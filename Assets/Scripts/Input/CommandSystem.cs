@@ -37,7 +37,7 @@ namespace NodeWar.Input
 
         private void TryIssueMoveCommand()
         {
-            if (selectionSystem.SelectedVillagerID < 0) return;
+            if (selectionSystem.SelectedVillagerIDs.Count == 0) return;
 
             Vector2 screenPos = Mouse.current.position.ReadValue();
             Ray ray = mainCam.ScreenPointToRay(screenPos);
@@ -50,17 +50,24 @@ namespace NodeWar.Input
                 {
                     int targetNode = nodeView.GetNodeID();
 
-                    GameCommand cmd = new GameCommand
+                    // One command per selected villager
+                    for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
                     {
-                        type = CommandType.Move,
-                        playerID = localPlayerID,
-                        villagerID = selectionSystem.SelectedVillagerID,
-                        targetNodeID = targetNode,
-                        issuedOnTick = simState.tickCount
-                    };
+                        int villagerID = selectionSystem.SelectedVillagerIDs[i];
 
-                    inputBuffer.EnqueueCommand(cmd);
-                    selectionSystem.ClearSelection();  // Command issued, deselect
+                        GameCommand cmd = new GameCommand
+                        {
+                            type = CommandType.Move,
+                            playerID = localPlayerID,
+                            villagerID = villagerID,
+                            targetNodeID = targetNode,
+                            issuedOnTick = simState.tickCount
+                        };
+
+                        inputBuffer.EnqueueCommand(cmd);
+                    }
+
+                    selectionSystem.ClearSelection();
                 }
             }
         }

@@ -21,6 +21,9 @@ namespace NodeWar.Core
         private SelectionSystem selectionSystem;
         private CommandSystem commandSystem;
 
+        // Track villager count for dynamic view spawning
+        private int trackedVillagerCount;
+
         private void Awake()
         {
             state = new SimulationState();
@@ -34,19 +37,28 @@ namespace NodeWar.Core
 
             SpawnNodeViews();
             SpawnVillagerViews();
+
+            trackedVillagerCount = state.villagers.Length;
+        }
+
+        private void Update()
+        {
+            // Detect bonus villagers spawned by simulation and create their views
+            if (state.villagers.Length > trackedVillagerCount)
+            {
+                SpawnNewVillagerViews(trackedVillagerCount, state.villagers.Length);
+                trackedVillagerCount = state.villagers.Length;
+            }
         }
 
         private void InitializeSystems()
         {
-            // TickRunner
             tickRunner = gameObject.AddComponent<TickRunner>();
             tickRunner.Initialize(state, inputBuffer);
 
-            // SelectionSystem
             selectionSystem = gameObject.AddComponent<SelectionSystem>();
-            selectionSystem.Initialize(state, 0); // Local player is 0
+            selectionSystem.Initialize(state, 0);
 
-            // CommandSystem
             commandSystem = gameObject.AddComponent<CommandSystem>();
             commandSystem.Initialize(state, inputBuffer, selectionSystem, 0);
         }
@@ -232,16 +244,29 @@ namespace NodeWar.Core
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
-                GameObject villagerGO = Instantiate(villagerPrefab, villagerParent);
-                villagerGO.name = "VillagerView_" + i;
+                SpawnSingleVillagerView(i);
+            }
+        }
 
-                NodeWar.View.VillagerView view = villagerGO.GetComponent<NodeWar.View.VillagerView>();
-                if (view != null)
-                {
-                    view.Initialize(state, i);
-                    view.SetTickRunner(tickRunner);
-                    view.SetSelectionSystem(selectionSystem);
-                }
+        private void SpawnNewVillagerViews(int fromIndex, int toIndex)
+        {
+            for (int i = fromIndex; i < toIndex; i++)
+            {
+                SpawnSingleVillagerView(i);
+            }
+        }
+
+        private void SpawnSingleVillagerView(int index)
+        {
+            GameObject villagerGO = Instantiate(villagerPrefab, villagerParent);
+            villagerGO.name = "VillagerView_" + index;
+
+            NodeWar.View.VillagerView view = villagerGO.GetComponent<NodeWar.View.VillagerView>();
+            if (view != null)
+            {
+                view.Initialize(state, index);
+                view.SetTickRunner(tickRunner);
+                view.SetSelectionSystem(selectionSystem);
             }
         }
     }

@@ -12,12 +12,12 @@ namespace NodeWar.View
         private MeshRenderer meshRenderer;
         private MaterialPropertyBlock propBlock;
 
-        // Node colors — muted, desaturated (distinct from bright villager colors)
+        // Muted node colors
         private static readonly Color neutralColor = new Color(0.45f, 0.45f, 0.4f);
-        private static readonly Color player0Color = new Color(0.2f, 0.3f, 0.5f);   // Dark blue-grey
-        private static readonly Color player1Color = new Color(0.5f, 0.2f, 0.2f);   // Dark red-brown
-        private static readonly Color coreColor0 = new Color(0.15f, 0.2f, 0.6f);    // Deep blue
-        private static readonly Color coreColor1 = new Color(0.6f, 0.15f, 0.15f);   // Deep red
+        private static readonly Color player0Color = new Color(0.2f, 0.3f, 0.5f);
+        private static readonly Color player1Color = new Color(0.5f, 0.2f, 0.2f);
+        private static readonly Color coreColor0 = new Color(0.15f, 0.2f, 0.6f);
+        private static readonly Color coreColor1 = new Color(0.6f, 0.15f, 0.15f);
 
         public void Initialize(SimulationState state, int id)
         {
@@ -48,21 +48,7 @@ namespace NodeWar.View
 
             if (meshRenderer != null)
             {
-                Color color;
-
-                if (node.districtType == DistrictType.Core)
-                {
-                    color = (node.ownerID == 0) ? coreColor0 : coreColor1;
-                }
-                else
-                {
-                    switch (node.ownerID)
-                    {
-                        case 0: color = player0Color; break;
-                        case 1: color = player1Color; break;
-                        default: color = neutralColor; break;
-                    }
-                }
+                Color color = CalculateNodeColor(node);
 
                 meshRenderer.GetPropertyBlock(propBlock);
                 propBlock.SetColor("_Color", color);
@@ -70,6 +56,7 @@ namespace NodeWar.View
                 meshRenderer.SetPropertyBlock(propBlock);
             }
 
+            // Scale by district type
             float scale = 1f;
             switch (node.districtType)
             {
@@ -80,6 +67,41 @@ namespace NodeWar.View
                 default: scale = 1f; break;
             }
             transform.localScale = Vector3.one * scale;
+        }
+
+        private Color CalculateNodeColor(NodeData node)
+        {
+            // Cores: always full owner color
+            if (node.districtType == DistrictType.Core)
+            {
+                return (node.ownerID == 0) ? coreColor0 : coreColor1;
+            }
+
+            // Owned nodes: blend from full color toward neutral based on bar erosion
+            if (node.ownerID == 0)
+            {
+                float t = (float)node.claimBar / 10000f;
+                return Color.Lerp(neutralColor, player0Color, t);
+            }
+            if (node.ownerID == 1)
+            {
+                float t = (float)(-node.claimBar) / 10000f;
+                return Color.Lerp(neutralColor, player1Color, t);
+            }
+
+            // Neutral: show claim progress as color shift
+            if (node.claimBar > 0)
+            {
+                float t = (float)node.claimBar / 10000f;
+                return Color.Lerp(neutralColor, player0Color, t);
+            }
+            if (node.claimBar < 0)
+            {
+                float t = (float)(-node.claimBar) / 10000f;
+                return Color.Lerp(neutralColor, player1Color, t);
+            }
+
+            return neutralColor;
         }
 
         public int GetNodeID()
