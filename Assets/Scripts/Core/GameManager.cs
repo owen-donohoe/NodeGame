@@ -1,6 +1,7 @@
 using UnityEngine;
 using NodeWar.Simulation;
 using NodeWar.Input;
+using NodeWar.Debugging;
 
 namespace NodeWar.Core
 {
@@ -61,6 +62,10 @@ namespace NodeWar.Core
 
             commandSystem = gameObject.AddComponent<CommandSystem>();
             commandSystem.Initialize(state, inputBuffer, selectionSystem, 0);
+
+            // Phase 6.1: Debug player switch
+            DebugPlayerSwitch debugSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
+            debugSwitch.Initialize(selectionSystem, commandSystem);
         }
 
         // ===== NODE INITIALIZATION =====
@@ -216,7 +221,14 @@ namespace NodeWar.Core
                     maxHP = 5,
                     attackDamage = 1,
                     moveSpeedTicks = 4,
-                    respawnTicksRemaining = 0
+                    respawnTicksRemaining = 0,
+                    // Phase 5 combat fields
+                    attackCooldownRemaining = 20,
+                    attackCooldownMax = 20,
+                    combatTargetID = -1,
+                    fightPriority = 0,
+                    // Phase 6 breach fields
+                    isConsumed = false
                 };
             }
         }
@@ -268,6 +280,44 @@ namespace NodeWar.Core
                 view.SetTickRunner(tickRunner);
                 view.SetSelectionSystem(selectionSystem);
             }
+        }
+
+        private void OnGUI()
+        {
+            if (state == null) return;
+            if (!state.gameOver) return;
+
+            // Dark overlay
+            GUI.color = new Color(0f, 0f, 0f, 0.7f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            // Winner text
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
+            titleStyle.fontSize = 48;
+            titleStyle.fontStyle = FontStyle.Bold;
+            titleStyle.alignment = TextAnchor.MiddleCenter;
+
+            if (state.winnerID == 0)
+                titleStyle.normal.textColor = new Color(0.3f, 0.5f, 1f);
+            else
+                titleStyle.normal.textColor = new Color(1f, 0.3f, 0.3f);
+
+            string winnerText = "PLAYER " + state.winnerID + " WINS!";
+            GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60), winnerText, titleStyle);
+
+            // Breach info
+            GUIStyle infoStyle = new GUIStyle(GUI.skin.label);
+            infoStyle.fontSize = 24;
+            infoStyle.alignment = TextAnchor.MiddleCenter;
+            infoStyle.normal.textColor = Color.white;
+
+            string infoText = "Breaches — P0: " + state.players[0].breachCount + "  P1: " + state.players[1].breachCount;
+            GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40), infoText, infoStyle);
+
+            // Tick count
+            string tickText = "Game ended at tick " + state.tickCount;
+            GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30), tickText, infoStyle);
         }
     }
 }

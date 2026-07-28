@@ -22,6 +22,15 @@ namespace NodeWar.Input
             mainCam = Camera.main;
         }
 
+        /// <summary>
+        /// Sets the local player ID this command system issues commands for.
+        /// Used by DebugPlayerSwitch to toggle control between players.
+        /// </summary>
+        public void SetPlayerID(int id)
+        {
+            localPlayerID = id;
+        }
+
         private void Update()
         {
             if (simState == null) return;

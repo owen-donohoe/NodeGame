@@ -30,6 +30,16 @@ namespace NodeWar.Input
             mainCam = Camera.main;
         }
 
+        /// <summary>
+        /// Sets the local player ID this selection system responds to.
+        /// Used by DebugPlayerSwitch to toggle control between players.
+        /// </summary>
+        public void SetPlayerID(int id)
+        {
+            localPlayerID = id;
+            ClearSelection();
+        }
+
         private void Update()
         {
             if (simState == null) return;
@@ -72,7 +82,8 @@ namespace NodeWar.Input
                 {
                     int id = villagerView.GetVillagerID();
                     if (simState.villagers[id].ownerID == localPlayerID &&
-                        simState.villagers[id].state != VillagerState.Dead)
+                        simState.villagers[id].state != VillagerState.Dead &&
+                        !simState.villagers[id].isConsumed)
                     {
                         selectedVillagerIDs.Clear();
                         selectedVillagerIDs.Add(id);
@@ -81,7 +92,7 @@ namespace NodeWar.Input
                 }
             }
 
-            // Clicked nothing valid — deselect
+            // Clicked nothing valid ï¿½ deselect
             ClearSelection();
         }
 
@@ -94,6 +105,7 @@ namespace NodeWar.Input
                 VillagerData v = simState.villagers[i];
                 if (v.ownerID != localPlayerID) continue;
                 if (v.state == VillagerState.Dead) continue;
+                if (v.isConsumed) continue;
 
                 // Get world position (use currentNodeID for stationary, path position for moving)
                 Vector3 worldPos;
@@ -106,9 +118,8 @@ namespace NodeWar.Input
                     worldPos = simState.nodes[v.currentNodeID].worldPosition;
                 }
 
-                // Project to screen
                 Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos);
-                if (screenPos.z < 0) continue; // Behind camera
+                if (screenPos.z < 0) continue;
 
                 float dist = Vector2.Distance(center, new Vector2(screenPos.x, screenPos.y));
                 if (dist <= radius)
@@ -132,7 +143,6 @@ namespace NodeWar.Input
             return false;
         }
 
-        // Exposed for optional UI circle visualization
         public bool IsDragging => isDragging;
         public Vector2 DragStart => dragStartScreenPos;
         public float CurrentDragRadius

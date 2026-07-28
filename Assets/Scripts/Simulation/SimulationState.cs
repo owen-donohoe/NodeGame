@@ -38,11 +38,11 @@ namespace NodeWar.Simulation
     public struct NodeData
     {
         public int nodeID;
-        public Vector3 worldPosition;       // Used by View layer only
+        public Vector3 worldPosition;
         public int[] connectedNodes;
         public DistrictType districtType;
-        public int claimBar;                // -10000 to +10000
-        public int ownerID;                 // -1 neutral, 0 player0, 1 player1
+        public int claimBar;
+        public int ownerID;
         public int bonusVillagersOnClaim;
     }
 
@@ -50,20 +50,29 @@ namespace NodeWar.Simulation
     public struct VillagerData
     {
         public int villagerID;
-        public int ownerID;                 // 0 or 1
+        public int ownerID;
         public int currentNodeID;
-        public int targetNodeID;            // -1 if stationary
-        public int[] movePath;              // BFS path (node IDs in order)
-        public int movePathIndex;           // Current index in movePath
-        public int moveProgress;            // 0 to moveSpeedTicks
-        public int previousNodeID;          // Last node left (for interpolation)
+        public int targetNodeID;
+        public int[] movePath;
+        public int movePathIndex;
+        public int moveProgress;
+        public int previousNodeID;
         public VillagerState state;
         public SuitType suit;
         public int hp;
         public int maxHP;
         public int attackDamage;
-        public int moveSpeedTicks;          // Ticks to traverse one edge
+        public int moveSpeedTicks;
         public int respawnTicksRemaining;
+
+        // Phase 5: Combat fields
+        public int attackCooldownRemaining;
+        public int attackCooldownMax;
+        public int combatTargetID;
+        public int fightPriority;
+
+        // Phase 6: Breach fields
+        public bool isConsumed;
     }
 
     [System.Serializable]
@@ -84,10 +93,10 @@ namespace NodeWar.Simulation
     {
         public NodeData[] nodes;
         public VillagerData[] villagers;
-        public PlayerData[] players;        // Always length 2
+        public PlayerData[] players;
         public int tickCount;
         public bool gameOver;
-        public int winnerID;                // -1 if no winner yet
+        public int winnerID;
 
         public SimulationState()
         {
