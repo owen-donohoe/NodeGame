@@ -183,7 +183,7 @@ namespace NodeWar.Core
             transform.position = pos;
         }
 
-        #if UNITY_EDITOR
+    #if UNITY_EDITOR
         private void OnDrawGizmos()
         {
             if (!useBounds) return;
@@ -216,6 +216,6 @@ namespace NodeWar.Core
             );
             Gizmos.DrawCube(center, size);
         }
-        #endif
+    #endif
     }
 }

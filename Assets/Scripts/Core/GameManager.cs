@@ -64,8 +64,18 @@ namespace NodeWar.Core
             commandSystem.Initialize(state, inputBuffer, selectionSystem, 0);
 
             // Phase 6.1: Debug player switch
-            DebugPlayerSwitch debugSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
+            NodeWar.Debugging.DebugPlayerSwitch debugSwitch = gameObject.AddComponent<NodeWar.Debugging.DebugPlayerSwitch>();
             debugSwitch.Initialize(selectionSystem, commandSystem);
+
+            // Selection lasso
+            CreateSelectionLasso();
+        }
+
+        private void CreateSelectionLasso()
+        {
+            GameObject lassoGO = new GameObject("SelectionLasso");
+            NodeWar.UI.SelectionLasso lasso = lassoGO.AddComponent<NodeWar.UI.SelectionLasso>();
+            lasso.Initialize(selectionSystem);
         }
 
         // ===== NODE INITIALIZATION =====
@@ -247,6 +257,13 @@ namespace NodeWar.Core
                 {
                     view.Initialize(state, i);
                 }
+
+                // Initialize claim bar (lives as child of the prefab)
+                NodeWar.UI.NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeWar.UI.NodeClaimBar>();
+                if (claimBar != null)
+                {
+                    claimBar.Initialize(state, i);
+                }
             }
         }
 
@@ -279,6 +296,13 @@ namespace NodeWar.Core
                 view.Initialize(state, index);
                 view.SetTickRunner(tickRunner);
                 view.SetSelectionSystem(selectionSystem);
+            }
+
+            // Initialize health ring (lives as child of the prefab)
+            NodeWar.UI.VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<NodeWar.UI.VillagerHealthRing>();
+            if (healthRing != null)
+            {
+                healthRing.Initialize(state, index);
             }
         }
 

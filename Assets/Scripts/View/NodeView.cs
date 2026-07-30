@@ -12,6 +12,10 @@ namespace NodeWar.View
         private MeshRenderer meshRenderer;
         private MaterialPropertyBlock propBlock;
 
+        // Sub-components
+        private NodeHighlight highlight;
+        private NodeWar.UI.NodeClaimBar claimBar;
+
         // Muted node colors
         private static readonly Color neutralColor = new Color(0.45f, 0.45f, 0.4f);
         private static readonly Color player0Color = new Color(0.2f, 0.3f, 0.5f);
@@ -31,7 +35,28 @@ namespace NodeWar.View
 
             propBlock = new MaterialPropertyBlock();
 
+            // Add NodeHighlight component
+            highlight = gameObject.AddComponent<NodeHighlight>();
+
             UpdateVisuals();
+        }
+
+        /// <summary>
+        /// Set the claim bar reference (created externally by GameManager or prefab).
+        /// </summary>
+        public void SetClaimBar(NodeWar.UI.NodeClaimBar bar)
+        {
+            claimBar = bar;
+        }
+
+        /// <summary>
+        /// Trigger a brief pulse highlight on this node.
+        /// Called by CommandSystem when this node is a move target.
+        /// </summary>
+        public void TriggerHighlight(Color color)
+        {
+            if (highlight != null)
+                highlight.Pulse(color);
         }
 
         private void Update()
@@ -56,7 +81,6 @@ namespace NodeWar.View
                 meshRenderer.SetPropertyBlock(propBlock);
             }
 
-            // Scale by district type
             float scale = 1f;
             switch (node.districtType)
             {
@@ -71,13 +95,11 @@ namespace NodeWar.View
 
         private Color CalculateNodeColor(NodeData node)
         {
-            // Cores: always full owner color
             if (node.districtType == DistrictType.Core)
             {
                 return (node.ownerID == 0) ? coreColor0 : coreColor1;
             }
 
-            // Owned nodes: blend from full color toward neutral based on bar erosion
             if (node.ownerID == 0)
             {
                 float t = (float)node.claimBar / 10000f;
@@ -89,7 +111,6 @@ namespace NodeWar.View
                 return Color.Lerp(neutralColor, player1Color, t);
             }
 
-            // Neutral: show claim progress as color shift
             if (node.claimBar > 0)
             {
                 float t = (float)node.claimBar / 10000f;

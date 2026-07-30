@@ -25,7 +25,8 @@ namespace NodeWar.View
                 {
                     // Match camera's X rotation so sprites appear "standing up"
                     // but lock Y/Z so they don't track the camera
-                    sharedFacing = Quaternion.Euler(cam.transform.eulerAngles.x, 0f, 0f);
+                    sharedFacing = Camera.main.transform.rotation;
+
                 }
                 else
                 {

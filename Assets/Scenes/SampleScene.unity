@@ -468,7 +468,7 @@ MonoBehaviour:
   panSpeed: 1
   momentumDamping: 5
   maxVelocity: 20
-  zoomSpeed: 2
+  zoomSpeed: 15
   minOrthoSize: 3
   maxOrthoSize: 15
   zoomDamping: 8

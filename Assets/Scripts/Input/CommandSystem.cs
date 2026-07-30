@@ -13,6 +13,10 @@ namespace NodeWar.Input
 
         private Camera mainCam;
 
+        // Player highlight colors for node target pulse
+        private static readonly Color p0HighlightColor = new Color(0.4f, 0.7f, 1f, 0.9f);
+        private static readonly Color p1HighlightColor = new Color(1f, 0.4f, 0.5f, 0.9f);
+
         public void Initialize(SimulationState state, InputBuffer buffer, SelectionSystem selection, int playerID)
         {
             simState = state;
@@ -22,10 +26,6 @@ namespace NodeWar.Input
             mainCam = Camera.main;
         }
 
-        /// <summary>
-        /// Sets the local player ID this command system issues commands for.
-        /// Used by DebugPlayerSwitch to toggle control between players.
-        /// </summary>
         public void SetPlayerID(int id)
         {
             localPlayerID = id;
@@ -59,7 +59,6 @@ namespace NodeWar.Input
                 {
                     int targetNode = nodeView.GetNodeID();
 
-                    // One command per selected villager
                     for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
                     {
                         int villagerID = selectionSystem.SelectedVillagerIDs[i];
@@ -75,6 +74,10 @@ namespace NodeWar.Input
 
                         inputBuffer.EnqueueCommand(cmd);
                     }
+
+                    // Trigger node highlight pulse
+                    Color highlightColor = (localPlayerID == 0) ? p0HighlightColor : p1HighlightColor;
+                    nodeView.TriggerHighlight(highlightColor);
 
                     selectionSystem.ClearSelection();
                 }

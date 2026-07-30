@@ -6,24 +6,37 @@ namespace NodeWar.View
 {
     public class VillagerView : MonoBehaviour
     {
+        [Header("Player 0 (Blue) Colors")]
+        [SerializeField] private Color p0BaseColor = new Color(0.3f, 0.6f, 1f);
+        [SerializeField] private Color p0MovingColor = new Color(0.5f, 0.75f, 1f);
+        [SerializeField] private Color p0ClaimingColor = new Color(0.3f, 0.8f, 0.9f);
+        [SerializeField] private Color p0FightingColor = new Color(0.6f, 0.3f, 1f);
+        [SerializeField] private Color p0IdleColor = new Color(0.3f, 0.6f, 1f);
+
+        [Header("Player 1 (Red) Colors")]
+        [SerializeField] private Color p1BaseColor = new Color(1f, 0.35f, 0.5f);
+        [SerializeField] private Color p1MovingColor = new Color(1f, 0.6f, 0.4f);
+        [SerializeField] private Color p1ClaimingColor = new Color(1f, 0.5f, 0.7f);
+        [SerializeField] private Color p1FightingColor = new Color(1f, 0.15f, 0.15f);
+        [SerializeField] private Color p1IdleColor = new Color(1f, 0.35f, 0.5f);
+
+        [Header("Selection Outline")]
+        [SerializeField] private Color outlineColor = new Color(1f, 1f, 1f, 1f);
+        [SerializeField] private float outlineThickness = 1.5f;
+
         private SimulationState simState;
         private int villagerID;
         private bool initialized = false;
 
         private SpriteRenderer[] spriteRenderers;
+        private MaterialPropertyBlock[] propBlocks;
         private Transform gfxTransform;
 
         private NodeWar.Core.TickRunner tickRunner;
         private SelectionSystem selectionSystem;
 
-        // Colors
-        private static readonly Color player0Color = new Color(0.3f, 0.6f, 1f);
-        private static readonly Color player1Color = new Color(1f, 0.35f, 0.5f);
-        private static readonly Color selectedTint = new Color(1f, 1f, 0.4f);
-        private static readonly Color movingTint = new Color(0.8f, 0.9f, 0.4f);
-        private static readonly Color claimingTint = new Color(0.4f, 1f, 0.6f);
+        private bool lastOutlineState = false;
 
-        // Stack offset
         private Vector3 stackOffset;
 
         public void Initialize(SimulationState state, int id)
@@ -43,7 +56,12 @@ namespace NodeWar.View
                 spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
             }
 
-            // Stack offset based on ID
+            propBlocks = new MaterialPropertyBlock[spriteRenderers.Length];
+            for (int i = 0; i < propBlocks.Length; i++)
+            {
+                propBlocks[i] = new MaterialPropertyBlock();
+            }
+
             int localIndex = id % 10;
             float angle = localIndex * 36f * Mathf.Deg2Rad;
             float radius = 0.3f;
@@ -65,9 +83,6 @@ namespace NodeWar.View
         private void Update()
         {
             if (!initialized) return;
-
-            // Bounds check: villagerID might be out of range if array was resized
-            // (shouldn't happen since views are spawned per-villager, but safety)
             if (villagerID >= simState.villagers.Length) return;
 
             UpdateVisuals();
@@ -77,8 +92,7 @@ namespace NodeWar.View
         {
             VillagerData villager = simState.villagers[villagerID];
 
-            // Hide dead villagers
-            if (villager.state == VillagerState.Dead)
+            if (villager.state == VillagerState.Dead || villager.isConsumed)
             {
                 SetRenderersEnabled(false);
                 return;
@@ -113,35 +127,58 @@ namespace NodeWar.View
 
             transform.position = targetPos + stackOffset;
 
-            // === Color ===
-            Color baseColor = (villager.ownerID == 0) ? player0Color : player1Color;
-            Color finalColor = baseColor;
+            // === Color via SpriteRenderer.color (vertex color channel, always works) ===
+            Color stateColor = GetStateColor(villager);
+            SetRenderersColor(stateColor);
 
-            // State tinting
-            switch (villager.state)
+            // === Outline via PropertyBlock (only outline properties, no color conflict) ===
+            bool isSelected = (selectionSystem != null && selectionSystem.IsSelected(villagerID));
+            Debug.Log(isSelected);
+
+            if (isSelected != lastOutlineState)
             {
-                case VillagerState.Moving:
-                    finalColor = movingTint;
-                    break;
-                case VillagerState.Claiming:
-                    finalColor = Color.Lerp(baseColor, claimingTint, 0.5f);
-                    break;
+                SetOutline(isSelected);
+                lastOutlineState = isSelected;
             }
-
-            // Selection override (highest priority visual)
-            if (selectionSystem != null && selectionSystem.IsSelected(villagerID))
-            {
-                finalColor = selectedTint;
-            }
-
-            SetRenderersColor(finalColor);
         }
 
-        private void SetRenderersEnabled(bool enabled)
+        private void SetOutline(bool enabled)
         {
             for (int i = 0; i < spriteRenderers.Length; i++)
             {
-                spriteRenderers[i].enabled = enabled;
+                spriteRenderers[i].GetPropertyBlock(propBlocks[i]);
+                propBlocks[i].SetFloat("_OutlineEnabled", enabled ? 1f : 0f);
+                propBlocks[i].SetColor("_OutlineColor", outlineColor);
+                propBlocks[i].SetFloat("_OutlineThickness", outlineThickness);
+                spriteRenderers[i].SetPropertyBlock(propBlocks[i]);
+            }
+        }
+
+        private Color GetStateColor(VillagerData villager)
+        {
+            if (villager.ownerID == 0)
+            {
+                switch (villager.state)
+                {
+                    case VillagerState.Moving: return p0MovingColor;
+                    case VillagerState.Claiming: return p0ClaimingColor;
+                    case VillagerState.Fighting: return p0FightingColor;
+                    case VillagerState.Idle: return p0IdleColor;
+                    case VillagerState.Working: return p0BaseColor;
+                    default: return p0BaseColor;
+                }
+            }
+            else
+            {
+                switch (villager.state)
+                {
+                    case VillagerState.Moving: return p1MovingColor;
+                    case VillagerState.Claiming: return p1ClaimingColor;
+                    case VillagerState.Fighting: return p1FightingColor;
+                    case VillagerState.Idle: return p1IdleColor;
+                    case VillagerState.Working: return p1BaseColor;
+                    default: return p1BaseColor;
+                }
             }
         }
 
@@ -150,6 +187,14 @@ namespace NodeWar.View
             for (int i = 0; i < spriteRenderers.Length; i++)
             {
                 spriteRenderers[i].color = color;
+            }
+        }
+
+        private void SetRenderersEnabled(bool enabled)
+        {
+            for (int i = 0; i < spriteRenderers.Length; i++)
+            {
+                spriteRenderers[i].enabled = enabled;
             }
         }
 
