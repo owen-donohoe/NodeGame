@@ -47,6 +47,11 @@ namespace NodeWar.Debugging
                 commandSystem.SetPlayerID(currentPlayerID);
         }
 
+        public int GetCurrentPlayerID()
+        {
+            return currentPlayerID;
+        }
+
         private void OnGUI()
         {
             if (!styleInitialized)

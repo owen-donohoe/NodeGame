@@ -3,7 +3,10 @@ namespace NodeWar.Simulation
     public enum CommandType
     {
         None,
-        Move
+        Move,
+        SetAllocation,
+        Equip,    
+        Respawn   
     }
 
     [System.Serializable]
@@ -14,5 +17,6 @@ namespace NodeWar.Simulation
         public int villagerID;
         public int targetNodeID;
         public int issuedOnTick;
+        public int value; // NEW: generic int for commands that need a number (e.g., allocation amount)
     }
 }

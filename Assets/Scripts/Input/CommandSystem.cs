@@ -13,7 +13,6 @@ namespace NodeWar.Input
 
         private Camera mainCam;
 
-        // Player highlight colors for node target pulse
         private static readonly Color p0HighlightColor = new Color(0.4f, 0.7f, 1f, 0.9f);
         private static readonly Color p1HighlightColor = new Color(1f, 0.4f, 0.5f, 0.9f);
 
@@ -36,11 +35,24 @@ namespace NodeWar.Input
             if (simState == null) return;
 
             Mouse mouse = Mouse.current;
-            if (mouse == null) return;
+            Keyboard keyboard = Keyboard.current;
 
-            if (mouse.rightButton.wasPressedThisFrame)
+            // Right-click: move command
+            if (mouse != null && mouse.rightButton.wasPressedThisFrame)
             {
                 TryIssueMoveCommand();
+            }
+
+            // E key: equip selected villagers as Soldiers
+            if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+            {
+                TryIssueEquipCommand();
+            }
+
+            // R key: respawn first dead villager
+            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            {
+                TryIssueRespawnCommand();
             }
         }
 
@@ -75,12 +87,54 @@ namespace NodeWar.Input
                         inputBuffer.EnqueueCommand(cmd);
                     }
 
-                    // Trigger node highlight pulse
                     Color highlightColor = (localPlayerID == 0) ? p0HighlightColor : p1HighlightColor;
                     nodeView.TriggerHighlight(highlightColor);
 
                     selectionSystem.ClearSelection();
                 }
+            }
+        }
+
+        private void TryIssueEquipCommand()
+        {
+            if (selectionSystem.SelectedVillagerIDs.Count == 0) return;
+
+            for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
+            {
+                int villagerID = selectionSystem.SelectedVillagerIDs[i];
+
+                GameCommand cmd = new GameCommand
+                {
+                    type = CommandType.Equip,
+                    playerID = localPlayerID,
+                    villagerID = villagerID,
+                    issuedOnTick = simState.tickCount
+                };
+
+                inputBuffer.EnqueueCommand(cmd);
+            }
+        }
+
+        private void TryIssueRespawnCommand()
+        {
+            // Find the first dead non-consumed villager owned by this player
+            for (int i = 0; i < simState.villagers.Length; i++)
+            {
+                VillagerData v = simState.villagers[i];
+                if (v.ownerID != localPlayerID) continue;
+                if (v.state != VillagerState.Dead) continue;
+                if (v.isConsumed) continue;
+
+                GameCommand cmd = new GameCommand
+                {
+                    type = CommandType.Respawn,
+                    playerID = localPlayerID,
+                    villagerID = i,
+                    issuedOnTick = simState.tickCount
+                };
+
+                inputBuffer.EnqueueCommand(cmd);
+                return; // Only respawn one per press
             }
         }
     }

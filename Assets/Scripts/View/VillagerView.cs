@@ -133,13 +133,17 @@ namespace NodeWar.View
 
             // === Outline via PropertyBlock (only outline properties, no color conflict) ===
             bool isSelected = (selectionSystem != null && selectionSystem.IsSelected(villagerID));
-            Debug.Log(isSelected);
 
             if (isSelected != lastOutlineState)
             {
                 SetOutline(isSelected);
                 lastOutlineState = isSelected;
             }
+
+            // Debug: update hierarchy name to reflect current state
+            #if UNITY_EDITOR
+                gameObject.name = "V_" + villagerID + "_P" + villager.ownerID + "_" + villager.suit + "_" + villager.state;
+            #endif
         }
 
         private void SetOutline(bool enabled)

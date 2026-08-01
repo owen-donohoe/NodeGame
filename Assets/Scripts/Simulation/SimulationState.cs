@@ -11,7 +11,8 @@ namespace NodeWar.Simulation
         Mine,
         Village,
         Barracks,
-        Core
+        Core,
+        Forge
     }
 
     public enum VillagerState
@@ -29,7 +30,8 @@ namespace NodeWar.Simulation
         None,
         Farmer,
         Miner,
-        Soldier
+        Soldier,
+        Smelter
     }
 
     // ===== DATA STRUCTS =====
@@ -44,6 +46,7 @@ namespace NodeWar.Simulation
         public int claimBar;
         public int ownerID;
         public int bonusVillagersOnClaim;
+        public int materialAllocation;
     }
 
     [System.Serializable]
@@ -73,6 +76,10 @@ namespace NodeWar.Simulation
 
         // Phase 6: Breach fields
         public bool isConsumed;
+
+        // Phase 7: Production fields
+        public int productionTicksRemaining;
+        public int productionTicksMax;
     }
 
     [System.Serializable]

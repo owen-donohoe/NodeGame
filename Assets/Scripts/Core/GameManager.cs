@@ -124,14 +124,15 @@ namespace NodeWar.Core
             types[14] = DistrictType.Mine;
             types[15] = DistrictType.Farm;
             types[16] = DistrictType.Core;
-            types[17] = DistrictType.None;
-            types[18] = DistrictType.None;
+            types[17] = DistrictType.Forge;
+            types[18] = DistrictType.Forge;
             types[19] = DistrictType.None;
 
             int[] bonus = new int[20];
             bonus[0] = 0; bonus[16] = 0;
             bonus[3] = 2; bonus[8] = 3; bonus[13] = 2;
-            bonus[17] = 0; bonus[18] = 0; bonus[19] = 0;
+            bonus[17] = 1;bonus[18] = 1; 
+            bonus[19] = 0;
             for (int i = 0; i < 20; i++)
             {
                 if (bonus[i] == 0 && types[i] != DistrictType.Core && types[i] != DistrictType.None)
@@ -238,7 +239,10 @@ namespace NodeWar.Core
                     combatTargetID = -1,
                     fightPriority = 0,
                     // Phase 6 breach fields
-                    isConsumed = false
+                    isConsumed = false,
+                    // Phase 7
+                    productionTicksRemaining = 0,
+                    productionTicksMax = 0
                 };
             }
         }
@@ -250,7 +254,7 @@ namespace NodeWar.Core
             for (int i = 0; i < state.nodes.Length; i++)
             {
                 GameObject nodeGO = Instantiate(nodePrefab, nodeParent);
-                nodeGO.name = "NodeView_" + i;
+                nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
 
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
@@ -288,7 +292,7 @@ namespace NodeWar.Core
         private void SpawnSingleVillagerView(int index)
         {
             GameObject villagerGO = Instantiate(villagerPrefab, villagerParent);
-            villagerGO.name = "VillagerView_" + index;
+            villagerGO.name = "V_" + index + "_P" + state.villagers[index].ownerID + "_" + state.villagers[index].suit + "_" + state.villagers[index].state;
 
             NodeWar.View.VillagerView view = villagerGO.GetComponent<NodeWar.View.VillagerView>();
             if (view != null)
@@ -309,14 +313,68 @@ namespace NodeWar.Core
         private void OnGUI()
         {
             if (state == null) return;
+
+            // === RESOURCE DISPLAY (always visible) ===
+            int controlledPlayer = 0;
+            NodeWar.Debugging.DebugPlayerSwitch debugSwitch = GetComponent<NodeWar.Debugging.DebugPlayerSwitch>();
+            if (debugSwitch != null)
+                controlledPlayer = debugSwitch.GetCurrentPlayerID();
+
+            PlayerData player = state.players[controlledPlayer];
+
+            GUIStyle resourceStyle = new GUIStyle(GUI.skin.label);
+            resourceStyle.fontSize = 18;
+            resourceStyle.normal.textColor = Color.white;
+
+            GUIStyle headerStyle = new GUIStyle(GUI.skin.label);
+            headerStyle.fontSize = 14;
+            headerStyle.normal.textColor = (controlledPlayer == 0)
+                ? new Color(0.4f, 0.6f, 1f)
+                : new Color(1f, 0.4f, 0.4f);
+
+            float x = Screen.width - 200;
+            float y = 10;
+
+            GUI.Label(new Rect(x, y, 190, 25), "Player " + controlledPlayer + " Resources", headerStyle);
+            y += 22;
+            GUI.Label(new Rect(x, y, 190, 25), "Food: " + player.food, resourceStyle);
+            y += 22;
+            GUI.Label(new Rect(x, y, 190, 25), "Materials: " + player.materials, resourceStyle);
+            y += 22;
+            GUI.Label(new Rect(x, y, 190, 25), "Metal: " + player.metal, resourceStyle);
+            y += 30;
+
+            // Breach display
+            GUIStyle breachStyle = new GUIStyle(GUI.skin.label);
+            breachStyle.fontSize = 16;
+            breachStyle.normal.textColor = new Color(0.4f, 0.6f, 1f);
+            GUI.Label(new Rect(x, y, 190, 25), "P0 Breaches: " + state.players[0].breachCount + " / 3", breachStyle);
+            y += 20;
+            breachStyle.normal.textColor = new Color(1f, 0.4f, 0.4f);
+            GUI.Label(new Rect(x, y, 190, 25), "P1 Breaches: " + state.players[1].breachCount + " / 3", breachStyle);
+            y += 20;
+
+            // Count per-player villagers (non-consumed)
+            GUIStyle countStyle = new GUIStyle(GUI.skin.label);
+            countStyle.fontSize = 12;
+            countStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
+            int p0Count = 0;
+            int p1Count = 0;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                if (state.villagers[i].isConsumed) continue;
+                if (state.villagers[i].ownerID == 0) p0Count++;
+                else p1Count++;
+            }
+            GUI.Label(new Rect(x, y, 190, 20), "P0: " + p0Count + "/25  P1: " + p1Count + "/25", countStyle);
+
+            // === GAME OVER OVERLAY ===
             if (!state.gameOver) return;
 
-            // Dark overlay
             GUI.color = new Color(0f, 0f, 0f, 0.7f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            // Winner text
             GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
             titleStyle.fontSize = 48;
             titleStyle.fontStyle = FontStyle.Bold;
@@ -330,7 +388,6 @@ namespace NodeWar.Core
             string winnerText = "PLAYER " + state.winnerID + " WINS!";
             GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60), winnerText, titleStyle);
 
-            // Breach info
             GUIStyle infoStyle = new GUIStyle(GUI.skin.label);
             infoStyle.fontSize = 24;
             infoStyle.alignment = TextAnchor.MiddleCenter;
@@ -339,7 +396,6 @@ namespace NodeWar.Core
             string infoText = "Breaches — P0: " + state.players[0].breachCount + "  P1: " + state.players[1].breachCount;
             GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40), infoText, infoStyle);
 
-            // Tick count
             string tickText = "Game ended at tick " + state.tickCount;
             GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30), tickText, infoStyle);
         }
