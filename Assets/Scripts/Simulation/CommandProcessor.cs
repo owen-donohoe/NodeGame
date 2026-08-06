@@ -34,7 +34,7 @@ namespace NodeWar.Simulation
 
             if (villager.currentNodeID == command.targetNodeID) return;
 
-            int[] path = Pathfinding.FindPath(state, villager.currentNodeID, command.targetNodeID);
+            int[] path = Pathfinding.FindPath(state, villager.ownerID, villager.currentNodeID, command.targetNodeID);
             if (path.Length < 2) return;
 
             state.villagers[command.villagerID].movePath = path;

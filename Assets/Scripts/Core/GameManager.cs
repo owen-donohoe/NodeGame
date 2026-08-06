@@ -2,17 +2,47 @@ using UnityEngine;
 using NodeWar.Simulation;
 using NodeWar.Input;
 using NodeWar.Debugging;
+using System.Collections.Generic;
 
 namespace NodeWar.Core
 {
     public class GameManager : MonoBehaviour
     {
-        [Header("Prefabs")]
-        public GameObject nodePrefab;
-        public GameObject villagerPrefab;
+        [Header("Node Prefabs (assign per district type)")]
+        [SerializeField] private GameObject nodePrefabDefault;
+        [SerializeField] private GameObject nodePrefabCore;
+        [SerializeField] private GameObject nodePrefabFarm;
+        [SerializeField] private GameObject nodePrefabMine;
+        [SerializeField] private GameObject nodePrefabVillage;
+        [SerializeField] private GameObject nodePrefabBarracks;
+        [SerializeField] private GameObject nodePrefabForge;
+
+        [Header("Villager Prefab")]
+        [SerializeField] private GameObject villagerPrefab;
+
+        [Header("Board Settings")]
+        [SerializeField] private float nodeScale = 5f;
+        [SerializeField] private int defaultEdgeWeight = 3;
+
+        [Header("Starting Values")]
+        [SerializeField] private int startingVillagersPerPlayer = 3;
+        [SerializeField] private int startingFood = 5;
+        [SerializeField] private int startingMaterials = 3;
+        [SerializeField] private int startingMetal = 0;
+
+        [Header("Pathfinding Preference")]
+        [SerializeField] private float ownedMultiplier = 0.5f;
+        [SerializeField] private float partiallyOwnedMultiplier = 0.75f;
+        [SerializeField] private float unownedMultiplier = 1.0f;
+        [SerializeField] private float enemyPartiallyOwnedMultiplier = 1.5f;
+        [SerializeField] private float enemyOwnedMultiplier = 2.0f;
 
         [Header("Runtime")]
         public SimulationState state;
+
+        // Grid dimensions
+        private const int GRID_COLS = 4;
+        private const int GRID_ROWS = 7;
 
         private Transform nodeParent;
         private Transform villagerParent;
@@ -22,13 +52,22 @@ namespace NodeWar.Core
         private SelectionSystem selectionSystem;
         private CommandSystem commandSystem;
 
-        // Track villager count for dynamic view spawning
+        // View references
+        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
         private int trackedVillagerCount;
+        private Transform[] villagerTransforms;
 
         private void Awake()
         {
             state = new SimulationState();
             inputBuffer = new InputBuffer();
+
+            Pathfinding.OwnedMultiplier = ownedMultiplier;
+            Pathfinding.PartiallyOwnedMultiplier = partiallyOwnedMultiplier;
+            Pathfinding.UnownedMultiplier = unownedMultiplier;
+            Pathfinding.EnemyPartiallyOwnedMultiplier = enemyPartiallyOwnedMultiplier;
+            Pathfinding.EnemyOwnedMultiplier = enemyOwnedMultiplier;
+
 
             InitializeNodes();
             InitializePlayers();
@@ -44,7 +83,6 @@ namespace NodeWar.Core
 
         private void Update()
         {
-            // Detect bonus villagers spawned by simulation and create their views
             if (state.villagers.Length > trackedVillagerCount)
             {
                 SpawnNewVillagerViews(trackedVillagerCount, state.villagers.Length);
@@ -63,11 +101,9 @@ namespace NodeWar.Core
             commandSystem = gameObject.AddComponent<CommandSystem>();
             commandSystem.Initialize(state, inputBuffer, selectionSystem, 0);
 
-            // Phase 6.1: Debug player switch
-            NodeWar.Debugging.DebugPlayerSwitch debugSwitch = gameObject.AddComponent<NodeWar.Debugging.DebugPlayerSwitch>();
+            DebugPlayerSwitch debugSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
             debugSwitch.Initialize(selectionSystem, commandSystem);
 
-            // Selection lasso
             CreateSelectionLasso();
         }
 
@@ -78,143 +114,120 @@ namespace NodeWar.Core
             lasso.Initialize(selectionSystem);
         }
 
-        // ===== NODE INITIALIZATION =====
+        // ===== NODE INITIALIZATION (4x7 GRID) =====
 
         private void InitializeNodes()
         {
-            state.nodes = new NodeData[20];
+            int nodeCount = GRID_COLS * GRID_ROWS;
+            state.nodes = new NodeData[nodeCount];
 
-            Vector3[] positions = new Vector3[20];
-            positions[0] = new Vector3(-8f, 0f, 0f);
-            positions[1] = new Vector3(-5.5f, 0f, 2.5f);
-            positions[2] = new Vector3(-5.5f, 0f, -2.5f);
-            positions[3] = new Vector3(-3f, 0f, 4f);
-            positions[4] = new Vector3(-3f, 0f, -4f);
-            positions[5] = new Vector3(-1f, 0f, 2f);
-            positions[6] = new Vector3(-1f, 0f, -2f);
-            positions[7] = new Vector3(0f, 0f, 4.5f);
-            positions[8] = new Vector3(0f, 0f, 0f);
-            positions[9] = new Vector3(0f, 0f, -4.5f);
-            positions[10] = new Vector3(1f, 0f, 2f);
-            positions[11] = new Vector3(1f, 0f, -2f);
-            positions[12] = new Vector3(3f, 0f, 4f);
-            positions[13] = new Vector3(3f, 0f, -4f);
-            positions[14] = new Vector3(5.5f, 0f, 2.5f);
-            positions[15] = new Vector3(5.5f, 0f, -2.5f);
-            positions[16] = new Vector3(8f, 0f, 0f);
-            positions[17] = new Vector3(-3f, 0f, 0f);
-            positions[18] = new Vector3(3f, 0f, 0f);
-            positions[19] = new Vector3(0f, 0f, 2f);
+            // District type layout (row by row, bottom to top)
+            // Row 0: None,     None,      Core_P1,    None
+            // Row 1: None,     Mine,      Farm,       None
+            // Row 2: Mine,     Barracks,  Village,    Farm
+            // Row 3: Forge,    None,      None,       Forge
+            // Row 4: Farm,     Village,   Barracks,   Mine
+            // Row 5: None,     Farm,      Mine,       None
+            // Row 6: None,     Core_P0,   None,       None
 
-            DistrictType[] types = new DistrictType[20];
-            types[0] = DistrictType.Core;
-            types[1] = DistrictType.Farm;
-            types[2] = DistrictType.Mine;
-            types[3] = DistrictType.Village;
-            types[4] = DistrictType.Farm;
-            types[5] = DistrictType.Farm;
-            types[6] = DistrictType.Mine;
-            types[7] = DistrictType.Barracks;
-            types[8] = DistrictType.Village;
-            types[9] = DistrictType.Mine;
-            types[10] = DistrictType.Farm;
-            types[11] = DistrictType.Barracks;
-            types[12] = DistrictType.Farm;
-            types[13] = DistrictType.Village;
-            types[14] = DistrictType.Mine;
-            types[15] = DistrictType.Farm;
-            types[16] = DistrictType.Core;
-            types[17] = DistrictType.Forge;
-            types[18] = DistrictType.Forge;
-            types[19] = DistrictType.None;
+            DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
+            layout[0, 0] = DistrictType.None; layout[0, 1] = DistrictType.None; layout[0, 2] = DistrictType.Core; layout[0, 3] = DistrictType.None;
+            layout[1, 0] = DistrictType.None; layout[1, 1] = DistrictType.Mine; layout[1, 2] = DistrictType.Farm; layout[1, 3] = DistrictType.None;
+            layout[2, 0] = DistrictType.Mine; layout[2, 1] = DistrictType.Barracks; layout[2, 2] = DistrictType.Village; layout[2, 3] = DistrictType.Farm;
+            layout[3, 0] = DistrictType.Forge; layout[3, 1] = DistrictType.None; layout[3, 2] = DistrictType.None; layout[3, 3] = DistrictType.Forge;
+            layout[4, 0] = DistrictType.Farm; layout[4, 1] = DistrictType.Village; layout[4, 2] = DistrictType.Barracks; layout[4, 3] = DistrictType.Mine;
+            layout[5, 0] = DistrictType.None; layout[5, 1] = DistrictType.Farm; layout[5, 2] = DistrictType.Mine; layout[5, 3] = DistrictType.None;
+            layout[6, 0] = DistrictType.None; layout[6, 1] = DistrictType.Core; layout[6, 2] = DistrictType.None; layout[6, 3] = DistrictType.None;
 
-            int[] bonus = new int[20];
-            bonus[0] = 0; bonus[16] = 0;
-            bonus[3] = 2; bonus[8] = 3; bonus[13] = 2;
-            bonus[17] = 1;bonus[18] = 1; 
-            bonus[19] = 0;
-            for (int i = 0; i < 20; i++)
+            for (int z = 0; z < GRID_ROWS; z++)
             {
-                if (bonus[i] == 0 && types[i] != DistrictType.Core && types[i] != DistrictType.None)
-                    bonus[i] = 1;
-            }
-
-            int[][] connections = new int[20][];
-            connections[0] = new int[] { 1, 2 };
-            connections[1] = new int[] { 0, 2, 3, 17 };
-            connections[2] = new int[] { 0, 1, 4, 17 };
-            connections[3] = new int[] { 1, 5, 7 };
-            connections[4] = new int[] { 2, 6, 9 };
-            connections[5] = new int[] { 3, 7, 8, 17, 19 };
-            connections[6] = new int[] { 4, 8, 9, 17, 19 };
-            connections[7] = new int[] { 3, 5, 10, 12, 19 };
-            connections[8] = new int[] { 5, 6, 10, 11, 18, 17 };
-            connections[9] = new int[] { 4, 6, 11, 13 };
-            connections[10] = new int[] { 7, 8, 12, 18, 19 };
-            connections[11] = new int[] { 8, 9, 13, 18, 19 };
-            connections[12] = new int[] { 7, 10, 14, 18 };
-            connections[13] = new int[] { 9, 11, 15, 18 };
-            connections[14] = new int[] { 12, 15, 16, 18 };
-            connections[15] = new int[] { 13, 14, 16, 18 };
-            connections[16] = new int[] { 14, 15 };
-            connections[17] = new int[] { 1, 2, 5, 6, 8 };
-            connections[18] = new int[] { 8, 10, 11, 12, 13, 14, 15 };
-            connections[19] = new int[] { 5, 6, 7, 10, 11 };
-
-            for (int i = 0; i < 20; i++)
-            {
-                state.nodes[i] = new NodeData
+                for (int x = 0; x < GRID_COLS; x++)
                 {
-                    nodeID = i,
-                    worldPosition = positions[i],
-                    connectedNodes = connections[i],
-                    districtType = types[i],
-                    claimBar = 0,
-                    ownerID = -1,
-                    bonusVillagersOnClaim = bonus[i]
-                };
-            }
+                    int nodeID = z * GRID_COLS + x;
 
-            state.nodes[0].claimBar = 10000;
-            state.nodes[0].ownerID = 0;
-            state.nodes[16].claimBar = -10000;
-            state.nodes[16].ownerID = 1;
+                    //System.Collections.Generic.List<int> neighbors = new System.Collections.Generic.List<int>();
+
+                    List<int> neighborIDs = new List<int>();
+                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));             // left
+                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1)); // right
+                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);             // down
+                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x); // up
+
+                    Edge[] edges = new Edge[neighborIDs.Count];
+                    for (int i = 0; i < neighborIDs.Count; i++)
+                    {
+                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = defaultEdgeWeight };
+                    }
+
+                    int[] connectedNodes = neighborIDs.ToArray();
+                    int[] edgeWeights = new int[connectedNodes.Length];
+                    for (int i = 0; i < edgeWeights.Length; i++)
+                        edgeWeights[i] = defaultEdgeWeight;
+
+                    // Bonus villagers: only Villages get bonus
+                    int bonus = 0;
+                    if (layout[z, x] == DistrictType.Village) bonus = 2;
+
+                    // Determine owner for cores
+                    int ownerID = -1;
+                    int claimBar = 0;
+                    if (z == 6 && x == 1) { ownerID = 0; claimBar = 10000; }  // P0 core
+                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -10000; } // P1 core
+
+                    state.nodes[nodeID] = new NodeData
+                    {
+                        nodeID = nodeID,
+                        worldPosition = new Vector3(x * nodeScale, 0f, z * nodeScale),
+                        gridX = x,
+                        gridZ = z,
+                        edges = edges,
+                        districtType = layout[z, x],
+                        claimBar = claimBar,
+                        ownerID = ownerID,
+                        bonusVillagersOnClaim = bonus,
+                        materialAllocation = 0
+                    };
+                }
+            }
         }
 
         private void InitializePlayers()
         {
             state.players = new PlayerData[2];
 
+            // P0 core is node at grid (1, 6) = index 6*4+1 = 25
+            // P1 core is node at grid (2, 0) = index 0*4+2 = 2
+
             state.players[0] = new PlayerData
             {
                 playerID = 0,
-                coreNodeID = 0,
-                food = 5,
-                materials = 3,
-                metal = 0,
+                coreNodeID = 25,
+                food = startingFood,
+                materials = startingMaterials,
+                metal = startingMetal,
                 breachCount = 0
             };
 
             state.players[1] = new PlayerData
             {
                 playerID = 1,
-                coreNodeID = 16,
-                food = 5,
-                materials = 3,
-                metal = 0,
+                coreNodeID = 2,
+                food = startingFood,
+                materials = startingMaterials,
+                metal = startingMetal,
                 breachCount = 0
             };
         }
 
         private void InitializeVillagers()
         {
-            int totalVillagers = 20;
+            int totalVillagers = startingVillagersPerPlayer * 2;
             state.villagers = new VillagerData[totalVillagers];
 
             for (int i = 0; i < totalVillagers; i++)
             {
-                int owner = (i < 10) ? 0 : 1;
-                int coreNode = (owner == 0) ? 0 : 16;
+                int owner = (i < startingVillagersPerPlayer) ? 0 : 1;
+                int coreNode = state.players[owner].coreNodeID;
 
                 state.villagers[i] = new VillagerData
                 {
@@ -233,28 +246,51 @@ namespace NodeWar.Core
                     attackDamage = 1,
                     moveSpeedTicks = 4,
                     respawnTicksRemaining = 0,
-                    // Phase 5 combat fields
                     attackCooldownRemaining = 20,
                     attackCooldownMax = 20,
                     combatTargetID = -1,
                     fightPriority = 0,
-                    // Phase 6 breach fields
                     isConsumed = false,
-                    // Phase 7
                     productionTicksRemaining = 0,
                     productionTicksMax = 0
                 };
             }
         }
 
+        // ===== VIEW SPAWNING =====
+
+        private GameObject GetPrefabForDistrict(DistrictType type)
+        {
+            GameObject prefab = null;
+            switch (type)
+            {
+                case DistrictType.Core: prefab = nodePrefabCore; break;
+                case DistrictType.Farm: prefab = nodePrefabFarm; break;
+                case DistrictType.Mine: prefab = nodePrefabMine; break;
+                case DistrictType.Village: prefab = nodePrefabVillage; break;
+                case DistrictType.Barracks: prefab = nodePrefabBarracks; break;
+                case DistrictType.Forge: prefab = nodePrefabForge; break;
+                default: prefab = nodePrefabDefault; break;
+            }
+            if (prefab == null) prefab = nodePrefabDefault;
+            return prefab;
+        }
+
         private void SpawnNodeViews()
         {
             nodeParent = new GameObject("NodeViews").transform;
+            nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                GameObject nodeGO = Instantiate(nodePrefab, nodeParent);
+                GameObject prefab = GetPrefabForDistrict(state.nodes[i].districtType);
+                GameObject nodeGO = Instantiate(prefab, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
+
+                //scale
+                //nodeGO.transform.localScale = Vector3.one * nodeScale;
+                //position
+                nodeGO.transform.position = state.nodes[i].worldPosition;
 
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
@@ -262,7 +298,14 @@ namespace NodeWar.Core
                     view.Initialize(state, i);
                 }
 
-                // Initialize claim bar (lives as child of the prefab)
+                // Initialize or add NodeSlotManager
+                NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
+                if (slotManager == null)
+                    slotManager = nodeGO.AddComponent<NodeWar.View.NodeSlotManager>();
+                slotManager.Initialize(i, nodeScale);
+                nodeSlotManagers[i] = slotManager;
+
+                // Claim bar
                 NodeWar.UI.NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeWar.UI.NodeClaimBar>();
                 if (claimBar != null)
                 {
@@ -274,19 +317,30 @@ namespace NodeWar.Core
         private void SpawnVillagerViews()
         {
             villagerParent = new GameObject("VillagerViews").transform;
+            villagerTransforms = new Transform[state.villagers.Length];
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 SpawnSingleVillagerView(i);
             }
+
+            selectionSystem.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnNewVillagerViews(int fromIndex, int toIndex)
         {
+            // Grow transforms array
+            Transform[] newArray = new Transform[toIndex];
+            for (int i = 0; i < villagerTransforms.Length; i++)
+                newArray[i] = villagerTransforms[i];
+            villagerTransforms = newArray;
+
             for (int i = fromIndex; i < toIndex; i++)
             {
                 SpawnSingleVillagerView(i);
             }
+
+            selectionSystem.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnSingleVillagerView(int index)
@@ -294,15 +348,19 @@ namespace NodeWar.Core
             GameObject villagerGO = Instantiate(villagerPrefab, villagerParent);
             villagerGO.name = "V_" + index + "_P" + state.villagers[index].ownerID + "_" + state.villagers[index].suit + "_" + state.villagers[index].state;
 
+            // Store transform for selection system
+            if (index < villagerTransforms.Length)
+                villagerTransforms[index] = villagerGO.transform;
+
             NodeWar.View.VillagerView view = villagerGO.GetComponent<NodeWar.View.VillagerView>();
             if (view != null)
             {
                 view.Initialize(state, index);
                 view.SetTickRunner(tickRunner);
                 view.SetSelectionSystem(selectionSystem);
+                view.SetNodeSlotManagers(nodeSlotManagers);
             }
 
-            // Initialize health ring (lives as child of the prefab)
             NodeWar.UI.VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<NodeWar.UI.VillagerHealthRing>();
             if (healthRing != null)
             {
@@ -310,13 +368,15 @@ namespace NodeWar.Core
             }
         }
 
+        // ===== GUI =====
+
         private void OnGUI()
         {
             if (state == null) return;
 
-            // === RESOURCE DISPLAY (always visible) ===
+            // === RESOURCE DISPLAY ===
             int controlledPlayer = 0;
-            NodeWar.Debugging.DebugPlayerSwitch debugSwitch = GetComponent<NodeWar.Debugging.DebugPlayerSwitch>();
+            DebugPlayerSwitch debugSwitch = GetComponent<DebugPlayerSwitch>();
             if (debugSwitch != null)
                 controlledPlayer = debugSwitch.GetCurrentPlayerID();
 
@@ -344,7 +404,6 @@ namespace NodeWar.Core
             GUI.Label(new Rect(x, y, 190, 25), "Metal: " + player.metal, resourceStyle);
             y += 30;
 
-            // Breach display
             GUIStyle breachStyle = new GUIStyle(GUI.skin.label);
             breachStyle.fontSize = 16;
             breachStyle.normal.textColor = new Color(0.4f, 0.6f, 1f);
@@ -354,21 +413,18 @@ namespace NodeWar.Core
             GUI.Label(new Rect(x, y, 190, 25), "P1 Breaches: " + state.players[1].breachCount + " / 3", breachStyle);
             y += 20;
 
-            // Count per-player villagers (non-consumed)
             GUIStyle countStyle = new GUIStyle(GUI.skin.label);
             countStyle.fontSize = 12;
             countStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
-            int p0Count = 0;
-            int p1Count = 0;
+            int p0Count = 0; int p1Count = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 if (state.villagers[i].isConsumed) continue;
-                if (state.villagers[i].ownerID == 0) p0Count++;
-                else p1Count++;
+                if (state.villagers[i].ownerID == 0) p0Count++; else p1Count++;
             }
             GUI.Label(new Rect(x, y, 190, 20), "P0: " + p0Count + "/25  P1: " + p1Count + "/25", countStyle);
 
-            // === GAME OVER OVERLAY ===
+            // === GAME OVER ===
             if (!state.gameOver) return;
 
             GUI.color = new Color(0f, 0f, 0f, 0.7f);
@@ -385,19 +441,14 @@ namespace NodeWar.Core
             else
                 titleStyle.normal.textColor = new Color(1f, 0.3f, 0.3f);
 
-            string winnerText = "PLAYER " + state.winnerID + " WINS!";
-            GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60), winnerText, titleStyle);
+            GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60), "PLAYER " + state.winnerID + " WINS!", titleStyle);
 
             GUIStyle infoStyle = new GUIStyle(GUI.skin.label);
             infoStyle.fontSize = 24;
             infoStyle.alignment = TextAnchor.MiddleCenter;
             infoStyle.normal.textColor = Color.white;
-
-            string infoText = "Breaches — P0: " + state.players[0].breachCount + "  P1: " + state.players[1].breachCount;
-            GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40), infoText, infoStyle);
-
-            string tickText = "Game ended at tick " + state.tickCount;
-            GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30), tickText, infoStyle);
+            GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40), "Breaches - P0: " + state.players[0].breachCount + "  P1: " + state.players[1].breachCount, infoStyle);
+            GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30), "Game ended at tick " + state.tickCount, infoStyle);
         }
     }
 }

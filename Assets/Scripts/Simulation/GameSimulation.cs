@@ -10,7 +10,7 @@ namespace NodeWar.Simulation
         // ===== CONSTANTS =====
         private const int BASE_CLAIM_PER_TICK = 17;
         private const int DECREMENT_MULTIPLIER = 4;
-        private const int CLAIM_THRESHOLD = 10000;
+        private const int CLAIM_THRESHOLD = 10000;//this is public for pathfinding currently. this might need to change.
         private const int MAX_CLAIMERS_PER_NODE = 4;
         private const int RESPAWN_TICKS = 50;
         private const int HEAL_INTERVAL_TICKS = 30;
@@ -31,10 +31,11 @@ namespace NodeWar.Simulation
         /// 2. Movement (with combat interruption and breach-on-arrival)
         /// 3. Combat (detect fights, process cooldowns, deal damage, handle deaths)
         /// 4. Claim bars
-        /// 5. Healing (every 30 ticks)
-        /// 6. Respawn timers
-        /// 7. Win condition (breachCount >= 3)
-        /// 8. Post-combat resume (fight ended, determine next state)
+        /// 5. Production
+        /// 6. Healing (every 30 ticks)
+        /// 7. Respawn timers
+        /// 8. Win condition (breachCount >= 3)
+        /// 9. Post-combat resume (fight ended, determine next state)
         /// </summary>
         public static void SimulateTick(SimulationState state)
         {
@@ -89,7 +90,15 @@ namespace NodeWar.Simulation
 
             v.moveProgress++;
 
-            if (v.moveProgress >= v.moveSpeedTicks)
+            // Calculate ticks needed for current edge
+            int edgeWeight = 3; // default
+            if (v.movePathIndex + 1 < v.movePath.Length)
+            {
+                edgeWeight = GetEdgeWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
+            }
+            int ticksForEdge = edgeWeight * v.moveSpeedTicks;
+
+            if (v.moveProgress >= ticksForEdge)
             {
                 // Advance to next node in path
                 v.previousNodeID = v.movePath[v.movePathIndex];
@@ -132,7 +141,6 @@ namespace NodeWar.Simulation
                 }
 
                 // --- Normal arrival logic (no enemies) ---
-                // Reached end of path?
                 if (v.movePathIndex >= v.movePath.Length - 1)
                 {
                     v.movePath = new int[0];
@@ -143,7 +151,6 @@ namespace NodeWar.Simulation
                     ApplyArrivalState(state, villagerIndex);
                     return;
                 }
-                // else: keep Moving along path
             }
 
             state.villagers[villagerIndex] = v;
@@ -160,13 +167,19 @@ namespace NodeWar.Simulation
             int nodeID = v.currentNodeID;
             NodeData node = state.nodes[nodeID];
 
-            // Core nodes: revert suit to None, always Idle
+            // Core nodes: always Idle.
+            // Non-combat suits (Farmer, Miner, Smelter) are free and re-assigned on arrival
+            // at production nodes, so reverting them here is harmless and keeps things clean.
+            // Soldier suit is PERMANENT until death — do not strip it.
             if (node.districtType == DistrictType.Core)
             {
-                state.villagers[villagerIndex].suit = SuitType.None;
-                state.villagers[villagerIndex].attackDamage = 1;
-                state.villagers[villagerIndex].moveSpeedTicks = 4;
-                state.villagers[villagerIndex].attackCooldownMax = 20;
+                if (v.suit != SuitType.Soldier)
+                {
+                    state.villagers[villagerIndex].suit = SuitType.None;
+                    state.villagers[villagerIndex].attackDamage = 1;
+                    state.villagers[villagerIndex].moveSpeedTicks = 4;
+                    state.villagers[villagerIndex].attackCooldownMax = 20;
+                }
                 state.villagers[villagerIndex].state = VillagerState.Idle;
                 return;
             }
@@ -174,14 +187,13 @@ namespace NodeWar.Simulation
             // Own node
             if (node.ownerID == v.ownerID)
             {
-                // Soldiers never auto-assign, just go Idle
+                // Soldiers never auto-assign suit, just go Idle
                 if (v.suit == SuitType.Soldier)
                 {
                     state.villagers[villagerIndex].state = VillagerState.Idle;
                     return;
                 }
 
-                // Production nodes: auto-assign suit and try Working
                 if (node.districtType == DistrictType.Farm)
                 {
                     state.villagers[villagerIndex].suit = SuitType.Farmer;
@@ -238,16 +250,12 @@ namespace NodeWar.Simulation
                 return;
             }
 
-            // Not own node: Claiming logic (unchanged from original)
+            // Not own node: Claiming logic
             int friendlyClaimers = CountFriendlyClaimersOnNode(state, nodeID, v.ownerID);
             if (friendlyClaimers < MAX_CLAIMERS_PER_NODE)
-            {
                 state.villagers[villagerIndex].state = VillagerState.Claiming;
-            }
             else
-            {
                 state.villagers[villagerIndex].state = VillagerState.Idle;
-            }
         }
 
         // ===== STEP 3: COMBAT =====
@@ -966,6 +974,22 @@ namespace NodeWar.Simulation
                 case DistrictType.Forge: return SuitType.Smelter;
                 default: return SuitType.None;
             }
+        }
+
+        /// <summary>
+        /// Gets the edge weight between two connected nodes.
+        /// Returns default weight of 3 if not found.
+        /// Public for View layer access (interpolation).
+        /// </summary>
+        public static int GetEdgeWeight(SimulationState state, int fromNode, int toNode)
+        {
+            Edge[] edges = state.nodes[fromNode].edges;
+            for (int i = 0; i < edges.Length; i++)
+            {
+                if (edges[i].toNode == toNode)
+                    return edges[i].travelWeight;
+            }
+            return 3; // fallback, no direct edge found
         }
     }
 }

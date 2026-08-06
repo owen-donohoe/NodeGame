@@ -13,31 +13,36 @@ namespace NodeWar.Input
         private List<int> selectedVillagerIDs = new List<int>();
         public IReadOnlyList<int> SelectedVillagerIDs => selectedVillagerIDs;
 
-        // Backward compat convenience
         public int SelectedVillagerID => selectedVillagerIDs.Count > 0 ? selectedVillagerIDs[0] : -1;
 
-        // Circle drag state
         private bool isDragging = false;
         private Vector2 dragStartScreenPos;
-        private const float DRAG_THRESHOLD = 10f; // pixels
+        private const float DRAG_THRESHOLD = 10f;
 
         private Camera mainCam;
+
+        private LayerMask villagerLayer;
+        private Transform[] villagerTransforms;
 
         public void Initialize(SimulationState state, int playerID)
         {
             simState = state;
             localPlayerID = playerID;
             mainCam = Camera.main;
+            villagerLayer = LayerMask.GetMask("Villagers");
+            Debug.Log("[SEL] Initialized. Layer mask value: " + villagerLayer.value + " PlayerID: " + localPlayerID);
         }
 
-        /// <summary>
-        /// Sets the local player ID this selection system responds to.
-        /// Used by DebugPlayerSwitch to toggle control between players.
-        /// </summary>
         public void SetPlayerID(int id)
         {
             localPlayerID = id;
             ClearSelection();
+        }
+
+        public void SetVillagerTransforms(Transform[] transforms)
+        {
+            villagerTransforms = transforms;
+            Debug.Log("[SEL] All Villager transforms set. Count: " + (transforms != null ? transforms.Length : 0));
         }
 
         private void Update()
@@ -59,6 +64,8 @@ namespace NodeWar.Input
                 Vector2 releasePos = mouse.position.ReadValue();
                 float dragDistance = Vector2.Distance(dragStartScreenPos, releasePos);
 
+                Debug.Log("[SEL] Left released. Drag distance: " + dragDistance);
+
                 if (dragDistance < DRAG_THRESHOLD)
                 {
                     TryClickSelect(releasePos);
@@ -67,37 +74,73 @@ namespace NodeWar.Input
                 {
                     CircleSelect(dragStartScreenPos, dragDistance);
                 }
+
+                Debug.Log("[SEL] After select action. Selected count: " + selectedVillagerIDs.Count);
+                for (int i = 0; i < selectedVillagerIDs.Count; i++)
+                    Debug.Log("[SEL]   Selected villager ID: " + selectedVillagerIDs[i]);
             }
         }
 
         private void TryClickSelect(Vector2 screenPos)
         {
+            Debug.Log("[SEL] TryClickSelect at screen pos: " + screenPos);
+
             Ray ray = mainCam.ScreenPointToRay(screenPos);
+            //Debug.Log("[SEL] Ray origin: " + ray.origin + " direction: " + ray.direction);
 
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 100f))
+            if (Physics.Raycast(ray, out hit, 100f, villagerLayer))
             {
+                Debug.Log("[SEL] Raycast HIT: " + hit.collider.gameObject.name + " on layer: " + hit.collider.gameObject.layer);
+
                 NodeWar.View.VillagerView villagerView = hit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
                 if (villagerView != null)
                 {
                     int id = villagerView.GetVillagerID();
+                    Debug.Log("[SEL] Found VillagerView. ID: " + id + " Owner: " + simState.villagers[id].ownerID + " State: " + simState.villagers[id].state + " Consumed: " + simState.villagers[id].isConsumed);
+
                     if (simState.villagers[id].ownerID == localPlayerID &&
                         simState.villagers[id].state != VillagerState.Dead &&
                         !simState.villagers[id].isConsumed)
                     {
                         selectedVillagerIDs.Clear();
                         selectedVillagerIDs.Add(id);
+                        Debug.Log("[SEL] SELECTED villager " + id);
                         return;
                     }
+                    else
+                    {
+                        Debug.Log("[SEL] Villager failed ownership/state check. LocalPlayer: " + localPlayerID);
+                    }
+                }
+                else
+                {
+                    Debug.Log("[SEL] Hit object on Villiger layer, has no VillagerView in parents: " + hit.collider.gameObject.name);
+                }
+            }
+            else
+            {
+                Debug.Log("[SEL] Raycast MISSED. No collider on villager layer mask: " + villagerLayer.value);
+
+                // Debug: try raycast without layer mask to see what we ARE hitting
+                RaycastHit debugHit;
+                if (Physics.Raycast(ray, out debugHit, 100f))
+                {
+                    Debug.Log("[SEL] (debug no-mask raycast hit: " + debugHit.collider.gameObject.name + " layer: " + debugHit.collider.gameObject.layer + ")");
+                }
+                else
+                {
+                    Debug.Log("[SEL] (debug no-mask raycast also missed - nothing in scene)");
                 }
             }
 
-            // Clicked nothing valid � deselect
+            Debug.Log("[SEL] Clearing selection (nothing valid clicked)");
             ClearSelection();
         }
 
         private void CircleSelect(Vector2 center, float radius)
         {
+            Debug.Log("[SEL] CircleSelect. Center: " + center + " Radius: " + radius);
             selectedVillagerIDs.Clear();
 
             for (int i = 0; i < simState.villagers.Length; i++)
@@ -107,11 +150,10 @@ namespace NodeWar.Input
                 if (v.state == VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
-                // Get world position (use currentNodeID for stationary, path position for moving)
                 Vector3 worldPos;
-                if (v.state == VillagerState.Moving && v.movePath.Length > 1)
+                if (villagerTransforms != null && i < villagerTransforms.Length && villagerTransforms[i] != null)
                 {
-                    worldPos = simState.nodes[v.movePath[v.movePathIndex]].worldPosition;
+                    worldPos = villagerTransforms[i].position;
                 }
                 else
                 {
@@ -122,15 +164,21 @@ namespace NodeWar.Input
                 if (screenPos.z < 0) continue;
 
                 float dist = Vector2.Distance(center, new Vector2(screenPos.x, screenPos.y));
+
                 if (dist <= radius)
                 {
                     selectedVillagerIDs.Add(i);
+                    Debug.Log("[SEL] Circle captured villager " + i + " at screen dist: " + dist);
                 }
             }
+
+            Debug.Log("[SEL] CircleSelect done. Total selected: " + selectedVillagerIDs.Count);
         }
 
         public void ClearSelection()
         {
+            if (selectedVillagerIDs.Count > 0)
+                Debug.Log("[SEL] ClearSelection called. Was: " + selectedVillagerIDs.Count);
             selectedVillagerIDs.Clear();
         }
 

@@ -41,12 +41,24 @@ namespace NodeWar.Simulation
     {
         public int nodeID;
         public Vector3 worldPosition;
-        public int[] connectedNodes;
+        public int gridX;
+        public int gridZ;
+        public Edge[] edges;           // replaces connectedNodes[] + edgeWeights[]
         public DistrictType districtType;
         public int claimBar;
         public int ownerID;
         public int bonusVillagersOnClaim;
         public int materialAllocation;
+    }
+
+    [System.Serializable]
+    public struct Edge
+    {
+        public int toNode;
+        public int travelWeight;   // physical terrain/distance cost to cross this edge.
+                                   // Never touched by ownership preference — TickMovement
+                                   // and Pathfinding's route-scoring both read this same
+                                   // number for "how far is it," just for different purposes.
     }
 
     [System.Serializable]

@@ -69,8 +69,6 @@ namespace NodeWar.View
         {
             NodeData node = simState.nodes[nodeID];
 
-            transform.position = node.worldPosition;
-
             if (meshRenderer != null)
             {
                 Color color = CalculateNodeColor(node);
@@ -81,16 +79,8 @@ namespace NodeWar.View
                 meshRenderer.SetPropertyBlock(propBlock);
             }
 
-            float scale = 1f;
-            switch (node.districtType)
-            {
-                case DistrictType.Core: scale = 1.5f; break;
-                case DistrictType.Village: scale = 1.2f; break;
-                case DistrictType.Barracks: scale = 1.3f; break;
-                case DistrictType.None: scale = 0.7f; break;
-                default: scale = 1f; break;
-            }
-            transform.localScale = Vector3.one * scale;
+            // Scale is now driven by GameManager's nodeScale (set during initialization via transform)
+            // Don't override scale here — let the prefab/spawn handle it
         }
 
         private Color CalculateNodeColor(NodeData node)
