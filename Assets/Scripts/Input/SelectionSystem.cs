@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using NodeWar.Simulation;
 using System.Collections.Generic;
+using UnityEngine.EventSystems;
 
 namespace NodeWar.Input
 {
@@ -30,7 +31,6 @@ namespace NodeWar.Input
             localPlayerID = playerID;
             mainCam = Camera.main;
             villagerLayer = LayerMask.GetMask("Villagers");
-            Debug.Log("[SEL] Initialized. Layer mask value: " + villagerLayer.value + " PlayerID: " + localPlayerID);
         }
 
         public void SetPlayerID(int id)
@@ -42,7 +42,6 @@ namespace NodeWar.Input
         public void SetVillagerTransforms(Transform[] transforms)
         {
             villagerTransforms = transforms;
-            Debug.Log("[SEL] All Villager transforms set. Count: " + (transforms != null ? transforms.Length : 0));
         }
 
         private void Update()
@@ -54,6 +53,10 @@ namespace NodeWar.Input
 
             if (mouse.leftButton.wasPressedThisFrame)
             {
+                if (UnityEngine.EventSystems.EventSystem.current != null &&
+                    UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                    return;
+
                 isDragging = true;
                 dragStartScreenPos = mouse.position.ReadValue();
             }
@@ -83,65 +86,52 @@ namespace NodeWar.Input
 
         private void TryClickSelect(Vector2 screenPos)
         {
-            Debug.Log("[SEL] TryClickSelect at screen pos: " + screenPos);
+            bool shiftHeld = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
 
             Ray ray = mainCam.ScreenPointToRay(screenPos);
-            //Debug.Log("[SEL] Ray origin: " + ray.origin + " direction: " + ray.direction);
 
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, 100f, villagerLayer))
             {
-                Debug.Log("[SEL] Raycast HIT: " + hit.collider.gameObject.name + " on layer: " + hit.collider.gameObject.layer);
-
                 NodeWar.View.VillagerView villagerView = hit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
                 if (villagerView != null)
                 {
                     int id = villagerView.GetVillagerID();
-                    Debug.Log("[SEL] Found VillagerView. ID: " + id + " Owner: " + simState.villagers[id].ownerID + " State: " + simState.villagers[id].state + " Consumed: " + simState.villagers[id].isConsumed);
 
                     if (simState.villagers[id].ownerID == localPlayerID &&
                         simState.villagers[id].state != VillagerState.Dead &&
                         !simState.villagers[id].isConsumed)
                     {
-                        selectedVillagerIDs.Clear();
-                        selectedVillagerIDs.Add(id);
-                        Debug.Log("[SEL] SELECTED villager " + id);
+                        if (shiftHeld)
+                        {
+                            // Toggle: remove if already selected, add if not
+                            if (selectedVillagerIDs.Contains(id))
+                                selectedVillagerIDs.Remove(id);
+                            else
+                                selectedVillagerIDs.Add(id);
+                        }
+                        else
+                        {
+                            // Normal: clear and select single
+                            selectedVillagerIDs.Clear();
+                            selectedVillagerIDs.Add(id);
+                        }
                         return;
                     }
-                    else
-                    {
-                        Debug.Log("[SEL] Villager failed ownership/state check. LocalPlayer: " + localPlayerID);
-                    }
-                }
-                else
-                {
-                    Debug.Log("[SEL] Hit object on Villiger layer, has no VillagerView in parents: " + hit.collider.gameObject.name);
-                }
-            }
-            else
-            {
-                Debug.Log("[SEL] Raycast MISSED. No collider on villager layer mask: " + villagerLayer.value);
-
-                // Debug: try raycast without layer mask to see what we ARE hitting
-                RaycastHit debugHit;
-                if (Physics.Raycast(ray, out debugHit, 100f))
-                {
-                    Debug.Log("[SEL] (debug no-mask raycast hit: " + debugHit.collider.gameObject.name + " layer: " + debugHit.collider.gameObject.layer + ")");
-                }
-                else
-                {
-                    Debug.Log("[SEL] (debug no-mask raycast also missed - nothing in scene)");
                 }
             }
 
-            Debug.Log("[SEL] Clearing selection (nothing valid clicked)");
-            ClearSelection();
+            // Clicked nothing valid
+            if (!shiftHeld)
+                ClearSelection();
         }
 
         private void CircleSelect(Vector2 center, float radius)
         {
-            Debug.Log("[SEL] CircleSelect. Center: " + center + " Radius: " + radius);
-            selectedVillagerIDs.Clear();
+            bool shiftHeld = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+
+            if (!shiftHeld)
+                selectedVillagerIDs.Clear();
 
             for (int i = 0; i < simState.villagers.Length; i++)
             {
@@ -167,18 +157,15 @@ namespace NodeWar.Input
 
                 if (dist <= radius)
                 {
-                    selectedVillagerIDs.Add(i);
-                    Debug.Log("[SEL] Circle captured villager " + i + " at screen dist: " + dist);
+                    // Prevent duplicates when shift-adding
+                    if (!selectedVillagerIDs.Contains(i))
+                        selectedVillagerIDs.Add(i);
                 }
             }
-
-            Debug.Log("[SEL] CircleSelect done. Total selected: " + selectedVillagerIDs.Count);
         }
 
         public void ClearSelection()
         {
-            if (selectedVillagerIDs.Count > 0)
-                Debug.Log("[SEL] ClearSelection called. Was: " + selectedVillagerIDs.Count);
             selectedVillagerIDs.Clear();
         }
 

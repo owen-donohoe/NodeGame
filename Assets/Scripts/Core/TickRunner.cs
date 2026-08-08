@@ -46,6 +46,13 @@ namespace NodeWar.Core
                 // Simulate one tick
                 GameSimulation.SimulateTick(simState);
 
+                // TEMP: verify hasher produces consistent results
+                if (simState.tickCount % 50 == 0)
+                {
+                    int hash = SimulationStateHasher.ComputeHash(simState);
+                    UnityEngine.Debug.Log("[HASH] Tick " + simState.tickCount + " Hash: " + hash);
+                }
+
                 accumulator -= tickInterval;
             }
         }

@@ -2,6 +2,7 @@ using UnityEngine;
 using NodeWar.Simulation;
 using NodeWar.Input;
 using NodeWar.Debugging;
+using NodeWar.UI;
 using System.Collections.Generic;
 
 namespace NodeWar.Core
@@ -30,15 +31,23 @@ namespace NodeWar.Core
         [SerializeField] private int startingMaterials = 3;
         [SerializeField] private int startingMetal = 0;
 
-        [Header("Pathfinding Preference")]
-        [SerializeField] private float ownedMultiplier = 0.5f;
-        [SerializeField] private float partiallyOwnedMultiplier = 0.75f;
-        [SerializeField] private float unownedMultiplier = 1.0f;
-        [SerializeField] private float enemyPartiallyOwnedMultiplier = 1.5f;
-        [SerializeField] private float enemyOwnedMultiplier = 2.0f;
+        [Header("Pathfinding Preference (integer percentages: 50=0.5x, 100=1x, 200=2x)")]
+        [SerializeField] private int ownedMultiplier = 50;
+        [SerializeField] private int partiallyOwnedMultiplier = 75;
+        [SerializeField] private int unownedMultiplier = 100;
+        [SerializeField] private int enemyPartiallyOwnedMultiplier = 150;
+        [SerializeField] private int enemyOwnedMultiplier = 200;
+
+        [Header("UI")]
+        [SerializeField] private GameObject uiManagerPrefab;
+        private NodeWar.UI.NodePanelManager nodePanelManager;
 
         [Header("Runtime")]
         public SimulationState state;
+
+        // --- add these ---
+        private DebugPlayerSwitch debugPlayerSwitch;
+        private NodeWar.UI.HUDManager hudManager;
 
         // Grid dimensions
         private const int GRID_COLS = 4;
@@ -78,6 +87,8 @@ namespace NodeWar.Core
             SpawnNodeViews();
             SpawnVillagerViews();
 
+            InitializeUI();
+
             trackedVillagerCount = state.villagers.Length;
         }
 
@@ -101,8 +112,8 @@ namespace NodeWar.Core
             commandSystem = gameObject.AddComponent<CommandSystem>();
             commandSystem.Initialize(state, inputBuffer, selectionSystem, 0);
 
-            DebugPlayerSwitch debugSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
-            debugSwitch.Initialize(selectionSystem, commandSystem);
+            debugPlayerSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
+            debugPlayerSwitch.Initialize(selectionSystem, commandSystem);
 
             CreateSelectionLasso();
         }
@@ -257,6 +268,27 @@ namespace NodeWar.Core
             }
         }
 
+        private void InitializeUI()
+        {
+            if (uiManagerPrefab == null)
+            {
+                Debug.LogError("[GameManager] uiManagerPrefab not assigned!");
+                return;
+            }
+
+            GameObject uiGO = Instantiate(uiManagerPrefab);
+            uiGO.name = "UIManager";
+
+            hudManager = uiGO.GetComponent<HUDManager>();
+            if (hudManager != null)
+                hudManager.Initialize(state, debugPlayerSwitch);
+
+            nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
+            if (nodePanelManager != null)
+                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickRunner);
+        }
+
+
         // ===== VIEW SPAWNING =====
 
         private GameObject GetPrefabForDistrict(DistrictType type)
@@ -372,60 +404,7 @@ namespace NodeWar.Core
 
         private void OnGUI()
         {
-            if (state == null) return;
-
-            // === RESOURCE DISPLAY ===
-            int controlledPlayer = 0;
-            DebugPlayerSwitch debugSwitch = GetComponent<DebugPlayerSwitch>();
-            if (debugSwitch != null)
-                controlledPlayer = debugSwitch.GetCurrentPlayerID();
-
-            PlayerData player = state.players[controlledPlayer];
-
-            GUIStyle resourceStyle = new GUIStyle(GUI.skin.label);
-            resourceStyle.fontSize = 18;
-            resourceStyle.normal.textColor = Color.white;
-
-            GUIStyle headerStyle = new GUIStyle(GUI.skin.label);
-            headerStyle.fontSize = 14;
-            headerStyle.normal.textColor = (controlledPlayer == 0)
-                ? new Color(0.4f, 0.6f, 1f)
-                : new Color(1f, 0.4f, 0.4f);
-
-            float x = Screen.width - 200;
-            float y = 10;
-
-            GUI.Label(new Rect(x, y, 190, 25), "Player " + controlledPlayer + " Resources", headerStyle);
-            y += 22;
-            GUI.Label(new Rect(x, y, 190, 25), "Food: " + player.food, resourceStyle);
-            y += 22;
-            GUI.Label(new Rect(x, y, 190, 25), "Materials: " + player.materials, resourceStyle);
-            y += 22;
-            GUI.Label(new Rect(x, y, 190, 25), "Metal: " + player.metal, resourceStyle);
-            y += 30;
-
-            GUIStyle breachStyle = new GUIStyle(GUI.skin.label);
-            breachStyle.fontSize = 16;
-            breachStyle.normal.textColor = new Color(0.4f, 0.6f, 1f);
-            GUI.Label(new Rect(x, y, 190, 25), "P0 Breaches: " + state.players[0].breachCount + " / 3", breachStyle);
-            y += 20;
-            breachStyle.normal.textColor = new Color(1f, 0.4f, 0.4f);
-            GUI.Label(new Rect(x, y, 190, 25), "P1 Breaches: " + state.players[1].breachCount + " / 3", breachStyle);
-            y += 20;
-
-            GUIStyle countStyle = new GUIStyle(GUI.skin.label);
-            countStyle.fontSize = 12;
-            countStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
-            int p0Count = 0; int p1Count = 0;
-            for (int i = 0; i < state.villagers.Length; i++)
-            {
-                if (state.villagers[i].isConsumed) continue;
-                if (state.villagers[i].ownerID == 0) p0Count++; else p1Count++;
-            }
-            GUI.Label(new Rect(x, y, 190, 20), "P0: " + p0Count + "/25  P1: " + p1Count + "/25", countStyle);
-
-            // === GAME OVER ===
-            if (!state.gameOver) return;
+            if (state == null || !state.gameOver) return;
 
             GUI.color = new Color(0f, 0f, 0f, 0.7f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
@@ -435,20 +414,24 @@ namespace NodeWar.Core
             titleStyle.fontSize = 48;
             titleStyle.fontStyle = FontStyle.Bold;
             titleStyle.alignment = TextAnchor.MiddleCenter;
+            titleStyle.normal.textColor = (state.winnerID == 0)
+                ? new Color(0.3f, 0.5f, 1f)
+                : new Color(1f, 0.3f, 0.3f);
 
-            if (state.winnerID == 0)
-                titleStyle.normal.textColor = new Color(0.3f, 0.5f, 1f);
-            else
-                titleStyle.normal.textColor = new Color(1f, 0.3f, 0.3f);
-
-            GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60), "PLAYER " + state.winnerID + " WINS!", titleStyle);
+            GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60),
+                "PLAYER " + state.winnerID + " WINS!", titleStyle);
 
             GUIStyle infoStyle = new GUIStyle(GUI.skin.label);
             infoStyle.fontSize = 24;
             infoStyle.alignment = TextAnchor.MiddleCenter;
             infoStyle.normal.textColor = Color.white;
-            GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40), "Breaches - P0: " + state.players[0].breachCount + "  P1: " + state.players[1].breachCount, infoStyle);
-            GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30), "Game ended at tick " + state.tickCount, infoStyle);
+
+            GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40),
+                "Breaches - P0: " + state.players[0].breachCount +
+                "  P1: " + state.players[1].breachCount, infoStyle);
+
+            GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30),
+                "Game ended at tick " + state.tickCount, infoStyle);
         }
     }
 }

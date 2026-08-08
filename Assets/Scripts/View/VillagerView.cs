@@ -15,6 +15,7 @@ namespace NodeWar.View
         [Header("Player 0 (Blue) Colors")]
         [SerializeField] private Color p0BaseColor = new Color(0.3f, 0.6f, 1f);
         [SerializeField] private Color p0MovingColor = new Color(0.5f, 0.75f, 1f);
+        [SerializeField] private Color p0WorkingColor = new Color(0.2f, 0.8f, 0.4f);
         [SerializeField] private Color p0ClaimingColor = new Color(0.3f, 0.8f, 0.9f);
         [SerializeField] private Color p0FightingColor = new Color(0.6f, 0.3f, 1f);
         [SerializeField] private Color p0IdleColor = new Color(0.3f, 0.6f, 1f);
@@ -22,6 +23,7 @@ namespace NodeWar.View
         [Header("Player 1 (Red) Colors")]
         [SerializeField] private Color p1BaseColor = new Color(1f, 0.35f, 0.5f);
         [SerializeField] private Color p1MovingColor = new Color(1f, 0.6f, 0.4f);
+        [SerializeField] private Color p1WorkingColor = new Color(0.9f, 0.6f, 0.2f);
         [SerializeField] private Color p1ClaimingColor = new Color(1f, 0.5f, 0.7f);
         [SerializeField] private Color p1FightingColor = new Color(1f, 0.15f, 0.15f);
         [SerializeField] private Color p1IdleColor = new Color(1f, 0.35f, 0.5f);
@@ -34,6 +36,7 @@ namespace NodeWar.View
         // Movement interpolation tracking
         private Vector3 edgeStartWorldPos;
         private int lastMovePathIndex = -1;
+        private int lastTargetNodeID = -1; 
         private VillagerState lastState = VillagerState.Idle;
 
         // Cached references
@@ -97,35 +100,28 @@ namespace NodeWar.View
         {
             VillagerData villager = simState.villagers[villagerID];
 
-            if (villager.state == VillagerState.Dead || villager.isConsumed)
-            {
-                SetRenderersEnabled(false);
-                return;
-            }
-            else
-            {
-                SetRenderersEnabled(true);
-            }
+            // === Visibility ===
+            ApplyVisualState(villager);
 
+            if (villager.state == VillagerState.Dead || villager.isConsumed)
+                return;
 
             // === Position ===
             Vector3 targetPos;
-            VillagerData villager_current = villager; // alias for clarity
 
             if (villager.state == VillagerState.Moving && villager.movePath.Length > 1 && tickRunner != null)
             {
-                // Detect if we just started moving or advanced to a new edge
                 bool justStartedMoving = (lastState != VillagerState.Moving);
-                bool advancedEdge = (villager.movePathIndex != lastMovePathIndex && !justStartedMoving);
+                bool wasRerouted = (!justStartedMoving && villager.targetNodeID != lastTargetNodeID && lastTargetNodeID != -1);
+                bool advancedEdge = (!justStartedMoving && !wasRerouted &&
+                                     villager.movePathIndex != lastMovePathIndex);
 
-                if (justStartedMoving)
+                if (justStartedMoving || wasRerouted)
                 {
-                    // Started a new path — lerp from wherever we physically are right now
                     edgeStartWorldPos = transform.position;
                 }
                 else if (advancedEdge)
                 {
-                    // Crossed into a new node — start from that node's idle position
                     int arrivedNodeID = villager.movePath[villager.movePathIndex];
                     if (nodeSlotManagers != null && arrivedNodeID < nodeSlotManagers.Length)
                     {
@@ -139,12 +135,11 @@ namespace NodeWar.View
                         edgeStartWorldPos = simState.nodes[arrivedNodeID].worldPosition;
                     }
                 }
-                //adjust height
+
                 edgeStartWorldPos.y = VillagerViewHeight;
-
                 lastMovePathIndex = villager.movePathIndex;
+                lastTargetNodeID = villager.targetNodeID;
 
-                // Destination: idle position on the NEXT node in path
                 Vector3 toPos;
                 if (villager.movePathIndex + 1 < villager.movePath.Length)
                 {
@@ -152,7 +147,6 @@ namespace NodeWar.View
                     if (nodeSlotManagers != null && nextNodeID < nodeSlotManagers.Length)
                     {
                         NodeSlotManager nextSlotManager = nodeSlotManagers[nextNodeID];
-                        // Use a generic idle position (index 0 of 1) as the approach target
                         toPos = nextSlotManager.GetIdlePosition(0, 1);
                     }
                     else
@@ -162,12 +156,13 @@ namespace NodeWar.View
                 }
                 else
                 {
-                    toPos = edgeStartWorldPos; // shouldn't happen, safety
+                    toPos = edgeStartWorldPos;
                 }
                 toPos.y = VillagerViewHeight;
 
-                // Calculate lerp alpha
-                int edgeWeight = GameSimulation.GetEdgeWeight(simState, villager.movePath[villager.movePathIndex], villager.movePath[villager.movePathIndex + 1]);
+                int edgeWeight = GameSimulation.GetEdgeWeight(simState,
+                    villager.movePath[villager.movePathIndex],
+                    villager.movePath[villager.movePathIndex + 1]);
                 int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
 
                 float edgeProgress = (float)villager.moveProgress / (float)totalTicksForEdge;
@@ -178,7 +173,6 @@ namespace NodeWar.View
             }
             else if (nodeSlotManagers != null && villager.currentNodeID < nodeSlotManagers.Length)
             {
-                // Not moving — use slot positions
                 NodeSlotManager slotManager = nodeSlotManagers[villager.currentNodeID];
 
                 switch (villager.state)
@@ -200,27 +194,26 @@ namespace NodeWar.View
                         targetPos = slotManager.GetFightPosition(fightIndex, totalFighting);
                         break;
 
-                    default: // Idle
+                    default:
                         int idleIndex = GetLocalIndex(villager.currentNodeID, villager.ownerID, VillagerState.Idle);
                         int totalIdle = GetTotalOnNode(villager.currentNodeID, villager.ownerID, VillagerState.Idle);
                         targetPos = slotManager.GetIdlePosition(idleIndex, totalIdle);
                         break;
                 }
 
-                // Reset tracking when not moving
                 lastMovePathIndex = -1;
+                lastTargetNodeID = -1;
             }
             else
             {
                 targetPos = simState.nodes[villager.currentNodeID].worldPosition;
                 lastMovePathIndex = -1;
+                lastTargetNodeID = -1;
             }
 
-            // Track state for next frame's transition detection
             lastState = villager.state;
             targetPos.y = VillagerViewHeight;
 
-            // Moving: use precise tick-based position. Not moving: smooth lerp to slot.
             if (villager.state == VillagerState.Moving)
             {
                 transform.position = targetPos;
@@ -229,13 +222,27 @@ namespace NodeWar.View
             {
                 transform.position = Vector3.Lerp(transform.position, targetPos, slotLerpSpeed * Time.deltaTime);
             }
-            // === Color ===
-            Color stateColor = GetStateColor(villager);
-            SetRenderersColor(stateColor);
-            // Debug: update hierarchy name to reflect current state
+
 #if UNITY_EDITOR
             gameObject.name = "V_" + villagerID + "_P" + villager.ownerID + "_" + villager.suit + "_" + villager.state;
-            #endif
+#endif
+        }
+
+        /// <summary>
+        /// Single entry point for all visual state: renderer enable/disable and color.
+        /// Future additions (animator, sprite swap, costume overlays) go here.
+        /// </summary>
+        private void ApplyVisualState(VillagerData villager)
+        {
+            if (villager.state == VillagerState.Dead || villager.isConsumed)
+            {
+                SetRenderersEnabled(false);
+                return;
+            }
+
+            SetRenderersEnabled(true);
+            Color stateColor = GetStateColor(villager);
+            SetRenderersColor(stateColor);
         }
 
         private void SetRenderersColor(Color color)
@@ -255,10 +262,10 @@ namespace NodeWar.View
                 switch (villager.state)
                 {
                     case VillagerState.Moving: return p0MovingColor;
+                    case VillagerState.Working: return p0WorkingColor;
                     case VillagerState.Claiming: return p0ClaimingColor;
                     case VillagerState.Fighting: return p0FightingColor;
                     case VillagerState.Idle: return p0IdleColor;
-                    case VillagerState.Working: return p0BaseColor;
                     default: return p0BaseColor;
                 }
             }
@@ -267,10 +274,10 @@ namespace NodeWar.View
                 switch (villager.state)
                 {
                     case VillagerState.Moving: return p1MovingColor;
+                    case VillagerState.Working: return p1WorkingColor;
                     case VillagerState.Claiming: return p1ClaimingColor;
                     case VillagerState.Fighting: return p1FightingColor;
                     case VillagerState.Idle: return p1IdleColor;
-                    case VillagerState.Working: return p1BaseColor;
                     default: return p1BaseColor;
                 }
             }

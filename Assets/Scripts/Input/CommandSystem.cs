@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using NodeWar.Simulation;
+using UnityEngine.EventSystems;
 
 namespace NodeWar.Input
 {
@@ -61,46 +62,35 @@ namespace NodeWar.Input
 
         private void TryIssueMoveCommand()
         {
-            Debug.Log("[CMD] TryIssueMoveCommand. Selected count: " + selectionSystem.SelectedVillagerIDs.Count);
+            //if (UnityEngine.EventSystems.EventSystem.current != null &&
+            //    UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            //    return;
 
             if (selectionSystem.SelectedVillagerIDs.Count == 0)
             {
-                Debug.Log("[CMD] No villagers selected. Aborting.");
                 return;
             }
-
-            Debug.Log("[CMD] Villagers selected: ");
-            for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
-                Debug.Log("[CMD]   ID: " + selectionSystem.SelectedVillagerIDs[i]);
 
             Vector2 screenPos = Mouse.current.position.ReadValue();
             Ray ray = mainCam.ScreenPointToRay(screenPos);
 
             // Draw the ray for 20 seconds in the Scene view
-            Debug.DrawRay(ray.origin, ray.direction * 100f, Color.yellow, 20f);
-
-            Debug.Log("[CMD] Raycast from screen: " + screenPos + " Ray origin: " + ray.origin + " dir: " + ray.direction);
-            Debug.Log("[CMD] Node layer mask value: " + nodeLayer.value);
+            //Debug.DrawRay(ray.origin, ray.direction * 100f, Color.yellow, 20f);
 
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, 100f, nodeLayer))
             {
-                // Green = hit
                 Debug.DrawLine(ray.origin, hit.point, Color.green, 20f);
-
-                Debug.Log("[CMD] Raycast HIT: " + hit.collider.gameObject.name + " layer: " + hit.collider.gameObject.layer);
 
                 NodeWar.View.NodeView nodeView = hit.collider.GetComponentInParent<NodeWar.View.NodeView>();
                 if (nodeView != null)
                 {
                     int targetNode = nodeView.GetNodeID();
-                    Debug.Log("[CMD] Target node: " + targetNode);
 
                     for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
                     {
                         int villagerID = selectionSystem.SelectedVillagerIDs[i];
                         int currentNode = simState.villagers[villagerID].currentNodeID;
-                        Debug.Log("[CMD] Issuing move for villager " + villagerID + " from node " + currentNode + " to node " + targetNode);
 
                         GameCommand cmd = new GameCommand
                         {
@@ -128,22 +118,6 @@ namespace NodeWar.Input
             {
                 // Red = miss
                 Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 20f);
-
-                Debug.Log("[CMD] Raycast MISSED on node layer.");
-
-                RaycastHit debugHit;
-                if (Physics.Raycast(ray, out debugHit, 100f))
-                {
-                    // Cyan = hit something, but not on the node layer
-                    Debug.DrawLine(ray.origin, debugHit.point, Color.cyan, 20f);
-
-                    Debug.Log("[CMD] (debug no-mask hit: " + debugHit.collider.gameObject.name + " layer: " + debugHit.collider.gameObject.layer + ")");
-                }
-                else
-                {
-                    Debug.DrawRay(ray.origin, ray.direction * 100f, Color.magenta, 20f);
-                    Debug.Log("[CMD] (debug no-mask also missed)");
-                }
             }
         }
 
