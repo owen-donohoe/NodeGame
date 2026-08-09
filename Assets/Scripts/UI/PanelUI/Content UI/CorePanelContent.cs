@@ -19,7 +19,7 @@ namespace NodeWar.UI
         [SerializeField] private GameObject respawnEntryPrefab;
 
         private SimulationState simState;
-        private NodeWar.Core.TickRunner tickRunner;
+        private NodeWar.Core.ITickProvider tickProvider;
         private InputBuffer inputBuffer;
         private int nodeID;
         private int controlledPID;
@@ -28,11 +28,11 @@ namespace NodeWar.UI
         private List<RespawnEntryDisplay> activeEntries = new List<RespawnEntryDisplay>();
         private List<int> trackedVillagerIDs = new List<int>();
 
-        public void Initialize(SimulationState state, NodeWar.Core.TickRunner runner,
-            InputBuffer buffer, int node, int pid)
+        public void Initialize(SimulationState state, NodeWar.Core.ITickProvider provider,
+                                InputBuffer buffer, int node, int pid)
         {
             simState = state;
-            tickRunner = runner;
+            tickProvider = provider;
             inputBuffer = buffer;
             nodeID = node;
             controlledPID = pid;
@@ -75,7 +75,7 @@ namespace NodeWar.UI
             // Update each entry's progress
             for (int i = 0; i < activeEntries.Count; i++)
             {
-                activeEntries[i].Refresh(simState, tickRunner);
+                activeEntries[i].Refresh(simState, tickProvider);
             }
         }
 

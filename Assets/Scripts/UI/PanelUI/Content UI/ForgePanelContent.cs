@@ -29,17 +29,17 @@ namespace NodeWar.UI
         [SerializeField] private AllocationWheel allocationWheel;
 
         private SimulationState simState;
-        private NodeWar.Core.TickRunner tickRunner;
+        private NodeWar.Core.ITickProvider tickProvider;
         private InputBuffer inputBuffer;
         private int nodeID;
         private int controlledPID;
         private bool isOwned;
 
-        public void Initialize(SimulationState state, NodeWar.Core.TickRunner runner,
-            InputBuffer buffer, int node, int pid, bool owned)
+        public void Initialize(SimulationState state, NodeWar.Core.ITickProvider provider,
+                               InputBuffer buffer, int node, int pid, bool owned)
         {
             simState = state;
-            tickRunner = runner;
+            tickProvider = provider;
             inputBuffer = buffer;
             nodeID = node;
             controlledPID = pid;
@@ -102,7 +102,7 @@ namespace NodeWar.UI
             if (v.productionTicksMax <= 0) { fill.fillAmount = 0f; return; }
 
             float rawFill = 1f - ((float)v.productionTicksRemaining / v.productionTicksMax);
-            float subTickBonus = (1f / v.productionTicksMax) * tickRunner.TickAlpha;
+            float subTickBonus = (1f / v.productionTicksMax) * tickProvider.TickAlpha;
             fill.fillAmount = Mathf.Clamp01(rawFill + subTickBonus);
         }
     }

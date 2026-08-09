@@ -44,7 +44,7 @@ namespace NodeWar.View
         private MaterialPropertyBlock[] propBlocks;
         private Transform gfxTransform;
 
-        private NodeWar.Core.TickRunner tickRunner;
+        private NodeWar.Core.ITickProvider tickProvider;
         private SelectionSystem selectionSystem;
         private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
 
@@ -74,9 +74,9 @@ namespace NodeWar.View
             UpdateVisuals();
         }
 
-        public void SetTickRunner(NodeWar.Core.TickRunner runner)
+        public void SetTickProvider(NodeWar.Core.ITickProvider provider)
         {
-            tickRunner = runner;
+            tickProvider = provider;
         }
 
         public void SetSelectionSystem(SelectionSystem system)
@@ -109,7 +109,7 @@ namespace NodeWar.View
             // === Position ===
             Vector3 targetPos;
 
-            if (villager.state == VillagerState.Moving && villager.movePath.Length > 1 && tickRunner != null)
+            if (villager.state == VillagerState.Moving && villager.movePath.Length > 1 && tickProvider != null)
             {
                 bool justStartedMoving = (lastState != VillagerState.Moving);
                 bool wasRerouted = (!justStartedMoving && villager.targetNodeID != lastTargetNodeID && lastTargetNodeID != -1);
@@ -166,7 +166,7 @@ namespace NodeWar.View
                 int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
 
                 float edgeProgress = (float)villager.moveProgress / (float)totalTicksForEdge;
-                float subTickAlpha = tickRunner.TickAlpha / (float)totalTicksForEdge;
+                float subTickAlpha = tickProvider.TickAlpha / (float)totalTicksForEdge;
                 float totalAlpha = Mathf.Clamp01(edgeProgress + subTickAlpha);
 
                 targetPos = Vector3.Lerp(edgeStartWorldPos, toPos, totalAlpha);

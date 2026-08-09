@@ -506,6 +506,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 444578f4e215f25448a87eb60072064b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Core.GameManager
+  networkMode: 1
   nodePrefabDefault: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
   nodePrefabCore: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
   nodePrefabFarm: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
@@ -520,11 +521,11 @@ MonoBehaviour:
   startingFood: 5
   startingMaterials: 3
   startingMetal: 0
-  ownedMultiplier: 0.5
-  partiallyOwnedMultiplier: 0.75
-  unownedMultiplier: 1
-  enemyPartiallyOwnedMultiplier: 1.5
-  enemyOwnedMultiplier: 2
+  ownedMultiplier: 50
+  partiallyOwnedMultiplier: 75
+  unownedMultiplier: 100
+  enemyPartiallyOwnedMultiplier: 150
+  enemyOwnedMultiplier: 200
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
   state:
     nodes: []

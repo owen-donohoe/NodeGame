@@ -3,7 +3,7 @@ using NodeWar.Simulation;
 
 namespace NodeWar.Core
 {
-    public class TickRunner : MonoBehaviour
+    public class TickRunner : MonoBehaviour, ITickProvider
     {
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
@@ -22,10 +22,6 @@ namespace NodeWar.Core
             accumulator = 0f;
         }
 
-        /// <summary>
-        /// Returns normalized progress (0-1) between last tick and next tick.
-        /// Used by View layer for interpolation.
-        /// </summary>
         public float TickAlpha
         {
             get { return accumulator / tickInterval; }
@@ -40,13 +36,9 @@ namespace NodeWar.Core
 
             while (accumulator >= tickInterval)
             {
-                // Process all buffered commands before simulating
                 ProcessBufferedCommands();
-
-                // Simulate one tick
                 GameSimulation.SimulateTick(simState);
 
-                // TEMP: verify hasher produces consistent results
                 if (simState.tickCount % 50 == 0)
                 {
                     int hash = SimulationStateHasher.ComputeHash(simState);

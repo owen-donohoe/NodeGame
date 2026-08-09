@@ -4,18 +4,13 @@ using NodeWar.Input;
 
 namespace NodeWar.Debugging
 {
-    /// <summary>
-    /// Debug tool: Press Tab to toggle which player the local input controls.
-    /// Displays current controlled player in top-left corner.
-    /// Allows testing combat and breach with a single keyboard/mouse.
-    /// </summary>
     public class DebugPlayerSwitch : MonoBehaviour
     {
         private SelectionSystem selectionSystem;
         private CommandSystem commandSystem;
         private int currentPlayerID = 0;
+        private bool isLocked = false;
 
-        // UI
         private GUIStyle labelStyle;
         private bool styleInitialized = false;
 
@@ -25,8 +20,25 @@ namespace NodeWar.Debugging
             commandSystem = command;
         }
 
+        /// <summary>
+        /// Lock to a fixed player ID. Used in networked mode.
+        /// Tab key does nothing while locked.
+        /// </summary>
+        public void LockToPlayer(int playerID)
+        {
+            currentPlayerID = playerID;
+            isLocked = true;
+
+            if (selectionSystem != null)
+                selectionSystem.SetPlayerID(playerID);
+            if (commandSystem != null)
+                commandSystem.SetPlayerID(playerID);
+        }
+
         private void Update()
         {
+            if (isLocked) return;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -66,16 +78,18 @@ namespace NodeWar.Debugging
             if (currentPlayerID == 0)
             {
                 labelStyle.normal.textColor = new Color(0.3f, 0.5f, 1f);
-                text = "CONTROLLING: P0 (Blue)";
+                text = isLocked ? "PLAYER 0 (Blue) [ONLINE]" : "CONTROLLING: P0 (Blue)";
             }
             else
             {
                 labelStyle.normal.textColor = new Color(1f, 0.3f, 0.3f);
-                text = "CONTROLLING: P1 (Red)";
+                text = isLocked ? "PLAYER 1 (Red) [ONLINE]" : "CONTROLLING: P1 (Red)";
             }
 
             GUI.Label(new Rect(10, 10, 400, 40), text, labelStyle);
-            GUI.Label(new Rect(10, 40, 400, 30), "[Tab] to switch", GUI.skin.label);
+
+            if (!isLocked)
+                GUI.Label(new Rect(10, 40, 400, 30), "[Tab] to switch", GUI.skin.label);
         }
     }
 }

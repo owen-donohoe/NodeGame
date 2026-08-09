@@ -44,7 +44,7 @@ namespace NodeWar.UI
             skipButton.onClick.AddListener(OnSkipClicked);
         }
 
-        public void Refresh(SimulationState state, NodeWar.Core.TickRunner runner)
+        public void Refresh(SimulationState state, NodeWar.Core.ITickProvider provider)
         {
             if (villagerID >= state.villagers.Length) return;
             VillagerData v = state.villagers[villagerID];
@@ -57,7 +57,7 @@ namespace NodeWar.UI
             }
 
             float rawFill = 1f - ((float)v.respawnTicksRemaining / RESPAWN_TICKS);
-            float subTick = (1f / RESPAWN_TICKS) * runner.TickAlpha;
+            float subTick = (1f / RESPAWN_TICKS) * provider.TickAlpha;
             barFill.fillAmount = Mathf.Clamp01(rawFill + subTick);
 
             // Skip button: grey out if no food

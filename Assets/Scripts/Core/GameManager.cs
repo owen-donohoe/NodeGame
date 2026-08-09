@@ -3,12 +3,16 @@ using NodeWar.Simulation;
 using NodeWar.Input;
 using NodeWar.Debugging;
 using NodeWar.UI;
+using NodeWar.Network;
 using System.Collections.Generic;
 
 namespace NodeWar.Core
 {
     public class GameManager : MonoBehaviour
     {
+        [Header("Mode")]
+        [SerializeField] private bool networkMode = false;
+
         [Header("Node Prefabs (assign per district type)")]
         [SerializeField] private GameObject nodePrefabDefault;
         [SerializeField] private GameObject nodePrefabCore;
@@ -31,7 +35,7 @@ namespace NodeWar.Core
         [SerializeField] private int startingMaterials = 3;
         [SerializeField] private int startingMetal = 0;
 
-        [Header("Pathfinding Preference (integer percentages: 50=0.5x, 100=1x, 200=2x)")]
+        [Header("Pathfinding Preference (integer percentages)")]
         [SerializeField] private int ownedMultiplier = 50;
         [SerializeField] private int partiallyOwnedMultiplier = 75;
         [SerializeField] private int unownedMultiplier = 100;
@@ -40,16 +44,14 @@ namespace NodeWar.Core
 
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
-        private NodeWar.UI.NodePanelManager nodePanelManager;
+        private NodePanelManager nodePanelManager;
 
         [Header("Runtime")]
         public SimulationState state;
 
-        // --- add these ---
         private DebugPlayerSwitch debugPlayerSwitch;
-        private NodeWar.UI.HUDManager hudManager;
+        private HUDManager hudManager;
 
-        // Grid dimensions
         private const int GRID_COLS = 4;
         private const int GRID_ROWS = 7;
 
@@ -57,7 +59,7 @@ namespace NodeWar.Core
         private Transform villagerParent;
 
         private InputBuffer inputBuffer;
-        private TickRunner tickRunner;
+        private ITickProvider tickProvider;
         private SelectionSystem selectionSystem;
         private CommandSystem commandSystem;
 
@@ -66,8 +68,14 @@ namespace NodeWar.Core
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
 
+        // Network references
+        private LobbyUI lobbyUI;
+        private LockstepRunner lockstepRunner;
+
         private void Awake()
         {
+            Application.runInBackground = true;
+
             state = new SimulationState();
             inputBuffer = new InputBuffer();
 
@@ -77,19 +85,25 @@ namespace NodeWar.Core
             Pathfinding.EnemyPartiallyOwnedMultiplier = enemyPartiallyOwnedMultiplier;
             Pathfinding.EnemyOwnedMultiplier = enemyOwnedMultiplier;
 
-
             InitializeNodes();
             InitializePlayers();
             InitializeVillagers();
 
-            InitializeSystems();
+            InitializeInputSystems();
 
             SpawnNodeViews();
             SpawnVillagerViews();
 
-            InitializeUI();
-
             trackedVillagerCount = state.villagers.Length;
+
+            if (networkMode)
+            {
+                StartNetworkLobby();
+            }
+            else
+            {
+                StartLocalPlay();
+            }
         }
 
         private void Update()
@@ -101,11 +115,15 @@ namespace NodeWar.Core
             }
         }
 
-        private void InitializeSystems()
-        {
-            tickRunner = gameObject.AddComponent<TickRunner>();
-            tickRunner.Initialize(state, inputBuffer);
+        // ===== SYSTEM INITIALIZATION =====
 
+        /// <summary>
+        /// Creates SelectionSystem, CommandSystem, DebugPlayerSwitch, and lasso.
+        /// These are always needed regardless of local/network mode.
+        /// Player ID is set to 0 initially; corrected on network connect.
+        /// </summary>
+        private void InitializeInputSystems()
+        {
             selectionSystem = gameObject.AddComponent<SelectionSystem>();
             selectionSystem.Initialize(state, 0);
 
@@ -118,10 +136,74 @@ namespace NodeWar.Core
             CreateSelectionLasso();
         }
 
+        /// <summary>
+        /// Local multiplayer: add TickRunner, initialize UI immediately.
+        /// </summary>
+        private void StartLocalPlay()
+        {
+            TickRunner tickRunner = gameObject.AddComponent<TickRunner>();
+            tickRunner.Initialize(state, inputBuffer);
+            tickProvider = tickRunner;
+
+            InitializeUI();
+        }
+
+        /// <summary>
+        /// Network mode: show lobby, wait for connection before starting tick loop.
+        /// </summary>
+        private void StartNetworkLobby()
+        {
+            GameObject lobbyGO = new GameObject("LobbyUI");
+            lobbyUI = lobbyGO.AddComponent<LobbyUI>();
+            lobbyUI.OnConnectionEstablished += OnNetworkConnected;
+        }
+
+        /// <summary>
+        /// Called when LobbyUI signals both players are connected.
+        /// Sets up LockstepRunner and locks input to the correct player.
+        /// </summary>
+        private void OnNetworkConnected()
+        {
+            int localPlayerID = lobbyUI.LocalPlayerID;
+            NetworkManager netManager = lobbyUI.NetManager;
+
+            // Lock input to this player (no Tab-switching in online mode)
+            debugPlayerSwitch.LockToPlayer(localPlayerID);
+
+            // Create LockstepRunner (replaces TickRunner)
+            lockstepRunner = gameObject.AddComponent<LockstepRunner>();
+            lockstepRunner.Initialize(state, inputBuffer, netManager, localPlayerID);
+            lockstepRunner.OnDisconnect += OnNetworkDisconnect;
+            lockstepRunner.OnDesync += OnDesyncDetected;
+            tickProvider = lockstepRunner;
+
+            // Initialize UI now that we know who we are
+            InitializeUI();
+
+            // Clean up lobby
+            lobbyUI.OnConnectionEstablished -= OnNetworkConnected;
+            lobbyUI.enabled = false;
+
+            Debug.Log("[GameManager] Network match started. Local player: " + localPlayerID);
+        }
+
+        private void OnNetworkDisconnect()
+        {
+            Debug.LogError("[GameManager] Opponent disconnected.");
+            // TODO: Show disconnect UI and return to menu.
+            // For prototype: just log it. The game freezes (LockstepRunner disabled itself).
+        }
+
+        private void OnDesyncDetected(int tick)
+        {
+            Debug.LogError("[GameManager] DESYNC at tick " + tick + "! Determinism bug exists.");
+            // For prototype: log and continue. In production: end match.
+        }
+
         private void CreateSelectionLasso()
         {
             GameObject lassoGO = new GameObject("SelectionLasso");
-            NodeWar.UI.SelectionLasso lasso = lassoGO.AddComponent<NodeWar.UI.SelectionLasso>();
+            SelectionLasso lasso = lassoGO.AddComponent<SelectionLasso>();
             lasso.Initialize(selectionSystem);
         }
 
@@ -131,15 +213,6 @@ namespace NodeWar.Core
         {
             int nodeCount = GRID_COLS * GRID_ROWS;
             state.nodes = new NodeData[nodeCount];
-
-            // District type layout (row by row, bottom to top)
-            // Row 0: None,     None,      Core_P1,    None
-            // Row 1: None,     Mine,      Farm,       None
-            // Row 2: Mine,     Barracks,  Village,    Farm
-            // Row 3: Forge,    None,      None,       Forge
-            // Row 4: Farm,     Village,   Barracks,   Mine
-            // Row 5: None,     Farm,      Mine,       None
-            // Row 6: None,     Core_P0,   None,       None
 
             DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
             layout[0, 0] = DistrictType.None; layout[0, 1] = DistrictType.None; layout[0, 2] = DistrictType.Core; layout[0, 3] = DistrictType.None;
@@ -156,13 +229,11 @@ namespace NodeWar.Core
                 {
                     int nodeID = z * GRID_COLS + x;
 
-                    //System.Collections.Generic.List<int> neighbors = new System.Collections.Generic.List<int>();
-
                     List<int> neighborIDs = new List<int>();
-                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));             // left
-                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1)); // right
-                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);             // down
-                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x); // up
+                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
+                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
+                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
+                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
 
                     Edge[] edges = new Edge[neighborIDs.Count];
                     for (int i = 0; i < neighborIDs.Count; i++)
@@ -170,20 +241,13 @@ namespace NodeWar.Core
                         edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = defaultEdgeWeight };
                     }
 
-                    int[] connectedNodes = neighborIDs.ToArray();
-                    int[] edgeWeights = new int[connectedNodes.Length];
-                    for (int i = 0; i < edgeWeights.Length; i++)
-                        edgeWeights[i] = defaultEdgeWeight;
-
-                    // Bonus villagers: only Villages get bonus
                     int bonus = 0;
                     if (layout[z, x] == DistrictType.Village) bonus = 2;
 
-                    // Determine owner for cores
                     int ownerID = -1;
                     int claimBar = 0;
-                    if (z == 6 && x == 1) { ownerID = 0; claimBar = 10000; }  // P0 core
-                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -10000; } // P1 core
+                    if (z == 6 && x == 1) { ownerID = 0; claimBar = 10000; }
+                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -10000; }
 
                     state.nodes[nodeID] = new NodeData
                     {
@@ -205,9 +269,6 @@ namespace NodeWar.Core
         private void InitializePlayers()
         {
             state.players = new PlayerData[2];
-
-            // P0 core is node at grid (1, 6) = index 6*4+1 = 25
-            // P1 core is node at grid (2, 0) = index 0*4+2 = 2
 
             state.players[0] = new PlayerData
             {
@@ -285,9 +346,8 @@ namespace NodeWar.Core
 
             nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
             if (nodePanelManager != null)
-                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickRunner);
+                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickProvider);
         }
-
 
         // ===== VIEW SPAWNING =====
 
@@ -318,31 +378,21 @@ namespace NodeWar.Core
                 GameObject prefab = GetPrefabForDistrict(state.nodes[i].districtType);
                 GameObject nodeGO = Instantiate(prefab, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
-
-                //scale
-                //nodeGO.transform.localScale = Vector3.one * nodeScale;
-                //position
                 nodeGO.transform.position = state.nodes[i].worldPosition;
 
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
-                {
                     view.Initialize(state, i);
-                }
 
-                // Initialize or add NodeSlotManager
                 NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
                 if (slotManager == null)
                     slotManager = nodeGO.AddComponent<NodeWar.View.NodeSlotManager>();
                 slotManager.Initialize(i, nodeScale);
                 nodeSlotManagers[i] = slotManager;
 
-                // Claim bar
-                NodeWar.UI.NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeWar.UI.NodeClaimBar>();
+                NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeClaimBar>();
                 if (claimBar != null)
-                {
                     claimBar.Initialize(state, i);
-                }
             }
         }
 
@@ -361,7 +411,6 @@ namespace NodeWar.Core
 
         private void SpawnNewVillagerViews(int fromIndex, int toIndex)
         {
-            // Grow transforms array
             Transform[] newArray = new Transform[toIndex];
             for (int i = 0; i < villagerTransforms.Length; i++)
                 newArray[i] = villagerTransforms[i];
@@ -378,9 +427,9 @@ namespace NodeWar.Core
         private void SpawnSingleVillagerView(int index)
         {
             GameObject villagerGO = Instantiate(villagerPrefab, villagerParent);
-            villagerGO.name = "V_" + index + "_P" + state.villagers[index].ownerID + "_" + state.villagers[index].suit + "_" + state.villagers[index].state;
+            villagerGO.name = "V_" + index + "_P" + state.villagers[index].ownerID +
+                "_" + state.villagers[index].suit + "_" + state.villagers[index].state;
 
-            // Store transform for selection system
             if (index < villagerTransforms.Length)
                 villagerTransforms[index] = villagerGO.transform;
 
@@ -388,16 +437,14 @@ namespace NodeWar.Core
             if (view != null)
             {
                 view.Initialize(state, index);
-                view.SetTickRunner(tickRunner);
+                view.SetTickProvider(tickProvider);
                 view.SetSelectionSystem(selectionSystem);
                 view.SetNodeSlotManagers(nodeSlotManagers);
             }
 
-            NodeWar.UI.VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<NodeWar.UI.VillagerHealthRing>();
+            VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<VillagerHealthRing>();
             if (healthRing != null)
-            {
                 healthRing.Initialize(state, index);
-            }
         }
 
         // ===== GUI =====

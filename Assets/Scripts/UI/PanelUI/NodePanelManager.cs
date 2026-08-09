@@ -41,7 +41,7 @@ namespace NodeWar.UI
         private InputBuffer inputBuffer;
         private SelectionSystem selectionSystem;
         private DebugPlayerSwitch debugPlayerSwitch;
-        private NodeWar.Core.TickRunner tickRunner;
+        private NodeWar.Core.ITickProvider tickProvider;
 
         private int currentNodeID = -1;
         private bool isOpen = false;
@@ -54,15 +54,15 @@ namespace NodeWar.UI
 
         private LayerMask villagerLayer;
 
-        public void Initialize(SimulationState state, InputBuffer buffer,
-            SelectionSystem selection, DebugPlayerSwitch debugSwitch,
-            NodeWar.Core.TickRunner runner)
+        public void Initialize(SimulationState state, InputBuffer buffer, 
+                                SelectionSystem selection, DebugPlayerSwitch debugSwitch, 
+                                 NodeWar.Core.ITickProvider provider)
         {
             simState = state;
             inputBuffer = buffer;
             selectionSystem = selection;
             debugPlayerSwitch = debugSwitch;
-            tickRunner = runner;
+            tickProvider = provider;
             mainCam = Camera.main;
             nodeLayer = LayerMask.GetMask("Nodes");
             villagerLayer = LayerMask.GetMask("Villagers");  // add this
@@ -230,21 +230,21 @@ namespace NodeWar.UI
             ProductionPanelContent prodContent = currentContent.GetComponent<ProductionPanelContent>();
             if (prodContent != null)
             {
-                prodContent.Initialize(simState, tickRunner, currentNodeID, controlledPID, isOwned);
+                prodContent.Initialize(simState, tickProvider, currentNodeID, controlledPID, isOwned);
                 return;
             }
 
             ForgePanelContent forgeContent = currentContent.GetComponent<ForgePanelContent>();
             if (forgeContent != null)
             {
-                forgeContent.Initialize(simState, tickRunner, inputBuffer, currentNodeID, controlledPID, isOwned);
+                forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned);
                 return;
             }
 
             CorePanelContent coreContent = currentContent.GetComponent<CorePanelContent>();
             if (coreContent != null)
             {
-                coreContent.Initialize(simState, tickRunner, inputBuffer, currentNodeID, controlledPID);
+                coreContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID);
                 return;
             }
 
