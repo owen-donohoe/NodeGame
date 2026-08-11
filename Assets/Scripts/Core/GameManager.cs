@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using NodeWar.Simulation;
 using NodeWar.Input;
 using NodeWar.Debugging;
@@ -10,9 +11,6 @@ namespace NodeWar.Core
 {
     public class GameManager : MonoBehaviour
     {
-        [Header("Mode")]
-        [SerializeField] private bool networkMode = false;
-
         [Header("Node Prefabs (assign per district type)")]
         [SerializeField] private GameObject nodePrefabDefault;
         [SerializeField] private GameObject nodePrefabCore;
@@ -45,6 +43,7 @@ namespace NodeWar.Core
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
+        private GameOverPanel gameOverPanel;
 
         [Header("Runtime")]
         public SimulationState state;
@@ -69,8 +68,11 @@ namespace NodeWar.Core
         private Transform[] villagerTransforms;
 
         // Network references
-        private LobbyUI lobbyUI;
         private LockstepRunner lockstepRunner;
+        private NodeWar.Input.BotPlayer botPlayer;
+
+        // Game over tracking
+        private bool gameOverHandled = false;
 
         private void Awake()
         {
@@ -85,43 +87,66 @@ namespace NodeWar.Core
             Pathfinding.EnemyPartiallyOwnedMultiplier = enemyPartiallyOwnedMultiplier;
             Pathfinding.EnemyOwnedMultiplier = enemyOwnedMultiplier;
 
+            // 1. Initialize simulation state
             InitializeNodes();
             InitializePlayers();
             InitializeVillagers();
 
+            // 2. Initialize input systems
             InitializeInputSystems();
 
+            // 3. Create tick provider (BEFORE views so they receive a valid reference)
+            MatchConnection match = MatchConnection.Instance;
+
+            if (match != null && match.isNetworked)
+            {
+                StartNetworkPlay(match);
+            }
+            else
+            {
+                StartLocalPlay();
+
+                // Create bot if this is a bot match
+                if (match != null && match.isBotMatch)
+                {
+                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1);
+                    debugPlayerSwitch.LockToPlayer(0);
+
+                    TickRunner runner = GetComponent<TickRunner>();
+                    if (runner != null)
+                        runner.SetBot(botPlayer);
+                }
+            }
+
+            // 4. Spawn views (tickProvider is now valid)
             SpawnNodeViews();
             SpawnVillagerViews();
 
             trackedVillagerCount = state.villagers.Length;
 
-            if (networkMode)
-            {
-                StartNetworkLobby();
-            }
-            else
-            {
-                StartLocalPlay();
-            }
+            // 5. Initialize UI (tickProvider is valid, views exist)
+            InitializeUI();
         }
 
         private void Update()
         {
+            // Spawn views for bonus villagers
             if (state.villagers.Length > trackedVillagerCount)
             {
                 SpawnNewVillagerViews(trackedVillagerCount, state.villagers.Length);
                 trackedVillagerCount = state.villagers.Length;
             }
+
+            // Detect game over
+            if (state.gameOver && !gameOverHandled)
+            {
+                gameOverHandled = true;
+                ShowGameOver();
+            }
         }
 
         // ===== SYSTEM INITIALIZATION =====
 
-        /// <summary>
-        /// Creates SelectionSystem, CommandSystem, DebugPlayerSwitch, and lasso.
-        /// These are always needed regardless of local/network mode.
-        /// Player ID is set to 0 initially; corrected on network connect.
-        /// </summary>
         private void InitializeInputSystems()
         {
             selectionSystem = gameObject.AddComponent<SelectionSystem>();
@@ -137,7 +162,7 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Local multiplayer: add TickRunner, initialize UI immediately.
+        /// Local play: create TickRunner. Sets tickProvider.
         /// </summary>
         private void StartLocalPlay()
         {
@@ -145,44 +170,25 @@ namespace NodeWar.Core
             tickRunner.Initialize(state, inputBuffer);
             tickProvider = tickRunner;
 
-            InitializeUI();
+            // Wire bot if this is a bot match (botPlayer created after this call in Awake)
+            // Defer wire-up to after bot creation — handled below
         }
 
         /// <summary>
-        /// Network mode: show lobby, wait for connection before starting tick loop.
+        /// Network play: create LockstepRunner from MatchConnection data. Sets tickProvider.
         /// </summary>
-        private void StartNetworkLobby()
+        private void StartNetworkPlay(MatchConnection match)
         {
-            GameObject lobbyGO = new GameObject("LobbyUI");
-            lobbyUI = lobbyGO.AddComponent<LobbyUI>();
-            lobbyUI.OnConnectionEstablished += OnNetworkConnected;
-        }
+            int localPlayerID = match.localPlayerID;
+            NetworkManager netManager = match.networkManager;
 
-        /// <summary>
-        /// Called when LobbyUI signals both players are connected.
-        /// Sets up LockstepRunner and locks input to the correct player.
-        /// </summary>
-        private void OnNetworkConnected()
-        {
-            int localPlayerID = lobbyUI.LocalPlayerID;
-            NetworkManager netManager = lobbyUI.NetManager;
-
-            // Lock input to this player (no Tab-switching in online mode)
             debugPlayerSwitch.LockToPlayer(localPlayerID);
 
-            // Create LockstepRunner (replaces TickRunner)
             lockstepRunner = gameObject.AddComponent<LockstepRunner>();
             lockstepRunner.Initialize(state, inputBuffer, netManager, localPlayerID);
             lockstepRunner.OnDisconnect += OnNetworkDisconnect;
             lockstepRunner.OnDesync += OnDesyncDetected;
             tickProvider = lockstepRunner;
-
-            // Initialize UI now that we know who we are
-            InitializeUI();
-
-            // Clean up lobby
-            lobbyUI.OnConnectionEstablished -= OnNetworkConnected;
-            lobbyUI.enabled = false;
 
             Debug.Log("[GameManager] Network match started. Local player: " + localPlayerID);
         }
@@ -190,14 +196,16 @@ namespace NodeWar.Core
         private void OnNetworkDisconnect()
         {
             Debug.LogError("[GameManager] Opponent disconnected.");
-            // TODO: Show disconnect UI and return to menu.
-            // For prototype: just log it. The game freezes (LockstepRunner disabled itself).
+
+            if (gameOverHandled) return;
+            gameOverHandled = true;
+
+            ShowDisconnect();
         }
 
         private void OnDesyncDetected(int tick)
         {
             Debug.LogError("[GameManager] DESYNC at tick " + tick + "! Determinism bug exists.");
-            // For prototype: log and continue. In production: end match.
         }
 
         private void CreateSelectionLasso()
@@ -205,6 +213,86 @@ namespace NodeWar.Core
             GameObject lassoGO = new GameObject("SelectionLasso");
             SelectionLasso lasso = lassoGO.AddComponent<SelectionLasso>();
             lasso.Initialize(selectionSystem);
+        }
+
+        // ===== GAME OVER / DISCONNECT =====
+
+        private void ShowGameOver()
+        {
+            if (gameOverPanel == null)
+            {
+                Debug.LogWarning("[GameManager] GameOverPanel not found. Cannot show game over UI.");
+                return;
+            }
+
+            Color winnerColor = (state.winnerID == 0)
+                ? new Color(0.3f, 0.5f, 1f)
+                : new Color(1f, 0.3f, 0.3f);
+
+            string title = "PLAYER " + state.winnerID + " WINS!";
+            string info = "Breaches - P0: " + state.players[0].breachCount +
+                          "  P1: " + state.players[1].breachCount +
+                          "\nGame ended at tick " + state.tickCount;
+
+            gameOverPanel.Show(title, winnerColor, info);
+        }
+
+        private void ShowDisconnect()
+        {
+            if (gameOverPanel == null)
+            {
+                Debug.LogWarning("[GameManager] GameOverPanel not found. Cannot show disconnect UI.");
+                return;
+            }
+
+            gameOverPanel.Show(
+                "DISCONNECTED",
+                new Color(1f, 0.8f, 0.2f),
+                "Opponent has disconnected."
+            );
+        }
+
+        private void ReturnToLobby()
+        {
+            // Shutdown MatchConnection (closes socket, destroys persistent object)
+            if (MatchConnection.Instance != null)
+            {
+                MatchConnection.Instance.Shutdown();
+            }
+
+            SceneManager.LoadScene("Lobby");
+        }
+
+        // ===== UI INITIALIZATION =====
+
+        private void InitializeUI()
+        {
+            if (uiManagerPrefab == null)
+            {
+                Debug.LogError("[GameManager] uiManagerPrefab not assigned!");
+                return;
+            }
+
+            GameObject uiGO = Instantiate(uiManagerPrefab);
+            uiGO.name = "UIManager";
+
+            hudManager = uiGO.GetComponent<HUDManager>();
+            if (hudManager != null)
+                hudManager.Initialize(state, debugPlayerSwitch);
+
+            nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
+            if (nodePanelManager != null)
+                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickProvider);
+
+            gameOverPanel = uiGO.GetComponentInChildren<GameOverPanel>(true); // true = include inactive
+            if (gameOverPanel != null)
+            {
+                gameOverPanel.OnReturnToLobby += ReturnToLobby;
+            }
+            else
+            {
+                Debug.LogWarning("[GameManager] GameOverPanel not found in UIManager prefab.");
+            }
         }
 
         // ===== NODE INITIALIZATION (4x7 GRID) =====
@@ -329,26 +417,6 @@ namespace NodeWar.Core
             }
         }
 
-        private void InitializeUI()
-        {
-            if (uiManagerPrefab == null)
-            {
-                Debug.LogError("[GameManager] uiManagerPrefab not assigned!");
-                return;
-            }
-
-            GameObject uiGO = Instantiate(uiManagerPrefab);
-            uiGO.name = "UIManager";
-
-            hudManager = uiGO.GetComponent<HUDManager>();
-            if (hudManager != null)
-                hudManager.Initialize(state, debugPlayerSwitch);
-
-            nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
-            if (nodePanelManager != null)
-                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickProvider);
-        }
-
         // ===== VIEW SPAWNING =====
 
         private GameObject GetPrefabForDistrict(DistrictType type)
@@ -445,40 +513,6 @@ namespace NodeWar.Core
             VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<VillagerHealthRing>();
             if (healthRing != null)
                 healthRing.Initialize(state, index);
-        }
-
-        // ===== GUI =====
-
-        private void OnGUI()
-        {
-            if (state == null || !state.gameOver) return;
-
-            GUI.color = new Color(0f, 0f, 0f, 0.7f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
-
-            GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
-            titleStyle.fontSize = 48;
-            titleStyle.fontStyle = FontStyle.Bold;
-            titleStyle.alignment = TextAnchor.MiddleCenter;
-            titleStyle.normal.textColor = (state.winnerID == 0)
-                ? new Color(0.3f, 0.5f, 1f)
-                : new Color(1f, 0.3f, 0.3f);
-
-            GUI.Label(new Rect(0, Screen.height / 2 - 60, Screen.width, 60),
-                "PLAYER " + state.winnerID + " WINS!", titleStyle);
-
-            GUIStyle infoStyle = new GUIStyle(GUI.skin.label);
-            infoStyle.fontSize = 24;
-            infoStyle.alignment = TextAnchor.MiddleCenter;
-            infoStyle.normal.textColor = Color.white;
-
-            GUI.Label(new Rect(0, Screen.height / 2 + 10, Screen.width, 40),
-                "Breaches - P0: " + state.players[0].breachCount +
-                "  P1: " + state.players[1].breachCount, infoStyle);
-
-            GUI.Label(new Rect(0, Screen.height / 2 + 50, Screen.width, 30),
-                "Game ended at tick " + state.tickCount, infoStyle);
         }
     }
 }

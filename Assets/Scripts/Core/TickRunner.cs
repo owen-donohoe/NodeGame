@@ -13,6 +13,7 @@ namespace NodeWar.Core
 
         private SimulationState simState;
         private InputBuffer inputBuffer;
+        private NodeWar.Input.BotPlayer botPlayer;
 
         public void Initialize(SimulationState state, InputBuffer buffer)
         {
@@ -20,6 +21,11 @@ namespace NodeWar.Core
             inputBuffer = buffer;
             tickInterval = 1f / ticksPerSecond;
             accumulator = 0f;
+        }
+
+        public void SetBot(NodeWar.Input.BotPlayer bot)
+        {
+            botPlayer = bot;
         }
 
         public float TickAlpha
@@ -36,6 +42,9 @@ namespace NodeWar.Core
 
             while (accumulator >= tickInterval)
             {
+                if (botPlayer != null)
+                    botPlayer.Evaluate();
+
                 ProcessBufferedCommands();
                 GameSimulation.SimulateTick(simState);
 

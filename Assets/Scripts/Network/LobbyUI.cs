@@ -1,17 +1,20 @@
 using UnityEngine;
-using NodeWar.Simulation;
+using UnityEngine.SceneManagement;
+using NodeWar.Core;
 
 namespace NodeWar.Network
 {
     /// <summary>
-    /// Pre-game lobby screen. Host/Join buttons, IP text field, handshake flow.
-    /// Uses OnGUI for prototype simplicity (no prefab/canvas dependency).
-    /// Signals readiness via OnConnectionEstablished callback.
-    /// 
+    /// Pre-game lobby screen. Host/Join/Local buttons, IP text field, handshake flow.
+    /// Lives as a scene object in the Lobby scene.
+    /// On successful connection: creates MatchConnection (DontDestroyOnLoad),
+    /// then loads the Gameplay scene.
+    ///
     /// Flow:
     ///   Idle -> (Host clicked) -> Hosting (waiting for client handshake)
     ///   Idle -> (Join clicked) -> Joining (sending handshake, waiting for ack)
-    ///   Either -> Connected -> fires callback ? disables self
+    ///   Either -> Connected -> creates MatchConnection, loads Gameplay scene
+    ///   Idle -> (Local clicked) -> creates MatchConnection (no network), loads Gameplay scene
     /// </summary>
     public class LobbyUI : MonoBehaviour
     {
@@ -25,6 +28,7 @@ namespace NodeWar.Network
 
         private LobbyState state = LobbyState.Idle;
         private NetworkManager networkManager;
+        private GameObject networkManagerGO;
         private string joinIP = "192.168.1.";
         private string statusMessage = "";
         private float handshakeRetryTimer;
@@ -32,15 +36,22 @@ namespace NodeWar.Network
         private const float CONNECTION_TIMEOUT = 10f;
         private float stateEnterTime;
 
-        // Result - read by GameManager after connection
-        public int LocalPlayerID { get; private set; }
-        public NetworkManager NetManager => networkManager;
+        private int localPlayerID;
 
-        /// <summary>
-        /// Fired when both sides have completed handshake.
-        /// GameManager hooks this to start the match with LockstepRunner.
-        /// </summary>
-        public System.Action OnConnectionEstablished;
+        private void Awake()
+        {
+            Application.runInBackground = true;
+        }
+
+        private void Start()
+        {
+            // If a MatchConnection already exists from a previous session
+            // (e.g., returning to lobby after a match), clean it up.
+            if (MatchConnection.Instance != null)
+            {
+                MatchConnection.Instance.Shutdown();
+            }
+        }
 
         private void Update()
         {
@@ -55,20 +66,49 @@ namespace NodeWar.Network
             }
         }
 
+        // ===== LOCAL PLAY =====
+
+        private void StartLocalPlay()
+        {
+            localPlayerID = 0;
+
+            GameObject mcGO = new GameObject("MatchConnection");
+            MatchConnection mc = mcGO.AddComponent<MatchConnection>();
+            mc.isNetworked = false;
+            mc.localPlayerID = 0;
+            mc.networkManager = null;
+
+            SceneManager.LoadScene("Gameplay");
+        }
+
+        // ======= BOT MATCH ======
+        private void StartBotMatch()
+        {
+            localPlayerID = 0;
+
+            GameObject mcGO = new GameObject("MatchConnection");
+            MatchConnection mc = mcGO.AddComponent<MatchConnection>();
+            mc.isNetworked = false;
+            mc.isBotMatch = true;
+            mc.localPlayerID = 0;
+            mc.networkManager = null;
+
+            SceneManager.LoadScene("Gameplay");
+        }
+
         // ===== HOSTING =====
 
         private void StartHosting()
         {
-            if (networkManager != null)
-                networkManager.Shutdown();
+            CleanupNetworkManager();
 
-            GameObject netGO = new GameObject("NetworkManager");
-            networkManager = netGO.AddComponent<NetworkManager>();
+            networkManagerGO = new GameObject("NetworkManager");
+            networkManager = networkManagerGO.AddComponent<NetworkManager>();
             networkManager.StartAsHost();
 
             state = LobbyState.Hosting;
             stateEnterTime = Time.time;
-            LocalPlayerID = 0;
+            localPlayerID = 0;
             statusMessage = "Hosting on " + NetworkManager.GetLocalIPAddress() +
                             ":" + NetworkManager.DEFAULT_PORT + "\nWaiting for opponent...";
         }
@@ -82,9 +122,8 @@ namespace NodeWar.Network
                 PacketType type = InputSerializer.ReadPacketType(packets[i]);
                 if (type == PacketType.Handshake)
                 {
-                    // Client connected — send ack
+                    // Client connected - send ack
                     networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                    // Send a few extra acks in case first is lost
                     networkManager.Send(InputSerializer.SerializeHandshakeAck());
                     networkManager.Send(InputSerializer.SerializeHandshakeAck());
 
@@ -96,7 +135,7 @@ namespace NodeWar.Network
             if (Time.time - stateEnterTime > CONNECTION_TIMEOUT)
             {
                 statusMessage = "No connection received. Try again.";
-                networkManager.Shutdown();
+                CleanupNetworkManager();
                 state = LobbyState.Idle;
             }
         }
@@ -105,8 +144,7 @@ namespace NodeWar.Network
 
         private void StartJoining()
         {
-            if (networkManager != null)
-                networkManager.Shutdown();
+            CleanupNetworkManager();
 
             string ip = joinIP.Trim();
             if (string.IsNullOrEmpty(ip))
@@ -115,8 +153,8 @@ namespace NodeWar.Network
                 return;
             }
 
-            GameObject netGO = new GameObject("NetworkManager");
-            networkManager = netGO.AddComponent<NetworkManager>();
+            networkManagerGO = new GameObject("NetworkManager");
+            networkManager = networkManagerGO.AddComponent<NetworkManager>();
 
             try
             {
@@ -125,16 +163,14 @@ namespace NodeWar.Network
             catch (System.Exception e)
             {
                 statusMessage = "Invalid IP: " + e.Message;
-                networkManager.Shutdown();
-                Destroy(netGO);
-                networkManager = null;
+                CleanupNetworkManager();
                 return;
             }
 
             state = LobbyState.Joining;
             stateEnterTime = Time.time;
             handshakeRetryTimer = 0f;
-            LocalPlayerID = 1;
+            localPlayerID = 1;
             statusMessage = "Connecting to " + ip + "...";
 
             // Send first handshake immediately
@@ -166,7 +202,7 @@ namespace NodeWar.Network
             if (Time.time - stateEnterTime > CONNECTION_TIMEOUT)
             {
                 statusMessage = "Connection timed out. Check IP and try again.";
-                networkManager.Shutdown();
+                CleanupNetworkManager();
                 state = LobbyState.Idle;
             }
         }
@@ -177,9 +213,41 @@ namespace NodeWar.Network
         {
             state = LobbyState.Connected;
             statusMessage = "Connected! Starting match...";
-            Debug.Log("[Lobby] Connected. Local player: " + LocalPlayerID);
+            Debug.Log("[Lobby] Connected. Local player: " + localPlayerID);
 
-            OnConnectionEstablished?.Invoke();
+            // Create MatchConnection and parent NetworkManager under it
+            GameObject mcGO = new GameObject("MatchConnection");
+            MatchConnection mc = mcGO.AddComponent<MatchConnection>();
+            mc.isNetworked = true;
+            mc.localPlayerID = localPlayerID;
+            mc.networkManager = networkManager;
+
+            // Parent NetworkManager GO under MatchConnection so DontDestroyOnLoad covers both
+            networkManagerGO.transform.SetParent(mcGO.transform);
+
+            // Clear local references (MatchConnection owns it now)
+            networkManager = null;
+            networkManagerGO = null;
+
+            // Load gameplay scene
+            SceneManager.LoadScene("Gameplay");
+        }
+
+        // ===== CLEANUP =====
+
+        private void CleanupNetworkManager()
+        {
+            if (networkManager != null)
+            {
+                networkManager.Shutdown();
+                networkManager = null;
+            }
+
+            if (networkManagerGO != null)
+            {
+                Destroy(networkManagerGO);
+                networkManagerGO = null;
+            }
         }
 
         // ===== GUI =====
@@ -196,7 +264,7 @@ namespace NodeWar.Network
             float cx = Screen.width * 0.5f;
             float cy = Screen.height * 0.5f;
             float boxW = 340f;
-            float boxH = 280f;
+            float boxH = 360f;
             float left = cx - boxW * 0.5f;
             float top = cy - boxH * 0.5f;
 
@@ -212,6 +280,22 @@ namespace NodeWar.Network
 
             if (state == LobbyState.Idle)
             {
+                // Local Play button
+                if (GUI.Button(new Rect(left + 20f, top, boxW - 40f, 40f), "LOCAL PLAY"))
+                {
+                    StartLocalPlay();
+                }
+
+                top += 50f;
+
+                // Bot Match button
+                if (GUI.Button(new Rect(left + 20f, top, boxW - 40f, 40f), "PLAY VS BOT"))
+                {
+                    StartBotMatch();
+                }
+
+                top += 60f;
+
                 // Host button
                 if (GUI.Button(new Rect(left + 20f, top, boxW - 40f, 40f), "HOST GAME"))
                 {
@@ -249,8 +333,7 @@ namespace NodeWar.Network
                 top += 70f;
                 if (GUI.Button(new Rect(left + 60f, top, boxW - 120f, 30f), "CANCEL"))
                 {
-                    if (networkManager != null)
-                        networkManager.Shutdown();
+                    CleanupNetworkManager();
                     state = LobbyState.Idle;
                     statusMessage = "";
                 }
