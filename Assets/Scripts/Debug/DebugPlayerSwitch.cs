@@ -69,8 +69,9 @@ namespace NodeWar.Debugging
             if (!styleInitialized)
             {
                 labelStyle = new GUIStyle(GUI.skin.label);
-                labelStyle.fontSize = 24;
+                labelStyle.fontSize = 14;
                 labelStyle.fontStyle = FontStyle.Bold;
+                labelStyle.alignment = TextAnchor.MiddleRight;
                 styleInitialized = true;
             }
 
@@ -78,18 +79,18 @@ namespace NodeWar.Debugging
             if (currentPlayerID == 0)
             {
                 labelStyle.normal.textColor = new Color(0.3f, 0.5f, 1f);
-                text = isLocked ? "PLAYER 0 (Blue) [ONLINE]" : "CONTROLLING: P0 (Blue)";
+                text = isLocked ? "P0 (Blue) [ONLINE]" : "P0 (Blue)";
             }
             else
             {
                 labelStyle.normal.textColor = new Color(1f, 0.3f, 0.3f);
-                text = isLocked ? "PLAYER 1 (Red) [ONLINE]" : "CONTROLLING: P1 (Red)";
+                text = isLocked ? "P1 (Red) [ONLINE]" : "P1 (Red)";
             }
 
-            GUI.Label(new Rect(10, 10, 400, 40), text, labelStyle);
+            GUI.Label(new Rect(Screen.width - 210, 10, 200, 25), text, labelStyle);
 
             if (!isLocked)
-                GUI.Label(new Rect(10, 40, 400, 30), "[Tab] to switch", GUI.skin.label);
+                GUI.Label(new Rect(Screen.width - 210, 30, 200, 20), "[Tab] switch", labelStyle);
         }
     }
 }

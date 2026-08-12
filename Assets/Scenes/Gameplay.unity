@@ -506,7 +506,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 444578f4e215f25448a87eb60072064b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Core.GameManager
-  networkMode: 1
+  balance: {fileID: 11400000, guid: a5d341a3d2da3fb48b90ead59f063e8a, type: 2}
+  boardConfig: {fileID: 11400000, guid: 5615db51283388145839515f3e5bfbc8, type: 2}
   nodePrefabDefault: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
   nodePrefabCore: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
   nodePrefabFarm: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
@@ -515,17 +516,6 @@ MonoBehaviour:
   nodePrefabBarracks: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
   nodePrefabForge: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
   villagerPrefab: {fileID: 7037243673507716427, guid: 4b6014b072d214546a7d15f00c45b8c2, type: 3}
-  nodeScale: 5
-  defaultEdgeWeight: 4
-  startingVillagersPerPlayer: 5
-  startingFood: 5
-  startingMaterials: 3
-  startingMetal: 0
-  ownedMultiplier: 50
-  partiallyOwnedMultiplier: 75
-  unownedMultiplier: 100
-  enemyPartiallyOwnedMultiplier: 150
-  enemyOwnedMultiplier: 200
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
   state:
     nodes: []
@@ -563,18 +553,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfaaf9b69cc810f4391039e05623dc00, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Core.CameraController
+  boardConfig: {fileID: 11400000, guid: 5615db51283388145839515f3e5bfbc8, type: 2}
   panSpeed: 1
-  momentumDamping: 5
+  momentumDamping: 3
   maxVelocity: 20
-  zoomSpeed: 15
-  minOrthoSize: 3
-  maxOrthoSize: 15
-  zoomDamping: 8
-  useBounds: 0
-  boundsMinX: -22
-  boundsMaxX: 2
-  boundsMinZ: -16
-  boundsMaxZ: -4
+  zoomSpeed: 25
+  minOrthoSize: 2
+  maxOrthoSize: 20
+  zoomDamping: 4
+  useBounds: 1
   boundsPushback: 10
 --- !u!4 &615212806
 Transform:

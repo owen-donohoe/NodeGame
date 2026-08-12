@@ -1,3 +1,4 @@
+using NodeWar.Simulation;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,6 +11,9 @@ namespace NodeWar.Core
     /// </summary>
     public class CameraController : MonoBehaviour
     {
+        [Header("Board Config")]
+        [SerializeField] private BoardConfig boardConfig;
+
         [Header("Pan Settings")]
         [SerializeField] private float panSpeed = 1f;
         [SerializeField] private float momentumDamping = 5f;
@@ -21,12 +25,8 @@ namespace NodeWar.Core
         [SerializeField] private float maxOrthoSize = 15f;
         [SerializeField] private float zoomDamping = 8f;
 
-        [Header("Bounds (optional)")]
+        [Header("Bounds")]
         [SerializeField] private bool useBounds = true;
-        [SerializeField] private float boundsMinX = -12f;
-        [SerializeField] private float boundsMaxX = 12f;
-        [SerializeField] private float boundsMinZ = -8f;
-        [SerializeField] private float boundsMaxZ = 8f;
         [SerializeField] private float boundsPushback = 10f;
 
         // Internal state
@@ -136,19 +136,23 @@ namespace NodeWar.Core
 
         private void ApplyBounds()
         {
-            if (!useBounds) return;
+            if (!useBounds || boardConfig == null) return;
 
             Vector3 pos = transform.position;
 
-            // Soft pushback toward bounds
-            if (pos.x < boundsMinX)
-                velocity.x += boundsPushback * (boundsMinX - pos.x) * Time.deltaTime;
-            if (pos.x > boundsMaxX)
-                velocity.x += boundsPushback * (boundsMaxX - pos.x) * Time.deltaTime;
-            if (pos.z < boundsMinZ)
-                velocity.z += boundsPushback * (boundsMinZ - pos.z) * Time.deltaTime;
-            if (pos.z > boundsMaxZ)
-                velocity.z += boundsPushback * (boundsMaxZ - pos.z) * Time.deltaTime;
+            float minX = boardConfig.boundsMinX;
+            float maxX = boardConfig.boundsMaxX;
+            float minZ = boardConfig.boundsMinZ;
+            float maxZ = boardConfig.boundsMaxZ;
+
+            if (pos.x < minX)
+                velocity.x += boundsPushback * (minX - pos.x) * Time.deltaTime;
+            if (pos.x > maxX)
+                velocity.x += boundsPushback * (maxX - pos.x) * Time.deltaTime;
+            if (pos.z < minZ)
+                velocity.z += boundsPushback * (minZ - pos.z) * Time.deltaTime;
+            if (pos.z > maxZ)
+                velocity.z += boundsPushback * (maxZ - pos.z) * Time.deltaTime;
         }
 
         /// <summary>
@@ -183,39 +187,42 @@ namespace NodeWar.Core
             transform.position = pos;
         }
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
         private void OnDrawGizmos()
         {
             if (!useBounds) return;
 
+            // Try to read from boardConfig if assigned
+            float minX = boardConfig != null ? boardConfig.boundsMinX : -12f;
+            float maxX = boardConfig != null ? boardConfig.boundsMaxX : 12f;
+            float minZ = boardConfig != null ? boardConfig.boundsMinZ : -8f;
+            float maxZ = boardConfig != null ? boardConfig.boundsMaxZ : 8f;
+
             Gizmos.color = new Color(1f, 1f, 0f, 0.4f);
 
-            // Calculate corners on XZ plane at Y=0
-            Vector3 bottomLeft = new Vector3(boundsMinX, 0f, boundsMinZ);
-            Vector3 bottomRight = new Vector3(boundsMaxX, 0f, boundsMinZ);
-            Vector3 topLeft = new Vector3(boundsMinX, 0f, boundsMaxZ);
-            Vector3 topRight = new Vector3(boundsMaxX, 0f, boundsMaxZ);
+            Vector3 bottomLeft = new Vector3(minX, 0f, minZ);
+            Vector3 bottomRight = new Vector3(maxX, 0f, minZ);
+            Vector3 topLeft = new Vector3(minX, 0f, maxZ);
+            Vector3 topRight = new Vector3(maxX, 0f, maxZ);
 
-            // Draw border lines
             Gizmos.DrawLine(bottomLeft, bottomRight);
             Gizmos.DrawLine(bottomRight, topRight);
             Gizmos.DrawLine(topRight, topLeft);
             Gizmos.DrawLine(topLeft, bottomLeft);
 
-            // Filled translucent quad
             Gizmos.color = new Color(1f, 1f, 0f, 0.05f);
             Vector3 center = new Vector3(
-                (boundsMinX + boundsMaxX) * 0.5f,
+                (minX + maxX) * 0.5f,
                 0f,
-                (boundsMinZ + boundsMaxZ) * 0.5f
+                (minZ + maxZ) * 0.5f
             );
             Vector3 size = new Vector3(
-                boundsMaxX - boundsMinX,
+                maxX - minX,
                 0.01f,
-                boundsMaxZ - boundsMinZ
+                maxZ - minZ
             );
             Gizmos.DrawCube(center, size);
         }
-    #endif
+#endif
     }
 }

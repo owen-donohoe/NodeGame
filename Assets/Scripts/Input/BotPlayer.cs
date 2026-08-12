@@ -4,10 +4,17 @@ using System.Collections.Generic;
 namespace NodeWar.Input
 {
     /// <summary>
-    /// Heuristic bot that reads SimulationState each tick and issues commands
-    /// via InputBuffer. Runs only in local mode via TickRunner.
-    /// Evaluates priorities top-to-bottom, marking villagers as claimed
-    /// so lower priorities don't double-assign.
+    /// Heuristic bot. Reads SimulationState each tick, issues commands via InputBuffer.
+    /// Priority-based evaluation with per-villager command cooldowns to prevent oscillation.
+    /// 
+    /// Priority order:
+    /// 0. Core emergency (enemies ON core — everyone responds)
+    /// 1. Core intercept (enemies heading toward core — soldiers intercept)
+    /// 2. Respawn dead villagers
+    /// 3. Node defense (enemies ON owned farm/mine/barracks)
+    /// 4. Expansion (village ? farm ? mine ? barracks ? second village)
+    /// 5. Military (equip at barracks, attack in wolfpacks of 3)
+    /// 6. Economy management (fill/reduce workers based on resource levels)
     /// </summary>
     public class BotPlayer
     {
@@ -16,83 +23,154 @@ namespace NodeWar.Input
         private int playerID;
         private int enemyID;
 
-        // Per-tick scratch state (reset each Evaluate call)
+        // Per-villager command cooldown (tick when they can next be commanded)
+        private int[] commandCooldownUntil;
+
+        // Per-tick scratch
         private bool[] claimedThisTick;
 
-        public BotPlayer(SimulationState state, InputBuffer buffer, int playerID)
+        // Balance references (read once, used for cooldown calculation)
+        private int defaultEdgeWeight;
+
+        public BotPlayer(SimulationState state, InputBuffer buffer, int playerID, int defaultEdgeWeight)
         {
             this.state = state;
             this.inputBuffer = buffer;
             this.playerID = playerID;
             this.enemyID = 1 - playerID;
+            this.defaultEdgeWeight = defaultEdgeWeight;
         }
 
         public void Evaluate()
         {
             if (state.gameOver) return;
 
-            // Resize claimed array if villager count grew
+            // Resize arrays if villager count grew
             if (claimedThisTick == null || claimedThisTick.Length < state.villagers.Length)
                 claimedThisTick = new bool[state.villagers.Length];
+            if (commandCooldownUntil == null || commandCooldownUntil.Length < state.villagers.Length)
+            {
+                int[] newCooldowns = new int[state.villagers.Length];
+                if (commandCooldownUntil != null)
+                {
+                    for (int i = 0; i < commandCooldownUntil.Length; i++)
+                        newCooldowns[i] = commandCooldownUntil[i];
+                }
+                commandCooldownUntil = newCooldowns;
+            }
 
             for (int i = 0; i < claimedThisTick.Length; i++)
                 claimedThisTick[i] = false;
 
-            CoreDefense();
+            CoreEmergency();
+            CoreIntercept();
             RespawnDead();
-            ResourceEmergency();
             NodeDefense();
             Expansion();
             Military();
-            EconomyFill();
+            EconomyManagement();
         }
 
-        // ===== PRIORITY 0: CORE DEFENSE =====
+        // ===== PRIORITY 0: CORE EMERGENCY (enemies ON core) =====
 
-        private void CoreDefense()
+        private void CoreEmergency()
         {
             int myCoreNode = state.players[playerID].coreNodeID;
 
-            // Count enemies on core or heading to core
-            int threatCount = 0;
+            int enemiesOnCore = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != enemyID) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
-
-                if (v.currentNodeID == myCoreNode || v.targetNodeID == myCoreNode)
-                    threatCount++;
+                if (v.currentNodeID == myCoreNode)
+                    enemiesOnCore++;
             }
 
-            if (threatCount == 0) return;
+            if (enemiesOnCore == 0) return;
 
-            // Send threatCount + 1 closest villagers to core (any non-dead unclaimed)
-            int toSend = threatCount + 1;
-            List<int> candidates = GetAvailableVillagers(true, true); // include moving + working
+            // Emergency: override ALL cooldowns, send everyone to core
+            List<int> candidates = GetAllLivingVillagers();
 
-            // Remove villagers already on or heading to core
-            for (int i = candidates.Count - 1; i >= 0; i--)
+            for (int i = 0; i < candidates.Count; i++)
             {
-                VillagerData v = state.villagers[candidates[i]];
-                if (v.currentNodeID == myCoreNode && v.state != VillagerState.Moving)
-                    candidates.RemoveAt(i);
-                else if (v.targetNodeID == myCoreNode)
-                    candidates.RemoveAt(i);
+                int vid = candidates[i];
+                VillagerData v = state.villagers[vid];
+
+                // Already on core
+                if (v.currentNodeID == myCoreNode && v.state != VillagerState.Moving) continue;
+                // Already heading there
+                if (v.targetNodeID == myCoreNode) continue;
+
+                IssueMoveForce(vid, myCoreNode); // Force = ignores cooldown
+            }
+        }
+
+        // ===== PRIORITY 1: CORE INTERCEPT (enemies heading toward core) =====
+
+        private void CoreIntercept()
+        {
+            int myCoreNode = state.players[playerID].coreNodeID;
+
+            int incomingThreats = 0;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.ownerID != enemyID) continue;
+                if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                if (v.currentNodeID == myCoreNode) continue; // handled by Emergency
+
+                if (v.targetNodeID == myCoreNode)
+                {
+                    incomingThreats++;
+                    continue;
+                }
+
+                // Check if within 3 edges of core
+                int dist = PathLength(v.currentNodeID, myCoreNode);
+                if (dist >= 0 && dist <= 3)
+                    incomingThreats++;
             }
 
-            // Sort by path distance to core
-            candidates.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, myCoreNode)
+            if (incomingThreats == 0) return;
+
+            // Send soldiers to core to intercept (prefer soldiers)
+            int toSend = incomingThreats + 1;
+            List<int> soldiers = GetAvailableSoldiers();
+            List<int> others = GetAvailableNonSoldiers(false);
+
+            // Sort both by distance to core
+            soldiers.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, myCoreNode)
+                .CompareTo(PathCost(state.villagers[b].currentNodeID, myCoreNode)));
+            others.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, myCoreNode)
                 .CompareTo(PathCost(state.villagers[b].currentNodeID, myCoreNode)));
 
-            for (int i = 0; i < candidates.Count && toSend > 0; i++)
+            // Send soldiers first
+            for (int i = 0; i < soldiers.Count && toSend > 0; i++)
             {
-                IssueMove(candidates[i], myCoreNode);
+                int vid = soldiers[i];
+                VillagerData v = state.villagers[vid];
+                if (v.currentNodeID == myCoreNode && v.state != VillagerState.Moving) continue;
+                if (v.targetNodeID == myCoreNode) continue;
+
+                IssueMove(vid, myCoreNode);
+                toSend--;
+            }
+
+            // Then non-soldiers if still needed
+            for (int i = 0; i < others.Count && toSend > 0; i++)
+            {
+                int vid = others[i];
+                VillagerData v = state.villagers[vid];
+                if (v.currentNodeID == myCoreNode && v.state != VillagerState.Moving) continue;
+                if (v.targetNodeID == myCoreNode) continue;
+
+                IssueMove(vid, myCoreNode);
                 toSend--;
             }
         }
 
-        // ===== PRIORITY 1: RESPAWN =====
+        // ===== PRIORITY 2: RESPAWN =====
 
         private void RespawnDead()
         {
@@ -103,7 +181,7 @@ namespace NodeWar.Input
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
-                if (state.players[playerID].food < 1) return; // can't afford any more
+                if (state.players[playerID].food < 1) return;
 
                 GameCommand cmd = new GameCommand
                 {
@@ -116,73 +194,56 @@ namespace NodeWar.Input
             }
         }
 
-        // ===== PRIORITY 2: RESOURCE EMERGENCY =====
-
-        private void ResourceEmergency()
-        {
-            // Only activate after owning at least one farm and one mine
-            if (!OwnsNodeOfType(DistrictType.Farm) || !OwnsNodeOfType(DistrictType.Mine))
-                return;
-
-            // Food emergency
-            if (state.players[playerID].food < 10 && !HasWorkerOnOwnedType(DistrictType.Farm))
-            {
-                int farmNode = FindClosestOwnedNodeOfType(DistrictType.Farm, state.players[playerID].coreNodeID);
-                if (farmNode >= 0)
-                {
-                    int villager = GetClosestFreeVillagerTo(farmNode);
-                    if (villager >= 0)
-                        IssueMove(villager, farmNode);
-                }
-            }
-
-            // Material emergency
-            if (state.players[playerID].materials < 10 && !HasWorkerOnOwnedType(DistrictType.Mine))
-            {
-                int mineNode = FindClosestOwnedNodeOfType(DistrictType.Mine, state.players[playerID].coreNodeID);
-                if (mineNode >= 0)
-                {
-                    int villager = GetClosestFreeVillagerTo(mineNode);
-                    if (villager >= 0)
-                        IssueMove(villager, mineNode);
-                }
-            }
-        }
-
-        // ===== PRIORITY 3: NODE DEFENSE =====
+        // ===== PRIORITY 3: NODE DEFENSE (enemies ON owned farm/mine/barracks) =====
 
         private void NodeDefense()
         {
-            // Find owned nodes with enemies present
             for (int n = 0; n < state.nodes.Length; n++)
             {
                 NodeData node = state.nodes[n];
                 if (node.ownerID != playerID) continue;
-                if (node.districtType == DistrictType.Core) continue; // core handled by Priority 0
+                if (node.districtType == DistrictType.Core) continue; // handled above
 
-                if (!HasEnemiesOnNode(n)) continue;
+                // Only defend production and military nodes
+                if (node.districtType != DistrictType.Farm &&
+                    node.districtType != DistrictType.Mine &&
+                    node.districtType != DistrictType.Barracks)
+                    continue;
 
-                // Send up to 2 available villagers within 3 edges
-                int sent = 0;
-                List<int> candidates = GetAvailableVillagers(false, false);
+                int enemyCount = CountEnemiesOnNode(n);
+                if (enemyCount == 0) continue;
 
-                // Sort by distance to threatened node
-                candidates.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, n)
+                int toSend = enemyCount + 1;
+
+                // Prefer soldiers
+                List<int> soldiers = GetAvailableSoldiers();
+                soldiers.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, n)
                     .CompareTo(PathCost(state.villagers[b].currentNodeID, n)));
 
-                for (int i = 0; i < candidates.Count && sent < 2; i++)
+                for (int i = 0; i < soldiers.Count && toSend > 0; i++)
                 {
-                    int vid = candidates[i];
-                    int pathLen = PathLength(state.villagers[vid].currentNodeID, n);
-                    if (pathLen < 0 || pathLen > 3) continue;
-
-                    // Already there or heading there
+                    int vid = soldiers[i];
                     if (state.villagers[vid].currentNodeID == n) continue;
                     if (state.villagers[vid].targetNodeID == n) continue;
-
-                    // Prefer soldiers
                     IssueMove(vid, n);
-                    sent++;
+                    toSend--;
+                }
+
+                // Then non-soldiers
+                if (toSend > 0)
+                {
+                    List<int> others = GetAvailableNonSoldiers(false);
+                    others.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, n)
+                        .CompareTo(PathCost(state.villagers[b].currentNodeID, n)));
+
+                    for (int i = 0; i < others.Count && toSend > 0; i++)
+                    {
+                        int vid = others[i];
+                        if (state.villagers[vid].currentNodeID == n) continue;
+                        if (state.villagers[vid].targetNodeID == n) continue;
+                        IssueMove(vid, n);
+                        toSend--;
+                    }
                 }
             }
         }
@@ -191,33 +252,58 @@ namespace NodeWar.Input
 
         private void Expansion()
         {
-            int coreNode = state.players[playerID].coreNodeID;
+            int maxClaimers = 4; // matches simulation MAX_CLAIMERS_PER_NODE
 
-            // Claim farm if we don't own one
-            if (!OwnsNodeOfType(DistrictType.Farm))
+            // Order: Village ? Farm ? Mine ? Barracks ? second Village
+            // For each type: if we don't own enough, send max claimers to the closest unowned
+
+            int ownedVillages = CountOwnedOfType(DistrictType.Village);
+            int ownedFarms = CountOwnedOfType(DistrictType.Farm);
+            int ownedMines = CountOwnedOfType(DistrictType.Mine);
+            int ownedBarracks = CountOwnedOfType(DistrictType.Barracks);
+
+            if (ownedVillages < 1)
             {
-                SendFreesToClosestUnownedType(DistrictType.Farm, 2);
+                SendClaimersToClosestUnowned(DistrictType.Village, maxClaimers);
                 return;
             }
 
-            // Claim mine if we don't own one
-            if (!OwnsNodeOfType(DistrictType.Mine))
+            if (ownedFarms < 1)
             {
-                SendFreesToClosestUnownedType(DistrictType.Mine, 2);
+                SendClaimersToClosestUnowned(DistrictType.Farm, maxClaimers);
                 return;
             }
 
-            // Claim village if we don't own one
-            if (!OwnsNodeOfType(DistrictType.Village))
+            if (ownedMines < 1)
             {
-                SendFreesToClosestUnownedType(DistrictType.Village, 2);
+                SendClaimersToClosestUnowned(DistrictType.Mine, maxClaimers);
                 return;
             }
 
-            // Claim barracks if we don't own one
-            if (!OwnsNodeOfType(DistrictType.Barracks))
+            if (ownedBarracks < 1)
             {
-                SendFreesToClosestUnownedType(DistrictType.Barracks, 2);
+                SendClaimersToClosestUnowned(DistrictType.Barracks, maxClaimers);
+                return;
+            }
+
+            // Second village
+            if (ownedVillages < 2)
+            {
+                SendClaimersToClosestUnowned(DistrictType.Village, maxClaimers);
+                return;
+            }
+
+            // Second farm
+            if (ownedFarms < 2)
+            {
+                SendClaimersToClosestUnowned(DistrictType.Farm, maxClaimers);
+                return;
+            }
+
+            // Second mine
+            if (ownedMines < 2)
+            {
+                SendClaimersToClosestUnowned(DistrictType.Mine, maxClaimers);
                 return;
             }
         }
@@ -229,6 +315,14 @@ namespace NodeWar.Input
             if (!OwnsNodeOfType(DistrictType.Barracks)) return;
 
             // Equip idle villagers on owned barracks
+            EquipAtBarracks();
+
+            // Wolfpack: attack enemy core when we have 3+ soldiers with no pending commands
+            AttackWithWolfpack(3);
+        }
+
+        private void EquipAtBarracks()
+        {
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
@@ -255,37 +349,60 @@ namespace NodeWar.Input
                 inputBuffer.EnqueueCommand(cmd);
                 claimedThisTick[i] = true;
             }
+        }
 
-            // Send soldiers to enemy core
+        private void AttackWithWolfpack(int packSize)
+        {
             int enemyCore = state.players[enemyID].coreNodeID;
+
+            // Count available soldiers (idle or on cooldown but not heading somewhere critical)
+            List<int> readySoldiers = new List<int>();
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
                 if (v.suit != SuitType.Soldier) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                if (v.state == VillagerState.Fighting) continue;
                 if (claimedThisTick[i]) continue;
 
-                // Skip if already heading to enemy core
-                if (v.targetNodeID == enemyCore) continue;
-                // Skip if currently fighting (let combat resolve)
-                if (v.state == VillagerState.Fighting) continue;
+                // Already heading to enemy core counts toward the pack
+                if (v.targetNodeID == enemyCore)
+                {
+                    readySoldiers.Add(i);
+                    continue;
+                }
 
-                IssueMove(i, enemyCore);
+                // Idle or available soldiers
+                if (v.state == VillagerState.Idle || IsOffCooldown(i))
+                    readySoldiers.Add(i);
+            }
+
+            if (readySoldiers.Count < packSize) return;
+
+            // Send all ready soldiers to enemy core
+            for (int i = 0; i < readySoldiers.Count; i++)
+            {
+                int vid = readySoldiers[i];
+                if (state.villagers[vid].targetNodeID == enemyCore) continue;
+                if (state.villagers[vid].currentNodeID == enemyCore) continue;
+                IssueMove(vid, enemyCore);
             }
         }
 
-        // ===== PRIORITY 6: ECONOMY FILL =====
+        // ===== PRIORITY 6: ECONOMY MANAGEMENT =====
 
-        private void EconomyFill()
+        private void EconomyManagement()
         {
-            // Fill owned farms to 2 workers
-            FillProductionNodes(DistrictType.Farm);
-            // Fill owned mines to 2 workers
-            FillProductionNodes(DistrictType.Mine);
+            ManageProduction(DistrictType.Farm, state.players[playerID].food, true);
+            ManageProduction(DistrictType.Mine, state.players[playerID].materials, false);
         }
 
-        private void FillProductionNodes(DistrictType type)
+        /// <summary>
+        /// Manages worker count on all owned nodes of a type based on resource level.
+        /// alwaysKeepOne: if true, never pull the last worker (farms).
+        /// </summary>
+        private void ManageProduction(DistrictType type, int currentResource, bool alwaysKeepOne)
         {
             for (int n = 0; n < state.nodes.Length; n++)
             {
@@ -294,34 +411,68 @@ namespace NodeWar.Input
                 if (node.ownerID != playerID) continue;
 
                 int workers = CountFriendlyWorkersOnNode(n);
-                int needed = 2 - workers;
-                if (needed <= 0) continue;
 
-                // Count villagers already heading there
-                int inbound = CountVillagersHeadingTo(n);
-                needed -= inbound;
-                if (needed <= 0) continue;
+                // Determine desired worker count
+                int desiredWorkers;
+                if (currentResource >= 20)
+                    desiredWorkers = alwaysKeepOne ? 1 : 0;
+                else if (currentResource >= 10)
+                    desiredWorkers = 1;
+                else
+                    desiredWorkers = 2;
 
-                for (int s = 0; s < needed; s++)
+                if (alwaysKeepOne && desiredWorkers < 1)
+                    desiredWorkers = 1;
+
+                if (workers > desiredWorkers)
                 {
-                    int villager = GetClosestFreeVillagerTo(n);
-                    if (villager < 0) break;
-                    IssueMove(villager, n);
+                    // Pull excess workers — send to barracks if owned, else core
+                    int toRemove = workers - desiredWorkers;
+                    for (int i = 0; i < state.villagers.Length && toRemove > 0; i++)
+                    {
+                        VillagerData v = state.villagers[i];
+                        if (v.ownerID != playerID) continue;
+                        if (v.currentNodeID != n) continue;
+                        if (v.state != VillagerState.Working) continue;
+                        if (v.isConsumed) continue;
+                        if (claimedThisTick[i]) continue;
+
+                        int destination = FindClosestOwnedNodeOfType(DistrictType.Barracks, n);
+                        if (destination < 0)
+                            destination = state.players[playerID].coreNodeID;
+
+                        IssueMove(i, destination);
+                        toRemove--;
+                    }
+                }
+                else if (workers < desiredWorkers)
+                {
+                    int needed = desiredWorkers - workers;
+                    int inbound = CountVillagersHeadingTo(n);
+                    needed -= inbound;
+
+                    for (int s = 0; s < needed; s++)
+                    {
+                        int villager = GetClosestFreeNonSoldierTo(n);
+                        if (villager < 0) break;
+                        IssueMove(villager, n);
+                    }
                 }
             }
         }
 
-        // ===== HELPER METHODS =====
+        // ===== COMMAND ISSUANCE =====
 
+        /// <summary>
+        /// Issues a move command respecting cooldown. Does nothing if on cooldown.
+        /// </summary>
         private void IssueMove(int villagerID, int targetNode)
         {
             if (claimedThisTick[villagerID]) return;
+            if (!IsOffCooldown(villagerID)) return;
 
             VillagerData v = state.villagers[villagerID];
-
-            // Don't issue if already there
             if (v.currentNodeID == targetNode && v.state != VillagerState.Moving) return;
-            // Don't re-issue if already heading there
             if (v.targetNodeID == targetNode) return;
 
             GameCommand cmd = new GameCommand
@@ -334,14 +485,68 @@ namespace NodeWar.Input
             };
             inputBuffer.EnqueueCommand(cmd);
             claimedThisTick[villagerID] = true;
+
+            // Set cooldown: 1 tick more than crossing one edge
+            int cooldownTicks = defaultEdgeWeight * v.moveSpeedTicks + 1;
+            commandCooldownUntil[villagerID] = state.tickCount + cooldownTicks;
         }
 
         /// <summary>
-        /// Returns villager IDs that are alive, owned by bot, unclaimed this tick.
-        /// includeMoving: include villagers currently in Moving state.
-        /// includeWorking: include villagers currently in Working state.
+        /// Issues a move command IGNORING cooldown. Used for core emergency only.
         /// </summary>
-        private List<int> GetAvailableVillagers(bool includeMoving, bool includeWorking)
+        private void IssueMoveForce(int villagerID, int targetNode)
+        {
+            if (claimedThisTick[villagerID]) return;
+
+            VillagerData v = state.villagers[villagerID];
+            if (v.currentNodeID == targetNode && v.state != VillagerState.Moving) return;
+            if (v.targetNodeID == targetNode) return;
+
+            GameCommand cmd = new GameCommand
+            {
+                type = CommandType.Move,
+                playerID = playerID,
+                villagerID = villagerID,
+                targetNodeID = targetNode,
+                issuedOnTick = state.tickCount
+            };
+            inputBuffer.EnqueueCommand(cmd);
+            claimedThisTick[villagerID] = true;
+
+            int cooldownTicks = defaultEdgeWeight * v.moveSpeedTicks + 1;
+            commandCooldownUntil[villagerID] = state.tickCount + cooldownTicks;
+        }
+
+        private bool IsOffCooldown(int villagerID)
+        {
+            if (villagerID >= commandCooldownUntil.Length) return true;
+            return state.tickCount >= commandCooldownUntil[villagerID];
+        }
+
+        // ===== EXPANSION HELPERS =====
+
+        private void SendClaimersToClosestUnowned(DistrictType type, int maxToSend)
+        {
+            int coreNode = state.players[playerID].coreNodeID;
+            int targetNode = FindClosestUnownedNodeOfType(type, coreNode);
+            if (targetNode < 0) return;
+
+            // Don't send villagers already heading there
+            int alreadyHeading = CountVillagersHeadingTo(targetNode);
+            int toSend = maxToSend - alreadyHeading;
+            if (toSend <= 0) return;
+
+            for (int s = 0; s < toSend; s++)
+            {
+                int villager = GetClosestFreeNonSoldierTo(targetNode);
+                if (villager < 0) break;
+                IssueMove(villager, targetNode);
+            }
+        }
+
+        // ===== QUERY HELPERS =====
+
+        private List<int> GetAllLivingVillagers()
         {
             List<int> result = new List<int>();
             for (int i = 0; i < state.villagers.Length; i++)
@@ -349,21 +554,49 @@ namespace NodeWar.Input
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                result.Add(i);
+            }
+            return result;
+        }
+
+        private List<int> GetAvailableSoldiers()
+        {
+            List<int> result = new List<int>();
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.ownerID != playerID) continue;
+                if (v.suit != SuitType.Soldier) continue;
+                if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                if (v.state == VillagerState.Fighting) continue;
                 if (claimedThisTick[i]) continue;
+                result.Add(i);
+            }
+            return result;
+        }
 
-                if (v.state == VillagerState.Fighting) continue; // never pull from fights
-                if (v.state == VillagerState.Moving && !includeMoving) continue;
-                if (v.state == VillagerState.Working && !includeWorking) continue;
-
+        private List<int> GetAvailableNonSoldiers(bool includeWorking)
+        {
+            List<int> result = new List<int>();
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.ownerID != playerID) continue;
+                if (v.suit == SuitType.Soldier) continue;
+                if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                if (v.state == VillagerState.Fighting) continue;
+                if (!includeWorking && v.state == VillagerState.Working) continue;
+                if (claimedThisTick[i]) continue;
+                if (!IsOffCooldown(i)) continue;
                 result.Add(i);
             }
             return result;
         }
 
         /// <summary>
-        /// Returns the closest free (idle, unclaimed) villager to a target node. -1 if none.
+        /// Closest idle non-soldier villager to a target. -1 if none.
         /// </summary>
-        private int GetClosestFreeVillagerTo(int targetNode)
+        private int GetClosestFreeNonSoldierTo(int targetNode)
         {
             int bestID = -1;
             int bestCost = int.MaxValue;
@@ -372,9 +605,11 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
+                if (v.suit == SuitType.Soldier) continue;
                 if (v.state != VillagerState.Idle) continue;
                 if (v.isConsumed) continue;
                 if (claimedThisTick[i]) continue;
+                if (!IsOffCooldown(i)) continue;
 
                 int cost = PathCost(v.currentNodeID, targetNode);
                 if (cost < bestCost)
@@ -383,22 +618,7 @@ namespace NodeWar.Input
                     bestID = i;
                 }
             }
-
             return bestID;
-        }
-
-        private void SendFreesToClosestUnownedType(DistrictType type, int count)
-        {
-            int coreNode = state.players[playerID].coreNodeID;
-            int targetNode = FindClosestUnownedNodeOfType(type, coreNode);
-            if (targetNode < 0) return;
-
-            for (int s = 0; s < count; s++)
-            {
-                int villager = GetClosestFreeVillagerTo(targetNode);
-                if (villager < 0) break;
-                IssueMove(villager, targetNode);
-            }
         }
 
         private bool OwnsNodeOfType(DistrictType type)
@@ -411,33 +631,29 @@ namespace NodeWar.Input
             return false;
         }
 
-        private bool HasWorkerOnOwnedType(DistrictType type)
+        private int CountOwnedOfType(DistrictType type)
         {
-            for (int i = 0; i < state.villagers.Length; i++)
+            int count = 0;
+            for (int i = 0; i < state.nodes.Length; i++)
             {
-                VillagerData v = state.villagers[i];
-                if (v.ownerID != playerID) continue;
-                if (v.state != VillagerState.Working) continue;
-                if (v.isConsumed) continue;
-
-                int nodeID = v.currentNodeID;
-                if (state.nodes[nodeID].districtType == type && state.nodes[nodeID].ownerID == playerID)
-                    return true;
+                if (state.nodes[i].districtType == type && state.nodes[i].ownerID == playerID)
+                    count++;
             }
-            return false;
+            return count;
         }
 
-        private bool HasEnemiesOnNode(int nodeID)
+        private int CountEnemiesOnNode(int nodeID)
         {
+            int count = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID == playerID) continue;
                 if (v.currentNodeID != nodeID) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
-                return true;
+                count++;
             }
-            return false;
+            return count;
         }
 
         private int CountFriendlyWorkersOnNode(int nodeID)
@@ -469,38 +685,6 @@ namespace NodeWar.Input
             return count;
         }
 
-        /// <summary>
-        /// Returns total weighted path cost from Pathfinding. Returns int.MaxValue if unreachable.
-        /// </summary>
-        private int PathCost(int fromNode, int toNode)
-        {
-            if (fromNode == toNode) return 0;
-            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode);
-            if (path.Length < 2) return int.MaxValue;
-
-            int cost = 0;
-            for (int i = 0; i < path.Length - 1; i++)
-            {
-                cost += GameSimulation.GetEdgeWeight(state, path[i], path[i + 1]);
-            }
-            return cost;
-        }
-
-        /// <summary>
-        /// Returns number of edges in the path (path.Length - 1). -1 if unreachable.
-        /// </summary>
-        private int PathLength(int fromNode, int toNode)
-        {
-            if (fromNode == toNode) return 0;
-            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode);
-            if (path.Length < 2) return -1;
-            return path.Length - 1;
-        }
-
-        /// <summary>
-        /// Finds the closest node of a given type NOT owned by this player.
-        /// Returns -1 if none found.
-        /// </summary>
         private int FindClosestUnownedNodeOfType(DistrictType type, int fromNode)
         {
             int bestNode = -1;
@@ -521,10 +705,6 @@ namespace NodeWar.Input
             return bestNode;
         }
 
-        /// <summary>
-        /// Finds the closest node of a given type owned by this player.
-        /// Returns -1 if none found.
-        /// </summary>
         private int FindClosestOwnedNodeOfType(DistrictType type, int fromNode)
         {
             int bestNode = -1;
@@ -543,6 +723,26 @@ namespace NodeWar.Input
                 }
             }
             return bestNode;
+        }
+
+        private int PathCost(int fromNode, int toNode)
+        {
+            if (fromNode == toNode) return 0;
+            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode);
+            if (path.Length < 2) return int.MaxValue;
+
+            int cost = 0;
+            for (int i = 0; i < path.Length - 1; i++)
+                cost += GameSimulation.GetEdgeWeight(state, path[i], path[i + 1]);
+            return cost;
+        }
+
+        private int PathLength(int fromNode, int toNode)
+        {
+            if (fromNode == toNode) return 0;
+            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode);
+            if (path.Length < 2) return -1;
+            return path.Length - 1;
         }
     }
 }

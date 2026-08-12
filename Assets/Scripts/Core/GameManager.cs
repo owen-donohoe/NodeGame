@@ -11,6 +11,10 @@ namespace NodeWar.Core
 {
     public class GameManager : MonoBehaviour
     {
+        [Header("Balance")]
+        [SerializeField] private GameBalance balance;
+        [SerializeField] private BoardConfig boardConfig;
+
         [Header("Node Prefabs (assign per district type)")]
         [SerializeField] private GameObject nodePrefabDefault;
         [SerializeField] private GameObject nodePrefabCore;
@@ -23,23 +27,6 @@ namespace NodeWar.Core
         [Header("Villager Prefab")]
         [SerializeField] private GameObject villagerPrefab;
 
-        [Header("Board Settings")]
-        [SerializeField] private float nodeScale = 5f;
-        [SerializeField] private int defaultEdgeWeight = 3;
-
-        [Header("Starting Values")]
-        [SerializeField] private int startingVillagersPerPlayer = 3;
-        [SerializeField] private int startingFood = 5;
-        [SerializeField] private int startingMaterials = 3;
-        [SerializeField] private int startingMetal = 0;
-
-        [Header("Pathfinding Preference (integer percentages)")]
-        [SerializeField] private int ownedMultiplier = 50;
-        [SerializeField] private int partiallyOwnedMultiplier = 75;
-        [SerializeField] private int unownedMultiplier = 100;
-        [SerializeField] private int enemyPartiallyOwnedMultiplier = 150;
-        [SerializeField] private int enemyOwnedMultiplier = 200;
-
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -50,9 +37,6 @@ namespace NodeWar.Core
 
         private DebugPlayerSwitch debugPlayerSwitch;
         private HUDManager hudManager;
-
-        private const int GRID_COLS = 4;
-        private const int GRID_ROWS = 7;
 
         private Transform nodeParent;
         private Transform villagerParent;
@@ -79,13 +63,28 @@ namespace NodeWar.Core
             Application.runInBackground = true;
 
             state = new SimulationState();
-            inputBuffer = new InputBuffer();
 
-            Pathfinding.OwnedMultiplier = ownedMultiplier;
-            Pathfinding.PartiallyOwnedMultiplier = partiallyOwnedMultiplier;
-            Pathfinding.UnownedMultiplier = unownedMultiplier;
-            Pathfinding.EnemyPartiallyOwnedMultiplier = enemyPartiallyOwnedMultiplier;
-            Pathfinding.EnemyOwnedMultiplier = enemyOwnedMultiplier;
+            if (balance == null)
+            {
+                Debug.LogError("[GameManager] GameBalance asset not assigned!");
+                return;
+            }
+            if (boardConfig == null)
+            {
+                Debug.LogError("[GameManager] BoardConfig asset not assigned!");
+                return;
+            }
+
+            GameSimulation.SetBalance(balance);
+            CommandProcessor.SetBalance(balance);
+
+            Pathfinding.OwnedMultiplier = boardConfig.ownedMultiplier;
+            Pathfinding.PartiallyOwnedMultiplier = boardConfig.partiallyOwnedMultiplier;
+            Pathfinding.UnownedMultiplier = boardConfig.unownedMultiplier;
+            Pathfinding.EnemyPartiallyOwnedMultiplier = boardConfig.enemyPartiallyOwnedMultiplier;
+            Pathfinding.EnemyOwnedMultiplier = boardConfig.enemyOwnedMultiplier;
+
+            inputBuffer = new InputBuffer();
 
             // 1. Initialize simulation state
             InitializeNodes();
@@ -106,10 +105,9 @@ namespace NodeWar.Core
             {
                 StartLocalPlay();
 
-                // Create bot if this is a bot match
                 if (match != null && match.isBotMatch)
                 {
-                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1);
+                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.defaultEdgeWeight);
                     debugPlayerSwitch.LockToPlayer(0);
 
                     TickRunner runner = GetComponent<TickRunner>();
@@ -299,7 +297,11 @@ namespace NodeWar.Core
 
         private void InitializeNodes()
         {
+
+            int GRID_COLS = boardConfig.gridCols;
+            int GRID_ROWS = boardConfig.gridRows;
             int nodeCount = GRID_COLS * GRID_ROWS;
+
             state.nodes = new NodeData[nodeCount];
 
             DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
@@ -326,11 +328,11 @@ namespace NodeWar.Core
                     Edge[] edges = new Edge[neighborIDs.Count];
                     for (int i = 0; i < neighborIDs.Count; i++)
                     {
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = defaultEdgeWeight };
+                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.defaultEdgeWeight };
                     }
 
                     int bonus = 0;
-                    if (layout[z, x] == DistrictType.Village) bonus = 2;
+                    if (layout[z, x] == DistrictType.Village) bonus = balance.bonusVillagersOnVillageClaim;
 
                     int ownerID = -1;
                     int claimBar = 0;
@@ -340,7 +342,7 @@ namespace NodeWar.Core
                     state.nodes[nodeID] = new NodeData
                     {
                         nodeID = nodeID,
-                        worldPosition = new Vector3(x * nodeScale, 0f, z * nodeScale),
+                        worldPosition = new Vector3(x * boardConfig.nodeScale, 0f, z * boardConfig.nodeScale),
                         gridX = x,
                         gridZ = z,
                         edges = edges,
@@ -362,9 +364,9 @@ namespace NodeWar.Core
             {
                 playerID = 0,
                 coreNodeID = 25,
-                food = startingFood,
-                materials = startingMaterials,
-                metal = startingMetal,
+                food = boardConfig.startingFood,
+                materials = boardConfig.startingMaterials,
+                metal = boardConfig.startingMetal,
                 breachCount = 0
             };
 
@@ -372,21 +374,21 @@ namespace NodeWar.Core
             {
                 playerID = 1,
                 coreNodeID = 2,
-                food = startingFood,
-                materials = startingMaterials,
-                metal = startingMetal,
+                food = boardConfig.startingFood,
+                materials = boardConfig.startingMaterials,
+                metal = boardConfig.startingMetal,
                 breachCount = 0
             };
         }
 
         private void InitializeVillagers()
         {
-            int totalVillagers = startingVillagersPerPlayer * 2;
+            int totalVillagers = boardConfig.startingVillagersPerPlayer * 2;
             state.villagers = new VillagerData[totalVillagers];
 
             for (int i = 0; i < totalVillagers; i++)
             {
-                int owner = (i < startingVillagersPerPlayer) ? 0 : 1;
+                int owner = (i < boardConfig.startingVillagersPerPlayer) ? 0 : 1;
                 int coreNode = state.players[owner].coreNodeID;
 
                 state.villagers[i] = new VillagerData
@@ -401,13 +403,13 @@ namespace NodeWar.Core
                     previousNodeID = coreNode,
                     state = VillagerState.Idle,
                     suit = SuitType.None,
-                    hp = 5,
-                    maxHP = 5,
-                    attackDamage = 1,
-                    moveSpeedTicks = 4,
+                    hp = balance.baseHP,
+                    maxHP = balance.baseHP,
+                    attackDamage = balance.baseAttackDamage,
+                    moveSpeedTicks = balance.baseMoveSpeedTicks,
                     respawnTicksRemaining = 0,
-                    attackCooldownRemaining = 20,
-                    attackCooldownMax = 20,
+                    attackCooldownRemaining = balance.baseAttackCooldownMax,
+                    attackCooldownMax = balance.baseAttackCooldownMax,
                     combatTargetID = -1,
                     fightPriority = 0,
                     isConsumed = false,
@@ -455,7 +457,7 @@ namespace NodeWar.Core
                 NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
                 if (slotManager == null)
                     slotManager = nodeGO.AddComponent<NodeWar.View.NodeSlotManager>();
-                slotManager.Initialize(i, nodeScale);
+                slotManager.Initialize(i, boardConfig.nodeScale);
                 nodeSlotManagers[i] = slotManager;
 
                 NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeClaimBar>();

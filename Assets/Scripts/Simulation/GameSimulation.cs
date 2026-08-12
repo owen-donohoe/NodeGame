@@ -7,20 +7,12 @@ namespace NodeWar.Simulation
 {
     public static class GameSimulation
     {
-        // ===== CONSTANTS =====
-        private const int BASE_CLAIM_PER_TICK = 17;
-        private const int DECREMENT_MULTIPLIER = 4;
-        private const int CLAIM_THRESHOLD = 10000;//this is public for pathfinding currently. this might need to change.
-        private const int MAX_CLAIMERS_PER_NODE = 4;
-        private const int RESPAWN_TICKS = 50;
-        private const int HEAL_INTERVAL_TICKS = 30;
-        private const int BREACH_THRESHOLD = 3;
+        private static GameBalance bal;
 
-        private const int FOOD_PRODUCTION_TICKS = 30;
-        private const int MATERIAL_PRODUCTION_TICKS = 40;
-        private const int METAL_PRODUCTION_TICKS = 50;
-        private const int MAX_WORKERS_PER_NODE = 2;
-        private const int MAX_VILLAGERS_PER_PLAYER = 25;
+        public static void SetBalance(GameBalance balance)
+        {
+            bal = balance;
+        }
 
         // ===== MAIN TICK =====
 
@@ -176,9 +168,9 @@ namespace NodeWar.Simulation
                 if (v.suit != SuitType.Soldier)
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
-                    state.villagers[villagerIndex].attackDamage = 1;
-                    state.villagers[villagerIndex].moveSpeedTicks = 4;
-                    state.villagers[villagerIndex].attackCooldownMax = 20;
+                    state.villagers[villagerIndex].attackDamage = bal.baseAttackDamage;
+                    state.villagers[villagerIndex].moveSpeedTicks = bal.baseMoveSpeedTicks;
+                    state.villagers[villagerIndex].attackCooldownMax = bal.baseAttackCooldownMax;
                 }
                 state.villagers[villagerIndex].state = VillagerState.Idle;
                 return;
@@ -198,10 +190,10 @@ namespace NodeWar.Simulation
                 {
                     state.villagers[villagerIndex].suit = SuitType.Farmer;
                     int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < MAX_WORKERS_PER_NODE)
+                    if (workers < bal.maxWorkersPerNode)
                     {
-                        state.villagers[villagerIndex].productionTicksMax = FOOD_PRODUCTION_TICKS;
-                        state.villagers[villagerIndex].productionTicksRemaining = FOOD_PRODUCTION_TICKS;
+                        state.villagers[villagerIndex].productionTicksMax = bal.foodProductionTicks;
+                        state.villagers[villagerIndex].productionTicksRemaining = bal.foodProductionTicks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
                     else
@@ -215,10 +207,10 @@ namespace NodeWar.Simulation
                 {
                     state.villagers[villagerIndex].suit = SuitType.Miner;
                     int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < MAX_WORKERS_PER_NODE)
+                    if (workers < bal.maxWorkersPerNode)
                     {
-                        state.villagers[villagerIndex].productionTicksMax = MATERIAL_PRODUCTION_TICKS;
-                        state.villagers[villagerIndex].productionTicksRemaining = MATERIAL_PRODUCTION_TICKS;
+                        state.villagers[villagerIndex].productionTicksMax = bal.materialProductionTicks;
+                        state.villagers[villagerIndex].productionTicksRemaining = bal.materialProductionTicks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
                     else
@@ -232,10 +224,10 @@ namespace NodeWar.Simulation
                 {
                     state.villagers[villagerIndex].suit = SuitType.Smelter;
                     int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < MAX_WORKERS_PER_NODE)
+                    if (workers < bal.maxWorkersPerNode)
                     {
-                        state.villagers[villagerIndex].productionTicksMax = METAL_PRODUCTION_TICKS;
-                        state.villagers[villagerIndex].productionTicksRemaining = METAL_PRODUCTION_TICKS;
+                        state.villagers[villagerIndex].productionTicksMax = bal.metalProductionTicks;
+                        state.villagers[villagerIndex].productionTicksRemaining = bal.metalProductionTicks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
                     else
@@ -252,7 +244,7 @@ namespace NodeWar.Simulation
 
             // Not own node: Claiming logic
             int friendlyClaimers = CountFriendlyClaimersOnNode(state, nodeID, v.ownerID);
-            if (friendlyClaimers < MAX_CLAIMERS_PER_NODE)
+            if (friendlyClaimers < bal.maxClaimersPerNode)
                 state.villagers[villagerIndex].state = VillagerState.Claiming;
             else
                 state.villagers[villagerIndex].state = VillagerState.Idle;
@@ -339,7 +331,7 @@ namespace NodeWar.Simulation
                 {
                     state.villagers[v].state = VillagerState.Dead;
                     state.villagers[v].hp = 0;
-                    state.villagers[v].respawnTicksRemaining = RESPAWN_TICKS;
+                    state.villagers[v].respawnTicksRemaining = bal.respawnTicks;
                     state.villagers[v].movePath = new int[0];
                     state.villagers[v].movePathIndex = 0;
                     state.villagers[v].moveProgress = 0;
@@ -452,18 +444,18 @@ namespace NodeWar.Simulation
                     int rate;
                     if (node.claimBar < 0)
                     {
-                        rate = DECREMENT_MULTIPLIER * BASE_CLAIM_PER_TICK * p0Claimers;
+                        rate = bal.decrementMultiplier * bal.baseClaimPerTick * p0Claimers;
                     }
                     else
                     {
-                        rate = BASE_CLAIM_PER_TICK * p0Claimers;
+                        rate = bal.baseClaimPerTick * p0Claimers;
                     }
 
                     node.claimBar += rate;
 
-                    if (node.claimBar >= CLAIM_THRESHOLD)
+                    if (node.claimBar >= bal.claimThreshold)
                     {
-                        node.claimBar = CLAIM_THRESHOLD;
+                        node.claimBar = bal.claimThreshold;
                         CompleteClaimForPlayer(state, nodeIndex, 0);
                         node = state.nodes[nodeIndex];
                     }
@@ -480,18 +472,18 @@ namespace NodeWar.Simulation
                     int rate;
                     if (node.claimBar > 0)
                     {
-                        rate = DECREMENT_MULTIPLIER * BASE_CLAIM_PER_TICK * p1Claimers;
+                        rate = bal.decrementMultiplier * bal.baseClaimPerTick * p1Claimers;
                     }
                     else
                     {
-                        rate = BASE_CLAIM_PER_TICK * p1Claimers;
+                        rate = bal.baseClaimPerTick * p1Claimers;
                     }
 
                     node.claimBar -= rate;
 
-                    if (node.claimBar <= -CLAIM_THRESHOLD)
+                    if (node.claimBar <= -bal.claimThreshold)
                     {
-                        node.claimBar = -CLAIM_THRESHOLD;
+                        node.claimBar = -bal.claimThreshold;
                         CompleteClaimForPlayer(state, nodeIndex, 1);
                         node = state.nodes[nodeIndex];
                     }
@@ -603,7 +595,7 @@ namespace NodeWar.Simulation
                         if (v.state != VillagerState.Working)
                         {
                             int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
-                            if (workers < MAX_WORKERS_PER_NODE)
+                            if (workers < bal.maxWorkersPerNode)
                             {
                                 state.villagers[idx].state = VillagerState.Working;
                                 state.villagers[idx].productionTicksMax = GetProductionTicks(node.districtType);
@@ -630,7 +622,7 @@ namespace NodeWar.Simulation
                 if (v.state != VillagerState.Claiming)
                 {
                     int friendlyClaimers = CountFriendlyClaimersOnNode(state, v.currentNodeID, v.ownerID);
-                    if (friendlyClaimers < MAX_CLAIMERS_PER_NODE)
+                    if (friendlyClaimers < bal.maxClaimersPerNode)
                     {
                         state.villagers[idx].state = VillagerState.Claiming;
                     }
@@ -660,7 +652,7 @@ namespace NodeWar.Simulation
             }
 
             // Enforce per-player cap
-            int maxAllowed = MAX_VILLAGERS_PER_PLAYER - playerVillagerCount;
+            int maxAllowed = bal.maxVillagersPerPlayer - playerVillagerCount;
             if (maxAllowed <= 0) return;
             if (count > maxAllowed) count = maxAllowed;
 
@@ -688,13 +680,13 @@ namespace NodeWar.Simulation
                     previousNodeID = nodeID,
                     state = VillagerState.Idle,
                     suit = SuitType.None,
-                    hp = 5,
-                    maxHP = 5,
-                    attackDamage = 1,
-                    moveSpeedTicks = 4,
+                    hp = bal.baseHP,
+                    maxHP = bal.baseHP,
+                    attackDamage = bal.baseAttackDamage,
+                    moveSpeedTicks = bal.baseMoveSpeedTicks,
                     respawnTicksRemaining = 0,
-                    attackCooldownRemaining = 20,
-                    attackCooldownMax = 20,
+                    attackCooldownRemaining = bal.baseAttackCooldownMax,
+                    attackCooldownMax = bal.baseAttackCooldownMax,
                     combatTargetID = -1,
                     fightPriority = 0,
                     isConsumed = false,
@@ -714,7 +706,7 @@ namespace NodeWar.Simulation
         /// </summary>
         private static void TickHealing(SimulationState state)
         {
-            if (state.tickCount % HEAL_INTERVAL_TICKS != 0) return;
+            if (state.tickCount % bal.healIntervalTicks != 0) return;
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -753,10 +745,10 @@ namespace NodeWar.Simulation
                     state.villagers[i].moveProgress = 0;
                     state.villagers[i].hp = state.villagers[i].maxHP;
                     state.villagers[i].suit = SuitType.None;
-                    state.villagers[i].attackDamage = 1;
-                    state.villagers[i].moveSpeedTicks = 4;
-                    state.villagers[i].attackCooldownMax = 20;
-                    state.villagers[i].attackCooldownRemaining = 20;
+                    state.villagers[i].attackDamage = bal.baseAttackDamage;
+                    state.villagers[i].moveSpeedTicks = bal.baseMoveSpeedTicks;
+                    state.villagers[i].attackCooldownMax = bal.baseAttackCooldownMax;
+                    state.villagers[i].attackCooldownRemaining = bal.baseAttackCooldownMax;
                     state.villagers[i].combatTargetID = -1;
                     state.villagers[i].respawnTicksRemaining = 0;
                 }
@@ -769,7 +761,7 @@ namespace NodeWar.Simulation
         {
             for (int p = 0; p < state.players.Length; p++)
             {
-                if (state.players[p].breachCount >= BREACH_THRESHOLD)
+                if (state.players[p].breachCount >= bal.breachThreshold)
                 {
                     state.gameOver = true;
                     // The winner is the OTHER player (the one who breached this player's core)
@@ -823,7 +815,7 @@ namespace NodeWar.Simulation
                         if (v.suit != SuitType.Soldier && v.suit == GetExpectedSuit(currentNode.districtType))
                         {
                             int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
-                            if (workers < MAX_WORKERS_PER_NODE)
+                            if (workers < bal.maxWorkersPerNode)
                             {
                                 // Stop and work here
                                 state.villagers[i].state = VillagerState.Working;
@@ -847,7 +839,7 @@ namespace NodeWar.Simulation
                     {
                         // Not our node: check if we should help claim or keep moving
                         int friendlyClaimers = CountFriendlyClaimersOnNode(state, v.currentNodeID, v.ownerID);
-                        if (friendlyClaimers < MAX_CLAIMERS_PER_NODE)
+                        if (friendlyClaimers < bal.maxClaimersPerNode)
                         {
                             state.villagers[i].state = VillagerState.Claiming;
                             state.villagers[i].combatTargetID = -1;
@@ -936,9 +928,9 @@ namespace NodeWar.Simulation
         {
             switch (district)
             {
-                case DistrictType.Farm: return FOOD_PRODUCTION_TICKS;
-                case DistrictType.Mine: return MATERIAL_PRODUCTION_TICKS;
-                case DistrictType.Forge: return METAL_PRODUCTION_TICKS;
+                case DistrictType.Farm: return bal.foodProductionTicks;
+                case DistrictType.Mine: return bal.materialProductionTicks;
+                case DistrictType.Forge: return bal.metalProductionTicks;
                 default: return 0;
             }
         }

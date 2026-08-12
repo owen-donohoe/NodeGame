@@ -2,9 +2,12 @@ namespace NodeWar.Simulation
 {
     public static class CommandProcessor
     {
-        private const int SOLDIER_COST_FOOD = 2;
-        private const int SOLDIER_COST_MATERIAL = 1;
-        private const int RESPAWN_COST_FOOD = 1;
+        private static GameBalance bal;
+
+        public static void SetBalance(GameBalance balance)
+        {
+            bal = balance;
+        }
 
         public static void ProcessCommand(SimulationState state, GameCommand command)
         {
@@ -82,18 +85,18 @@ namespace NodeWar.Simulation
             if (state.nodes[nodeID].ownerID != command.playerID) return;
 
             // Resource check
-            if (state.players[command.playerID].food < SOLDIER_COST_FOOD) return;
-            if (state.players[command.playerID].materials < SOLDIER_COST_MATERIAL) return;
+            if (state.players[command.playerID].food < bal.soldierCostFood) return;
+            if (state.players[command.playerID].materials < bal.soldierCostMaterial) return;
 
-            // All valid — apply
-            state.players[command.playerID].food -= SOLDIER_COST_FOOD;
-            state.players[command.playerID].materials -= SOLDIER_COST_MATERIAL;
+            // All valid - apply
+            state.players[command.playerID].food -= bal.soldierCostFood;
+            state.players[command.playerID].materials -= bal.soldierCostMaterial;
 
             state.villagers[vid].suit = SuitType.Soldier;
-            state.villagers[vid].attackDamage = 2;
-            state.villagers[vid].moveSpeedTicks = 5;
-            state.villagers[vid].attackCooldownMax = 10;
-            state.villagers[vid].attackCooldownRemaining = 10;
+            state.villagers[vid].attackDamage = bal.soldierAttackDamage;
+            state.villagers[vid].moveSpeedTicks = bal.soldierMoveSpeedTicks;
+            state.villagers[vid].attackCooldownMax = bal.soldierAttackCooldownMax;
+            state.villagers[vid].attackCooldownRemaining = bal.soldierAttackCooldownMax;
         }
 
         private static void ProcessRespawnCommand(SimulationState state, GameCommand command)
@@ -113,10 +116,10 @@ namespace NodeWar.Simulation
             if (villager.isConsumed) return;
 
             // Resource check
-            if (state.players[command.playerID].food < RESPAWN_COST_FOOD) return;
+            if (state.players[command.playerID].food < bal.respawnCostFood) return;
 
-            // All valid — apply
-            state.players[command.playerID].food -= RESPAWN_COST_FOOD;
+            // All valid - apply
+            state.players[command.playerID].food -= bal.respawnCostFood;
 
             int coreNode = state.players[command.playerID].coreNodeID;
 
@@ -129,10 +132,10 @@ namespace NodeWar.Simulation
             state.villagers[vid].moveProgress = 0;
             state.villagers[vid].hp = state.villagers[vid].maxHP;
             state.villagers[vid].suit = SuitType.None;
-            state.villagers[vid].attackDamage = 1;
-            state.villagers[vid].moveSpeedTicks = 4;
-            state.villagers[vid].attackCooldownMax = 20;
-            state.villagers[vid].attackCooldownRemaining = 20;
+            state.villagers[vid].attackDamage = bal.baseAttackDamage;
+            state.villagers[vid].moveSpeedTicks = bal.baseMoveSpeedTicks;
+            state.villagers[vid].attackCooldownMax = bal.baseAttackCooldownMax;
+            state.villagers[vid].attackCooldownRemaining = bal.baseAttackCooldownMax;
             state.villagers[vid].combatTargetID = -1;
             state.villagers[vid].respawnTicksRemaining = 0;
             state.villagers[vid].productionTicksRemaining = 0;
