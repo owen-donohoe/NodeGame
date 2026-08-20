@@ -15,4 +15,5 @@ MonoBehaviour:
   nodeID: node_rampart
   displayName: Rampart
   icon: {fileID: 0}
-  description: Slows enemy movement through
+  description: "Enemy decrement rate halved (2\xD7 instead of 4\xD7). Defenders take
+    -1 damage (min 1). Defenders get +1 maxHP while present"

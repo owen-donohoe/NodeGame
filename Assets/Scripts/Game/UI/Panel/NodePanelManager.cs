@@ -266,11 +266,23 @@ namespace NodeWar.UI
         {
             switch (type)
             {
+
+
                 case DistrictType.Farm: return farmContentPrefab;
                 case DistrictType.Mine: return mineContentPrefab;
                 case DistrictType.Forge: return forgeContentPrefab;
                 case DistrictType.Core: return coreContentPrefab;
-                case DistrictType.Barracks: return barracksContentPrefab;
+                case DistrictType.Barracks:
+                case DistrictType.Camp:
+                case DistrictType.Arsenal:
+                case DistrictType.Sanctuary:
+                    return barracksContentPrefab;
+                case DistrictType.Market:
+                    return farmContentPrefab;
+                case DistrictType.Watchtower:
+                case DistrictType.Rampart:
+                case DistrictType.Shrine:
+                    return genericContentPrefab;
                 default: return genericContentPrefab;
             }
         }
@@ -285,6 +297,13 @@ namespace NodeWar.UI
                 case DistrictType.Core: return "Core";
                 case DistrictType.Barracks: return "Barracks";
                 case DistrictType.Village: return "Village";
+                case DistrictType.Camp: return "Camp";
+                case DistrictType.Shrine: return "Shrine";
+                case DistrictType.Arsenal: return "Arsenal";
+                case DistrictType.Sanctuary: return "Sanctuary";
+                case DistrictType.Watchtower: return "Watchtower";
+                case DistrictType.Rampart: return "Rampart";
+                case DistrictType.Market: return "Market";
                 default: return "Crossroads";
             }
         }

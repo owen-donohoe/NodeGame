@@ -16,6 +16,7 @@ namespace NodeWar.Lobby
         [Header("Equipped Slots")]
         [SerializeField] private GroupSlotDisplay suitSlot0;
         [SerializeField] private GroupSlotDisplay suitSlot1;
+        [SerializeField] private GroupSlotDisplay suitSlot2;
         [SerializeField] private GroupSlotDisplay nodeSlot0;
         [SerializeField] private GroupSlotDisplay nodeSlot1;
 
@@ -56,6 +57,7 @@ namespace NodeWar.Lobby
         {
             suitSlot0.Initialize(OnSuitUnequipped);
             suitSlot1.Initialize(OnSuitUnequipped);
+            suitSlot2.Initialize(OnSuitUnequipped);
             nodeSlot0.Initialize(OnNodeUnequipped);
             nodeSlot1.Initialize(OnNodeUnequipped);
 
@@ -160,6 +162,8 @@ namespace NodeWar.Lobby
                 EquipSuit(suitSlot0, suitID);
             else if (suitSlot1.IsEmpty)
                 EquipSuit(suitSlot1, suitID);
+            else if (!suitSlot2.IsEmpty)
+                EquipSuit(suitSlot2, suitID);
 
             RefreshListVisibility();
             DeselectAll(suitItems);
@@ -206,11 +210,12 @@ namespace NodeWar.Lobby
         {
             string suitEquipped0 = suitSlot0.EquippedID;
             string suitEquipped1 = suitSlot1.EquippedID;
+            string suitEquipped2 = suitSlot2.EquippedID;
 
             for (int i = 0; i < suitItems.Count; i++)
             {
                 string id = suitItems[i].ItemID;
-                bool isEquipped = (id == suitEquipped0 || id == suitEquipped1);
+                bool isEquipped = (id == suitEquipped0 || id == suitEquipped1 || id == suitEquipped2);
                 bool isActiveTab = (activeTab == SelectionTab.Suits);
                 suitItems[i].SetVisible(isActiveTab && !isEquipped);
             }
@@ -244,6 +249,7 @@ namespace NodeWar.Lobby
 
             suitSlot0.SetEmpty();
             suitSlot1.SetEmpty();
+            suitSlot2.SetEmpty();
             nodeSlot0.SetEmpty();
             nodeSlot1.SetEmpty();
 
@@ -251,6 +257,9 @@ namespace NodeWar.Lobby
                 EquipSuit(suitSlot0, loadout.suitID0);
             if (!string.IsNullOrEmpty(loadout.suitID1))
                 EquipSuit(suitSlot1, loadout.suitID1);
+            if (!string.IsNullOrEmpty(loadout.suitID2))
+                EquipSuit(suitSlot2, loadout.suitID2);
+
             if (!string.IsNullOrEmpty(loadout.nodeID0))
                 EquipNode(nodeSlot0, loadout.nodeID0);
             if (!string.IsNullOrEmpty(loadout.nodeID1))
@@ -266,6 +275,7 @@ namespace NodeWar.Lobby
             {
                 suitID0 = suitSlot0.EquippedID ?? "",
                 suitID1 = suitSlot1.EquippedID ?? "",
+                suitID2 = suitSlot2.EquippedID ?? "",
                 nodeID0 = nodeSlot0.EquippedID ?? "",
                 nodeID1 = nodeSlot1.EquippedID ?? ""
             };

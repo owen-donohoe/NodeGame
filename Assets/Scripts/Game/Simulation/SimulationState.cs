@@ -3,16 +3,33 @@ using UnityEngine;
 namespace NodeWar.Simulation
 {
     // ===== ENUMS =====
-
     public enum DistrictType
     {
-        None,
+        None, // empty connector / crossroads
         Farm,
         Mine,
         Village,
         Barracks,
         Core,
-        Forge
+        Forge,
+        
+        Camp,
+        Shrine,
+        Arsenal,
+        Sanctuary,
+        Watchtower,
+        Rampart,
+        Market
+
+    }
+
+    public enum NodeSlotType
+    {
+        Fixed,
+        Army,
+        Healing,
+        Affect,
+        ResourceSpecial
     }
 
     public enum VillagerState
@@ -30,12 +47,18 @@ namespace NodeWar.Simulation
         None,
         Farmer,
         Miner,
-        Soldier,
-        Smelter
+        Warrior, // renamed from Soldier
+        Smelter,
+        Guardian,
+        Scout,
+        Berserker,
+        Medic,
+        Merchant, // auto-assigned: Market worker
+        Acolyte, // auto-assigned: Sanctuary worker
+        Watcher // auto-assigned: Watchtower worker
     }
 
     // ===== DATA STRUCTS =====
-
     [System.Serializable]
     public struct NodeData
     {
@@ -43,25 +66,27 @@ namespace NodeWar.Simulation
         public Vector3 worldPosition;
         public int gridX;
         public int gridZ;
-        public Edge[] edges;           // replaces connectedNodes[] + edgeWeights[]
+        public Edge[] edges;
         public DistrictType districtType;
         public int claimBar;
         public int ownerID;
         public int bonusVillagersOnClaim;
         public int materialAllocation;
+
+        public NodeSlotType slotType;
+        public DistrictType baseDistrictType;
     }
 
     [System.Serializable]
+
     public struct Edge
     {
         public int toNode;
-        public int travelWeight;   // physical terrain/distance cost to cross this edge.
-                                   // Never touched by ownership preference — TickMovement
-                                   // and Pathfinding's route-scoring both read this same
-                                   // number for "how far is it," just for different purposes.
+        public int travelWeight;
     }
 
     [System.Serializable]
+
     public struct VillagerData
     {
         public int villagerID;
@@ -79,19 +104,14 @@ namespace NodeWar.Simulation
         public int attackDamage;
         public int moveSpeedTicks;
         public int respawnTicksRemaining;
-
-        // Phase 5: Combat fields
         public int attackCooldownRemaining;
         public int attackCooldownMax;
         public int combatTargetID;
         public int fightPriority;
-
-        // Phase 6: Breach fields
         public bool isConsumed;
-
-        // Phase 7: Production fields
         public int productionTicksRemaining;
         public int productionTicksMax;
+        public bool hasRampartBonus;
     }
 
     [System.Serializable]
@@ -103,11 +123,14 @@ namespace NodeWar.Simulation
         public int materials;
         public int metal;
         public int breachCount;
+        public int[] draftedSuits; // (int)SuitType values this player can equip
+        public int[] draftedNodes; // (int)DistrictType values for draft upgrades
     }
 
     // ===== SIMULATION STATE =====
 
     [System.Serializable]
+
     public class SimulationState
     {
         public NodeData[] nodes;

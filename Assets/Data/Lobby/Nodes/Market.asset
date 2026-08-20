@@ -15,4 +15,4 @@ MonoBehaviour:
   nodeID: node_market
   displayName: Market
   icon: {fileID: 0}
-  description: Converts resources at improved rates
+  description: Workers produce Food every 45 ticks AND Materials every 60 ticks

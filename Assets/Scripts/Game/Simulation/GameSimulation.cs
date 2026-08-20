@@ -36,6 +36,8 @@ namespace NodeWar.Simulation
             // Step 2: Movement
             TickAllMovement(state);
 
+            TickRampartBonuses(state);   // NEW
+
             // Step 3: Combat
             TickCombat(state);
 
@@ -148,6 +150,34 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex] = v;
         }
 
+        private static void TickRampartBonuses(SimulationState state)
+        {
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.state == VillagerState.Dead || v.isConsumed) continue;
+
+                bool shouldHaveBonus =
+                    state.nodes[v.currentNodeID].districtType == DistrictType.Rampart &&
+                    state.nodes[v.currentNodeID].ownerID == v.ownerID;
+
+                if (shouldHaveBonus && !v.hasRampartBonus)
+                {
+                    state.villagers[i].maxHP += bal.rampartMaxHPBonus;
+                    state.villagers[i].hp += bal.rampartMaxHPBonus;
+                    state.villagers[i].hasRampartBonus = true;
+                }
+                else if (!shouldHaveBonus && v.hasRampartBonus)
+                {
+                    state.villagers[i].maxHP -= bal.rampartMaxHPBonus;
+                    if (state.villagers[i].hp > state.villagers[i].maxHP)
+                        state.villagers[i].hp = state.villagers[i].maxHP;
+                    state.villagers[i].hasRampartBonus = false;
+                }
+            }
+        }
+
+
         /// <summary>
         /// Applies suit assignment, production timer, and state for a villager
         /// that has arrived at a node (end of path or post-combat with no path).
@@ -165,7 +195,7 @@ namespace NodeWar.Simulation
             // Soldier suit is PERMANENT until death — do not strip it.
             if (node.districtType == DistrictType.Core)
             {
-                if (v.suit != SuitType.Soldier)
+                if (!GameBalance.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
                     state.villagers[villagerIndex].attackDamage = bal.baseAttackDamage;
@@ -179,8 +209,7 @@ namespace NodeWar.Simulation
             // Own node
             if (node.ownerID == v.ownerID)
             {
-                // Soldiers never auto-assign suit, just go Idle
-                if (v.suit == SuitType.Soldier)
+                if (GameBalance.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].state = VillagerState.Idle;
                     return;
@@ -196,10 +225,7 @@ namespace NodeWar.Simulation
                         state.villagers[villagerIndex].productionTicksRemaining = bal.foodProductionTicks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
-                    else
-                    {
-                        state.villagers[villagerIndex].state = VillagerState.Idle;
-                    }
+                    else state.villagers[villagerIndex].state = VillagerState.Idle;
                     return;
                 }
 
@@ -213,10 +239,7 @@ namespace NodeWar.Simulation
                         state.villagers[villagerIndex].productionTicksRemaining = bal.materialProductionTicks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
-                    else
-                    {
-                        state.villagers[villagerIndex].state = VillagerState.Idle;
-                    }
+                    else state.villagers[villagerIndex].state = VillagerState.Idle;
                     return;
                 }
 
@@ -230,14 +253,60 @@ namespace NodeWar.Simulation
                         state.villagers[villagerIndex].productionTicksRemaining = bal.metalProductionTicks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
-                    else
-                    {
-                        state.villagers[villagerIndex].state = VillagerState.Idle;
-                    }
+                    else state.villagers[villagerIndex].state = VillagerState.Idle;
                     return;
                 }
 
-                // Barracks, Village, None: just Idle, no suit change
+                if (node.districtType == DistrictType.Market)
+                {
+                    state.villagers[villagerIndex].suit = SuitType.Merchant;
+                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
+                    if (workers < bal.maxWorkersPerNode)
+                    {
+                        state.villagers[villagerIndex].productionTicksMax = bal.marketFoodProductionTicks;
+                        state.villagers[villagerIndex].productionTicksRemaining = bal.marketFoodProductionTicks;
+                        state.villagers[villagerIndex].state = VillagerState.Working;
+                    }
+                    else state.villagers[villagerIndex].state = VillagerState.Idle;
+                    return;
+                }
+
+                if (node.districtType == DistrictType.Sanctuary)
+                {
+                    state.villagers[villagerIndex].suit = SuitType.Acolyte;
+                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
+                    if (workers < bal.maxWorkersPerNode)
+                    {
+                        state.villagers[villagerIndex].productionTicksMax = 0;
+                        state.villagers[villagerIndex].productionTicksRemaining = 0;
+                        state.villagers[villagerIndex].state = VillagerState.Working;
+                    }
+                    else state.villagers[villagerIndex].state = VillagerState.Idle;
+                    return;
+                }
+
+                if (node.districtType == DistrictType.Watchtower)
+                {
+                    state.villagers[villagerIndex].suit = SuitType.Watcher;
+                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
+                    if (workers < bal.maxWorkersPerNode)
+                    {
+                        state.villagers[villagerIndex].productionTicksMax = 0;
+                        state.villagers[villagerIndex].productionTicksRemaining = 0;
+                        state.villagers[villagerIndex].state = VillagerState.Working;
+                    }
+                    else state.villagers[villagerIndex].state = VillagerState.Idle;
+                    return;
+                }
+
+                // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None — strip non-combat suit, go Idle
+                if (!GameBalance.IsCombatSuit(v.suit))
+                {
+                    state.villagers[villagerIndex].suit = SuitType.None;
+                    state.villagers[villagerIndex].attackDamage = bal.baseAttackDamage;
+                    state.villagers[villagerIndex].moveSpeedTicks = bal.baseMoveSpeedTicks;
+                    state.villagers[villagerIndex].attackCooldownMax = bal.baseAttackCooldownMax;
+                }
                 state.villagers[villagerIndex].state = VillagerState.Idle;
                 return;
             }
@@ -305,18 +374,35 @@ namespace NodeWar.Simulation
 
                 if (state.villagers[v].attackCooldownRemaining <= 0)
                 {
-                    // Deal damage to target
-                    int targetID = state.villagers[v].combatTargetID;
-                    if (targetID >= 0 && targetID < state.villagers.Length)
+                    if (state.villagers[v].suit == SuitType.Medic)
                     {
-                        if (state.villagers[targetID].state != VillagerState.Dead &&
-                            !state.villagers[targetID].isConsumed)
+                        int healTarget = FindMostDamagedFriendly(state,
+                            state.villagers[v].currentNodeID, state.villagers[v].ownerID, v);
+                        if (healTarget >= 0)
                         {
-                            state.villagers[targetID].hp -= state.villagers[v].attackDamage;
+                            state.villagers[healTarget].hp++;
+                            if (state.villagers[healTarget].hp > state.villagers[healTarget].maxHP)
+                                state.villagers[healTarget].hp = state.villagers[healTarget].maxHP;
                         }
                     }
-
-                    // Reset cooldown
+                    else
+                    {
+                        int targetID = state.villagers[v].combatTargetID;
+                        if (targetID >= 0 && targetID < state.villagers.Length)
+                        {
+                            if (state.villagers[targetID].state != VillagerState.Dead &&
+                                !state.villagers[targetID].isConsumed)
+                            {
+                                int damage = state.villagers[v].attackDamage;
+                                if (state.villagers[targetID].hasRampartBonus)
+                                {
+                                    damage -= bal.rampartDamageReduction;
+                                    if (damage < 1) damage = 1;
+                                }
+                                state.villagers[targetID].hp -= damage;
+                            }
+                        }
+                    }
                     state.villagers[v].attackCooldownRemaining = state.villagers[v].attackCooldownMax;
                 }
             }
@@ -337,6 +423,7 @@ namespace NodeWar.Simulation
                     state.villagers[v].moveProgress = 0;
                     state.villagers[v].targetNodeID = -1;
                     state.villagers[v].combatTargetID = -1;
+                    state.villagers[v].hasRampartBonus = false;
                 }
             }
         }
@@ -441,15 +528,22 @@ namespace NodeWar.Simulation
                 // --- Player 0 claiming ---
                 if (p0Claimers > 0 && node.ownerID != 0)
                 {
+                    int activeDecrement = bal.decrementMultiplier;
+                    if (node.districtType == DistrictType.Rampart)
+                        activeDecrement = bal.rampartDecrementMultiplier;
+
                     int rate;
                     if (node.claimBar < 0)
                     {
-                        rate = bal.decrementMultiplier * bal.baseClaimPerTick * p0Claimers;
+                        rate = activeDecrement * bal.baseClaimPerTick * p0Claimers;
                     }
                     else
                     {
                         rate = bal.baseClaimPerTick * p0Claimers;
                     }
+
+                    if (HasAdjacentFriendlyWatchtowerWorkers(state, nodeIndex, 0)) 
+                        rate = rate * bal.watchtowerClaimNumerator / bal.watchtowerClaimDenominator;
 
                     node.claimBar += rate;
 
@@ -469,15 +563,22 @@ namespace NodeWar.Simulation
                 // --- Player 1 claiming ---
                 if (p1Claimers > 0 && node.ownerID != 1)
                 {
+                    int activeDecrement = bal.decrementMultiplier;
+                    if (node.districtType == DistrictType.Rampart)
+                        activeDecrement = bal.rampartDecrementMultiplier;
+
                     int rate;
                     if (node.claimBar > 0)
                     {
-                        rate = bal.decrementMultiplier * bal.baseClaimPerTick * p1Claimers;
+                        rate = activeDecrement * bal.baseClaimPerTick * p1Claimers;
                     }
                     else
                     {
                         rate = bal.baseClaimPerTick * p1Claimers;
                     }
+
+                    if (HasAdjacentFriendlyWatchtowerWorkers(state, nodeIndex, 1)) 
+                        rate = rate * bal.watchtowerClaimNumerator / bal.watchtowerClaimDenominator;
 
                     node.claimBar -= rate;
 
@@ -514,6 +615,7 @@ namespace NodeWar.Simulation
             {
                 if (state.villagers[idx].state != VillagerState.Working) continue;
                 if (state.villagers[idx].isConsumed) continue;
+                if (state.villagers[idx].productionTicksMax <= 0) continue;
 
                 state.villagers[idx].productionTicksRemaining--;
 
@@ -542,6 +644,20 @@ namespace NodeWar.Simulation
                                 state.players[ownerID].metal++;
                             }
                             // If allocation is 0 or no materials: timer resets, nothing produced
+                            break;
+                        case DistrictType.Market:
+                            if (state.villagers[idx].productionTicksMax == bal.marketFoodProductionTicks)
+                            {
+                                state.players[ownerID].food++;
+                                state.villagers[idx].productionTicksMax = bal.marketMaterialProductionTicks;
+                                state.villagers[idx].productionTicksRemaining = bal.marketMaterialProductionTicks;
+                            }
+                            else
+                            {
+                                state.players[ownerID].materials++;
+                                state.villagers[idx].productionTicksMax = bal.marketFoodProductionTicks;
+                                state.villagers[idx].productionTicksRemaining = bal.marketFoodProductionTicks;
+                            }
                             break;
                     }
 
@@ -575,7 +691,7 @@ namespace NodeWar.Simulation
                 if (node.ownerID == v.ownerID)
                 {
                     // Soldiers never work, just Idle
-                    if (v.suit == SuitType.Soldier)
+                    if (GameBalance.IsCombatSuit(v.suit))
                     {
                         if (v.state != VillagerState.Idle)
                             state.villagers[idx].state = VillagerState.Idle;
@@ -634,11 +750,42 @@ namespace NodeWar.Simulation
         {
             state.nodes[nodeIndex].ownerID = playerID;
 
+            if (state.nodes[nodeIndex].slotType != NodeSlotType.Fixed)
+            {
+                DistrictType upgrade = GetPlayerUpgradeForSlot(state, playerID, state.nodes[nodeIndex].slotType);
+                state.nodes[nodeIndex].districtType = upgrade != DistrictType.None
+                    ? upgrade
+                    : state.nodes[nodeIndex].baseDistrictType;
+
+                // Reset non-combat workers — node type just changed
+                for (int i = 0; i < state.villagers.Length; i++)
+                {
+                    if (state.villagers[i].currentNodeID != nodeIndex) continue;
+                    if (state.villagers[i].state == VillagerState.Dead || state.villagers[i].isConsumed) continue;
+                    if (GameBalance.IsCombatSuit(state.villagers[i].suit)) continue;
+                    state.villagers[i].state = VillagerState.Idle;
+                    state.villagers[i].suit = SuitType.None;
+                    state.villagers[i].productionTicksRemaining = 0;
+                    state.villagers[i].productionTicksMax = 0;
+                }
+            }
+
             int bonus = state.nodes[nodeIndex].bonusVillagersOnClaim;
             if (bonus > 0)
-            {
                 SpawnBonusVillagers(state, nodeIndex, playerID, bonus);
+        }
+
+        private static DistrictType GetPlayerUpgradeForSlot(SimulationState state, int playerID, NodeSlotType slotType)
+        {
+            int[] draftedNodes = state.players[playerID].draftedNodes;
+            if (draftedNodes == null) return DistrictType.None;
+            for (int i = 0; i < draftedNodes.Length; i++)
+            {
+                DistrictType drafted = (DistrictType)draftedNodes[i];
+                if (GameBalance.GetSlotTypeForDistrict(drafted) == slotType)
+                    return drafted;
             }
+            return DistrictType.None;
         }
 
         private static void SpawnBonusVillagers(SimulationState state, int nodeID, int playerID, int count)
@@ -691,7 +838,8 @@ namespace NodeWar.Simulation
                     fightPriority = 0,
                     isConsumed = false,
                     productionTicksRemaining = 0,
-                    productionTicksMax = 0
+                    productionTicksMax = 0,
+                    hasRampartBonus = false
                 };
             }
 
@@ -716,7 +864,11 @@ namespace NodeWar.Simulation
                 if (v.state == VillagerState.Fighting) continue;
                 if (v.hp >= v.maxHP) continue;
 
-                state.villagers[i].hp++;
+                bool onOwnedShrine = state.nodes[v.currentNodeID].districtType == DistrictType.Shrine &&
+                                     state.nodes[v.currentNodeID].ownerID == v.ownerID;
+                int interval = onOwnedShrine ? bal.shrineHealIntervalTicks : bal.healIntervalTicks;
+                if (state.tickCount % interval == 0)
+                    state.villagers[i].hp++;
             }
         }
 
@@ -730,7 +882,9 @@ namespace NodeWar.Simulation
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
-                state.villagers[i].respawnTicksRemaining--;
+                int sanctuaryWorkers = CountSanctuaryWorkersForPlayer(state, v.ownerID);
+                int decrement = 1 + (sanctuaryWorkers * bal.sanctuaryRespawnBoostPerWorker);
+                state.villagers[i].respawnTicksRemaining -= decrement;
 
                 if (state.villagers[i].respawnTicksRemaining <= 0)
                 {
@@ -751,6 +905,7 @@ namespace NodeWar.Simulation
                     state.villagers[i].attackCooldownRemaining = bal.baseAttackCooldownMax;
                     state.villagers[i].combatTargetID = -1;
                     state.villagers[i].respawnTicksRemaining = 0;
+                    state.villagers[i].hasRampartBonus = false;
                 }
             }
         }
@@ -812,7 +967,7 @@ namespace NodeWar.Simulation
                     if (currentNode.ownerID == v.ownerID)
                     {
                         // Own node: check if suit matches for Working
-                        if (v.suit != SuitType.Soldier && v.suit == GetExpectedSuit(currentNode.districtType))
+                        if (!GameBalance.IsCombatSuit(v.suit) && v.suit == GetExpectedSuit(currentNode.districtType))
                         {
                             int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
                             if (workers < bal.maxWorkersPerNode)
@@ -880,6 +1035,7 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].moveProgress = 0;
             state.villagers[villagerIndex].targetNodeID = -1;
             state.villagers[villagerIndex].combatTargetID = -1;
+            state.villagers[villagerIndex].hasRampartBonus = false;
         }
 
         // ===== HELPER FUNCTIONS =====
@@ -931,6 +1087,9 @@ namespace NodeWar.Simulation
                 case DistrictType.Farm: return bal.foodProductionTicks;
                 case DistrictType.Mine: return bal.materialProductionTicks;
                 case DistrictType.Forge: return bal.metalProductionTicks;
+                case DistrictType.Market: return bal.marketFoodProductionTicks;
+                case DistrictType.Sanctuary: return 0;
+                case DistrictType.Watchtower: return 0;
                 default: return 0;
             }
         }
@@ -964,6 +1123,9 @@ namespace NodeWar.Simulation
                 case DistrictType.Farm: return SuitType.Farmer;
                 case DistrictType.Mine: return SuitType.Miner;
                 case DistrictType.Forge: return SuitType.Smelter;
+                case DistrictType.Market: return SuitType.Merchant;
+                case DistrictType.Sanctuary: return SuitType.Acolyte;
+                case DistrictType.Watchtower: return SuitType.Watcher;
                 default: return SuitType.None;
             }
         }
@@ -982,6 +1144,58 @@ namespace NodeWar.Simulation
                     return edges[i].travelWeight;
             }
             return 3; // fallback, no direct edge found
+        }
+
+        private static int FindMostDamagedFriendly(SimulationState state, int nodeID, int ownerID, int excludeID)
+        {
+            int bestTarget = -1;
+            int mostDamage = 0;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                if (i == excludeID) continue;
+                VillagerData v = state.villagers[i];
+                if (v.currentNodeID != nodeID) continue;
+                if (v.ownerID != ownerID) continue;
+                if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                if (v.hp >= v.maxHP) continue;
+                int damage = v.maxHP - v.hp;
+                if (damage > mostDamage) { mostDamage = damage; bestTarget = i; }
+            }
+            return bestTarget;
+        }
+
+        private static bool HasAdjacentFriendlyWatchtowerWorkers(SimulationState state, int nodeIndex, int playerID)
+        {
+            Edge[] edges = state.nodes[nodeIndex].edges;
+            for (int e = 0; e < edges.Length; e++)
+            {
+                int adjNode = edges[e].toNode;
+                if (state.nodes[adjNode].districtType != DistrictType.Watchtower) continue;
+                if (state.nodes[adjNode].ownerID != playerID) continue;
+                for (int v = 0; v < state.villagers.Length; v++)
+                {
+                    VillagerData vil = state.villagers[v];
+                    if (vil.currentNodeID != adjNode) continue;
+                    if (vil.ownerID != playerID) continue;
+                    if (vil.state != VillagerState.Working || vil.isConsumed) continue;
+                    return true;
+                }
+            }
+            return false;
+        }
+        private static int CountSanctuaryWorkersForPlayer(SimulationState state, int playerID)
+        {
+            int count = 0;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.ownerID != playerID) continue;
+                if (v.state != VillagerState.Working || v.isConsumed) continue;
+                if (state.nodes[v.currentNodeID].districtType != DistrictType.Sanctuary) continue;
+                if (state.nodes[v.currentNodeID].ownerID != playerID) continue;
+                count++;
+            }
+            return count;
         }
     }
 }

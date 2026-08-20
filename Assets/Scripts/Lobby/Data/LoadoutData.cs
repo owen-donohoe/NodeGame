@@ -5,6 +5,7 @@ namespace NodeWar.Lobby
     {
         public string suitID0;
         public string suitID1;
+        public string suitID2;
         public string nodeID0;
         public string nodeID1;
     }

@@ -328,7 +328,7 @@ namespace NodeWar.Input
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
                 if (v.state != VillagerState.Idle) continue;
-                if (v.suit == SuitType.Soldier) continue;
+                if (GameBalance.IsCombatSuit(v.suit)) continue;
                 if (v.isConsumed) continue;
                 if (claimedThisTick[i]) continue;
 
@@ -344,7 +344,8 @@ namespace NodeWar.Input
                     type = CommandType.Equip,
                     playerID = playerID,
                     villagerID = i,
-                    issuedOnTick = state.tickCount
+                    issuedOnTick = state.tickCount,
+                    value = (int)SuitType.Warrior
                 };
                 inputBuffer.EnqueueCommand(cmd);
                 claimedThisTick[i] = true;
@@ -361,7 +362,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (v.suit != SuitType.Soldier) continue;
+                if (!GameBalance.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
                 if (claimedThisTick[i]) continue;
@@ -566,7 +567,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (v.suit != SuitType.Soldier) continue;
+                if (!GameBalance.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
                 if (claimedThisTick[i]) continue;
@@ -582,7 +583,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (v.suit == SuitType.Soldier) continue;
+                if (GameBalance.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
                 if (!includeWorking && v.state == VillagerState.Working) continue;
@@ -605,7 +606,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (v.suit == SuitType.Soldier) continue;
+                if (GameBalance.IsCombatSuit(v.suit)) continue;
                 if (v.state != VillagerState.Idle) continue;
                 if (v.isConsumed) continue;
                 if (claimedThisTick[i]) continue;

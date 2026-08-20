@@ -10,10 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 96268278c45b7e843a0bc05b0f2dc522, type: 3}
-  m_Name: Sanctuary
+  m_Name: Barracks
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Lobby.NodeDefinition
-  nodeID: node_sanctuary
-  displayName: Sanctuary
+  nodeID: node_barracks
+  displayName: Barracks
   icon: {fileID: 0}
-  description: Equip Medic here. Workers reduce all friendly respawn timers by 1/tick/worker.
-    Instant respawn cost -25%/worker (min 1F)
+  description: Equip Army-category suits here

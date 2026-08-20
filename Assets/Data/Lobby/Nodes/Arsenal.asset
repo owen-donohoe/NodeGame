@@ -15,4 +15,4 @@ MonoBehaviour:
   nodeID: node_arsenal
   displayName: Arsenal
   icon: {fileID: 0}
-  description: Equips soldiers faster
+  description: Equip Army-category suits here. Equipped units gain +1 attack

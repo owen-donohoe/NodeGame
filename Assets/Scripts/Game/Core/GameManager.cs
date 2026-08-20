@@ -15,7 +15,7 @@ namespace NodeWar.Core
         [SerializeField] private GameBalance balance;
         [SerializeField] private BoardConfig boardConfig;
 
-        [Header("Node Prefabs (assign per district type)")]
+        [Header("Node Prefabs")]
         [SerializeField] private GameObject nodePrefabDefault;
         [SerializeField] private GameObject nodePrefabCore;
         [SerializeField] private GameObject nodePrefabFarm;
@@ -23,6 +23,13 @@ namespace NodeWar.Core
         [SerializeField] private GameObject nodePrefabVillage;
         [SerializeField] private GameObject nodePrefabBarracks;
         [SerializeField] private GameObject nodePrefabForge;
+        [SerializeField] private GameObject nodePrefabCamp;
+        [SerializeField] private GameObject nodePrefabShrine;
+        [SerializeField] private GameObject nodePrefabArsenal;
+        [SerializeField] private GameObject nodePrefabSanctuary;
+        [SerializeField] private GameObject nodePrefabWatchtower;
+        [SerializeField] private GameObject nodePrefabRampart;
+        [SerializeField] private GameObject nodePrefabMarket;
 
         [Header("Villager Prefab")]
         [SerializeField] private GameObject villagerPrefab;
@@ -294,21 +301,17 @@ namespace NodeWar.Core
         }
 
         // ===== NODE INITIALIZATION (4x7 GRID) =====
-
         private void InitializeNodes()
         {
-
             int GRID_COLS = boardConfig.gridCols;
             int GRID_ROWS = boardConfig.gridRows;
-            int nodeCount = GRID_COLS * GRID_ROWS;
-
-            state.nodes = new NodeData[nodeCount];
+            state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
 
             DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
             layout[0, 0] = DistrictType.None; layout[0, 1] = DistrictType.None; layout[0, 2] = DistrictType.Core; layout[0, 3] = DistrictType.None;
             layout[1, 0] = DistrictType.None; layout[1, 1] = DistrictType.Mine; layout[1, 2] = DistrictType.Farm; layout[1, 3] = DistrictType.None;
             layout[2, 0] = DistrictType.Mine; layout[2, 1] = DistrictType.Barracks; layout[2, 2] = DistrictType.Village; layout[2, 3] = DistrictType.Farm;
-            layout[3, 0] = DistrictType.Forge; layout[3, 1] = DistrictType.None; layout[3, 2] = DistrictType.None; layout[3, 3] = DistrictType.Forge;
+            layout[3, 0] = DistrictType.Forge; layout[3, 1] = DistrictType.Market; layout[3, 2] = DistrictType.Market; layout[3, 3] = DistrictType.Forge;
             layout[4, 0] = DistrictType.Farm; layout[4, 1] = DistrictType.Village; layout[4, 2] = DistrictType.Barracks; layout[4, 3] = DistrictType.Mine;
             layout[5, 0] = DistrictType.None; layout[5, 1] = DistrictType.Farm; layout[5, 2] = DistrictType.Mine; layout[5, 3] = DistrictType.None;
             layout[6, 0] = DistrictType.None; layout[6, 1] = DistrictType.Core; layout[6, 2] = DistrictType.None; layout[6, 3] = DistrictType.None;
@@ -318,7 +321,6 @@ namespace NodeWar.Core
                 for (int x = 0; x < GRID_COLS; x++)
                 {
                     int nodeID = z * GRID_COLS + x;
-
                     List<int> neighborIDs = new List<int>();
                     if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
                     if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
@@ -327,13 +329,9 @@ namespace NodeWar.Core
 
                     Edge[] edges = new Edge[neighborIDs.Count];
                     for (int i = 0; i < neighborIDs.Count; i++)
-                    {
                         edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.defaultEdgeWeight };
-                    }
 
-                    int bonus = 0;
-                    if (layout[z, x] == DistrictType.Village) bonus = balance.bonusVillagersOnVillageClaim;
-
+                    int bonus = layout[z, x] == DistrictType.Village ? balance.bonusVillagersOnVillageClaim : 0;
                     int ownerID = -1;
                     int claimBar = 0;
                     if (z == 6 && x == 1) { ownerID = 0; claimBar = 10000; }
@@ -347,6 +345,8 @@ namespace NodeWar.Core
                         gridZ = z,
                         edges = edges,
                         districtType = layout[z, x],
+                        baseDistrictType = layout[z, x],
+                        slotType = NodeSlotType.Fixed,
                         claimBar = claimBar,
                         ownerID = ownerID,
                         bonusVillagersOnClaim = bonus,
@@ -360,6 +360,9 @@ namespace NodeWar.Core
         {
             state.players = new PlayerData[2];
 
+            int[] defaultSuits = new int[] { (int)SuitType.Warrior };
+            int[] defaultNodes = new int[0];
+
             state.players[0] = new PlayerData
             {
                 playerID = 0,
@@ -367,9 +370,10 @@ namespace NodeWar.Core
                 food = boardConfig.startingFood,
                 materials = boardConfig.startingMaterials,
                 metal = boardConfig.startingMetal,
-                breachCount = 0
+                breachCount = 0,
+                draftedSuits = defaultSuits,
+                draftedNodes = defaultNodes
             };
-
             state.players[1] = new PlayerData
             {
                 playerID = 1,
@@ -377,7 +381,9 @@ namespace NodeWar.Core
                 food = boardConfig.startingFood,
                 materials = boardConfig.startingMaterials,
                 metal = boardConfig.startingMetal,
-                breachCount = 0
+                breachCount = 0,
+                draftedSuits = defaultSuits,
+                draftedNodes = defaultNodes
             };
         }
 
@@ -432,6 +438,13 @@ namespace NodeWar.Core
                 case DistrictType.Village: prefab = nodePrefabVillage; break;
                 case DistrictType.Barracks: prefab = nodePrefabBarracks; break;
                 case DistrictType.Forge: prefab = nodePrefabForge; break;
+                case DistrictType.Camp: prefab = nodePrefabCamp; break;
+                case DistrictType.Shrine: prefab = nodePrefabShrine; break;
+                case DistrictType.Arsenal: prefab = nodePrefabArsenal; break;
+                case DistrictType.Sanctuary: prefab = nodePrefabSanctuary; break;
+                case DistrictType.Watchtower: prefab = nodePrefabWatchtower; break;
+                case DistrictType.Rampart: prefab = nodePrefabRampart; break;
+                case DistrictType.Market: prefab = nodePrefabMarket; break;
                 default: prefab = nodePrefabDefault; break;
             }
             if (prefab == null) prefab = nodePrefabDefault;

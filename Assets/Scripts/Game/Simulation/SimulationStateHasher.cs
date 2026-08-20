@@ -32,6 +32,21 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.players[i].materials;
                     hash = hash * 31 + state.players[i].metal;
                     hash = hash * 31 + state.players[i].breachCount;
+                    if (state.players[i].draftedSuits != null)
+                    {
+                        hash = hash * 31 + state.players[i].draftedSuits.Length;
+                        for (int s = 0; s < state.players[i].draftedSuits.Length; s++)
+                            hash = hash * 31 + state.players[i].draftedSuits[s];
+                    }
+                    else hash = hash * 31 + 0;
+
+                    if (state.players[i].draftedNodes != null)
+                    {
+                        hash = hash * 31 + state.players[i].draftedNodes.Length;
+                        for (int n = 0; n < state.players[i].draftedNodes.Length; n++)
+                            hash = hash * 31 + state.players[i].draftedNodes[n];
+                    }
+                    else hash = hash * 31 + 0;
                 }
 
                 // Nodes (mutable gameplay fields only)
@@ -41,6 +56,9 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.nodes[i].claimBar;
                     hash = hash * 31 + state.nodes[i].ownerID;
                     hash = hash * 31 + state.nodes[i].materialAllocation;
+                    hash = hash * 31 + (int)state.nodes[i].districtType;
+                    hash = hash * 31 + (int)state.nodes[i].slotType;
+                    hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
                 }
 
                 // Villagers (all mutable fields)
@@ -68,6 +86,7 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (v.isConsumed ? 1 : 0);
                     hash = hash * 31 + v.productionTicksRemaining;
                     hash = hash * 31 + v.productionTicksMax;
+                    hash = hash * 31 + (v.hasRampartBonus ? 1 : 0);
 
                     // movePath contents
                     if (v.movePath != null)

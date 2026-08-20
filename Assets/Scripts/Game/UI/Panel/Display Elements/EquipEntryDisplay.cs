@@ -59,6 +59,7 @@ namespace NodeWar.UI
                 type = CommandType.Equip,
                 playerID = controlledPID,
                 villagerID = villagerID,
+                value = (int)SuitType.Warrior,  // TODO: suit picker UI
                 issuedOnTick = simState.tickCount
             };
             inputBuffer.EnqueueCommand(cmd);

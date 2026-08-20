@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Simulation.BoardConfig
   gridCols: 4
   gridRows: 7
-  nodeScale: 5
-  defaultEdgeWeight: 3
+  nodeScale: 7
+  defaultEdgeWeight: 4
   startingVillagersPerPlayer: 3
   startingFood: 0
   startingMaterials: 0

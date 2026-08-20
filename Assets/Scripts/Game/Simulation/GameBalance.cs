@@ -2,6 +2,19 @@ using UnityEngine;
 
 namespace NodeWar.Simulation
 {
+    [System.Serializable]
+    public struct SuitStats
+    {
+        public SuitType suitType;
+        public int bonusHP; // added to baseHP (can be negative)
+        public int attackDamage;
+        public int moveSpeedTicks;
+        public int attackCooldownMax;
+        public int foodCost;
+        public int materialCost;
+        public int fightPriority;
+    }
+
     [CreateAssetMenu(fileName = "GameBalance", menuName = "NodeWar/Game Balance")]
     public class GameBalance : ScriptableObject
     {
@@ -23,13 +36,13 @@ namespace NodeWar.Simulation
         public int foodProductionTicks = 30;
         public int materialProductionTicks = 40;
         public int metalProductionTicks = 50;
+        public int marketFoodProductionTicks = 45;
+        public int marketMaterialProductionTicks = 60;
         public int maxWorkersPerNode = 2;
         public int maxVillagersPerPlayer = 25;
 
         [Header("Costs")]
         public int respawnCostFood = 1;
-        public int soldierCostFood = 2;
-        public int soldierCostMaterial = 1;
 
         [Header("Villager Base Stats")]
         public int baseHP = 5;
@@ -37,28 +50,101 @@ namespace NodeWar.Simulation
         public int baseMoveSpeedTicks = 4;
         public int baseAttackCooldownMax = 20;
 
-        [Header("Suit: Soldier")]
-        public int soldierBonusHP = 0;
-        public int soldierAttackDamage = 2;
-        public int soldierMoveSpeedTicks = 5;
-        public int soldierAttackCooldownMax = 10;
-
-        [Header("Suit: Farmer")]
-        public int farmerBonusHP = 0;
-        public int farmerAttackDamage = 1;
-        public int farmerMoveSpeedTicks = 4;
-
-        [Header("Suit: Miner")]
-        public int minerBonusHP = 0;
-        public int minerAttackDamage = 1;
-        public int minerMoveSpeedTicks = 4;
-
-        [Header("Suit: Smelter")]
-        public int smelterBonusHP = 0;
-        public int smelterAttackDamage = 1;
-        public int smelterMoveSpeedTicks = 4;
+        [Header("Suit Stats (configure in Inspector)")]
+        public SuitStats[] suitStats;
 
         [Header("Village Bonus")]
         public int bonusVillagersOnVillageClaim = 2;
+
+        [Header("Node: Shrine")]
+        public int shrineHealIntervalTicks = 20;
+
+        [Header("Node: Rampart")]
+        public int rampartDecrementMultiplier = 2;
+        public int rampartDamageReduction = 1;
+        public int rampartMaxHPBonus = 1;
+
+        [Header("Node: Watchtower")]
+        public int watchtowerClaimNumerator = 3;
+        public int watchtowerClaimDenominator = 2;
+
+        [Header("Node: Sanctuary")]
+        public int sanctuaryRespawnBoostPerWorker = 1;
+        public int sanctuaryRespawnCostReductionPercent = 25;
+
+        public SuitStats GetSuitStats(SuitType type)
+        {
+            if (suitStats == null) return default;
+
+            for (int i = 0; i < suitStats.Length; i++)
+            {
+                if (suitStats[i].suitType == type) return suitStats[i];
+            }
+            return default;
+        }
+
+        public bool CanEquipSuitAtNode(SuitType suit, DistrictType district)
+        {
+            switch (district)
+            {
+                case DistrictType.Camp:
+                    return suit == SuitType.Warrior || suit == SuitType.Scout;
+
+                case DistrictType.Barracks:
+                    return suit == SuitType.Warrior || suit == SuitType.Guardian ||
+                           suit == SuitType.Berserker || suit == SuitType.Scout;
+
+                case DistrictType.Arsenal:
+                    return suit == SuitType.Warrior || suit == SuitType.Guardian ||
+                           suit == SuitType.Scout;
+
+                case DistrictType.Sanctuary:
+                    return suit == SuitType.Medic;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsCombatSuit(SuitType suit)
+        {
+            switch (suit)
+            {
+                case SuitType.Warrior:
+                case SuitType.Guardian:
+                case SuitType.Scout:
+                case SuitType.Berserker:
+                case SuitType.Medic:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static NodeSlotType GetSlotTypeForDistrict(DistrictType district)
+        {
+            switch (district)
+            {
+                case DistrictType.Camp:
+                case DistrictType.Barracks:
+                case DistrictType.Arsenal:
+                    return NodeSlotType.Army;
+                
+                case DistrictType.Shrine:
+                case DistrictType.Sanctuary:
+                    return NodeSlotType.Healing;
+                
+                case DistrictType.Watchtower:
+                case DistrictType.Rampart:
+                    return NodeSlotType.Affect;
+                
+                case DistrictType.Market:
+                    return NodeSlotType.ResourceSpecial;
+                
+                default:
+                    return NodeSlotType.Fixed;
+            }
+        }
     }
 }

@@ -509,12 +509,19 @@ MonoBehaviour:
   balance: {fileID: 11400000, guid: a5d341a3d2da3fb48b90ead59f063e8a, type: 2}
   boardConfig: {fileID: 11400000, guid: 5615db51283388145839515f3e5bfbc8, type: 2}
   nodePrefabDefault: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabCore: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabFarm: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabMine: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
+  nodePrefabCore: {fileID: 8688766449498250874, guid: 8373adfcbf8334e47ba7814cdcc1491a, type: 3}
+  nodePrefabFarm: {fileID: 8408422106066874737, guid: a00d4f7cc036da44f87af02a061dd4d2, type: 3}
+  nodePrefabMine: {fileID: 9055227416273874177, guid: e174304aa5911c44393ab62c31ec6a6c, type: 3}
   nodePrefabVillage: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabBarracks: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabForge: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
+  nodePrefabBarracks: {fileID: 6184294175726980618, guid: ec59c9c42a4594e40b807cd6322dadab, type: 3}
+  nodePrefabForge: {fileID: 4807130452135644850, guid: 7601e1fadd59c004ba009050143b9570, type: 3}
+  nodePrefabCamp: {fileID: 6726012211073196602, guid: 79bceda0ed54892458afa647d73f85cc, type: 3}
+  nodePrefabShrine: {fileID: 529037922120096893, guid: 770657f18a845ef43ae01df01f51a0f4, type: 3}
+  nodePrefabArsenal: {fileID: 7552578624291263241, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
+  nodePrefabSanctuary: {fileID: 5804528226822421175, guid: 088aea7e8b679d44d849a85350e20838, type: 3}
+  nodePrefabWatchtower: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
+  nodePrefabRampart: {fileID: 7549120291414093570, guid: 40a8c452c7846b64abcf26947af7fd60, type: 3}
+  nodePrefabMarket: {fileID: 424209603255228295, guid: ccb8cd26a930f2f4fa2b908852dfac88, type: 3}
   villagerPrefab: {fileID: 7037243673507716427, guid: 4b6014b072d214546a7d15f00c45b8c2, type: 3}
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
   state:

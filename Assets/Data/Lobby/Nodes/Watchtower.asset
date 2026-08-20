@@ -15,4 +15,5 @@ MonoBehaviour:
   nodeID: node_watchtower
   displayName: Watchtower
   icon: {fileID: 0}
-  description: Reveals nearby enemy movement
+  description: "Workers cause friendly claimers on adjacent nodes to claim at 1.5\xD7
+    rate"
