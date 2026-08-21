@@ -5,6 +5,14 @@ using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
+using Unity.Services.Core;
+using Unity.Services.Authentication;
+using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
+using Unity.Networking.Transport;
+using Unity.Networking.Transport.Relay;
+using Unity.Collections;
+
 namespace NodeWar.Network
 {
     /// <summary>
@@ -28,6 +36,73 @@ namespace NodeWar.Network
         // Connection state
         public bool IsConnected { get; private set; }
         public bool IsHost { get; private set; }
+
+        public enum TransportMode { DirectUDP, UnityRelay }
+        private TransportMode mode = TransportMode.DirectUDP;
+
+        private NetworkDriver relayDriver;
+        private NetworkConnection relayPeerConnection;
+        private bool relayReady = false;
+
+        public string JoinCode { get; private set; }
+        public bool RelayReady => relayReady;
+
+        public async void StartAsRelayHost()
+        {
+            mode = TransportMode.UnityRelay;
+            IsHost = true;
+            isRunning = true;
+            relayReady = false;
+
+            await UnityServices.InitializeAsync();
+
+            if (!AuthenticationService.Instance.IsSignedIn)
+                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
+            JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+
+            // Alternative if .ToRelayServerData() isn't found:
+            //var relayServerData = AllocationUtils.ToRelayServerData(allocation, "udp");
+
+            var relayServerData = allocation.ToRelayServerData("udp");
+            var settings = new NetworkSettings();
+            settings.WithRelayParameters(ref relayServerData);
+
+            relayDriver = NetworkDriver.Create(settings);
+            relayDriver.Bind(NetworkEndpoint.AnyIpv4);
+            relayDriver.Listen();
+
+            relayReady = true;
+            Debug.Log("[Net] Relay host ready. Code: " + JoinCode);
+        }
+
+        public async void StartAsRelayClient(string joinCode)
+        {
+            mode = TransportMode.UnityRelay;
+            IsHost = false;
+            isRunning = true;
+            relayReady = false;
+            JoinCode = joinCode;
+
+            await UnityServices.InitializeAsync();
+
+            if (!AuthenticationService.Instance.IsSignedIn)
+                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+
+            var relayServerData = joinAllocation.ToRelayServerData("udp");
+            var settings = new NetworkSettings();
+            settings.WithRelayParameters(ref relayServerData);
+
+            relayDriver = NetworkDriver.Create(settings);
+            relayDriver.Bind(NetworkEndpoint.AnyIpv4);
+            relayPeerConnection = relayDriver.Connect();
+
+            relayReady = true;
+            Debug.Log("[Net] Relay client connecting.");
+        }
 
         /// <summary>
         /// Open socket as host. Listens on the specified port.
@@ -59,16 +134,21 @@ namespace NodeWar.Network
         /// </summary>
         public void Send(byte[] data)
         {
-            if (udpClient == null || remoteEndPoint == null) return;
+            if (mode == TransportMode.DirectUDP)
+            {
+                if (udpClient == null || remoteEndPoint == null) return;
+                try { udpClient.Send(data, data.Length, remoteEndPoint); }
+                catch (SocketException e) { Debug.LogWarning("[Net] Send failed: " + e.Message); }
+                return;
+            }
 
-            try
-            {
-                udpClient.Send(data, data.Length, remoteEndPoint);
-            }
-            catch (SocketException e)
-            {
-                Debug.LogWarning("[Net] Send failed: " + e.Message);
-            }
+            if (!relayDriver.IsCreated || relayPeerConnection == default) return;
+
+            relayDriver.BeginSend(relayPeerConnection, out var writer);
+            var nativeData = new NativeArray<byte>(data, Allocator.Temp);
+            writer.WriteBytes(nativeData);
+            nativeData.Dispose();
+            relayDriver.EndSend(writer);
         }
 
         /// <summary>
@@ -77,15 +157,73 @@ namespace NodeWar.Network
         /// </summary>
         public byte[][] ReceiveAll()
         {
-            lock (queueLock)
+            if (mode == TransportMode.DirectUDP)
             {
-                if (incomingQueue.Count == 0)
-                    return Array.Empty<byte[]>();
-
-                byte[][] packets = incomingQueue.ToArray();
-                incomingQueue.Clear();
-                return packets;
+                lock (queueLock)
+                {
+                    if (incomingQueue.Count == 0) return Array.Empty<byte[]>();
+                    byte[][] result = incomingQueue.ToArray();
+                    incomingQueue.Clear();
+                    return result;
+                }
             }
+
+            if (!relayDriver.IsCreated || !relayReady) return Array.Empty<byte[]>();
+
+            relayDriver.ScheduleUpdate().Complete();
+
+            // Host: accept incoming connection
+            if (IsHost)
+            {
+                NetworkConnection incoming;
+                while ((incoming = relayDriver.Accept()) != default)
+                {
+                    relayPeerConnection = incoming;
+                    IsConnected = true;
+                    Debug.Log("[Net] Relay peer connected.");
+                }
+            }
+
+            if (relayPeerConnection == default) return Array.Empty<byte[]>();
+
+            // Check connection state (client)
+            if (!IsHost && !IsConnected)
+            {
+                var state = relayDriver.GetConnectionState(relayPeerConnection);
+                if (state == NetworkConnection.State.Connected)
+                {
+                    IsConnected = true;
+                    Debug.Log("[Net] Relay connected to host.");
+                }
+            }
+
+            var packets = new List<byte[]>();
+            NetworkEvent.Type evt;
+            DataStreamReader reader;
+
+            while ((evt = relayDriver.PopEventForConnection(relayPeerConnection, out reader)) != NetworkEvent.Type.Empty)
+            {
+                switch (evt)
+                {
+                    case NetworkEvent.Type.Data:
+                        var nativeData = new NativeArray<byte>(reader.Length, Allocator.Temp);
+                        reader.ReadBytes(nativeData);
+                        packets.Add(nativeData.ToArray());
+                        nativeData.Dispose();
+                        break;
+                    case NetworkEvent.Type.Connect:
+                        IsConnected = true;
+                        Debug.Log("[Net] Relay connect event.");
+                        break;
+                    case NetworkEvent.Type.Disconnect:
+                        IsConnected = false;
+                        relayPeerConnection = default;
+                        Debug.Log("[Net] Relay disconnected.");
+                        break;
+                }
+            }
+
+            return packets.ToArray();
         }
 
         /// <summary>
@@ -115,19 +253,17 @@ namespace NodeWar.Network
             isRunning = false;
             IsConnected = false;
 
-            if (udpClient != null)
+            if (mode == TransportMode.DirectUDP)
             {
-                udpClient.Close();
-                udpClient = null;
+                if (udpClient != null) { udpClient.Close(); udpClient = null; }
+                if (receiveThread != null && receiveThread.IsAlive) { receiveThread.Join(500); receiveThread = null; }
+            }
+            else
+            {
+                if (relayDriver.IsCreated) relayDriver.Dispose();
             }
 
-            if (receiveThread != null && receiveThread.IsAlive)
-            {
-                receiveThread.Join(500);
-                receiveThread = null;
-            }
-
-            Debug.Log("[Net] Shutdown complete.");
+            Debug.Log("[Net] Shutdown.");
         }
 
         // --- Internal ---

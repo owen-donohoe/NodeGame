@@ -27,12 +27,20 @@ namespace NodeWar.Lobby
         [Header("Root")]
         [SerializeField] private GameObject modalRoot;
         [SerializeField] private Button closeButton;
+        [SerializeField] private Color active = new Color(0.25f, 0.35f, 0.55f, 1f);
+        [SerializeField] private Color inactive = new Color(0.16f, 0.16f, 0.23f, 1f);
 
         [Header("Idle State (Host/Join selection)")]
         [SerializeField] private GameObject idlePanel;
         [SerializeField] private Button hostButton;
         [SerializeField] private Button joinButton;
         [SerializeField] private TMP_InputField ipInputField;
+
+        private bool useLAN = false;
+        [SerializeField] private Button onlineModeButton;
+        [SerializeField] private Button lanModeButton;
+        [SerializeField] private Image onlineModeImage;
+        [SerializeField] private Image lanModeImage;
 
         [Header("Active State (waiting/connecting)")]
         [SerializeField] private GameObject activePanel;
@@ -64,6 +72,12 @@ namespace NodeWar.Lobby
                 joinButton.onClick.AddListener(OnJoinClicked);
             if (cancelButton != null)
                 cancelButton.onClick.AddListener(OnCancelClicked);
+            if (onlineModeButton != null) 
+                onlineModeButton.onClick.AddListener(() => SetMode(false));
+            if (lanModeButton != null) 
+                lanModeButton.onClick.AddListener(() => SetMode(true));
+
+            SetMode(false);
         }
 
         public void Open()
@@ -112,37 +126,63 @@ namespace NodeWar.Lobby
 
         // ===== HOST =====
 
+        private void SetMode(bool lan)
+        {
+            useLAN = lan;
+            UpdateModeButtons();
+        }
+
+        private void UpdateModeButtons() {
+            
+            if (onlineModeImage != null) onlineModeImage.color = useLAN ? inactive : active;
+            if (lanModeImage != null) lanModeImage.color = useLAN ? active : inactive;
+            if (ipInputField != null)
+                ipInputField.placeholder.GetComponent<TMPro.TextMeshProUGUI>().text = useLAN ? "Enter IP" : "Enter Join Code";
+        }
+
         private void OnHostClicked()
         {
             CleanupNetworkManager();
-
             networkManagerGO = new GameObject("NetworkManager");
             networkManager = networkManagerGO.AddComponent<NetworkManager>();
-            networkManager.StartAsHost();
 
-            state = NetState.Hosting;
-            stateEnterTime = Time.time;
-            localPlayerID = 0;
-
-            string localIP = NetworkManager.GetLocalIPAddress();
-            ShowActiveState("Hosting on " + localIP + ":" + NetworkManager.DEFAULT_PORT +
-                "\nWaiting for opponent...");
+            if (useLAN)
+            {
+                networkManager.StartAsHost();
+                state = NetState.Hosting;
+                stateEnterTime = Time.time;
+                localPlayerID = 0;
+                ShowActiveState("Hosting on " + NetworkManager.GetLocalIPAddress() + "\nWaiting for opponent...");
+            }
+            else
+            {
+                networkManager.StartAsRelayHost();
+                state = NetState.Hosting;
+                stateEnterTime = Time.time;
+                localPlayerID = 0;
+                ShowActiveState("Creating room...");
+            }
         }
 
         private void UpdateHosting()
         {
-            byte[][] packets = networkManager.ReceiveAll();
+            if (!useLAN && !networkManager.RelayReady)
+            {
+                statusText.text = "Creating room...";
+                return;
+            }
 
+            if (!useLAN && !networkManager.IsConnected)
+                statusText.text = "Join Code: " + networkManager.JoinCode + "\nWaiting for opponent...";
+
+            byte[][] packets = networkManager.ReceiveAll();
             for (int i = 0; i < packets.Length; i++)
             {
-                PacketType type = InputSerializer.ReadPacketType(packets[i]);
-                if (type == PacketType.Handshake)
+                if (InputSerializer.ReadPacketType(packets[i]) == PacketType.Handshake)
                 {
-                    // Client connected — send ack x3
                     networkManager.Send(InputSerializer.SerializeHandshakeAck());
                     networkManager.Send(InputSerializer.SerializeHandshakeAck());
                     networkManager.Send(InputSerializer.SerializeHandshakeAck());
-
                     OnConnected();
                     return;
                 }
@@ -150,7 +190,7 @@ namespace NodeWar.Lobby
 
             if (Time.time - stateEnterTime > CONNECTION_TIMEOUT)
             {
-                statusText.text = "No connection received.\nTry again.";
+                statusText.text = "Timed out. Try again.";
                 CleanupNetworkManager();
                 ShowIdleState();
             }
@@ -160,66 +200,66 @@ namespace NodeWar.Lobby
 
         private void OnJoinClicked()
         {
-            string ip = ipInputField.text.Trim();
-            if (string.IsNullOrEmpty(ip))
-            {
-                statusText.text = "Enter a valid IP address.";
-                return;
-            }
+            string input = ipInputField.text.Trim();
+            if (string.IsNullOrEmpty(input)) { statusText.text = useLAN ? "Enter an IP address." : "Enter a join code."; return; }
 
             CleanupNetworkManager();
-
             networkManagerGO = new GameObject("NetworkManager");
             networkManager = networkManagerGO.AddComponent<NetworkManager>();
 
-            try
+            if (useLAN)
             {
-                networkManager.StartAsClient(ip);
+                try { networkManager.StartAsClient(input); }
+                catch (System.Exception e) { ShowActiveState("Invalid IP: " + e.Message); CleanupNetworkManager(); ShowIdleState(); return; }
+
+                state = NetState.Joining;
+                stateEnterTime = Time.time;
+                handshakeRetryTimer = 0f;
+                localPlayerID = 1;
+                ShowActiveState("Connecting to " + input + "...");
+                networkManager.Send(InputSerializer.SerializeHandshake());
             }
-            catch (System.Exception e)
+            else
             {
-                ShowActiveState("Invalid IP: " + e.Message);
-                CleanupNetworkManager();
-                ShowIdleState();
-                return;
+                networkManager.StartAsRelayClient(input.ToUpper());
+                state = NetState.Joining;
+                stateEnterTime = Time.time;
+                localPlayerID = 1;
+                ShowActiveState("Connecting...");
             }
-
-            state = NetState.Joining;
-            stateEnterTime = Time.time;
-            handshakeRetryTimer = 0f;
-            localPlayerID = 1;
-
-            ShowActiveState("Connecting to " + ip + "...");
-
-            // Send first handshake immediately
-            networkManager.Send(InputSerializer.SerializeHandshake());
         }
 
         private void UpdateJoining()
         {
-            byte[][] packets = networkManager.ReceiveAll();
+            if (!useLAN && !networkManager.RelayReady) return;
 
+            // LAN: retry handshake on interval (original behaviour)
+            // Relay: wait for transport connection then send handshake
+            bool shouldSendHandshake = useLAN || networkManager.IsConnected;
+
+            if (shouldSendHandshake)
+            {
+                handshakeRetryTimer += Time.deltaTime;
+                if (handshakeRetryTimer >= HANDSHAKE_RETRY_INTERVAL)
+                {
+                    networkManager.Send(InputSerializer.SerializeHandshake());
+                    handshakeRetryTimer = 0f;
+                }
+            }
+
+            byte[][] packets = networkManager.ReceiveAll();
             for (int i = 0; i < packets.Length; i++)
             {
-                PacketType type = InputSerializer.ReadPacketType(packets[i]);
-                if (type == PacketType.HandshakeAck)
+                if (InputSerializer.ReadPacketType(packets[i]) == PacketType.HandshakeAck)
                 {
                     OnConnected();
                     return;
                 }
             }
 
-            // Resend handshake periodically
-            handshakeRetryTimer += Time.deltaTime;
-            if (handshakeRetryTimer >= HANDSHAKE_RETRY_INTERVAL)
-            {
-                networkManager.Send(InputSerializer.SerializeHandshake());
-                handshakeRetryTimer = 0f;
-            }
-
             if (Time.time - stateEnterTime > CONNECTION_TIMEOUT)
             {
-                statusText.text = "Connection timed out.\nCheck IP and try again.";
+                statusText.text = "Timed out.";
                 CleanupNetworkManager();
                 ShowIdleState();
             }
@@ -284,6 +324,8 @@ namespace NodeWar.Lobby
             if (hostButton != null) hostButton.onClick.RemoveAllListeners();
             if (joinButton != null) joinButton.onClick.RemoveAllListeners();
             if (cancelButton != null) cancelButton.onClick.RemoveAllListeners();
+            if (onlineModeButton != null) onlineModeButton.onClick.RemoveAllListeners();
+            if (lanModeButton != null) lanModeButton.onClick.RemoveAllListeners();
         }
     }
 }

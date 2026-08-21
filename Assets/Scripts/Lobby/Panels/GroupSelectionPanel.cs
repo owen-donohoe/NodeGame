@@ -144,7 +144,7 @@ namespace NodeWar.Lobby
             // Build node items
             for (int i = 0; i < allNodes.Length; i++)
             {
-                NodeDefinition def = allNodes[i];
+                NodeDefinition def = allNodes[i]; 
                 bool locked = (profile != null) ? !profile.IsNodeUnlocked(def.nodeID) : true;
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
@@ -162,7 +162,7 @@ namespace NodeWar.Lobby
                 EquipSuit(suitSlot0, suitID);
             else if (suitSlot1.IsEmpty)
                 EquipSuit(suitSlot1, suitID);
-            else if (!suitSlot2.IsEmpty)
+            else if (suitSlot2.IsEmpty)
                 EquipSuit(suitSlot2, suitID);
 
             RefreshListVisibility();
