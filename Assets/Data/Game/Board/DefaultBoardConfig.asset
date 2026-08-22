@@ -25,7 +25,7 @@ MonoBehaviour:
   unownedMultiplier: 100
   enemyPartiallyOwnedMultiplier: 150
   enemyOwnedMultiplier: 200
-  boundsMinX: -20
-  boundsMaxX: 14
-  boundsMinZ: -14
-  boundsMaxZ: 20
+  boundsMinX: -10
+  boundsMaxX: 30
+  boundsMinZ: -15
+  boundsMaxZ: 45

@@ -57,6 +57,8 @@ namespace NodeWar.Core
         private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
+        private NodeWar.View.NodePresentation[] nodePresentations;
+
 
         // Network references
         private LockstepRunner lockstepRunner;
@@ -64,6 +66,8 @@ namespace NodeWar.Core
 
         // Game over tracking
         private bool gameOverHandled = false;
+
+        private CameraController cameraController; 
 
         private void Awake()
         {
@@ -92,6 +96,10 @@ namespace NodeWar.Core
             Pathfinding.EnemyOwnedMultiplier = boardConfig.enemyOwnedMultiplier;
 
             inputBuffer = new InputBuffer();
+
+            cameraController = FindAnyObjectByType<CameraController>();
+            if (cameraController != null)
+                cameraController.InitializeSides(boardConfig);
 
             // 1. Initialize simulation state
             InitializeNodes();
@@ -129,8 +137,15 @@ namespace NodeWar.Core
 
             trackedVillagerCount = state.villagers.Length;
 
+            // Wire camera side — views exist, LockToPlayer already set the correct ID
+            debugPlayerSwitch.OnPlayerSwitched += OnPlayerSideChanged;
+            OnPlayerSideChanged(debugPlayerSwitch.GetCurrentPlayerID());
+
             // 5. Initialize UI (tickProvider is valid, views exist)
             InitializeUI();
+
+            // 6. Node setup
+            PlayAllNodeStartup();
         }
 
         private void Update()
@@ -164,6 +179,26 @@ namespace NodeWar.Core
             debugPlayerSwitch.Initialize(selectionSystem, commandSystem);
 
             CreateSelectionLasso();
+        }
+
+
+        private void OnPlayerSideChanged(int playerID)
+        {
+            if (cameraController != null)
+                cameraController.SetPlayerSide(playerID);
+
+            Vector3 spriteRot = cameraController != null
+                ? cameraController.GetSpriteRotation()
+                : new Vector3(50f, playerID == 0 ? 180f : 0f, 0f);
+
+            if (nodePresentations != null)
+            {
+                for (int i = 0; i < nodePresentations.Length; i++)
+                {
+                    if (nodePresentations[i] != null)
+                        nodePresentations[i].SetBaseRotation(spriteRot);
+                }
+            }
         }
 
         /// <summary>
@@ -224,6 +259,8 @@ namespace NodeWar.Core
 
         private void ShowGameOver()
         {
+            PlayAllNodeBreakdown();
+
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found. Cannot show game over UI.");
@@ -455,6 +492,7 @@ namespace NodeWar.Core
         {
             nodeParent = new GameObject("NodeViews").transform;
             nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
+            nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
@@ -472,6 +510,12 @@ namespace NodeWar.Core
                     slotManager = nodeGO.AddComponent<NodeWar.View.NodeSlotManager>();
                 slotManager.Initialize(i, boardConfig.nodeScale);
                 nodeSlotManagers[i] = slotManager;
+
+                NodeWar.View.NodePresentation presentation = nodeGO.GetComponent<NodeWar.View.NodePresentation>();
+                if (presentation == null)
+                    presentation = nodeGO.AddComponent<NodeWar.View.NodePresentation>();
+                nodePresentations[i] = presentation;
+
 
                 NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeClaimBar>();
                 if (claimBar != null)
@@ -528,6 +572,56 @@ namespace NodeWar.Core
             VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<VillagerHealthRing>();
             if (healthRing != null)
                 healthRing.Initialize(state, index);
+        }
+
+        // ===== PRESENTATION TRIGGERS =====
+
+        /// <summary>
+        /// Animate all nodes appearing. Call at match start or after draft reveal.
+        /// Staggers by grid distance from center for a wave effect.
+        /// </summary>
+        public void PlayAllNodeStartup()
+        {
+            if (nodePresentations == null) return;
+
+            float centerX = (boardConfig.gridCols - 1) * 0.5f;
+            float centerZ = (boardConfig.gridRows - 1) * 0.5f;
+
+            for (int i = 0; i < nodePresentations.Length; i++)
+            {
+                if (nodePresentations[i] == null) continue;
+
+                NodeData node = state.nodes[i];
+                float dist = Mathf.Abs(node.gridX - centerX) + Mathf.Abs(node.gridZ - centerZ);
+                float delay = dist * 0.08f; // 80ms per grid step from center
+
+                nodePresentations[i].SetHidden();
+                nodePresentations[i].PlayStartup(delay);
+            }
+        }
+
+        /// <summary>
+        /// Animate all nodes collapsing. Call on game over.
+        /// Staggers outward from the breached core for narrative effect.
+        /// </summary>
+        public void PlayAllNodeBreakdown()
+        {
+            if (nodePresentations == null) return;
+
+            // Wave originates from the losing player's core
+            int loserID = state.winnerID == 0 ? 1 : 0;
+            int originNode = state.players[loserID].coreNodeID;
+            Vector3 origin = state.nodes[originNode].worldPosition;
+
+            for (int i = 0; i < nodePresentations.Length; i++)
+            {
+                if (nodePresentations[i] == null) continue;
+
+                float dist = Vector3.Distance(state.nodes[i].worldPosition, origin);
+                float delay = dist * 0.04f; // 40ms per unit distance from core
+
+                nodePresentations[i].PlayBreakdown(delay);
+            }
         }
     }
 }
