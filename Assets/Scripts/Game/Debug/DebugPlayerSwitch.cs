@@ -14,6 +14,8 @@ namespace NodeWar.Debugging
         private GUIStyle labelStyle;
         private bool styleInitialized = false;
 
+        public System.Action<int> OnPlayerSwitched;
+
         public void Initialize(SelectionSystem selection, CommandSystem command)
         {
             selectionSystem = selection;
@@ -33,6 +35,8 @@ namespace NodeWar.Debugging
                 selectionSystem.SetPlayerID(playerID);
             if (commandSystem != null)
                 commandSystem.SetPlayerID(playerID);
+
+            OnPlayerSwitched?.Invoke(playerID);
         }
 
         private void Update()
@@ -54,9 +58,10 @@ namespace NodeWar.Debugging
 
             if (selectionSystem != null)
                 selectionSystem.SetPlayerID(currentPlayerID);
-
             if (commandSystem != null)
                 commandSystem.SetPlayerID(currentPlayerID);
+
+            OnPlayerSwitched?.Invoke(currentPlayerID);
         }
 
         public int GetCurrentPlayerID()
