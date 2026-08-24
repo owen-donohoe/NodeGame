@@ -5,15 +5,15 @@ using UnityEngine.InputSystem;
 namespace NodeWar.Core
 {
     /// <summary>
-    /// Perspective camera controller with drag-to-pan, velocity momentum,
-    /// variable dampening, dolly zoom, bounds, and camera shake.
+    /// Perspective camera controller with drag-to-pan, momentum, dolly zoom, 
+    /// bounds, shake, draft-mode framing, and per-player-side memory.
     /// 
     /// Hierarchy (set up in Editor):
-    ///   CameraRig [this script] — world X/Z position, pan target
-    ///     ??? CameraPivot — rotation only (viewing angle, e.g. X=50)
-    ///           ??? Camera — local Z = -zoomDistance (dolly)
+    ///   CameraRig [this script] — world X/Z position
+    ///     ? CameraPivot — rotation only (viewing angle)
+    ///           ? Camera — local Z = -zoomDistance (dolly)
     ///
-    /// Middle mouse button to drag. Scroll wheel to zoom.
+    /// Middle mouse to drag. Scroll to zoom.
     /// </summary>
     public class CameraController : MonoBehaviour
     {
@@ -24,44 +24,53 @@ namespace NodeWar.Core
         [SerializeField] private Transform cameraPivot;
         [SerializeField] private Camera cam;
 
-        [Header("Pan Settings")]
+        [Header("Pan")]
         [SerializeField] private float panSpeed = 1f;
-        [SerializeField] private float momentumDamping = 5f;
-        [SerializeField] private float maxVelocity = 20f;
+        [SerializeField] private float panMomentumDamping = 5f;
+        [SerializeField] private float panMaxVelocity = 20f;
 
-        [Header("Zoom Settings (Dolly)")]
-        [SerializeField] private float zoomSpeed = 2f;
-        [SerializeField] private float minZoomDistance = 5f;
-        [SerializeField] private float maxZoomDistance = 30f;
-        [SerializeField] private float zoomDamping = 8f;
+        [Header("Zoom (Dolly)")]
+        [SerializeField] private float zoomScrollSensitivity = 2f;
+        [SerializeField] private float zoomMinDistance = 5f;
+        [SerializeField] private float zoomMaxDistance = 30f;
+        [SerializeField] private float zoomSmoothingSpeed = 8f;
 
         [Header("Bounds")]
         [SerializeField] private bool useBounds = true;
-        [SerializeField] private float boundsPushback = 10f;
+        [Tooltip("Spring force pushing camera back inside BoardConfig bounds.")]
+        [SerializeField] private float boundsPushbackForce = 10f;
 
-        [Header("Shake Settings")]
+        [Header("Shake Defaults")]
         [SerializeField] private float defaultShakeIntensity = 0.15f;
         [SerializeField] private float defaultShakeRotationalIntensity = 0.5f;
         [SerializeField] private float defaultShakeDuration = 0.4f;
         [SerializeField] private float defaultShakeFrequency = 25f;
-        [SerializeField] private float maxShakeOffset = 0.5f;
-        [SerializeField] private float maxShakeRotation = 3f;
-        [SerializeField] private AnimationCurve shakeFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
+        [SerializeField] private float shakeMaxPositionalOffset = 0.5f;
+        [SerializeField] private float shakeMaxRotationalOffset = 3f;
+        [SerializeField] private AnimationCurve shakeFalloffCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
 
-        // Per-side camera memory
-        private struct SideState
-        {
-            public Vector3 position;
-            public float zoomDistance;
-            public bool initialized;
-        }
+        [Header("Draft Mode Framing")]
+        [Tooltip("Multiplier on largest grid dimension to determine zoom distance during draft.")]
+        [SerializeField][Range(1.0f, 3.0f)] private float draftZoomBoardMultiplier = 1.3f;
+        [Tooltip("Pivot X angle during draft. Higher = more top-down.")]
+        [SerializeField][Range(30f, 90f)] private float draftPivotAngle = 70f;
+        [Tooltip("If true, draft zoom never goes below zoomMaxDistance.")]
+        [SerializeField] private bool draftZoomNeverBelowMax = true;
 
-        private SideState[] sideStates = new SideState[2];
-        private int currentSide = 0;
-        private bool sideHasBeenSet = false;
+        [Header("Per-Side Defaults")]
+        [Tooltip("Normalized position between min/max zoom for gameplay start. 0=closest, 1=farthest.")]
+        [SerializeField][Range(0f, 1f)] private float sideDefaultZoomNormalized = 0.65f;
+        [Tooltip("Fraction of nodeScale used as Z offset from board edge.")]
+        [SerializeField][Range(0f, 1f)] private float sideZOffsetFactor = 0.35f;
+        [SerializeField][Range(0f, 1f)] private float sideP0LateralNudgeFactor = 0.5f;
+        [SerializeField][Range(0f, 1f)] private float sideP1ZPositionFactor = 0.6f;
+
+        [Header("Sprite Rotation Fallback")]
+        [Tooltip("Returned by GetSpriteRotation() if cameraPivot is null.")]
+        [SerializeField] private Vector3 spriteRotationFallback = new Vector3(50f, 0f, 0f);
 
         // Pan state
-        private Vector3 velocity;
+        private Vector3 panVelocity;
         private bool isDragging;
         private Vector3 lastMouseWorldPos;
 
@@ -75,7 +84,21 @@ namespace NodeWar.Core
         private float shakeIntensity;
         private float shakeRotationalIntensity;
         private float shakeFrequency;
-        private float shakeSeed; // Unique per shake instance for varied Perlin sampling
+        private float shakeSeed;
+
+        // Side memory
+        private struct SideState
+        {
+            public Vector3 position;
+            public float zoomDistance;
+            public bool initialized;
+        }
+
+        private SideState[] sideStates = new SideState[2];
+        private int currentSide = 0;
+        private bool sideHasBeenSet = false;
+
+        private bool isDraftMode = false;
 
         private void Awake()
         {
@@ -84,17 +107,12 @@ namespace NodeWar.Core
             if (cam == null)
                 cam = Camera.main;
 
-            if (cameraPivot == null)
-            {
-                // Fallback: find first child as pivot
-                if (transform.childCount > 0)
-                    cameraPivot = transform.GetChild(0);
-            }
+            if (cameraPivot == null && transform.childCount > 0)
+                cameraPivot = transform.GetChild(0);
 
-            // Initialize zoom from current camera position
             currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
             targetZoomDistance = currentZoomDistance;
-            velocity = Vector3.zero;
+            panVelocity = Vector3.zero;
         }
 
         private void Update()
@@ -111,6 +129,8 @@ namespace NodeWar.Core
 
         private void HandleDragInput()
         {
+            if (isDraftMode) return;
+
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
 
@@ -118,7 +138,7 @@ namespace NodeWar.Core
             {
                 isDragging = true;
                 lastMouseWorldPos = GetMouseWorldPosition(mouse);
-                velocity = Vector3.zero;
+                panVelocity = Vector3.zero;
             }
 
             if (mouse.middleButton.isPressed && isDragging)
@@ -127,50 +147,46 @@ namespace NodeWar.Core
                 Vector3 delta = lastMouseWorldPos - currentMouseWorld;
 
                 transform.position += delta * panSpeed;
+                panVelocity = delta * panSpeed / Time.deltaTime;
 
-                velocity = delta * panSpeed / Time.deltaTime;
+                if (panVelocity.magnitude > panMaxVelocity)
+                    panVelocity = panVelocity.normalized * panMaxVelocity;
 
-                if (velocity.magnitude > maxVelocity)
-                    velocity = velocity.normalized * maxVelocity;
-
-                // Recalculate after move to prevent drift with perspective
+                // Recalculate after move to prevent perspective drift
                 lastMouseWorldPos = GetMouseWorldPosition(mouse);
             }
 
             if (mouse.middleButton.wasReleasedThisFrame)
-            {
                 isDragging = false;
-            }
         }
 
         private void ApplyMomentum()
         {
             if (isDragging) return;
+            if (panVelocity.sqrMagnitude < 0.0001f) return;
 
-            if (velocity.sqrMagnitude > 0.0001f)
-            {
-                transform.position += velocity * Time.deltaTime;
+            transform.position += panVelocity * Time.deltaTime;
+            panVelocity = Vector3.Lerp(panVelocity, Vector3.zero, panMomentumDamping * Time.deltaTime);
 
-                velocity = Vector3.Lerp(velocity, Vector3.zero, momentumDamping * Time.deltaTime);
-
-                if (velocity.sqrMagnitude < 0.001f)
-                    velocity = Vector3.zero;
-            }
+            if (panVelocity.sqrMagnitude < 0.001f)
+                panVelocity = Vector3.zero;
         }
 
-        // ===== ZOOM (DOLLY) =====
+        // ===== ZOOM =====
 
         private void HandleZoomInput()
         {
+            if (isDraftMode) return;
+
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
 
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.01f)
             {
-                // Zoom toward board (scroll up = closer = smaller distance)
-                targetZoomDistance -= scroll * zoomSpeed * 0.01f * targetZoomDistance;
-                targetZoomDistance = Mathf.Clamp(targetZoomDistance, minZoomDistance, maxZoomDistance);
+                // Proportional: zoom feels consistent at any distance
+                targetZoomDistance -= scroll * zoomScrollSensitivity * 0.01f * targetZoomDistance;
+                targetZoomDistance = Mathf.Clamp(targetZoomDistance, zoomMinDistance, zoomMaxDistance);
             }
         }
 
@@ -179,15 +195,10 @@ namespace NodeWar.Core
             if (cam == null) return;
 
             if (Mathf.Abs(currentZoomDistance - targetZoomDistance) > 0.01f)
-            {
-                currentZoomDistance = Mathf.Lerp(currentZoomDistance, targetZoomDistance, zoomDamping * Time.deltaTime);
-            }
+                currentZoomDistance = Mathf.Lerp(currentZoomDistance, targetZoomDistance, zoomSmoothingSpeed * Time.deltaTime);
             else
-            {
                 currentZoomDistance = targetZoomDistance;
-            }
 
-            // Camera sits along pivot's -Z at zoom distance (no shake applied here)
             cam.transform.localPosition = new Vector3(0f, 0f, -currentZoomDistance);
         }
 
@@ -199,26 +210,19 @@ namespace NodeWar.Core
 
             Vector3 pos = transform.position;
 
-            float minX = boardConfig.boundsMinX;
-            float maxX = boardConfig.boundsMaxX;
-            float minZ = boardConfig.boundsMinZ;
-            float maxZ = boardConfig.boundsMaxZ;
-
-            if (pos.x < minX)
-                velocity.x += boundsPushback * (minX - pos.x) * Time.deltaTime;
-            if (pos.x > maxX)
-                velocity.x += boundsPushback * (maxX - pos.x) * Time.deltaTime;
-            if (pos.z < minZ)
-                velocity.z += boundsPushback * (minZ - pos.z) * Time.deltaTime;
-            if (pos.z > maxZ)
-                velocity.z += boundsPushback * (maxZ - pos.z) * Time.deltaTime;
+            // Soft spring pushback rather than hard clamp — feels natural
+            if (pos.x < boardConfig.boundsMinX)
+                panVelocity.x += boundsPushbackForce * (boardConfig.boundsMinX - pos.x) * Time.deltaTime;
+            if (pos.x > boardConfig.boundsMaxX)
+                panVelocity.x += boundsPushbackForce * (boardConfig.boundsMaxX - pos.x) * Time.deltaTime;
+            if (pos.z < boardConfig.boundsMinZ)
+                panVelocity.z += boundsPushbackForce * (boardConfig.boundsMinZ - pos.z) * Time.deltaTime;
+            if (pos.z > boardConfig.boundsMaxZ)
+                panVelocity.z += boundsPushbackForce * (boardConfig.boundsMaxZ - pos.z) * Time.deltaTime;
         }
 
-        // ===== CAMERA SHAKE =====
+        // ===== SHAKE =====
 
-        /// <summary>
-        /// Trigger shake with default parameters.
-        /// </summary>
         public void Shake()
         {
             Shake(defaultShakeIntensity, defaultShakeRotationalIntensity,
@@ -226,12 +230,10 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Trigger shake with custom parameters. Stacks by taking the stronger value
-        /// if a shake is already active.
+        /// Stronger shake wins if one is already active.
         /// </summary>
         public void Shake(float intensity, float rotationalIntensity, float duration, float frequency)
         {
-            // If new shake is stronger or current is nearly done, override
             if (intensity >= shakeIntensity || shakeTimeRemaining < 0.05f)
             {
                 shakeIntensity = intensity;
@@ -249,7 +251,6 @@ namespace NodeWar.Core
 
             if (shakeTimeRemaining <= 0f)
             {
-                // No shake — ensure clean local rotation on camera
                 cam.transform.localRotation = Quaternion.identity;
                 return;
             }
@@ -257,95 +258,68 @@ namespace NodeWar.Core
             shakeTimeRemaining -= Time.deltaTime;
             if (shakeTimeRemaining < 0f) shakeTimeRemaining = 0f;
 
-            // Normalized time (1 at start, 0 at end)
             float normalizedTime = 1f - (shakeTimeRemaining / shakeDuration);
-            float envelope = shakeFalloff.Evaluate(normalizedTime);
-
-            // Perlin-based smooth noise (two different seeds for X and Y)
+            float envelope = shakeFalloffCurve.Evaluate(normalizedTime);
             float time = (shakeDuration - shakeTimeRemaining) * shakeFrequency;
 
+            // Perlin noise per axis with offset seeds for variety
             float noiseX = (Mathf.PerlinNoise(shakeSeed + time, 0f) - 0.5f) * 2f;
             float noiseY = (Mathf.PerlinNoise(0f, shakeSeed + time) - 0.5f) * 2f;
             float noiseZ = (Mathf.PerlinNoise(shakeSeed + time, shakeSeed + time) - 0.5f) * 2f;
 
-            // Positional offset (applied on top of zoom position)
             Vector3 posOffset = new Vector3(noiseX, noiseY, 0f) * shakeIntensity * envelope;
-            posOffset.x = Mathf.Clamp(posOffset.x, -maxShakeOffset, maxShakeOffset);
-            posOffset.y = Mathf.Clamp(posOffset.y, -maxShakeOffset, maxShakeOffset);
+            posOffset.x = Mathf.Clamp(posOffset.x, -shakeMaxPositionalOffset, shakeMaxPositionalOffset);
+            posOffset.y = Mathf.Clamp(posOffset.y, -shakeMaxPositionalOffset, shakeMaxPositionalOffset);
 
-            cam.transform.localPosition = new Vector3(posOffset.x, posOffset.y, -currentZoomDistance + posOffset.z * 0.5f);
+            cam.transform.localPosition = new Vector3(
+                posOffset.x, posOffset.y, -currentZoomDistance + posOffset.z * 0.5f);
 
-            // Rotational offset
             Vector3 rotOffset = new Vector3(noiseY, noiseX, noiseZ) * shakeRotationalIntensity * envelope;
-            rotOffset.x = Mathf.Clamp(rotOffset.x, -maxShakeRotation, maxShakeRotation);
-            rotOffset.y = Mathf.Clamp(rotOffset.y, -maxShakeRotation, maxShakeRotation);
-            rotOffset.z = Mathf.Clamp(rotOffset.z, -maxShakeRotation, maxShakeRotation);
+            rotOffset.x = Mathf.Clamp(rotOffset.x, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
+            rotOffset.y = Mathf.Clamp(rotOffset.y, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
+            rotOffset.z = Mathf.Clamp(rotOffset.z, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
 
             cam.transform.localRotation = Quaternion.Euler(rotOffset);
-        }
-
-        // ===== MOUSE PROJECTION =====
-
-        /// <summary>
-        /// Projects mouse screen position to a world-space point on the XZ ground plane (Y=0).
-        /// Works correctly with perspective camera at any angle/distance.
-        /// </summary>
-        private Vector3 GetMouseWorldPosition(Mouse mouse)
-        {
-            Vector2 screenPos = mouse.position.ReadValue();
-            Ray ray = cam.ScreenPointToRay(screenPos);
-
-            // Intersect with XZ plane (Y = 0)
-            if (Mathf.Abs(ray.direction.y) < 0.0001f)
-                return transform.position; // Ray parallel to ground — fallback
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0) t = 0;
-
-            return ray.origin + ray.direction * t;
         }
 
         // ===== PUBLIC API =====
 
         /// <summary>
-        /// Call once after boardConfig is available. Computes default centered positions
-        /// for both sides based on grid dimensions.
+        /// Computes default per-side camera positions from grid dimensions.
+        /// Called once by GameManager after BoardConfig is available.
         /// </summary>
         public void InitializeSides(BoardConfig config)
         {
             float centerX = (config.gridCols - 1) * config.nodeScale * 0.5f;
             float maxZ = (config.gridRows - 1) * config.nodeScale;
-            float offset = config.nodeScale * 0.35f;
-            float defaultZoom = Mathf.Lerp(minZoomDistance, maxZoomDistance, 0.65f);
+            float zOffset = config.nodeScale * sideZOffsetFactor;
+            float defaultZoom = Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
 
-            // P0: behind their core (high Z), looking toward -Z
+            // P0: high-Z side, looking toward -Z
             sideStates[0] = new SideState
             {
-                position = new Vector3(centerX + offset * 0.5f, 0f, maxZ + offset),
+                position = new Vector3(centerX + zOffset * sideP0LateralNudgeFactor, 0f, maxZ + zOffset),
                 zoomDistance = defaultZoom,
                 initialized = true
             };
 
-            // P1: behind their core (low Z), looking toward +Z
+            // P1: low-Z side, looking toward +Z
             sideStates[1] = new SideState
             {
-                position = new Vector3(centerX, 0f, offset * 0.6f),
+                position = new Vector3(centerX, 0f, zOffset * sideP1ZPositionFactor),
                 zoomDistance = defaultZoom,
                 initialized = true
             };
         }
 
         /// <summary>
-        /// Flip camera to view from the specified player's side.
-        /// Stores current position/zoom for the old side, restores for the new side.
-        /// 0 = behind P0's core (high Z), looking toward -Z.
-        /// 1 = behind P1's core (low Z), looking toward +Z.
+        /// Stores departing side's state, restores arriving side's state, flips pivot rotation.
         /// </summary>
         public void SetPlayerSide(int playerID)
         {
             if (cameraPivot == null) return;
 
-            // Store current side's state (skip first call — scene position is meaningless)
+            // Store current (skip first call — scene start position is meaningless)
             if (sideHasBeenSet && sideStates[currentSide].initialized)
             {
                 sideStates[currentSide].position = transform.position;
@@ -355,7 +329,6 @@ namespace NodeWar.Core
             currentSide = playerID;
             sideHasBeenSet = true;
 
-            // Restore target side's state
             if (sideStates[currentSide].initialized)
             {
                 transform.position = sideStates[currentSide].position;
@@ -363,47 +336,71 @@ namespace NodeWar.Core
                 currentZoomDistance = targetZoomDistance;
             }
 
-            // Kill momentum on switch
-            velocity = Vector3.zero;
+            panVelocity = Vector3.zero;
 
-            // Flip pivot Y rotation
+            // P0 faces -Z (Y=180), P1 faces +Z (Y=0)
             float yRotation = (playerID == 0) ? 180f : 0f;
             cameraPivot.localRotation = Quaternion.Euler(
                 cameraPivot.localRotation.eulerAngles.x, yRotation, 0f);
         }
 
-        /// <summary>
-        /// Returns the euler rotation sprites should use to face the current camera.
-        /// </summary>
         public Vector3 GetSpriteRotation()
         {
-            if (cameraPivot == null) return new Vector3(50f, 0f, 0f);
+            if (cameraPivot == null) return spriteRotationFallback;
             return cameraPivot.localRotation.eulerAngles;
         }
 
         public void SetTargetZoom(float distance)
         {
-            targetZoomDistance = Mathf.Clamp(distance, minZoomDistance, maxZoomDistance);
+            targetZoomDistance = Mathf.Clamp(distance, zoomMinDistance, zoomMaxDistance);
         }
 
-        public float GetCurrentZoomDistance()
-        {
-            return currentZoomDistance;
-        }
+        public float GetCurrentZoomDistance() => currentZoomDistance;
 
         /// <summary>
-        /// Normalized zoom: 0 = fully zoomed in, 1 = fully zoomed out.
-        /// Useful for UI or other systems that need to know relative zoom level.
+        /// 0 = fully zoomed in, 1 = fully zoomed out.
         /// </summary>
         public float GetZoomNormalized()
         {
-            if (maxZoomDistance <= minZoomDistance) return 0f;
-            return (currentZoomDistance - minZoomDistance) / (maxZoomDistance - minZoomDistance);
+            if (zoomMaxDistance <= zoomMinDistance) return 0f;
+            return (currentZoomDistance - zoomMinDistance) / (zoomMaxDistance - zoomMinDistance);
+        }
+
+        /// <summary>
+        /// Locks camera to centered bird's-eye for draft phase. Disables pan/zoom input.
+        /// </summary>
+        public void SetDraftMode(bool enabled)
+        {
+            isDraftMode = enabled;
+
+            if (!enabled) return;
+
+            panVelocity = Vector3.zero;
+            ResetToCenter();
+
+            // Fit board with configured padding
+            float gridWidth = 0f;
+            float gridHeight = 0f;
+            if (boardConfig != null)
+            {
+                gridWidth = (boardConfig.gridCols - 1) * boardConfig.nodeScale;
+                gridHeight = (boardConfig.gridRows - 1) * boardConfig.nodeScale;
+            }
+
+            float neededZoom = Mathf.Max(gridWidth, gridHeight) * draftZoomBoardMultiplier;
+            if (draftZoomNeverBelowMax)
+                neededZoom = Mathf.Max(neededZoom, zoomMaxDistance);
+
+            targetZoomDistance = neededZoom;
+            currentZoomDistance = neededZoom;
+
+            if (cameraPivot != null)
+                cameraPivot.localRotation = Quaternion.Euler(draftPivotAngle, 0f, 0f);
         }
 
         public void ResetToCenter()
         {
-            velocity = Vector3.zero;
+            panVelocity = Vector3.zero;
 
             if (boardConfig != null)
             {
@@ -420,6 +417,25 @@ namespace NodeWar.Core
             }
         }
 
+        // ===== HELPERS =====
+
+        /// <summary>
+        /// Raycast from screen position to XZ ground plane (Y=0).
+        /// </summary>
+        private Vector3 GetMouseWorldPosition(Mouse mouse)
+        {
+            Vector2 screenPos = mouse.position.ReadValue();
+            Ray ray = cam.ScreenPointToRay(screenPos);
+
+            if (Mathf.Abs(ray.direction.y) < 0.0001f)
+                return transform.position;
+
+            float t = -ray.origin.y / ray.direction.y;
+            if (t < 0) t = 0;
+
+            return ray.origin + ray.direction * t;
+        }
+
 #if UNITY_EDITOR
         private void OnDrawGizmos()
         {
@@ -431,16 +447,10 @@ namespace NodeWar.Core
             float maxZ = boardConfig != null ? boardConfig.boundsMaxZ : 8f;
 
             Gizmos.color = new Color(1f, 1f, 0f, 0.4f);
-
-            Vector3 bottomLeft = new Vector3(minX, 0f, minZ);
-            Vector3 bottomRight = new Vector3(maxX, 0f, minZ);
-            Vector3 topLeft = new Vector3(minX, 0f, maxZ);
-            Vector3 topRight = new Vector3(maxX, 0f, maxZ);
-
-            Gizmos.DrawLine(bottomLeft, bottomRight);
-            Gizmos.DrawLine(bottomRight, topRight);
-            Gizmos.DrawLine(topRight, topLeft);
-            Gizmos.DrawLine(topLeft, bottomLeft);
+            Gizmos.DrawLine(new Vector3(minX, 0f, minZ), new Vector3(maxX, 0f, minZ));
+            Gizmos.DrawLine(new Vector3(maxX, 0f, minZ), new Vector3(maxX, 0f, maxZ));
+            Gizmos.DrawLine(new Vector3(maxX, 0f, maxZ), new Vector3(minX, 0f, maxZ));
+            Gizmos.DrawLine(new Vector3(minX, 0f, maxZ), new Vector3(minX, 0f, minZ));
 
             Gizmos.color = new Color(1f, 1f, 0f, 0.05f);
             Vector3 center = new Vector3((minX + maxX) * 0.5f, 0f, (minZ + maxZ) * 0.5f);

@@ -1,5 +1,6 @@
 using UnityEngine;
 using NodeWar.Simulation;
+using Unity.VisualScripting.Antlr3.Runtime;
 
 namespace NodeWar.Core
 {
@@ -14,6 +15,13 @@ namespace NodeWar.Core
         private SimulationState simState;
         private InputBuffer inputBuffer;
         private NodeWar.Input.BotPlayer botPlayer;
+
+        private bool paused = true;
+
+        public void Unpause()
+        {
+            paused = false;
+        }
 
         public void Initialize(SimulationState state, InputBuffer buffer)
         {
@@ -36,6 +44,7 @@ namespace NodeWar.Core
         private void Update()
         {
             if (simState == null) return;
+            if (paused) return;
             if (simState.gameOver) return;
 
             accumulator += Time.deltaTime;

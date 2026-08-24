@@ -36,5 +36,31 @@ namespace NodeWar.Simulation
         public float boundsMaxX = 12f;
         public float boundsMinZ = -8f;
         public float boundsMaxZ = 8f;
+
+        [Header("Initial Node Placements (shown before draft)")]
+        public InitialNodePlacement[] initialPlacements;
+
+        [Header("Draft Configuration")]
+        public float draftTurnDuration = 15f;
+        public int maxConsecutiveTimeouts = 2;
+        public DraftNodeEntry[] baseDraftNodesP0;
+        public DraftNodeEntry[] baseDraftNodesP1;
+
+        [System.Serializable]
+        public struct InitialNodePlacement
+        {
+            public int gridX;
+            public int gridZ;
+            public DistrictType districtType;
+            public int ownerID; // -1 = unowned, 0 = P0, 1 = P1
+            [Tooltip("Initial claimBar value. Use +/-10000 for fully owned.")]
+            public int claimBar;
+        }
+
+        [System.Serializable]
+        public struct DraftNodeEntry
+        {
+            public DistrictType districtType;
+        }
     }
 }

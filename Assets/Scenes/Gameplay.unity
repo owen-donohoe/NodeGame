@@ -361,7 +361,7 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   m_Enabled: 1
-  serializedVersion: 12
+  serializedVersion: 13
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 2
@@ -413,7 +413,7 @@ Light:
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
-  m_ShadowRadius: 0
+  m_ShapeRadius: 0
   m_ShadowAngle: 0
   m_LightUnit: 1
   m_LuxAtDistance: 1
@@ -531,6 +531,10 @@ MonoBehaviour:
     tickCount: 0
     gameOver: 0
     winnerID: -1
+  draftUIPrefab: {fileID: 3595327956611536689, guid: 1144ccd5ea8a087499052f23d215f97f, type: 3}
+  countdownUIPrefab: {fileID: 5454849423351147693, guid: f27bfd2b858b0bf4191d16389583fd1f, type: 3}
+  placementPreviewPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
+  gridCellMarkerPrefab: {fileID: 4001519955181544305, guid: 9ae5f97e745e82a4aa4f454412956bf7, type: 3}
 --- !u!1 &615212804
 GameObject:
   m_ObjectHideFlags: 0
@@ -565,20 +569,20 @@ MonoBehaviour:
   cam: {fileID: 330585545}
   panSpeed: 1
   momentumDamping: 3
-  maxVelocity: 20
-  zoomSpeed: 25
+  maxPanVelocity: 20
+  zoomScrollSensitivity: 2
   minZoomDistance: 2
   maxZoomDistance: 30
-  zoomDamping: 4
+  zoomSmoothingSpeed: 8
   useBounds: 1
-  boundsPushback: 10
+  boundsPushbackForce: 10
   defaultShakeIntensity: 0.15
   defaultShakeRotationalIntensity: 0.5
   defaultShakeDuration: 0.4
   defaultShakeFrequency: 25
-  maxShakeOffset: 0.5
-  maxShakeRotation: 3
-  shakeFalloff:
+  maxShakePositionalOffset: 0.5
+  maxShakeRotationalOffset: 3
+  shakeFalloffCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -602,6 +606,14 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  draftZoomBoardMultiplier: 1.853
+  draftPivotAngle: 76.3
+  draftZoomNeverBelowMax: 1
+  sideDefaultZoomNormalized: 0.65
+  sideZOffsetFactor: 0.35
+  sideP0LateralNudgeFactor: 0.5
+  sideP1ZPositionFactor: 0.6
+  spriteRotationFallback: {x: 50, y: 0, z: 0}
 --- !u!4 &615212806
 Transform:
   m_ObjectHideFlags: 0

@@ -57,6 +57,14 @@ namespace NodeWar.Network
         public System.Action OnDisconnect;
         public System.Action<int> OnDesync; // tick number where desync detected
 
+        private bool paused = true;
+
+        public void Unpause()
+        {
+            paused = false;
+        }
+
+
         /// <summary>
         /// Normalized progress (0-1) between last tick and next tick.
         /// Used by View layer for interpolation. Same contract as TickRunner.TickAlpha.
@@ -106,6 +114,7 @@ namespace NodeWar.Network
         private void Update()
         {
             if (simState == null || networkManager == null) return;
+            if (paused) return;
             if (simState.gameOver) return;
 
             ProcessIncomingPackets();

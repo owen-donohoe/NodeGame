@@ -7,7 +7,9 @@ namespace NodeWar.Network
         Handshake = 0,
         HandshakeAck = 1,
         TickInput = 2,
-        Heartbeat = 3
+        Heartbeat = 3,
+        DraftReady = 4,
+        DraftPlacement = 5
     }
 
     /// <summary>

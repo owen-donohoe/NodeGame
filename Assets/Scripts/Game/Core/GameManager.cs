@@ -6,6 +6,7 @@ using NodeWar.Debugging;
 using NodeWar.UI;
 using NodeWar.Network;
 using System.Collections.Generic;
+using DG.Tweening;
 
 namespace NodeWar.Core
 {
@@ -67,7 +68,26 @@ namespace NodeWar.Core
         // Game over tracking
         private bool gameOverHandled = false;
 
-        private CameraController cameraController; 
+        private CameraController cameraController;
+
+        [Header("Draft")]
+        [SerializeField] private GameObject draftUIPrefab;
+        [SerializeField] private GameObject countdownUIPrefab;
+        [SerializeField] private GameObject placementPreviewPrefab;
+        [SerializeField] private GameObject gridCellMarkerPrefab;
+
+        private enum MatchPhase
+        {
+            PreDraft,
+            Drafting,
+            PostDraft,
+            Countdown,
+            Playing
+        }
+
+        private MatchPhase matchPhase = MatchPhase.PreDraft;
+        private DraftManager draftManager;
+        private DraftResult? pendingDraftResult;
 
         private void Awake()
         {
@@ -86,6 +106,7 @@ namespace NodeWar.Core
                 return;
             }
 
+            // Phase 1: Pre-draft setup (no board/state dependency)
             GameSimulation.SetBalance(balance);
             CommandProcessor.SetBalance(balance);
 
@@ -101,15 +122,101 @@ namespace NodeWar.Core
             if (cameraController != null)
                 cameraController.InitializeSides(boardConfig);
 
-            // 1. Initialize simulation state
-            InitializeNodes();
+            // Determine match type and start appropriate flow
+            MatchConnection match = MatchConnection.Instance;
+
+            if (match != null && match.isBotMatch)
+            {
+                StartDraftPhase(match);
+            }
+            else if (match != null && match.isNetworked)
+            {
+                StartDraftPhase(match);
+            }
+            else
+            {
+                // Testing mode: skip draft, use legacy hardcoded board
+                SkipDraftAndInitialize();
+            }
+        }
+
+        // ===== NEW: Draft phase startup =====
+
+        private void StartDraftPhase(MatchConnection match)
+        {
+            matchPhase = MatchPhase.Drafting;
+
+            // Create DraftManager
+            GameObject draftGO = new GameObject("DraftManager");
+            draftManager = draftGO.AddComponent<DraftManager>();
+
+            draftManager.Initialize(
+                boardConfig,
+                match.isNetworked ? match.networkManager : null,
+                match.isNetworked ? match.localPlayerID : 0,
+                match.isNetworked,
+                match.isBotMatch,
+                cameraController,
+                gridCellMarkerPrefab
+            );
+
+            draftManager.OnDraftComplete += OnDraftComplete;
+            draftManager.OnDraftDisconnect += OnDraftDisconnect;
+
+            // Create Draft UI
+            if (draftUIPrefab != null)
+            {
+                GameObject uiGO = Instantiate(draftUIPrefab);
+                NodeWar.UI.DraftUI draftUI = uiGO.GetComponent<NodeWar.UI.DraftUI>();
+                if (draftUI != null)
+                {
+                    draftUI.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
+                    draftManager.SetDraftUI(draftUI);
+                }
+            }
+        }
+
+        private void OnDraftComplete(DraftResult result)
+        {
+            pendingDraftResult = result;
+            matchPhase = MatchPhase.PostDraft;
+
+            // Clean up draft manager
+            if (draftManager != null)
+            {
+                Destroy(draftManager.gameObject);
+                draftManager = null;
+            }
+
+            // Proceed to post-draft initialization
+            InitializeFromDraftResult(result);
+        }
+
+        private void OnDraftDisconnect()
+        {
+            Debug.LogError("[GameManager] Draft disconnected.");
+
+            if (draftManager != null)
+            {
+                Destroy(draftManager.gameObject);
+                draftManager = null;
+            }
+
+            // Show disconnect and return to lobby
+            ShowDisconnect();
+        }
+
+        // ===== NEW: Post-draft initialization =====
+
+        private void InitializeFromDraftResult(DraftResult result)
+        {
+            // Build the board from initial placements + draft results
+            InitializeNodesFromDraft(result);
             InitializePlayers();
             InitializeVillagers();
-
-            // 2. Initialize input systems
             InitializeInputSystems();
 
-            // 3. Create tick provider (BEFORE views so they receive a valid reference)
+            // Create tick provider
             MatchConnection match = MatchConnection.Instance;
 
             if (match != null && match.isNetworked)
@@ -131,25 +238,216 @@ namespace NodeWar.Core
                 }
             }
 
-            // 4. Spawn views (tickProvider is now valid)
+            // Spawn views
             SpawnNodeViews();
             SpawnVillagerViews();
-
             trackedVillagerCount = state.villagers.Length;
 
-            // Wire camera side — views exist, LockToPlayer already set the correct ID
+            // Wire camera side
+            debugPlayerSwitch.OnPlayerSwitched += OnPlayerSideChanged;
+
+            // Initialize UI
+            InitializeUI();
+
+            // Start countdown
+            StartCountdown();
+        }
+
+        // ===== NEW: Build nodes from draft =====
+
+        private void InitializeNodesFromDraft(DraftResult result)
+        {
+            int GRID_COLS = boardConfig.gridCols;
+            int GRID_ROWS = boardConfig.gridRows;
+            state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
+
+            // Step 1: Create all nodes as None with grid topology
+            for (int z = 0; z < GRID_ROWS; z++)
+            {
+                for (int x = 0; x < GRID_COLS; x++)
+                {
+                    int nodeID = z * GRID_COLS + x;
+                    List<int> neighborIDs = new List<int>();
+                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
+                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
+                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
+                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
+
+                    Edge[] edges = new Edge[neighborIDs.Count];
+                    for (int i = 0; i < neighborIDs.Count; i++)
+                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.defaultEdgeWeight };
+
+                    state.nodes[nodeID] = new NodeData
+                    {
+                        nodeID = nodeID,
+                        worldPosition = new Vector3(x * boardConfig.nodeScale, 0f, z * boardConfig.nodeScale),
+                        gridX = x,
+                        gridZ = z,
+                        edges = edges,
+                        districtType = DistrictType.None,
+                        baseDistrictType = DistrictType.None,
+                        slotType = NodeSlotType.Fixed,
+                        claimBar = 0,
+                        ownerID = -1,
+                        bonusVillagersOnClaim = 0,
+                        materialAllocation = 0
+                    };
+                }
+            }
+
+            // Step 2: Apply initial placements from BoardConfig
+            if (boardConfig.initialPlacements != null)
+            {
+                for (int i = 0; i < boardConfig.initialPlacements.Length; i++)
+                {
+                    var ip = boardConfig.initialPlacements[i];
+                    int nodeID = ip.gridZ * GRID_COLS + ip.gridX;
+                    state.nodes[nodeID].districtType = ip.districtType;
+                    state.nodes[nodeID].baseDistrictType = ip.districtType;
+                    state.nodes[nodeID].ownerID = ip.ownerID;
+                    state.nodes[nodeID].claimBar = ip.claimBar;
+                }
+            }
+
+            // Step 3: Apply draft placements
+            if (result.placements != null)
+            {
+                for (int i = 0; i < result.placements.Length; i++)
+                {
+                    var dp = result.placements[i];
+                    int nodeID = dp.gridZ * GRID_COLS + dp.gridX;
+                    state.nodes[nodeID].districtType = dp.districtType;
+                    state.nodes[nodeID].baseDistrictType = dp.districtType;
+                    state.nodes[nodeID].ownerID = -1; // drafted nodes start unowned
+                    state.nodes[nodeID].slotType = NodeSlotType.Fixed;
+
+                    // Village bonus
+                    if (dp.districtType == DistrictType.Village)
+                        state.nodes[nodeID].bonusVillagersOnClaim = balance.bonusVillagersOnVillageClaim;
+                }
+            }
+        }
+
+        // ===== NEW: Skip draft for testing mode (preserves existing behavior) =====
+
+        private void SkipDraftAndInitialize()
+        {
+            matchPhase = MatchPhase.Playing;
+
+            // Use legacy initialization (hardcoded board)
+            InitializeNodes(); // existing method, unchanged
+            InitializePlayers();
+            InitializeVillagers();
+            InitializeInputSystems();
+
+            MatchConnection match = MatchConnection.Instance;
+            if (match != null && match.isNetworked)
+            {
+                StartNetworkPlay(match);
+            }
+            else
+            {
+                StartLocalPlay();
+            }
+
+            SpawnNodeViews();
+            SpawnVillagerViews();
+            trackedVillagerCount = state.villagers.Length;
+
             debugPlayerSwitch.OnPlayerSwitched += OnPlayerSideChanged;
             OnPlayerSideChanged(debugPlayerSwitch.GetCurrentPlayerID());
 
-            // 5. Initialize UI (tickProvider is valid, views exist)
             InitializeUI();
-
-            // 6. Node setup
             PlayAllNodeStartup();
+        }
+
+        private void StartCountdown()
+        {
+            matchPhase = MatchPhase.Countdown;
+
+            if (cameraController != null)
+                cameraController.SetDraftMode(false);
+
+            MatchConnection match = MatchConnection.Instance;
+            int pid = (match != null && match.isNetworked) ? match.localPlayerID : 0;
+            OnPlayerSideChanged(pid);
+
+            AnimatePlaceholdersAway();
+
+            // Delay the startup and countdown to let removal breathe
+            float removalDuration = 1.5f; // approximate time for all placeholders to fly away
+            StartCoroutine(DelayedStartup(removalDuration));
+        }
+
+        private System.Collections.IEnumerator DelayedStartup(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+
+            PlayAllNodeStartup();
+
+            // Additional pause to let nodes spring up before countdown text appears
+            yield return new WaitForSeconds(1.0f);
+
+            if (countdownUIPrefab != null)
+            {
+                GameObject countdownGO = Instantiate(countdownUIPrefab);
+                CountdownUI countdown = countdownGO.GetComponent<CountdownUI>();
+                if (countdown != null)
+                {
+                    countdown.OnCountdownComplete += OnCountdownComplete;
+                    countdown.StartCountdown();
+                }
+                else
+                {
+                    OnCountdownComplete();
+                }
+            }
+            else
+            {
+                OnCountdownComplete();
+            }
+        }
+
+        private void AnimatePlaceholdersAway()
+        {
+            DraftUI draftUI = FindAnyObjectByType<DraftUI>();
+            List<GameObject> placeholders = null;
+
+            if (draftUI != null)
+                placeholders = draftUI.GetPersistentPlacements();
+
+            if (placeholders == null || placeholders.Count == 0) return;
+
+            for (int i = 0; i < placeholders.Count; i++)
+            {
+                if (placeholders[i] == null) continue;
+
+                GameObject obj = placeholders[i];
+                float delay = i * 0.12f; // was 0.05f — slower stagger between each
+
+                obj.transform.DOMove(obj.transform.position + Vector3.up * 10f, 0.8f) // was 0.5f
+                    .SetDelay(delay)
+                    .SetEase(Ease.InBack)
+                    .OnComplete(() => Destroy(obj));
+            }
+        }
+
+
+        private void OnCountdownComplete()
+        {
+            matchPhase = MatchPhase.Playing;
+
+            TickRunner tickRunner = GetComponent<TickRunner>();
+            if (tickRunner != null) tickRunner.Unpause();
+
+            LockstepRunner lockstep = GetComponent<LockstepRunner>();
+            if (lockstep != null) lockstep.Unpause();
         }
 
         private void Update()
         {
+            if (matchPhase != MatchPhase.Playing) return;
+
             // Spawn views for bonus villagers
             if (state.villagers.Length > trackedVillagerCount)
             {
@@ -521,6 +819,13 @@ namespace NodeWar.Core
                 if (claimBar != null)
                     claimBar.Initialize(state, i);
             }
+
+            // Pre-hide all nodes. PlayAllNodeStartup reveals them after placeholders leave.
+            for (int i = 0; i < nodePresentations.Length; i++)
+            {
+                if (nodePresentations[i] != null)
+                    nodePresentations[i].SetHidden();
+            }
         }
 
         private void SpawnVillagerViews()
@@ -593,7 +898,7 @@ namespace NodeWar.Core
 
                 NodeData node = state.nodes[i];
                 float dist = Mathf.Abs(node.gridX - centerX) + Mathf.Abs(node.gridZ - centerZ);
-                float delay = dist * 0.08f; // 80ms per grid step from center
+                float delay = dist * 0.14f; // was 0.08f — more time between each ring
 
                 nodePresentations[i].SetHidden();
                 nodePresentations[i].PlayStartup(delay);
