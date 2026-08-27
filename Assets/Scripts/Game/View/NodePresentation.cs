@@ -5,40 +5,42 @@ namespace NodeWar.View
 {
     /// <summary>
     /// Manages sprite orientation and entrance/exit animations for node prefabs.
-    /// Finds all SpriteRenderers and MeshRenderers under gfxRoot, sets them to
-    /// a uniform rotation (with per-instance offset), and provides tweened
-    /// startup/breakdown animations.
-    ///
-    /// Startup: Scale Y 0 --> 1 with overshoot (spring up from bottom pivot).
-    /// Breakdown: Scale Y 1 --> 0, slow-to-fast (collapse into ground).
-    ///
-    /// [ExecuteAlways] for editor orientation preview.
+    /// Finds SpriteRenderers under gfxRoot and applies a uniform world rotation,
+    /// then provides tweened startup (spring up) and breakdown (collapse) animations.
+    /// 
+    /// Also rotates the WorkPoints root on camera flip so slot positions mirror correctly.
+    /// 
+    /// Per-sprite rotation offsets are supported via SpriteOrientationOffset components
+    /// on individual sprite GameObjects.
+    /// 
+    /// [ExecuteAlways] allows orientation preview in the Editor without entering play mode.
     /// </summary>
     [ExecuteAlways]
     public class NodePresentation : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("Parent transform containing all sprite children. Auto-finds if null.")]
+        [Tooltip("Parent containing all sprite children. Auto-discovered if null.")]
         [SerializeField] private Transform gfxRoot;
+        [Tooltip("Parent containing work slot transforms. Auto-discovered if null.")]
+        [SerializeField] private Transform workPointsRoot;
 
         [Header("Orientation")]
-        [Tooltip("Base euler rotation applied to all sprites. Set to match camera angle.")]
+        [Tooltip("Base euler rotation applied to all sprites. Should match camera viewing angle.")]
         [SerializeField] private Vector3 spriteRotation = new Vector3(50f, 0f, 0f);
-        [Tooltip("Per-instance offset added to base rotation.")]
-        [SerializeField] private Vector3 rotationOffset;
 
         [Header("Startup Animation")]
+        [Tooltip("Duration of the Y-scale spring from 0 to 1.")]
         [SerializeField] private float startupDuration = 0.5f;
+        [Tooltip("Overshoot amount for the spring. Higher = more bounce.")]
         [SerializeField] private float startupOvershoot = 1.6f;
         [SerializeField] private Ease startupEase = Ease.OutBack;
 
         [Header("Breakdown Animation")]
+        [Tooltip("Duration of the Y-scale collapse from 1 to 0.")]
         [SerializeField] private float breakdownDuration = 0.35f;
         [SerializeField] private Ease breakdownEase = Ease.InCubic;
 
-        // Discovered targets
-        private Transform[] targets;
-        private Transform[] meshTargets; // excluded from rotation, always reset to identity
+        private Transform[] sprites;
         private Vector3[] baseScales;
         private bool isPresented;
         private Sequence activeSequence;
@@ -51,54 +53,57 @@ namespace NodeWar.View
 
         // ===== ORIENTATION =====
 
+        [ContextMenu("Apply Orientation")]
         private void ApplyOrientation()
         {
-            if (targets == null) return;
+            if (sprites == null) return;
 
-            Quaternion rotation = Quaternion.Euler(spriteRotation + rotationOffset);
+            Quaternion baseRotation = Quaternion.Euler(spriteRotation);
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < sprites.Length; i++)
             {
-                if (targets[i] == null) continue;
-                targets[i].rotation = rotation;
-            }
+                if (sprites[i] == null) continue;
 
-            if (meshTargets == null) return;
-            for (int i = 0; i < meshTargets.Length; i++)
-            {
-                if (meshTargets[i] == null) continue;
-                meshTargets[i].rotation = Quaternion.Euler(90f, 0f, 0f);
+                SpriteOrientationOffset perSpriteOffset = sprites[i].GetComponent<SpriteOrientationOffset>();
+                if (perSpriteOffset != null)
+                {
+                    sprites[i].rotation = Quaternion.Euler(spriteRotation + perSpriteOffset.offset);
+                }
+                else
+                {
+                    sprites[i].rotation = baseRotation;
+                }
             }
         }
 
         // ===== STARTUP =====
 
         /// <summary>
-        /// Sprites spring up from ground (Y scale 0 --> 1 with overshoot).
+        /// Sprites spring up from ground (Y scale 0 to 1 with overshoot).
+        /// Staggered slightly per sprite for a layered feel.
         /// </summary>
         public void PlayStartup(float delay = 0f)
         {
-            if (targets == null) DiscoverTargets();
+            if (sprites == null) DiscoverTargets();
 
             activeSequence?.Kill();
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < sprites.Length; i++)
             {
-                if (targets[i] == null) continue;
+                if (sprites[i] == null) continue;
                 Vector3 scale = baseScales[i];
                 scale.y = 0f;
-                targets[i].localScale = scale;
+                sprites[i].localScale = scale;
             }
 
             Sequence seq = DOTween.Sequence();
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < sprites.Length; i++)
             {
-                if (targets[i] == null) continue;
+                if (sprites[i] == null) continue;
 
-                Transform t = targets[i];
+                Transform t = sprites[i];
                 Vector3 targetScale = baseScales[i];
-
                 float spriteDelay = delay + (i * 0.03f);
 
                 seq.Insert(spriteDelay,
@@ -113,21 +118,21 @@ namespace NodeWar.View
         // ===== BREAKDOWN =====
 
         /// <summary>
-        /// Sprites collapse into ground (Y scale 1 --> 0, slow-to-fast).
+        /// Sprites collapse into ground (Y scale 1 to 0, slow-to-fast).
         /// </summary>
         public void PlayBreakdown(float delay = 0f)
         {
-            if (targets == null) return;
+            if (sprites == null) return;
 
             activeSequence?.Kill();
 
             Sequence seq = DOTween.Sequence();
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < sprites.Length; i++)
             {
-                if (targets[i] == null) continue;
+                if (sprites[i] == null) continue;
 
-                Transform t = targets[i];
+                Transform t = sprites[i];
                 float spriteDelay = delay + (i * 0.02f);
 
                 seq.Insert(spriteDelay,
@@ -139,104 +144,121 @@ namespace NodeWar.View
             activeSequence = seq;
         }
 
-        /// <summary>
-        /// Immediately visible, no animation.
-        /// </summary>
         public void SetPresented()
         {
-            if (targets == null) DiscoverTargets();
+            if (sprites == null) DiscoverTargets();
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < sprites.Length; i++)
             {
-                if (targets[i] == null) continue;
-                targets[i].localScale = baseScales[i];
+                if (sprites[i] == null) continue;
+                sprites[i].localScale = baseScales[i];
             }
             isPresented = true;
         }
 
-        /// <summary>
-        /// Immediately hidden, no animation.
-        /// </summary>
         public void SetHidden()
         {
-            if (targets == null) DiscoverTargets();
+            if (sprites == null) DiscoverTargets();
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < sprites.Length; i++)
             {
-                if (targets[i] == null) continue;
+                if (sprites[i] == null) continue;
                 Vector3 scale = baseScales[i];
                 scale.y = 0f;
-                targets[i].localScale = scale;
+                sprites[i].localScale = scale;
             }
             isPresented = false;
         }
 
-        public bool IsPresented => isPresented;
+        /// <summary>
+        /// Sets the Y rotation of the GFX root and WorkPoints root.
+        /// The existing local X and Z rotations are preserved.
+        /// </summary>
+        public void RotateNode(float yRotation)
+        {
+            if (gfxRoot != null)
+            {
+                Vector3 rotation = gfxRoot.localEulerAngles;
+                rotation.y = yRotation;
+                gfxRoot.localEulerAngles = rotation;
+            }
 
+            if (workPointsRoot != null)
+            {
+                Vector3 rotation = workPointsRoot.localEulerAngles;
+                rotation.y = yRotation;
+                workPointsRoot.localEulerAngles = rotation;
+            }
+        }
+
+        /// <summary>
+        /// Sets the base sprite rotation using only the X and Z values provided.
+        /// The Y value is intentionally ignored because Y is controlled separately
+        /// by Flip().
+        /// </summary>
+        public void SetBaseSpriteRotation(Vector3 rotation)
+        {
+            spriteRotation = new Vector3(
+                rotation.x,
+                0f,
+                rotation.z
+            );
+
+            ApplyOrientation();
+        }
+        
         // ===== TARGET DISCOVERY =====
 
         private void DiscoverTargets()
         {
+            // Discover gfxRoot
             if (gfxRoot == null)
             {
-                Transform found = transform.Find("GFX");
-                if (found == null) found = transform.Find("gfx");
-                if (found == null) found = transform.Find("Gfx");
-                if (found == null && transform.childCount > 0)
-                    found = transform.GetChild(0);
-                gfxRoot = found;
+                gfxRoot = transform.Find("GFX")
+                    ?? transform.Find("gfx")
+                    ?? transform.Find("Gfx");
+
+                if (gfxRoot == null && transform.childCount > 0)
+                    gfxRoot = transform.GetChild(0);
+            }
+
+            // Discover workPointsRoot
+            if (workPointsRoot == null)
+            {
+                workPointsRoot = transform.Find("WorkPoints")
+                    ?? transform.Find("Work Points")
+                    ?? transform.Find("WORKPOINTS");
             }
 
             if (gfxRoot == null)
             {
-                targets = new Transform[0];
+                sprites = new Transform[0];
                 baseScales = new Vector3[0];
-                meshTargets = new Transform[0];
                 return;
             }
 
             Renderer[] renderers = gfxRoot.GetComponentsInChildren<Renderer>(true);
-            var validTargets = new System.Collections.Generic.List<Transform>();
-            var meshList = new System.Collections.Generic.List<Transform>();
+
+            var spriteList = new System.Collections.Generic.List<Transform>();
 
             for (int i = 0; i < renderers.Length; i++)
             {
                 if (renderers[i] is SpriteRenderer)
-                    validTargets.Add(renderers[i].transform);
-                else if (renderers[i] is MeshRenderer)
-                    meshList.Add(renderers[i].transform);
+                    spriteList.Add(renderers[i].transform);
             }
 
-            targets = validTargets.ToArray();
-            baseScales = new Vector3[targets.Length];
-            for (int i = 0; i < targets.Length; i++)
-                baseScales[i] = targets[i].localScale;
-
-            meshTargets = meshList.ToArray();
+            sprites = spriteList.ToArray();
+            baseScales = new Vector3[sprites.Length];
+            for (int i = 0; i < sprites.Length; i++)
+                baseScales[i] = sprites[i].localScale;
         }
 
-        /// <summary>
-        /// Update sprite facing AND rotate GFX root to flip spatial arrangement.
-        /// Sprites face camera via world rotation; depth ordering flips via parent Y rotation.
-        /// </summary>
-        public void SetBaseRotation(Vector3 rotation)
-        {
-            spriteRotation = rotation;
-
-            // Rotate gfxRoot on Y to flip spatial arrangement of children
-            if (gfxRoot != null)
-                gfxRoot.localRotation = Quaternion.Euler(0f, rotation.y, 0f);
-
-            ApplyOrientation();
-        }
-
-        // ===== EDITOR SUPPORT =====
+        // ===== EDITOR =====
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            // Re-apply orientation when inspector values change
-            if (targets == null || targets.Length == 0)
+            if (sprites == null || sprites.Length == 0)
                 DiscoverTargets();
             ApplyOrientation();
         }
@@ -245,14 +267,6 @@ namespace NodeWar.View
         {
             DiscoverTargets();
             ApplyOrientation();
-        }
-
-        // In editor (not playing), keep orientation applied in case
-        // scene camera movement deselects and re-serializes transforms
-        private void Update()
-        {
-            if (!Application.isPlaying)
-                ApplyOrientation();
         }
 #endif
 

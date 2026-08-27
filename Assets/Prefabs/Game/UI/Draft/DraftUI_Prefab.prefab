@@ -349,8 +349,9 @@ GameObject:
   - component: {fileID: 6425692349570081326}
   - component: {fileID: 4834520321852552779}
   - component: {fileID: 8598558672999132120}
+  - component: {fileID: 3146132051590245523}
   m_Layer: 5
-  m_Name: DraftUIPrefab
+  m_Name: DraftUI_Prefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -397,6 +398,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -457,48 +459,76 @@ MonoBehaviour:
   barPanel: {fileID: 7566201801585733510}
   barContainer: {fileID: 1860575312826424970}
   draftSlotPrefab: {fileID: 6797049498145351925, guid: 44962260d0262b84da94550a9fd33a8b, type: 3}
-  dragProxy: {fileID: 8959871227188263008}
-  dragProxyCanvasGroup: {fileID: 7608056053858501599}
-  confirmButtonGO: {fileID: 6377914537107157914}
-  confirmButton: {fileID: 1240131850302978556}
+  barSweepDuration: 0.4
+  barSweepInEase: 9
+  barSweepOutEase: 8
+  barOffscreenY: -200
+  playerPanel: {fileID: 6488880166256602067}
+  playerPanelOffscreenY: 200
   timerFill: {fileID: 8848713350341310474}
   timerText: {fileID: 2326152314429911556}
   turnText: {fileID: 5657719605119631414}
-  turnIndicatorBG: {fileID: 5096130719176097801}
-  placementPreviewPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
+  turnIndicatorBackground: {fileID: 5096130719176097801}
+  player0Color: {r: 0.3, g: 0.5, b: 1, a: 1}
+  player1Color: {r: 1, g: 0.3, b: 0.3, a: 1}
+  placementController: {fileID: 3146132051590245523}
+  confirmedPlacementPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
+  confirmedPlacementYOffset: 0.1
+  placementDropHeight: 10
+  placementDropDuration: 0.6
+  placementDropEase: 5
+  placementBounceStrength: 0.15
+  placementBounceDuration: 0.25
   stickerMappings:
   - districtType: 1
-    sprite: {fileID: 0}
+    sprite: {fileID: -1163881572, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 13
-    sprite: {fileID: 0}
+    sprite: {fileID: 1932555571, guid: 4529beb66b7c32c4c9d18ee8685cbc32, type: 3}
   - districtType: 8
-    sprite: {fileID: 0}
+    sprite: {fileID: -1749986298, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 7
-    sprite: {fileID: 0}
+    sprite: {fileID: -1084826701, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 4
-    sprite: {fileID: 0}
+    sprite: {fileID: 984913607, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 2
-    sprite: {fileID: 0}
+    sprite: {fileID: 2038435977, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 12
-    sprite: {fileID: 0}
+    sprite: {fileID: -1979648809, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 10
-    sprite: {fileID: 0}
+    sprite: {fileID: 1457306146, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 6
-    sprite: {fileID: 0}
-  - districtType: 6
-    sprite: {fileID: 0}
+    sprite: {fileID: -573322024, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
   - districtType: 9
-    sprite: {fileID: 0}
-  barZone: 0.1
-  fadeZone: 0.2
-  stillThreshold: 0.3
-  confirmSpringDuration: 0.35
-  sweepDuration: 0.4
-  barOffscreenY: -200
-  p0Color: {r: 0.3, g: 0.5, b: 1, a: 1}
-  p1Color: {r: 1, g: 0.3, b: 0.3, a: 1}
-  validColor: {r: 0.3, g: 1, b: 0.3, a: 0.6}
-  invalidColor: {r: 1, g: 0.3, b: 0.3, a: 0.6}
+    sprite: {fileID: 1953576264, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 3
+    sprite: {fileID: -661655534, guid: 4529beb66b7c32c4c9d18ee8685cbc32, type: 3}
+  - districtType: 5
+    sprite: {fileID: 107567208, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 11
+    sprite: {fileID: 1501339176, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+--- !u!114 &3146132051590245523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3595327956611536689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d1a822eb3cb19645adf89752eb17681, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.UI.DraftPlacementController
+  barZoneThreshold: 0.1
+  placementEligibleThreshold: 0.15
+  fadeZoneThreshold: 0.2
+  confirmStillThreshold: 0.2
+  ghostPreviewPrefab: {fileID: 1879787182496836857, guid: 98b61a6da97a6d148acb674bbbad90ad, type: 3}
+  previewYOffset: 0.1
+  validCellTint: {r: 0.3, g: 1, b: 0.3, a: 0.7}
+  invalidCellTint: {r: 1, g: 0.3, b: 0.3, a: 0.5}
+  dragProxy: {fileID: 8959871227188263008}
+  dragProxyCanvasGroup: {fileID: 7608056053858501599}
+  confirmPresenter: {fileID: 6791570890266470873}
 --- !u!1 &3891972435067028103
 GameObject:
   m_ObjectHideFlags: 0
@@ -920,9 +950,9 @@ RectTransform:
   - {fileID: 7116597179561105111}
   m_Father: {fileID: 6488880166256602067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 186, y: 491}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -50, y: -50}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5611336712188891580
@@ -1074,6 +1104,7 @@ GameObject:
   - component: {fileID: 905928570949840279}
   - component: {fileID: 7640797193262480931}
   - component: {fileID: 1240131850302978556}
+  - component: {fileID: 6791570890266470873}
   m_Layer: 5
   m_Name: ConfirmButton
   m_TagString: Untagged
@@ -1183,6 +1214,24 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6791570890266470873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6377914537107157914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed0cdd7ac7abe1045967ccb1fbb5582f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.UI.DraftConfirmPresenter
+  button: {fileID: 1240131850302978556}
+  rectTransform: {fileID: 4108019718766724893}
+  springInDuration: 0.35
+  springInEase: 27
+  springOvershoot: 2.5
+  screenOffsetY: 70
 --- !u!1 &7524143160748141576
 GameObject:
   m_ObjectHideFlags: 0
@@ -1269,7 +1318,7 @@ GameObject:
   - component: {fileID: 1860575312826424970}
   - component: {fileID: 6006498484042586202}
   m_Layer: 5
-  m_Name: BarContainer
+  m_Name: BarSlotContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

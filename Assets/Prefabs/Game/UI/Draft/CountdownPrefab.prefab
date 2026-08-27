@@ -59,6 +59,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -113,8 +114,8 @@ CanvasGroup:
   m_GameObject: {fileID: 5454849423351147693}
   m_Enabled: 1
   m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
 --- !u!114 &3819485175314389210
 MonoBehaviour:
@@ -130,8 +131,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CountdownUI
   countdownText: {fileID: 437502930586866253}
   canvasGroup: {fileID: 6505966528336007488}
-  stepDuration: 0.5
-  goDuration: 0.6
+  stepDisplayDuration: 0.7
+  goDisplayDuration: 1
+  fadeOutDuration: 0.3
+  stepStartScale: 1.5
+  stepPunchDuration: 0.21
+  stepPunchEase: 27
 --- !u!1 &6850431078655689462
 GameObject:
   m_ObjectHideFlags: 0

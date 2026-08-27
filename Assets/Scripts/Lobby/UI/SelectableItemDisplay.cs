@@ -25,10 +25,13 @@ namespace NodeWar.Lobby
         private bool isLocked;
         private bool isSelected;
         private System.Action<string> onUse;
+        private int originalSiblingIndex = -1;
 
         private static readonly Color normalColor = new Color(0.14f, 0.14f, 0.19f, 1f);
         private static readonly Color selectedColor = new Color(0.22f, 0.28f, 0.38f, 1f);
         private static readonly Color lockedColor = new Color(0.10f, 0.10f, 0.12f, 1f);
+
+        private System.Action<SelectableItemDisplay> onRowSelected;
 
         private void Awake()
         {
@@ -42,12 +45,14 @@ namespace NodeWar.Lobby
         }
 
         public void Initialize(string id, string displayName, Sprite icon, bool locked,
-            System.Action<string> useCallback)
+                                System.Action<string> useCallback,
+                                System.Action<SelectableItemDisplay> rowSelectedCallback = null)
         {
             itemID = id;
             isLocked = locked;
             onUse = useCallback;
             isSelected = false;
+            onRowSelected = rowSelectedCallback;
 
             if (nameText != null) nameText.text = displayName;
             if (iconImage != null)
@@ -74,6 +79,8 @@ namespace NodeWar.Lobby
                 useButtonContainer.SetActive(false);
             if (backgroundImage != null && !isLocked)
                 backgroundImage.color = normalColor;
+
+            RestoreSiblingIndex();
         }
 
         public void SetVisible(bool visible)
@@ -85,12 +92,34 @@ namespace NodeWar.Lobby
         {
             if (isLocked) return;
 
+            bool wasSelected = isSelected;
             isSelected = !isSelected;
+
+            // Notify panel to deselect siblings before this item shows its Use button
+            if (isSelected && !wasSelected)
+            {
+                onRowSelected?.Invoke(this);
+                // Move to last sibling so Use button renders above items below us
+                originalSiblingIndex = transform.GetSiblingIndex();
+                transform.SetAsLastSibling();
+            }
+            else if (!isSelected && wasSelected)
+            {
+                RestoreSiblingIndex();
+            }
 
             if (useButtonContainer != null)
                 useButtonContainer.SetActive(isSelected);
             if (backgroundImage != null)
                 backgroundImage.color = isSelected ? selectedColor : normalColor;
+        }
+        private void RestoreSiblingIndex()
+        {
+            if (originalSiblingIndex >= 0 && originalSiblingIndex < transform.parent.childCount)
+            {
+                transform.SetSiblingIndex(originalSiblingIndex);
+                originalSiblingIndex = -1;
+            }
         }
 
         private void OnUseClicked()

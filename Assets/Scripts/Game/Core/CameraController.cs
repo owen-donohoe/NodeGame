@@ -56,6 +56,8 @@ namespace NodeWar.Core
         [SerializeField][Range(30f, 90f)] private float draftPivotAngle = 70f;
         [Tooltip("If true, draft zoom never goes below zoomMaxDistance.")]
         [SerializeField] private bool draftZoomNeverBelowMax = true;
+        [Tooltip("Scroll sensitivity for vertical panning during draft mode. Allows seeing full board.")]
+        [SerializeField] private float draftScrollPanSensitivity = 2f;
 
         [Header("Per-Side Defaults")]
         [Tooltip("Normalized position between min/max zoom for gameplay start. 0=closest, 1=farthest.")]
@@ -107,6 +109,12 @@ namespace NodeWar.Core
             if (cam == null)
                 cam = Camera.main;
 
+            if (cam != null)
+            {
+                cam.transparencySortMode = UnityEngine.TransparencySortMode.CustomAxis;
+                cam.transparencySortAxis = new Vector3(0f, 0f, -1f); // P1 default before SetPlayerSide is called
+            }
+
             if (cameraPivot == null && transform.childCount > 0)
                 cameraPivot = transform.GetChild(0);
 
@@ -119,6 +127,7 @@ namespace NodeWar.Core
         {
             HandleDragInput();
             HandleZoomInput();
+            HandleDraftScroll();
             ApplyMomentum();
             ApplyZoom();
             ApplyBounds();
@@ -158,6 +167,22 @@ namespace NodeWar.Core
 
             if (mouse.middleButton.wasReleasedThisFrame)
                 isDragging = false;
+        }
+
+        private void HandleDraftScroll()
+        {
+            if (!isDraftMode) return;
+
+            Mouse mouse = Mouse.current;
+            if (mouse == null) return;
+
+            float scroll = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) < 0.01f) return;
+
+            // Scroll moves camera along Z axis to view different parts of the board
+            Vector3 pos = transform.position;
+            pos.z += scroll * draftScrollPanSensitivity * 0.1f;
+            transform.position = pos;
         }
 
         private void ApplyMomentum()
@@ -334,6 +359,15 @@ namespace NodeWar.Core
                 transform.position = sideStates[currentSide].position;
                 targetZoomDistance = sideStates[currentSide].zoomDistance;
                 currentZoomDistance = targetZoomDistance;
+            }
+
+            if (cam != null)
+            {
+                // P0 faces -Z (pivot Y=180): higher Z is further back, axis points +Z
+                // P1 faces +Z (pivot Y=0): lower Z is further back, axis points -Z
+                cam.transparencySortAxis = (playerID == 0)
+                    ? new Vector3(0f, 0f, 1f)
+                    : new Vector3(0f, 0f, -1f);
             }
 
             panVelocity = Vector3.zero;

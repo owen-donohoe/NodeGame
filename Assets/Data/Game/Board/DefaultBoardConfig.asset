@@ -38,7 +38,7 @@ MonoBehaviour:
   - gridX: 2
     gridZ: 0
     districtType: 5
-    ownerID: 0
+    ownerID: 1
     claimBar: -10000
   draftTurnDuration: 15
   maxConsecutiveTimeouts: 2
@@ -50,3 +50,4 @@ MonoBehaviour:
   - districtType: 13
   - districtType: 8
   - districtType: 2
+  botLoadoutNodes: []

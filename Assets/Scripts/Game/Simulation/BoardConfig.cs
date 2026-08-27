@@ -46,6 +46,10 @@ namespace NodeWar.Simulation
         public DraftNodeEntry[] baseDraftNodesP0;
         public DraftNodeEntry[] baseDraftNodesP1;
 
+        [Header("Bot Draft Loadout")]
+        [Tooltip("Additional nodes added to the bot player's draft pool beyond the base draft nodes.")]
+        public DraftNodeEntry[] botLoadoutNodes;
+
         [System.Serializable]
         public struct InitialNodePlacement
         {

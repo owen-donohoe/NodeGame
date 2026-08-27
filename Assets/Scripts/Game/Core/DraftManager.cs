@@ -48,6 +48,11 @@ namespace NodeWar.Core
         private CameraController cameraController;
         private GameObject placementGridCellPrefab;
 
+        // Loadout exchange
+        private NodeWar.Lobby.LoadoutData localLoadout;
+        private NodeWar.Lobby.LoadoutData remoteLoadout;
+        private bool remoteLoadoutReceived;
+
         // State
         private DraftState draftState;
         private float turnTimer;
@@ -77,8 +82,9 @@ namespace NodeWar.Core
         // ===== INITIALIZATION =====
 
         public void Initialize(BoardConfig config, NetworkManager netManager,
-                            int playerID, bool networked, bool botMatch,
-                            CameraController camController, GameObject gridCellPrefab)
+                    int playerID, bool networked, bool botMatch,
+                    CameraController camController, GameObject gridCellPrefab,
+                    NodeWar.Lobby.LoadoutData loadout)
         {
             boardConfig = config;
             networkManager = netManager;
@@ -87,6 +93,9 @@ namespace NodeWar.Core
             isBotMatch = botMatch;
             cameraController = camController;
             placementGridCellPrefab = gridCellPrefab;
+            localLoadout = loadout;
+            remoteLoadout = new NodeWar.Lobby.LoadoutData();
+            remoteLoadoutReceived = false;
 
             float now = Time.time;
             lastHeartbeatTime = now;
@@ -104,9 +113,6 @@ namespace NodeWar.Core
                 }
             }
 
-            draftState.player0Slots = BuildPlayerSlots(0);
-            draftState.player1Slots = BuildPlayerSlots(1);
-
             if (cameraController != null)
                 cameraController.SetDraftMode(true);
 
@@ -115,6 +121,8 @@ namespace NodeWar.Core
             {
                 localReady = true;
                 remoteReady = true;
+                remoteLoadoutReceived = true;
+                // Bot gets no loadout nodes (only base draft nodes)
                 BeginInitialReveal();
             }
             else
@@ -122,7 +130,9 @@ namespace NodeWar.Core
                 draftState.phase = DraftPhase.WaitingForReady;
                 localReady = false;
                 remoteReady = false;
+                remoteLoadoutReceived = false;
                 SendDraftReady();
+                SendDraftLoadout();
                 localReady = true;
             }
 
@@ -148,7 +158,7 @@ namespace NodeWar.Core
             switch (draftState.phase)
             {
                 case DraftPhase.WaitingForReady:
-                    if (localReady && remoteReady)
+                    if (localReady && remoteReady && (remoteLoadoutReceived || !isNetworked || isBotMatch))
                         BeginInitialReveal();
                     break;
                 case DraftPhase.InitialReveal:
@@ -166,6 +176,10 @@ namespace NodeWar.Core
         {
             draftState.phase = DraftPhase.InitialReveal;
             revealTimer = 0f;
+
+            // Both loadouts are now known - rebuild slots with full information
+            draftState.player0Slots = BuildPlayerSlots(0);
+            draftState.player1Slots = BuildPlayerSlots(1);
 
             if (draftUI != null)
                 draftUI.ShowInitialReveal(boardConfig.initialPlacements);
@@ -463,8 +477,25 @@ namespace NodeWar.Core
                         break;
                     case PacketType.Heartbeat:
                         break;
+                    case PacketType.DraftLoadout:
+                        HandleRemoteLoadout(packets[i]);
+                        break;
                 }
             }
+        }
+
+        private void HandleRemoteLoadout(byte[] data)
+        {
+            DraftSerializer.DeserializeDraftLoadout(data, out int playerID, out NodeWar.Lobby.LoadoutData loadout);
+            if (playerID == localPlayerID) return; // ignore our own loadout echoed back
+            remoteLoadout = loadout;
+            remoteLoadoutReceived = true;
+        }
+        private void SendDraftLoadout()
+        {
+            if (networkManager == null) return;
+            byte[] packet = DraftSerializer.SerializeDraftLoadout(localPlayerID, localLoadout);
+            networkManager.Send(packet);
         }
 
         private void HandleRemotePlacement(byte[] data)
@@ -581,15 +612,41 @@ namespace NodeWar.Core
                 Debug.LogWarning("[DraftManager] baseDraftNodes null for P" + playerID);
             }
 
-            // Add loadout nodes (only for local player — remote loadout not exchanged yet)
-            MatchConnection match = MatchConnection.Instance;
-            if (match != null && playerID == localPlayerID)
+            // Add loadout nodes
+            if (isBotMatch && playerID != localPlayerID)
             {
-                AddLoadoutNode(slots, match.loadout.nodeID0);
-                AddLoadoutNode(slots, match.loadout.nodeID1);
+                // Bot player: use nodes configured directly in BoardConfig
+                if (boardConfig.botLoadoutNodes != null)
+                {
+                    for (int i = 0; i < boardConfig.botLoadoutNodes.Length; i++)
+                    {
+                        if (boardConfig.botLoadoutNodes[i].districtType == DistrictType.None) continue;
+                        slots.Add(new DraftSlot
+                        {
+                            districtType = boardConfig.botLoadoutNodes[i].districtType,
+                            isConsumed = false,
+                            isFromLoadout = true
+                        });
+                    }
+                }
+            }
+            else
+            {
+                // Human player: use lobby loadout
+                NodeWar.Lobby.LoadoutData loadout = GetLoadoutForPlayer(playerID);
+                AddLoadoutNode(slots, loadout.nodeID0);
+                AddLoadoutNode(slots, loadout.nodeID1);
             }
 
             return slots.ToArray();
+        }
+
+        private NodeWar.Lobby.LoadoutData GetLoadoutForPlayer(int playerID)
+        {
+            if (playerID == localPlayerID)
+                return localLoadout;
+            else
+                return remoteLoadout;
         }
 
         private void AddLoadoutNode(List<DraftSlot> slots, string nodeID)
@@ -661,5 +718,7 @@ namespace NodeWar.Core
         }
 
         public float NodeScale => boardConfig.nodeScale;
+        public NodeWar.Lobby.LoadoutData GetRemoteLoadout() => remoteLoadout;
+        public NodeWar.Lobby.LoadoutData GetLocalLoadout() => localLoadout;
     }
 }

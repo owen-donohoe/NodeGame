@@ -10,5 +10,6 @@ namespace NodeWar.Lobby
         public Sprite icon;
         [TextArea(2, 4)]
         public string description;
+        public bool isGlobal;
     }
 }

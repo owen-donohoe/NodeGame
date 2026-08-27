@@ -9,6 +9,11 @@ namespace NodeWar.Lobby
         public string nodeID0;
         public string nodeID1;
     }
+    public enum NodeCategory
+    {
+        Generic,    // Available in base draft pool for all players
+        Selectable  // Only available when selected in player loadout
+    }
 
     public enum GameMode
     {

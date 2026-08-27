@@ -225,7 +225,7 @@ GameObject:
   - component: {fileID: 6275999523751812493}
   - component: {fileID: 2709315630502554478}
   m_Layer: 5
-  m_Name: DraftSlotPrefab
+  m_Name: DraftSlot_Prefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

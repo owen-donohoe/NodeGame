@@ -9,7 +9,8 @@ namespace NodeWar.Network
         TickInput = 2,
         Heartbeat = 3,
         DraftReady = 4,
-        DraftPlacement = 5
+        DraftPlacement = 5,
+        DraftLoadout = 6
     }
 
     /// <summary>

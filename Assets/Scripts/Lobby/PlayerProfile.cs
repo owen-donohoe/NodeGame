@@ -76,26 +76,27 @@ namespace NodeWar.Lobby
             data.loadout = loadout;
             Save();
         }
+        public bool IsSuitUnlocked(string suitID) { return true; }
+        public bool IsNodeUnlocked(string nodeID) { return true; }
+        //public bool IsSuitUnlocked(string suitID)
+        //{
+        //    if (data.unlockedSuitIDs == null) return false;
+        //    for (int i = 0; i < data.unlockedSuitIDs.Length; i++)
+        //    {
+        //        if (data.unlockedSuitIDs[i] == suitID) return true;
+        //    }
+        //    return false;
+        //}
 
-        public bool IsSuitUnlocked(string suitID)
-        {
-            if (data.unlockedSuitIDs == null) return false;
-            for (int i = 0; i < data.unlockedSuitIDs.Length; i++)
-            {
-                if (data.unlockedSuitIDs[i] == suitID) return true;
-            }
-            return false;
-        }
-
-        public bool IsNodeUnlocked(string nodeID)
-        {
-            if (data.unlockedNodeIDs == null) return false;
-            for (int i = 0; i < data.unlockedNodeIDs.Length; i++)
-            {
-                if (data.unlockedNodeIDs[i] == nodeID) return true;
-            }
-            return false;
-        }
+        //public bool IsNodeUnlocked(string nodeID)
+        //{
+        //    if (data.unlockedNodeIDs == null) return false;
+        //    for (int i = 0; i < data.unlockedNodeIDs.Length; i++)
+        //    {
+        //        if (data.unlockedNodeIDs[i] == nodeID) return true;
+        //    }
+        //    return false;
+        //}
 
         // ===== VALIDATION =====
 

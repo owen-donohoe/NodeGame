@@ -472,6 +472,7 @@ GameObject:
   m_Component:
   - component: {fileID: 571336743}
   - component: {fileID: 571336744}
+  - component: {fileID: 571336745}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -508,22 +509,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Core.GameManager
   balance: {fileID: 11400000, guid: a5d341a3d2da3fb48b90ead59f063e8a, type: 2}
   boardConfig: {fileID: 11400000, guid: 5615db51283388145839515f3e5bfbc8, type: 2}
-  nodePrefabDefault: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabCore: {fileID: 8688766449498250874, guid: 8373adfcbf8334e47ba7814cdcc1491a, type: 3}
-  nodePrefabFarm: {fileID: 8408422106066874737, guid: a00d4f7cc036da44f87af02a061dd4d2, type: 3}
-  nodePrefabMine: {fileID: 9055227416273874177, guid: e174304aa5911c44393ab62c31ec6a6c, type: 3}
-  nodePrefabVillage: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabBarracks: {fileID: 6184294175726980618, guid: ec59c9c42a4594e40b807cd6322dadab, type: 3}
-  nodePrefabForge: {fileID: 4807130452135644850, guid: 7601e1fadd59c004ba009050143b9570, type: 3}
-  nodePrefabCamp: {fileID: 6726012211073196602, guid: 79bceda0ed54892458afa647d73f85cc, type: 3}
-  nodePrefabShrine: {fileID: 529037922120096893, guid: 770657f18a845ef43ae01df01f51a0f4, type: 3}
-  nodePrefabArsenal: {fileID: 7552578624291263241, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-  nodePrefabSanctuary: {fileID: 5804528226822421175, guid: 088aea7e8b679d44d849a85350e20838, type: 3}
-  nodePrefabWatchtower: {fileID: 3054436516923914996, guid: 92dce6b119607654aba341fde9b11435, type: 3}
-  nodePrefabRampart: {fileID: 7549120291414093570, guid: 40a8c452c7846b64abcf26947af7fd60, type: 3}
-  nodePrefabMarket: {fileID: 424209603255228295, guid: ccb8cd26a930f2f4fa2b908852dfac88, type: 3}
+  nodePrefabDefault: {fileID: 8046070869750961505, guid: 905b2523df8f1024f8877c6aacbdf880, type: 3}
+  nodePrefabCore: {fileID: 8211250036296402091, guid: 8071dd2b50ddad54182245a544239923, type: 3}
+  nodePrefabFarm: {fileID: 1519156837394272603, guid: 8a989809a053a4e47a7750505b98c878, type: 3}
+  nodePrefabMine: {fileID: 6508061111322472956, guid: bcb7315dc25e47e498a8677b51832beb, type: 3}
+  nodePrefabVillage: {fileID: 3054436516923914996, guid: 47ba9deb0f688894dba8355c64db7e8c, type: 3}
+  nodePrefabBarracks: {fileID: 7032556316584536576, guid: 1c6a2a7bce1cdff4d808c78875f9b321, type: 3}
+  nodePrefabForge: {fileID: 3054436516923914996, guid: 47ba9deb0f688894dba8355c64db7e8c, type: 3}
+  nodePrefabCamp: {fileID: 6812824908004170424, guid: da45cbe017dad734896131f0a42fb650, type: 3}
+  nodePrefabShrine: {fileID: 2045233324925196744, guid: 352d582a51c532d42b6b0aacd20a31bf, type: 3}
+  nodePrefabArsenal: {fileID: 1103330223385362504, guid: 994bb7ea7a04e1643a9faa693b75c5f8, type: 3}
+  nodePrefabSanctuary: {fileID: 6572207896810802489, guid: c9cbb24d5c875a24dac98a226ff8d733, type: 3}
+  nodePrefabWatchtower: {fileID: 3054436516923914996, guid: 47ba9deb0f688894dba8355c64db7e8c, type: 3}
+  nodePrefabRampart: {fileID: 6457397819837387546, guid: b12c9e939dc3ef24c9e43b5c79f6ed6e, type: 3}
+  nodePrefabMarket: {fileID: 3130650414941034616, guid: 1d035d50e9d75bf4493e6a721d8fd1e1, type: 3}
   villagerPrefab: {fileID: 7037243673507716427, guid: 4b6014b072d214546a7d15f00c45b8c2, type: 3}
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
+  transitionController: {fileID: 571336745}
+  draftUIPrefab: {fileID: 3595327956611536689, guid: 1144ccd5ea8a087499052f23d215f97f, type: 3}
+  placementPreviewPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
+  gridCellMarkerPrefab: {fileID: 4001519955181544305, guid: 9ae5f97e745e82a4aa4f454412956bf7, type: 3}
   state:
     nodes: []
     villagers: []
@@ -531,10 +536,27 @@ MonoBehaviour:
     tickCount: 0
     gameOver: 0
     winnerID: -1
-  draftUIPrefab: {fileID: 3595327956611536689, guid: 1144ccd5ea8a087499052f23d215f97f, type: 3}
-  countdownUIPrefab: {fileID: 5454849423351147693, guid: f27bfd2b858b0bf4191d16389583fd1f, type: 3}
-  placementPreviewPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
-  gridCellMarkerPrefab: {fileID: 4001519955181544305, guid: 9ae5f97e745e82a4aa4f454412956bf7, type: 3}
+--- !u!114 &571336745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 571336742}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 917342924de5c1744a1af459b884c0a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MatchTransitionController
+  placeholderFlyUpDistance: 10
+  placeholderFlyDuration: 0.8
+  placeholderStaggerDelay: 0.12
+  placeholderFlyEase: 26
+  delayAfterPlaceholderRemoval: 1.5
+  delayAfterNodeStartup: 1
+  nodeStartupDelayPerGridDistance: 0.14
+  nodeBreakdownDelayPerWorldUnit: 0.04
+  countdownPrefab: {fileID: 5454849423351147693, guid: f27bfd2b858b0bf4191d16389583fd1f, type: 3}
 --- !u!1 &615212804
 GameObject:
   m_ObjectHideFlags: 0
@@ -568,11 +590,11 @@ MonoBehaviour:
   cameraPivot: {fileID: 1404931599}
   cam: {fileID: 330585545}
   panSpeed: 1
-  momentumDamping: 3
-  maxPanVelocity: 20
+  panMomentumDamping: 5
+  panMaxVelocity: 20
   zoomScrollSensitivity: 2
-  minZoomDistance: 2
-  maxZoomDistance: 30
+  zoomMinDistance: 5
+  zoomMaxDistance: 30
   zoomSmoothingSpeed: 8
   useBounds: 1
   boundsPushbackForce: 10
@@ -580,8 +602,8 @@ MonoBehaviour:
   defaultShakeRotationalIntensity: 0.5
   defaultShakeDuration: 0.4
   defaultShakeFrequency: 25
-  maxShakePositionalOffset: 0.5
-  maxShakeRotationalOffset: 3
+  shakeMaxPositionalOffset: 0.5
+  shakeMaxRotationalOffset: 3
   shakeFalloffCurve:
     serializedVersion: 2
     m_Curve:
@@ -609,6 +631,7 @@ MonoBehaviour:
   draftZoomBoardMultiplier: 1.853
   draftPivotAngle: 76.3
   draftZoomNeverBelowMax: 1
+  draftScrollPanSensitivity: 2
   sideDefaultZoomNormalized: 0.65
   sideZOffsetFactor: 0.35
   sideP0LateralNudgeFactor: 0.5

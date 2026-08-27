@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.InputSystem;
-using UnityEngine.EventSystems;
 using TMPro;
 using DG.Tweening;
 using NodeWar.Simulation;
@@ -11,34 +9,39 @@ using System.Collections.Generic;
 namespace NodeWar.UI
 {
     /// <summary>
-    /// Controls the draft phase UI.
+    /// Facade and coordinator for the draft phase UI.
     /// 
-    /// Responsibilities:
-    /// - Draft bar (always visible, shows unconsumed slots)
-    /// - Drag proxy (cursor follower, visible near bar, fades on board)
-    /// - Placement preview lifecycle (created/destroyed by screen zone)
-    /// - Confirm button (appears on still, independent of preview renderer)
-    /// - Turn/timer display
-    /// - Persistent placeholders (stay on board until game starts)
+    /// This is what DraftManager talks to. Public API matches what DraftManager expects:
+    ///   ShowInitialReveal, SweepIn, SweepOut, UpdateTimer, OnTurnChanged, OnPlacementConfirmed
     /// 
-    /// Does NOT own draft state or networking. Those live in DraftManager.
+    /// Owns:
+    ///   - Bar panel (sweep animation, slot lifecycle)
+    ///   - Timer/turn display
+    ///   - Persistent placeholder tracking
+    ///   - Sticker sprite registry
+    ///   - Routing slot drag-starts to DraftPlacementController
+    /// 
+    /// Does NOT own: placement state machine, input, preview lifecycle, confirm button.
+    /// Those live on DraftPlacementController and DraftConfirmPresenter.
     /// </summary>
     public class DraftUI : MonoBehaviour
     {
-        // ===== INSPECTOR =====
-
-        [Header("Bar (always visible)")]
+        [Header("Bar Panel")]
         [SerializeField] private RectTransform barPanel;
         [SerializeField] private RectTransform barContainer;
         [SerializeField] private GameObject draftSlotPrefab;
 
-        [Header("Drag Proxy (screen-space cursor follower)")]
-        [SerializeField] private RectTransform dragProxy;
-        [SerializeField] private CanvasGroup dragProxyCanvasGroup;
+        [Header("Bar Animation")]
+        [SerializeField] private float barSweepDuration = 0.4f;
+        [SerializeField] private Ease barSweepInEase = Ease.OutCubic;
+        [SerializeField] private Ease barSweepOutEase = Ease.InCubic;
+        [SerializeField] private float barOffscreenY = -200f;
 
-        [Header("Confirm Button")]
-        [SerializeField] private GameObject confirmButtonGO;
-        [SerializeField] private Button confirmButton;
+        [Header("Player Panel")]
+        [Tooltip("Panel at top of screen containing turn indicator, timer, etc. Sweeps down on draft start.")]
+        [SerializeField] private RectTransform playerPanel;
+        [Tooltip("Offscreen Y position for player panel (positive = above screen).")]
+        [SerializeField] private float playerPanelOffscreenY = 200f;
 
         [Header("Timer")]
         [SerializeField] private Image timerFill;
@@ -46,27 +49,31 @@ namespace NodeWar.UI
 
         [Header("Turn Indicator")]
         [SerializeField] private TextMeshProUGUI turnText;
-        [SerializeField] private Image turnIndicatorBG;
+        [SerializeField] private Image turnIndicatorBackground;
 
-        [Header("World Prefabs")]
-        [SerializeField] private GameObject placementPreviewPrefab;
+        [Header("Turn Colors")]
+        [SerializeField] private Color player0Color = new Color(0.3f, 0.5f, 1f);
+        [SerializeField] private Color player1Color = new Color(1f, 0.3f, 0.3f);
+
+        [Header("Placement Controller")]
+        [Tooltip("DraftPlacementController on this same GameObject.")]
+        [SerializeField] private DraftPlacementController placementController;
+
+        [Header("Confirmed Placement Prefab")]
+        [Tooltip("World-space prefab for nodes that stay on board until game starts. Should look solid.")]
+        [SerializeField] private GameObject confirmedPlacementPrefab;
+        [Tooltip("Y offset for confirmed placements above grid.")]
+        [SerializeField] private float confirmedPlacementYOffset = 0.1f;
+
+        [Header("Confirmed Placement Animation")]
+        [SerializeField] private float placementDropHeight = 6f;
+        [SerializeField] private float placementDropDuration = 0.4f;
+        [SerializeField] private Ease placementDropEase = Ease.InQuad;
+        [SerializeField] private float placementBounceStrength = 0.15f;
+        [SerializeField] private float placementBounceDuration = 0.25f;
 
         [Header("Sticker Mappings")]
         [SerializeField] private StickerEntry[] stickerMappings;
-
-        [Header("Tuning")]
-        [SerializeField] private float barZone = 0.10f;
-        [SerializeField] private float fadeZone = 0.20f;
-        [SerializeField] private float stillThreshold = 0.3f;
-        [SerializeField] private float confirmSpringDuration = 0.35f;
-        [SerializeField] private float sweepDuration = 0.4f;
-        [SerializeField] private float barOffscreenY = -200f;
-
-        [Header("Colors")]
-        [SerializeField] private Color p0Color = new Color(0.3f, 0.5f, 1f);
-        [SerializeField] private Color p1Color = new Color(1f, 0.3f, 0.3f);
-        [SerializeField] private Color validColor = new Color(0.3f, 1f, 0.3f, 0.7f);
-        [SerializeField] private Color invalidColor = new Color(1f, 0.3f, 0.3f, 0.5f);
 
         [System.Serializable]
         public struct StickerEntry
@@ -75,40 +82,16 @@ namespace NodeWar.UI
             public Sprite sprite;
         }
 
-        // ===== STATE =====
-
-        private enum DragMode { Idle, Dragging, Placed, Repositioning }
-
+        // Runtime
         private DraftManager draftManager;
         private DraftState draftState;
         private int localPlayerID;
-        private Camera mainCam;
 
-        private DragMode dragMode = DragMode.Idle;
-        private int activeSlotIndex = -1;
-        private DistrictType activeDistrictType;
-
-        // Preview
-        private GameObject previewInstance;
-        private Renderer previewRenderer;
-        private int previewGridX = -1;
-        private int previewGridZ = -1;
-        private bool previewOnValidCell;
-
-        // Still detection
-        private float stillTimer;
-        private Vector3 lastPreviewPos;
-        private bool confirmVisible;
-
-        // Slots
         private List<DraftSlotUI> slotDisplays = new List<DraftSlotUI>();
         private DraftSlotUI activeSlotUI;
-
-        // Persistent placements
         private List<GameObject> persistentPlacements = new List<GameObject>();
-
         private Tween sweepTween;
-        private Tween confirmTween;
+        private Tween playerPanelSweepTween;
 
         // ===== INITIALIZATION =====
 
@@ -116,13 +99,18 @@ namespace NodeWar.UI
         {
             draftManager = manager;
             localPlayerID = playerID;
-            mainCam = Camera.main;
 
-            // Start bar offscreen for sweep-in
             barPanel.anchoredPosition = new Vector2(barPanel.anchoredPosition.x, barOffscreenY);
 
-            HideDragProxy();
-            HideConfirm();
+            if (playerPanel != null)
+                playerPanel.anchoredPosition = new Vector2(playerPanel.anchoredPosition.x, playerPanelOffscreenY);
+
+            if (placementController != null)
+            {
+                placementController.Initialize(manager, playerID, GetStickerSprite);
+                placementController.OnDragStarted += OnSlotDragStarted;
+                placementController.OnDragCancelled += OnSlotDragCancelled;
+            }
         }
 
         // ===== PUBLIC API (called by DraftManager) =====
@@ -133,7 +121,7 @@ namespace NodeWar.UI
             for (int i = 0; i < placements.Length; i++)
             {
                 Vector3 pos = draftManager.GridToWorld(placements[i].gridX, placements[i].gridZ);
-                SpawnPersistentPlaceholder(pos, placements[i].districtType);
+                SpawnConfirmedPlaceholder(pos, placements[i].districtType);
             }
         }
 
@@ -141,17 +129,33 @@ namespace NodeWar.UI
         {
             draftState = state;
             localPlayerID = playerID;
+
+            if (placementController != null)
+                placementController.SetDraftState(state);
+
             RebuildBar();
             UpdateTurnDisplay();
 
             sweepTween?.Kill();
-            sweepTween = barPanel.DOAnchorPosY(0f, sweepDuration).SetEase(Ease.OutCubic);
+            sweepTween = barPanel.DOAnchorPosY(0f, barSweepDuration).SetEase(barSweepInEase);
+
+            if (playerPanel != null)
+            {
+                playerPanelSweepTween?.Kill();
+                playerPanelSweepTween = playerPanel.DOAnchorPosY(0f, barSweepDuration).SetEase(barSweepInEase);
+            }
         }
 
         public void SweepOut()
         {
             sweepTween?.Kill();
-            sweepTween = barPanel.DOAnchorPosY(barOffscreenY, sweepDuration).SetEase(Ease.InCubic);
+            sweepTween = barPanel.DOAnchorPosY(barOffscreenY, barSweepDuration).SetEase(barSweepOutEase);
+
+            if (playerPanel != null)
+            {
+                playerPanelSweepTween?.Kill();
+                playerPanelSweepTween = playerPanel.DOAnchorPosY(playerPanelOffscreenY, barSweepDuration).SetEase(barSweepOutEase);
+            }
         }
 
         public void UpdateTimer(float remaining, float total)
@@ -166,7 +170,13 @@ namespace NodeWar.UI
         public void OnTurnChanged(DraftState state, int playerID)
         {
             draftState = state;
-            CancelDrag();
+
+            if (placementController != null)
+            {
+                placementController.CancelDrag();
+                placementController.SetDraftState(state);
+            }
+
             RebuildBar();
             UpdateTurnDisplay();
         }
@@ -174,382 +184,45 @@ namespace NodeWar.UI
         public void OnPlacementConfirmed(DraftPlacement placement)
         {
             Vector3 pos = draftManager.GridToWorld(placement.gridX, placement.gridZ);
-            GameObject ph = SpawnPersistentPlaceholder(pos, placement.districtType);
+            SpawnConfirmedPlaceholder(pos, placement.districtType);
 
-            // Drop-from-above animation
-            if (ph != null)
-            {
-                Vector3 finalPos = ph.transform.position;
-                ph.transform.position = finalPos + Vector3.up * 6f;
-                ph.transform.DOMove(finalPos, 0.4f).SetEase(Ease.InQuad)
-                    .OnComplete(() => ph.transform.DOPunchScale(Vector3.one * 0.15f, 0.25f, 6));
-            }
-
-            CancelDrag();
+            // Cancel any active drag state and rebuild bar with consumed slot removed
+            if (placementController != null)
+                placementController.CancelDrag();
             RebuildBar();
         }
 
         public List<GameObject> GetPersistentPlacements() => persistentPlacements;
 
-        // ===== DRAG START (called by DraftSlotUI) =====
+        // ===== SLOT INTERACTION (called by DraftSlotUI) =====
 
+        /// <summary>
+        /// Routes slot click to placement controller. Called by DraftSlotUI.OnPointerDown.
+        /// </summary>
         public void BeginDrag(int slotIndex)
         {
-            if (!draftManager.IsLocalPlayerTurn()) return;
             if (draftState == null) return;
+            if (placementController == null) return;
 
             DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 
-            activeSlotIndex = slotIndex;
-            activeDistrictType = slots[slotIndex].districtType;
-            dragMode = DragMode.Dragging;
-            confirmVisible = false;
-            HideConfirm();
+            placementController.BeginDrag(slotIndex, slots[slotIndex].districtType);
+        }
 
-            // Dim the source slot
+        private void OnSlotDragStarted(int slotIndex)
+        {
             activeSlotUI = FindSlotUI(slotIndex);
             if (activeSlotUI != null)
                 activeSlotUI.SetDimmed(true);
-
-            ShowDragProxy();
         }
 
-        // ===== PER-FRAME UPDATE =====
-
-        private void Update()
+        private void OnSlotDragCancelled()
         {
-            switch (dragMode)
-            {
-                case DragMode.Idle:
-                    break;
-                case DragMode.Dragging:
-                case DragMode.Repositioning:
-                    UpdateDragging();
-                    break;
-                case DragMode.Placed:
-                    UpdatePlaced();
-                    break;
-            }
-        }
-
-        private void UpdateDragging()
-        {
-            Mouse mouse = Mouse.current;
-            if (mouse == null) return;
-
-            Vector2 screenPos = mouse.position.ReadValue();
-            float normalizedY = screenPos.y / Screen.height;
-
-            // --- Drag proxy visibility (fades out going up) ---
-            float proxyAlpha;
-            if (normalizedY < barZone)
-                proxyAlpha = 1f;
-            else if (normalizedY < fadeZone)
-                proxyAlpha = 1f - ((normalizedY - barZone) / (fadeZone - barZone));
-            else
-                proxyAlpha = 0f;
-
-            SetDragProxyAlpha(proxyAlpha);
-            if (dragProxy != null)
-                dragProxy.position = screenPos;
-
-            // --- Preview lifecycle (created above 10%, destroyed below 10%) ---
-            if (normalizedY < barZone)
-            {
-                // Below 10%: destroy preview
-                DestroyPreview();
-            }
-            else
-            {
-                // Above 10%: ensure preview exists
-                EnsurePreviewExists();
-                UpdatePreviewPosition(screenPos);
-
-                // Preview opacity (fades in from 10-20%)
-                float previewAlpha;
-                if (normalizedY < fadeZone)
-                    previewAlpha = (normalizedY - barZone) / (fadeZone - barZone);
-                else
-                    previewAlpha = 1f;
-
-                SetPreviewAlpha(previewAlpha);
-            }
-
-            // --- Release ---
-            if (mouse.leftButton.wasReleasedThisFrame)
-            {
-                if (normalizedY < barZone)
-                {
-                    // Released in bar zone ? cancel
-                    CancelDrag();
-                }
-                else if (previewOnValidCell)
-                {
-                    // Released on valid cell ? place
-                    EnterPlacedState();
-                }
-                else
-                {
-                    // Released on invalid cell ? cancel
-                    CancelDrag();
-                }
-                return;
-            }
-
-            // --- Cancel ---
-            if (mouse.rightButton.wasPressedThisFrame || EscapePressed())
-            {
-                CancelDrag();
-            }
-        }
-
-        private void UpdatePlaced()
-        {
-            Mouse mouse = Mouse.current;
-            if (mouse == null) return;
-
-            // Still detection
-            if (previewInstance != null)
-            {
-                if (Vector3.Distance(previewInstance.transform.position, lastPreviewPos) < 0.01f)
-                    stillTimer += Time.deltaTime;
-                else
-                {
-                    stillTimer = 0f;
-                    lastPreviewPos = previewInstance.transform.position;
-                }
-            }
-            else
-            {
-                stillTimer += Time.deltaTime;
-            }
-
-            // Show confirm after being still
-            if (!confirmVisible && stillTimer >= stillThreshold)
-            {
-                ShowConfirm();
-            }
-
-            // Re-grab: pointer down but NOT on confirm button
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                {
-                    // UI click — let EventSystem handle it (confirm button)
-                    // Do nothing here
-                }
-                else if (IsPointerOnPreviewCell(mouse.position.ReadValue()))
-                {
-                    // Clicked on the placed node — re-grab
-                    dragMode = DragMode.Repositioning;
-                    HideConfirm();
-                    ShowDragProxy();
-                }
-                return;
-            }
-
-
-            // Cancel
-            if (mouse.rightButton.wasPressedThisFrame || EscapePressed())
-            {
-                CancelDrag();
-            }
-        }
-
-        private void EnterPlacedState()
-        {
-            dragMode = DragMode.Placed;
-            HideDragProxy();
-            stillTimer = 0f;
-            lastPreviewPos = previewInstance != null ? previewInstance.transform.position : Vector3.zero;
-            confirmVisible = false;
-        }
-
-        // ===== CONFIRM =====
-
-        private void ShowConfirm()
-        {
-            if (confirmButtonGO == null) return;
-            confirmVisible = true;
-
-            // Position in screen space above the placed preview
-            Vector3 worldPos = draftManager.GridToWorld(previewGridX, previewGridZ);
-            Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos);
-
-            confirmButtonGO.SetActive(true);
-            RectTransform rect = confirmButtonGO.GetComponent<RectTransform>();
-            if (rect != null)
-                rect.position = screenPos + new Vector3(0f, 70f, 0f);
-
-            // Spring animation
-            confirmButtonGO.transform.localScale = Vector3.zero;
-            confirmTween?.Kill();
-            confirmTween = confirmButtonGO.transform
-                .DOScale(Vector3.one, confirmSpringDuration)
-                .SetEase(Ease.OutBack, 2.5f);
-        }
-
-        private void HideConfirm()
-        {
-            confirmVisible = false;
-            confirmTween?.Kill();
-            confirmTween = null;
-            if (confirmButtonGO != null)
-            {
-                confirmButtonGO.SetActive(false);
-                confirmButtonGO.transform.localScale = Vector3.zero;
-            }
-        }
-
-        private void OnConfirmClicked()
-        {
-            if (dragMode != DragMode.Placed) return;
-            if (activeSlotIndex < 0) return;
-            if (!previewOnValidCell) return;
-
-            draftManager.ConfirmLocalPlacement(activeSlotIndex, previewGridX, previewGridZ);
-
-            // Clean up
-            DestroyPreview();
-            HideDragProxy();
-            HideConfirm();
-            if (activeSlotUI != null) activeSlotUI.SetDimmed(false);
+            if (activeSlotUI != null)
+                activeSlotUI.SetDimmed(false);
             activeSlotUI = null;
-            activeSlotIndex = -1;
-            dragMode = DragMode.Idle;
-        }
-
-        // ===== CANCEL =====
-
-        private void CancelDrag()
-        {
-            DestroyPreview();
-            HideDragProxy();
-            HideConfirm();
-            if (activeSlotUI != null) activeSlotUI.SetDimmed(false);
-            activeSlotUI = null;
-            activeSlotIndex = -1;
-            dragMode = DragMode.Idle;
-        }
-
-        // ===== PREVIEW MANAGEMENT =====
-
-        private void EnsurePreviewExists()
-        {
-            if (previewInstance != null) return;
-            if (placementPreviewPrefab == null) return;
-
-            previewInstance = Instantiate(placementPreviewPrefab);
-            previewRenderer = previewInstance.GetComponentInChildren<MeshRenderer>();
-            SetPreviewSticker(activeDistrictType);
-        }
-
-        private void DestroyPreview()
-        {
-            if (previewInstance != null)
-            {
-                Destroy(previewInstance);
-                previewInstance = null;
-                previewRenderer = null;
-            }
-            previewOnValidCell = false;
-        }
-
-        private void UpdatePreviewPosition(Vector2 screenPos)
-        {
-            if (previewInstance == null) return;
-
-            Ray ray = mainCam.ScreenPointToRay(screenPos);
-            if (Mathf.Abs(ray.direction.y) < 0.0001f) { previewOnValidCell = false; return; }
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0) { previewOnValidCell = false; return; }
-
-            Vector3 worldHit = ray.origin + ray.direction * t;
-
-            if (!draftManager.WorldToGrid(worldHit, out int gx, out int gz))
-            {
-                previewOnValidCell = false;
-                previewInstance.transform.position = worldHit;
-                SetPreviewTint(invalidColor);
-                return;
-            }
-
-            previewOnValidCell = draftState.IsCellAvailable(gx, gz);
-            previewGridX = gx;
-            previewGridZ = gz;
-            // In UpdatePreviewPosition, when setting position:
-            previewInstance.transform.position = draftManager.GridToWorld(gx, gz) + Vector3.up * 0.1f;
-            SetPreviewTint(previewOnValidCell ? validColor : invalidColor);
-        }
-
-        private void SetPreviewAlpha(float alpha)
-        {
-            if (previewRenderer == null) return;
-            Color c = previewRenderer.material.color;
-            c.a = alpha;
-            previewRenderer.material.color = c;
-
-            // Also fade sticker if present
-            SpriteRenderer sr = previewInstance != null
-                ? previewInstance.GetComponentInChildren<SpriteRenderer>()
-                : null;
-            if (sr != null)
-            {
-                Color sc = sr.color;
-                sc.a = alpha;
-                sr.color = sc;
-            }
-        }
-
-        private void SetPreviewTint(Color tint)
-        {
-            if (previewRenderer == null) return;
-            float currentAlpha = previewRenderer.material.color.a;
-            tint.a = currentAlpha; // preserve alpha from zone logic
-            previewRenderer.material.color = tint;
-        }
-
-        private void SetPreviewSticker(DistrictType type)
-        {
-            if (previewInstance == null) return;
-            Sprite sprite = GetStickerSprite(type);
-            if (sprite == null) return;
-
-            Transform stickerChild = previewInstance.transform.Find("Sticker");
-            SpriteRenderer sr = null;
-            if (stickerChild != null) sr = stickerChild.GetComponent<SpriteRenderer>();
-            if (sr == null) sr = previewInstance.GetComponentInChildren<SpriteRenderer>();
-            if (sr != null) sr.sprite = sprite;
-        }
-
-        // ===== DRAG PROXY =====
-
-        private void ShowDragProxy()
-        {
-            if (dragProxy == null) return;
-
-            // Position BEFORE activating — prevents one-frame snap to old position
-            Mouse mouse = Mouse.current;
-            if (mouse != null)
-                dragProxy.position = mouse.position.ReadValue();
-
-            dragProxy.gameObject.SetActive(true);
-            SetDragProxyAlpha(1f);
-        }
-
-        private void HideDragProxy()
-        {
-            if (dragProxy == null) return;
-            dragProxy.gameObject.SetActive(false);
-        }
-
-        private void SetDragProxyAlpha(float alpha)
-        {
-            if (dragProxyCanvasGroup != null)
-                dragProxyCanvasGroup.alpha = alpha;
         }
 
         // ===== BAR MANAGEMENT =====
@@ -564,7 +237,7 @@ namespace NodeWar.UI
 
             for (int i = 0; i < slots.Length; i++)
             {
-                if (slots[i].isConsumed) continue; // consumed = gone from bar
+                if (slots[i].isConsumed) continue;
 
                 GameObject go = Instantiate(draftSlotPrefab, barContainer);
                 DraftSlotUI slotUI = go.GetComponent<DraftSlotUI>();
@@ -603,92 +276,72 @@ namespace NodeWar.UI
         {
             if (draftState == null) return;
             bool isMyTurn = (draftState.currentTurnPlayerID == localPlayerID);
-            Color c = (draftState.currentTurnPlayerID == 0) ? p0Color : p1Color;
+            Color c = (draftState.currentTurnPlayerID == 0) ? player0Color : player1Color;
 
             if (turnText != null)
                 turnText.text = isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN";
-            if (turnIndicatorBG != null)
-                turnIndicatorBG.color = c;
+            if (turnIndicatorBackground != null)
+                turnIndicatorBackground.color = c;
         }
 
         // ===== PERSISTENT PLACEHOLDERS =====
 
-        private GameObject SpawnPersistentPlaceholder(Vector3 pos, DistrictType type)
+        private void SpawnConfirmedPlaceholder(Vector3 pos, DistrictType type)
         {
-            if (placementPreviewPrefab == null) return null;
+            if (confirmedPlacementPrefab == null) return;
 
-            GameObject ph = Instantiate(placementPreviewPrefab);
-            ph.transform.position = pos + Vector3.up * 0.1f;//bump up so visable over previewGrid prefab
+            GameObject ph = Instantiate(confirmedPlacementPrefab);
+            ph.transform.position = pos + Vector3.up * confirmedPlacementYOffset;
 
-            // Set sticker
-            Sprite sprite = GetStickerSprite(type);
-            if (sprite != null)
+            // Set sticker via component
+            DraftPlacementPreview preview = ph.GetComponent<DraftPlacementPreview>();
+            if (preview != null)
             {
-                Transform stickerChild = ph.transform.Find("Sticker");
-                SpriteRenderer sr = stickerChild != null
-                    ? stickerChild.GetComponent<SpriteRenderer>()
-                    : ph.GetComponentInChildren<SpriteRenderer>();
-                if (sr != null) sr.sprite = sprite;
+                Sprite sprite = GetStickerSprite(type);
+                preview.SetSticker(sprite);
+                preview.SetTintWithAlpha(new Color(1f, 1f, 1f, 0.85f));
             }
 
-            // Full opacity, white tint
-            MeshRenderer mr = ph.GetComponentInChildren<MeshRenderer>();
-            if (mr != null) mr.material.color = new Color(1f, 1f, 1f, 0.85f);
+            // Drop-from-above animation
+            Vector3 finalPos = ph.transform.position;
+            ph.transform.position = finalPos + Vector3.up * placementDropHeight;
+            ph.transform.DOMove(finalPos, placementDropDuration)
+                .SetEase(placementDropEase)
+                .OnComplete(() => ph.transform.DOPunchScale(
+                    Vector3.one * placementBounceStrength, placementBounceDuration, 6));
 
             persistentPlacements.Add(ph);
-            return ph;
         }
 
-        // ===== HELPERS =====
+        // ===== STICKER REGISTRY =====
+
         public Sprite GetStickerSprite(DistrictType type)
         {
-            if (stickerMappings == null) return null;
+            if (stickerMappings == null)
+            {
+                Debug.LogWarning("[DraftUI] stickerMappings array is null");
+                return null;
+            }
             for (int i = 0; i < stickerMappings.Length; i++)
+            {
                 if (stickerMappings[i].districtType == type)
                     return stickerMappings[i].sprite;
+            }
+            Debug.LogWarning("[DraftUI] No sticker mapping found for district type: " + type);
             return null;
         }
 
-        private bool EscapePressed()
-        {
-            return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
-        }
-
-        /// <summary>
-        /// Returns true if the screen-space pointer position maps to the same
-        /// grid cell as the currently placed preview. Camera-zoom-agnostic.
-        /// </summary>
-        private bool IsPointerOnPreviewCell(Vector2 screenPos)
-        {
-            if (previewGridX < 0 || previewGridZ < 0) return false;
-
-            Ray ray = mainCam.ScreenPointToRay(screenPos);
-            if (Mathf.Abs(ray.direction.y) < 0.0001f) return false;
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0) return false;
-
-            Vector3 worldHit = ray.origin + ray.direction * t;
-
-            if (!draftManager.WorldToGrid(worldHit, out int gx, out int gz)) return false;
-
-            return gx == previewGridX && gz == previewGridZ;
-        }
-
-        // ===== SETUP/TEARDOWN =====
-
-        private void Awake()
-        {
-            if (confirmButton != null)
-                confirmButton.onClick.AddListener(OnConfirmClicked);
-        }
+        // ===== CLEANUP =====
 
         private void OnDestroy()
         {
             sweepTween?.Kill();
-            confirmTween?.Kill();
-            if (previewInstance != null) Destroy(previewInstance);
-            if (confirmButton != null) confirmButton.onClick.RemoveAllListeners();
+            playerPanelSweepTween?.Kill();
+            if (placementController != null)
+            {
+                placementController.OnDragStarted -= OnSlotDragStarted;
+                placementController.OnDragCancelled -= OnSlotDragCancelled;
+            }
         }
     }
 }

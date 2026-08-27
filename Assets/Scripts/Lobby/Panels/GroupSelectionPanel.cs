@@ -137,7 +137,11 @@ namespace NodeWar.Lobby
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
                 SelectableItemDisplay display = go.GetComponent<SelectableItemDisplay>();
-                display.Initialize(def.suitID, def.displayName, def.icon, locked, OnSuitUseClicked);
+
+                display.Initialize(def.suitID, def.displayName, def.icon, locked,
+                    OnSuitUseClicked,
+                    (selected) => DeselectAllExcept(suitItems, selected));
+
                 suitItems.Add(display);
             }
 
@@ -149,8 +153,21 @@ namespace NodeWar.Lobby
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
                 SelectableItemDisplay display = go.GetComponent<SelectableItemDisplay>();
-                display.Initialize(def.nodeID, def.displayName, def.icon, locked, OnNodeUseClicked);
+
+                display.Initialize(def.nodeID, def.displayName, def.icon, locked,
+                                    OnNodeUseClicked,
+                                    (selected) => DeselectAllExcept(nodeItems, selected));
+
                 nodeItems.Add(display);
+            }
+        }
+
+        private void DeselectAllExcept(List<SelectableItemDisplay> items, SelectableItemDisplay except)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] != except)
+                    items[i].Deselect();
             }
         }
 
