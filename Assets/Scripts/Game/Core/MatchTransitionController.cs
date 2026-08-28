@@ -15,7 +15,7 @@ namespace NodeWar.Core
     ///   - Game over: nodes collapse outward from losing core
     /// 
     /// All timing and animation parameters are Inspector-configurable.
-    /// Stateless between sequences — receives data per invocation via method parameters.
+    /// Stateless between sequences â€” receives data per invocation via method parameters.
     /// Lives on the same GameObject as GameManager or a sibling; assigned via Inspector.
     /// </summary>
     public class MatchTransitionController : MonoBehaviour
@@ -118,13 +118,15 @@ namespace NodeWar.Core
 
             int loserID = state.winnerID == 0 ? 1 : 0;
             int originNode = state.players[loserID].coreNodeID;
-            Vector3 origin = state.nodes[originNode].worldPosition;
+            Vector3 origin = nodePresentations[originNode] != null
+                ? nodePresentations[originNode].transform.position
+                : Vector3.zero;
 
             for (int i = 0; i < nodePresentations.Length; i++)
             {
                 if (nodePresentations[i] == null) continue;
 
-                float dist = Vector3.Distance(state.nodes[i].worldPosition, origin);
+                float dist = Vector3.Distance(nodePresentations[i].transform.position, origin);
                 float delay = dist * nodeBreakdownDelayPerWorldUnit;
 
                 nodePresentations[i].PlayBreakdown(delay);

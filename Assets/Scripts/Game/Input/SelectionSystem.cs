@@ -24,6 +24,7 @@ namespace NodeWar.Input
 
         private LayerMask villagerLayer;
         private Transform[] villagerTransforms;
+        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
 
         public void Initialize(SimulationState state, int playerID)
         {
@@ -42,6 +43,11 @@ namespace NodeWar.Input
         public void SetVillagerTransforms(Transform[] transforms)
         {
             villagerTransforms = transforms;
+        }
+
+        public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
+        {
+            nodeSlotManagers = managers;
         }
 
         private void Update()
@@ -145,9 +151,14 @@ namespace NodeWar.Input
                 {
                     worldPos = villagerTransforms[i].position;
                 }
+                else if (nodeSlotManagers != null && v.currentNodeID < nodeSlotManagers.Length &&
+                    nodeSlotManagers[v.currentNodeID] != null)
+                {
+                    worldPos = nodeSlotManagers[v.currentNodeID].transform.position;
+                }
                 else
                 {
-                    worldPos = simState.nodes[v.currentNodeID].worldPosition;
+                    continue;
                 }
 
                 Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos);

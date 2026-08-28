@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace NodeWar.Simulation
 {
     // ===== ENUMS =====
@@ -63,7 +61,6 @@ namespace NodeWar.Simulation
     public struct NodeData
     {
         public int nodeID;
-        public Vector3 worldPosition;
         public int gridX;
         public int gridZ;
         public Edge[] edges;

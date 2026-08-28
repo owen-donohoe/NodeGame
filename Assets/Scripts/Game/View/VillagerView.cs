@@ -132,7 +132,7 @@ namespace NodeWar.View
                     }
                     else
                     {
-                        edgeStartWorldPos = simState.nodes[arrivedNodeID].worldPosition;
+                        edgeStartWorldPos = transform.position;
                     }
                 }
 
@@ -151,7 +151,7 @@ namespace NodeWar.View
                     }
                     else
                     {
-                        toPos = simState.nodes[nextNodeID].worldPosition;
+                        toPos = edgeStartWorldPos;
                     }
                 }
                 else
@@ -206,7 +206,7 @@ namespace NodeWar.View
             }
             else
             {
-                targetPos = simState.nodes[villager.currentNodeID].worldPosition;
+                targetPos = transform.position;
                 lastMovePathIndex = -1;
                 lastTargetNodeID = -1;
             }

@@ -258,7 +258,7 @@ namespace NodeWar.Core
             }
             else
             {
-                // Fallback if no controller assigned — just start immediately
+                // Fallback if no controller assigned â€” just start immediately
                 OnPlayerSideChanged(localPID);
                 OnTransitionComplete();
             }
@@ -507,7 +507,6 @@ namespace NodeWar.Core
                     state.nodes[nodeID] = new NodeData
                     {
                         nodeID = nodeID,
-                        worldPosition = new Vector3(x * boardConfig.nodeScale, 0f, z * boardConfig.nodeScale),
                         gridX = x,
                         gridZ = z,
                         edges = edges,
@@ -595,7 +594,6 @@ namespace NodeWar.Core
                     state.nodes[nodeID] = new NodeData
                     {
                         nodeID = nodeID,
-                        worldPosition = new Vector3(x * boardConfig.nodeScale, 0f, z * boardConfig.nodeScale),
                         gridX = x,
                         gridZ = z,
                         edges = edges,
@@ -873,7 +871,10 @@ namespace NodeWar.Core
                 GameObject prefab = GetPrefabForDistrict(state.nodes[i].districtType);
                 GameObject nodeGO = Instantiate(prefab, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
-                nodeGO.transform.position = state.nodes[i].worldPosition;
+                nodeGO.transform.position = new Vector3(
+                    state.nodes[i].gridX * boardConfig.nodeScale,
+                    0f,
+                    state.nodes[i].gridZ * boardConfig.nodeScale);
 
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
@@ -901,6 +902,8 @@ namespace NodeWar.Core
                 if (nodePresentations[i] != null)
                     nodePresentations[i].SetHidden();
             }
+
+            selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
         }
 
         private void SpawnVillagerViews()
