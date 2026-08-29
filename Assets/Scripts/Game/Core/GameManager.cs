@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using NodeWar.Simulation;
+using NodeWar.Config;
 using NodeWar.Input;
 using NodeWar.Debugging;
 using NodeWar.UI;
@@ -94,14 +95,14 @@ namespace NodeWar.Core
             if (balance == null) { Debug.LogError("[GameManager] GameBalance not assigned!"); return; }
             if (boardConfig == null) { Debug.LogError("[GameManager] BoardConfig not assigned!"); return; }
 
-            GameSimulation.SetBalance(balance);
-            CommandProcessor.SetBalance(balance);
+            GameSimulation.SetBalance(balance.Data);
+            CommandProcessor.SetBalance(balance.Data);
 
-            Pathfinding.OwnedMultiplier = boardConfig.ownedMultiplier;
-            Pathfinding.PartiallyOwnedMultiplier = boardConfig.partiallyOwnedMultiplier;
-            Pathfinding.UnownedMultiplier = boardConfig.unownedMultiplier;
-            Pathfinding.EnemyPartiallyOwnedMultiplier = boardConfig.enemyPartiallyOwnedMultiplier;
-            Pathfinding.EnemyOwnedMultiplier = boardConfig.enemyOwnedMultiplier;
+            Pathfinding.OwnedMultiplier = boardConfig.Data.ownedMultiplier;
+            Pathfinding.PartiallyOwnedMultiplier = boardConfig.Data.partiallyOwnedMultiplier;
+            Pathfinding.UnownedMultiplier = boardConfig.Data.unownedMultiplier;
+            Pathfinding.EnemyPartiallyOwnedMultiplier = boardConfig.Data.enemyPartiallyOwnedMultiplier;
+            Pathfinding.EnemyOwnedMultiplier = boardConfig.Data.enemyOwnedMultiplier;
 
             inputBuffer = new InputBuffer();
 
@@ -217,7 +218,7 @@ namespace NodeWar.Core
 
                 if (match != null && match.isBotMatch)
                 {
-                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.defaultEdgeWeight);
+                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultEdgeWeight);
                     debugPlayerSwitch.LockToPlayer(0);
 
                     TickRunner runner = GetComponent<TickRunner>();
@@ -484,8 +485,8 @@ namespace NodeWar.Core
 
         private void InitializeNodesFromDraft(DraftResult result)
         {
-            int GRID_COLS = boardConfig.gridCols;
-            int GRID_ROWS = boardConfig.gridRows;
+            int GRID_COLS = boardConfig.Data.gridCols;
+            int GRID_ROWS = boardConfig.Data.gridRows;
             state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
 
             // Step 1: Create all nodes with grid topology, no district types
@@ -502,7 +503,7 @@ namespace NodeWar.Core
 
                     Edge[] edges = new Edge[neighborIDs.Count];
                     for (int i = 0; i < neighborIDs.Count; i++)
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.defaultEdgeWeight };
+                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
 
                     state.nodes[nodeID] = new NodeData
                     {
@@ -522,11 +523,11 @@ namespace NodeWar.Core
             }
 
             // Step 2: Apply BoardConfig initial placements (cores, fixed nodes)
-            if (boardConfig.initialPlacements != null)
+            if (boardConfig.Data.initialPlacements != null)
             {
-                for (int i = 0; i < boardConfig.initialPlacements.Length; i++)
+                for (int i = 0; i < boardConfig.Data.initialPlacements.Length; i++)
                 {
-                    var ip = boardConfig.initialPlacements[i];
+                    var ip = boardConfig.Data.initialPlacements[i];
                     int nodeID = ip.gridZ * GRID_COLS + ip.gridX;
                     state.nodes[nodeID].districtType = ip.districtType;
                     state.nodes[nodeID].baseDistrictType = ip.districtType;
@@ -548,7 +549,7 @@ namespace NodeWar.Core
                     state.nodes[nodeID].slotType = NodeSlotType.Fixed;
 
                     if (dp.districtType == DistrictType.Village)
-                        state.nodes[nodeID].bonusVillagersOnClaim = balance.bonusVillagersOnVillageClaim;
+                        state.nodes[nodeID].bonusVillagersOnClaim = balance.Data.bonusVillagersOnVillageClaim;
                 }
             }
         }
@@ -557,8 +558,8 @@ namespace NodeWar.Core
 
         private void InitializeNodes()
         {
-            int GRID_COLS = boardConfig.gridCols;
-            int GRID_ROWS = boardConfig.gridRows;
+            int GRID_COLS = boardConfig.Data.gridCols;
+            int GRID_ROWS = boardConfig.Data.gridRows;
             state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
 
             DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
@@ -583,9 +584,9 @@ namespace NodeWar.Core
 
                     Edge[] edges = new Edge[neighborIDs.Count];
                     for (int i = 0; i < neighborIDs.Count; i++)
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.defaultEdgeWeight };
+                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
 
-                    int bonus = layout[z, x] == DistrictType.Village ? balance.bonusVillagersOnVillageClaim : 0;
+                    int bonus = layout[z, x] == DistrictType.Village ? balance.Data.bonusVillagersOnVillageClaim : 0;
                     int ownerID = -1;
                     int claimBar = 0;
                     if (z == 6 && x == 1) { ownerID = 0; claimBar = 10000; }
@@ -622,9 +623,9 @@ namespace NodeWar.Core
             {
                 playerID = 0,
                 coreNodeID = FindCoreNodeID(0),
-                food = boardConfig.startingFood,
-                materials = boardConfig.startingMaterials,
-                metal = boardConfig.startingMetal,
+                food = boardConfig.Data.startingFood,
+                materials = boardConfig.Data.startingMaterials,
+                metal = boardConfig.Data.startingMetal,
                 breachCount = 0,
                 draftedSuits = BuildDraftedSuits(0, loadout),
                 draftedNodes = BuildDraftedNodes(0, loadout)
@@ -633,9 +634,9 @@ namespace NodeWar.Core
             {
                 playerID = 1,
                 coreNodeID = FindCoreNodeID(1),
-                food = boardConfig.startingFood,
-                materials = boardConfig.startingMaterials,
-                metal = boardConfig.startingMetal,
+                food = boardConfig.Data.startingFood,
+                materials = boardConfig.Data.startingMaterials,
+                metal = boardConfig.Data.startingMetal,
                 breachCount = 0,
                 draftedSuits = BuildDraftedSuits(1, loadout),
                 draftedNodes = BuildDraftedNodes(1, loadout)
@@ -798,12 +799,12 @@ namespace NodeWar.Core
 
         private void InitializeVillagers()
         {
-            int totalVillagers = boardConfig.startingVillagersPerPlayer * 2;
+            int totalVillagers = boardConfig.Data.startingVillagersPerPlayer * 2;
             state.villagers = new VillagerData[totalVillagers];
 
             for (int i = 0; i < totalVillagers; i++)
             {
-                int owner = (i < boardConfig.startingVillagersPerPlayer) ? 0 : 1;
+                int owner = (i < boardConfig.Data.startingVillagersPerPlayer) ? 0 : 1;
                 int coreNode = state.players[owner].coreNodeID;
 
                 state.villagers[i] = new VillagerData
@@ -818,13 +819,13 @@ namespace NodeWar.Core
                     previousNodeID = coreNode,
                     state = VillagerState.Idle,
                     suit = SuitType.None,
-                    hp = balance.baseHP,
-                    maxHP = balance.baseHP,
-                    attackDamage = balance.baseAttackDamage,
-                    moveSpeedTicks = balance.baseMoveSpeedTicks,
+                    hp = balance.Data.baseHP,
+                    maxHP = balance.Data.baseHP,
+                    attackDamage = balance.Data.baseAttackDamage,
+                    moveSpeedTicks = balance.Data.baseMoveSpeedTicks,
                     respawnTicksRemaining = 0,
-                    attackCooldownRemaining = balance.baseAttackCooldownMax,
-                    attackCooldownMax = balance.baseAttackCooldownMax,
+                    attackCooldownRemaining = balance.Data.baseAttackCooldownMax,
+                    attackCooldownMax = balance.Data.baseAttackCooldownMax,
                     combatTargetID = -1,
                     fightPriority = 0,
                     isConsumed = false,

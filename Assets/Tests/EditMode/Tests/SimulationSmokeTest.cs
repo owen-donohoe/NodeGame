@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using UnityEngine;
 using NodeWar.Simulation;
 
 namespace NodeWar.Tests
@@ -9,7 +8,7 @@ namespace NodeWar.Tests
         [Test]
         public void SimulateTick_RunsOnceWithoutThrowing()
         {
-            GameBalance balance = ScriptableObject.CreateInstance<GameBalance>();
+            GameBalanceData balance = GameBalanceData.Default();
             GameSimulation.SetBalance(balance);
 
             SimulationState state = new SimulationState();

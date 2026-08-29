@@ -11,35 +11,36 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7dfee6c68e0ca34469b710921eaf766d, type: 3}
   m_Name: DefaultBoardConfig
-  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Simulation.BoardConfig
-  gridCols: 4
-  gridRows: 7
-  nodeScale: 7
-  defaultEdgeWeight: 4
-  startingVillagersPerPlayer: 3
-  startingFood: 0
-  startingMaterials: 0
-  startingMetal: 0
-  ownedMultiplier: 50
-  partiallyOwnedMultiplier: 75
-  unownedMultiplier: 100
-  enemyPartiallyOwnedMultiplier: 150
-  enemyOwnedMultiplier: 200
+  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Config.BoardConfig
+  data:
+    gridCols: 4
+    gridRows: 7
+    defaultEdgeWeight: 4
+    startingVillagersPerPlayer: 3
+    startingFood: 0
+    startingMaterials: 0
+    startingMetal: 0
+    ownedMultiplier: 50
+    partiallyOwnedMultiplier: 75
+    unownedMultiplier: 100
+    enemyPartiallyOwnedMultiplier: 150
+    enemyOwnedMultiplier: 200
+    initialPlacements:
+    - gridX: 1
+      gridZ: 6
+      districtType: 5
+      ownerID: 0
+      claimBar: 10000
+    - gridX: 2
+      gridZ: 0
+      districtType: 5
+      ownerID: 1
+      claimBar: -10000
+  nodeScale: 6
   boundsMinX: -10
   boundsMaxX: 30
   boundsMinZ: -15
   boundsMaxZ: 45
-  initialPlacements:
-  - gridX: 1
-    gridZ: 6
-    districtType: 5
-    ownerID: 0
-    claimBar: 10000
-  - gridX: 2
-    gridZ: 0
-    districtType: 5
-    ownerID: 1
-    claimBar: -10000
   draftTurnDuration: 15
   maxConsecutiveTimeouts: 2
   baseDraftNodesP0:

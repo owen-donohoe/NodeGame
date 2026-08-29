@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using NodeWar.Simulation;
+using NodeWar.Config;
 using NodeWar.UI;
 using NodeWar.View;
 using System.Collections;
@@ -91,8 +92,8 @@ namespace NodeWar.Core
         {
             if (nodePresentations == null) return;
 
-            float centerX = (boardConfig.gridCols - 1) * 0.5f;
-            float centerZ = (boardConfig.gridRows - 1) * 0.5f;
+            float centerX = (boardConfig.Data.gridCols - 1) * 0.5f;
+            float centerZ = (boardConfig.Data.gridRows - 1) * 0.5f;
 
             for (int i = 0; i < nodePresentations.Length; i++)
             {

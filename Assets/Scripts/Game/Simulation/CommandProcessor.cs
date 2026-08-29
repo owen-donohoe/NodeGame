@@ -2,8 +2,8 @@ namespace NodeWar.Simulation
 {
     public static class CommandProcessor
     {
-        private static GameBalance bal;
-        public static void SetBalance(GameBalance balance)
+        private static GameBalanceData bal;
+        public static void SetBalance(GameBalanceData balance)
         {
             bal = balance;
         }
@@ -66,9 +66,9 @@ namespace NodeWar.Simulation
             if (villager.state == VillagerState.Dead) return;
             if (villager.isConsumed) return;
             if (villager.state != VillagerState.Idle) return;
-            if (GameBalance.IsCombatSuit(villager.suit)) return;
+            if (GameBalanceData.IsCombatSuit(villager.suit)) return;
             SuitType requestedSuit = (SuitType)command.value;
-            if (!GameBalance.IsCombatSuit(requestedSuit)) return;
+            if (!GameBalanceData.IsCombatSuit(requestedSuit)) return;
             int nodeID = villager.currentNodeID;
             if (state.nodes[nodeID].ownerID != command.playerID) return;
             if (!bal.CanEquipSuitAtNode(requestedSuit, state.nodes[nodeID].districtType)) return;

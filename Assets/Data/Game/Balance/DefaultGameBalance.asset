@@ -12,105 +12,130 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce486ed18d52e964088089eab631a729, type: 3}
   m_Name: DefaultGameBalance
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Simulation.GameBalance
-  ticksPerSecond: 10
-  baseClaimPerTick: 17
-  decrementMultiplier: 4
-  claimThreshold: 10000
-  maxClaimersPerNode: 4
-  respawnTicks: 50
-  healIntervalTicks: 30
-  breachThreshold: 3
-  foodProductionTicks: 30
-  materialProductionTicks: 40
-  metalProductionTicks: 50
-  marketFoodProductionTicks: 45
-  marketMaterialProductionTicks: 60
-  maxWorkersPerNode: 2
-  maxVillagersPerPlayer: 25
-  respawnCostFood: 1
-  baseHP: 5
-  baseAttackDamage: 1
-  baseMoveSpeedTicks: 4
-  baseAttackCooldownMax: 20
-  suitStats:
-  - suitType: 1
-    bonusHP: 0
-    attackDamage: 1
-    moveSpeedTicks: 4
-    attackCooldownMax: 20
-    foodCost: 0
-    materialCost: 0
-    fightPriority: 0
-  - suitType: 2
-    bonusHP: 0
-    attackDamage: 1
-    moveSpeedTicks: 4
-    attackCooldownMax: 20
-    foodCost: 0
-    materialCost: 0
-    fightPriority: 0
-  - suitType: 3
-    bonusHP: 1
-    attackDamage: 2
-    moveSpeedTicks: 5
-    attackCooldownMax: 10
-    foodCost: 2
-    materialCost: 1
-    fightPriority: 0
-  - suitType: 4
-    bonusHP: 0
-    attackDamage: 1
-    moveSpeedTicks: 4
-    attackCooldownMax: 20
-    foodCost: 0
-    materialCost: 0
-    fightPriority: 0
-  - suitType: 5
-    bonusHP: 3
-    attackDamage: 1
-    moveSpeedTicks: 6
-    attackCooldownMax: 20
-    foodCost: 2
-    materialCost: 2
-    fightPriority: 3
-  - suitType: 6
-    bonusHP: -2
-    attackDamage: 1
-    moveSpeedTicks: 2
-    attackCooldownMax: 25
-    foodCost: 1
-    materialCost: 0
-    fightPriority: 1
-  - suitType: 6
-    bonusHP: -2
-    attackDamage: 1
-    moveSpeedTicks: 2
-    attackCooldownMax: 25
-    foodCost: 1
-    materialCost: 0
-    fightPriority: 1
-  - suitType: 7
-    bonusHP: -2
-    attackDamage: 3
-    moveSpeedTicks: 5
-    attackCooldownMax: 8
-    foodCost: 3
-    materialCost: 1
-    fightPriority: 2
-  - suitType: 8
-    bonusHP: -1
-    attackDamage: 0
-    moveSpeedTicks: 4
-    attackCooldownMax: 15
-    foodCost: 1
-    materialCost: 1
-    fightPriority: 4
-  bonusVillagersOnVillageClaim: 2
-  shrineHealIntervalTicks: 20
-  rampartDecrementMultiplier: 2
-  rampartDamageReduction: 1
-  rampartMaxHPBonus: 1
-  watchtowerClaimNumerator: 3
-  watchtowerClaimDenominator: 2
-  sanctuaryRespawnBoostPerWorker: 1
-  sanctuaryRespawnCostReductionPercent: 25
+  data:
+    ticksPerSecond: 10
+    baseClaimPerTick: 17
+    decrementMultiplier: 4
+    claimThreshold: 10000
+    maxClaimersPerNode: 4
+    respawnTicks: 50
+    healIntervalTicks: 30
+    breachThreshold: 3
+    foodProductionTicks: 30
+    materialProductionTicks: 40
+    metalProductionTicks: 50
+    marketFoodProductionTicks: 45
+    marketMaterialProductionTicks: 60
+    maxWorkersPerNode: 2
+    maxVillagersPerPlayer: 25
+    respawnCostFood: 1
+    baseHP: 5
+    baseAttackDamage: 1
+    baseMoveSpeedTicks: 4
+    baseAttackCooldownMax: 20
+    suitStats:
+    - suitType: 0
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 1
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 2
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 4
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 9
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 10
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 11
+      bonusHP: 0
+      attackDamage: 1
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 0
+      materialCost: 0
+      fightPriority: 0
+    - suitType: 6
+      bonusHP: -1
+      attackDamage: 1
+      moveSpeedTicks: 2
+      attackCooldownMax: 16
+      foodCost: 1
+      materialCost: 1
+      fightPriority: 1
+    - suitType: 3
+      bonusHP: 2
+      attackDamage: 2
+      moveSpeedTicks: 4
+      attackCooldownMax: 20
+      foodCost: 2
+      materialCost: 1
+      fightPriority: 2
+    - suitType: 7
+      bonusHP: -2
+      attackDamage: 3
+      moveSpeedTicks: 3
+      attackCooldownMax: 10
+      foodCost: 3
+      materialCost: 2
+      fightPriority: 4
+    - suitType: 5
+      bonusHP: 9
+      attackDamage: 2
+      moveSpeedTicks: 5
+      attackCooldownMax: 30
+      foodCost: 3
+      materialCost: 3
+      fightPriority: 3
+    - suitType: 8
+      bonusHP: -1
+      attackDamage: 0
+      moveSpeedTicks: 4
+      attackCooldownMax: 15
+      foodCost: 2
+      materialCost: 2
+      fightPriority: 0
+    bonusVillagersOnVillageClaim: 2
+    shrineHealIntervalTicks: 20
+    rampartDecrementMultiplier: 2
+    rampartDamageReduction: 1
+    rampartMaxHPBonus: 1
+    watchtowerClaimNumerator: 3
+    watchtowerClaimDenominator: 2
+    sanctuaryRespawnBoostPerWorker: 1
+    sanctuaryRespawnCostReductionPercent: 25

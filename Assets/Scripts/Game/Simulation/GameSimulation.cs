@@ -6,9 +6,9 @@ namespace NodeWar.Simulation
 {
     public static class GameSimulation
     {
-        private static GameBalance bal;
+        private static GameBalanceData bal;
 
-        public static void SetBalance(GameBalance balance)
+        public static void SetBalance(GameBalanceData balance)
         {
             bal = balance;
         }
@@ -194,7 +194,7 @@ namespace NodeWar.Simulation
             // Soldier suit is PERMANENT until death — do not strip it.
             if (node.districtType == DistrictType.Core)
             {
-                if (!GameBalance.IsCombatSuit(v.suit))
+                if (!GameBalanceData.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
                     state.villagers[villagerIndex].attackDamage = bal.baseAttackDamage;
@@ -208,7 +208,7 @@ namespace NodeWar.Simulation
             // Own node
             if (node.ownerID == v.ownerID)
             {
-                if (GameBalance.IsCombatSuit(v.suit))
+                if (GameBalanceData.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].state = VillagerState.Idle;
                     return;
@@ -299,7 +299,7 @@ namespace NodeWar.Simulation
                 }
 
                 // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None — strip non-combat suit, go Idle
-                if (!GameBalance.IsCombatSuit(v.suit))
+                if (!GameBalanceData.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
                     state.villagers[villagerIndex].attackDamage = bal.baseAttackDamage;
@@ -690,7 +690,7 @@ namespace NodeWar.Simulation
                 if (node.ownerID == v.ownerID)
                 {
                     // Soldiers never work, just Idle
-                    if (GameBalance.IsCombatSuit(v.suit))
+                    if (GameBalanceData.IsCombatSuit(v.suit))
                     {
                         if (v.state != VillagerState.Idle)
                             state.villagers[idx].state = VillagerState.Idle;
@@ -761,7 +761,7 @@ namespace NodeWar.Simulation
                 {
                     if (state.villagers[i].currentNodeID != nodeIndex) continue;
                     if (state.villagers[i].state == VillagerState.Dead || state.villagers[i].isConsumed) continue;
-                    if (GameBalance.IsCombatSuit(state.villagers[i].suit)) continue;
+                    if (GameBalanceData.IsCombatSuit(state.villagers[i].suit)) continue;
                     state.villagers[i].state = VillagerState.Idle;
                     state.villagers[i].suit = SuitType.None;
                     state.villagers[i].productionTicksRemaining = 0;
@@ -781,7 +781,7 @@ namespace NodeWar.Simulation
             for (int i = 0; i < draftedNodes.Length; i++)
             {
                 DistrictType drafted = (DistrictType)draftedNodes[i];
-                if (GameBalance.GetSlotTypeForDistrict(drafted) == slotType)
+                if (GameBalanceData.GetSlotTypeForDistrict(drafted) == slotType)
                     return drafted;
             }
             return DistrictType.None;
@@ -966,7 +966,7 @@ namespace NodeWar.Simulation
                     if (currentNode.ownerID == v.ownerID)
                     {
                         // Own node: check if suit matches for Working
-                        if (!GameBalance.IsCombatSuit(v.suit) && v.suit == GetExpectedSuit(currentNode.districtType))
+                        if (!GameBalanceData.IsCombatSuit(v.suit) && v.suit == GetExpectedSuit(currentNode.districtType))
                         {
                             int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
                             if (workers < bal.maxWorkersPerNode)
