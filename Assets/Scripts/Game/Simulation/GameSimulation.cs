@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using NodeWar.Simulation;
-using UnityEngine;
 
 namespace NodeWar.Simulation
 {
@@ -192,7 +191,7 @@ namespace NodeWar.Simulation
             // Core nodes: always Idle.
             // Non-combat suits (Farmer, Miner, Smelter) are free and re-assigned on arrival
             // at production nodes, so reverting them here is harmless and keeps things clean.
-            // Soldier suit is PERMANENT until death — do not strip it.
+            // Soldier suit is PERMANENT until death â€” do not strip it.
             if (node.districtType == DistrictType.Core)
             {
                 if (!GameBalance.IsCombatSuit(v.suit))
@@ -299,7 +298,7 @@ namespace NodeWar.Simulation
                     return;
                 }
 
-                // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None — strip non-combat suit, go Idle
+                // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None â€” strip non-combat suit, go Idle
                 if (!GameBalance.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
@@ -757,7 +756,7 @@ namespace NodeWar.Simulation
                     ? upgrade
                     : state.nodes[nodeIndex].baseDistrictType;
 
-                // Reset non-combat workers — node type just changed
+                // Reset non-combat workers â€” node type just changed
                 for (int i = 0; i < state.villagers.Length; i++)
                 {
                     if (state.villagers[i].currentNodeID != nodeIndex) continue;
