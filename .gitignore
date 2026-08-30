@@ -104,3 +104,6 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Test output from scripts/run-tests.ps1 -- results.xml and unity-test.log
+/TestResults/
