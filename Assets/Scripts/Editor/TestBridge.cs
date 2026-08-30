@@ -69,6 +69,19 @@ namespace NodeWar.EditorTools
             if (EditorApplication.isPlaying || EditorApplication.isCompiling) return;
 
             lastConsumedRunId = runId;
+
+            // Delete the trigger now that it's consumed. Without this, a domain
+            // reload (e.g. from a later script recompile) resets lastConsumedRunId
+            // to null, and the still-present file would be picked up and re-run.
+            try
+            {
+                File.Delete(TriggerFile);
+            }
+            catch (IOException ex)
+            {
+                Debug.LogWarning($"[TestBridge] Failed to delete trigger file after consuming run {runId}: {ex.Message}");
+            }
+
             StartRun(runId);
         }
 
