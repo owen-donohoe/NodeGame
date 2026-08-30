@@ -1,0 +1,12 @@
+{
+    "name": "NodeWar.Simulation.Tests",
+    "references": [
+        "NodeWar.Simulation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

@@ -1,4 +1,5 @@
 using NodeWar.Simulation;
+using NodeWar.Config;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,9 +10,9 @@ namespace NodeWar.Core
     /// bounds, shake, draft-mode framing, and per-player-side memory.
     /// 
     /// Hierarchy (set up in Editor):
-    ///   CameraRig [this script] — world X/Z position
-    ///     ? CameraPivot — rotation only (viewing angle)
-    ///           ? Camera — local Z = -zoomDistance (dolly)
+    ///   CameraRig [this script] â€” world X/Z position
+    ///     ? CameraPivot â€” rotation only (viewing angle)
+    ///           ? Camera â€” local Z = -zoomDistance (dolly)
     ///
     /// Middle mouse to drag. Scroll to zoom.
     /// </summary>
@@ -235,7 +236,7 @@ namespace NodeWar.Core
 
             Vector3 pos = transform.position;
 
-            // Soft spring pushback rather than hard clamp — feels natural
+            // Soft spring pushback rather than hard clamp â€” feels natural
             if (pos.x < boardConfig.boundsMinX)
                 panVelocity.x += boundsPushbackForce * (boardConfig.boundsMinX - pos.x) * Time.deltaTime;
             if (pos.x > boardConfig.boundsMaxX)
@@ -315,8 +316,8 @@ namespace NodeWar.Core
         /// </summary>
         public void InitializeSides(BoardConfig config)
         {
-            float centerX = (config.gridCols - 1) * config.nodeScale * 0.5f;
-            float maxZ = (config.gridRows - 1) * config.nodeScale;
+            float centerX = (config.Data.gridCols - 1) * config.nodeScale * 0.5f;
+            float maxZ = (config.Data.gridRows - 1) * config.nodeScale;
             float zOffset = config.nodeScale * sideZOffsetFactor;
             float defaultZoom = Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
 
@@ -344,7 +345,7 @@ namespace NodeWar.Core
         {
             if (cameraPivot == null) return;
 
-            // Store current (skip first call — scene start position is meaningless)
+            // Store current (skip first call â€” scene start position is meaningless)
             if (sideHasBeenSet && sideStates[currentSide].initialized)
             {
                 sideStates[currentSide].position = transform.position;
@@ -417,8 +418,8 @@ namespace NodeWar.Core
             float gridHeight = 0f;
             if (boardConfig != null)
             {
-                gridWidth = (boardConfig.gridCols - 1) * boardConfig.nodeScale;
-                gridHeight = (boardConfig.gridRows - 1) * boardConfig.nodeScale;
+                gridWidth = (boardConfig.Data.gridCols - 1) * boardConfig.nodeScale;
+                gridHeight = (boardConfig.Data.gridRows - 1) * boardConfig.nodeScale;
             }
 
             float neededZoom = Mathf.Max(gridWidth, gridHeight) * draftZoomBoardMultiplier;
@@ -438,8 +439,8 @@ namespace NodeWar.Core
 
             if (boardConfig != null)
             {
-                float centerX = (boardConfig.gridCols - 1) * boardConfig.nodeScale * 0.5f;
-                float centerZ = (boardConfig.gridRows - 1) * boardConfig.nodeScale * 0.5f;
+                float centerX = (boardConfig.Data.gridCols - 1) * boardConfig.nodeScale * 0.5f;
+                float centerZ = (boardConfig.Data.gridRows - 1) * boardConfig.nodeScale * 0.5f;
                 transform.position = new Vector3(centerX, 0f, centerZ);
             }
             else

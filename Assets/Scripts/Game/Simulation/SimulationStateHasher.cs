@@ -3,11 +3,11 @@ namespace NodeWar.Simulation
     /// <summary>
     /// Computes a deterministic integer hash of the full SimulationState.
     /// Used for desync detection in lockstep networking.
-    /// Called every 50 ticks — both machines compare hashes to verify determinism.
+    /// Called every 50 ticks â€” both machines compare hashes to verify determinism.
     ///
     /// Rules:
     /// - Must include every field that can diverge between machines.
-    /// - Must NOT include view-only data (worldPosition is set at init, never mutated).
+    /// - Must NOT include view-only data (node grid position is a View-layer concern).
     /// - Must be deterministic: same state = same hash, always.
     /// - Order of field hashing must be fixed (array index order).
     /// </summary>

@@ -1,8 +1,9 @@
 using UnityEngine;
 using NodeWar.Simulation;
+using NodeWar.Config;
 using NodeWar.Network;
 using System.Collections.Generic;
-using static NodeWar.Simulation.BoardConfig;
+using static NodeWar.Config.BoardConfig;
 
 namespace NodeWar.Core
 {
@@ -102,13 +103,13 @@ namespace NodeWar.Core
             lastReceiveTime = now;
 
             // Build draft state and mark initial placements as occupied
-            draftState = new DraftState(config.gridCols, config.gridRows);
+            draftState = new DraftState(config.Data.gridCols, config.Data.gridRows);
 
-            if (config.initialPlacements != null)
+            if (config.Data.initialPlacements != null)
             {
-                for (int i = 0; i < config.initialPlacements.Length; i++)
+                for (int i = 0; i < config.Data.initialPlacements.Length; i++)
                 {
-                    var ip = config.initialPlacements[i];
+                    var ip = config.Data.initialPlacements[i];
                     draftState.OccupyCell(ip.gridX, ip.gridZ);
                 }
             }
@@ -182,7 +183,7 @@ namespace NodeWar.Core
             draftState.player1Slots = BuildPlayerSlots(1);
 
             if (draftUI != null)
-                draftUI.ShowInitialReveal(boardConfig.initialPlacements);
+                draftUI.ShowInitialReveal(boardConfig.Data.initialPlacements);
         }
 
         private void UpdateInitialReveal()
@@ -239,7 +240,7 @@ namespace NodeWar.Core
             }
             else if (!isBotMatch && !isMyTurn)
             {
-                // Waiting for remote — clamp timer display at zero
+                // Waiting for remote â€” clamp timer display at zero
                 if (turnTimer <= 0f)
                     turnTimer = 0f;
             }
@@ -313,14 +314,14 @@ namespace NodeWar.Core
 
             // Find bot's core position for proximity heuristic
             int coreX = -1, coreZ = -1;
-            if (boardConfig.initialPlacements != null)
+            if (boardConfig.Data.initialPlacements != null)
             {
-                for (int i = 0; i < boardConfig.initialPlacements.Length; i++)
+                for (int i = 0; i < boardConfig.Data.initialPlacements.Length; i++)
                 {
-                    if (boardConfig.initialPlacements[i].ownerID == botPlayer)
+                    if (boardConfig.Data.initialPlacements[i].ownerID == botPlayer)
                     {
-                        coreX = boardConfig.initialPlacements[i].gridX;
-                        coreZ = boardConfig.initialPlacements[i].gridZ;
+                        coreX = boardConfig.Data.initialPlacements[i].gridX;
+                        coreZ = boardConfig.Data.initialPlacements[i].gridZ;
                         break;
                     }
                 }
@@ -558,9 +559,9 @@ namespace NodeWar.Core
         {
             if (placementGridCellPrefab == null) return;
 
-            for (int z = 0; z < boardConfig.gridRows; z++)
+            for (int z = 0; z < boardConfig.Data.gridRows; z++)
             {
-                for (int x = 0; x < boardConfig.gridCols; x++)
+                for (int x = 0; x < boardConfig.Data.gridCols; x++)
                 {
                     if (draftState.occupiedCells[z, x]) continue;
 
@@ -666,7 +667,7 @@ namespace NodeWar.Core
 
         /// <summary>
         /// Convention: nodeID format is "node_[lowercase district name]".
-        /// Informal string matching — a registry would be more robust long-term.
+        /// Informal string matching â€” a registry would be more robust long-term.
         /// </summary>
         private DistrictType MapNodeIDToDistrict(string nodeID)
         {
@@ -713,8 +714,8 @@ namespace NodeWar.Core
             gridX = Mathf.RoundToInt(worldPos.x / boardConfig.nodeScale);
             gridZ = Mathf.RoundToInt(worldPos.z / boardConfig.nodeScale);
 
-            return gridX >= 0 && gridX < boardConfig.gridCols &&
-                   gridZ >= 0 && gridZ < boardConfig.gridRows;
+            return gridX >= 0 && gridX < boardConfig.Data.gridCols &&
+                   gridZ >= 0 && gridZ < boardConfig.Data.gridRows;
         }
 
         public float NodeScale => boardConfig.nodeScale;

@@ -54,7 +54,7 @@ namespace NodeWar.UI
                 if (v.currentNodeID != nodeID) continue;
                 if (v.ownerID != controlledPID) continue;
                 if (v.state != VillagerState.Idle) continue;
-                if (GameBalance.IsCombatSuit(v.suit)) continue;
+                if (GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.isConsumed) continue;
                 idleIDs.Add(i);
             }

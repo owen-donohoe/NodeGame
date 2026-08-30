@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace NodeWar.Simulation
 {
     [System.Serializable]
@@ -15,62 +13,87 @@ namespace NodeWar.Simulation
         public int fightPriority;
     }
 
-    [CreateAssetMenu(fileName = "GameBalance", menuName = "NodeWar/Game Balance")]
-    public class GameBalance : ScriptableObject
+    [System.Serializable]
+    public struct GameBalanceData
     {
-        [Header("Tick Rate")]
-        public int ticksPerSecond = 10;
+        public int ticksPerSecond;
 
-        [Header("Claiming")]
-        public int baseClaimPerTick = 17;
-        public int decrementMultiplier = 4;
-        public int claimThreshold = 10000;
-        public int maxClaimersPerNode = 4;
+        public int baseClaimPerTick;
+        public int decrementMultiplier;
+        public int claimThreshold;
+        public int maxClaimersPerNode;
 
-        [Header("Combat")]
-        public int respawnTicks = 50;
-        public int healIntervalTicks = 30;
-        public int breachThreshold = 3;
+        public int respawnTicks;
+        public int healIntervalTicks;
+        public int breachThreshold;
 
-        [Header("Production")]
-        public int foodProductionTicks = 30;
-        public int materialProductionTicks = 40;
-        public int metalProductionTicks = 50;
-        public int marketFoodProductionTicks = 45;
-        public int marketMaterialProductionTicks = 60;
-        public int maxWorkersPerNode = 2;
-        public int maxVillagersPerPlayer = 25;
+        public int foodProductionTicks;
+        public int materialProductionTicks;
+        public int metalProductionTicks;
+        public int marketFoodProductionTicks;
+        public int marketMaterialProductionTicks;
+        public int maxWorkersPerNode;
+        public int maxVillagersPerPlayer;
 
-        [Header("Costs")]
-        public int respawnCostFood = 1;
+        public int respawnCostFood;
 
-        [Header("Villager Base Stats")]
-        public int baseHP = 5;
-        public int baseAttackDamage = 1;
-        public int baseMoveSpeedTicks = 4;
-        public int baseAttackCooldownMax = 20;
+        public int baseHP;
+        public int baseAttackDamage;
+        public int baseMoveSpeedTicks;
+        public int baseAttackCooldownMax;
 
-        [Header("Suit Stats (configure in Inspector)")]
         public SuitStats[] suitStats;
 
-        [Header("Village Bonus")]
-        public int bonusVillagersOnVillageClaim = 2;
+        public int bonusVillagersOnVillageClaim;
 
-        [Header("Node: Shrine")]
-        public int shrineHealIntervalTicks = 20;
+        public int shrineHealIntervalTicks;
 
-        [Header("Node: Rampart")]
-        public int rampartDecrementMultiplier = 2;
-        public int rampartDamageReduction = 1;
-        public int rampartMaxHPBonus = 1;
+        public int rampartDecrementMultiplier;
+        public int rampartDamageReduction;
+        public int rampartMaxHPBonus;
 
-        [Header("Node: Watchtower")]
-        public int watchtowerClaimNumerator = 3;
-        public int watchtowerClaimDenominator = 2;
+        public int watchtowerClaimNumerator;
+        public int watchtowerClaimDenominator;
 
-        [Header("Node: Sanctuary")]
-        public int sanctuaryRespawnBoostPerWorker = 1;
-        public int sanctuaryRespawnCostReductionPercent = 25;
+        public int sanctuaryRespawnBoostPerWorker;
+        public int sanctuaryRespawnCostReductionPercent;
+
+        public static GameBalanceData Default()
+        {
+            return new GameBalanceData
+            {
+                ticksPerSecond = 10,
+                baseClaimPerTick = 17,
+                decrementMultiplier = 4,
+                claimThreshold = 10000,
+                maxClaimersPerNode = 4,
+                respawnTicks = 50,
+                healIntervalTicks = 30,
+                breachThreshold = 3,
+                foodProductionTicks = 30,
+                materialProductionTicks = 40,
+                metalProductionTicks = 50,
+                marketFoodProductionTicks = 45,
+                marketMaterialProductionTicks = 60,
+                maxWorkersPerNode = 2,
+                maxVillagersPerPlayer = 25,
+                respawnCostFood = 1,
+                baseHP = 5,
+                baseAttackDamage = 1,
+                baseMoveSpeedTicks = 4,
+                baseAttackCooldownMax = 20,
+                suitStats = null,
+                bonusVillagersOnVillageClaim = 2,
+                shrineHealIntervalTicks = 20,
+                rampartDecrementMultiplier = 2,
+                rampartDamageReduction = 1,
+                rampartMaxHPBonus = 1,
+                watchtowerClaimNumerator = 3,
+                watchtowerClaimDenominator = 2,
+                sanctuaryRespawnBoostPerWorker = 1,
+                sanctuaryRespawnCostReductionPercent = 25
+            };
+        }
 
         public SuitStats GetSuitStats(SuitType type)
         {
@@ -130,18 +153,18 @@ namespace NodeWar.Simulation
                 case DistrictType.Barracks:
                 case DistrictType.Arsenal:
                     return NodeSlotType.Army;
-                
+
                 case DistrictType.Shrine:
                 case DistrictType.Sanctuary:
                     return NodeSlotType.Healing;
-                
+
                 case DistrictType.Watchtower:
                 case DistrictType.Rampart:
                     return NodeSlotType.Affect;
-                
+
                 case DistrictType.Market:
                     return NodeSlotType.ResourceSpecial;
-                
+
                 default:
                     return NodeSlotType.Fixed;
             }

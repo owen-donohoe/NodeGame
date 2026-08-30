@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using NodeWar.Simulation;
-using UnityEngine;
 
 namespace NodeWar.Simulation
 {

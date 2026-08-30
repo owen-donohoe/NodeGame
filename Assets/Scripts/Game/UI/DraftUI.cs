@@ -115,7 +115,7 @@ namespace NodeWar.UI
 
         // ===== PUBLIC API (called by DraftManager) =====
 
-        public void ShowInitialReveal(BoardConfig.InitialNodePlacement[] placements)
+        public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
         {
             if (placements == null) return;
             for (int i = 0; i < placements.Length; i++)

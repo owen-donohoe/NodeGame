@@ -328,7 +328,7 @@ namespace NodeWar.Input
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
                 if (v.state != VillagerState.Idle) continue;
-                if (GameBalance.IsCombatSuit(v.suit)) continue;
+                if (GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.isConsumed) continue;
                 if (claimedThisTick[i]) continue;
 
@@ -362,7 +362,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (!GameBalance.IsCombatSuit(v.suit)) continue;
+                if (!GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
                 if (claimedThisTick[i]) continue;
@@ -567,7 +567,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (!GameBalance.IsCombatSuit(v.suit)) continue;
+                if (!GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
                 if (claimedThisTick[i]) continue;
@@ -583,7 +583,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (GameBalance.IsCombatSuit(v.suit)) continue;
+                if (GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
                 if (!includeWorking && v.state == VillagerState.Working) continue;
@@ -606,7 +606,7 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
-                if (GameBalance.IsCombatSuit(v.suit)) continue;
+                if (GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state != VillagerState.Idle) continue;
                 if (v.isConsumed) continue;
                 if (claimedThisTick[i]) continue;
