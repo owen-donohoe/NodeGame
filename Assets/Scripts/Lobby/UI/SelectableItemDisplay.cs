@@ -25,7 +25,13 @@ namespace NodeWar.Lobby
         private bool isLocked;
         private bool isSelected;
         private System.Action<string> onUse;
-        private int originalSiblingIndex = -1;
+
+        // Nested Canvas used to raise this row's render order above the rows
+        // below it while selected, without touching sibling index (which
+        // would also move the row within the VerticalLayoutGroup).
+        private Canvas sortingCanvas;
+        private GraphicRaycaster sortingRaycaster;
+        private const int RaisedSortingOrder = 1;
 
         private static readonly Color normalColor = new Color(0.14f, 0.14f, 0.19f, 1f);
         private static readonly Color selectedColor = new Color(0.22f, 0.28f, 0.38f, 1f);
@@ -42,6 +48,44 @@ namespace NodeWar.Lobby
 
             if (useButtonContainer != null)
                 useButtonContainer.SetActive(false);
+
+            EnsureSortingComponents();
+        }
+
+        // Adds (or finds) the Canvas/GraphicRaycaster pair once and keeps them
+        // cached for the lifetime of the row. A nested Canvas with
+        // overrideSorting breaks raycasting for its children unless a
+        // GraphicRaycaster is also present on the same object, so both are
+        // ensured together. overrideSorting only has a visible effect when a
+        // parent Canvas exists in the hierarchy; if the lookups ever fail to
+        // produce components (e.g. AddComponent blocked for some reason) the
+        // raise/lower calls below simply no-op instead of throwing.
+        private void EnsureSortingComponents()
+        {
+            if (sortingCanvas == null)
+                sortingCanvas = GetComponent<Canvas>();
+            if (sortingCanvas == null)
+                sortingCanvas = gameObject.AddComponent<Canvas>();
+            if (sortingCanvas != null)
+                sortingCanvas.overrideSorting = false;
+
+            if (sortingRaycaster == null)
+                sortingRaycaster = GetComponent<GraphicRaycaster>();
+            if (sortingRaycaster == null)
+                sortingRaycaster = gameObject.AddComponent<GraphicRaycaster>();
+        }
+
+        private void RaiseSortingOrder()
+        {
+            if (sortingCanvas == null) return;
+            sortingCanvas.overrideSorting = true;
+            sortingCanvas.sortingOrder = RaisedSortingOrder;
+        }
+
+        private void LowerSortingOrder()
+        {
+            if (sortingCanvas == null) return;
+            sortingCanvas.overrideSorting = false;
         }
 
         public void Initialize(string id, string displayName, Sprite icon, bool locked,
@@ -80,7 +124,7 @@ namespace NodeWar.Lobby
             if (backgroundImage != null && !isLocked)
                 backgroundImage.color = normalColor;
 
-            RestoreSiblingIndex();
+            LowerSortingOrder();
         }
 
         public void SetVisible(bool visible)
@@ -99,27 +143,19 @@ namespace NodeWar.Lobby
             if (isSelected && !wasSelected)
             {
                 onRowSelected?.Invoke(this);
-                // Move to last sibling so Use button renders above items below us
-                originalSiblingIndex = transform.GetSiblingIndex();
-                transform.SetAsLastSibling();
+                // Raise render order (via nested Canvas) so the Use button renders
+                // above items below us, without touching layout position.
+                RaiseSortingOrder();
             }
             else if (!isSelected && wasSelected)
             {
-                RestoreSiblingIndex();
+                LowerSortingOrder();
             }
 
             if (useButtonContainer != null)
                 useButtonContainer.SetActive(isSelected);
             if (backgroundImage != null)
                 backgroundImage.color = isSelected ? selectedColor : normalColor;
-        }
-        private void RestoreSiblingIndex()
-        {
-            if (originalSiblingIndex >= 0 && originalSiblingIndex < transform.parent.childCount)
-            {
-                transform.SetSiblingIndex(originalSiblingIndex);
-                originalSiblingIndex = -1;
-            }
         }
 
         private void OnUseClicked()

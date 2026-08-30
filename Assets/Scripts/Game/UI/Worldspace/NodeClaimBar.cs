@@ -36,12 +36,13 @@ namespace NodeWar.UI
         private float showTimer;
         private float targetAlpha;
 
-        private const int CLAIM_THRESHOLD = 10000;
+        private int claimThreshold = 10000;
 
-        public void Initialize(SimulationState state, int id)
+        public void Initialize(SimulationState state, int id, int claimThreshold)
         {
             simState = state;
             nodeID = id;
+            this.claimThreshold = claimThreshold;
             initialized = true;
 
             if (backgroundImage != null)
@@ -84,7 +85,7 @@ namespace NodeWar.UI
             // Update fill amounts and colors
             if (node.claimBar > 0)
             {
-                float p0Fill = (float)node.claimBar / CLAIM_THRESHOLD;
+                float p0Fill = (float)node.claimBar / claimThreshold;
                 float clampedFill = Mathf.Clamp01(p0Fill);
                 if (p0FillImage != null)
                 {
@@ -96,7 +97,7 @@ namespace NodeWar.UI
             }
             else if (node.claimBar < 0)
             {
-                float p1Fill = (float)(-node.claimBar) / CLAIM_THRESHOLD;
+                float p1Fill = (float)(-node.claimBar) / claimThreshold;
                 float clampedFill = Mathf.Clamp01(p1Fill);
                 if (p1FillImage != null)
                 {

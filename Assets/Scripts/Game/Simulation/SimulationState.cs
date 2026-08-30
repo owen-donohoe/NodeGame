@@ -136,12 +136,14 @@ namespace NodeWar.Simulation
         public int tickCount;
         public bool gameOver;
         public int winnerID;
+        public int defaultEdgeWeight;
 
         public SimulationState()
         {
             tickCount = 0;
             gameOver = false;
             winnerID = -1;
+            defaultEdgeWeight = BoardConfigData.DefaultEdgeWeight;
         }
     }
 }

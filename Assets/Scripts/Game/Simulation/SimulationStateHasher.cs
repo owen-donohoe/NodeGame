@@ -22,6 +22,7 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + state.tickCount;
                 hash = hash * 31 + (state.gameOver ? 1 : 0);
                 hash = hash * 31 + state.winnerID;
+                hash = hash * 31 + state.defaultEdgeWeight;
 
                 // Players
                 for (int i = 0; i < state.players.Length; i++)

@@ -33,6 +33,12 @@ namespace NodeWar.Network
         private readonly object queueLock = new object();
         private Queue<byte[]> incomingQueue = new Queue<byte[]>();
 
+        // Outbound packet queue -- buffers sends attempted before the transport is ready
+        // (relay handshake not complete, DirectUDP remote endpoint not yet observed).
+        private const int MAX_OUTGOING_QUEUE = 256;
+        private readonly object outgoingQueueLock = new object();
+        private readonly Queue<byte[]> outgoingQueue = new Queue<byte[]>();
+
         // Connection state
         public bool IsConnected { get; private set; }
         public bool IsHost { get; private set; }
@@ -130,25 +136,108 @@ namespace NodeWar.Network
         }
 
         /// <summary>
-        /// Send raw bytes to the remote endpoint.
+        /// Send raw bytes to the remote endpoint. If the underlying transport connection
+        /// is not yet established, the packet is buffered and flushed once it comes up
+        /// (see FlushOutgoing, called from ReceiveAll).
         /// </summary>
         public void Send(byte[] data)
         {
-            if (mode == TransportMode.DirectUDP)
+            if (!IsSendReady())
             {
-                if (udpClient == null || remoteEndPoint == null) return;
-                try { udpClient.Send(data, data.Length, remoteEndPoint); }
-                catch (SocketException e) { Debug.LogWarning("[Net] Send failed: " + e.Message); }
+                EnqueueOutgoing(data);
                 return;
             }
 
-            if (!relayDriver.IsCreated || relayPeerConnection == default) return;
+            SendImmediate(data);
+        }
 
-            relayDriver.BeginSend(relayPeerConnection, out var writer);
+        /// <summary>
+        /// True when the active transport has a live connection to send on right now.
+        /// </summary>
+        private bool IsSendReady()
+        {
+            if (mode == TransportMode.DirectUDP)
+                return udpClient != null && remoteEndPoint != null;
+
+            return relayDriver.IsCreated && IsConnected && relayPeerConnection != default;
+        }
+
+        /// <summary>
+        /// Sends without any readiness check -- callers must confirm IsSendReady() first.
+        /// Returns false on failure so the flush loop can stop and preserve ordering.
+        /// </summary>
+        private bool SendImmediate(byte[] data)
+        {
+            if (mode == TransportMode.DirectUDP)
+            {
+                try
+                {
+                    udpClient.Send(data, data.Length, remoteEndPoint);
+                    return true;
+                }
+                catch (SocketException e)
+                {
+                    Debug.LogWarning("[Net] Send failed: " + e.Message);
+                    return false;
+                }
+            }
+
+            int beginStatus = relayDriver.BeginSend(relayPeerConnection, out var writer);
+            if (beginStatus != 0)
+            {
+                Debug.LogWarning("[Net] Relay BeginSend failed with status " + beginStatus);
+                return false;
+            }
+
             var nativeData = new NativeArray<byte>(data, Allocator.Temp);
             writer.WriteBytes(nativeData);
             nativeData.Dispose();
-            relayDriver.EndSend(writer);
+
+            int endStatus = relayDriver.EndSend(writer);
+            if (endStatus < 0)
+            {
+                Debug.LogWarning("[Net] Relay EndSend failed with status " + endStatus);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Buffers a packet sent before the connection was ready. On overflow, drops the
+        /// incoming packet (queue is left untouched) and warns, rather than growing unbounded.
+        /// </summary>
+        private void EnqueueOutgoing(byte[] data)
+        {
+            lock (outgoingQueueLock)
+            {
+                if (outgoingQueue.Count >= MAX_OUTGOING_QUEUE)
+                {
+                    Debug.LogWarning("[Net] Outbound queue full (" + MAX_OUTGOING_QUEUE + "), dropping packet.");
+                    return;
+                }
+                outgoingQueue.Enqueue(data);
+            }
+        }
+
+        /// <summary>
+        /// Sends everything buffered while the connection was not yet ready. Called from
+        /// ReceiveAll (main thread) once per frame, after connection-state updates, so
+        /// queued packets go out the same frame the link comes up. Stops on the first
+        /// failure and leaves the remainder queued so send order is preserved.
+        /// </summary>
+        private void FlushOutgoing()
+        {
+            lock (outgoingQueueLock)
+            {
+                while (outgoingQueue.Count > 0)
+                {
+                    if (!IsSendReady()) break;
+                    byte[] next = outgoingQueue.Peek();
+                    if (!SendImmediate(next)) break;
+                    outgoingQueue.Dequeue();
+                }
+            }
         }
 
         /// <summary>
@@ -159,13 +248,19 @@ namespace NodeWar.Network
         {
             if (mode == TransportMode.DirectUDP)
             {
+                // remoteEndPoint may have just been set by the receive thread; flush
+                // regardless of whether there are inbound packets this frame.
+                byte[][] result = Array.Empty<byte[]>();
                 lock (queueLock)
                 {
-                    if (incomingQueue.Count == 0) return Array.Empty<byte[]>();
-                    byte[][] result = incomingQueue.ToArray();
-                    incomingQueue.Clear();
-                    return result;
+                    if (incomingQueue.Count > 0)
+                    {
+                        result = incomingQueue.ToArray();
+                        incomingQueue.Clear();
+                    }
                 }
+                FlushOutgoing();
+                return result;
             }
 
             if (!relayDriver.IsCreated || !relayReady) return Array.Empty<byte[]>();
@@ -223,6 +318,11 @@ namespace NodeWar.Network
                 }
             }
 
+            // All connection-state updates for this frame (Accept/GetConnectionState/Connect
+            // event) are settled by this point -- flush now so queued packets go out the
+            // same frame the link comes up.
+            FlushOutgoing();
+
             return packets.ToArray();
         }
 
@@ -263,6 +363,11 @@ namespace NodeWar.Network
                 if (relayDriver.IsCreated) relayDriver.Dispose();
             }
 
+            lock (outgoingQueueLock)
+            {
+                outgoingQueue.Clear();
+            }
+
             Debug.Log("[Net] Shutdown.");
         }
 
@@ -300,7 +405,7 @@ namespace NodeWar.Network
                 }
                 catch (SocketException)
                 {
-                    // Socket closed during Receive — expected on shutdown
+                    // Socket closed during Receive ï¿½ expected on shutdown
                     if (!isRunning) break;
                 }
                 catch (ObjectDisposedException)

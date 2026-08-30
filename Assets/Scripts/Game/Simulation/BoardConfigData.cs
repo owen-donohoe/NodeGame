@@ -3,6 +3,8 @@ namespace NodeWar.Simulation
     [System.Serializable]
     public struct BoardConfigData
     {
+        public const int DefaultEdgeWeight = 4;
+
         public int gridCols;
         public int gridRows;
 
@@ -37,7 +39,7 @@ namespace NodeWar.Simulation
             {
                 gridCols = 4,
                 gridRows = 7,
-                defaultEdgeWeight = 4,
+                defaultEdgeWeight = DefaultEdgeWeight,
                 startingVillagersPerPlayer = 3,
                 startingFood = 0,
                 startingMaterials = 0,

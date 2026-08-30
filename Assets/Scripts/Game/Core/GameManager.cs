@@ -97,6 +97,7 @@ namespace NodeWar.Core
 
             GameSimulation.SetBalance(balance.Data);
             CommandProcessor.SetBalance(balance.Data);
+            state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
 
             Pathfinding.OwnedMultiplier = boardConfig.Data.ownedMultiplier;
             Pathfinding.PartiallyOwnedMultiplier = boardConfig.Data.partiallyOwnedMultiplier;
@@ -468,7 +469,7 @@ namespace NodeWar.Core
 
             hudManager = uiGO.GetComponent<HUDManager>();
             if (hudManager != null)
-                hudManager.Initialize(state, debugPlayerSwitch);
+                hudManager.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold);
 
             nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
             if (nodePanelManager != null)
@@ -589,8 +590,8 @@ namespace NodeWar.Core
                     int bonus = layout[z, x] == DistrictType.Village ? balance.Data.bonusVillagersOnVillageClaim : 0;
                     int ownerID = -1;
                     int claimBar = 0;
-                    if (z == 6 && x == 1) { ownerID = 0; claimBar = 10000; }
-                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -10000; }
+                    if (z == 6 && x == 1) { ownerID = 0; claimBar = balance.Data.claimThreshold; }
+                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -balance.Data.claimThreshold; }
 
                     state.nodes[nodeID] = new NodeData
                     {
@@ -648,9 +649,9 @@ namespace NodeWar.Core
             int p1CoreID = state.players[1].coreNodeID;
 
             state.nodes[p0CoreID].ownerID = 0;
-            state.nodes[p0CoreID].claimBar = 10000;
+            state.nodes[p0CoreID].claimBar = balance.Data.claimThreshold;
             state.nodes[p1CoreID].ownerID = 1;
-            state.nodes[p1CoreID].claimBar = -10000;
+            state.nodes[p1CoreID].claimBar = -balance.Data.claimThreshold;
         }
 
         private int FindCoreNodeID(int playerID)
@@ -879,7 +880,7 @@ namespace NodeWar.Core
 
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
-                    view.Initialize(state, i);
+                    view.Initialize(state, i, balance.Data.claimThreshold);
 
                 NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
                 if (slotManager == null)
@@ -894,7 +895,7 @@ namespace NodeWar.Core
 
                 NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeClaimBar>();
                 if (claimBar != null)
-                    claimBar.Initialize(state, i);
+                    claimBar.Initialize(state, i, balance.Data.claimThreshold);
             }
 
             // Pre-hide all nodes. Transition controller reveals them during startup wave.

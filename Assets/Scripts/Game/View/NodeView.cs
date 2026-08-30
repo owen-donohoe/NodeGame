@@ -19,6 +19,7 @@ namespace NodeWar.View
         private SimulationState simState;
         private int nodeID;
         private bool initialized = false;
+        private int claimThreshold = 10000;
 
         private MeshRenderer meshRenderer;
         private MaterialPropertyBlock propBlock;
@@ -26,10 +27,11 @@ namespace NodeWar.View
         private NodeHighlight highlight;
         private NodeWar.UI.NodeClaimBar claimBar;
 
-        public void Initialize(SimulationState state, int id)
+        public void Initialize(SimulationState state, int id, int claimThreshold)
         {
             simState = state;
             nodeID = id;
+            this.claimThreshold = claimThreshold;
             initialized = true;
 
             meshRenderer = GetComponentInChildren<MeshRenderer>();
@@ -82,16 +84,16 @@ namespace NodeWar.View
                 return (node.ownerID == 0) ? coreColorPlayer0 : coreColorPlayer1;
 
             if (node.ownerID == 0)
-                return Color.Lerp(neutralColor, player0ClaimedColor, (float)node.claimBar / 10000f);
+                return Color.Lerp(neutralColor, player0ClaimedColor, (float)node.claimBar / (float)claimThreshold);
 
             if (node.ownerID == 1)
-                return Color.Lerp(neutralColor, player1ClaimedColor, (float)(-node.claimBar) / 10000f);
+                return Color.Lerp(neutralColor, player1ClaimedColor, (float)(-node.claimBar) / (float)claimThreshold);
 
-            // Unowned but contested — show partial progress toward whichever player is claiming
+            // Unowned but contested ï¿½ show partial progress toward whichever player is claiming
             if (node.claimBar > 0)
-                return Color.Lerp(neutralColor, player0ClaimedColor, (float)node.claimBar / 10000f);
+                return Color.Lerp(neutralColor, player0ClaimedColor, (float)node.claimBar / (float)claimThreshold);
             if (node.claimBar < 0)
-                return Color.Lerp(neutralColor, player1ClaimedColor, (float)(-node.claimBar) / 10000f);
+                return Color.Lerp(neutralColor, player1ClaimedColor, (float)(-node.claimBar) / (float)claimThreshold);
 
             return neutralColor;
         }

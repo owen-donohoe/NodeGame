@@ -7,7 +7,7 @@ namespace NodeWar.UI
 {
     /// <summary>
     /// Orchestrates the always-visible HUD elements.
-    /// Holds serialized references to prefab children — does zero layout/construction.
+    /// Holds serialized references to prefab children ï¿½ does zero layout/construction.
     /// Updates resource wheels, breach bars, and villager count every frame.
     /// Detects Tab-switch and snaps resource display to new player.
     /// </summary>
@@ -29,7 +29,7 @@ namespace NodeWar.UI
         [SerializeField] private Color p0Color = new Color(0.40f, 0.60f, 1.00f);
         [SerializeField] private Color p1Color = new Color(1.00f, 0.40f, 0.40f);
 
-        // Dependencies — set via Initialize
+        // Dependencies ï¿½ set via Initialize
         private SimulationState simState;
         private DebugPlayerSwitch debugPlayerSwitch;
         private bool initialized = false;
@@ -40,7 +40,7 @@ namespace NodeWar.UI
         private int lastMaterials = -1;
         private int lastMetal = -1;
 
-        public void Initialize(SimulationState state, DebugPlayerSwitch debugSwitch)
+        public void Initialize(SimulationState state, DebugPlayerSwitch debugSwitch, int breachThreshold)
         {
             simState = state;
             debugPlayerSwitch = debugSwitch;
@@ -56,8 +56,8 @@ namespace NodeWar.UI
             lastMaterials = p.materials;
             lastMetal = p.metal;
 
-            p0BreachDisplay.Initialize(0, p0Color);
-            p1BreachDisplay.Initialize(1, p1Color);
+            p0BreachDisplay.Initialize(0, p0Color, breachThreshold);
+            p1BreachDisplay.Initialize(1, p1Color, breachThreshold);
 
             initialized = true;
         }
@@ -75,7 +75,7 @@ namespace NodeWar.UI
         {
             int pid = debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
 
-            // Tab was pressed — snap all wheels to new player's values (no animation)
+            // Tab was pressed ï¿½ snap all wheels to new player's values (no animation)
             if (pid != lastControlledPID)
             {
                 lastControlledPID = pid;

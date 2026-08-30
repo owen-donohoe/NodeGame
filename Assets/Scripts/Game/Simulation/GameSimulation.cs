@@ -81,14 +81,24 @@ namespace NodeWar.Simulation
         {
             VillagerData v = state.villagers[villagerIndex];
 
+            // Invariant: a Moving villager always has a further node ahead on its path.
+            // If that is violated the villager is in a corrupt movement state -- recover
+            // deterministically rather than indexing off the end of movePath below.
+            if (v.movePathIndex + 1 >= v.movePath.Length)
+            {
+                v.movePath = new int[0];
+                v.movePathIndex = 0;
+                v.moveProgress = 0;
+                v.targetNodeID = -1;
+                state.villagers[villagerIndex] = v;
+                ApplyArrivalState(state, villagerIndex);
+                return;
+            }
+
             v.moveProgress++;
 
             // Calculate ticks needed for current edge
-            int edgeWeight = 3; // default
-            if (v.movePathIndex + 1 < v.movePath.Length)
-            {
-                edgeWeight = GetEdgeWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
-            }
+            int edgeWeight = GetEdgeWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
             int ticksForEdge = edgeWeight * v.moveSpeedTicks;
 
             if (v.moveProgress >= ticksForEdge)
@@ -1131,7 +1141,7 @@ namespace NodeWar.Simulation
 
         /// <summary>
         /// Gets the edge weight between two connected nodes.
-        /// Returns default weight of 3 if not found.
+        /// Returns state.defaultEdgeWeight if no direct edge is found.
         /// Public for View layer access (interpolation).
         /// </summary>
         public static int GetEdgeWeight(SimulationState state, int fromNode, int toNode)
@@ -1142,7 +1152,7 @@ namespace NodeWar.Simulation
                 if (edges[i].toNode == toNode)
                     return edges[i].travelWeight;
             }
-            return 3; // fallback, no direct edge found
+            return state.defaultEdgeWeight; // fallback, no direct edge found
         }
 
         private static int FindMostDamagedFriendly(SimulationState state, int nodeID, int ownerID, int excludeID)

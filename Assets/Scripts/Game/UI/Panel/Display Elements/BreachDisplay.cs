@@ -7,7 +7,7 @@ namespace NodeWar.UI
 {
     /// <summary>
     /// Horizontal health bar representing one player's breach status.
-    /// Full bar = 0 breaches (safe). Empty bar = 3 breaches (lost).
+    /// Full bar = 0 breaches (safe). Empty bar = breach threshold reached (lost).
     /// Animates fill depletion and punches scale on breach increment.
     /// </summary>
     public class BreachDisplay : MonoBehaviour
@@ -24,17 +24,19 @@ namespace NodeWar.UI
         [SerializeField] private float punchStrength = 0.18f;
 
         private int lastBreachCount = 0;
+        private int breachThreshold = 3;
         private Color baseColor;
         private Tween fillTween;
         private Tween punchTween;
 
-        public void Initialize(int playerID, Color color)
+        public void Initialize(int playerID, Color color, int breachThreshold)
         {
             baseColor = color;
             fillImage.color = color;
             fillImage.fillAmount = 1f;
             //labelText.text = "P" + playerID;
             lastBreachCount = 0;
+            this.breachThreshold = breachThreshold;
         }
 
         public void UpdateBreachCount(int breachCount)
@@ -42,7 +44,9 @@ namespace NodeWar.UI
             if (breachCount == lastBreachCount) return;
             lastBreachCount = breachCount;
 
-            float targetFill = Mathf.Clamp01((3f - breachCount) / 3f);
+            float targetFill = breachThreshold > 0
+                ? Mathf.Clamp01((breachThreshold - breachCount) / (float)breachThreshold)
+                : 0f;
 
             // Animate fill depletion
             fillTween?.Kill();
