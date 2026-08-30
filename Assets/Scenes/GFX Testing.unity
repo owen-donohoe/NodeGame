@@ -119,71 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &1373080362
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 3644615504369584901, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_AnchorMax.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3644615504369584901, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7552578624291263241, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_Name
-      value: Node_Arsenal
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8926901240572959854, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: e49f20b1e5fcb844f8cd3f3eeaeb4f81, type: 3}
 --- !u!1 &1754643042
 GameObject:
   m_ObjectHideFlags: 0
@@ -270,13 +205,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1754643042}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.22507088, y: 0.37115395, z: -0.09322741, w: 0.89604497}
-  m_LocalPosition: {x: -7, y: 10, z: -12}
+  m_LocalRotation: {x: 0.42261827, y: 0, z: 0, w: 0.9063079}
+  m_LocalPosition: {x: 0, y: 10, z: -8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 28.2, y: 45, z: 0}
+  m_LocalEulerAnglesHint: {x: 50, y: 0, z: 0}
 --- !u!114 &1754643046
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -347,7 +282,7 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1982692465}
   m_Enabled: 1
-  serializedVersion: 12
+  serializedVersion: 13
   m_Type: 1
   m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
   m_Intensity: 1
@@ -399,7 +334,7 @@ Light:
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
-  m_ShadowRadius: 0
+  m_ShapeRadius: 0
   m_ShadowAngle: 0
   m_LightUnit: 1
   m_LuxAtDistance: 1
@@ -454,4 +389,3 @@ SceneRoots:
   m_Roots:
   - {fileID: 1754643045}
   - {fileID: 1982692467}
-  - {fileID: 1373080362}

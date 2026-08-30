@@ -29,3 +29,25 @@ MonoBehaviour:
   boundsMaxX: 30
   boundsMinZ: -15
   boundsMaxZ: 45
+  initialPlacements:
+  - gridX: 1
+    gridZ: 6
+    districtType: 5
+    ownerID: 0
+    claimBar: 10000
+  - gridX: 2
+    gridZ: 0
+    districtType: 5
+    ownerID: 1
+    claimBar: -10000
+  draftTurnDuration: 15
+  maxConsecutiveTimeouts: 2
+  baseDraftNodesP0:
+  - districtType: 1
+  - districtType: 3
+  - districtType: 4
+  baseDraftNodesP1:
+  - districtType: 13
+  - districtType: 8
+  - districtType: 2
+  botLoadoutNodes: []
