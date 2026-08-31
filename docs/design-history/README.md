@@ -1,3 +1,32 @@
+---
+type: Design History
+title: Design history
+description: Banner and reconciliation for the v2.1 master design PDF — historical for planning purposes, still substantially the plan.
+tags: [design, history, reconciliation]
+generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: bc701d1
+status: stable
+sources:
+  - id: v21-pdf
+    resource: docs/design-history/NODE_WAR_MASTER_DESIGN_V2_1.pdf
+    title: Node War Master Design v2.1
+    author: human:DonohoeCUA
+  - id: districts
+    resource: Assets/Scripts/Game/Simulation/SimulationState.cs
+    title: DistrictType and SuitType — the arena-tier content this doc reconciles
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: draft-state
+    resource: Assets/Scripts/Game/Simulation/DraftState.cs
+    title: DraftState — the placement draft the document does not describe
+    last_modified: 2026-08-24T09:08:13-04:00
+  - id: bot
+    resource: Assets/Scripts/Game/Input/BotPlayer.cs
+    title: BotPlayer — Phase B
+    last_modified: 2026-08-29T10:56:17-04:00
+---
+
 # Design history
 
 **`NODE_WAR_MASTER_DESIGN_V2_1.pdf` is historical. As of 2026-08-31, Notion is

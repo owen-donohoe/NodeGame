@@ -1,3 +1,15 @@
+---
+type: Skill
+title: session-summary
+description: End-of-session review of the working diff before committing.
+tags: [skill, process, git]
+generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: bc701d1
+status: stable
+---
+
 # session-summary
 
 ## When to use

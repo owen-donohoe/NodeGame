@@ -1,3 +1,44 @@
+---
+type: Architecture
+title: Architecture
+description: The seven layers of Assets/Scripts/, how information flows between them, and the lockstep networking model.
+tags: [architecture, layers, networking, lockstep]
+generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: bc701d1
+status: stable
+sources:
+  - id: sim-state
+    resource: Assets/Scripts/Game/Simulation/SimulationState.cs
+    title: SimulationState
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: sim-loop
+    resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
+    title: GameSimulation.SimulateTick
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: game-manager
+    resource: Assets/Scripts/Game/Core/GameManager.cs
+    title: GameManager match lifecycle
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: lockstep
+    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
+    title: LockstepRunner
+    last_modified: 2026-08-30T22:15:29-04:00
+  - id: tick-runner
+    resource: Assets/Scripts/Game/Core/TickRunner.cs
+    title: TickRunner
+    last_modified: 2026-08-24T09:08:13-04:00
+  - id: match-connection
+    resource: Assets/Scripts/Game/Core/MatchConnection.cs
+    title: MatchConnection
+    last_modified: 2026-08-14T00:06:30-04:00
+  - id: draft-manager
+    resource: Assets/Scripts/Game/Core/DraftManager.cs
+    title: DraftManager
+    last_modified: 2026-08-30T22:15:29-04:00
+---
+
 # Architecture
 
 Node War is a 1v1 real-time strategy game built in Unity 6 (namespace

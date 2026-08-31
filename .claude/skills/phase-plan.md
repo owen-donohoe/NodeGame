@@ -1,3 +1,15 @@
+---
+type: Skill
+title: phase-plan
+description: Read-then-propose procedure for starting a phase. Largely superseded by Notion Phases, which own future work; kept for the read-before-proposing discipline.
+tags: [skill, planning]
+generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: bc701d1
+status: stable
+---
+
 # phase-plan
 
 ## When to use
