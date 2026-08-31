@@ -1,0 +1,4 @@
+# Git hooks are executed by sh, which chokes on CRLF line endings with
+# "bad interpreter: /bin/sh^M". Windows checkouts convert by default, so the
+# hook must be pinned to LF or it breaks the moment someone clones the repo.
+scripts/hooks/* text eol=lf
