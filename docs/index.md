@@ -51,6 +51,35 @@ OKF's conformance rules require consumers to tolerate a member outside the root,
 The ground those files cover is checked anyway: `.claude/rules/simulation.md` restates the contract
 in [simulation-rules](simulation-rules.md), which does declare its sources.
 
+## How the check runs
+
+Nobody has to remember to ask. That was the point — a freshness check you invoke by hand has the
+same failure mode as the documents it polices.
+
+* **SessionStart** runs `scripts/okf-stale-hook.ps1`, wired in `.claude/settings.json`. It is
+  silent when every document is current and injects the suspect list when one is not. Silence
+  when clean is deliberate: a check that reports "all current" every time trains the reader to
+  skip it.
+* **pre-commit** runs the same check as advisory — it reports and lets the commit through.
+  Re-reading a document against moved sources is human work a commit cannot be compelled to
+  contain, and blocking on it would mean every code change dragged a documentation review behind
+  it until the hook got bypassed. It also runs `scripts/sim-guard.ps1`, which **does** block, and
+  only when the commit touches `Simulation/`. See `scripts/hooks/README.md`; install per clone
+  with `git config core.hooksPath scripts/hooks`.
+* **`/audit`** runs the check as its step 0, so a chapter's plan is re-read against the code
+  starting from the documents whose ground already moved.
+* **`/update`** reports it, and is explicitly forbidden from acting on it. Reconciling commits and
+  re-verifying a document are different acts.
+
+`sim-guard.ps1` is the mechanical subset of `.claude/skills/determinism-guard.md` — the contract
+items a regex can settle. Sort tiebreakers, tick order, hasher registration, command/serializer
+pairing and the view boundary are not in it and still need the checklist and a reader.
+
+`docs/attesters/hash_baseline.ps1` is **not** wired to anything. Running it means executing the
+simulation, which today means Unity, installed and licensed. That is tracked under the
+**Determinism CI gate** chapter and is unblocked by extracting `Simulation/` into a plain .NET
+assembly, not by anything in this bundle.
+
 ## Conventions used here
 
 * `sources[].resource` is a **repo-root-relative path**, so a source reference means the same thing
