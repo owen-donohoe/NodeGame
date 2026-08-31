@@ -1,3 +1,48 @@
+---
+type: Checklist
+title: Adding a Feature — Checklist
+description: The 11-step order of operations for any new feature, from simulation state through view, test, and desync check.
+tags: [process, checklist, simulation, testing]
+generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: bc701d1
+status: stable
+sources:
+  - id: sim-state
+    resource: Assets/Scripts/Game/Simulation/SimulationState.cs
+    title: NodeData, VillagerData, PlayerData, SimulationState
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: hasher
+    resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
+    title: SimulationStateHasher.ComputeHash
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: commands
+    resource: Assets/Scripts/Game/Simulation/Commands.cs
+    title: CommandType and GameCommand
+    last_modified: 2026-08-14T00:06:30-04:00
+  - id: command-processor
+    resource: Assets/Scripts/Game/Simulation/CommandProcessor.cs
+    title: CommandProcessor.ProcessCommand and ProcessEquipCommand
+    last_modified: 2026-08-29T10:56:17-04:00
+  - id: sim-loop
+    resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
+    title: SpawnBonusVillagers, AssignAllCombatTargets, SimulateTick
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: balance
+    resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
+    title: GameBalanceData tuning fields
+    last_modified: 2026-08-29T10:56:17-04:00
+  - id: tests
+    resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
+    title: EditMode determinism tests
+    last_modified: 2026-08-30T16:44:10-04:00
+  - id: test-runner
+    resource: scripts/run-tests.ps1
+    title: EditMode test runner
+    last_modified: 2026-08-30T16:44:10-04:00
+---
+
 # Adding a Feature — Checklist
 
 Work through in order. Answer each question honestly before moving on —
@@ -99,10 +144,15 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
 
 11. **Write a test for any simulation change.**
     The project has the Unity Test Framework package installed
-    (`com.unity.test-framework`, per `Packages/manifest.json`), but no
-    test assembly or test files exist in the repo yet. Any change to
-    `Simulation/` should come with a test exercising the new behavior; if
-    no test assembly exists yet, that setup is part of the task, not
-    something to skip. At minimum, before calling the feature done, run a
+    (`com.unity.test-framework`, per `Packages/manifest.json`) and an
+    EditMode suite at `Assets/Tests/EditMode/Tests/`
+    (`NodeWar.Simulation.Tests.asmdef`, plus `DeterminismBaselineTests`,
+    `EdgeWeightTests`, `MovementCorrectnessTests`, `SimulationSmokeTest`,
+    and the shared `TestBoardFactory`). Run it with
+    `scripts/run-tests.ps1` (batch mode — close the Editor first, it takes
+    the project lock) or `scripts/run-tests-live.ps1` (drives the
+    already-open Editor via `TestBridge`). Any change to `Simulation/`
+    should come with a test exercising the new behavior, added alongside
+    the existing ones. At minimum, before calling the feature done, run a
     local match long enough to cross a `DESYNC_CHECK_INTERVAL` boundary
     (50 ticks) and confirm no `[DESYNC]` log appears.
