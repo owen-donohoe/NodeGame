@@ -1,90 +1,141 @@
 # Node War — Claude Instructions
 
-## Project
-1v1 real-time strategy game, Unity 6, lockstep P2P networking.
-Namespace: NodeWar. Project: NodeGame/. Scripts: Assets/Scripts/
-Current phase: Phase A — two-scene architecture, initialization order fix.
-Target: playable shareable build in approximately 3 months.
+1v1 real-time strategy game on a node graph. Unity 6, namespace `NodeWar`,
+lockstep P2P networking migrating to a server-authoritative hybrid.
 
-## Folder Map
-Assets/Scripts/
-  Lobby/       — menus, player profile, loadout and node data definitions
-  Game/
-    Core/      — GameManager (state machine), DraftManager, TickRunner, CameraController
-    Simulation/— ALL game logic. Pure C#. No UnityEngine. See simulation rules below.
-    Network/   — LockstepRunner, NetworkManager, InputSerializer, DraftSerializer
-    Input/     — CommandSystem, SelectionSystem, InputBuffer, BotPlayer
-    UI/        — HUDManager, panels, menus. Reads SimulationState. Never writes it.
-    View/      — NodeView, VillagerView, presentation. Reads SimulationState. Never writes it.
+## Ownership — nothing is mirrored
 
-Full architecture: docs/architecture.md
+| Owns | Where |
+|---|---|
+| Current behaviour | the code |
+| Current architecture | `docs/` (see below) |
+| Future work | Notion **Phases** |
+| Current work | Notion **Tasks** |
+
+Live state is never cached into markdown. Do not restate `docs/` in this file,
+and do not copy Notion content into the repo. Write to Notion only during `/update`.
+
+## Notion identifiers
+
+- Page **Node** — `3cde745f-f2df-8139-8e3d-e93fac741de0`
+- DB **Phases** — `5b7c3aa7-93a1-4eb3-ba25-29b86e743514`
+  data source `3664290f-3ad4-4308-8deb-d4c5b057090a`
+- DB **Tasks** — `8706a60b-0572-4fb7-b933-2c48c275607d`
+  data source `b8f545c7-316b-4d66-9d2e-19f42d5d27f5`
+- View **Tasks · Open** — `ee6d187b-368d-473a-bd80-8b75ccf84958`
+- View **Tasks · Loose** — `3cde745f-f2df-814a-bfcf-000c6ae4e1d7`
+- View **Tasks · Quick wins** — `3cde745f-f2df-81ab-8526-000cd4865ae4`
+- View **Phases · Roadmap** — `3cde745f-f2df-816a-ab45-000cac100ef7`
+
+## Schemas
+
+**Phases** — books and chapters. A *Book* is a long-lived area (Networking,
+Drafting) and carries no status. A *Chapter* is a specific system or panel and
+carries the plan, status, and tasks. The plan lives in the page body, never in
+properties.
+
+| Property | Type | Values |
+|---|---|---|
+| `Phase` | Title | — |
+| `Type` | Select | `Book` · `Chapter` |
+| `Status` | Select | `Half-formed idea` · `Idea with a plan` · `Audit plan against code` · `Active` · `Shipped` · `Parked` |
+| `Parent Phase` | Relation → Phases (self, dual, other side `Sub-phases`) | — |
+| `Last Reviewed Commit` | Text | short SHA |
+
+Chapter body: `## Goal` · `## Approach` · `## Open questions` · `## Notes`.
+For `Half-formed idea`, one line is enough — that is the point of the status.
+
+**Tasks**
+
+| Property | Type | Values |
+|---|---|---|
+| `Task` | Title | — |
+| `Phase` | Relation → Phases (dual, other side `Tasks`) | may be empty |
+| `Status` | Select | `Todo` · `In Progress` · `Blocked` · `Done` · `Dropped` |
+| `Size` | Select | `S` · `M` · `L` |
+| `Priority` | Select | `ASAP` · `Normal` · `Later` |
+
+Tasks with no Phase are legitimate — bugs hit while doing something else.
+`ASAP` is the quick-win lane: small, cheap, disproportionately useful.
+
+## Which doc to read for what
+
+Read the file, do not ask me to summarise it here.
+
+- `docs/architecture.md` — the seven layers, information flow, scene structure,
+  persistent objects, key classes per layer, networking model. Start here.
+- `docs/simulation-rules.md` — the full determinism contract.
+- `docs/adding-a-feature.md` — 11-step checklist for any new feature.
+- `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
+- `docs/design-history/` — the v2.1 design document. Historical. Notion is
+  authoritative for future work.
 
 ## Simulation Boundary — Non-Negotiable
-Both peers run identical simulation from identical inputs.
-Any violation causes a desync. These rules are not negotiable.
 
-- No UnityEngine references anywhere in Simulation/
-- Integer-only math — no float, no double
-- No System.DateTime, Time.deltaTime, or any frame/wall-clock API
-- No UnityEngine.Random — use seeded RNG stored in SimulationState only
-- Collections: arrays or List<T> only — no Dictionary or HashSet iteration
-- All sort operations must have total-order comparators with ID tiebreakers
-- Tick order is canonical and must not be reordered:
-    movement → combat → claiming → production → healing → respawns → win-check
-- View and UI never write to SimulationState. All state changes go through:
-    GameCommand → InputBuffer → CommandProcessor → SimulateTick
+Both peers run identical simulation from identical inputs. Any violation
+desyncs. Full contract in `docs/simulation-rules.md`.
 
-Detailed rules: docs/simulation-rules.md
-
-## C# Conventions
-- Keep [SerializeField] variables in the same file as their MonoBehaviour (single-file principle)
-- Do not split a class into separate files unless there is a strong reason
-- New SimulationState fields must always be added to SimulationStateHasher
-- Follow SpawnBonusVillagers pattern when adding array-backed state that needs view objects
+- No UnityEngine references anywhere in `Simulation/`
+- Integer-only math — no float, double, decimal
+- No `DateTime`, `Time.deltaTime`, or any frame/wall-clock API
+- No `UnityEngine.Random` — only seeded RNG stored in `SimulationState`
+- Arrays or `List<T>` only — no Dictionary/HashSet iteration
+- All sorts need total-order comparators with ID tiebreakers
+- Tick order is canonical, never reordered:
+  movement → combat → claiming → production → healing → respawns → win-check
+- View and UI never write `SimulationState`. All changes go through:
+  `GameCommand` → `InputBuffer` → `CommandProcessor` → `SimulateTick`
+- Every new `SimulationState` field must be added to `SimulationStateHasher`
 
 ## Key Entry Points
-GameSimulation.SimulateTick()  — deterministic tick loop, runs at 10Hz
-CommandProcessor               — applies GameCommands to SimulationState
-GameManager                    — match lifecycle state machine (PreDraft → Playing → GameOver)
-LockstepRunner / TickRunner    — tick timing; shared via ITickProvider
-SimulationStateHasher          — desync detection fingerprint (checked every 50 ticks)
+
+- `GameSimulation.SimulateTick()` — deterministic tick loop, 10Hz
+- `CommandProcessor` — applies `GameCommand`s to `SimulationState`
+- `GameManager` — match lifecycle (PreDraft → Drafting → PostDraft → Countdown → Playing)
+- `LockstepRunner` / `TickRunner` — tick timing, shared via `ITickProvider`
+- `SimulationStateHasher` — desync fingerprint, checked every 50 ticks
+
+## C# Conventions
+
+- Keep `[SerializeField]` fields in the same file as their MonoBehaviour
+- Do not split a class across files without a strong reason
+- Follow `SpawnBonusVillagers` when adding array-backed state needing view objects
 
 ## How to Work
+
 - Read relevant files before proposing anything
-- For anything touching Simulation/: use plan mode first
+- For anything touching `Simulation/`: use plan mode first
 - Prefer the smallest change that satisfies the goal
-- Do not modify .unity scenes, prefabs, or .meta files without explicit instruction
+- Do not modify `.unity` scenes, prefabs, or `.meta` files without instruction
 - When uncertain about intent: ask once, clearly, then proceed
-- After Simulation/ changes: flag which tests should be run
+- After `Simulation/` changes: flag which tests should be run
 
 ## Subagent Usage
-- Do not spawn a subagent (Agent tool) for a task that would use 2 or fewer of them.
-  Do the work directly instead.
-- Subagent overhead (fresh context, full tool-schema load, re-reading files) usually
-  costs more time and tokens than just doing a small task inline.
-- Reserve subagents for work that genuinely parallelizes across 3+ independent
-  angles, or where isolating large tool output from the main context matters.
-- This does not apply to managed skills (e.g. /code-review, /security-review) that
-  spawn their own internal agents as part of a fixed procedure -- that fan-out is
-  not something this file can override.
 
-## Skills
-Skills are markdown files in .claude/skills/.
-To use a skill, read the file and follow its procedure.
-There is no formal invocation syntax.
-Reference skills by file path:
-  .claude/skills/session-summary.md
-  .claude/skills/determinism-guard.md
-  .claude/skills/write-sim-test.md
-  .claude/skills/cs-review.md
-  .claude/skills/phase-plan.md
+Do not spawn a subagent for work that would use 2 or fewer of them — the
+overhead of fresh context and re-reading files costs more than doing it inline.
+Reserve them for 3+ genuinely independent angles, or where isolating large tool
+output matters. Managed skills that fan out internally (`/code-review`,
+`/security-review`) are exempt.
+
+## Commit Convention
+
+`done: <task title>` in a commit message marks that task **Done** on the next
+`/update`. Without it, tasks move to **In Progress** at most — a commit that
+touches a system is not work that finished.
+
+## Commands and Skills
+
+- `/update` — reconcile Notion against new commits. The only time Notion is written.
+- `/audit` — re-check a chapter's plan against the code before it goes Active.
+
+Skills are markdown files in `.claude/skills/`. Read the file and follow its
+procedure; there is no invocation syntax. Reference them by path:
+`determinism-guard.md` · `write-sim-test.md` · `cs-review.md` ·
+`session-summary.md` · `phase-plan.md` (largely superseded by Notion Phases).
 
 ## Response Style
-Do not end responses with trailing additions:
-"one more thing", "also worth noting", "additionally I should mention",
-"one last note", "before I finish", or similar patterns.
-If something is important, say it once in the right place.
-A Stop hook enforces this. Treat it as strict.
 
-## Feature Implementation
-docs/adding-a-feature.md — checklist for any new feature
+No trailing additions: "one more thing", "also worth noting", "before I finish",
+or similar. If something is important, say it once in the right place.
+A Stop hook enforces this. Treat it as strict.
