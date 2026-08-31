@@ -8,7 +8,7 @@ namespace NodeWar.UI
     /// Self-contained confirm button for draft placement.
     /// Handles its own show/hide animation. Fires OnConfirmed when clicked.
     /// Lives on the confirm button GameObject within the DraftUI prefab hierarchy.
-    /// 
+    ///
     /// Can be swapped for a different prefab/child as long as this component
     /// is present and wired to DraftPlacementController.
     /// </summary>
@@ -35,7 +35,12 @@ namespace NodeWar.UI
         {
             if (button != null)
                 button.onClick.AddListener(HandleClick);
-            gameObject.SetActive(false);
+
+            // Deliberately no SetActive(false) here. This object is inactive in the prefab, so
+            // Unity defers Awake until the first SetActive(true) -- which happens inside Show().
+            // Self-deactivating here ran during that Show() and silently undid it, leaving the
+            // button invisible for the first placement of every match. The initial hidden state
+            // is owned by DraftPlacementController.Initialize(), which calls Hide() during setup.
         }
 
         /// <summary>
