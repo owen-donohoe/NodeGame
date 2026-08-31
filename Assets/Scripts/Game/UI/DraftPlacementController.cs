@@ -9,19 +9,19 @@ namespace NodeWar.UI
     /// <summary>
     /// Draft placement state machine and input handler.
     /// Manages the lifecycle of drag --> preview --> confirm --> place.
-    /// 
+    ///
     /// State flow: Idle --> Dragging --> Placed --> (Repositioning --> Dragging) or Confirmed
-    /// 
+    ///
     /// Responsibilities:
     ///   - Reading mouse input and screen-zone detection
     ///   - Creating/destroying ghost preview instances
     ///   - Controlling drag proxy visibility and position
     ///   - Showing/hiding confirm button at correct timing
     ///   - Calling DraftManager.ConfirmLocalPlacement on confirm
-    ///   
+    ///
     /// Does NOT own: bar, timer, turn display, persistent placeholders, sticker data.
     /// Those live on DraftUI.
-    /// 
+    ///
     /// Lives on the DraftUI root GameObject. Initialized by DraftUI.
     /// </summary>
     public class DraftPlacementController : MonoBehaviour
@@ -33,10 +33,6 @@ namespace NodeWar.UI
         [SerializeField][Range(0.08f, 0.35f)] private float placementEligibleThreshold = 0.15f;
         [Tooltip("Above this = proxy fully invisible, preview fully opaque.")]
         [SerializeField][Range(0.10f, 0.40f)] private float fadeZoneThreshold = 0.20f;
-
-        [Header("Confirm Timing")]
-        [Tooltip("Seconds the preview must be still before confirm button appears.")]
-        [SerializeField] private float confirmStillThreshold = 0.3f;
 
         [Header("Preview Prefab")]
         [Tooltip("World-space prefab shown during drag. Should look ghostly/translucent.")]
@@ -61,7 +57,7 @@ namespace NodeWar.UI
         private Camera mainCam;
         private int localPlayerID;
 
-        // Sticker lookup — provided by DraftUI
+        // Sticker lookup - provided by DraftUI
         private System.Func<DistrictType, Sprite> stickerLookup;
 
         // State machine
@@ -78,11 +74,6 @@ namespace NodeWar.UI
         private int previewGridX = -1;
         private int previewGridZ = -1;
         private bool previewOnValidCell;
-
-        // Still detection for confirm
-        private float stillTimer;
-        private Vector3 lastPreviewPosition;
-        private bool confirmVisible;
 
         // Callback to DraftUI for slot dimming
         public System.Action<int> OnDragStarted;
@@ -104,7 +95,7 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Called each time turn changes — controller needs fresh DraftState reference.
+        /// Called each time turn changes - controller needs fresh DraftState reference.
         /// </summary>
         public void SetDraftState(DraftState state)
         {
@@ -127,14 +118,12 @@ namespace NodeWar.UI
                 DestroyPreview();
                 HideDragProxy();
                 if (confirmPresenter != null) confirmPresenter.Hide();
-                confirmVisible = false;
                 OnDragCancelled?.Invoke();
             }
 
             activeSlotIndex = slotIndex;
             activeDistrictType = districtType;
             dragMode = DragMode.Dragging;
-            confirmVisible = false;
 
             if (confirmPresenter != null)
                 confirmPresenter.Hide();
@@ -149,9 +138,7 @@ namespace NodeWar.UI
             HideDragProxy();
             if (confirmPresenter != null)
                 confirmPresenter.Hide();
-            confirmVisible = false;
 
-            int cancelledSlot = activeSlotIndex;
             activeSlotIndex = -1;
             dragMode = DragMode.Idle;
 
@@ -230,33 +217,12 @@ namespace NodeWar.UI
             {
                 if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                 {
-                    // UI click (probably confirm button) — let EventSystem handle it
+                    // UI click (probably confirm button) - let EventSystem handle it
                 }
                 else if (IsPointerOnPreviewCell(mouse.position.ReadValue()))
                 {
                     dragMode = DragMode.Repositioning;
                     if (confirmPresenter != null) confirmPresenter.Hide();
-                    confirmVisible = false;
-                    ShowDragProxy();
-                }
-                return;
-            }
-
-            if (mouse.rightButton.wasPressedThisFrame || EscapePressed())
-                CancelDrag();
-
-            // Re-grab: click on the placed cell to reposition
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                {
-                    // UI click (probably confirm button) — let EventSystem handle it
-                }
-                else if (IsPointerOnPreviewCell(mouse.position.ReadValue()))
-                {
-                    dragMode = DragMode.Repositioning;
-                    if (confirmPresenter != null) confirmPresenter.Hide();
-                    confirmVisible = false;
                     ShowDragProxy();
                 }
                 return;
@@ -266,22 +232,17 @@ namespace NodeWar.UI
                 CancelDrag();
         }
 
+        /// <summary>
+        /// Only reached from UpdateDragging's release path, which already guarantees
+        /// previewOnValidCell, so the confirm button can always be shown here.
+        /// </summary>
         private void EnterPlacedState()
         {
             dragMode = DragMode.Placed;
             HideDragProxy();
 
-            if (previewOnValidCell)
-            {
-                // Show confirm immediately — the spring animation provides visual delay
-                ShowConfirm();
-            }
-            else
-            {
-                stillTimer = 0f;
-                lastPreviewPosition = previewInstance != null ? previewInstance.transform.position : Vector3.zero;
-                confirmVisible = false;
-            }
+            // Show confirm immediately - the spring animation provides visual delay
+            ShowConfirm();
         }
 
         // ===== CONFIRM =====
@@ -289,7 +250,6 @@ namespace NodeWar.UI
         private void ShowConfirm()
         {
             if (confirmPresenter == null) return;
-            confirmVisible = true;
 
             Vector3 worldPos = draftManager.GridToWorld(previewGridX, previewGridZ);
             Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos);
@@ -306,11 +266,10 @@ namespace NodeWar.UI
 
             draftManager.ConfirmLocalPlacement(activeSlotIndex, previewGridX, previewGridZ);
 
-            // Clean up — DraftUI.OnPlacementConfirmed will handle visual feedback
+            // Clean up - DraftUI.OnPlacementConfirmed will handle visual feedback
             DestroyPreview();
             HideDragProxy();
             if (confirmPresenter != null) confirmPresenter.Hide();
-            confirmVisible = false;
             activeSlotIndex = -1;
             dragMode = DragMode.Idle;
 
@@ -425,7 +384,7 @@ namespace NodeWar.UI
         // ===== HELPERS =====
 
         /// <summary>
-        /// World-space grid-cell check — zoom-agnostic.
+        /// World-space grid-cell check - zoom-agnostic.
         /// </summary>
         private bool IsPointerOnPreviewCell(Vector2 screenPos)
         {

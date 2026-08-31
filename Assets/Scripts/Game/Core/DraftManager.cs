@@ -451,6 +451,14 @@ namespace NodeWar.Core
             if (draftUI != null)
                 draftUI.SweepOut();
 
+            // Stop this component before handing off. ReceiveAll() drains the
+            // shared inbound queue destructively, so if this Update() keeps
+            // running alongside LockstepRunner (created by the OnDraftComplete
+            // handler) whichever runs first that frame swallows the other's
+            // packets -- and TickInput/Heartbeat are not handled here, so they
+            // would be silently discarded until LockstepRunner times out.
+            enabled = false;
+
             OnDraftComplete?.Invoke(result);
         }
 

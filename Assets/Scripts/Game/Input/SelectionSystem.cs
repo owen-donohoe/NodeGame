@@ -8,6 +8,10 @@ namespace NodeWar.Input
 {
     public class SelectionSystem : MonoBehaviour
     {
+        [Tooltip("Per-click selection logging. Off by default -- it fires on every " +
+                 "mouse release and drowns out networking/draft logs.")]
+        [SerializeField] private bool verboseSelectionLogging = false;
+
         private SimulationState simState;
         private int localPlayerID = 0;
 
@@ -73,7 +77,8 @@ namespace NodeWar.Input
                 Vector2 releasePos = mouse.position.ReadValue();
                 float dragDistance = Vector2.Distance(dragStartScreenPos, releasePos);
 
-                Debug.Log("[SEL] Left released. Drag distance: " + dragDistance);
+                if (verboseSelectionLogging)
+                    Debug.Log("[SEL] Left released. Drag distance: " + dragDistance);
 
                 if (dragDistance < DRAG_THRESHOLD)
                 {
@@ -84,9 +89,12 @@ namespace NodeWar.Input
                     CircleSelect(dragStartScreenPos, dragDistance);
                 }
 
-                Debug.Log("[SEL] After select action. Selected count: " + selectedVillagerIDs.Count);
-                for (int i = 0; i < selectedVillagerIDs.Count; i++)
-                    Debug.Log("[SEL]   Selected villager ID: " + selectedVillagerIDs[i]);
+                if (verboseSelectionLogging)
+                {
+                    Debug.Log("[SEL] After select action. Selected count: " + selectedVillagerIDs.Count);
+                    for (int i = 0; i < selectedVillagerIDs.Count; i++)
+                        Debug.Log("[SEL]   Selected villager ID: " + selectedVillagerIDs[i]);
+                }
             }
         }
 
