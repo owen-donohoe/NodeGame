@@ -1,3 +1,28 @@
+---
+type: Skill
+title: write-sim-test
+description: Procedure for adding test coverage when simulation behaviour changes.
+tags: [skill, testing, simulation]
+generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: f1aaba9
+status: stable
+sources:
+  - id: tests
+    resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
+    title: Existing EditMode test patterns
+    last_modified: 2026-08-30T16:44:10-04:00
+  - id: fixture
+    resource: Assets/Tests/EditMode/Tests/TestBoardFactory.cs
+    title: TestBoardFactory shared fixtures
+    last_modified: 2026-08-30T16:44:10-04:00
+  - id: runner
+    resource: scripts/run-tests.ps1
+    title: EditMode test runner
+    last_modified: 2026-08-30T16:44:10-04:00
+---
+
 # write-sim-test
 
 ## When to use

@@ -5,6 +5,25 @@ namespace NodeWar.Tests
 {
     public class DeterminismBaselineTests
     {
+        // Pinned simulation fingerprints.
+        //
+        // The in-process assertions below (hashA == hashB) only prove that two runs
+        // in ONE build agree. They cannot catch the failure this project actually
+        // fears: a code change silently altering simulation output, which desyncs
+        // two peers running different builds. These constants are the recorded
+        // baseline that does catch it.
+        //
+        // A failure here means the simulation's output changed. That is either a bug
+        // or a deliberate balance/logic change -- either way it must be re-pinned
+        // consciously, in the same commit as the change that caused it. Never
+        // update these to "make the test pass" without knowing which change moved
+        // them and why.
+        //
+        // Declared in docs/computations/determinism-baseline.md as an Attested
+        // Computation; docs/attesters/hash_baseline.ps1 verifies a run's receipt.
+        private const int EmptyTick100Hash = 17457352;
+        private const int MoveAndCombat4Hash = 626950565;
+
         [Test]
         public void EmptyTick_100Iterations_ProducesDeterministicHash()
         {
@@ -34,6 +53,8 @@ namespace NodeWar.Tests
             int hashB = SimulationStateHasher.ComputeHash(stateB);
 
             Assert.AreEqual(hashA, hashB);
+            Assert.AreEqual(EmptyTick100Hash, hashA,
+                "Simulation output changed against the recorded baseline. See the note on EmptyTick100Hash.");
         }
 
         [Test]
@@ -92,6 +113,8 @@ namespace NodeWar.Tests
             int hashB = SimulationStateHasher.ComputeHash(stateB);
 
             Assert.AreEqual(hashA, hashB);
+            Assert.AreEqual(MoveAndCombat4Hash, hashA,
+                "Simulation output changed against the recorded baseline. See the note on EmptyTick100Hash.");
         }
     }
 }

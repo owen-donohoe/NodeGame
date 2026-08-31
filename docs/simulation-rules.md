@@ -1,3 +1,40 @@
+---
+type: Determinism Contract
+title: Simulation Determinism Contract
+description: The rules Assets/Scripts/Game/Simulation/ must uphold so both peers produce identical state from identical commands.
+tags: [simulation, determinism, lockstep, desync]
+generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
+verified:
+  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: bc701d1
+status: stable
+sources:
+  - id: sim-loop
+    resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
+    title: GameSimulation.SimulateTick and AssignAllCombatTargets
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: sim-state
+    resource: Assets/Scripts/Game/Simulation/SimulationState.cs
+    title: SimulationState, NodeData, VillagerData, PlayerData
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: hasher
+    resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
+    title: SimulationStateHasher.ComputeHash
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: pathfinding
+    resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
+    title: Pathfinding integer cost multipliers
+    last_modified: 2026-08-29T01:52:16-04:00
+  - id: lockstep
+    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
+    title: LockstepRunner.DESYNC_CHECK_INTERVAL and CompareHash
+    last_modified: 2026-08-30T22:15:29-04:00
+  - id: draft-manager
+    resource: Assets/Scripts/Game/Core/DraftManager.cs
+    title: DraftManager.HandleTimeout seed derivation
+    last_modified: 2026-08-30T22:15:29-04:00
+---
+
 # Simulation Determinism Contract
 
 `Assets/Scripts/Game/Simulation/` is shared, lockstep-replicated logic.
@@ -103,8 +140,8 @@ or `SimulationState` itself must be added to this method.** A field left
 out is invisible to desync detection: bugs involving it will show up as
 silent, undiagnosable gameplay divergence instead of a caught desync.
 Fields that are set once at construction and never mutated during play
-(e.g. `worldPosition`, `edges`) are intentionally excluded — keep it that
-way rather than hashing static data.
+(on `NodeData`: `gridX`/`gridZ`, `edges`, `bonusVillagersOnClaim`) are
+intentionally excluded — keep it that way rather than hashing static data.
 
 ## Desync detection
 
