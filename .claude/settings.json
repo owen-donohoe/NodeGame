@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/okf-stale-hook.ps1",
+            "timeout": 30,
+            "statusMessage": "Checking document freshness"
+          }
+        ]
+      }
+    ]
+  }
+}

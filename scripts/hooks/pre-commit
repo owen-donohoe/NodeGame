@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Pre-commit guard for Node War.
+#
+# Two checks, deliberately with different severities:
+#
+#   sim-guard.ps1   BLOCKS.  A float in Simulation/ is an objective contract
+#                   violation with no legitimate reading. Only runs when the
+#                   commit actually touches the simulation layer, so the
+#                   verdict is always about *this* change.
+#
+#   okf-stale.ps1   ADVISORY. A document whose sources moved needs a human to
+#                   re-read it, which is not something a commit can be forced
+#                   to contain. Blocking here would mean every code change
+#                   drags a documentation review along with it, and the
+#                   predictable result is that the hook gets bypassed. So it
+#                   reports and lets the commit through.
+#
+# Bypass with `git commit --no-verify` when you genuinely mean to. The grep is
+# the mechanical subset of the determinism contract, not the whole of it, and
+# it can be wrong in ways a reader is not.
+#
+# Installed via core.hooksPath -- see scripts/hooks/README.md.
+
+set -e
+
+PS="powershell -NoProfile -ExecutionPolicy Bypass -File"
+
+# --- Blocking: simulation determinism guard -------------------------------
+# Only if this commit touches Simulation/. A docs-only commit has no business
+# being blocked by the state of code it did not modify.
+if git diff --cached --name-only --diff-filter=ACM | grep -q '^Assets/Scripts/Game/Simulation/.*\.cs$'; then
+    if ! $PS scripts/sim-guard.ps1; then
+        echo ""
+        echo "pre-commit: BLOCKED by the determinism guard."
+        echo "Fix the violations above, or bypass with --no-verify if you are certain."
+        exit 1
+    fi
+fi
+
+# --- Advisory: OKF document freshness -------------------------------------
+# Exit code ignored on purpose. See the note at the top.
+$PS scripts/okf-stale.ps1 || true
+
+exit 0

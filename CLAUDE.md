@@ -112,6 +112,26 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 - When uncertain about intent: ask once, clearly, then proceed
 - After `Simulation/` changes: flag which tests should be run
 
+## Automatic Guards
+
+Two checks run without being asked. Neither replaces the reading they point at.
+
+- **SessionStart** runs `scripts/okf-stale-hook.ps1`. It is silent when every
+  document is current, and injects the suspect list when one is not. A suspect
+  document is one whose sources moved after it was last verified — read it
+  against those sources before trusting it.
+- **pre-commit** (`scripts/hooks/`, enabled by
+  `git config core.hooksPath scripts/hooks`) blocks on
+  `scripts/sim-guard.ps1` when the commit touches `Simulation/`, and reports
+  `scripts/okf-stale.ps1` without blocking.
+
+`sim-guard.ps1` is the mechanical subset of `determinism-guard.md` — the items
+a regex can settle. Sort tiebreakers, tick order, hasher registration,
+command/serializer pairing and the view boundary are not in it and still need
+the checklist.
+
+Never stamp `verified:` or bump `verified_at_commit` on the user's behalf.
+
 ## Subagent Usage
 
 Do not spawn a subagent for work that would use 2 or fewer of them — the
