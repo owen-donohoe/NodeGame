@@ -69,6 +69,8 @@ Read the file, do not ask me to summarise it here.
 - `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
 - `docs/design-history/` — the v2.1 design document. Historical. Notion is
   authoritative for future work.
+- `docs/index.md` — OKF v0.2 bundle root. Entry point for the doc graph and its
+  freshness signal (`scripts/okf-stale.ps1`).
 
 ## Simulation Boundary — Non-Negotiable
 

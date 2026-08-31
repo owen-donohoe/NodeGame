@@ -33,8 +33,13 @@ Runs when I invoke `/update` and at no other time. Writing to Notion happens onl
   This is an ingestion gap, not a decision.
 - Work in Notion that the commits contradict → flag it. Do not delete, do not silently re-scope.
 - Update `Last Reviewed Commit` on the active phase to HEAD.
+- Run `powershell -File scripts/okf-stale.ps1` and report any newly-suspect documents. This is a
+  repo-side check and writes nothing to Notion.
 
 **Do not**, during an Update: create or restructure phases, edit a Shipped phase, rewrite a plan, or
 change anything I edited by hand. My edits are intentional; confirm before reverting any of them.
+Do not stamp `verified:` or bump `verified_at_commit` on any document — re-verification means
+reading the doc against its changed sources, which is a separate act from reconciling commits.
+Report what looks stale and let me decide.
 
 **Report:** what moved, what is blocked, what needs me. If nothing needs me, say so in one line.
