@@ -61,6 +61,15 @@ namespace NodeWar.Network
 
         public void Unpause()
         {
+            // Re-stamp the timing baselines. Initialize() runs before the
+            // post-draft transition, which can take longer than
+            // DISCONNECT_TIMEOUT; without this the first unpaused frame would
+            // see a stale lastReceiveTime and immediately report a disconnect.
+            float now = Time.time;
+            lastSendTime = now;
+            lastReceiveTime = now;
+            lastHeartbeatTime = now;
+
             paused = false;
         }
 
@@ -114,10 +123,23 @@ namespace NodeWar.Network
         private void Update()
         {
             if (simState == null || networkManager == null) return;
-            if (paused) return;
             if (simState.gameOver) return;
 
+            // Pump the transport even while paused. Keeps lastReceiveTime fresh
+            // and preserves any TickInput a peer sends if its transition
+            // finishes before ours -- inputs are keyed by forTick, so receiving
+            // them early loses nothing.
             ProcessIncomingPackets();
+
+            if (paused)
+            {
+                // Keep the link alive so the peer does not time out waiting on
+                // our transition. Deliberately no CheckDisconnect() while
+                // paused: a long transition is not a disconnect, and Unpause()
+                // re-baselines the timers anyway.
+                SendHeartbeatIfNeeded();
+                return;
+            }
 
             if (CheckDisconnect()) return;
 

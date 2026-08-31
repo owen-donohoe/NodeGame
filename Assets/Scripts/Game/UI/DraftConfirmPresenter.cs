@@ -44,7 +44,7 @@ namespace NodeWar.UI
         public void Show(Vector3 screenPosition)
         {
             // Position while inactive so layout system sees the correct position on first activation.
-            // Never call Canvas.ForceUpdateCanvases() here — it triggers synchronous layout callbacks
+            // Never call Canvas.ForceUpdateCanvases() here ï¿½ it triggers synchronous layout callbacks
             // that can call Hide() before the method returns.
             if (rectTransform != null)
                 rectTransform.position = screenPosition + new Vector3(0f, screenOffsetY, 0f);
@@ -58,7 +58,6 @@ namespace NodeWar.UI
 
         public void Hide()
         {
-            Debug.Log("[ConfirmPresenter] Hide() called\n" + System.Environment.StackTrace);
             activeTween?.Kill();
             activeTween = null;
             transform.localScale = Vector3.zero;
