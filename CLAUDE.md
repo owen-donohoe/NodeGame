@@ -160,4 +160,4 @@ procedure; there is no invocation syntax. Reference them by path:
 
 No trailing additions: "one more thing", "also worth noting", "before I finish",
 or similar. If something is important, say it once in the right place.
-A Stop hook enforces this. Treat it as strict.
+Nothing enforces this mechanically — treat it as strict anyway.
