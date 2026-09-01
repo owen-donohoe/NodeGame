@@ -3,12 +3,12 @@ type: Attested Computation
 title: Determinism baseline
 description: The sanctioned simulation fingerprint check — runs a known board for a known tick count and compares the state hash against a recorded baseline.
 tags: [determinism, testing, attested, simulation]
-runtime: unity-editmode
+runtime: [dotnet-test, unity-editmode]
 parameters:
   - { name: fixture, type: string, required: true }
   - { name: ticks, type: integer, required: true }
 executor:
-  resource: docs/skills/run-editmode-tests.md
+  resource: docs/skills/run-dotnet-tests.md
   receipt: [commit, fixture, ticks, state_hash, tests_passed]
 attester:
   resource: docs/attesters/hash_baseline.ps1
@@ -35,6 +35,12 @@ sources:
   - id: contract
     resource: docs/simulation-rules.md
     title: Simulation Determinism Contract
+  - id: build
+    resource: dotnet/NodeWar.Simulation/NodeWar.Simulation.csproj
+    title: The build definition the gate compiles the fixture through
+  - id: gate
+    resource: .github/workflows/determinism.yml
+    title: The CI job that runs this computation
 ---
 
 # Computation
@@ -59,6 +65,29 @@ node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`. That file is the computation;
 this document is its contract.
+
+## Where it runs
+
+Two runtimes execute this computation from one copy of the source, and they produce the same
+receipt:
+
+| Runtime | Executor | Needs Unity |
+|---|---|---|
+| `dotnet-test` | [../skills/run-dotnet-tests](../skills/run-dotnet-tests.md) | No |
+| `unity-editmode` | [../skills/run-editmode-tests](../skills/run-editmode-tests.md) | Yes, installed and licensed |
+
+`dotnet-test` is the declared executor because it is what the gate relies on: it needs no licence,
+runs on Linux, and always compiles before it runs. The Unity runners remain correct and answer a
+question the .NET one cannot — whether the code works in the Editor.
+
+`.github/workflows/determinism.yml` runs the `dotnet-test` executor on `ubuntu-latest` and
+`windows-latest` on every push and pull request, then runs the attester on each leg. Because the
+fixtures assert exact integers, two green legs assert something stronger than "the tests pass":
+that the fingerprints are identical across operating system and runtime. That is the property
+lockstep depends on, and nothing verified it before the gate existed.
+
+**A hash that differs between legs is a finding about the simulation, not a CI problem.** See
+*Re-pinning* below; the rule there is unchanged by having more than one runtime.
 
 ## What a caller may vary
 

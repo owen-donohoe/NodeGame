@@ -66,6 +66,10 @@ same failure mode as the documents it polices.
   it until the hook got bypassed. It also runs `scripts/sim-guard.ps1`, which **does** block, and
   only when the commit touches `Simulation/`. See `scripts/hooks/README.md`; install per clone
   with `git config core.hooksPath scripts/hooks`.
+* **CI** runs `.github/workflows/determinism.yml` on every push and pull request: `sim-guard.ps1`,
+  then the simulation suite, then `docs/attesters/hash_baseline.ps1` — on `ubuntu-latest` and
+  `windows-latest`. It **blocks**, and it is the only guard that blocks on determinism itself
+  rather than on the mechanical regex.
 * **`/audit`** runs the check as its step 0, so a chapter's plan is re-read against the code
   starting from the documents whose ground already moved.
 * **`/update`** reports it, and is explicitly forbidden from acting on it. Reconciling commits and
@@ -75,10 +79,15 @@ same failure mode as the documents it polices.
 items a regex can settle. Sort tiebreakers, tick order, hasher registration, command/serializer
 pairing and the view boundary are not in it and still need the checklist and a reader.
 
-`docs/attesters/hash_baseline.ps1` is **not** wired to anything. Running it means executing the
-simulation, which today means Unity, installed and licensed. That is tracked under the
-**Determinism CI gate** chapter and is unblocked by extracting `Simulation/` into a plain .NET
-assembly, not by anything in this bundle.
+`docs/attesters/hash_baseline.ps1` is now wired to that gate. Executing the simulation no longer
+means Unity: `dotnet/` holds hand-written .NET projects that compile the same sources under
+`Assets/` that Unity does, so the suite runs with no Editor and no licence. See
+[skills/run-dotnet-tests](skills/run-dotnet-tests.md).
+
+The matrix is the substantive part. The baselines assert exact integers, so two green legs assert
+that the simulation computes bit-identical results across operating systems and runtimes — the
+property lockstep depends on, and one nothing verified until the gate existed. A hash that differs
+between legs is a finding about the simulation, not a CI problem.
 
 ## Conventions used here
 
