@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The deterministic simulation layer, built as a plain .NET library from the
+    exact same files Unity compiles through
+    Assets/Scripts/Game/Simulation/NodeWar.Simulation.asmdef.
+
+    The source does not live here and must not be copied here. There is one
+    copy of the truth, in Assets/, and two toolchains compiling it.
+  -->
+
+  <PropertyGroup>
+    <!--
+      netstandard2.1 is load-bearing, not incidental. It is the API
+      Compatibility Level Unity builds this project at (its generated csproj
+      defines NETSTANDARD2_1). Targeting the same surface makes this build a
+      proof that the simulation stays inside Unity's API budget: reaching for a
+      net8.0-only API fails here, before Unity ever sees the commit.
+    -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>NodeWar.Simulation</AssemblyName>
+    <RootNamespace>NodeWar.Simulation</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Recursive glob, so a new file added to Simulation/ is picked up by both
+      build systems automatically. There is no second file list to keep in sync.
+    -->
+    <Compile Include="../../Assets/Scripts/Game/Simulation/**/*.cs"
+             Link="Simulation/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

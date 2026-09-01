@@ -105,5 +105,18 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
-# Test output from scripts/run-tests.ps1 -- results.xml and unity-test.log
+# Test output from scripts/run-tests.ps1 and dotnet test -- results.xml and unity-test.log
 /TestResults/
+
+# The hand-written .NET projects under dotnet/ ARE tracked. The *.csproj and
+# *.sln rules above exist to ignore the ones Unity regenerates at the repo root,
+# and those stay ignored. These negations work because the rules above exclude
+# files by extension rather than excluding the dotnet/ directory itself -- git
+# will not resurrect a file from inside an excluded directory.
+!dotnet/**/*.csproj
+!dotnet/NodeWar.sln
+
+# .NET build output. The /[Oo]bj/ and /[Bb]uild/ rules above are anchored to the
+# repo root and do not reach these.
+dotnet/**/bin/
+dotnet/**/obj/

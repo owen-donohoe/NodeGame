@@ -1,0 +1,35 @@
+<Project>
+
+  <!--
+    Shared settings for the hand-written .NET projects that compile the same
+    sources Unity does.
+
+    This file lives in dotnet/ and NOT at the repository root on purpose.
+    MSBuild walks upward from a project directory and applies the first
+    Directory.Build.props it finds; at the root it would also be picked up by
+    Unity's own generated Assembly-CSharp.csproj and friends.
+  -->
+
+  <PropertyGroup>
+    <!--
+      Unity pins C# 9 (see the LangVersion in its generated
+      NodeWar.Simulation.csproj). Matching it exactly is the point: these
+      projects compile the SAME source files, so anything the .NET build
+      accepts must also be something Unity's compiler accepts.
+    -->
+    <LangVersion>9.0</LangVersion>
+
+    <!--
+      Every source file is linked in from Assets/. Without this, the SDK's
+      default glob would also pick up any stray .cs dropped next to a project
+      file, which would join the .NET assembly while Unity never saw it. That
+      is exactly the drift this whole arrangement exists to prevent.
+    -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>
