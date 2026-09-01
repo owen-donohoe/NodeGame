@@ -306,6 +306,21 @@ namespace NodeWar.Core
             // Just play the startup animation, no countdown sequence
             if (transitionController != null)
                 transitionController.PlayNodeStartupWave(nodePresentations, state, boardConfig);
+
+            // PlayNodeStartupWave is animation only -- it deliberately raises no
+            // events, so OnStartupTransitionComplete never fires on this path and
+            // nothing else would ever unpause the runner. Without this the tick
+            // loop stays paused forever: commands enqueue and are never drained,
+            // and the whole simulation is frozen. The draft path gets here via
+            // PostDraftSequence instead.
+            //
+            // TODO: no test covers this. Both entry paths need to end with an
+            // unpaused runner, and only the draft one is exercised today -- which
+            // is why this went unnoticed. A test that drives each path and asserts
+            // tickCount advances would have caught it. Needs a seam first: Unpause()
+            // is reached through a MonoBehaviour and a DOTween animation, neither of
+            // which the EditMode suite can drive.
+            OnTransitionComplete();
         }
 
         // ===== UPDATE =====
