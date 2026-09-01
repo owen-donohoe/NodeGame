@@ -27,9 +27,16 @@
 
 .USAGE
     From anywhere:
-        powershell -File scripts\run-tests-live.ps1
-    or, from the project root in a PowerShell session:
-        .\scripts\run-tests-live.ps1
+        powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-tests-live.ps1
+
+    NOTE: -ExecutionPolicy Bypass is required, not decoration. Windows client
+    defaults to Restricted when no scope sets a policy, and PowerShell then
+    refuses to load this file at all ("running scripts is disabled on this
+    system") -- the run dies before the trigger file is ever written, so the
+    Editor never sees a request and this looks like a broken test suite rather
+    than a blocked launcher. Launching as .\scripts\run-tests-live.ps1 from an
+    interactive session hits the same wall unless that session's policy already
+    allows local scripts.
 #>
 
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path

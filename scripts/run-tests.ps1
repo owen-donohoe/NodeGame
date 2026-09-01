@@ -14,13 +14,18 @@
 
 .USAGE
     From anywhere:
-        powershell -File scripts\run-tests.ps1
-    or, from the project root in a PowerShell session:
-        .\scripts\run-tests.ps1
+        powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-tests.ps1
+
+    NOTE: -ExecutionPolicy Bypass is required, not decoration. Windows client
+    defaults to Restricted when no scope sets a policy, and PowerShell then
+    refuses to load this file at all ("running scripts is disabled on this
+    system") -- the run dies before Unity is reached. Launching as
+    .\scripts\run-tests.ps1 from an interactive session hits the same wall
+    unless that session's policy already allows local scripts.
 
     NOTE: Unity locks a project while it's open in the Editor. If you already
     have this project open, close it first -- otherwise this batch-mode run
-    will fail to acquire the project lock.
+    will fail to acquire the project lock. Use run-tests-live.ps1 instead.
 #>
 
 $UnityExe = "C:\Program Files\Unity\Hub\Editor\6000.5.9f1\Editor\Unity.exe"

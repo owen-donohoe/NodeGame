@@ -40,9 +40,18 @@ Unity locks a project to one process, so batch mode cannot run while the Editor 
 the only reason two runners exist.
 
 ```powershell
-powershell -File scripts\run-tests.ps1        # Editor closed
-powershell -File scripts\run-tests-live.ps1   # Editor open
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-tests.ps1        # Editor closed
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-tests-live.ps1   # Editor open
 ```
+
+`-ExecutionPolicy Bypass` is not optional and not a convenience. Windows client defaults to
+`Restricted` when no scope sets a policy, and under it PowerShell refuses to load a `.ps1` at all —
+the run dies before Unity is ever reached, with `running scripts is disabled on this system`. A
+machine that once worked can start refusing after a policy reset, which looks like the test suite
+breaking and is not. `scripts/hooks/pre-commit` and the `SessionStart` hook in
+`.claude/settings.json` already invoke every script this way; these two are the only entry points a
+human types, so they are the only ones a machine policy can stop. `-NoProfile` keeps a user profile
+from injecting state into a run whose output is meant to be a receipt.
 
 ## How the live runner reaches the Editor
 
