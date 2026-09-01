@@ -26,8 +26,12 @@
 
 $ErrorActionPreference = 'Stop'
 
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$ResultsFile = Join-Path $RepoRoot "TestResults\results.xml"
+# Forward slashes throughout: Windows accepts them, Linux requires them, and a
+# literal "\" in a path string is an ordinary filename character on Linux rather
+# than a separator. Join-Path's multi-segment form is PowerShell 6+, and this
+# script also runs under Windows PowerShell 5.1, so two arguments only.
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$ResultsFile = Join-Path $RepoRoot "TestResults/results.xml"
 $SimulationDir = "Assets/Scripts/Game/Simulation"
 
 # The cases the computation sanctions. Both must appear and both must pass.
@@ -166,8 +170,8 @@ else {
 # 8/8 passed against code whose real fingerprint had moved to a completely
 # different value. A receipt older than the sources is not evidence about them.
 $watchedDirs = @(
-    (Join-Path $RepoRoot "Assets\Scripts\Game\Simulation"),
-    (Join-Path $RepoRoot "Assets\Tests\EditMode\Tests")
+    (Join-Path $RepoRoot "Assets/Scripts/Game/Simulation"),
+    (Join-Path $RepoRoot "Assets/Tests/EditMode/Tests")
 )
 
 $newestSource = $null
