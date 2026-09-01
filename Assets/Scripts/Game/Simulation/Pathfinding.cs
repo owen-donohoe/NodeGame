@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using NodeWar.Simulation;
 
 namespace NodeWar.Simulation
 {

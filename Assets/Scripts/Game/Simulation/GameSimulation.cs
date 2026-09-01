@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
-using NodeWar.Simulation;
 
 namespace NodeWar.Simulation
 {
