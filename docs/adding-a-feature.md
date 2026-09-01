@@ -6,7 +6,7 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: f1aaba9
+verified_at_commit: e90548a
 status: stable
 sources:
   - id: sim-state
