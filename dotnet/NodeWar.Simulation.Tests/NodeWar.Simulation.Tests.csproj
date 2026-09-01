@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The EditMode test suite, run without Unity.
+
+    Same arrangement as the simulation project: the test sources stay in
+    Assets/Tests/EditMode/Tests/ and are linked in here, so Unity's Test Runner
+    and `dotnet test` execute the same files and cannot drift apart.
+  -->
+
+  <PropertyGroup>
+    <!-- The test host needs an executable framework; the library it tests stays on netstandard2.1. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>NodeWar.Simulation.Tests</AssemblyName>
+    <RootNamespace>NodeWar.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/Tests/EditMode/Tests/**/*.cs"
+             Link="Tests/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      NUnit stays on 3.x deliberately. NUnit 4 removed the classic assertion
+      model (Assert.AreEqual, Assert.IsNotNull, Assert.IsTrue) in favour of
+      Assert.That, and these tests are also compiled by Unity's Test Framework,
+      which ships NUnit 3. Upgrading here would break the Unity build of the
+      same files.
+    -->
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+
+    <!--
+      Emits NUnit3 XML rather than TRX, which is the receipt format
+      docs/attesters/hash_baseline.ps1 already parses.
+    -->
+    <PackageReference Include="NunitXml.TestLogger" Version="3.1.20" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+  </ItemGroup>
+
+</Project>

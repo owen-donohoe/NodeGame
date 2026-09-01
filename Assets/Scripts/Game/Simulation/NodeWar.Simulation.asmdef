@@ -1,3 +1,4 @@
 {
-    "name": "NodeWar.Simulation"
+    "name": "NodeWar.Simulation",
+    "noEngineReferences": true
 }

@@ -23,7 +23,11 @@
 
 .USAGE
         powershell -File scripts\sim-guard.ps1
-        powershell -File scripts\sim-guard.ps1 -Path Assets\Scripts\Game\Simulation
+        powershell -File scripts\sim-guard.ps1 -Path Assets/Scripts/Game/Simulation
+
+    Runs under Windows PowerShell 5.1 and under pwsh on Linux (the CI gate calls
+    it on both). Paths are written with forward slashes for that reason -- on
+    Linux a literal "\" is an ordinary filename character, not a separator.
 
     Run automatically by the pre-commit hook in scripts/hooks/, but only for
     commits that actually touch the simulation layer.
@@ -33,7 +37,7 @@
 #>
 
 param(
-    [string]$Path = "Assets\Scripts\Game\Simulation"
+    [string]$Path = "Assets/Scripts/Game/Simulation"
 )
 
 $ErrorActionPreference = 'Stop'

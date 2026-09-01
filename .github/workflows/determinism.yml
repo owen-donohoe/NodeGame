@@ -1,0 +1,69 @@
+name: determinism
+
+# The determinism gate. Runs the pinned-hash suite on every commit, on two
+# operating systems, with no Unity installation and no Unity licence.
+#
+# The matrix is the point. The tests assert exact integers rather than "it did
+# not crash", so two green legs are a statement that the simulation computes
+# bit-identical results on different operating systems and runtimes. That is
+# precisely the property lockstep depends on -- two peers on different builds
+# agreeing -- and until now nothing verified it.
+#
+# See docs/computations/determinism-baseline.md for the computation, and
+# docs/attesters/hash_baseline.ps1 for what turns a run into a verdict.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Do not cancel the other leg on failure: a hash that matches on one OS
+      # and not the other is the single most informative outcome this job can
+      # produce, and cancelling would hide half of it.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history is required, not cosmetic. hash_baseline.ps1 runs
+          # `git log -1 -- Assets/Scripts/Game/Simulation` to date the last
+          # simulation change; on a shallow clone that commit may be absent and
+          # the staleness check silently downgrades to "skipped".
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Cheap, and it catches the careless half before anything is compiled.
+      - name: Simulation determinism guard
+        shell: pwsh
+        run: ./scripts/sim-guard.ps1
+
+      - name: Run the simulation suite
+        shell: pwsh
+        run: >
+          dotnet test dotnet/NodeWar.sln
+          --configuration Release
+          --logger "nunit;LogFilePath=${{ github.workspace }}/TestResults/results.xml"
+
+      # Passing tests are a claim. This is what turns the claim into a verdict:
+      # both sanctioned cases present and passed, and the receipt newer than the
+      # code it claims to cover.
+      - name: Attest the determinism baseline
+        shell: pwsh
+        run: ./docs/attesters/hash_baseline.ps1
+
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-receipt-${{ matrix.os }}
+          path: TestResults/results.xml
+          if-no-files-found: warn

@@ -71,6 +71,9 @@ Read the file, do not ask me to summarise it here.
   authoritative for future work.
 - `docs/index.md` — OKF v0.2 bundle root. Entry point for the doc graph and its
   freshness signal (`scripts/okf-stale.ps1`).
+- `docs/skills/run-dotnet-tests.md` — running the simulation suite without Unity
+  (`dotnet test dotnet/NodeWar.sln`). The projects in `dotnet/` compile the same
+  sources under `Assets/` that Unity does; there is one copy of the source.
 
 ## Simulation Boundary — Non-Negotiable
 
@@ -114,7 +117,7 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 
 ## Automatic Guards
 
-Two checks run without being asked. Neither replaces the reading they point at.
+Three checks run without being asked. None replaces the reading they point at.
 
 - **SessionStart** runs `scripts/okf-stale-hook.ps1`. It is silent when every
   document is current, and injects the suspect list when one is not. A suspect
@@ -124,6 +127,12 @@ Two checks run without being asked. Neither replaces the reading they point at.
   `git config core.hooksPath scripts/hooks`) blocks on
   `scripts/sim-guard.ps1` when the commit touches `Simulation/`, and reports
   `scripts/okf-stale.ps1` without blocking.
+- **CI** (`.github/workflows/determinism.yml`) runs `sim-guard.ps1`, the
+  simulation suite, and `docs/attesters/hash_baseline.ps1` on Linux and Windows
+  for every push and PR. It blocks. Two green legs assert the pinned
+  fingerprints are identical across OS and runtime — the property lockstep
+  depends on. **A hash that differs between legs is a finding about the
+  simulation, not a CI problem; never re-pin a baseline to make it green.**
 
 `sim-guard.ps1` is the mechanical subset of `determinism-guard.md` — the items
 a regex can settle. Sort tiebreakers, tick order, hasher registration,
