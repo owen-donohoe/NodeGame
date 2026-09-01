@@ -4,6 +4,7 @@ title: Run the simulation suite without Unity
 description: How to run Assets/Tests/EditMode/ through the plain .NET projects in dotnet/, the receipt it produces, and why this is the runner CI uses.
 tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified_at_commit: fc94a0f
 status: draft
 sources:
   - id: solution

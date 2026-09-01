@@ -4,7 +4,7 @@ title: Run the EditMode test suite
 description: The two ways to run Assets/Tests/EditMode/, when each applies, and the TestResults/results.xml receipt both produce.
 tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: bc701d1
+verified_at_commit: fc94a0f
 status: stable
 sources:
   - id: batch-runner
