@@ -171,6 +171,25 @@ namespace NodeWar.UI
         /// the two-state rule allows only "moved to clear the panel" or "did
         /// not", and peeking un-occluding the node must not start a chase.
         /// </summary>
+        /// <summary>
+        /// Springs the sheet back to whichever state it is logically in, after
+        /// a drag that did not go far enough to dismiss.
+        ///
+        /// The sheet's transform can be moved directly by a swipe, so its
+        /// position and its state can disagree; this resolves that in favour of
+        /// the state.
+        /// </summary>
+        public void ReturnToRestingPosition()
+        {
+            if (!isOpen)
+            {
+                SlideTo(HiddenPosition, Ease.InCubic);
+                return;
+            }
+
+            SlideTo(isPeeking ? PeekPosition : OpenPosition, slideEase);
+        }
+
         private void CollapseToPeek()
         {
             if (!isOpen || isPeeking || !useBottomSheet) return;

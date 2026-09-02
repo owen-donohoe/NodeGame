@@ -68,6 +68,28 @@ namespace NodeWar.Input
         private bool gestureRouted = false;
 
         /// <summary>
+        /// Whether this villager can be selected at all: ours, alive, not
+        /// consumed.
+        ///
+        /// Public because the gesture source uses it to decide whether a
+        /// villager is even a tap target. An opponent's villager is not one --
+        /// the raycast falls through it to the node underneath, so an enemy
+        /// standing on your node does not block the node.
+        /// </summary>
+        public bool IsSelectable(int villagerID)
+        {
+            if (simState == null) return false;
+            if (villagerID < 0 || villagerID >= simState.villagers.Length) return false;
+
+            VillagerData v = simState.villagers[villagerID];
+            if (v.ownerID != localPlayerID) return false;
+            if (v.state == VillagerState.Dead) return false;
+            if (v.isConsumed) return false;
+
+            return true;
+        }
+
+        /// <summary>
         /// Replaces the selection with a single villager. Returns false if the
         /// villager is not selectable -- not ours, dead, or consumed -- and
         /// leaves the selection untouched so the caller can decide what a tap
@@ -78,13 +100,7 @@ namespace NodeWar.Input
         /// </summary>
         public bool SelectSingle(int villagerID)
         {
-            if (simState == null) return false;
-            if (villagerID < 0 || villagerID >= simState.villagers.Length) return false;
-
-            VillagerData v = simState.villagers[villagerID];
-            if (v.ownerID != localPlayerID) return false;
-            if (v.state == VillagerState.Dead) return false;
-            if (v.isConsumed) return false;
+            if (!IsSelectable(villagerID)) return false;
 
             selectedVillagerIDs.Clear();
             selectedVillagerIDs.Add(villagerID);

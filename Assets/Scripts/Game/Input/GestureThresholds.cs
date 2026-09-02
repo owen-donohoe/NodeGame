@@ -16,10 +16,14 @@ namespace NodeWar.Input
     {
         [Header("Movement (millimetres)")]
         [Tooltip("How far the pointer may travel and still count as a tap. " +
-                 "Below the jitter of a deliberate press; above this the gesture " +
-                 "becomes a pan and any pending selection is cancelled.")]
-        [Range(0.5f, 6f)]
-        public float tapSlopMm = 2.0f;
+                 "Above this the gesture becomes a pan and any pending selection " +
+                 "is cancelled. Raise it if taps are being read as pans.")]
+        [Range(0.5f, 10f)]
+        // Widened from 2.0mm after play. 2mm is about the jitter of a
+        // deliberate press on a mouse; a thumb on glass rolls further than
+        // that, and losing a tap to a 2mm wobble is far more annoying than a
+        // pan needing a slightly more committed drag.
+        public float tapSlopMm = 4.0f;
 
         [Tooltip("Minimum spacing between recorded lasso points. Kept below " +
                  "tapSlop so the polygon still tracks a tight curve, while " +

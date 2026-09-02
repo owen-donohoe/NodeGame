@@ -101,6 +101,19 @@ namespace NodeWar.Input
         /// </summary>
         public bool PanSuppressed => state == GestureState.LassoArmed || state == GestureState.Lassoing;
 
+        private System.Func<int, bool> villagerFilter;
+
+        /// <summary>
+        /// Decides whether a villager is a tap target at all. Supplied rather
+        /// than implemented here so the input layer does not need to know what
+        /// makes a villager selectable -- SelectionSystem owns that rule and
+        /// this only asks it.
+        /// </summary>
+        public void SetVillagerFilter(System.Func<int, bool> filter)
+        {
+            villagerFilter = filter;
+        }
+
         public void Initialize(Camera camera)
         {
             cam = camera != null ? camera : Camera.main;
@@ -305,7 +318,17 @@ namespace NodeWar.Input
             {
                 var villager = hit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
                 if (villager != null)
-                    return new GestureTarget(GestureTargetKind.Villager, villager.GetVillagerID(), screenPos);
+                {
+                    int id = villager.GetVillagerID();
+
+                    // An opponent's villager is not a tap target, so the press
+                    // falls through to the node beneath rather than being
+                    // swallowed. Otherwise an enemy standing on your node would
+                    // block you from opening it -- and their touch targets are
+                    // finger-sized, so they cover a lot of board.
+                    if (villagerFilter == null || villagerFilter(id))
+                        return new GestureTarget(GestureTargetKind.Villager, id, screenPos);
+                }
             }
 
             if (Physics.Raycast(ray, out hit, raycastDistance, nodeMask))
