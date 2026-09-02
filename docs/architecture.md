@@ -81,6 +81,13 @@ desyncs/disconnects.
 `GameCommand`s queued for the next tick. Never mutates `SimulationState`
 directly.
 
+Exactly one component reads a pointer device: `PointerGestureSource`. It
+resolves a press once into a tap, a pan or a long-press lasso, raycasts
+once for what was under it, and publishes the outcome. Everything else in
+this layer consumes that outcome rather than polling input itself.
+Thresholds are authored in millimetres and converted against screen
+density, so they mean the same thing to a finger on any device.
+
 **6. UI/** — HUD, panels, menus during a match. Reads `SimulationState` to
 render; writes nothing to it.
 
@@ -91,8 +98,14 @@ writes nothing to it.
 ## Information flow
 
 ```
-Player input (mouse/keyboard)  or  BotPlayer
+Pointer (mouse / touch)        or  BotPlayer
         │
+        ▼
+ PointerGestureSource                   (Input/)
+        │  one press -> tap | pan | lasso, resolved once
+        ▼
+ TapRouter / SelectionSystem            (Input/)
+        │  decides what the gesture meant; tracks selection
         ▼
    CommandSystem / BotPlayer            (Input/)
         │  produces GameCommand
@@ -200,22 +213,41 @@ Two objects are carried across the Lobby → Gameplay scene load via
   placement, loadout).
 
 **Input/**
-- `SelectionSystem` — tracks selected villagers.
+- `PointerGestureSource` — the only device reader. Resolves a press into a
+  tap, pan or long-press lasso and publishes it.
+- `TapRouter` — the tap priority ladder: villager, then node-with-selection
+  (move), then node (panel), then empty (clear).
+- `SelectionSystem` — tracks selected villagers; applies lasso results.
 - `CommandSystem` — turns player actions into `GameCommand`s.
 - `InputBuffer` — queue of commands awaiting the next tick.
 - `BotPlayer` — generates commands for an AI-controlled side.
+- `HitFlashRouter` — the single bridge from gesture events to renderers,
+  so the input layer never touches a `SpriteRenderer` itself.
+- `LassoGeometry` / `ScreenMetrics` / `GestureThresholds` — pure helpers:
+  polygon containment and smoothing, millimetre-to-pixel conversion, and
+  the tunable thresholds.
 
 **UI/**
 - `HUDManager` — top-level in-match HUD.
 - `NodePanelManager` — per-node detail/action panel.
 - `DraftUI` — draft-phase interface.
 - `GameOverPanel` — end-of-match result display.
+- `SelectionLasso` — draws the in-progress lasso stroke.
+- `LassoArmedCue` — ring pulse confirming the long press armed.
+- `SafeAreaFitter` — insets a rect to `Screen.safeArea`; the only reader
+  of it in the project.
 
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
   villager slotting on a node.
 - `VillagerView` — villager visuals and movement interpolation.
 - `NodeClaimBar`, `VillagerHealthRing` — world-space status indicators.
+- `NodeHighlight` — the expanding ring used for move-order destinations
+  and, configured smaller, for the lasso-armed cue.
+- `VillagerTouchTarget` — constant-screen-size tap collider, built at
+  runtime so the villager prefab needs no edit.
+- `VillagerFlash` — touch-down white flash amount, composed over the
+  per-state tint by `VillagerView`.
 
 ## Networking model
 
