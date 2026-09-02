@@ -183,6 +183,44 @@ namespace NodeWar.UI
 
         private NodeWar.Input.PointerGestureSource gestureSource;
 
+        private NodeWar.Core.CameraController cameraController;
+        private NodeWar.View.NodeView[] nodeViews;
+
+        public void SetCameraController(NodeWar.Core.CameraController controller)
+        {
+            cameraController = controller;
+        }
+
+        /// <summary>Node views by ID, so the panel can locate the node it is covering.</summary>
+        public void SetNodeViews(NodeWar.View.NodeView[] views)
+        {
+            nodeViews = views;
+        }
+
+        /// <summary>
+        /// The panel's rect in screen pixels.
+        ///
+        /// Read at call time, never cached. The panel's height varies with its
+        /// content, and caching a size at Initialize is exactly the bug the old
+        /// panelWidth field was -- a value read once from a rect that changes
+        /// later. On a Screen Space Overlay canvas the world corners are
+        /// already screen coordinates.
+        /// </summary>
+        private Rect GetPanelScreenRect()
+        {
+            if (panelRect == null) return Rect.zero;
+
+            Vector3[] corners = new Vector3[4];
+            panelRect.GetWorldCorners(corners);
+
+            float minX = Mathf.Min(corners[0].x, corners[2].x);
+            float maxX = Mathf.Max(corners[0].x, corners[2].x);
+            float minY = Mathf.Min(corners[0].y, corners[2].y);
+            float maxY = Mathf.Max(corners[0].y, corners[2].y);
+
+            return new Rect(minX, minY, maxX - minX, maxY - minY);
+        }
+
         private void HandleLassoBegin(Vector2 _)
         {
             if (isOpen) ClosePanel();
@@ -203,7 +241,19 @@ namespace NodeWar.UI
             if (simState == null) return;
             if (nodeID < 0 || nodeID >= simState.nodes.Length) return;
 
-            if (simState.nodes[nodeID].ownerID == -1)
+            NodeData node = simState.nodes[nodeID];
+
+            // Unclaimed: nothing to show and nothing to act on.
+            if (node.ownerID == -1)
+            {
+                if (isOpen) ClosePanel();
+                return;
+            }
+
+            // Informational districts never open a sheet. This is what makes an
+            // open panel mean "there is something to press" -- a farm's state
+            // belongs on the farm, not behind a sheet that covers the board.
+            if (!DistrictPanelPolicy.IsFunctional(node.districtType))
             {
                 if (isOpen) ClosePanel();
                 return;
@@ -264,6 +314,31 @@ namespace NodeWar.UI
                 slideTween?.Kill();
                 slideTween = panelRect.DOAnchorPosX(0f, slideDuration).SetEase(slideEase);
             }
+
+            RequestCameraClearance(nodeID);
+        }
+
+        /// <summary>
+        /// Asks the camera to lift the node clear of the panel, but only if the
+        /// panel actually covers it. A node already visible beside or above the
+        /// sheet does not move the camera at all.
+        ///
+        /// The layout is rebuilt synchronously first: content was instantiated
+        /// moments ago and Unity would not resolve its size until end of frame,
+        /// so the occlusion test would otherwise run against a stale rect.
+        /// </summary>
+        private void RequestCameraClearance(int nodeID)
+        {
+            if (cameraController == null) return;
+            if (nodeViews == null || nodeID < 0 || nodeID >= nodeViews.Length) return;
+
+            NodeWar.View.NodeView view = nodeViews[nodeID];
+            if (view == null) return;
+
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+
+            cameraController.BeginFocusSession();
+            cameraController.FocusToClearPanel(view.transform.position, GetPanelScreenRect());
         }
 
         public void ClosePanel()
@@ -271,6 +346,11 @@ namespace NodeWar.UI
             if (!isOpen) return;
             isOpen = false;
             currentNodeID = -1;
+
+            // Returns to the pre-focus position, but only if the player never
+            // panned. Manual input is never undone automatically.
+            if (cameraController != null)
+                cameraController.EndFocusSession();
 
             slideTween?.Kill();
             slideTween = panelRect.DOAnchorPosX(panelWidth, slideDuration)
@@ -326,28 +406,34 @@ namespace NodeWar.UI
             }
         }
 
+        /// <summary>
+        /// Only functional districts reach here -- OpenForNode filters the rest
+        /// -- so this maps the six that have an action. Three prefabs cover
+        /// them: the four equip districts share one.
+        ///
+        /// farmContentPrefab, mineContentPrefab and genericContentPrefab are no
+        /// longer reached. They are left assigned rather than removed because
+        /// the fields are wired in UI_Manager.prefab, and clearing them is
+        /// Editor work; see the branch notes before deleting.
+        /// </summary>
         private GameObject GetContentPrefab(DistrictType type)
         {
             switch (type)
             {
-
-
-                case DistrictType.Farm: return farmContentPrefab;
-                case DistrictType.Mine: return mineContentPrefab;
                 case DistrictType.Forge: return forgeContentPrefab;
                 case DistrictType.Core: return coreContentPrefab;
+
                 case DistrictType.Barracks:
                 case DistrictType.Camp:
                 case DistrictType.Arsenal:
                 case DistrictType.Sanctuary:
                     return barracksContentPrefab;
-                case DistrictType.Market:
-                    return farmContentPrefab;
-                case DistrictType.Watchtower:
-                case DistrictType.Rampart:
-                case DistrictType.Shrine:
+
+                default:
+                    // Unreachable via OpenForNode. Kept as a safety net for the
+                    // legacy click path rather than returning null and
+                    // Instantiate throwing.
                     return genericContentPrefab;
-                default: return genericContentPrefab;
             }
         }
 

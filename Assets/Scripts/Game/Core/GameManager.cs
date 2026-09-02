@@ -550,6 +550,8 @@ namespace NodeWar.Core
             {
                 nodePanelManager.SetGestureRouted(true);
                 nodePanelManager.SetGestureSource(gestureSource);
+                nodePanelManager.SetCameraController(cameraController);
+                nodePanelManager.SetNodeViews(nodeViews);
             }
         }
 

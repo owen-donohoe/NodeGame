@@ -129,6 +129,7 @@ namespace NodeWar.Core
             HandleDragInput();
             HandleZoomInput();
             HandleDraftScroll();
+            ApplyFocus();
             ApplyMomentum();
             ApplyZoom();
             ApplyBounds();
@@ -149,6 +150,11 @@ namespace NodeWar.Core
                 isDragging = true;
                 lastMouseWorldPos = GetMouseWorldPosition(mouse);
                 panVelocity = Vector3.zero;
+
+                // Any manual pan cancels the automatic return on dismissal.
+                // A focus tween in flight is abandoned rather than fought.
+                isFocusing = false;
+                NotifyManualPan();
             }
 
             if (mouse.middleButton.isPressed && isDragging)
@@ -188,6 +194,10 @@ namespace NodeWar.Core
 
         private void ApplyMomentum()
         {
+            // The focus tween owns transform.position while it runs. Two
+            // writers in one frame is how a focus move ends with a visible
+            // slide, so momentum yields rather than blending.
+            if (isFocusing) return;
             if (isDragging) return;
             if (panVelocity.sqrMagnitude < 0.0001f) return;
 
@@ -233,6 +243,12 @@ namespace NodeWar.Core
         private void ApplyBounds()
         {
             if (!useBounds || boardConfig == null) return;
+
+            // The spring would fight the focus tween and drag the camera back
+            // after it lands, turning "one short motion" into a motion plus a
+            // slide. Focus targets are clamped into bounds before the tween
+            // starts (see ClampToBounds), so suspending it here is safe.
+            if (isFocusing) return;
 
             Vector3 pos = transform.position;
 
@@ -306,6 +322,194 @@ namespace NodeWar.Core
             rotOffset.z = Mathf.Clamp(rotOffset.z, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
 
             cam.transform.localRotation = Quaternion.Euler(rotOffset);
+        }
+
+        // ===== FOCUS =====
+        //
+        // The camera moves for exactly one reason: the selected node would sit
+        // behind the panel. Two states, one rule -- either it moved to clear the
+        // sheet or it did not. There is no averaged position between them.
+
+        [Header("Focus")]
+        [Tooltip("Duration of the move that clears the panel. Short enough to " +
+                 "read as one motion rather than a journey.")]
+        [SerializeField] private float focusDuration = 0.28f;
+
+        [Tooltip("Extra gap above the panel edge, in screen pixels, so the node " +
+                 "clears it rather than touching it.")]
+        [SerializeField] private float focusMarginPx = 48f;
+
+        private bool isFocusing;
+        private Vector3 focusFrom;
+        private Vector3 focusTo;
+        private float focusElapsed;
+
+        // Session state. A session spans one selection: it opens when a panel
+        // opens and closes when it dismisses.
+        private bool sessionActive;
+        private Vector3 sessionReturnPosition;
+        private bool sessionPanDirty;
+
+        /// <summary>
+        /// True once the player has panned during the current session. Manual
+        /// input is never undone, so this decides whether dismissal restores
+        /// the previous position or leaves the camera where they put it.
+        /// </summary>
+        public bool SessionPanDirty => sessionPanDirty;
+
+        /// <summary>
+        /// Marks the current session as manually panned. Called by any
+        /// player-initiated camera movement -- including a notification tap,
+        /// which is an instruction, not an automatic move.
+        /// </summary>
+        public void NotifyManualPan()
+        {
+            if (sessionActive) sessionPanDirty = true;
+        }
+
+        /// <summary>
+        /// Captures the position to return to. Taken before any focus move and
+        /// only once per session, so a second selection inside the same session
+        /// cannot overwrite the origin with an already-focused position.
+        /// </summary>
+        public void BeginFocusSession()
+        {
+            if (sessionActive) return;
+
+            sessionActive = true;
+            sessionPanDirty = false;
+
+            // Momentum is zeroed first so the captured origin is where the
+            // camera actually rests, not a point it is still drifting through.
+            panVelocity = Vector3.zero;
+            sessionReturnPosition = transform.position;
+        }
+
+        /// <summary>
+        /// Ends the session. Returns to the captured position only if the
+        /// player never panned; if they did, the camera stays where they left
+        /// it.
+        /// </summary>
+        public void EndFocusSession()
+        {
+            if (!sessionActive) return;
+
+            bool shouldReturn = !sessionPanDirty;
+            sessionActive = false;
+            sessionPanDirty = false;
+
+            if (shouldReturn) StartFocusTween(sessionReturnPosition);
+        }
+
+        /// <summary>
+        /// Moves the camera only far enough to lift a world point clear of a
+        /// panel occupying the bottom <paramref name="panelHeightPx"/> pixels.
+        /// A point already above that band does not move the camera at all.
+        ///
+        /// The delta needs no basis maths. Project the point to the screen, ask
+        /// where the ground sits under it and under the position it should end
+        /// up at, and take the difference: moving the rig by (A - B) puts the
+        /// world point at A onto the screen position that currently shows B.
+        /// The pivot's yaw and pitch are already baked into both rays, so there
+        /// is no rotation to decompose and no chance of getting that wrong.
+        /// </summary>
+        public void FocusToClearPanel(Vector3 worldPos, Rect panelScreenRect)
+        {
+            if (cam == null || isDraftMode) return;
+
+            Vector3 screenPos = cam.WorldToScreenPoint(worldPos);
+
+            // Behind the camera: the projection is mirrored and any delta from
+            // it would move the wrong way. Centre instead.
+            if (screenPos.z < 0f)
+            {
+                StartFocusTween(worldPos);
+                return;
+            }
+
+            // Rect rather than a bottom band, so the test is correct whatever
+            // edge the panel is anchored to. A node beside the panel is not
+            // occluded by it and must not move the camera.
+            if (!panelScreenRect.Contains(new Vector2(screenPos.x, screenPos.y)))
+                return;
+
+            float clearY = panelScreenRect.yMax + focusMarginPx;
+            float needed = clearY - screenPos.y;
+
+            // Already clear. Requirement is explicit that this does nothing.
+            if (needed <= 0f) return;
+
+            Vector2 from = new Vector2(screenPos.x, screenPos.y);
+            Vector2 to = new Vector2(screenPos.x, screenPos.y + needed);
+
+            Vector3 groundFrom = ScreenToGroundPoint(from);
+            Vector3 groundTo = ScreenToGroundPoint(to);
+
+            Vector3 delta = groundFrom - groundTo;
+            delta.y = 0f;
+
+            StartFocusTween(transform.position + delta);
+        }
+
+        private void StartFocusTween(Vector3 target)
+        {
+            focusFrom = transform.position;
+            focusTo = ClampToBounds(target);
+            focusTo.y = transform.position.y;
+            focusElapsed = 0f;
+            isFocusing = true;
+
+            // Momentum would otherwise resume the instant the tween ends.
+            panVelocity = Vector3.zero;
+        }
+
+        private void ApplyFocus()
+        {
+            if (!isFocusing) return;
+
+            focusElapsed += Time.deltaTime;
+
+            float t = focusDuration <= 0f ? 1f : Mathf.Clamp01(focusElapsed / focusDuration);
+
+            // Smoothstep: eased at both ends so it reads as one motion rather
+            // than a snap that decelerates.
+            float eased = t * t * (3f - 2f * t);
+
+            transform.position = Vector3.Lerp(focusFrom, focusTo, eased);
+
+            if (t >= 1f)
+            {
+                transform.position = focusTo;
+                isFocusing = false;
+            }
+        }
+
+        /// <summary>
+        /// Clamps a focus target inside the board bounds so the spring has
+        /// nothing to correct when the tween lands.
+        /// </summary>
+        private Vector3 ClampToBounds(Vector3 position)
+        {
+            if (!useBounds || boardConfig == null) return position;
+
+            position.x = Mathf.Clamp(position.x, boardConfig.boundsMinX, boardConfig.boundsMaxX);
+            position.z = Mathf.Clamp(position.z, boardConfig.boundsMinZ, boardConfig.boundsMaxZ);
+            return position;
+        }
+
+        /// <summary>
+        /// True if a world point projects inside the viewport, inset by a
+        /// normalised margin. Used by off-screen notification indicators.
+        /// </summary>
+        public bool IsPointOnScreen(Vector3 worldPos, float viewportMargin)
+        {
+            if (cam == null) return false;
+
+            Vector3 vp = cam.WorldToViewportPoint(worldPos);
+            if (vp.z < 0f) return false;
+
+            return vp.x >= viewportMargin && vp.x <= 1f - viewportMargin
+                && vp.y >= viewportMargin && vp.y <= 1f - viewportMargin;
         }
 
         // ===== PUBLIC API =====
@@ -459,7 +663,21 @@ namespace NodeWar.Core
         /// </summary>
         private Vector3 GetMouseWorldPosition(Mouse mouse)
         {
-            Vector2 screenPos = mouse.position.ReadValue();
+            return ScreenToGroundPoint(mouse.position.ReadValue());
+        }
+
+        /// <summary>
+        /// Raycast from any screen position to the XZ ground plane (Y=0).
+        ///
+        /// Generalised from the mouse-only version because the focus rule needs
+        /// it for two arbitrary screen points. Every projection in this file
+        /// goes through here, so the degenerate cases -- a ray parallel to the
+        /// plane, and a plane behind the camera -- are handled once.
+        /// </summary>
+        public Vector3 ScreenToGroundPoint(Vector2 screenPos)
+        {
+            if (cam == null) return transform.position;
+
             Ray ray = cam.ScreenPointToRay(screenPos);
 
             if (Mathf.Abs(ray.direction.y) < 0.0001f)
