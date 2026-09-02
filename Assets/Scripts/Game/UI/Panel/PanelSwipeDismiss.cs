@@ -130,9 +130,11 @@ namespace NodeWar.UI
                 float draggedDown = dragStartY - eventData.position.y;
                 bool committed = draggedDown >= distancePx || velocityPxPerSec <= -velocityPx;
 
-                // Animates from wherever the sheet currently sits, so the
-                // dismissal continues the drag rather than snapping back first.
-                if (committed) panel.ClosePanel();
+                // Swiping away leaves the handle reachable, unlike the close
+                // button, which means closed. Animates from wherever the sheet
+                // currently sits, so it continues the drag rather than snapping
+                // back first.
+                if (committed) panel.DismissToHandle();
                 else panel.ReturnToRestingPosition();
 
                 return;

@@ -150,25 +150,29 @@ namespace NodeWar.UI
                 : new Vector2(0f, panelRect.anchoredPosition.y);
 
         /// <summary>
-        /// Dismissed, but with the grab handle left on screen so the sheet can
-        /// be pulled back up.
+        /// Gone. Nothing left on screen.
         ///
-        /// Fully hidden until a panel has been opened at least once -- a handle
-        /// for a sheet that has never had contents is an affordance that leads
-        /// nowhere, and it would sit on the board from the first frame of the
-        /// match.
+        /// Closing and swiping away are different intents and were briefly the
+        /// same position, which made every close after the first stop short and
+        /// look like it had failed. Close means closed.
         /// </summary>
-        private Vector2 HiddenPosition
-        {
-            get
-            {
-                if (!useBottomSheet)
-                    return new Vector2(panelWidth, panelRect.anchoredPosition.y);
+        private Vector2 HiddenPosition =>
+            useBottomSheet
+                ? new Vector2(0f, -CurrentHeight)
+                : new Vector2(panelWidth, panelRect.anchoredPosition.y);
 
-                float visible = lastNodeID >= 0 ? handleRestHeight : 0f;
-                return new Vector2(0f, -(CurrentHeight - visible));
-            }
-        }
+        /// <summary>
+        /// Swiped away, with the grab handle left on screen so the sheet can be
+        /// pulled back up. Only a swipe rests here -- the close button, a tap
+        /// on empty ground and game over all hide it completely.
+        /// </summary>
+        private Vector2 HandleRestPosition =>
+            useBottomSheet
+                ? new Vector2(0f, -(CurrentHeight - handleRestHeight))
+                : HiddenPosition;
+
+        /// <summary>True while the sheet is parked at the handle rather than fully hidden.</summary>
+        private bool handleResting;
 
         /// <summary>
         /// The node whose panel was last shown. Kept after dismissal so pulling
@@ -219,7 +223,10 @@ namespace NodeWar.UI
         {
             if (!isOpen)
             {
-                SlideTo(HiddenPosition, Ease.InCubic);
+                // Back to whichever dismissed state it was in, not always the
+                // fully hidden one -- a cancelled upward drag from the handle
+                // must leave the handle where it was.
+                SlideTo(handleResting ? HandleRestPosition : HiddenPosition, Ease.InCubic);
                 return;
             }
 
@@ -517,6 +524,7 @@ namespace NodeWar.UI
             {
                 isOpen = true;
                 isPeeking = false;
+                handleResting = false;
 
                 // Height must be resolved before the target is computed, or the
                 // sheet slides to an offset derived from the previous content.
@@ -578,10 +586,29 @@ namespace NodeWar.UI
             cameraController.FocusToClearPanel(view.transform.position, panelScreen);
         }
 
+        /// <summary>
+        /// Closes the sheet completely. The close button, a tap on empty
+        /// ground, Escape and game over all end here.
+        /// </summary>
         public void ClosePanel()
+        {
+            Dismiss(HiddenPosition, restingAtHandle: false);
+        }
+
+        /// <summary>
+        /// Puts the sheet away but leaves the grab handle on screen, so an
+        /// upward drag can bring it back. Only a downward swipe ends here.
+        /// </summary>
+        public void DismissToHandle()
+        {
+            Dismiss(HandleRestPosition, restingAtHandle: true);
+        }
+
+        private void Dismiss(Vector2 target, bool restingAtHandle)
         {
             if (!isOpen) return;
             isOpen = false;
+            handleResting = restingAtHandle;
 
             // Remembered so the handle has something to restore. currentNodeID
             // is cleared because no panel is showing; lastNodeID is what the
@@ -596,7 +623,7 @@ namespace NodeWar.UI
 
             isPeeking = false;
 
-            SlideTo(HiddenPosition, Ease.InCubic)
+            SlideTo(target, Ease.InCubic)
                 .OnComplete(() =>
                 {
                     if (currentContent != null)
