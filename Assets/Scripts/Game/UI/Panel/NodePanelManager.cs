@@ -50,6 +50,11 @@ namespace NodeWar.UI
                  "header strip and a grab handle.")]
         [SerializeField] private float peekHeight = 72f;
 
+        [Tooltip("How much of the sheet stays on screen after it is dismissed, " +
+                 "in pixels. The grab handle lives in this strip, so the sheet " +
+                 "can be pulled back up. Zero hides it completely.")]
+        [SerializeField] private float handleRestHeight = 40f;
+
         [Header("Debug")]
         [Tooltip("Logs why the camera did or did not move when a panel opens.")]
         [SerializeField] private bool verbosePanelLogging = false;
@@ -144,10 +149,41 @@ namespace NodeWar.UI
                 ? new Vector2(0f, 0f)
                 : new Vector2(0f, panelRect.anchoredPosition.y);
 
-        private Vector2 HiddenPosition =>
-            useBottomSheet
-                ? new Vector2(0f, -CurrentHeight)
-                : new Vector2(panelWidth, panelRect.anchoredPosition.y);
+        /// <summary>
+        /// Dismissed, but with the grab handle left on screen so the sheet can
+        /// be pulled back up.
+        ///
+        /// Fully hidden until a panel has been opened at least once -- a handle
+        /// for a sheet that has never had contents is an affordance that leads
+        /// nowhere, and it would sit on the board from the first frame of the
+        /// match.
+        /// </summary>
+        private Vector2 HiddenPosition
+        {
+            get
+            {
+                if (!useBottomSheet)
+                    return new Vector2(panelWidth, panelRect.anchoredPosition.y);
+
+                float visible = lastNodeID >= 0 ? handleRestHeight : 0f;
+                return new Vector2(0f, -(CurrentHeight - visible));
+            }
+        }
+
+        /// <summary>
+        /// The node whose panel was last shown. Kept after dismissal so pulling
+        /// the handle back up restores that panel rather than nothing.
+        /// </summary>
+        private int lastNodeID = -1;
+
+        public bool IsOpen => isOpen;
+
+        /// <summary>Reopens the last panel. Called by an upward drag on the handle.</summary>
+        public void ReopenLast()
+        {
+            if (isOpen || lastNodeID < 0) return;
+            OpenForNode(lastNodeID);
+        }
 
         /// <summary>
         /// Collapsed, not dismissed. Panning means the player wants to see the
@@ -546,6 +582,11 @@ namespace NodeWar.UI
         {
             if (!isOpen) return;
             isOpen = false;
+
+            // Remembered so the handle has something to restore. currentNodeID
+            // is cleared because no panel is showing; lastNodeID is what the
+            // handle reopens.
+            if (currentNodeID >= 0) lastNodeID = currentNodeID;
             currentNodeID = -1;
 
             // Returns to the pre-focus position, but only if the player never

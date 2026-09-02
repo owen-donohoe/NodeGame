@@ -45,11 +45,33 @@ namespace NodeWar.UI
         private float lastTime;
         private float velocityPxPerSec;
         private bool dragging;
+        private bool openedAtDragStart;
+        private Canvas canvas;
 
         private void Awake()
         {
             if (panel == null) panel = GetComponentInParent<NodePanelManager>();
             if (sheet == null) sheet = GetComponentInParent<RectTransform>();
+            canvas = GetComponentInParent<Canvas>();
+        }
+
+        /// <summary>
+        /// Screen pixels per canvas unit.
+        ///
+        /// PointerEventData.position is in screen pixels; anchoredPosition is in
+        /// canvas units. Under a ScaleWithScreenSize CanvasScaler those differ
+        /// by scaleFactor, so assigning a raw pixel delta moves the sheet a
+        /// fraction of the distance the finger travelled and reads as lag.
+        /// Dividing by it makes the sheet track the finger exactly.
+        /// </summary>
+        private float ScaleFactor
+        {
+            get
+            {
+                if (canvas == null) return 1f;
+                float s = canvas.scaleFactor;
+                return s > 0.0001f ? s : 1f;
+            }
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -57,6 +79,7 @@ namespace NodeWar.UI
             if (sheet == null) return;
 
             dragging = true;
+            openedAtDragStart = panel != null && panel.IsOpen;
             startAnchoredPos = sheet.anchoredPosition;
             dragStartY = eventData.position.y;
             lastY = eventData.position.y;
@@ -68,13 +91,17 @@ namespace NodeWar.UI
         {
             if (!dragging || sheet == null) return;
 
-            float dy = eventData.position.y - dragStartY;
+            float dyPixels = eventData.position.y - dragStartY;
 
-            // Downward only. Dragging up does not stretch the sheet past its
-            // resting position -- there is nothing above it to reveal.
-            if (dy > 0f) dy = 0f;
+            // An open sheet only travels down; a dismissed one only travels up.
+            // Neither stretches past its resting position, because there is
+            // nothing beyond it to reveal in that direction.
+            if (openedAtDragStart) { if (dyPixels > 0f) dyPixels = 0f; }
+            else                   { if (dyPixels < 0f) dyPixels = 0f; }
 
-            sheet.anchoredPosition = new Vector2(startAnchoredPos.x, startAnchoredPos.y + dy);
+            sheet.anchoredPosition = new Vector2(
+                startAnchoredPos.x,
+                startAnchoredPos.y + (dyPixels / ScaleFactor));
 
             float now = Time.unscaledTime;
             float dt = now - lastTime;
@@ -91,22 +118,32 @@ namespace NodeWar.UI
             if (!dragging || sheet == null) return;
             dragging = false;
 
-            float draggedDown = dragStartY - eventData.position.y;
+            if (panel == null) return;
 
-            bool pastDistance = draggedDown >= NodeWar.Input.ScreenMetrics.MmToPixels(dismissDistanceMm);
-            bool fastFlick = velocityPxPerSec <= -NodeWar.Input.ScreenMetrics.MmToPixels(dismissVelocityMmPerSec);
+            // Thresholds stay in screen pixels: they describe how far a finger
+            // moved on glass, which is what the millimetre figure means.
+            float distancePx = NodeWar.Input.ScreenMetrics.MmToPixels(dismissDistanceMm);
+            float velocityPx = NodeWar.Input.ScreenMetrics.MmToPixels(dismissVelocityMmPerSec);
 
-            if (panel != null && (pastDistance || fastFlick))
+            if (openedAtDragStart)
             {
-                // ClosePanel animates from wherever the sheet currently sits,
-                // so the dismissal continues the drag rather than snapping back
-                // first and then sliding away.
-                panel.ClosePanel();
+                float draggedDown = dragStartY - eventData.position.y;
+                bool committed = draggedDown >= distancePx || velocityPxPerSec <= -velocityPx;
+
+                // Animates from wherever the sheet currently sits, so the
+                // dismissal continues the drag rather than snapping back first.
+                if (committed) panel.ClosePanel();
+                else panel.ReturnToRestingPosition();
+
                 return;
             }
 
-            // Not far or fast enough: return to where it was.
-            panel?.ReturnToRestingPosition();
+            // Dismissed: an upward drag pulls the last panel back.
+            float draggedUp = eventData.position.y - dragStartY;
+            bool restoring = draggedUp >= distancePx || velocityPxPerSec >= velocityPx;
+
+            if (restoring) panel.ReopenLast();
+            else panel.ReturnToRestingPosition();
         }
     }
 }
