@@ -7,7 +7,8 @@ generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-verified_at_commit: 1b3652c
+  - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
+verified_at_commit: b5d3099
 status: stable
 sources:
   - id: architecture

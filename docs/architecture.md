@@ -7,7 +7,8 @@ generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-verified_at_commit: 1b3652c
+  - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
+verified_at_commit: b5d3099
 status: stable
 sources:
   - id: sim-state
@@ -88,6 +89,11 @@ once for what was under it, and publishes the outcome. Everything else in
 this layer consumes that outcome rather than polling input itself.
 Thresholds are authored in millimetres and converted against screen
 density, so they mean the same thing to a finger on any device.
+
+What counts as a tap target is asked, not assumed: an opponent's villager
+is not one, and the press falls through it to the node beneath. The rule
+lives with the selection owner rather than in the gesture source, so the
+input layer never learns game ownership.
 
 **6. UI/** — HUD, panels, menus during a match. Reads `SimulationState` to
 render; writes nothing to it.
