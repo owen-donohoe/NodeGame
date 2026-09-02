@@ -567,7 +567,8 @@ namespace NodeWar.UI
             CorePanelContent coreContent = currentContent.GetComponent<CorePanelContent>();
             if (coreContent != null)
             {
-                coreContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID);
+                coreContent.Initialize(simState, tickProvider, inputBuffer,
+                                       currentNodeID, controlledPID, isOwned);
                 return;
             }
 
