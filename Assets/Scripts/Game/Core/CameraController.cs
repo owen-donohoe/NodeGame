@@ -199,6 +199,11 @@ namespace NodeWar.Core
             // slide, so momentum yields rather than blending.
             if (isFocusing) return;
             if (isDragging) return;
+
+            // Momentum applies after the finger lifts, not while it is still
+            // driving the position directly.
+            if (gesturePanActive) return;
+
             if (panVelocity.sqrMagnitude < 0.0001f) return;
 
             transform.position += panVelocity * Time.deltaTime;
@@ -322,6 +327,96 @@ namespace NodeWar.Core
             rotOffset.z = Mathf.Clamp(rotOffset.z, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
 
             cam.transform.localRotation = Quaternion.Euler(rotOffset);
+        }
+
+        // ===== GESTURE PAN =====
+        //
+        // One finger dragging the board. The middle-mouse path below is kept
+        // for desktop habit, but this is the one that exists on a phone.
+
+        private NodeWar.Input.PointerGestureSource gestureSource;
+        private bool gesturePanActive;
+        private Vector3 gesturePanLastWorld;
+
+        public void SetGestureSource(NodeWar.Input.PointerGestureSource source)
+        {
+            if (gestureSource != null)
+            {
+                gestureSource.OnPanBegin -= HandlePanBegin;
+                gestureSource.OnPanUpdate -= HandlePanUpdate;
+                gestureSource.OnPanEnd -= HandlePanEnd;
+            }
+
+            gestureSource = source;
+
+            if (gestureSource != null)
+            {
+                gestureSource.OnPanBegin += HandlePanBegin;
+                gestureSource.OnPanUpdate += HandlePanUpdate;
+                gestureSource.OnPanEnd += HandlePanEnd;
+            }
+        }
+
+        private void HandlePanBegin(Vector2 screenPos)
+        {
+            if (isDraftMode) return;
+
+            // A lasso latches PanSuppressed for the rest of its stroke. Long
+            // press is reserved for multi-select and the camera may never
+            // steal it.
+            if (gestureSource != null && gestureSource.PanSuppressed) return;
+
+            gesturePanActive = true;
+            gesturePanLastWorld = ScreenToGroundPoint(screenPos);
+
+            panVelocity = Vector3.zero;
+
+            // Abandon any focus move in flight and mark the session, so
+            // dismissal will not undo where the player just put the camera.
+            isFocusing = false;
+            NotifyManualPan();
+        }
+
+        private void HandlePanUpdate(Vector2 screenPos)
+        {
+            if (!gesturePanActive || isDraftMode) return;
+
+            if (gestureSource != null && gestureSource.PanSuppressed)
+            {
+                gesturePanActive = false;
+                return;
+            }
+
+            Vector3 currentWorld = ScreenToGroundPoint(screenPos);
+            Vector3 delta = gesturePanLastWorld - currentWorld;
+
+            transform.position += delta * panSpeed;
+
+            if (Time.deltaTime > 0f)
+            {
+                panVelocity = delta * panSpeed / Time.deltaTime;
+                if (panVelocity.magnitude > panMaxVelocity)
+                    panVelocity = panVelocity.normalized * panMaxVelocity;
+            }
+
+            // Re-sampled after the move so the world point under the finger
+            // stays pinned; sampling before would drift under perspective.
+            gesturePanLastWorld = ScreenToGroundPoint(screenPos);
+        }
+
+        private void HandlePanEnd()
+        {
+            gesturePanActive = false;
+        }
+
+        private void OnDestroy()
+        {
+            if (gestureSource != null)
+            {
+                gestureSource.OnPanBegin -= HandlePanBegin;
+                gestureSource.OnPanUpdate -= HandlePanUpdate;
+                gestureSource.OnPanEnd -= HandlePanEnd;
+            }
         }
 
         // ===== FOCUS =====

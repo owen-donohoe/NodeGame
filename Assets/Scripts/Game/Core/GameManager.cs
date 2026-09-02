@@ -379,6 +379,11 @@ namespace NodeWar.Core
             // through TapRouter would add indirection without removing any.
             selectionSystem.SetGestureSource(gestureSource);
 
+            // One-finger drag pans the board. Middle-mouse still works for
+            // desktop habit, but this is the path that exists on a phone.
+            if (cameraController != null)
+                cameraController.SetGestureSource(gestureSource);
+
             CreateSelectionLasso();
         }
 
