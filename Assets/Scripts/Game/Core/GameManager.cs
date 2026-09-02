@@ -348,6 +348,7 @@ namespace NodeWar.Core
 
         private NodeWar.Input.PointerGestureSource gestureSource;
         private NodeWar.Input.TapRouter tapRouter;
+        private NodeWar.Input.HitFlashRouter hitFlashRouter;
 
         private void InitializeInputSystems()
         {
@@ -367,6 +368,11 @@ namespace NodeWar.Core
             gestureSource.Initialize(Camera.main);
 
             tapRouter = gameObject.AddComponent<NodeWar.Input.TapRouter>();
+
+            // Built before villagers spawn so the flash components they get on
+            // creation have a router to reach them through.
+            hitFlashRouter = gameObject.AddComponent<NodeWar.Input.HitFlashRouter>();
+            hitFlashRouter.Initialize(gestureSource);
 
             // Lasso completion goes straight to the selection owner. Only
             // *taps* need arbitration -- a lasso has one meaning, so routing it
@@ -443,7 +449,7 @@ namespace NodeWar.Core
             // finger, while the lasso line is projected near the camera.
             GameObject cueGO = new GameObject("LassoArmedCue");
             LassoArmedCue cue = cueGO.AddComponent<LassoArmedCue>();
-            cue.Initialize(gestureSource, Camera.main);
+            cue.Initialize(gestureSource, Camera.main, cameraController);
         }
 
         // ===== GAME OVER =====
@@ -989,6 +995,8 @@ namespace NodeWar.Core
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (hitFlashRouter != null)
+                hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnNewVillagerViews(int fromIndex, int toIndex)
@@ -1002,6 +1010,8 @@ namespace NodeWar.Core
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (hitFlashRouter != null)
+                hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnSingleVillagerView(int index)
@@ -1020,7 +1030,20 @@ namespace NodeWar.Core
                 view.SetTickProvider(tickProvider);
                 view.SetSelectionSystem(selectionSystem);
                 view.SetNodeSlotManagers(nodeSlotManagers);
+
+                NodeWar.View.VillagerFlash flash = villagerGO.AddComponent<NodeWar.View.VillagerFlash>();
+                flash.Initialize(view, gestureSource != null
+                    ? gestureSource.Thresholds.flashDuration
+                    : 0.12f);
             }
+
+            // Constant-size tap target, so a villager stays hittable at the far
+            // end of the dolly range where its sprite is only a few pixels.
+            NodeWar.View.VillagerTouchTarget touchTarget =
+                villagerGO.AddComponent<NodeWar.View.VillagerTouchTarget>();
+            touchTarget.Initialize(Camera.main, gestureSource != null
+                ? gestureSource.Thresholds
+                : null);
 
             VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<VillagerHealthRing>();
             if (healthRing != null)

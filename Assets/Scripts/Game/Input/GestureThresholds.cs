@@ -43,6 +43,14 @@ namespace NodeWar.Input
         [Range(0.03f, 0.5f)]
         public float flashDuration = 0.12f;
 
+        [Header("Touch targets")]
+        [Tooltip("Radius of a villager's tap target, in millimetres on the " +
+                 "screen. Sized to a fingertip rather than to the sprite, so a " +
+                 "villager stays hittable when zoomed out. May overlap the node " +
+                 "beneath it freely -- villager wins that contest by design.")]
+        [Range(1.5f, 10f)]
+        public float touchTargetRadiusMm = 4f;
+
         [Header("Lasso")]
         [Tooltip("Minimum enclosed area for a lasso to select anything, in " +
                  "SQUARE millimetres. Default is a 5x5 mm square. Below this " +

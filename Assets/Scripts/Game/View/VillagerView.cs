@@ -242,7 +242,24 @@ namespace NodeWar.View
 
             SetRenderersEnabled(true);
             Color stateColor = GetStateColor(villager);
+
+            // Flash composes over the state tint rather than replacing it, so a
+            // fighting villager still reads as fighting mid-flash.
+            if (flashAmount > 0f)
+                stateColor = Color.Lerp(stateColor, Color.white, flashAmount);
+
             SetRenderersColor(stateColor);
+        }
+
+        private float flashAmount;
+
+        /// <summary>
+        /// 0 = no flash, 1 = fully white. Driven by VillagerFlash; kept here
+        /// because this is the single entry point for villager visual state.
+        /// </summary>
+        public void SetFlashAmount(float amount)
+        {
+            flashAmount = Mathf.Clamp01(amount);
         }
 
         private void SetRenderersColor(Color color)
