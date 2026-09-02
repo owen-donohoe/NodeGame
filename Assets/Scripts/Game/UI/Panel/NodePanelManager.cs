@@ -99,9 +99,9 @@ namespace NodeWar.UI
                 if (mouse != null && mouse.rightButton.wasPressedThisFrame)
                 { ClosePanel(); }
 
-                if (selectionSystem != null && selectionSystem.IsDragging &&
-                    selectionSystem.CurrentDragRadius > 10f)
-                { ClosePanel(); return; }
+                // Closing on a lasso is now driven by OnLassoBegin rather than
+                // polled from SelectionSystem's drag radius, which no longer
+                // exists -- the lasso is a gesture, not a mouse drag.
             }
 
             // Open condition: left click.
@@ -164,6 +164,29 @@ namespace NodeWar.UI
         }
 
         private bool gestureRouted = false;
+
+        /// <summary>
+        /// Starting a lasso closes the panel -- the player has moved on to
+        /// selecting, and the sheet would otherwise sit over the area they are
+        /// drawing in.
+        /// </summary>
+        public void SetGestureSource(NodeWar.Input.PointerGestureSource source)
+        {
+            if (gestureSource != null)
+                gestureSource.OnLassoBegin -= HandleLassoBegin;
+
+            gestureSource = source;
+
+            if (gestureSource != null)
+                gestureSource.OnLassoBegin += HandleLassoBegin;
+        }
+
+        private NodeWar.Input.PointerGestureSource gestureSource;
+
+        private void HandleLassoBegin(Vector2 _)
+        {
+            if (isOpen) ClosePanel();
+        }
 
         /// <summary>
         /// Opens the panel for a node identified by ID, applying the same
@@ -354,6 +377,9 @@ namespace NodeWar.UI
             slideTween?.Kill();
             if (closeButton != null)
                 closeButton.onClick.RemoveAllListeners();
+
+            if (gestureSource != null)
+                gestureSource.OnLassoBegin -= HandleLassoBegin;
         }
     }
 }

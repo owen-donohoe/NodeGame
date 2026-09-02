@@ -368,6 +368,11 @@ namespace NodeWar.Core
 
             tapRouter = gameObject.AddComponent<NodeWar.Input.TapRouter>();
 
+            // Lasso completion goes straight to the selection owner. Only
+            // *taps* need arbitration -- a lasso has one meaning, so routing it
+            // through TapRouter would add indirection without removing any.
+            selectionSystem.SetGestureSource(gestureSource);
+
             CreateSelectionLasso();
         }
 
@@ -430,8 +435,9 @@ namespace NodeWar.Core
         private void CreateSelectionLasso()
         {
             GameObject lassoGO = new GameObject("SelectionLasso");
+            lassoGO.AddComponent<LineRenderer>();
             SelectionLasso lasso = lassoGO.AddComponent<SelectionLasso>();
-            lasso.Initialize(selectionSystem);
+            lasso.Initialize(gestureSource, Camera.main);
         }
 
         // ===== GAME OVER =====
@@ -527,7 +533,12 @@ namespace NodeWar.Core
             tapRouter.Initialize(gestureSource, selectionSystem, commandSystem, nodePanelManager);
 
             if (selectionSystem != null) selectionSystem.SetGestureRouted(true);
-            if (nodePanelManager != null) nodePanelManager.SetGestureRouted(true);
+
+            if (nodePanelManager != null)
+            {
+                nodePanelManager.SetGestureRouted(true);
+                nodePanelManager.SetGestureSource(gestureSource);
+            }
         }
 
         // ===== NODE INITIALIZATION (from draft) =====

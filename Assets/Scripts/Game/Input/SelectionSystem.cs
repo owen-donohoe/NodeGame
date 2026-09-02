@@ -118,13 +118,12 @@ namespace NodeWar.Input
                 if (verboseSelectionLogging)
                     Debug.Log("[SEL] Left released. Drag distance: " + dragDistance);
 
+                // Legacy mouse path only. A drag no longer selects anything --
+                // the lasso is a long-press gesture now, and arrives through
+                // the gesture source rather than from a mouse read here.
                 if (dragDistance < DRAG_THRESHOLD)
                 {
                     TryClickSelect(releasePos);
-                }
-                else
-                {
-                    CircleSelect(dragStartScreenPos, dragDistance);
                 }
 
                 if (verboseSelectionLogging)
@@ -178,12 +177,28 @@ namespace NodeWar.Input
                 ClearSelection();
         }
 
-        private void CircleSelect(Vector2 center, float radius)
+        /// <summary>
+        /// Selects every owned villager whose screen position falls inside the
+        /// stroke. Replaces the radius circle: the component was named lasso
+        /// and drew one, but selected by distance from a centre point.
+        ///
+        /// The lasso always replaces. There is no additive path -- draw a
+        /// bigger lasso if you want a bigger selection -- which is what makes
+        /// LassoGeometry's nonzero winding rule load-bearing: a stroke that
+        /// loops back inside itself must add, never subtract.
+        ///
+        /// A stroke too small to be a shape leaves the selection untouched
+        /// rather than clearing it. A long press that goes nowhere is a no-op.
+        /// </summary>
+        public void ApplyLasso(IReadOnlyList<Vector2> points)
         {
-            bool shiftHeld = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+            if (simState == null || mainCam == null) return;
+            if (!LassoGeometry.IsValid(points, thresholds.MinLassoAreaSqPx)) return;
 
-            if (!shiftHeld)
-                selectedVillagerIDs.Clear();
+            // Cheap screen-space reject before the per-edge containment test.
+            Rect bounds = LassoGeometry.Bounds(points);
+
+            selectedVillagerIDs.Clear();
 
             for (int i = 0; i < simState.villagers.Length; i++)
             {
@@ -208,17 +223,21 @@ namespace NodeWar.Input
                 }
 
                 Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos);
+
+                // Behind the camera projects with negative z and would otherwise
+                // land at a mirrored screen point, selecting villagers the
+                // player cannot see.
                 if (screenPos.z < 0) continue;
 
-                float dist = Vector2.Distance(center, new Vector2(screenPos.x, screenPos.y));
+                Vector2 flat = new Vector2(screenPos.x, screenPos.y);
+                if (!bounds.Contains(flat)) continue;
+                if (!LassoGeometry.Contains(points, flat)) continue;
 
-                if (dist <= radius)
-                {
-                    // Prevent duplicates when shift-adding
-                    if (!selectedVillagerIDs.Contains(i))
-                        selectedVillagerIDs.Add(i);
-                }
+                selectedVillagerIDs.Add(i);
             }
+
+            if (verboseSelectionLogging)
+                Debug.Log("[SEL] Lasso selected " + selectedVillagerIDs.Count + " villagers");
         }
 
         public void ClearSelection()
@@ -235,17 +254,35 @@ namespace NodeWar.Input
             return false;
         }
 
-        public bool IsDragging => isDragging;
-        public Vector2 DragStart => dragStartScreenPos;
-        public float CurrentDragRadius
+        /// <summary>
+        /// Subscribes to lasso completion. SelectionSystem listens directly
+        /// rather than going through TapRouter because a lasso has exactly one
+        /// meaning -- unlike a click, where three components each inferring
+        /// intent was the problem the router exists to solve.
+        /// </summary>
+        public void SetGestureSource(PointerGestureSource source)
         {
-            get
-            {
-                if (!isDragging) return 0f;
-                Mouse mouse = Mouse.current;
-                if (mouse == null) return 0f;
-                return Vector2.Distance(dragStartScreenPos, mouse.position.ReadValue());
-            }
+            if (gestureSource != null)
+                gestureSource.OnLassoComplete -= ApplyLasso;
+
+            gestureSource = source;
+
+            if (gestureSource != null)
+                gestureSource.OnLassoComplete += ApplyLasso;
+        }
+
+        private PointerGestureSource gestureSource;
+
+        /// <summary>Thresholds come from the gesture source so the area gate cannot disagree with the stroke that produced it.</summary>
+        private GestureThresholds thresholds =>
+            gestureSource != null ? gestureSource.Thresholds : fallbackThresholds;
+
+        private readonly GestureThresholds fallbackThresholds = new GestureThresholds();
+
+        private void OnDestroy()
+        {
+            if (gestureSource != null)
+                gestureSource.OnLassoComplete -= ApplyLasso;
         }
     }
 }
