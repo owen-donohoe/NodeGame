@@ -46,7 +46,10 @@ namespace NodeWar.UI
             lineRenderer.useWorldSpace = true;
             lineRenderer.startWidth = lineWidth;
             lineRenderer.endWidth = lineWidth;
-            lineRenderer.numCornerVertices = 2;
+            // Rounds the joints the smoothing pass leaves behind. Cheap: these
+            // are extra verts on an already tiny mesh, not extra draw calls.
+            lineRenderer.numCornerVertices = 4;
+            lineRenderer.numCapVertices = 4;
             lineRenderer.positionCount = 0;
             lineRenderer.enabled = false;
             lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -125,8 +128,16 @@ namespace NodeWar.UI
                 return;
             }
 
-            Color c = source != null &&
-                      LassoGeometry.IsValid(screenPoints, source.Thresholds.MinLassoAreaSqPx)
+            // Smoothed with the same iteration count SelectionSystem applies
+            // before testing containment, so the line the player sees is the
+            // boundary that actually selects.
+            GestureThresholds t = source != null ? source.Thresholds : null;
+            int iterations = t != null ? t.lassoSmoothingIterations : 0;
+            int cap = t != null ? t.MaxSmoothedPoints : 2048;
+
+            LassoGeometry.Smooth(screenPoints, drawPoints, iterations, cap);
+
+            Color c = t != null && LassoGeometry.IsValid(drawPoints, t.MinLassoAreaSqPx)
                 ? validColor
                 : tooSmallColor;
 
@@ -135,12 +146,14 @@ namespace NodeWar.UI
 
             float depth = cam.nearClipPlane + 0.01f;
 
-            lineRenderer.positionCount = screenPoints.Count;
-            for (int i = 0; i < screenPoints.Count; i++)
+            lineRenderer.positionCount = drawPoints.Count;
+            for (int i = 0; i < drawPoints.Count; i++)
             {
-                Vector2 p = screenPoints[i];
+                Vector2 p = drawPoints[i];
                 lineRenderer.SetPosition(i, cam.ScreenToWorldPoint(new Vector3(p.x, p.y, depth)));
             }
         }
+
+        private readonly List<Vector2> drawPoints = new List<Vector2>();
     }
 }

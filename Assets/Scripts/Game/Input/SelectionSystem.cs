@@ -190,9 +190,20 @@ namespace NodeWar.Input
         /// A stroke too small to be a shape leaves the selection untouched
         /// rather than clearing it. A long press that goes nowhere is a no-op.
         /// </summary>
-        public void ApplyLasso(IReadOnlyList<Vector2> points)
+        public void ApplyLasso(IReadOnlyList<Vector2> rawPoints)
         {
             if (simState == null || mainCam == null) return;
+
+            // Smoothed before testing, with the same iteration count the
+            // renderer uses, so the shape the player saw is the shape that
+            // selects. Chaikin cuts corners inward -- testing the raw polyline
+            // against a smoothed drawing would select villagers sitting
+            // visibly outside the line.
+            LassoGeometry.Smooth(rawPoints, smoothedLasso,
+                thresholds.lassoSmoothingIterations, thresholds.MaxSmoothedPoints);
+
+            IReadOnlyList<Vector2> points = smoothedLasso;
+
             if (!LassoGeometry.IsValid(points, thresholds.MinLassoAreaSqPx)) return;
 
             // Cheap screen-space reject before the per-edge containment test.
@@ -278,6 +289,7 @@ namespace NodeWar.Input
             gestureSource != null ? gestureSource.Thresholds : fallbackThresholds;
 
         private readonly GestureThresholds fallbackThresholds = new GestureThresholds();
+        private readonly List<Vector2> smoothedLasso = new List<Vector2>();
 
         private void OnDestroy()
         {

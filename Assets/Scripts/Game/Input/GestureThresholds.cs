@@ -56,6 +56,20 @@ namespace NodeWar.Input
         [Range(32, 1024)]
         public int maxLassoPoints = 256;
 
+        [Tooltip("Chaikin corner-cutting passes applied to the lasso before it " +
+                 "is drawn and tested. 0 leaves the raw decimated polyline. " +
+                 "Each pass doubles the point count, so 1-2 is plenty at the " +
+                 "default decimation.")]
+        [Range(0, 3)]
+        public int lassoSmoothingIterations = 2;
+
+        /// <summary>
+        /// Headroom for the smoothing passes, which double the count each time.
+        /// Kept separate from maxLassoPoints so raising smoothing cannot
+        /// silently start truncating strokes at capture time.
+        /// </summary>
+        public int MaxSmoothedPoints => maxLassoPoints * 8;
+
         // ===== DERIVED (pixels, current screen) =====
 
         public float TapSlopPx => ScreenMetrics.MmToPixels(tapSlopMm);

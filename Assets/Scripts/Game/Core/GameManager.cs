@@ -438,6 +438,12 @@ namespace NodeWar.Core
             lassoGO.AddComponent<LineRenderer>();
             SelectionLasso lasso = lassoGO.AddComponent<SelectionLasso>();
             lasso.Initialize(gestureSource, Camera.main);
+
+            // Separate object: the cue sits on the ground plane under the
+            // finger, while the lasso line is projected near the camera.
+            GameObject cueGO = new GameObject("LassoArmedCue");
+            LassoArmedCue cue = cueGO.AddComponent<LassoArmedCue>();
+            cue.Initialize(gestureSource, Camera.main);
         }
 
         // ===== GAME OVER =====

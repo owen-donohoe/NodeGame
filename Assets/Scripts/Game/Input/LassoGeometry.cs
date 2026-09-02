@@ -153,6 +153,61 @@ namespace NodeWar.Input
             return (b.x - a.x) * (p.y - a.y) - (p.x - a.x) * (b.y - a.y);
         }
 
+        // Reused across Smooth calls so per-frame rendering does not allocate.
+        // Unity's main thread is the only caller; this is not reentrant.
+        private static readonly List<Vector2> smoothScratch = new List<Vector2>();
+
+        /// <summary>
+        /// Chaikin corner-cutting on a closed polygon. Each iteration replaces
+        /// every point with two points a quarter and three quarters along its
+        /// outgoing edge, which rounds the joints left by decimation without
+        /// needing a spline or any per-point geometry.
+        ///
+        /// The result MUST be used for both drawing and containment. Chaikin
+        /// cuts corners *inward*, so smoothing only what is rendered would draw
+        /// a shape slightly smaller than the one being tested -- a villager
+        /// just inside a corner would sit outside the visible line and still
+        /// select. Callers take the smoothed set for both, which keeps them
+        /// identical by construction rather than by agreement.
+        ///
+        /// Stops early rather than exceeding maxPoints; point count doubles per
+        /// iteration.
+        /// </summary>
+        public static void Smooth(IReadOnlyList<Vector2> source, List<Vector2> destination,
+                                  int iterations, int maxPoints)
+        {
+            if (destination == null) return;
+
+            destination.Clear();
+            if (source == null || source.Count == 0) return;
+
+            for (int i = 0; i < source.Count; i++)
+                destination.Add(source[i]);
+
+            // Below a triangle there is no corner to cut.
+            if (source.Count < 3 || iterations <= 0) return;
+
+            for (int iteration = 0; iteration < iterations; iteration++)
+            {
+                if (destination.Count * 2 > maxPoints) return;
+
+                smoothScratch.Clear();
+                int count = destination.Count;
+
+                for (int i = 0; i < count; i++)
+                {
+                    Vector2 a = destination[i];
+                    Vector2 b = destination[(i + 1) % count];   // wraps: closed shape
+
+                    smoothScratch.Add(a * 0.75f + b * 0.25f);
+                    smoothScratch.Add(a * 0.25f + b * 0.75f);
+                }
+
+                destination.Clear();
+                destination.AddRange(smoothScratch);
+            }
+        }
+
         /// <summary>
         /// Screen-space axis-aligned bounds of the stroke. Used to reject
         /// candidates cheaply before the full containment test.
