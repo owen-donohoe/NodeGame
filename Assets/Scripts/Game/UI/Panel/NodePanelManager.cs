@@ -36,6 +36,16 @@ namespace NodeWar.UI
         [SerializeField] private float slideDuration = 0.22f;
         [SerializeField] private Ease slideEase = Ease.OutCubic;
 
+        [Header("Sheet")]
+        [Tooltip("Anchor the panel to the bottom edge and slide it vertically. " +
+                 "Off restores the original right-edge panel, which is the " +
+                 "fallback if the prefab's child layout does not survive the move.")]
+        [SerializeField] private bool useBottomSheet = true;
+
+        [Tooltip("Height of the collapsed peek state, in pixels. Enough for a " +
+                 "header strip and a grab handle.")]
+        [SerializeField] private float peekHeight = 72f;
+
         [Header("Debug")]
         [Tooltip("Logs why the camera did or did not move when a panel opens.")]
         [SerializeField] private bool verbosePanelLogging = false;
@@ -74,11 +84,82 @@ namespace NodeWar.UI
             nodeLayer = LayerMask.GetMask("Nodes");
             villagerLayer = LayerMask.GetMask("Villagers");  // add this
 
+            SetupSheetGeometry();
+
             panelWidth = panelRect.sizeDelta.x;
-            panelRect.anchoredPosition = new Vector2(panelWidth, panelRect.anchoredPosition.y);
+            panelRect.anchoredPosition = HiddenPosition;
 
             if (closeButton != null)
                 closeButton.onClick.AddListener(ClosePanel);
+        }
+
+        // ===== SHEET GEOMETRY =====
+        //
+        // Anchoring is done from code rather than authored, so moving the panel
+        // to the bottom edge needs no prefab edit and can be reverted with the
+        // useBottomSheet toggle. What code cannot do is re-lay-out the panel's
+        // children: they were arranged for a 320-wide column on the right, and
+        // a full-width sheet will want that redone by hand.
+
+        private bool isPeeking;
+
+        private void SetupSheetGeometry()
+        {
+            if (panelRect == null || !useBottomSheet) return;
+
+            // Full width, pinned to the bottom edge, growing upward from it.
+            panelRect.anchorMin = new Vector2(0f, 0f);
+            panelRect.anchorMax = new Vector2(1f, 0f);
+            panelRect.pivot = new Vector2(0.5f, 0f);
+
+            // Width is now driven by the anchors; only height is authored.
+            panelRect.sizeDelta = new Vector2(0f, panelRect.sizeDelta.y);
+        }
+
+        /// <summary>
+        /// Height read at call time, never cached -- the sheet's height varies
+        /// with its content and the old panelWidth field is the cautionary tale.
+        /// </summary>
+        private float CurrentHeight => panelRect != null ? panelRect.rect.height : 0f;
+
+        private Vector2 OpenPosition =>
+            useBottomSheet
+                ? new Vector2(0f, 0f)
+                : new Vector2(0f, panelRect.anchoredPosition.y);
+
+        private Vector2 HiddenPosition =>
+            useBottomSheet
+                ? new Vector2(0f, -CurrentHeight)
+                : new Vector2(panelWidth, panelRect.anchoredPosition.y);
+
+        /// <summary>
+        /// Collapsed, not dismissed. Panning means the player wants to see the
+        /// board, not that they are finished with the node -- the selection and
+        /// its outline persist, and the sheet is one tap from full again.
+        /// </summary>
+        private Vector2 PeekPosition =>
+            useBottomSheet
+                ? new Vector2(0f, -(CurrentHeight - peekHeight))
+                : OpenPosition;
+
+        private Tween SlideTo(Vector2 target, Ease ease)
+        {
+            slideTween?.Kill();
+            slideTween = panelRect.DOAnchorPos(target, slideDuration).SetEase(ease);
+            return slideTween;
+        }
+
+        /// <summary>
+        /// Collapses to peek on a pan. Deliberately does not move the camera:
+        /// the two-state rule allows only "moved to clear the panel" or "did
+        /// not", and peeking un-occluding the node must not start a chase.
+        /// </summary>
+        private void CollapseToPeek()
+        {
+            if (!isOpen || isPeeking || !useBottomSheet) return;
+
+            isPeeking = true;
+            SlideTo(PeekPosition, Ease.OutCubic);
         }
 
         private void Update()
@@ -180,12 +261,28 @@ namespace NodeWar.UI
         public void SetGestureSource(NodeWar.Input.PointerGestureSource source)
         {
             if (gestureSource != null)
+            {
                 gestureSource.OnLassoBegin -= HandleLassoBegin;
+                gestureSource.OnPanBegin -= HandlePanBegin;
+            }
 
             gestureSource = source;
 
             if (gestureSource != null)
+            {
                 gestureSource.OnLassoBegin += HandleLassoBegin;
+                gestureSource.OnPanBegin += HandlePanBegin;
+            }
+        }
+
+        /// <summary>
+        /// A pan collapses the sheet rather than dismissing it. The player is
+        /// looking around, not finished with the node -- so the selection and
+        /// its outline survive, and the sheet returns on the next selection.
+        /// </summary>
+        private void HandlePanBegin(Vector2 _)
+        {
+            CollapseToPeek();
         }
 
         private NodeWar.Input.PointerGestureSource gestureSource;
@@ -228,9 +325,9 @@ namespace NodeWar.UI
 
             Vector2 resting = panelRect.anchoredPosition;
 
-            // Open position. Currently x=0 for the right-anchored panel; the
-            // bottom sheet will make this y=0 and the rest of this still holds.
-            panelRect.anchoredPosition = new Vector2(0f, resting.y);
+            // OpenPosition covers both anchorings, so the occlusion test does
+            // not need to know which one is in use.
+            panelRect.anchoredPosition = OpenPosition;
             UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
 
             Vector3[] corners = new Vector3[4];
@@ -332,12 +429,17 @@ namespace NodeWar.UI
             // Initialize content script
             InitializeContent(node, isOwned, controlledPID);
 
-            // Slide in
-            if (!isOpen)
+            // Slide in. Also re-expands a peeked sheet: selecting a new node is
+            // a request to see its panel, not to keep the collapsed one.
+            if (!isOpen || isPeeking)
             {
                 isOpen = true;
-                slideTween?.Kill();
-                slideTween = panelRect.DOAnchorPosX(0f, slideDuration).SetEase(slideEase);
+                isPeeking = false;
+
+                // Height must be resolved before the target is computed, or the
+                // sheet slides to an offset derived from the previous content.
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+                SlideTo(OpenPosition, slideEase);
             }
 
             RequestCameraClearance(nodeID);
@@ -405,9 +507,9 @@ namespace NodeWar.UI
             if (cameraController != null)
                 cameraController.EndFocusSession();
 
-            slideTween?.Kill();
-            slideTween = panelRect.DOAnchorPosX(panelWidth, slideDuration)
-                .SetEase(Ease.InCubic)
+            isPeeking = false;
+
+            SlideTo(HiddenPosition, Ease.InCubic)
                 .OnComplete(() =>
                 {
                     if (currentContent != null)
@@ -519,7 +621,10 @@ namespace NodeWar.UI
                 closeButton.onClick.RemoveAllListeners();
 
             if (gestureSource != null)
+            {
                 gestureSource.OnLassoBegin -= HandleLassoBegin;
+                gestureSource.OnPanBegin -= HandlePanBegin;
+            }
         }
     }
 }
