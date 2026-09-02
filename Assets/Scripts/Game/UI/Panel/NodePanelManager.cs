@@ -46,6 +46,7 @@ namespace NodeWar.UI
         private SelectionSystem selectionSystem;
         private DebugPlayerSwitch debugPlayerSwitch;
         private NodeWar.Core.ITickProvider tickProvider;
+        private GameBalanceData balance;
 
         private int currentNodeID = -1;
         private bool isOpen = false;
@@ -58,15 +59,17 @@ namespace NodeWar.UI
 
         private LayerMask villagerLayer;
 
-        public void Initialize(SimulationState state, InputBuffer buffer, 
-                                SelectionSystem selection, DebugPlayerSwitch debugSwitch, 
-                                 NodeWar.Core.ITickProvider provider)
+        public void Initialize(SimulationState state, InputBuffer buffer,
+                                SelectionSystem selection, DebugPlayerSwitch debugSwitch,
+                                 NodeWar.Core.ITickProvider provider,
+                                 GameBalanceData balanceData)
         {
             simState = state;
             inputBuffer = buffer;
             selectionSystem = selection;
             debugPlayerSwitch = debugSwitch;
             tickProvider = provider;
+            balance = balanceData;
             mainCam = Camera.main;
             nodeLayer = LayerMask.GetMask("Nodes");
             villagerLayer = LayerMask.GetMask("Villagers");  // add this
@@ -445,7 +448,8 @@ namespace NodeWar.UI
             BarracksPanelContent barracksContent = currentContent.GetComponent<BarracksPanelContent>();
             if (barracksContent != null)
             {
-                barracksContent.Initialize(simState, inputBuffer, currentNodeID, controlledPID, isOwned);
+                barracksContent.Initialize(simState, inputBuffer, balance,
+                                           currentNodeID, controlledPID, isOwned);
                 return;
             }
 

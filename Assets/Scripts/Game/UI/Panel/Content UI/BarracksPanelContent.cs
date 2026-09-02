@@ -16,21 +16,26 @@ namespace NodeWar.UI
 
         private SimulationState simState;
         private InputBuffer inputBuffer;
+        private GameBalanceData balance;
         private int nodeID;
         private int controlledPID;
         private bool isOwned;
+        private SuitType districtSuit = SuitType.None;
 
         private List<EquipEntryDisplay> activeEntries = new List<EquipEntryDisplay>();
         private List<int> trackedVillagerIDs = new List<int>();
 
-        public void Initialize(SimulationState state, InputBuffer buffer,
+        public void Initialize(SimulationState state, InputBuffer buffer, GameBalanceData balanceData,
             int node, int pid, bool owned)
         {
             simState = state;
             inputBuffer = buffer;
+            balance = balanceData;
             nodeID = node;
             controlledPID = pid;
             isOwned = owned;
+
+            districtSuit = ResolveDistrictSuit(state.nodes[node].districtType);
 
             if (!owned)
             {
@@ -62,14 +67,40 @@ namespace NodeWar.UI
             noVillagersLabel.SetActive(idleIDs.Count == 0);
             SyncEntries(idleIDs);
 
-            bool canAfford = simState.players[controlledPID].food >= 2 &&
-                             simState.players[controlledPID].materials >= 1;
-
+            // Each entry answers for its own suit. The single shared bool this
+            // replaced was built from a hardcoded food>=2 && materials>=1,
+            // which matched no suit in particular.
             for (int i = 0; i < activeEntries.Count; i++)
             {
                 if (activeEntries[i] != null)
-                    activeEntries[i].RefreshAffordability(canAfford);
+                    activeEntries[i].Refresh();
             }
+        }
+
+        /// <summary>
+        /// The suit this district actually equips.
+        ///
+        /// One prefab serves Camp, Barracks, Arsenal and Sanctuary, and those
+        /// accept different suits -- Sanctuary takes only Medic. Picking the
+        /// first suit CanEquipSuitAtNode allows keeps the panel honest without
+        /// duplicating the eligibility table here.
+        ///
+        /// A single suit per district is a placeholder for the suit picker the
+        /// entry still lacks; Barracks accepts four and this offers the first.
+        /// </summary>
+        private SuitType ResolveDistrictSuit(DistrictType district)
+        {
+            // GameBalanceData is a struct, so there is no null to guard against.
+            // CanEquipSuitAtNode switches on the district and answers correctly
+            // even for a default-constructed value.
+            foreach (SuitType candidate in System.Enum.GetValues(typeof(SuitType)))
+            {
+                if (candidate == SuitType.None) continue;
+                if (!GameBalanceData.IsCombatSuit(candidate)) continue;
+                if (balance.CanEquipSuitAtNode(candidate, district)) return candidate;
+            }
+
+            return SuitType.None;
         }
 
         private void SyncEntries(List<int> idleIDs)
@@ -104,7 +135,8 @@ namespace NodeWar.UI
                     continue;
                 }
 
-                if (!entry.Initialize(simState, inputBuffer, idleIDs[i], controlledPID))
+                if (!entry.Initialize(simState, inputBuffer, idleIDs[i], controlledPID,
+                                      districtSuit, balance.GetSuitStats(districtSuit)))
                 {
                     Debug.LogError("[Barracks] EquipEntry Initialize failed for villager " + idleIDs[i]);
                     Destroy(entryGO);

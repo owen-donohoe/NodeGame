@@ -518,7 +518,8 @@ namespace NodeWar.Core
 
             nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
             if (nodePanelManager != null)
-                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickProvider);
+                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch,
+                                            tickProvider, balance.Data);
 
             gameOverPanel = uiGO.GetComponentInChildren<GameOverPanel>(true);
             if (gameOverPanel != null)
