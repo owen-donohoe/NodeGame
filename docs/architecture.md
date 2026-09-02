@@ -256,6 +256,27 @@ Two objects are carried across the Lobby → Gameplay scene load via
 - `VillagerFlash` — touch-down white flash amount, composed over the
   per-state tint by `VillagerView`.
 
+### Where a villager is, mid-edge
+
+A villager in transit has no position of its own. `currentNodeID` is the node
+it last stood on, and how far it has come is `moveProgress` counted in ticks
+along the leg `movePath[movePathIndex]` to `movePath[movePathIndex + 1]`,
+against `edgeWeight * moveSpeedTicks`.
+
+Normally `movePath[movePathIndex]` and `currentNodeID` are the same node. The
+one exception carries meaning: when they differ, the villager is **walking a
+reversal** -- it was retargeted part-way across an edge, and is returning to
+`currentNodeID` from the node named at `movePathIndex`, which it turned around
+before ever reaching. Expressing the return as forward travel along the
+reversed leg is what lets the tick loop stay ignorant of it: `TickMovement`
+counts up and arrives exactly as it does on any other leg.
+
+Two consequences a reader needs. Anything that zeroes `moveProgress` while
+keeping `movePath` -- combat, above all -- must call `CollapseReversalLeg`
+first, or the villager is left standing on a node it never reached. And the
+view must anchor its interpolation to `movePath[movePathIndex]` rather than to
+the sprite, or it draws a line the simulation is not walking.
+
 ## Networking model
 
 Node War uses **lockstep**: peers never send simulation state, only

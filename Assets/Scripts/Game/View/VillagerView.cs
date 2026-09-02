@@ -36,7 +36,8 @@ namespace NodeWar.View
         // Movement interpolation tracking
         private Vector3 edgeStartWorldPos;
         private int lastMovePathIndex = -1;
-        private int lastTargetNodeID = -1; 
+        private int lastLegFrom = -1;
+        private int lastLegTo = -1;
         private VillagerState lastState = VillagerState.Idle;
 
         // Cached references
@@ -111,48 +112,46 @@ namespace NodeWar.View
 
             if (villager.state == VillagerState.Moving && villager.movePath.Length > 1 && tickProvider != null)
             {
+                // The leg the simulation is actually walking. On a reversal
+                // legFrom is the node the villager turned around before ever
+                // reaching, and legTo is the node it is walking back to -- the
+                // one case where legFrom is not currentNodeID.
+                int legFrom = villager.movePath[villager.movePathIndex];
+                int legTo = (villager.movePathIndex + 1 < villager.movePath.Length)
+                    ? villager.movePath[villager.movePathIndex + 1]
+                    : legFrom;
+
                 bool justStartedMoving = (lastState != VillagerState.Moving);
-                bool wasRerouted = (!justStartedMoving && villager.targetNodeID != lastTargetNodeID && lastTargetNodeID != -1);
+                bool wasRerouted = (!justStartedMoving &&
+                                    (legFrom != lastLegFrom || legTo != lastLegTo));
                 bool advancedEdge = (!justStartedMoving && !wasRerouted &&
                                      villager.movePathIndex != lastMovePathIndex);
 
-                if (justStartedMoving || wasRerouted)
+                if (justStartedMoving || wasRerouted || advancedEdge)
                 {
-                    edgeStartWorldPos = transform.position;
-                }
-                else if (advancedEdge)
-                {
-                    int arrivedNodeID = villager.movePath[villager.movePathIndex];
-                    if (nodeSlotManagers != null && arrivedNodeID < nodeSlotManagers.Length)
-                    {
-                        NodeSlotManager arrivalSlotManager = nodeSlotManagers[arrivedNodeID];
-                        int idleIdx = GetLocalIndex(arrivedNodeID, villager.ownerID, VillagerState.Idle);
-                        int totalIdleOnArrival = GetTotalOnNode(arrivedNodeID, villager.ownerID, VillagerState.Idle);
-                        edgeStartWorldPos = arrivalSlotManager.GetIdlePosition(idleIdx, Mathf.Max(totalIdleOnArrival, 1));
-                    }
-                    else
-                    {
-                        edgeStartWorldPos = transform.position;
-                    }
+                    // A leg always starts at movePath[movePathIndex], so that is
+                    // the only honest anchor. A reroute used to anchor to the
+                    // sprite instead, which drew the villager along a line the
+                    // simulation was not walking: a diagonal across open board
+                    // whenever the new route left in a different direction, and a
+                    // crawl over the last stretch when it did not.
+                    //
+                    // Keying the reroute off the leg rather than off targetNodeID
+                    // also catches re-issuing the same destination, which used to
+                    // slip through and snap the sprite back to the path start.
+                    edgeStartWorldPos = IdleSlotPosition(legFrom, villager.ownerID);
                 }
 
                 edgeStartWorldPos.y = VillagerViewHeight;
                 lastMovePathIndex = villager.movePathIndex;
-                lastTargetNodeID = villager.targetNodeID;
+                lastLegFrom = legFrom;
+                lastLegTo = legTo;
 
                 Vector3 toPos;
-                if (villager.movePathIndex + 1 < villager.movePath.Length)
+                if (legTo != legFrom && nodeSlotManagers != null && legTo < nodeSlotManagers.Length &&
+                    nodeSlotManagers[legTo] != null)
                 {
-                    int nextNodeID = villager.movePath[villager.movePathIndex + 1];
-                    if (nodeSlotManagers != null && nextNodeID < nodeSlotManagers.Length)
-                    {
-                        NodeSlotManager nextSlotManager = nodeSlotManagers[nextNodeID];
-                        toPos = nextSlotManager.GetIdlePosition(0, 1);
-                    }
-                    else
-                    {
-                        toPos = edgeStartWorldPos;
-                    }
+                    toPos = nodeSlotManagers[legTo].GetIdlePosition(0, 1);
                 }
                 else
                 {
@@ -160,10 +159,9 @@ namespace NodeWar.View
                 }
                 toPos.y = VillagerViewHeight;
 
-                int edgeWeight = GameSimulation.GetEdgeWeight(simState,
-                    villager.movePath[villager.movePathIndex],
-                    villager.movePath[villager.movePathIndex + 1]);
+                int edgeWeight = GameSimulation.GetEdgeWeight(simState, legFrom, legTo);
                 int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
+                if (totalTicksForEdge < 1) totalTicksForEdge = 1;
 
                 float edgeProgress = (float)villager.moveProgress / (float)totalTicksForEdge;
                 float subTickAlpha = tickProvider.TickAlpha / (float)totalTicksForEdge;
@@ -202,13 +200,15 @@ namespace NodeWar.View
                 }
 
                 lastMovePathIndex = -1;
-                lastTargetNodeID = -1;
+                lastLegFrom = -1;
+                lastLegTo = -1;
             }
             else
             {
                 targetPos = transform.position;
                 lastMovePathIndex = -1;
-                lastTargetNodeID = -1;
+                lastLegFrom = -1;
+                lastLegTo = -1;
             }
 
             lastState = villager.state;
@@ -311,6 +311,28 @@ namespace NodeWar.View
         public int GetVillagerID()
         {
             return villagerID;
+        }
+
+        /// <summary>
+        /// Where this villager stands on a node when idle, and so where movement
+        /// interpolation should start from: a villager leaves a node from the
+        /// same spot it was drawn standing on.
+        ///
+        /// Falls back to the current sprite position when the node has no slot
+        /// manager, which keeps a missing reference from snapping the villager to
+        /// the world origin.
+        /// </summary>
+        private Vector3 IdleSlotPosition(int nodeID, int ownerID)
+        {
+            if (nodeSlotManagers == null || nodeID < 0 || nodeID >= nodeSlotManagers.Length ||
+                nodeSlotManagers[nodeID] == null)
+            {
+                return transform.position;
+            }
+
+            int idleIndex = GetLocalIndex(nodeID, ownerID, VillagerState.Idle);
+            int totalIdle = GetTotalOnNode(nodeID, ownerID, VillagerState.Idle);
+            return nodeSlotManagers[nodeID].GetIdlePosition(idleIndex, Mathf.Max(totalIdle, 1));
         }
 
         /// <summary>

@@ -157,6 +157,47 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex] = v;
         }
 
+        /// <summary>
+        /// Drops a half-walked reversal leg, leaving the villager standing on
+        /// currentNodeID with the rest of its route intact.
+        ///
+        /// A reversing villager is between currentNodeID and movePath[movePathIndex],
+        /// walking back -- the one case where those two disagree. Anything that
+        /// zeroes moveProgress, combat above all, would otherwise place it at the
+        /// far end of that leg: a node it turned around before ever reaching, and
+        /// which it would then walk the whole leg back from.
+        ///
+        /// Cancelling the return instead is both correct and what a player expects.
+        /// A fight breaking out where you are standing ends the retreat you were
+        /// in the middle of; it does not teleport you to where you were headed.
+        /// </summary>
+        private static void CollapseReversalLeg(SimulationState state, int villagerIndex)
+        {
+            VillagerData v = state.villagers[villagerIndex];
+
+            if (v.movePath == null) return;
+            if (v.movePathIndex >= v.movePath.Length) return;
+            if (v.movePath[v.movePathIndex] == v.currentNodeID) return;
+
+            // Everything from currentNodeID onward. It sits one past the
+            // abandoned node, which is what movePathIndex still points at.
+            int remaining = v.movePath.Length - v.movePathIndex - 1;
+
+            if (remaining < 1)
+            {
+                state.villagers[villagerIndex].movePath = new int[0];
+                state.villagers[villagerIndex].movePathIndex = 0;
+                return;
+            }
+
+            int[] collapsed = new int[remaining];
+            for (int i = 0; i < remaining; i++)
+                collapsed[i] = v.movePath[v.movePathIndex + 1 + i];
+
+            state.villagers[villagerIndex].movePath = collapsed;
+            state.villagers[villagerIndex].movePathIndex = 0;
+        }
+
         private static void TickRampartBonuses(SimulationState state)
         {
             for (int i = 0; i < state.villagers.Length; i++)
@@ -364,6 +405,12 @@ namespace NodeWar.Simulation
                         state.villagers[v].attackCooldownRemaining = state.villagers[v].attackCooldownMax;
                         state.villagers[v].combatTargetID = -1;
                         state.villagers[v].moveProgress = 0;
+
+                        // Zeroing progress above means "standing on
+                        // movePath[movePathIndex]". For a villager part-way
+                        // through a reversal that node is the one it turned
+                        // around before ever reaching, so the leg goes with it.
+                        CollapseReversalLeg(state, v);
                     }
                 }
             }
