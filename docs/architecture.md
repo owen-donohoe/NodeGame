@@ -255,6 +255,13 @@ Two objects are carried across the Lobby → Gameplay scene load via
   runtime so the villager prefab needs no edit.
 - `VillagerFlash` — touch-down white flash amount, composed over the
   per-state tint by `VillagerView`.
+- `PathCurve` — rounds a node path into the curve a route is drawn along and
+  a villager walks. Corner rounding rather than Chaikin, because the
+  waypoints are leg boundaries the sprite has to arrive on.
+- `PathCurveSettings` — the one shared instance of that curve shape, owned by
+  `GameManager` and handed to both consumers so they cannot disagree.
+- `MovementPathRenderer` — dotted routes for the local player, one line per
+  distinct remaining route so a squad reads as one, fading as an order ages.
 
 ### Where a villager is, mid-edge
 

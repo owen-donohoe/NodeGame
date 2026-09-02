@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using NodeWar.Simulation;
 using NodeWar.Input;
@@ -34,11 +35,12 @@ namespace NodeWar.View
         private bool initialized = false;
 
         // Movement interpolation tracking
-        private Vector3 edgeStartWorldPos;
-        private int lastMovePathIndex = -1;
-        private int lastLegFrom = -1;
-        private int lastLegTo = -1;
         private VillagerState lastState = VillagerState.Idle;
+
+        // Offset carried out of a crowded node so departure does not snap the
+        // sprite from its idle slot to the node centre the route runs through.
+        private Vector3 departureOffset;
+        private readonly List<Vector3> routeWaypoints = new List<Vector3>();
 
         // Cached references
         private SpriteRenderer[] spriteRenderers;
@@ -90,6 +92,54 @@ namespace NodeWar.View
             nodeSlotManagers = managers;
         }
 
+        /// <summary>
+        /// Curve shape shared with MovementPathRenderer, so the route the sprite
+        /// walks and the route drawn on the board are the same curve. Falls back
+        /// to defaults if nothing supplies one, the way SelectionSystem falls
+        /// back for gesture thresholds.
+        /// </summary>
+        public void SetPathCurveSettings(PathCurveSettings settings)
+        {
+            if (settings != null) curveSettings = settings;
+        }
+
+        private PathCurveSettings curveSettings = new PathCurveSettings();
+
+        /// <summary>
+        /// Builds the curve for the whole route into PathCurve.
+        ///
+        /// Waypoints are node centres, not per-villager idle slots: two villagers
+        /// ordered together must produce the same curve, or MovementPathRenderer
+        /// cannot collapse their routes to one line, and each would ride a curve
+        /// of its own. The slot offset is carried separately as departureOffset.
+        ///
+        /// Returns false if any node on the route has no slot manager, rather
+        /// than building a curve with a hole in it -- a missing waypoint would
+        /// shift every leg index after it and put the sprite on the wrong leg.
+        /// </summary>
+        private bool BuildRouteCurve(VillagerData villager)
+        {
+            if (nodeSlotManagers == null) return false;
+
+            routeWaypoints.Clear();
+
+            for (int i = 0; i < villager.movePath.Length; i++)
+            {
+                int nodeID = villager.movePath[i];
+                if (nodeID < 0 || nodeID >= nodeSlotManagers.Length) return false;
+                if (nodeSlotManagers[nodeID] == null) return false;
+
+                Vector3 point = nodeSlotManagers[nodeID].transform.position;
+                point.y = VillagerViewHeight;
+                routeWaypoints.Add(point);
+            }
+
+            if (routeWaypoints.Count < 2) return false;
+
+            PathCurve.Build(routeWaypoints, curveSettings.cornerRadius, curveSettings.cornerSegments);
+            return true;
+        }
+
         private void Update()
         {
             if (!initialized) return;
@@ -116,48 +166,11 @@ namespace NodeWar.View
                 // legFrom is the node the villager turned around before ever
                 // reaching, and legTo is the node it is walking back to -- the
                 // one case where legFrom is not currentNodeID.
-                int legFrom = villager.movePath[villager.movePathIndex];
-                int legTo = (villager.movePathIndex + 1 < villager.movePath.Length)
-                    ? villager.movePath[villager.movePathIndex + 1]
+                int legIndex = villager.movePathIndex;
+                int legFrom = villager.movePath[legIndex];
+                int legTo = (legIndex + 1 < villager.movePath.Length)
+                    ? villager.movePath[legIndex + 1]
                     : legFrom;
-
-                bool justStartedMoving = (lastState != VillagerState.Moving);
-                bool wasRerouted = (!justStartedMoving &&
-                                    (legFrom != lastLegFrom || legTo != lastLegTo));
-                bool advancedEdge = (!justStartedMoving && !wasRerouted &&
-                                     villager.movePathIndex != lastMovePathIndex);
-
-                if (justStartedMoving || wasRerouted || advancedEdge)
-                {
-                    // A leg always starts at movePath[movePathIndex], so that is
-                    // the only honest anchor. A reroute used to anchor to the
-                    // sprite instead, which drew the villager along a line the
-                    // simulation was not walking: a diagonal across open board
-                    // whenever the new route left in a different direction, and a
-                    // crawl over the last stretch when it did not.
-                    //
-                    // Keying the reroute off the leg rather than off targetNodeID
-                    // also catches re-issuing the same destination, which used to
-                    // slip through and snap the sprite back to the path start.
-                    edgeStartWorldPos = IdleSlotPosition(legFrom, villager.ownerID);
-                }
-
-                edgeStartWorldPos.y = VillagerViewHeight;
-                lastMovePathIndex = villager.movePathIndex;
-                lastLegFrom = legFrom;
-                lastLegTo = legTo;
-
-                Vector3 toPos;
-                if (legTo != legFrom && nodeSlotManagers != null && legTo < nodeSlotManagers.Length &&
-                    nodeSlotManagers[legTo] != null)
-                {
-                    toPos = nodeSlotManagers[legTo].GetIdlePosition(0, 1);
-                }
-                else
-                {
-                    toPos = edgeStartWorldPos;
-                }
-                toPos.y = VillagerViewHeight;
 
                 int edgeWeight = GameSimulation.GetEdgeWeight(simState, legFrom, legTo);
                 int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
@@ -165,9 +178,34 @@ namespace NodeWar.View
 
                 float edgeProgress = (float)villager.moveProgress / (float)totalTicksForEdge;
                 float subTickAlpha = tickProvider.TickAlpha / (float)totalTicksForEdge;
-                float totalAlpha = Mathf.Clamp01(edgeProgress + subTickAlpha);
+                float legT = Mathf.Clamp01(edgeProgress + subTickAlpha);
 
-                targetPos = Vector3.Lerp(edgeStartWorldPos, toPos, totalAlpha);
+                // The whole route, not just the stretch ahead. Building from the
+                // current node would unround the corner the villager is banking
+                // through at the moment it crosses a leg boundary, and the sprite
+                // would jump from the corner to the node centre once per node.
+                if (BuildRouteCurve(villager))
+                {
+                    targetPos = PathCurve.PositionOnLeg(legIndex, legT);
+                }
+                else
+                {
+                    targetPos = transform.position;
+                }
+                targetPos.y = VillagerViewHeight;
+
+                // A villager standing in a crowded node sits in its idle slot,
+                // while the route runs through the node centre. Carry that offset
+                // out of the node and let it decay, so a move order does not snap
+                // the villager to the middle of the node it is leaving.
+                if (lastState != VillagerState.Moving)
+                    departureOffset = transform.position - targetPos;
+                else
+                    departureOffset = Vector3.Lerp(departureOffset, Vector3.zero,
+                                                   slotLerpSpeed * Time.deltaTime);
+
+                departureOffset.y = 0f;
+                targetPos += departureOffset;
             }
             else if (nodeSlotManagers != null && villager.currentNodeID < nodeSlotManagers.Length)
             {
@@ -198,17 +236,10 @@ namespace NodeWar.View
                         targetPos = slotManager.GetIdlePosition(idleIndex, totalIdle);
                         break;
                 }
-
-                lastMovePathIndex = -1;
-                lastLegFrom = -1;
-                lastLegTo = -1;
             }
             else
             {
                 targetPos = transform.position;
-                lastMovePathIndex = -1;
-                lastLegFrom = -1;
-                lastLegTo = -1;
             }
 
             lastState = villager.state;
@@ -313,27 +344,6 @@ namespace NodeWar.View
             return villagerID;
         }
 
-        /// <summary>
-        /// Where this villager stands on a node when idle, and so where movement
-        /// interpolation should start from: a villager leaves a node from the
-        /// same spot it was drawn standing on.
-        ///
-        /// Falls back to the current sprite position when the node has no slot
-        /// manager, which keeps a missing reference from snapping the villager to
-        /// the world origin.
-        /// </summary>
-        private Vector3 IdleSlotPosition(int nodeID, int ownerID)
-        {
-            if (nodeSlotManagers == null || nodeID < 0 || nodeID >= nodeSlotManagers.Length ||
-                nodeSlotManagers[nodeID] == null)
-            {
-                return transform.position;
-            }
-
-            int idleIndex = GetLocalIndex(nodeID, ownerID, VillagerState.Idle);
-            int totalIdle = GetTotalOnNode(nodeID, ownerID, VillagerState.Idle);
-            return nodeSlotManagers[nodeID].GetIdlePosition(idleIndex, Mathf.Max(totalIdle, 1));
-        }
 
         /// <summary>
         /// Gets this villager's index among same-owner villagers in the same state on the same node.

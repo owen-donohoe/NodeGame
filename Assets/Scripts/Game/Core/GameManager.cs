@@ -36,6 +36,13 @@ namespace NodeWar.Core
         [Header("Villager Prefab")]
         [SerializeField] private GameObject villagerPrefab;
 
+        [Header("Movement Routes")]
+        [Tooltip("Shape of a drawn movement route. One instance, handed to both " +
+                 "MovementPathRenderer and every VillagerView, so the curve the " +
+                 "sprite walks and the curve drawn on the board cannot disagree.")]
+        [SerializeField] private NodeWar.View.PathCurveSettings pathCurveSettings =
+            new NodeWar.View.PathCurveSettings();
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -70,6 +77,7 @@ namespace NodeWar.Core
         private Transform[] villagerTransforms;
         private NodeWar.View.NodePresentation[] nodePresentations;
         private NodeWar.View.NodeView[] nodeViews;
+        private NodeWar.View.MovementPathRenderer pathRenderer;
 
         // Network
         private LockstepRunner lockstepRunner;
@@ -389,12 +397,40 @@ namespace NodeWar.Core
                 cameraController.SetGestureSource(gestureSource);
 
             CreateSelectionLasso();
+            CreateMovementPathRenderer();
+        }
+
+        /// <summary>
+        /// The dotted routes for the local player movers.
+        ///
+        /// Node slot managers and the tick provider arrive through setters rather
+        /// than the constructor call, because either may not exist yet depending
+        /// on whether this runs before SpawnNodeViews and StartLocalPlay. Both
+        /// call sites push their value in when they have it.
+        /// </summary>
+        private void CreateMovementPathRenderer()
+        {
+            GameObject routesGO = new GameObject("MovementRoutes");
+            pathRenderer = routesGO.AddComponent<NodeWar.View.MovementPathRenderer>();
+
+            // Read straight from the cross-scene MatchConnection rather than
+            // waiting on OnPlayerSideChanged: DebugPlayerSwitch.LockToPlayer
+            // fires that event before GameManager subscribes to it, so a
+            // networked player 1 would otherwise be left watching player 0
+            // routes. The event still corrects the Tab-key debug switch.
+            MatchConnection match = MatchConnection.Instance;
+            int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
+            pathRenderer.Initialize(state, localPID, pathCurveSettings, tickProvider);
+            pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
         }
 
         private void OnPlayerSideChanged(int playerID)
         {
             if (cameraController != null)
                 cameraController.SetPlayerSide(playerID);
+
+            if (pathRenderer != null)
+                pathRenderer.SetPlayerID(playerID);
 
             //Vector3 spriteRot = cameraController != null
             //    ? cameraController.GetSpriteRotation()
@@ -991,6 +1027,8 @@ namespace NodeWar.Core
             }
 
             selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
+            if (pathRenderer != null)
+                pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
 
             // Lets a move issued by node ID still fire the destination
             // highlight, which the raycast path got from the hit directly.
@@ -1007,6 +1045,8 @@ namespace NodeWar.Core
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (pathRenderer != null)
+                pathRenderer.SetTickProvider(tickProvider);
             if (hitFlashRouter != null)
                 hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
@@ -1022,6 +1062,8 @@ namespace NodeWar.Core
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (pathRenderer != null)
+                pathRenderer.SetTickProvider(tickProvider);
             if (hitFlashRouter != null)
                 hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
@@ -1042,6 +1084,7 @@ namespace NodeWar.Core
                 view.SetTickProvider(tickProvider);
                 view.SetSelectionSystem(selectionSystem);
                 view.SetNodeSlotManagers(nodeSlotManagers);
+                view.SetPathCurveSettings(pathCurveSettings);
 
                 NodeWar.View.VillagerFlash flash = villagerGO.AddComponent<NodeWar.View.VillagerFlash>();
                 flash.Initialize(view, gestureSource != null
