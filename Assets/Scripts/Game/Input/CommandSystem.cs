@@ -34,6 +34,58 @@ namespace NodeWar.Input
             localPlayerID = id;
         }
 
+        /// <summary>
+        /// Node views indexed by node ID, so a move issued by ID can still
+        /// trigger the destination highlight. Matches the existing
+        /// SetNodeSlotManagers pattern on SelectionSystem.
+        /// </summary>
+        public void SetNodeViews(NodeWar.View.NodeView[] views)
+        {
+            nodeViews = views;
+        }
+
+        private NodeWar.View.NodeView[] nodeViews;
+
+        /// <summary>
+        /// Orders every selected villager to a node, highlights the
+        /// destination, and clears the selection.
+        ///
+        /// Extracted from the right-click path so a tap can reach the same
+        /// behaviour without a second raycast. This is the only place a Move
+        /// command is built; both the desktop right-click and the touch tap
+        /// funnel through here.
+        /// </summary>
+        public void IssueMoveTo(int targetNode)
+        {
+            if (simState == null || inputBuffer == null) return;
+            if (selectionSystem == null || selectionSystem.SelectedVillagerIDs.Count == 0) return;
+            if (targetNode < 0 || targetNode >= simState.nodes.Length) return;
+
+            for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
+            {
+                int villagerID = selectionSystem.SelectedVillagerIDs[i];
+
+                GameCommand cmd = new GameCommand
+                {
+                    type = CommandType.Move,
+                    playerID = localPlayerID,
+                    villagerID = villagerID,
+                    targetNodeID = targetNode,
+                    issuedOnTick = simState.tickCount
+                };
+
+                inputBuffer.EnqueueCommand(cmd);
+            }
+
+            if (nodeViews != null && targetNode < nodeViews.Length && nodeViews[targetNode] != null)
+            {
+                Color highlightColor = (localPlayerID == 0) ? p0HighlightColor : p1HighlightColor;
+                nodeViews[targetNode].TriggerHighlight(highlightColor);
+            }
+
+            selectionSystem.ClearSelection();
+        }
+
         private void Update()
         {
             if (simState == null) return;
@@ -85,29 +137,7 @@ namespace NodeWar.Input
                 NodeWar.View.NodeView nodeView = hit.collider.GetComponentInParent<NodeWar.View.NodeView>();
                 if (nodeView != null)
                 {
-                    int targetNode = nodeView.GetNodeID();
-
-                    for (int i = 0; i < selectionSystem.SelectedVillagerIDs.Count; i++)
-                    {
-                        int villagerID = selectionSystem.SelectedVillagerIDs[i];
-                        int currentNode = simState.villagers[villagerID].currentNodeID;
-
-                        GameCommand cmd = new GameCommand
-                        {
-                            type = CommandType.Move,
-                            playerID = localPlayerID,
-                            villagerID = villagerID,
-                            targetNodeID = targetNode,
-                            issuedOnTick = simState.tickCount
-                        };
-
-                        inputBuffer.EnqueueCommand(cmd);
-                    }
-
-                    Color highlightColor = (localPlayerID == 0) ? p0HighlightColor : p1HighlightColor;
-                    nodeView.TriggerHighlight(highlightColor);
-
-                    selectionSystem.ClearSelection();
+                    IssueMoveTo(nodeView.GetNodeID());
                 }
                 else
                 {

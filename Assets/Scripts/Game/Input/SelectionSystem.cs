@@ -54,9 +54,47 @@ namespace NodeWar.Input
             nodeSlotManagers = managers;
         }
 
+        /// <summary>
+        /// When true, a TapRouter drives selection and this component stops
+        /// reading the mouse. The legacy path is gated rather than deleted so
+        /// the two can be compared during tuning; GameManager sets this on when
+        /// it builds the gesture stack.
+        /// </summary>
+        public void SetGestureRouted(bool routed)
+        {
+            gestureRouted = routed;
+        }
+
+        private bool gestureRouted = false;
+
+        /// <summary>
+        /// Replaces the selection with a single villager. Returns false if the
+        /// villager is not selectable -- not ours, dead, or consumed -- and
+        /// leaves the selection untouched so the caller can decide what a tap
+        /// on an unselectable target should mean.
+        ///
+        /// Validity lives here rather than in the router because selection
+        /// ownership is this component's concern.
+        /// </summary>
+        public bool SelectSingle(int villagerID)
+        {
+            if (simState == null) return false;
+            if (villagerID < 0 || villagerID >= simState.villagers.Length) return false;
+
+            VillagerData v = simState.villagers[villagerID];
+            if (v.ownerID != localPlayerID) return false;
+            if (v.state == VillagerState.Dead) return false;
+            if (v.isConsumed) return false;
+
+            selectedVillagerIDs.Clear();
+            selectedVillagerIDs.Add(villagerID);
+            return true;
+        }
+
         private void Update()
         {
             if (simState == null) return;
+            if (gestureRouted) return;
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;

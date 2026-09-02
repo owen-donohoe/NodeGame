@@ -104,7 +104,12 @@ namespace NodeWar.UI
                 { ClosePanel(); return; }
             }
 
-            // Open condition: left click
+            // Open condition: left click.
+            // Skipped when routed -- TapRouter owns opening, and the defensive
+            // villager raycast below exists only to avoid stealing clicks from
+            // SelectionSystem, which the router settles in one place instead.
+            if (gestureRouted) return;
+
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
 
             // Don't open if clicking UI elements
@@ -120,7 +125,7 @@ namespace NodeWar.UI
             RaycastHit villagerHit;
             if (Physics.Raycast(ray, out villagerHit, 100f, villagerLayer))
             {
-                // Click is on a villager — let SelectionSystem handle it, don't open panel
+                // Click is on a villager ï¿½ let SelectionSystem handle it, don't open panel
                 if (isOpen) ClosePanel();
                 return;
             }
@@ -143,9 +148,45 @@ namespace NodeWar.UI
             }
             else if (isOpen)
             {
-                // Clicked away from any node — close
+                // Clicked away from any node ï¿½ close
                 ClosePanel();
             }
+        }
+
+        /// <summary>
+        /// When true, a TapRouter decides when the panel opens and this
+        /// component stops raycasting on its own. Gated rather than deleted so
+        /// the legacy path stays available while the gesture stack is tuned.
+        /// </summary>
+        public void SetGestureRouted(bool routed)
+        {
+            gestureRouted = routed;
+        }
+
+        private bool gestureRouted = false;
+
+        /// <summary>
+        /// Opens the panel for a node identified by ID, applying the same
+        /// ownership rule the click path used: an unclaimed node has nothing to
+        /// show, so the tap closes any open panel instead of opening a new one.
+        ///
+        /// The functional-versus-informational split -- farms and mines opening
+        /// no panel at all -- is a later commit on the panel branch. This
+        /// preserves today's behaviour so the router changes what *routes*
+        /// input, not what the panel decides.
+        /// </summary>
+        public void OpenForNode(int nodeID)
+        {
+            if (simState == null) return;
+            if (nodeID < 0 || nodeID >= simState.nodes.Length) return;
+
+            if (simState.nodes[nodeID].ownerID == -1)
+            {
+                if (isOpen) ClosePanel();
+                return;
+            }
+
+            OpenPanel(nodeID);
         }
 
         public void OpenPanel(int nodeID)

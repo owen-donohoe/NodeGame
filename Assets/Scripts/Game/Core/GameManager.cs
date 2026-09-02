@@ -69,6 +69,7 @@ namespace NodeWar.Core
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
         private NodeWar.View.NodePresentation[] nodePresentations;
+        private NodeWar.View.NodeView[] nodeViews;
 
         // Network
         private LockstepRunner lockstepRunner;
@@ -345,6 +346,9 @@ namespace NodeWar.Core
 
         // ===== INPUT SYSTEMS =====
 
+        private NodeWar.Input.PointerGestureSource gestureSource;
+        private NodeWar.Input.TapRouter tapRouter;
+
         private void InitializeInputSystems()
         {
             selectionSystem = gameObject.AddComponent<SelectionSystem>();
@@ -355,6 +359,14 @@ namespace NodeWar.Core
 
             debugPlayerSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
             debugPlayerSwitch.Initialize(selectionSystem, commandSystem);
+
+            // The gesture source must be the only device reader, so it is built
+            // before anything that could otherwise be tempted to read one.
+            // The router is wired in InitializeUI, once the panel exists.
+            gestureSource = gameObject.AddComponent<NodeWar.Input.PointerGestureSource>();
+            gestureSource.Initialize(Camera.main);
+
+            tapRouter = gameObject.AddComponent<NodeWar.Input.TapRouter>();
 
             CreateSelectionLasso();
         }
@@ -495,6 +507,27 @@ namespace NodeWar.Core
                 gameOverPanel.OnReturnToLobby += ReturnToLobby;
             else
                 Debug.LogWarning("[GameManager] GameOverPanel not found in UIManager prefab.");
+
+            WireGestureRouting();
+        }
+
+        /// <summary>
+        /// Hands tap arbitration to the router and silences the three legacy
+        /// input paths. Deferred to here because the router needs the panel,
+        /// which only exists once the UI prefab is instantiated.
+        ///
+        /// The legacy paths are gated rather than deleted: flipping both
+        /// SetGestureRouted calls to false restores the old behaviour intact,
+        /// which is the comparison the thresholds still need.
+        /// </summary>
+        private void WireGestureRouting()
+        {
+            if (gestureSource == null || tapRouter == null) return;
+
+            tapRouter.Initialize(gestureSource, selectionSystem, commandSystem, nodePanelManager);
+
+            if (selectionSystem != null) selectionSystem.SetGestureRouted(true);
+            if (nodePanelManager != null) nodePanelManager.SetGestureRouted(true);
         }
 
         // ===== NODE INITIALIZATION (from draft) =====
@@ -882,6 +915,7 @@ namespace NodeWar.Core
             nodeParent = new GameObject("NodeViews").transform;
             nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
+            nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
@@ -896,6 +930,7 @@ namespace NodeWar.Core
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
                     view.Initialize(state, i, balance.Data.claimThreshold);
+                nodeViews[i] = view;
 
                 NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
                 if (slotManager == null)
@@ -921,6 +956,11 @@ namespace NodeWar.Core
             }
 
             selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
+
+            // Lets a move issued by node ID still fire the destination
+            // highlight, which the raycast path got from the hit directly.
+            if (commandSystem != null)
+                commandSystem.SetNodeViews(nodeViews);
         }
 
         private void SpawnVillagerViews()
