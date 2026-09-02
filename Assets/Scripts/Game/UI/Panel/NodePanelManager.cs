@@ -36,6 +36,10 @@ namespace NodeWar.UI
         [SerializeField] private float slideDuration = 0.22f;
         [SerializeField] private Ease slideEase = Ease.OutCubic;
 
+        [Header("Debug")]
+        [Tooltip("Logs why the camera did or did not move when a panel opens.")]
+        [SerializeField] private bool verbosePanelLogging = false;
+
         // State
         private SimulationState simState;
         private InputBuffer inputBuffer;
@@ -198,20 +202,38 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// The panel's rect in screen pixels.
+        /// The panel's rect in screen pixels, measured where the panel will be
+        /// once open rather than where it currently sits.
         ///
-        /// Read at call time, never cached. The panel's height varies with its
-        /// content, and caching a size at Initialize is exactly the bug the old
-        /// panelWidth field was -- a value read once from a rect that changes
-        /// later. On a Screen Space Overlay canvas the world corners are
-        /// already screen coordinates.
+        /// This distinction is the whole thing. Clearance is requested from
+        /// OpenPanel, which runs the frame the slide-in tween is *created* --
+        /// the panel is still parked off-screen at that moment, so measuring it
+        /// in place returns a rect that contains nothing and the camera
+        /// concludes it has no work to do.
+        ///
+        /// So the panel is moved to its open anchor, measured, and put back,
+        /// all within this call. No frame renders in between.
+        ///
+        /// Size is read at call time and never cached: panel height varies with
+        /// content, and a size captured once at Initialize is exactly what the
+        /// old panelWidth field got wrong. On a Screen Space Overlay canvas the
+        /// world corners are already screen coordinates.
         /// </summary>
         private Rect GetPanelScreenRect()
         {
             if (panelRect == null) return Rect.zero;
 
+            Vector2 resting = panelRect.anchoredPosition;
+
+            // Open position. Currently x=0 for the right-anchored panel; the
+            // bottom sheet will make this y=0 and the rest of this still holds.
+            panelRect.anchoredPosition = new Vector2(0f, resting.y);
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+
             Vector3[] corners = new Vector3[4];
             panelRect.GetWorldCorners(corners);
+
+            panelRect.anchoredPosition = resting;
 
             float minX = Mathf.Min(corners[0].x, corners[2].x);
             float maxX = Mathf.Max(corners[0].x, corners[2].x);
@@ -329,16 +351,44 @@ namespace NodeWar.UI
         /// </summary>
         private void RequestCameraClearance(int nodeID)
         {
-            if (cameraController == null) return;
-            if (nodeViews == null || nodeID < 0 || nodeID >= nodeViews.Length) return;
+            if (cameraController == null)
+            {
+                if (verbosePanelLogging)
+                    Debug.LogWarning("[PANEL] No CameraController -- clearance skipped. " +
+                                     "SetCameraController was never called.");
+                return;
+            }
+
+            if (nodeViews == null || nodeID < 0 || nodeID >= nodeViews.Length)
+            {
+                if (verbosePanelLogging)
+                    Debug.LogWarning("[PANEL] No node views (null=" + (nodeViews == null) +
+                                     ", id=" + nodeID + ") -- clearance skipped.");
+                return;
+            }
 
             NodeWar.View.NodeView view = nodeViews[nodeID];
-            if (view == null) return;
+            if (view == null)
+            {
+                if (verbosePanelLogging)
+                    Debug.LogWarning("[PANEL] Node view " + nodeID + " is null -- clearance skipped.");
+                return;
+            }
 
             UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
 
+            Rect panelScreen = GetPanelScreenRect();
+
+            if (verbosePanelLogging)
+            {
+                Debug.Log("[PANEL] Clearance for node " + nodeID +
+                          " at world " + view.transform.position +
+                          " | open-panel rect " + panelScreen +
+                          " | screen " + Screen.width + "x" + Screen.height);
+            }
+
             cameraController.BeginFocusSession();
-            cameraController.FocusToClearPanel(view.transform.position, GetPanelScreenRect());
+            cameraController.FocusToClearPanel(view.transform.position, panelScreen);
         }
 
         public void ClosePanel()

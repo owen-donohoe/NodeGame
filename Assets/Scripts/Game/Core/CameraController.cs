@@ -339,6 +339,10 @@ namespace NodeWar.Core
                  "clears it rather than touching it.")]
         [SerializeField] private float focusMarginPx = 48f;
 
+        [Tooltip("Logs every focus decision: whether the node was occluded, " +
+                 "the delta computed, and whether bounds clamped it away.")]
+        [SerializeField] private bool verboseFocusLogging = false;
+
         private bool isFocusing;
         private Vector3 focusFrom;
         private Vector3 focusTo;
@@ -398,6 +402,11 @@ namespace NodeWar.Core
             sessionActive = false;
             sessionPanDirty = false;
 
+            if (verboseFocusLogging)
+                Debug.Log("[FOCUS] session end -- " + (shouldReturn
+                    ? "returning to " + sessionReturnPosition
+                    : "player panned, staying put"));
+
             if (shouldReturn) StartFocusTween(sessionReturnPosition);
         }
 
@@ -430,14 +439,25 @@ namespace NodeWar.Core
             // Rect rather than a bottom band, so the test is correct whatever
             // edge the panel is anchored to. A node beside the panel is not
             // occluded by it and must not move the camera.
-            if (!panelScreenRect.Contains(new Vector2(screenPos.x, screenPos.y)))
-                return;
+            bool occluded = panelScreenRect.Contains(new Vector2(screenPos.x, screenPos.y));
+
+            if (verboseFocusLogging)
+                Debug.Log("[FOCUS] node screen " + (Vector2)screenPos +
+                          " vs panel " + panelScreenRect +
+                          " -> " + (occluded ? "OCCLUDED" : "clear, no move"));
+
+            if (!occluded) return;
 
             float clearY = panelScreenRect.yMax + focusMarginPx;
             float needed = clearY - screenPos.y;
 
             // Already clear. Requirement is explicit that this does nothing.
-            if (needed <= 0f) return;
+            if (needed <= 0f)
+            {
+                if (verboseFocusLogging)
+                    Debug.Log("[FOCUS] already above panel top, no move");
+                return;
+            }
 
             Vector2 from = new Vector2(screenPos.x, screenPos.y);
             Vector2 to = new Vector2(screenPos.x, screenPos.y + needed);
@@ -447,6 +467,9 @@ namespace NodeWar.Core
 
             Vector3 delta = groundFrom - groundTo;
             delta.y = 0f;
+
+            if (verboseFocusLogging)
+                Debug.Log("[FOCUS] need +" + needed.ToString("0") + "px -> world delta " + delta);
 
             StartFocusTween(transform.position + delta);
         }
@@ -461,6 +484,14 @@ namespace NodeWar.Core
 
             // Momentum would otherwise resume the instant the tween ends.
             panVelocity = Vector3.zero;
+
+            if (verboseFocusLogging)
+            {
+                Vector3 moved = focusTo - focusFrom;
+                Debug.Log("[FOCUS] tween " + focusFrom + " -> " + focusTo +
+                          "  (moved " + moved.magnitude.ToString("0.00") + "u" +
+                          (moved.magnitude < 0.001f ? ", CLAMPED TO NOTHING -- target outside board bounds" : "") + ")");
+            }
         }
 
         private void ApplyFocus()
