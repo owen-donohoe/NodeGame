@@ -25,12 +25,16 @@ namespace NodeWar.UI
         [SerializeField] private Button closeButton;
 
         [Header("Content Prefabs")]
-        [SerializeField] private GameObject farmContentPrefab;
-        [SerializeField] private GameObject mineContentPrefab;
+        [Tooltip("Forge only. SetAllocation is the only command it accepts.")]
         [SerializeField] private GameObject forgeContentPrefab;
+
+        [Tooltip("Core only. Respawn plus breach pressure.")]
         [SerializeField] private GameObject coreContentPrefab;
-        [SerializeField] private GameObject barracksContentPrefab;
-        [SerializeField] private GameObject genericContentPrefab;
+
+        [Tooltip("Shared by Barracks, Camp, Arsenal and Sanctuary -- the four " +
+                 "districts CanEquipSuitAtNode accepts. The suit list differs " +
+                 "per district; the panel does not.")]
+        [SerializeField] private GameObject equipContentPrefab;
 
         [Header("Animation")]
         [SerializeField] private float slideDuration = 0.22f;
@@ -103,17 +107,30 @@ namespace NodeWar.UI
 
         private bool isPeeking;
 
+        /// <summary>
+        /// Deliberately does not touch anchors, pivot or size.
+        ///
+        /// An earlier version forced anchorMin (0,0) / anchorMax (1,0) here,
+        /// which destroys an anchor-driven height: authoring the sheet as
+        /// min (0,0) max (1,0.2) means its height is 20% of the screen, and
+        /// rewriting anchorMax.y to 0 converts that to a sizeDelta-driven
+        /// panel whose sizeDelta.y is 0. The sheet disappears at runtime and
+        /// the Editor still shows it correctly, which is the worst way for
+        /// this to fail.
+        ///
+        /// Layout is authored; this component only slides what it is given.
+        /// CurrentHeight reads the resolved rect, so anchor-driven and
+        /// size-driven heights both work without the code knowing which.
+        /// </summary>
         private void SetupSheetGeometry()
         {
             if (panelRect == null || !useBottomSheet) return;
 
-            // Full width, pinned to the bottom edge, growing upward from it.
-            panelRect.anchorMin = new Vector2(0f, 0f);
-            panelRect.anchorMax = new Vector2(1f, 0f);
-            panelRect.pivot = new Vector2(0.5f, 0f);
-
-            // Width is now driven by the anchors; only height is authored.
-            panelRect.sizeDelta = new Vector2(0f, panelRect.sizeDelta.y);
+            if (verbosePanelLogging)
+                Debug.Log("[PANEL] Sheet geometry (authored): anchors " +
+                          panelRect.anchorMin + "-" + panelRect.anchorMax +
+                          " pivot " + panelRect.pivot +
+                          " resolved height " + CurrentHeight);
         }
 
         /// <summary>
@@ -419,6 +436,16 @@ namespace NodeWar.UI
             // Spawn appropriate content
             bool isOwned = (node.ownerID == controlledPID);
             GameObject prefab = GetContentPrefab(node.districtType);
+            if (prefab == null)
+            {
+                // Nothing to show. Bail before Instantiate throws, and leave the
+                // sheet closed rather than sliding up an empty one.
+                Debug.LogError("[PANEL] " + node.districtType +
+                               " has no content prefab assigned on NodePanelManager.");
+                currentNodeID = -1;
+                return;
+            }
+
             currentContent = Instantiate(prefab, contentArea);
             RectTransform contentRect = currentContent.GetComponent<RectTransform>();
             contentRect.anchorMin = Vector2.zero;
@@ -526,13 +553,10 @@ namespace NodeWar.UI
         private void InitializeContent(NodeData node, bool isOwned, int controlledPID)
         {
             // Try each content type
-            ProductionPanelContent prodContent = currentContent.GetComponent<ProductionPanelContent>();
-            if (prodContent != null)
-            {
-                prodContent.Initialize(simState, tickProvider, currentNodeID, controlledPID, isOwned);
-                return;
-            }
-
+            // ProductionPanelContent and GenericPanelContent are deliberately
+            // absent. Farms, mines and the passive districts open no panel at
+            // all now, so nothing instantiates them -- and leaving the
+            // GetComponent calls here would block deleting those scripts.
             ForgePanelContent forgeContent = currentContent.GetComponent<ForgePanelContent>();
             if (forgeContent != null)
             {
@@ -555,22 +579,15 @@ namespace NodeWar.UI
                 return;
             }
 
-            GenericPanelContent genericContent = currentContent.GetComponent<GenericPanelContent>();
-            if (genericContent != null)
-            {
-                genericContent.Initialize(simState, currentNodeID, controlledPID);
-            }
+            Debug.LogWarning("[PANEL] Content prefab for " + node.districtType +
+                             " has no recognised content script. Expected one of " +
+                             "ForgePanelContent, CorePanelContent, BarracksPanelContent.");
         }
 
         /// <summary>
-        /// Only functional districts reach here -- OpenForNode filters the rest
-        /// -- so this maps the six that have an action. Three prefabs cover
-        /// them: the four equip districts share one.
-        ///
-        /// farmContentPrefab, mineContentPrefab and genericContentPrefab are no
-        /// longer reached. They are left assigned rather than removed because
-        /// the fields are wired in UI_Manager.prefab, and clearing them is
-        /// Editor work; see the branch notes before deleting.
+        /// Six functional districts, three prefabs. Only functional districts
+        /// reach here -- OpenForNode filters the rest -- so an unmapped type is
+        /// a bug rather than a case to absorb silently.
         /// </summary>
         private GameObject GetContentPrefab(DistrictType type)
         {
@@ -583,13 +600,13 @@ namespace NodeWar.UI
                 case DistrictType.Camp:
                 case DistrictType.Arsenal:
                 case DistrictType.Sanctuary:
-                    return barracksContentPrefab;
+                    return equipContentPrefab;
 
                 default:
-                    // Unreachable via OpenForNode. Kept as a safety net for the
-                    // legacy click path rather than returning null and
-                    // Instantiate throwing.
-                    return genericContentPrefab;
+                    Debug.LogWarning("[PANEL] No content prefab for " + type +
+                                     ". DistrictPanelPolicy calls it functional " +
+                                     "but nothing maps it -- the two have drifted.");
+                    return null;
             }
         }
 
