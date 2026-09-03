@@ -54,9 +54,63 @@ namespace NodeWar.Input
             nodeSlotManagers = managers;
         }
 
+        /// <summary>
+        /// When true, a TapRouter drives selection and this component stops
+        /// reading the mouse. The legacy path is gated rather than deleted so
+        /// the two can be compared during tuning; GameManager sets this on when
+        /// it builds the gesture stack.
+        /// </summary>
+        public void SetGestureRouted(bool routed)
+        {
+            gestureRouted = routed;
+        }
+
+        private bool gestureRouted = false;
+
+        /// <summary>
+        /// Whether this villager can be selected at all: ours, alive, not
+        /// consumed.
+        ///
+        /// Public because the gesture source uses it to decide whether a
+        /// villager is even a tap target. An opponent's villager is not one --
+        /// the raycast falls through it to the node underneath, so an enemy
+        /// standing on your node does not block the node.
+        /// </summary>
+        public bool IsSelectable(int villagerID)
+        {
+            if (simState == null) return false;
+            if (villagerID < 0 || villagerID >= simState.villagers.Length) return false;
+
+            VillagerData v = simState.villagers[villagerID];
+            if (v.ownerID != localPlayerID) return false;
+            if (v.state == VillagerState.Dead) return false;
+            if (v.isConsumed) return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Replaces the selection with a single villager. Returns false if the
+        /// villager is not selectable -- not ours, dead, or consumed -- and
+        /// leaves the selection untouched so the caller can decide what a tap
+        /// on an unselectable target should mean.
+        ///
+        /// Validity lives here rather than in the router because selection
+        /// ownership is this component's concern.
+        /// </summary>
+        public bool SelectSingle(int villagerID)
+        {
+            if (!IsSelectable(villagerID)) return false;
+
+            selectedVillagerIDs.Clear();
+            selectedVillagerIDs.Add(villagerID);
+            return true;
+        }
+
         private void Update()
         {
             if (simState == null) return;
+            if (gestureRouted) return;
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
@@ -80,13 +134,12 @@ namespace NodeWar.Input
                 if (verboseSelectionLogging)
                     Debug.Log("[SEL] Left released. Drag distance: " + dragDistance);
 
+                // Legacy mouse path only. A drag no longer selects anything --
+                // the lasso is a long-press gesture now, and arrives through
+                // the gesture source rather than from a mouse read here.
                 if (dragDistance < DRAG_THRESHOLD)
                 {
                     TryClickSelect(releasePos);
-                }
-                else
-                {
-                    CircleSelect(dragStartScreenPos, dragDistance);
                 }
 
                 if (verboseSelectionLogging)
@@ -140,12 +193,39 @@ namespace NodeWar.Input
                 ClearSelection();
         }
 
-        private void CircleSelect(Vector2 center, float radius)
+        /// <summary>
+        /// Selects every owned villager whose screen position falls inside the
+        /// stroke. Replaces the radius circle: the component was named lasso
+        /// and drew one, but selected by distance from a centre point.
+        ///
+        /// The lasso always replaces. There is no additive path -- draw a
+        /// bigger lasso if you want a bigger selection -- which is what makes
+        /// LassoGeometry's nonzero winding rule load-bearing: a stroke that
+        /// loops back inside itself must add, never subtract.
+        ///
+        /// A stroke too small to be a shape leaves the selection untouched
+        /// rather than clearing it. A long press that goes nowhere is a no-op.
+        /// </summary>
+        public void ApplyLasso(IReadOnlyList<Vector2> rawPoints)
         {
-            bool shiftHeld = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+            if (simState == null || mainCam == null) return;
 
-            if (!shiftHeld)
-                selectedVillagerIDs.Clear();
+            // Smoothed before testing, with the same iteration count the
+            // renderer uses, so the shape the player saw is the shape that
+            // selects. Chaikin cuts corners inward -- testing the raw polyline
+            // against a smoothed drawing would select villagers sitting
+            // visibly outside the line.
+            LassoGeometry.Smooth(rawPoints, smoothedLasso,
+                thresholds.lassoSmoothingIterations, thresholds.MaxSmoothedPoints);
+
+            IReadOnlyList<Vector2> points = smoothedLasso;
+
+            if (!LassoGeometry.IsValid(points, thresholds.MinLassoAreaSqPx)) return;
+
+            // Cheap screen-space reject before the per-edge containment test.
+            Rect bounds = LassoGeometry.Bounds(points);
+
+            selectedVillagerIDs.Clear();
 
             for (int i = 0; i < simState.villagers.Length; i++)
             {
@@ -170,17 +250,21 @@ namespace NodeWar.Input
                 }
 
                 Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos);
+
+                // Behind the camera projects with negative z and would otherwise
+                // land at a mirrored screen point, selecting villagers the
+                // player cannot see.
                 if (screenPos.z < 0) continue;
 
-                float dist = Vector2.Distance(center, new Vector2(screenPos.x, screenPos.y));
+                Vector2 flat = new Vector2(screenPos.x, screenPos.y);
+                if (!bounds.Contains(flat)) continue;
+                if (!LassoGeometry.Contains(points, flat)) continue;
 
-                if (dist <= radius)
-                {
-                    // Prevent duplicates when shift-adding
-                    if (!selectedVillagerIDs.Contains(i))
-                        selectedVillagerIDs.Add(i);
-                }
+                selectedVillagerIDs.Add(i);
             }
+
+            if (verboseSelectionLogging)
+                Debug.Log("[SEL] Lasso selected " + selectedVillagerIDs.Count + " villagers");
         }
 
         public void ClearSelection()
@@ -197,17 +281,36 @@ namespace NodeWar.Input
             return false;
         }
 
-        public bool IsDragging => isDragging;
-        public Vector2 DragStart => dragStartScreenPos;
-        public float CurrentDragRadius
+        /// <summary>
+        /// Subscribes to lasso completion. SelectionSystem listens directly
+        /// rather than going through TapRouter because a lasso has exactly one
+        /// meaning -- unlike a click, where three components each inferring
+        /// intent was the problem the router exists to solve.
+        /// </summary>
+        public void SetGestureSource(PointerGestureSource source)
         {
-            get
-            {
-                if (!isDragging) return 0f;
-                Mouse mouse = Mouse.current;
-                if (mouse == null) return 0f;
-                return Vector2.Distance(dragStartScreenPos, mouse.position.ReadValue());
-            }
+            if (gestureSource != null)
+                gestureSource.OnLassoComplete -= ApplyLasso;
+
+            gestureSource = source;
+
+            if (gestureSource != null)
+                gestureSource.OnLassoComplete += ApplyLasso;
+        }
+
+        private PointerGestureSource gestureSource;
+
+        /// <summary>Thresholds come from the gesture source so the area gate cannot disagree with the stroke that produced it.</summary>
+        private GestureThresholds thresholds =>
+            gestureSource != null ? gestureSource.Thresholds : fallbackThresholds;
+
+        private readonly GestureThresholds fallbackThresholds = new GestureThresholds();
+        private readonly List<Vector2> smoothedLasso = new List<Vector2>();
+
+        private void OnDestroy()
+        {
+            if (gestureSource != null)
+                gestureSource.OnLassoComplete -= ApplyLasso;
         }
     }
 }

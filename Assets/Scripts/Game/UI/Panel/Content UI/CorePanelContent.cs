@@ -28,14 +28,17 @@ namespace NodeWar.UI
         private List<RespawnEntryDisplay> activeEntries = new List<RespawnEntryDisplay>();
         private List<int> trackedVillagerIDs = new List<int>();
 
+        private bool isOwned;
+
         public void Initialize(SimulationState state, NodeWar.Core.ITickProvider provider,
-                                InputBuffer buffer, int node, int pid)
+                                InputBuffer buffer, int node, int pid, bool owned)
         {
             simState = state;
             tickProvider = provider;
             inputBuffer = buffer;
             nodeID = node;
             controlledPID = pid;
+            isOwned = owned;
 
             // Determine which player's core this is
             int coreOwner = state.nodes[nodeID].ownerID;
@@ -45,6 +48,24 @@ namespace NodeWar.UI
                 : new Color(1f, 0.40f, 0.40f);
 
             breachStatusLabel.color = playerColor;
+
+            if (!owned)
+            {
+                // An enemy core shows breach pressure and nothing else. The
+                // respawn list is the opponent's casualty roster -- listing it
+                // hands over information they never chose to reveal, and every
+                // button on it is dead anyway: ProcessRespawnCommand rejects a
+                // villager whose ownerID is not the issuing player.
+                if (respawnListContent != null)
+                    respawnListContent.gameObject.SetActive(false);
+
+                if (allAliveLabel != null)
+                {
+                    allAliveLabel.SetActive(true);
+                    TextMeshProUGUI label = allAliveLabel.GetComponent<TextMeshProUGUI>();
+                    if (label != null) label.text = "Enemy core";
+                }
+            }
         }
 
         private void Update()
@@ -54,6 +75,10 @@ namespace NodeWar.UI
             int coreOwner = simState.nodes[nodeID].ownerID;
             int breaches = simState.players[coreOwner].breachCount;
             breachStatusLabel.text = "Breaches: " + breaches + " / 3";
+
+            // Breach pressure is public -- it is on the HUD already. The
+            // casualty roster is not, so an enemy core stops here.
+            if (!isOwned) return;
 
             // Gather dead non-consumed villagers for this core's owner
             List<int> deadIDs = new List<int>();

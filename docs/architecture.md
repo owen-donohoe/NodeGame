@@ -6,7 +6,10 @@ tags: [architecture, layers, networking, lockstep]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: e90548a
+  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-02T04:00:00Z }
+verified_at_commit: 67fea34
 status: stable
 sources:
   - id: sim-state
@@ -81,6 +84,18 @@ desyncs/disconnects.
 `GameCommand`s queued for the next tick. Never mutates `SimulationState`
 directly.
 
+Exactly one component reads a pointer device: `PointerGestureSource`. It
+resolves a press once into a tap, a pan or a long-press lasso, raycasts
+once for what was under it, and publishes the outcome. Everything else in
+this layer consumes that outcome rather than polling input itself.
+Thresholds are authored in millimetres and converted against screen
+density, so they mean the same thing to a finger on any device.
+
+What counts as a tap target is asked, not assumed: an opponent's villager
+is not one, and the press falls through it to the node beneath. The rule
+lives with the selection owner rather than in the gesture source, so the
+input layer never learns game ownership.
+
 **6. UI/** — HUD, panels, menus during a match. Reads `SimulationState` to
 render; writes nothing to it.
 
@@ -91,8 +106,14 @@ writes nothing to it.
 ## Information flow
 
 ```
-Player input (mouse/keyboard)  or  BotPlayer
+Pointer (mouse / touch)        or  BotPlayer
         │
+        ▼
+ PointerGestureSource                   (Input/)
+        │  one press -> tap | pan | lasso, resolved once
+        ▼
+ TapRouter / SelectionSystem            (Input/)
+        │  decides what the gesture meant; tracks selection
         ▼
    CommandSystem / BotPlayer            (Input/)
         │  produces GameCommand
@@ -200,22 +221,72 @@ Two objects are carried across the Lobby → Gameplay scene load via
   placement, loadout).
 
 **Input/**
-- `SelectionSystem` — tracks selected villagers.
+- `PointerGestureSource` — the only device reader. Resolves a press into a
+  tap, pan or long-press lasso and publishes it.
+- `TapRouter` — the tap priority ladder: villager, then node-with-selection
+  (move), then node (panel), then empty (clear).
+- `SelectionSystem` — tracks selected villagers; applies lasso results.
 - `CommandSystem` — turns player actions into `GameCommand`s.
 - `InputBuffer` — queue of commands awaiting the next tick.
 - `BotPlayer` — generates commands for an AI-controlled side.
+- `HitFlashRouter` — the single bridge from gesture events to renderers,
+  so the input layer never touches a `SpriteRenderer` itself.
+- `LassoGeometry` / `ScreenMetrics` / `GestureThresholds` — pure helpers:
+  polygon containment and smoothing, millimetre-to-pixel conversion, and
+  the tunable thresholds.
 
 **UI/**
 - `HUDManager` — top-level in-match HUD.
 - `NodePanelManager` — per-node detail/action panel.
 - `DraftUI` — draft-phase interface.
 - `GameOverPanel` — end-of-match result display.
+- `SelectionLasso` — draws the in-progress lasso stroke.
+- `LassoArmedCue` — ring pulse confirming the long press armed.
+- `SafeAreaFitter` — insets a rect to `Screen.safeArea`; the only reader
+  of it in the project.
 
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
   villager slotting on a node.
 - `VillagerView` — villager visuals and movement interpolation.
 - `NodeClaimBar`, `VillagerHealthRing` — world-space status indicators.
+- `NodeHighlight` — the expanding ring used for move-order destinations
+  and, configured smaller, for the lasso-armed cue.
+- `VillagerTouchTarget` — constant-screen-size tap collider, built at
+  runtime so the villager prefab needs no edit.
+- `VillagerFlash` — touch-down white flash amount, composed over the
+  per-state tint by `VillagerView`.
+- `PathCurve` — rounds a node path into the curve a route is drawn along and
+  a villager walks. Corner rounding rather than Chaikin, because the
+  waypoints are leg boundaries the sprite has to arrive on.
+- `PathCurveSettings` — the one shared instance of that curve shape, owned by
+  `GameManager` and handed to both consumers so they cannot disagree.
+- `MovementPathRenderer` — dotted routes for the local player, one line per
+  distinct remaining route so a squad reads as one, fading as an order ages.
+- `OpponentRouteSettings` — the rules of the one information gate in the
+  game. Everything else is fully visible to both players, so an opponent
+  route hands the player something new rather than withholding it.
+
+### Where a villager is, mid-edge
+
+A villager in transit has no position of its own. `currentNodeID` is the node
+it last stood on, and how far it has come is `moveProgress` counted in ticks
+along the leg `movePath[movePathIndex]` to `movePath[movePathIndex + 1]`,
+against `edgeWeight * moveSpeedTicks`.
+
+Normally `movePath[movePathIndex]` and `currentNodeID` are the same node. The
+one exception carries meaning: when they differ, the villager is **walking a
+reversal** -- it was retargeted part-way across an edge, and is returning to
+`currentNodeID` from the node named at `movePathIndex`, which it turned around
+before ever reaching. Expressing the return as forward travel along the
+reversed leg is what lets the tick loop stay ignorant of it: `TickMovement`
+counts up and arrives exactly as it does on any other leg.
+
+Two consequences a reader needs. Anything that zeroes `moveProgress` while
+keeping `movePath` -- combat, above all -- must call `CollapseReversalLeg`
+first, or the villager is left standing on a node it never reached. And the
+view must anchor its interpolation to `movePath[movePathIndex]` rather than to
+the sprite, or it draws a line the simulation is not walking.
 
 ## Networking model
 

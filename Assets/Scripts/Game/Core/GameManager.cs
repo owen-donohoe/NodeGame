@@ -36,6 +36,19 @@ namespace NodeWar.Core
         [Header("Villager Prefab")]
         [SerializeField] private GameObject villagerPrefab;
 
+        [Header("Movement Routes")]
+        [Tooltip("Shape of a drawn movement route. One instance, handed to both " +
+                 "MovementPathRenderer and every VillagerView, so the curve the " +
+                 "sprite walks and the curve drawn on the board cannot disagree.")]
+        [SerializeField] private NodeWar.View.PathCurveSettings pathCurveSettings =
+            new NodeWar.View.PathCurveSettings();
+
+        [Tooltip("How much of an opponent route the player is allowed to see. " +
+                 "The reveal is a real truncation, not a fade, so the cut is a " +
+                 "rule rather than a look.")]
+        [SerializeField] private NodeWar.View.OpponentRouteSettings opponentRouteSettings =
+            new NodeWar.View.OpponentRouteSettings();
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -69,6 +82,8 @@ namespace NodeWar.Core
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
         private NodeWar.View.NodePresentation[] nodePresentations;
+        private NodeWar.View.NodeView[] nodeViews;
+        private NodeWar.View.MovementPathRenderer pathRenderer;
 
         // Network
         private LockstepRunner lockstepRunner;
@@ -345,6 +360,10 @@ namespace NodeWar.Core
 
         // ===== INPUT SYSTEMS =====
 
+        private NodeWar.Input.PointerGestureSource gestureSource;
+        private NodeWar.Input.TapRouter tapRouter;
+        private NodeWar.Input.HitFlashRouter hitFlashRouter;
+
         private void InitializeInputSystems()
         {
             selectionSystem = gameObject.AddComponent<SelectionSystem>();
@@ -356,13 +375,69 @@ namespace NodeWar.Core
             debugPlayerSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
             debugPlayerSwitch.Initialize(selectionSystem, commandSystem);
 
+            // The gesture source must be the only device reader, so it is built
+            // before anything that could otherwise be tempted to read one.
+            // The router is wired in InitializeUI, once the panel exists.
+            gestureSource = gameObject.AddComponent<NodeWar.Input.PointerGestureSource>();
+            gestureSource.Initialize(Camera.main);
+
+            tapRouter = gameObject.AddComponent<NodeWar.Input.TapRouter>();
+
+            // Built before villagers spawn so the flash components they get on
+            // creation have a router to reach them through.
+            hitFlashRouter = gameObject.AddComponent<NodeWar.Input.HitFlashRouter>();
+            hitFlashRouter.Initialize(gestureSource);
+
+            // Lasso completion goes straight to the selection owner. Only
+            // *taps* need arbitration -- a lasso has one meaning, so routing it
+            // through TapRouter would add indirection without removing any.
+            selectionSystem.SetGestureSource(gestureSource);
+
+            // Opponent villagers are not tap targets; presses fall through them
+            // to the node beneath.
+            gestureSource.SetVillagerFilter(selectionSystem.IsSelectable);
+
+            // One-finger drag pans the board. Middle-mouse still works for
+            // desktop habit, but this is the path that exists on a phone.
+            if (cameraController != null)
+                cameraController.SetGestureSource(gestureSource);
+
             CreateSelectionLasso();
+            CreateMovementPathRenderer();
+        }
+
+        /// <summary>
+        /// The dotted routes for the local player movers.
+        ///
+        /// Node slot managers and the tick provider arrive through setters rather
+        /// than the constructor call, because either may not exist yet depending
+        /// on whether this runs before SpawnNodeViews and StartLocalPlay. Both
+        /// call sites push their value in when they have it.
+        /// </summary>
+        private void CreateMovementPathRenderer()
+        {
+            GameObject routesGO = new GameObject("MovementRoutes");
+            pathRenderer = routesGO.AddComponent<NodeWar.View.MovementPathRenderer>();
+
+            // Read straight from the cross-scene MatchConnection rather than
+            // waiting on OnPlayerSideChanged: DebugPlayerSwitch.LockToPlayer
+            // fires that event before GameManager subscribes to it, so a
+            // networked player 1 would otherwise be left watching player 0
+            // routes. The event still corrects the Tab-key debug switch.
+            MatchConnection match = MatchConnection.Instance;
+            int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
+            pathRenderer.Initialize(state, localPID, pathCurveSettings,
+                                    opponentRouteSettings, tickProvider, Camera.main);
+            pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
         }
 
         private void OnPlayerSideChanged(int playerID)
         {
             if (cameraController != null)
                 cameraController.SetPlayerSide(playerID);
+
+            if (pathRenderer != null)
+                pathRenderer.SetPlayerID(playerID);
 
             //Vector3 spriteRot = cameraController != null
             //    ? cameraController.GetSpriteRotation()
@@ -418,8 +493,15 @@ namespace NodeWar.Core
         private void CreateSelectionLasso()
         {
             GameObject lassoGO = new GameObject("SelectionLasso");
+            lassoGO.AddComponent<LineRenderer>();
             SelectionLasso lasso = lassoGO.AddComponent<SelectionLasso>();
-            lasso.Initialize(selectionSystem);
+            lasso.Initialize(gestureSource, Camera.main);
+
+            // Separate object: the cue sits on the ground plane under the
+            // finger, while the lasso line is projected near the camera.
+            GameObject cueGO = new GameObject("LassoArmedCue");
+            LassoArmedCue cue = cueGO.AddComponent<LassoArmedCue>();
+            cue.Initialize(gestureSource, Camera.main, cameraController);
         }
 
         // ===== GAME OVER =====
@@ -488,13 +570,42 @@ namespace NodeWar.Core
 
             nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
             if (nodePanelManager != null)
-                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch, tickProvider);
+                nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch,
+                                            tickProvider, balance.Data);
 
             gameOverPanel = uiGO.GetComponentInChildren<GameOverPanel>(true);
             if (gameOverPanel != null)
                 gameOverPanel.OnReturnToLobby += ReturnToLobby;
             else
                 Debug.LogWarning("[GameManager] GameOverPanel not found in UIManager prefab.");
+
+            WireGestureRouting();
+        }
+
+        /// <summary>
+        /// Hands tap arbitration to the router and silences the three legacy
+        /// input paths. Deferred to here because the router needs the panel,
+        /// which only exists once the UI prefab is instantiated.
+        ///
+        /// The legacy paths are gated rather than deleted: flipping both
+        /// SetGestureRouted calls to false restores the old behaviour intact,
+        /// which is the comparison the thresholds still need.
+        /// </summary>
+        private void WireGestureRouting()
+        {
+            if (gestureSource == null || tapRouter == null) return;
+
+            tapRouter.Initialize(gestureSource, selectionSystem, commandSystem, nodePanelManager);
+
+            if (selectionSystem != null) selectionSystem.SetGestureRouted(true);
+
+            if (nodePanelManager != null)
+            {
+                nodePanelManager.SetGestureRouted(true);
+                nodePanelManager.SetGestureSource(gestureSource);
+                nodePanelManager.SetCameraController(cameraController);
+                nodePanelManager.SetNodeViews(nodeViews);
+            }
         }
 
         // ===== NODE INITIALIZATION (from draft) =====
@@ -882,6 +993,7 @@ namespace NodeWar.Core
             nodeParent = new GameObject("NodeViews").transform;
             nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
+            nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
@@ -896,6 +1008,7 @@ namespace NodeWar.Core
                 NodeWar.View.NodeView view = nodeGO.GetComponent<NodeWar.View.NodeView>();
                 if (view != null)
                     view.Initialize(state, i, balance.Data.claimThreshold);
+                nodeViews[i] = view;
 
                 NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
                 if (slotManager == null)
@@ -921,6 +1034,13 @@ namespace NodeWar.Core
             }
 
             selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
+            if (pathRenderer != null)
+                pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+
+            // Lets a move issued by node ID still fire the destination
+            // highlight, which the raycast path got from the hit directly.
+            if (commandSystem != null)
+                commandSystem.SetNodeViews(nodeViews);
         }
 
         private void SpawnVillagerViews()
@@ -932,6 +1052,10 @@ namespace NodeWar.Core
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (pathRenderer != null)
+                pathRenderer.SetTickProvider(tickProvider);
+            if (hitFlashRouter != null)
+                hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnNewVillagerViews(int fromIndex, int toIndex)
@@ -945,6 +1069,10 @@ namespace NodeWar.Core
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (pathRenderer != null)
+                pathRenderer.SetTickProvider(tickProvider);
+            if (hitFlashRouter != null)
+                hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnSingleVillagerView(int index)
@@ -963,7 +1091,21 @@ namespace NodeWar.Core
                 view.SetTickProvider(tickProvider);
                 view.SetSelectionSystem(selectionSystem);
                 view.SetNodeSlotManagers(nodeSlotManagers);
+                view.SetPathCurveSettings(pathCurveSettings);
+
+                NodeWar.View.VillagerFlash flash = villagerGO.AddComponent<NodeWar.View.VillagerFlash>();
+                flash.Initialize(view, gestureSource != null
+                    ? gestureSource.Thresholds.flashDuration
+                    : 0.12f);
             }
+
+            // Constant-size tap target, so a villager stays hittable at the far
+            // end of the dolly range where its sprite is only a few pixels.
+            NodeWar.View.VillagerTouchTarget touchTarget =
+                villagerGO.AddComponent<NodeWar.View.VillagerTouchTarget>();
+            touchTarget.Initialize(Camera.main, gestureSource != null
+                ? gestureSource.Thresholds
+                : null);
 
             VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<VillagerHealthRing>();
             if (healthRing != null)

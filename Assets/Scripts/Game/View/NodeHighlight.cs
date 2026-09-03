@@ -56,6 +56,22 @@ namespace NodeWar.View
         }
 
         /// <summary>
+        /// Overrides the pulse geometry and timing for this instance.
+        ///
+        /// The serialized defaults are tuned to sit on a node for a move order.
+        /// A caller that pulses this ring somewhere else -- under a finger, at
+        /// a different camera distance -- needs different numbers, and setting
+        /// them here keeps the node defaults untouched rather than making every
+        /// user of NodeHighlight agree on one size.
+        /// </summary>
+        public void Configure(float start, float end, float duration)
+        {
+            startScale = start;
+            endScale = end;
+            pulseDuration = duration;
+        }
+
+        /// <summary>
         /// Trigger the highlight pulse. Call this when a move command targets this node.
         /// </summary>
         public void Pulse()
