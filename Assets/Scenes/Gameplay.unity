@@ -524,6 +524,27 @@ MonoBehaviour:
   nodePrefabRampart: {fileID: 6457397819837387546, guid: b12c9e939dc3ef24c9e43b5c79f6ed6e, type: 3}
   nodePrefabMarket: {fileID: 3130650414941034616, guid: 1d035d50e9d75bf4493e6a721d8fd1e1, type: 3}
   villagerPrefab: {fileID: 7037243673507716427, guid: 4b6014b072d214546a7d15f00c45b8c2, type: 3}
+  pathCurveSettings:
+    cornerRadius: 1
+    cornerSegments: 8
+    lineWidth: 0.3
+    lineHeight: 0.5
+    sortingLayerName: Lasso
+    dashSpacing: 1
+    player0Color: {r: 0.4, g: 0.7, b: 1, a: 1}
+    player1Color: {r: 1, g: 0.45, b: 0.5, a: 1}
+    freshAlpha: 0.9
+    settledAlpha: 0.3
+    settleSeconds: 4
+  opponentRouteSettings:
+    show: 1
+    revealLegs: 5
+    withinHopsOfYou: 12
+    fadeNodes: 1.6
+    nearAlpha: 0.85
+    farAlpha: 0
+    offScreenFade: 0.35
+    widthScale: 1
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
   transitionController: {fileID: 571336745}
   draftUIPrefab: {fileID: 3595327956611536689, guid: 1144ccd5ea8a087499052f23d215f97f, type: 3}
@@ -536,6 +557,7 @@ MonoBehaviour:
     tickCount: 0
     gameOver: 0
     winnerID: -1
+    defaultEdgeWeight: 4
 --- !u!114 &571336745
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -637,6 +659,9 @@ MonoBehaviour:
   sideP0LateralNudgeFactor: 0.5
   sideP1ZPositionFactor: 0.6
   spriteRotationFallback: {x: 50, y: 0, z: 0}
+  focusDuration: 0.28
+  focusMarginPx: 48
+  verboseFocusLogging: 0
 --- !u!4 &615212806
 Transform:
   m_ObjectHideFlags: 0
@@ -686,7 +711,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 1f7738ec3b71e5c458d93ff63a90acaa, type: 2}
 --- !u!4 &832575519
 Transform:
   m_ObjectHideFlags: 0
