@@ -8,7 +8,12 @@ namespace NodeWar.Lobby
     /// The Workshop: pick the suits and districts you bring into the draft.
     /// The UI Toolkit replacement for GroupSelectionPanel.
     ///
-    /// Slot counts come from LoadoutData.SuitSlots and NodeSlots, so the slots
+    /// Two panels. The loadout card on top is what you have - districts down
+    /// the left, suits down the right, staggered so the two stacks read as two
+    /// stacks. The picker card below is what you can take, with a big tab under
+    /// each column and a two-across scrolling grid.
+    ///
+    /// Slot counts come from LoadoutData.NodeSlots and SuitSlots, so the slots
     /// are built rather than wired - the open 2-vs-3 balance question stays an
     /// edit to those two constants. All the rules about what may occupy a slot
     /// live in LoadoutEditor, which has no UnityEngine reference and is covered
@@ -24,7 +29,7 @@ namespace NodeWar.Lobby
     ///   - Warrior is granted to every player regardless of loadout, because
     ///     GameManager.BuildDraftedSuits adds it unconditionally (finding 8).
     ///     Suits flagged isGlobal are therefore shown above the slots and kept
-    ///     out of the list: a slot spent on one buys nothing.
+    ///     out of the grid: a slot spent on one buys nothing.
     ///
     ///   - Crossroads is discarded. GameManager.MapNodeIDToDistrict has its
     ///     line commented out and DistrictType has no Crossroads member
@@ -39,7 +44,10 @@ namespace NodeWar.Lobby
     public class WorkshopPage : LobbyPage
     {
         /// <summary>
-        /// Which list the page is showing.
+        /// Which grid the picker is showing.
+        ///
+        /// Districts is first so it is zero, which makes it both the requested
+        /// default and what an older profile without the field deserialises to.
         ///
         /// Not GroupSelectionPanel's SelectionTab, even though the two hold the
         /// same two values: that enum sits in GroupSelectionPanel.cs and is
@@ -48,8 +56,8 @@ namespace NodeWar.Lobby
         /// </summary>
         private enum Tab
         {
-            Suits,
-            Districts
+            Districts = 0,
+            Suits = 1
         }
 
         /// <summary>
@@ -83,16 +91,16 @@ namespace NodeWar.Lobby
         private readonly Button suitsTabButton;
         private readonly Button nodesTabButton;
         private readonly Label hintLabel;
-        private readonly ScrollView suitList;
-        private readonly ScrollView nodeList;
+        private readonly ScrollView suitGrid;
+        private readonly ScrollView nodeGrid;
 
         private readonly List<SlotView> suitSlots = new List<SlotView>();
         private readonly List<SlotView> nodeSlots = new List<SlotView>();
-        private readonly List<ItemRow> suitRows = new List<ItemRow>();
-        private readonly List<ItemRow> nodeRows = new List<ItemRow>();
+        private readonly List<ItemCell> suitCells = new List<ItemCell>();
+        private readonly List<ItemCell> nodeCells = new List<ItemCell>();
 
         private LoadoutEditor loadout = new LoadoutEditor(LoadoutData.CreateEmpty());
-        private Tab activeTab = Tab.Suits;
+        private Tab activeTab = Tab.Districts;
         private bool built;
 
         public WorkshopPage(VisualTreeAsset layout, SuitDefinition[] suits, NodeDefinition[] nodes)
@@ -113,8 +121,8 @@ namespace NodeWar.Lobby
             suitsTabButton = Root.Q<Button>("workshop-tab-suits");
             nodesTabButton = Root.Q<Button>("workshop-tab-nodes");
             hintLabel = Root.Q<Label>("workshop-hint");
-            suitList = Root.Q<ScrollView>("workshop-list-suits");
-            nodeList = Root.Q<ScrollView>("workshop-list-nodes");
+            suitGrid = Root.Q<ScrollView>("workshop-list-suits");
+            nodeGrid = Root.Q<ScrollView>("workshop-list-nodes");
 
             if (suitsTabButton != null) suitsTabButton.clicked += () => SetTab(Tab.Suits);
             if (nodesTabButton != null) nodesTabButton.clicked += () => SetTab(Tab.Districts);
@@ -155,7 +163,7 @@ namespace NodeWar.Lobby
             {
                 BuildGrantedBand();
                 BuildSlots();
-                BuildRows();
+                BuildCells();
                 built = true;
             }
 
@@ -279,11 +287,11 @@ namespace NodeWar.Lobby
 
         private void BuildSlots()
         {
-            BuildSlotRow(suitSlotHost, suitSlots, LoadoutData.SuitSlots, Tab.Suits);
-            BuildSlotRow(nodeSlotHost, nodeSlots, LoadoutData.NodeSlots, Tab.Districts);
+            BuildSlotColumn(nodeSlotHost, nodeSlots, LoadoutData.NodeSlots, Tab.Districts);
+            BuildSlotColumn(suitSlotHost, suitSlots, LoadoutData.SuitSlots, Tab.Suits);
         }
 
-        private void BuildSlotRow(VisualElement host, List<SlotView> into, int count, Tab tab)
+        private void BuildSlotColumn(VisualElement host, List<SlotView> into, int count, Tab tab)
         {
             if (host == null) return;
 
@@ -297,21 +305,21 @@ namespace NodeWar.Lobby
             }
         }
 
-        private void BuildRows()
+        private void BuildCells()
         {
-            BuildRowList(suitList, suitRows, Tab.Suits);
-            BuildRowList(nodeList, nodeRows, Tab.Districts);
+            BuildCellGrid(nodeGrid, nodeCells, Tab.Districts);
+            BuildCellGrid(suitGrid, suitCells, Tab.Suits);
         }
 
-        private void BuildRowList(ScrollView list, List<ItemRow> into, Tab tab)
+        private void BuildCellGrid(ScrollView grid, List<ItemCell> into, Tab tab)
         {
-            if (list == null) return;
+            if (grid == null) return;
 
             int count = tab == Tab.Suits ? draftableSuits.Count : draftableNodes.Count;
 
             if (count == 0)
             {
-                list.Add(BuildEmptyListNote(tab));
+                grid.Add(BuildEmptyGridNote(tab));
                 return;
             }
 
@@ -319,39 +327,35 @@ namespace NodeWar.Lobby
             {
                 string id;
                 string displayName;
-                string description;
 
                 if (tab == Tab.Suits)
                 {
                     SuitDefinition suit = draftableSuits[i];
                     id = suit.suitID;
                     displayName = DisplayNameOf(suit);
-                    description = suit.description;
                 }
                 else
                 {
                     NodeDefinition node = draftableNodes[i];
                     id = node.nodeID;
                     displayName = DisplayNameOf(node);
-                    description = node.description;
                 }
 
                 string equipID = id;
-                ItemRow row = new ItemRow(id, displayName, description,
-                                          () => OnRowClicked(tab, equipID));
+                ItemCell cell = new ItemCell(id, displayName, () => OnCellClicked(tab, equipID));
 
-                into.Add(row);
-                list.Add(row.Root);
+                into.Add(cell);
+                grid.Add(cell.Root);
             }
         }
 
         /// <summary>
-        /// What the list says when there is nothing to list. Only reachable
+        /// What the grid says when there is nothing to show. Only reachable
         /// when the definition arrays are unassigned, which means the Editor
         /// setup has not been re-run since those fields were added - so the
         /// message names the fix.
         /// </summary>
-        private static VisualElement BuildEmptyListNote(Tab tab)
+        private static VisualElement BuildEmptyGridNote(Tab tab)
         {
             VisualElement box = new VisualElement();
             box.AddToClassList("placeholder");
@@ -375,10 +379,12 @@ namespace NodeWar.Lobby
             loadout = new LoadoutEditor(
                 profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
 
+            activeTab = profile != null ? ToTab(profile.WorkshopTabIndex) : Tab.Districts;
+
             // A saved loadout can hold a suit that has since become globally
             // granted, or Crossroads. Both are slots already producing nothing;
             // clearing them hands the slots back rather than showing an item
-            // the list has no row for.
+            // the grid has no cell for.
             int cleared = loadout.DropUnavailable(IsSuitOffered, IsNodeOffered);
 
             if (cleared > 0)
@@ -398,15 +404,24 @@ namespace NodeWar.Lobby
             profile.SetLoadout(loadout.ToLoadout());
         }
 
+        /// <summary>
+        /// Anything that is not a tab we know about becomes Districts - the
+        /// default - rather than throwing on a profile written by a later build.
+        /// </summary>
+        private static Tab ToTab(int index)
+        {
+            return index == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
+        }
+
         // ===== INTERACTION =====
 
-        private void OnRowClicked(Tab tab, string itemID)
+        private void OnCellClicked(Tab tab, string itemID)
         {
             int slot = tab == Tab.Suits
                 ? loadout.EquipSuit(itemID)
                 : loadout.EquipNode(itemID);
 
-            // Refused: already equipped, or no slot free. Rows in either state
+            // Refused: already equipped, or no slot free. Cells in either state
             // are disabled, so this is a guard rather than a path.
             if (slot == LoadoutEditor.NoSlot) return;
 
@@ -424,8 +439,8 @@ namespace NodeWar.Lobby
                 ? loadout.ClearSuitSlot(slot)
                 : loadout.ClearNodeSlot(slot);
 
-            // An empty slot is not a dead tap: it sends you to the list that
-            // fills it.
+            // An empty slot is not a dead tap: it switches the picker to the
+            // grid that fills it.
             if (string.IsNullOrEmpty(removed))
             {
                 SetTab(tab);
@@ -439,6 +454,10 @@ namespace NodeWar.Lobby
         private void SetTab(Tab tab)
         {
             activeTab = tab;
+
+            PlayerProfile profile = PlayerProfile.Instance;
+            if (profile != null) profile.WorkshopTabIndex = (int)tab;
+
             RefreshAll();
         }
 
@@ -448,7 +467,7 @@ namespace NodeWar.Lobby
         {
             RefreshSlots();
             RefreshTabs();
-            RefreshRows();
+            RefreshCells();
             RefreshHint();
         }
 
@@ -499,41 +518,41 @@ namespace NodeWar.Lobby
             if (nodesTabButton != null)
                 nodesTabButton.EnableInClassList("workshop__tab--active", !suitsActive);
 
-            if (suitList != null)
-                suitList.EnableInClassList("workshop__list--hidden", !suitsActive);
+            if (suitGrid != null)
+                suitGrid.EnableInClassList("workshop__grid--hidden", !suitsActive);
 
-            if (nodeList != null)
-                nodeList.EnableInClassList("workshop__list--hidden", suitsActive);
+            if (nodeGrid != null)
+                nodeGrid.EnableInClassList("workshop__grid--hidden", suitsActive);
         }
 
         /// <summary>
-        /// Row state is recomputed here rather than fixed at build time, so an
+        /// Cell state is recomputed here rather than fixed at build time, so an
         /// unlock that lands while the lobby is open is picked up on the next
         /// visit. It also means a null PlayerProfile at construction does not
-        /// leave every row permanently locked.
+        /// leave every cell permanently locked.
         /// </summary>
-        private void RefreshRows()
+        private void RefreshCells()
         {
             PlayerProfile profile = PlayerProfile.Instance;
 
-            for (int i = 0; i < suitRows.Count; i++)
+            for (int i = 0; i < suitCells.Count; i++)
             {
-                ItemRow row = suitRows[i];
+                ItemCell cell = suitCells[i];
 
-                bool locked = profile != null && !profile.IsSuitUnlocked(row.ItemID);
-                bool equipped = loadout.IsSuitEquipped(row.ItemID);
+                bool locked = profile != null && !profile.IsSuitUnlocked(cell.ItemID);
+                bool equipped = loadout.IsSuitEquipped(cell.ItemID);
 
-                row.SetState(locked, equipped, loadout.SuitSlotsFull);
+                cell.SetState(locked, equipped, loadout.SuitSlotsFull);
             }
 
-            for (int i = 0; i < nodeRows.Count; i++)
+            for (int i = 0; i < nodeCells.Count; i++)
             {
-                ItemRow row = nodeRows[i];
+                ItemCell cell = nodeCells[i];
 
-                bool locked = profile != null && !profile.IsNodeUnlocked(row.ItemID);
-                bool equipped = loadout.IsNodeEquipped(row.ItemID);
+                bool locked = profile != null && !profile.IsNodeUnlocked(cell.ItemID);
+                bool equipped = loadout.IsNodeEquipped(cell.ItemID);
 
-                row.SetState(locked, equipped, loadout.NodeSlotsFull);
+                cell.SetState(locked, equipped, loadout.NodeSlotsFull);
             }
         }
 
@@ -551,7 +570,7 @@ namespace NodeWar.Lobby
         /// <summary>
         /// The name to show. Falls back to the ID when displayName is blank, so
         /// a half-filled definition asset is visible as itself rather than as an
-        /// empty row.
+        /// empty cell.
         /// </summary>
         private static string DisplayNameOf(SuitDefinition suit)
         {
@@ -566,8 +585,8 @@ namespace NodeWar.Lobby
         // ===== ELEMENTS =====
 
         /// <summary>
-        /// One loadout slot. Filled slots unequip on tap; empty ones jump to
-        /// the list that fills them.
+        /// One loadout slot. Filled slots unequip on tap; empty ones switch the
+        /// picker to the grid that fills them.
         /// </summary>
         private class SlotView
         {
@@ -610,16 +629,15 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>
-        /// One row in the available-items list: tile, name, what it does, and
-        /// what tapping it will do.
+        /// One cell in the two-across picker grid: tile, name, and what tapping
+        /// it will do.
         ///
-        /// The description falls back to the raw ID when a definition has none.
-        /// Without art the name is the only handle a player has on an item, and
-        /// one of the nine district assets currently carries the wrong
-        /// displayName - Camp.asset reads "Watchtower" - so having the ID
-        /// somewhere on screen is what makes those two rows distinguishable.
+        /// No description. The definitions carry one and it is worth reading,
+        /// but at two cells across on a phone a two-line effect note triples the
+        /// height of every cell and drops the grid to two visible rows. The
+        /// place for it is a detail view, not the picker.
         /// </summary>
-        private class ItemRow
+        private class ItemCell
         {
             public string ItemID { get; private set; }
 
@@ -627,55 +645,44 @@ namespace NodeWar.Lobby
 
             private readonly Label statusLabel;
 
-            public ItemRow(string itemID, string displayName, string description,
-                           System.Action onClick)
+            public ItemCell(string itemID, string displayName, System.Action onClick)
             {
                 ItemID = itemID;
 
                 Root = new Button();
-                Root.AddToClassList("workshop__row");
+                Root.AddToClassList("workshop__cell");
 
                 ItemTile tile = new ItemTile();
                 tile.SetItem(itemID, displayName);
-                tile.Root.AddToClassList("tile--row");
-
-                VisualElement text = new VisualElement();
-                text.AddToClassList("workshop__row-text");
-                text.pickingMode = PickingMode.Ignore;
+                tile.Root.AddToClassList("tile--cell");
 
                 Label name = new Label(displayName);
                 name.AddToClassList("body");
-                name.AddToClassList("workshop__row-name");
-                text.Add(name);
-
-                Label subtitle = new Label(
-                    !string.IsNullOrEmpty(description) ? description : itemID);
-                subtitle.AddToClassList("caption");
-                subtitle.AddToClassList("workshop__row-subtitle");
-                text.Add(subtitle);
+                name.AddToClassList("workshop__cell-name");
+                name.pickingMode = PickingMode.Ignore;
 
                 statusLabel = new Label();
                 statusLabel.AddToClassList("caption");
-                statusLabel.AddToClassList("workshop__row-status");
+                statusLabel.AddToClassList("workshop__cell-status");
                 statusLabel.pickingMode = PickingMode.Ignore;
 
                 Root.Add(tile.Root);
-                Root.Add(text);
+                Root.Add(name);
                 Root.Add(statusLabel);
 
                 if (onClick != null) Root.clicked += onClick;
             }
 
             /// <summary>
-            /// An equipped row is hidden, matching GroupSelectionPanel. Locked
-            /// and slots-full rows stay visible but say why they cannot be
-            /// tapped - a row that silently ignores a tap is the thing this
+            /// An equipped cell leaves the grid, matching GroupSelectionPanel.
+            /// Locked and slots-full cells stay visible but say why they cannot
+            /// be tapped - a cell that silently ignores a tap is the thing this
             /// replaces.
             /// </summary>
             public void SetState(bool locked, bool equipped, bool slotsFull)
             {
-                Root.EnableInClassList("workshop__row--hidden", equipped);
-                Root.EnableInClassList("workshop__row--locked", locked);
+                Root.EnableInClassList("workshop__cell--hidden", equipped);
+                Root.EnableInClassList("workshop__cell--locked", locked);
 
                 bool blocked = locked || slotsFull;
 

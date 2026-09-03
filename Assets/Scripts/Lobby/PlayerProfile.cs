@@ -24,6 +24,11 @@ namespace NodeWar.Lobby
             public int selectedGameModeIndex; // cast to GameMode
             public int boxesAvailable;
             public float boxProgress;
+
+            // Which Workshop tab was open last. 0 is Districts, which is also
+            // what an older save without this field deserialises to - so the
+            // requested default costs no migration.
+            public int workshopTabIndex;
         }
 
         public PlayerProfileData data;
@@ -56,6 +61,23 @@ namespace NodeWar.Lobby
             set { data.selectedGameModeIndex = (int)value; Save(); }
         }
         public LoadoutData Loadout => data.loadout;
+
+        /// <summary>
+        /// Which Workshop tab to open on. Saved so it survives a scene reload
+        /// and a relaunch - the Lobby scene is rebuilt every time you come back
+        /// from a match, so anything remembered only in the page would reset
+        /// constantly and never actually be remembered.
+        /// </summary>
+        public int WorkshopTabIndex
+        {
+            get => data.workshopTabIndex;
+            set
+            {
+                if (data.workshopTabIndex == value) return;
+                data.workshopTabIndex = value;
+                Save();
+            }
+        }
 
         public void SetUsername(string newName)
         {

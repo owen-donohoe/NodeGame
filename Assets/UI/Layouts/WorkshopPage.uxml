@@ -8,15 +8,24 @@
     <!--
         Workshop - the loadout picker. Replaces GroupSelectionPanel.
 
-        Fixed top, scrolling bottom: the loadout card and the tabs stay put
-        while the list of available items scrolls under them, so the slots a
-        player is filling never leave the screen.
+        Two panels, and the split is the point. The top one is what you have:
+        two columns of slots, districts on the left and suits on the right,
+        staggered so the two columns read as separate stacks rather than a
+        grid with a hole in it. The bottom one is what you can take: two big
+        tabs sitting directly under the column each one fills, and a scrolling
+        two-across grid.
 
-        Only the frame is here. Slots are built in C# from LoadoutData.SuitSlots
-        and NodeSlots, and rows from the definition assets, because neither
+        An earlier version put the slots in one row and the tabs directly under
+        them with no panel between. Run on a phone, the tabs were squeezed to
+        the point of being invisible - which is what having only one panel and
+        no fixed floor for the picker gets you. The picker now owns its own
+        card and grows into whatever the loadout card leaves.
+
+        Only the frame is here. Slots are built in C# from LoadoutData.NodeSlots
+        and SuitSlots, and cells from the definition assets, because neither
         count is knowable at authoring time.
 
-        Two ScrollViews rather than one shared list: each tab then keeps its own
+        Two ScrollViews rather than one shared grid: each tab then keeps its own
         scroll offset for free. GroupSelectionPanel does that by hand, saving
         verticalNormalizedPosition per tab and restoring it a frame later.
     -->
@@ -28,46 +37,58 @@
         <engine:VisualElement name="workshop-loadout" class="card workshop__loadout">
 
             <!--
-                Suits every player is granted regardless of loadout, shown
-                outside the slots because they cost none. Driven by
-                SuitDefinition.isGlobal; hidden entirely when no suit sets it.
+                Suits every player is granted regardless of loadout. Full width
+                and above both columns, because the whole point is that it sits
+                outside the slot system. Hidden entirely when no suit sets
+                SuitDefinition.isGlobal.
             -->
             <engine:VisualElement name="workshop-granted" class="workshop__granted">
                 <engine:VisualElement name="workshop-granted-tiles" class="workshop__granted-tiles" />
                 <engine:VisualElement class="workshop__granted-text">
                     <engine:Label name="workshop-granted-names" class="body" text="Warrior" />
-                    <engine:Label class="caption"
-                                  text="Always granted - costs no slot" />
+                    <engine:Label class="caption" text="Always granted - costs no slot" />
                 </engine:VisualElement>
             </engine:VisualElement>
 
-            <engine:VisualElement name="workshop-suits-group" class="workshop__group">
-                <engine:Label name="workshop-suits-label" class="caption" text="Suits" />
-                <engine:VisualElement name="workshop-suit-slots" class="workshop__slots" />
-            </engine:VisualElement>
+            <engine:VisualElement class="workshop__columns">
 
-            <engine:VisualElement name="workshop-nodes-group" class="workshop__group">
-                <engine:Label name="workshop-nodes-label" class="caption" text="Districts" />
-                <engine:VisualElement name="workshop-node-slots" class="workshop__slots" />
+                <engine:VisualElement class="workshop__column">
+                    <engine:Label name="workshop-nodes-label" class="caption workshop__column-label"
+                                  text="Districts" />
+                    <engine:VisualElement name="workshop-node-slots"
+                                          class="workshop__slots workshop__slots--stagger" />
+                </engine:VisualElement>
+
+                <engine:VisualElement class="workshop__column">
+                    <engine:Label name="workshop-suits-label" class="caption workshop__column-label"
+                                  text="Suits" />
+                    <engine:VisualElement name="workshop-suit-slots" class="workshop__slots" />
+                </engine:VisualElement>
+
             </engine:VisualElement>
 
         </engine:VisualElement>
 
-        <engine:VisualElement name="workshop-tabs" class="workshop__tabs">
-            <engine:Button name="workshop-tab-suits" class="btn btn--ghost workshop__tab" text="Suits" />
-            <engine:Button name="workshop-tab-nodes" class="btn btn--ghost workshop__tab" text="Districts" />
+        <engine:VisualElement name="workshop-picker" class="card workshop__picker">
+
+            <!-- Each tab sits under the column it fills. Left is left. -->
+            <engine:VisualElement name="workshop-tabs" class="workshop__tabs">
+                <engine:Button name="workshop-tab-nodes" class="workshop__tab" text="Districts" />
+                <engine:Button name="workshop-tab-suits" class="workshop__tab" text="Suits" />
+            </engine:VisualElement>
+
+            <!--
+                Shown only when every slot on the active tab is taken. Without it
+                a tap on a cell would do nothing and say nothing, which is what
+                GroupSelectionPanel does today.
+            -->
+            <engine:Label name="workshop-hint" class="caption workshop__hint"
+                          text="Slots full - tap a slot above to free one" />
+
+            <engine:ScrollView name="workshop-list-nodes" class="workshop__grid" />
+            <engine:ScrollView name="workshop-list-suits" class="workshop__grid" />
+
         </engine:VisualElement>
-
-        <!--
-            Shown only when every slot on the active tab is taken. Without it a
-            tap on a row would do nothing and say nothing, which is what
-            GroupSelectionPanel does today.
-        -->
-        <engine:Label name="workshop-hint" class="caption workshop__hint"
-                      text="Slots full - tap a slot above to free one" />
-
-        <engine:ScrollView name="workshop-list-suits" class="workshop__list" />
-        <engine:ScrollView name="workshop-list-nodes" class="workshop__list" />
 
     </engine:VisualElement>
 
