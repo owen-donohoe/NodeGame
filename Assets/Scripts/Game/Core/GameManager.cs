@@ -43,6 +43,12 @@ namespace NodeWar.Core
         [SerializeField] private NodeWar.View.PathCurveSettings pathCurveSettings =
             new NodeWar.View.PathCurveSettings();
 
+        [Tooltip("How much of an opponent route the player is allowed to see. " +
+                 "The reveal is a real truncation, not a fade, so the cut is a " +
+                 "rule rather than a look.")]
+        [SerializeField] private NodeWar.View.OpponentRouteSettings opponentRouteSettings =
+            new NodeWar.View.OpponentRouteSettings();
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -420,7 +426,8 @@ namespace NodeWar.Core
             // routes. The event still corrects the Tab-key debug switch.
             MatchConnection match = MatchConnection.Instance;
             int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
-            pathRenderer.Initialize(state, localPID, pathCurveSettings, tickProvider);
+            pathRenderer.Initialize(state, localPID, pathCurveSettings,
+                                    opponentRouteSettings, tickProvider, Camera.main);
             pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
         }
 

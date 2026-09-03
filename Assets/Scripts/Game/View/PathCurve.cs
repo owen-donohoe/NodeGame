@@ -170,10 +170,30 @@ namespace NodeWar.View
         /// </summary>
         public static void AppendRemainder(int legIndex, float t, List<Vector3> destination)
         {
+            AppendRemainder(legIndex, t, int.MaxValue, destination);
+        }
+
+        /// <summary>
+        /// The same, stopped after maxLegs legs.
+        ///
+        /// This is a real truncation, not a fade: nothing past the cut is written
+        /// at all. Drawing the whole route and tapering its alpha to zero would
+        /// still put the destination on screen, recoverable by anyone who raises
+        /// their brightness or levels a screenshot -- so an opponent route that
+        /// is meant to withhold its endpoint has to lose the geometry, and the
+        /// fade only shapes what remains.
+        ///
+        /// The cut lands on a leg boundary, which is the midpoint of a rounded
+        /// corner, so a truncated route ends banking into its next turn rather
+        /// than at a node.
+        /// </summary>
+        public static void AppendRemainder(int legIndex, float t, int maxLegs, List<Vector3> destination)
+        {
             if (destination == null) return;
             destination.Clear();
 
             if (points.Count == 0) return;
+            if (maxLegs < 1) return;
 
             if (legIndex < 0) legIndex = 0;
             if (legIndex >= legStarts.Count)
@@ -211,7 +231,16 @@ namespace NodeWar.View
                 firstWhole++;
             }
 
-            for (int i = firstWhole; i < points.Count; i++)
+            // Where the copy stops. maxLegs counts legs from the one being
+            // walked, so revealing "two nodes ahead" is two legs, and the cut
+            // lands on the far boundary of the second.
+            int lastLeg;
+            if (maxLegs >= legStarts.Count - legIndex) lastLeg = legStarts.Count - 1;
+            else lastLeg = legIndex + maxLegs - 1;
+
+            int stopAt = LegEnd(lastLeg);
+
+            for (int i = firstWhole; i <= stopAt && i < points.Count; i++)
                 destination.Add(points[i]);
         }
 

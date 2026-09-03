@@ -262,6 +262,9 @@ Two objects are carried across the Lobby → Gameplay scene load via
   `GameManager` and handed to both consumers so they cannot disagree.
 - `MovementPathRenderer` — dotted routes for the local player, one line per
   distinct remaining route so a squad reads as one, fading as an order ages.
+- `OpponentRouteSettings` — the rules of the one information gate in the
+  game. Everything else is fully visible to both players, so an opponent
+  route hands the player something new rather than withholding it.
 
 ### Where a villager is, mid-edge
 
