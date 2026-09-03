@@ -4,6 +4,8 @@ using NodeWar.Core;
 
 namespace NodeWar.Lobby
 {
+    // LEGACY - serves only the uGUI panels in Assets/Legacy/Lobby/Panels.
+    // Nothing in the UI Toolkit stack uses PanelType; LobbyPageID replaces it.
     public enum PanelType
     {
         Homepage,
@@ -15,6 +17,13 @@ namespace NodeWar.Lobby
 
     public class LobbyManager : MonoBehaviour
     {
+        // LEGACY - every field in this block points at a panel in
+        // Assets/Legacy/. They are NOT commented out, and that is deliberate:
+        // these are [SerializeField]s with live inspector assignments in
+        // Lobby.unity. Comment one out and Unity drops its value the next time
+        // the scene is saved, so re-enabling it would mean re-dragging the
+        // reference by hand. Marked instead, so S5 knows exactly what to remove
+        // in the same commit as the scene edit.
         [Header("Panels")]
         [SerializeField] private HomepagePanel homepagePanel;
         [SerializeField] private LobbyPanel gameModePanel;
@@ -25,6 +34,8 @@ namespace NodeWar.Lobby
         [Header("PlayerProfile Prefab (spawns if none exists)")]
         [SerializeField] private GameObject playerProfilePrefab;
 
+        // LEGACY - replaced by PlayPopup + MatchLauncher. Same reason as above
+        // for not commenting it out.
         [Header("Modals")]
         [SerializeField] private NetworkingModal networkingModal;
 
@@ -39,6 +50,8 @@ namespace NodeWar.Lobby
                  "Created by Tools > Node War > Set Up UI Toolkit Lobby.")]
         [SerializeField] private GameObject uiToolkitLobbyRoot;
 
+        // LEGACY - tracks which uGUI panel is open. The new stack tracks its own
+        // page in NavigationController.
         private LobbyPanel currentPanel;
 
         public GameMode SelectedMode
@@ -126,6 +139,7 @@ namespace NodeWar.Lobby
             }
         }
 
+        // LEGACY - panel lifecycle for the uGUI stack.
         private void RegisterPanel(LobbyPanel panel)
         {
             if (panel == null) return;
@@ -133,6 +147,8 @@ namespace NodeWar.Lobby
             panel.gameObject.SetActive(false);
         }
 
+        // LEGACY - the uGUI navigation entry point. NavigationController.Show is
+        // the equivalent in the new stack, and nothing in Assets/UI calls this.
         public void ShowPanel(PanelType type)
         {
             LobbyPanel target = GetPanel(type);
@@ -209,6 +225,12 @@ namespace NodeWar.Lobby
             SceneManager.LoadScene("Gameplay");
         }
 
+        // LEGACY - the only path LaunchMatch has for GameMode.OneVsOne, and it
+        // opens a panel that now lives in Assets/Legacy. PlayPopup owns its own
+        // MatchLauncher and never routes online play through here, so this is
+        // unreachable while useUIToolkitLobby is on - but it still compiles and
+        // is still reachable with the toggle off. S5 has to decide what
+        // LaunchMatch(OneVsOne) does before this can go.
         private void LaunchOnlineMatch()
         {
             if (networkingModal != null)
@@ -217,6 +239,7 @@ namespace NodeWar.Lobby
                 Debug.LogWarning("[LobbyManager] NetworkingModal not assigned.");
         }
 
+        // LEGACY - PanelType to panel lookup.
         private LobbyPanel GetPanel(PanelType type)
         {
             switch (type)
