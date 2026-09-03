@@ -168,12 +168,9 @@ namespace NodeWar.EditorTools
 
             SerializedObject so = new SerializedObject(controller);
 
-            SerializedProperty layoutProperty = so.FindProperty("hudLayout");
-
-            if (layoutProperty != null)
-                layoutProperty.objectReferenceValue = layout;
-            else
-                Debug.LogWarning("[UIToolkitHUDSetup] GameplayHUDController has no hudLayout field.");
+            Assign(so, "hudLayout", layout);
+            Assign(so, "nodeSheetLayout",
+                   AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UIRoot + "/Layouts/NodeSheet.uxml"));
 
             so.ApplyModifiedPropertiesWithoutUndo();
 
@@ -208,6 +205,23 @@ namespace NodeWar.EditorTools
 
             property.objectReferenceValue = root;
             so.ApplyModifiedProperties();
+        }
+
+        private static void Assign(SerializedObject so, string propertyName, VisualTreeAsset asset)
+        {
+            SerializedProperty property = so.FindProperty(propertyName);
+
+            if (property == null)
+            {
+                Debug.LogWarning("[UIToolkitHUDSetup] GameplayHUDController has no " +
+                                 propertyName + " field. Has it compiled?");
+                return;
+            }
+
+            if (asset == null)
+                Debug.LogWarning("[UIToolkitHUDSetup] No asset found for " + propertyName + ".");
+
+            property.objectReferenceValue = asset;
         }
 
         private static void EnsureFolder(string path)

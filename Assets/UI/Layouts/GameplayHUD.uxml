@@ -108,6 +108,13 @@
             <engine:VisualElement class="hud__board-space" picking-mode="Ignore" />
 
         </engine:VisualElement>
+
+        <!--
+            The node sheet is added here at runtime, outside the safe area
+            padding and after it in the tree so it draws over the readouts. It
+            is absolutely positioned against this root, and it is the only
+            thing on this surface allowed to reach the bottom of the screen.
+        -->
     </engine:VisualElement>
 
 </engine:UXML>

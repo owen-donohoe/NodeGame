@@ -1,0 +1,347 @@
+/*
+    Node sheet.
+
+    Colour, spacing and type come from Theme.uss. The player marks come from
+    there too, unchanged, so a node owner reads the same here as on the HUD and
+    in the lobby.
+
+    THE SHEET NEVER COVERS MORE THAN THE BOTTOM. max-height is a proportion of
+    the screen rather than a pixel count, so it holds on any aspect from 16:9
+    to 21:9 - and the board above it stays visible, which is the whole reason
+    this is a sheet and not a takeover.
+*/
+
+.sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 55%;
+    flex-direction: column;
+    background-color: var(--paper);
+    border-top-width: var(--border-width);
+    border-top-color: var(--border-ink);
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    padding: var(--space-sm);
+    transition-property: translate;
+    transition-duration: 0.22s;
+}
+
+/*
+    Slid away rather than display:none, so it animates out. 110% clears the
+    border and any shadow the theme adds later.
+*/
+.sheet--hidden {
+    translate: 0 110%;
+}
+
+/* ===================================================================
+   Header
+   =================================================================== */
+
+.sheet__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.sheet__mark {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+}
+
+/* Unclaimed: no player colour, so no shape claim either. */
+.sheet__mark--none {
+    background-color: var(--disabled);
+    border-radius: var(--radius-sm);
+}
+
+.sheet__title {
+    flex-grow: 1;
+    flex-direction: column;
+    margin-left: var(--space-sm);
+}
+
+.sheet__close {
+    flex-shrink: 0;
+    min-height: var(--touch-min);
+    min-width: var(--touch-min);
+    margin: 0;
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+    background-image: none;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: var(--border-width);
+    border-color: var(--ink-muted);
+    border-radius: var(--radius-md);
+    color: var(--ink-dark);
+    font-size: var(--text-sm);
+    -unity-font-style: bold;
+}
+
+/* ===================================================================
+   Claim - a tug of war, not a progress bar
+   =================================================================== */
+
+.sheet__claim {
+    flex-shrink: 0;
+    margin-top: var(--space-sm);
+}
+
+.sheet__claim-track {
+    flex-direction: row;
+    align-items: center;
+    height: 14px;
+    background-color: rgba(72, 56, 40, 0.15);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+/*
+    Two halves of equal width meeting at a centre line. Each fill grows from
+    the centre outward, so the eye reads distance-from-neutral in both
+    directions rather than progress in one.
+*/
+.sheet__claim-half {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 100%;
+    flex-direction: row;
+}
+
+.sheet__claim-half--left {
+    justify-content: flex-end;
+}
+
+.sheet__claim-half--right {
+    justify-content: flex-start;
+}
+
+.sheet__claim-centre {
+    width: 2px;
+    height: 100%;
+    flex-shrink: 0;
+    background-color: var(--border-ink);
+}
+
+.sheet__claim-fill {
+    height: 100%;
+    width: 0;
+    transition-property: width;
+    transition-duration: 0.2s;
+}
+
+.sheet__claim-fill--p0 { background-color: var(--player-0); }
+.sheet__claim-fill--p1 { background-color: var(--player-1); }
+
+.sheet__claim-label {
+    -unity-text-align: middle-center;
+    margin-top: var(--space-xs);
+}
+
+/* ===================================================================
+   Content
+   =================================================================== */
+
+.sheet__scroll {
+    flex-grow: 1;
+    margin-top: var(--space-sm);
+}
+
+.sheet__content-host {
+    flex-direction: column;
+}
+
+.sheet__content {
+    flex-direction: column;
+}
+
+.sheet__hidden {
+    display: none;
+}
+
+.sheet__headline {
+    -unity-font-style: bold;
+}
+
+/* Why a control is refused. Never left as a silently dead button. */
+.sheet__reason {
+    color: var(--accent);
+    margin-top: var(--space-xs);
+}
+
+.sheet__action {
+    min-height: var(--touch-min);
+    margin: 0;
+    margin-left: var(--space-sm);
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+    background-image: none;
+    background-color: var(--primary);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-md);
+    color: var(--ink-dark);
+    font-size: var(--text-sm);
+    -unity-font-style: bold;
+    flex-shrink: 0;
+}
+
+.sheet__action:disabled {
+    background-color: var(--disabled);
+    color: var(--ink-muted);
+}
+
+.sheet__step {
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    margin: 0;
+    padding: 0;
+    background-image: none;
+    background-color: var(--card);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    color: var(--ink-dark);
+    font-size: var(--text-lg);
+    -unity-font-style: bold;
+}
+
+.sheet__step:disabled {
+    background-color: var(--disabled);
+    color: var(--ink-muted);
+}
+
+/* ===================================================================
+   Forge
+   =================================================================== */
+
+.forge__slots {
+    flex-direction: column;
+    margin-top: var(--space-xs);
+}
+
+.forge__slot {
+    height: 10px;
+    margin-bottom: var(--space-xs);
+    background-color: rgba(72, 56, 40, 0.15);
+    border-width: 1px;
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.forge__slot-fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--secondary);
+}
+
+.forge__allocation {
+    margin-top: var(--space-sm);
+}
+
+.forge__allocation-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--space-xs);
+}
+
+.forge__allocation-value {
+    flex-grow: 1;
+    font-size: var(--text-lg);
+    color: var(--ink-dark);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* ===================================================================
+   Core
+   =================================================================== */
+
+.core__roster {
+    flex-direction: column;
+    margin-top: var(--space-sm);
+}
+
+.core__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.core__row-text {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.core__track {
+    height: 8px;
+    margin-top: var(--space-xs);
+    background-color: rgba(72, 56, 40, 0.15);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.core__track-fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--primary);
+}
+
+/* ===================================================================
+   Equip
+   =================================================================== */
+
+.equip__roster {
+    flex-direction: column;
+    margin-top: var(--space-sm);
+}
+
+.equip__villager {
+    flex-direction: column;
+    margin-bottom: var(--space-sm);
+    background-color: var(--card);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.equip__villager-header {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--touch-min);
+    margin: 0;
+    padding: var(--space-sm);
+    background-image: none;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.equip__villager-header:disabled {
+    opacity: 0.6;
+}
+
+.equip__villager-text {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.equip__suits {
+    flex-direction: column;
+    padding: var(--space-sm);
+    padding-top: 0;
+}
+
+.equip__suit {
+    margin-left: 0;
+    margin-bottom: var(--space-xs);
+}

@@ -579,12 +579,15 @@ namespace NodeWar.Core
             if (hudManager != null)
                 hudManager.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold);
 
-            ApplyHUDStackChoice(uiGO);
-
             nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
             if (nodePanelManager != null)
                 nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch,
                                             tickProvider, balance.Data);
+
+            // After the node panel, not before: the new HUD subscribes to it,
+            // and suppressing a manager that has not been initialised would hand
+            // the sheet an event source with no simulation behind it.
+            ApplyHUDStackChoice(uiGO);
 
             gameOverPanel = uiGO.GetComponentInChildren<GameOverPanel>(true);
             if (gameOverPanel != null)
@@ -652,10 +655,20 @@ namespace NodeWar.Core
 
             uiToolkitHud = uiToolkitHudRoot.GetComponent<GameplayHUDController>();
 
-            if (uiToolkitHud != null)
-                uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold);
-            else
+            if (uiToolkitHud == null)
+            {
                 Debug.LogWarning("[GameManager] uiToolkitHudRoot has no GameplayHUDController.");
+                return;
+            }
+
+            uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
+                                    inputBuffer, tickProvider, balance.Data, nodePanelManager);
+
+            // Only hand the node panel over if the new sheet actually exists.
+            // Without a layout assigned the uGUI panel keeps the job, which is
+            // better than a tap that opens nothing at all.
+            if (nodePanelManager != null)
+                nodePanelManager.SetSuppressed(uiToolkitHud.HasNodeSheet);
         }
 
         /// <summary>

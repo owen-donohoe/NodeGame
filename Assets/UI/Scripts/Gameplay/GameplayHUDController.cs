@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
 using NodeWar.Debugging;
+using NodeWar.Input;
 
 // SafeAreaBinder lives in NodeWar.Lobby because that is where it was first
 // needed. It is a general utility with nothing lobby-specific in it, and moving
@@ -37,16 +38,28 @@ namespace NodeWar.UI
         [Tooltip("The HUD layout. Assign GameplayHUD.uxml.")]
         [SerializeField] private VisualTreeAsset hudLayout;
 
+        [Tooltip("NodeSheet.uxml. Without it no node sheet is shown and the old " +
+                 "uGUI panel keeps the job.")]
+        [SerializeField] private VisualTreeAsset nodeSheetLayout;
+
         [Tooltip("How long the bump on a changed number lasts. Matches HUD.uss.")]
         [SerializeField] private long bumpMilliseconds = 180;
 
         private UIDocument document;
         private SafeAreaBinder safeArea;
+        private NodeSheet nodeSheet;
 
         private SimulationState state;
         private DebugPlayerSwitch playerSwitch;
+        private NodePanelManager panelSource;
         private int breachThreshold = 3;
         private bool initialized;
+
+        /// <summary>
+        /// The node sheet, or null when no layout was assigned. GameManager
+        /// asks so it knows whether to suppress the uGUI panel.
+        /// </summary>
+        public bool HasNodeSheet { get { return nodeSheet != null; } }
 
         private Label foodLabel;
         private Label materialsLabel;
@@ -114,8 +127,38 @@ namespace NodeWar.UI
 
         private void OnDisable()
         {
+            if (panelSource != null)
+            {
+                panelSource.NodeOpened -= OnNodeOpened;
+                panelSource.NodeClosed -= OnNodeClosed;
+                panelSource = null;
+            }
+
             safeArea = null;
+            nodeSheet = null;
             initialized = false;
+        }
+
+        private void OnNodeOpened(int nodeID)
+        {
+            if (nodeSheet == null) return;
+
+            nodeSheet.Open(nodeID, CurrentPlayerID());
+        }
+
+        private void OnNodeClosed()
+        {
+            if (nodeSheet != null) nodeSheet.Close();
+        }
+
+        private int CurrentPlayerID()
+        {
+            int pid = playerSwitch != null ? playerSwitch.GetCurrentPlayerID() : 0;
+
+            if (state == null) return 0;
+            if (pid < 0 || pid >= state.players.Length) return 0;
+
+            return pid;
         }
 
         /// <summary>
@@ -124,13 +167,33 @@ namespace NodeWar.UI
         /// and GameManager should not care which it got.
         /// </summary>
         public void Initialize(SimulationState simulationState, DebugPlayerSwitch debugSwitch,
-                               int breachThresholdValue)
+                               int breachThresholdValue, InputBuffer inputBuffer,
+                               NodeWar.Core.ITickProvider tickProvider, GameBalanceData balance,
+                               NodePanelManager nodePanelManager)
         {
             state = simulationState;
             playerSwitch = debugSwitch;
             breachThreshold = breachThresholdValue > 0 ? breachThresholdValue : 1;
 
             CountVillagerTotals();
+
+            if (nodeSheet != null)
+            {
+                nodeSheet.Bind(state, inputBuffer, tickProvider, balance);
+
+                // The old manager keeps the input path: TapRouter arbitrates the
+                // tap, DistrictPanelPolicy decides whether a node deserves a
+                // sheet at all, and the camera focus session hangs off the same
+                // call. Subscribing rather than raycasting again is what stops
+                // two things racing to answer one tap.
+                panelSource = nodePanelManager;
+
+                if (panelSource != null)
+                {
+                    panelSource.NodeOpened += OnNodeOpened;
+                    panelSource.NodeClosed += OnNodeClosed;
+                }
+            }
 
             initialized = true;
 
@@ -144,6 +207,8 @@ namespace NodeWar.UI
             if (!initialized || state == null) return;
 
             RefreshAll(false);
+
+            if (nodeSheet != null) nodeSheet.Update(CurrentPlayerID());
         }
 
         // ===== BINDING =====
@@ -171,6 +236,39 @@ namespace NodeWar.UI
                 villagerToggle.clicked += ToggleVillagers;
 
             ApplyVillagerPanelState();
+
+            BuildNodeSheet(root);
+        }
+
+        /// <summary>
+        /// The sheet is added to the document root rather than inside the safe
+        /// area, and after everything else so it draws over the readouts. It is
+        /// the one element on this surface allowed to reach the bottom edge -
+        /// its own padding keeps its contents clear of the home indicator.
+        /// </summary>
+        private void BuildNodeSheet(VisualElement root)
+        {
+            if (nodeSheetLayout == null)
+            {
+                Debug.LogWarning("[HUD] No NodeSheet.uxml assigned; the uGUI node panel " +
+                                 "keeps the job. Run Tools > Node War > Set Up UI Toolkit HUD.");
+                return;
+            }
+
+            nodeSheet = new NodeSheet(nodeSheetLayout);
+            nodeSheet.Closed += OnSheetClosedByPlayer;
+
+            root.Add(nodeSheet.Root);
+        }
+
+        /// <summary>
+        /// The player pressed Close on the sheet. The old manager still owns the
+        /// open/closed truth - it drives the camera focus session and decides
+        /// what a later tap means - so it is told rather than bypassed.
+        /// </summary>
+        private void OnSheetClosedByPlayer()
+        {
+            if (panelSource != null) panelSource.ClosePanel();
         }
 
         private void ToggleVillagers()
