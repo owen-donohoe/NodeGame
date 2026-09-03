@@ -1,0 +1,209 @@
+/*
+    In-match HUD.
+
+    Colour, spacing and type come from Theme.uss custom properties, and the
+    player marks come from there too - the same blue square and red circle the
+    lobby uses, so ownership reads identically in both places.
+
+    Two things here are not taste:
+
+    1. NOTHING PAINTS A FULL-SCREEN BACKGROUND. This surface floats over a 3D
+       board. .hud and every container are transparent; only the chips and the
+       villager card have a fill, and they are as small as they can be.
+
+    2. THE BOTTOM OF THE SCREEN IS LEFT EMPTY. .hud__board-space takes all the
+       slack, so every readout is pinned to the top and the board keeps the
+       part of the screen a thumb is over.
+*/
+
+.hud {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* SafeAreaBinder writes the padding here; nothing else should. */
+.hud__safe {
+    flex-grow: 1;
+    flex-direction: column;
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+}
+
+/* ===================================================================
+   Breach - the win condition, and the reason this HUD has a top band
+   =================================================================== */
+
+.hud__breaches {
+    flex-direction: column;
+    flex-shrink: 0;
+    margin-top: var(--space-sm);
+}
+
+.hud__breach {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+}
+
+.hud__mark {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+}
+
+/*
+    A depleting bar: full is nought breaches, empty is defeat. Reading it as
+    "how much wall is left" is the right intuition, which is why it drains
+    rather than fills.
+*/
+.hud__breach-track {
+    flex-grow: 1;
+    height: 12px;
+    margin-left: var(--space-sm);
+    margin-right: var(--space-sm);
+    background-color: rgba(20, 14, 8, 0.55);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.hud__breach-fill {
+    height: 100%;
+    width: 100%;
+    transition-property: width;
+    transition-duration: 0.35s;
+}
+
+.hud__breach-fill--p0 { background-color: var(--player-0); }
+.hud__breach-fill--p1 { background-color: var(--player-1); }
+
+/* The count in text as well as length, for anyone the bar alone fails. */
+.hud__breach-count {
+    flex-shrink: 0;
+    min-width: 34px;
+    color: var(--ink-light);
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+}
+
+/* ===================================================================
+   Resources and the villager toggle
+   =================================================================== */
+
+.hud__second-row {
+    flex-direction: row;
+    align-items: stretch;
+    flex-shrink: 0;
+    margin-top: var(--space-xs);
+}
+
+.hud__resources {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.hud__res {
+    flex-grow: 1;
+    flex-basis: 0;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--space-xs);
+    padding-top: var(--space-xs);
+    padding-bottom: var(--space-xs);
+    background-color: var(--card);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+}
+
+.hud__res-value {
+    font-size: var(--text-lg);
+    color: var(--ink-dark);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    transition-property: scale, color;
+    transition-duration: 0.18s;
+}
+
+/*
+    Added for a moment when the number changes, then removed. The odometer in
+    WheelDisplay does this with three stacked TMP texts and a DOTween strip
+    slide; a transition on one label is the UI Toolkit shape of the same idea.
+*/
+.hud__res-value--bump {
+    scale: 1.3;
+    color: var(--accent);
+}
+
+.hud__res-label {
+    -unity-text-align: middle-center;
+}
+
+.hud__villager-toggle {
+    flex-shrink: 0;
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    margin: 0;
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+    background-image: none;
+    background-color: var(--card);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    color: var(--ink-dark);
+    font-size: var(--text-md);
+    -unity-font-style: bold;
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.hud__villager-toggle:active {
+    scale: 0.94;
+}
+
+.hud__villager-toggle--open {
+    background-color: var(--primary);
+}
+
+/* ===================================================================
+   Villager count - the one thing here that collapses
+   =================================================================== */
+
+.hud__villagers {
+    flex-shrink: 0;
+    margin-top: var(--space-xs);
+    padding: var(--space-sm);
+    display: none;
+}
+
+.hud__villagers--open {
+    display: flex;
+}
+
+.hud__villager-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+}
+
+.hud__villager-count {
+    margin-left: var(--space-sm);
+    -unity-font-style: bold;
+}
+
+/* ===================================================================
+   The board
+   =================================================================== */
+
+/*
+    Deliberately empty and deliberately greedy. It exists so nothing drifts
+    down into the playfield on a tall screen, and so the HUD reads as a band
+    across the top rather than a frame around the game.
+*/
+.hud__board-space {
+    flex-grow: 1;
+}

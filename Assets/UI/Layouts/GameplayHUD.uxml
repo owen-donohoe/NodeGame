@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        The in-match HUD. The UI Toolkit counterpart to HUD_Canvas inside
+        UI_Manager.prefab, and the first piece of the rebuild that sits over
+        live gameplay rather than replacing a screen.
+
+        WHAT IS ALWAYS VISIBLE, AND WHY. Settled 2026-09-02: three resource
+        readouts and both breach bars never hide, and the villager count
+        collapses behind a tap. Breach is the win condition - a player who
+        cannot see how close either side is to losing cannot play - so it is at
+        the top, it is first, and it has no collapsed state.
+
+        PICKING MODE IS LOAD-BEARING. Every container here is picking-mode
+        Ignore. A runtime panel that picks over its whole area swallows every
+        tap before the board sees it, and the board is the game. Only the
+        villager toggle picks, because it is the only thing here you can press.
+
+        READ-ONLY. This surface reads SimulationState and writes nothing. The
+        four commands - Move, SetAllocation, Equip, Respawn - all belong to the
+        node panel, which is S7.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Theme.uss" />
+    <engine:Style src="project://database/Assets/UI/Styles/HUD.uss" />
+
+    <engine:VisualElement name="hud-root" class="hud" picking-mode="Ignore">
+        <engine:VisualElement name="hud-safe-area" class="hud__safe" picking-mode="Ignore">
+
+            <!--
+                Breach. Two bars, always. Ownership is never colour alone here
+                either: .player-mark--p0 is a blue square and --p1 a red circle,
+                and each bar carries its count as text.
+            -->
+            <engine:VisualElement name="hud-breaches" class="hud__breaches" picking-mode="Ignore">
+
+                <engine:VisualElement class="hud__breach" picking-mode="Ignore">
+                    <engine:VisualElement class="player-mark player-mark--p0 hud__mark" picking-mode="Ignore">
+                        <engine:Label class="player-mark__label" text="1" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:VisualElement class="hud__breach-track" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-breach-fill-p0" class="hud__breach-fill hud__breach-fill--p0" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:Label name="hud-breach-count-p0" class="caption hud__breach-count" text="0/3" picking-mode="Ignore" />
+                </engine:VisualElement>
+
+                <engine:VisualElement class="hud__breach" picking-mode="Ignore">
+                    <engine:VisualElement class="player-mark player-mark--p1 hud__mark" picking-mode="Ignore">
+                        <engine:Label class="player-mark__label" text="2" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:VisualElement class="hud__breach-track" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-breach-fill-p1" class="hud__breach-fill hud__breach-fill--p1" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:Label name="hud-breach-count-p1" class="caption hud__breach-count" text="0/3" picking-mode="Ignore" />
+                </engine:VisualElement>
+
+            </engine:VisualElement>
+
+            <engine:VisualElement name="hud-second-row" class="hud__second-row" picking-mode="Ignore">
+
+                <!-- Food, materials, metal - the three the simulation carries. -->
+                <engine:VisualElement name="hud-resources" class="hud__resources" picking-mode="Ignore">
+
+                    <engine:VisualElement class="hud__res" picking-mode="Ignore">
+                        <engine:Label name="hud-food" class="hud__res-value" text="0" picking-mode="Ignore" />
+                        <engine:Label class="caption hud__res-label" text="Food" picking-mode="Ignore" />
+                    </engine:VisualElement>
+
+                    <engine:VisualElement class="hud__res" picking-mode="Ignore">
+                        <engine:Label name="hud-materials" class="hud__res-value" text="0" picking-mode="Ignore" />
+                        <engine:Label class="caption hud__res-label" text="Materials" picking-mode="Ignore" />
+                    </engine:VisualElement>
+
+                    <engine:VisualElement class="hud__res" picking-mode="Ignore">
+                        <engine:Label name="hud-metal" class="hud__res-value" text="0" picking-mode="Ignore" />
+                        <engine:Label class="caption hud__res-label" text="Metal" picking-mode="Ignore" />
+                    </engine:VisualElement>
+
+                </engine:VisualElement>
+
+                <!-- The one thing on this surface you can press. -->
+                <engine:Button name="hud-villager-toggle" class="hud__villager-toggle" text="0" />
+
+            </engine:VisualElement>
+
+            <engine:VisualElement name="hud-villagers" class="card hud__villagers" picking-mode="Ignore">
+                <engine:VisualElement class="hud__villager-row" picking-mode="Ignore">
+                    <engine:VisualElement class="player-mark player-mark--p0 hud__mark" picking-mode="Ignore">
+                        <engine:Label class="player-mark__label" text="1" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:Label name="hud-villagers-p0" class="body hud__villager-count" text="0" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement class="hud__villager-row" picking-mode="Ignore">
+                    <engine:VisualElement class="player-mark player-mark--p1 hud__mark" picking-mode="Ignore">
+                        <engine:Label class="player-mark__label" text="2" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:Label name="hud-villagers-p1" class="body hud__villager-count" text="0" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:Label class="caption" text="Alive of total. A villager that breaches is spent for good." picking-mode="Ignore" />
+            </engine:VisualElement>
+
+            <!-- Everything below here is board. Nothing may cover it. -->
+            <engine:VisualElement class="hud__board-space" picking-mode="Ignore" />
+
+        </engine:VisualElement>
+    </engine:VisualElement>
+
+</engine:UXML>
