@@ -480,12 +480,21 @@ namespace NodeWar.View
                 line.receiveShadows = false;
                 line.material = EnsureDashMaterial();
 
-                // Bottom of the sorting order, so a route never draws over
-                // anything: not a villager, not a node, not the HUD. Read from
-                // SortingLayer rather than hard-coding a name, so reordering the
-                // layers in Project Settings moves this with them.
-                if (sortingLayers == null) sortingLayers = SortingLayer.layers;
-                if (sortingLayers.Length > 0) line.sortingLayerID = sortingLayers[0].id;
+                // Above Ground, where the node art draws, and below Villagers,
+                // so a route lies on the board without covering a unit. The
+                // lowest layer sits under Ground and would hide the routes
+                // behind the nodes entirely.
+                //
+                // Resolved by name so the layer can be changed in the Inspector,
+                // and falls back to the lowest layer if the name is not defined
+                // rather than silently landing on Default.
+                int layerID = SortingLayer.NameToID(settings.sortingLayerName);
+                if (!SortingLayer.IsValid(layerID))
+                {
+                    if (sortingLayers == null) sortingLayers = SortingLayer.layers;
+                    if (sortingLayers.Length > 0) layerID = sortingLayers[0].id;
+                }
+                line.sortingLayerID = layerID;
                 line.sortingOrder = short.MinValue;
                 line.enabled = false;
 

@@ -45,6 +45,12 @@ namespace NodeWar.View
         [Range(0f, 1f)]
         public float lineHeight = 0.05f;
 
+        [Tooltip("Sorting layer the routes draw on. Lasso by default: it sits " +
+                 "above Ground, where the node art renders, and below Villagers, " +
+                 "so a route lies on the board without covering a unit. The " +
+                 "lowest layer would put routes behind the nodes and hide them.")]
+        public string sortingLayerName = "Lasso";
+
         [Tooltip("Distance from one dash to the next, in world units. This is " +
                  "the gap pattern along the line, unrelated to lineHeight. " +
                  "Smaller is a finer dotted line.")]
