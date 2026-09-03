@@ -160,15 +160,26 @@ namespace NodeWar.EditorTools
             LobbyUIController controller = root.GetComponent<LobbyUIController>();
             if (controller == null) controller = root.AddComponent<LobbyUIController>();
 
-            // rootLayout is private [SerializeField]; SerializedObject is the
+            // These are private [SerializeField]s; SerializedObject is the
             // supported way to set one without widening its access.
+            //
+            // Each session that adds a page adds a row here. A page whose layout
+            // is missing degrades to a placeholder rather than an exception, so
+            // a half-updated table is visible rather than fatal.
             SerializedObject so = new SerializedObject(controller);
-            SerializedProperty layoutProperty = so.FindProperty("rootLayout");
-            if (layoutProperty != null)
+
+            AssignLayout(so, "rootLayout", layout);
+            AssignLayout(so, "homePageLayout", Load(UIRoot + "/Layouts/HomePage.uxml"));
+            AssignLayout(so, "playPopupLayout", Load(UIRoot + "/Layouts/PlayPopup.uxml"));
+
+            SerializedProperty managerProperty = so.FindProperty("lobbyManager");
+            if (managerProperty != null)
             {
-                layoutProperty.objectReferenceValue = layout;
-                so.ApplyModifiedPropertiesWithoutUndo();
+                managerProperty.objectReferenceValue =
+                    Object.FindAnyObjectByType<LobbyManager>(FindObjectsInactive.Include);
             }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
 
             // Starts inactive. LobbyManager.ApplyUIStackChoice turns it on when
             // the toggle says so, and leaving it off means running this setup
@@ -203,6 +214,30 @@ namespace NodeWar.EditorTools
 
             property.objectReferenceValue = root;
             so.ApplyModifiedProperties();
+        }
+
+        private static VisualTreeAsset Load(string path)
+        {
+            VisualTreeAsset asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
+
+            if (asset == null)
+                Debug.LogWarning("[UIToolkitLobbySetup] Layout not found: " + path);
+
+            return asset;
+        }
+
+        private static void AssignLayout(SerializedObject so, string propertyName, VisualTreeAsset asset)
+        {
+            SerializedProperty property = so.FindProperty(propertyName);
+
+            if (property == null)
+            {
+                Debug.LogWarning("[UIToolkitLobbySetup] LobbyUIController has no " +
+                                 propertyName + " field. Has it compiled?");
+                return;
+            }
+
+            property.objectReferenceValue = asset;
         }
 
         private static void EnsureFolder(string path)

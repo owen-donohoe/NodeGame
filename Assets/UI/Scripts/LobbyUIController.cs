@@ -23,12 +23,24 @@ namespace NodeWar.Lobby
         [Tooltip("The lobby shell layout. Assign LobbyRoot.uxml.")]
         [SerializeField] private VisualTreeAsset rootLayout;
 
+        [Header("Pages")]
+        [Tooltip("HomePage.uxml. Without it Home falls back to a placeholder.")]
+        [SerializeField] private VisualTreeAsset homePageLayout;
+
+        [Tooltip("PlayPopup.uxml. Without it the Play button does nothing.")]
+        [SerializeField] private VisualTreeAsset playPopupLayout;
+
+        [Header("Links")]
+        [Tooltip("Used to start Bot and Testing matches. Found automatically if left empty.")]
+        [SerializeField] private LobbyManager lobbyManager;
+
         [Tooltip("Log what the shell wired up on start. Off for normal play.")]
         [SerializeField] private bool verboseLogging;
 
         private UIDocument document;
         private NavigationController navigation;
         private SafeAreaBinder safeArea;
+        private PlayPopup playPopup;
 
         /// <summary>
         /// Page switching, for pages to navigate between themselves. Null until
@@ -77,6 +89,11 @@ namespace NodeWar.Lobby
 
         private void OnDisable()
         {
+            // Dispose before dropping the reference: the popup may own a live
+            // socket, and leaving one open would collide with the next attempt.
+            if (playPopup != null) playPopup.Dispose();
+
+            playPopup = null;
             navigation = null;
             safeArea = null;
         }
@@ -86,6 +103,14 @@ namespace NodeWar.Lobby
             // Cheap: returns immediately unless the safe area, the screen or the
             // panel size actually changed.
             if (safeArea != null) safeArea.Update();
+
+            // Pumps the connection state machine while the popup is open.
+            if (playPopup != null) playPopup.Update();
+        }
+
+        private void OnPlayRequested()
+        {
+            if (playPopup != null) playPopup.Show();
         }
 
         private void BuildShell(VisualElement root)
@@ -110,11 +135,32 @@ namespace NodeWar.Lobby
             BindNav(root, "nav-profile", LobbyPageID.Profile);
 
             RegisterPages();
+            BuildPlayPopup(root);
 
             navigation.Show(LobbyPageID.Home);
 
             if (verboseLogging)
                 Debug.Log("[LobbyUI] Shell built. Current page: " + navigation.CurrentPageID);
+        }
+
+        /// <summary>
+        /// The popup is added to the shell root, not the page host, so it floats
+        /// over the nav bar as well as the page. It is absolutely positioned and
+        /// starts hidden, so it costs nothing until opened.
+        /// </summary>
+        private void BuildPlayPopup(VisualElement root)
+        {
+            if (playPopupLayout == null)
+            {
+                Debug.LogWarning("[LobbyUI] No PlayPopup.uxml assigned; Play will do nothing.");
+                return;
+            }
+
+            if (lobbyManager == null)
+                lobbyManager = FindAnyObjectByType<LobbyManager>();
+
+            playPopup = new PlayPopup(playPopupLayout, lobbyManager);
+            root.Add(playPopup.Root);
         }
 
         /// <summary>
@@ -127,7 +173,17 @@ namespace NodeWar.Lobby
         /// </summary>
         private void RegisterPages()
         {
-            navigation.Register(new PlaceholderPage(LobbyPageID.Home, "due in S2"));
+            if (homePageLayout != null)
+            {
+                HomePage home = new HomePage(homePageLayout);
+                home.PlayRequested += OnPlayRequested;
+                navigation.Register(home);
+            }
+            else
+            {
+                navigation.Register(new PlaceholderPage(LobbyPageID.Home, "HomePage.uxml not assigned"));
+            }
+
             navigation.Register(new PlaceholderPage(LobbyPageID.Workshop, "due in S3"));
             navigation.Register(new PlaceholderPage(LobbyPageID.Shop, "due in S4"));
             navigation.Register(new PlaceholderPage(LobbyPageID.Social, "due in S4"));

@@ -1,0 +1,223 @@
+/*
+    Home page and play popup.
+
+    Colour, spacing and type all come from Theme.uss custom properties; nothing
+    here invents a value. If a number appears below it is a layout proportion,
+    not a design token.
+*/
+
+/* ===================================================================
+   Home
+   =================================================================== */
+
+.home {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.home__identity {
+    flex-shrink: 0;
+}
+
+.home__identity-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.home__rename {
+    min-height: var(--touch-min);
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    font-size: var(--text-sm);
+}
+
+.home__trophy-row {
+    flex-direction: row;
+    align-items: flex-end;
+    margin-top: var(--space-sm);
+}
+
+.home__trophy-row > .caption {
+    margin-left: var(--space-sm);
+    margin-bottom: var(--space-xs);
+}
+
+/*
+    The arena band takes the slack between identity and Play, so the page
+    breathes on a tall phone without the Play button drifting up a short one.
+*/
+.home__arena {
+    flex-grow: 1;
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-md);
+    min-height: 120px;
+}
+
+.home__actions {
+    flex-shrink: 0;
+    flex-direction: column;
+}
+
+.home__mode {
+    -unity-text-align: middle-center;
+    margin-bottom: var(--space-sm);
+}
+
+/* The one thing on the page a thumb must always find. */
+.home__play {
+    min-height: 64px;
+    font-size: var(--text-lg);
+}
+
+/* ===================================================================
+   Popup
+   =================================================================== */
+
+/*
+    Absolute over the whole panel rather than a new page: the brief settled that
+    the board stays visible behind a sheet, and the same reasoning applies in the
+    lobby - a popup that replaces the screen loses the context it was opened from.
+*/
+.popup {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: flex-end;
+}
+
+.popup--hidden {
+    display: none;
+}
+
+.popup__scrim {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(20, 14, 8, 0.55);
+}
+
+/* Sits on the bottom edge, where a thumb is. */
+.popup__sheet {
+    flex-shrink: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    max-height: 88%;
+}
+
+.popup__header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.popup__close {
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.popup__view {
+    flex-direction: column;
+}
+
+.popup__view--hidden {
+    display: none;
+}
+
+.popup__action {
+    margin-top: var(--space-sm);
+    margin-bottom: var(--space-xs);
+}
+
+.popup__or {
+    -unity-text-align: middle-center;
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-xs);
+}
+
+.popup__tabs {
+    flex-direction: row;
+    margin-bottom: var(--space-sm);
+}
+
+.popup__tab {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: var(--space-sm);
+    font-size: var(--text-sm);
+}
+
+.popup__tab--active {
+    background-color: var(--primary);
+    border-color: var(--border-ink);
+}
+
+.popup__input {
+    min-height: var(--touch-min);
+    margin-top: var(--space-sm);
+    font-size: var(--text-lg);
+}
+
+/*
+    UI Toolkit puts the editable region in a child; the outer TextField only
+    carries layout. Styling has to reach the inner element or the height and
+    type size are ignored.
+*/
+.popup__input > .unity-base-text-field__input {
+    min-height: var(--touch-min);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    background-color: var(--card-raised);
+    color: var(--ink-dark);
+    font-size: var(--text-lg);
+    -unity-text-align: middle-center;
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+}
+
+.popup__code {
+    align-items: center;
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
+    background-color: var(--card-raised);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-md);
+}
+
+/* A code that gets read aloud: wide letter spacing, hard to misread. */
+.popup__code-value {
+    font-size: var(--text-xl);
+    letter-spacing: 4px;
+    margin-top: var(--space-xs);
+    margin-bottom: var(--space-xs);
+}
+
+.popup__code--hidden {
+    display: none;
+}
+
+/*
+    Every failure says what to do next, not just what went wrong. The open
+    card is "give every failure a recovery action, not just a message", and a
+    dead-end error screen is the thing it names.
+*/
+.popup__recovery {
+    margin-top: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    color: var(--ink-dark);
+}
+
+.popup__recovery--hidden {
+    display: none;
+}
