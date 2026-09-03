@@ -3927,6 +3927,97 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 372009675}
   m_CullTransparentMesh: 1
+--- !u!1 &373479924
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 373479927}
+  - component: {fileID: 373479926}
+  - component: {fileID: 373479925}
+  m_Layer: 0
+  m_Name: UIToolkitLobby
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &373479925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 373479924}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c157b038bef41cb48836b8960d187756, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Lobby.LobbyUIController
+  rootLayout: {fileID: 9197481963319205126, guid: 33d2b0f996ccee64d9f63c1760435ae0, type: 3}
+  homePageLayout: {fileID: 9197481963319205126, guid: f32a91acb6222164db4991b6f9abfb02, type: 3}
+  playPopupLayout: {fileID: 9197481963319205126, guid: e9702572a647e0d408c8b53e99f622a9, type: 3}
+  workshopPageLayout: {fileID: 9197481963319205126, guid: f2bd4ad2db105fd4799638eaa62d9ebf, type: 3}
+  profilePageLayout: {fileID: 9197481963319205126, guid: 7abbf37ed3a1b2247a89ebcbccb3b906, type: 3}
+  allSuits:
+  - {fileID: 11400000, guid: e36fb10665454a948abb0673cdd5c15e, type: 2}
+  - {fileID: 11400000, guid: edd425e184b3e9f4aa65b59117bf0927, type: 2}
+  - {fileID: 11400000, guid: 8b3a17bf18a89cc429d0d7459a904fef, type: 2}
+  - {fileID: 11400000, guid: 88984f864ff9c9147a396ae8608477d9, type: 2}
+  - {fileID: 11400000, guid: ac3b772a9b493384ca03ede9e2d5883b, type: 2}
+  allNodes:
+  - {fileID: 11400000, guid: 849cb286a669b74408d05b49163290b9, type: 2}
+  - {fileID: 11400000, guid: 899ee923d3d3f6e4e810bbd6bbc49a9b, type: 2}
+  - {fileID: 11400000, guid: 22d89299d8dfee040bb1f3ac5a36d492, type: 2}
+  - {fileID: 11400000, guid: 91c82d924a3a0b14194e55e224ddd795, type: 2}
+  - {fileID: 11400000, guid: 3c2b9bab274708d4381a60c6ecc91cf0, type: 2}
+  - {fileID: 11400000, guid: 8994035d2313d6f4a98792d0ec9883e5, type: 2}
+  - {fileID: 11400000, guid: e8b493de0aa6fed4cb36835d2f88b1ec, type: 2}
+  - {fileID: 11400000, guid: f433fca0b2497c44eab0a8e23383aca5, type: 2}
+  - {fileID: 11400000, guid: 1a0d21c585871084698b8853ab338b35, type: 2}
+  lobbyManager: {fileID: 1372691860}
+  verboseLogging: 0
+--- !u!114 &373479926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 373479924}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 871f732eba83f9a4fab9a412c8be63d0, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 33d2b0f996ccee64d9f63c1760435ae0, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &373479927
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 373479924}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &380443967
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12153,6 +12244,8 @@ MonoBehaviour:
   groupSelectionPanel: {fileID: 74142590}
   playerProfilePrefab: {fileID: 0}
   networkingModal: {fileID: 1684268890}
+  useUIToolkitLobby: 1
+  uiToolkitLobbyRoot: {fileID: 373479924}
 --- !u!114 &1372691861
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18812,3 +18905,4 @@ SceneRoots:
   - {fileID: 857485809}
   - {fileID: 491312975}
   - {fileID: 1372691864}
+  - {fileID: 373479927}
