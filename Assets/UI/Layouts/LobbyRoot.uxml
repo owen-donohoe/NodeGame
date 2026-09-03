@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        The lobby shell. Holds no page content - pages are added into
+        #page-host at runtime by NavigationController, so this file stays
+        stable as pages arrive across S2-S4.
+
+        Structure, outermost first:
+          #lobby-root   fills the panel, paints the background
+          #safe-area    SafeAreaBinder writes padding here from Screen.safeArea
+          #page-host    grows to fill whatever the nav bar leaves
+          #nav-bar      fixed height, sits on the bottom edge
+
+        The nav bar is INSIDE the safe area on purpose. On a device with a home
+        indicator the bar would otherwise sit under it, and its buttons are the
+        one thing on screen that must always be hittable.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Theme.uss" />
+
+    <engine:VisualElement name="lobby-root" class="lobby-root">
+        <engine:VisualElement name="safe-area" class="safe-area">
+
+            <engine:VisualElement name="page-host" class="page-host" />
+
+            <engine:VisualElement name="nav-bar" class="nav-bar">
+
+                <engine:Button name="nav-home" class="nav-button" text="Home">
+                    <engine:VisualElement class="nav-button__indicator" />
+                </engine:Button>
+
+                <engine:Button name="nav-workshop" class="nav-button" text="Workshop">
+                    <engine:VisualElement class="nav-button__indicator" />
+                </engine:Button>
+
+                <engine:Button name="nav-shop" class="nav-button" text="Shop">
+                    <engine:VisualElement class="nav-button__indicator" />
+                </engine:Button>
+
+                <engine:Button name="nav-social" class="nav-button" text="Social">
+                    <engine:VisualElement class="nav-button__indicator" />
+                </engine:Button>
+
+                <engine:Button name="nav-profile" class="nav-button" text="Profile">
+                    <engine:VisualElement class="nav-button__indicator" />
+                </engine:Button>
+
+            </engine:VisualElement>
+        </engine:VisualElement>
+    </engine:VisualElement>
+
+</engine:UXML>

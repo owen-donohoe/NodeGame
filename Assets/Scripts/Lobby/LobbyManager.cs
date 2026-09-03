@@ -28,6 +28,17 @@ namespace NodeWar.Lobby
         [Header("Modals")]
         [SerializeField] private NetworkingModal networkingModal;
 
+        [Header("UI Toolkit migration")]
+        [Tooltip("Show the UI Toolkit lobby instead of these uGUI panels. " +
+                 "Off keeps the shipped lobby exactly as it was; this is the " +
+                 "switch to flip back if the new one misbehaves. Removed in S5 " +
+                 "once the uGUI panels are retired.")]
+        [SerializeField] private bool useUIToolkitLobby;
+
+        [Tooltip("Root object carrying the UIDocument and LobbyUIController. " +
+                 "Created by Tools > Node War > Set Up UI Toolkit Lobby.")]
+        [SerializeField] private GameObject uiToolkitLobbyRoot;
+
         private LobbyPanel currentPanel;
 
         public GameMode SelectedMode
@@ -58,7 +69,46 @@ namespace NodeWar.Lobby
             RegisterPanel(shopPanel);
             RegisterPanel(groupSelectionPanel);
 
-            ShowPanel(PanelType.Homepage);
+            ApplyUIStackChoice();
+
+            // The uGUI panels stay unregistered-but-present when the new lobby
+            // is live, so flipping the toggle back needs no other change.
+            if (!useUIToolkitLobby)
+                ShowPanel(PanelType.Homepage);
+        }
+
+        /// <summary>
+        /// Turns on exactly one of the two lobby UIs.
+        ///
+        /// Both exist in the scene during the migration. This is the only place
+        /// that decides which one the player sees, and it is deliberately a
+        /// serialized bool rather than a #define or a build flag: the point of
+        /// the toggle is that it can be flipped in the inspector mid-session
+        /// when the new lobby does something wrong.
+        /// </summary>
+        private void ApplyUIStackChoice()
+        {
+            if (uiToolkitLobbyRoot != null)
+            {
+                uiToolkitLobbyRoot.SetActive(useUIToolkitLobby);
+            }
+            else if (useUIToolkitLobby)
+            {
+                Debug.LogWarning("[LobbyManager] useUIToolkitLobby is on but no " +
+                                 "uiToolkitLobbyRoot is assigned. Falling back to the " +
+                                 "uGUI lobby. Run Tools > Node War > Set Up UI Toolkit Lobby.");
+                useUIToolkitLobby = false;
+            }
+
+            if (!useUIToolkitLobby) return;
+
+            // Hide the uGUI panels without unregistering them.
+            if (currentPanel != null)
+            {
+                currentPanel.OnHide();
+                currentPanel.gameObject.SetActive(false);
+                currentPanel = null;
+            }
         }
 
         private void EnsurePlayerProfile()
