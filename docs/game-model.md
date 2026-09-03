@@ -4,7 +4,7 @@ title: Game Model
 description: What Node War is — the match model, board, villagers, districts, suits, resources, and win condition, as the simulation actually implements them.
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: e90548a
+verified_at_commit: 67fea34
 status: draft
 sources:
   - id: sim-state
@@ -106,6 +106,19 @@ through friendly territory and route around enemy ground unless the detour is lo
 Movement is checked on **every node arrival**, not just at the destination: arriving on a node with
 living enemies interrupts the path and starts a fight, and arriving on the enemy Core triggers a
 breach or a fight.
+
+A villager in transit has no position of its own. `currentNodeID` is the node it last stood on, and
+how far it has come is a tick count along the edge it is crossing.
+
+**Retargeting mid-edge costs the ground already covered.** Ordering a moving villager somewhere new
+does not rewind it onto the node behind it. If the new route continues through the node it is
+already approaching, the crossing carries over and the order is free. If the new route leaves in
+another direction, the villager turns around and re-walks exactly the distance it had covered before
+taking it. Ordering it back to the node it just left is a legitimate order, and is how a player
+cancels one.
+
+Turning around therefore has a price, and repeated orders cannot stall a villager in place — neither of
+which was true before, when every order reset the crossing.
 
 ## Claiming
 

@@ -13,7 +13,7 @@ executor:
 attester:
   resource: docs/attesters/hash_baseline.ps1
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: fc94a0f
+verified_at_commit: 67fea34
 status: stable
 sources:
   - id: tests
@@ -57,6 +57,10 @@ each, edge weights of 1, and `GameBalanceData.Default()`:
 |---|---|---|---|
 | `EmptyTick` | 100 | none | `17457352` |
 | `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `626950565` |
+
+`TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
+It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
+attested; adding a third to this table means recording and defending a new constant.
 
 `EmptyTick` exercises the idle path: healing fires at ticks 30/60/90 but both villagers are at
 `maxHP`, so only `tickCount` moves. `MoveAndCombat` exercises movement and combat entry: each

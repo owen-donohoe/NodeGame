@@ -8,7 +8,8 @@ verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
-verified_at_commit: 2c612a9
+  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
+verified_at_commit: 67fea34
 status: stable
 sources:
   - id: architecture
