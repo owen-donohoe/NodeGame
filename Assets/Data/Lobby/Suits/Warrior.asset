@@ -16,3 +16,4 @@ MonoBehaviour:
   displayName: Warrior
   icon: {fileID: 0}
   description: Increased attack speed
+  isGlobal: 1

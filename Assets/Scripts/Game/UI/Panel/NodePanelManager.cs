@@ -437,6 +437,39 @@ namespace NodeWar.UI
         /// preserves today's behaviour so the router changes what *routes*
         /// input, not what the panel decides.
         /// </summary>
+        /// <summary>
+        /// Raised when a node should be shown, and by which node. The UI Toolkit
+        /// sheet listens; nothing else does.
+        /// </summary>
+        public event System.Action<int> NodeOpened;
+
+        /// <summary>Raised when whatever was showing should stop.</summary>
+        public event System.Action NodeClosed;
+
+        /// <summary>
+        /// Stops this manager sliding its own uGUI sheet, leaving it as the
+        /// arbiter of when a panel should be up without being the thing that
+        /// draws it.
+        ///
+        /// Everything worth keeping is upstream of the drawing: TapRouter sends
+        /// every tap here, DistrictPanelPolicy decides which districts deserve a
+        /// sheet, and the camera focus session is started and ended by the same
+        /// calls. Reimplementing that in the new stack would give the game two
+        /// things racing to answer one tap, so instead the new sheet subscribes
+        /// and this stays in charge.
+        /// </summary>
+        public void SetSuppressed(bool value)
+        {
+            if (suppressed == value) return;
+
+            suppressed = value;
+
+            // Put the old sheet away rather than leaving it stranded on screen.
+            if (suppressed && isOpen) Dismiss(HiddenPosition, restingAtHandle: false);
+        }
+
+        private bool suppressed;
+
         public void OpenForNode(int nodeID)
         {
             if (simState == null) return;
@@ -448,6 +481,7 @@ namespace NodeWar.UI
             if (node.ownerID == -1)
             {
                 if (isOpen) ClosePanel();
+                if (suppressed && NodeClosed != null) NodeClosed();
                 return;
             }
 
@@ -457,6 +491,19 @@ namespace NodeWar.UI
             if (!DistrictPanelPolicy.IsFunctional(node.districtType))
             {
                 if (isOpen) ClosePanel();
+                if (suppressed && NodeClosed != null) NodeClosed();
+                return;
+            }
+
+            if (suppressed)
+            {
+                // Camera focus still belongs here, but it is bound up with the
+                // slide in OpenPanel. Leaving it out is the one behaviour the
+                // new sheet does not inherit yet, and it is noted rather than
+                // faked: focusing from here would double up the moment the old
+                // panel is unsuppressed.
+                currentNodeID = nodeID;
+                if (NodeOpened != null) NodeOpened(nodeID);
                 return;
             }
 
@@ -592,6 +639,13 @@ namespace NodeWar.UI
         /// </summary>
         public void ClosePanel()
         {
+            if (suppressed)
+            {
+                currentNodeID = -1;
+                if (NodeClosed != null) NodeClosed();
+                return;
+            }
+
             Dismiss(HiddenPosition, restingAtHandle: false);
         }
 

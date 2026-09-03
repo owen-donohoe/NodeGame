@@ -1,0 +1,444 @@
+/*
+    Node War - lobby theme.
+
+    Single source of colour, spacing and type for the UI Toolkit lobby. Every
+    page stylesheet imports nothing; it just uses these custom properties, so
+    changing the art direction is an edit to this file alone.
+
+    Two things here are decisions rather than taste, and should not be quietly
+    reverted:
+
+    1. PLAYER COLOURS. Player 0 is blue and player 1 is red, matching
+       HUDManager.p0Color / p1Color and the pathCurveSettings already
+       serialised in Gameplay.unity. An earlier draft of the rebuild brief had
+       these inverted; the code is correct and the brief was wrong.
+
+    2. OWNERSHIP IS NEVER COLOUR ALONE. --player-0 and --player-1 always travel
+       with a second channel - a shape, an end cap, or a label. See the
+       .player-mark rules at the bottom. This is a hard accessibility
+       requirement, not a nicety: red/blue is the single worst pairing for the
+       most common form of colour blindness.
+*/
+
+:root {
+    /* ===== Surfaces ===== */
+    --paper: rgb(235, 220, 195);
+    --card: rgb(215, 195, 165);
+    --card-raised: rgb(228, 210, 182);
+    --nav-bg: rgb(55, 40, 30);
+
+    /* ===== Ink ===== */
+    --ink-dark: rgb(45, 35, 25);
+    --ink-muted: rgb(105, 90, 72);
+    --ink-light: rgb(250, 245, 235);
+
+    /* ===== Actions ===== */
+    --primary: rgb(245, 195, 60);
+    --primary-press: rgb(222, 174, 44);
+    --secondary: rgb(95, 185, 95);
+    --accent: rgb(90, 50, 140);
+    --danger: rgb(205, 55, 45);
+    --disabled: rgb(160, 150, 135);
+
+    /* ===== Player identity ===== */
+    /* Blue / red as shipped. Always paired with .player-mark-* for shape. */
+    --player-0: rgb(102, 153, 255);
+    --player-1: rgb(255, 102, 102);
+
+    /* ===== Borders ===== */
+    --border-ink: rgb(72, 56, 40);
+    --border-width: 2px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 16px;
+
+    /* ===== Spacing scale ===== */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    /* ===== Type scale ===== */
+    --text-sm: 13px;
+    --text-md: 16px;
+    --text-lg: 22px;
+    --text-xl: 30px;
+
+    /*
+        Minimum touch target. 44 is the number both Apple and Google converge
+        on, and PanelSettings runs in ConstantPhysicalSize, so one unit here is
+        about one point on the device rather than one screen pixel.
+    */
+    --touch-min: 44px;
+
+    /*
+        Safe-area insets. Zero here; SafeAreaBinder overwrites them at runtime
+        from Screen.safeArea. Declared so the layout is correct in the UI
+        Builder preview, where there is no device to ask.
+    */
+    --safe-top: 0;
+    --safe-bottom: 0;
+    --safe-left: 0;
+    --safe-right: 0;
+}
+
+/* ===================================================================
+   Shell
+   =================================================================== */
+
+.lobby-root {
+    flex-grow: 1;
+    background-color: var(--paper);
+}
+
+/*
+    Everything that must clear a notch or a home indicator lives inside this.
+    SafeAreaBinder writes the padding; nothing else should.
+*/
+.safe-area {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+/* The page host fills whatever the nav bar leaves. */
+.page-host {
+    flex-grow: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.page {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: var(--space-md);
+}
+
+.page--hidden {
+    display: none;
+}
+
+/* ===================================================================
+   Navigation
+   =================================================================== */
+
+.nav-bar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+    background-color: var(--nav-bg);
+    border-top-width: var(--border-width);
+    border-top-color: var(--border-ink);
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+    flex-shrink: 0;
+}
+
+.nav-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-height: var(--touch-min);
+    padding-top: var(--space-sm);
+    padding-bottom: var(--space-sm);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: rgb(190, 175, 155);
+    font-size: var(--text-sm);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    transition-property: color, scale;
+    transition-duration: 0.12s;
+}
+
+.nav-button:hover {
+    color: var(--ink-light);
+}
+
+.nav-button:active {
+    scale: 0.94;
+}
+
+.nav-button--active {
+    color: var(--primary);
+}
+
+/*
+    The active tab carries an underline as well as a colour, for the same
+    reason ownership never rides on colour alone.
+*/
+.nav-button--active > .nav-button__indicator {
+    background-color: var(--primary);
+    height: 3px;
+}
+
+.nav-button__indicator {
+    height: 3px;
+    background-color: rgba(0, 0, 0, 0);
+    margin-top: var(--space-xs);
+    border-radius: 2px;
+}
+
+/* ===================================================================
+   Buttons
+   =================================================================== */
+
+.btn {
+    min-height: var(--touch-min);
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-md);
+    color: var(--ink-dark);
+    font-size: var(--text-md);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+
+    /*
+        Two durations on purpose: press reads as instant, release as a settle.
+        Same shape the uGUI lobby used.
+    */
+    transition-property: scale, translate, background-color;
+    transition-duration: 0.12s;
+}
+
+.btn:hover {
+    scale: 1.05;
+}
+
+.btn:active {
+    scale: 0.92;
+    translate: 0 2px;
+    transition-duration: 0.06s;
+}
+
+.btn--primary {
+    background-color: var(--primary);
+}
+
+.btn--primary:active {
+    background-color: var(--primary-press);
+}
+
+.btn--secondary {
+    background-color: var(--secondary);
+    color: var(--ink-light);
+}
+
+.btn--danger {
+    background-color: var(--danger);
+    color: var(--ink-light);
+}
+
+.btn--ghost {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: var(--ink-muted);
+}
+
+.btn:disabled {
+    background-color: var(--disabled);
+    color: var(--ink-muted);
+    scale: 1;
+    translate: 0 0;
+}
+
+/* ===================================================================
+   Cards and text
+   =================================================================== */
+
+.card {
+    background-color: var(--card);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+}
+
+.card--raised {
+    background-color: var(--card-raised);
+}
+
+.title {
+    font-size: var(--text-xl);
+    color: var(--ink-dark);
+    -unity-font-style: bold;
+}
+
+.subtitle {
+    font-size: var(--text-lg);
+    color: var(--ink-dark);
+    -unity-font-style: bold;
+}
+
+.body {
+    font-size: var(--text-md);
+    color: var(--ink-dark);
+    white-space: normal;
+}
+
+.caption {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    white-space: normal;
+}
+
+/*
+    Placeholder marker. Anything standing in for art or a system that does not
+    exist yet wears this, so a screenshot never quietly implies a feature. See
+    docs/ui-migration-inventory.md finding 6 - there are no district or suit
+    icons in the project at all.
+*/
+.placeholder {
+    background-color: rgba(90, 50, 140, 0.12);
+    border-width: 1px;
+    border-color: var(--accent);
+    border-radius: var(--radius-sm);
+    align-items: center;
+    justify-content: center;
+}
+
+.placeholder__label {
+    font-size: var(--text-sm);
+    color: var(--accent);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+/* ===================================================================
+   Player identity - colour PLUS a second channel, always
+   =================================================================== */
+
+.player-mark {
+    min-width: 22px;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+}
+
+.player-mark__label {
+    font-size: var(--text-sm);
+    color: var(--ink-dark);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* Player 0: blue, square. */
+.player-mark--p0 {
+    background-color: var(--player-0);
+    border-radius: 3px;
+}
+
+/* Player 1: red, round. Distinguishable in greyscale by shape alone. */
+.player-mark--p1 {
+    background-color: var(--player-1);
+    border-radius: 50%;
+}
+
+/* ===================================================================
+   Monogram tints - the stand-in for art that does not exist
+   ===================================================================
+
+   There are no district or suit icons in the project: every icon field on
+   all 9 NodeDefinitions and all 5 SuitDefinitions is null, and
+   Assets/Sprites/Icons is an empty directory
+   (docs/ui-migration-inventory.md, finding 6).
+
+   So an item tile is a lettered square tinted from a hash of the item's own
+   ID - ItemTint.IndexFor picks the index, ItemTint.ClassFor names the class
+   below. Fourteen tiles are then told apart at a glance instead of being
+   fourteen identical grey boxes.
+
+   The letter carries the identity and the tint only reinforces it, which is
+   the same non-colour-alone rule the player marks follow. Nothing here wears
+   .placeholder, because a monogram is a real design decision rather than
+   something standing in for one - the art debt is recorded in the inventory,
+   not implied by a purple box on every row.
+
+   These live in the theme rather than a page stylesheet because S7's district
+   panels have the same problem and should reach the same tile.
+*/
+
+:root {
+    --tile-0: rgb(58, 110, 108);
+    --tile-1: rgb(160, 82, 45);
+    --tile-2: rgb(72, 82, 140);
+    --tile-3: rgb(104, 112, 52);
+    --tile-4: rgb(112, 64, 112);
+    --tile-5: rgb(78, 92, 104);
+    --tile-6: rgb(158, 122, 40);
+    --tile-7: rgb(140, 62, 62);
+}
+
+/*
+    The tile itself. Square, bordered like every other surface, with the
+    monogram centred. Sized by whatever contains it - a loadout slot wants a
+    bigger one than a list row - so no width or height here.
+*/
+.tile {
+    align-items: center;
+    justify-content: center;
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.tile__monogram {
+    color: var(--ink-light);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/*
+    An empty slot's tile. Dashed is not available in USS, so emptiness reads
+    from the absent fill and the muted border instead.
+*/
+.tile--empty {
+    background-color: rgba(72, 56, 40, 0.08);
+    border-color: var(--ink-muted);
+}
+
+/* One class per --tile-N. ItemTint.ClassFor builds the name. */
+.tile-tint--0 { background-color: var(--tile-0); }
+.tile-tint--1 { background-color: var(--tile-1); }
+.tile-tint--2 { background-color: var(--tile-2); }
+.tile-tint--3 { background-color: var(--tile-3); }
+.tile-tint--4 { background-color: var(--tile-4); }
+.tile-tint--5 { background-color: var(--tile-5); }
+.tile-tint--6 { background-color: var(--tile-6); }
+.tile-tint--7 { background-color: var(--tile-7); }
+
+/* ===================================================================
+   Text input
+   ===================================================================
+
+   UI Toolkit puts the editable region in a child element; the outer TextField
+   carries layout only. Styling has to reach the inner element or the height
+   and the type size are both ignored - which also means the 44pt minimum is
+   ignored, so this is a touch-target rule as much as a visual one.
+
+   Home.uss carries the same workaround as .popup__input, written before there
+   was a second text field in the project. Left there untouched; anything new
+   should use this.
+*/
+
+.text-input {
+    min-height: var(--touch-min);
+    font-size: var(--text-lg);
+}
+
+.text-input > .unity-base-text-field__input {
+    min-height: var(--touch-min);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    background-color: var(--card-raised);
+    background-image: none;
+    color: var(--ink-dark);
+    font-size: var(--text-lg);
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+}

@@ -1,0 +1,164 @@
+/*
+    Profile.
+
+    Colour, spacing and type come from Theme.uss custom properties. Numbers
+    below are layout proportions, not design tokens.
+*/
+
+.profile {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.profile__scroll {
+    flex-grow: 1;
+}
+
+.profile__card {
+    margin-bottom: var(--space-md);
+}
+
+/* ===================================================================
+   Identity and rename
+   =================================================================== */
+
+.profile__identity-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.profile__username {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
+.profile__rename {
+    flex-shrink: 0;
+    margin-left: var(--space-sm);
+    font-size: var(--text-sm);
+}
+
+/*
+    Collapsed until Rename is pressed. Hidden with display:none rather than
+    opacity, so it takes no space and cannot be tabbed into while closed.
+*/
+.profile__rename-editor {
+    flex-direction: column;
+    margin-top: var(--space-sm);
+    display: none;
+}
+
+.profile__rename-editor--open {
+    display: flex;
+}
+
+.profile__input {
+    margin-top: var(--space-xs);
+}
+
+.profile__error {
+    color: var(--danger);
+    -unity-font-style: bold;
+    margin-top: var(--space-xs);
+    display: none;
+}
+
+.profile__error--visible {
+    display: flex;
+}
+
+.profile__rename-actions {
+    flex-direction: row;
+    margin-top: var(--space-sm);
+}
+
+.profile__rename-action {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: var(--space-sm);
+    font-size: var(--text-sm);
+}
+
+/* ===================================================================
+   Trophies - the one part of this page that is real
+   =================================================================== */
+
+.profile__trophy-row {
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+.profile__trophy-row > .caption {
+    margin-left: var(--space-sm);
+    margin-bottom: var(--space-xs);
+}
+
+.profile__bar-track {
+    height: 14px;
+    margin-top: var(--space-sm);
+    background-color: rgba(72, 56, 40, 0.15);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-direction: row;
+}
+
+/*
+    Width is set from C# as a percentage of the track. A fill that is only a
+    colour would be unreadable to anyone who cannot separate it from the
+    track, so the numbers underneath carry the same information in text.
+*/
+.profile__bar-fill {
+    background-color: var(--primary);
+    height: 100%;
+    width: 0;
+}
+
+.profile__bar-scale {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: var(--space-xs);
+}
+
+.profile__arena {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+}
+
+/* ===================================================================
+   Record - six placeholders, and a line saying why
+   =================================================================== */
+
+.profile__stat-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: var(--space-sm);
+}
+
+/*
+    Two columns. 48% rather than 50% leaves room for the gap without needing a
+    negative margin on the row.
+*/
+.profile__stat {
+    width: 48%;
+    margin-right: 2%;
+    margin-bottom: var(--space-sm);
+    padding: var(--space-sm);
+    min-height: var(--touch-min);
+}
+
+.profile__stat-value {
+    font-size: var(--text-lg);
+}
+
+.profile__note {
+    margin-top: var(--space-xs);
+}
+
+.profile__empty {
+    margin-top: var(--space-sm);
+    padding: var(--space-lg);
+}

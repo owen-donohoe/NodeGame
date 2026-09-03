@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Round-trip tests for the loadout wire format.
+
+    Why this project exists at all: DraftSerializer and LoadoutData compile into
+    Unity's predefined Assembly-CSharp, and an .asmdef test assembly cannot
+    reference a predefined assembly. So Assets/Tests/EditMode/ physically cannot
+    reach this code, and NodeWar.Simulation.Tests only references
+    NodeWar.Simulation. Without this project the wire format has no coverage at
+    all - which is a poor state for a lockstep game, where a serializer bug is a
+    desync rather than a visible error.
+
+    Why the test source lives here rather than under Assets/: the Simulation
+    tests live in Assets/ so that Unity's Test Runner and `dotnet test` execute
+    the same files. That reason does not apply here, because Unity can never run
+    these. Putting them under Assets/ would only give Unity a file it must
+    compile and cannot use.
+
+    DELIBERATELY NOT IN NodeWar.sln. CI runs `dotnet test dotnet/NodeWar.sln`
+    with an nunit logger pointed at one fixed LogFilePath for every project in
+    the solution, and docs/attesters/hash_baseline.ps1 reads that exact file
+    (TestResults/results.xml) to confirm the sanctioned determinism cases ran.
+    A second test project writing to the same path could overwrite the
+    determinism receipt and fail the attester for a reason that has nothing to
+    do with the simulation. Wiring this into CI means giving each project its
+    own results file first, which is a change to the determinism gate and not
+    this project's call to make.
+
+    Run it directly:
+      dotnet test dotnet/NodeWar.Lobby.Tests
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>NodeWar.Lobby.Tests</AssemblyName>
+    <RootNamespace>NodeWar.Lobby.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The tests themselves. -->
+    <Compile Include="LoadoutWireTests.cs" />
+    <Compile Include="LoadoutEditorTests.cs" />
+    <Compile Include="ItemTintTests.cs" />
+
+    <!--
+      The real sources, linked not copied - the same arrangement the other two
+      projects use. All three are free of UnityEngine references, which is what
+      makes compiling them outside Unity possible.
+      InputSerializer is here only for PacketType, which DraftSerializer writes
+      as its first byte.
+    -->
+    <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
+             Link="Lobby/LoadoutData.cs" />
+
+    <!--
+      The Workshop's two UnityEngine-free pieces. Everything else under
+      Assets/UI/Scripts touches UIElements and cannot come here; these two were
+      written without it precisely so they could.
+    -->
+    <Compile Include="../../Assets/UI/Scripts/LoadoutEditor.cs"
+             Link="Lobby/LoadoutEditor.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
+             Link="Lobby/ItemTint.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Network/DraftSerializer.cs"
+             Link="Network/DraftSerializer.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Network/InputSerializer.cs"
+             Link="Network/InputSerializer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same NUnit 3.x pin as NodeWar.Simulation.Tests, for the same reason. -->
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NunitXml.TestLogger" Version="3.1.20" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- InputSerializer.cs uses GameCommand from the simulation layer. -->
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+  </ItemGroup>
+
+</Project>

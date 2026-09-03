@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        Social. Coming soon, and nothing more.
+
+        There is no friends list, no club, no presence and no chat anywhere in
+        the project - not a stub, not a data field, nothing. So this page is one
+        marked placeholder rather than a shell of empty lists, which would imply
+        a system that has not been designed yet.
+
+        The one real thing it can offer is the way two people actually play each
+        other today, which is the join code in the Play sheet. Saying so is more
+        use than an empty friends list.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Social.uss" />
+
+    <engine:VisualElement name="social-page" class="social">
+
+        <engine:VisualElement class="placeholder social__band">
+            <engine:Label class="placeholder__label social__heading" text="SOCIAL" />
+            <engine:Label class="placeholder__label"
+                          text="Friends, clubs and chat are not designed yet - there is nothing behind this screen to show." />
+        </engine:VisualElement>
+
+        <engine:VisualElement class="card social__aside">
+            <engine:Label class="body"
+                          text="To play someone you know, use Play and share the join code." />
+            <engine:Label class="caption social__aside-note"
+                          text="Local network by direct IP works too, on the same Wi-Fi." />
+        </engine:VisualElement>
+
+    </engine:VisualElement>
+
+</engine:UXML>

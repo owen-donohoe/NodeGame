@@ -24,6 +24,11 @@ namespace NodeWar.Lobby
             public int selectedGameModeIndex; // cast to GameMode
             public int boxesAvailable;
             public float boxProgress;
+
+            // Which Workshop tab was open last. 0 is Districts, which is also
+            // what an older save without this field deserialises to - so the
+            // requested default costs no migration.
+            public int workshopTabIndex;
         }
 
         public PlayerProfileData data;
@@ -57,6 +62,34 @@ namespace NodeWar.Lobby
         }
         public LoadoutData Loadout => data.loadout;
 
+        /// <summary>
+        /// Which Workshop tab to open on. Saved so it survives a scene reload
+        /// and a relaunch - the Lobby scene is rebuilt every time you come back
+        /// from a match, so anything remembered only in the page would reset
+        /// constantly and never actually be remembered.
+        /// </summary>
+        public int WorkshopTabIndex
+        {
+            get => data.workshopTabIndex;
+            set
+            {
+                if (data.workshopTabIndex == value) return;
+                data.workshopTabIndex = value;
+                Save();
+            }
+        }
+
+        /// <summary>
+        /// Boxes the player has waiting. Nothing writes this yet - the box
+        /// system is unplanned and blocked on unlocks existing at all - so the
+        /// Shop displays it as the unwired figure it is rather than dressing it
+        /// up as a balance.
+        /// </summary>
+        public int BoxesAvailable => data.boxesAvailable;
+
+        /// <summary>Progress toward the next box, 0 to 1. Also written by nothing yet.</summary>
+        public float BoxProgress => data.boxProgress;
+
         public void SetUsername(string newName)
         {
             if (!ValidateUsername(newName)) return;
@@ -73,7 +106,7 @@ namespace NodeWar.Lobby
 
         public void SetLoadout(LoadoutData loadout)
         {
-            data.loadout = loadout;
+            data.loadout = LoadoutData.Normalized(loadout);
             Save();
         }
         public bool IsSuitUnlocked(string suitID) { return true; }
@@ -128,12 +161,83 @@ namespace NodeWar.Lobby
             {
                 string json = File.ReadAllText(SavePath);
                 data = JsonUtility.FromJson<PlayerProfileData>(json);
+
+                bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
+                data.loadout = LoadoutData.Normalized(data.loadout);
+
+                if (migrated)
+                {
+                    Debug.Log("[PlayerProfile] Migrated flat loadout fields to arrays.");
+                    Save();
+                }
             }
             else
             {
                 CreateDefaults();
                 Save();
             }
+        }
+
+        // ===== LEGACY SAVE MIGRATION =====
+
+        [System.Serializable]
+        private struct LegacyLoadout
+        {
+            public string suitID0;
+            public string suitID1;
+            public string suitID2;
+            public string nodeID0;
+            public string nodeID1;
+        }
+
+        [System.Serializable]
+        private struct LegacyProfile
+        {
+            public LegacyLoadout loadout;
+        }
+
+        /// <summary>
+        /// Saves written before LoadoutData became array-backed carry
+        /// loadout.suitID0..nodeID1. JsonUtility does not error on those — it
+        /// simply leaves suitIDs/nodeIDs null, which would silently wipe the
+        /// player's selection on first launch after the change. So read the old
+        /// field names back and convert.
+        ///
+        /// The legacy shape was always 3 suits and 2 nodes; that is hardcoded
+        /// here on purpose, because it describes a file format that is now
+        /// fixed forever. Normalized() reconciles it with the current counts.
+        ///
+        /// Returns true when a migration actually happened, so the caller can
+        /// rewrite the file and make it a one-time cost.
+        /// </summary>
+        private static bool TryMigrateLegacyLoadout(string json, ref LoadoutData loadout)
+        {
+            bool alreadyMigrated =
+                (loadout.suitIDs != null && loadout.suitIDs.Length > 0) ||
+                (loadout.nodeIDs != null && loadout.nodeIDs.Length > 0);
+
+            if (alreadyMigrated) return false;
+            if (string.IsNullOrEmpty(json)) return false;
+            if (json.IndexOf("suitID0", System.StringComparison.Ordinal) < 0) return false;
+
+            LegacyProfile legacy = JsonUtility.FromJson<LegacyProfile>(json);
+
+            loadout = new LoadoutData
+            {
+                suitIDs = new string[]
+                {
+                    legacy.loadout.suitID0,
+                    legacy.loadout.suitID1,
+                    legacy.loadout.suitID2
+                },
+                nodeIDs = new string[]
+                {
+                    legacy.loadout.nodeID0,
+                    legacy.loadout.nodeID1
+                }
+            };
+
+            return true;
         }
 
         private void CreateDefaults()
@@ -145,7 +249,7 @@ namespace NodeWar.Lobby
                 username = "player_" + uuid,
                 uuid = uuid,
                 trophies = 0,
-                loadout = new LoadoutData(),
+                loadout = LoadoutData.CreateEmpty(),
                 unlockedSuitIDs = new string[] { "suit_warrior", "suit_guardian" },
                 unlockedNodeIDs = new string[] { "node_watchtower", "node_market" },
                 selectedGameModeIndex = (int)GameMode.Bot,

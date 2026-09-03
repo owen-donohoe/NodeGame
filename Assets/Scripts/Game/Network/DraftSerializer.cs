@@ -51,47 +51,39 @@ namespace NodeWar.Network
         }
 
         /// <summary>
-        /// DraftLoadout: [type:1][playerID:4][suit0Len:1][suit0:N][suit1Len:1][suit1:N][suit2Len:1][suit2:N]
-        ///              [node0Len:1][node0:N][node1Len:1][node1:N]
-        /// Variable length. String IDs encoded as length-prefixed UTF8.
+        /// DraftLoadout: [type:1][playerID:4]
+        ///               [suitCount:1][ (len:1)(utf8:len) x suitCount ]
+        ///               [nodeCount:1][ (len:1)(utf8:len) x nodeCount ]
+        ///
+        /// Variable length. String IDs are length-prefixed UTF8, and each array
+        /// is count-prefixed, so changing LoadoutData.SuitSlots or NodeSlots
+        /// does not change this format. Both peers still have to be on the same
+        /// build — a count mismatch is a build mismatch, which desyncs anyway.
+        ///
+        /// One byte per length caps an ID at 255 bytes; IDs are short ASCII
+        /// like "suit_warrior", and an over-long one is clamped rather than
+        /// allowed to corrupt the offset of everything after it.
         /// </summary>
         public static byte[] SerializeDraftLoadout(int playerID, NodeWar.Lobby.LoadoutData loadout)
         {
-            // Calculate total size
-            byte[] suit0Bytes = System.Text.Encoding.UTF8.GetBytes(loadout.suitID0 ?? "");
-            byte[] suit1Bytes = System.Text.Encoding.UTF8.GetBytes(loadout.suitID1 ?? "");
-            byte[] suit2Bytes = System.Text.Encoding.UTF8.GetBytes(loadout.suitID2 ?? "");
-            byte[] node0Bytes = System.Text.Encoding.UTF8.GetBytes(loadout.nodeID0 ?? "");
-            byte[] node1Bytes = System.Text.Encoding.UTF8.GetBytes(loadout.nodeID1 ?? "");
+            // Normalize first, so a default-constructed or foreign-shaped
+            // loadout still produces a well-formed packet.
+            loadout = NodeWar.Lobby.LoadoutData.Normalized(loadout);
 
-            int size = 1 + 4 + 5 + suit0Bytes.Length + suit1Bytes.Length + suit2Bytes.Length
-                     + node0Bytes.Length + node1Bytes.Length;
+            byte[][] suitBytes = EncodeAll(loadout.suitIDs);
+            byte[][] nodeBytes = EncodeAll(loadout.nodeIDs);
+
+            int size = 1 + 4                        // type, playerID
+                     + 1 + MeasureAll(suitBytes)    // suit count + entries
+                     + 1 + MeasureAll(nodeBytes);   // node count + entries
 
             byte[] data = new byte[size];
             int offset = 0;
 
             data[offset++] = (byte)PacketType.DraftLoadout;
             WriteInt(data, ref offset, playerID);
-
-            data[offset++] = (byte)suit0Bytes.Length;
-            System.Array.Copy(suit0Bytes, 0, data, offset, suit0Bytes.Length);
-            offset += suit0Bytes.Length;
-
-            data[offset++] = (byte)suit1Bytes.Length;
-            System.Array.Copy(suit1Bytes, 0, data, offset, suit1Bytes.Length);
-            offset += suit1Bytes.Length;
-
-            data[offset++] = (byte)suit2Bytes.Length;
-            System.Array.Copy(suit2Bytes, 0, data, offset, suit2Bytes.Length);
-            offset += suit2Bytes.Length;
-
-            data[offset++] = (byte)node0Bytes.Length;
-            System.Array.Copy(node0Bytes, 0, data, offset, node0Bytes.Length);
-            offset += node0Bytes.Length;
-
-            data[offset++] = (byte)node1Bytes.Length;
-            System.Array.Copy(node1Bytes, 0, data, offset, node1Bytes.Length);
-            offset += node1Bytes.Length;
+            WriteStringArray(data, ref offset, suitBytes);
+            WriteStringArray(data, ref offset, nodeBytes);
 
             return data;
         }
@@ -102,28 +94,74 @@ namespace NodeWar.Network
             int offset = 1; // skip type byte
             playerID = ReadInt(data, ref offset);
 
-            loadout = new NodeWar.Lobby.LoadoutData();
+            loadout = new NodeWar.Lobby.LoadoutData
+            {
+                suitIDs = ReadStringArray(data, ref offset),
+                nodeIDs = ReadStringArray(data, ref offset)
+            };
 
-            int len;
-            len = data[offset++];
-            loadout.suitID0 = System.Text.Encoding.UTF8.GetString(data, offset, len);
-            offset += len;
+            // Reconcile with this build's slot counts before anyone reads it.
+            loadout = NodeWar.Lobby.LoadoutData.Normalized(loadout);
+        }
 
-            len = data[offset++];
-            loadout.suitID1 = System.Text.Encoding.UTF8.GetString(data, offset, len);
-            offset += len;
+        // ===== LENGTH-PREFIXED STRING ARRAYS =====
 
-            len = data[offset++];
-            loadout.suitID2 = System.Text.Encoding.UTF8.GetString(data, offset, len);
-            offset += len;
+        private const int MaxStringBytes = 255;
 
-            len = data[offset++];
-            loadout.nodeID0 = System.Text.Encoding.UTF8.GetString(data, offset, len);
-            offset += len;
+        private static byte[][] EncodeAll(string[] values)
+        {
+            byte[][] encoded = new byte[values.Length][];
 
-            len = data[offset++];
-            loadout.nodeID1 = System.Text.Encoding.UTF8.GetString(data, offset, len);
-            offset += len;
+            for (int i = 0; i < values.Length; i++)
+            {
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(values[i] ?? "");
+
+                if (bytes.Length > MaxStringBytes)
+                {
+                    byte[] clamped = new byte[MaxStringBytes];
+                    System.Array.Copy(bytes, clamped, MaxStringBytes);
+                    bytes = clamped;
+                }
+
+                encoded[i] = bytes;
+            }
+
+            return encoded;
+        }
+
+        private static int MeasureAll(byte[][] encoded)
+        {
+            int total = 0;
+            for (int i = 0; i < encoded.Length; i++)
+                total += 1 + encoded[i].Length; // length byte + payload
+            return total;
+        }
+
+        private static void WriteStringArray(byte[] buffer, ref int offset, byte[][] encoded)
+        {
+            buffer[offset++] = (byte)encoded.Length;
+
+            for (int i = 0; i < encoded.Length; i++)
+            {
+                buffer[offset++] = (byte)encoded[i].Length;
+                System.Array.Copy(encoded[i], 0, buffer, offset, encoded[i].Length);
+                offset += encoded[i].Length;
+            }
+        }
+
+        private static string[] ReadStringArray(byte[] buffer, ref int offset)
+        {
+            int count = buffer[offset++];
+            string[] values = new string[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                int len = buffer[offset++];
+                values[i] = System.Text.Encoding.UTF8.GetString(buffer, offset, len);
+                offset += len;
+            }
+
+            return values;
         }
 
         // Little-endian helpers (same as InputSerializer)

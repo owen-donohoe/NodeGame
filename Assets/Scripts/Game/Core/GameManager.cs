@@ -54,6 +54,17 @@ namespace NodeWar.Core
         private NodePanelManager nodePanelManager;
         private GameOverPanel gameOverPanel;
 
+        [Header("UI Toolkit HUD (migration)")]
+        [Tooltip("Swap the uGUI HUD band for the UI Toolkit one. The node panels, " +
+                 "draft UI and game-over panel are unaffected either way.")]
+        [SerializeField] private bool useUIToolkitHUD;
+
+        [Tooltip("Scene object carrying the UIDocument and GameplayHUDController. " +
+                 "Created by Tools > Node War > Set Up UI Toolkit HUD.")]
+        [SerializeField] private GameObject uiToolkitHudRoot;
+
+        private GameplayHUDController uiToolkitHud;
+
         [Header("Transitions")]
         [SerializeField] private MatchTransitionController transitionController;
 
@@ -573,6 +584,11 @@ namespace NodeWar.Core
                 nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch,
                                             tickProvider, balance.Data);
 
+            // After the node panel, not before: the new HUD subscribes to it,
+            // and suppressing a manager that has not been initialised would hand
+            // the sheet an event source with no simulation behind it.
+            ApplyHUDStackChoice(uiGO);
+
             gameOverPanel = uiGO.GetComponentInChildren<GameOverPanel>(true);
             if (gameOverPanel != null)
                 gameOverPanel.OnReturnToLobby += ReturnToLobby;
@@ -580,6 +596,79 @@ namespace NodeWar.Core
                 Debug.LogWarning("[GameManager] GameOverPanel not found in UIManager prefab.");
 
             WireGestureRouting();
+        }
+
+        /// <summary>
+        /// Turns on exactly one of the two HUD bands.
+        ///
+        /// Only the band - the resource readouts, the breach bars and the
+        /// villager count. The node panels, the draft UI and the game-over
+        /// panel all live in the same prefab and are untouched by this, because
+        /// they are not what S6 replaced. That is why this hides HUD_Canvas
+        /// rather than the prefab: HUDManager sits on the prefab root alongside
+        /// NodePanelManager, so disabling its GameObject would take the panels
+        /// with it.
+        ///
+        /// HUD_Canvas is found by name. That is a weak link and it is
+        /// deliberate: the alternative is a serialized field, and adding one
+        /// means editing UI_Manager.prefab, which is exactly the kind of change
+        /// this migration has avoided while both stacks are live. It fails
+        /// loudly rather than silently drawing two HUDs on top of each other.
+        /// </summary>
+        private void ApplyHUDStackChoice(GameObject uiGO)
+        {
+            if (!useUIToolkitHUD)
+            {
+                if (uiToolkitHudRoot != null) uiToolkitHudRoot.SetActive(false);
+                return;
+            }
+
+            if (uiToolkitHudRoot == null)
+            {
+                Debug.LogWarning("[GameManager] useUIToolkitHUD is on but no uiToolkitHudRoot " +
+                                 "is assigned. Keeping the uGUI HUD. Run " +
+                                 "Tools > Node War > Set Up UI Toolkit HUD.");
+                return;
+            }
+
+            Canvas[] canvases = uiGO.GetComponentsInChildren<Canvas>(true);
+            bool hidden = false;
+
+            for (int i = 0; i < canvases.Length; i++)
+            {
+                if (canvases[i].gameObject.name != "HUD_Canvas") continue;
+
+                canvases[i].gameObject.SetActive(false);
+                hidden = true;
+                break;
+            }
+
+            if (!hidden)
+            {
+                Debug.LogError("[GameManager] Could not find HUD_Canvas in the UI prefab, so the " +
+                               "uGUI HUD cannot be hidden. Leaving the UI Toolkit HUD off rather " +
+                               "than drawing both.");
+                return;
+            }
+
+            uiToolkitHudRoot.SetActive(true);
+
+            uiToolkitHud = uiToolkitHudRoot.GetComponent<GameplayHUDController>();
+
+            if (uiToolkitHud == null)
+            {
+                Debug.LogWarning("[GameManager] uiToolkitHudRoot has no GameplayHUDController.");
+                return;
+            }
+
+            uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
+                                    inputBuffer, tickProvider, balance.Data, nodePanelManager);
+
+            // Only hand the node panel over if the new sheet actually exists.
+            // Without a layout assigned the uGUI panel keeps the job, which is
+            // better than a tap that opens nothing at all.
+            if (nodePanelManager != null)
+                nodePanelManager.SetSuppressed(uiToolkitHud.HasNodeSheet);
         }
 
         /// <summary>
@@ -828,9 +917,9 @@ namespace NodeWar.Core
                 playerLoadout = cachedRemoteLoadout;
             }
 
-            AddSuitFromID(suits, playerLoadout.suitID0);
-            AddSuitFromID(suits, playerLoadout.suitID1);
-            AddSuitFromID(suits, playerLoadout.suitID2);
+            playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
+            for (int i = 0; i < playerLoadout.suitIDs.Length; i++)
+                AddSuitFromID(suits, playerLoadout.suitIDs[i]);
 
             return suits.ToArray();
         }
@@ -855,8 +944,9 @@ namespace NodeWar.Core
                 playerLoadout = cachedRemoteLoadout;
             }
 
-            AddNodeFromID(nodes, playerLoadout.nodeID0);
-            AddNodeFromID(nodes, playerLoadout.nodeID1);
+            playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
+            for (int i = 0; i < playerLoadout.nodeIDs.Length; i++)
+                AddNodeFromID(nodes, playerLoadout.nodeIDs[i]);
 
             return nodes.ToArray();
         }

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Camp
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Lobby.NodeDefinition
   nodeID: node_camp
-  displayName: Watchtower
+  displayName: Camp
   icon: {fileID: 0}
   description: Villagers here have respawn timer reduced by 10 ticks (respawn in
     40 instead of 50)

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        The node sheet. Bottom edge, board still visible above it.
+
+        Only the frame is here: the header, the claim tug-of-war and an empty
+        content host. The three contents are built in C# because what goes in
+        them depends on how many villagers are standing on a node, which is not
+        knowable at authoring time.
+
+        THE CLAIM BAR IS TWO BARS. claimBar is signed - positive is player 1,
+        negative is player 2 - and the value passes through zero on its way from
+        one owner to the other. So both halves grow outward from a fixed centre
+        line and only one has width at a time. A single left-to-right fill would
+        say a node is most of the way claimed without saying by whom.
+
+        No scrim. The opponent is still playing behind this.
+    -->
+
+    <engine:VisualElement name="node-sheet" class="sheet">
+
+        <engine:VisualElement name="sheet-header" class="sheet__header">
+
+            <engine:VisualElement name="sheet-owner-mark" class="player-mark sheet__mark">
+                <engine:Label name="sheet-owner-mark-label" class="player-mark__label" text="-" picking-mode="Ignore" />
+            </engine:VisualElement>
+
+            <engine:VisualElement class="sheet__title" picking-mode="Ignore">
+                <engine:Label name="sheet-district" class="subtitle" text="District" picking-mode="Ignore" />
+                <engine:Label name="sheet-owner" class="caption" text="Unclaimed" picking-mode="Ignore" />
+            </engine:VisualElement>
+
+            <engine:Button name="sheet-close" class="sheet__close" text="Close" />
+
+        </engine:VisualElement>
+
+        <engine:VisualElement class="sheet__claim" picking-mode="Ignore">
+            <engine:VisualElement class="sheet__claim-track" picking-mode="Ignore">
+                <engine:VisualElement class="sheet__claim-half sheet__claim-half--left" picking-mode="Ignore">
+                    <engine:VisualElement name="sheet-claim-p1" class="sheet__claim-fill sheet__claim-fill--p1" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement class="sheet__claim-centre" picking-mode="Ignore" />
+                <engine:VisualElement class="sheet__claim-half sheet__claim-half--right" picking-mode="Ignore">
+                    <engine:VisualElement name="sheet-claim-p0" class="sheet__claim-fill sheet__claim-fill--p0" picking-mode="Ignore" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+            <engine:Label name="sheet-claim-label" class="caption sheet__claim-label" text="Neutral" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <engine:ScrollView name="sheet-scroll" class="sheet__scroll">
+            <engine:VisualElement name="sheet-content" class="sheet__content-host" />
+        </engine:ScrollView>
+
+    </engine:VisualElement>
+
+</engine:UXML>

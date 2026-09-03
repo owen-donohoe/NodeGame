@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        The play popup. A scrim plus a sheet, not a full-screen page, so the
+        lobby stays visible behind it.
+
+        Three views, one at a time:
+          #play-modes    pick Bot / Testing / 1v1
+          #play-connect  host or join a 1v1
+          #play-status   what the connection is doing, or why it failed
+
+        Testing is exposed deliberately. It routes to the no-draft path with the
+        hardcoded board and is the fastest way into a match while developing.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Home.uss" />
+
+    <engine:VisualElement name="play-popup" class="popup">
+        <engine:VisualElement name="play-scrim" class="popup__scrim" />
+
+        <engine:VisualElement name="play-sheet" class="popup__sheet card">
+
+            <engine:VisualElement class="popup__header">
+                <engine:Label name="play-title" class="subtitle" text="Play" />
+                <engine:Button name="play-close" class="btn btn--ghost popup__close" text="X" />
+            </engine:VisualElement>
+
+            <!-- Mode selection -->
+            <engine:VisualElement name="play-modes" class="popup__view">
+                <engine:Button name="play-mode-bot" class="btn btn--primary popup__action"
+                               text="Play a Bot" />
+                <engine:Label class="caption" text="Single player against the AI." />
+
+                <engine:Button name="play-mode-1v1" class="btn btn--secondary popup__action"
+                               text="1v1 Online" />
+                <engine:Label class="caption" text="Host a room or join with a code." />
+
+                <engine:Button name="play-mode-testing" class="btn btn--ghost popup__action"
+                               text="Testing Board" />
+                <engine:Label class="caption"
+                              text="Development shortcut: hardcoded board, no draft." />
+            </engine:VisualElement>
+
+            <!-- Host / join -->
+            <engine:VisualElement name="play-connect" class="popup__view">
+
+                <engine:VisualElement name="play-transport" class="popup__tabs">
+                    <engine:Button name="play-transport-relay" class="btn btn--ghost popup__tab"
+                                   text="Online" />
+                    <engine:Button name="play-transport-lan" class="btn btn--ghost popup__tab"
+                                   text="Local network" />
+                </engine:VisualElement>
+
+                <engine:Label name="play-transport-hint" class="caption"
+                              text="Online play goes through Unity Relay. No port forwarding needed." />
+
+                <engine:Button name="play-host" class="btn btn--primary popup__action"
+                               text="Host a room" />
+
+                <engine:Label class="caption popup__or" text="or join one" />
+
+                <engine:TextField name="play-code" class="popup__input" max-length="32" />
+                <engine:Button name="play-join" class="btn btn--secondary popup__action"
+                               text="Join" />
+
+                <engine:Button name="play-connect-back" class="btn btn--ghost popup__action"
+                               text="Back" />
+            </engine:VisualElement>
+
+            <!-- Status / failure -->
+            <engine:VisualElement name="play-status" class="popup__view">
+                <engine:Label name="play-status-text" class="subtitle" text="" />
+
+                <engine:VisualElement name="play-code-display" class="popup__code">
+                    <engine:Label class="caption" text="Your join code" />
+                    <engine:Label name="play-code-value" class="title popup__code-value" text="" />
+                    <engine:Label class="caption"
+                                  text="Read this out to your opponent. The room stays open until you cancel." />
+                </engine:VisualElement>
+
+                <engine:Label name="play-failure-recovery" class="body popup__recovery" text="" />
+
+                <engine:Button name="play-retry" class="btn btn--primary popup__action" text="Try again" />
+                <engine:Button name="play-cancel" class="btn btn--ghost popup__action" text="Cancel" />
+            </engine:VisualElement>
+
+        </engine:VisualElement>
+    </engine:VisualElement>
+
+</engine:UXML>

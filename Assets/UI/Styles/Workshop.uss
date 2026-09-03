@@ -1,0 +1,314 @@
+/*
+    Workshop - the loadout picker.
+
+    Colour, spacing and type come from Theme.uss custom properties; the tile
+    tints and the .tile base come from there too. Numbers below are layout
+    proportions and tile sizes, not design tokens.
+
+    Slots and cells are Buttons, so they get :hover / :active / :disabled for
+    free. They do not wear .btn - that class is for actions with a label, and
+    these are surfaces with content inside them - so each resets the runtime
+    theme's own button look explicitly.
+
+    THE TWO PANELS DIVIDE THE HEIGHT DELIBERATELY. The loadout card is sized by
+    its contents and never grows; the picker card takes everything left and its
+    grid scrolls inside that. Anything that makes the loadout card grow eats the
+    picker, and the first version of this screen lost its tabs entirely that way.
+*/
+
+.workshop {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+/* ===================================================================
+   Loadout card - what you have. Fixed height, always on screen.
+   =================================================================== */
+
+.workshop__loadout {
+    flex-shrink: 0;
+    padding: var(--space-sm);
+}
+
+/*
+    Suits granted to every player regardless of loadout. Above both columns and
+    ruled off from them, because the point is that these cost no slot.
+*/
+.workshop__granted {
+    flex-direction: row;
+    align-items: center;
+    padding-bottom: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-ink);
+}
+
+.workshop__granted--hidden {
+    display: none;
+}
+
+.workshop__granted-tiles {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.workshop__granted-text {
+    flex-direction: column;
+    flex-grow: 1;
+    margin-left: var(--space-sm);
+}
+
+/* ===================================================================
+   Two columns, staggered
+   =================================================================== */
+
+.workshop__columns {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.workshop__column {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    align-items: center;
+}
+
+.workshop__column-label {
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin-bottom: var(--space-xs);
+}
+
+.workshop__slots {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/*
+    The stagger. Half a slot block, so the two-slot column interleaves with the
+    three-slot one instead of sitting alongside it with a gap at the bottom.
+    Column labels stay aligned because only the slot list is offset.
+
+    Tied to .workshop__slot's height below - change one and change both.
+*/
+.workshop__slots--stagger {
+    margin-top: 38px;
+}
+
+.workshop__slot {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 76px;
+    min-width: var(--touch-min);
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-image: none;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    transition-property: scale;
+    transition-duration: 0.12s;
+}
+
+.workshop__slot:active {
+    scale: 0.94;
+}
+
+.workshop__slot-name {
+    width: 100%;
+    margin-top: var(--space-xs);
+    -unity-text-align: middle-center;
+    overflow: hidden;
+}
+
+.tile--slot {
+    width: 52px;
+    height: 52px;
+}
+
+.tile--slot .tile__monogram {
+    font-size: var(--text-lg);
+}
+
+.tile--granted {
+    width: 32px;
+    height: 32px;
+}
+
+.tile--granted .tile__monogram {
+    font-size: var(--text-md);
+}
+
+/* ===================================================================
+   Picker card - what you can take. Takes the rest of the height.
+   =================================================================== */
+
+.workshop__picker {
+    flex-grow: 1;
+    flex-direction: column;
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    overflow: hidden;
+}
+
+/*
+    Two tabs, each under the column it fills. Big on purpose: these are the
+    control that switches the whole lower half, and on a phone they were the
+    first thing to get squeezed when they shared a panel with the slots.
+*/
+.workshop__tabs {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.workshop__tab {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-height: 52px;
+    margin: 0;
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+    background-image: none;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: var(--border-width);
+    border-color: var(--ink-muted);
+    border-radius: var(--radius-md);
+    color: var(--ink-muted);
+    font-size: var(--text-lg);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    transition-property: background-color, color, scale;
+    transition-duration: 0.12s;
+}
+
+.workshop__tab:active {
+    scale: 0.97;
+}
+
+.workshop__tabs > .workshop__tab {
+    margin-right: var(--space-sm);
+}
+
+.workshop__tabs > .workshop__tab:last-child {
+    margin-right: 0;
+}
+
+.workshop__tab--active {
+    background-color: var(--primary);
+    border-color: var(--border-ink);
+    color: var(--ink-dark);
+}
+
+.workshop__hint {
+    flex-shrink: 0;
+    margin-top: var(--space-sm);
+    -unity-text-align: middle-center;
+    color: var(--accent);
+    -unity-font-style: bold;
+}
+
+.workshop__hint--hidden {
+    display: none;
+}
+
+/* ===================================================================
+   The grid - two across, scrolling
+   =================================================================== */
+
+.workshop__grid {
+    flex-grow: 1;
+    margin-top: var(--space-sm);
+}
+
+.workshop__grid--hidden {
+    display: none;
+}
+
+/*
+    ScrollView keeps its children in a content container of its own, so the
+    wrap has to be set there rather than on the ScrollView itself. Two across
+    comes from the cell width, not from a column count - flex has no such thing.
+*/
+.workshop__grid .unity-scroll-view__content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
+/*
+    48% rather than 50% leaves room for the gap without a negative margin, and
+    guarantees a third cell cannot fit on a line.
+*/
+.workshop__cell {
+    width: 48%;
+    margin: 0;
+    margin-right: 2%;
+    margin-bottom: var(--space-sm);
+    padding: var(--space-sm);
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: var(--touch-min);
+    background-image: none;
+    background-color: var(--card);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-md);
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.workshop__cell:hover {
+    background-color: var(--card-raised);
+}
+
+.workshop__cell:active {
+    scale: 0.97;
+}
+
+/* Equipped items leave the grid - they are visible in their slot instead. */
+.workshop__cell--hidden {
+    display: none;
+}
+
+.workshop__cell:disabled {
+    opacity: 0.55;
+    scale: 1;
+}
+
+.workshop__cell--locked {
+    background-color: rgba(72, 56, 40, 0.10);
+}
+
+.tile--cell {
+    width: 52px;
+    height: 52px;
+}
+
+.tile--cell .tile__monogram {
+    font-size: var(--text-lg);
+}
+
+.workshop__cell-name {
+    width: 100%;
+    margin-top: var(--space-xs);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.workshop__cell-status {
+    width: 100%;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: var(--ink-muted);
+}
+
+/* Shown in place of the grid when no definition assets are assigned. */
+.workshop__empty {
+    width: 100%;
+    padding: var(--space-lg);
+}

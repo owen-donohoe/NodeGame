@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        Home. Three bands: identity at the top, an arena placeholder in the
+        middle, and Play at the bottom where a thumb reaches.
+
+        The arena band is a labelled placeholder on purpose. The tier scheme
+        (Ancient / Bronze Age / Steam Era / Sorcery in the design doc) does not
+        map onto the districts that exist, and that is an open question - so
+        nothing here may encode four named tiers.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Home.uss" />
+
+    <engine:VisualElement name="home-page" class="home">
+
+        <engine:VisualElement name="home-identity" class="card home__identity">
+            <engine:VisualElement class="home__identity-row">
+                <engine:Label name="home-username" class="subtitle" text="player" />
+                <engine:Button name="home-rename" class="btn btn--ghost home__rename" text="Rename" />
+            </engine:VisualElement>
+
+            <engine:VisualElement class="home__trophy-row">
+                <engine:Label name="home-trophy-count" class="title" text="0" />
+                <engine:Label class="caption" text="trophies" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <engine:VisualElement name="home-arena" class="placeholder home__arena">
+            <engine:Label class="placeholder__label" text="ARENA" />
+            <engine:Label name="home-arena-name" class="placeholder__label"
+                          text="Tier scheme undecided - placeholder" />
+        </engine:VisualElement>
+
+        <engine:VisualElement name="home-actions" class="home__actions">
+            <engine:Label name="home-mode-label" class="caption home__mode" text="Mode: Bot" />
+            <engine:Button name="home-play" class="btn btn--primary home__play" text="PLAY" />
+        </engine:VisualElement>
+
+    </engine:VisualElement>
+
+</engine:UXML>
