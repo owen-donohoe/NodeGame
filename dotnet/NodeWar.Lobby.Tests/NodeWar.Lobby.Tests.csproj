@@ -41,6 +41,8 @@
   <ItemGroup>
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
+    <Compile Include="LoadoutEditorTests.cs" />
+    <Compile Include="ItemTintTests.cs" />
 
     <!--
       The real sources, linked not copied - the same arrangement the other two
@@ -51,6 +53,16 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+
+    <!--
+      The Workshop's two UnityEngine-free pieces. Everything else under
+      Assets/UI/Scripts touches UIElements and cannot come here; these two were
+      written without it precisely so they could.
+    -->
+    <Compile Include="../../Assets/UI/Scripts/LoadoutEditor.cs"
+             Link="Lobby/LoadoutEditor.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
+             Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/DraftSerializer.cs"
              Link="Network/DraftSerializer.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/InputSerializer.cs"

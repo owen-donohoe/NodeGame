@@ -30,6 +30,27 @@ namespace NodeWar.Lobby
         [Tooltip("PlayPopup.uxml. Without it the Play button does nothing.")]
         [SerializeField] private VisualTreeAsset playPopupLayout;
 
+        [Tooltip("WorkshopPage.uxml. Without it Workshop falls back to a placeholder.")]
+        [SerializeField] private VisualTreeAsset workshopPageLayout;
+
+        [Tooltip("ProfilePage.uxml. Without it Profile falls back to a placeholder.")]
+        [SerializeField] private VisualTreeAsset profilePageLayout;
+
+        [Header("Draftable items")]
+
+        // The Workshop's catalogue. GroupSelectionPanel holds the same assets in
+        // its own [SerializeField] arrays, wired in Lobby.unity; the new stack
+        // gets its own copy rather than reading the old panel, so neither
+        // depends on the other surviving. The project uses no Resources folder
+        // and Assets/Data is not one, so a serialized reference is the only way
+        // to reach a ScriptableObject at runtime here - the setup menu item
+        // fills both arrays from Assets/Data/Lobby.
+        [Tooltip("All SuitDefinitions. Filled by Tools > Node War > Set Up UI Toolkit Lobby.")]
+        [SerializeField] private SuitDefinition[] allSuits;
+
+        [Tooltip("All NodeDefinitions. Filled by Tools > Node War > Set Up UI Toolkit Lobby.")]
+        [SerializeField] private NodeDefinition[] allNodes;
+
         [Header("Links")]
         [Tooltip("Used to start Bot and Testing matches. Found automatically if left empty.")]
         [SerializeField] private LobbyManager lobbyManager;
@@ -41,6 +62,7 @@ namespace NodeWar.Lobby
         private NavigationController navigation;
         private SafeAreaBinder safeArea;
         private PlayPopup playPopup;
+        private ProfilePage profilePage;
 
         /// <summary>
         /// Page switching, for pages to navigate between themselves. Null until
@@ -94,6 +116,7 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Dispose();
 
             playPopup = null;
+            profilePage = null;
             navigation = null;
             safeArea = null;
         }
@@ -111,6 +134,21 @@ namespace NodeWar.Lobby
         private void OnPlayRequested()
         {
             if (playPopup != null) playPopup.Show();
+        }
+
+        /// <summary>
+        /// Home's Rename button. The rename editor lives on Profile, so this
+        /// navigates there and opens it rather than raising a second copy of
+        /// the same form. In the uGUI stack this is RenameModal, which is a
+        /// uGUI object the new stack cannot reach.
+        /// </summary>
+        private void OnRenameRequested()
+        {
+            if (navigation == null) return;
+
+            navigation.Show(LobbyPageID.Profile);
+
+            if (profilePage != null) profilePage.BeginRename();
         }
 
         private void BuildShell(VisualElement root)
@@ -166,10 +204,11 @@ namespace NodeWar.Lobby
         /// <summary>
         /// Every page the lobby can show.
         ///
-        /// S1 registers placeholders only. Each session replaces the ones it
+        /// S1 registered placeholders only. Each session replaces the ones it
         /// builds: S2 Home, S3 Workshop and Profile, S4 Shop and Social. The
         /// placeholder for a page is deleted in the same commit as the page
-        /// that replaces it.
+        /// that replaces it, so the two left below are exactly the two pages
+        /// nobody has built yet.
         /// </summary>
         private void RegisterPages()
         {
@@ -177,6 +216,7 @@ namespace NodeWar.Lobby
             {
                 HomePage home = new HomePage(homePageLayout);
                 home.PlayRequested += OnPlayRequested;
+                home.RenameRequested += OnRenameRequested;
                 navigation.Register(home);
             }
             else
@@ -184,10 +224,15 @@ namespace NodeWar.Lobby
                 navigation.Register(new PlaceholderPage(LobbyPageID.Home, "HomePage.uxml not assigned"));
             }
 
-            navigation.Register(new PlaceholderPage(LobbyPageID.Workshop, "due in S3"));
+            // Workshop and Profile handle a missing layout themselves, falling
+            // back to a labelled box, so they are registered unconditionally.
+            navigation.Register(new WorkshopPage(workshopPageLayout, allSuits, allNodes));
+
+            profilePage = new ProfilePage(profilePageLayout);
+            navigation.Register(profilePage);
+
             navigation.Register(new PlaceholderPage(LobbyPageID.Shop, "due in S4"));
             navigation.Register(new PlaceholderPage(LobbyPageID.Social, "due in S4"));
-            navigation.Register(new PlaceholderPage(LobbyPageID.Profile, "due in S3"));
         }
 
         private void BindNav(VisualElement root, string elementName, LobbyPageID id)

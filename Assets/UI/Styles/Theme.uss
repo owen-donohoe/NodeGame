@@ -336,3 +336,109 @@
     background-color: var(--player-1);
     border-radius: 50%;
 }
+
+/* ===================================================================
+   Monogram tints - the stand-in for art that does not exist
+   ===================================================================
+
+   There are no district or suit icons in the project: every icon field on
+   all 9 NodeDefinitions and all 5 SuitDefinitions is null, and
+   Assets/Sprites/Icons is an empty directory
+   (docs/ui-migration-inventory.md, finding 6).
+
+   So an item tile is a lettered square tinted from a hash of the item's own
+   ID - ItemTint.IndexFor picks the index, ItemTint.ClassFor names the class
+   below. Fourteen tiles are then told apart at a glance instead of being
+   fourteen identical grey boxes.
+
+   The letter carries the identity and the tint only reinforces it, which is
+   the same non-colour-alone rule the player marks follow. Nothing here wears
+   .placeholder, because a monogram is a real design decision rather than
+   something standing in for one - the art debt is recorded in the inventory,
+   not implied by a purple box on every row.
+
+   These live in the theme rather than a page stylesheet because S7's district
+   panels have the same problem and should reach the same tile.
+*/
+
+:root {
+    --tile-0: rgb(58, 110, 108);
+    --tile-1: rgb(160, 82, 45);
+    --tile-2: rgb(72, 82, 140);
+    --tile-3: rgb(104, 112, 52);
+    --tile-4: rgb(112, 64, 112);
+    --tile-5: rgb(78, 92, 104);
+    --tile-6: rgb(158, 122, 40);
+    --tile-7: rgb(140, 62, 62);
+}
+
+/*
+    The tile itself. Square, bordered like every other surface, with the
+    monogram centred. Sized by whatever contains it - a loadout slot wants a
+    bigger one than a list row - so no width or height here.
+*/
+.tile {
+    align-items: center;
+    justify-content: center;
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.tile__monogram {
+    color: var(--ink-light);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/*
+    An empty slot's tile. Dashed is not available in USS, so emptiness reads
+    from the absent fill and the muted border instead.
+*/
+.tile--empty {
+    background-color: rgba(72, 56, 40, 0.08);
+    border-color: var(--ink-muted);
+}
+
+/* One class per --tile-N. ItemTint.ClassFor builds the name. */
+.tile-tint--0 { background-color: var(--tile-0); }
+.tile-tint--1 { background-color: var(--tile-1); }
+.tile-tint--2 { background-color: var(--tile-2); }
+.tile-tint--3 { background-color: var(--tile-3); }
+.tile-tint--4 { background-color: var(--tile-4); }
+.tile-tint--5 { background-color: var(--tile-5); }
+.tile-tint--6 { background-color: var(--tile-6); }
+.tile-tint--7 { background-color: var(--tile-7); }
+
+/* ===================================================================
+   Text input
+   ===================================================================
+
+   UI Toolkit puts the editable region in a child element; the outer TextField
+   carries layout only. Styling has to reach the inner element or the height
+   and the type size are both ignored - which also means the 44pt minimum is
+   ignored, so this is a touch-target rule as much as a visual one.
+
+   Home.uss carries the same workaround as .popup__input, written before there
+   was a second text field in the project. Left there untouched; anything new
+   should use this.
+*/
+
+.text-input {
+    min-height: var(--touch-min);
+    font-size: var(--text-lg);
+}
+
+.text-input > .unity-base-text-field__input {
+    min-height: var(--touch-min);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    background-color: var(--card-raised);
+    background-image: none;
+    color: var(--ink-dark);
+    font-size: var(--text-lg);
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+}

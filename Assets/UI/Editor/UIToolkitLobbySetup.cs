@@ -28,6 +28,7 @@ namespace NodeWar.EditorTools
     public static class UIToolkitLobbySetup
     {
         private const string UIRoot = "Assets/UI";
+        private const string DataRoot = "Assets/Data/Lobby";
         private const string ThemePath = UIRoot + "/UnityDefaultRuntimeTheme.tss";
         private const string PanelSettingsPath = UIRoot + "/LobbyPanelSettings.asset";
         private const string LayoutPath = UIRoot + "/Layouts/LobbyRoot.uxml";
@@ -171,6 +172,11 @@ namespace NodeWar.EditorTools
             AssignLayout(so, "rootLayout", layout);
             AssignLayout(so, "homePageLayout", Load(UIRoot + "/Layouts/HomePage.uxml"));
             AssignLayout(so, "playPopupLayout", Load(UIRoot + "/Layouts/PlayPopup.uxml"));
+            AssignLayout(so, "workshopPageLayout", Load(UIRoot + "/Layouts/WorkshopPage.uxml"));
+            AssignLayout(so, "profilePageLayout", Load(UIRoot + "/Layouts/ProfilePage.uxml"));
+
+            AssignDefinitions<SuitDefinition>(so, "allSuits", DataRoot + "/Suits");
+            AssignDefinitions<NodeDefinition>(so, "allNodes", DataRoot + "/Nodes");
 
             SerializedProperty managerProperty = so.FindProperty("lobbyManager");
             if (managerProperty != null)
@@ -224,6 +230,64 @@ namespace NodeWar.EditorTools
                 Debug.LogWarning("[UIToolkitLobbySetup] Layout not found: " + path);
 
             return asset;
+        }
+
+        /// <summary>
+        /// Fills a ScriptableObject array field from every asset of that type in
+        /// a folder.
+        ///
+        /// The Workshop needs the 9 NodeDefinitions and 5 SuitDefinitions at
+        /// runtime, and the project has no Resources folder to load them from -
+        /// GroupSelectionPanel solves the same problem by having them dragged
+        /// into the scene one at a time. Collecting them here means adding a new
+        /// district is "make the asset, re-run this menu item" rather than
+        /// "remember which two arrays to drag it into".
+        ///
+        /// Sorted by path so the picker's order is stable across machines;
+        /// FindAssets does not promise an order.
+        /// </summary>
+        private static void AssignDefinitions<T>(SerializedObject so, string propertyName, string folder)
+            where T : ScriptableObject
+        {
+            SerializedProperty property = so.FindProperty(propertyName);
+
+            if (property == null)
+            {
+                Debug.LogWarning("[UIToolkitLobbySetup] LobbyUIController has no " +
+                                 propertyName + " field. Has it compiled?");
+                return;
+            }
+
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                Debug.LogWarning("[UIToolkitLobbySetup] No such folder: " + folder +
+                                 ". " + propertyName + " left empty; the Workshop will " +
+                                 "show a labelled empty list.");
+                property.arraySize = 0;
+                return;
+            }
+
+            string[] guids = AssetDatabase.FindAssets("t:" + typeof(T).Name, new[] { folder });
+            string[] paths = new string[guids.Length];
+
+            for (int i = 0; i < guids.Length; i++)
+                paths[i] = AssetDatabase.GUIDToAssetPath(guids[i]);
+
+            System.Array.Sort(paths, System.StringComparer.Ordinal);
+
+            property.arraySize = paths.Length;
+
+            for (int i = 0; i < paths.Length; i++)
+            {
+                property.GetArrayElementAtIndex(i).objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<T>(paths[i]);
+            }
+
+            if (paths.Length == 0)
+            {
+                Debug.LogWarning("[UIToolkitLobbySetup] No " + typeof(T).Name +
+                                 " assets found in " + folder + ".");
+            }
         }
 
         private static void AssignLayout(SerializedObject so, string propertyName, VisualTreeAsset asset)

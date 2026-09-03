@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        Profile. Replaces ProfilePanel, and takes over rename from RenameModal.
+
+        The page scrolls, because the honest version of this screen is mostly
+        things that do not exist yet and they are worth showing as such rather
+        than compressing into one screenful.
+
+        What is real: the username, and the trophy count. Everything else is a
+        marked placeholder, and deliberately so:
+
+          - ARENA has no tier scheme. The design document's four names
+            (Ancient / Bronze Age / Steam Era / Sorcery) do not map onto the
+            districts that exist, so nothing here encodes four named tiers -
+            not in the layout and not in a data structure.
+
+          - The six stat boxes are each a placeholder because no match result
+            is written anywhere in the project. ProfilePanel shows "--" for the
+            same six; here they say why.
+
+          - Achievements and match history have no backing system at all.
+
+        The trophy bar underneath the count IS real - it is the same
+        TrophyBarLogic window HomepagePanel uses, showing position within a
+        100-trophy band. It is separate from the arena placeholder on purpose:
+        trophies are data, tiers are not.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Profile.uss" />
+
+    <engine:VisualElement name="profile-page" class="profile">
+        <engine:ScrollView name="profile-scroll" class="profile__scroll">
+
+            <engine:VisualElement name="profile-identity" class="card profile__card">
+                <engine:VisualElement class="profile__identity-row">
+                    <engine:Label name="profile-username" class="subtitle profile__username"
+                                  text="player" />
+                    <engine:Button name="profile-rename" class="btn btn--ghost profile__rename"
+                                   text="Rename" />
+                </engine:VisualElement>
+
+                <!-- Inline, not a modal: the new stack cannot reach RenameModal. -->
+                <engine:VisualElement name="profile-rename-editor" class="profile__rename-editor">
+                    <engine:TextField name="profile-name-field" class="text-input profile__input"
+                                      max-length="16" />
+                    <engine:Label name="profile-name-error" class="caption profile__error" />
+                    <engine:VisualElement class="profile__rename-actions">
+                        <engine:Button name="profile-name-save" class="btn btn--primary profile__rename-action"
+                                       text="Save" />
+                        <engine:Button name="profile-name-cancel" class="btn btn--ghost profile__rename-action"
+                                       text="Cancel" />
+                    </engine:VisualElement>
+                </engine:VisualElement>
+            </engine:VisualElement>
+
+            <engine:VisualElement name="profile-trophies" class="card profile__card">
+                <engine:VisualElement class="profile__trophy-row">
+                    <engine:Label name="profile-trophy-count" class="title" text="0" />
+                    <engine:Label class="caption" text="trophies" />
+                </engine:VisualElement>
+
+                <engine:VisualElement class="profile__bar-track">
+                    <engine:VisualElement name="profile-trophy-fill" class="profile__bar-fill" />
+                </engine:VisualElement>
+
+                <engine:VisualElement class="profile__bar-scale">
+                    <engine:Label name="profile-trophy-min" class="caption" text="0" />
+                    <engine:Label name="profile-trophy-max" class="caption" text="100" />
+                </engine:VisualElement>
+
+                <engine:VisualElement name="profile-arena" class="placeholder profile__arena">
+                    <engine:Label class="placeholder__label" text="ARENA" />
+                    <engine:Label class="placeholder__label"
+                                  text="Tier scheme undecided - placeholder" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+
+            <engine:VisualElement name="profile-stats" class="card profile__card">
+                <engine:Label class="subtitle" text="Record" />
+                <engine:VisualElement name="profile-stat-grid" class="profile__stat-grid" />
+                <engine:Label class="caption profile__note"
+                              text="No match result is written anywhere yet, so none of these are tracked." />
+            </engine:VisualElement>
+
+            <engine:VisualElement class="card profile__card">
+                <engine:Label class="subtitle" text="Achievements" />
+                <engine:VisualElement class="placeholder profile__empty">
+                    <engine:Label class="placeholder__label" text="No achievement system exists" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+
+            <engine:VisualElement class="card profile__card">
+                <engine:Label class="subtitle" text="Match history" />
+                <engine:VisualElement class="placeholder profile__empty">
+                    <engine:Label class="placeholder__label" text="Matches are not recorded" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+
+        </engine:ScrollView>
+    </engine:VisualElement>
+
+</engine:UXML>
