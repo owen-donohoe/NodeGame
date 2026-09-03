@@ -1,0 +1,92 @@
+/*
+    Shop.
+
+    Colour, spacing and type come from Theme.uss custom properties. Numbers
+    below are layout proportions, not design tokens.
+
+    Nothing on this page is a button, and nothing is styled to look like one.
+    A shop full of things that appear tappable and are not is worse than a shop
+    that plainly says it is not open.
+*/
+
+.shop {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.shop__scroll {
+    flex-grow: 1;
+}
+
+.shop__card {
+    margin-bottom: var(--space-md);
+}
+
+.shop__box-row {
+    flex-direction: row;
+    align-items: flex-end;
+    margin-top: var(--space-sm);
+}
+
+.shop__box-row > .caption {
+    margin-left: var(--space-sm);
+    margin-bottom: var(--space-xs);
+}
+
+/*
+    boxProgress is the only fractional field PlayerProfile carries. Shown as a
+    bar because that is what it is, and captioned as unwired because nothing
+    advances it.
+*/
+.shop__bar-track {
+    height: 14px;
+    margin-top: var(--space-sm);
+    background-color: rgba(72, 56, 40, 0.15);
+    border-width: var(--border-width);
+    border-color: var(--border-ink);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.shop__bar-fill {
+    background-color: var(--secondary);
+    height: 100%;
+    width: 0;
+}
+
+.shop__note {
+    margin-top: var(--space-sm);
+}
+
+.shop__rule {
+    margin-top: var(--space-sm);
+}
+
+/* ===================================================================
+   Categories - three inert placeholders
+   =================================================================== */
+
+.shop__categories {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: var(--space-md);
+}
+
+/*
+    48% rather than 50% leaves room for the gap without a negative margin. The
+    third tile sits alone on its line, which is honest about there being three
+    of them rather than padding the row out to four.
+*/
+.shop__category {
+    width: 48%;
+    margin-right: 2%;
+    margin-bottom: var(--space-sm);
+    padding: var(--space-md) var(--space-sm);
+    min-height: 96px;
+}
+
+.shop__category-name {
+    font-size: var(--text-md);
+    margin-bottom: var(--space-xs);
+}

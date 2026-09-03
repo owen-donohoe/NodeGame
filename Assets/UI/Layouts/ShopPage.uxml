@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        Shop. Replaces ShopPanel.
+
+        Nothing here can be bought, and the page says so rather than implying
+        otherwise. Two hard constraints shape it:
+
+        1. THERE IS NO CURRENCY. Gold and Ink do not exist anywhere in the
+           project. PlayerProfile carries boxesAvailable and boxProgress, and
+           until now nothing wrote or read either. Those two are the only
+           economy-shaped numbers that exist, so the top card shows exactly
+           them and admits nothing feeds them. Inventing a coin balance here
+           would be inventing a system.
+
+        2. THE MONETISATION RULE IS ON RECORD: free to play, cosmetics and
+           accelerated progression only, nothing that affects competitive
+           results. The rebuild brief's own example content - "Bronze Sword
+           (Suit Upgrade)", "Stone Wall (Node)" - breaks that rule, and a
+           placeholder that models pay-to-win is the version that gets copied
+           when the real system arrives. So the categories below are cosmetic
+           or accelerative, and no suit, district or stat appears among them.
+
+        Every tile wears .placeholder. None of them is a button.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Shop.uss" />
+
+    <engine:VisualElement name="shop-page" class="shop">
+        <engine:ScrollView name="shop-scroll" class="shop__scroll">
+
+            <engine:VisualElement class="card shop__card">
+                <engine:Label class="subtitle" text="Boxes" />
+
+                <engine:VisualElement class="shop__box-row">
+                    <engine:Label name="shop-box-count" class="title" text="0" />
+                    <engine:Label class="caption" text="available" />
+                </engine:VisualElement>
+
+                <engine:VisualElement class="shop__bar-track">
+                    <engine:VisualElement name="shop-box-fill" class="shop__bar-fill" />
+                </engine:VisualElement>
+
+                <engine:Label name="shop-box-note" class="caption shop__note"
+                              text="Nothing writes either figure yet. The box system is unplanned, and blocked on unlocks existing at all - PlayerProfile.IsSuitUnlocked and IsNodeUnlocked both return true unconditionally today." />
+            </engine:VisualElement>
+
+            <engine:VisualElement class="card shop__card">
+                <engine:Label class="subtitle" text="What this will sell" />
+                <engine:Label class="caption shop__note"
+                              text="Cosmetics and accelerated progression only. Nothing that changes what happens in a match." />
+
+                <engine:VisualElement name="shop-categories" class="shop__categories" />
+            </engine:VisualElement>
+
+            <engine:VisualElement class="card shop__card">
+                <engine:Label class="subtitle" text="What this will not sell" />
+                <engine:Label class="body shop__rule"
+                              text="No suits, no districts, no stat upgrades, and nothing that decides a match. A player who spends nothing meets a player who spends everything on equal terms." />
+            </engine:VisualElement>
+
+        </engine:ScrollView>
+    </engine:VisualElement>
+
+</engine:UXML>

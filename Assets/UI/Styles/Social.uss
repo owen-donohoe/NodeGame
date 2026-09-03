@@ -1,0 +1,32 @@
+/*
+    Social.
+
+    One placeholder and one useful aside. Colour, spacing and type come from
+    Theme.uss custom properties.
+*/
+
+.social {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.social__band {
+    flex-grow: 1;
+    max-height: 60%;
+    padding: var(--space-lg);
+}
+
+.social__heading {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-sm);
+}
+
+.social__aside {
+    flex-shrink: 0;
+    margin-top: var(--space-md);
+}
+
+.social__aside-note {
+    margin-top: var(--space-xs);
+}

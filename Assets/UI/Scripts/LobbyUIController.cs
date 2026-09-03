@@ -36,6 +36,12 @@ namespace NodeWar.Lobby
         [Tooltip("ProfilePage.uxml. Without it Profile falls back to a placeholder.")]
         [SerializeField] private VisualTreeAsset profilePageLayout;
 
+        [Tooltip("ShopPage.uxml. Without it Shop falls back to a placeholder.")]
+        [SerializeField] private VisualTreeAsset shopPageLayout;
+
+        [Tooltip("SocialPage.uxml. Without it Social falls back to a placeholder.")]
+        [SerializeField] private VisualTreeAsset socialPageLayout;
+
         [Header("Draftable items")]
 
         // The Workshop's catalogue. GroupSelectionPanel holds the same assets in
@@ -204,11 +210,11 @@ namespace NodeWar.Lobby
         /// <summary>
         /// Every page the lobby can show.
         ///
-        /// S1 registered placeholders only. Each session replaces the ones it
-        /// builds: S2 Home, S3 Workshop and Profile, S4 Shop and Social. The
-        /// placeholder for a page is deleted in the same commit as the page
-        /// that replaces it, so the two left below are exactly the two pages
-        /// nobody has built yet.
+        /// S1 registered placeholders only, and each session since has replaced
+        /// the ones it built: S2 Home, S3 Workshop and Profile, S4 Shop and
+        /// Social. With S4 in, no PlaceholderPage remains except the fallback
+        /// for a Home layout that failed to assign - so PlaceholderPage itself
+        /// is now only a diagnostic, not a stand-in for unbuilt work.
         /// </summary>
         private void RegisterPages()
         {
@@ -231,8 +237,8 @@ namespace NodeWar.Lobby
             profilePage = new ProfilePage(profilePageLayout);
             navigation.Register(profilePage);
 
-            navigation.Register(new PlaceholderPage(LobbyPageID.Shop, "due in S4"));
-            navigation.Register(new PlaceholderPage(LobbyPageID.Social, "due in S4"));
+            navigation.Register(new ShopPage(shopPageLayout));
+            navigation.Register(new SocialPage(socialPageLayout));
         }
 
         private void BindNav(VisualElement root, string elementName, LobbyPageID id)

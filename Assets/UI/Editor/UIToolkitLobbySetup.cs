@@ -174,6 +174,8 @@ namespace NodeWar.EditorTools
             AssignLayout(so, "playPopupLayout", Load(UIRoot + "/Layouts/PlayPopup.uxml"));
             AssignLayout(so, "workshopPageLayout", Load(UIRoot + "/Layouts/WorkshopPage.uxml"));
             AssignLayout(so, "profilePageLayout", Load(UIRoot + "/Layouts/ProfilePage.uxml"));
+            AssignLayout(so, "shopPageLayout", Load(UIRoot + "/Layouts/ShopPage.uxml"));
+            AssignLayout(so, "socialPageLayout", Load(UIRoot + "/Layouts/SocialPage.uxml"));
 
             AssignDefinitions<SuitDefinition>(so, "allSuits", DataRoot + "/Suits");
             AssignDefinitions<NodeDefinition>(so, "allNodes", DataRoot + "/Nodes");

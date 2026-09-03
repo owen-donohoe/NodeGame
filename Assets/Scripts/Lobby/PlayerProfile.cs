@@ -79,6 +79,17 @@ namespace NodeWar.Lobby
             }
         }
 
+        /// <summary>
+        /// Boxes the player has waiting. Nothing writes this yet - the box
+        /// system is unplanned and blocked on unlocks existing at all - so the
+        /// Shop displays it as the unwired figure it is rather than dressing it
+        /// up as a balance.
+        /// </summary>
+        public int BoxesAvailable => data.boxesAvailable;
+
+        /// <summary>Progress toward the next box, 0 to 1. Also written by nothing yet.</summary>
+        public float BoxProgress => data.boxProgress;
+
         public void SetUsername(string newName)
         {
             if (!ValidateUsername(newName)) return;
