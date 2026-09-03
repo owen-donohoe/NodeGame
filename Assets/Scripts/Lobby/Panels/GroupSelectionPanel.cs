@@ -262,25 +262,27 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
             if (profile == null) return;
 
-            LoadoutData loadout = profile.Loadout;
+            LoadoutData loadout = LoadoutData.Normalized(profile.Loadout);
 
-            suitSlot0.SetEmpty();
-            suitSlot1.SetEmpty();
-            suitSlot2.SetEmpty();
-            nodeSlot0.SetEmpty();
-            nodeSlot1.SetEmpty();
+            GroupSlotDisplay[] suitSlots = SuitSlots;
+            GroupSlotDisplay[] nodeSlots = NodeSlots;
 
-            if (!string.IsNullOrEmpty(loadout.suitID0))
-                EquipSuit(suitSlot0, loadout.suitID0);
-            if (!string.IsNullOrEmpty(loadout.suitID1))
-                EquipSuit(suitSlot1, loadout.suitID1);
-            if (!string.IsNullOrEmpty(loadout.suitID2))
-                EquipSuit(suitSlot2, loadout.suitID2);
+            for (int i = 0; i < suitSlots.Length; i++) suitSlots[i].SetEmpty();
+            for (int i = 0; i < nodeSlots.Length; i++) nodeSlots[i].SetEmpty();
 
-            if (!string.IsNullOrEmpty(loadout.nodeID0))
-                EquipNode(nodeSlot0, loadout.nodeID0);
-            if (!string.IsNullOrEmpty(loadout.nodeID1))
-                EquipNode(nodeSlot1, loadout.nodeID1);
+            int suitCount = Mathf.Min(suitSlots.Length, loadout.suitIDs.Length);
+            for (int i = 0; i < suitCount; i++)
+            {
+                if (!string.IsNullOrEmpty(loadout.suitIDs[i]))
+                    EquipSuit(suitSlots[i], loadout.suitIDs[i]);
+            }
+
+            int nodeCount = Mathf.Min(nodeSlots.Length, loadout.nodeIDs.Length);
+            for (int i = 0; i < nodeCount; i++)
+            {
+                if (!string.IsNullOrEmpty(loadout.nodeIDs[i]))
+                    EquipNode(nodeSlots[i], loadout.nodeIDs[i]);
+            }
         }
 
         private void SaveToProfile()
@@ -288,16 +290,39 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
             if (profile == null) return;
 
+            GroupSlotDisplay[] suitSlots = SuitSlots;
+            GroupSlotDisplay[] nodeSlots = NodeSlots;
+
             LoadoutData loadout = new LoadoutData
             {
-                suitID0 = suitSlot0.EquippedID ?? "",
-                suitID1 = suitSlot1.EquippedID ?? "",
-                suitID2 = suitSlot2.EquippedID ?? "",
-                nodeID0 = nodeSlot0.EquippedID ?? "",
-                nodeID1 = nodeSlot1.EquippedID ?? ""
+                suitIDs = new string[suitSlots.Length],
+                nodeIDs = new string[nodeSlots.Length]
             };
 
+            for (int i = 0; i < suitSlots.Length; i++)
+                loadout.suitIDs[i] = suitSlots[i].EquippedID ?? "";
+            for (int i = 0; i < nodeSlots.Length; i++)
+                loadout.nodeIDs[i] = nodeSlots[i].EquippedID ?? "";
+
+            // SetLoadout normalizes, so a mismatch between the number of slot
+            // displays wired in the scene and LoadoutData's slot counts is
+            // reconciled there rather than persisted.
             profile.SetLoadout(loadout);
+        }
+
+        /// <summary>
+        /// The serialized slot fields as an array. The displays stay individual
+        /// [SerializeField]s because they are wired in the scene one by one;
+        /// this is just the indexed view the loadout code wants.
+        /// </summary>
+        private GroupSlotDisplay[] SuitSlots
+        {
+            get { return new GroupSlotDisplay[] { suitSlot0, suitSlot1, suitSlot2 }; }
+        }
+
+        private GroupSlotDisplay[] NodeSlots
+        {
+            get { return new GroupSlotDisplay[] { nodeSlot0, nodeSlot1 }; }
         }
 
         // ===== LOOKUP =====

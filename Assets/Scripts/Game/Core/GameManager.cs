@@ -828,9 +828,9 @@ namespace NodeWar.Core
                 playerLoadout = cachedRemoteLoadout;
             }
 
-            AddSuitFromID(suits, playerLoadout.suitID0);
-            AddSuitFromID(suits, playerLoadout.suitID1);
-            AddSuitFromID(suits, playerLoadout.suitID2);
+            playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
+            for (int i = 0; i < playerLoadout.suitIDs.Length; i++)
+                AddSuitFromID(suits, playerLoadout.suitIDs[i]);
 
             return suits.ToArray();
         }
@@ -855,8 +855,9 @@ namespace NodeWar.Core
                 playerLoadout = cachedRemoteLoadout;
             }
 
-            AddNodeFromID(nodes, playerLoadout.nodeID0);
-            AddNodeFromID(nodes, playerLoadout.nodeID1);
+            playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
+            for (int i = 0; i < playerLoadout.nodeIDs.Length; i++)
+                AddNodeFromID(nodes, playerLoadout.nodeIDs[i]);
 
             return nodes.ToArray();
         }

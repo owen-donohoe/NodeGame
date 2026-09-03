@@ -642,9 +642,11 @@ namespace NodeWar.Core
             else
             {
                 // Human player: use lobby loadout
-                NodeWar.Lobby.LoadoutData loadout = GetLoadoutForPlayer(playerID);
-                AddLoadoutNode(slots, loadout.nodeID0);
-                AddLoadoutNode(slots, loadout.nodeID1);
+                NodeWar.Lobby.LoadoutData loadout =
+                    NodeWar.Lobby.LoadoutData.Normalized(GetLoadoutForPlayer(playerID));
+
+                for (int i = 0; i < loadout.nodeIDs.Length; i++)
+                    AddLoadoutNode(slots, loadout.nodeIDs[i]);
             }
 
             return slots.ToArray();
