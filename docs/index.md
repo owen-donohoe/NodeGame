@@ -28,6 +28,17 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [design-history](design-history/README.md) — the v2.1 master design document. Historical, and
   still substantially the plan.
 
+## Historical snapshots
+
+* [ui-migration-inventory](ui-migration-inventory.md) — the UI layer as it stood at `d0f4420`,
+  before the phone-UI rebuild replaced it.
+
+A snapshot carries `status: historical` and a `snapshot_of_commit:` instead of `sources:` and
+`verified_at_commit:`. It is frozen on purpose, so its ground moving is expected rather than
+suspect, and the freshness check has nothing to say about it. Do not add sources to one to
+"fix" a warning — that would make every later commit report a false alarm. If a snapshot starts
+describing live code again, it has stopped being a snapshot.
+
 `attesters/` holds the deterministic verification code the computations point at. It contains no
 markdown and is not part of the concept graph.
 

@@ -24,7 +24,7 @@
     it is the stale output of the very code being compiled, and referencing it
     makes every type in the project ambiguous with itself.
 
-.PARAMETER Verbose1
+.PARAMETER ShowAll
     Show the full compiler output rather than just errors.
 
 .EXAMPLE

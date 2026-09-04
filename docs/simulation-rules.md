@@ -59,12 +59,21 @@ multipliers (`50` = 0.5x, `100` = 1.0x, `200` = 2.0x).
 **No `UnityEngine` references in `Simulation/`.**
 Why: keeps the simulation platform-independent and free of any Unity
 subsystem (physics, time, math) that isn't guaranteed to behave
-identically on every machine running the game. The `GameBalance` and
-`BoardConfig` `ScriptableObject`s are the sanctioned exception: they are
-read-only tuning data loaded once before a match starts
-(`GameSimulation.SetBalance`, `CommandProcessor.SetBalance`) and never
-mutated by the tick loop, so they never carry non-deterministic state
-into the simulation.
+identically on every machine running the game.
+
+There is no exception to this — including for tuning data, which is worth
+stating because the arrangement can look like one. The `GameBalance` and
+`BoardConfig` `ScriptableObject`s live in `Assets/Scripts/Game/Config/`
+and never cross into `Simulation/`. What crosses is their *contents*, as
+plain structs: `GameSimulation.SetBalance` and
+`CommandProcessor.SetBalance` both take a `GameBalanceData`, which is an
+ordinary `struct` declared inside `Simulation/` with no `UnityEngine`
+reference. It is read-only tuning loaded once before a match starts and
+never mutated by the tick loop, so it carries no non-deterministic state
+in with it.
+
+Do not put a `ScriptableObject` in `Simulation/` on the strength of this
+paragraph — `scripts/sim-guard.ps1` blocks it, correctly.
 
 **Collections: arrays or `List<T>` only. No `Dictionary`/`HashSet`
 iteration.**

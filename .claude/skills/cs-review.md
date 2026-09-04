@@ -32,7 +32,12 @@ Read all files modified in this session, then check:
 1. Architecture compliance
    - Does each file respect its layer's ownership rules?
    - Does anything in Simulation/ reference UnityEngine?
-   - Does anything in View/ or UI/ write to SimulationState?
+   - Does any presentation code write to SimulationState, or call
+     GameSimulation or CommandProcessor? Check all three trees, not
+     just the layer named UI: Assets/Scripts/Game/{View,UI}/,
+     Assets/UI/ (UI Toolkit), and Assets/Legacy/.
+   - Does every command sent from presentation code go through
+     InputBuffer with issuedOnTick stamped?
    - Does anything in Network/ contain game logic?
 
 2. Single-file principle

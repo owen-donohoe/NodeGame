@@ -149,10 +149,16 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
     EditMode suite at `Assets/Tests/EditMode/Tests/`
     (`NodeWar.Simulation.Tests.asmdef`, plus `DeterminismBaselineTests`,
     `EdgeWeightTests`, `MovementCorrectnessTests`, `SimulationSmokeTest`,
-    and the shared `TestBoardFactory`). Run it with
-    `scripts/run-tests.ps1` (batch mode — close the Editor first, it takes
-    the project lock) or `scripts/run-tests-live.ps1` (drives the
-    already-open Editor via `TestBridge`). Any change to `Simulation/`
+    and the shared `TestBoardFactory`).
+
+    Run it with `dotnet test dotnet/NodeWar.sln` — no Editor, no licence,
+    and it is what CI runs, so prefer it for any result you intend to rely
+    on. The Unity runners answer a different question, whether the code
+    works *in the Editor*: `scripts/run-tests.ps1` (batch mode — close the
+    Editor first, it takes the project lock) or `scripts/run-tests-live.ps1`
+    (drives the already-open Editor via `TestBridge`). See
+    `docs/skills/run-dotnet-tests.md`, and note the `--logger` caveat there
+    before generating a receipt. Any change to `Simulation/`
     should come with a test exercising the new behavior, added alongside
     the existing ones. At minimum, before calling the feature done, run a
     local match long enough to cross a `DESYNC_CHECK_INTERVAL` boundary

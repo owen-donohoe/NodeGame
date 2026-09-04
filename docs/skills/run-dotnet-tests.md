@@ -19,22 +19,67 @@ sources:
   - id: shared-props
     resource: dotnet/Directory.Build.props
     title: Shared LangVersion and compile-item settings
+  - id: lobby-test-project
+    resource: dotnet/NodeWar.Lobby.Tests/NodeWar.Lobby.Tests.csproj
+    title: Lobby test project, linked sources
   - id: workflow
     resource: .github/workflows/determinism.yml
     title: The determinism CI gate
+  # The test files themselves. Declared because this document states how many
+  # cases to expect, and that number is only checkable against them.
+  - id: tests-determinism
+    resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
+    title: Determinism baseline cases
+    last_modified: 2026-08-30T16:44:10-04:00
+  - id: tests-edge-weight
+    resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
+    title: Edge weight cases
+    last_modified: 2026-08-30T17:51:21-04:00
+  - id: tests-movement
+    resource: Assets/Tests/EditMode/Tests/MovementCorrectnessTests.cs
+    title: Movement correctness cases
+    last_modified: 2026-09-02T10:22:51-04:00
+  - id: tests-smoke
+    resource: Assets/Tests/EditMode/Tests/SimulationSmokeTest.cs
+    title: Simulation smoke test
+    last_modified: 2026-08-29T10:56:17-04:00
 ---
 
 # Run the simulation suite without Unity
 
-The same 8 test cases as [run-editmode-tests](run-editmode-tests.md), executed by `dotnet test`
-instead of Unity's Test Runner. No Editor, no licence, no Windows requirement.
+The same 14 simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
+`dotnet test` instead of Unity's Test Runner. No Editor, no licence, no Windows requirement.
+
+The solution holds two test projects. Run everything for pass/fail:
 
 ```
-dotnet test dotnet/NodeWar.sln --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
+dotnet test dotnet/NodeWar.sln
 ```
 
-Expect 8 passed, and both pinned fingerprints from
+Expect **60 passed** — 14 from `NodeWar.Simulation.Tests`, 46 from `NodeWar.Lobby.Tests`.
+
+| Project | Cases | Covers |
+|---|---|---|
+| `NodeWar.Simulation.Tests` | 14 | the determinism baseline, edge weights, movement correctness, a smoke test |
+| `NodeWar.Lobby.Tests` | 46 | `LoadoutData`'s wire format and the loadout editor rules |
+
+## Producing the receipt
+
+**Do not pass `--logger` to the solution.** Both projects would write the same absolute
+`LogFilePath`, and the last to finish overwrites the other — leaving a receipt with no determinism
+cases in it, which the attester correctly rejects but which reads like a broken tool rather than a
+misuse.
+
+The receipt is a claim about the simulation, so produce it from that project alone:
+
+```
+dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
+  --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
+```
+
+Expect 14 passed, and both pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
+`.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 
 ## There is one copy of the source
 
@@ -78,7 +123,7 @@ NUnit's default is sequential. The requirement is simply never to add `[Parallel
 | Used by CI | Yes | No | No |
 
 Prefer this runner for any receipt you intend to rely on. It always compiles before it runs, so the
-stale-assembly hazard documented in [run-editmode-tests](run-editmode-tests.md) — a green 8/8
+stale-assembly hazard documented in [run-editmode-tests](run-editmode-tests.md) — a fully green run
 against assemblies that predate the edit — cannot occur on this path.
 
 The Unity runners remain the right choice when the question is whether the code works *in the

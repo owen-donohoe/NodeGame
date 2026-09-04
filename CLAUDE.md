@@ -63,17 +63,40 @@ Tasks with no Phase are legitimate — bugs hit while doing something else.
 Read the file, do not ask me to summarise it here.
 
 - `docs/architecture.md` — the seven layers, information flow, scene structure,
-  persistent objects, key classes per layer, networking model. Start here.
+  persistent objects, key classes per layer, networking model. **Start here.**
+  Its *Where the UI lives* section is required reading before touching any UI:
+  presentation spans three trees and which one runs is a scene value.
+- `docs/game-model.md` — what the game *is*: districts, suits, resources, the
+  win condition. Read this before any gameplay or balance question; the code
+  will tell you what happens, not what it is for.
 - `docs/simulation-rules.md` — the full determinism contract.
 - `docs/adding-a-feature.md` — 11-step checklist for any new feature.
 - `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
 - `docs/design-history/` — the v2.1 design document. Historical. Notion is
   authoritative for future work.
+- `docs/ui-migration-inventory.md` — historical. The S0 snapshot of the uGUI
+  layer taken *before* the rebuild that replaced it. Read it for why the
+  migration was scoped as it was, never for what the UI is now.
 - `docs/index.md` — OKF v0.2 bundle root. Entry point for the doc graph and its
   freshness signal (`scripts/okf-stale.ps1`).
-- `docs/skills/run-dotnet-tests.md` — running the simulation suite without Unity
-  (`dotnet test dotnet/NodeWar.sln`). The projects in `dotnet/` compile the same
-  sources under `Assets/` that Unity does; there is one copy of the source.
+- `docs/skills/run-dotnet-tests.md` — running the tests without Unity
+  (`dotnet test dotnet/NodeWar.sln`, 60 cases). The projects in `dotnet/`
+  compile the same sources under `Assets/` that Unity does; there is one copy
+  of the source. Read it before passing `--logger`.
+- `docs/skills/run-editmode-tests.md` — the same suite through Unity, for when
+  the question is whether it works *in the Editor*.
+
+## Checking your work without Unity
+
+`dotnet test` covers `Simulation/` only — it is the one assembly with no
+UnityEngine references. For everything else (lobby, HUD, network, view, and all
+of `Assets/UI/`), `scripts/compile-check.ps1` type-checks the real sources
+against the real Unity assemblies with the editor closed. It catches syntax,
+missing usings, wrong API names and broken call sites. It cannot see prefab or
+scene wiring, and it is not a test run.
+
+Run it after any edit you could not otherwise compile. The editor is usually
+already open, and it does not need to be closed for this.
 
 ## Simulation Boundary — Non-Negotiable
 
@@ -83,7 +106,9 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 - No UnityEngine references anywhere in `Simulation/`
 - Integer-only math — no float, double, decimal
 - No `DateTime`, `Time.deltaTime`, or any frame/wall-clock API
-- No `UnityEngine.Random` — only seeded RNG stored in `SimulationState`
+- No `UnityEngine.Random`. `SimulationState` holds no RNG today; derive a seed
+  from replicated state, and if one is ever stored it lives on
+  `SimulationState` and advances only inside `SimulateTick`
 - Arrays or `List<T>` only — no Dictionary/HashSet iteration
 - All sorts need total-order comparators with ID tiebreakers
 - Tick order is canonical, never reordered:

@@ -10,10 +10,16 @@ glob: Assets/Scripts/Game/Simulation/**
 - Integer math only. No float, no double, no decimal
 - No System.DateTime, Time.deltaTime, Time.time, or any
   frame/wall-clock API
-- No UnityEngine.Random. Use only the seeded RNG stored in
-  SimulationState, advanced only inside SimulateTick
-- Collections: arrays or List<T> only. No Dictionary, no HashSet.
-  Iteration order must be deterministic.
+- No UnityEngine.Random, and nothing seeded from wall-clock time.
+  SimulationState holds no RNG today. Derive a seed from already-
+  replicated state (see DraftManager.HandleTimeout). If a mid-match
+  feature needs randomness, the RNG state must itself live on
+  SimulationState and advance only inside SimulateTick.
+- Collections: arrays or List<T> only. No Dictionary/HashSet
+  *iteration* over anything affecting simulation results. Holding one
+  is not the violation; enumerating it in an order the two peers may
+  not share is. (LockstepRunner keeps a Dictionary for local input
+  bookkeeping; it never enters SimulationState or the hash.)
 - All sort operations must use total-order comparators with an
   ID-based tiebreaker. No ties permitted.
 - Canonical tick order must not be reordered:
