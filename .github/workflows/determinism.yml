@@ -46,10 +46,23 @@ jobs:
         shell: pwsh
         run: ./scripts/sim-guard.ps1
 
-      - name: Run the simulation suite
+      # Everything in the solution, for pass/fail. No logger: several test
+      # projects writing one absolute LogFilePath overwrite each other, and the
+      # last one to finish decides what the receipt contains.
+      - name: Run every test
         shell: pwsh
         run: >
           dotnet test dotnet/NodeWar.sln
+          --configuration Release
+
+      # The receipt is a claim about the simulation specifically, so it is
+      # produced by the simulation project alone. Re-running those tests costs
+      # milliseconds; a receipt that silently lost its sanctioned cases would
+      # cost a lot more.
+      - name: Produce the determinism receipt
+        shell: pwsh
+        run: >
+          dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj
           --configuration Release
           --logger "nunit;LogFilePath=${{ github.workspace }}/TestResults/results.xml"
 
