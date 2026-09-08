@@ -97,12 +97,24 @@ namespace NodeWar.View.Outline
         public float AlphaClipThreshold => alphaClipThreshold;
         public OutlineInjectionPoint InjectionPoint => injectionPoint;
 
+        // Built once, and only if something actually needs it. Unity does not
+        // run C# field initializers when deserializing an asset, so a settings
+        // asset authored without an explicit palette -- or one saved before a
+        // style was added -- arrives here with a null or short array. Falling
+        // back to the defaults keeps that case working instead of drawing every
+        // outline in transparent black, which would look exactly like the
+        // feature being broken.
+        private static StyleEntry[] fallbackPalette;
+
         public StyleEntry GetStyle(OutlineStyle style)
         {
             int index = (int)style;
-            if (palette == null || index < 0 || index >= palette.Length) return default;
+            if (index < 0 || index >= OutlineStyleMask.StyleCount) return default;
 
-            return palette[index];
+            if (palette != null && index < palette.Length) return palette[index];
+
+            if (fallbackPalette == null) fallbackPalette = DefaultPalette();
+            return fallbackPalette[index];
         }
 
         private static StyleEntry[] DefaultPalette()

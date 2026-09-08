@@ -31,8 +31,16 @@ namespace NodeWar.View.Outline
                  "exists for.")]
         [SerializeField] private List<Renderer> excluded = new List<Renderer>();
 
+        [Header("Debug")]
+        [Tooltip("Forces one intent on, so an outline can be exercised from the " +
+                 "Inspector without any gameplay wiring. Leave at None in " +
+                 "shipped content -- real state is driven through SetIntent by " +
+                 "selection, claim state and the pointer.")]
+        [SerializeField] private OutlineStyle debugStyle = OutlineStyle.None;
+
         private OutlineRegistry registry;
         private uint intents;
+        private OutlineStyle appliedDebugStyle = OutlineStyle.None;
 
         /// <summary>
         /// The resolved style, highest intent wins. There is no setter: several
@@ -144,12 +152,29 @@ namespace NodeWar.View.Outline
             return candidate is MeshRenderer || candidate is SpriteRenderer;
         }
 
+        /// <summary>
+        /// Folds <see cref="debugStyle"/> into the intent mask, replacing
+        /// whatever it forced last time. Routed through SetIntent rather than
+        /// writing the mask directly, so the debug path exercises exactly the
+        /// same code the game will.
+        /// </summary>
+        private void ApplyDebugStyle()
+        {
+            if (appliedDebugStyle == debugStyle) return;
+
+            if (appliedDebugStyle != OutlineStyle.None) SetIntent(appliedDebugStyle, false);
+            appliedDebugStyle = debugStyle;
+            if (appliedDebugStyle != OutlineStyle.None) SetIntent(appliedDebugStyle, true);
+        }
+
         private void OnEnable()
         {
             if (renderers == null || renderers.Length == 0) RebuildFromChildren();
 
-            // Deliberately does not register. A group earns its place in the
-            // registry by having a style, not by existing. See OutlineRegistry.
+            // Deliberately does not register on its own. A group earns its place
+            // in the registry by having a style, not by existing. See
+            // OutlineRegistry.
+            ApplyDebugStyle();
             Registry.SyncStyle(this);
         }
 
@@ -157,5 +182,14 @@ namespace NodeWar.View.Outline
         {
             Registry.Remove(this);
         }
+
+#if UNITY_EDITOR
+        // Editor only, so the debug field can be changed live in play mode and
+        // take effect immediately. Ships as nothing.
+        private void Update()
+        {
+            ApplyDebugStyle();
+        }
+#endif
     }
 }
