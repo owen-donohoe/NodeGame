@@ -17,9 +17,20 @@ namespace NodeWar.View.Outline
     {
         public TextureHandle mask;
 
+        /// <summary>
+        /// The mask's actual dimensions. Carried rather than recomputed by the
+        /// composite, so the two passes cannot disagree about the size -- a
+        /// disagreement would put the tap radius, and therefore the outline
+        /// thickness, quietly out by the mask resolution factor.
+        /// </summary>
+        public int width;
+        public int height;
+
         public override void Reset()
         {
             mask = TextureHandle.nullHandle;
+            width = 0;
+            height = 0;
         }
     }
 
@@ -143,6 +154,8 @@ namespace NodeWar.View.Outline
 
             OutlineMaskData maskData = frameData.GetOrCreate<OutlineMaskData>();
             maskData.mask = maskColor;
+            maskData.width = width;
+            maskData.height = height;
 
             maskMaterial.SetFloat(ClipThresholdId, settings.AlphaClipThreshold);
 

@@ -39,6 +39,36 @@ namespace NodeWar.View.Outline
     }
 
     /// <summary>
+    /// Diagnostic overrides for the composite pass. Off in shipped content.
+    /// </summary>
+    public enum OutlineDebugView
+    {
+        /// <summary>Normal outlines.</summary>
+        Off = 0,
+
+        /// <summary>
+        /// Fills the group silhouettes solid instead of outlining them, so the
+        /// mask can be seen on screen without the frame debugger. Answers "did
+        /// the composite read the mask correctly?".
+        /// </summary>
+        Mask = 1,
+
+        /// <summary>
+        /// Ignores the mask and paints an opaque band down the left of the
+        /// screen. Answers the more basic question underneath Mask: "did the
+        /// composite pass reach the screen at all?" -- separating a plumbing
+        /// problem from a dilation problem.
+        ///
+        /// A band rather than a full fill, and opaque rather than blended, on
+        /// purpose. A full-screen fill is indistinguishable from a camera clear
+        /// colour, and a blended one can be lost to the blend unit; a hard
+        /// vertical edge with the scene still visible beside it can only be
+        /// this pass.
+        /// </summary>
+        SolidFill = 2,
+    }
+
+    /// <summary>
     /// Every tunable the outline system has, in one asset.
     ///
     /// This is the single place outline colours are defined. Nothing else --
@@ -91,11 +121,15 @@ namespace NodeWar.View.Outline
         [SerializeField]
         private OutlineInjectionPoint injectionPoint = OutlineInjectionPoint.AfterPostProcessing;
 
+        [Tooltip("Diagnostics. Leave Off unless something is wrong.")]
+        [SerializeField] private OutlineDebugView debugView = OutlineDebugView.Off;
+
         public float ThicknessReferencePixels => thicknessReferencePixels;
         public float ReferenceHeight => Mathf.Max(1f, referenceHeight);
         public OutlineMaskResolution MaskResolution => maskResolution;
         public float AlphaClipThreshold => alphaClipThreshold;
         public OutlineInjectionPoint InjectionPoint => injectionPoint;
+        public OutlineDebugView DebugView => debugView;
 
         // Built once, and only if something actually needs it. Unity does not
         // run C# field initializers when deserializing an asset, so a settings

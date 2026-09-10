@@ -109,3 +109,4 @@ MonoBehaviour:
   m_Active: 1
   settings: {fileID: 11400000, guid: e6cb3aa3dcd84b4daa94c29d946e2ad2, type: 2}
   maskShader: {fileID: 4800000, guid: 7ab645ace2c702543abfc9b380df5ac1, type: 3}
+  compositeShader: {fileID: 4800000, guid: 27adcfa01622f5b4bb6d0d52bb287a44, type: 3}

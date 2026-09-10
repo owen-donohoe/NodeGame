@@ -28,12 +28,18 @@ namespace NodeWar.View.Outline
                  "already references.")]
         [SerializeField] private Shader maskShader;
 
+        [Tooltip("NodeWar/Outline Composite.")]
+        [SerializeField] private Shader compositeShader;
+
         private Material maskMaterial;
+        private Material compositeMaterial;
         private OutlineMaskPass maskPass;
+        private OutlineCompositePass compositePass;
 
         public override void Create()
         {
             if (maskPass == null) maskPass = new OutlineMaskPass();
+            if (compositePass == null) compositePass = new OutlineCompositePass();
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -65,27 +71,63 @@ namespace NodeWar.View.Outline
             // allocated, and no draw call is added.
             if (!OutlineRegistry.Instance.HasWork) return;
 
-            if (!TryPrepareMaterial()) return;
+            if (!TryPrepareMaterials()) return;
 
             maskPass.Setup(settings, maskMaterial);
             renderer.EnqueuePass(maskPass);
+
+            // Enqueued unconditionally alongside the mask. It finds no mask in
+            // frame data and skips itself if the mask pass decided there was
+            // nothing to draw, which keeps the "is there work?" decision in one
+            // place instead of two that can disagree.
+            compositePass.Setup(settings, compositeMaterial);
+            renderer.EnqueuePass(compositePass);
+
+            Trace(cameraData.camera, renderer);
         }
 
-        private bool TryPrepareMaterial()
-        {
-            if (maskMaterial != null) return true;
-            if (maskShader == null) return false;
-            if (!maskShader.isSupported) return false;
+        // Capped so a diagnostic run is readable. Reports what was enqueued and
+        // onto which camera and renderer, which is the half of the chain the
+        // pass itself cannot see.
+        private int traced;
 
-            maskMaterial = CoreUtils.CreateEngineMaterial(maskShader);
-            return maskMaterial != null;
+        private void Trace(Camera camera, ScriptableRenderer renderer)
+        {
+            if (settings.DebugView == OutlineDebugView.Off) return;
+            if (traced >= 4) return;
+
+            traced++;
+            Debug.LogWarning(
+                $"[Outline] enqueued both passes on camera '{camera.name}' " +
+                $"({camera.cameraType}), renderer {renderer.GetType().Name}, " +
+                $"groups={OutlineRegistry.Instance.ActiveCount}, " +
+                $"injection={settings.InjectionPoint}");
+        }
+
+        private bool TryPrepareMaterials()
+        {
+            maskMaterial = EnsureMaterial(maskMaterial, maskShader);
+            compositeMaterial = EnsureMaterial(compositeMaterial, compositeShader);
+
+            return maskMaterial != null && compositeMaterial != null;
+        }
+
+        private static Material EnsureMaterial(Material existing, Shader shader)
+        {
+            if (existing != null) return existing;
+            if (shader == null || !shader.isSupported) return null;
+
+            return CoreUtils.CreateEngineMaterial(shader);
         }
 
         protected override void Dispose(bool disposing)
         {
             CoreUtils.Destroy(maskMaterial);
+            CoreUtils.Destroy(compositeMaterial);
             maskMaterial = null;
+            compositeMaterial = null;
             maskPass = null;
+            compositePass = null;
         }
     }
 }

@@ -28,3 +28,4 @@ MonoBehaviour:
   maskResolution: 0
   alphaClipThreshold: 0.5
   injectionPoint: 1
+  debugView: 0
