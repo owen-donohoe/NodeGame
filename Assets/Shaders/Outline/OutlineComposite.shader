@@ -14,8 +14,8 @@
 //
 // The line always sits *outside* the group it belongs to, so it never covers
 // that group's own art and a sprite never loses its outermost pixels to its own
-// outline. Where two groups meet, only the one nearer the camera draws, and it
-// draws over its neighbour.
+// outline. Where two groups meet, only the one nearer the camera may draw onto
+// the other's pixels.
 //
 // That depth test is the whole point. Without it both groups draw at a shared
 // seam, each painting its line into the other's pixels, and since the mask is
@@ -29,10 +29,28 @@
 // comparison is free: it reads two channels of a texel the dilation loop has
 // already fetched.
 //
-// Nearest hit wins for distance, which is what makes the result stable. Two
-// groups closer together than the line is thick both have a claim on the pixel
-// between them, and taking the smallest distance resolves it the same way every
-// frame rather than flickering as the camera moves a fraction of a pixel.
+// Two groups closer together than the line is thick both have a claim on the
+// pixels between them, and something has to settle it the same way every frame
+// rather than flickering as the camera moves a fraction of a pixel.
+//
+// *Style priority settles it*, not distance. Selected outranks Contested
+// outranks Hover -- the same OutlineStyle order that resolves several intents
+// on one group. Distance only breaks ties within one style.
+//
+// Depth still decides whether a group may draw on another group's pixels at
+// all, which is the check above. The two rules answer different questions, and
+// that separation is the point: a hovered villager standing on a selected node
+// is in front, so it earns the node's interior and its ring shows there, while
+// the node keeps every empty pixel along its own edge and its line runs
+// unbroken instead of changing colour wherever the villager's ring crosses it.
+// Priority alone would erase the villager; depth alone breaks the node's line.
+//
+// The walk still usually stops early. The tap table is sorted closest-first, so
+// the first tap of a style is the nearest one of that style, and _OutlineMaxStyle
+// says what the best possible answer on screen is -- reach it and nothing later
+// can win. With one style showing, that is the first boundary found. Only a
+// pixel with no boundary within reach pays for all sixteen taps, and
+// OutlineCompositePass scissors most of those away before this shader runs.
 Shader "NodeWar/Outline Composite"
 {
     SubShader
@@ -67,16 +85,28 @@ Shader "NodeWar/Outline Composite"
             // includes it from this path -- copy it rather than guessing.
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
-            // The quality and cost knob. Every tap is a texture sample and the
-            // loop no longer stops at the first hit, so this is close to the
-            // whole cost of the effect. Sixteen is the budget the design
-            // settled on for a 1-3px line; raise it if the fade looks stepped,
-            // which is the first artefact to appear, because the distance
-            // estimate can only take as many values as there are taps.
+            // The quality knob, and the worst-case cost knob. Every tap is a
+            // texture sample, but the loop breaks at the first hit, so this is
+            // the bill for a pixel with *no* boundary in reach rather than the
+            // bill for an outlined one -- a pixel on the line itself typically
+            // exits within a few taps. Sixteen is the budget the design settled
+            // on for a 1-3px line; raise it if the fade looks stepped, which is
+            // the first artefact to appear, because the distance estimate can
+            // only take as many values as there are taps.
             #define OUTLINE_TAP_COUNT 16
             #define OUTLINE_STYLE_COUNT 5
 
             float4 _OutlinePalette[OUTLINE_STYLE_COUNT];
+
+            // .x is the style's line width as a fraction of the tap radius, so
+            // Selected can read as a thin line while still winning every pixel
+            // it contests.
+            float4 _OutlineStyleRadius[OUTLINE_STYLE_COUNT];
+
+            // The highest style on screen this frame. The loop stops as soon as
+            // it matches this, because nothing left can outrank it.
+            float _OutlineMaxStyle;
+
             float2 _OutlineTexelSize;
             float _OutlineTapRadius;
 
@@ -101,6 +131,13 @@ Shader "NodeWar/Outline Composite"
             // Every point also has a different radius, so sixteen taps give
             // sixteen distinct distance readings. That is what there is to
             // antialias with; a ring layout would have offered two.
+            //
+            // The entries are *sorted by radius*, ascending, and the loop
+            // depends on it: that is what makes the first hit the nearest hit
+            // and lets the walk break instead of finishing. Reordering this
+            // table does not fail a compile or look obviously wrong -- it
+            // quietly starts picking whichever boundary happens to come first
+            // in the list. Keep it sorted.
             //
             // xy is the offset in units of the tap radius, z is its length,
             // precomputed so the loop needs no square root.
@@ -189,18 +226,24 @@ Shader "NodeWar/Outline Composite"
                 // Distance to the nearest differing pixel, in units of the tap
                 // radius. Starts past the furthest tap so that "found nothing"
                 // and "found one at the very edge" stay distinguishable.
+                // Distance to the winning boundary, its style, and that style's
+                // radius. Style leads the comparison, distance only breaks ties
+                // within a style -- see the loop.
                 float nearest = 1.0e6;
                 uint nearestStyle = 0u;
+                float nearestRadius = 1.0;
 
-                UNITY_UNROLL
+                uint maxStyle = (uint)_OutlineMaxStyle;
+
+                // Deliberately not UNITY_UNROLL. The taps are sorted, so the
+                // loop exits at the first hit, and an unrolled body turns that
+                // exit into predication -- sixteen texture fetches issued
+                // whatever the branches say, which is precisely the cost this
+                // is trying not to pay on a tile-based GPU. A real loop with a
+                // real break cannot be read that way.
                 for (int i = 0; i < OUTLINE_TAP_COUNT; i++)
                 {
                     float3 tap = kOutlineTaps[i];
-
-                    // Already beaten. Tested before sampling, because the
-                    // texture read is the expensive part and the table is not
-                    // ordered by radius.
-                    if (tap.z >= nearest) continue;
 
                     float2 tapUv = uv + tap.xy * step;
                     float4 tapTexel =
@@ -236,14 +279,46 @@ Shader "NodeWar/Outline Composite"
                         if (tapNearness == centreNearness && tapId > centreId) continue;
                     }
 
+                    uint tapStyle = DecodeId(tapTexel.g);
+                    float tapRadius =
+                        _OutlineStyleRadius[min(tapStyle, OUTLINE_STYLE_COUNT - 1)].x;
+
+                    // Outside this style's own line width. A thinner style stops
+                    // short rather than reaching the full tap radius, and the
+                    // pixel stays available to whatever else can claim it.
+                    if (tap.z > tapRadius) continue;
+
+                    // Style decides, not distance. This is what keeps a Selected
+                    // line unbroken where a Hover line crosses it: both groups
+                    // have a claim on the empty pixels between them, and handing
+                    // those to whichever happens to be nearer is what made the
+                    // higher-priority line change colour mid-run.
+                    //
+                    // Strictly greater, never equal: the table runs closest to
+                    // furthest, so the first tap of any given style is already
+                    // the nearest one of that style, and a later tap of the same
+                    // style can only be further away.
+                    if (tapStyle <= nearestStyle) continue;
+
                     nearest = tap.z;
-                    nearestStyle = DecodeId(tapTexel.g);
+                    nearestStyle = tapStyle;
+                    nearestRadius = tapRadius;
+
+                    // Nothing on screen outranks this, so no later tap can
+                    // change the answer. With a single style showing -- the
+                    // common case -- this fires on the first boundary found and
+                    // the walk costs exactly what it did before priority
+                    // existed.
+                    if (nearestStyle >= maxStyle) break;
                 }
 
-                // No boundary within reach. Discard rather than returning a
-                // transparent pixel, so the blend unit does no work for the
-                // vast majority of the screen.
-                if (nearest > 1.0) discard;
+                // No boundary within reach. Tested on the style rather than the
+                // distance now, because a style's radius can be well under 1 and
+                // "found nothing" has to stay distinct from "found a thin style
+                // at its outer edge". Discard rather than returning a transparent
+                // pixel, so the blend unit does no work for the vast majority of
+                // the screen.
+                if (nearestStyle == 0u) discard;
 
                 float4 colour = _OutlinePalette[min(nearestStyle, OUTLINE_STYLE_COUNT - 1)];
 
@@ -252,8 +327,12 @@ Shader "NodeWar/Outline Composite"
                 // rounds the corners: coverage falls off with true radial
                 // distance now, instead of stopping wherever the tap pattern
                 // happened to reach.
-                float fade = max(_OutlineSoftness, 1.0e-4);
-                colour.a *= 1.0 - smoothstep(1.0 - fade, 1.0, nearest);
+                // Measured against the winning style's own radius, not the tap
+                // radius, so a thinner style fades over its own outer edge
+                // rather than over a boundary it never reaches.
+                float radius = max(nearestRadius, 1.0e-4);
+                float fade = max(_OutlineSoftness, 1.0e-4) * radius;
+                colour.a *= 1.0 - smoothstep(radius - fade, radius, nearest);
 
                 return colour;
             }

@@ -83,12 +83,42 @@ namespace NodeWar.View.Outline
         {
             public Color color;
 
+            [Tooltip("This style's line width, as a fraction of the thickness " +
+                     "below. Selected is the style most worth turning down: it " +
+                     "wins every contested pixel, so it reads as heavy at the " +
+                     "same width another style reads as normal.")]
+            [Range(MinThicknessScale, 1f)]
+            public float thicknessScale;
+
             [Tooltip("Draw this style's outline even where the group is hidden " +
                      "behind something. Off by default: an occluded part writes " +
                      "no ID and grows no line, so depth ordering reads correctly. " +
                      "Turn it on for a style that has to be findable behind a " +
                      "node -- a selected villager walking behind one.")]
             public bool drawThrough;
+        }
+
+        /// <summary>
+        /// Floor for a style's thickness fraction. Not zero: a style scaled to
+        /// nothing is a style that silently stops drawing, which looks like the
+        /// priority rule eating it rather than like a width of zero.
+        /// </summary>
+        public const float MinThicknessScale = 0.05f;
+
+        /// <summary>
+        /// Normalises a serialised thickness fraction into the usable range.
+        ///
+        /// Zero maps to full width rather than to nothing, because zero is what
+        /// Unity hands back for a field that did not exist when the asset was
+        /// written -- every palette entry saved before this field was added.
+        /// Treating that as "no line" would make the outline vanish on upgrade
+        /// and look like the feature had broken.
+        /// </summary>
+        public static float ResolveThicknessScale(float serialised)
+        {
+            if (serialised <= 0f) return 1f;
+
+            return Mathf.Clamp(serialised, MinThicknessScale, 1f);
         }
 
         [Tooltip("Indexed by OutlineStyle. Entry 0 is None and is never drawn.")]
@@ -130,6 +160,14 @@ namespace NodeWar.View.Outline
         [SerializeField]
         private OutlineInjectionPoint injectionPoint = OutlineInjectionPoint.AfterPostProcessing;
 
+        [Tooltip("Restrict the composite to the screen rectangle the outlined " +
+                 "groups actually cover, instead of rasterising the whole " +
+                 "screen and discarding most of it. On by default and visually " +
+                 "identical either way -- it is here so the two can be " +
+                 "compared in play mode, because the failure it could cause is " +
+                 "a line shaved off at one edge rather than anything obvious.")]
+        [SerializeField] private bool scissorComposite = true;
+
         [Tooltip("Diagnostics. Leave Off unless something is wrong.")]
         [SerializeField] private OutlineDebugView debugView = OutlineDebugView.Off;
 
@@ -139,6 +177,7 @@ namespace NodeWar.View.Outline
         public OutlineMaskResolution MaskResolution => maskResolution;
         public float AlphaClipThreshold => alphaClipThreshold;
         public OutlineInjectionPoint InjectionPoint => injectionPoint;
+        public bool ScissorComposite => scissorComposite;
         public OutlineDebugView DebugView => debugView;
 
         // Built once, and only if something actually needs it. Unity does not
@@ -171,18 +210,21 @@ namespace NodeWar.View.Outline
             {
                 color = new Color(0f, 0f, 0f, 0f),
                 drawThrough = false,
+                thicknessScale = 1f,
             };
 
             entries[(int)OutlineStyle.Hover] = new StyleEntry
             {
                 color = new Color(1f, 1f, 1f, 0.55f),
                 drawThrough = false,
+                thicknessScale = 1f,
             };
 
             entries[(int)OutlineStyle.Contested] = new StyleEntry
             {
                 color = new Color(1f, 0.42f, 0.2f, 1f),
                 drawThrough = false,
+                thicknessScale = 1f,
             };
 
             entries[(int)OutlineStyle.Selected] = new StyleEntry
@@ -193,12 +235,14 @@ namespace NodeWar.View.Outline
                 // villager that walks behind a node has to stay findable, and
                 // it is the case where losing the outline is most disorienting.
                 drawThrough = true,
+                thicknessScale = 1f,
             };
 
             entries[(int)OutlineStyle.CommandAck] = new StyleEntry
             {
                 color = new Color(0.55f, 1f, 0.65f, 1f),
                 drawThrough = false,
+                thicknessScale = 1f,
             };
 
             return entries;
@@ -219,6 +263,16 @@ namespace NodeWar.View.Outline
                 }
 
                 palette = resized;
+            }
+
+            // Stamps the upgrade default onto the asset itself, so an entry
+            // written before thicknessScale existed reads 1 in the Inspector
+            // rather than a 0 that ResolveThicknessScale quietly reinterprets
+            // every frame. A value the shader treats as 1 should not display
+            // as 0.
+            for (int i = 0; i < palette.Length; i++)
+            {
+                palette[i].thicknessScale = ResolveThicknessScale(palette[i].thicknessScale);
             }
         }
     }

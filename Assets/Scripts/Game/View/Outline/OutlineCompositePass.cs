@@ -21,12 +21,25 @@ namespace NodeWar.View.Outline
         private static readonly int TexelSizeId = Shader.PropertyToID("_OutlineTexelSize");
         private static readonly int TapRadiusId = Shader.PropertyToID("_OutlineTapRadius");
         private static readonly int SoftnessId = Shader.PropertyToID("_OutlineSoftness");
+        private static readonly int StyleRadiusId = Shader.PropertyToID("_OutlineStyleRadius");
+        private static readonly int MaxStyleId = Shader.PropertyToID("_OutlineMaxStyle");
         private static readonly int DebugModeId = Shader.PropertyToID("_OutlineDebugMode");
 
         private sealed class PassData
         {
             public Material material;
             public TextureHandle mask;
+
+            /// <summary>
+            /// The region of the colour target to rasterise, in target pixels,
+            /// or empty for the whole thing.
+            ///
+            /// This is the entire optimisation. The fragment shader's sixteen
+            /// taps are unchanged; what changes is how many fragments run it,
+            /// from every pixel of a portrait phone screen down to the few
+            /// percent the outlined groups and their line actually cover.
+            /// </summary>
+            public Rect scissor;
 
             /// <summary>
             /// Whether this frame's execution should report itself. Carried on
@@ -40,6 +53,13 @@ namespace NodeWar.View.Outline
 
         // Rebuilt each frame from the settings asset, but never reallocated.
         private readonly Vector4[] palette = new Vector4[OutlineStyleMask.StyleCount];
+
+        // Each style's line width as a fraction of the tap radius, in the same
+        // indexing as the palette. A float4 array rather than a float one to
+        // match the palette's shape -- the packing rules for a bare float array
+        // in a constant buffer are the kind of detail that works until a
+        // platform disagrees.
+        private readonly Vector4[] styleRadius = new Vector4[OutlineStyleMask.StyleCount];
 
         private OutlineSettings settings;
         private Material compositeMaterial;
@@ -122,15 +142,21 @@ namespace NodeWar.View.Outline
             // the mask is dropped to half resolution.
             float tapRadius = settings.ThicknessReferencePixels *
                               (maskData.height / settings.ReferenceHeight);
-            compositeMaterial.SetFloat(TapRadiusId, Mathf.Max(0.5f, tapRadius));
+            tapRadius = Mathf.Max(0.5f, tapRadius);
+            compositeMaterial.SetFloat(TapRadiusId, tapRadius);
             compositeMaterial.SetFloat(SoftnessId, settings.EdgeSoftness);
             compositeMaterial.SetFloat(DebugModeId, (float)settings.DebugView);
+            compositeMaterial.SetFloat(MaxStyleId, maskData.maxStyle);
+
+            UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+            Rect scissor = ResolveScissor(cameraData, maskData, tapRadius);
 
             using (IRasterRenderGraphBuilder builder =
                    renderGraph.AddRasterRenderPass<PassData>("NodeWar Outline Composite", out PassData passData))
             {
                 passData.material = compositeMaterial;
                 passData.mask = maskData.mask;
+                passData.scissor = scissor;
                 passData.trace = settings.DebugView != OutlineDebugView.Off && executeTraced < TraceBudget;
 
                 // Reported at record time as well as inside Execute, because the
@@ -143,7 +169,8 @@ namespace NodeWar.View.Outline
                     Trace($"composite recorded. isActiveTargetBackBuffer=" +
                           $"{resourceData.isActiveTargetBackBuffer}, " +
                           $"debugMode={(int)settings.DebugView}, " +
-                          $"mask={maskData.width}x{maskData.height}.");
+                          $"mask={maskData.width}x{maskData.height}, " +
+                          $"scissor={(OutlineScreenBounds.IsEmpty(scissor) ? "full screen" : scissor.ToString())}.");
                 }
 
                 builder.UseTexture(maskData.mask, AccessFlags.Read);
@@ -165,6 +192,45 @@ namespace NodeWar.View.Outline
         }
 
         /// <summary>
+        /// Works out how much of the colour target this pass has to rasterise.
+        /// An empty result means "all of it".
+        /// </summary>
+        private Rect ResolveScissor(UniversalCameraData cameraData, OutlineMaskData maskData,
+                                    float tapRadius)
+        {
+            if (!settings.ScissorComposite) return OutlineScreenBounds.Empty;
+
+            // Single-pass instanced XR renders both eyes into one double-wide
+            // target -- hence SAMPLE_TEXTURE2D_X in the shader -- and one rect
+            // computed from one camera matrix cannot describe both halves of
+            // it. This project is a mobile portrait game with no XR, so the
+            // rect is simply given up rather than computed twice.
+            if (cameraData.xr.enabled) return OutlineScreenBounds.Empty;
+
+            RenderTextureDescriptor desc = cameraData.cameraTargetDescriptor;
+
+            // The bounds arrive in camera-target pixels, but the tap radius is
+            // in *mask* texels, and at half mask resolution one of those is two
+            // of the other. Getting this conversion wrong does not fail loudly:
+            // it shaves the outer half of the line off along whichever edges the
+            // scissor happens to cut, which reads as an art problem.
+            //
+            // The larger of the two axis ratios, because GetMaskSize divides
+            // integers and an odd target leaves them fractionally apart.
+            float ratio = Mathf.Max(
+                desc.width / (float)Mathf.Max(1, maskData.width),
+                desc.height / (float)Mathf.Max(1, maskData.height));
+
+            // Plus one, for the half-texel the point sampler can reach across
+            // and the pixel the outward snap in Expand has already rounded to.
+            // A pixel of slack costs nothing and a pixel of shortfall is a bug.
+            float margin = Mathf.Ceil(tapRadius * ratio) + 1f;
+
+            return OutlineScreenBounds.Expand(
+                maskData.groupBounds, margin, desc.width, desc.height);
+        }
+
+        /// <summary>
         /// Copies the palette into the reusable array, converting to linear.
         ///
         /// The conversion is not optional. This project renders in Linear colour
@@ -178,7 +244,15 @@ namespace NodeWar.View.Outline
 
             for (int i = 0; i < palette.Length; i++)
             {
-                Color color = settings.GetStyle((OutlineStyle)i).color;
+                OutlineSettings.StyleEntry entry = settings.GetStyle((OutlineStyle)i);
+
+                // Normalised on the way through rather than trusted: an entry
+                // saved before thicknessScale existed deserialises as zero, and
+                // a zero here would be a style that silently stops drawing.
+                styleRadius[i] = new Vector4(
+                    OutlineSettings.ResolveThicknessScale(entry.thicknessScale), 0f, 0f, 0f);
+
+                Color color = entry.color;
                 if (linear)
                 {
                     Color converted = color.linear;
@@ -190,6 +264,7 @@ namespace NodeWar.View.Outline
             }
 
             compositeMaterial.SetVectorArray(PaletteId, palette);
+            compositeMaterial.SetVectorArray(StyleRadiusId, styleRadius);
         }
 
         /// <summary>
@@ -280,8 +355,24 @@ namespace NodeWar.View.Outline
             if (mask != null) SharedProperties.SetTexture(BlitTextureId, mask);
             SharedProperties.SetVector(BlitScaleBiasId, new Vector4(1f, 1f, 0f, 0f));
 
+            // The triangle is still the full-screen one, and its vertices are
+            // still off past the corners of the target. The scissor clips the
+            // rasteriser rather than moving the geometry, so the mapping from
+            // vertex to UV is untouched and the shader needs no knowledge of
+            // any of this. Using SetViewport instead would squash the triangle
+            // into the rect and sample the mask through a stretched UV.
+            bool scissored = !OutlineScreenBounds.IsEmpty(data.scissor);
+            if (scissored) context.cmd.EnableScissorRect(data.scissor);
+
             context.cmd.DrawProcedural(
                 Matrix4x4.identity, data.material, 0, MeshTopology.Triangles, 3, 1, SharedProperties);
+
+            // Not optional, and not tidiness. The scissor is command buffer
+            // state, not pass state: left enabled it survives into whatever the
+            // render graph merges or records after this, and the symptom would
+            // be some unrelated later pass drawing only inside the last
+            // outline's bounding box.
+            if (scissored) context.cmd.DisableScissorRect();
         }
     }
 }

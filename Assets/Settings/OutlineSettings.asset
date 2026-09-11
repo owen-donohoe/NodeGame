@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ec43def17d386894b844ca5a1ead990d, type: 3}
   m_Name: OutlineSettings
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   palette:
   - color: {r: 0, g: 0, b: 0, a: 0}
     drawThrough: 0
@@ -23,10 +23,11 @@ MonoBehaviour:
     drawThrough: 1
   - color: {r: 0.55, g: 1, b: 0.65, a: 1}
     drawThrough: 0
-  thicknessReferencePixels: 3
-  edgeSoftness: 0.35
+  thicknessReferencePixels: 8
+  edgeSoftness: 0
   referenceHeight: 1080
   maskResolution: 0
   alphaClipThreshold: 0.5
   injectionPoint: 1
+  scissorComposite: 1
   debugView: 0

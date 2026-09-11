@@ -26,11 +26,42 @@ namespace NodeWar.View.Outline
         public int width;
         public int height;
 
+        /// <summary>
+        /// The screen rectangle the outlined groups cover, in camera-target
+        /// pixels, before the outline's own width is added to it. The composite
+        /// scissors to this rather than rasterising the whole screen.
+        ///
+        /// Carried for the same reason as the dimensions above: the mask pass
+        /// already walks every renderer to build its draw list, so it can
+        /// accumulate this for nothing, and a composite that recomputed it
+        /// could disagree about which renderers counted.
+        ///
+        /// Already resolved to the full target when the projection could not be
+        /// trusted, so the composite has one case to handle rather than two.
+        /// </summary>
+        public Rect groupBounds;
+
+        /// <summary>
+        /// The highest <see cref="OutlineStyle"/> value actually drawn this
+        /// frame.
+        ///
+        /// The composite resolves a contested pixel by style priority, which in
+        /// principle means scanning every tap rather than stopping at the first
+        /// boundary. This is what gives the loop its exit back: once it has
+        /// found the highest style present on screen, nothing further can
+        /// outrank it. In the common case one style is showing, so the first
+        /// hit is immediately unbeatable and the walk stops exactly where it
+        /// used to.
+        /// </summary>
+        public int maxStyle;
+
         public override void Reset()
         {
             mask = TextureHandle.nullHandle;
             width = 0;
             height = 0;
+            groupBounds = OutlineScreenBounds.Empty;
+            maxStyle = 0;
         }
     }
 
@@ -83,6 +114,18 @@ namespace NodeWar.View.Outline
 
         private readonly List<GroupDraw> draws = new List<GroupDraw>(32);
 
+        // Accumulated alongside the draw list, in camera-target pixels.
+        private Rect boundsUnion;
+
+        // Highest style value among the groups actually added to the draw list.
+        private int maxStyleDrawn;
+
+        // Latched when a projection could not be trusted -- a group straddling
+        // the near plane. Once set, the union is abandoned and the composite
+        // gets the whole screen, because a partly-wrong rect is worse than no
+        // rect: it would clip an outline rather than merely fail to tighten it.
+        private bool boundsUnreliable;
+
         private OutlineSettings settings;
         private Material maskMaterial;
 
@@ -104,7 +147,19 @@ namespace NodeWar.View.Outline
         {
             if (settings == null || maskMaterial == null) return;
 
-            BuildDrawList();
+            UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+
+            RenderTextureDescriptor colorDesc = cameraData.cameraTargetDescriptor;
+
+            // The plain projection, not GetGPUProjectionMatrix: this is a CPU
+            // projection into bottom-left pixel coordinates, which is what the
+            // scissor wants, and the GPU variant carries a platform-specific
+            // y flip and depth range that would put the rect upside down on
+            // half the platforms and nowhere on the other half.
+            Matrix4x4 viewProjection =
+                cameraData.GetProjectionMatrix() * cameraData.GetViewMatrix();
+
+            BuildDrawList(viewProjection, colorDesc.width, colorDesc.height);
 
             // Nothing outlined, or everything outlined has an empty renderer
             // list. Add no pass at all: no render target is allocated and no
@@ -112,9 +167,12 @@ namespace NodeWar.View.Outline
             // has to cost nothing.
             if (draws.Count == 0) return;
 
-            UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+            // Every group is off screen. Previously this still allocated two
+            // full-screen attachments and drew into them, then composited
+            // nothing -- the draw list was non-empty, which was the only
+            // question asked.
+            if (!boundsUnreliable && OutlineScreenBounds.IsEmpty(boundsUnion)) return;
 
-            RenderTextureDescriptor colorDesc = cameraData.cameraTargetDescriptor;
             GetMaskSize(colorDesc.width, colorDesc.height, out int width, out int height);
 
             colorDesc.width = width;
@@ -156,6 +214,10 @@ namespace NodeWar.View.Outline
             maskData.mask = maskColor;
             maskData.width = width;
             maskData.height = height;
+            maskData.groupBounds = boundsUnreliable
+                ? OutlineScreenBounds.FullTarget(colorDesc.width, colorDesc.height)
+                : boundsUnion;
+            maskData.maxStyle = maxStyleDrawn;
 
             maskMaterial.SetFloat(ClipThresholdId, settings.AlphaClipThreshold);
 
@@ -187,9 +249,12 @@ namespace NodeWar.View.Outline
         /// interleaved with depth-tested groups it would punch holes in the ones
         /// in front of it.
         /// </summary>
-        private void BuildDrawList()
+        private void BuildDrawList(Matrix4x4 viewProjection, int targetWidth, int targetHeight)
         {
             draws.Clear();
+            boundsUnion = OutlineScreenBounds.Empty;
+            boundsUnreliable = false;
+            maxStyleDrawn = 0;
 
             OutlineRegistry registry = OutlineRegistry.Instance;
             int count = registry.ActiveCount;
@@ -200,7 +265,7 @@ namespace NodeWar.View.Outline
                 if (group == null) continue;
                 if (settings.GetStyle(group.Style).drawThrough) continue;
 
-                AddGroup(group, DepthTestedShaderPass);
+                AddGroup(group, DepthTestedShaderPass, viewProjection, targetWidth, targetHeight);
             }
 
             for (int i = 0; i < count; i++)
@@ -209,14 +274,64 @@ namespace NodeWar.View.Outline
                 if (group == null) continue;
                 if (!settings.GetStyle(group.Style).drawThrough) continue;
 
-                AddGroup(group, DrawThroughShaderPass);
+                AddGroup(group, DrawThroughShaderPass, viewProjection, targetWidth, targetHeight);
             }
         }
 
-        private void AddGroup(IOutlineGroup group, int shaderPass)
+        /// <summary>
+        /// Whether a renderer will actually produce pixels this frame.
+        ///
+        /// Shared between the bounds accumulation here and the draw loop in
+        /// <see cref="Execute"/> on purpose. The two must agree: a rect built
+        /// from a set larger than the one drawn is merely loose, but a rect
+        /// built from a smaller one clips a real outline, and that is the sort
+        /// of divergence that only shows up on the one frame a villager dies.
+        /// </summary>
+        private static bool IsDrawable(Renderer renderer)
+        {
+            // Nothing in this project destroys nodes or villagers. A dead
+            // villager is a live GameObject whose SpriteRenderers were disabled
+            // by VillagerView.ApplyVisualState, so this is the check that stops
+            // it keeping its outline for the rest of the match.
+            if (renderer == null) return false;
+            if (!renderer.enabled) return false;
+            if (!renderer.gameObject.activeInHierarchy) return false;
+
+            return true;
+        }
+
+        private void AddGroup(IOutlineGroup group, int shaderPass,
+                              Matrix4x4 viewProjection, int targetWidth, int targetHeight)
         {
             Renderer[] groupRenderers = group.Renderers;
             if (groupRenderers == null || groupRenderers.Length == 0) return;
+
+            // Accumulated before the group is added, so a group whose renderers
+            // are all disabled adds no draw at all rather than an empty one.
+            int drawable = 0;
+
+            for (int i = 0; i < groupRenderers.Length; i++)
+            {
+                Renderer renderer = groupRenderers[i];
+                if (!IsDrawable(renderer)) continue;
+
+                drawable++;
+
+                // Already given up. Keep counting drawables -- whether the group
+                // draws at all is a separate question from whether its rect can
+                // be trusted -- but stop paying for projections nobody will read.
+                if (boundsUnreliable) continue;
+
+                if (!OutlineScreenBounds.TryProject(viewProjection, renderer.bounds,
+                                                    targetWidth, targetHeight, ref boundsUnion))
+                {
+                    boundsUnreliable = true;
+                }
+            }
+
+            if (drawable == 0) return;
+
+            if ((int)group.Style > maxStyleDrawn) maxStyleDrawn = (int)group.Style;
 
             draws.Add(new GroupDraw
             {
@@ -262,14 +377,11 @@ namespace NodeWar.View.Outline
                 {
                     Renderer renderer = groupRenderers[r];
 
-                    // Filtered here rather than when the group was built, because
-                    // nothing in this project destroys nodes or villagers. A dead
-                    // villager is a live GameObject whose SpriteRenderers were
-                    // disabled by VillagerView.ApplyVisualState. Without this
-                    // check it would keep its outline for the rest of the match.
-                    if (renderer == null) continue;
-                    if (!renderer.enabled) continue;
-                    if (!renderer.gameObject.activeInHierarchy) continue;
+                    // Re-checked rather than trusted from record time. The
+                    // record-time pass over the same filter is what sized the
+                    // scissor; this one is what keeps a renderer disabled in
+                    // between out of the mask.
+                    if (!IsDrawable(renderer)) continue;
 
                     cmd.DrawRenderer(renderer, data.maskMaterial, 0, draw.shaderPass);
                 }
