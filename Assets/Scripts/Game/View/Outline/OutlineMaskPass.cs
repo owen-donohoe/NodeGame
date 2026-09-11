@@ -42,18 +42,17 @@ namespace NodeWar.View.Outline
         public Rect groupBounds;
 
         /// <summary>
-        /// The highest <see cref="OutlineStyle"/> value actually drawn this
-        /// frame.
+        /// Bitmask of the <see cref="OutlineStyle"/> values actually drawn this
+        /// frame, in <see cref="OutlineStyleMask"/>'s layout.
         ///
-        /// The composite resolves a contested pixel by style priority, which in
-        /// principle means scanning every tap rather than stopping at the first
-        /// boundary. This is what gives the loop its exit back: once it has
-        /// found the highest style present on screen, nothing further can
-        /// outrank it. In the common case one style is showing, so the first
-        /// hit is immediately unbeatable and the walk stops exactly where it
-        /// used to.
+        /// The composite treats styles as layers, so in principle it has to walk
+        /// every tap rather than stopping at the first boundary -- a pixel can
+        /// carry a Hover line with a Selected one over it. This is what gives the
+        /// walk its exit back: once it has accounted for every style on screen,
+        /// no later tap can add a layer. In the common case one style is showing,
+        /// so the first boundary found ends the walk exactly where it used to.
         /// </summary>
-        public int maxStyle;
+        public uint stylesPresent;
 
         public override void Reset()
         {
@@ -61,7 +60,7 @@ namespace NodeWar.View.Outline
             width = 0;
             height = 0;
             groupBounds = OutlineScreenBounds.Empty;
-            maxStyle = 0;
+            stylesPresent = 0u;
         }
     }
 
@@ -117,8 +116,8 @@ namespace NodeWar.View.Outline
         // Accumulated alongside the draw list, in camera-target pixels.
         private Rect boundsUnion;
 
-        // Highest style value among the groups actually added to the draw list.
-        private int maxStyleDrawn;
+        // Bitmask of the styles among the groups actually added to the draw list.
+        private uint stylesDrawn;
 
         // Latched when a projection could not be trusted -- a group straddling
         // the near plane. Once set, the union is abandoned and the composite
@@ -217,7 +216,7 @@ namespace NodeWar.View.Outline
             maskData.groupBounds = boundsUnreliable
                 ? OutlineScreenBounds.FullTarget(colorDesc.width, colorDesc.height)
                 : boundsUnion;
-            maskData.maxStyle = maxStyleDrawn;
+            maskData.stylesPresent = stylesDrawn;
 
             maskMaterial.SetFloat(ClipThresholdId, settings.AlphaClipThreshold);
 
@@ -254,7 +253,7 @@ namespace NodeWar.View.Outline
             draws.Clear();
             boundsUnion = OutlineScreenBounds.Empty;
             boundsUnreliable = false;
-            maxStyleDrawn = 0;
+            stylesDrawn = 0u;
 
             OutlineRegistry registry = OutlineRegistry.Instance;
             int count = registry.ActiveCount;
@@ -331,7 +330,7 @@ namespace NodeWar.View.Outline
 
             if (drawable == 0) return;
 
-            if ((int)group.Style > maxStyleDrawn) maxStyleDrawn = (int)group.Style;
+            stylesDrawn = OutlineStyleMask.With(stylesDrawn, group.Style, true);
 
             draws.Add(new GroupDraw
             {

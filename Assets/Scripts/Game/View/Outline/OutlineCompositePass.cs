@@ -22,7 +22,7 @@ namespace NodeWar.View.Outline
         private static readonly int TapRadiusId = Shader.PropertyToID("_OutlineTapRadius");
         private static readonly int SoftnessId = Shader.PropertyToID("_OutlineSoftness");
         private static readonly int StyleRadiusId = Shader.PropertyToID("_OutlineStyleRadius");
-        private static readonly int MaxStyleId = Shader.PropertyToID("_OutlineMaxStyle");
+        private static readonly int StylesPresentId = Shader.PropertyToID("_OutlineStylesPresent");
         private static readonly int DebugModeId = Shader.PropertyToID("_OutlineDebugMode");
 
         private sealed class PassData
@@ -146,7 +146,7 @@ namespace NodeWar.View.Outline
             compositeMaterial.SetFloat(TapRadiusId, tapRadius);
             compositeMaterial.SetFloat(SoftnessId, settings.EdgeSoftness);
             compositeMaterial.SetFloat(DebugModeId, (float)settings.DebugView);
-            compositeMaterial.SetFloat(MaxStyleId, maskData.maxStyle);
+            compositeMaterial.SetFloat(StylesPresentId, maskData.stylesPresent);
 
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
             Rect scissor = ResolveScissor(cameraData, maskData, tapRadius);

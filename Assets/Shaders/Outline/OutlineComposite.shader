@@ -33,24 +33,30 @@
 // pixels between them, and something has to settle it the same way every frame
 // rather than flickering as the camera moves a fraction of a pixel.
 //
-// *Style priority settles it*, not distance. Selected outranks Contested
-// outranks Hover -- the same OutlineStyle order that resolves several intents
-// on one group. Distance only breaks ties within one style.
+// *The styles are layers, not competitors.* Every style that reaches a pixel
+// keeps its own coverage there, and they are painted in OutlineStyle order --
+// Hover, then Contested, then Selected, then CommandAck -- so a higher style
+// lands in front of a lower one rather than in place of it. A Hover ring stays
+// continuous underneath a Selected band; it is simply covered where the Selected
+// line is opaque, and shows through where it is not.
+//
+// Picking a single winner per pixel instead is wrong in a way that is easy to
+// miss: the faded outer edge of a Selected band would claim pixels it then
+// barely paints, chewing a near-invisible bite out of the Hover ring it crossed.
 //
 // Depth still decides whether a group may draw on another group's pixels at
-// all, which is the check above. The two rules answer different questions, and
-// that separation is the point: a hovered villager standing on a selected node
-// is in front, so it earns the node's interior and its ring shows there, while
-// the node keeps every empty pixel along its own edge and its line runs
-// unbroken instead of changing colour wherever the villager's ring crosses it.
-// Priority alone would erase the villager; depth alone breaks the node's line.
+// all, which is the check above, and it answers a different question from
+// layering. A hovered villager standing on a selected node is in front, so it
+// earns the node's interior and its ring shows there; the node's own line is
+// painted after it and so runs unbroken across the top.
 //
 // The walk still usually stops early. The tap table is sorted closest-first, so
-// the first tap of a style is the nearest one of that style, and _OutlineMaxStyle
-// says what the best possible answer on screen is -- reach it and nothing later
-// can win. With one style showing, that is the first boundary found. Only a
-// pixel with no boundary within reach pays for all sixteen taps, and
-// OutlineCompositePass scissors most of those away before this shader runs.
+// the first eligible tap of a style is the nearest one of that style, and
+// _OutlineStylesPresent says which styles are on screen at all -- account for
+// them and nothing later can add a layer. With one style showing, that is the
+// first boundary found. Only a pixel with no boundary within reach pays for all
+// sixteen taps, and OutlineCompositePass scissors most of those away before this
+// shader ever runs on them.
 Shader "NodeWar/Outline Composite"
 {
     SubShader
@@ -86,15 +92,24 @@ Shader "NodeWar/Outline Composite"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             // The quality knob, and the worst-case cost knob. Every tap is a
-            // texture sample, but the loop breaks at the first hit, so this is
-            // the bill for a pixel with *no* boundary in reach rather than the
-            // bill for an outlined one -- a pixel on the line itself typically
-            // exits within a few taps. Sixteen is the budget the design settled
-            // on for a 1-3px line; raise it if the fade looks stepped, which is
-            // the first artefact to appear, because the distance estimate can
-            // only take as many values as there are taps.
+            // texture sample, but the walk stops once every style on screen has
+            // been accounted for, so this is the bill for a pixel with *no*
+            // boundary in reach rather than the bill for an outlined one -- and
+            // with a single style showing, that is the first boundary found.
+            // Sixteen is the budget the design settled on for a 1-3px line;
+            // raise it if the fade looks stepped, which is the first artefact to
+            // appear, because the distance estimate can only take as many values
+            // as there are taps.
             #define OUTLINE_TAP_COUNT 16
             #define OUTLINE_STYLE_COUNT 5
+
+            // The four drawable styles map one-to-one onto the lanes of a float4
+            // in the resolve below, which is what keeps every lane a constant
+            // index. Add a member to OutlineStyle and that mapping silently runs
+            // out of lanes, so fail the compile instead.
+            #if OUTLINE_STYLE_COUNT != 5
+                #error OutlineStyle changed size -- the float4 lanes in OutlineFragment no longer cover every drawable style.
+            #endif
 
             float4 _OutlinePalette[OUTLINE_STYLE_COUNT];
 
@@ -103,9 +118,10 @@ Shader "NodeWar/Outline Composite"
             // it contests.
             float4 _OutlineStyleRadius[OUTLINE_STYLE_COUNT];
 
-            // The highest style on screen this frame. The loop stops as soon as
-            // it matches this, because nothing left can outrank it.
-            float _OutlineMaxStyle;
+            // Bitmask of the styles actually drawn this frame, 1u << styleValue,
+            // matching OutlineStyleMask.Bit. The tap walk stops as soon as it has
+            // accounted for all of them, because nothing later can add a layer.
+            float _OutlineStylesPresent;
 
             float2 _OutlineTexelSize;
             float _OutlineTapRadius;
@@ -178,6 +194,31 @@ Shader "NodeWar/Outline Composite"
                 return (round(bits.x * 255.0) + bits.y) / 255.0;
             }
 
+            /// Composites one style's line over what is already accumulated.
+            ///
+            /// A function rather than a macro on purpose: this file is stored
+            /// with CRLF endings, and a multi-line macro would put a carriage
+            /// return between the continuation backslash and the newline, which
+            /// not every shader preprocessor forgives. The callers pass the
+            /// palette and radius entries directly, so the array indices stay
+            /// compile-time constants either way.
+            ///
+            /// <param name="accumulated">Premultiplied. Converted back to
+            /// straight alpha by the caller, once.</param>
+            void OutlineLayerOver(float4 colour, float radius, float distance,
+                                  float fadeFraction, inout float4 accumulated)
+            {
+                // Past this style's own edge, so it contributes no coverage here
+                // and whatever else reached the pixel keeps it.
+                if (distance > radius) return;
+
+                float r = max(radius, 1.0e-4);
+                colour.a *= 1.0 - smoothstep(r - fadeFraction * r, r, distance);
+
+                accumulated.rgb = colour.rgb * colour.a + accumulated.rgb * (1.0 - colour.a);
+                accumulated.a   = colour.a             + accumulated.a   * (1.0 - colour.a);
+            }
+
             float4 OutlineFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
@@ -223,17 +264,24 @@ Shader "NodeWar/Outline Composite"
 
                 float2 step = _OutlineTapRadius * _OutlineTexelSize;
 
-                // Distance to the nearest differing pixel, in units of the tap
-                // radius. Starts past the furthest tap so that "found nothing"
-                // and "found one at the very edge" stay distinguishable.
-                // Distance to the winning boundary, its style, and that style's
-                // radius. Style leads the comparison, distance only breaks ties
-                // within a style -- see the loop.
-                float nearest = 1.0e6;
-                uint nearestStyle = 0u;
-                float nearestRadius = 1.0;
+                // Distance to the nearest eligible boundary *per style*, in units
+                // of the tap radius, starting past the furthest tap so that
+                // "found nothing" stays distinct from "found one at the very
+                // edge".
+                //
+                // One lane each, rather than a single winner, because the styles
+                // are layers and not competitors: a pixel can carry a Hover line
+                // with a Selected one over it, and collapsing that to whichever
+                // ranked highest is what turned the faint outer edge of a
+                // Selected band into a bite taken out of the Hover ring.
+                //
+                // A float4 rather than an array so no lane is ever addressed
+                // dynamically -- an indexable temp is the one thing in this
+                // shader that would be genuinely slow on a tile-based GPU.
+                float4 styleDist = 1.0e6;
 
-                uint maxStyle = (uint)_OutlineMaxStyle;
+                uint stylesPresent = (uint)_OutlineStylesPresent;
+                uint stylesFound = 0u;
 
                 // Deliberately not UNITY_UNROLL. The taps are sorted, so the
                 // loop exits at the first hit, and an unrolled body turns that
@@ -279,62 +327,83 @@ Shader "NodeWar/Outline Composite"
                         if (tapNearness == centreNearness && tapId > centreId) continue;
                     }
 
-                    uint tapStyle = DecodeId(tapTexel.g);
-                    float tapRadius =
-                        _OutlineStyleRadius[min(tapStyle, OUTLINE_STYLE_COUNT - 1)].x;
+                    // Clamped at the decode, not at each use. This is an integer
+                    // recovered from an 8-bit channel, so nothing but the writer's
+                    // discipline keeps it in range, and an out-of-range value
+                    // would shift a bit off the end of the mask below.
+                    uint tapStyle = min(DecodeId(tapTexel.g), OUTLINE_STYLE_COUNT - 1);
 
-                    // Outside this style's own line width. A thinner style stops
-                    // short rather than reaching the full tap radius, and the
-                    // pixel stays available to whatever else can claim it.
-                    if (tap.z > tapRadius) continue;
+                    // None is not a layer. A group holding this style never
+                    // reaches the mask, so this is unreachable in practice -- but
+                    // the lane chain below ends in an else, and a zero arriving
+                    // there would silently land in CommandAck's lane.
+                    if (tapStyle == 0u) continue;
 
-                    // Style decides, not distance. This is what keeps a Selected
-                    // line unbroken where a Hover line crosses it: both groups
-                    // have a claim on the empty pixels between them, and handing
-                    // those to whichever happens to be nearer is what made the
-                    // higher-priority line change colour mid-run.
-                    //
-                    // Strictly greater, never equal: the table runs closest to
-                    // furthest, so the first tap of any given style is already
-                    // the nearest one of that style, and a later tap of the same
-                    // style can only be further away.
-                    if (tapStyle <= nearestStyle) continue;
+                    uint tapBit = 1u << tapStyle;
 
-                    nearest = tap.z;
-                    nearestStyle = tapStyle;
-                    nearestRadius = tapRadius;
+                    // Already have this style's nearest. The table runs closest
+                    // to furthest, so the first eligible tap of a style is the
+                    // nearest one of that style and every later one is further.
+                    // That holds for the radius rejection below too, which is
+                    // why the style is marked found either way.
+                    if ((stylesFound & tapBit) != 0u) continue;
 
-                    // Nothing on screen outranks this, so no later tap can
-                    // change the answer. With a single style showing -- the
+                    stylesFound |= tapBit;
+
+                    // Inside this style's own line width. A thinner style stops
+                    // short of the tap radius, and a pixel past its edge simply
+                    // carries no line of that style -- whatever else reaches the
+                    // pixel still draws there.
+                    if (tap.z <= _OutlineStyleRadius[tapStyle].x)
+                    {
+                        if (tapStyle == 1u)      styleDist.x = tap.z;
+                        else if (tapStyle == 2u) styleDist.y = tap.z;
+                        else if (tapStyle == 3u) styleDist.z = tap.z;
+                        else                     styleDist.w = tap.z;
+                    }
+
+                    // Every style on screen has been accounted for, so no later
+                    // tap can add anything. With a single style showing -- the
                     // common case -- this fires on the first boundary found and
-                    // the walk costs exactly what it did before priority
-                    // existed.
-                    if (nearestStyle >= maxStyle) break;
+                    // the walk costs what it did before layering existed.
+                    if (stylesFound == stylesPresent) break;
                 }
 
-                // No boundary within reach. Tested on the style rather than the
-                // distance now, because a style's radius can be well under 1 and
-                // "found nothing" has to stay distinct from "found a thin style
-                // at its outer edge". Discard rather than returning a transparent
-                // pixel, so the blend unit does no work for the vast majority of
-                // the screen.
-                if (nearestStyle == 0u) discard;
+                float fadeFrac = max(_OutlineSoftness, 1.0e-4);
 
-                float4 colour = _OutlinePalette[min(nearestStyle, OUTLINE_STYLE_COUNT - 1)];
+                // Accumulated premultiplied, converted back to straight alpha on
+                // the way out, because the pass blends SrcAlpha/OneMinusSrcAlpha.
+                // Compositing straight-alpha layers directly is the classic way
+                // to get a colour that is subtly wrong wherever two of them
+                // overlap at partial coverage -- which is exactly where these
+                // layers meet.
+                float4 accum = 0.0;
 
-                // Full strength close to the boundary, fading out over the
-                // outermost _OutlineSoftness of the line's width. This is what
-                // rounds the corners: coverage falls off with true radial
-                // distance now, instead of stopping wherever the tap pattern
-                // happened to reach.
-                // Measured against the winning style's own radius, not the tap
-                // radius, so a thinner style fades over its own outer edge
-                // rather than over a boundary it never reaches.
-                float radius = max(nearestRadius, 1.0e-4);
-                float fade = max(_OutlineSoftness, 1.0e-4) * radius;
-                colour.a *= 1.0 - smoothstep(radius - fade, radius, nearest);
+                // Painted lowest style to highest, each one over what is already
+                // there, so Selected lands in front of Contested lands in front
+                // of Hover. "In front of", not "instead of": a lower style still
+                // shows wherever the one above it is absent or only partly
+                // covering, which is what keeps a Hover ring continuous where a
+                // Selected band's faded outer edge crosses it.
+                //
+                // Coverage is measured against each style's own radius, so a
+                // thinner style fades out over its own edge rather than over a
+                // boundary it never reaches.
+                OutlineLayerOver(_OutlinePalette[1], _OutlineStyleRadius[1].x,
+                                 styleDist.x, fadeFrac, accum);
+                OutlineLayerOver(_OutlinePalette[2], _OutlineStyleRadius[2].x,
+                                 styleDist.y, fadeFrac, accum);
+                OutlineLayerOver(_OutlinePalette[3], _OutlineStyleRadius[3].x,
+                                 styleDist.z, fadeFrac, accum);
+                OutlineLayerOver(_OutlinePalette[4], _OutlineStyleRadius[4].x,
+                                 styleDist.w, fadeFrac, accum);
 
-                return colour;
+                // No layer covered this pixel. Discard rather than returning a
+                // transparent one, so the blend unit does no work for the vast
+                // majority of the pixels inside the scissor.
+                if (accum.a <= 1.0e-4) discard;
+
+                return float4(accum.rgb / accum.a, accum.a);
             }
             ENDHLSL
         }
