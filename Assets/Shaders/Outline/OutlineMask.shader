@@ -76,7 +76,28 @@ Shader "NodeWar/Outline Mask"
             return output;
         }
 
-        float4 MaskFragment(Varyings input) : SV_Target
+        /// Splits a 0..1 value across two 8-bit UNorm channels, giving roughly
+        /// 16 bits. Eight would not do: the composite compares the depths of two
+        /// *different* objects at adjacent pixels, and 256 levels across a
+        /// perspective depth range lets a villager and the node it stands on
+        /// land on the same level. A tie reads as "neither is in front", which
+        /// is a missing outline rather than a wrong one, so it would be easy to
+        /// mistake for the boundary simply not being detected.
+        float2 EncodeNearness(float value)
+        {
+            value = saturate(value) * 255.0;
+            float high = floor(value);
+            return float2(high / 255.0, value - high);
+        }
+
+        /// <param name="forceNearest">
+        /// Draw-through groups claim maximum nearness rather than their real
+        /// depth. Their whole purpose is to stay visible behind something, and
+        /// the composite only draws the nearer group's line at a seam -- so a
+        /// selected villager walking behind a node would lose the outline that
+        /// makes it findable, which is the one case the style exists for.
+        /// </param>
+        float4 MaskCommon(Varyings input, bool forceNearest)
         {
             // Texture alpha only -- vertex colour is deliberately not folded in.
             // The ground quad is Unity's stock primitive mesh, which carries no
@@ -90,11 +111,46 @@ Shader "NodeWar/Outline Mask"
             float alpha = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).a;
             clip(alpha - _ClipThreshold);
 
+            // Nearness rather than depth: bigger always means closer to the
+            // camera, on every platform. Doing the reversed-Z fold here means
+            // the composite compares two numbers and needs to know nothing
+            // about the platform's depth convention.
+            #if UNITY_REVERSED_Z
+                float nearness = input.positionCS.z;
+            #else
+                float nearness = 1.0 - input.positionCS.z;
+            #endif
+
+            if (forceNearest) nearness = 1.0;
+
             // R is the group ID, G the style index, both as 0..1 UNorm and
-            // decoded on the far side with an explicit round. B and A are spare;
-            // B is reserved for a future owner tint so outline colour can be
-            // redundantly tinted by player without ownership ever depending on it.
-            return float4(_OutlineGroupId, _OutlineStyleIndex, 0.0, 1.0);
+            // decoded on the far side with an explicit round. B and A carry
+            // nearness, 16 bits across the pair.
+            //
+            // That spends both spare channels, including the one previously
+            // reserved for an owner tint. Depth is the better use: without it
+            // the composite cannot tell which of two overlapping groups is in
+            // front, and an owner tint is recoverable from the group ID via the
+            // palette, which is where every other outline colour decision
+            // already lives.
+            //
+            // It also means alpha is no longer 1 wherever a group was drawn, so
+            // the mask's alpha channel is no longer a silhouette preview in the
+            // frame debugger. Use the red channel, or the Mask debug view.
+            float2 nearnessBits = EncodeNearness(nearness);
+
+            return float4(_OutlineGroupId, _OutlineStyleIndex,
+                          nearnessBits.x, nearnessBits.y);
+        }
+
+        float4 MaskFragmentDepthTested(Varyings input) : SV_Target
+        {
+            return MaskCommon(input, false);
+        }
+
+        float4 MaskFragmentDrawThrough(Varyings input) : SV_Target
+        {
+            return MaskCommon(input, true);
         }
         ENDHLSL
 
@@ -113,7 +169,7 @@ Shader "NodeWar/Outline Mask"
 
             HLSLPROGRAM
             #pragma vertex MaskVertex
-            #pragma fragment MaskFragment
+            #pragma fragment MaskFragmentDepthTested
             ENDHLSL
         }
 
@@ -133,7 +189,7 @@ Shader "NodeWar/Outline Mask"
 
             HLSLPROGRAM
             #pragma vertex MaskVertex
-            #pragma fragment MaskFragment
+            #pragma fragment MaskFragmentDrawThrough
             ENDHLSL
         }
     }

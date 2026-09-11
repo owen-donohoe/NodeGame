@@ -20,6 +20,7 @@ namespace NodeWar.View.Outline
         private static readonly int PaletteId = Shader.PropertyToID("_OutlinePalette");
         private static readonly int TexelSizeId = Shader.PropertyToID("_OutlineTexelSize");
         private static readonly int TapRadiusId = Shader.PropertyToID("_OutlineTapRadius");
+        private static readonly int SoftnessId = Shader.PropertyToID("_OutlineSoftness");
         private static readonly int DebugModeId = Shader.PropertyToID("_OutlineDebugMode");
 
         private sealed class PassData
@@ -122,6 +123,7 @@ namespace NodeWar.View.Outline
             float tapRadius = settings.ThicknessReferencePixels *
                               (maskData.height / settings.ReferenceHeight);
             compositeMaterial.SetFloat(TapRadiusId, Mathf.Max(0.5f, tapRadius));
+            compositeMaterial.SetFloat(SoftnessId, settings.EdgeSoftness);
             compositeMaterial.SetFloat(DebugModeId, (float)settings.DebugView);
 
             using (IRasterRenderGraphBuilder builder =

@@ -100,6 +100,15 @@ namespace NodeWar.View.Outline
         [Range(1f, 8f)]
         [SerializeField] private float thicknessReferencePixels = 3f;
 
+        [Tooltip("Fraction of the line's width spent fading out, measured from " +
+                 "its outer edge. This is the antialiasing, and it is also " +
+                 "what rounds corners -- coverage falls off with distance " +
+                 "rather than stopping where the tap pattern reached. Zero is " +
+                 "a hard, aliased edge; past about 0.5 the line reads as a " +
+                 "glow rather than a line.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float edgeSoftness = 0.35f;
+
         [Tooltip("Screen height the thickness above is authored against. " +
                  "Thickness is converted to mask texels as thickness * " +
                  "(maskHeight / referenceHeight), which holds a constant " +
@@ -125,6 +134,7 @@ namespace NodeWar.View.Outline
         [SerializeField] private OutlineDebugView debugView = OutlineDebugView.Off;
 
         public float ThicknessReferencePixels => thicknessReferencePixels;
+        public float EdgeSoftness => edgeSoftness;
         public float ReferenceHeight => Mathf.Max(1f, referenceHeight);
         public OutlineMaskResolution MaskResolution => maskResolution;
         public float AlphaClipThreshold => alphaClipThreshold;
