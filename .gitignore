@@ -120,3 +120,11 @@ InitTestScene*.unity*
 # repo root and do not reach these.
 dotnet/**/bin/
 dotnet/**/obj/
+
+# Unity regenerates these from UI Toolkit > Generate UIElements Schema. Thirty-
+# seven .xsd files whose only job is to give an XML editor autocomplete inside
+# UXML -- no build, test or player ever reads one.
+UIElementsSchema/
+
+# Rider workspace state. Per-machine, and it rewrites itself on every reindex.
+.idea/
