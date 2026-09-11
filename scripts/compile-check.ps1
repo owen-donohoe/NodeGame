@@ -79,11 +79,20 @@ $asmdefDirs = @(
 
 $pluginsDir = Join-Path $AssetsDir 'Plugins'
 
+# Compared with a trailing separator, so a directory only excludes files that
+# are actually inside it. Without one, any sibling whose name merely starts with
+# an asmdef folder's name is silently dropped -- Assets/Scripts/Game/View/
+# Outline is an asmdef folder, so OutlineDriver.cs beside it disappeared from
+# the check while Unity, which scopes by directory, compiled it fine. A source
+# that vanishes from a type check reads as a missing type at its call site, and
+# sends you looking at the wrong file.
+$sep = [System.IO.Path]::DirectorySeparatorChar
+
 $sources = Get-ChildItem -Path $AssetsDir -Recurse -Filter '*.cs' -File | Where-Object {
     $path = $_.FullName
-    if ($path.StartsWith($pluginsDir, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+    if ($path.StartsWith($pluginsDir + $sep, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
     foreach ($dir in $asmdefDirs) {
-        if ($path.StartsWith($dir, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        if ($path.StartsWith($dir + $sep, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
     }
     return $true
 }
