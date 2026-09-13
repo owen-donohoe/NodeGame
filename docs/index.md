@@ -111,6 +111,13 @@ between legs is a finding about the simulation, not a CI problem.
 * `verified_at_commit` is a producer-defined key holding the short SHA a document was last confirmed
   against. It is the same idea as the `Last Reviewed Commit` property on Notion Phases, at file
   granularity instead of phase granularity. The two are independent and neither mirrors the other.
+* **A source that is itself a document moves only when its body moves.** Several documents here cite
+  another document as a source — `cs-review` cites `architecture`, `determinism-guard` cites
+  `simulation-rules`. Stamping a document's own `verified_at_commit` edits that file, so without
+  this rule every document citing it would go suspect on a change that says nothing about their
+  subject, and re-verifying anything would permanently generate its own next round. `okf-stale.ps1`
+  therefore walks back past commits that touched only a markdown source's frontmatter. Code sources
+  are unaffected — a `.cs` file has no frontmatter, and any commit touching one still counts.
 * Only a `human:` actor may write `verified:`. An agent that checks a document writes an agent-tier
   entry (`claude-opus-5`); that is the machine-confirmed tier, not human-reviewed. See the trust
   tiers in the OKF spec.
