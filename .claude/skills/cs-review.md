@@ -9,7 +9,8 @@ verified:
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+verified_at_commit: ea42e61
 status: stable
 sources:
   - id: architecture

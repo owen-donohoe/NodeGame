@@ -13,7 +13,9 @@ executor:
 attester:
   resource: docs/attesters/hash_baseline.ps1
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: 67fea34
+verified:
+  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+verified_at_commit: ea42e61
 status: stable
 sources:
   - id: tests

@@ -9,7 +9,8 @@ verified:
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T04:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+verified_at_commit: ea42e61
 status: stable
 sources:
   - id: sim-state
@@ -64,6 +65,18 @@ sources:
     resource: Assets/UI/Scripts/Gameplay/NodeSheetContent.cs
     title: NodeSheetContent.Send, the UI Toolkit command path
     last_modified: 2026-09-03T16:54:53-04:00
+  - id: outline-driver
+    resource: Assets/Scripts/Game/View/OutlineDriver.cs
+    title: OutlineDriver, the only setter of outline intents
+  - id: outline-registry
+    resource: Assets/Scripts/Game/View/Outline/OutlineRegistry.cs
+    title: OutlineRegistry and the outlined-only ID lifecycle
+  - id: outline-style
+    resource: Assets/Scripts/Game/View/Outline/OutlineStyle.cs
+    title: OutlineStyle, whose numeric order is the priority order
+  - id: outline-feature
+    resource: Assets/Scripts/Game/View/Outline/OutlineRendererFeature.cs
+    title: OutlineRendererFeature, the URP entry point
 ---
 
 # Architecture
@@ -88,6 +101,7 @@ Assets/Scripts/
     Input/     Layer 5
     UI/        Layer 6      uGUI, in-match
     View/      Layer 7
+      Outline/              own assembly, NodeWar.View.Outline
     Config/    not a layer   GameBalance / BoardConfig ScriptableObjects
     Debug/     not a layer   development aids
   Editor/      not a layer   TestBridge and other editor-only tooling
@@ -365,6 +379,42 @@ Two objects are carried across the Lobby → Gameplay scene load via
 - `OpponentRouteSettings` — the rules of the one information gate in the
   game. Everything else is fully visible to both players, so an opponent
   route hands the player something new rather than withholding it.
+- `OutlineDriver` — the only thing that sets outline intents. Reads hover,
+  villager selection and the open node, and is read-only against the
+  simulation. `GameManager` builds it before the views that register with
+  it, and hands it the same `SelectionSystem` the tap path uses, so hover
+  and selection agree about ownership by construction rather than by two
+  copies of the same rule.
+
+**View/Outline/** — its own assembly, `NodeWar.View.Outline`
+
+The group-silhouette outline system. It is separate from `View/` proper
+because its ID lifecycle is the part with real edge cases in it, and an
+assembly of its own is what lets those cases be unit tested against a plain
+object with no GameObject, no scene and no render pipeline — the reason
+`IOutlineGroup` exists at all.
+
+- `OutlineRendererFeature` — the entry point into URP, and the project's
+  first custom renderer feature. It must be listed in **both**
+  `Assets/Settings/Mobile_Renderer.asset` and `PC_Renderer.asset`.
+- `OutlineMaskPass` / `OutlineCompositePass` — draw the registered groups as
+  IDs into an offscreen target, then dilate ID boundaries into outline colour.
+- `OutlineRegistry` / `OutlineIdAllocator` — ID allocation and the draw list.
+  **A group holds an ID only while it is actually outlined**; registration is
+  not what grants one, a style other than `None` is. So "nothing is outlined"
+  is an empty list and both passes are skipped, and nothing needs cleanup when
+  a node or villager goes away.
+- `OutlineGroup` / `IOutlineGroup` — marks a node or villager root as one
+  silhouette, so seams inside it grow no line. Added at runtime, like
+  `NodeHighlight` and `VillagerTouchTarget`, so no prefab needs editing.
+- `OutlineStyle` — the transient states an outline expresses. **The numeric
+  order is the priority order**, so reordering the enum silently changes which
+  state wins a conflict; `OutlineStyleTests` pins it so a reorder fails a test
+  instead of changing the game. Player ownership is deliberately not a style.
+- `OutlineSettings` / `OutlineScreenBounds` — the palette and thickness asset
+  (`Assets/Settings/OutlineSettings.asset`), and the screen-space scissor.
+
+Tested by `Assets/Tests/EditMode/Outline/`, its own test assembly.
 
 ### Where a villager is, mid-edge
 
