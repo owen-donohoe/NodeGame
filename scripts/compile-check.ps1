@@ -7,12 +7,12 @@
     and the project's already-built package assemblies, then throws the output
     away. Nothing is written into Assets/ and Unity never has to be running.
 
-    Why this exists: dotnet/NodeWar.sln only covers Assets/Scripts/Game/Simulation,
-    because that is the only assembly with no UnityEngine references. Everything
-    else - the lobby, the HUD, the networking layer, the view - could previously
-    only be compiled by opening the editor. During the UI Toolkit migration that
-    is most of the code being changed, so "it compiles" was an assumption rather
-    than a fact.
+    Why this exists: dotnet/NodeWar.sln covers Assets/Scripts/Game/Simulation and
+    the lobby's loadout logic, because those are the assemblies with no
+    UnityEngine references. Everything else - the HUD, the networking layer, the
+    view, Assets/UI - could previously only be compiled by opening the editor.
+    During the UI Toolkit migration that is most of the code being changed, so
+    "it compiles" was an assumption rather than a fact.
 
     What it is NOT: a faithful reproduction of Unity's assembly graph. Runtime
     and editor code are compiled into one assembly here, so it will not catch an

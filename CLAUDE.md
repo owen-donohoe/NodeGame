@@ -88,15 +88,37 @@ Read the file, do not ask me to summarise it here.
 
 ## Checking your work without Unity
 
-`dotnet test` covers `Simulation/` only — it is the one assembly with no
-UnityEngine references. For everything else (lobby, HUD, network, view, and all
-of `Assets/UI/`), `scripts/compile-check.ps1` type-checks the real sources
-against the real Unity assemblies with the editor closed. It catches syntax,
-missing usings, wrong API names and broken call sites. It cannot see prefab or
-scene wiring, and it is not a test run.
+`dotnet test dotnet/NodeWar.sln` runs 60 cases — 14 over `Simulation/` and 46
+over the lobby's loadout wire format and editor rules. Those are the two
+assemblies that compile without UnityEngine. A lobby change has real tests;
+run them rather than settling for a type-check.
 
-Run it after any edit you could not otherwise compile. The editor is usually
-already open, and it does not need to be closed for this.
+For everything else (HUD, network, view, and all of `Assets/UI/`),
+`scripts/compile-check.ps1` type-checks the real sources against the real Unity
+assemblies. It catches syntax, missing usings, wrong API names and broken call
+sites. It cannot see prefab or scene wiring, and it is not a test run.
+
+Run it after any edit you could not otherwise compile. Unity never has to be
+running, and an open editor does not have to be closed.
+
+## Driving the editor, when one is connected
+
+Check with `unity status`. If it reports an instance in state `ready`, the
+Unity CLI can drive that editor — read the hierarchy, capture the scene and
+game views as PNGs, read the console, run the EditMode suite, evaluate C#.
+That closes the blind spot compile-check declares above: prefab and scene
+wiring become observable rather than assumed.
+
+If `unity status` reports nothing, everything here is simply unavailable.
+Do not treat it as broken, and never make it a precondition for finishing
+work — it is a faster path when present, not a requirement. It needs the
+CLI installed per-machine and `com.unity.pipeline` in the project, and a
+collaborator may have neither. Both are beta and may move.
+
+The usual reason a connected editor stops answering is Safe Mode: a C#
+compile error keeps the package from loading, and every command fails to
+connect. Fix the compile error, don't fall back to editing scene files by
+hand.
 
 ## Simulation Boundary — Non-Negotiable
 
@@ -136,7 +158,9 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 - Read relevant files before proposing anything
 - For anything touching `Simulation/`: use plan mode first
 - Prefer the smallest change that satisfies the goal
-- Do not modify `.unity` scenes, prefabs, or `.meta` files without instruction
+- Never hand-edit `.unity` scenes, prefabs, or `.meta` files. Editing that YAML
+  corrupts GUIDs and merge state. Change them through a connected editor, and
+  only with instruction — the ban is on the text, the permission is on the file
 - When uncertain about intent: ask once, clearly, then proceed
 - After `Simulation/` changes: flag which tests should be run
 
