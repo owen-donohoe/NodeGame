@@ -11,6 +11,9 @@ a mechanical run that produces a receipt.
   Unity, and the `TestResults/results.xml` receipt both produce.
 * [run-dotnet-tests](run-dotnet-tests.md) — the same simulation suite run by `dotnet test` over the
   projects in `dotnet/`, with no Unity and no licence. The runner CI uses.
+* [drive-the-editor](drive-the-editor.md) — driving a connected Unity Editor from the CLI, when
+  `unity status` reports one. Unlike the two runners above it produces no receipt, and unlike them
+  it is conditional on a per-machine install that a collaborator may not have.
 
 All three runners write the same receipt from the same simulation test sources — that is what makes
 their results comparable rather than merely similar.

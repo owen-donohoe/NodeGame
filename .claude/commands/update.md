@@ -6,6 +6,9 @@ description: Reconcile Notion against new commits. The only time Notion is writt
 
 Runs when I invoke `/update` and at no other time. Writing to Notion happens only inside an Update.
 
+Read `docs/notion-workspace.md` first — it holds the database identifiers and the Phases/Tasks
+property schemas this procedure assumes.
+
 **Read, in this order, and stop as soon as you have enough:**
 
 1. Notion Phases where `Status` is `Active` or `Audit plan against code`. Nothing else.

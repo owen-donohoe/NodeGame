@@ -20,6 +20,9 @@ directly. This index exists so the set can be traversed as a graph, and so
   classes, networking model.
 * [simulation-rules](simulation-rules.md) — the determinism contract `Simulation/` must uphold.
 * [adding-a-feature](adding-a-feature.md) — the 11-step checklist for any new feature.
+* [notion-workspace](notion-workspace.md) — identifiers and property schemas for the Notion
+  workspace that owns future and current work. Declares no sources: its subject is not code in
+  this repo, so no commit here can make it stale.
 
 ## Subdirectories
 
