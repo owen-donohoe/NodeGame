@@ -14,17 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   palette:
   - color: {r: 0, g: 0, b: 0, a: 0}
+    thicknessScale: 1
     drawThrough: 0
   - color: {r: 1, g: 1, b: 1, a: 0.55}
+    thicknessScale: 1
     drawThrough: 0
   - color: {r: 1, g: 0.42, b: 0.2, a: 1}
+    thicknessScale: 1
     drawThrough: 0
   - color: {r: 1, g: 1, b: 1, a: 1}
+    thicknessScale: 1
     drawThrough: 1
   - color: {r: 0.55, g: 1, b: 0.65, a: 1}
+    thicknessScale: 1
     drawThrough: 0
-  thicknessReferencePixels: 8
-  edgeSoftness: 0
+  thicknessReferencePixels: 4
+  edgeSoftness: 0.4
   referenceHeight: 1080
   maskResolution: 0
   alphaClipThreshold: 0.5
