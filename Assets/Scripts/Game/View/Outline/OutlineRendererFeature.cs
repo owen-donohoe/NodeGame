@@ -7,14 +7,17 @@ namespace NodeWar.View.Outline
     /// <summary>
     /// The group-silhouette outline system's entry point into URP.
     ///
-    /// Two passes: a mask that draws the registered groups as IDs into an
-    /// offscreen target, and a full-screen dilate that turns ID boundaries into
-    /// outline colour. Only the mask exists so far.
+    /// Two passes, both live: a mask that draws the registered groups as IDs
+    /// into an offscreen target, and a full-screen dilate that turns ID
+    /// boundaries into outline colour.
     ///
-    /// This is the project's first custom renderer feature, so it has to be
-    /// added to both Assets/Settings/Mobile_Renderer.asset and
-    /// Assets/Settings/PC_Renderer.asset -- Mobile has no feature list content
-    /// at all today, and PC has only the built-in SSAO.
+    /// This is the project's first custom renderer feature, and it is wired
+    /// into both Assets/Settings/Mobile_Renderer.asset and
+    /// Assets/Settings/PC_Renderer.asset -- the outline is Mobile's only
+    /// feature, and sits alongside the built-in SSAO on PC. Both entries are
+    /// needed: a renderer asset that does not list it renders no outlines at
+    /// all, silently, and which asset is in play is a quality-setting value.
+    /// Any renderer added later needs the same entry.
     /// </summary>
     [DisallowMultipleRendererFeature("NodeWar Outline")]
     public sealed class OutlineRendererFeature : ScriptableRendererFeature
