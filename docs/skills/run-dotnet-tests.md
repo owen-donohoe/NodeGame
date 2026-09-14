@@ -6,7 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-verified_at_commit: ea42e61
+  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
+verified_at_commit: 2241e47
 status: draft
 sources:
   - id: solution
@@ -58,12 +59,12 @@ The solution holds two test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **60 passed** — 14 from `NodeWar.Simulation.Tests`, 46 from `NodeWar.Lobby.Tests`.
+Expect **77 passed** — 14 from `NodeWar.Simulation.Tests`, 63 from `NodeWar.Lobby.Tests`.
 
 | Project | Cases | Covers |
 |---|---|---|
 | `NodeWar.Simulation.Tests` | 14 | the determinism baseline, edge weights, movement correctness, a smoke test |
-| `NodeWar.Lobby.Tests` | 46 | `LoadoutData`'s wire format and the loadout editor rules |
+| `NodeWar.Lobby.Tests` | 63 | `LoadoutData`'s wire format, the loadout editor rules (including when a side is short), item tints and district families |
 
 ## Producing the receipt
 

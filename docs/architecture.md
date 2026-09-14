@@ -11,7 +11,8 @@ verified:
   - { by: claude-opus-5, at: 2026-09-02T04:00:00Z }
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
-verified_at_commit: af65ec5
+  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
+verified_at_commit: 2241e47
 status: stable
 sources:
   - id: sim-state
@@ -345,8 +346,19 @@ Two objects are carried across the Lobby → Gameplay scene load via
 
 **`Assets/UI/`** (UI Toolkit)
 - `LobbyUIController` / `NavigationController` / `LobbyPage` — the lobby
-  shell and its pages (`HomePage`, `WorkshopPage`, `ProfilePage`,
-  `ShopPage`, `SocialPage`, `PlayPopup`).
+  shell. The tab pages (`ShopPage`, `HomePage`, `WorkshopPage`,
+  `SocialPage`) sit side by side in one track that slides between them.
+  `ProfilePage` (expands from the trophy strip) and the `LobbyPushPage`s
+  (`SettingsPage`, `MatchHistoryPage`) are overlays above the chrome, not
+  tabs.
+- `LobbySheet`, `LobbyContextMenu`, `LobbyToast` — one of each for the
+  whole lobby, handed to pages rather than built per page. `PlayPopup` is
+  content shown in the sheet.
+- `LoadoutCatalog` — what a loadout slot may hold and what the player owns
+  (not globally granted, not Crossroads, unlocked). The Workshop, Home and
+  the battle sheet all ask it; the slot rules themselves are in the
+  UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
+  covers.
 - `MatchLauncher` — the lobby's route into a match.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
@@ -356,8 +368,10 @@ Two objects are carried across the Lobby → Gameplay scene load via
   `Send` is the only path to the simulation.
 - `SafeAreaBinder` — the UI Toolkit reader of `Screen.safeArea`.
   `Assets/Legacy/Game/UI/SafeAreaFitter.cs` is the uGUI equivalent.
-- Layouts in `Assets/UI/Layouts/*.uxml`, styles in `Assets/UI/Styles/*.uss`
-  (`Theme.uss` holds the shared tokens).
+- Layouts in `Assets/UI/Layouts/*.uxml`, styles in `Assets/UI/Styles/*.uss`.
+  `Lobby.uss` holds the lobby's tokens and shared components; `Theme.uss`
+  holds the tokens the in-match HUD and the not-yet-rebuilt Social page
+  still read, so changing it changes the Gameplay scene.
 
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
