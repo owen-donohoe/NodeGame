@@ -25,17 +25,13 @@ namespace NodeWar.Lobby
             Status
         }
 
-        // Drag distance on the handle that changes detent, from the prototype.
-        private const float HandleDragThreshold = 44f;
-
         public VisualElement Root { get; private set; }
 
         private readonly MatchLauncher launcher = new MatchLauncher();
         private readonly LobbyManager lobbyManager;
         private readonly LobbyToast toast;
+        private readonly LobbySheet sheet;
 
-        private readonly VisualElement scrim;
-        private readonly VisualElement sheet;
         private readonly VisualElement findView;
         private readonly VisualElement joinView;
         private readonly VisualElement statusView;
@@ -67,27 +63,18 @@ namespace NodeWar.Lobby
 
         private GameMode mode = GameMode.OneVsOne;
         private bool useLan;
-        private bool open;
-        private float dragStartY;
-        private bool dragging;
 
-        public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast)
+        public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast, LobbySheet sheet)
         {
             this.lobbyManager = lobbyManager;
             this.toast = toast;
+            this.sheet = sheet;
 
             Root = new VisualElement();
-            Root.name = "play-popup-host";
+            Root.name = "play-popup";
             Root.pickingMode = PickingMode.Ignore;
-            Root.style.position = Position.Absolute;
-            Root.style.left = 0;
-            Root.style.right = 0;
-            Root.style.top = 0;
-            Root.style.bottom = 0;
             if (layout != null) layout.CloneTree(Root);
 
-            scrim = Root.Q<VisualElement>("play-scrim");
-            sheet = Root.Q<VisualElement>("play-sheet");
             findView = Root.Q<VisualElement>("play-find");
             joinView = Root.Q<VisualElement>("play-join");
             statusView = Root.Q<VisualElement>("play-status");
@@ -121,22 +108,15 @@ namespace NodeWar.Lobby
 
             launcher.Changed += RefreshStatus;
 
-            SetOpen(false);
+            // Whatever closes the sheet - scrim, handle or Cancel - a connection
+            // attempt must not outlive it, or the next attempt binds a second
+            // NetworkManager while the first keeps receiving.
+            if (sheet != null)
+                sheet.Closed += content => { if (content == Root) launcher.Cancel(); };
         }
 
         private void Wire()
         {
-            if (scrim != null)
-            {
-                scrim.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    Hide();
-                    evt.StopPropagation();
-                });
-            }
-
-            WireHandle(Root.Q<VisualElement>("play-handle"));
-
             Bind(modeOnline, () => SetMode(GameMode.OneVsOne));
             Bind(modeBot, () => SetMode(GameMode.Bot));
             Bind(modeTesting, () => SetMode(GameMode.Testing));
@@ -165,49 +145,6 @@ namespace NodeWar.Lobby
             if (button != null) button.clicked += action;
         }
 
-        /// <summary>
-        /// Drag the handle up to expand, down to shrink or close - the
-        /// prototype's two detents.
-        /// </summary>
-        private void WireHandle(VisualElement handle)
-        {
-            if (handle == null) return;
-
-            handle.RegisterCallback<PointerDownEvent>(evt =>
-            {
-                dragging = true;
-                dragStartY = evt.position.y;
-                handle.CapturePointer(evt.pointerId);
-            });
-
-            handle.RegisterCallback<PointerMoveEvent>(evt =>
-            {
-                if (!dragging || sheet == null) return;
-
-                float dy = evt.position.y - dragStartY;
-
-                if (dy < -HandleDragThreshold)
-                {
-                    sheet.AddToClassList("lb-sheet--large");
-                    dragging = false;
-                }
-                else if (dy > HandleDragThreshold)
-                {
-                    if (sheet.ClassListContains("lb-sheet--large"))
-                        sheet.RemoveFromClassList("lb-sheet--large");
-                    else
-                        Hide();
-                    dragging = false;
-                }
-            });
-
-            handle.RegisterCallback<PointerUpEvent>(evt =>
-            {
-                dragging = false;
-                handle.ReleasePointer(evt.pointerId);
-            });
-        }
-
         private void Say(string message)
         {
             if (toast != null) toast.Show(message);
@@ -222,42 +159,22 @@ namespace NodeWar.Lobby
             if (saved == GameMode.Bot || saved == GameMode.Testing || saved == GameMode.OneVsOne)
                 mode = saved;
 
-            if (sheet != null) sheet.RemoveFromClassList("lb-sheet--large");
-
             SetTransport(useLan);
             SetMode(mode);
             ShowView(View.Find);
-            SetOpen(true);
+
+            if (sheet != null) sheet.Open(Root);
         }
 
         public void Hide()
         {
-            // Closing while connecting must not leave a socket open, or the next
-            // attempt binds a second NetworkManager and the first keeps receiving.
-            launcher.Cancel();
-            SetOpen(false);
+            // The sheet's Closed event cancels any connection attempt.
+            if (sheet != null && sheet.IsShowing(Root)) sheet.Close();
         }
 
         public bool IsOpen
         {
-            get { return open; }
-        }
-
-        /// <summary>
-        /// The sheet slides rather than appearing, so it is never display:none -
-        /// a hidden sheet is translated below the screen and the scrim stops
-        /// taking taps, which is what lets the page under it work.
-        /// </summary>
-        private void SetOpen(bool value)
-        {
-            open = value;
-
-            if (sheet != null) sheet.EnableInClassList("lb-sheet--open", value);
-            if (scrim != null)
-            {
-                scrim.EnableInClassList("lb-scrim--on", value);
-                scrim.pickingMode = value ? PickingMode.Position : PickingMode.Ignore;
-            }
+            get { return sheet != null && sheet.IsShowing(Root); }
         }
 
         private void ShowView(View view)
@@ -415,7 +332,7 @@ namespace NodeWar.Lobby
 
         public void Update()
         {
-            if (!open) return;
+            if (!IsOpen) return;
             launcher.Update();
         }
 

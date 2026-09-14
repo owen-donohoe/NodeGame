@@ -1,223 +1,335 @@
 /*
-    Home page and play popup.
+    Home - the lobby's landing page, after lobby-prototype.html.
 
-    Colour, spacing and type all come from Theme.uss custom properties; nothing
-    here invents a value. If a number appears below it is a layout proportion,
-    not a design token.
+    Tokens, shell and shared components (sticker shadows, lips, sheets) are
+    in Lobby.uss, which LobbyRoot.uxml imports ahead of every page.
+
+    Label rules that set margin or padding are written .lb-root .lb-x, so they
+    outrank the label reset in Lobby.uss. Follow that in any new rule.
 */
 
 /* ===================================================================
-   Home
+   HOME
    =================================================================== */
 
-.home {
+.lb-home-page {
     flex-grow: 1;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.home__identity {
-    flex-shrink: 0;
-}
-
-.home__identity-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.home__rename {
-    min-height: var(--touch-min);
-    padding-left: var(--space-md);
-    padding-right: var(--space-md);
-    font-size: var(--text-sm);
-}
-
-.home__trophy-row {
-    flex-direction: row;
-    align-items: flex-end;
-    margin-top: var(--space-sm);
-}
-
-.home__trophy-row > .caption {
-    margin-left: var(--space-sm);
-    margin-bottom: var(--space-xs);
-}
-
-/*
-    The arena band takes the slack between identity and Play, so the page
-    breathes on a tall phone without the Play button drifting up a short one.
-*/
-.home__arena {
-    flex-grow: 1;
-    margin-top: var(--space-md);
-    margin-bottom: var(--space-md);
-    min-height: 120px;
-}
-
-.home__actions {
-    flex-shrink: 0;
-    flex-direction: column;
-}
-
-.home__mode {
-    -unity-text-align: middle-center;
-    margin-bottom: var(--space-sm);
-}
-
-/* The one thing on the page a thumb must always find. */
-.home__play {
-    min-height: 64px;
-    font-size: var(--text-lg);
-}
-
-/* ===================================================================
-   Popup
-   =================================================================== */
-
-/*
-    Absolute over the whole panel rather than a new page: the brief settled that
-    the board stays visible behind a sheet, and the same reasoning applies in the
-    lobby - a popup that replaces the screen loses the context it was opened from.
-*/
-.popup {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    justify-content: flex-end;
-}
-
-.popup--hidden {
-    display: none;
-}
-
-.popup__scrim {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(20, 14, 8, 0.55);
-}
-
-/* Sits on the bottom edge, where a thumb is. */
-.popup__sheet {
-    flex-shrink: 0;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    max-height: 88%;
-}
-
-.popup__header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-md);
-}
-
-.popup__close {
-    min-width: var(--touch-min);
-    min-height: var(--touch-min);
     padding-left: 0;
     padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
-.popup__view {
-    flex-direction: column;
+/* ---- boxes ---- */
+
+.lb-boxcol {
+    position: absolute;
+    left: var(--lb-sp4);
+    top: 24px;
+    width: 130px;
 }
 
-.popup__view--hidden {
-    display: none;
-}
-
-.popup__action {
-    margin-top: var(--space-sm);
-    margin-bottom: var(--space-xs);
-}
-
-.popup__or {
-    -unity-text-align: middle-center;
-    margin-top: var(--space-md);
-    margin-bottom: var(--space-xs);
-}
-
-.popup__tabs {
-    flex-direction: row;
-    margin-bottom: var(--space-sm);
-}
-
-.popup__tab {
-    flex-grow: 1;
-    flex-basis: 0;
-    margin-right: var(--space-sm);
-    font-size: var(--text-sm);
-}
-
-.popup__tab--active {
-    background-color: var(--primary);
-    border-color: var(--border-ink);
-}
-
-.popup__input {
-    min-height: var(--touch-min);
-    margin-top: var(--space-sm);
-    font-size: var(--text-lg);
-}
-
-/*
-    UI Toolkit puts the editable region in a child; the outer TextField only
-    carries layout. Styling has to reach the inner element or the height and
-    type size are ignored.
-*/
-.popup__input > .unity-base-text-field__input {
-    min-height: var(--touch-min);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-sm);
-    background-color: var(--card-raised);
-    color: var(--ink-dark);
-    font-size: var(--text-lg);
-    -unity-text-align: middle-center;
-    padding-left: var(--space-sm);
-    padding-right: var(--space-sm);
-}
-
-.popup__code {
+.lb-box {
     align-items: center;
-    margin-top: var(--space-md);
-    margin-bottom: var(--space-md);
-    padding: var(--space-md);
-    background-color: var(--card-raised);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-md);
+    justify-content: center;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    transition-property: scale, translate;
+    transition-duration: var(--lb-t-press);
+    transition-timing-function: ease-in;
 }
 
-/* A code that gets read aloud: wide letter spacing, hard to misread. */
-.popup__code-value {
-    font-size: var(--text-xl);
-    letter-spacing: 4px;
-    margin-top: var(--space-xs);
-    margin-bottom: var(--space-xs);
+.lb-box:active {
+    scale: 0.96 0.96;
+    translate: 0 2px;
 }
 
-.popup__code--hidden {
-    display: none;
+.lb-box-wrap--big {
+    height: 130px;
+    margin-bottom: var(--lb-sp3);
 }
 
-/*
-    Every failure says what to do next, not just what went wrong. The open
-    card is "give every failure a recovery action, not just a message", and a
-    dead-end error screen is the thing it names.
-*/
-.popup__recovery {
-    margin-top: var(--space-sm);
-    margin-bottom: var(--space-sm);
-    color: var(--ink-dark);
+.lb-box-wrap--small {
+    height: 78px;
 }
 
-.popup__recovery--hidden {
-    display: none;
+.lb-box-wrap > .lb-box {
+    flex-grow: 1;
 }
+
+.lb-box .lb-icon {
+    width: 38px;
+    height: 38px;
+    -unity-background-image-tint-color: var(--lb-ink-mute);
+}
+
+.lb-box-wrap--small .lb-icon {
+    width: 26px;
+    height: 26px;
+}
+
+.lb-root .lb-box__label {
+    font-size: 14px;
+    color: var(--lb-ink-mute);
+    margin-top: 4px;
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-badge {
+    position: absolute;
+    top: -11px;
+    right: -11px;
+    min-width: 30px;
+    height: 30px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+    background-color: var(--lb-badge);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-badge-edge);
+    border-right-color: var(--lb-badge-edge);
+    border-top-color: var(--lb-badge-edge);
+    border-bottom-color: var(--lb-badge-edge);
+    color: var(--lb-white);
+    font-size: 16px;
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-badge--zero {
+    background-color: var(--lb-off);
+    border-left-color: var(--lb-off-edge);
+    border-right-color: var(--lb-off-edge);
+    border-top-color: var(--lb-off-edge);
+    border-bottom-color: var(--lb-off-edge);
+}
+
+/* ---- loadout preview: deliberately quiet - no border, no shadow ---- */
+
+.lb-loadcol {
+    position: absolute;
+    right: var(--lb-sp4);
+    top: 28px;
+    align-items: center;
+    opacity: 0.62;
+    transition-property: opacity;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-loadcol:hover {
+    opacity: 1;
+}
+
+.lb-lpi {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 6px;
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    border-bottom-left-radius: 11px;
+    border-bottom-right-radius: 11px;
+    background-color: var(--lb-chip-bg);
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-lpi--gap {
+    margin-top: 9px;
+}
+
+.lb-root .lb-lpi__letter {
+    font-size: 19px;
+    color: var(--lb-ink-mute);
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-lpcap {
+    font-size: 11px;
+    color: var(--lb-ink-mute);
+    letter-spacing: 0.7px;
+    margin-top: 3px;
+    -unity-text-align: middle-center;
+}
+
+/* ---- villager ---- */
+
+.lb-villager-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 30%;
+    align-items: center;
+}
+
+.lb-root .lb-tapedit {
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    margin-bottom: 14px;
+}
+
+.lb-villager {
+    align-items: center;
+    transition-property: translate;
+    transition-duration: var(--lb-t-bob);
+    transition-timing-function: ease-in-out;
+}
+
+.lb-villager--up {
+    translate: 0 -6px;
+}
+
+.lb-villager__body {
+    width: 56px;
+    height: 78px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    align-items: center;
+}
+
+.lb-villager > .lb-sticker__shadow {
+    top: 5px;
+    bottom: -5px;
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.lb-villager__hat {
+    position: absolute;
+    top: -11px;
+    width: 52px;
+    height: 14px;
+    background-color: var(--lb-hat);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
+}
+
+.lb-villager__face {
+    position: absolute;
+    top: 17px;
+    width: 26px;
+    height: 26px;
+    -unity-background-image-tint-color: var(--lb-edge);
+}
+
+/* ---- call to action ---- */
+
+.lb-cta {
+    position: absolute;
+    left: var(--lb-sp4);
+    right: var(--lb-sp4);
+    bottom: 100px;
+}
+
+.lb-battle {
+    height: 74px;
+    background-color: var(--lb-gold);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-gold-edge);
+    border-right-color: var(--lb-gold-edge);
+    border-top-color: var(--lb-gold-edge);
+    border-bottom-color: var(--lb-gold-edge);
+    border-top-left-radius: var(--lb-r-lg);
+    border-top-right-radius: var(--lb-r-lg);
+    border-bottom-left-radius: var(--lb-r-lg);
+    border-bottom-right-radius: var(--lb-r-lg);
+    font-size: 30px;
+    letter-spacing: 0.5px;
+    color: var(--lb-gold-text);
+    transition-property: translate;
+    transition-duration: var(--lb-t-press);
+    transition-timing-function: ease-in;
+}
+
+.lb-battle:active {
+    translate: 0 4px;
+}
+
+.lb-battle-lip {
+    background-color: var(--lb-gold-edge);
+    border-top-left-radius: var(--lb-r-lg);
+    border-top-right-radius: var(--lb-r-lg);
+    border-bottom-left-radius: var(--lb-r-lg);
+    border-bottom-right-radius: var(--lb-r-lg);
+}
+
+.lb-boxmeter {
+    margin-top: var(--lb-sp3);
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--lb-meter-bg);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.lb-root .lb-boxmeter__label {
+    font-size: 15px;
+    color: var(--lb-ink-inv);
+    margin-right: var(--lb-sp3);
+    flex-shrink: 0;
+}
+
+.lb-boxmeter__track {
+    flex-grow: 1;
+    height: 12px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background-color: var(--lb-meter-track);
+    overflow: hidden;
+}
+
+.lb-boxmeter__fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--lb-green);
+}
+

@@ -18,6 +18,8 @@
         anything around. Styles live in Lobby.uss, which LobbyRoot.uxml imports.
     -->
 
+    <engine:Style src="project://database/Assets/UI/Styles/Home.uss" />
+
     <engine:VisualElement name="home-page" class="lb-home-page" picking-mode="Ignore">
 
         <engine:VisualElement class="lb-boxcol" picking-mode="Ignore">

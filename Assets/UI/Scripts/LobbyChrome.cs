@@ -4,8 +4,8 @@ using UnityEngine.UIElements;
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// The persistent top of the lobby: currency purses, the gear, and the
-    /// trophy strip. It sits outside the page host, so it is bound once here
+    /// The persistent top of the lobby: currency purses, match history, the
+    /// gear, and the trophy strip. It sits outside the page host, so it is bound once here
     /// rather than once per page.
     ///
     /// Only the player name is a link (to Profile); the rest of the strip is
@@ -28,6 +28,12 @@ namespace NodeWar.Lobby
         /// <summary>Raised when the player name is pressed.</summary>
         public event System.Action ProfileRequested;
 
+        /// <summary>Raised when the gear is pressed.</summary>
+        public event System.Action SettingsRequested;
+
+        /// <summary>Raised when the TV button beside the gear is pressed.</summary>
+        public event System.Action HistoryRequested;
+
         public LobbyChrome(VisualElement root, LobbyToast toast)
         {
             nameText = root.Q<Label>("name-text");
@@ -42,8 +48,8 @@ namespace NodeWar.Lobby
             Bind(root, "purse-coin", () => toast.Show("Coins arrive in a later update"));
             Bind(root, "purse-leaf", () => toast.Show("Gold leaf arrives in a later update"));
 
-            // TODO(settings): there is no settings page yet.
-            Bind(root, "gear", () => toast.Show("Settings arrive in a later update"));
+            Bind(root, "gear", () => { if (SettingsRequested != null) SettingsRequested(); });
+            Bind(root, "history", () => { if (HistoryRequested != null) HistoryRequested(); });
         }
 
         private static void Bind(VisualElement root, string name, System.Action action)

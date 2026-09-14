@@ -2,107 +2,79 @@
 <engine:UXML
     xmlns:engine="UnityEngine.UIElements"
     xmlns:editor="UnityEditor.UIElements"
+    xmlns:lobby="NodeWar.Lobby"
     xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
-        Profile. Replaces ProfilePanel, and takes over rename from RenameModal.
+        Profile, after the prototype's stats and arena view. It is not a tab:
+        it expands in place from the trophy strip when the player name is
+        pressed, and covers the whole lobby, chrome included.
 
-        The page scrolls, because the honest version of this screen is mostly
-        things that do not exist yet and they are worth showing as such rather
-        than compressing into one screenful.
+        Header: back, the name carried over from the strip, Rename.
+        Body:   the record down the left, one stat per row (label above, the
+                panel holds only the value); the arena road on the right,
+                opened scrolled to the bottom so you travel upward, with a rail
+                that fills to your position.
 
-        What is real: the username, and the trophy count. Everything else is a
-        marked placeholder, and deliberately so:
+        Layout first, then the system, then the layout revised. So:
+          - the record is em-dashes - no match result is written anywhere;
+          - the four eras are the prototype's placeholder tiers, held in one
+            table in ProfilePage.cs. No arena system exists;
+          - the username and trophy count are real, and Rename really saves.
 
-          - ARENA has no tier scheme. The design document's four names
-            (Ancient / Bronze Age / Steam Era / Sorcery) do not map onto the
-            districts that exist, so nothing here encodes four named tiers -
-            not in the layout and not in a data structure.
+        Match history is not here. It has its own page, from the TV button
+        beside the gear.
 
-          - The six stat boxes are each a placeholder because no match result
-            is written anywhere in the project. ProfilePanel shows a double dash for the
-            same six; here they say why.
-
-          - Achievements and match history have no backing system at all.
-
-        The trophy bar underneath the count IS real - it is the same
-        TrophyBarLogic window HomepagePanel uses, showing position within a
-        100-trophy band. It is separate from the arena placeholder on purpose:
-        trophies are data, tiers are not.
+        #profile-rename is not shown in place. ProfilePage lifts it out and
+        hands it to the lobby's shared sheet.
     -->
 
     <engine:Style src="project://database/Assets/UI/Styles/Profile.uss" />
 
-    <engine:VisualElement name="profile-page" class="profile">
-        <engine:ScrollView name="profile-scroll" class="profile__scroll">
+    <engine:VisualElement name="profile-arena" class="lb-arena">
+        <engine:VisualElement name="push-safe-area" class="lb-arena__inner" picking-mode="Ignore">
 
-            <engine:VisualElement name="profile-identity" class="card profile__card">
-                <engine:VisualElement class="profile__identity-row">
-                    <engine:Label name="profile-username" class="subtitle profile__username"
-                                  text="player" />
-                    <engine:Button name="profile-rename" class="btn btn--ghost profile__rename"
-                                   text="Rename" />
+            <engine:VisualElement class="lb-arena__head">
+                <engine:Button name="profile-back" class="lb-reset-button lb-back">
+                    <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+                </engine:Button>
+                <engine:VisualElement class="lb-arena__name" picking-mode="Ignore">
+                    <engine:Label name="profile-username" class="lb-arena__name-text lb-w600" text="player" />
+                    <engine:Label name="profile-subtitle" class="lb-arena__name-sub lb-w500" text="Arena — · 0 trophies" />
                 </engine:VisualElement>
+                <engine:VisualElement class="lb-lip lb-rename-wrap" picking-mode="Ignore">
+                    <engine:VisualElement class="lb-lip__block lb-rename-lip" picking-mode="Ignore" />
+                    <engine:Button name="profile-rename" class="lb-reset-button lb-rename lb-w600" text="Rename" />
+                </engine:VisualElement>
+            </engine:VisualElement>
 
-                <!-- Inline, not a modal: the new stack cannot reach RenameModal. -->
-                <engine:VisualElement name="profile-rename-editor" class="profile__rename-editor">
-                    <engine:TextField name="profile-name-field" class="text-input profile__input"
-                                      max-length="16" />
-                    <engine:Label name="profile-name-error" class="caption profile__error" />
-                    <engine:VisualElement class="profile__rename-actions">
-                        <engine:Button name="profile-name-save" class="btn btn--primary profile__rename-action"
-                                       text="Save" />
-                        <engine:Button name="profile-name-cancel" class="btn btn--ghost profile__rename-action"
-                                       text="Cancel" />
+            <engine:VisualElement class="lb-arena__body" picking-mode="Ignore">
+                <engine:ScrollView name="profile-record" class="lb-record" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
+
+                <engine:ScrollView name="profile-road" class="lb-road" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+                    <engine:VisualElement name="profile-road-inner" class="lb-road__inner" picking-mode="Ignore">
+                        <engine:VisualElement name="profile-rail" class="lb-rail" picking-mode="Ignore">
+                            <engine:VisualElement name="profile-rail-fill" class="lb-rail__fill" picking-mode="Ignore" />
+                        </engine:VisualElement>
                     </engine:VisualElement>
-                </engine:VisualElement>
+                </engine:ScrollView>
             </engine:VisualElement>
 
-            <engine:VisualElement name="profile-trophies" class="card profile__card">
-                <engine:VisualElement class="profile__trophy-row">
-                    <engine:Label name="profile-trophy-count" class="title" text="0" />
-                    <engine:Label class="caption" text="trophies" />
-                </engine:VisualElement>
+        </engine:VisualElement>
+    </engine:VisualElement>
 
-                <engine:VisualElement class="profile__bar-track">
-                    <engine:VisualElement name="profile-trophy-fill" class="profile__bar-fill" />
-                </engine:VisualElement>
-
-                <engine:VisualElement class="profile__bar-scale">
-                    <engine:Label name="profile-trophy-min" class="caption" text="0" />
-                    <engine:Label name="profile-trophy-max" class="caption" text="100" />
-                </engine:VisualElement>
-
-                <engine:VisualElement name="profile-arena" class="placeholder profile__arena">
-                    <engine:Label class="placeholder__label" text="ARENA" />
-                    <engine:Label class="placeholder__label"
-                                  text="Tier scheme undecided - placeholder" />
-                </engine:VisualElement>
-            </engine:VisualElement>
-
-            <engine:VisualElement name="profile-stats" class="card profile__card">
-                <engine:Label class="subtitle" text="Record" />
-                <engine:VisualElement name="profile-stat-grid" class="profile__stat-grid" />
-                <engine:Label class="caption profile__note"
-                              text="No match result is written anywhere yet, so none of these are tracked." />
-            </engine:VisualElement>
-
-            <engine:VisualElement class="card profile__card">
-                <engine:Label class="subtitle" text="Achievements" />
-                <engine:VisualElement class="placeholder profile__empty">
-                    <engine:Label class="placeholder__label" text="No achievement system exists" />
-                </engine:VisualElement>
-            </engine:VisualElement>
-
-            <engine:VisualElement class="card profile__card">
-                <engine:Label class="subtitle" text="Match history" />
-                <engine:VisualElement class="placeholder profile__empty">
-                    <engine:Label class="placeholder__label" text="Matches are not recorded" />
-                </engine:VisualElement>
-            </engine:VisualElement>
-
-        </engine:ScrollView>
+    <engine:VisualElement name="profile-rename" picking-mode="Ignore">
+        <engine:Label class="lb-sheet__title lb-w600" text="Change your name" />
+        <engine:TextField name="profile-name-field" class="lb-field lb-field--left" max-length="16" />
+        <engine:Label name="profile-name-note" class="lb-sheet__note lb-w500" text="Up to 16 characters. Visible to opponents." />
+        <engine:VisualElement class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
+            <engine:VisualElement class="lb-lip__block lb-lip__block--gold" picking-mode="Ignore" />
+            <engine:Button name="profile-name-save" class="lb-reset-button lb-bigbtn lb-bigbtn--gold lb-w700" text="Save" />
+        </engine:VisualElement>
+        <engine:VisualElement class="lb-bigbtn-wrap" picking-mode="Ignore">
+            <engine:Button name="profile-name-cancel" class="lb-reset-button lb-bigbtn lb-bigbtn--quiet lb-w700" text="Cancel" />
+        </engine:VisualElement>
     </engine:VisualElement>
 
 </engine:UXML>

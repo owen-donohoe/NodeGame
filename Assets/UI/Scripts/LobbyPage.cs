@@ -3,7 +3,8 @@ using UnityEngine.UIElements;
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// Which page the lobby is showing.
+    /// Which tab page the lobby is showing. Profile is not here: it is an
+    /// overlay that expands from the trophy strip, not a page in the track.
     ///
     /// Deliberately not the same set as NodeWar.Lobby.PanelType, which the uGUI
     /// lobby uses. That enum has GameMode as a page; here mode selection lives
@@ -16,8 +17,7 @@ namespace NodeWar.Lobby
         Home,
         Workshop,
         Shop,
-        Social,
-        Profile
+        Social
     }
 
     /// <summary>
@@ -48,10 +48,5 @@ namespace NodeWar.Lobby
 
         /// <summary>Called when this page is being hidden. Cancel pending work here.</summary>
         public virtual void OnHide() { }
-
-        internal void SetVisible(bool visible)
-        {
-            Root.EnableInClassList("page--hidden", !visible);
-        }
     }
 }

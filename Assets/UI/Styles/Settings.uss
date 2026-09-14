@@ -1,0 +1,92 @@
+/*
+    Settings and Match history - the two push pages.
+
+    The push mechanism, back button and empty state are shared, in Lobby.uss.
+    This file is the grouped-row list the prototype uses for Settings.
+
+    Label rules that set margin or padding are written .lb-root .lb-x, so they
+    outrank the label reset in Lobby.uss.
+*/
+
+.lb-push__safe {
+    flex-grow: 1;
+}
+
+.lb-push__scroll .unity-scroll-view__content-container {
+    padding-bottom: 40px;
+}
+
+.lb-root .lb-group-label {
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    padding-bottom: var(--lb-sp2);
+}
+
+.lb-root .lb-group-label--first {
+    margin-top: 20px;
+}
+
+.lb-group-wrap {
+    margin-left: var(--lb-sp4);
+    margin-right: var(--lb-sp4);
+    margin-bottom: var(--lb-sp4);
+}
+
+.lb-group-wrap > .lb-sticker__shadow {
+    background-color: var(--lb-shadow-soft);
+}
+
+.lb-group {
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    overflow: hidden;
+}
+
+.lb-grow {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    height: 56px;
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    border-bottom-width: var(--lb-bw-thin);
+    border-bottom-color: var(--lb-rule);
+}
+
+.lb-grow--last {
+    border-bottom-width: 0;
+}
+
+.lb-root .lb-grow__label {
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: 18px;
+    color: var(--lb-ink);
+    margin-right: var(--lb-sp3);
+    -unity-text-align: middle-left;
+}
+
+.lb-root .lb-grow__value {
+    font-size: 16px;
+    color: var(--lb-ink-mute);
+}
+
+.lb-root .lb-settings-footnote {
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    -unity-text-align: middle-center;
+    margin-top: var(--lb-sp2);
+}

@@ -14,16 +14,19 @@
           #lobby-root
             #backdrop        stand-in scenery (the prototype fakes it too)
             #safe-area       SafeAreaBinder writes padding here
-              #top-bar         purses and gear          PERSISTENT
-              #strip-wrap      name, trophies, bar      PERSISTENT
-              #page-host       only this changes with a tab
-              #tabbar-dock     floating capsule         PERSISTENT
-              #toast-dock
-            (the play sheet is added last, by LobbyUIController)
+              #top-bar         purses, match history, gear   PERSISTENT
+              #strip-wrap      name, trophies, bar           PERSISTENT
+              #page-host       the page track - slides between tabs
+              #tabbar-dock     floating capsule              PERSISTENT
+            #overlay-host    Profile (expands from the strip), then the push
+                             pages (Settings, Match history) - filled in code
+            #sheet-layer     one shared bottom sheet; pages hand it content
+            #menu-layer      the long-press context menu
+            #toast-dock      above everything, so a toast reads over a sheet
 
         The chrome is a sibling of #page-host, never a child of a page. That is
-        why it does not move when a page changes, and why the trophy bar is one
-        element bound once.
+        why it does not move when the track slides, and why the trophy bar is
+        one element bound once.
 
         Four tabs. Profile is reached from the player name, not a tab.
     -->
@@ -67,7 +70,10 @@
                     <engine:Label name="purse-leaf-value" class="lb-purse__value lb-w600" text="—" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:VisualElement class="lb-spacer" picking-mode="Ignore" />
-                <engine:Button name="gear" class="lb-reset-button lb-gear">
+                <engine:Button name="history" class="lb-reset-button lb-gear lb-gear--history" tooltip="Match history">
+                    <lobby:LobbyIcon kind="Tv" class="lb-icon" picking-mode="Ignore" />
+                </engine:Button>
+                <engine:Button name="gear" class="lb-reset-button lb-gear" tooltip="Settings">
                     <lobby:LobbyIcon kind="Gear" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
@@ -114,11 +120,29 @@
                 </engine:VisualElement>
             </engine:VisualElement>
 
-            <engine:VisualElement name="toast-dock" class="lb-toast-dock" picking-mode="Ignore">
-                <engine:Label name="toast" class="lb-toast lb-w500" text="" picking-mode="Ignore" />
-            </engine:VisualElement>
-
         </engine:VisualElement>
+
+        <engine:VisualElement name="overlay-host" class="lb-sheet-layer" picking-mode="Ignore" />
+
+        <engine:VisualElement name="sheet-layer" class="lb-sheet-layer" picking-mode="Ignore">
+            <engine:VisualElement name="sheet-scrim" class="lb-scrim" picking-mode="Ignore" />
+            <engine:VisualElement name="sheet" class="lb-sheet">
+                <engine:VisualElement name="sheet-handle" class="lb-handle-hit">
+                    <engine:VisualElement class="lb-handle" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement name="sheet-body" picking-mode="Ignore" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <engine:VisualElement name="menu-layer" class="lb-menu-layer" picking-mode="Ignore">
+            <engine:VisualElement name="menu-scrim" class="lb-scrim" picking-mode="Ignore" />
+            <engine:VisualElement name="menu" class="lb-menu" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <engine:VisualElement name="toast-dock" class="lb-toast-dock" picking-mode="Ignore">
+            <engine:Label name="toast" class="lb-toast lb-w500" text="" picking-mode="Ignore" />
+        </engine:VisualElement>
+
     </engine:VisualElement>
 
 </engine:UXML>

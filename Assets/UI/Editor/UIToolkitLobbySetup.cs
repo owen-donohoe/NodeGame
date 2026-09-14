@@ -145,7 +145,10 @@ namespace NodeWar.EditorTools
 
         private static GameObject EnsureSceneRoot(PanelSettings panelSettings, VisualTreeAsset layout)
         {
-            GameObject root = GameObject.Find(RootObjectName);
+            // Not GameObject.Find: it skips inactive objects, and this root is
+            // left inactive on purpose (see the end of this method), so a second
+            // run would build a duplicate and repoint LobbyManager at it.
+            GameObject root = FindSceneRoot(RootObjectName);
 
             if (root == null)
             {
@@ -177,6 +180,8 @@ namespace NodeWar.EditorTools
             AssignLayout(so, "profilePageLayout", Load(UIRoot + "/Layouts/ProfilePage.uxml"));
             AssignLayout(so, "shopPageLayout", Load(UIRoot + "/Layouts/ShopPage.uxml"));
             AssignLayout(so, "socialPageLayout", Load(UIRoot + "/Layouts/SocialPage.uxml"));
+            AssignLayout(so, "settingsPageLayout", Load(UIRoot + "/Layouts/SettingsPage.uxml"));
+            AssignLayout(so, "matchHistoryPageLayout", Load(UIRoot + "/Layouts/MatchHistoryPage.uxml"));
 
             AssignDefinitions<SuitDefinition>(so, "allSuits", DataRoot + "/Suits");
             AssignDefinitions<NodeDefinition>(so, "allNodes", DataRoot + "/Nodes");
@@ -223,6 +228,18 @@ namespace NodeWar.EditorTools
 
             property.objectReferenceValue = root;
             so.ApplyModifiedProperties();
+        }
+
+        private static GameObject FindSceneRoot(string name)
+        {
+            GameObject[] roots = SceneManager.GetActiveScene().GetRootGameObjects();
+
+            for (int i = 0; i < roots.Length; i++)
+            {
+                if (roots[i].name == name) return roots[i];
+            }
+
+            return null;
         }
 
         private static VisualTreeAsset Load(string path)

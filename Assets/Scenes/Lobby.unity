@@ -5560,7 +5560,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 12.9999695, y: 0}
+  m_AnchoredPosition: {x: 13, y: 0}
   m_SizeDelta: {x: 300, y: 0}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &498715102
@@ -12281,6 +12281,8 @@ MonoBehaviour:
   profilePageLayout: {fileID: 9197481963319205126, guid: 7abbf37ed3a1b2247a89ebcbccb3b906, type: 3}
   shopPageLayout: {fileID: 9197481963319205126, guid: e319daeef966bad47b61360a7875f154, type: 3}
   socialPageLayout: {fileID: 9197481963319205126, guid: 7e8bc43c1d652b24a933b278142082d2, type: 3}
+  settingsPageLayout: {fileID: 9197481963319205126, guid: af2f55ffab2587941b202687d3a410d8, type: 3}
+  matchHistoryPageLayout: {fileID: 9197481963319205126, guid: b45380ecc2166884b85d1d6ab7293991, type: 3}
   allSuits:
   - {fileID: 11400000, guid: e36fb10665454a948abb0673cdd5c15e, type: 2}
   - {fileID: 11400000, guid: edd425e184b3e9f4aa65b59117bf0927, type: 2}

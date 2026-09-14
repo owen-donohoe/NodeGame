@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -20,6 +21,7 @@ namespace NodeWar.Lobby
         private const long BobHalfCycleMs = 1700;
 
         private readonly LobbyToast toast;
+        private readonly LobbyContextMenu menu;
         private readonly SuitDefinition[] allSuits;
         private readonly NodeDefinition[] allNodes;
 
@@ -36,11 +38,12 @@ namespace NodeWar.Lobby
         /// <summary>Raised when the loadout preview is pressed.</summary>
         public event System.Action LoadoutRequested;
 
-        public HomePage(VisualTreeAsset layout, LobbyToast toast,
+        public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu,
                         SuitDefinition[] allSuits, NodeDefinition[] allNodes)
             : base(LobbyPageID.Home, Build(layout))
         {
             this.toast = toast;
+            this.menu = menu;
             this.allSuits = allSuits;
             this.allNodes = allNodes;
 
@@ -63,13 +66,37 @@ namespace NodeWar.Lobby
 
             // TODO(villager): there is no appearance editor.
             Bind("home-villager", () => Say("Villager customisation arrives in a later update"));
+
+            AttachMenus();
+        }
+
+        /// <summary>The prototype's long-press menus on the boxes and the villager.</summary>
+        private void AttachMenus()
+        {
+            if (menu == null) return;
+
+            System.Func<IList<LobbyMenuItem>> boxRows = () => new List<LobbyMenuItem>
+            {
+                new LobbyMenuItem("What is in a box", () => Say("Cosmetics, and rarely an unlock from your arena")),
+                new LobbyMenuItem("Open now", () => Say("Opening boxes arrives in a later update")),
+                new LobbyMenuItem("History", () => Say("Box history arrives in a later update")),
+            };
+
+            menu.Attach(Root.Q<Button>("home-box-victory"), boxRows);
+            menu.Attach(Root.Q<Button>("home-box-daily"), boxRows);
+
+            menu.Attach(Root.Q<Button>("home-villager"), () => new List<LobbyMenuItem>
+            {
+                new LobbyMenuItem("Change appearance", () => Say("Villager customisation arrives in a later update")),
+                new LobbyMenuItem("Go to Workshop", () => { if (LoadoutRequested != null) LoadoutRequested(); }),
+            });
         }
 
         private static VisualElement Build(VisualTreeAsset layout)
         {
             VisualElement root = new VisualElement();
             root.name = "page-home";
-            root.AddToClassList("lb-home-host");
+            root.AddToClassList("lb-page-flush");
             root.pickingMode = PickingMode.Ignore;
 
             if (layout != null) layout.CloneTree(root);

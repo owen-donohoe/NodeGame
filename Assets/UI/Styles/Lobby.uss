@@ -81,6 +81,32 @@
     --lb-prop-shadow: rgba(90, 70, 40, 0.28);
     --lb-hat: rgb(201, 168, 95);
 
+    /* ---- arena road eras (placeholder tiers, see ProfilePage) ---- */
+    --lb-era-sorcery: rgb(43, 33, 56);
+    --lb-era-sorcery-ink: rgb(237, 227, 200);
+    --lb-era-sorcery-edge: rgb(15, 10, 22);
+    --lb-era-steam: rgb(221, 230, 240);
+    --lb-era-bronze: rgb(228, 210, 172);
+    --lb-era-ancient: rgb(185, 172, 151);
+    --lb-chip-got: rgba(255, 255, 255, 0.4);
+
+    /* ---- workshop: shape families, slots, picker ---- */
+    --lb-fam-round: rgb(127, 175, 99);
+    --lb-fam-square: rgb(126, 140, 168);
+    --lb-fam-triangle: rgb(195, 112, 90);
+    --lb-fam-combat: rgb(201, 139, 94);
+    --lb-slot-empty: rgba(244, 233, 213, 0.5);
+    --lb-slot-empty-edge: rgba(45, 35, 25, 0.45);
+    --lb-ready-ring: rgba(245, 195, 60, 0.7);
+    --lb-veil: rgba(235, 220, 195, 0.55);
+    --lb-pick-lip: rgba(90, 70, 40, 0.4);
+
+    /* ---- shop stall ---- */
+    --lb-awning-red: rgb(200, 106, 92);
+    --lb-awning-cream: rgb(242, 230, 210);
+    --lb-stall-wood: rgb(156, 108, 60);
+    --lb-stall-counter: rgb(181, 129, 74);
+
     /* ---- spacing, 4pt base ---- */
     --lb-sp1: 4px;
     --lb-sp2: 8px;
@@ -274,14 +300,33 @@
     overflow: hidden;
 }
 
-/* Pages not yet rebuilt keep Theme.uss's .page, but must clear the
-   floating tab bar, which now sits over the bottom of the page. */
-.lb-page-host > .page {
+/* The pages sit side by side in one track, which slides to show a page -
+   a tab press scrolls rather than cuts. NavigationController sets each
+   page to the host width and the track translate. */
+.lb-page-track {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: row;
+    transition-property: translate;
+    transition-duration: var(--lb-t-page);
+    transition-timing-function: ease-out;
+}
+
+.lb-page-track > .page {
+    flex-shrink: 0;
+    flex-grow: 0;
+}
+
+/* Pages not yet rebuilt keep Theme.uss.s .page, but must clear the
+   floating tab bar, which sits over the bottom of the page. */
+.lb-page-track > .page {
     padding-bottom: 96px;
 }
 
-/* Home is rebuilt: it places its own content edge to edge. */
-.lb-page-host > .lb-home-host {
+/* Rebuilt pages place their own content edge to edge. */
+.lb-page-track > .lb-page-flush {
     padding-left: 0;
     padding-right: 0;
     padding-top: 0;
@@ -384,6 +429,10 @@
     background-color: var(--lb-dark-glass);
     align-items: center;
     justify-content: center;
+}
+
+.lb-gear--history {
+    margin-right: var(--lb-sp2);
 }
 
 .lb-gear > .lb-icon {
@@ -595,259 +644,10 @@
     flex-shrink: 0;
     -unity-background-scale-mode: scale-to-fit;
 }
-
 /* ===================================================================
-   HOME
+   Lips. The prototype's 0 5px 0 box-shadow is a solid block behind.
    =================================================================== */
 
-.lb-home-page {
-    flex-grow: 1;
-    padding-left: 0;
-    padding-right: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-}
-
-/* ---- boxes ---- */
-
-.lb-boxcol {
-    position: absolute;
-    left: var(--lb-sp4);
-    top: 24px;
-    width: 130px;
-}
-
-.lb-box {
-    align-items: center;
-    justify-content: center;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: var(--lb-r-md);
-    border-top-right-radius: var(--lb-r-md);
-    border-bottom-left-radius: var(--lb-r-md);
-    border-bottom-right-radius: var(--lb-r-md);
-    transition-property: scale, translate;
-    transition-duration: var(--lb-t-press);
-    transition-timing-function: ease-in;
-}
-
-.lb-box:active {
-    scale: 0.96 0.96;
-    translate: 0 2px;
-}
-
-.lb-box-wrap--big {
-    height: 130px;
-    margin-bottom: var(--lb-sp3);
-}
-
-.lb-box-wrap--small {
-    height: 78px;
-}
-
-.lb-box-wrap > .lb-box {
-    flex-grow: 1;
-}
-
-.lb-box .lb-icon {
-    width: 38px;
-    height: 38px;
-    -unity-background-image-tint-color: var(--lb-ink-mute);
-}
-
-.lb-box-wrap--small .lb-icon {
-    width: 26px;
-    height: 26px;
-}
-
-.lb-root .lb-box__label {
-    font-size: 14px;
-    color: var(--lb-ink-mute);
-    margin-top: 4px;
-    -unity-text-align: middle-center;
-}
-
-.lb-root .lb-badge {
-    position: absolute;
-    top: -11px;
-    right: -11px;
-    min-width: 30px;
-    height: 30px;
-    padding-left: 6px;
-    padding-right: 6px;
-    border-top-left-radius: 15px;
-    border-top-right-radius: 15px;
-    border-bottom-left-radius: 15px;
-    border-bottom-right-radius: 15px;
-    background-color: var(--lb-badge);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-badge-edge);
-    border-right-color: var(--lb-badge-edge);
-    border-top-color: var(--lb-badge-edge);
-    border-bottom-color: var(--lb-badge-edge);
-    color: var(--lb-white);
-    font-size: 16px;
-    -unity-text-align: middle-center;
-}
-
-.lb-root .lb-badge--zero {
-    background-color: var(--lb-off);
-    border-left-color: var(--lb-off-edge);
-    border-right-color: var(--lb-off-edge);
-    border-top-color: var(--lb-off-edge);
-    border-bottom-color: var(--lb-off-edge);
-}
-
-/* ---- loadout preview: deliberately quiet - no border, no shadow ---- */
-
-.lb-loadcol {
-    position: absolute;
-    right: var(--lb-sp4);
-    top: 28px;
-    align-items: center;
-    opacity: 0.62;
-    transition-property: opacity;
-    transition-duration: var(--lb-t-rel);
-}
-
-.lb-loadcol:hover {
-    opacity: 1;
-}
-
-.lb-lpi {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 6px;
-    border-top-left-radius: 11px;
-    border-top-right-radius: 11px;
-    border-bottom-left-radius: 11px;
-    border-bottom-right-radius: 11px;
-    background-color: var(--lb-chip-bg);
-    align-items: center;
-    justify-content: center;
-}
-
-.lb-lpi--gap {
-    margin-top: 9px;
-}
-
-.lb-root .lb-lpi__letter {
-    font-size: 19px;
-    color: var(--lb-ink-mute);
-    -unity-text-align: middle-center;
-}
-
-.lb-root .lb-lpcap {
-    font-size: 11px;
-    color: var(--lb-ink-mute);
-    letter-spacing: 0.7px;
-    margin-top: 3px;
-    -unity-text-align: middle-center;
-}
-
-/* ---- villager ---- */
-
-.lb-villager-dock {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 30%;
-    align-items: center;
-}
-
-.lb-root .lb-tapedit {
-    font-size: 15px;
-    color: var(--lb-ink-mute);
-    margin-bottom: 14px;
-}
-
-.lb-villager {
-    align-items: center;
-    transition-property: translate;
-    transition-duration: var(--lb-t-bob);
-    transition-timing-function: ease-in-out;
-}
-
-.lb-villager--up {
-    translate: 0 -6px;
-}
-
-.lb-villager__body {
-    width: 56px;
-    height: 78px;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: 26px;
-    border-top-right-radius: 26px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    align-items: center;
-}
-
-.lb-villager > .lb-sticker__shadow {
-    top: 5px;
-    bottom: -5px;
-    border-top-left-radius: 26px;
-    border-top-right-radius: 26px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-}
-
-.lb-villager__hat {
-    position: absolute;
-    top: -11px;
-    width: 52px;
-    height: 14px;
-    background-color: var(--lb-hat);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: 9px;
-    border-top-right-radius: 9px;
-    border-bottom-left-radius: 9px;
-    border-bottom-right-radius: 9px;
-}
-
-.lb-villager__face {
-    position: absolute;
-    top: 17px;
-    width: 26px;
-    height: 26px;
-    -unity-background-image-tint-color: var(--lb-edge);
-}
-
-/* ---- call to action ---- */
-
-.lb-cta {
-    position: absolute;
-    left: var(--lb-sp4);
-    right: var(--lb-sp4);
-    bottom: 100px;
-}
-
-/* The prototype's 0 5px 0 lip is a solid block behind the button. */
 .lb-lip {
     position: relative;
 }
@@ -860,79 +660,6 @@
     bottom: -5px;
 }
 
-.lb-battle {
-    height: 74px;
-    background-color: var(--lb-gold);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-gold-edge);
-    border-right-color: var(--lb-gold-edge);
-    border-top-color: var(--lb-gold-edge);
-    border-bottom-color: var(--lb-gold-edge);
-    border-top-left-radius: var(--lb-r-lg);
-    border-top-right-radius: var(--lb-r-lg);
-    border-bottom-left-radius: var(--lb-r-lg);
-    border-bottom-right-radius: var(--lb-r-lg);
-    font-size: 30px;
-    letter-spacing: 0.5px;
-    color: var(--lb-gold-text);
-    transition-property: translate;
-    transition-duration: var(--lb-t-press);
-    transition-timing-function: ease-in;
-}
-
-.lb-battle:active {
-    translate: 0 4px;
-}
-
-.lb-battle-lip {
-    background-color: var(--lb-gold-edge);
-    border-top-left-radius: var(--lb-r-lg);
-    border-top-right-radius: var(--lb-r-lg);
-    border-bottom-left-radius: var(--lb-r-lg);
-    border-bottom-right-radius: var(--lb-r-lg);
-}
-
-.lb-boxmeter {
-    margin-top: var(--lb-sp3);
-    flex-direction: row;
-    align-items: center;
-    background-color: var(--lb-meter-bg);
-    border-top-left-radius: 14px;
-    border-top-right-radius: 14px;
-    border-bottom-left-radius: 14px;
-    border-bottom-right-radius: 14px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    padding-left: 16px;
-    padding-right: 16px;
-}
-
-.lb-root .lb-boxmeter__label {
-    font-size: 15px;
-    color: var(--lb-ink-inv);
-    margin-right: var(--lb-sp3);
-    flex-shrink: 0;
-}
-
-.lb-boxmeter__track {
-    flex-grow: 1;
-    height: 12px;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    background-color: var(--lb-meter-track);
-    overflow: hidden;
-}
-
-.lb-boxmeter__fill {
-    height: 100%;
-    width: 0;
-    background-color: var(--lb-green);
-}
 
 /* ===================================================================
    SHEET. Pinned to the bottom edge by construction, so it cannot render
@@ -1223,6 +950,7 @@
     color: var(--lb-ink);
     padding-left: var(--lb-sp4);
     padding-right: var(--lb-sp4);
+    --unity-selection-color: var(--lb-gold);
     -unity-text-align: middle-center;
 }
 
@@ -1266,4 +994,304 @@
 .lb-root .lb-toast--on {
     opacity: 1;
     translate: 0 0;
+}
+
+/* ===================================================================
+   PUSH PAGES (Settings, Match history). Full-screen, sliding in from the
+   right over everything, including the chrome. Same mechanism as the
+   sheet on the X axis: pinned by construction, never display-toggled, so
+   the slide always runs.
+   =================================================================== */
+
+.lb-push {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--lb-paper);
+    translate: 100% 0;
+    transition-property: translate;
+    transition-duration: 300ms;
+    transition-timing-function: ease-out;
+}
+
+.lb-push--open {
+    translate: 0 0;
+}
+
+.lb-push__scroll {
+    flex-grow: 1;
+}
+
+.lb-push__header {
+    flex-direction: row;
+    align-items: center;
+    padding-top: var(--lb-sp4);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+}
+
+.lb-root .lb-push__title {
+    font-size: 30px;
+    color: var(--lb-ink);
+    margin-left: var(--lb-sp3);
+}
+
+/* The round back button shared by push pages and the Profile header. */
+.lb-back {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background-color: var(--lb-paper);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-back > .lb-icon {
+    width: 19px;
+    height: 19px;
+    -unity-background-image-tint-color: var(--lb-ink);
+}
+
+/* ===================================================================
+   EMPTY STATE - a system that has nothing to show yet.
+   =================================================================== */
+
+.lb-stub {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    padding-left: var(--lb-sp6);
+    padding-right: var(--lb-sp6);
+    padding-bottom: 130px;
+}
+
+.lb-stub__icon {
+    width: 96px;
+    height: 96px;
+    background-color: var(--lb-card);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-lg);
+    border-top-right-radius: var(--lb-r-lg);
+    border-bottom-left-radius: var(--lb-r-lg);
+    border-bottom-right-radius: var(--lb-r-lg);
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--lb-sp4);
+}
+
+.lb-stub__icon > .lb-icon {
+    width: 40px;
+    height: 40px;
+    -unity-background-image-tint-color: var(--lb-ink-mute);
+}
+
+.lb-root .lb-stub__title {
+    font-size: 26px;
+    color: var(--lb-ink);
+    margin-bottom: var(--lb-sp2);
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-stub__body {
+    font-size: 17px;
+    color: var(--lb-ink-mute);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+/* ===================================================================
+   CONTEXT MENU. USS has no backdrop-filter, so no blur: dim with a scrim
+   and lift the pressed element. The lift is what sells it.
+   =================================================================== */
+
+.lb-menu-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.lb-menu {
+    position: absolute;
+    min-width: 200px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    overflow: hidden;
+    opacity: 0;
+    scale: 0.9 0.9;
+    transform-origin: top;
+    transition-property: opacity, scale;
+    transition-duration: 140ms, 180ms;
+    transition-timing-function: ease-out, ease-out-back;
+}
+
+.lb-menu--on {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.lb-menu__row {
+    height: 52px;
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    font-size: 18px;
+    color: var(--lb-ink);
+    -unity-text-align: middle-left;
+    border-bottom-width: var(--lb-bw-thin);
+    border-bottom-color: var(--lb-rule);
+}
+
+.lb-menu__row--last {
+    border-bottom-width: 0;
+}
+
+.lb-menu__row:active {
+    background-color: var(--lb-card);
+}
+
+/* Applied to the long-pressed element while its menu is open. */
+.lb-lifted {
+    scale: 1.1 1.1;
+}
+
+/* ===================================================================
+   SWITCH and SLIDER - the prototype's settings controls.
+   =================================================================== */
+
+.lb-switch {
+    width: 52px;
+    height: 31px;
+    flex-shrink: 0;
+    border-top-left-radius: 15.5px;
+    border-top-right-radius: 15.5px;
+    border-bottom-left-radius: 15.5px;
+    border-bottom-right-radius: 15.5px;
+    background-color: var(--lb-off);
+    transition-property: background-color;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-switch__knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 25px;
+    height: 25px;
+    border-top-left-radius: 12.5px;
+    border-top-right-radius: 12.5px;
+    border-bottom-left-radius: 12.5px;
+    border-bottom-right-radius: 12.5px;
+    background-color: var(--lb-white);
+    transition-property: translate;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-switch--on {
+    background-color: var(--lb-green);
+}
+
+.lb-switch--on > .lb-switch__knob {
+    translate: 21px 0;
+}
+
+/* UI Toolkit's Slider, restyled. The tracker and dragger are its children. */
+.lb-slider {
+    flex-grow: 1.4;
+    flex-basis: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.lb-slider .unity-base-slider__drag-container {
+    height: 22px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.lb-slider .unity-base-slider__tracker {
+    top: 6px;
+    height: 10px;
+    margin-top: 0;
+    background-color: var(--lb-track);
+    border-left-width: var(--lb-bw-thin);
+    border-right-width: var(--lb-bw-thin);
+    border-top-width: var(--lb-bw-thin);
+    border-bottom-width: var(--lb-bw-thin);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.lb-slider .unity-base-slider__dragger {
+    top: 0;
+    width: 22px;
+    height: 22px;
+    margin-top: 0;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    border-bottom-left-radius: 11px;
+    border-bottom-right-radius: 11px;
+}
+
+.lb-slider .unity-base-slider__dragger-border {
+    display: none;
+}
+
+/* A sheet note that is reporting a problem, e.g. a name that will not save. */
+.lb-root .lb-sheet__note--error {
+    color: var(--lb-badge);
+}
+
+/* A field whose text is prose rather than a code. */
+.lb-field--left > .unity-base-text-field__input {
+    -unity-text-align: middle-left;
 }

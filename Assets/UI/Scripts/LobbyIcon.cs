@@ -14,7 +14,16 @@ namespace NodeWar.Lobby
         Smile,    // prototype: ☺
         Gear,     // prototype: ⚙
         Envelope, // prototype: ✉
-        Mouth     // the villager's smile: a CSS bottom border with radii, which USS draws flat
+        Mouth,    // the villager's smile: a CSS bottom border with radii, which USS draws flat
+        Tv,       // match history
+        Back,     // prototype: ←
+        Flag,     // prototype: ⚑
+        Hat,      // prototype: ◠
+        Diamond,  // prototype: ❖
+        District, // prototype: 🏛
+        Suit,     // prototype: 🥋
+        Lock,     // prototype: 🔒
+        Pip       // prototype: ◆
     }
 
     /// <summary>
@@ -93,6 +102,15 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Gear: DrawGear(p); break;
                 case LobbyIconKind.Envelope: DrawEnvelope(p); break;
                 case LobbyIconKind.Mouth: DrawMouth(p); break;
+                case LobbyIconKind.Tv: DrawTv(p); break;
+                case LobbyIconKind.Back: DrawBack(p); break;
+                case LobbyIconKind.Flag: DrawFlag(p); break;
+                case LobbyIconKind.Hat: DrawHat(p); break;
+                case LobbyIconKind.Diamond: DrawDiamond(p); break;
+                case LobbyIconKind.District: DrawDistrict(p); break;
+                case LobbyIconKind.Suit: DrawSuit(p); break;
+                case LobbyIconKind.Lock: DrawLock(p); break;
+                case LobbyIconKind.Pip: Diamond(p, 12f, 12f, 10f); break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();
@@ -241,6 +259,158 @@ namespace NodeWar.Lobby
             p.MoveTo(new Vector2(2.5f, 3f));
             p.QuadraticCurveTo(new Vector2(12f, 13.5f), new Vector2(21.5f, 3f));
             p.Stroke();
+        }
+
+        // A television: screen, antennae, feet.
+        private static void DrawTv(Painter2D p)
+        {
+            p.lineWidth = 2f;
+            RoundedRect(p, 2.5f, 7f, 19f, 13f, 2.5f);
+            p.Stroke();
+
+            p.BeginPath();
+            p.MoveTo(new Vector2(8f, 2.5f));
+            p.LineTo(new Vector2(12f, 6.5f));
+            p.LineTo(new Vector2(16f, 2.5f));
+            p.MoveTo(new Vector2(7f, 20f));
+            p.LineTo(new Vector2(6f, 22.5f));
+            p.MoveTo(new Vector2(17f, 20f));
+            p.LineTo(new Vector2(18f, 22.5f));
+            p.Stroke();
+        }
+
+        // ← - an arrow pointing left.
+        private static void DrawBack(Painter2D p)
+        {
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(20f, 12f));
+            p.LineTo(new Vector2(4.5f, 12f));
+            p.MoveTo(new Vector2(11f, 5f));
+            p.LineTo(new Vector2(4f, 12f));
+            p.LineTo(new Vector2(11f, 19f));
+            p.Stroke();
+        }
+
+        // ⚑ - a pennant on a pole.
+        private static void DrawFlag(Painter2D p)
+        {
+            p.lineWidth = 2.2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(5f, 22f));
+            p.LineTo(new Vector2(5f, 2.5f));
+            p.Stroke();
+
+            p.BeginPath();
+            p.MoveTo(new Vector2(6f, 3f));
+            p.LineTo(new Vector2(20f, 7.5f));
+            p.LineTo(new Vector2(6f, 12.5f));
+            p.ClosePath();
+            p.Fill();
+        }
+
+        // ◠ - an upper half-circle, the prototype's straw hat.
+        private static void DrawHat(Painter2D p)
+        {
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(4f, 16f));
+            p.QuadraticCurveTo(new Vector2(4f, 6f), new Vector2(12f, 6f));
+            p.QuadraticCurveTo(new Vector2(20f, 6f), new Vector2(20f, 16f));
+            p.Stroke();
+        }
+
+        // ❖ - four diamonds in a diamond.
+        private static void DrawDiamond(Painter2D p)
+        {
+            Diamond(p, 12f, 5f, 4f);
+            Diamond(p, 19f, 12f, 4f);
+            Diamond(p, 12f, 19f, 4f);
+            Diamond(p, 5f, 12f, 4f);
+        }
+
+        // 🏛 - a columned building.
+        private static void DrawDistrict(Painter2D p)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(2.5f, 8.5f));
+            p.LineTo(new Vector2(12f, 2.5f));
+            p.LineTo(new Vector2(21.5f, 8.5f));
+            p.ClosePath();
+            p.Fill();
+
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(6f, 11f)); p.LineTo(new Vector2(6f, 18f));
+            p.MoveTo(new Vector2(12f, 11f)); p.LineTo(new Vector2(12f, 18f));
+            p.MoveTo(new Vector2(18f, 11f)); p.LineTo(new Vector2(18f, 18f));
+            p.Stroke();
+
+            p.lineWidth = 2.6f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(3f, 21f));
+            p.LineTo(new Vector2(21f, 21f));
+            p.Stroke();
+        }
+
+        // 🥋 - a robe with a belt.
+        private static void DrawSuit(Painter2D p)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(8f, 3f));
+            p.LineTo(new Vector2(12f, 7f));
+            p.LineTo(new Vector2(16f, 3f));
+            p.LineTo(new Vector2(22f, 7f));
+            p.LineTo(new Vector2(19.5f, 11.5f));
+            p.LineTo(new Vector2(17.5f, 10.5f));
+            p.LineTo(new Vector2(17.5f, 21.5f));
+            p.LineTo(new Vector2(6.5f, 21.5f));
+            p.LineTo(new Vector2(6.5f, 10.5f));
+            p.LineTo(new Vector2(4.5f, 11.5f));
+            p.LineTo(new Vector2(2f, 7f));
+            p.ClosePath();
+            p.Fill();
+        }
+
+        // 🔒 - a padlock.
+        private static void DrawLock(Painter2D p)
+        {
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(7.5f, 11f));
+            p.LineTo(new Vector2(7.5f, 8f));
+            p.Arc(new Vector2(12f, 8f), 4.5f, 180f, 360f);
+            p.LineTo(new Vector2(16.5f, 11f));
+            p.Stroke();
+
+            RoundedRect(p, 4f, 10.5f, 16f, 11.5f, 2f);
+            p.Fill();
+        }
+
+        private static void Diamond(Painter2D p, float cx, float cy, float r)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(cx, cy - r));
+            p.LineTo(new Vector2(cx + r, cy));
+            p.LineTo(new Vector2(cx, cy + r));
+            p.LineTo(new Vector2(cx - r, cy));
+            p.ClosePath();
+            p.Fill();
+        }
+
+        private static void RoundedRect(Painter2D p, float x, float y, float w, float h, float r)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(x + r, y));
+            p.LineTo(new Vector2(x + w - r, y));
+            p.ArcTo(new Vector2(x + w, y), new Vector2(x + w, y + r), r);
+            p.LineTo(new Vector2(x + w, y + h - r));
+            p.ArcTo(new Vector2(x + w, y + h), new Vector2(x + w - r, y + h), r);
+            p.LineTo(new Vector2(x + r, y + h));
+            p.ArcTo(new Vector2(x, y + h), new Vector2(x, y + h - r), r);
+            p.LineTo(new Vector2(x, y + r));
+            p.ArcTo(new Vector2(x, y), new Vector2(x + r, y), r);
+            p.ClosePath();
         }
 
         private static Vector2 Polar(Vector2 centre, float radius, float degrees)

@@ -1,164 +1,410 @@
 /*
-    Profile.
+    Profile - the stats and arena view that expands from the trophy strip,
+    after lobby-prototype.html.
 
-    Colour, spacing and type come from Theme.uss custom properties. Numbers
-    below are layout proportions, not design tokens.
+    The expand is not animated with left/top/height, which UI Toolkit will
+    not transition smoothly. The view is built at full size and ProfilePage
+    scales and translates it down onto the strip's rect, then transitions
+    back to identity; the content fades in a beat later, which hides the
+    stretch. transform-origin is top-left so that mapping is plain arithmetic.
+
+    Label rules that set margin or padding are written .lb-root .lb-x, so they
+    outrank the label reset in Lobby.uss.
 */
 
-.profile {
+.lb-arena {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--lb-paper);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    overflow: hidden;
+    transform-origin: left top;
+    opacity: 0;
+    transition-property: translate, scale, opacity;
+    transition-duration: 340ms, 340ms, 120ms;
+    transition-timing-function: ease-out-cubic, ease-out-cubic, linear;
+}
+
+.lb-arena--open {
+    opacity: 1;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+/* Set for the one frame the view is snapped onto the strip before growing. */
+.lb-arena--instant {
+    transition-duration: 0s;
+}
+
+.lb-arena__inner {
     flex-grow: 1;
-    flex-direction: column;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 200ms;
+    transition-delay: 0s;
 }
 
-.profile__scroll {
-    flex-grow: 1;
+.lb-arena--open > .lb-arena__inner {
+    opacity: 1;
+    transition-delay: 160ms;
 }
 
-.profile__card {
-    margin-bottom: var(--space-md);
-}
+/* ---- header ---- */
 
-/* ===================================================================
-   Identity and rename
-   =================================================================== */
-
-.profile__identity-row {
+.lb-arena__head {
     flex-direction: row;
-    justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
+    padding-top: 16px;
+    padding-bottom: 12px;
+    padding-left: 12px;
+    padding-right: var(--lb-sp4);
+    background-color: var(--lb-paper-hi);
+    border-bottom-width: var(--lb-bw);
+    border-bottom-color: var(--lb-edge);
 }
 
-.profile__username {
+.lb-arena__name {
     flex-grow: 1;
     flex-shrink: 1;
+    margin-left: var(--lb-sp2);
+    margin-right: var(--lb-sp2);
     overflow: hidden;
 }
 
-.profile__rename {
+.lb-root .lb-arena__name-text {
+    font-size: 23px;
+    color: var(--lb-ink);
+    text-overflow: ellipsis;
+}
+
+.lb-root .lb-arena__name-sub {
+    font-size: 14px;
+    color: var(--lb-ink-mute);
+    margin-top: 2px;
+}
+
+.lb-rename-wrap {
     flex-shrink: 0;
-    margin-left: var(--space-sm);
-    font-size: var(--text-sm);
 }
 
-/*
-    Collapsed until Rename is pressed. Hidden with display:none rather than
-    opacity, so it takes no space and cannot be tabbed into while closed.
-*/
-.profile__rename-editor {
-    flex-direction: column;
-    margin-top: var(--space-sm);
-    display: none;
+.lb-rename-wrap > .lb-lip__block {
+    top: 3px;
+    bottom: -3px;
 }
 
-.profile__rename-editor--open {
-    display: flex;
+.lb-rename-lip {
+    background-color: var(--lb-shadow);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
 }
 
-.profile__input {
-    margin-top: var(--space-xs);
+.lb-rename {
+    height: 44px;
+    padding-left: 15px;
+    padding-right: 15px;
+    background-color: var(--lb-card);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    font-size: 16px;
+    color: var(--lb-ink);
+    transition-property: translate;
+    transition-duration: var(--lb-t-press);
 }
 
-.profile__error {
-    color: var(--danger);
-    -unity-font-style: bold;
-    margin-top: var(--space-xs);
-    display: none;
+.lb-rename:active {
+    translate: 0 2px;
 }
 
-.profile__error--visible {
-    display: flex;
-}
+/* ---- body ---- */
 
-.profile__rename-actions {
-    flex-direction: row;
-    margin-top: var(--space-sm);
-}
-
-.profile__rename-action {
+.lb-arena__body {
     flex-grow: 1;
-    flex-basis: 0;
-    margin-right: var(--space-sm);
-    font-size: var(--text-sm);
-}
-
-/* ===================================================================
-   Trophies - the one part of this page that is real
-   =================================================================== */
-
-.profile__trophy-row {
     flex-direction: row;
-    align-items: flex-end;
 }
 
-.profile__trophy-row > .caption {
-    margin-left: var(--space-sm);
-    margin-bottom: var(--space-xs);
+/* The record: one stat per row, down the left. */
+.lb-record {
+    width: 45%;
+    flex-shrink: 0;
+    background-color: var(--lb-paper);
+    border-right-width: var(--lb-bw);
+    border-right-color: var(--lb-edge);
 }
 
-.profile__bar-track {
-    height: 14px;
-    margin-top: var(--space-sm);
-    background-color: rgba(72, 56, 40, 0.15);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-sm);
+.lb-record .unity-scroll-view__content-container {
+    padding-top: var(--lb-sp4);
+    padding-bottom: 40px;
+    padding-left: var(--lb-sp3);
+    padding-right: var(--lb-sp3);
+}
+
+.lb-root .lb-stat__label {
+    font-size: 12px;
+    color: var(--lb-ink-mute);
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+    padding-left: 3px;
+}
+
+.lb-stat__wrap {
+    margin-bottom: var(--lb-sp3);
+}
+
+.lb-stat__wrap > .lb-sticker__shadow {
+    left: 2px;
+    top: 3px;
+    right: -2px;
+    bottom: -3px;
+    background-color: rgba(90, 70, 40, 0.28);
+    border-top-left-radius: var(--lb-r-sm);
+    border-top-right-radius: var(--lb-r-sm);
+    border-bottom-left-radius: var(--lb-r-sm);
+    border-bottom-right-radius: var(--lb-r-sm);
+}
+
+.lb-root .lb-stat__panel {
+    height: 54px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-sm);
+    border-top-right-radius: var(--lb-r-sm);
+    border-bottom-left-radius: var(--lb-r-sm);
+    border-bottom-right-radius: var(--lb-r-sm);
+    font-size: 24px;
+    color: var(--lb-ink);
+    -unity-text-align: middle-center;
+}
+
+/* ---- the arena road ---- */
+
+.lb-road {
+    flex-grow: 1;
+    background-color: var(--lb-paper);
+}
+
+.lb-road__inner {
+    position: relative;
+    padding-top: 28px;
+    padding-bottom: 40px;
+    padding-left: 48px;
+    padding-right: 12px;
+}
+
+.lb-rail {
+    position: absolute;
+    left: 22px;
+    top: 28px;
+    bottom: 40px;
+    width: 14px;
+    background-color: var(--lb-track);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
     overflow: hidden;
-    flex-direction: row;
 }
 
-/*
-    Width is set from C# as a percentage of the track. A fill that is only a
-    colour would be unreadable to anyone who cannot separate it from the
-    track, so the numbers underneath carry the same information in text.
-*/
-.profile__bar-fill {
-    background-color: var(--primary);
-    height: 100%;
-    width: 0;
+/* Flat: the prototype's gradient has no USS equivalent. */
+.lb-rail__fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0;
+    background-color: var(--lb-gold);
+    transition-property: height;
+    transition-duration: 700ms;
+    transition-delay: 250ms;
+    transition-timing-function: ease-out;
 }
 
-.profile__bar-scale {
-    flex-direction: row;
-    justify-content: space-between;
-    margin-top: var(--space-xs);
+.lb-road__node {
+    position: absolute;
+    left: 18px;
+    width: 22px;
+    height: 22px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    border-bottom-left-radius: 11px;
+    border-bottom-right-radius: 11px;
 }
 
-.profile__arena {
-    margin-top: var(--space-md);
-    padding: var(--space-md);
+/* "You" on the road. Not a player colour in the match sense - it marks the
+   viewer - so it uses the badge red the prototype gives it. */
+.lb-road__you {
+    position: absolute;
+    left: 14px;
+    width: 30px;
+    height: 30px;
+    background-color: var(--lb-badge);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-badge-edge);
+    border-right-color: var(--lb-badge-edge);
+    border-top-color: var(--lb-badge-edge);
+    border-bottom-color: var(--lb-badge-edge);
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+    align-items: center;
+    justify-content: center;
 }
 
-/* ===================================================================
-   Record - six placeholders, and a line saying why
-   =================================================================== */
+.lb-road__you > .lb-icon {
+    width: 13px;
+    height: 13px;
+    -unity-background-image-tint-color: var(--lb-white);
+}
 
-.profile__stat-grid {
+.lb-era {
+    min-height: 540px;
+    margin-bottom: var(--lb-sp5);
+    padding-top: var(--lb-sp4);
+    padding-bottom: var(--lb-sp4);
+    padding-left: var(--lb-sp3);
+    padding-right: var(--lb-sp3);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    color: var(--lb-ink);
+}
+
+.lb-era--last {
+    margin-bottom: 0;
+}
+
+/* Flat era fills: the prototype's grid and dot textures are gradients. */
+.lb-era--sorcery {
+    background-color: var(--lb-era-sorcery);
+    color: var(--lb-era-sorcery-ink);
+    border-left-color: var(--lb-era-sorcery-edge);
+    border-right-color: var(--lb-era-sorcery-edge);
+    border-top-color: var(--lb-era-sorcery-edge);
+    border-bottom-color: var(--lb-era-sorcery-edge);
+}
+
+.lb-era--steam { background-color: var(--lb-era-steam); }
+.lb-era--bronze { background-color: var(--lb-era-bronze); }
+.lb-era--ancient { background-color: var(--lb-era-ancient); }
+
+.lb-root .lb-era__name {
+    font-size: 22px;
+}
+
+.lb-root .lb-era__range {
+    font-size: 15px;
+    opacity: 0.75;
+    margin-bottom: var(--lb-sp4);
+    white-space: normal;
+}
+
+.lb-era__items {
+    flex-grow: 1;
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: var(--space-sm);
+    align-content: flex-start;
 }
 
-/*
-    Two columns. 48% rather than 50% leaves room for the gap without needing a
-    negative margin on the row.
-*/
-.profile__stat {
-    width: 48%;
-    margin-right: 2%;
-    margin-bottom: var(--space-sm);
-    padding: var(--space-sm);
-    min-height: var(--touch-min);
+.lb-chip {
+    width: 46px;
+    height: 46px;
+    margin-right: var(--lb-sp2);
+    margin-bottom: var(--lb-sp2);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    border-bottom-left-radius: 11px;
+    border-bottom-right-radius: 11px;
+    opacity: 0.4;
 }
 
-.profile__stat-value {
-    font-size: var(--text-lg);
+/* The prototype draws chip borders in the era's text colour (currentColor). */
+.lb-chip {
+    border-left-color: var(--lb-ink);
+    border-right-color: var(--lb-ink);
+    border-top-color: var(--lb-ink);
+    border-bottom-color: var(--lb-ink);
 }
 
-.profile__note {
-    margin-top: var(--space-xs);
+.lb-era--sorcery .lb-chip {
+    border-left-color: var(--lb-era-sorcery-ink);
+    border-right-color: var(--lb-era-sorcery-ink);
+    border-top-color: var(--lb-era-sorcery-ink);
+    border-bottom-color: var(--lb-era-sorcery-ink);
 }
 
-.profile__empty {
-    margin-top: var(--space-sm);
-    padding: var(--space-lg);
+.lb-chip--got {
+    opacity: 1;
+    background-color: var(--lb-chip-got);
+}
+
+.lb-root .lb-era__foot {
+    font-size: 14px;
+    opacity: 0.62;
+    margin-top: var(--lb-sp3);
+    white-space: normal;
 }
