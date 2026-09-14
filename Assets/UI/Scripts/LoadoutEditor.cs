@@ -41,6 +41,28 @@ namespace NodeWar.Lobby
         public bool SuitSlotsFull { get { return FirstEmptySuitSlot() == NoSlot; } }
         public bool NodeSlotsFull { get { return FirstEmptyNodeSlot() == NoSlot; } }
 
+        public int FilledSuitCount { get { return CountFilled(suitIDs); } }
+        public int FilledNodeCount { get { return CountFilled(nodeIDs); } }
+
+        /// <summary>
+        /// Whether the suit side is short: a slot is empty although the player
+        /// owns enough draftable suits to fill every slot. The lobby flags a
+        /// short side. A side the player cannot fill yet - too few unlocked -
+        /// is not short; nothing they could do would complete it.
+        /// </summary>
+        /// <param name="ownedSuits">Suits the player could put in a slot: unlocked, and not granted to everyone.</param>
+        public bool IsSuitSideShort(int ownedSuits)
+        {
+            return IsShort(suitIDs, ownedSuits);
+        }
+
+        /// <summary>The district side's counterpart to <see cref="IsSuitSideShort"/>.</summary>
+        /// <param name="ownedNodes">Districts the player could put in a slot: unlocked, and ones the draft can use.</param>
+        public bool IsNodeSideShort(int ownedNodes)
+        {
+            return IsShort(nodeIDs, ownedNodes);
+        }
+
         /// <summary>The ID in a suit slot, or "" when empty. Out of range gives "".</summary>
         public string SuitAt(int slot)
         {
@@ -180,6 +202,21 @@ namespace NodeWar.Lobby
             }
 
             return cleared;
+        }
+
+        private static int CountFilled(string[] slots)
+        {
+            int filled = 0;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(slots[i])) filled++;
+            }
+            return filled;
+        }
+
+        private static bool IsShort(string[] slots, int owned)
+        {
+            return FirstEmpty(slots) != NoSlot && owned >= slots.Length;
         }
 
         private static int FirstEmpty(string[] slots)

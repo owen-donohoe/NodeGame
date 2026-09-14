@@ -90,6 +90,14 @@
     --lb-era-ancient: rgb(185, 172, 151);
     --lb-chip-got: rgba(255, 255, 255, 0.4);
 
+    /* ---- loadout state: filled is navy, short (fillable but empty) is orange.
+       Solid here: Home's preview column is drawn at the prototype's quiet
+       62% opacity, which is what fades them. ---- */
+    --lb-loadout-ok-bg: rgb(52, 80, 146);
+    --lb-loadout-ok-ink: rgb(236, 240, 250);
+    --lb-loadout-short-bg: rgb(222, 110, 48);
+    --lb-loadout-short-ink: rgb(178, 84, 32);
+
     /* ---- workshop: shape families, slots, picker ---- */
     --lb-fam-round: rgb(127, 175, 99);
     --lb-fam-square: rgb(126, 140, 168);
@@ -690,11 +698,16 @@
     opacity: 1;
 }
 
+/*
+    The sheet runs 48px past the bottom edge, with that much extra padding.
+    Its slide overshoots (ease-out-back), and without the extension the
+    overshoot lifted the sheet's bottom edge into view as a gap.
+*/
 .lb-sheet {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: -48px;
     min-height: 46%;
     max-height: 88%;
     background-color: var(--lb-paper);
@@ -709,7 +722,7 @@
     border-top-right-radius: var(--lb-r-sheet);
     padding-left: var(--lb-sp4);
     padding-right: var(--lb-sp4);
-    padding-bottom: var(--lb-sp5);
+    padding-bottom: 72px;
     translate: 0 100%;
     transition-property: translate, min-height;
     transition-duration: var(--lb-t-sheet);
@@ -1294,4 +1307,23 @@
 /* A field whose text is prose rather than a code. */
 .lb-field--left > .unity-base-text-field__input {
     -unity-text-align: middle-left;
+}
+
+/* The battle sheet's loadout line. Each part is a label, so the side that is
+   short - fillable but not filled - can take the same orange as Home's
+   loadout preview without colouring the whole sentence. */
+.lb-loadout-line {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.lb-root .lb-loadout-line__part {
+    font-size: 17px;
+    color: var(--lb-ink-mute);
+    margin-right: 5px;
+}
+
+.lb-root .lb-loadout-line__part--short {
+    color: var(--lb-loadout-short-ink);
 }

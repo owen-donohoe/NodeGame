@@ -51,13 +51,6 @@ namespace NodeWar.Lobby
             Suits = 1
         }
 
-        /// <summary>
-        /// Districts the Workshop refuses to offer. Only Crossroads, because
-        /// GameManager cannot map it to a DistrictType (inventory finding 4).
-        /// When DistrictType gains a Crossroads member, this array empties.
-        /// </summary>
-        private static readonly string[] UnmappedNodeIDs = { "node_crossroads" };
-
         private const int GridColumns = 3;
 
         /// <summary>One item as a card: a district or a suit.</summary>
@@ -71,6 +64,7 @@ namespace NodeWar.Lobby
             public bool Granted;
         }
 
+        private readonly LoadoutCatalog catalog;
         private readonly LobbyToast toast;
         private readonly LobbyContextMenu menu;
 
@@ -93,10 +87,10 @@ namespace NodeWar.Lobby
         private Tab activeTab = Tab.Districts;
         private bool pickerOpen;
 
-        public WorkshopPage(VisualTreeAsset layout, SuitDefinition[] allSuits, NodeDefinition[] allNodes,
-                            LobbyToast toast, LobbyContextMenu menu)
+        public WorkshopPage(VisualTreeAsset layout, LoadoutCatalog catalog, LobbyToast toast, LobbyContextMenu menu)
             : base(LobbyPageID.Workshop, Build(layout))
         {
+            this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
             this.toast = toast;
             this.menu = menu;
 
@@ -129,7 +123,7 @@ namespace NodeWar.Lobby
                 });
             }
 
-            CollectItems(allSuits, allNodes);
+            CollectItems(this.catalog.Suits, this.catalog.Nodes);
             SetPickerOpen(false);
         }
 
@@ -186,7 +180,7 @@ namespace NodeWar.Lobby
                 {
                     NodeDefinition node = allNodes[i];
                     if (node == null || string.IsNullOrEmpty(node.nodeID)) continue;
-                    if (IsUnmapped(node.nodeID)) continue;
+                    if (!catalog.IsNodeOffered(node.nodeID)) continue;
 
                     ItemFamily.Family family = ItemFamily.ForNode(node.nodeID);
                     districts.Add(new Item
@@ -246,24 +240,6 @@ namespace NodeWar.Lobby
             return !string.IsNullOrEmpty(displayName) ? displayName : id;
         }
 
-        private static bool IsUnmapped(string nodeID)
-        {
-            for (int i = 0; i < UnmappedNodeIDs.Length; i++)
-                if (UnmappedNodeIDs[i] == nodeID) return true;
-            return false;
-        }
-
-        private bool IsSuitOffered(string suitID)
-        {
-            Item item = Find(suits, suitID);
-            return item != null && !item.Granted;
-        }
-
-        private bool IsNodeOffered(string nodeID)
-        {
-            return Find(districts, nodeID) != null;
-        }
-
         private static Item Find(List<Item> items, string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
@@ -284,7 +260,7 @@ namespace NodeWar.Lobby
             // A saved loadout can hold a suit that has since become globally
             // granted, or Crossroads. Both are slots producing nothing; clearing
             // them hands the slots back.
-            int cleared = loadout.DropUnavailable(IsSuitOffered, IsNodeOffered);
+            int cleared = loadout.DropUnavailable(catalog.IsSuitOffered, catalog.IsNodeOffered);
 
             if (cleared > 0)
             {

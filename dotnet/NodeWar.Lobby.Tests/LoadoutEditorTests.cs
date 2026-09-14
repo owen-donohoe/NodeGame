@@ -250,5 +250,47 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("suit_scout", snapshot.suitIDs[0]);
             Assert.AreEqual("", editor.SuitAt(0));
         }
+
+        // ===== SHORT SIDES =====
+        //
+        // A side is flagged in the lobby when a slot is empty that the player
+        // could fill. The flag must never nag someone who does not own enough to
+        // fill every slot.
+
+        [Test]
+        public void SuitSide_WithAnEmptySlotAndEnoughOwned_IsShort()
+        {
+            LoadoutEditor editor = Empty();
+            editor.EquipSuit("suit_scout");
+
+            Assert.IsTrue(editor.IsSuitSideShort(LoadoutData.SuitSlots));
+        }
+
+        [Test]
+        public void SuitSide_WithTooFewOwnedToFillIt_IsNotShort()
+        {
+            LoadoutEditor editor = Empty();
+            editor.EquipSuit("suit_scout");
+
+            Assert.IsFalse(editor.IsSuitSideShort(LoadoutData.SuitSlots - 1));
+        }
+
+        [Test]
+        public void FullSide_IsNeverShort()
+        {
+            LoadoutEditor editor = Empty();
+            for (int i = 0; i < LoadoutData.NodeSlots; i++)
+                editor.EquipNode("node_" + i);
+
+            Assert.IsFalse(editor.IsNodeSideShort(99));
+            Assert.AreEqual(LoadoutData.NodeSlots, editor.FilledNodeCount);
+        }
+
+        [Test]
+        public void EmptyNodeSide_WithEnoughOwned_IsShort()
+        {
+            Assert.IsTrue(Empty().IsNodeSideShort(LoadoutData.NodeSlots));
+            Assert.AreEqual(0, Empty().FilledNodeCount);
+        }
     }
 }

@@ -80,6 +80,7 @@ namespace NodeWar.Lobby
         private UIDocument document;
         private NavigationController navigation;
         private SafeAreaBinder safeArea;
+        private LoadoutCatalog catalog;
         private LobbyToast toast;
         private LobbySheet sheet;
         private LobbyContextMenu menu;
@@ -144,6 +145,7 @@ namespace NodeWar.Lobby
             profilePage = null;
             settingsPage = null;
             matchHistoryPage = null;
+            catalog = null;
             toast = null;
             sheet = null;
             menu = null;
@@ -182,6 +184,9 @@ namespace NodeWar.Lobby
             navigation = new NavigationController(pageHost);
 
             // Shared machinery, built before any page so every page gets the same.
+            // The catalog is the one answer to what the loadout may hold and what
+            // the player owns - Workshop, Home and the battle sheet all ask it.
+            catalog = new LoadoutCatalog(allSuits, allNodes);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
             menu = new LobbyContextMenu(root);
@@ -248,7 +253,7 @@ namespace NodeWar.Lobby
             if (lobbyManager == null)
                 lobbyManager = FindAnyObjectByType<LobbyManager>();
 
-            playPopup = new PlayPopup(playPopupLayout, lobbyManager, toast, sheet);
+            playPopup = new PlayPopup(playPopupLayout, lobbyManager, toast, sheet, catalog);
         }
 
         private void OnPlayRequested()
@@ -269,7 +274,7 @@ namespace NodeWar.Lobby
 
             if (homePageLayout != null)
             {
-                HomePage home = new HomePage(homePageLayout, toast, menu, allSuits, allNodes);
+                HomePage home = new HomePage(homePageLayout, toast, menu, catalog);
                 home.PlayRequested += OnPlayRequested;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
@@ -279,7 +284,7 @@ namespace NodeWar.Lobby
                 navigation.Register(new PlaceholderPage(LobbyPageID.Home, "HomePage.uxml not assigned"));
             }
 
-            navigation.Register(new WorkshopPage(workshopPageLayout, allSuits, allNodes, toast, menu));
+            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu));
             navigation.Register(new SocialPage(socialPageLayout));
         }
 

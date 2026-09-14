@@ -153,10 +153,25 @@
     margin-top: 9px;
 }
 
+/* A filled slot: faded navy, with the item's letter. */
+.lb-lpi--filled {
+    background-color: var(--lb-loadout-ok-bg);
+}
+
+/* An empty slot the player could fill: faded orange. The same orange marks
+   the short side in the battle sheet's loadout line. */
+.lb-lpi--short {
+    background-color: var(--lb-loadout-short-bg);
+}
+
 .lb-root .lb-lpi__letter {
     font-size: 19px;
     color: var(--lb-ink-mute);
     -unity-text-align: middle-center;
+}
+
+.lb-root .lb-lpi--filled > .lb-lpi__letter {
+    color: var(--lb-loadout-ok-ink);
 }
 
 .lb-root .lb-lpcap {

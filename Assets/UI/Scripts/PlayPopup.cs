@@ -31,6 +31,7 @@ namespace NodeWar.Lobby
         private readonly LobbyManager lobbyManager;
         private readonly LobbyToast toast;
         private readonly LobbySheet sheet;
+        private readonly LoadoutCatalog catalog;
 
         private readonly VisualElement findView;
         private readonly VisualElement joinView;
@@ -44,6 +45,9 @@ namespace NodeWar.Lobby
         private readonly Button relayTabButton;
         private readonly Button lanTabButton;
         private readonly Label note;
+        private readonly VisualElement loadoutLine;
+        private readonly Label loadoutNodes;
+        private readonly Label loadoutSuits;
         private readonly VisualElement hostWrap;
         private readonly VisualElement joinOpenWrap;
         private readonly VisualElement startWrap;
@@ -64,8 +68,10 @@ namespace NodeWar.Lobby
         private GameMode mode = GameMode.OneVsOne;
         private bool useLan;
 
-        public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast, LobbySheet sheet)
+        public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast, LobbySheet sheet,
+                         LoadoutCatalog catalog)
         {
+            this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
             this.lobbyManager = lobbyManager;
             this.toast = toast;
             this.sheet = sheet;
@@ -87,6 +93,9 @@ namespace NodeWar.Lobby
             relayTabButton = Root.Q<Button>("play-transport-relay");
             lanTabButton = Root.Q<Button>("play-transport-lan");
             note = Root.Q<Label>("play-note");
+            loadoutLine = Root.Q<VisualElement>("play-loadout");
+            loadoutNodes = Root.Q<Label>("play-loadout-nodes");
+            loadoutSuits = Root.Q<Label>("play-loadout-suits");
             hostWrap = Root.Q<VisualElement>("play-host-wrap");
             joinOpenWrap = Root.Q<VisualElement>("play-join-wrap");
             startWrap = Root.Q<VisualElement>("play-start-wrap");
@@ -216,48 +225,44 @@ namespace NodeWar.Lobby
             if (button != null) button.EnableInClassList("lb-seg__btn--on", on);
         }
 
+        /// <summary>
+        /// The loadout counts and the note under the mode row. Testing has no
+        /// draft, so it shows no loadout. A side that is short - a slot empty
+        /// although the player owns enough to fill it - is orange, the same rule
+        /// and colour as Home's loadout preview.
+        /// </summary>
         private void RefreshNote()
         {
-            if (note == null) return;
+            bool testing = mode == GameMode.Testing;
+            SetVisible(loadoutLine, !testing);
 
-            if (mode == GameMode.Testing)
+            if (!testing)
             {
-                note.text = "Development shortcut: hardcoded board, no draft.";
-                return;
+                LoadoutEditor loadout = LoadoutCatalog.CurrentLoadout();
+
+                SetCount(loadoutNodes, loadout.FilledNodeCount, loadout.NodeSlotCount, "districts",
+                         loadout.IsNodeSideShort(catalog.OwnedNodeCount()));
+                SetCount(loadoutSuits, loadout.FilledSuitCount, loadout.SuitSlotCount, "suits",
+                         loadout.IsSuitSideShort(catalog.OwnedSuitCount()));
             }
 
-            string loadout = DescribeLoadout();
+            string text = testing
+                ? "Development shortcut: hardcoded board, no draft."
+                : (mode == GameMode.OneVsOne && useLan ? "Same Wi-Fi. Join with the host's IP address." : "");
 
-            if (mode == GameMode.OneVsOne)
+            if (note != null)
             {
-                note.text = loadout + (useLan
-                    ? "\nSame Wi-Fi. Join with the host's IP address."
-                    : "");
-            }
-            else
-            {
-                note.text = loadout;
+                note.text = text;
+                SetVisible(note, text.Length > 0);
             }
         }
 
-        private static string DescribeLoadout()
+        private static void SetCount(Label label, int filled, int slots, string noun, bool isShort)
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-            LoadoutData loadout = profile != null
-                ? LoadoutData.Normalized(profile.Loadout)
-                : LoadoutData.CreateEmpty();
+            if (label == null) return;
 
-            return "Loadout: " + Filled(loadout.nodeIDs) + "/" + LoadoutData.NodeSlots + " districts · " +
-                   Filled(loadout.suitIDs) + "/" + LoadoutData.SuitSlots + " suits";
-        }
-
-        private static int Filled(string[] ids)
-        {
-            int count = 0;
-            if (ids == null) return 0;
-            for (int i = 0; i < ids.Length; i++)
-                if (!string.IsNullOrEmpty(ids[i])) count++;
-            return count;
+            label.text = filled + "/" + slots + " " + noun;
+            label.EnableInClassList("lb-loadout-line__part--short", isShort);
         }
 
         private void LaunchLocal(GameMode value)

@@ -22,8 +22,7 @@ namespace NodeWar.Lobby
 
         private readonly LobbyToast toast;
         private readonly LobbyContextMenu menu;
-        private readonly SuitDefinition[] allSuits;
-        private readonly NodeDefinition[] allNodes;
+        private readonly LoadoutCatalog catalog;
 
         private readonly Label victoryBadge;
         private readonly VisualElement boxMeterFill;
@@ -38,14 +37,12 @@ namespace NodeWar.Lobby
         /// <summary>Raised when the loadout preview is pressed.</summary>
         public event System.Action LoadoutRequested;
 
-        public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu,
-                        SuitDefinition[] allSuits, NodeDefinition[] allNodes)
+        public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu, LoadoutCatalog catalog)
             : base(LobbyPageID.Home, Build(layout))
         {
             this.toast = toast;
             this.menu = menu;
-            this.allSuits = allSuits;
-            this.allNodes = allNodes;
+            this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
 
             victoryBadge = Root.Q<Label>("home-box-victory-badge");
             boxMeterFill = Root.Q<VisualElement>("home-boxmeter-fill");
@@ -153,26 +150,43 @@ namespace NodeWar.Lobby
                 boxMeterFill.style.width = Length.Percent(progress * 100f);
             }
 
-            LoadoutData loadout = profile != null
-                ? LoadoutData.Normalized(profile.Loadout)
-                : LoadoutData.CreateEmpty();
+            // A side whose empty slots the player could fill is flagged, so an
+            // unfinished loadout is visible before BATTLE. A side they cannot
+            // fill yet is left quiet.
+            LoadoutEditor loadout = LoadoutCatalog.CurrentLoadout();
+            bool nodesShort = loadout.IsNodeSideShort(catalog.OwnedNodeCount());
+            bool suitsShort = loadout.IsSuitSideShort(catalog.OwnedSuitCount());
 
             for (int i = 0; i < nodeChips.Length; i++)
-                SetChip(nodeChips[i], loadout.nodeIDs[i], NodeName(loadout.nodeIDs[i]));
+            {
+                string id = loadout.NodeAt(i);
+                SetChip(nodeChips[i], id, catalog.NodeName(id), nodesShort);
+            }
+
             for (int i = 0; i < suitChips.Length; i++)
-                SetChip(suitChips[i], loadout.suitIDs[i], SuitName(loadout.suitIDs[i]));
+            {
+                string id = loadout.SuitAt(i);
+                SetChip(suitChips[i], id, catalog.SuitName(id), suitsShort);
+            }
         }
 
         /// <summary>
-        /// A chip shows the item's monogram, muted. TODO(art): the prototype
-        /// shows each item's icon here; no district or suit icons exist yet.
+        /// A filled chip is navy and shows the item's monogram. An empty chip is
+        /// orange when its side is short - fillable but not filled - and the
+        /// plain quiet chip otherwise. Colour never carries this alone: a filled
+        /// chip has a letter, an empty one has none.
+        /// TODO(art): the prototype shows each item's icon here; no icons exist yet.
         /// </summary>
-        private static void SetChip(VisualElement chip, string id, string displayName)
+        private static void SetChip(VisualElement chip, string id, string displayName, bool sideShort)
         {
             if (chip == null) return;
 
+            bool filled = !string.IsNullOrEmpty(id);
+            chip.EnableInClassList("lb-lpi--filled", filled);
+            chip.EnableInClassList("lb-lpi--short", !filled && sideShort);
+
             chip.Clear();
-            if (string.IsNullOrEmpty(id)) return;
+            if (!filled) return;
 
             Label letter = new Label(ItemTint.MonogramFor(displayName, id));
             letter.AddToClassList("lb-lpi__letter");
@@ -181,20 +195,5 @@ namespace NodeWar.Lobby
             chip.Add(letter);
         }
 
-        private string NodeName(string id)
-        {
-            if (allNodes == null || string.IsNullOrEmpty(id)) return null;
-            for (int i = 0; i < allNodes.Length; i++)
-                if (allNodes[i] != null && allNodes[i].nodeID == id) return allNodes[i].displayName;
-            return null;
-        }
-
-        private string SuitName(string id)
-        {
-            if (allSuits == null || string.IsNullOrEmpty(id)) return null;
-            for (int i = 0; i < allSuits.Length; i++)
-                if (allSuits[i] != null && allSuits[i].suitID == id) return allSuits[i].displayName;
-            return null;
-        }
     }
 }

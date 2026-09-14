@@ -45,6 +45,14 @@
                 <engine:Button name="play-transport-lan" class="lb-reset-button lb-seg__btn lb-seg__btn--last lb-w600" text="Local network" />
             </engine:VisualElement>
 
+            <!-- Loadout counts, each side its own label so only a short side turns orange. -->
+            <engine:VisualElement name="play-loadout" class="lb-loadout-line" picking-mode="Ignore">
+                <engine:Label class="lb-loadout-line__part lb-w500" text="Loadout:" />
+                <engine:Label name="play-loadout-nodes" class="lb-loadout-line__part lb-w500" text="" />
+                <engine:Label class="lb-loadout-line__part lb-w500" text="·" />
+                <engine:Label name="play-loadout-suits" class="lb-loadout-line__part lb-w500" text="" />
+            </engine:VisualElement>
+
             <engine:Label name="play-note" class="lb-sheet__note lb-w500" text="" />
 
             <engine:VisualElement name="play-host-wrap" class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
