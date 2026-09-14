@@ -28,8 +28,8 @@ namespace NodeWar.Lobby
             label.AddToClassList("lb-toast--on");
 
             if (hideItem != null) hideItem.Pause();
-            hideItem = label.schedule.Execute(() => label.RemoveFromClassList("lb-toast--on"))
-                                     .StartingIn(VisibleMs);
+            hideItem = label.schedule.Execute(() => label.RemoveFromClassList("lb-toast--on"));
+            hideItem.ExecuteLater(VisibleMs);
         }
     }
 }
