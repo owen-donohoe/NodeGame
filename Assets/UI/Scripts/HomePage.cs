@@ -153,7 +153,7 @@ namespace NodeWar.Lobby
             // A side whose empty slots the player could fill is flagged, so an
             // unfinished loadout is visible before BATTLE. A side they cannot
             // fill yet is left quiet.
-            LoadoutEditor loadout = LoadoutCatalog.CurrentLoadout();
+            LoadoutEditor loadout = catalog.CurrentLoadout();
             bool nodesShort = loadout.IsNodeSideShort(catalog.OwnedNodeCount());
             bool suitsShort = loadout.IsSuitSideShort(catalog.OwnedSuitCount());
 

@@ -17,15 +17,12 @@
     these. Putting them under Assets/ would only give Unity a file it must
     compile and cannot use.
 
-    DELIBERATELY NOT IN NodeWar.sln. CI runs `dotnet test dotnet/NodeWar.sln`
-    with an nunit logger pointed at one fixed LogFilePath for every project in
-    the solution, and docs/attesters/hash_baseline.ps1 reads that exact file
-    (TestResults/results.xml) to confirm the sanctioned determinism cases ran.
-    A second test project writing to the same path could overwrite the
-    determinism receipt and fail the attester for a reason that has nothing to
-    do with the simulation. Wiring this into CI means giving each project its
-    own results file first, which is a change to the determinism gate and not
-    this project's call to make.
+    IN NodeWar.sln, BUT NEVER IN THE RECEIPT. CI runs the whole solution for
+    pass/fail with no logger, then produces TestResults/results.xml from
+    NodeWar.Simulation.Tests alone, because docs/attesters/hash_baseline.ps1
+    reads that file to confirm the sanctioned determinism cases ran. Two
+    projects writing one LogFilePath overwrite each other, so do not point a
+    logger at this project's results there.
 
     Run it directly:
       dotnet test dotnet/NodeWar.Lobby.Tests

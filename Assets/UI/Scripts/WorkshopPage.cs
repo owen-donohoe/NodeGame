@@ -123,7 +123,7 @@ namespace NodeWar.Lobby
                 });
             }
 
-            CollectItems(this.catalog.Suits, this.catalog.Nodes);
+            CollectItems();
             SetPickerOpen(false);
         }
 
@@ -172,47 +172,44 @@ namespace NodeWar.Lobby
         /// (round, square, triangle, as the prototype lists them), keeping the
         /// assets' own order within a family.
         /// </summary>
-        private void CollectItems(SuitDefinition[] allSuits, NodeDefinition[] allNodes)
+        private void CollectItems()
         {
-            if (allNodes != null)
+            // The catalog never hands back a null array.
+            NodeDefinition[] allNodes = catalog.Nodes;
+            for (int i = 0; i < allNodes.Length; i++)
             {
-                for (int i = 0; i < allNodes.Length; i++)
+                NodeDefinition node = allNodes[i];
+                if (node == null || string.IsNullOrEmpty(node.nodeID)) continue;
+                if (!catalog.IsNodeOffered(node.nodeID)) continue;
+
+                ItemFamily.Family family = ItemFamily.ForNode(node.nodeID);
+                districts.Add(new Item
                 {
-                    NodeDefinition node = allNodes[i];
-                    if (node == null || string.IsNullOrEmpty(node.nodeID)) continue;
-                    if (!catalog.IsNodeOffered(node.nodeID)) continue;
-
-                    ItemFamily.Family family = ItemFamily.ForNode(node.nodeID);
-                    districts.Add(new Item
-                    {
-                        ID = node.nodeID,
-                        Name = NameOf(node.displayName, node.nodeID),
-                        Description = node.description,
-                        Note = ItemFamily.NoteFor(family),
-                        Family = family
-                    });
-                }
-
-                SortByFamily(districts);
+                    ID = node.nodeID,
+                    Name = catalog.NodeName(node.nodeID),
+                    Description = node.description,
+                    Note = ItemFamily.NoteFor(family),
+                    Family = family
+                });
             }
 
-            if (allSuits != null)
-            {
-                for (int i = 0; i < allSuits.Length; i++)
-                {
-                    SuitDefinition suit = allSuits[i];
-                    if (suit == null || string.IsNullOrEmpty(suit.suitID)) continue;
+            SortByFamily(districts);
 
-                    suits.Add(new Item
-                    {
-                        ID = suit.suitID,
-                        Name = NameOf(suit.displayName, suit.suitID),
-                        Description = suit.description,
-                        Note = suit.isGlobal ? "Always granted" : suit.description,
-                        Family = ItemFamily.Family.Combat,
-                        Granted = suit.isGlobal
-                    });
-                }
+            SuitDefinition[] allSuits = catalog.Suits;
+            for (int i = 0; i < allSuits.Length; i++)
+            {
+                SuitDefinition suit = allSuits[i];
+                if (suit == null || string.IsNullOrEmpty(suit.suitID)) continue;
+
+                suits.Add(new Item
+                {
+                    ID = suit.suitID,
+                    Name = catalog.SuitName(suit.suitID),
+                    Description = suit.description,
+                    Note = suit.isGlobal ? "Always granted" : suit.description,
+                    Family = ItemFamily.Family.Combat,
+                    Granted = suit.isGlobal
+                });
             }
         }
 
@@ -233,11 +230,6 @@ namespace NodeWar.Lobby
 
                 items[j + 1] = current;
             }
-        }
-
-        private static string NameOf(string displayName, string id)
-        {
-            return !string.IsNullOrEmpty(displayName) ? displayName : id;
         }
 
         private static Item Find(List<Item> items, string id)

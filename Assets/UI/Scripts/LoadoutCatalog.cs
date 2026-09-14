@@ -115,11 +115,19 @@ namespace NodeWar.Lobby
             return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName : nodeID;
         }
 
-        /// <summary>The player's saved loadout as an editor, or an empty one with no profile.</summary>
-        public static LoadoutEditor CurrentLoadout()
+        /// <summary>
+        /// The player's saved loadout as an editor, or an empty one with no
+        /// profile - with any entry no slot may hold already dropped, as the
+        /// Workshop drops it on load. Without that, Home and the battle sheet
+        /// would count a saved Warrior or Crossroads as a filled slot the
+        /// Workshop shows as empty. Nothing is saved here; the Workshop owns that.
+        /// </summary>
+        public LoadoutEditor CurrentLoadout()
         {
             PlayerProfile profile = PlayerProfile.Instance;
-            return new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
+            LoadoutEditor loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
+            loadout.DropUnavailable(IsSuitOffered, IsNodeOffered);
+            return loadout;
         }
     }
 }

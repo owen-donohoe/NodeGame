@@ -238,7 +238,7 @@ namespace NodeWar.Lobby
 
             if (!testing)
             {
-                LoadoutEditor loadout = LoadoutCatalog.CurrentLoadout();
+                LoadoutEditor loadout = catalog.CurrentLoadout();
 
                 SetCount(loadoutNodes, loadout.FilledNodeCount, loadout.NodeSlotCount, "districts",
                          loadout.IsNodeSideShort(catalog.OwnedNodeCount()));
