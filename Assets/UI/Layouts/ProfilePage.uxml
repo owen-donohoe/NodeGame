@@ -21,7 +21,7 @@
             not in the layout and not in a data structure.
 
           - The six stat boxes are each a placeholder because no match result
-            is written anywhere in the project. ProfilePanel shows "--" for the
+            is written anywhere in the project. ProfilePanel shows a double dash for the
             same six; here they say why.
 
           - Achievements and match history have no backing system at all.
