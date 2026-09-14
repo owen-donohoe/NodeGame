@@ -21,6 +21,12 @@ namespace NodeWar.Lobby
 
         private LobbyPage currentPage;
 
+        /// <summary>
+        /// Raised after a page becomes visible. The persistent chrome refreshes
+        /// on it, since a page (Profile's rename) can change what it shows.
+        /// </summary>
+        public event System.Action<LobbyPageID> PageShown;
+
         public LobbyPageID? CurrentPageID
         {
             get { return currentPage != null ? currentPage.ID : (LobbyPageID?)null; }
@@ -81,6 +87,8 @@ namespace NodeWar.Lobby
             currentPage.OnShow();
 
             RefreshNavButtons();
+
+            if (PageShown != null) PageShown(id);
         }
 
         /// <summary>Shows the first registered page. Used at startup.</summary>
@@ -94,7 +102,7 @@ namespace NodeWar.Lobby
             foreach (KeyValuePair<LobbyPageID, Button> entry in navButtons)
             {
                 bool active = currentPage != null && entry.Key == currentPage.ID;
-                entry.Value.EnableInClassList("nav-button--active", active);
+                entry.Value.EnableInClassList("lb-tab--on", active);
             }
         }
 

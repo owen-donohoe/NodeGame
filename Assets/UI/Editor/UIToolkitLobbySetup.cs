@@ -128,13 +128,14 @@ namespace NodeWar.EditorTools
             PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
             settings.themeStyleSheet = theme;
 
-            // ConstantPhysicalSize is the reason the theme can talk in points.
-            // A 44px touch target in Theme.uss is then about 44 real points on
-            // the device, which is what makes the minimum meaningful. It also
-            // matches how GestureThresholds already reasons about mm.
-            settings.scaleMode = PanelScaleMode.ConstantPhysicalSize;
-            settings.referenceDpi = 96f;
-            settings.fallbackDpi = 96f;
+            // The lobby is laid out in the prototype's units: a 390-point-wide
+            // portrait phone. Scaling to that width makes one USS pixel one
+            // point on such a phone, so a 44px target is 44pt there. Physical
+            // size at 96 dpi made everything ~1.7x the design on a real phone.
+            settings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            settings.referenceResolution = new Vector2Int(390, 844);
+            settings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            settings.match = 0f;
 
             AssetDatabase.CreateAsset(settings, PanelSettingsPath);
             AssetDatabase.SaveAssets();

@@ -68,7 +68,8 @@ namespace NodeWar.Lobby
         private NavigationController navigation;
         private SafeAreaBinder safeArea;
         private PlayPopup playPopup;
-        private ProfilePage profilePage;
+        private LobbyToast toast;
+        private LobbyChrome chrome;
 
         /// <summary>
         /// Page switching, for pages to navigate between themselves. Null until
@@ -122,7 +123,8 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Dispose();
 
             playPopup = null;
-            profilePage = null;
+            toast = null;
+            chrome = null;
             navigation = null;
             safeArea = null;
         }
@@ -142,44 +144,37 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Show();
         }
 
-        /// <summary>
-        /// Home's Rename button. The rename editor lives on Profile, so this
-        /// navigates there and opens it rather than raising a second copy of
-        /// the same form. In the uGUI stack this is RenameModal, which is a
-        /// uGUI object the new stack cannot reach.
-        /// </summary>
-        private void OnRenameRequested()
-        {
-            if (navigation == null) return;
-
-            navigation.Show(LobbyPageID.Profile);
-
-            if (profilePage != null) profilePage.BeginRename();
-        }
-
         private void BuildShell(VisualElement root)
         {
+            VisualElement lobbyRoot = root.Q<VisualElement>("lobby-root");
             VisualElement safeAreaElement = root.Q<VisualElement>("safe-area");
             VisualElement pageHost = root.Q<VisualElement>("page-host");
 
-            if (safeAreaElement == null || pageHost == null)
+            if (lobbyRoot == null || safeAreaElement == null || pageHost == null)
             {
-                Debug.LogError("[LobbyUI] LobbyRoot.uxml is missing #safe-area or #page-host. " +
-                               "The shell cannot be built.");
+                Debug.LogError("[LobbyUI] LobbyRoot.uxml is missing #lobby-root, #safe-area " +
+                               "or #page-host. The shell cannot be built.");
                 return;
             }
 
             safeArea = new SafeAreaBinder(safeAreaElement);
             navigation = new NavigationController(pageHost);
+            toast = new LobbyToast(root.Q<Label>("toast"));
 
+            // The chrome is outside every page, so it is bound once, and it
+            // refreshes whenever a page shows - Profile can rename the player.
+            chrome = new LobbyChrome(root, toast);
+            chrome.ProfileRequested += () => navigation.Show(LobbyPageID.Profile);
+            navigation.PageShown += id => chrome.Refresh();
+
+            // Four tabs. Profile is reached from the player name, not a tab.
+            BindNav(root, "nav-shop", LobbyPageID.Shop);
             BindNav(root, "nav-home", LobbyPageID.Home);
             BindNav(root, "nav-workshop", LobbyPageID.Workshop);
-            BindNav(root, "nav-shop", LobbyPageID.Shop);
             BindNav(root, "nav-social", LobbyPageID.Social);
-            BindNav(root, "nav-profile", LobbyPageID.Profile);
 
             RegisterPages();
-            BuildPlayPopup(root);
+            BuildPlayPopup(lobbyRoot);
 
             navigation.Show(LobbyPageID.Home);
 
@@ -188,23 +183,26 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>
-        /// The popup is added to the shell root, not the page host, so it floats
-        /// over the nav bar as well as the page. It is absolutely positioned and
-        /// starts hidden, so it costs nothing until opened.
+        /// The sheet is added to #lobby-root, after the safe area, so it floats
+        /// over the tab bar as well as the page and inherits the lobby font. The
+        /// toast is then moved after it, so "Code copied" shows over the sheet.
         /// </summary>
-        private void BuildPlayPopup(VisualElement root)
+        private void BuildPlayPopup(VisualElement lobbyRoot)
         {
             if (playPopupLayout == null)
             {
-                Debug.LogWarning("[LobbyUI] No PlayPopup.uxml assigned; Play will do nothing.");
+                Debug.LogWarning("[LobbyUI] No PlayPopup.uxml assigned; BATTLE will do nothing.");
                 return;
             }
 
             if (lobbyManager == null)
                 lobbyManager = FindAnyObjectByType<LobbyManager>();
 
-            playPopup = new PlayPopup(playPopupLayout, lobbyManager);
-            root.Add(playPopup.Root);
+            playPopup = new PlayPopup(playPopupLayout, lobbyManager, toast);
+            lobbyRoot.Add(playPopup.Root);
+
+            VisualElement toastDock = lobbyRoot.Q<VisualElement>("toast-dock");
+            if (toastDock != null) lobbyRoot.Add(toastDock);
         }
 
         /// <summary>
@@ -220,9 +218,9 @@ namespace NodeWar.Lobby
         {
             if (homePageLayout != null)
             {
-                HomePage home = new HomePage(homePageLayout);
+                HomePage home = new HomePage(homePageLayout, toast, allSuits, allNodes);
                 home.PlayRequested += OnPlayRequested;
-                home.RenameRequested += OnRenameRequested;
+                home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }
             else
@@ -234,8 +232,7 @@ namespace NodeWar.Lobby
             // back to a labelled box, so they are registered unconditionally.
             navigation.Register(new WorkshopPage(workshopPageLayout, allSuits, allNodes));
 
-            profilePage = new ProfilePage(profilePageLayout);
-            navigation.Register(profilePage);
+            navigation.Register(new ProfilePage(profilePageLayout));
 
             navigation.Register(new ShopPage(shopPageLayout));
             navigation.Register(new SocialPage(socialPageLayout));

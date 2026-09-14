@@ -1,0 +1,1269 @@
+/*
+    Node War - lobby stylesheet.
+
+    The lobby's look, translated from lobby-prototype.html (v3.2). That file is
+    the spec: sizes, colours and timings below are its values, not new ones.
+
+    Lobby only. Theme.uss is still imported ahead of this file, because the
+    Workshop, Shop, Social and Profile pages have not been rebuilt yet and still
+    read its tokens - and because GameplayHUD.uxml imports Theme.uss too, so
+    rewriting it would change the Gameplay scene. Everything here is prefixed
+    lb- (classes) and --lb- (tokens) so the two can never collide.
+
+    Where the prototype uses CSS that USS does not have, the substitute is
+    noted where it happens. Measured against 6000.5.9f1:
+      box-shadow, filter: drop-shadow   unknown  -> a sibling element behind
+      linear-/radial-gradient           unknown  -> flat fill, or vertex
+                                                    colours in LobbyBackdrop
+      filter: blur                      works    -> soft shadows
+      gap, :last-child, :nth-child      absent   -> margins on each child
+      @keyframes                        absent   -> class ping-pong from C#
+      picking-mode                      not USS  -> set in UXML or C#
+
+    Player colours are not defined here. The red on a count badge is a
+    notification colour, not player ownership, so it is --lb-badge rather than
+    a --p0 that would contradict Theme.uss (player 0 is blue).
+*/
+
+:root {
+    /* ---- surface ---- */
+    --lb-paper: rgb(235, 220, 195);
+    --lb-paper-hi: rgb(244, 233, 213);
+    --lb-card: rgb(215, 195, 165);
+    --lb-edge: rgb(150, 128, 95);
+    --lb-scrim: rgba(30, 22, 15, 0.55);
+    --lb-dark-glass: rgba(45, 35, 25, 0.82);
+    --lb-nav-bg: rgba(45, 35, 25, 0.92);
+    --lb-toast-bg: rgba(45, 35, 25, 0.94);
+    --lb-meter-bg: rgba(45, 35, 25, 0.8);
+    --lb-meter-track: rgb(74, 59, 42);
+    --lb-shadow: rgba(90, 70, 40, 0.3);
+    --lb-shadow-soft: rgba(90, 70, 40, 0.25);
+    --lb-shadow-deep: rgba(0, 0, 0, 0.35);
+    --lb-chip-bg: rgba(150, 128, 95, 0.2);
+    --lb-press-tint: rgba(150, 128, 95, 0.22);
+    --lb-track: rgb(195, 170, 133);
+    --lb-rule: rgba(150, 128, 95, 0.3);
+
+    /* ---- ink ---- */
+    --lb-ink: rgb(45, 35, 25);
+    --lb-ink-mute: rgb(115, 100, 79);
+    --lb-ink-inv: rgb(250, 245, 235);
+    --lb-ink-tab: rgb(169, 151, 124);
+    --lb-ink-trophy: rgb(138, 106, 18);
+    --lb-white: rgb(255, 255, 255);
+
+    /* ---- action ---- */
+    --lb-gold: rgb(245, 195, 60);
+    --lb-gold-dk: rgb(222, 172, 42);
+    --lb-gold-edge: rgb(168, 128, 28);
+    --lb-gold-text: rgb(58, 42, 8);
+    --lb-green: rgb(95, 185, 95);
+    --lb-green-dk: rgb(76, 160, 76);
+    --lb-green-text: rgb(18, 51, 18);
+    --lb-leaf: rgb(201, 162, 39);
+    --lb-leaf-edge: rgb(126, 100, 19);
+    --lb-badge: rgb(205, 60, 50);
+    --lb-badge-edge: rgb(125, 33, 26);
+    --lb-off: rgb(160, 150, 135);
+    --lb-off-edge: rgb(110, 101, 87);
+
+    /* ---- stand-in scenery (CSS fakery in the prototype too) ---- */
+    --lb-sky-0: rgb(247, 238, 219);
+    --lb-sky-1: rgb(231, 213, 182);
+    --lb-sky-2: rgb(210, 187, 149);
+    --lb-ground-top: rgb(207, 184, 143);
+    --lb-ground-bottom: rgb(188, 161, 115);
+    --lb-prop-a: rgb(198, 168, 111);
+    --lb-prop-b: rgb(185, 156, 107);
+    --lb-prop-c: rgb(203, 177, 131);
+    --lb-prop-d: rgb(194, 166, 114);
+    --lb-prop-shadow: rgba(90, 70, 40, 0.28);
+    --lb-hat: rgb(201, 168, 95);
+
+    /* ---- spacing, 4pt base ---- */
+    --lb-sp1: 4px;
+    --lb-sp2: 8px;
+    --lb-sp3: 12px;
+    --lb-sp4: 16px;
+    --lb-sp5: 24px;
+    --lb-sp6: 32px;
+
+    /* ---- radius ---- */
+    --lb-r-sm: 10px;
+    --lb-r-md: 16px;
+    --lb-r-lg: 24px;
+    --lb-r-sheet: 28px;
+    /* No pill token: USS scales an oversized radius into an ellipse, so a
+       pill is given exactly half its height where it is used. */
+
+    /* ---- borders ---- */
+    --lb-bw: 3px;
+    --lb-bw-mid: 2.5px;
+    --lb-bw-thin: 2px;
+
+    /* ---- motion ---- */
+    --lb-t-press: 60ms;
+    --lb-t-rel: 120ms;
+    --lb-t-page: 250ms;
+    --lb-t-sheet: 320ms;
+    --lb-t-bob: 1700ms;
+
+    /* ---- fonts ---- */
+    --lb-font-500: url("project://database/Assets/UI/Fonts/Fredoka-Medium-SDF.asset");
+    --lb-font-600: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
+    --lb-font-700: url("project://database/Assets/UI/Fonts/Fredoka-Bold-SDF.asset");
+}
+
+/* ===================================================================
+   Type. Fredoka at the root; weights are separate font assets because
+   -unity-font-style: bold would synthesise rather than use the real cut.
+   =================================================================== */
+
+.lb-root {
+    flex-grow: 1;
+    background-color: var(--lb-paper);
+    -unity-font-definition: var(--lb-font-500);
+    color: var(--lb-ink);
+    font-size: 17px;
+}
+
+.lb-w500 { -unity-font-definition: var(--lb-font-500); -unity-font-style: normal; }
+.lb-w600 { -unity-font-definition: var(--lb-font-600); -unity-font-style: normal; }
+.lb-w700 { -unity-font-definition: var(--lb-font-700); -unity-font-style: normal; }
+
+/* Labels and buttons carry default padding/margins in the runtime theme. */
+.lb-root Label {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.lb-reset-button {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* ===================================================================
+   Shadows. USS has no box-shadow, so a shadow is an absolutely placed
+   sibling drawn first, offset down and right. Hard shadows are flat; the
+   soft ones under floating controls use filter: blur.
+   =================================================================== */
+
+.lb-sticker {
+    position: relative;
+}
+
+.lb-sticker__shadow {
+    position: absolute;
+    left: 3px;
+    top: 4px;
+    right: -3px;
+    bottom: -4px;
+    background-color: var(--lb-shadow);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+}
+
+.lb-soft-shadow {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    bottom: -8px;
+    background-color: var(--lb-shadow-deep);
+    filter: blur(11px);
+}
+
+/* ===================================================================
+   Backdrop - stands in for the 3D lobby scene, as it does in the prototype.
+   =================================================================== */
+
+.lb-backdrop {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.lb-ground-edge {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 25%;
+    height: 3px;
+    background-color: var(--lb-edge);
+}
+
+.lb-prop {
+    position: absolute;
+}
+
+.lb-prop > .lb-sticker__shadow {
+    background-color: var(--lb-prop-shadow);
+    border-top-left-radius: var(--lb-r-sm);
+    border-top-right-radius: var(--lb-r-sm);
+    border-bottom-left-radius: var(--lb-r-sm);
+    border-bottom-right-radius: var(--lb-r-sm);
+    top: 5px;
+    bottom: -5px;
+}
+
+.lb-prop__body {
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-sm);
+    border-top-right-radius: var(--lb-r-sm);
+    border-bottom-left-radius: var(--lb-r-sm);
+    border-bottom-right-radius: var(--lb-r-sm);
+}
+
+#prop-a { left: 20px; bottom: 158px; }
+#prop-a > .lb-prop__body { width: 62px; height: 44px; background-color: var(--lb-prop-a); }
+#prop-b { right: 22px; bottom: 184px; }
+#prop-b > .lb-prop__body { width: 50px; height: 58px; background-color: var(--lb-prop-b); }
+#prop-c { left: 8px; bottom: 90px; }
+#prop-c > .lb-prop__body { width: 84px; height: 36px; background-color: var(--lb-prop-c); }
+#prop-d { right: 4px; bottom: 76px; }
+#prop-d > .lb-prop__body { width: 72px; height: 42px; background-color: var(--lb-prop-d); }
+
+/* ===================================================================
+   Shell. Persistent chrome sits OUTSIDE the page host, so it never moves
+   with a page and the trophy bar is one element bound once.
+   =================================================================== */
+
+.lb-safe-area {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: column;
+}
+
+.lb-page-host {
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Pages not yet rebuilt keep Theme.uss's .page, but must clear the
+   floating tab bar, which now sits over the bottom of the page. */
+.lb-page-host > .page {
+    padding-bottom: 96px;
+}
+
+/* Home is rebuilt: it places its own content edge to edge. */
+.lb-page-host > .lb-home-host {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* ---- top bar ---- */
+
+.lb-topbar {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 18px;
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    flex-shrink: 0;
+}
+
+.lb-purse {
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--lb-dark-glass);
+    border-top-left-radius: 19px;
+    border-top-right-radius: 19px;
+    border-bottom-left-radius: 19px;
+    border-bottom-right-radius: 19px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    padding-left: 8px;
+    padding-right: 14px;
+    margin-right: var(--lb-sp2);
+    color: var(--lb-ink-inv);
+    font-size: 19px;
+}
+
+.lb-root .lb-purse__value {
+    margin-left: 6px;
+    color: var(--lb-ink-inv);
+    font-size: 19px;
+}
+
+.lb-coin {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--lb-gold);
+    border-left-width: var(--lb-bw-mid);
+    border-right-width: var(--lb-bw-mid);
+    border-top-width: var(--lb-bw-mid);
+    border-bottom-width: var(--lb-bw-mid);
+    border-left-color: var(--lb-gold-edge);
+    border-right-color: var(--lb-gold-edge);
+    border-top-color: var(--lb-gold-edge);
+    border-bottom-color: var(--lb-gold-edge);
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+}
+
+/* The coin's square hole - a ::before in the prototype. */
+.lb-coin__hole {
+    width: 7px;
+    height: 7px;
+    background-color: var(--lb-gold-edge);
+}
+
+.lb-leaf {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    background-color: var(--lb-leaf);
+    border-left-width: var(--lb-bw-mid);
+    border-right-width: var(--lb-bw-mid);
+    border-top-width: var(--lb-bw-mid);
+    border-bottom-width: var(--lb-bw-mid);
+    border-left-color: var(--lb-leaf-edge);
+    border-right-color: var(--lb-leaf-edge);
+    border-top-color: var(--lb-leaf-edge);
+    border-bottom-color: var(--lb-leaf-edge);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 12px;
+    rotate: -12deg;
+}
+
+.lb-spacer {
+    flex-grow: 1;
+}
+
+.lb-gear {
+    width: 44px;
+    height: 44px;
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+    background-color: var(--lb-dark-glass);
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-gear > .lb-icon {
+    width: 20px;
+    height: 20px;
+    -unity-background-image-tint-color: var(--lb-ink-inv);
+}
+
+/* ---- trophy strip ---- */
+
+.lb-strip-wrap {
+    margin-top: var(--lb-sp3);
+    margin-left: var(--lb-sp4);
+    margin-right: var(--lb-sp4);
+    flex-shrink: 0;
+}
+
+.lb-strip {
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    padding-top: var(--lb-sp2);
+    padding-bottom: var(--lb-sp3);
+    padding-left: var(--lb-sp3);
+    padding-right: var(--lb-sp3);
+}
+
+.lb-strip__row {
+    flex-direction: row;
+    align-items: center;
+}
+
+/* Only the name is the link to Profile, not the whole strip. */
+.lb-name-btn {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 4px;
+    padding-right: 8px;
+    margin-left: -4px;
+    margin-right: var(--lb-sp2);
+    border-top-left-radius: var(--lb-r-sm);
+    border-top-right-radius: var(--lb-r-sm);
+    border-bottom-left-radius: var(--lb-r-sm);
+    border-bottom-right-radius: var(--lb-r-sm);
+    transition-property: scale, background-color;
+    transition-duration: var(--lb-t-press), var(--lb-t-rel);
+}
+
+.lb-name-btn:active {
+    scale: 0.97 0.97;
+    background-color: var(--lb-press-tint);
+}
+
+.lb-root .lb-name-btn__text {
+    font-size: 21px;
+    color: var(--lb-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+}
+
+.lb-root .lb-name-btn__chev {
+    font-size: 19px;
+    color: var(--lb-ink-mute);
+    margin-left: 5px;
+    translate: 0 -1px;
+}
+
+.lb-trophy {
+    flex-direction: row;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.lb-root .lb-trophy__count {
+    font-size: 26px;
+    color: var(--lb-ink-trophy);
+}
+
+.lb-root .lb-trophy__max {
+    margin-left: 3px;
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    margin-bottom: 4px;
+}
+
+.lb-track {
+    margin-top: 3px;
+    height: 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: var(--lb-track);
+    border-left-width: var(--lb-bw-mid);
+    border-right-width: var(--lb-bw-mid);
+    border-top-width: var(--lb-bw-mid);
+    border-bottom-width: var(--lb-bw-mid);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    overflow: hidden;
+}
+
+/* Flat: the prototype's gold -> gold-dk gradient has no USS equivalent. */
+.lb-track__fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--lb-gold);
+}
+
+.lb-root .lb-arena {
+    margin-top: 5px;
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+}
+
+/* ---- tab bar: thin floating capsule, icons only ---- */
+
+.lb-tabbar-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 26px;
+    align-items: center;
+}
+
+.lb-tabbar-wrap {
+    position: relative;
+}
+
+.lb-tabbar-wrap > .lb-soft-shadow {
+    border-top-left-radius: 27px;
+    border-top-right-radius: 27px;
+    border-bottom-left-radius: 27px;
+    border-bottom-right-radius: 27px;
+}
+
+.lb-tabbar {
+    flex-direction: row;
+    background-color: var(--lb-nav-bg);
+    border-top-left-radius: 27px;
+    border-top-right-radius: 27px;
+    border-bottom-left-radius: 27px;
+    border-bottom-right-radius: 27px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.lb-tab {
+    width: 44px;
+    height: 44px;
+    margin-right: 4px;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    align-items: center;
+    justify-content: center;
+    transition-property: background-color, scale;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-tab--last {
+    margin-right: 0;
+}
+
+.lb-tab > .lb-icon {
+    width: 19px;
+    height: 19px;
+    -unity-background-image-tint-color: var(--lb-ink-tab);
+    transition-property: -unity-background-image-tint-color;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-tab--on {
+    background-color: var(--lb-gold);
+    scale: 1.06 1.06;
+}
+
+.lb-tab--on > .lb-icon {
+    -unity-background-image-tint-color: var(--lb-gold-text);
+}
+
+/* ===================================================================
+   Icons. Vector images drawn by LobbyIcon; colour is the tint, so it
+   transitions like any other style property.
+   =================================================================== */
+
+.lb-icon {
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* ===================================================================
+   HOME
+   =================================================================== */
+
+.lb-home-page {
+    flex-grow: 1;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* ---- boxes ---- */
+
+.lb-boxcol {
+    position: absolute;
+    left: var(--lb-sp4);
+    top: 24px;
+    width: 130px;
+}
+
+.lb-box {
+    align-items: center;
+    justify-content: center;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    transition-property: scale, translate;
+    transition-duration: var(--lb-t-press);
+    transition-timing-function: ease-in;
+}
+
+.lb-box:active {
+    scale: 0.96 0.96;
+    translate: 0 2px;
+}
+
+.lb-box-wrap--big {
+    height: 130px;
+    margin-bottom: var(--lb-sp3);
+}
+
+.lb-box-wrap--small {
+    height: 78px;
+}
+
+.lb-box-wrap > .lb-box {
+    flex-grow: 1;
+}
+
+.lb-box .lb-icon {
+    width: 38px;
+    height: 38px;
+    -unity-background-image-tint-color: var(--lb-ink-mute);
+}
+
+.lb-box-wrap--small .lb-icon {
+    width: 26px;
+    height: 26px;
+}
+
+.lb-root .lb-box__label {
+    font-size: 14px;
+    color: var(--lb-ink-mute);
+    margin-top: 4px;
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-badge {
+    position: absolute;
+    top: -11px;
+    right: -11px;
+    min-width: 30px;
+    height: 30px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+    background-color: var(--lb-badge);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-badge-edge);
+    border-right-color: var(--lb-badge-edge);
+    border-top-color: var(--lb-badge-edge);
+    border-bottom-color: var(--lb-badge-edge);
+    color: var(--lb-white);
+    font-size: 16px;
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-badge--zero {
+    background-color: var(--lb-off);
+    border-left-color: var(--lb-off-edge);
+    border-right-color: var(--lb-off-edge);
+    border-top-color: var(--lb-off-edge);
+    border-bottom-color: var(--lb-off-edge);
+}
+
+/* ---- loadout preview: deliberately quiet - no border, no shadow ---- */
+
+.lb-loadcol {
+    position: absolute;
+    right: var(--lb-sp4);
+    top: 28px;
+    align-items: center;
+    opacity: 0.62;
+    transition-property: opacity;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-loadcol:hover {
+    opacity: 1;
+}
+
+.lb-lpi {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 6px;
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    border-bottom-left-radius: 11px;
+    border-bottom-right-radius: 11px;
+    background-color: var(--lb-chip-bg);
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-lpi--gap {
+    margin-top: 9px;
+}
+
+.lb-root .lb-lpi__letter {
+    font-size: 19px;
+    color: var(--lb-ink-mute);
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-lpcap {
+    font-size: 11px;
+    color: var(--lb-ink-mute);
+    letter-spacing: 0.7px;
+    margin-top: 3px;
+    -unity-text-align: middle-center;
+}
+
+/* ---- villager ---- */
+
+.lb-villager-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 30%;
+    align-items: center;
+}
+
+.lb-root .lb-tapedit {
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    margin-bottom: 14px;
+}
+
+.lb-villager {
+    align-items: center;
+    transition-property: translate;
+    transition-duration: var(--lb-t-bob);
+    transition-timing-function: ease-in-out;
+}
+
+.lb-villager--up {
+    translate: 0 -6px;
+}
+
+.lb-villager__body {
+    width: 56px;
+    height: 78px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    align-items: center;
+}
+
+.lb-villager > .lb-sticker__shadow {
+    top: 5px;
+    bottom: -5px;
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.lb-villager__hat {
+    position: absolute;
+    top: -11px;
+    width: 52px;
+    height: 14px;
+    background-color: var(--lb-hat);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
+}
+
+.lb-villager__face {
+    position: absolute;
+    top: 17px;
+    width: 26px;
+    height: 26px;
+    -unity-background-image-tint-color: var(--lb-edge);
+}
+
+/* ---- call to action ---- */
+
+.lb-cta {
+    position: absolute;
+    left: var(--lb-sp4);
+    right: var(--lb-sp4);
+    bottom: 100px;
+}
+
+/* The prototype's 0 5px 0 lip is a solid block behind the button. */
+.lb-lip {
+    position: relative;
+}
+
+.lb-lip__block {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 5px;
+    bottom: -5px;
+}
+
+.lb-battle {
+    height: 74px;
+    background-color: var(--lb-gold);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-gold-edge);
+    border-right-color: var(--lb-gold-edge);
+    border-top-color: var(--lb-gold-edge);
+    border-bottom-color: var(--lb-gold-edge);
+    border-top-left-radius: var(--lb-r-lg);
+    border-top-right-radius: var(--lb-r-lg);
+    border-bottom-left-radius: var(--lb-r-lg);
+    border-bottom-right-radius: var(--lb-r-lg);
+    font-size: 30px;
+    letter-spacing: 0.5px;
+    color: var(--lb-gold-text);
+    transition-property: translate;
+    transition-duration: var(--lb-t-press);
+    transition-timing-function: ease-in;
+}
+
+.lb-battle:active {
+    translate: 0 4px;
+}
+
+.lb-battle-lip {
+    background-color: var(--lb-gold-edge);
+    border-top-left-radius: var(--lb-r-lg);
+    border-top-right-radius: var(--lb-r-lg);
+    border-bottom-left-radius: var(--lb-r-lg);
+    border-bottom-right-radius: var(--lb-r-lg);
+}
+
+.lb-boxmeter {
+    margin-top: var(--lb-sp3);
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--lb-meter-bg);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.lb-root .lb-boxmeter__label {
+    font-size: 15px;
+    color: var(--lb-ink-inv);
+    margin-right: var(--lb-sp3);
+    flex-shrink: 0;
+}
+
+.lb-boxmeter__track {
+    flex-grow: 1;
+    height: 12px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background-color: var(--lb-meter-track);
+    overflow: hidden;
+}
+
+.lb-boxmeter__fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--lb-green);
+}
+
+/* ===================================================================
+   SHEET. Pinned to the bottom edge by construction, so it cannot render
+   off-screen. Never positioned with top: and a computed value.
+   =================================================================== */
+
+.lb-sheet-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.lb-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--lb-scrim);
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--lb-t-sheet);
+}
+
+.lb-scrim--on {
+    opacity: 1;
+}
+
+.lb-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    min-height: 46%;
+    max-height: 88%;
+    background-color: var(--lb-paper);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: 0;
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-sheet);
+    border-top-right-radius: var(--lb-r-sheet);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    padding-bottom: var(--lb-sp5);
+    translate: 0 100%;
+    transition-property: translate, min-height;
+    transition-duration: var(--lb-t-sheet);
+    transition-timing-function: ease-out-back;
+}
+
+.lb-sheet--open {
+    translate: 0 0;
+}
+
+.lb-sheet--large {
+    min-height: 88%;
+}
+
+.lb-handle-hit {
+    height: 33px;
+    align-items: center;
+}
+
+.lb-handle {
+    width: 44px;
+    height: 5px;
+    margin-top: var(--lb-sp3);
+    border-top-left-radius: 2.5px;
+    border-top-right-radius: 2.5px;
+    border-bottom-left-radius: 2.5px;
+    border-bottom-right-radius: 2.5px;
+    background-color: var(--lb-ink-mute);
+}
+
+.lb-root .lb-sheet__title {
+    font-size: 27px;
+    color: var(--lb-ink);
+    margin-bottom: var(--lb-sp4);
+    white-space: normal;
+}
+
+.lb-root .lb-sheet__note {
+    font-size: 17px;
+    color: var(--lb-ink-mute);
+    margin-bottom: 18px;
+    white-space: normal;
+}
+
+.lb-view--hidden {
+    display: none;
+}
+
+/* ---- segmented control ---- */
+
+.lb-seg {
+    flex-direction: row;
+    background-color: var(--lb-card);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 29px;
+    border-top-right-radius: 29px;
+    border-bottom-left-radius: 29px;
+    border-bottom-right-radius: 29px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+}
+
+.lb-seg__btn {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 44px;
+    margin-right: 4px;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    transition-property: background-color, color;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-seg__btn--last {
+    margin-right: 0;
+}
+
+/* The prototype's 0 2px 0 lift, as a bottom border. */
+.lb-seg__btn--on {
+    background-color: var(--lb-paper-hi);
+    color: var(--lb-ink);
+    border-bottom-width: var(--lb-bw-thin);
+    border-bottom-color: var(--lb-shadow-soft);
+}
+
+/* Looks disabled but still answers a tap, so it can say why. */
+.lb-seg__btn--off {
+    opacity: 0.45;
+}
+
+/* ---- big buttons ---- */
+
+.lb-bigbtn-wrap {
+    margin-bottom: var(--lb-sp3);
+}
+
+.lb-bigbtn-wrap > .lb-lip__block {
+    top: 4px;
+    bottom: -4px;
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+}
+
+.lb-bigbtn {
+    height: 60px;
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    font-size: 21px;
+    transition-property: translate;
+    transition-duration: var(--lb-t-press);
+}
+
+.lb-bigbtn:active {
+    translate: 0 3px;
+}
+
+.lb-bigbtn--gold {
+    background-color: var(--lb-gold);
+    border-left-color: var(--lb-gold-edge);
+    border-right-color: var(--lb-gold-edge);
+    border-top-color: var(--lb-gold-edge);
+    border-bottom-color: var(--lb-gold-edge);
+    color: var(--lb-gold-text);
+}
+
+.lb-lip__block--gold {
+    background-color: var(--lb-gold-edge);
+}
+
+.lb-bigbtn--green {
+    background-color: var(--lb-green);
+    border-left-color: var(--lb-green-dk);
+    border-right-color: var(--lb-green-dk);
+    border-top-color: var(--lb-green-dk);
+    border-bottom-color: var(--lb-green-dk);
+    color: var(--lb-green-text);
+}
+
+.lb-lip__block--green {
+    background-color: var(--lb-green-dk);
+}
+
+.lb-bigbtn--quiet {
+    background-color: var(--lb-card);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    color: var(--lb-ink);
+}
+
+/* ---- code box ---- */
+
+.lb-codebox {
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    padding-top: var(--lb-sp4);
+    padding-bottom: var(--lb-sp4);
+    margin-bottom: var(--lb-sp3);
+    align-items: center;
+}
+
+.lb-root .lb-codebox__label {
+    font-size: 15px;
+    color: var(--lb-ink-mute);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.lb-root .lb-codebox__code {
+    font-size: 38px;
+    letter-spacing: 5px;
+    color: var(--lb-ink);
+    -unity-text-align: middle-center;
+}
+
+/* The prototype's .field. The editable region is the inner child. */
+.lb-field {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: var(--lb-sp3);
+}
+
+.lb-field > .unity-base-text-field__input {
+    height: 60px;
+    background-color: var(--lb-paper-hi);
+    background-image: none;
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    -unity-font-definition: var(--lb-font-600);
+    font-size: 23px;
+    color: var(--lb-ink);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    -unity-text-align: middle-center;
+}
+
+.lb-field > .unity-label {
+    display: none;
+}
+
+/* ===================================================================
+   TOAST
+   =================================================================== */
+
+.lb-toast-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 196px;
+    align-items: center;
+}
+
+.lb-root .lb-toast {
+    max-width: 300px;
+    background-color: var(--lb-toast-bg);
+    border-top-left-radius: 23px;
+    border-top-right-radius: 23px;
+    border-bottom-left-radius: 23px;
+    border-bottom-right-radius: 23px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    color: var(--lb-ink-inv);
+    font-size: 17px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    opacity: 0;
+    translate: 0 8px;
+    transition-property: opacity, translate;
+    transition-duration: 200ms;
+}
+
+.lb-root .lb-toast--on {
+    opacity: 1;
+    translate: 0 0;
+}
