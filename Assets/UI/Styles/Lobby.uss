@@ -27,46 +27,46 @@
 
 :root {
     /* ---- surface ---- */
-    --lb-paper: rgb(235, 220, 195);
-    --lb-paper-hi: rgb(244, 233, 213);
-    --lb-card: rgb(215, 195, 165);
-    --lb-edge: rgb(150, 128, 95);
-    --lb-scrim: rgba(30, 22, 15, 0.55);
-    --lb-dark-glass: rgba(45, 35, 25, 0.82);
-    --lb-nav-bg: rgba(45, 35, 25, 0.92);
-    --lb-toast-bg: rgba(45, 35, 25, 0.94);
+    --lb-paper: var(--surface);
+    --lb-paper-hi: var(--surface-raised);
+    --lb-card: var(--surface-sunk);
+    --lb-edge: var(--edge);
+    --lb-scrim: var(--scrim);
+    --lb-dark-glass: var(--glass);
+    --lb-nav-bg: var(--glass-strong);
+    --lb-toast-bg: var(--glass-toast);
     --lb-meter-bg: rgba(45, 35, 25, 0.8);
     --lb-meter-track: rgb(74, 59, 42);
-    --lb-shadow: rgba(90, 70, 40, 0.3);
-    --lb-shadow-soft: rgba(90, 70, 40, 0.25);
-    --lb-shadow-deep: rgba(0, 0, 0, 0.35);
+    --lb-shadow: var(--shadow);
+    --lb-shadow-soft: var(--shadow-soft);
+    --lb-shadow-deep: var(--shadow-deep);
     --lb-chip-bg: rgba(150, 128, 95, 0.2);
-    --lb-press-tint: rgba(150, 128, 95, 0.22);
-    --lb-track: rgb(195, 170, 133);
-    --lb-rule: rgba(150, 128, 95, 0.3);
+    --lb-press-tint: var(--press-tint);
+    --lb-track: var(--surface-track);
+    --lb-rule: var(--rule);
 
     /* ---- ink ---- */
-    --lb-ink: rgb(45, 35, 25);
-    --lb-ink-mute: rgb(115, 100, 79);
-    --lb-ink-inv: rgb(250, 245, 235);
+    --lb-ink: var(--ink);
+    --lb-ink-mute: var(--ink-mute);
+    --lb-ink-inv: var(--ink-inverse);
     --lb-ink-tab: rgb(169, 151, 124);
-    --lb-ink-trophy: rgb(138, 106, 18);
-    --lb-white: rgb(255, 255, 255);
+    --lb-ink-trophy: var(--trophy-ink);
+    --lb-white: var(--ink-white);
 
     /* ---- action ---- */
-    --lb-gold: rgb(245, 195, 60);
-    --lb-gold-dk: rgb(222, 172, 42);
-    --lb-gold-edge: rgb(168, 128, 28);
-    --lb-gold-text: rgb(58, 42, 8);
-    --lb-green: rgb(95, 185, 95);
-    --lb-green-dk: rgb(76, 160, 76);
-    --lb-green-text: rgb(18, 51, 18);
-    --lb-leaf: rgb(201, 162, 39);
-    --lb-leaf-edge: rgb(126, 100, 19);
-    --lb-badge: rgb(205, 60, 50);
-    --lb-badge-edge: rgb(125, 33, 26);
-    --lb-off: rgb(160, 150, 135);
-    --lb-off-edge: rgb(110, 101, 87);
+    --lb-gold: var(--action);
+    --lb-gold-dk: var(--action-press);
+    --lb-gold-edge: var(--action-edge);
+    --lb-gold-text: var(--action-ink);
+    --lb-green: var(--confirm);
+    --lb-green-dk: var(--confirm-edge);
+    --lb-green-text: var(--confirm-ink);
+    --lb-leaf: var(--leaf);
+    --lb-leaf-edge: var(--leaf-edge);
+    --lb-badge: var(--badge);
+    --lb-badge-edge: var(--badge-edge);
+    --lb-off: var(--off);
+    --lb-off-edge: var(--off-edge);
 
     /* ---- stand-in scenery (CSS fakery in the prototype too) ---- */
     --lb-sky-0: rgb(247, 238, 219);
@@ -93,10 +93,10 @@
     /* ---- loadout state: filled is navy, short (fillable but empty) is orange.
        Solid here: Home's preview column is drawn at the prototype's quiet
        62% opacity, which is what fades them. ---- */
-    --lb-loadout-ok-bg: rgb(52, 80, 146);
-    --lb-loadout-ok-ink: rgb(236, 240, 250);
-    --lb-loadout-short-bg: rgb(222, 110, 48);
-    --lb-loadout-short-ink: rgb(178, 84, 32);
+    --lb-loadout-ok-bg: var(--status-ready);
+    --lb-loadout-ok-ink: var(--status-ready-ink);
+    --lb-loadout-short-bg: var(--status-short);
+    --lb-loadout-short-ink: var(--status-short-ink);
 
     /* ---- workshop: shape families, slots, picker ---- */
     --lb-fam-round: rgb(127, 175, 99);
@@ -116,37 +116,37 @@
     --lb-stall-counter: rgb(181, 129, 74);
 
     /* ---- spacing, 4pt base ---- */
-    --lb-sp1: 4px;
-    --lb-sp2: 8px;
-    --lb-sp3: 12px;
-    --lb-sp4: 16px;
-    --lb-sp5: 24px;
-    --lb-sp6: 32px;
+    --lb-sp1: var(--space-1);
+    --lb-sp2: var(--space-2);
+    --lb-sp3: var(--space-3);
+    --lb-sp4: var(--space-4);
+    --lb-sp5: var(--space-5);
+    --lb-sp6: var(--space-6);
 
     /* ---- radius ---- */
-    --lb-r-sm: 10px;
-    --lb-r-md: 16px;
-    --lb-r-lg: 24px;
-    --lb-r-sheet: 28px;
+    --lb-r-sm: var(--corner-sm);
+    --lb-r-md: var(--corner-md);
+    --lb-r-lg: var(--corner-lg);
+    --lb-r-sheet: var(--corner-sheet);
     /* No pill token: USS scales an oversized radius into an ellipse, so a
        pill is given exactly half its height where it is used. */
 
     /* ---- borders ---- */
-    --lb-bw: 3px;
-    --lb-bw-mid: 2.5px;
-    --lb-bw-thin: 2px;
+    --lb-bw: var(--stroke);
+    --lb-bw-mid: var(--stroke-mid);
+    --lb-bw-thin: var(--stroke-thin);
 
     /* ---- motion ---- */
-    --lb-t-press: 60ms;
-    --lb-t-rel: 120ms;
-    --lb-t-page: 250ms;
-    --lb-t-sheet: 320ms;
-    --lb-t-bob: 1700ms;
+    --lb-t-press: var(--motion-press);
+    --lb-t-rel: var(--motion-release);
+    --lb-t-page: var(--motion-page);
+    --lb-t-sheet: var(--motion-sheet);
+    --lb-t-bob: var(--motion-bob);
 
     /* ---- fonts ---- */
-    --lb-font-500: url("project://database/Assets/UI/Fonts/Fredoka-Medium-SDF.asset");
-    --lb-font-600: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
-    --lb-font-700: url("project://database/Assets/UI/Fonts/Fredoka-Bold-SDF.asset");
+    --lb-font-500: var(--font-medium);
+    --lb-font-600: var(--font-semibold);
+    --lb-font-700: var(--font-bold);
 }
 
 /* ===================================================================
