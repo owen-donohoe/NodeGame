@@ -1,1 +1,11 @@
 @import url("unity-theme://default");
+
+/*
+    Node War's theme, on top of Unity's runtime defaults. Both PanelSettings
+    (Lobby and HUD) use this file, so what is imported here reaches every
+    UI Toolkit panel in the game without any layout importing it.
+
+    Tokens first, because the components read them.
+*/
+@import url("Styles/Tokens.uss");
+@import url("Styles/Components.uss");

@@ -1,0 +1,258 @@
+/*
+    Node War - design tokens.
+
+    The single source of colour, spacing, shape, motion and type for every
+    UI Toolkit panel in the game: the lobby and the match. It reaches both
+    through UnityDefaultRuntimeTheme.tss, which both PanelSettings use, so no
+    layout imports it and no page can forget to.
+
+    TWO LAYERS, AND ONLY THE SECOND IS FOR USE.
+
+    1. PALETTE (--pal-*). The raw colours, named for what they are. Nothing
+       outside this file reads a palette token. Restyling the game is editing
+       this block.
+    2. MEANING (everything else). Named for the job - a surface, an ink, the
+       main action, player 0. Stylesheets read these. Two jobs that happen to
+       share a colour today get two tokens, so they can part later without a
+       search through every page.
+
+    Layout sizes (a card's width, a page's padding) are not tokens. They
+    belong to the page that owns them. A token is for a value that must agree
+    across screens.
+
+    Tokens used by one page only live in that page's own :root block (the
+    arena eras in Profile.uss, the stall in Shop.uss), not here.
+
+    Custom properties may alias one another: --x: var(--y) resolves, for
+    colours and lengths alike (probed in 6000.5.9f1). C# reading a token
+    through customStyle should read a token holding a literal, not an alias.
+
+    Two things are decisions rather than taste:
+
+    PLAYER COLOURS copy the board. --pal-player-0 and --pal-player-1 are
+    HUDManager.p0Color / p1Color as serialised on UI_Manager.prefab
+    (0.4, 0.6, 1.0) and (1.0, 0.4, 0.4). The board is the source; change it
+    there first, then here. Player 0 is blue, player 1 is red.
+
+    OWNERSHIP IS NEVER COLOUR ALONE. A player colour travels with a shape or a
+    label (.ui-mark in Components.uss). And red is not a warning colour on the
+    match surface, because there red means player 1 - the notification red is
+    --badge, not a player token.
+*/
+
+:root {
+    /* ================= PALETTE ================= */
+
+    /* paper, lightest to darkest */
+    --pal-paper-50: rgb(244, 233, 213);
+    --pal-paper-100: rgb(235, 220, 195);
+    --pal-paper-200: rgb(215, 195, 165);
+    --pal-paper-300: rgb(195, 170, 133);
+    --pal-paper-500: rgb(150, 128, 95);
+    --pal-paper-500-a22: rgba(150, 128, 95, 0.22);
+    --pal-paper-500-a30: rgba(150, 128, 95, 0.3);
+
+    /* umber: the ink, and the dark glass drawn over scenery */
+    --pal-umber-900: rgb(45, 35, 25);
+    --pal-umber-900-a55: rgba(30, 22, 15, 0.55);
+    --pal-umber-900-a82: rgba(45, 35, 25, 0.82);
+    --pal-umber-900-a92: rgba(45, 35, 25, 0.92);
+    --pal-umber-900-a94: rgba(45, 35, 25, 0.94);
+    --pal-umber-500: rgb(115, 100, 79);
+    --pal-shadow-a25: rgba(90, 70, 40, 0.25);
+    --pal-shadow-a30: rgba(90, 70, 40, 0.3);
+    --pal-black-a35: rgba(0, 0, 0, 0.35);
+
+    --pal-cream: rgb(250, 245, 235);
+    --pal-white: rgb(255, 255, 255);
+    --pal-clear: rgba(0, 0, 0, 0);
+
+    /* gold */
+    --pal-gold-400: rgb(245, 195, 60);
+    --pal-gold-500: rgb(222, 172, 42);
+    --pal-gold-700: rgb(168, 128, 28);
+    --pal-gold-800: rgb(138, 106, 18);
+    --pal-gold-950: rgb(58, 42, 8);
+
+    /* green */
+    --pal-green-400: rgb(95, 185, 95);
+    --pal-green-500: rgb(76, 160, 76);
+    --pal-green-950: rgb(18, 51, 18);
+
+    /* leaf - the second currency */
+    --pal-leaf-500: rgb(201, 162, 39);
+    --pal-leaf-800: rgb(126, 100, 19);
+
+    /* signal red and its edge */
+    --pal-red-500: rgb(205, 60, 50);
+    --pal-red-800: rgb(125, 33, 26);
+
+    /* stone - off and disabled */
+    --pal-stone-400: rgb(160, 150, 135);
+    --pal-stone-600: rgb(110, 101, 87);
+
+    /* navy and orange - loadout state */
+    --pal-navy-600: rgb(52, 80, 146);
+    --pal-navy-50: rgb(236, 240, 250);
+    --pal-orange-500: rgb(222, 110, 48);
+    --pal-orange-700: rgb(178, 84, 32);
+
+    /* players - copied from the board, see the header */
+    --pal-player-0: rgb(102, 153, 255);
+    --pal-player-0-edge: rgb(40, 72, 140);
+    --pal-player-1: rgb(255, 102, 102);
+    --pal-player-1-edge: rgb(140, 40, 40);
+    --pal-neutral: rgb(154, 146, 133);
+    --pal-neutral-edge: rgb(107, 100, 89);
+
+    /* the match's dark glass over a lit board */
+    --pal-night-a55: rgba(12, 11, 7, 0.55);
+    --pal-night-a72: rgba(12, 11, 7, 0.72);
+    --pal-cream-a28: rgba(247, 242, 231, 0.28);
+    --pal-cream-a40: rgba(247, 242, 231, 0.4);
+    --pal-cream-a60: rgba(247, 242, 231, 0.6);
+    --pal-white-a60: rgba(255, 255, 255, 0.6);
+
+    /* resource readout zones */
+    --pal-clay: rgb(192, 138, 110);
+    --pal-wheat: rgb(201, 179, 126);
+    --pal-sage: rgb(143, 168, 124);
+
+    /* monogram tiles - ItemTint picks one by hashing the item's ID */
+    --pal-tile-0: rgb(58, 110, 108);
+    --pal-tile-1: rgb(160, 82, 45);
+    --pal-tile-2: rgb(72, 82, 140);
+    --pal-tile-3: rgb(104, 112, 52);
+    --pal-tile-4: rgb(112, 64, 112);
+    --pal-tile-5: rgb(78, 92, 104);
+    --pal-tile-6: rgb(158, 122, 40);
+    --pal-tile-7: rgb(140, 62, 62);
+
+    /* ================= MEANING ================= */
+
+    /* ---- surfaces ---- */
+    --surface: var(--pal-paper-100);
+    --surface-raised: var(--pal-paper-50);
+    --surface-sunk: var(--pal-paper-200);
+    --surface-track: var(--pal-paper-300);
+    --edge: var(--pal-paper-500);
+    --rule: var(--pal-paper-500-a30);
+    --press-tint: var(--pal-paper-500-a22);
+    --scrim: var(--pal-umber-900-a55);
+    --glass: var(--pal-umber-900-a82);
+    --glass-strong: var(--pal-umber-900-a92);
+    --glass-toast: var(--pal-umber-900-a94);
+    --shadow: var(--pal-shadow-a30);
+    --shadow-soft: var(--pal-shadow-a25);
+    --shadow-deep: var(--pal-black-a35);
+
+    /* ---- ink ---- */
+    --ink: var(--pal-umber-900);
+    --ink-mute: var(--pal-umber-500);
+    --ink-inverse: var(--pal-cream);
+    --ink-white: var(--pal-white);
+    --clear: var(--pal-clear);
+
+    /* ---- actions ---- */
+    --action: var(--pal-gold-400);
+    --action-press: var(--pal-gold-500);
+    --action-edge: var(--pal-gold-700);
+    --action-ink: var(--pal-gold-950);
+    --confirm: var(--pal-green-400);
+    --confirm-edge: var(--pal-green-500);
+    --confirm-ink: var(--pal-green-950);
+    --off: var(--pal-stone-400);
+    --off-edge: var(--pal-stone-600);
+
+    /* ---- currency and progress ---- */
+    --trophy-ink: var(--pal-gold-800);
+    --leaf: var(--pal-leaf-500);
+    --leaf-edge: var(--pal-leaf-800);
+
+    /* ---- notification. NOT a player colour. ---- */
+    --badge: var(--pal-red-500);
+    --badge-edge: var(--pal-red-800);
+
+    /* ---- status: a filled loadout slot, and one that could be filled but is not ---- */
+    --status-ready: var(--pal-navy-600);
+    --status-ready-ink: var(--pal-navy-50);
+    --status-short: var(--pal-orange-500);
+    --status-short-ink: var(--pal-orange-700);
+
+    /* ---- players ---- */
+    --p0: var(--pal-player-0);
+    --p0-edge: var(--pal-player-0-edge);
+    --p1: var(--pal-player-1);
+    --p1-edge: var(--pal-player-1-edge);
+    --unowned: var(--pal-neutral);
+    --unowned-edge: var(--pal-neutral-edge);
+    --mark-ink: var(--pal-umber-900);
+
+    /* ---- the match: readouts floating over the board ---- */
+    --hud-glass: var(--pal-night-a55);
+    --hud-glass-strong: var(--pal-night-a72);
+    --hud-edge: var(--pal-cream-a28);
+    --hud-ink: var(--pal-cream);
+    --hud-ink-mute: var(--pal-cream-a60);
+    --hud-bar-past: var(--pal-cream-a40);
+    --hud-ghost: var(--pal-white-a60);
+    --resource-low: var(--pal-clay);
+    --resource-mid: var(--pal-wheat);
+    --resource-high: var(--pal-sage);
+
+    /* ---- monogram tiles ---- */
+    --tile-tint-0: var(--pal-tile-0);
+    --tile-tint-1: var(--pal-tile-1);
+    --tile-tint-2: var(--pal-tile-2);
+    --tile-tint-3: var(--pal-tile-3);
+    --tile-tint-4: var(--pal-tile-4);
+    --tile-tint-5: var(--pal-tile-5);
+    --tile-tint-6: var(--pal-tile-6);
+    --tile-tint-7: var(--pal-tile-7);
+
+    /* ---- spacing, 4pt base ---- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    /* ---- corners. No pill token: USS turns an oversized radius into an
+       ellipse, so a pill is given exactly half its height where it is used. ---- */
+    --corner-sm: 10px;
+    --corner-md: 16px;
+    --corner-lg: 24px;
+    --corner-sheet: 28px;
+
+    /* ---- strokes ---- */
+    --stroke: 3px;
+    --stroke-mid: 2.5px;
+    --stroke-thin: 2px;
+
+    /* ---- motion ---- */
+    --motion-press: 60ms;
+    --motion-release: 120ms;
+    --motion-page: 250ms;
+    --motion-sheet: 320ms;
+    --motion-bob: 1700ms;
+
+    /* ---- type. Fredoka only; each weight is its own font asset, because
+       -unity-font-style: bold would synthesise rather than use the real cut. ---- */
+    --font-medium: url("project://database/Assets/UI/Fonts/Fredoka-Medium-SDF.asset");
+    --font-semibold: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
+    --font-bold: url("project://database/Assets/UI/Fonts/Fredoka-Bold-SDF.asset");
+
+    /* Nothing is set smaller than --type-min. The prototypes go to 7px, which
+       at a 390-wide reference is unreadable on a phone. */
+    --type-min: 11px;
+    --type-caption: 13px;
+    --type-body: 17px;
+    --type-number: 18px;
+    --type-heading: 21px;
+    --type-title: 27px;
+
+    /* Minimum touch target. The panels scale to a 390-wide reference, so a
+       unit is about one point on a phone. */
+    --target-min: 44px;
+}
