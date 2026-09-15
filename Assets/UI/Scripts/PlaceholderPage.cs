@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
     ///
     /// S1 builds the shell before any real page exists. Rather than leave four
     /// tabs leading nowhere, each gets one of these: a labelled empty page that
-    /// names the session due to replace it. The .placeholder class makes it
+    /// names the session due to replace it. The .lb-placeholder class makes it
     /// visually obvious that nothing here is real, so a screenshot of the
     /// half-built lobby cannot be mistaken for a working one.
     ///
@@ -27,15 +27,15 @@ namespace NodeWar.Lobby
             root.name = "page-" + id.ToString().ToLowerInvariant();
 
             VisualElement box = new VisualElement();
-            box.AddToClassList("placeholder");
+            box.AddToClassList("lb-placeholder");
             box.style.flexGrow = 1;
 
             Label title = new Label(id.ToString());
-            title.AddToClassList("placeholder__label");
+            title.AddToClassList("lb-placeholder__label");
             title.style.fontSize = 22;
 
             Label note = new Label("Not built yet - " + dueIn);
-            note.AddToClassList("placeholder__label");
+            note.AddToClassList("lb-placeholder__label");
 
             box.Add(title);
             box.Add(note);

@@ -1,9 +1,16 @@
 /*
     Social.
 
-    One placeholder and one useful aside. Colour, spacing and type come from
-    Theme.uss custom properties.
+    One placeholder and one useful aside. The placeholder band is Lobby.uss's
+    .lb-placeholder; the aside's card and text are drawn here.
 */
+
+:root {
+    /* The aside keeps the look it had under the old theme: a darker card edge
+       and caption ink than the rest of the lobby uses. */
+    --social-card-edge: rgb(72, 56, 40);
+    --social-caption-ink: rgb(105, 90, 72);
+}
 
 .social {
     flex-grow: 1;
@@ -14,19 +21,39 @@
 .social__band {
     flex-grow: 1;
     max-height: 60%;
-    padding: var(--space-lg);
+    padding: var(--space-5);
 }
 
 .social__heading {
-    font-size: var(--text-lg);
-    margin-bottom: var(--space-sm);
+    font-size: 22px;
+    margin-bottom: var(--space-2);
 }
 
 .social__aside {
     flex-shrink: 0;
-    margin-top: var(--space-md);
+    margin-top: var(--space-4);
 }
 
 .social__aside-note {
-    margin-top: var(--space-xs);
+    margin-top: var(--space-1);
+}
+
+.social__card {
+    background-color: var(--surface-sunk);
+    border-width: var(--stroke-thin);
+    border-color: var(--social-card-edge);
+    border-radius: var(--corner-md);
+    padding: var(--space-4);
+}
+
+.social__body {
+    font-size: 16px;
+    color: var(--ink);
+    white-space: normal;
+}
+
+.social__caption {
+    font-size: 13px;
+    color: var(--social-caption-ink);
+    white-space: normal;
 }

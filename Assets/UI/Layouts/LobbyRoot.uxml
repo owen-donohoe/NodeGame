@@ -29,12 +29,14 @@
         one element bound once.
 
         Four tabs. Profile is reached from the player name, not a tab.
+
+        Tokens and shared components arrive through the panel theme
+        (UnityDefaultRuntimeTheme.tss); only the lobby's own sheet is imported here.
     -->
 
-    <engine:Style src="project://database/Assets/UI/Styles/Theme.uss" />
     <engine:Style src="project://database/Assets/UI/Styles/Lobby.uss" />
 
-    <engine:VisualElement name="lobby-root" class="lobby-root lb-root">
+    <engine:VisualElement name="lobby-root" class="lb-root">
 
         <lobby:LobbyBackdrop name="backdrop" class="lb-backdrop" picking-mode="Ignore">
             <engine:VisualElement class="lb-ground-edge" picking-mode="Ignore" />

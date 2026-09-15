@@ -115,6 +115,10 @@
     --lb-stall-wood: rgb(156, 108, 60);
     --lb-stall-counter: rgb(181, 129, 74);
 
+    /* ---- placeholder screens ---- */
+    --placeholder-ink: rgb(90, 50, 140);
+    --placeholder-fill: rgba(90, 50, 140, 0.12);
+
     /* ---- spacing, 4pt base ---- */
     --lb-sp1: var(--space-1);
     --lb-sp2: var(--space-2);
@@ -322,14 +326,21 @@
     transition-timing-function: ease-out;
 }
 
-.lb-page-track > .page {
+/* Every tab page. LobbyPage adds the class. */
+.lb-page {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: var(--space-4);
+}
+
+.lb-page-track > .lb-page {
     flex-shrink: 0;
     flex-grow: 0;
 }
 
-/* Pages not yet rebuilt keep Theme.uss.s .page, but must clear the
-   floating tab bar, which sits over the bottom of the page. */
-.lb-page-track > .page {
+/* A page that places its own content must still clear the floating tab
+   bar, which sits over the bottom of the page. */
+.lb-page-track > .lb-page {
     padding-bottom: 96px;
 }
 
@@ -1077,6 +1088,29 @@
     width: 19px;
     height: 19px;
     -unity-background-image-tint-color: var(--lb-ink);
+}
+
+/* ===================================================================
+   PLACEHOLDER - a screen standing in for a system nobody has designed,
+   so a screenshot never quietly implies a feature. Purple on purpose:
+   it is not a colour the lobby uses for anything real.
+   =================================================================== */
+
+.lb-placeholder {
+    background-color: var(--placeholder-fill);
+    border-width: 1px;
+    border-color: var(--placeholder-ink);
+    border-radius: var(--corner-sm);
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-placeholder__label {
+    font-size: 13px;
+    color: var(--placeholder-ink);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
 }
 
 /* ===================================================================
