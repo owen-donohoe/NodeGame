@@ -11,7 +11,7 @@ namespace NodeWar.Lobby
     /// with per-vertex colour - the sky as the prototype's radial gradient
     /// (120% x 70% at 50% 8%, three stops), the ground as its vertical one.
     ///
-    /// Colours come from Lobby.uss custom properties (--lb-sky-*, --lb-ground-*),
+    /// Colours come from Lobby.uss custom properties (--backdrop-sky-*, --backdrop-ground-*),
     /// so the stylesheet stays the single place a colour is decided. The ground
     /// edge line and the props are ordinary child elements, styled there too.
     ///
@@ -27,11 +27,11 @@ namespace NodeWar.Lobby
         private const int SkyColumns = 12;
         private const int SkyRows = 24;
 
-        private static readonly CustomStyleProperty<Color> SkyInner = new CustomStyleProperty<Color>("--lb-sky-0");
-        private static readonly CustomStyleProperty<Color> SkyMid = new CustomStyleProperty<Color>("--lb-sky-1");
-        private static readonly CustomStyleProperty<Color> SkyOuter = new CustomStyleProperty<Color>("--lb-sky-2");
-        private static readonly CustomStyleProperty<Color> GroundHigh = new CustomStyleProperty<Color>("--lb-ground-top");
-        private static readonly CustomStyleProperty<Color> GroundLow = new CustomStyleProperty<Color>("--lb-ground-bottom");
+        private static readonly CustomStyleProperty<Color> SkyInner = new CustomStyleProperty<Color>("--backdrop-sky-0");
+        private static readonly CustomStyleProperty<Color> SkyMid = new CustomStyleProperty<Color>("--backdrop-sky-1");
+        private static readonly CustomStyleProperty<Color> SkyOuter = new CustomStyleProperty<Color>("--backdrop-sky-2");
+        private static readonly CustomStyleProperty<Color> GroundHigh = new CustomStyleProperty<Color>("--backdrop-ground-top");
+        private static readonly CustomStyleProperty<Color> GroundLow = new CustomStyleProperty<Color>("--backdrop-ground-bottom");
 
         private Color skyInner = new Color32(247, 238, 219, 255);
         private Color skyMid = new Color32(231, 213, 182, 255);
