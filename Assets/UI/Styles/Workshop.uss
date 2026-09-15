@@ -1,314 +1,503 @@
 /*
-    Workshop - the loadout picker.
+    Workshop, after lobby-prototype.html. This layout is the one wanted in
+    game, so values here are the prototype's; change them only on purpose.
 
-    Colour, spacing and type come from Theme.uss custom properties; the tile
-    tints and the .tile base come from there too. Numbers below are layout
-    proportions and tile sizes, not design tokens.
+    Label rules that set margin or padding are written .lb-root .lb-x, so they
+    outrank the label reset in Lobby.uss.
 
-    Slots and cells are Buttons, so they get :hover / :active / :disabled for
-    free. They do not wear .btn - that class is for actions with a label, and
-    these are surfaces with content inside them - so each resets the runtime
-    theme's own button look explicitly.
-
-    THE TWO PANELS DIVIDE THE HEIGHT DELIBERATELY. The loadout card is sized by
-    its contents and never grows; the picker card takes everything left and its
-    grid scrolls inside that. Anything that makes the loadout card grow eats the
-    picker, and the first version of this screen lost its tabs entirely that way.
+    Differences from the prototype, all USS limits:
+      - empty slots have a translucent solid border; USS has no dashed border;
+      - the gold ring round full slots is a child element, not box-shadow;
+      - card and button shadows are sibling blocks, the picker's soft shadow
+        a blurred one;
+      - the grid is a wrapping row whose cards get their right margin from
+        WorkshopPage (every third card has none), since USS has no gap and no
+        :nth-child.
 */
 
-.workshop {
+.lb-workshop {
     flex-grow: 1;
-    flex-direction: column;
 }
 
-/* ===================================================================
-   Loadout card - what you have. Fixed height, always on screen.
-   =================================================================== */
+/* ---- segmented switcher ---- */
 
-.workshop__loadout {
-    flex-shrink: 0;
-    padding: var(--space-sm);
+.lb-wsbar {
+    padding-top: var(--lb-sp4);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
 }
 
-/*
-    Suits granted to every player regardless of loadout. Above both columns and
-    ruled off from them, because the point is that these cost no slot.
-*/
-.workshop__granted {
+.lb-wsseg {
     flex-direction: row;
-    align-items: center;
-    padding-bottom: var(--space-sm);
-    margin-bottom: var(--space-sm);
-    border-bottom-width: 1px;
-    border-bottom-color: var(--border-ink);
+    background-color: var(--lb-card);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 29px;
+    border-top-right-radius: 29px;
+    border-bottom-left-radius: 29px;
+    border-bottom-right-radius: 29px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
-.workshop__granted--hidden {
-    display: none;
-}
-
-.workshop__granted-tiles {
-    flex-direction: row;
-    flex-shrink: 0;
-}
-
-.workshop__granted-text {
-    flex-direction: column;
-    flex-grow: 1;
-    margin-left: var(--space-sm);
-}
-
-/* ===================================================================
-   Two columns, staggered
-   =================================================================== */
-
-.workshop__columns {
-    flex-direction: row;
-    align-items: flex-start;
-}
-
-.workshop__column {
+.lb-wsseg__btn {
     flex-grow: 1;
     flex-basis: 0;
-    flex-direction: column;
-    align-items: center;
-}
-
-.workshop__column-label {
-    -unity-text-align: middle-center;
-    -unity-font-style: bold;
-    margin-bottom: var(--space-xs);
-}
-
-.workshop__slots {
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-}
-
-/*
-    The stagger. Half a slot block, so the two-slot column interleaves with the
-    three-slot one instead of sitting alongside it with a gap at the bottom.
-    Column labels stay aligned because only the slot list is offset.
-
-    Tied to .workshop__slot's height below - change one and change both.
-*/
-.workshop__slots--stagger {
-    margin-top: 38px;
-}
-
-.workshop__slot {
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    height: 76px;
-    min-width: var(--touch-min);
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background-image: none;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-    transition-property: scale;
-    transition-duration: 0.12s;
-}
-
-.workshop__slot:active {
-    scale: 0.94;
-}
-
-.workshop__slot-name {
-    width: 100%;
-    margin-top: var(--space-xs);
-    -unity-text-align: middle-center;
-    overflow: hidden;
-}
-
-.tile--slot {
-    width: 52px;
-    height: 52px;
-}
-
-.tile--slot .tile__monogram {
-    font-size: var(--text-lg);
-}
-
-.tile--granted {
-    width: 32px;
-    height: 32px;
-}
-
-.tile--granted .tile__monogram {
-    font-size: var(--text-md);
-}
-
-/* ===================================================================
-   Picker card - what you can take. Takes the rest of the height.
-   =================================================================== */
-
-.workshop__picker {
-    flex-grow: 1;
-    flex-direction: column;
-    margin-top: var(--space-sm);
-    padding: var(--space-sm);
-    overflow: hidden;
-}
-
-/*
-    Two tabs, each under the column it fills. Big on purpose: these are the
-    control that switches the whole lower half, and on a phone they were the
-    first thing to get squeezed when they shared a panel with the slots.
-*/
-.workshop__tabs {
+    height: 44px;
+    margin-right: 4px;
     flex-direction: row;
-    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    transition-property: background-color;
+    transition-duration: var(--lb-t-rel);
 }
 
-.workshop__tab {
-    flex-grow: 1;
-    flex-basis: 0;
-    min-height: 52px;
-    margin: 0;
-    padding-left: var(--space-sm);
-    padding-right: var(--space-sm);
-    background-image: none;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: var(--border-width);
-    border-color: var(--ink-muted);
-    border-radius: var(--radius-md);
-    color: var(--ink-muted);
-    font-size: var(--text-lg);
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    transition-property: background-color, color, scale;
-    transition-duration: 0.12s;
-}
-
-.workshop__tab:active {
-    scale: 0.97;
-}
-
-.workshop__tabs > .workshop__tab {
-    margin-right: var(--space-sm);
-}
-
-.workshop__tabs > .workshop__tab:last-child {
+.lb-wsseg__btn--last {
     margin-right: 0;
 }
 
-.workshop__tab--active {
-    background-color: var(--primary);
-    border-color: var(--border-ink);
-    color: var(--ink-dark);
+.lb-wsseg__btn > .lb-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 7px;
+    -unity-background-image-tint-color: var(--lb-ink-mute);
 }
 
-.workshop__hint {
-    flex-shrink: 0;
-    margin-top: var(--space-sm);
+.lb-root .lb-wsseg__text {
+    font-size: 17px;
+    color: var(--lb-ink-mute);
+}
+
+/* The prototype's 0 2px 0 lift, as a bottom border. */
+.lb-wsseg__btn--on {
+    background-color: var(--lb-paper-hi);
+    border-bottom-width: var(--lb-bw-thin);
+    border-bottom-color: var(--lb-shadow-soft);
+}
+
+.lb-wsseg__btn--on > .lb-icon {
+    -unity-background-image-tint-color: var(--lb-ink);
+}
+
+.lb-root .lb-wsseg__btn--on > .lb-wsseg__text {
+    color: var(--lb-ink);
+}
+
+/* ---- slots ---- */
+
+.lb-slots {
+    flex-direction: row;
+    justify-content: center;
+    padding-top: var(--lb-sp3);
+    padding-bottom: var(--lb-sp2);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+}
+
+.lb-slot {
+    width: 72px;
+    height: 72px;
+    margin-right: var(--lb-sp2);
+    align-items: center;
+    justify-content: center;
+    background-color: var(--lb-slot-empty);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-slot-empty-edge);
+    border-right-color: var(--lb-slot-empty-edge);
+    border-top-color: var(--lb-slot-empty-edge);
+    border-bottom-color: var(--lb-slot-empty-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    white-space: normal;
+    transition-property: scale;
+    transition-duration: var(--lb-t-rel);
+    transition-timing-function: ease-out-back;
+}
+
+.lb-slot--last {
+    margin-right: 0;
+}
+
+.lb-slot:active {
+    scale: 0.94 0.94;
+}
+
+.lb-slot--filled {
+    background-color: var(--lb-paper-hi);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+}
+
+.lb-root .lb-slot__text {
+    font-size: 13px;
+    color: var(--lb-ink-mute);
+    white-space: normal;
     -unity-text-align: middle-center;
-    color: var(--accent);
-    -unity-font-style: bold;
 }
 
-.workshop__hint--hidden {
+.lb-root .lb-slot--filled .lb-slot__text {
+    color: var(--lb-ink);
+}
+
+.lb-root .lb-slot__letter {
+    font-size: 24px;
+    color: var(--lb-ink);
+    margin-bottom: 1px;
+    -unity-text-align: middle-center;
+}
+
+/* The gold ring round a filled slot once every slot is full. */
+.lb-slot__ring {
+    position: absolute;
+    left: -6px;
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-ready-ring);
+    border-right-color: var(--lb-ready-ring);
+    border-top-color: var(--lb-ready-ring);
+    border-bottom-color: var(--lb-ready-ring);
+    border-top-left-radius: 19px;
+    border-top-right-radius: 19px;
+    border-bottom-left-radius: 19px;
+    border-bottom-right-radius: 19px;
     display: none;
 }
 
-/* ===================================================================
-   The grid - two across, scrolling
-   =================================================================== */
-
-.workshop__grid {
-    flex-grow: 1;
-    margin-top: var(--space-sm);
+.lb-slotwrap--ready .lb-slot--filled > .lb-slot__ring {
+    display: flex;
 }
 
-.workshop__grid--hidden {
-    display: none;
+.lb-root .lb-readytag {
+    height: 20px;
+    font-size: 16px;
+    color: var(--lb-ink-trophy);
+    -unity-text-align: middle-center;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--lb-t-rel);
 }
 
-/*
-    ScrollView keeps its children in a content container of its own, so the
-    wrap has to be set there rather than on the ScrollView itself. Two across
-    comes from the cell width, not from a column count - flex has no such thing.
-*/
-.workshop__grid .unity-scroll-view__content-container {
+.lb-root .lb-slotwrap--ready > .lb-readytag {
+    opacity: 1;
+}
+
+/* ---- card grid ---- */
+
+.lb-grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 184px;
+    bottom: 0;
+}
+
+.lb-grid .unity-scroll-view__content-container {
     flex-direction: row;
     flex-wrap: wrap;
     align-content: flex-start;
+    padding-top: var(--lb-sp3);
+    padding-left: var(--lb-sp4);
+    padding-right: var(--lb-sp4);
+    padding-bottom: 160px;
 }
 
-/*
-    48% rather than 50% leaves room for the gap without a negative margin, and
-    guarantees a third cell cannot fit on a line.
-*/
-.workshop__cell {
-    width: 48%;
-    margin: 0;
-    margin-right: 2%;
-    margin-bottom: var(--space-sm);
-    padding: var(--space-sm);
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: var(--touch-min);
-    background-image: none;
-    background-color: var(--card);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-md);
-    transition-property: scale, background-color;
-    transition-duration: 0.12s;
+.lb-gcard-wrap {
+    width: 31.33%;
+    margin-bottom: var(--lb-sp3);
+    transition-property: opacity;
+    transition-duration: var(--lb-t-rel);
 }
 
-.workshop__cell:hover {
-    background-color: var(--card-raised);
+.lb-gcard-wrap--gap {
+    margin-right: 3%;
 }
 
-.workshop__cell:active {
-    scale: 0.97;
+.lb-gcard-wrap > .lb-sticker__shadow {
+    left: 2px;
+    top: 3px;
+    right: -2px;
+    bottom: -3px;
+    background-color: var(--lb-shadow-soft);
 }
 
-/* Equipped items leave the grid - they are visible in their slot instead. */
-.workshop__cell--hidden {
-    display: none;
+.lb-gcard-wrap--used {
+    opacity: 0.38;
 }
 
-.workshop__cell:disabled {
+.lb-gcard-wrap--locked {
     opacity: 0.55;
-    scale: 1;
 }
 
-.workshop__cell--locked {
-    background-color: rgba(72, 56, 40, 0.10);
+.lb-gcard {
+    align-items: center;
+    padding-top: var(--lb-sp2);
+    padding-bottom: var(--lb-sp2);
+    padding-left: 3px;
+    padding-right: 3px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-md);
+    border-top-right-radius: var(--lb-r-md);
+    border-bottom-left-radius: var(--lb-r-md);
+    border-bottom-right-radius: var(--lb-r-md);
+    transition-property: scale, translate;
+    transition-duration: var(--lb-t-press);
+    transition-timing-function: ease-in;
 }
 
-.tile--cell {
-    width: 52px;
-    height: 52px;
+.lb-gcard:active {
+    scale: 0.94 0.94;
+    translate: 0 2px;
 }
 
-.tile--cell .tile__monogram {
-    font-size: var(--text-lg);
+.lb-gcard__art {
+    height: 48px;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: var(--lb-r-sm);
+    border-top-right-radius: var(--lb-r-sm);
+    border-bottom-left-radius: var(--lb-r-sm);
+    border-bottom-right-radius: var(--lb-r-sm);
 }
 
-.workshop__cell-name {
-    width: 100%;
-    margin-top: var(--space-xs);
+.lb-art--round { background-color: var(--lb-fam-round); }
+.lb-art--square { background-color: var(--lb-fam-square); }
+.lb-art--triangle { background-color: var(--lb-fam-triangle); }
+.lb-art--combat { background-color: var(--lb-fam-combat); }
+
+/* TODO(art): a monogram stands where the item's art goes. */
+.lb-root .lb-gcard__letter {
+    font-size: 22px;
+    color: var(--lb-ink);
     -unity-text-align: middle-center;
-    -unity-font-style: bold;
+}
+
+.lb-gcard__art > .lb-icon {
+    width: 14px;
+    height: 14px;
+    -unity-background-image-tint-color: var(--lb-ink);
+}
+
+.lb-root .lb-gcard__name {
+    font-size: 14px;
+    color: var(--lb-ink);
+    -unity-text-align: middle-center;
     white-space: normal;
 }
 
-.workshop__cell-status {
-    width: 100%;
-    -unity-font-style: bold;
+.lb-root .lb-gcard__note {
+    font-size: 12px;
+    color: var(--lb-ink-mute);
     -unity-text-align: middle-center;
-    color: var(--ink-muted);
+    white-space: normal;
+    padding-left: 2px;
+    padding-right: 2px;
 }
 
-/* Shown in place of the grid when no definition assets are assigned. */
-.workshop__empty {
-    width: 100%;
-    padding: var(--space-lg);
+/* ---- floating picker - draws OVER the cards ---- */
+
+.lb-pickveil {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--lb-veil);
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--lb-t-rel);
+}
+
+.lb-pickveil--on {
+    opacity: 1;
+}
+
+.lb-picker {
+    position: absolute;
+    right: var(--lb-sp3);
+    bottom: 150px;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+}
+
+.lb-pick-lip {
+    top: 4px;
+    bottom: -4px;
+    background-color: var(--lb-pick-lip);
+}
+
+.lb-pickbtn-wrap {
+    position: relative;
+}
+
+.lb-pickbtn-wrap > .lb-pick-lip {
+    border-top-left-radius: 31px;
+    border-top-right-radius: 31px;
+    border-bottom-left-radius: 31px;
+    border-bottom-right-radius: 31px;
+}
+
+.lb-pickbtn {
+    width: 62px;
+    height: 62px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 31px;
+    border-top-right-radius: 31px;
+    border-bottom-left-radius: 31px;
+    border-bottom-right-radius: 31px;
+    transition-property: translate;
+    transition-duration: var(--lb-t-press);
+}
+
+.lb-pickbtn:active {
+    translate: 0 3px;
+}
+
+.lb-pickbtn > .lb-icon {
+    width: 22px;
+    height: 22px;
+    -unity-background-image-tint-color: var(--lb-ink);
+}
+
+.lb-root .lb-pickbtn__label {
+    font-size: 10px;
+    color: var(--lb-ink-mute);
+    letter-spacing: 0.4px;
+    -unity-text-align: middle-center;
+}
+
+.lb-pickopts {
+    align-items: flex-end;
+    margin-bottom: var(--lb-sp2);
+    opacity: 0;
+    translate: 0 14px;
+    scale: 0.9 0.9;
+    transform-origin: right bottom;
+    transition-property: opacity, translate, scale;
+    transition-duration: 160ms, 220ms, 220ms;
+    transition-timing-function: ease-out, ease-out-back, ease-out-back;
+}
+
+.lb-picker--open > .lb-pickopts {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1 1;
+}
+
+.lb-pickopt-wrap {
+    position: relative;
+    margin-bottom: var(--lb-sp2);
+}
+
+.lb-pickopt-wrap > .lb-pick-lip {
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+}
+
+.lb-pickopt {
+    height: 56px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--lb-sp4);
+    padding-right: 20px;
+    background-color: var(--lb-paper-hi);
+    border-left-width: var(--lb-bw);
+    border-right-width: var(--lb-bw);
+    border-top-width: var(--lb-bw);
+    border-bottom-width: var(--lb-bw);
+    border-left-color: var(--lb-edge);
+    border-right-color: var(--lb-edge);
+    border-top-color: var(--lb-edge);
+    border-bottom-color: var(--lb-edge);
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+    transition-property: translate;
+    transition-duration: var(--lb-t-press);
+}
+
+.lb-pickopt:active {
+    translate: 0 3px;
+}
+
+.lb-pickopt > .lb-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    -unity-background-image-tint-color: var(--lb-ink);
+}
+
+.lb-root .lb-pickopt__text {
+    font-size: 17px;
+    color: var(--lb-ink);
+}
+
+.lb-pickopt--on {
+    background-color: var(--lb-gold);
+    border-left-color: var(--lb-gold-edge);
+    border-right-color: var(--lb-gold-edge);
+    border-top-color: var(--lb-gold-edge);
+    border-bottom-color: var(--lb-gold-edge);
+}
+
+.lb-root .lb-pickopt--on > .lb-pickopt__text {
+    color: var(--lb-gold-text);
+}
+
+.lb-pickopt--on > .lb-icon {
+    -unity-background-image-tint-color: var(--lb-gold-text);
 }

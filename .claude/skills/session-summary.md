@@ -35,19 +35,24 @@ Step 3: Test results
 Step 4: Remaining issues
 - What is still broken or incomplete?
 - What follow-on work does this session create?
-- Should any GitHub issues be created?
+- Does anything belong in Notion Tasks? Do not create it here —
+  Notion is written only during /update. Name it and let me decide.
+  (This project does not track work in GitHub issues.)
 
 Step 5: Suggested commit message
-- Format: type(scope): description
-- type: fix, feat, refactor, test, docs, chore
-- scope: sim, network, view, ui, input, core, lobby
+- Format: type: description — no scope parentheses. That is what
+  this repo's history actually uses; a scope is optional and rare.
+- type: fix, feat, refactor, test, docs, chore, build, ci
 - description: present tense, under 72 characters
 - Body: two to three lines explaining what and why
+- If the change finishes a Notion task, add a `done: <task title>`
+  line. That trailer is what marks the task Done on the next
+  /update; without it the task moves to In Progress at most.
 - Example:
-  feat(sim): add elapsed tick counter to SimulationState
-  
+  feat: add elapsed tick counter to SimulationState
+
   Tracks total ticks since match start as an integer field.
-  Added to SimulationStateHasher. EditMode test added.
+  Added to SimulationStateHasher. Simulation test added.
 
 Step 6: Next logical step
 - One sentence: what should the next session start with?

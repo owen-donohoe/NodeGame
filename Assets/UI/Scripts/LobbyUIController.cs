@@ -12,10 +12,17 @@ namespace NodeWar.Lobby
     /// decided by LobbyManager.useUIToolkitLobby, so the old lobby is one
     /// checkbox away for as long as the migration runs.
     ///
+    /// What it builds, in the layer order of LobbyRoot.uxml:
+    ///   - the persistent chrome (LobbyChrome) and the tab track
+    ///     (NavigationController) with Shop, Home, Workshop and Social;
+    ///   - the overlays above the chrome: Profile, which expands from the
+    ///     trophy strip, and the push pages, Settings and Match history;
+    ///   - the shared machinery every page is handed rather than builds for
+    ///     itself: one sheet, one context menu, one toast.
+    ///
     /// It reads no simulation state and writes none - the lobby runs in its own
     /// scene before any SimulationState exists. The view/UI boundary in
-    /// .claude/rules/view-ui.md has nothing to bite on here, and will only
-    /// start to matter when the HUD moves in S6.
+    /// .claude/rules/view-ui.md has nothing to bite on here.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public class LobbyUIController : MonoBehaviour
@@ -42,6 +49,12 @@ namespace NodeWar.Lobby
         [Tooltip("SocialPage.uxml. Without it Social falls back to a placeholder.")]
         [SerializeField] private VisualTreeAsset socialPageLayout;
 
+        [Tooltip("SettingsPage.uxml. Without it Settings shows a labelled note.")]
+        [SerializeField] private VisualTreeAsset settingsPageLayout;
+
+        [Tooltip("MatchHistoryPage.uxml. Without it Match history shows a labelled note.")]
+        [SerializeField] private VisualTreeAsset matchHistoryPageLayout;
+
         [Header("Draftable items")]
 
         // The Workshop's catalogue. GroupSelectionPanel holds the same assets in
@@ -67,8 +80,15 @@ namespace NodeWar.Lobby
         private UIDocument document;
         private NavigationController navigation;
         private SafeAreaBinder safeArea;
+        private LoadoutCatalog catalog;
+        private LobbyToast toast;
+        private LobbySheet sheet;
+        private LobbyContextMenu menu;
+        private LobbyChrome chrome;
         private PlayPopup playPopup;
         private ProfilePage profilePage;
+        private SettingsPage settingsPage;
+        private MatchHistoryPage matchHistoryPage;
 
         /// <summary>
         /// Page switching, for pages to navigate between themselves. Null until
@@ -123,63 +143,65 @@ namespace NodeWar.Lobby
 
             playPopup = null;
             profilePage = null;
+            settingsPage = null;
+            matchHistoryPage = null;
+            catalog = null;
+            toast = null;
+            sheet = null;
+            menu = null;
+            chrome = null;
             navigation = null;
             safeArea = null;
         }
 
         private void Update()
         {
-            // Cheap: returns immediately unless the safe area, the screen or the
-            // panel size actually changed.
+            // Cheap: each returns immediately unless the safe area, the screen
+            // or the panel size actually changed.
             if (safeArea != null) safeArea.Update();
+            if (profilePage != null) profilePage.Update();
+            if (settingsPage != null) settingsPage.Update();
+            if (matchHistoryPage != null) matchHistoryPage.Update();
 
-            // Pumps the connection state machine while the popup is open.
+            // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
-        }
-
-        private void OnPlayRequested()
-        {
-            if (playPopup != null) playPopup.Show();
-        }
-
-        /// <summary>
-        /// Home's Rename button. The rename editor lives on Profile, so this
-        /// navigates there and opens it rather than raising a second copy of
-        /// the same form. In the uGUI stack this is RenameModal, which is a
-        /// uGUI object the new stack cannot reach.
-        /// </summary>
-        private void OnRenameRequested()
-        {
-            if (navigation == null) return;
-
-            navigation.Show(LobbyPageID.Profile);
-
-            if (profilePage != null) profilePage.BeginRename();
         }
 
         private void BuildShell(VisualElement root)
         {
             VisualElement safeAreaElement = root.Q<VisualElement>("safe-area");
             VisualElement pageHost = root.Q<VisualElement>("page-host");
+            VisualElement overlayHost = root.Q<VisualElement>("overlay-host");
 
-            if (safeAreaElement == null || pageHost == null)
+            if (safeAreaElement == null || pageHost == null || overlayHost == null)
             {
-                Debug.LogError("[LobbyUI] LobbyRoot.uxml is missing #safe-area or #page-host. " +
-                               "The shell cannot be built.");
+                Debug.LogError("[LobbyUI] LobbyRoot.uxml is missing #safe-area, #page-host " +
+                               "or #overlay-host. The shell cannot be built.");
                 return;
             }
 
             safeArea = new SafeAreaBinder(safeAreaElement);
             navigation = new NavigationController(pageHost);
 
+            // Shared machinery, built before any page so every page gets the same.
+            // The catalog is the one answer to what the loadout may hold and what
+            // the player owns - Workshop, Home and the battle sheet all ask it.
+            catalog = new LoadoutCatalog(allSuits, allNodes);
+            toast = new LobbyToast(root.Q<Label>("toast"));
+            sheet = new LobbySheet(root);
+            menu = new LobbyContextMenu(root);
+
+            BuildOverlays(overlayHost);
+            BuildChrome(root);
+
+            // Four tabs, in track order. Profile is reached from the player name.
+            BindNav(root, "nav-shop", LobbyPageID.Shop);
             BindNav(root, "nav-home", LobbyPageID.Home);
             BindNav(root, "nav-workshop", LobbyPageID.Workshop);
-            BindNav(root, "nav-shop", LobbyPageID.Shop);
             BindNav(root, "nav-social", LobbyPageID.Social);
-            BindNav(root, "nav-profile", LobbyPageID.Profile);
 
+            BuildPlayPopup();
             RegisterPages();
-            BuildPlayPopup(root);
 
             navigation.Show(LobbyPageID.Home);
 
@@ -187,42 +209,74 @@ namespace NodeWar.Lobby
                 Debug.Log("[LobbyUI] Shell built. Current page: " + navigation.CurrentPageID);
         }
 
+        private void BuildChrome(VisualElement root)
+        {
+            // The chrome is outside every page, so it is bound once, and it
+            // refreshes whenever a page shows or the player is renamed.
+            chrome = new LobbyChrome(root, toast);
+            navigation.PageShown += id => chrome.Refresh();
+
+            VisualElement strip = root.Q<VisualElement>("strip-wrap");
+            chrome.ProfileRequested += () => { if (profilePage != null) profilePage.Open(strip); };
+            chrome.SettingsRequested += () => { if (settingsPage != null) settingsPage.Open(); };
+            chrome.HistoryRequested += () => { if (matchHistoryPage != null) matchHistoryPage.Open(); };
+
+            if (profilePage != null) profilePage.Renamed += chrome.Refresh;
+        }
+
         /// <summary>
-        /// The popup is added to the shell root, not the page host, so it floats
-        /// over the nav bar as well as the page. It is absolutely positioned and
-        /// starts hidden, so it costs nothing until opened.
+        /// Profile first, then the push pages, so a push page opened from
+        /// anywhere draws over Profile. The sheet, menu and toast layers come
+        /// after #overlay-host in LobbyRoot.uxml, so Rename's sheet draws over
+        /// Profile too.
         /// </summary>
-        private void BuildPlayPopup(VisualElement root)
+        private void BuildOverlays(VisualElement overlayHost)
+        {
+            profilePage = new ProfilePage(profilePageLayout, sheet, toast);
+            overlayHost.Add(profilePage.Root);
+
+            settingsPage = new SettingsPage(settingsPageLayout);
+            overlayHost.Add(settingsPage.Root);
+
+            matchHistoryPage = new MatchHistoryPage(matchHistoryPageLayout);
+            overlayHost.Add(matchHistoryPage.Root);
+        }
+
+        private void BuildPlayPopup()
         {
             if (playPopupLayout == null)
             {
-                Debug.LogWarning("[LobbyUI] No PlayPopup.uxml assigned; Play will do nothing.");
+                Debug.LogWarning("[LobbyUI] No PlayPopup.uxml assigned; BATTLE will do nothing.");
                 return;
             }
 
             if (lobbyManager == null)
                 lobbyManager = FindAnyObjectByType<LobbyManager>();
 
-            playPopup = new PlayPopup(playPopupLayout, lobbyManager);
-            root.Add(playPopup.Root);
+            playPopup = new PlayPopup(playPopupLayout, lobbyManager, toast, sheet, catalog);
+        }
+
+        private void OnPlayRequested()
+        {
+            if (playPopup != null)
+                playPopup.Show();
+            else if (toast != null)
+                toast.Show("Cannot open the battle sheet: its layout is not assigned");
         }
 
         /// <summary>
-        /// Every page the lobby can show.
-        ///
-        /// S1 registered placeholders only, and each session since has replaced
-        /// the ones it built: S2 Home, S3 Workshop and Profile, S4 Shop and
-        /// Social. With S4 in, no PlaceholderPage remains except the fallback
-        /// for a Home layout that failed to assign - so PlaceholderPage itself
-        /// is now only a diagnostic, not a stand-in for unbuilt work.
+        /// The tab pages, registered in track order - left to right is the
+        /// order the tab bar shows them.
         /// </summary>
         private void RegisterPages()
         {
+            navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
+
             if (homePageLayout != null)
             {
-                HomePage home = new HomePage(homePageLayout);
+                HomePage home = new HomePage(homePageLayout, toast, menu, catalog);
                 home.PlayRequested += OnPlayRequested;
-                home.RenameRequested += OnRenameRequested;
+                home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }
             else
@@ -230,14 +284,7 @@ namespace NodeWar.Lobby
                 navigation.Register(new PlaceholderPage(LobbyPageID.Home, "HomePage.uxml not assigned"));
             }
 
-            // Workshop and Profile handle a missing layout themselves, falling
-            // back to a labelled box, so they are registered unconditionally.
-            navigation.Register(new WorkshopPage(workshopPageLayout, allSuits, allNodes));
-
-            profilePage = new ProfilePage(profilePageLayout);
-            navigation.Register(profilePage);
-
-            navigation.Register(new ShopPage(shopPageLayout));
+            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu));
             navigation.Register(new SocialPage(socialPageLayout));
         }
 

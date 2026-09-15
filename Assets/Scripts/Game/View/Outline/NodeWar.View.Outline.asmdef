@@ -1,0 +1,8 @@
+{
+    "name": "NodeWar.View.Outline",
+    "references": [
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "autoReferenced": true
+}

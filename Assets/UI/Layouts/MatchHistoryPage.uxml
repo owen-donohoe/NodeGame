@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xmlns:lobby="NodeWar.Lobby"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        Match history: a full page pushed in from the right, opened from the TV
+        button beside the gear. It lives here rather than on Profile so the
+        arena view stays about progress, not a log.
+
+        No match result is written anywhere in the project yet, so this is the
+        empty state. #history-list is where rows go once there is a system;
+        MatchHistoryPage hides the empty state when it has any.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Settings.uss" />
+
+    <engine:VisualElement name="push-safe-area" class="lb-push__safe" picking-mode="Ignore">
+        <engine:VisualElement class="lb-push__header" picking-mode="Ignore">
+            <engine:Button name="push-back" class="lb-reset-button lb-back">
+                <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+            </engine:Button>
+            <engine:Label class="lb-push__title lb-w600" text="Match history" />
+        </engine:VisualElement>
+
+        <engine:ScrollView name="history-list" class="lb-push__scroll lb-view--hidden" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
+
+        <engine:VisualElement name="history-empty" class="lb-stub" picking-mode="Ignore">
+            <engine:VisualElement class="lb-stub__icon" picking-mode="Ignore">
+                <lobby:LobbyIcon kind="Tv" class="lb-icon" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:Label class="lb-stub__title lb-w600" text="No matches yet" />
+            <engine:Label class="lb-stub__body lb-w500" text="Finished matches will be listed here, with the result and the loadout you took." />
+        </engine:VisualElement>
+    </engine:VisualElement>
+
+</engine:UXML>

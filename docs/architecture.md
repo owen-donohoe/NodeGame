@@ -1,15 +1,18 @@
 ---
 type: Architecture
 title: Architecture
-description: The seven layers of Assets/Scripts/, how information flows between them, and the lockstep networking model.
-tags: [architecture, layers, networking, lockstep]
+description: The seven layers of Assets/Scripts/, where the three UI trees live and which one runs, how information flows between them, and the lockstep networking model.
+tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T04:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
+verified_at_commit: 2241e47
 status: stable
 sources:
   - id: sim-state
@@ -40,13 +43,53 @@ sources:
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager
     last_modified: 2026-08-30T22:15:29-04:00
+  - id: lobby-manager
+    resource: Assets/Scripts/Lobby/LobbyManager.cs
+    title: LobbyManager and the useUIToolkitLobby toggle
+    last_modified: 2026-09-03T16:45:30-04:00
+  - id: node-panel-manager
+    resource: Assets/Scripts/Game/UI/Panel/NodePanelManager.cs
+    title: NodePanelManager and SetSuppressed
+    last_modified: 2026-09-03T16:54:53-04:00
+  - id: uitk-lobby
+    resource: Assets/UI/Scripts/LobbyUIController.cs
+    title: UI Toolkit lobby shell
+    last_modified: 2026-09-03T16:17:06-04:00
+  - id: uitk-hud
+    resource: Assets/UI/Scripts/Gameplay/GameplayHUDController.cs
+    title: UI Toolkit in-match HUD
+    last_modified: 2026-09-03T16:54:53-04:00
+  - id: uitk-sheet
+    resource: Assets/UI/Scripts/Gameplay/NodeSheet.cs
+    title: UI Toolkit node sheet
+    last_modified: 2026-09-03T16:54:53-04:00
+  - id: uitk-sheet-content
+    resource: Assets/UI/Scripts/Gameplay/NodeSheetContent.cs
+    title: NodeSheetContent.Send, the UI Toolkit command path
+    last_modified: 2026-09-03T16:54:53-04:00
+  - id: outline-driver
+    resource: Assets/Scripts/Game/View/OutlineDriver.cs
+    title: OutlineDriver, the only setter of outline intents
+  - id: outline-registry
+    resource: Assets/Scripts/Game/View/Outline/OutlineRegistry.cs
+    title: OutlineRegistry and the outlined-only ID lifecycle
+  - id: outline-style
+    resource: Assets/Scripts/Game/View/Outline/OutlineStyle.cs
+    title: OutlineStyle, whose numeric order is the priority order
+  - id: outline-feature
+    resource: Assets/Scripts/Game/View/Outline/OutlineRendererFeature.cs
+    title: OutlineRendererFeature, the URP entry point
 ---
 
 # Architecture
 
 Node War is a 1v1 real-time strategy game built in Unity 6 (namespace
-`NodeWar`), with lockstep peer-to-peer networking. All gameplay code lives
+`NodeWar`), with lockstep peer-to-peer networking. Gameplay code lives
 under `Assets/Scripts/`, split into seven layers.
+
+Presentation is mid-migration and does **not** all live there. Two sibling
+trees hold the rest, and both are live code: see
+[Where the UI lives](#where-the-ui-lives).
 
 ## The seven layers
 
@@ -58,13 +101,28 @@ Assets/Scripts/
     Simulation/Layer 3
     Network/   Layer 4
     Input/     Layer 5
-    UI/        Layer 6
+    UI/        Layer 6      uGUI, in-match
     View/      Layer 7
+      Outline/              own assembly, NodeWar.View.Outline
+    Config/    not a layer   GameBalance / BoardConfig ScriptableObjects
+    Debug/     not a layer   development aids
+  Editor/      not a layer   TestBridge and other editor-only tooling
+
+Assets/UI/                  UI Toolkit — the replacement for layers 1 and 6
+Assets/Legacy/              retired uGUI lobby, still compiled
 ```
+
+The three marked *not a layer* carry no gameplay rules and sit outside the
+information flow below. `Config/` matters anyway: it is where a new tunable
+number goes, and the only place the `GameBalance` and `BoardConfig`
+`ScriptableObject`s exist.
 
 **1. Lobby/** — Pre-match menu flow: game mode selection, player profile,
 loadout/node/suit selection. Runs entirely in the Lobby scene, before a
-`SimulationState` exists.
+`SimulationState` exists. This layer is now data and state only
+(`LobbyManager`, `PlayerProfile`, `LoadoutData`, the definition assets);
+its uGUI panels moved to `Assets/Legacy/Lobby/` and its live presentation
+is `Assets/UI/`.
 
 **2. Core/** — Match lifecycle orchestration. Owns the top-level state
 machine (`GameManager`), the pre-match draft (`DraftManager`), local tick
@@ -96,12 +154,52 @@ is not one, and the press falls through it to the node beneath. The rule
 lives with the selection owner rather than in the gesture source, so the
 input layer never learns game ownership.
 
-**6. UI/** — HUD, panels, menus during a match. Reads `SimulationState` to
-render; writes nothing to it.
+**6. UI/** — HUD, panels, menus during a match, in uGUI. Reads
+`SimulationState` to render; writes nothing to it. Being replaced by
+`Assets/UI/`, which is not a subset of this layer — see below.
 
 **7. View/** — World-space presentation of nodes and villagers
 (sprites/animation/interpolation). Reads `SimulationState` to render;
 writes nothing to it.
+
+## Where the UI lives
+
+Three trees, deliberately. The phone-UI rebuild runs the UI Toolkit stack
+*alongside* the uGUI one rather than replacing it in place, so either can
+be selected without a branch and nothing is lost while the new one is
+still being proven.
+
+| Tree | Holds | State |
+|---|---|---|
+| `Assets/Scripts/Game/UI/` | in-match uGUI: `HUDManager`, `NodePanelManager`, draft UI, world-space bars | live, still the default |
+| `Assets/UI/` | UI Toolkit: the whole lobby, plus the in-match HUD and node sheet | live behind two toggles |
+| `Assets/Legacy/` | the retired uGUI lobby panels, and `SafeAreaFitter` | compiled, unreachable when the new lobby is on |
+
+**Which one runs is a scene value, not a code value.** Both toggles are
+`[SerializeField]` booleans, so their live setting exists only in scene
+and prefab serialisation — reading the code will not tell you which UI is
+on screen:
+
+- `LobbyManager.useUIToolkitLobby` — swaps the uGUI lobby panels for
+  `Assets/UI/`. Falls back to uGUI with a warning if the root is
+  unassigned.
+- `GameManager.useUIToolkitHUD` — activates the UI Toolkit HUD and, when
+  that HUD carries a node sheet, calls `NodePanelManager.SetSuppressed`
+  so the two panels never race one tap.
+
+Both roots are built by editor commands under **Tools > Node War**, not by
+hand (`Assets/UI/Editor/`).
+
+`Assets/UI/` is not a fourth layer. It sits exactly where layers 1 and 6
+sit in the information flow, under the same rule as every other consumer:
+it reads `SimulationState` and reaches the simulation only by enqueuing a
+`GameCommand` on `InputBuffer`. `NodeSheetContent.Send` is the single
+choke point for that, and nothing under `Assets/UI/` calls
+`GameSimulation` or `CommandProcessor`.
+
+Legacy code is kept compiling rather than commented out or deleted, so
+that a break in it is a compiler error rather than a discovery made later.
+See `Assets/Legacy/README.md`.
 
 ## Information flow
 
@@ -235,15 +333,45 @@ Two objects are carried across the Lobby → Gameplay scene load via
   polygon containment and smoothing, millimetre-to-pixel conversion, and
   the tunable thresholds.
 
-**UI/**
+**UI/** (uGUI, `Assets/Scripts/Game/UI/`)
 - `HUDManager` — top-level in-match HUD.
-- `NodePanelManager` — per-node detail/action panel.
+- `NodePanelManager` — per-node detail/action panel. Can be told to stand
+  down by `SetSuppressed` when the UI Toolkit sheet is serving instead.
+- `DistrictPanelPolicy` — decides which districts open a panel at all.
+  Both panel stacks defer to it, so neither has its own answer.
 - `DraftUI` — draft-phase interface.
 - `GameOverPanel` — end-of-match result display.
 - `SelectionLasso` — draws the in-progress lasso stroke.
 - `LassoArmedCue` — ring pulse confirming the long press armed.
-- `SafeAreaFitter` — insets a rect to `Screen.safeArea`; the only reader
-  of it in the project.
+
+**`Assets/UI/`** (UI Toolkit)
+- `LobbyUIController` / `NavigationController` / `LobbyPage` — the lobby
+  shell. The tab pages (`ShopPage`, `HomePage`, `WorkshopPage`,
+  `SocialPage`) sit side by side in one track that slides between them.
+  `ProfilePage` (expands from the trophy strip) and the `LobbyPushPage`s
+  (`SettingsPage`, `MatchHistoryPage`) are overlays above the chrome, not
+  tabs.
+- `LobbySheet`, `LobbyContextMenu`, `LobbyToast` — one of each for the
+  whole lobby, handed to pages rather than built per page. `PlayPopup` is
+  content shown in the sheet.
+- `LoadoutCatalog` — what a loadout slot may hold and what the player owns
+  (not globally granted, not Crossroads, unlocked). The Workshop, Home and
+  the battle sheet all ask it; the slot rules themselves are in the
+  UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
+  covers.
+- `MatchLauncher` — the lobby's route into a match.
+- `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+- `NodeSheet` — the node panel as a bottom sheet. It does not decide when
+  to open; `NodePanelManager` still owns that.
+- `NodeSheetContent` and its three subclasses — `ForgeContent`,
+  `CoreContent`, `EquipContent` cover all six actionable districts.
+  `Send` is the only path to the simulation.
+- `SafeAreaBinder` — the UI Toolkit reader of `Screen.safeArea`.
+  `Assets/Legacy/Game/UI/SafeAreaFitter.cs` is the uGUI equivalent.
+- Layouts in `Assets/UI/Layouts/*.uxml`, styles in `Assets/UI/Styles/*.uss`.
+  `Lobby.uss` holds the lobby's tokens and shared components; `Theme.uss`
+  holds the tokens the in-match HUD and the not-yet-rebuilt Social page
+  still read, so changing it changes the Gameplay scene.
 
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
@@ -266,6 +394,42 @@ Two objects are carried across the Lobby → Gameplay scene load via
 - `OpponentRouteSettings` — the rules of the one information gate in the
   game. Everything else is fully visible to both players, so an opponent
   route hands the player something new rather than withholding it.
+- `OutlineDriver` — the only thing that sets outline intents. Reads hover,
+  villager selection and the open node, and is read-only against the
+  simulation. `GameManager` builds it before the views that register with
+  it, and hands it the same `SelectionSystem` the tap path uses, so hover
+  and selection agree about ownership by construction rather than by two
+  copies of the same rule.
+
+**View/Outline/** — its own assembly, `NodeWar.View.Outline`
+
+The group-silhouette outline system. It is separate from `View/` proper
+because its ID lifecycle is the part with real edge cases in it, and an
+assembly of its own is what lets those cases be unit tested against a plain
+object with no GameObject, no scene and no render pipeline — the reason
+`IOutlineGroup` exists at all.
+
+- `OutlineRendererFeature` — the entry point into URP, and the project's
+  first custom renderer feature. It must be listed in **both**
+  `Assets/Settings/Mobile_Renderer.asset` and `PC_Renderer.asset`.
+- `OutlineMaskPass` / `OutlineCompositePass` — draw the registered groups as
+  IDs into an offscreen target, then dilate ID boundaries into outline colour.
+- `OutlineRegistry` / `OutlineIdAllocator` — ID allocation and the draw list.
+  **A group holds an ID only while it is actually outlined**; registration is
+  not what grants one, a style other than `None` is. So "nothing is outlined"
+  is an empty list and both passes are skipped, and nothing needs cleanup when
+  a node or villager goes away.
+- `OutlineGroup` / `IOutlineGroup` — marks a node or villager root as one
+  silhouette, so seams inside it grow no line. Added at runtime, like
+  `NodeHighlight` and `VillagerTouchTarget`, so no prefab needs editing.
+- `OutlineStyle` — the transient states an outline expresses. **The numeric
+  order is the priority order**, so reordering the enum silently changes which
+  state wins a conflict; `OutlineStyleTests` pins it so a reorder fails a test
+  instead of changing the game. Player ownership is deliberately not a style.
+- `OutlineSettings` / `OutlineScreenBounds` — the palette and thickness asset
+  (`Assets/Settings/OutlineSettings.asset`), and the screen-space scissor.
+
+Tested by `Assets/Tests/EditMode/Outline/`, its own test assembly.
 
 ### Where a villager is, mid-edge
 

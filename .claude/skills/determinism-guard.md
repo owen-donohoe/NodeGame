@@ -7,7 +7,9 @@ generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
+verified_at_commit: 1f5c20b
 status: stable
 sources:
   - id: contract
@@ -46,8 +48,13 @@ Read the changed or proposed code, then check each item:
 
 4. Randomness
    - Any UnityEngine.Random usage?
-   - Any System.Random constructed without a seed?
-   - Any new Random() without storing it in SimulationState?
+   - Any System.Random constructed without a seed, or seeded from
+     wall-clock time or per-machine state?
+   - SimulationState holds no RNG field today, so "stored in
+     SimulationState" is not yet the test. The precedent is
+     DraftManager.HandleTimeout, which derives a seed from already-
+     replicated values. If a change introduces stored RNG state, does it
+     live on SimulationState and advance only inside SimulateTick?
 
 5. Collections
    - Any Dictionary or HashSet iterated in simulation code?

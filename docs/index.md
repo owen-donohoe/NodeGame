@@ -20,6 +20,9 @@ directly. This index exists so the set can be traversed as a graph, and so
   classes, networking model.
 * [simulation-rules](simulation-rules.md) — the determinism contract `Simulation/` must uphold.
 * [adding-a-feature](adding-a-feature.md) — the 11-step checklist for any new feature.
+* [notion-workspace](notion-workspace.md) — identifiers and property schemas for the Notion
+  workspace that owns future and current work. Declares no sources: its subject is not code in
+  this repo, so no commit here can make it stale.
 
 ## Subdirectories
 
@@ -27,6 +30,17 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [skills](skills/index.md) — executor instructions for running those computations.
 * [design-history](design-history/README.md) — the v2.1 master design document. Historical, and
   still substantially the plan.
+
+## Historical snapshots
+
+* [ui-migration-inventory](ui-migration-inventory.md) — the UI layer as it stood at `d0f4420`,
+  before the phone-UI rebuild replaced it.
+
+A snapshot carries `status: historical` and a `snapshot_of_commit:` instead of `sources:` and
+`verified_at_commit:`. It is frozen on purpose, so its ground moving is expected rather than
+suspect, and the freshness check has nothing to say about it. Do not add sources to one to
+"fix" a warning — that would make every later commit report a false alarm. If a snapshot starts
+describing live code again, it has stopped being a snapshot.
 
 `attesters/` holds the deterministic verification code the computations point at. It contains no
 markdown and is not part of the concept graph.
@@ -97,6 +111,13 @@ between legs is a finding about the simulation, not a CI problem.
 * `verified_at_commit` is a producer-defined key holding the short SHA a document was last confirmed
   against. It is the same idea as the `Last Reviewed Commit` property on Notion Phases, at file
   granularity instead of phase granularity. The two are independent and neither mirrors the other.
+* **A source that is itself a document moves only when its body moves.** Several documents here cite
+  another document as a source — `cs-review` cites `architecture`, `determinism-guard` cites
+  `simulation-rules`. Stamping a document's own `verified_at_commit` edits that file, so without
+  this rule every document citing it would go suspect on a change that says nothing about their
+  subject, and re-verifying anything would permanently generate its own next round. `okf-stale.ps1`
+  therefore walks back past commits that touched only a markdown source's frontmatter. Code sources
+  are unaffected — a `.cs` file has no frontmatter, and any commit touching one still counts.
 * Only a `human:` actor may write `verified:`. An agent that checks a document writes an agent-tier
   entry (`claude-opus-5`); that is the machine-confirmed tier, not human-reviewed. See the trust
   tiers in the OKF spec.

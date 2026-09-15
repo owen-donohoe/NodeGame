@@ -34,7 +34,7 @@
 
             <!--
                 Breach. Two bars, always. Ownership is never colour alone here
-                either: .player-mark--p0 is a blue square and --p1 a red circle,
+                either: the p0 player mark is a blue square and the p1 mark a red circle,
                 and each bar carries its count as text.
             -->
             <engine:VisualElement name="hud-breaches" class="hud__breaches" picking-mode="Ignore">

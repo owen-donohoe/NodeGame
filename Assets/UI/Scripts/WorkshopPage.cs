@@ -5,54 +5,45 @@ using UnityEngine.UIElements;
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// The Workshop: pick the suits and districts you bring into the draft.
-    /// The UI Toolkit replacement for GroupSelectionPanel.
+    /// The Workshop: pick the districts and suits you bring into the draft.
+    /// Laid out exactly as lobby-prototype.html, which is the layout wanted in
+    /// game.
     ///
-    /// Two panels. The loadout card on top is what you have - districts down
-    /// the left, suits down the right, staggered so the two stacks read as two
-    /// stacks. The picker card below is what you can take, with a big tab under
-    /// each column and a two-across scrolling grid.
+    /// One side at a time. A segmented pill at the top and a floating round
+    /// button bottom-right choose Districts or Suits; both call
+    /// <see cref="SetTab"/>, which owns the state and re-syncs both, so the
+    /// two controls can never disagree. The slots for that side sit under the
+    /// pill, "Ready" appears once they are all full, and a three-across grid of
+    /// cards scrolls beneath. Tap a card to take it, tap a filled slot to
+    /// give it back.
     ///
-    /// Slot counts come from LoadoutData.NodeSlots and SuitSlots, so the slots
-    /// are built rather than wired - the open 2-vs-3 balance question stays an
-    /// edit to those two constants. All the rules about what may occupy a slot
-    /// live in LoadoutEditor, which has no UnityEngine reference and is covered
-    /// by dotnet/NodeWar.Lobby.Tests.
+    /// The rules are unchanged from the previous Workshop, and still not
+    /// decided here:
+    ///   - slot counts come from LoadoutData.NodeSlots and SuitSlots, and what
+    ///     may occupy a slot lives in LoadoutEditor, which has no UnityEngine
+    ///     reference and is covered by dotnet/NodeWar.Lobby.Tests;
+    ///   - every change is saved at once through PlayerProfile.SetLoadout - a
+    ///     phone can be killed at any moment, and there is no back to rely on;
+    ///   - the chosen side is remembered on PlayerProfile.WorkshopTabIndex,
+    ///     because the Lobby scene is rebuilt after every match;
+    ///   - locked cards ask PlayerProfile.IsSuitUnlocked / IsNodeUnlocked, even
+    ///     though both return true today, so this is right when they are real.
     ///
-    /// Three facts about the game shape this screen, all recorded in
-    /// docs/ui-migration-inventory.md:
+    /// Two facts about the game shape the grid (docs/ui-migration-inventory.md):
+    ///   - suits flagged isGlobal (Warrior) are granted to everyone by
+    ///     GameManager.BuildDraftedSuits. They are shown as cards, in the
+    ///     prototype's grid, but say "Always granted" and refuse a slot, which
+    ///     would buy nothing;
+    ///   - Crossroads is excluded: GameManager cannot map it to a DistrictType,
+    ///     so a slot spent on it produces nothing.
     ///
-    ///   - There is no art. Every icon on all 9 NodeDefinitions and all 5
-    ///     SuitDefinitions is null (finding 6), so items show as lettered,
-    ///     tinted tiles. See ItemTint.
-    ///
-    ///   - Warrior is granted to every player regardless of loadout, because
-    ///     GameManager.BuildDraftedSuits adds it unconditionally (finding 8).
-    ///     Suits flagged isGlobal are therefore shown above the slots and kept
-    ///     out of the grid: a slot spent on one buys nothing.
-    ///
-    ///   - Crossroads is discarded. GameManager.MapNodeIDToDistrict has its
-    ///     line commented out and DistrictType has no Crossroads member
-    ///     (finding 4), so a slot spent on it produces nothing at all. It is
-    ///     excluded here rather than offered and dropped in silence. The asset
-    ///     and the old panel are untouched; deletion is S5's business.
-    ///
-    /// Reads PlayerProfile and writes it back through SetLoadout. No simulation
-    /// state exists in the lobby scene, so the view/UI boundary has nothing to
-    /// bite on yet.
+    /// No art exists, so a card's art is its family colour with a monogram.
     /// </summary>
     public class WorkshopPage : LobbyPage
     {
         /// <summary>
-        /// Which grid the picker is showing.
-        ///
-        /// Districts is first so it is zero, which makes it both the requested
-        /// default and what an older profile without the field deserialises to.
-        ///
-        /// Not GroupSelectionPanel's SelectionTab, even though the two hold the
-        /// same two values: that enum sits in GroupSelectionPanel.cs and is
-        /// deleted along with it in S5. The new stack owning its own is what
-        /// keeps that deletion a one-file change.
+        /// Which side is shown. Districts is zero, so it is both the default
+        /// and what an older profile without the field deserialises to.
         /// </summary>
         private enum Tab
         {
@@ -60,80 +51,88 @@ namespace NodeWar.Lobby
             Suits = 1
         }
 
-        /// <summary>
-        /// Districts the picker refuses to offer.
-        ///
-        /// Only Crossroads, and only because GameManager cannot map it to a
-        /// DistrictType (inventory finding 4). This is a hardcoded ID in the UI
-        /// on purpose - the honest alternative would be for the UI to ask
-        /// GameManager what it can map, and GameManager does not exist in the
-        /// lobby scene. When DistrictType gains a Crossroads member, or the
-        /// asset goes, this array empties.
-        /// </summary>
-        private static readonly string[] UnmappedNodeIDs = { "node_crossroads" };
+        private const int GridColumns = 3;
 
-        private readonly SuitDefinition[] allSuits;
-        private readonly NodeDefinition[] allNodes;
+        /// <summary>One item as a card: a district or a suit.</summary>
+        private class Item
+        {
+            public string ID;
+            public string Name;
+            public string Description;
+            public string Note;
+            public ItemFamily.Family Family;
+            public bool Granted;
+        }
 
-        private readonly List<SuitDefinition> grantedSuits = new List<SuitDefinition>();
-        private readonly List<SuitDefinition> draftableSuits = new List<SuitDefinition>();
-        private readonly List<NodeDefinition> draftableNodes = new List<NodeDefinition>();
+        private readonly LoadoutCatalog catalog;
+        private readonly LobbyToast toast;
+        private readonly LobbyContextMenu menu;
 
-        private readonly VisualElement grantedBand;
-        private readonly VisualElement grantedTiles;
-        private readonly Label grantedNames;
+        private readonly List<Item> districts = new List<Item>();
+        private readonly List<Item> suits = new List<Item>();
 
-        private readonly Label suitsLabel;
-        private readonly Label nodesLabel;
-        private readonly VisualElement suitSlotHost;
-        private readonly VisualElement nodeSlotHost;
-
-        private readonly Button suitsTabButton;
-        private readonly Button nodesTabButton;
-        private readonly Label hintLabel;
-        private readonly ScrollView suitGrid;
-        private readonly ScrollView nodeGrid;
-
-        private readonly List<SlotView> suitSlots = new List<SlotView>();
-        private readonly List<SlotView> nodeSlots = new List<SlotView>();
-        private readonly List<ItemCell> suitCells = new List<ItemCell>();
-        private readonly List<ItemCell> nodeCells = new List<ItemCell>();
+        private readonly Button segDistricts;
+        private readonly Button segSuits;
+        private readonly VisualElement slotWrap;
+        private readonly VisualElement slotHost;
+        private readonly ScrollView grid;
+        private readonly VisualElement veil;
+        private readonly VisualElement picker;
+        private readonly LobbyIcon pickIcon;
+        private readonly Label pickLabel;
+        private readonly Button pickDistricts;
+        private readonly Button pickSuits;
 
         private LoadoutEditor loadout = new LoadoutEditor(LoadoutData.CreateEmpty());
         private Tab activeTab = Tab.Districts;
-        private bool built;
+        private bool pickerOpen;
 
-        public WorkshopPage(VisualTreeAsset layout, SuitDefinition[] suits, NodeDefinition[] nodes)
+        public WorkshopPage(VisualTreeAsset layout, LoadoutCatalog catalog, LobbyToast toast, LobbyContextMenu menu)
             : base(LobbyPageID.Workshop, Build(layout))
         {
-            allSuits = suits != null ? suits : new SuitDefinition[0];
-            allNodes = nodes != null ? nodes : new NodeDefinition[0];
+            this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
+            this.toast = toast;
+            this.menu = menu;
 
-            grantedBand = Root.Q<VisualElement>("workshop-granted");
-            grantedTiles = Root.Q<VisualElement>("workshop-granted-tiles");
-            grantedNames = Root.Q<Label>("workshop-granted-names");
+            segDistricts = Root.Q<Button>("workshop-seg-districts");
+            segSuits = Root.Q<Button>("workshop-seg-suits");
+            slotWrap = Root.Q<VisualElement>("workshop-slotwrap");
+            slotHost = Root.Q<VisualElement>("workshop-slots");
+            grid = Root.Q<ScrollView>("workshop-grid");
+            veil = Root.Q<VisualElement>("workshop-veil");
+            picker = Root.Q<VisualElement>("workshop-picker");
+            pickIcon = Root.Q<LobbyIcon>("workshop-pick-icon");
+            pickLabel = Root.Q<Label>("workshop-pick-label");
+            pickDistricts = Root.Q<Button>("workshop-pick-districts");
+            pickSuits = Root.Q<Button>("workshop-pick-suits");
 
-            suitsLabel = Root.Q<Label>("workshop-suits-label");
-            nodesLabel = Root.Q<Label>("workshop-nodes-label");
-            suitSlotHost = Root.Q<VisualElement>("workshop-suit-slots");
-            nodeSlotHost = Root.Q<VisualElement>("workshop-node-slots");
+            if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
+            if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
+            if (pickDistricts != null) pickDistricts.clicked += () => SetTab(Tab.Districts);
+            if (pickSuits != null) pickSuits.clicked += () => SetTab(Tab.Suits);
 
-            suitsTabButton = Root.Q<Button>("workshop-tab-suits");
-            nodesTabButton = Root.Q<Button>("workshop-tab-nodes");
-            hintLabel = Root.Q<Label>("workshop-hint");
-            suitGrid = Root.Q<ScrollView>("workshop-list-suits");
-            nodeGrid = Root.Q<ScrollView>("workshop-list-nodes");
+            Button pickButton = Root.Q<Button>("workshop-pickbtn");
+            if (pickButton != null) pickButton.clicked += () => SetPickerOpen(!pickerOpen);
 
-            if (suitsTabButton != null) suitsTabButton.clicked += () => SetTab(Tab.Suits);
-            if (nodesTabButton != null) nodesTabButton.clicked += () => SetTab(Tab.Districts);
+            if (veil != null)
+            {
+                veil.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    SetPickerOpen(false);
+                    evt.StopPropagation();
+                });
+            }
 
-            PartitionDefinitions();
+            CollectItems();
+            SetPickerOpen(false);
         }
 
         private static VisualElement Build(VisualTreeAsset layout)
         {
             VisualElement root = new VisualElement();
             root.name = "page-workshop";
+            root.AddToClassList("lb-page-flush");
+            root.pickingMode = PickingMode.Ignore;
 
             if (layout != null)
             {
@@ -141,17 +140,9 @@ namespace NodeWar.Lobby
             }
             else
             {
-                // Same degradation as every other page: labelled, inert, and
-                // not an exception.
-                VisualElement box = new VisualElement();
-                box.AddToClassList("placeholder");
-                box.style.flexGrow = 1;
-
                 Label note = new Label("Workshop layout missing - assign WorkshopPage.uxml");
-                note.AddToClassList("placeholder__label");
-
-                box.Add(note);
-                root.Add(box);
+                note.AddToClassList("lb-stub__body");
+                root.Add(note);
             }
 
             return root;
@@ -159,215 +150,94 @@ namespace NodeWar.Lobby
 
         public override void OnShow()
         {
-            if (!built)
-            {
-                BuildGrantedBand();
-                BuildSlots();
-                BuildCells();
-                built = true;
-            }
-
             LoadFromProfile();
-            RefreshAll();
+            Render();
         }
 
         /// <summary>
         /// A second save on the way out. Every change already persists as it
-        /// happens, so this only covers the case where SetLoadout is made
-        /// deferred later; it costs one JSON write per visit.
+        /// happens; this only covers SetLoadout being made deferred later.
         /// </summary>
         public override void OnHide()
         {
+            SetPickerOpen(false);
             SaveToProfile();
         }
 
         // ===== DEFINITIONS =====
 
         /// <summary>
-        /// Splits the definition assets into what the slots may hold and what
-        /// they may not. Runs once - the assets are serialized fields and
-        /// cannot change at runtime.
+        /// Turns the definition assets into cards, once - they are serialized
+        /// fields and cannot change at runtime. Districts are ordered by family
+        /// (round, square, triangle, as the prototype lists them), keeping the
+        /// assets' own order within a family.
         /// </summary>
-        private void PartitionDefinitions()
+        private void CollectItems()
         {
+            // The catalog never hands back a null array.
+            NodeDefinition[] allNodes = catalog.Nodes;
+            for (int i = 0; i < allNodes.Length; i++)
+            {
+                NodeDefinition node = allNodes[i];
+                if (node == null || string.IsNullOrEmpty(node.nodeID)) continue;
+                if (!catalog.IsNodeOffered(node.nodeID)) continue;
+
+                ItemFamily.Family family = ItemFamily.ForNode(node.nodeID);
+                districts.Add(new Item
+                {
+                    ID = node.nodeID,
+                    Name = catalog.NodeName(node.nodeID),
+                    Description = node.description,
+                    Note = ItemFamily.NoteFor(family),
+                    Family = family
+                });
+            }
+
+            SortByFamily(districts);
+
+            SuitDefinition[] allSuits = catalog.Suits;
             for (int i = 0; i < allSuits.Length; i++)
             {
                 SuitDefinition suit = allSuits[i];
                 if (suit == null || string.IsNullOrEmpty(suit.suitID)) continue;
 
-                if (suit.isGlobal)
-                    grantedSuits.Add(suit);
-                else
-                    draftableSuits.Add(suit);
+                suits.Add(new Item
+                {
+                    ID = suit.suitID,
+                    Name = catalog.SuitName(suit.suitID),
+                    Description = suit.description,
+                    Note = suit.isGlobal ? "Always granted" : suit.description,
+                    Family = ItemFamily.Family.Combat,
+                    Granted = suit.isGlobal
+                });
             }
+        }
 
-            for (int i = 0; i < allNodes.Length; i++)
+        /// <summary>Stable insertion sort: the lists are a handful of items.</summary>
+        private static void SortByFamily(List<Item> items)
+        {
+            for (int i = 1; i < items.Count; i++)
             {
-                NodeDefinition node = allNodes[i];
-                if (node == null || string.IsNullOrEmpty(node.nodeID)) continue;
-                if (IsUnmapped(node.nodeID)) continue;
+                Item current = items[i];
+                int key = ItemFamily.SortKey(current.Family);
+                int j = i - 1;
 
-                draftableNodes.Add(node);
+                while (j >= 0 && ItemFamily.SortKey(items[j].Family) > key)
+                {
+                    items[j + 1] = items[j];
+                    j--;
+                }
+
+                items[j + 1] = current;
             }
         }
 
-        private static bool IsUnmapped(string nodeID)
+        private static Item Find(List<Item> items, string id)
         {
-            for (int i = 0; i < UnmappedNodeIDs.Length; i++)
-            {
-                if (UnmappedNodeIDs[i] == nodeID) return true;
-            }
-            return false;
-        }
-
-        private bool IsSuitOffered(string suitID)
-        {
-            return FindSuit(suitID) != null;
-        }
-
-        private bool IsNodeOffered(string nodeID)
-        {
-            return FindNode(nodeID) != null;
-        }
-
-        private SuitDefinition FindSuit(string suitID)
-        {
-            if (string.IsNullOrEmpty(suitID)) return null;
-
-            for (int i = 0; i < draftableSuits.Count; i++)
-            {
-                if (draftableSuits[i].suitID == suitID) return draftableSuits[i];
-            }
+            if (string.IsNullOrEmpty(id)) return null;
+            for (int i = 0; i < items.Count; i++)
+                if (items[i].ID == id) return items[i];
             return null;
-        }
-
-        private NodeDefinition FindNode(string nodeID)
-        {
-            if (string.IsNullOrEmpty(nodeID)) return null;
-
-            for (int i = 0; i < draftableNodes.Count; i++)
-            {
-                if (draftableNodes[i].nodeID == nodeID) return draftableNodes[i];
-            }
-            return null;
-        }
-
-        // ===== BUILDING =====
-
-        private void BuildGrantedBand()
-        {
-            if (grantedBand == null) return;
-
-            // No suit sets isGlobal: say nothing rather than show an empty band.
-            if (grantedSuits.Count == 0)
-            {
-                grantedBand.AddToClassList("workshop__granted--hidden");
-                return;
-            }
-
-            string names = "";
-
-            for (int i = 0; i < grantedSuits.Count; i++)
-            {
-                SuitDefinition suit = grantedSuits[i];
-
-                if (grantedTiles != null)
-                {
-                    ItemTile tile = new ItemTile();
-                    tile.SetItem(suit.suitID, suit.displayName);
-                    tile.Root.AddToClassList("tile--granted");
-                    grantedTiles.Add(tile.Root);
-                }
-
-                names += (names.Length > 0 ? ", " : "") + DisplayNameOf(suit);
-            }
-
-            if (grantedNames != null) grantedNames.text = names;
-        }
-
-        private void BuildSlots()
-        {
-            BuildSlotColumn(nodeSlotHost, nodeSlots, LoadoutData.NodeSlots, Tab.Districts);
-            BuildSlotColumn(suitSlotHost, suitSlots, LoadoutData.SuitSlots, Tab.Suits);
-        }
-
-        private void BuildSlotColumn(VisualElement host, List<SlotView> into, int count, Tab tab)
-        {
-            if (host == null) return;
-
-            for (int i = 0; i < count; i++)
-            {
-                int slot = i;
-
-                SlotView view = new SlotView(() => OnSlotClicked(tab, slot));
-                into.Add(view);
-                host.Add(view.Root);
-            }
-        }
-
-        private void BuildCells()
-        {
-            BuildCellGrid(nodeGrid, nodeCells, Tab.Districts);
-            BuildCellGrid(suitGrid, suitCells, Tab.Suits);
-        }
-
-        private void BuildCellGrid(ScrollView grid, List<ItemCell> into, Tab tab)
-        {
-            if (grid == null) return;
-
-            int count = tab == Tab.Suits ? draftableSuits.Count : draftableNodes.Count;
-
-            if (count == 0)
-            {
-                grid.Add(BuildEmptyGridNote(tab));
-                return;
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                string id;
-                string displayName;
-
-                if (tab == Tab.Suits)
-                {
-                    SuitDefinition suit = draftableSuits[i];
-                    id = suit.suitID;
-                    displayName = DisplayNameOf(suit);
-                }
-                else
-                {
-                    NodeDefinition node = draftableNodes[i];
-                    id = node.nodeID;
-                    displayName = DisplayNameOf(node);
-                }
-
-                string equipID = id;
-                ItemCell cell = new ItemCell(id, displayName, () => OnCellClicked(tab, equipID));
-
-                into.Add(cell);
-                grid.Add(cell.Root);
-            }
-        }
-
-        /// <summary>
-        /// What the grid says when there is nothing to show. Only reachable
-        /// when the definition arrays are unassigned, which means the Editor
-        /// setup has not been re-run since those fields were added - so the
-        /// message names the fix.
-        /// </summary>
-        private static VisualElement BuildEmptyGridNote(Tab tab)
-        {
-            VisualElement box = new VisualElement();
-            box.AddToClassList("placeholder");
-            box.AddToClassList("workshop__empty");
-
-            Label note = new Label(
-                "No " + (tab == Tab.Suits ? "suit" : "district") + " definitions assigned.\n" +
-                "Run Tools > Node War > Set Up UI Toolkit Lobby.");
-            note.AddToClassList("placeholder__label");
-
-            box.Add(note);
-            return box;
         }
 
         // ===== PROFILE =====
@@ -376,22 +246,18 @@ namespace NodeWar.Lobby
         {
             PlayerProfile profile = PlayerProfile.Instance;
 
-            loadout = new LoadoutEditor(
-                profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
-
-            activeTab = profile != null ? ToTab(profile.WorkshopTabIndex) : Tab.Districts;
+            loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
+            activeTab = profile != null && profile.WorkshopTabIndex == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
 
             // A saved loadout can hold a suit that has since become globally
-            // granted, or Crossroads. Both are slots already producing nothing;
-            // clearing them hands the slots back rather than showing an item
-            // the grid has no cell for.
-            int cleared = loadout.DropUnavailable(IsSuitOffered, IsNodeOffered);
+            // granted, or Crossroads. Both are slots producing nothing; clearing
+            // them hands the slots back.
+            int cleared = loadout.DropUnavailable(catalog.IsSuitOffered, catalog.IsNodeOffered);
 
             if (cleared > 0)
             {
-                Debug.Log("[Workshop] Cleared " + cleared +
-                          " loadout entr" + (cleared == 1 ? "y" : "ies") +
-                          " that the draft cannot use.");
+                Debug.Log("[Workshop] Cleared " + cleared + " loadout entr" +
+                          (cleared == 1 ? "y" : "ies") + " that the draft cannot use.");
                 SaveToProfile();
             }
         }
@@ -399,302 +265,282 @@ namespace NodeWar.Lobby
         private void SaveToProfile()
         {
             PlayerProfile profile = PlayerProfile.Instance;
-            if (profile == null) return;
-
-            profile.SetLoadout(loadout.ToLoadout());
+            if (profile != null) profile.SetLoadout(loadout.ToLoadout());
         }
 
+        // ===== STATE =====
+
         /// <summary>
-        /// Anything that is not a tab we know about becomes Districts - the
-        /// default - rather than throwing on a profile written by a later build.
+        /// The one owner of which side is shown. Both switchers call this, and
+        /// it re-renders both, the slots and the grid, then closes the picker.
         /// </summary>
-        private static Tab ToTab(int index)
+        private void SetTab(Tab tab)
         {
-            return index == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
+            if (tab != activeTab)
+            {
+                activeTab = tab;
+
+                PlayerProfile profile = PlayerProfile.Instance;
+                if (profile != null) profile.WorkshopTabIndex = (int)tab;
+
+                Render();
+                if (grid != null) grid.scrollOffset = Vector2.zero;
+            }
+
+            SetPickerOpen(false);
+        }
+
+        private void SetPickerOpen(bool open)
+        {
+            pickerOpen = open;
+
+            if (picker != null) picker.EnableInClassList("lb-picker--open", open);
+
+            if (veil != null)
+            {
+                veil.EnableInClassList("lb-pickveil--on", open);
+                veil.pickingMode = open ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            // The options fade out rather than vanish, so they must also stop
+            // taking taps while closed.
+            SetPickable(pickDistricts, open);
+            SetPickable(pickSuits, open);
+        }
+
+        private static void SetPickable(VisualElement element, bool pickable)
+        {
+            if (element != null) element.pickingMode = pickable ? PickingMode.Position : PickingMode.Ignore;
+        }
+
+        // ===== RENDER =====
+
+        private void Render()
+        {
+            RenderSwitchers();
+            RenderSlots();
+            RenderGrid();
+        }
+
+        private void RenderSwitchers()
+        {
+            bool suitsOn = activeTab == Tab.Suits;
+
+            if (segDistricts != null) segDistricts.EnableInClassList("lb-wsseg__btn--on", !suitsOn);
+            if (segSuits != null) segSuits.EnableInClassList("lb-wsseg__btn--on", suitsOn);
+            if (pickDistricts != null) pickDistricts.EnableInClassList("lb-pickopt--on", !suitsOn);
+            if (pickSuits != null) pickSuits.EnableInClassList("lb-pickopt--on", suitsOn);
+
+            // The floating button's face always shows the current side.
+            if (pickIcon != null) pickIcon.Kind = suitsOn ? LobbyIconKind.Suit : LobbyIconKind.District;
+            if (pickLabel != null) pickLabel.text = suitsOn ? "SUITS" : "DIST";
+        }
+
+        private void RenderSlots()
+        {
+            if (slotHost == null) return;
+
+            bool suitsOn = activeTab == Tab.Suits;
+            int count = suitsOn ? loadout.SuitSlotCount : loadout.NodeSlotCount;
+
+            slotHost.Clear();
+
+            bool allFull = count > 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                string id = suitsOn ? loadout.SuitAt(i) : loadout.NodeAt(i);
+                Item item = Find(suitsOn ? suits : districts, id);
+                bool filled = !string.IsNullOrEmpty(id);
+                if (!filled) allFull = false;
+
+                int slot = i;
+                Button button = new Button();
+                button.AddToClassList("lb-reset-button");
+                button.AddToClassList("lb-slot");
+                if (i == count - 1) button.AddToClassList("lb-slot--last");
+                button.EnableInClassList("lb-slot--filled", filled);
+
+                VisualElement ring = new VisualElement();
+                ring.AddToClassList("lb-slot__ring");
+                ring.pickingMode = PickingMode.Ignore;
+                button.Add(ring);
+
+                if (filled)
+                {
+                    string name = item != null ? item.Name : id;
+                    button.Add(MakeLabel(ItemTint.MonogramFor(name, id), "lb-slot__letter", "lb-w600"));
+                    button.Add(MakeLabel(name, "lb-slot__text", "lb-w600"));
+                }
+                else
+                {
+                    button.Add(MakeLabel("Slot\n" + (i + 1), "lb-slot__text", "lb-w500"));
+                }
+
+                button.clicked += () => OnSlotClicked(slot);
+
+                slotHost.Add(button);
+            }
+
+            if (slotWrap != null) slotWrap.EnableInClassList("lb-slotwrap--ready", allFull);
+        }
+
+        private void RenderGrid()
+        {
+            if (grid == null) return;
+
+            List<Item> items = activeTab == Tab.Suits ? suits : districts;
+
+            grid.Clear();
+
+            if (items.Count == 0)
+            {
+                // Only reachable when the definition arrays are unassigned, which
+                // means the Editor setup has not been re-run - so name the fix.
+                Label note = new Label("No " + (activeTab == Tab.Suits ? "suit" : "district") +
+                                       " definitions assigned.\nRun Tools > Node War > Set Up UI Toolkit Lobby.");
+                note.AddToClassList("lb-stub__body");
+                grid.Add(note);
+                return;
+            }
+
+            PlayerProfile profile = PlayerProfile.Instance;
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                Item item = items[i];
+
+                bool locked = IsLocked(profile, item);
+                bool used = activeTab == Tab.Suits ? loadout.IsSuitEquipped(item.ID) : loadout.IsNodeEquipped(item.ID);
+
+                VisualElement wrap = new VisualElement();
+                wrap.AddToClassList("lb-sticker");
+                wrap.AddToClassList("lb-gcard-wrap");
+                if (i % GridColumns != GridColumns - 1) wrap.AddToClassList("lb-gcard-wrap--gap");
+                wrap.EnableInClassList("lb-gcard-wrap--used", used);
+                wrap.EnableInClassList("lb-gcard-wrap--locked", locked);
+                wrap.pickingMode = PickingMode.Ignore;
+
+                VisualElement shadow = new VisualElement();
+                shadow.AddToClassList("lb-sticker__shadow");
+                shadow.pickingMode = PickingMode.Ignore;
+                wrap.Add(shadow);
+
+                Button card = new Button();
+                card.AddToClassList("lb-reset-button");
+                card.AddToClassList("lb-gcard");
+
+                VisualElement art = new VisualElement();
+                art.AddToClassList("lb-gcard__art");
+                art.AddToClassList(ItemFamily.ClassFor(item.Family));
+                art.pickingMode = PickingMode.Ignore;
+                if (locked)
+                    art.Add(new LobbyIcon(LobbyIconKind.Lock));
+                else
+                    art.Add(MakeLabel(ItemTint.MonogramFor(item.Name, item.ID), "lb-gcard__letter", "lb-w600"));
+                card.Add(art);
+
+                card.Add(MakeLabel(item.Name, "lb-gcard__name", "lb-w600"));
+                card.Add(MakeLabel(item.Note, "lb-gcard__note", "lb-w500"));
+
+                card.clicked += () => OnCardClicked(item);
+
+                if (menu != null)
+                {
+                    menu.Attach(card, () => new List<LobbyMenuItem>
+                    {
+                        new LobbyMenuItem("View details", () => Say(DetailsOf(item))),
+                        new LobbyMenuItem("Add to loadout", () => OnCardClicked(item)),
+                        new LobbyMenuItem("Compare", () => Say("Comparing arrives in a later update")),
+                    });
+                }
+
+                wrap.Add(card);
+                grid.Add(wrap);
+            }
+        }
+
+        private bool IsLocked(PlayerProfile profile, Item item)
+        {
+            if (profile == null || item.Granted) return false;
+
+            return activeTab == Tab.Suits
+                ? !profile.IsSuitUnlocked(item.ID)
+                : !profile.IsNodeUnlocked(item.ID);
         }
 
         // ===== INTERACTION =====
 
-        private void OnCellClicked(Tab tab, string itemID)
+        /// <summary>
+        /// Tap a card to take the first free slot. Every refusal says why - the
+        /// cards stay tappable in every state so none of them is silently dead.
+        /// </summary>
+        private void OnCardClicked(Item item)
         {
-            int slot = tab == Tab.Suits
-                ? loadout.EquipSuit(itemID)
-                : loadout.EquipNode(itemID);
+            bool suitsOn = activeTab == Tab.Suits;
 
-            // Refused: already equipped, or no slot free. Cells in either state
-            // are disabled, so this is a guard rather than a path.
-            if (slot == LoadoutEditor.NoSlot) return;
-
-            // Persist per change rather than only on the way out. A phone can
-            // be killed at any moment and there is no "back" to rely on, so a
-            // selection that survives only until OnHide is a selection that
-            // gets lost.
-            SaveToProfile();
-            RefreshAll();
-        }
-
-        private void OnSlotClicked(Tab tab, int slot)
-        {
-            string removed = tab == Tab.Suits
-                ? loadout.ClearSuitSlot(slot)
-                : loadout.ClearNodeSlot(slot);
-
-            // An empty slot is not a dead tap: it switches the picker to the
-            // grid that fills it.
-            if (string.IsNullOrEmpty(removed))
+            if (item.Granted)
             {
-                SetTab(tab);
+                Say(item.Name + " is always granted. It costs no slot");
+                return;
+            }
+
+            if (IsLocked(PlayerProfile.Instance, item))
+            {
+                Say(item.Name + " is locked");
+                return;
+            }
+
+            bool equipped = suitsOn ? loadout.IsSuitEquipped(item.ID) : loadout.IsNodeEquipped(item.ID);
+            if (equipped)
+            {
+                Say("Already in your loadout");
+                return;
+            }
+
+            int slot = suitsOn ? loadout.EquipSuit(item.ID) : loadout.EquipNode(item.ID);
+            if (slot == LoadoutEditor.NoSlot)
+            {
+                Say("Loadout full. Tap a slot to clear it");
                 return;
             }
 
             SaveToProfile();
-            RefreshAll();
+            Render();
         }
 
-        private void SetTab(Tab tab)
+        /// <summary>A filled slot gives its item back; an empty one says how to fill it.</summary>
+        private void OnSlotClicked(int slot)
         {
-            activeTab = tab;
+            string removed = activeTab == Tab.Suits ? loadout.ClearSuitSlot(slot) : loadout.ClearNodeSlot(slot);
 
-            PlayerProfile profile = PlayerProfile.Instance;
-            if (profile != null) profile.WorkshopTabIndex = (int)tab;
-
-            RefreshAll();
-        }
-
-        // ===== REFRESH =====
-
-        private void RefreshAll()
-        {
-            RefreshSlots();
-            RefreshTabs();
-            RefreshCells();
-            RefreshHint();
-        }
-
-        private void RefreshSlots()
-        {
-            for (int i = 0; i < suitSlots.Count; i++)
+            if (string.IsNullOrEmpty(removed))
             {
-                string id = loadout.SuitAt(i);
-                SuitDefinition suit = FindSuit(id);
-                suitSlots[i].Set(id, suit != null ? DisplayNameOf(suit) : id);
+                Say("Tap a card below to fill this slot");
+                return;
             }
 
-            for (int i = 0; i < nodeSlots.Count; i++)
-            {
-                string id = loadout.NodeAt(i);
-                NodeDefinition node = FindNode(id);
-                nodeSlots[i].Set(id, node != null ? DisplayNameOf(node) : id);
-            }
-
-            if (suitsLabel != null)
-                suitsLabel.text = "Suits " + FilledCount(true) + "/" + loadout.SuitSlotCount;
-
-            if (nodesLabel != null)
-                nodesLabel.text = "Districts " + FilledCount(false) + "/" + loadout.NodeSlotCount;
+            SaveToProfile();
+            Render();
         }
 
-        private int FilledCount(bool suits)
+        private static string DetailsOf(Item item)
         {
-            int count = suits ? loadout.SuitSlotCount : loadout.NodeSlotCount;
-            int filled = 0;
-
-            for (int i = 0; i < count; i++)
-            {
-                string id = suits ? loadout.SuitAt(i) : loadout.NodeAt(i);
-                if (!string.IsNullOrEmpty(id)) filled++;
-            }
-
-            return filled;
+            return string.IsNullOrEmpty(item.Description) ? item.Name : item.Name + ": " + item.Description;
         }
 
-        private void RefreshTabs()
+        private void Say(string message)
         {
-            bool suitsActive = activeTab == Tab.Suits;
-
-            if (suitsTabButton != null)
-                suitsTabButton.EnableInClassList("workshop__tab--active", suitsActive);
-
-            if (nodesTabButton != null)
-                nodesTabButton.EnableInClassList("workshop__tab--active", !suitsActive);
-
-            if (suitGrid != null)
-                suitGrid.EnableInClassList("workshop__grid--hidden", !suitsActive);
-
-            if (nodeGrid != null)
-                nodeGrid.EnableInClassList("workshop__grid--hidden", suitsActive);
+            if (toast != null) toast.Show(message);
         }
 
-        /// <summary>
-        /// Cell state is recomputed here rather than fixed at build time, so an
-        /// unlock that lands while the lobby is open is picked up on the next
-        /// visit. It also means a null PlayerProfile at construction does not
-        /// leave every cell permanently locked.
-        /// </summary>
-        private void RefreshCells()
+        private static Label MakeLabel(string text, string styleClass, string weightClass)
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-
-            for (int i = 0; i < suitCells.Count; i++)
-            {
-                ItemCell cell = suitCells[i];
-
-                bool locked = profile != null && !profile.IsSuitUnlocked(cell.ItemID);
-                bool equipped = loadout.IsSuitEquipped(cell.ItemID);
-
-                cell.SetState(locked, equipped, loadout.SuitSlotsFull);
-            }
-
-            for (int i = 0; i < nodeCells.Count; i++)
-            {
-                ItemCell cell = nodeCells[i];
-
-                bool locked = profile != null && !profile.IsNodeUnlocked(cell.ItemID);
-                bool equipped = loadout.IsNodeEquipped(cell.ItemID);
-
-                cell.SetState(locked, equipped, loadout.NodeSlotsFull);
-            }
-        }
-
-        private void RefreshHint()
-        {
-            if (hintLabel == null) return;
-
-            bool full = activeTab == Tab.Suits ? loadout.SuitSlotsFull : loadout.NodeSlotsFull;
-
-            hintLabel.EnableInClassList("workshop__hint--hidden", !full);
-        }
-
-        // ===== SHARED =====
-
-        /// <summary>
-        /// The name to show. Falls back to the ID when displayName is blank, so
-        /// a half-filled definition asset is visible as itself rather than as an
-        /// empty cell.
-        /// </summary>
-        private static string DisplayNameOf(SuitDefinition suit)
-        {
-            return !string.IsNullOrEmpty(suit.displayName) ? suit.displayName : suit.suitID;
-        }
-
-        private static string DisplayNameOf(NodeDefinition node)
-        {
-            return !string.IsNullOrEmpty(node.displayName) ? node.displayName : node.nodeID;
-        }
-
-        // ===== ELEMENTS =====
-
-        /// <summary>
-        /// One loadout slot. Filled slots unequip on tap; empty ones switch the
-        /// picker to the grid that fills them.
-        /// </summary>
-        private class SlotView
-        {
-            public Button Root { get; private set; }
-
-            private readonly ItemTile tile;
-            private readonly Label nameLabel;
-
-            public SlotView(System.Action onClick)
-            {
-                Root = new Button();
-                Root.AddToClassList("workshop__slot");
-
-                tile = new ItemTile();
-                tile.Root.AddToClassList("tile--slot");
-
-                nameLabel = new Label();
-                nameLabel.AddToClassList("caption");
-                nameLabel.AddToClassList("workshop__slot-name");
-                nameLabel.pickingMode = PickingMode.Ignore;
-
-                Root.Add(tile.Root);
-                Root.Add(nameLabel);
-
-                if (onClick != null) Root.clicked += onClick;
-            }
-
-            public void Set(string itemID, string displayName)
-            {
-                bool filled = !string.IsNullOrEmpty(itemID);
-
-                if (filled)
-                    tile.SetItem(itemID, displayName);
-                else
-                    tile.SetEmpty();
-
-                nameLabel.text = filled ? displayName : "Empty";
-                Root.EnableInClassList("workshop__slot--filled", filled);
-            }
-        }
-
-        /// <summary>
-        /// One cell in the two-across picker grid: tile, name, and what tapping
-        /// it will do.
-        ///
-        /// No description. The definitions carry one and it is worth reading,
-        /// but at two cells across on a phone a two-line effect note triples the
-        /// height of every cell and drops the grid to two visible rows. The
-        /// place for it is a detail view, not the picker.
-        /// </summary>
-        private class ItemCell
-        {
-            public string ItemID { get; private set; }
-
-            public Button Root { get; private set; }
-
-            private readonly Label statusLabel;
-
-            public ItemCell(string itemID, string displayName, System.Action onClick)
-            {
-                ItemID = itemID;
-
-                Root = new Button();
-                Root.AddToClassList("workshop__cell");
-
-                ItemTile tile = new ItemTile();
-                tile.SetItem(itemID, displayName);
-                tile.Root.AddToClassList("tile--cell");
-
-                Label name = new Label(displayName);
-                name.AddToClassList("body");
-                name.AddToClassList("workshop__cell-name");
-                name.pickingMode = PickingMode.Ignore;
-
-                statusLabel = new Label();
-                statusLabel.AddToClassList("caption");
-                statusLabel.AddToClassList("workshop__cell-status");
-                statusLabel.pickingMode = PickingMode.Ignore;
-
-                Root.Add(tile.Root);
-                Root.Add(name);
-                Root.Add(statusLabel);
-
-                if (onClick != null) Root.clicked += onClick;
-            }
-
-            /// <summary>
-            /// An equipped cell leaves the grid, matching GroupSelectionPanel.
-            /// Locked and slots-full cells stay visible but say why they cannot
-            /// be tapped - a cell that silently ignores a tap is the thing this
-            /// replaces.
-            /// </summary>
-            public void SetState(bool locked, bool equipped, bool slotsFull)
-            {
-                Root.EnableInClassList("workshop__cell--hidden", equipped);
-                Root.EnableInClassList("workshop__cell--locked", locked);
-
-                bool blocked = locked || slotsFull;
-
-                Root.SetEnabled(!blocked);
-
-                if (locked)
-                    statusLabel.text = "LOCKED";
-                else if (slotsFull)
-                    statusLabel.text = "SLOTS FULL";
-                else
-                    statusLabel.text = "EQUIP";
-            }
+            Label label = new Label(text);
+            label.AddToClassList(styleClass);
+            label.AddToClassList(weightClass);
+            label.pickingMode = PickingMode.Ignore;
+            return label;
         }
     }
 }

@@ -4,55 +4,54 @@ title: UI migration inventory
 description: What the lobby and in-match UI actually consist of today, what references each piece, and what the phone-UI rebuild would have to move, keep or replace.
 tags: [ui, lobby, hud, migration, ugui, ui-toolkit]
 generated: { by: claude-opus-5, at: 2026-09-03T00:00:00Z }
-status: draft
-sources:
-  - id: lobby-manager
-    resource: Assets/Scripts/Lobby/LobbyManager.cs
-    title: LobbyManager panel navigation
-    last_modified: 2026-08-14T00:06:30-04:00
-  - id: player-profile
-    resource: Assets/Scripts/Lobby/PlayerProfile.cs
-    title: PlayerProfile persistence and unlock stubs
-    last_modified: 2026-08-27T09:24:18-04:00
-  - id: loadout-data
-    resource: Assets/Scripts/Lobby/Data/LoadoutData.cs
-    title: LoadoutData slot layout and GameMode
-    last_modified: 2026-08-27T09:24:18-04:00
-  - id: sim-state
-    resource: Assets/Scripts/Game/Simulation/SimulationState.cs
-    title: DistrictType and SuitType enums
-    last_modified: 2026-08-30T17:51:21-04:00
-  - id: game-manager
-    resource: Assets/Scripts/Game/Core/GameManager.cs
-    title: Loadout to enum mapping and UI_Manager instantiation
-    last_modified: 2026-09-02T20:26:13-04:00
-  - id: network-manager
-    resource: Assets/Scripts/Game/Network/NetworkManager.cs
-    title: Relay and direct-UDP transport API
-    last_modified: 2026-08-30T17:51:21-04:00
-  - id: safe-area
-    resource: Assets/Scripts/Game/UI/SafeAreaFitter.cs
-    title: SafeAreaFitter
-    last_modified: 2026-09-01T21:18:45-04:00
-  - id: lobby-scene
-    resource: Assets/Scenes/Lobby.unity
-    title: Lobby scene UI wiring
-    last_modified: 2026-08-30T22:15:29-04:00
-  - id: ui-manager-prefab
-    resource: Assets/Prefabs/Game/UI/UI_Manager.prefab
-    title: In-match HUD prefab
-    last_modified: 2026-08-14T00:06:30-04:00
+status: historical
+snapshot_of_commit: d0f4420
+# No `sources:`, deliberately. This is a frozen snapshot of the UI layer as it
+# stood before the rebuild, not a description of live code. Sources moving is
+# the expected outcome here, not a staleness signal, so putting this document
+# under the freshness check would produce a permanent false alarm. What it was
+# taken against is recorded in the body instead. See docs/index.md.
 ---
 
 # UI migration inventory
+
+> **HISTORICAL — do not read this for what the UI is now.**
+>
+> This is the S0 snapshot taken at `d0f4420`, *before* the rebuild it exists to
+> inform. Every uGUI lobby panel it describes now lives in `Assets/Legacy/`, and
+> the UI Toolkit stack it calls "present, unused" is the live lobby. Its claim
+> that the project contains no `.uxml`/`.uss`/`.tss` was true when written and
+> is now emphatically false.
+>
+> For the current UI, read **[architecture](architecture.md) → *Where the UI
+> lives***. Read this document only for why the migration was scoped the way it
+> was.
 
 Taken at `d0f4420`, against a working tree carrying uncommitted prefab work
 (see [Working tree](#working-tree-at-the-time-of-this-audit)).
 
 This is the S0 deliverable of the phone-UI rebuild brief. It records what
-exists, what points at it, and where the brief's own description of the
-project diverges from the code. It takes no position on the Option A/B/C
-decision; it exists so that decision can be made against real numbers.
+existed, what pointed at it, and where the brief's own description of the
+project diverged from the code. It takes no position on the Option A/B/C
+decision; it existed so that decision could be made against real numbers.
+
+## What this was taken against
+
+These were the document's declared sources while it tracked live code. They are
+recorded here as history; the paths are as they were at `d0f4420`, and one of
+them has since moved.
+
+| Path at `d0f4420` | Why it mattered |
+|---|---|
+| `Assets/Scripts/Lobby/LobbyManager.cs` | panel navigation |
+| `Assets/Scripts/Lobby/PlayerProfile.cs` | persistence and unlock stubs |
+| `Assets/Scripts/Lobby/Data/LoadoutData.cs` | slot layout and `GameMode` |
+| `Assets/Scripts/Game/Simulation/SimulationState.cs` | `DistrictType` and `SuitType` |
+| `Assets/Scripts/Game/Core/GameManager.cs` | loadout→enum mapping, `UI_Manager` instantiation |
+| `Assets/Scripts/Game/Network/NetworkManager.cs` | relay and direct-UDP transport API |
+| `Assets/Scripts/Game/UI/SafeAreaFitter.cs` | safe-area insetting — **now `Assets/Legacy/Game/UI/SafeAreaFitter.cs`** |
+| `Assets/Scenes/Lobby.unity` | lobby scene UI wiring |
+| `Assets/Prefabs/Game/UI/UI_Manager.prefab` | in-match HUD prefab |
 
 ## Environment
 

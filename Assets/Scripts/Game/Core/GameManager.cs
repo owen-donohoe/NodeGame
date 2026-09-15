@@ -6,6 +6,7 @@ using NodeWar.Input;
 using NodeWar.Debugging;
 using NodeWar.UI;
 using NodeWar.Network;
+using NodeWar.View.Outline;
 using System.Collections.Generic;
 using DG.Tweening;
 
@@ -92,6 +93,11 @@ namespace NodeWar.Core
         private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
+
+        // Outline groups, indexed in step with the view arrays beside them.
+        private OutlineGroup[] villagerOutlines;
+        private OutlineGroup[] nodeOutlines;
+        private NodeWar.View.OutlineDriver outlineDriver;
         private NodeWar.View.NodePresentation[] nodePresentations;
         private NodeWar.View.NodeView[] nodeViews;
         private NodeWar.View.MovementPathRenderer pathRenderer;
@@ -386,6 +392,15 @@ namespace NodeWar.Core
             debugPlayerSwitch = gameObject.AddComponent<DebugPlayerSwitch>();
             debugPlayerSwitch.Initialize(selectionSystem, commandSystem);
 
+            // The only thing that sets outline intents. Built here so it exists
+            // before the views that register with it, and fed the same
+            // SelectionSystem the tap path uses -- hover and selection then
+            // agree about ownership by construction rather than by two copies
+            // of the same rule.
+            outlineDriver = gameObject.AddComponent<NodeWar.View.OutlineDriver>();
+            outlineDriver.Initialize(state, selectionSystem, Camera.main);
+            debugPlayerSwitch.OnPlayerSwitched += outlineDriver.OnPlayerSideChanged;
+
             // The gesture source must be the only device reader, so it is built
             // before anything that could otherwise be tempted to read one.
             // The router is wired in InitializeUI, once the panel exists.
@@ -580,6 +595,7 @@ namespace NodeWar.Core
                 hudManager.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold);
 
             nodePanelManager = uiGO.GetComponentInChildren<NodePanelManager>();
+            if (outlineDriver != null) outlineDriver.BindPanel(nodePanelManager);
             if (nodePanelManager != null)
                 nodePanelManager.Initialize(state, inputBuffer, selectionSystem, debugPlayerSwitch,
                                             tickProvider, balance.Data);
@@ -1084,6 +1100,7 @@ namespace NodeWar.Core
             nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
             nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
+            nodeOutlines = new OutlineGroup[state.nodes.Length];
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
@@ -1111,10 +1128,19 @@ namespace NodeWar.Core
                     presentation = nodeGO.AddComponent<NodeWar.View.NodePresentation>();
                 nodePresentations[i] = presentation;
 
+                // One group for the whole node: the ground quad and every
+                // building sprite share an ID, so the seams between them grow
+                // no line and the node reads as a single silhouette. The
+                // move-order pulse ring is a LineRenderer and the claim bar a
+                // CanvasRenderer, so neither is collected.
+                nodeOutlines[i] = nodeGO.AddComponent<OutlineGroup>();
+
                 NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeClaimBar>();
                 if (claimBar != null)
                     claimBar.Initialize(state, i, balance.Data.claimThreshold);
             }
+
+            if (outlineDriver != null) outlineDriver.SetNodeGroups(nodeOutlines);
 
             // Pre-hide all nodes. Transition controller reveals them during startup wave.
             for (int i = 0; i < nodePresentations.Length; i++)
@@ -1137,11 +1163,13 @@ namespace NodeWar.Core
         {
             villagerParent = new GameObject("VillagerViews").transform;
             villagerTransforms = new Transform[state.villagers.Length];
+            villagerOutlines = new OutlineGroup[state.villagers.Length];
 
             for (int i = 0; i < state.villagers.Length; i++)
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (outlineDriver != null) outlineDriver.SetVillagerGroups(villagerOutlines);
             if (pathRenderer != null)
                 pathRenderer.SetTickProvider(tickProvider);
             if (hitFlashRouter != null)
@@ -1155,10 +1183,19 @@ namespace NodeWar.Core
                 newArray[i] = villagerTransforms[i];
             villagerTransforms = newArray;
 
+            // Grown in step. SpawnSingleVillagerView writes into this by index,
+            // so a stale length here would silently stop outlining every
+            // villager produced by a bonus spawn.
+            OutlineGroup[] newOutlines = new OutlineGroup[toIndex];
+            for (int i = 0; i < villagerOutlines.Length; i++)
+                newOutlines[i] = villagerOutlines[i];
+            villagerOutlines = newOutlines;
+
             for (int i = fromIndex; i < toIndex; i++)
                 SpawnSingleVillagerView(i);
 
             selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (outlineDriver != null) outlineDriver.SetVillagerGroups(villagerOutlines);
             if (pathRenderer != null)
                 pathRenderer.SetTickProvider(tickProvider);
             if (hitFlashRouter != null)
@@ -1188,6 +1225,13 @@ namespace NodeWar.Core
                     ? gestureSource.Thresholds.flashDuration
                     : 0.12f);
             }
+
+            // Added at runtime, like the touch target below, so the villager
+            // prefab needs no edit. The component collects its own silhouette
+            // from the children on enable -- MeshRenderer and SpriteRenderer
+            // only, so the health ring's CanvasRenderer stays out of it.
+            if (index < villagerOutlines.Length)
+                villagerOutlines[index] = villagerGO.AddComponent<OutlineGroup>();
 
             // Constant-size tap target, so a villager stays hittable at the far
             // end of the dolly range where its sprite is only a few pixels.

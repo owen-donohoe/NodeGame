@@ -1,56 +1,108 @@
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// Shop. Replaces ShopPanel.
+    /// The Shop, after lobby-prototype.html: a stall with three wares beside
+    /// it, and a quiet list of bundles below.
     ///
-    /// Nothing is for sale, because there is nothing to sell it for: no
-    /// currency exists anywhere in the project. The only economy-shaped state
-    /// PlayerProfile carries is boxesAvailable and boxProgress, and until this
-    /// page nothing read either. So the page shows those two honestly and says
-    /// what would feed them, rather than inventing a coin balance that would
-    /// then have to be un-invented.
+    /// Layout pass. There is no economy - no coins, no gold leaf, no boxes to
+    /// open - so the catalogue below is the prototype's illustrative content,
+    /// kept in one place for the shop system to replace, and every purchase
+    /// says it is not available yet rather than pretending to work.
     ///
-    /// The categories are placeholders, and they are cosmetic or accelerative
-    /// on purpose. The monetisation rule on record is free to play, nothing
-    /// that affects competitive results - and a placeholder that models
-    /// pay-to-win is the one that gets copied when the real shop is built.
+    /// Cosmetics and boxes only. Nothing here may change a match: no stat
+    /// upgrades, no purchasable districts or suits. A placeholder that models
+    /// pay-to-win is the thing that gets copied when the real system lands.
     /// </summary>
     public class ShopPage : LobbyPage
     {
-        /// <summary>
-        /// What a shop under the stated rule is allowed to contain. Each is a
-        /// marked placeholder with no price, because a price implies a currency
-        /// and there is none.
-        ///
-        /// Deliberately no suits, districts or stat upgrades. If a fourth
-        /// category is ever added here and it changes what happens in a match,
-        /// it is the rule that broke, not this list.
-        /// </summary>
-        private static readonly string[][] Categories =
+        private struct Ware
         {
-            new[] { "Villager looks",  "Skins for the units on the board" },
-            new[] { "Board themes",    "How the map and its districts are drawn" },
-            new[] { "Progress boosts", "Faster unlocks, never exclusive ones" }
+            public string Name;
+            public string Cost;
+            public LobbyIconKind Icon;
+
+            public Ware(string name, string cost, LobbyIconKind icon)
+            {
+                Name = name;
+                Cost = cost;
+                Icon = icon;
+            }
+        }
+
+        private struct Offer
+        {
+            public string Section;
+            public string Title;
+            public string Subtitle;
+            public string Action;
+            public LobbyIconKind Icon;
+
+            public Offer(string section, string title, string subtitle, string action, LobbyIconKind icon)
+            {
+                Section = section;
+                Title = title;
+                Subtitle = subtitle;
+                Action = action;
+                Icon = icon;
+            }
+        }
+
+        // TODO(shop): illustrative catalogue from the prototype. Replace with
+        // the shop system's stock; keep it cosmetic.
+        private static readonly Ware[] Wares =
+        {
+            new Ware("Paper Banner", "200 coins", LobbyIconKind.Flag),
+            new Ware("Tin Roof", "350 coins", LobbyIconKind.Shop),
+            new Ware("Straw Hat", "150 coins", LobbyIconKind.Hat),
         };
 
-        private readonly Label boxCountLabel;
-        private readonly VisualElement boxFill;
+        private static readonly Offer[] Offers =
+        {
+            new Offer("Bundles", "Three boxes", "Ancient pool only", "30 leaf", LobbyIconKind.Envelope),
+            new Offer("Bundles", "Ten boxes", "Ancient pool only", "90 leaf", LobbyIconKind.Envelope),
+            new Offer("Gold leaf", "Dissolve duplicates", "4 spare cosmetics → 20 leaf", "Dissolve", LobbyIconKind.Diamond),
+        };
 
-        public ShopPage(VisualTreeAsset layout)
+        private const string NotYet = "Purchasing arrives in a later update";
+
+        private readonly LobbySheet sheet;
+        private readonly LobbyToast toast;
+        private readonly LobbyContextMenu menu;
+
+        private readonly VisualElement itemContent;
+        private readonly Label itemTitle;
+        private readonly LobbyIcon itemIcon;
+        private readonly Button itemBuy;
+
+        public ShopPage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast, LobbyContextMenu menu)
             : base(LobbyPageID.Shop, Build(layout))
         {
-            boxCountLabel = Root.Q<Label>("shop-box-count");
-            boxFill = Root.Q<VisualElement>("shop-box-fill");
+            this.sheet = sheet;
+            this.toast = toast;
+            this.menu = menu;
 
-            BuildCategories();
+            itemContent = LobbySheet.Lift(Root, "shop-item");
+            if (itemContent != null)
+            {
+                itemTitle = itemContent.Q<Label>("shop-item-title");
+                itemIcon = itemContent.Q<LobbyIcon>("shop-item-icon");
+                itemBuy = itemContent.Q<Button>("shop-item-buy");
+                if (itemBuy != null) itemBuy.clicked += () => Say(NotYet);
+            }
+
+            BuildWares(Root.Q<VisualElement>("shop-wares"));
+            BuildOffers(Root.Q<VisualElement>("shop-tail"));
         }
 
         private static VisualElement Build(VisualTreeAsset layout)
         {
             VisualElement root = new VisualElement();
             root.name = "page-shop";
+            root.AddToClassList("lb-page-flush");
+            root.pickingMode = PickingMode.Ignore;
 
             if (layout != null)
             {
@@ -58,67 +110,143 @@ namespace NodeWar.Lobby
             }
             else
             {
-                VisualElement box = new VisualElement();
-                box.AddToClassList("placeholder");
-                box.style.flexGrow = 1;
-
                 Label note = new Label("Shop layout missing - assign ShopPage.uxml");
-                note.AddToClassList("placeholder__label");
-
-                box.Add(note);
-                root.Add(box);
+                note.AddToClassList("lb-stub__body");
+                root.Add(note);
             }
 
             return root;
         }
 
-        public override void OnShow()
+        private void Say(string message)
         {
-            Refresh();
+            if (toast != null) toast.Show(message);
         }
 
-        private void Refresh()
+        private void BuildWares(VisualElement host)
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-
-            int boxes = profile != null ? profile.BoxesAvailable : 0;
-            float progress = profile != null ? profile.BoxProgress : 0f;
-
-            if (boxCountLabel != null)
-                boxCountLabel.text = boxes.ToString();
-
-            if (boxFill != null)
-            {
-                // Clamped rather than trusted: nothing writes boxProgress today,
-                // so the first thing that does may well write something outside
-                // 0-1 and a bar wider than its track would be the only symptom.
-                float clamped = progress < 0f ? 0f : (progress > 1f ? 1f : progress);
-                boxFill.style.width = Length.Percent(clamped * 100f);
-            }
-        }
-
-        private void BuildCategories()
-        {
-            VisualElement host = Root.Q<VisualElement>("shop-categories");
             if (host == null) return;
 
-            for (int i = 0; i < Categories.Length; i++)
+            for (int i = 0; i < Wares.Length; i++)
             {
-                VisualElement tile = new VisualElement();
-                tile.AddToClassList("placeholder");
-                tile.AddToClassList("shop__category");
+                Ware ware = Wares[i];
 
-                Label name = new Label(Categories[i][0]);
-                name.AddToClassList("placeholder__label");
-                name.AddToClassList("shop__category-name");
+                VisualElement wrap = Sticker("lb-ware-wrap");
+                if (i == Wares.Length - 1) wrap.AddToClassList("lb-ware-wrap--last");
 
-                Label detail = new Label(Categories[i][1]);
-                detail.AddToClassList("placeholder__label");
+                Button button = new Button();
+                button.AddToClassList("lb-reset-button");
+                button.AddToClassList("lb-ware");
+                button.Add(new LobbyIcon(ware.Icon));
 
-                tile.Add(name);
-                tile.Add(detail);
-                host.Add(tile);
+                VisualElement text = new VisualElement();
+                text.pickingMode = PickingMode.Ignore;
+                text.Add(MakeLabel(ware.Name, "lb-ware__name", "lb-w600"));
+                text.Add(MakeLabel(ware.Cost, "lb-ware__cost", "lb-w500"));
+                button.Add(text);
+
+                button.clicked += () => OpenWare(ware);
+
+                wrap.Add(button);
+                host.Add(wrap);
             }
+        }
+
+        private void BuildOffers(VisualElement host)
+        {
+            if (host == null) return;
+
+            string section = null;
+
+            for (int i = 0; i < Offers.Length; i++)
+            {
+                Offer offer = Offers[i];
+
+                if (offer.Section != section)
+                {
+                    Label head = MakeLabel(offer.Section, "lb-sechead", "lb-w600");
+                    if (section != null) head.AddToClassList("lb-sechead--spaced");
+                    host.Add(head);
+                    section = offer.Section;
+                }
+
+                VisualElement wrap = Sticker("lb-row-wrap");
+
+                VisualElement row = new VisualElement();
+                row.AddToClassList("lb-row");
+
+                VisualElement thumb = new VisualElement();
+                thumb.AddToClassList("lb-rowthumb");
+                thumb.pickingMode = PickingMode.Ignore;
+                thumb.Add(new LobbyIcon(offer.Icon));
+                row.Add(thumb);
+
+                VisualElement text = new VisualElement();
+                text.AddToClassList("lb-row__text");
+                text.pickingMode = PickingMode.Ignore;
+                text.Add(MakeLabel(offer.Title, "lb-row__title", "lb-w600"));
+                text.Add(MakeLabel(offer.Subtitle, "lb-row__sub", "lb-w500"));
+                row.Add(text);
+
+                Button pill = new Button();
+                pill.text = offer.Action;
+                pill.AddToClassList("lb-reset-button");
+                pill.AddToClassList("lb-pill");
+                pill.AddToClassList("lb-w700");
+                pill.clicked += () => Say(NotYet);
+                row.Add(pill);
+
+                if (menu != null)
+                {
+                    menu.Attach(row, () => new List<LobbyMenuItem>
+                    {
+                        new LobbyMenuItem("Preview", () => Say("Previews arrive in a later update")),
+                        new LobbyMenuItem("Details", () => Say(offer.Title + ": " + offer.Subtitle)),
+                    });
+                }
+
+                wrap.Add(row);
+                host.Add(wrap);
+            }
+        }
+
+        private void OpenWare(Ware ware)
+        {
+            if (sheet == null || itemContent == null)
+            {
+                Say(NotYet);
+                return;
+            }
+
+            if (itemTitle != null) itemTitle.text = ware.Name;
+            if (itemIcon != null) itemIcon.Kind = ware.Icon;
+            if (itemBuy != null) itemBuy.text = "Buy for " + ware.Cost;
+
+            sheet.Open(itemContent);
+        }
+
+        private static VisualElement Sticker(string wrapClass)
+        {
+            VisualElement wrap = new VisualElement();
+            wrap.AddToClassList("lb-sticker");
+            wrap.AddToClassList(wrapClass);
+            wrap.pickingMode = PickingMode.Ignore;
+
+            VisualElement shadow = new VisualElement();
+            shadow.AddToClassList("lb-sticker__shadow");
+            shadow.pickingMode = PickingMode.Ignore;
+            wrap.Add(shadow);
+
+            return wrap;
+        }
+
+        private static Label MakeLabel(string text, string styleClass, string weightClass)
+        {
+            Label label = new Label(text);
+            label.AddToClassList(styleClass);
+            label.AddToClassList(weightClass);
+            label.pickingMode = PickingMode.Ignore;
+            return label;
         }
     }
 }

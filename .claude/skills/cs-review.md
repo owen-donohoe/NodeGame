@@ -9,7 +9,10 @@ verified:
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
+  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
+verified_at_commit: 0a32181
 status: stable
 sources:
   - id: architecture
@@ -32,7 +35,12 @@ Read all files modified in this session, then check:
 1. Architecture compliance
    - Does each file respect its layer's ownership rules?
    - Does anything in Simulation/ reference UnityEngine?
-   - Does anything in View/ or UI/ write to SimulationState?
+   - Does any presentation code write to SimulationState, or call
+     GameSimulation or CommandProcessor? Check all three trees, not
+     just the layer named UI: Assets/Scripts/Game/{View,UI}/,
+     Assets/UI/ (UI Toolkit), and Assets/Legacy/.
+   - Does every command sent from presentation code go through
+     InputBuffer with issuedOnTick stamped?
    - Does anything in Network/ contain game logic?
 
 2. Single-file principle

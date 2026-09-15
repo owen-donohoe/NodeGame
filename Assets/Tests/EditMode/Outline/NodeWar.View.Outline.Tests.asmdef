@@ -1,0 +1,12 @@
+{
+    "name": "NodeWar.View.Outline.Tests",
+    "references": [
+        "NodeWar.View.Outline"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

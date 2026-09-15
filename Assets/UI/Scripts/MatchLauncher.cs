@@ -79,11 +79,6 @@ namespace NodeWar.Lobby
         private float phaseEnterTime;
         private float handshakeRetryTimer;
 
-        public bool IsBusy
-        {
-            get { return CurrentPhase != Phase.Idle && CurrentPhase != Phase.Failed; }
-        }
-
         // ===== ENTRY POINTS =====
 
         public void HostRelay()

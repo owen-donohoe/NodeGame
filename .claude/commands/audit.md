@@ -7,6 +7,9 @@ description: Re-check a chapter's plan against the code before it goes Active.
 Runs when a phase moves to `Audit plan against code`, before it goes Active. The plan may have been
 written months and dozens of commits ago.
 
+Read `docs/notion-workspace.md` first — it holds the database identifiers and the Phases/Tasks
+property schemas this procedure assumes.
+
 0. Run `powershell -File scripts/okf-stale.ps1`. It reports which documents have sources that moved
    since they were last verified. A phase whose ground is covered by a suspect document is the most
    likely place for the plan to have drifted — read those first.

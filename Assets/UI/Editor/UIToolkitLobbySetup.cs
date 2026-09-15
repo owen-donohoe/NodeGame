@@ -128,13 +128,14 @@ namespace NodeWar.EditorTools
             PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
             settings.themeStyleSheet = theme;
 
-            // ConstantPhysicalSize is the reason the theme can talk in points.
-            // A 44px touch target in Theme.uss is then about 44 real points on
-            // the device, which is what makes the minimum meaningful. It also
-            // matches how GestureThresholds already reasons about mm.
-            settings.scaleMode = PanelScaleMode.ConstantPhysicalSize;
-            settings.referenceDpi = 96f;
-            settings.fallbackDpi = 96f;
+            // The lobby is laid out in the prototype's units: a 390-point-wide
+            // portrait phone. Scaling to that width makes one USS pixel one
+            // point on such a phone, so a 44px target is 44pt there. Physical
+            // size at 96 dpi made everything ~1.7x the design on a real phone.
+            settings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            settings.referenceResolution = new Vector2Int(390, 844);
+            settings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            settings.match = 0f;
 
             AssetDatabase.CreateAsset(settings, PanelSettingsPath);
             AssetDatabase.SaveAssets();
@@ -144,7 +145,10 @@ namespace NodeWar.EditorTools
 
         private static GameObject EnsureSceneRoot(PanelSettings panelSettings, VisualTreeAsset layout)
         {
-            GameObject root = GameObject.Find(RootObjectName);
+            // Not GameObject.Find: it skips inactive objects, and this root is
+            // left inactive on purpose (see the end of this method), so a second
+            // run would build a duplicate and repoint LobbyManager at it.
+            GameObject root = FindSceneRoot(RootObjectName);
 
             if (root == null)
             {
@@ -176,6 +180,8 @@ namespace NodeWar.EditorTools
             AssignLayout(so, "profilePageLayout", Load(UIRoot + "/Layouts/ProfilePage.uxml"));
             AssignLayout(so, "shopPageLayout", Load(UIRoot + "/Layouts/ShopPage.uxml"));
             AssignLayout(so, "socialPageLayout", Load(UIRoot + "/Layouts/SocialPage.uxml"));
+            AssignLayout(so, "settingsPageLayout", Load(UIRoot + "/Layouts/SettingsPage.uxml"));
+            AssignLayout(so, "matchHistoryPageLayout", Load(UIRoot + "/Layouts/MatchHistoryPage.uxml"));
 
             AssignDefinitions<SuitDefinition>(so, "allSuits", DataRoot + "/Suits");
             AssignDefinitions<NodeDefinition>(so, "allNodes", DataRoot + "/Nodes");
@@ -222,6 +228,18 @@ namespace NodeWar.EditorTools
 
             property.objectReferenceValue = root;
             so.ApplyModifiedProperties();
+        }
+
+        private static GameObject FindSceneRoot(string name)
+        {
+            GameObject[] roots = SceneManager.GetActiveScene().GetRootGameObjects();
+
+            for (int i = 0; i < roots.Length; i++)
+            {
+                if (roots[i].name == name) return roots[i];
+            }
+
+            return null;
         }
 
         private static VisualTreeAsset Load(string path)

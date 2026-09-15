@@ -14,6 +14,13 @@
     That is the whole freshness model -- it is what makes documentation drift a
     thing that fails a check rather than a thing you happen to notice.
 
+    One refinement: when the source is itself a markdown document, commits that
+    changed only its YAML frontmatter do not count as the source moving. Bundle
+    documents cite one another, so stamping one document's verified_at_commit
+    would otherwise mark every document citing it suspect -- on a change that
+    says nothing about their subject -- and each re-verification would generate
+    the next. See Get-LastCommit.
+
     Also reports documents past their `stale_after:` date, and warns about
     documents that carry sources but no `verified_at_commit` to check them
     against.
@@ -96,21 +103,106 @@ function Read-Frontmatter {
     return $result
 }
 
-# Last commit that touched a path, or $null if git does not track it.
+# The file's content at a revision, as a single string, or $null when the path
+# does not exist there (a root commit, or the commit that added the file).
+function Get-BlobAt {
+    param([string]$Rev, [string]$RepoRelativePath)
+
+    Push-Location $RepoRoot
+    try {
+        $text = & git show "${Rev}:${RepoRelativePath}" 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+    }
+    catch {
+        return $null
+    }
+    finally {
+        Pop-Location
+    }
+
+    if ($null -eq $text) { return "" }
+    return ($text -join "`n")
+}
+
+# Everything after the closing '---' of a YAML frontmatter block. Text with no
+# frontmatter is returned unchanged, so this is safe to call on anything.
+function Remove-Frontmatter {
+    param([string]$Text)
+
+    if ([string]::IsNullOrEmpty($Text)) { return "" }
+
+    $lines = $Text -split "`n"
+    if ($lines.Count -eq 0 -or $lines[0].Trim() -ne '---') { return $Text }
+
+    for ($i = 1; $i -lt $lines.Count; $i++) {
+        if ($lines[$i].Trim() -eq '---') {
+            return (($lines[($i + 1)..($lines.Count - 1)]) -join "`n")
+        }
+    }
+
+    # An unterminated block is not frontmatter. Treat the whole file as body
+    # rather than silently discarding it.
+    return $Text
+}
+
+# True when a commit changed a markdown file's body, not only its frontmatter.
+# Adding the file counts as a body change, as does any commit we cannot compare.
+function Test-BodyChanged {
+    param([string]$Sha, [string]$RepoRelativePath)
+
+    $after = Get-BlobAt -Rev $Sha -RepoRelativePath $RepoRelativePath
+    if ($null -eq $after) { return $true }
+
+    $before = Get-BlobAt -Rev "${Sha}^" -RepoRelativePath $RepoRelativePath
+    if ($null -eq $before) { return $true }
+
+    return (Remove-Frontmatter $before) -ne (Remove-Frontmatter $after)
+}
+
+# How far back to walk looking for a substantive commit before giving up and
+# reporting the newest one. A document whose last 50 commits were all
+# frontmatter is not a case worth optimising for.
+$FrontmatterWalkLimit = 50
+
+# Last commit that substantively touched a path, or $null if git does not track
+# it.
+#
+# For a markdown source, commits that changed only the YAML frontmatter are
+# skipped. Documents in this bundle cite one another, so stamping a document's
+# own verified_at_commit edits a file that other documents declare as a source
+# -- which would mark every one of them suspect on a change that says nothing
+# about their subject. Re-verifying then permanently generates its own next
+# round of re-verification. Skipping frontmatter-only commits is what lets that
+# reach a fixed point.
+#
+# Non-markdown sources are unaffected: a .cs file has no frontmatter, and the
+# very first commit reported for it is returned as before.
 function Get-LastCommit {
     param([string]$RepoRelativePath)
 
     Push-Location $RepoRoot
     try {
-        $sha = & git log -1 --format=%H -- $RepoRelativePath
+        $shas = @(& git log --format=%H -n $FrontmatterWalkLimit -- $RepoRelativePath)
         if ($LASTEXITCODE -ne 0) { return $null }
     }
     finally {
         Pop-Location
     }
 
-    if ([string]::IsNullOrWhiteSpace($sha)) { return $null }
-    return $sha.Trim()
+    $shas = @($shas | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($shas.Count -eq 0) { return $null }
+
+    if ($RepoRelativePath -notmatch '\.md$') { return $shas[0].Trim() }
+
+    foreach ($sha in $shas) {
+        if (Test-BodyChanged -Sha $sha.Trim() -RepoRelativePath $RepoRelativePath) {
+            return $sha.Trim()
+        }
+    }
+
+    # Every commit in the window was frontmatter-only. Report the newest rather
+    # than claiming the file never substantively moved.
+    return $shas[0].Trim()
 }
 
 # True when $Ancestor is an ancestor of $Descendant, or the same commit.

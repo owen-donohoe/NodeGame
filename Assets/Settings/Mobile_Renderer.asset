@@ -26,8 +26,9 @@ MonoBehaviour:
     probeSamplingDebugMesh: {fileID: 0}
     probeSamplingDebugTexture: {fileID: 0}
     probeVolumeBlendStatesCS: {fileID: 0}
-  m_RendererFeatures: []
-  m_RendererFeatureMap: 
+  m_RendererFeatures:
+  - {fileID: 5176087356417471110}
+  m_RendererFeatureMap: 8672a7cd0628d547
   m_UseNativeRenderPass: 1
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 2
@@ -50,3 +51,19 @@ MonoBehaviour:
   m_CopyDepthMode: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &5176087356417471110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e421be77f1e34ed5ab12698dc22771bc, type: 3}
+  m_Name: NodeWar Outline
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings: {fileID: 11400000, guid: e6cb3aa3dcd84b4daa94c29d946e2ad2, type: 2}
+  maskShader: {fileID: 4800000, guid: 7ab645ace2c702543abfc9b380df5ac1, type: 3}
+  compositeShader: {fileID: 4800000, guid: 27adcfa01622f5b4bb6d0d52bb287a44, type: 3}
