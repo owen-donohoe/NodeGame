@@ -209,6 +209,7 @@ namespace NodeWar.UI
         private void Update()
         {
             if (safeArea != null) safeArea.Update();
+            if (nodeSheet != null) nodeSheet.UpdateSafeArea();
 
             if (!initialized || state == null) return;
 

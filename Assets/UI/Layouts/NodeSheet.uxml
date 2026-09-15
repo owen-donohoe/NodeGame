@@ -6,55 +6,82 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
-        The node sheet. Bottom edge, board still visible above it.
+        The node sheet, after ingame-prototype.html. Opens for the six
+        districts with something to press - Core, Forge, and the four equip
+        districts - and never for the rest.
 
-        Only the frame is here: the header, the claim tug-of-war and an empty
-        content host. The three contents are built in C# because what goes in
-        them depends on how many villagers are standing on a node, which is not
-        knowable at authoring time.
+        A SHEET, NOT A TAKEOVER. Settled 2026-09-02: the opponent keeps acting
+        while this is open, so there is no scrim and the board stays visible
+        above it. It is the only element on the match surface that reaches
+        the bottom edge; its safe-area spacer keeps its buttons clear of the
+        home indicator.
 
-        THE CLAIM BAR IS TWO BARS. claimBar is signed - positive is player 1,
-        negative is player 2 - and the value passes through zero on its way from
-        one owner to the other. So both halves grow outward from a fixed centre
-        line and only one has width at a time. A single left-to-right fill would
-        say a node is most of the way claimed without saying by whom.
+        The sheet itself picks, so a tap on it never falls through to the
+        board. Its body is filled by one of three contents in code, and its
+        action bar holds that content's one main control.
 
-        No scrim. The opponent is still playing behind this.
+        This file imports its own stylesheet. It used not to, and NodeSheet.uss
+        was loaded by nothing, so the sheet had never been styled.
     -->
 
-    <engine:VisualElement name="node-sheet" class="sheet">
+    <engine:Style src="project://database/Assets/UI/Styles/NodeSheet.uss" />
 
-        <engine:VisualElement name="sheet-header" class="sheet__header">
+    <engine:VisualElement name="node-sheet" class="ui-sheet sheet">
 
-            <engine:VisualElement name="sheet-owner-mark" class="player-mark sheet__mark">
-                <engine:Label name="sheet-owner-mark-label" class="player-mark__label" text="-" picking-mode="Ignore" />
-            </engine:VisualElement>
-
-            <engine:VisualElement class="sheet__title" picking-mode="Ignore">
-                <engine:Label name="sheet-district" class="subtitle" text="District" picking-mode="Ignore" />
-                <engine:Label name="sheet-owner" class="caption" text="Unclaimed" picking-mode="Ignore" />
-            </engine:VisualElement>
-
-            <engine:Button name="sheet-close" class="sheet__close" text="Close" />
-
+        <engine:VisualElement name="sheet-grab" class="ui-handle-hit sheet__grab">
+            <engine:VisualElement class="ui-handle sheet__handle" picking-mode="Ignore" />
         </engine:VisualElement>
 
-        <engine:VisualElement class="sheet__claim" picking-mode="Ignore">
-            <engine:VisualElement class="sheet__claim-track" picking-mode="Ignore">
-                <engine:VisualElement class="sheet__claim-half sheet__claim-half--left" picking-mode="Ignore">
+        <engine:VisualElement class="sheet__head" picking-mode="Ignore">
+            <engine:VisualElement name="sheet-thumb" class="ui-tile sheet__thumb" picking-mode="Ignore">
+                <engine:Label name="sheet-thumb-letter" class="ui-tile__monogram sheet__thumb-letter" text="F" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:VisualElement class="sheet__name" picking-mode="Ignore">
+                <engine:Label name="sheet-district" class="sheet__title ui-w600" text="District" picking-mode="Ignore" />
+                <engine:VisualElement class="sheet__owner-row" picking-mode="Ignore">
+                    <engine:Label name="sheet-owner" class="sheet__owner ui-w600" text="YOURS" picking-mode="Ignore" />
+                    <engine:VisualElement name="sheet-owner-mark" class="ui-mark ui-mark--small ui-mark--p0" picking-mode="Ignore">
+                        <engine:Label name="sheet-owner-mark-label" class="ui-mark__label sheet__mark-label" text="1" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                </engine:VisualElement>
+            </engine:VisualElement>
+            <engine:Button name="sheet-close" class="ui-reset-button sheet__close" />
+        </engine:VisualElement>
+
+        <!--
+            The claim tug of war. claimBar is signed: player 0 pulls right,
+            player 1 pulls left - the same way round as the bar over the node
+            in 3D. Each mark sits beside the half that fills for its player.
+        -->
+        <engine:VisualElement name="sheet-claim" class="sheet__claim" picking-mode="Ignore">
+            <engine:VisualElement class="sheet__claimbar" picking-mode="Ignore">
+                <engine:VisualElement class="sheet__claim-half sheet__claim-half--p1" picking-mode="Ignore">
                     <engine:VisualElement name="sheet-claim-p1" class="sheet__claim-fill sheet__claim-fill--p1" picking-mode="Ignore" />
                 </engine:VisualElement>
-                <engine:VisualElement class="sheet__claim-centre" picking-mode="Ignore" />
-                <engine:VisualElement class="sheet__claim-half sheet__claim-half--right" picking-mode="Ignore">
+                <engine:VisualElement class="sheet__claim-half" picking-mode="Ignore">
                     <engine:VisualElement name="sheet-claim-p0" class="sheet__claim-fill sheet__claim-fill--p0" picking-mode="Ignore" />
                 </engine:VisualElement>
+                <engine:VisualElement class="sheet__claim-mid" picking-mode="Ignore" />
             </engine:VisualElement>
-            <engine:Label name="sheet-claim-label" class="caption sheet__claim-label" text="Neutral" picking-mode="Ignore" />
+            <engine:VisualElement class="sheet__claim-labels" picking-mode="Ignore">
+                <engine:VisualElement class="ui-mark ui-mark--small ui-mark--p1" picking-mode="Ignore">
+                    <engine:Label class="ui-mark__label sheet__mark-label" text="2" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:Label name="sheet-claim-label" class="sheet__claim-label ui-w600" text="Neutral" picking-mode="Ignore" />
+                <engine:VisualElement class="ui-mark ui-mark--small ui-mark--p0" picking-mode="Ignore">
+                    <engine:Label class="ui-mark__label sheet__mark-label" text="1" picking-mode="Ignore" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+            <engine:Label name="sheet-claim-note" class="sheet__microcap" text="" picking-mode="Ignore" />
         </engine:VisualElement>
 
-        <engine:ScrollView name="sheet-scroll" class="sheet__scroll">
-            <engine:VisualElement name="sheet-content" class="sheet__content-host" />
+        <engine:ScrollView name="sheet-body" class="sheet__body" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+            <engine:VisualElement name="sheet-content" class="sheet__content" picking-mode="Ignore" />
         </engine:ScrollView>
+
+        <engine:VisualElement name="sheet-actions" class="sheet__actions" picking-mode="Ignore" />
+
+        <engine:VisualElement name="sheet-safe-bottom" class="sheet__safe-bottom" picking-mode="Ignore" />
 
     </engine:VisualElement>
 
