@@ -85,7 +85,7 @@ namespace NodeWar.Lobby.Tests
         [Test]
         public void ClassFor_NamesAThemeClass()
         {
-            Assert.AreEqual("tile-tint--1", ItemTint.ClassFor("node_barracks"));
+            Assert.AreEqual("ui-tile-tint--1", ItemTint.ClassFor("node_barracks"));
         }
 
         [Test]

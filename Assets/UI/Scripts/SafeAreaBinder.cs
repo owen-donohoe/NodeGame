@@ -17,13 +17,30 @@ namespace NodeWar.Lobby
     ///
     /// Insets are computed as a PROPORTION of the screen and applied to the
     /// panel's own resolved size, rather than assigning screen pixels directly.
-    /// PanelSettings runs in ConstantPhysicalSize, so one panel unit is not one
-    /// screen pixel, and assigning raw Screen.safeArea numbers would inset by
-    /// the wrong amount on every device whose scale factor is not exactly 1.
+    /// PanelSettings scales the panel to a reference size, so one panel unit is
+    /// not one screen pixel, and assigning raw Screen.safeArea numbers would
+    /// inset by the wrong amount on every device whose scale factor is not
+    /// exactly 1.
+    ///
+    /// By default all four edges are padded. An element that reaches only one
+    /// edge - the match's bottom sheet, which is pinned below the safe area
+    /// and pads itself clear of the home indicator - asks for just that edge.
     /// </summary>
     public class SafeAreaBinder
     {
+        [System.Flags]
+        public enum Edges
+        {
+            None = 0,
+            Left = 1,
+            Right = 2,
+            Top = 4,
+            Bottom = 8,
+            All = Left | Right | Top | Bottom
+        }
+
         private readonly VisualElement target;
+        private readonly Edges edges;
 
         private Rect lastSafeArea = new Rect(0, 0, 0, 0);
         private int lastScreenWidth;
@@ -31,9 +48,14 @@ namespace NodeWar.Lobby
         private float lastPanelWidth;
         private float lastPanelHeight;
 
-        public SafeAreaBinder(VisualElement target)
+        public SafeAreaBinder(VisualElement target) : this(target, Edges.All)
+        {
+        }
+
+        public SafeAreaBinder(VisualElement target, Edges edges)
         {
             this.target = target;
+            this.edges = edges;
         }
 
         /// <summary>
@@ -91,10 +113,10 @@ namespace NodeWar.Lobby
             float bottomPx = safeArea.yMin;
             float topPx = screenHeight - safeArea.yMax;
 
-            target.style.paddingLeft = ToPanelUnits(leftPx, screenWidth, panelWidth);
-            target.style.paddingRight = ToPanelUnits(rightPx, screenWidth, panelWidth);
-            target.style.paddingTop = ToPanelUnits(topPx, screenHeight, panelHeight);
-            target.style.paddingBottom = ToPanelUnits(bottomPx, screenHeight, panelHeight);
+            if ((edges & Edges.Left) != 0) target.style.paddingLeft = ToPanelUnits(leftPx, screenWidth, panelWidth);
+            if ((edges & Edges.Right) != 0) target.style.paddingRight = ToPanelUnits(rightPx, screenWidth, panelWidth);
+            if ((edges & Edges.Top) != 0) target.style.paddingTop = ToPanelUnits(topPx, screenHeight, panelHeight);
+            if ((edges & Edges.Bottom) != 0) target.style.paddingBottom = ToPanelUnits(bottomPx, screenHeight, panelHeight);
         }
 
         private static float ToPanelUnits(float screenPixels, float screenExtent, float panelExtent)
