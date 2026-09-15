@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
@@ -13,24 +14,28 @@ using NodeWar.Lobby;
 namespace NodeWar.UI
 {
     /// <summary>
-    /// The UI Toolkit in-match HUD. Counterpart to HUDManager, and live only
-    /// when GameManager.useUIToolkitHUD is on - the same one-checkbox switch the
-    /// lobby migration used, for the same reason: the old HUD stays one tick
-    /// away for as long as the new one is unproven.
+    /// The UI Toolkit in-match HUD, after ingame-prototype.html. Counterpart to
+    /// HUDManager, and live only when GameManager.useUIToolkitHUD is on - the
+    /// same one-checkbox switch the lobby migration used, so the old HUD stays
+    /// one tick away for as long as the new one is unproven.
     ///
     /// Namespace NodeWar.UI rather than NodeWar.Lobby, unlike everything else
     /// under Assets/UI/Scripts, because this is gameplay UI and belongs beside
     /// HUDManager in the layer it replaces. The folder says which stack it is
     /// in; the namespace says which layer.
     ///
-    /// WHAT IT SHOWS is settled, not preference: three resources and both
-    /// breach bars are always visible, and only the villager count collapses.
+    /// WHAT IT SHOWS is settled, not preference: both breach walls and three
+    /// resources are always visible, and only the villager count collapses.
     /// Breach is the win condition, so it is first and it never hides.
     ///
-    /// READ-ONLY, ABSOLUTELY. It reads SimulationState and writes nothing -
-    /// not through GameSimulation, not through CommandProcessor. The four
-    /// commands belong to the node panel in S7, and they will go through
-    /// InputBuffer like everything else. See .claude/rules/view-ui.md.
+    /// YOU ARE ON THE LEFT. The left wall belongs to whichever player is being
+    /// controlled - in a networked match that may be player 1 - and each wall
+    /// carries its player mark, so position never has to say who is who.
+    ///
+    /// READ-ONLY, ABSOLUTELY. It reads SimulationState and writes nothing - not
+    /// through GameSimulation, not through CommandProcessor. The node sheet's
+    /// commands go through InputBuffer like everything else. See
+    /// .claude/rules/view-ui.md.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public class GameplayHUDController : MonoBehaviour
@@ -42,15 +47,24 @@ namespace NodeWar.UI
                  "uGUI panel keeps the job.")]
         [SerializeField] private VisualTreeAsset nodeSheetLayout;
 
-        [Tooltip("How long the bump on a changed number lasts. Matches HUD.uss.")]
-        [SerializeField] private long bumpMilliseconds = 180;
+        // The prototype's locked resource readout: five past samples, a full
+        // bar at 15, and colour zones at 2 and 6. Presentation only - nothing
+        // in the simulation knows about these numbers.
+        private const int HistorySamples = 5;
+        private const int ReadoutCap = 15;
+        private const float ReadoutHeight = 40f;
+        private const int LowZoneMax = 2;
+        private const int MidZoneMax = 6;
 
         private UIDocument document;
         private SafeAreaBinder safeArea;
         private NodeSheet nodeSheet;
+        private VisualElement hudRoot;
 
         private SimulationState state;
+        private GameBalanceData balance;
         private DebugPlayerSwitch playerSwitch;
+        private SelectionSystem selection;
         private NodePanelManager panelSource;
         private int breachThreshold = 3;
         private bool initialized;
@@ -61,36 +75,28 @@ namespace NodeWar.UI
         /// </summary>
         public bool HasNodeSheet { get { return nodeSheet != null; } }
 
-        private Label foodLabel;
-        private Label materialsLabel;
-        private Label metalLabel;
+        private BreachSide you;
+        private BreachSide them;
+        private Label clockLabel;
+        private VisualElement flash;
 
-        private VisualElement breachFillP0;
-        private VisualElement breachFillP1;
-        private Label breachCountP0;
-        private Label breachCountP1;
+        private readonly ResourceReadout[] resources = new ResourceReadout[3];
 
         private Button villagerToggle;
-        private VisualElement villagerPanel;
+        private VisualElement villagerCard;
         private Label villagersP0;
         private Label villagersP1;
         private bool villagersOpen;
 
-        // Totals never change during a match - villagers are consumed, not
-        // created - so they are counted once rather than every frame.
-        private int totalP0;
-        private int totalP1;
+        private VisualElement selectionDock;
+        private Label selectionText;
 
-        // Change detection, so the bump fires on a real change rather than
-        // every frame, and so no label is rewritten for nothing.
         private int lastControlledPID = -1;
-        private int lastFood = int.MinValue;
-        private int lastMaterials = int.MinValue;
-        private int lastMetal = int.MinValue;
-        private int lastBreachP0 = -1;
-        private int lastBreachP1 = -1;
-        private int lastAliveP0 = -1;
-        private int lastAliveP1 = -1;
+        private int lastClockSeconds = -1;
+        private int lastSampleSecond = -1;
+        private int lastUnitsP0 = -1;
+        private int lastUnitsP1 = -1;
+        private int lastSelected = -1;
 
         private void OnEnable()
         {
@@ -168,14 +174,14 @@ namespace NodeWar.UI
         /// </summary>
         public void Initialize(SimulationState simulationState, DebugPlayerSwitch debugSwitch,
                                int breachThresholdValue, InputBuffer inputBuffer,
-                               NodeWar.Core.ITickProvider tickProvider, GameBalanceData balance,
-                               NodePanelManager nodePanelManager)
+                               NodeWar.Core.ITickProvider tickProvider, GameBalanceData balanceData,
+                               NodePanelManager nodePanelManager, SelectionSystem selectionSystem)
         {
             state = simulationState;
+            balance = balanceData;
             playerSwitch = debugSwitch;
+            selection = selectionSystem;
             breachThreshold = breachThresholdValue > 0 ? breachThresholdValue : 1;
-
-            CountVillagerTotals();
 
             if (nodeSheet != null)
             {
@@ -197,7 +203,7 @@ namespace NodeWar.UI
 
             initialized = true;
 
-            RefreshAll(true);
+            Refresh();
         }
 
         private void Update()
@@ -206,7 +212,7 @@ namespace NodeWar.UI
 
             if (!initialized || state == null) return;
 
-            RefreshAll(false);
+            Refresh();
 
             if (nodeSheet != null) nodeSheet.Update(CurrentPlayerID());
         }
@@ -215,27 +221,30 @@ namespace NodeWar.UI
 
         private void Bind(VisualElement root)
         {
+            hudRoot = root.Q<VisualElement>("hud-root");
+
             VisualElement safeAreaElement = root.Q<VisualElement>("hud-safe-area");
             if (safeAreaElement != null) safeArea = new SafeAreaBinder(safeAreaElement);
 
-            foodLabel = root.Q<Label>("hud-food");
-            materialsLabel = root.Q<Label>("hud-materials");
-            metalLabel = root.Q<Label>("hud-metal");
+            you = new BreachSide(root, "you");
+            them = new BreachSide(root, "them");
+            clockLabel = root.Q<Label>("hud-clock");
+            flash = root.Q<VisualElement>("hud-flash");
 
-            breachFillP0 = root.Q<VisualElement>("hud-breach-fill-p0");
-            breachFillP1 = root.Q<VisualElement>("hud-breach-fill-p1");
-            breachCountP0 = root.Q<Label>("hud-breach-count-p0");
-            breachCountP1 = root.Q<Label>("hud-breach-count-p1");
+            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-hist-food"));
+            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-hist-materials"));
+            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-hist-metal"));
 
             villagerToggle = root.Q<Button>("hud-villager-toggle");
-            villagerPanel = root.Q<VisualElement>("hud-villagers");
+            villagerCard = root.Q<VisualElement>("hud-villagers");
             villagersP0 = root.Q<Label>("hud-villagers-p0");
             villagersP1 = root.Q<Label>("hud-villagers-p1");
 
             if (villagerToggle != null)
                 villagerToggle.clicked += ToggleVillagers;
 
-            ApplyVillagerPanelState();
+            selectionDock = root.Q<VisualElement>("hud-selection");
+            selectionText = root.Q<Label>("hud-selection-text");
 
             BuildNodeSheet(root);
         }
@@ -244,7 +253,7 @@ namespace NodeWar.UI
         /// The sheet is added to the document root rather than inside the safe
         /// area, and after everything else so it draws over the readouts. It is
         /// the one element on this surface allowed to reach the bottom edge -
-        /// its own padding keeps its contents clear of the home indicator.
+        /// its own padding keeps its buttons clear of the home indicator.
         /// </summary>
         private void BuildNodeSheet(VisualElement root)
         {
@@ -258,13 +267,15 @@ namespace NodeWar.UI
             nodeSheet = new NodeSheet(nodeSheetLayout);
             nodeSheet.Closed += OnSheetClosedByPlayer;
 
-            root.Add(nodeSheet.Root);
+            VisualElement host = hudRoot != null ? hudRoot : root;
+            host.Add(nodeSheet.Root);
         }
 
         /// <summary>
-        /// The player pressed Close on the sheet. The old manager still owns the
-        /// open/closed truth - it drives the camera focus session and decides
-        /// what a later tap means - so it is told rather than bypassed.
+        /// The player closed the sheet from its own button or handle. The old
+        /// manager still owns the open/closed truth - it drives the camera focus
+        /// session and decides what a later tap means - so it is told rather
+        /// than bypassed.
         /// </summary>
         private void OnSheetClosedByPlayer()
         {
@@ -274,157 +285,335 @@ namespace NodeWar.UI
         private void ToggleVillagers()
         {
             villagersOpen = !villagersOpen;
-            ApplyVillagerPanelState();
-        }
 
-        private void ApplyVillagerPanelState()
-        {
-            if (villagerPanel != null)
-                villagerPanel.EnableInClassList("hud__villagers--open", villagersOpen);
+            if (villagerCard != null)
+                villagerCard.EnableInClassList("hud__units-card--open", villagersOpen);
 
             if (villagerToggle != null)
-                villagerToggle.EnableInClassList("hud__villager-toggle--open", villagersOpen);
+                villagerToggle.EnableInClassList("hud__units--open", villagersOpen);
         }
 
         // ===== REFRESH =====
 
-        private void RefreshAll(bool snap)
+        private void Refresh()
         {
-            RefreshResources(snap);
-            RefreshBreaches(snap);
-            RefreshVillagers();
-        }
+            int pid = CurrentPlayerID();
 
-        /// <summary>
-        /// Resources belong to whichever player is being controlled, which the
-        /// debug switch can change mid-match. A switch snaps rather than bumps:
-        /// the numbers did not change, the player looking at them did, and
-        /// flashing three counters would report an event that never happened.
-        /// </summary>
-        private void RefreshResources(bool snap)
-        {
-            int pid = playerSwitch != null ? playerSwitch.GetCurrentPlayerID() : 0;
-            if (pid < 0 || pid >= state.players.Length) pid = 0;
-
+            // A viewer switch changes whose numbers these are, not the numbers.
+            // Everything redraws at once, with no breach punch and no bars
+            // sliding, because nothing happened in the match.
             bool switched = pid != lastControlledPID;
             lastControlledPID = pid;
 
+            if (switched) Snap();
+
+            RefreshBreaches(pid, switched);
+            RefreshClock();
+            RefreshResources(pid, switched);
+            RefreshUnits(pid);
+            RefreshSelection();
+        }
+
+        private void Snap()
+        {
+            if (hudRoot == null) return;
+
+            hudRoot.AddToClassList("hud--snap");
+            hudRoot.schedule.Execute(() => hudRoot.RemoveFromClassList("hud--snap")).StartingIn(50);
+        }
+
+        private void RefreshBreaches(int pid, bool switched)
+        {
+            int other = pid == 0 ? 1 : 0;
+
+            bool hitYou = you.Set(pid, state.players[pid].breachCount, breachThreshold, switched);
+            bool hitThem = them.Set(other, state.players[other].breachCount, breachThreshold, switched);
+
+            if ((hitYou || hitThem) && flash != null)
+            {
+                flash.AddToClassList("hud__flash--on");
+                flash.schedule.Execute(() => flash.RemoveFromClassList("hud__flash--on")).StartingIn(40);
+            }
+        }
+
+        /// <summary>
+        /// Elapsed match time from the tick count. The match has no time limit -
+        /// breach is the only way it ends - so this counts up, never down.
+        /// </summary>
+        private void RefreshClock()
+        {
+            int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
+            int seconds = state.tickCount / ticksPerSecond;
+
+            if (seconds == lastClockSeconds) return;
+            lastClockSeconds = seconds;
+
+            if (clockLabel != null)
+                clockLabel.text = (seconds / 60) + ":" + (seconds % 60).ToString("00");
+        }
+
+        /// <summary>
+        /// Your three resources. History is sampled once per simulated second,
+        /// keyed on the tick count so a paused tick loop records nothing, and it
+        /// starts again from the current values when the viewer switches.
+        /// </summary>
+        private void RefreshResources(int pid, bool switched)
+        {
             PlayerData player = state.players[pid];
-            bool quiet = snap || switched;
+            int[] values = { player.food, player.materials, player.metal };
+            int[] needs = { CheapestDraftedCost(pid, true), CheapestDraftedCost(pid, false), 0 };
 
-            SetNumber(foodLabel, player.food, ref lastFood, quiet);
-            SetNumber(materialsLabel, player.materials, ref lastMaterials, quiet);
-            SetNumber(metalLabel, player.metal, ref lastMetal, quiet);
-        }
+            int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
+            int second = state.tickCount / ticksPerSecond;
+            bool sample = second != lastSampleSecond;
+            lastSampleSecond = second;
 
-        private void SetNumber(Label label, int value, ref int last, bool quiet)
-        {
-            if (value == last) return;
+            for (int i = 0; i < resources.Length; i++)
+            {
+                if (resources[i] == null) continue;
 
-            bool changed = last != int.MinValue && !quiet;
-            last = value;
+                if (switched) resources[i].Reset(values[i]);
+                else if (sample) resources[i].Sample(values[i]);
 
-            if (label == null) return;
-
-            label.text = value.ToString();
-
-            if (changed) Bump(label);
-        }
-
-        /// <summary>
-        /// Adds the bump class, then takes it off again. USS transitions do the
-        /// rest, so there is no per-frame animation code and nothing to kill on
-        /// destroy - unlike the DOTween chains in WheelDisplay and
-        /// BreachDisplay, which both need an OnDestroy to stay safe.
-        /// </summary>
-        private void Bump(VisualElement element)
-        {
-            element.AddToClassList("hud__res-value--bump");
-            element.schedule
-                   .Execute(() => element.RemoveFromClassList("hud__res-value--bump"))
-                   .StartingIn(bumpMilliseconds);
-        }
-
-        private void RefreshBreaches(bool snap)
-        {
-            RefreshBreach(0, state.players[0].breachCount, breachFillP0, breachCountP0,
-                          ref lastBreachP0, snap);
-            RefreshBreach(1, state.players[1].breachCount, breachFillP1, breachCountP1,
-                          ref lastBreachP1, snap);
-        }
-
-        private void RefreshBreach(int playerID, int breachCount, VisualElement fill, Label count,
-                                   ref int last, bool snap)
-        {
-            if (breachCount == last) return;
-            last = breachCount;
-
-            // Remaining wall, not damage taken. Clamped because a breach count
-            // past the threshold is a won match still being rendered for a
-            // frame, not a reason to draw a negative-width bar.
-            int remaining = breachThreshold - breachCount;
-            if (remaining < 0) remaining = 0;
-
-            float fraction = remaining / (float)breachThreshold;
-
-            if (fill != null) fill.style.width = Length.Percent(fraction * 100f);
-            if (count != null) count.text = breachCount + "/" + breachThreshold;
+                resources[i].Render(values[i], needs[i]);
+            }
         }
 
         /// <summary>
-        /// Alive villagers per player. Counted every frame because there is no
-        /// event to hang it on - the simulation consumes a villager inside
-        /// SimulateTick and nothing announces it - but the labels are only
-        /// rewritten when a count actually moves.
+        /// The cheapest price, in food or materials, of a suit this player
+        /// drafted - the line the readout marks as "buy". Zero when nothing
+        /// drafted costs anything, which draws no line. Metal buys nothing.
         /// </summary>
-        private void RefreshVillagers()
+        private int CheapestDraftedCost(int pid, bool food)
         {
-            int aliveP0 = 0;
-            int aliveP1 = 0;
+            int[] drafted = state.players[pid].draftedSuits;
+            if (drafted == null) return 0;
+
+            int cheapest = int.MaxValue;
+
+            for (int i = 0; i < drafted.Length; i++)
+            {
+                SuitStats stats = balance.GetSuitStats((SuitType)drafted[i]);
+                int cost = food ? stats.foodCost : stats.materialCost;
+                if (cost > 0 && cost < cheapest) cheapest = cost;
+            }
+
+            return cheapest == int.MaxValue ? 0 : cheapest;
+        }
+
+        /// <summary>
+        /// Units per player: every villager not consumed, the dead included,
+        /// because the dead come back. Recounted every frame - a claimed Village
+        /// grows the villager array mid-match, so a count taken at the start
+        /// would drift - and shown against the balance cap, not a literal.
+        /// </summary>
+        private void RefreshUnits(int pid)
+        {
+            int p0 = 0;
+            int p1 = 0;
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 if (state.villagers[i].isConsumed) continue;
 
-                if (state.villagers[i].ownerID == 0) aliveP0++;
-                else aliveP1++;
+                if (state.villagers[i].ownerID == 0) p0++;
+                else if (state.villagers[i].ownerID == 1) p1++;
             }
 
-            if (aliveP0 != lastAliveP0)
-            {
-                lastAliveP0 = aliveP0;
-                if (villagersP0 != null) villagersP0.text = aliveP0 + " / " + totalP0;
-            }
+            if (p0 == lastUnitsP0 && p1 == lastUnitsP1 && villagerToggle != null &&
+                villagerToggle.userData is int shownFor && shownFor == pid)
+                return;
 
-            if (aliveP1 != lastAliveP1)
-            {
-                lastAliveP1 = aliveP1;
-                if (villagersP1 != null) villagersP1.text = aliveP1 + " / " + totalP1;
-            }
+            lastUnitsP0 = p0;
+            lastUnitsP1 = p1;
 
-            // Collapsed, the button still carries the controlled player's own
-            // count - a tap should reveal detail, not the only number worth
-            // having.
+            int cap = balance.maxVillagersPerPlayer;
+
+            if (villagersP0 != null) villagersP0.text = cap > 0 ? p0 + " / " + cap : p0.ToString();
+            if (villagersP1 != null) villagersP1.text = cap > 0 ? p1 + " / " + cap : p1.ToString();
+
             if (villagerToggle != null)
-                villagerToggle.text = (lastControlledPID == 1 ? aliveP1 : aliveP0).ToString();
+            {
+                int mine = pid == 1 ? p1 : p0;
+                villagerToggle.text = mine + (mine == 1 ? " unit" : " units");
+                villagerToggle.userData = pid;
+            }
+        }
+
+        private void RefreshSelection()
+        {
+            int count = selection != null ? selection.SelectedVillagerIDs.Count : 0;
+            if (count == lastSelected) return;
+            lastSelected = count;
+
+            if (selectionDock != null)
+                selectionDock.EnableInClassList("hud__selection-dock--on", count > 0);
+
+            if (selectionText != null && count > 0)
+                selectionText.text = "Tap a node to move · " + count;
         }
 
         /// <summary>
-        /// Per-player totals, taken once. The old HUD prints "/25" as a literal;
-        /// counting the array instead means a board with a different villager
-        /// count does not quietly display a lie.
+        /// One breach wall: a player's mark, their count as text, and the wall
+        /// itself with the ghost of where it stood.
         /// </summary>
-        private void CountVillagerTotals()
+        private class BreachSide
         {
-            totalP0 = 0;
-            totalP1 = 0;
+            private readonly VisualElement side;
+            private readonly VisualElement mark;
+            private readonly Label markLabel;
+            private readonly Label count;
+            private readonly VisualElement fill;
+            private readonly VisualElement ghost;
 
-            if (state == null || state.villagers == null) return;
+            private int shownPlayer = -1;
+            private int shownCount = -1;
 
-            for (int i = 0; i < state.villagers.Length; i++)
+            public BreachSide(VisualElement root, string which)
             {
-                if (state.villagers[i].ownerID == 0) totalP0++;
-                else totalP1++;
+                side = root.Q<VisualElement>("hud-side-" + which);
+                mark = root.Q<VisualElement>("hud-mark-" + which);
+                markLabel = root.Q<Label>("hud-mark-" + which + "-label");
+                count = root.Q<Label>("hud-breach-count-" + which);
+                fill = root.Q<VisualElement>("hud-fill-" + which);
+                ghost = root.Q<VisualElement>("hud-ghost-" + which);
+            }
+
+            /// <summary>Returns true when this call showed a new breach landing.</summary>
+            public bool Set(int playerID, int breaches, int threshold, bool snap)
+            {
+                if (playerID == shownPlayer && breaches == shownCount) return false;
+
+                bool landed = !snap && playerID == shownPlayer && breaches > shownCount && shownCount >= 0;
+
+                shownPlayer = playerID;
+                shownCount = breaches;
+
+                if (mark != null)
+                {
+                    mark.EnableInClassList("ui-mark--p0", playerID == 0);
+                    mark.EnableInClassList("ui-mark--p1", playerID == 1);
+                }
+
+                if (markLabel != null) markLabel.text = (playerID + 1).ToString();
+
+                if (count != null) count.text = breaches + "/" + threshold;
+
+                // Remaining wall, not damage taken. Clamped because a count past
+                // the threshold is a won match still being drawn for a frame.
+                int remaining = threshold - breaches;
+                if (remaining < 0) remaining = 0;
+                Length width = Length.Percent(remaining * 100f / threshold);
+
+                if (fill != null)
+                {
+                    fill.EnableInClassList("hud__wall-fill--p0", playerID == 0);
+                    fill.EnableInClassList("hud__wall-fill--p1", playerID == 1);
+                    fill.style.width = width;
+                }
+
+                if (ghost != null) ghost.style.width = width;
+
+                if (landed && side != null)
+                {
+                    side.AddToClassList("hud__side--hit");
+                    side.schedule.Execute(() => side.RemoveFromClassList("hud__side--hit")).StartingIn(180);
+                }
+
+                return landed;
+            }
+        }
+
+        /// <summary>
+        /// One resource's readout: the number, five fading past bars and the
+        /// current bar, and the "buy" line at the cheapest drafted price.
+        /// </summary>
+        private class ResourceReadout
+        {
+            private readonly Label value;
+            private readonly VisualElement[] bars = new VisualElement[HistorySamples + 1];
+            private readonly VisualElement refLine;
+            private readonly List<int> history = new List<int>(HistorySamples + 1);
+
+            private int shownValue = int.MinValue;
+            private int shownNeed = -1;
+
+            public ResourceReadout(Label valueLabel, VisualElement host)
+            {
+                value = valueLabel;
+                if (host == null) return;
+
+                for (int i = 0; i < bars.Length; i++)
+                {
+                    VisualElement bar = new VisualElement();
+                    bar.AddToClassList("hud__bar");
+                    bar.AddToClassList(i < HistorySamples ? "hud__bar--age-" + i : "hud__bar--current");
+                    bar.pickingMode = PickingMode.Ignore;
+                    host.Add(bar);
+                    bars[i] = bar;
+                }
+
+                refLine = new VisualElement();
+                refLine.AddToClassList("hud__ref");
+                refLine.pickingMode = PickingMode.Ignore;
+
+                Label refLabel = new Label("buy");
+                refLabel.AddToClassList("hud__ref-label");
+                refLabel.pickingMode = PickingMode.Ignore;
+                refLine.Add(refLabel);
+
+                host.Add(refLine);
+            }
+
+            public void Reset(int current)
+            {
+                history.Clear();
+                for (int i = 0; i < HistorySamples; i++) history.Add(current);
+                shownValue = int.MinValue;
+            }
+
+            public void Sample(int current)
+            {
+                if (history.Count == 0) { Reset(current); return; }
+
+                history.Add(current);
+                while (history.Count > HistorySamples) history.RemoveAt(0);
+                shownValue = int.MinValue;
+            }
+
+            public void Render(int current, int need)
+            {
+                if (history.Count == 0) Reset(current);
+
+                if (current != shownValue)
+                {
+                    shownValue = current;
+
+                    if (value != null) value.text = current.ToString();
+
+                    for (int i = 0; i < HistorySamples && bars[i] != null; i++)
+                        bars[i].style.height = HeightFor(history[i]);
+
+                    VisualElement now = bars[HistorySamples];
+                    if (now != null)
+                    {
+                        now.style.height = HeightFor(current);
+                        now.EnableInClassList("hud__bar--low", current <= LowZoneMax);
+                        now.EnableInClassList("hud__bar--mid", current > LowZoneMax && current <= MidZoneMax);
+                        now.EnableInClassList("hud__bar--high", current > MidZoneMax);
+                    }
+                }
+
+                if (need == shownNeed || refLine == null) return;
+                shownNeed = need;
+
+                refLine.style.display = need > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+                if (need > 0) refLine.style.top = (1f - Mathf.Min(1f, need / (float)ReadoutCap)) * ReadoutHeight;
+            }
+
+            private static float HeightFor(int amount)
+            {
+                return Mathf.Max(2f, Mathf.Min(1f, amount / (float)ReadoutCap) * ReadoutHeight);
             }
         }
     }

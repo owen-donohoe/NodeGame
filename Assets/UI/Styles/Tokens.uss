@@ -112,6 +112,7 @@
     --pal-cream-a40: rgba(247, 242, 231, 0.4);
     --pal-cream-a60: rgba(247, 242, 231, 0.6);
     --pal-white-a60: rgba(255, 255, 255, 0.6);
+    --pal-night-a60: rgba(18, 17, 10, 0.6);
 
     /* resource readout zones */
     --pal-clay: rgb(192, 138, 110);
@@ -196,6 +197,8 @@
     --hud-ink-mute: var(--pal-cream-a60);
     --hud-bar-past: var(--pal-cream-a40);
     --hud-ghost: var(--pal-white-a60);
+    --hud-flash: var(--pal-white);
+    --hud-dim: var(--pal-night-a60);
     --resource-low: var(--pal-clay);
     --resource-mid: var(--pal-wheat);
     --resource-high: var(--pal-sage);

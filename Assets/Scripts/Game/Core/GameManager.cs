@@ -678,7 +678,8 @@ namespace NodeWar.Core
             }
 
             uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
-                                    inputBuffer, tickProvider, balance.Data, nodePanelManager);
+                                    inputBuffer, tickProvider, balance.Data, nodePanelManager,
+                                    selectionSystem);
 
             // Only hand the node panel over if the new sheet actually exists.
             // Without a layout assigned the uGUI panel keeps the job, which is
