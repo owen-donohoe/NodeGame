@@ -35,6 +35,9 @@ directly. This index exists so the set can be traversed as a graph, and so
 
 * [ui-migration-inventory](ui-migration-inventory.md) — the UI layer as it stood at `d0f4420`,
   before the phone-UI rebuild replaced it.
+* [ui-inventory](ui-inventory.md) — every sprite asset, the district-to-sprite mapping, and the
+  art that does not exist, taken at `b72fc6d`. Its sprite sections were re-checked at `9d08dae`;
+  its `Assets/UI/` section predates the rebuild.
 
 A snapshot carries `status: historical` and a `snapshot_of_commit:` instead of `sources:` and
 `verified_at_commit:`. It is frozen on purpose, so its ground moving is expected rather than
