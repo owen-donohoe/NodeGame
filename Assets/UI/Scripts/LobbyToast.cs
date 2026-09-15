@@ -25,10 +25,10 @@ namespace NodeWar.Lobby
             if (label == null) return;
 
             label.text = message;
-            label.AddToClassList("lb-toast--on");
+            label.AddToClassList("ui-toast--on");
 
             if (hideItem != null) hideItem.Pause();
-            hideItem = label.schedule.Execute(() => label.RemoveFromClassList("lb-toast--on"));
+            hideItem = label.schedule.Execute(() => label.RemoveFromClassList("ui-toast--on"));
             hideItem.ExecuteLater(VisibleMs);
         }
     }

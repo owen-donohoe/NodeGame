@@ -36,16 +36,16 @@
         <engine:VisualElement name="push-safe-area" class="lb-arena__inner" picking-mode="Ignore">
 
             <engine:VisualElement class="lb-arena__head">
-                <engine:Button name="profile-back" class="lb-reset-button lb-back">
+                <engine:Button name="profile-back" class="ui-reset-button lb-back">
                     <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:VisualElement class="lb-arena__name" picking-mode="Ignore">
-                    <engine:Label name="profile-username" class="lb-arena__name-text lb-w600" text="player" />
-                    <engine:Label name="profile-subtitle" class="lb-arena__name-sub lb-w500" text="Arena — · 0 trophies" />
+                    <engine:Label name="profile-username" class="lb-arena__name-text ui-w600" text="player" />
+                    <engine:Label name="profile-subtitle" class="lb-arena__name-sub ui-w500" text="Arena — · 0 trophies" />
                 </engine:VisualElement>
-                <engine:VisualElement class="lb-lip lb-rename-wrap" picking-mode="Ignore">
-                    <engine:VisualElement class="lb-lip__block lb-rename-lip" picking-mode="Ignore" />
-                    <engine:Button name="profile-rename" class="lb-reset-button lb-rename lb-w600" text="Rename" />
+                <engine:VisualElement class="ui-lip lb-rename-wrap" picking-mode="Ignore">
+                    <engine:VisualElement class="ui-lip__block lb-rename-lip" picking-mode="Ignore" />
+                    <engine:Button name="profile-rename" class="ui-reset-button lb-rename ui-w600" text="Rename" />
                 </engine:VisualElement>
             </engine:VisualElement>
 
@@ -65,15 +65,15 @@
     </engine:VisualElement>
 
     <engine:VisualElement name="profile-rename" picking-mode="Ignore">
-        <engine:Label class="lb-sheet__title lb-w600" text="Change your name" />
+        <engine:Label class="ui-sheet__title ui-w600" text="Change your name" />
         <engine:TextField name="profile-name-field" class="lb-field lb-field--left" max-length="16" />
-        <engine:Label name="profile-name-note" class="lb-sheet__note lb-w500" text="Up to 16 characters. Visible to opponents." />
-        <engine:VisualElement class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-            <engine:VisualElement class="lb-lip__block lb-lip__block--gold" picking-mode="Ignore" />
-            <engine:Button name="profile-name-save" class="lb-reset-button lb-bigbtn lb-bigbtn--gold lb-w700" text="Save" />
+        <engine:Label name="profile-name-note" class="ui-sheet__note ui-w500" text="Up to 16 characters. Visible to opponents." />
+        <engine:VisualElement class="ui-lip ui-button-wrap" picking-mode="Ignore">
+            <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
+            <engine:Button name="profile-name-save" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Save" />
         </engine:VisualElement>
-        <engine:VisualElement class="lb-bigbtn-wrap" picking-mode="Ignore">
-            <engine:Button name="profile-name-cancel" class="lb-reset-button lb-bigbtn lb-bigbtn--quiet lb-w700" text="Cancel" />
+        <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
+            <engine:Button name="profile-name-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
         </engine:VisualElement>
     </engine:VisualElement>
 

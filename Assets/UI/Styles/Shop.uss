@@ -42,7 +42,7 @@
     margin-right: var(--space-3);
 }
 
-.lb-stall__awning-wrap > .lb-sticker__shadow {
+.lb-stall__awning-wrap > .ui-sticker__shadow {
     left: 4px;
     top: 7px;
     right: -4px;
@@ -122,7 +122,7 @@
     margin-top: 56px;
 }
 
-.lb-stall__counter-wrap > .lb-sticker__shadow {
+.lb-stall__counter-wrap > .ui-sticker__shadow {
     left: 4px;
     top: 7px;
     right: -4px;
@@ -161,7 +161,7 @@
     margin-bottom: 0;
 }
 
-.lb-ware-wrap > .lb-sticker__shadow {
+.lb-ware-wrap > .ui-sticker__shadow {
     background-color: rgba(90, 70, 40, 0.28);
 }
 
@@ -246,7 +246,7 @@
     margin-bottom: var(--space-3);
 }
 
-.lb-row-wrap > .lb-sticker__shadow {
+.lb-row-wrap > .ui-sticker__shadow {
     background-color: var(--shadow-soft);
 }
 

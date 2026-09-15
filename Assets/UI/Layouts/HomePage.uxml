@@ -23,37 +23,37 @@
     <engine:VisualElement name="home-page" class="lb-home-page" picking-mode="Ignore">
 
         <engine:VisualElement class="lb-boxcol" picking-mode="Ignore">
-            <engine:VisualElement class="lb-sticker lb-box-wrap lb-box-wrap--big" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
-                <engine:Button name="home-box-victory" class="lb-reset-button lb-box">
+            <engine:VisualElement class="ui-sticker lb-box-wrap lb-box-wrap--big" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
+                <engine:Button name="home-box-victory" class="ui-reset-button lb-box">
                     <lobby:LobbyIcon kind="Envelope" class="lb-icon" picking-mode="Ignore" />
-                    <engine:Label class="lb-box__label lb-w600" text="Victory box" picking-mode="Ignore" />
-                    <engine:Label name="home-box-victory-badge" class="lb-badge lb-w700" text="0" picking-mode="Ignore" />
+                    <engine:Label class="lb-box__label ui-w600" text="Victory box" picking-mode="Ignore" />
+                    <engine:Label name="home-box-victory-badge" class="lb-badge ui-w700" text="0" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
-            <engine:VisualElement class="lb-sticker lb-box-wrap lb-box-wrap--small" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
-                <engine:Button name="home-box-daily" class="lb-reset-button lb-box">
+            <engine:VisualElement class="ui-sticker lb-box-wrap lb-box-wrap--small" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
+                <engine:Button name="home-box-daily" class="ui-reset-button lb-box">
                     <lobby:LobbyIcon kind="Spark" class="lb-icon" picking-mode="Ignore" />
-                    <engine:Label class="lb-box__label lb-w600" text="Daily" picking-mode="Ignore" />
-                    <engine:Label name="home-box-daily-badge" class="lb-badge lb-badge--zero lb-w700" text="—" picking-mode="Ignore" />
+                    <engine:Label class="lb-box__label ui-w600" text="Daily" picking-mode="Ignore" />
+                    <engine:Label name="home-box-daily-badge" class="lb-badge lb-badge--zero ui-w700" text="—" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
         </engine:VisualElement>
 
-        <engine:Button name="home-loadout" class="lb-reset-button lb-loadcol">
+        <engine:Button name="home-loadout" class="ui-reset-button lb-loadcol">
             <engine:VisualElement name="home-loadout-node-0" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-node-1" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-0" class="lb-lpi lb-lpi--gap" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-1" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-2" class="lb-lpi" picking-mode="Ignore" />
-            <engine:Label class="lb-lpcap lb-w600" text="LOADOUT" picking-mode="Ignore" />
+            <engine:Label class="lb-lpcap ui-w600" text="LOADOUT" picking-mode="Ignore" />
         </engine:Button>
 
         <engine:VisualElement class="lb-villager-dock" picking-mode="Ignore">
-            <engine:Label class="lb-tapedit lb-w600" text="Tap to edit" picking-mode="Ignore" />
-            <engine:Button name="home-villager" class="lb-reset-button lb-villager">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+            <engine:Label class="lb-tapedit ui-w600" text="Tap to edit" picking-mode="Ignore" />
+            <engine:Button name="home-villager" class="ui-reset-button lb-villager">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-villager__body" picking-mode="Ignore">
                     <engine:VisualElement class="lb-villager__hat" picking-mode="Ignore" />
                     <lobby:LobbyIcon kind="Mouth" class="lb-villager__face" picking-mode="Ignore" />
@@ -62,12 +62,12 @@
         </engine:VisualElement>
 
         <engine:VisualElement class="lb-cta" picking-mode="Ignore">
-            <engine:VisualElement class="lb-lip" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-battle-lip" picking-mode="Ignore" />
-                <engine:Button name="home-battle" class="lb-reset-button lb-battle lb-w700" text="BATTLE" />
+            <engine:VisualElement class="ui-lip" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block lb-battle-lip" picking-mode="Ignore" />
+                <engine:Button name="home-battle" class="ui-reset-button lb-battle ui-w700" text="BATTLE" />
             </engine:VisualElement>
-            <engine:Button name="home-boxmeter" class="lb-reset-button lb-boxmeter">
-                <engine:Label class="lb-boxmeter__label lb-w500" text="Next box" picking-mode="Ignore" />
+            <engine:Button name="home-boxmeter" class="ui-reset-button lb-boxmeter">
+                <engine:Label class="lb-boxmeter__label ui-w500" text="Next box" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-boxmeter__track" picking-mode="Ignore">
                     <engine:VisualElement name="home-boxmeter-fill" class="lb-boxmeter__fill" picking-mode="Ignore" />
                 </engine:VisualElement>

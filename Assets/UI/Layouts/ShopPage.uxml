@@ -25,8 +25,8 @@
 
         <engine:VisualElement class="lb-stallzone" picking-mode="Ignore">
             <engine:VisualElement class="lb-stall" picking-mode="Ignore">
-                <engine:VisualElement class="lb-stall__awning-wrap lb-sticker" picking-mode="Ignore">
-                    <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="lb-stall__awning-wrap ui-sticker" picking-mode="Ignore">
+                    <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                     <engine:VisualElement class="lb-stall__awning" picking-mode="Ignore">
                         <engine:VisualElement class="lb-stripe lb-stripe--red" picking-mode="Ignore" />
                         <engine:VisualElement class="lb-stripe lb-stripe--cream" picking-mode="Ignore" />
@@ -39,8 +39,8 @@
                 <engine:VisualElement class="lb-stall__post lb-stall__post--left" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-stall__post lb-stall__post--right" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-stall__keeper" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-stall__counter-wrap lb-sticker" picking-mode="Ignore">
-                    <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="lb-stall__counter-wrap ui-sticker" picking-mode="Ignore">
+                    <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                     <engine:VisualElement class="lb-stall__counter" picking-mode="Ignore" />
                 </engine:VisualElement>
             </engine:VisualElement>
@@ -53,16 +53,16 @@
     </engine:ScrollView>
 
     <engine:VisualElement name="shop-item" picking-mode="Ignore">
-        <engine:Label name="shop-item-title" class="lb-sheet__title lb-w600" text="" />
+        <engine:Label name="shop-item-title" class="ui-sheet__title ui-w600" text="" />
         <engine:VisualElement class="lb-shop-item__row" picking-mode="Ignore">
             <engine:VisualElement class="lb-rowthumb lb-rowthumb--large" picking-mode="Ignore">
                 <lobby:LobbyIcon name="shop-item-icon" kind="Flag" class="lb-icon" picking-mode="Ignore" />
             </engine:VisualElement>
-            <engine:Label class="lb-sheet__note lb-shop-item__note lb-w500" text="Appearance only. No effect on a match." />
+            <engine:Label class="ui-sheet__note lb-shop-item__note ui-w500" text="Appearance only. No effect on a match." />
         </engine:VisualElement>
-        <engine:VisualElement class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-            <engine:VisualElement class="lb-lip__block lb-lip__block--green" picking-mode="Ignore" />
-            <engine:Button name="shop-item-buy" class="lb-reset-button lb-bigbtn lb-bigbtn--green lb-w700" text="Buy" />
+        <engine:VisualElement class="ui-lip ui-button-wrap" picking-mode="Ignore">
+            <engine:VisualElement class="ui-lip__block ui-lip__block--green" picking-mode="Ignore" />
+            <engine:Button name="shop-item-buy" class="ui-reset-button ui-button ui-button--green ui-w700" text="Buy" />
         </engine:VisualElement>
     </engine:VisualElement>
 

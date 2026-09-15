@@ -30,20 +30,20 @@
 
         <engine:VisualElement class="lb-wsbar" picking-mode="Ignore">
             <engine:VisualElement class="lb-wsseg" picking-mode="Ignore">
-                <engine:Button name="workshop-seg-districts" class="lb-reset-button lb-wsseg__btn">
+                <engine:Button name="workshop-seg-districts" class="ui-reset-button lb-wsseg__btn">
                     <lobby:LobbyIcon kind="District" class="lb-icon" picking-mode="Ignore" />
-                    <engine:Label class="lb-wsseg__text lb-w600" text="Districts" picking-mode="Ignore" />
+                    <engine:Label class="lb-wsseg__text ui-w600" text="Districts" picking-mode="Ignore" />
                 </engine:Button>
-                <engine:Button name="workshop-seg-suits" class="lb-reset-button lb-wsseg__btn lb-wsseg__btn--last">
+                <engine:Button name="workshop-seg-suits" class="ui-reset-button lb-wsseg__btn lb-wsseg__btn--last">
                     <lobby:LobbyIcon kind="Suit" class="lb-icon" picking-mode="Ignore" />
-                    <engine:Label class="lb-wsseg__text lb-w600" text="Suits" picking-mode="Ignore" />
+                    <engine:Label class="lb-wsseg__text ui-w600" text="Suits" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
         </engine:VisualElement>
 
         <engine:VisualElement name="workshop-slotwrap" class="lb-slotwrap" picking-mode="Ignore">
             <engine:VisualElement name="workshop-slots" class="lb-slots" picking-mode="Ignore" />
-            <engine:Label class="lb-readytag lb-w600" text="Ready" picking-mode="Ignore" />
+            <engine:Label class="lb-readytag ui-w600" text="Ready" picking-mode="Ignore" />
         </engine:VisualElement>
 
         <engine:ScrollView name="workshop-grid" class="lb-grid" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
@@ -52,25 +52,25 @@
 
         <engine:VisualElement name="workshop-picker" class="lb-picker" picking-mode="Ignore">
             <engine:VisualElement class="lb-pickbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-pick-lip" picking-mode="Ignore" />
-                <engine:Button name="workshop-pickbtn" class="lb-reset-button lb-pickbtn">
+                <engine:VisualElement class="ui-lip__block lb-pick-lip" picking-mode="Ignore" />
+                <engine:Button name="workshop-pickbtn" class="ui-reset-button lb-pickbtn">
                     <lobby:LobbyIcon name="workshop-pick-icon" kind="District" class="lb-icon" picking-mode="Ignore" />
-                    <engine:Label name="workshop-pick-label" class="lb-pickbtn__label lb-w600" text="DIST" picking-mode="Ignore" />
+                    <engine:Label name="workshop-pick-label" class="lb-pickbtn__label ui-w600" text="DIST" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
             <engine:VisualElement name="workshop-pickopts" class="lb-pickopts" picking-mode="Ignore">
                 <engine:VisualElement class="lb-pickopt-wrap" picking-mode="Ignore">
-                    <engine:VisualElement class="lb-lip__block lb-pick-lip" picking-mode="Ignore" />
-                    <engine:Button name="workshop-pick-districts" class="lb-reset-button lb-pickopt">
+                    <engine:VisualElement class="ui-lip__block lb-pick-lip" picking-mode="Ignore" />
+                    <engine:Button name="workshop-pick-districts" class="ui-reset-button lb-pickopt">
                         <lobby:LobbyIcon kind="District" class="lb-icon" picking-mode="Ignore" />
-                        <engine:Label class="lb-pickopt__text lb-w600" text="Districts" picking-mode="Ignore" />
+                        <engine:Label class="lb-pickopt__text ui-w600" text="Districts" picking-mode="Ignore" />
                     </engine:Button>
                 </engine:VisualElement>
                 <engine:VisualElement class="lb-pickopt-wrap" picking-mode="Ignore">
-                    <engine:VisualElement class="lb-lip__block lb-pick-lip" picking-mode="Ignore" />
-                    <engine:Button name="workshop-pick-suits" class="lb-reset-button lb-pickopt">
+                    <engine:VisualElement class="ui-lip__block lb-pick-lip" picking-mode="Ignore" />
+                    <engine:Button name="workshop-pick-suits" class="ui-reset-button lb-pickopt">
                         <lobby:LobbyIcon kind="Suit" class="lb-icon" picking-mode="Ignore" />
-                        <engine:Label class="lb-pickopt__text lb-w600" text="Suits" picking-mode="Ignore" />
+                        <engine:Label class="lb-pickopt__text ui-w600" text="Suits" picking-mode="Ignore" />
                     </engine:Button>
                 </engine:VisualElement>
             </engine:VisualElement>

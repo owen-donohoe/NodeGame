@@ -135,14 +135,14 @@ namespace NodeWar.Lobby
                 if (i == Wares.Length - 1) wrap.AddToClassList("lb-ware-wrap--last");
 
                 Button button = new Button();
-                button.AddToClassList("lb-reset-button");
+                button.AddToClassList("ui-reset-button");
                 button.AddToClassList("lb-ware");
                 button.Add(new LobbyIcon(ware.Icon));
 
                 VisualElement text = new VisualElement();
                 text.pickingMode = PickingMode.Ignore;
-                text.Add(MakeLabel(ware.Name, "lb-ware__name", "lb-w600"));
-                text.Add(MakeLabel(ware.Cost, "lb-ware__cost", "lb-w500"));
+                text.Add(MakeLabel(ware.Name, "lb-ware__name", "ui-w600"));
+                text.Add(MakeLabel(ware.Cost, "lb-ware__cost", "ui-w500"));
                 button.Add(text);
 
                 button.clicked += () => OpenWare(ware);
@@ -164,7 +164,7 @@ namespace NodeWar.Lobby
 
                 if (offer.Section != section)
                 {
-                    Label head = MakeLabel(offer.Section, "lb-sechead", "lb-w600");
+                    Label head = MakeLabel(offer.Section, "lb-sechead", "ui-w600");
                     if (section != null) head.AddToClassList("lb-sechead--spaced");
                     host.Add(head);
                     section = offer.Section;
@@ -184,15 +184,15 @@ namespace NodeWar.Lobby
                 VisualElement text = new VisualElement();
                 text.AddToClassList("lb-row__text");
                 text.pickingMode = PickingMode.Ignore;
-                text.Add(MakeLabel(offer.Title, "lb-row__title", "lb-w600"));
-                text.Add(MakeLabel(offer.Subtitle, "lb-row__sub", "lb-w500"));
+                text.Add(MakeLabel(offer.Title, "lb-row__title", "ui-w600"));
+                text.Add(MakeLabel(offer.Subtitle, "lb-row__sub", "ui-w500"));
                 row.Add(text);
 
                 Button pill = new Button();
                 pill.text = offer.Action;
-                pill.AddToClassList("lb-reset-button");
+                pill.AddToClassList("ui-reset-button");
                 pill.AddToClassList("lb-pill");
-                pill.AddToClassList("lb-w700");
+                pill.AddToClassList("ui-w700");
                 pill.clicked += () => Say(NotYet);
                 row.Add(pill);
 
@@ -228,12 +228,12 @@ namespace NodeWar.Lobby
         private static VisualElement Sticker(string wrapClass)
         {
             VisualElement wrap = new VisualElement();
-            wrap.AddToClassList("lb-sticker");
+            wrap.AddToClassList("ui-sticker");
             wrap.AddToClassList(wrapClass);
             wrap.pickingMode = PickingMode.Ignore;
 
             VisualElement shadow = new VisualElement();
-            shadow.AddToClassList("lb-sticker__shadow");
+            shadow.AddToClassList("ui-sticker__shadow");
             shadow.pickingMode = PickingMode.Ignore;
             wrap.Add(shadow);
 

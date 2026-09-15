@@ -31,79 +31,79 @@
 
         <!-- Find a match -->
         <engine:VisualElement name="play-find" picking-mode="Ignore">
-            <engine:Label class="lb-sheet__title lb-w600" text="Find a match" />
+            <engine:Label class="ui-sheet__title ui-w600" text="Find a match" />
 
             <engine:VisualElement class="lb-seg" picking-mode="Ignore">
-                <engine:Button name="play-mode-1v1" class="lb-reset-button lb-seg__btn lb-w600" text="1 vs 1" />
-                <engine:Button name="play-mode-bot" class="lb-reset-button lb-seg__btn lb-w600" text="Bot" />
-                <engine:Button name="play-mode-testing" class="lb-reset-button lb-seg__btn lb-w600" text="Testing" />
-                <engine:Button name="play-mode-locked" class="lb-reset-button lb-seg__btn lb-seg__btn--off lb-seg__btn--last lb-w600" text="Locked" />
+                <engine:Button name="play-mode-1v1" class="ui-reset-button lb-seg__btn ui-w600" text="1 vs 1" />
+                <engine:Button name="play-mode-bot" class="ui-reset-button lb-seg__btn ui-w600" text="Bot" />
+                <engine:Button name="play-mode-testing" class="ui-reset-button lb-seg__btn ui-w600" text="Testing" />
+                <engine:Button name="play-mode-locked" class="ui-reset-button lb-seg__btn lb-seg__btn--off lb-seg__btn--last ui-w600" text="Locked" />
             </engine:VisualElement>
 
             <engine:VisualElement name="play-transport" class="lb-seg" picking-mode="Ignore">
-                <engine:Button name="play-transport-relay" class="lb-reset-button lb-seg__btn lb-w600" text="Online" />
-                <engine:Button name="play-transport-lan" class="lb-reset-button lb-seg__btn lb-seg__btn--last lb-w600" text="Local network" />
+                <engine:Button name="play-transport-relay" class="ui-reset-button lb-seg__btn ui-w600" text="Online" />
+                <engine:Button name="play-transport-lan" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Local network" />
             </engine:VisualElement>
 
             <!-- Loadout counts, each side its own label so only a short side turns orange. -->
             <engine:VisualElement name="play-loadout" class="lb-loadout-line" picking-mode="Ignore">
-                <engine:Label class="lb-loadout-line__part lb-w500" text="Loadout:" />
-                <engine:Label name="play-loadout-nodes" class="lb-loadout-line__part lb-w500" text="" />
-                <engine:Label class="lb-loadout-line__part lb-w500" text="·" />
-                <engine:Label name="play-loadout-suits" class="lb-loadout-line__part lb-w500" text="" />
+                <engine:Label class="lb-loadout-line__part ui-w500" text="Loadout:" />
+                <engine:Label name="play-loadout-nodes" class="lb-loadout-line__part ui-w500" text="" />
+                <engine:Label class="lb-loadout-line__part ui-w500" text="·" />
+                <engine:Label name="play-loadout-suits" class="lb-loadout-line__part ui-w500" text="" />
             </engine:VisualElement>
 
-            <engine:Label name="play-note" class="lb-sheet__note lb-w500" text="" />
+            <engine:Label name="play-note" class="ui-sheet__note ui-w500" text="" />
 
-            <engine:VisualElement name="play-host-wrap" class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-host" class="lb-reset-button lb-bigbtn lb-bigbtn--gold lb-w700" text="Host" />
+            <engine:VisualElement name="play-host-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
+                <engine:Button name="play-host" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Host" />
             </engine:VisualElement>
-            <engine:VisualElement name="play-join-wrap" class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-lip__block--green" picking-mode="Ignore" />
-                <engine:Button name="play-join-open" class="lb-reset-button lb-bigbtn lb-bigbtn--green lb-w700" text="Join with a code" />
+            <engine:VisualElement name="play-join-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--green" picking-mode="Ignore" />
+                <engine:Button name="play-join-open" class="ui-reset-button ui-button ui-button--green ui-w700" text="Join with a code" />
             </engine:VisualElement>
-            <engine:VisualElement name="play-start-wrap" class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-start" class="lb-reset-button lb-bigbtn lb-bigbtn--gold lb-w700" text="Play" />
+            <engine:VisualElement name="play-start-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
+                <engine:Button name="play-start" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Play" />
             </engine:VisualElement>
         </engine:VisualElement>
 
         <!-- Enter the code -->
         <engine:VisualElement name="play-join" picking-mode="Ignore">
-            <engine:Label name="play-join-title" class="lb-sheet__title lb-w600" text="Enter the code" />
+            <engine:Label name="play-join-title" class="ui-sheet__title ui-w600" text="Enter the code" />
             <engine:TextField name="play-code" class="lb-field" max-length="32" />
-            <engine:Label name="play-join-hint" class="lb-sheet__note lb-w500" text="Four letters from your opponent" />
-            <engine:VisualElement class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-join-go" class="lb-reset-button lb-bigbtn lb-bigbtn--gold lb-w700" text="Join" />
+            <engine:Label name="play-join-hint" class="ui-sheet__note ui-w500" text="Four letters from your opponent" />
+            <engine:VisualElement class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
+                <engine:Button name="play-join-go" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Join" />
             </engine:VisualElement>
-            <engine:VisualElement class="lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:Button name="play-join-back" class="lb-reset-button lb-bigbtn lb-bigbtn--quiet lb-w700" text="Back" />
+            <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
+                <engine:Button name="play-join-back" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Back" />
             </engine:VisualElement>
         </engine:VisualElement>
 
         <!-- Waiting / connecting / failed -->
         <engine:VisualElement name="play-status" picking-mode="Ignore">
-            <engine:Label name="play-status-text" class="lb-sheet__title lb-w600" text="" />
+            <engine:Label name="play-status-text" class="ui-sheet__title ui-w600" text="" />
 
             <engine:VisualElement name="play-code-display" class="lb-codebox" picking-mode="Ignore">
-                <engine:Label class="lb-codebox__label lb-w500" text="Share this code" />
-                <engine:Label name="play-code-value" class="lb-codebox__code lb-w700" text="" />
+                <engine:Label class="lb-codebox__label ui-w500" text="Share this code" />
+                <engine:Label name="play-code-value" class="lb-codebox__code ui-w700" text="" />
             </engine:VisualElement>
 
-            <engine:Label name="play-failure-recovery" class="lb-sheet__note lb-w500" text="" />
+            <engine:Label name="play-failure-recovery" class="ui-sheet__note ui-w500" text="" />
 
-            <engine:VisualElement name="play-copy-wrap" class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-lip__block--green" picking-mode="Ignore" />
-                <engine:Button name="play-copy" class="lb-reset-button lb-bigbtn lb-bigbtn--green lb-w700" text="Copy code" />
+            <engine:VisualElement name="play-copy-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--green" picking-mode="Ignore" />
+                <engine:Button name="play-copy" class="ui-reset-button ui-button ui-button--green ui-w700" text="Copy code" />
             </engine:VisualElement>
-            <engine:VisualElement name="play-retry-wrap" class="lb-lip lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-lip__block lb-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-retry" class="lb-reset-button lb-bigbtn lb-bigbtn--gold lb-w700" text="Try again" />
+            <engine:VisualElement name="play-retry-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
+                <engine:Button name="play-retry" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Try again" />
             </engine:VisualElement>
-            <engine:VisualElement class="lb-bigbtn-wrap" picking-mode="Ignore">
-                <engine:Button name="play-cancel" class="lb-reset-button lb-bigbtn lb-bigbtn--quiet lb-w700" text="Cancel" />
+            <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
+                <engine:Button name="play-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
             </engine:VisualElement>
         </engine:VisualElement>
 

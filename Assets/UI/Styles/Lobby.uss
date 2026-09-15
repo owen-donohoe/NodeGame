@@ -47,83 +47,14 @@
 }
 
 /* ===================================================================
-   Type. Fredoka at the root; weights are separate font assets because
-   -unity-font-style: bold would synthesise rather than use the real cut.
+   Root. Fredoka, the label reset, the weights (.ui-w500/600/700), the
+   reset button, shadows (.ui-sticker__shadow, .ui-soft-shadow), lip
+   buttons (.ui-button), the sheet, the bar and the toast are shared
+   components in Components.uss. The lobby adds only its own ground.
    =================================================================== */
 
 .lb-root {
-    flex-grow: 1;
     background-color: var(--surface);
-    -unity-font-definition: var(--font-medium);
-    color: var(--ink);
-    font-size: 17px;
-}
-
-.lb-w500 { -unity-font-definition: var(--font-medium); -unity-font-style: normal; }
-.lb-w600 { -unity-font-definition: var(--font-semibold); -unity-font-style: normal; }
-.lb-w700 { -unity-font-definition: var(--font-bold); -unity-font-style: normal; }
-
-/* Labels and buttons carry default padding/margins in the runtime theme. */
-.lb-root Label {
-    padding-left: 0;
-    padding-right: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-left: 0;
-    margin-right: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.lb-reset-button {
-    margin-left: 0;
-    margin-right: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    padding-left: 0;
-    padding-right: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    border-left-width: 0;
-    border-right-width: 0;
-    border-top-width: 0;
-    border-bottom-width: 0;
-    background-color: rgba(0, 0, 0, 0);
-    -unity-text-align: middle-center;
-    white-space: nowrap;
-}
-
-/* ===================================================================
-   Shadows. USS has no box-shadow, so a shadow is an absolutely placed
-   sibling drawn first, offset down and right. Hard shadows are flat; the
-   soft ones under floating controls use filter: blur.
-   =================================================================== */
-
-.lb-sticker {
-    position: relative;
-}
-
-.lb-sticker__shadow {
-    position: absolute;
-    left: 3px;
-    top: 4px;
-    right: -3px;
-    bottom: -4px;
-    background-color: var(--shadow);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-}
-
-.lb-soft-shadow {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 8px;
-    bottom: -8px;
-    background-color: var(--shadow-deep);
-    filter: blur(11px);
 }
 
 /* ===================================================================
@@ -151,7 +82,7 @@
     position: absolute;
 }
 
-.lb-prop > .lb-sticker__shadow {
+.lb-prop > .ui-sticker__shadow {
     background-color: var(--backdrop-prop-shadow);
     border-top-left-radius: var(--corner-sm);
     border-top-right-radius: var(--corner-sm);
@@ -446,30 +377,9 @@
     margin-bottom: 4px;
 }
 
+/* The trophy bar is the shared .ui-bar, sitting 3px under its row. */
 .lb-track {
     margin-top: 3px;
-    height: 16px;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    background-color: var(--surface-track);
-    border-left-width: var(--stroke-mid);
-    border-right-width: var(--stroke-mid);
-    border-top-width: var(--stroke-mid);
-    border-bottom-width: var(--stroke-mid);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    overflow: hidden;
-}
-
-/* Flat: the prototype's gold -> gold-dk gradient has no USS equivalent. */
-.lb-track__fill {
-    height: 100%;
-    width: 0;
-    background-color: var(--action);
 }
 
 .lb-root .lb-arena {
@@ -492,7 +402,7 @@
     position: relative;
 }
 
-.lb-tabbar-wrap > .lb-soft-shadow {
+.lb-tabbar-wrap > .ui-soft-shadow {
     border-top-left-radius: 27px;
     border-top-right-radius: 27px;
     border-bottom-left-radius: 27px;
@@ -557,23 +467,6 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 /* ===================================================================
-   Lips. The prototype's 0 5px 0 box-shadow is a solid block behind.
-   =================================================================== */
-
-.lb-lip {
-    position: relative;
-}
-
-.lb-lip__block {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 5px;
-    bottom: -5px;
-}
-
-
-/* ===================================================================
    SHEET. Pinned to the bottom edge by construction, so it cannot render
    off-screen. Never positioned with top: and a computed value.
    =================================================================== */
@@ -586,89 +479,23 @@
     bottom: 0;
 }
 
-.lb-scrim {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: var(--scrim);
-    opacity: 0;
-    transition-property: opacity;
-    transition-duration: var(--motion-sheet);
-}
-
-.lb-scrim--on {
-    opacity: 1;
-}
-
 /*
-    The sheet runs 48px past the bottom edge, with that much extra padding.
-    Its slide overshoots (ease-out-back), and without the extension the
-    overshoot lifted the sheet's bottom edge into view as a gap.
+    The lobby's sheet, on top of the shared .ui-sheet: it runs 48px past the
+    bottom edge, with that much extra padding. Its slide overshoots
+    (ease-out-back), and without the extension the overshoot lifted the
+    sheet's bottom edge into view as a gap.
 */
 .lb-sheet {
-    position: absolute;
-    left: 0;
-    right: 0;
     bottom: -48px;
     min-height: 46%;
     max-height: 88%;
-    background-color: var(--surface);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: 0;
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-top-left-radius: var(--corner-sheet);
-    border-top-right-radius: var(--corner-sheet);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
     padding-bottom: 72px;
-    translate: 0 100%;
     transition-property: translate, min-height;
-    transition-duration: var(--motion-sheet);
     transition-timing-function: ease-out-back;
-}
-
-.lb-sheet--open {
-    translate: 0 0;
 }
 
 .lb-sheet--large {
     min-height: 88%;
-}
-
-.lb-handle-hit {
-    height: 33px;
-    align-items: center;
-}
-
-.lb-handle {
-    width: 44px;
-    height: 5px;
-    margin-top: var(--space-3);
-    border-top-left-radius: 2.5px;
-    border-top-right-radius: 2.5px;
-    border-bottom-left-radius: 2.5px;
-    border-bottom-right-radius: 2.5px;
-    background-color: var(--ink-mute);
-}
-
-.lb-root .lb-sheet__title {
-    font-size: 27px;
-    color: var(--ink);
-    margin-bottom: var(--space-4);
-    white-space: normal;
-}
-
-.lb-root .lb-sheet__note {
-    font-size: 17px;
-    color: var(--ink-mute);
-    margin-bottom: 18px;
-    white-space: normal;
 }
 
 .lb-view--hidden {
@@ -732,73 +559,6 @@
 }
 
 /* ---- big buttons ---- */
-
-.lb-bigbtn-wrap {
-    margin-bottom: var(--space-3);
-}
-
-.lb-bigbtn-wrap > .lb-lip__block {
-    top: 4px;
-    bottom: -4px;
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-}
-
-.lb-bigbtn {
-    height: 60px;
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    font-size: 21px;
-    transition-property: translate;
-    transition-duration: var(--motion-press);
-}
-
-.lb-bigbtn:active {
-    translate: 0 3px;
-}
-
-.lb-bigbtn--gold {
-    background-color: var(--action);
-    border-left-color: var(--action-edge);
-    border-right-color: var(--action-edge);
-    border-top-color: var(--action-edge);
-    border-bottom-color: var(--action-edge);
-    color: var(--action-ink);
-}
-
-.lb-lip__block--gold {
-    background-color: var(--action-edge);
-}
-
-.lb-bigbtn--green {
-    background-color: var(--confirm);
-    border-left-color: var(--confirm-edge);
-    border-right-color: var(--confirm-edge);
-    border-top-color: var(--confirm-edge);
-    border-bottom-color: var(--confirm-edge);
-    color: var(--confirm-ink);
-}
-
-.lb-lip__block--green {
-    background-color: var(--confirm-edge);
-}
-
-.lb-bigbtn--quiet {
-    background-color: var(--surface-sunk);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    color: var(--ink);
-}
 
 /* ---- code box ---- */
 
@@ -885,32 +645,6 @@
     right: 0;
     bottom: 196px;
     align-items: center;
-}
-
-.lb-root .lb-toast {
-    max-width: 300px;
-    background-color: var(--glass-toast);
-    border-top-left-radius: 23px;
-    border-top-right-radius: 23px;
-    border-bottom-left-radius: 23px;
-    border-bottom-right-radius: 23px;
-    padding-left: 20px;
-    padding-right: 20px;
-    padding-top: 12px;
-    padding-bottom: 12px;
-    color: var(--ink-inverse);
-    font-size: 17px;
-    white-space: normal;
-    -unity-text-align: middle-center;
-    opacity: 0;
-    translate: 0 8px;
-    transition-property: opacity, translate;
-    transition-duration: 200ms;
-}
-
-.lb-root .lb-toast--on {
-    opacity: 1;
-    translate: 0 0;
 }
 
 /* ===================================================================
@@ -1224,11 +958,6 @@
 
 .lb-slider .unity-base-slider__dragger-border {
     display: none;
-}
-
-/* A sheet note that is reporting a problem, e.g. a name that will not save. */
-.lb-root .lb-sheet__note--error {
-    color: var(--badge);
 }
 
 /* A field whose text is prose rather than a code. */

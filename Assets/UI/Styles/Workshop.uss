@@ -248,7 +248,7 @@
     margin-right: 3%;
 }
 
-.lb-gcard-wrap > .lb-sticker__shadow {
+.lb-gcard-wrap > .ui-sticker__shadow {
     left: 2px;
     top: 3px;
     right: -2px;

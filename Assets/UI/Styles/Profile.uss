@@ -110,7 +110,7 @@
     flex-shrink: 0;
 }
 
-.lb-rename-wrap > .lb-lip__block {
+.lb-rename-wrap > .ui-lip__block {
     top: 3px;
     bottom: -3px;
 }
@@ -185,7 +185,7 @@
     margin-bottom: var(--space-3);
 }
 
-.lb-stat__wrap > .lb-sticker__shadow {
+.lb-stat__wrap > .ui-sticker__shadow {
     left: 2px;
     top: 3px;
     right: -2px;

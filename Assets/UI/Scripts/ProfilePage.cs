@@ -243,21 +243,21 @@ namespace NodeWar.Lobby
             {
                 Label label = new Label(StatNames[i]);
                 label.AddToClassList("lb-stat__label");
-                label.AddToClassList("lb-w600");
+                label.AddToClassList("ui-w600");
                 record.Add(label);
 
                 VisualElement wrap = new VisualElement();
-                wrap.AddToClassList("lb-sticker");
+                wrap.AddToClassList("ui-sticker");
                 wrap.AddToClassList("lb-stat__wrap");
                 wrap.pickingMode = PickingMode.Ignore;
 
                 VisualElement shadow = new VisualElement();
-                shadow.AddToClassList("lb-sticker__shadow");
+                shadow.AddToClassList("ui-sticker__shadow");
                 shadow.pickingMode = PickingMode.Ignore;
 
                 Label value = new Label(Dash);
                 value.AddToClassList("lb-stat__panel");
-                value.AddToClassList("lb-w700");
+                value.AddToClassList("ui-w700");
 
                 wrap.Add(shadow);
                 wrap.Add(value);
@@ -281,11 +281,11 @@ namespace NodeWar.Lobby
                 if (i == Eras.Length - 1) box.AddToClassList("lb-era--last");
                 box.pickingMode = PickingMode.Ignore;
 
-                box.Add(MakeLabel(era.Name, "lb-era__name", "lb-w600"));
+                box.Add(MakeLabel(era.Name, "lb-era__name", "ui-w600"));
 
                 bool here = trophies >= era.Min && (trophies < era.Max || i == 0);
                 box.Add(MakeLabel(era.Min + " – " + era.Max + (here ? " · you are here" : ""),
-                                  "lb-era__range", "lb-w500"));
+                                  "lb-era__range", "ui-w500"));
 
                 VisualElement items = new VisualElement();
                 items.AddToClassList("lb-era__items");
@@ -302,7 +302,7 @@ namespace NodeWar.Lobby
                 }
 
                 box.Add(items);
-                box.Add(MakeLabel(era.Foot, "lb-era__foot", "lb-w500"));
+                box.Add(MakeLabel(era.Foot, "lb-era__foot", "ui-w500"));
 
                 roadInner.Add(box);
             }
@@ -420,7 +420,7 @@ namespace NodeWar.Lobby
 
             bool isError = !string.IsNullOrEmpty(error);
             nameNote.text = isError ? error : "Up to 16 characters. Visible to opponents.";
-            nameNote.EnableInClassList("lb-sheet__note--error", isError);
+            nameNote.EnableInClassList("ui-sheet__note--error", isError);
         }
     }
 }

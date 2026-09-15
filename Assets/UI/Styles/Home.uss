@@ -235,7 +235,7 @@
     align-items: center;
 }
 
-.lb-villager > .lb-sticker__shadow {
+.lb-villager > .ui-sticker__shadow {
     top: 5px;
     bottom: -5px;
     border-top-left-radius: 26px;

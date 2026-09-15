@@ -26,7 +26,6 @@
 
 .social__heading {
     font-size: 22px;
-    margin-bottom: var(--space-2);
 }
 
 .social__aside {
@@ -34,9 +33,6 @@
     margin-top: var(--space-4);
 }
 
-.social__aside-note {
-    margin-top: var(--space-1);
-}
 
 .social__card {
     background-color: var(--surface-sunk);

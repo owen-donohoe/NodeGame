@@ -12,10 +12,12 @@
 
     Rules here read meaning tokens only, never --pal-*.
 
-    SPECIFICITY. .ui-root Label resets the runtime theme's label margins and
-    padding. That selector outranks a single class, so a label rule here that
-    sets margin or padding is written .ui-root .ui-x. Page stylesheets follow
-    the same pattern.
+    PRECEDENCE. These rules arrive through the panel theme, and a theme rule
+    loses to ANY rule in a stylesheet a layout imports, whatever the
+    specificity (measured in 6000.5.9f1). So a page overrides a component with
+    a plain single-class rule - and the .ui-root Label reset below yields to
+    any page rule that sets a label's margin or padding. Set those only where
+    the spacing is meant.
 
     Measured against 6000.5.9f1, where the prototypes use CSS that USS lacks:
       box-shadow, drop-shadow        -> a sibling element behind (.ui-sticker__shadow)
@@ -242,7 +244,6 @@
 .ui-handle-hit {
     height: 33px;
     align-items: center;
-    flex-shrink: 0;
 }
 
 .ui-handle {
