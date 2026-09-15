@@ -41,6 +41,7 @@
     <Compile Include="LoadoutEditorTests.cs" />
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
+    <Compile Include="CommandEligibilityTests.cs" />
 
     <!--
       The real sources, linked not copied - the same arrangement the other two
@@ -63,6 +64,12 @@
              Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemFamily.cs"
              Link="Lobby/ItemFamily.cs" />
+    <!--
+      The in-match sheet's command checks. UnityEngine-free, and tested
+      against CommandProcessor itself, which NodeWar.Simulation brings in.
+    -->
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/CommandEligibility.cs"
+             Link="Gameplay/CommandEligibility.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/DraftSerializer.cs"
              Link="Network/DraftSerializer.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/InputSerializer.cs"

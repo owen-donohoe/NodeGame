@@ -78,7 +78,7 @@ Read the file. Do not ask me to summarise it here.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 77 cases, 14 over `Simulation/` and 63
+- `dotnet test dotnet/NodeWar.sln` — 86 cases, 14 over `Simulation/` and 72
   over the lobby. Those are the two assemblies that compile without
   UnityEngine. A lobby change has real tests; run them rather than settling
   for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.

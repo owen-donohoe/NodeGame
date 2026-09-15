@@ -59,12 +59,12 @@ The solution holds two test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **77 passed** — 14 from `NodeWar.Simulation.Tests`, 63 from `NodeWar.Lobby.Tests`.
+Expect **86 passed** — 14 from `NodeWar.Simulation.Tests`, 72 from `NodeWar.Lobby.Tests`.
 
 | Project | Cases | Covers |
 |---|---|---|
 | `NodeWar.Simulation.Tests` | 14 | the determinism baseline, edge weights, movement correctness, a smoke test |
-| `NodeWar.Lobby.Tests` | 63 | `LoadoutData`'s wire format, the loadout editor rules (including when a side is short), item tints and district families |
+| `NodeWar.Lobby.Tests` | 72 | `LoadoutData`'s wire format, the loadout editor rules (including when a side is short), item tints, district families, and the in-match command checks held against `CommandProcessor` |
 
 ## Producing the receipt
 
