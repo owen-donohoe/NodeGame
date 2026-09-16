@@ -532,42 +532,72 @@ namespace NodeWar.Core
 
         // ===== GAME OVER =====
 
+        /// <summary>
+        /// Which player is watching: the local one in a networked match, and
+        /// otherwise whoever the debug switch is controlling. The result screen
+        /// is written from this side, so it is asked rather than assumed to be
+        /// player 0.
+        /// </summary>
+        private int ViewerPlayerID()
+        {
+            MatchConnection match = MatchConnection.Instance;
+            if (match != null && match.isNetworked) return match.localPlayerID;
+
+            return debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
+        }
+
+        /// <summary>
+        /// Ends the match on whichever HUD stack is live. Neither one is handed
+        /// a string to print: both are told the state and who is looking, and
+        /// word the result themselves.
+        /// </summary>
         private void ShowGameOver()
         {
             if (transitionController != null)
                 transitionController.PlayNodeBreakdownWave(nodePresentations, state);
 
+            int viewer = ViewerPlayerID();
+
+            if (uiToolkitHud != null)
+            {
+                uiToolkitHud.ShowMatchEnd(viewer);
+                return;
+            }
+
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found.");
                 return;
             }
 
-            Color winnerColor = (state.winnerID == 0)
-                ? new Color(0.3f, 0.5f, 1f)
-                : new Color(1f, 0.3f, 0.3f);
-
-            string title = "PLAYER " + state.winnerID + " WINS!";
-            string info = "Breaches - P0: " + state.players[0].breachCount +
-                          "  P1: " + state.players[1].breachCount +
-                          "\nGame ended at tick " + state.tickCount;
-
-            gameOverPanel.Show(title, winnerColor, info);
+            gameOverPanel.ShowResult(state, viewer, balance.Data.breachThreshold);
         }
 
         private void ShowDisconnect()
         {
+            int viewer = ViewerPlayerID();
+
+            if (uiToolkitHud != null && state != null)
+            {
+                uiToolkitHud.ShowDisconnected(viewer);
+                return;
+            }
+
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found.");
                 return;
             }
 
-            gameOverPanel.Show(
-                "DISCONNECTED",
-                new Color(1f, 0.8f, 0.2f),
-                "Opponent has disconnected."
-            );
+            if (state != null)
+            {
+                gameOverPanel.ShowDisconnected(state, viewer, balance.Data.breachThreshold);
+                return;
+            }
+
+            // A disconnect during the draft, before any simulation exists.
+            gameOverPanel.Show("DISCONNECTED", new Color(1f, 0.8f, 0.2f),
+                               "Opponent has disconnected.");
         }
 
         private void ReturnToLobby()
@@ -680,6 +710,13 @@ namespace NodeWar.Core
             uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
                                     inputBuffer, tickProvider, balance.Data, nodePanelManager,
                                     selectionSystem);
+
+            uiToolkitHud.ReturnToLobby += ReturnToLobby;
+
+            // The countdown belongs to whichever stack is live, or two would
+            // run at once. The uGUI prefab is used when this is not set.
+            if (transitionController != null)
+                transitionController.SetCountdownPresenter(uiToolkitHud);
 
             // Only hand the node panel over if the new sheet actually exists.
             // Without a layout assigned the uGUI panel keeps the job, which is

@@ -48,6 +48,18 @@ namespace NodeWar.Core
         [Tooltip("Prefab with CountdownUI component. Screen-space overlay canvas.")]
         [SerializeField] private GameObject countdownPrefab;
 
+        // Set by GameManager when the UI Toolkit HUD is on, so the countdown is
+        // drawn by whichever stack is live rather than by both.
+        private ICountdownPresenter countdownPresenter;
+
+        /// <summary>
+        /// Hands the countdown to another UI stack. Null restores the prefab.
+        /// </summary>
+        public void SetCountdownPresenter(ICountdownPresenter presenter)
+        {
+            countdownPresenter = presenter;
+        }
+
         // Events
         /// <summary>
         /// Fired at the moment the transition needs the camera/sprites to switch to gameplay side.
@@ -156,8 +168,16 @@ namespace NodeWar.Core
             // Step 5: Wait for wave to settle before countdown
             yield return new WaitForSeconds(delayAfterNodeStartup);
 
-            // Step 6: Countdown (or skip if no prefab)
-            if (countdownPrefab != null)
+            // Step 6: Countdown, by whichever UI stack is live (or skipped)
+            if (countdownPresenter != null)
+            {
+                bool presenterFinished = false;
+                countdownPresenter.PlayCountdown(() => presenterFinished = true);
+
+                while (!presenterFinished)
+                    yield return null;
+            }
+            else if (countdownPrefab != null)
             {
                 GameObject countdownGO = Instantiate(countdownPrefab);
                 CountdownUI countdown = countdownGO.GetComponent<CountdownUI>();

@@ -397,3 +397,146 @@
     opacity: 0.5;
     transition-duration: 0s;
 }
+
+/* ===================================================================
+   Countdown. Each step is punched in from larger, the way the uGUI
+   overlay does it; the class is toggled from code and USS transitions
+   the rest.
+   =================================================================== */
+
+.hud__countdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    display: none;
+    opacity: 1;
+    transition-property: opacity;
+    transition-duration: 300ms;
+}
+
+.hud__countdown--on {
+    display: flex;
+}
+
+.hud__countdown--out {
+    opacity: 0;
+}
+
+.ui-root .hud__countdown-step {
+    font-size: 96px;
+    color: var(--action);
+    -unity-text-outline-width: 3px;
+    -unity-text-outline-color: var(--ink);
+    -unity-text-align: middle-center;
+    scale: 1.5 1.5;
+    transition-property: scale;
+    transition-duration: 210ms;
+    transition-timing-function: ease-out-back;
+}
+
+.ui-root .hud__countdown-step--in {
+    scale: 1 1;
+}
+
+/* ===================================================================
+   End of match
+   =================================================================== */
+
+.hud__end {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
+    background-color: var(--hud-dim);
+    display: none;
+}
+
+.hud__end--on {
+    display: flex;
+}
+
+.hud__end-card {
+    width: 100%;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-4);
+    background-color: var(--surface);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-lg);
+    border-top-right-radius: var(--corner-lg);
+    border-bottom-left-radius: var(--corner-lg);
+    border-bottom-right-radius: var(--corner-lg);
+}
+
+/*
+    Victory is green; defeat and a disconnect are plain ink. Red is not used
+    here: on this surface red means player 2, so a red title would read as an
+    ownership cue rather than a result.
+*/
+.ui-root .hud__end-title {
+    font-size: 36px;
+    color: var(--ink);
+    margin-bottom: 5px;
+}
+
+.ui-root .hud__end-title--won {
+    color: var(--confirm-edge);
+}
+
+.ui-root .hud__end-sub {
+    font-size: 13px;
+    color: var(--ink-mute);
+    margin-bottom: var(--space-5);
+    white-space: normal;
+}
+
+.hud__end-tally {
+    margin-bottom: var(--space-5);
+}
+
+.hud__end-row {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--rule);
+}
+
+.ui-root .hud__end-name {
+    flex-grow: 1;
+    font-size: 15px;
+    color: var(--ink);
+    margin-left: var(--space-2);
+}
+
+.ui-root .hud__end-count {
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.ui-root .hud__end-button {
+    width: 100%;
+    height: 54px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}

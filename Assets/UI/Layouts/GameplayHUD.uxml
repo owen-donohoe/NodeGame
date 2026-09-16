@@ -146,6 +146,46 @@
         <!-- A breach flashes the screen. Never picks. -->
         <engine:VisualElement name="hud-flash" class="hud__flash" picking-mode="Ignore" />
 
+        <!--
+            The countdown before the tick loop starts. It may block input: the
+            board is not live yet, and there is nothing to press.
+        -->
+        <engine:VisualElement name="hud-countdown" class="hud__countdown">
+            <engine:Label name="hud-countdown-step" class="hud__countdown-step ui-w700" text="3" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
+            The end of the match, from the viewer's side: Victory or Defeat,
+            never "PLAYER 0 WINS". The tally is the whole scoreboard, so both
+            players' breach counts are shown with their marks. Translucent, so
+            the board collapsing behind it stays visible.
+        -->
+        <engine:VisualElement name="hud-end" class="hud__end">
+            <engine:VisualElement class="hud__end-card">
+                <engine:Label name="hud-end-title" class="hud__end-title ui-w700" text="Victory" picking-mode="Ignore" />
+                <engine:Label name="hud-end-sub" class="hud__end-sub" text="" picking-mode="Ignore" />
+
+                <engine:VisualElement name="hud-end-tally" class="hud__end-tally" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__end-row" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-end-mark-a" class="ui-mark ui-mark--p0" picking-mode="Ignore">
+                            <engine:Label name="hud-end-mark-a-label" class="ui-mark__label" text="1" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                        <engine:Label name="hud-end-name-a" class="hud__end-name" text="You" picking-mode="Ignore" />
+                        <engine:Label name="hud-end-count-a" class="hud__end-count ui-w600" text="0/3" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:VisualElement class="hud__end-row" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-end-mark-b" class="ui-mark ui-mark--p1" picking-mode="Ignore">
+                            <engine:Label name="hud-end-mark-b-label" class="ui-mark__label" text="2" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                        <engine:Label name="hud-end-name-b" class="hud__end-name" text="Opponent" picking-mode="Ignore" />
+                        <engine:Label name="hud-end-count-b" class="hud__end-count ui-w600" text="0/3" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                </engine:VisualElement>
+
+                <engine:Button name="hud-end-return" class="ui-button ui-button--gold ui-w600 hud__end-button" text="Return to Lobby" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
     </engine:VisualElement>
 
 </engine:UXML>

@@ -38,7 +38,7 @@ namespace NodeWar.UI
     /// .claude/rules/view-ui.md.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
-    public class GameplayHUDController : MonoBehaviour
+    public class GameplayHUDController : MonoBehaviour, NodeWar.Core.ICountdownPresenter
     {
         [Tooltip("The HUD layout. Assign GameplayHUD.uxml.")]
         [SerializeField] private VisualTreeAsset hudLayout;
@@ -90,6 +90,17 @@ namespace NodeWar.UI
 
         private VisualElement selectionDock;
         private Label selectionText;
+
+        private VisualElement countdownRoot;
+        private Label countdownStep;
+
+        private VisualElement endRoot;
+        private Label endTitle;
+        private Label endSub;
+        private readonly EndRow[] endRows = new EndRow[2];
+
+        /// <summary>The player pressed Return to Lobby on the end overlay.</summary>
+        public event System.Action ReturnToLobby;
 
         private int lastControlledPID = -1;
         private int lastClockSeconds = -1;
@@ -246,6 +257,19 @@ namespace NodeWar.UI
 
             selectionDock = root.Q<VisualElement>("hud-selection");
             selectionText = root.Q<Label>("hud-selection-text");
+
+            countdownRoot = root.Q<VisualElement>("hud-countdown");
+            countdownStep = root.Q<Label>("hud-countdown-step");
+
+            endRoot = root.Q<VisualElement>("hud-end");
+            endTitle = root.Q<Label>("hud-end-title");
+            endSub = root.Q<Label>("hud-end-sub");
+            endRows[0] = new EndRow(root, "a");
+            endRows[1] = new EndRow(root, "b");
+
+            Button endReturn = root.Q<Button>("hud-end-return");
+            if (endReturn != null)
+                endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
             BuildNodeSheet(root);
         }
@@ -452,6 +476,139 @@ namespace NodeWar.UI
 
             if (selectionText != null && count > 0)
                 selectionText.text = "Tap a node to move · " + count;
+        }
+
+        // ===== COUNTDOWN =====
+
+        /// <summary>
+        /// "3 - 2 - 1 - GO" before the tick loop starts, in the same beats the
+        /// uGUI overlay used: 0.7s a number, 0.8s on GO, then a 0.3s fade. The
+        /// callback must always arrive - the transition waits on it before
+        /// unpausing the match - so it is scheduled, not tied to an animation.
+        /// </summary>
+        public void PlayCountdown(System.Action onComplete)
+        {
+            if (countdownRoot == null || countdownStep == null)
+            {
+                if (onComplete != null) onComplete();
+                return;
+            }
+
+            countdownRoot.RemoveFromClassList("hud__countdown--out");
+            countdownRoot.AddToClassList("hud__countdown--on");
+
+            string[] steps = { "3", "2", "1", "GO" };
+            long at = 0;
+
+            for (int i = 0; i < steps.Length; i++)
+            {
+                string text = steps[i];
+                countdownRoot.schedule.Execute(() => ShowCountdownStep(text)).StartingIn(at);
+                at += i < steps.Length - 1 ? 700 : 800;
+            }
+
+            countdownRoot.schedule.Execute(() => countdownRoot.AddToClassList("hud__countdown--out")).StartingIn(at);
+            countdownRoot.schedule.Execute(() =>
+            {
+                countdownRoot.RemoveFromClassList("hud__countdown--on");
+                if (onComplete != null) onComplete();
+            }).StartingIn(at + 300);
+        }
+
+        private void ShowCountdownStep(string text)
+        {
+            countdownStep.text = text;
+
+            // Off, then on a frame later, so the transition runs each time
+            // rather than only on the first step.
+            countdownStep.RemoveFromClassList("hud__countdown-step--in");
+            countdownStep.schedule.Execute(() => countdownStep.AddToClassList("hud__countdown-step--in")).StartingIn(16);
+        }
+
+        // ===== END OF MATCH =====
+
+        /// <summary>
+        /// The result from the viewer's side. Never "PLAYER 0 WINS": that is
+        /// zero-indexed, clashes with the 1/2 marks everywhere else, and says
+        /// nothing about you.
+        /// </summary>
+        public void ShowMatchEnd(int viewerPID)
+        {
+            if (state == null || endRoot == null) return;
+
+            bool won = state.winnerID == viewerPID;
+
+            endTitle.text = won ? "Victory" : "Defeat";
+            endTitle.EnableInClassList("hud__end-title--won", won);
+            endSub.text = (won ? "You held the wall." : "Your wall fell.") + " " + MatchLength();
+
+            ShowEnd(viewerPID);
+        }
+
+        /// <summary>
+        /// The opponent left. Can happen mid-match, so the tally still stands.
+        /// </summary>
+        public void ShowDisconnected(int viewerPID)
+        {
+            if (state == null || endRoot == null) return;
+
+            endTitle.text = "Disconnected";
+            endTitle.EnableInClassList("hud__end-title--won", false);
+            endSub.text = "Your opponent has disconnected. " + MatchLength();
+
+            ShowEnd(viewerPID);
+        }
+
+        private void ShowEnd(int viewerPID)
+        {
+            int other = viewerPID == 0 ? 1 : 0;
+
+            endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, breachThreshold);
+            endRows[1].Set(other, "Opponent", state.players[other].breachCount, breachThreshold);
+
+            endRoot.AddToClassList("hud__end--on");
+        }
+
+        /// <summary>
+        /// How long the match ran, as time rather than ticks. The old panel
+        /// printed "Game ended at tick N", which is a number for a log.
+        /// </summary>
+        private string MatchLength()
+        {
+            int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
+            int seconds = state.tickCount / ticksPerSecond;
+
+            return (seconds / 60) + ":" + (seconds % 60).ToString("00");
+        }
+
+        /// <summary>One player's line on the end card: mark, who, breaches.</summary>
+        private class EndRow
+        {
+            private readonly VisualElement mark;
+            private readonly Label markLabel;
+            private readonly Label name;
+            private readonly Label count;
+
+            public EndRow(VisualElement root, string which)
+            {
+                mark = root.Q<VisualElement>("hud-end-mark-" + which);
+                markLabel = root.Q<Label>("hud-end-mark-" + which + "-label");
+                name = root.Q<Label>("hud-end-name-" + which);
+                count = root.Q<Label>("hud-end-count-" + which);
+            }
+
+            public void Set(int playerID, string who, int breaches, int threshold)
+            {
+                if (mark != null)
+                {
+                    mark.EnableInClassList("ui-mark--p0", playerID == 0);
+                    mark.EnableInClassList("ui-mark--p1", playerID == 1);
+                }
+
+                if (markLabel != null) markLabel.text = (playerID + 1).ToString();
+                if (name != null) name.text = who;
+                if (count != null) count.text = breaches + "/" + threshold;
+            }
         }
 
         /// <summary>
