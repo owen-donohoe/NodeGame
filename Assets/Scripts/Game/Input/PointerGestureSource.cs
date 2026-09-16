@@ -20,6 +20,8 @@ namespace NodeWar.Input
         Lassoing,
         /// <summary>Press began over UI. Consumes the stroke and publishes nothing.</summary>
         Blocked,
+        /// <summary>Two fingers down and spreading. Drives zoom, never pan.</summary>
+        Pinching,
         /// <summary>A second finger arrived. The stroke is abandoned.</summary>
         Cancelled
     }
@@ -76,6 +78,24 @@ namespace NodeWar.Input
         public event Action<Vector2> OnLassoPoint;
         public event Action<IReadOnlyList<Vector2>> OnLassoComplete;
 
+        /// <summary>
+        /// A pinch began. Consumers capture whatever they are about to scale here.
+        ///
+        /// The pair below publish a scale measured from that captured start,
+        /// never a per-frame delta. An accumulating delta drifts: every frame's
+        /// rounding is kept, and a pinch that returns the fingers to exactly
+        /// where they started would not return the camera with them.
+        /// </summary>
+        public event Action OnZoomBegin;
+
+        /// <summary>
+        /// Scale relative to the pinch start. Above 1 means zoom in (fingers
+        /// spreading), below 1 means out.
+        /// </summary>
+        public event Action<float> OnZoomUpdate;
+
+        public event Action OnZoomEnd;
+
         // ===== STATE =====
 
         private GestureState state = GestureState.Idle;
@@ -84,6 +104,8 @@ namespace NodeWar.Input
         private GestureTarget downTarget;
 
         private readonly List<Vector2> strokePoints = new List<Vector2>();
+
+        private float pinchStartSpan;
 
         private Camera cam;
         private int villagerMask;
@@ -134,11 +156,45 @@ namespace NodeWar.Input
             Pointer pointer = Pointer.current;
             if (pointer == null) return;
 
-            // A second finger abandons whatever the first was doing. Checked
-            // before anything else so a pinch never half-resolves as a pan.
-            if (state != GestureState.Idle && ActiveTouchCount() >= 2)
+            // Two fingers are a pinch, and the check runs before anything else
+            // so a pan never half-resolves into one. A lasso is the exception:
+            // PanSuppressed latches long press for multi-select and zoom loses
+            // that contest exactly as pan does, so the stroke is abandoned
+            // rather than turned into a camera move.
+            if (ActiveTouchCount() >= 2)
             {
-                Cancel();
+                if (state == GestureState.Pinching)
+                {
+                    UpdatePinch();
+                    return;
+                }
+
+                if (state == GestureState.Blocked) return;
+
+                if (PanSuppressed)
+                {
+                    Cancel();
+
+                    // Consume the rest of the stroke. Cancel leaves the state
+                    // Idle, and Idle plus two fingers still down would begin a
+                    // pinch on the very next frame -- so the lasso the player
+                    // abandoned would silently become a zoom without them ever
+                    // lifting a finger. Blocked already means "publish nothing
+                    // until this stroke ends", and EndPress clears it.
+                    state = GestureState.Blocked;
+                    return;
+                }
+
+                BeginPinch();
+                return;
+            }
+
+            // Fewer than two fingers left. The survivor does not inherit the
+            // stroke -- resuming a pan from whichever finger happened to lift
+            // last makes the board lurch at the end of every pinch.
+            if (state == GestureState.Pinching)
+            {
+                EndZoom();
                 return;
             }
 
@@ -299,6 +355,75 @@ namespace NodeWar.Input
 
             state = GestureState.Idle;
             Log("cancelled (second finger)");
+        }
+
+        // ===== ZOOM =====
+
+        private void BeginPinch()
+        {
+            float span;
+            if (!TryReadPinchSpan(out span)) return;
+
+            // Whatever the first finger was doing is abandoned before the
+            // pinch starts, so a half-formed pan does not leave a consumer
+            // believing a drag is still live.
+            if (state != GestureState.Idle) OnGestureCancelled?.Invoke();
+
+            state = GestureState.Pinching;
+            pinchStartSpan = span;
+            strokePoints.Clear();
+
+            OnZoomBegin?.Invoke();
+            Log("two fingers -> Pinching, span " + span.ToString("0"));
+        }
+
+        private void UpdatePinch()
+        {
+            float span;
+            if (!TryReadPinchSpan(out span)) return;
+
+            // Below the dead zone the fingers are resting rather than pinching,
+            // and publishing that noise would make the board creep.
+            if (Mathf.Abs(span - pinchStartSpan) < thresholds.PinchDeadZonePx) return;
+
+            OnZoomUpdate?.Invoke(span / pinchStartSpan);
+        }
+
+        private void EndZoom()
+        {
+            state = GestureState.Idle;
+            OnZoomEnd?.Invoke();
+            Log("zoom end");
+        }
+
+        /// <summary>
+        /// Distance between the first two pressed touches. Guarded against a
+        /// zero span: two fingers reported at the same point would make the
+        /// ratio infinite and throw the camera to a clamp instantly.
+        /// </summary>
+        private bool TryReadPinchSpan(out float span)
+        {
+            span = 0f;
+
+            Touchscreen touch = Touchscreen.current;
+            if (touch == null) return false;
+
+            Vector2 a = Vector2.zero;
+            int found = 0;
+
+            var touches = touch.touches;
+            for (int i = 0; i < touches.Count && found < 2; i++)
+            {
+                if (!touches[i].press.isPressed) continue;
+
+                Vector2 p = touches[i].position.ReadValue();
+                if (found == 0) a = p;
+                else span = Vector2.Distance(a, p);
+                found++;
+            }
+
+            if (found < 2) return false;
+            return span > 1f;
         }
 
         // ===== RESOLUTION =====

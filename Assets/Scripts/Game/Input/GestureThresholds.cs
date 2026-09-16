@@ -47,6 +47,13 @@ namespace NodeWar.Input
         [Range(0.03f, 0.5f)]
         public float flashDuration = 0.12f;
 
+        [Header("Zoom")]
+        [Tooltip("How far the two fingers' separation must change before a " +
+                 "two-finger press is read as a pinch rather than held still. " +
+                 "Below this the span is noise from a hand resting on glass.")]
+        [Range(0.5f, 10f)]
+        public float pinchDeadZoneMm = 2.5f;
+
         [Header("Touch targets")]
         [Tooltip("Radius of a villager's tap target, in millimetres on the " +
                  "screen. Sized to a fingertip rather than to the sprite, so a " +
@@ -86,6 +93,7 @@ namespace NodeWar.Input
 
         public float TapSlopPx => ScreenMetrics.MmToPixels(tapSlopMm);
         public float LassoDecimationPx => ScreenMetrics.MmToPixels(lassoDecimationMm);
+        public float PinchDeadZonePx => ScreenMetrics.MmToPixels(pinchDeadZoneMm);
 
         /// <summary>
         /// Square pixels. Uses the area conversion -- density squared, not

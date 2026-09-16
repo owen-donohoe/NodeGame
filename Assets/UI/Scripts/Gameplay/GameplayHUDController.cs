@@ -156,6 +156,19 @@ namespace NodeWar.UI
                 panelSource = null;
             }
 
+            // Unsubscribed here rather than in OnDestroy: the elements the
+            // handlers write are rebuilt from scratch on the next OnEnable, and
+            // a live subscription across that would be writing to a discarded tree.
+            if (boardCamera != null)
+            {
+                boardCamera.ZoomChanged -= OnZoomChanged;
+                boardCamera.ZoomGestureActiveChanged -= OnZoomGestureActiveChanged;
+            }
+
+            zoomHideJob = null;
+            handleDragging = false;
+            handleZoomed = false;
+
             safeArea = null;
             nodeSheet = null;
             initialized = false;
@@ -263,6 +276,13 @@ namespace NodeWar.UI
             selectionDock = root.Q<VisualElement>("hud-selection");
             selectionText = root.Q<Label>("hud-selection-text");
 
+            zoomRoot = root.Q<VisualElement>("hud-zoom");
+            zoomValue = root.Q<Label>("hud-zoom-value");
+            zoomFill = root.Q<VisualElement>("hud-zoom-fill");
+
+            recentreButton = root.Q<VisualElement>("hud-recentre");
+            RegisterZoomHandle();
+
             countdownRoot = root.Q<VisualElement>("hud-countdown");
             countdownStep = root.Q<Label>("hud-countdown-step");
 
@@ -277,6 +297,12 @@ namespace NodeWar.UI
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
             BuildNodeSheet(root);
+
+            // The tree was just rebuilt, so any subscription from a previous
+            // enable is pointed at discarded elements. Re-hooking here keeps
+            // the readout alive across a disable without GameManager having to
+            // know the HUD was ever switched off.
+            if (boardCamera != null) BindCamera(boardCamera);
         }
 
         /// <summary>
@@ -487,6 +513,228 @@ namespace NodeWar.UI
 
             if (selectionText != null && count > 0)
                 selectionText.text = "Tap a node to move · " + count;
+        }
+
+        // ===== CAMERA AFFORDANCES =====
+        //
+        // Two things, neither of them a camera control. The readout is
+        // feedback that answers "am I in zoom mode" and then leaves; the
+        // recentre button is the undo for having gone somewhere. The camera
+        // itself is driven entirely by gestures on the board.
+
+        private VisualElement zoomRoot;
+        private Label zoomValue;
+        private VisualElement zoomFill;
+        private VisualElement recentreButton;
+
+        [Header("Zoom handle")]
+        [Tooltip("Responsiveness of dragging UP to zoom in. Lower than the out " +
+                 "gain on purpose: going in is a precision move toward something " +
+                 "you have already picked out, going out is a panic move.")]
+        [SerializeField] private float zoomInGain = 10f;
+
+        [Tooltip("Responsiveness of dragging DOWN to zoom out. What matters is " +
+                 "the ratio against the in gain, not either number alone.")]
+        [SerializeField] private float zoomOutGain = 17f;
+
+        [Tooltip("Drag distance, in panel units, that crosses the whole zoom " +
+                 "range at a gain of 10. Raise it to make the handle longer-throw.")]
+        [SerializeField] private float zoomDragRange = 260f;
+
+        [Tooltip("How far the press may travel and still count as a click that " +
+                 "recentres rather than a drag that zooms.")]
+        [SerializeField] private float zoomHandleClickSlop = 6f;
+
+        private NodeWar.Core.CameraController boardCamera;
+        private IVisualElementScheduledItem zoomHideJob;
+
+        // Zoom-handle drag. The handle is one control with two meanings, so it
+        // has to know which one is happening: a press that never travels past
+        // the slop is a click and recentres on release, and one that does is a
+        // zoom and must NOT also recentre when the finger lifts.
+        private bool handleDragging;
+        private bool handleZoomed;
+        private float handleStartY;
+        private float handleStartNormalized;
+
+        /// <summary>
+        /// Subscribes the readout to the camera. Event-driven rather than
+        /// polled: a camera at rest publishes nothing, so a HUD that is mostly
+        /// idle does no per-frame work for a control that is mostly hidden.
+        /// </summary>
+        public void BindCamera(NodeWar.Core.CameraController cameraController)
+        {
+            if (boardCamera != null)
+            {
+                boardCamera.ZoomChanged -= OnZoomChanged;
+                boardCamera.ZoomGestureActiveChanged -= OnZoomGestureActiveChanged;
+            }
+
+            boardCamera = cameraController;
+
+            if (boardCamera != null)
+            {
+                boardCamera.ZoomChanged += OnZoomChanged;
+                boardCamera.ZoomGestureActiveChanged += OnZoomGestureActiveChanged;
+            }
+        }
+
+        private void OnZoomChanged(float normalized)
+        {
+            if (zoomFill != null)
+                zoomFill.style.width = Length.Percent(Mathf.Clamp01(normalized) * 100f);
+
+            if (zoomValue != null && boardCamera != null)
+            {
+                // Shown as a magnification the player can reason about, not as
+                // the dolly distance in world units, which means nothing to
+                // anyone looking at a board.
+                float distance = boardCamera.GetCurrentZoomDistance();
+                float magnification = distance > 0.01f ? boardCamera.DefaultZoomDistance / distance : 1f;
+                zoomValue.text = magnification.ToString("0.0") + "x";
+            }
+        }
+
+        private void OnZoomGestureActiveChanged(bool active)
+        {
+            if (zoomRoot == null) return;
+
+            if (zoomHideJob != null)
+            {
+                zoomHideJob.Pause();
+                zoomHideJob = null;
+            }
+
+            if (active)
+            {
+                zoomRoot.AddToClassList("hud__zoom--on");
+                return;
+            }
+
+            // Held briefly past the end of the gesture so the final value is
+            // readable, rather than vanishing with the fingers that set it.
+            zoomHideJob = zoomRoot.schedule
+                .Execute(() => zoomRoot.RemoveFromClassList("hud__zoom--on"))
+                .StartingIn(520);
+        }
+
+        /// <summary>
+        /// The handle is permanent and carries both meanings: a click returns
+        /// the camera to your core, and a vertical drag zooms. One circle, two
+        /// inputs, no board area spent on either.
+        ///
+        /// Driven by raw pointer events rather than Button.clicked, because a
+        /// Button fires its click on release regardless of how far the finger
+        /// travelled -- so every zoom drag would end by also recentring, undoing
+        /// the zoom the player just set.
+        /// </summary>
+        private void RegisterZoomHandle()
+        {
+            if (recentreButton == null)
+            {
+                Debug.LogWarning("[HUD] hud-recentre not found in GameplayHUD.uxml; " +
+                                 "the zoom handle will not respond.");
+                return;
+            }
+
+            // Picking is set here rather than in UXML so it cannot be lost to an
+            // edit of the markup: this element is the one thing on the HUD that
+            // must take a touch, and it is surrounded by Ignore.
+            recentreButton.pickingMode = PickingMode.Position;
+
+            recentreButton.RegisterCallback<PointerDownEvent>(OnHandleDown);
+            recentreButton.RegisterCallback<PointerMoveEvent>(OnHandleMove);
+            recentreButton.RegisterCallback<PointerUpEvent>(OnHandleUp);
+            recentreButton.RegisterCallback<PointerCaptureOutEvent>(OnHandleCaptureLost);
+        }
+
+        private void OnHandleDown(PointerDownEvent evt)
+        {
+            // Deliberately not gated on the camera. A press that silently does
+            // nothing is indistinguishable from a dead control, so the handle
+            // always takes the pointer and says why if it cannot act.
+            handleDragging = true;
+            handleZoomed = false;
+            handleStartY = evt.position.y;
+            handleStartNormalized = boardCamera != null
+                ? boardCamera.GetTargetZoomNormalized()
+                : 0f;
+
+            recentreButton.AddToClassList("hud__recentre--held");
+
+            // Captured so the drag survives the finger leaving the 46px circle,
+            // which it does within a few pixels of a real throw.
+            recentreButton.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+
+            if (boardCamera == null)
+                Debug.LogWarning("[HUD] Zoom handle pressed but no CameraController is bound. " +
+                                 "GameManager.InitializeUI should have called BindCamera.");
+        }
+
+        private void OnHandleMove(PointerMoveEvent evt)
+        {
+            if (!handleDragging || boardCamera == null) return;
+
+            // Panel Y grows downward, so a finger moving up is a NEGATIVE delta.
+            // Flipped here once, so everything below reads in player terms.
+            float dy = handleStartY - evt.position.y;
+
+            if (!handleZoomed)
+            {
+                if (Mathf.Abs(dy) < zoomHandleClickSlop) return;
+
+                handleZoomed = true;
+                boardCamera.BeginZoomGesture();
+            }
+
+            float gain = dy > 0f ? zoomInGain : zoomOutGain;
+            float range = Mathf.Max(1f, zoomDragRange);
+
+            // Normalized is 0 at the closest distance, so zooming IN subtracts.
+            float delta = dy * (gain / 10f) / range;
+            boardCamera.SetZoomNormalized(handleStartNormalized - delta);
+
+            evt.StopPropagation();
+        }
+
+        private void OnHandleUp(PointerUpEvent evt)
+        {
+            if (!handleDragging) return;
+
+            recentreButton.ReleasePointer(evt.pointerId);
+            FinishHandleDrag();
+            evt.StopPropagation();
+        }
+
+        /// <summary>
+        /// A capture can be lost without a PointerUp -- the panel rebuilding, or
+        /// the OS taking the touch. Without this the handle would stay armed and
+        /// the zoom readout would never be told the gesture ended.
+        /// </summary>
+        private void OnHandleCaptureLost(PointerCaptureOutEvent evt)
+        {
+            FinishHandleDrag();
+        }
+
+        private void FinishHandleDrag()
+        {
+            if (!handleDragging) return;
+            handleDragging = false;
+
+            if (recentreButton != null)
+                recentreButton.RemoveFromClassList("hud__recentre--held");
+
+            if (boardCamera == null) { handleZoomed = false; return; }
+
+            // Which half of the control fired is decided by whether the press
+            // ever travelled: a click that stayed put recentres, and a drag that
+            // zoomed must NOT also recentre, or it would throw away the zoom the
+            // player just set on the way to lifting their finger.
+            if (handleZoomed) boardCamera.EndZoomGesture();
+            else boardCamera.RecentreOnHome();
+
+            handleZoomed = false;
         }
 
         // ===== COUNTDOWN =====

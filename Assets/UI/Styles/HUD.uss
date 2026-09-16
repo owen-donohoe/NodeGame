@@ -377,6 +377,127 @@
 }
 
 /* ===================================================================
+   Zoom readout
+
+   Transient feedback, never a control. It exists so the player can tell
+   they are in zoom mode and how far they have gone -- a pinch or a handle
+   drag is otherwise a mode with nothing on screen to confirm it.
+   =================================================================== */
+
+.hud__zoom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 44%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    scale: 0.94 0.94;
+    transition-property: opacity, scale;
+    transition-duration: 140ms, 180ms;
+}
+
+.hud__zoom--on {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.hud__zoom-value {
+    font-size: 17px;
+    color: var(--hud-ink);
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    border-radius: 99px;
+    padding-left: 15px;
+    padding-right: 11px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    -unity-text-align: middle-center;
+}
+
+.hud__zoom-track {
+    width: 74px;
+    height: 4px;
+    border-radius: 99px;
+    background-color: var(--hud-bar-past);
+    margin-left: -9px;
+    overflow: hidden;
+}
+
+.hud__zoom-fill {
+    height: 100%;
+    width: 50%;
+    border-radius: 99px;
+    background-color: var(--action);
+}
+
+/* ===================================================================
+   Zoom handle
+
+   One circle carrying two inputs: a click recentres on your core, a
+   vertical drag zooms. Permanent, because a control that appears only
+   once you have moved is missing exactly when you want to zoom out to
+   look around at the start of a match.
+
+   The dock ignores picking; only the button itself takes a touch.
+   =================================================================== */
+
+.hud__recentre-dock {
+    position: absolute;
+    right: 12px;
+    bottom: 290px;
+    align-items: center;
+}
+
+.hud__recentre {
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    color: var(--hud-ink);
+    font-size: 17px;
+    -unity-text-align: middle-center;
+}
+
+.hud__recentre-glyph {
+    font-size: 17px;
+    color: var(--hud-ink);
+    -unity-text-align: middle-center;
+}
+
+/* Driven from code, not :active -- the handle owns the pointer for the
+   whole drag, and :active would drop the moment the finger left the circle. */
+.hud__recentre--held {
+    background-color: var(--hud-glass);
+    scale: 0.94 0.94;
+}
+
+.hud__recentre-label {
+    font-size: 8px;
+    letter-spacing: 0.7px;
+    color: var(--hud-ink-mute);
+    margin-top: 3px;
+}
+
+/* ===================================================================
    Breach flash
    =================================================================== */
 

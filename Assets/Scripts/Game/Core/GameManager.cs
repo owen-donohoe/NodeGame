@@ -713,6 +713,10 @@ namespace NodeWar.Core
 
             uiToolkitHud.ReturnToLobby += ReturnToLobby;
 
+            // The zoom readout and the zoom handle. Without this the handle
+            // still takes the press but has nothing to drive, and says so.
+            uiToolkitHud.BindCamera(cameraController);
+
             // The countdown belongs to whichever stack is live, or two would
             // run at once. The uGUI prefab is used when this is not set.
             if (transitionController != null)

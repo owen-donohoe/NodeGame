@@ -143,6 +143,44 @@
             </engine:VisualElement>
         </engine:VisualElement>
 
+        <!--
+            Zoom readout. Feedback, not a control: it answers "am I in zoom
+            mode" while a pinch or a handle drag is running and then leaves.
+            Never picks, so it cannot swallow a tap meant for the board.
+        -->
+        <engine:VisualElement name="hud-zoom" class="hud__zoom" picking-mode="Ignore">
+            <engine:Label name="hud-zoom-value" class="hud__zoom-value ui-w600" text="1.0x" picking-mode="Ignore" />
+            <engine:VisualElement name="hud-zoom-track" class="hud__zoom-track" picking-mode="Ignore">
+                <engine:VisualElement name="hud-zoom-fill" class="hud__zoom-fill" picking-mode="Ignore" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!--
+            The zoom handle: the only camera control on the surface, and the
+            only place the HUD takes a touch besides the villager toggle.
+            Click recentres on your core; a vertical drag zooms, up for in.
+
+            Permanent. A control that appears only once you have moved is
+            missing exactly when you want to look around at the start of a
+            match, and a circle carries the two inputs without costing the
+            board a strip of pannable area.
+        -->
+        <engine:VisualElement name="hud-recentre-dock" class="hud__recentre-dock" picking-mode="Ignore">
+            <!--
+                A plain element, deliberately NOT a Button. Button carries a
+                Clickable manipulator that captures the pointer on press and
+                releases it again as soon as the finger leaves the element's
+                bounds - which a zoom drag does within a few pixels, since the
+                throw is far longer than the 46px circle. That release ends the
+                gesture almost as soon as it starts. Owning the pointer
+                ourselves is the only way one control can hold both meanings.
+            -->
+            <engine:VisualElement name="hud-recentre" class="hud__recentre">
+                <engine:Label class="hud__recentre-glyph" text="◎" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:Label name="hud-recentre-label" class="hud__recentre-label ui-w600" text="CORE" picking-mode="Ignore" />
+        </engine:VisualElement>
+
         <!-- A breach flashes the screen. Never picks. -->
         <engine:VisualElement name="hud-flash" class="hud__flash" picking-mode="Ignore" />
 
