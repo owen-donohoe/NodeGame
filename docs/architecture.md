@@ -171,8 +171,8 @@ still being proven.
 
 | Tree | Holds | State |
 |---|---|---|
-| `Assets/Scripts/Game/UI/` | in-match uGUI: `HUDManager`, `NodePanelManager`, draft UI, world-space bars | live, still the default |
-| `Assets/UI/` | UI Toolkit: the whole lobby, plus the in-match HUD and node sheet | live behind two toggles |
+| `Assets/Scripts/Game/UI/` | in-match uGUI: `HUDManager`, `NodePanelManager`, draft UI, world-space bars | compiled; `NodePanelManager` still owns tap arbitration and the draft is still its own, but the uGUI HUD band is off |
+| `Assets/UI/` | UI Toolkit: the whole lobby, plus the in-match HUD, node sheet, countdown and end screen | live; both toggles are on |
 | `Assets/Legacy/` | the retired uGUI lobby panels, and `SafeAreaFitter` | compiled, unreachable when the new lobby is on |
 
 **Which one runs is a scene value, not a code value.** Both toggles are

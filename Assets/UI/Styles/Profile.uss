@@ -20,6 +20,9 @@
     --arena-bronze: rgb(228, 210, 172);
     --arena-ancient: rgb(185, 172, 151);
     --arena-chip-got: rgba(255, 255, 255, 0.4);
+
+    /* A shade heavier than the shared --shadow-soft, as the prototype drew it. */
+    --arena-shadow: rgba(90, 70, 40, 0.28);
 }
 
 .lb-arena {
@@ -190,7 +193,7 @@
     top: 3px;
     right: -2px;
     bottom: -3px;
-    background-color: rgba(90, 70, 40, 0.28);
+    background-color: var(--arena-shadow);
     border-top-left-radius: var(--corner-sm);
     border-top-right-radius: var(--corner-sm);
     border-bottom-left-radius: var(--corner-sm);

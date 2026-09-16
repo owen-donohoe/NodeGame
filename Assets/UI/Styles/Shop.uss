@@ -15,6 +15,9 @@
     --shop-awning-cream: rgb(242, 230, 210);
     --shop-stall-wood: rgb(156, 108, 60);
     --shop-stall-counter: rgb(181, 129, 74);
+
+    /* A shade heavier than the shared --shadow-soft, as the prototype drew it. */
+    --shop-shadow: rgba(90, 70, 40, 0.28);
 }
 
 .lb-shop {
@@ -162,7 +165,7 @@
 }
 
 .lb-ware-wrap > .ui-sticker__shadow {
-    background-color: rgba(90, 70, 40, 0.28);
+    background-color: var(--shop-shadow);
 }
 
 .lb-ware {
