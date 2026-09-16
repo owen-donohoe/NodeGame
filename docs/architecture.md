@@ -369,9 +369,16 @@ Two objects are carried across the Lobby → Gameplay scene load via
 - `SafeAreaBinder` — the UI Toolkit reader of `Screen.safeArea`.
   `Assets/Legacy/Game/UI/SafeAreaFitter.cs` is the uGUI equivalent.
 - Layouts in `Assets/UI/Layouts/*.uxml`, styles in `Assets/UI/Styles/*.uss`.
-  `Lobby.uss` holds the lobby's tokens and shared components; `Theme.uss`
-  holds the tokens the in-match HUD and the not-yet-rebuilt Social page
-  still read, so changing it changes the Gameplay scene.
+  One theme serves both scenes: `Tokens.uss` (palette, then tokens named for
+  their job) and `Components.uss` (the `ui-` classes both draw - button,
+  sheet, bar, chip, toast, player mark, monogram tile). Neither is imported by
+  a layout; both arrive through `UnityDefaultRuntimeTheme.tss`, which the
+  Lobby and HUD `PanelSettings` share. So a token edit changes both scenes.
+  Page stylesheets (`Lobby.uss`, `HUD.uss`, `NodeSheet.uss`, one per lobby
+  page) hold only what that screen draws, plus any token only it uses.
+  Precedence runs the other way from CSS intuition: a rule arriving through
+  the theme loses to any rule in a stylesheet a layout imports, whatever the
+  specificity.
 
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
