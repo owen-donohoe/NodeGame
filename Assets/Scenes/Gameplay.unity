@@ -546,7 +546,7 @@ MonoBehaviour:
     offScreenFade: 0.35
     widthScale: 1
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
-  useUIToolkitHUD: 0
+  useUIToolkitHUD: 1
   uiToolkitHudRoot: {fileID: 1710263983}
   transitionController: {fileID: 571336745}
   draftUIPrefab: {fileID: 3595327956611536689, guid: 1144ccd5ea8a087499052f23d215f97f, type: 3}
@@ -793,7 +793,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.UI.GameplayHUDController
   hudLayout: {fileID: 9197481963319205126, guid: c39605c3a76a9ad4aba3b6d1cb2593bf, type: 3}
   nodeSheetLayout: {fileID: 9197481963319205126, guid: eb380d1039ac19b43847d852d0505d73, type: 3}
-  bumpMilliseconds: 180
 --- !u!114 &1710263985
 MonoBehaviour:
   m_ObjectHideFlags: 0
