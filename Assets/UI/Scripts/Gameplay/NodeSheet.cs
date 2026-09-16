@@ -61,6 +61,14 @@ namespace NodeWar.UI
         private int nodeID = -1;
         private string thumbTint;
 
+        // What the header is currently showing. RefreshHeader runs every frame
+        // while the sheet is open - the node can change hands under it - but
+        // the text only has to be rebuilt when one of these moves.
+        private int shownNode = -1;
+        private int shownOwner = -2;
+        private int shownViewer = -2;
+        private int shownClaim = int.MinValue;
+
         private int dragPointer = -1;
         private float dragStartY;
 
@@ -170,6 +178,10 @@ namespace NodeWar.UI
             }
 
             nodeID = node;
+            shownNode = -1;
+            shownOwner = -2;
+            shownViewer = -2;
+            shownClaim = int.MinValue;
 
             if (current != next)
             {
@@ -262,6 +274,29 @@ namespace NodeWar.UI
         private void RefreshHeader(int controlledPID)
         {
             NodeData node = state.nodes[nodeID];
+
+            if (nodeID != shownNode)
+            {
+                shownNode = nodeID;
+                RefreshDistrict(node);
+            }
+
+            if (node.ownerID != shownOwner || controlledPID != shownViewer)
+            {
+                shownOwner = node.ownerID;
+                shownViewer = controlledPID;
+                RefreshOwner(node, controlledPID);
+            }
+
+            if (node.claimBar != shownClaim)
+            {
+                shownClaim = node.claimBar;
+                RefreshClaim(node);
+            }
+        }
+
+        private void RefreshDistrict(NodeData node)
+        {
             string name = node.districtType.ToString();
 
             if (districtLabel != null) districtLabel.text = name;
@@ -277,9 +312,6 @@ namespace NodeWar.UI
             }
 
             if (thumbLetter != null) thumbLetter.text = name.Substring(0, 1);
-
-            RefreshOwner(node, controlledPID);
-            RefreshClaim(node);
         }
 
         private void RefreshOwner(NodeData node, int controlledPID)

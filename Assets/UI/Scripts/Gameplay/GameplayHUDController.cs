@@ -109,6 +109,11 @@ namespace NodeWar.UI
         private int lastUnitsP1 = -1;
         private int lastSelected = -1;
 
+        // Reused rather than rebuilt: Refresh runs every frame, and two fresh
+        // arrays a frame is litter a phone has to collect.
+        private readonly int[] resourceValues = new int[3];
+        private readonly int[] resourceNeeds = new int[3];
+
         private void OnEnable()
         {
             document = GetComponent<UIDocument>();
@@ -385,8 +390,14 @@ namespace NodeWar.UI
         private void RefreshResources(int pid, bool switched)
         {
             PlayerData player = state.players[pid];
-            int[] values = { player.food, player.materials, player.metal };
-            int[] needs = { CheapestDraftedCost(pid, true), CheapestDraftedCost(pid, false), 0 };
+
+            resourceValues[0] = player.food;
+            resourceValues[1] = player.materials;
+            resourceValues[2] = player.metal;
+
+            resourceNeeds[0] = CheapestDraftedCost(pid, true);
+            resourceNeeds[1] = CheapestDraftedCost(pid, false);
+            resourceNeeds[2] = 0;
 
             int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
             int second = state.tickCount / ticksPerSecond;
@@ -397,10 +408,10 @@ namespace NodeWar.UI
             {
                 if (resources[i] == null) continue;
 
-                if (switched) resources[i].Reset(values[i]);
-                else if (sample) resources[i].Sample(values[i]);
+                if (switched) resources[i].Reset(resourceValues[i]);
+                else if (sample) resources[i].Sample(resourceValues[i]);
 
-                resources[i].Render(values[i], needs[i]);
+                resources[i].Render(resourceValues[i], resourceNeeds[i]);
             }
         }
 
