@@ -956,6 +956,14 @@ namespace NodeWar.Core
         public float GetCurrentZoomDistance() => currentZoomDistance;
 
         /// <summary>
+        /// Where the zoom is heading, before smoothing. Anything reporting the
+        /// zoom to the player wants this: ZoomChanged fires the moment the
+        /// target moves, and the current distance at that moment is still the
+        /// old one.
+        /// </summary>
+        public float GetTargetZoomDistance() => targetZoomDistance;
+
+        /// <summary>
         /// The distance the match starts at for the current side. The readout
         /// divides by this to show a magnification, so "1.0x" means the framing
         /// the player was given rather than an arbitrary point in the range.

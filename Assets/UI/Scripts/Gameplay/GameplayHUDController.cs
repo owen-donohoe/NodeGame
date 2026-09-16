@@ -554,15 +554,26 @@ namespace NodeWar.UI
 
         private void OnZoomChanged(float normalized)
         {
+            // Filled means zoomed IN, so the bar grows the same way the number
+            // beside it does. normalized is 0 at the closest distance, hence
+            // the inversion.
             if (zoomFill != null)
-                zoomFill.style.width = Length.Percent(Mathf.Clamp01(normalized) * 100f);
+                zoomFill.style.width = Length.Percent((1f - Mathf.Clamp01(normalized)) * 100f);
 
             if (zoomValue != null && boardCamera != null)
             {
+                // The TARGET distance, not the current one. This event fires
+                // when the target moves, and at that instant ApplyZoom has
+                // barely begun easing toward it -- so reading the current
+                // distance here reports where the camera still is, and because
+                // no further event follows a released gesture, that stale value
+                // is the one left on screen. It made a fast drag look like it
+                // was hunting around the value it started from.
+                //
                 // Shown as a magnification the player can reason about, not as
                 // the dolly distance in world units, which means nothing to
                 // anyone looking at a board.
-                float distance = boardCamera.GetCurrentZoomDistance();
+                float distance = boardCamera.GetTargetZoomDistance();
                 float magnification = distance > 0.01f ? boardCamera.DefaultZoomDistance / distance : 1f;
                 zoomValue.text = magnification.ToString("0.0") + "x";
             }
