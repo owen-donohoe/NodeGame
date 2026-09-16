@@ -925,6 +925,30 @@ namespace NodeWar.Core
             state.nodes[p0CoreID].claimBar = balance.Data.claimThreshold;
             state.nodes[p1CoreID].ownerID = 1;
             state.nodes[p1CoreID].claimBar = -balance.Data.claimThreshold;
+
+            // Where "home" actually is. InitializeSides runs in Awake, before
+            // the board exists, so it can only guess from grid dimensions -- and
+            // its guess is the middle of your back row, which is the board's
+            // centre line, not your core. The cores sit wherever the layout puts
+            // them, so the real positions have to come back here once known.
+            if (cameraController != null)
+            {
+                cameraController.SetHomeAnchor(0, CoreWorldPosition(p0CoreID));
+                cameraController.SetHomeAnchor(1, CoreWorldPosition(p1CoreID));
+            }
+        }
+
+        /// <summary>
+        /// Node world positions are laid out by SpawnNodeViews as grid index
+        /// times nodeScale. Duplicated as one line here rather than read off a
+        /// NodeView, because the cameras need it before the views exist.
+        /// </summary>
+        private Vector3 CoreWorldPosition(int nodeID)
+        {
+            return new Vector3(
+                state.nodes[nodeID].gridX * boardConfig.nodeScale,
+                0f,
+                state.nodes[nodeID].gridZ * boardConfig.nodeScale);
         }
 
         private int FindCoreNodeID(int playerID)

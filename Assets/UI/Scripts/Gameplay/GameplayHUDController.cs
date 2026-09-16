@@ -112,7 +112,6 @@ namespace NodeWar.UI
         // Reused rather than rebuilt: Refresh runs every frame, and two fresh
         // arrays a frame is litter a phone has to collect.
         private readonly int[] resourceValues = new int[3];
-        private readonly int[] resourceNeeds = new int[3];
 
         private void OnEnable()
         {
@@ -421,10 +420,6 @@ namespace NodeWar.UI
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
 
-            resourceNeeds[0] = CheapestDraftedCost(pid, true);
-            resourceNeeds[1] = CheapestDraftedCost(pid, false);
-            resourceNeeds[2] = 0;
-
             int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
             int second = state.tickCount / ticksPerSecond;
             bool sample = second != lastSampleSecond;
@@ -437,30 +432,8 @@ namespace NodeWar.UI
                 if (switched) resources[i].Reset(resourceValues[i]);
                 else if (sample) resources[i].Sample(resourceValues[i]);
 
-                resources[i].Render(resourceValues[i], resourceNeeds[i]);
+                resources[i].Render(resourceValues[i]);
             }
-        }
-
-        /// <summary>
-        /// The cheapest price, in food or materials, of a suit this player
-        /// drafted - the line the readout marks as "buy". Zero when nothing
-        /// drafted costs anything, which draws no line. Metal buys nothing.
-        /// </summary>
-        private int CheapestDraftedCost(int pid, bool food)
-        {
-            int[] drafted = state.players[pid].draftedSuits;
-            if (drafted == null) return 0;
-
-            int cheapest = int.MaxValue;
-
-            for (int i = 0; i < drafted.Length; i++)
-            {
-                SuitStats stats = balance.GetSuitStats((SuitType)drafted[i]);
-                int cost = food ? stats.foodCost : stats.materialCost;
-                if (cost > 0 && cost < cheapest) cheapest = cost;
-            }
-
-            return cheapest == int.MaxValue ? 0 : cheapest;
         }
 
         /// <summary>
@@ -943,21 +916,31 @@ namespace NodeWar.UI
 
         /// <summary>
         /// One resource's readout: the number, five fading past bars and the
-        /// current bar, and the "buy" line at the cheapest drafted price.
+        /// current bar.
+        ///
+        /// The staircase stays hidden until this resource has been held at all.
+        /// A row of flat minimum-height bars sitting under a zero says nothing
+        /// except that nothing has happened yet, and three of them across the
+        /// top of the board is noise over the only thing worth looking at. Once
+        /// the resource has been earned the history means something, so it
+        /// appears and then stays -- dropping back to zero is exactly the case
+        /// the staircase is for.
         /// </summary>
         private class ResourceReadout
         {
             private readonly Label value;
+            private readonly VisualElement barHost;
             private readonly VisualElement[] bars = new VisualElement[HistorySamples + 1];
-            private readonly VisualElement refLine;
             private readonly List<int> history = new List<int>(HistorySamples + 1);
 
             private int shownValue = int.MinValue;
-            private int shownNeed = -1;
+            private bool everHeld;
+            private bool barsShown = true;
 
             public ResourceReadout(Label valueLabel, VisualElement host)
             {
                 value = valueLabel;
+                barHost = host;
                 if (host == null) return;
 
                 for (int i = 0; i < bars.Length; i++)
@@ -970,16 +953,19 @@ namespace NodeWar.UI
                     bars[i] = bar;
                 }
 
-                refLine = new VisualElement();
-                refLine.AddToClassList("hud__ref");
-                refLine.pickingMode = PickingMode.Ignore;
+                SetBarsShown(false);
+            }
 
-                Label refLabel = new Label("buy");
-                refLabel.AddToClassList("hud__ref-label");
-                refLabel.pickingMode = PickingMode.Ignore;
-                refLine.Add(refLabel);
+            /// <summary>
+            /// Kept in the layout rather than collapsed, so the readouts do not
+            /// jump upward the first time a resource is earned mid-match.
+            /// </summary>
+            private void SetBarsShown(bool shown)
+            {
+                if (barHost == null || shown == barsShown) return;
+                barsShown = shown;
 
-                host.Add(refLine);
+                barHost.style.visibility = shown ? Visibility.Visible : Visibility.Hidden;
             }
 
             public void Reset(int current)
@@ -987,6 +973,11 @@ namespace NodeWar.UI
                 history.Clear();
                 for (int i = 0; i < HistorySamples; i++) history.Add(current);
                 shownValue = int.MinValue;
+
+                // Latched per viewer, not per match: the debug switch resets the
+                // history, and the new viewer's own holdings decide afresh.
+                everHeld = current > 0;
+                SetBarsShown(everHeld);
             }
 
             public void Sample(int current)
@@ -998,9 +989,15 @@ namespace NodeWar.UI
                 shownValue = int.MinValue;
             }
 
-            public void Render(int current, int need)
+            public void Render(int current)
             {
                 if (history.Count == 0) Reset(current);
+
+                if (!everHeld && current > 0)
+                {
+                    everHeld = true;
+                    SetBarsShown(true);
+                }
 
                 if (current != shownValue)
                 {
@@ -1020,12 +1017,6 @@ namespace NodeWar.UI
                         now.EnableInClassList("hud__bar--high", current > MidZoneMax);
                     }
                 }
-
-                if (need == shownNeed || refLine == null) return;
-                shownNeed = need;
-
-                refLine.style.display = need > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-                if (need > 0) refLine.style.top = (1f - Mathf.Min(1f, need / (float)ReadoutCap)) * ReadoutHeight;
             }
 
             private static float HeightFor(int amount)

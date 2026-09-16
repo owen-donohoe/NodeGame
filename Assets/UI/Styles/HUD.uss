@@ -259,24 +259,6 @@
 .hud__bar--mid { background-color: var(--resource-mid); }
 .hud__bar--high { background-color: var(--resource-high); }
 
-/* The cheapest drafted suit's price, where there is one to reach. */
-.hud__ref {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: var(--action);
-    opacity: 0.5;
-}
-
-.ui-root .hud__ref-label {
-    position: absolute;
-    right: 0;
-    bottom: 2px;
-    font-size: var(--type-min);
-    color: var(--action);
-}
-
 /* ===================================================================
    Units
    =================================================================== */

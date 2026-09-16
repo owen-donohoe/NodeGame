@@ -112,6 +112,11 @@ namespace NodeWar.Core
         // Without this pair, panning and then switching sides twice would make
         // "home" wherever the player last happened to stop.
         private SideState[] sideHomeStates = new SideState[2];
+
+        // World units each side's framing is pushed toward the opponent,
+        // computed once from the board's depth in InitializeSides.
+        private float opponentBias;
+
         private int currentSide = 0;
         private bool sideHasBeenSet = false;
 
@@ -841,6 +846,64 @@ namespace NodeWar.Core
 
             sideHomeStates[0] = sideStates[0];
             sideHomeStates[1] = sideStates[1];
+
+            // Kept so SetHomeAnchor can apply the same push when the real core
+            // positions arrive, without recomputing the board's depth.
+            opponentBias = bias;
+        }
+
+        /// <summary>
+        /// Replaces a side's guessed framing with one built on where that
+        /// player's Core actually is, once the board exists.
+        ///
+        /// The rig position is what the camera looks at, so this is the point
+        /// that ends up in the middle of the screen. Your core, pushed toward
+        /// the opponent by the same bias the defaults use -- centred exactly on
+        /// the core would spend half the screen on the empty ground behind you.
+        ///
+        /// Called during setup, before the player has touched anything, so a
+        /// side that has not been visited is moved outright rather than tweened.
+        /// </summary>
+        public void SetHomeAnchor(int playerID, Vector3 coreWorldPosition)
+        {
+            if (playerID < 0 || playerID > 1) return;
+
+            // P0 sits at high Z and faces -Z, so its opponent is the way the
+            // bias subtracts; P1 is the mirror.
+            float bias = playerID == 0 ? -opponentBias : opponentBias;
+
+            Vector3 home = new Vector3(
+                coreWorldPosition.x,
+                0f,
+                coreWorldPosition.z + bias);
+
+            sideHomeStates[playerID].position = home;
+            sideHomeStates[playerID].initialized = true;
+
+            // InitializeSides normally set this already. If it did not, a zero
+            // would recentre the player to the closest clamp every time.
+            if (sideHomeStates[playerID].zoomDistance <= 0f)
+            {
+                sideHomeStates[playerID].zoomDistance =
+                    Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
+            }
+
+            // The stored framing is only overwritten while it is still the
+            // guess. Once a side has been played, that is the player's camera
+            // and setup has no business moving it.
+            if (!sideHasBeenSet || playerID != currentSide)
+            {
+                sideStates[playerID].position = home;
+                sideStates[playerID].initialized = true;
+            }
+
+            // Never during the draft: that phase has deliberately framed the
+            // whole board from its centre, and this would drag it to one end.
+            if (playerID == currentSide && !sessionActive && !isDraftMode)
+            {
+                transform.position = new Vector3(home.x, transform.position.y, home.z);
+                panVelocity = Vector3.zero;
+            }
         }
 
         /// <summary>
