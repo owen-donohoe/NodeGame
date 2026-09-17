@@ -43,6 +43,14 @@ sources:
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager
     last_modified: 2026-08-30T22:15:29-04:00
+  - id: draft-presenter
+    resource: Assets/Scripts/Game/Core/IDraftPresenter.cs
+    title: IDraftPresenter, the seam between the draft and its two UI stacks
+    last_modified: 2026-09-17T09:11:22-04:00
+  - id: uitk-draft
+    resource: Assets/UI/Scripts/Gameplay/DraftScreenController.cs
+    title: UI Toolkit draft screen
+    last_modified: 2026-09-17T09:11:22-04:00
   - id: lobby-manager
     resource: Assets/Scripts/Lobby/LobbyManager.cs
     title: LobbyManager and the useUIToolkitLobby toggle
@@ -171,11 +179,11 @@ still being proven.
 
 | Tree | Holds | State |
 |---|---|---|
-| `Assets/Scripts/Game/UI/` | in-match uGUI: `HUDManager`, `NodePanelManager`, draft UI, world-space bars | compiled; `NodePanelManager` still owns tap arbitration and the draft is still its own, but the uGUI HUD band is off |
-| `Assets/UI/` | UI Toolkit: the whole lobby, plus the in-match HUD, node sheet, countdown and end screen | live; both toggles are on |
+| `Assets/Scripts/Game/UI/` | in-match uGUI: `HUDManager`, `NodePanelManager`, draft UI, world-space bars | compiled; `NodePanelManager` still owns tap arbitration, but the uGUI HUD band and the uGUI draft are both off |
+| `Assets/UI/` | UI Toolkit: the whole lobby, plus the in-match HUD, node sheet, countdown, end screen and draft | live; all three toggles are on |
 | `Assets/Legacy/` | the retired uGUI lobby panels, and `SafeAreaFitter` | compiled, unreachable when the new lobby is on |
 
-**Which one runs is a scene value, not a code value.** Both toggles are
+**Which one runs is a scene value, not a code value.** All three toggles are
 `[SerializeField]` booleans, so their live setting exists only in scene
 and prefab serialisation — reading the code will not tell you which UI is
 on screen:
@@ -186,9 +194,30 @@ on screen:
 - `GameManager.useUIToolkitHUD` — activates the UI Toolkit HUD and, when
   that HUD carries a node sheet, calls `NodePanelManager.SetSuppressed`
   so the two panels never race one tap.
+- `GameManager.useUIToolkitDraft` — activates the UI Toolkit draft screen.
+  Deliberately **separate from the HUD toggle**: the draft and the match
+  never overlap, so there is no reason a half-finished migration has to
+  move them together. Falls back to the uGUI draft with a warning if the
+  root is unassigned, because a draft you cannot see is a match you cannot
+  start.
 
-Both roots are built by editor commands under **Tools > Node War**, not by
-hand (`Assets/UI/Editor/`).
+The two in-match toggles pick between presenters rather than between
+prefabs. `DraftManager` holds an `IDraftPresenter`, the same shape as
+`ICountdownPresenter` and for the same reason: the turn machine owns the
+rules and must not know which stack is drawing them. The two are turned
+off differently — the uGUI draft is a prefab that simply is not
+instantiated, the UI Toolkit one a scene object that is not activated — so
+`GameManager.CreateDraftPresenter` is the single place that guarantees
+exactly one of them exists.
+
+All three roots are built by editor commands under **Tools > Node War**, not
+by hand (`Assets/UI/Editor/`). A `PanelSettings` asset and a scene object
+carrying a `UIDocument` are Unity-serialised, and hand-written YAML with
+guessed GUIDs is how scenes get quietly corrupted. The draft setup goes one
+step further and copies the ghost prefab, the placed-piece prefab and the
+sticker table off the uGUI draft prefab `GameManager` already points at,
+rather than looking them up by path — a second answer to "which prefab is
+the draft's" is a second thing to keep in step.
 
 `Assets/UI/` is not a fourth layer. It sits exactly where layers 1 and 6
 sit in the information flow, under the same rule as every other consumer:
@@ -283,7 +312,13 @@ Two objects are carried across the Lobby → Gameplay scene load via
   node/villager views.
 - `DraftManager` — runs the pre-match node-placement draft as its own
   turn-based phase machine (`WaitingForReady → InitialReveal →
-  ActiveDraft → Complete`).
+  ActiveDraft → Complete`). Draws nothing itself: it drives an
+  `IDraftPresenter`, and asks it one question back — whether a piece is
+  parked but unconfirmed, so a turn that times out takes the cell the
+  player already chose rather than a random one.
+- `IDraftPresenter` / `ICountdownPresenter` — the two places a phase has
+  to be drawn by whichever UI stack is on. Same shape for the same reason:
+  the phase owns the rules, the presenter owns the pixels.
 - `TickRunner` — local (non-networked) fixed-tick driver.
 - `MatchConnection` — persists match configuration across the Lobby →
   Gameplay scene load.
@@ -339,7 +374,11 @@ Two objects are carried across the Lobby → Gameplay scene load via
   down by `SetSuppressed` when the UI Toolkit sheet is serving instead.
 - `DistrictPanelPolicy` — decides which districts open a panel at all.
   Both panel stacks defer to it, so neither has its own answer.
-- `DraftUI` — draft-phase interface.
+- `DraftUI` — draft-phase interface, with `DraftPlacementController`
+  (drag/park/confirm state machine), `DraftSlotUI` and
+  `DraftConfirmPresenter`. Implements `IDraftPresenter`. Off by default
+  now, and mouse-only: it reads `Mouse.current` and cancels on right-click
+  or Escape, neither of which a phone has.
 - `GameOverPanel` — end-of-match result display.
 - `SelectionLasso` — draws the in-progress lasso stroke.
 - `LassoArmedCue` — ring pulse confirming the long press armed.
@@ -366,6 +405,19 @@ Two objects are carried across the Lobby → Gameplay scene load via
 - `NodeSheetContent` and its three subclasses — `ForgeContent`,
   `CoreContent`, `EquipContent` cover all six actionable districts.
   `Send` is the only path to the simulation.
+- `DraftScreenController` — the draft screen, and the one place in this
+  tree that owns an interaction end to end. The chrome and the placement
+  cannot be separated here: the drag begins on a UI Toolkit card and ends
+  on the 3D board, so it reads `Pointer.current` (mouse *or* touch) for
+  everything past the card press, positions the Confirm pair from the
+  parked cell's world position each frame, and instantiates the same
+  world-space ghost prefab the uGUI draft used. It writes nothing to
+  `SimulationState` — during the draft there is not one yet.
+- `DraftPieceInfo` — a district's name, monogram and tint for the draft
+  cards. Names come from the lobby's `NodeDefinition` assets rather than a
+  switch statement, so the draft and the Workshop cannot disagree about
+  what a player picked; the enum name is the fallback for the four base
+  draft districts no loadout slot can hold.
 - `SafeAreaBinder` — the UI Toolkit reader of `Screen.safeArea`.
   `Assets/Legacy/Game/UI/SafeAreaFitter.cs` is the uGUI equivalent.
 - Layouts in `Assets/UI/Layouts/*.uxml`, styles in `Assets/UI/Styles/*.uss`.
@@ -379,6 +431,11 @@ Two objects are carried across the Lobby → Gameplay scene load via
   Precedence runs the other way from CSS intuition: a rule arriving through
   the theme loses to any rule in a stylesheet a layout imports, whatever the
   specificity.
+
+  Three `PanelSettings` assets, not one — Lobby, HUD and Draft. They share
+  the theme and the 390x844 reference frame, but each is a separate surface
+  with its own sort order, and one asset tuned for the match is one asset
+  that has to be re-checked whenever the draft changes.
 
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,

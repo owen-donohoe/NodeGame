@@ -38,7 +38,7 @@ remains forbidden regardless.
 
 | Command | Use |
 |---|---|
-| `capture_scene_view` / `capture_game_view` | Render a PNG of what the Editor is showing. The fastest way to answer "does this look right" |
+| `capture_scene_view` / `capture_game_view` | Render a PNG of what the Editor is showing. The fastest way to answer "does this look right" — but see the traps below before trusting an empty one |
 | `console` / `console_status` | Read Unity's console, including whether compilation failed |
 | `run_tests` / `list_tests` | The EditMode suite through Unity — see [run-editmode-tests](run-editmode-tests.md) |
 | `create_gameobject`, `add_component`, `attach_script` | Scene edits that go through Unity rather than through the YAML |
@@ -49,6 +49,56 @@ Editor. It is not remote access and grants nothing they do not already have at
 their terminal. It is still arbitrary code execution against live project
 state: use it to read and to make changes that were asked for, not to explore
 destructively.
+
+## Seeing UI Toolkit, which is where most of the time goes
+
+Four traps, each of which produces a result that looks like a broken UI
+rather than a broken capture. All four cost a session on 2026-09-16.
+
+- **`capture_game_view` defaults to `--source camera`, which renders through
+  a camera and misses every Screen Space Overlay panel** — and a `UIDocument`
+  is one. The PNG comes back as bare scenery. Pass **`--source screen`**,
+  which grabs the composited backbuffer. It is **Play mode only**.
+- **In Edit mode a runtime panel never lays out.** The tree clones and every
+  element is findable, but `worldBound` is `NaN` throughout and no controller
+  `OnEnable` has run. Edit mode can prove a `.uxml` imports and its names
+  resolve. It can prove nothing about layout, and a layout question has to go
+  to Play mode.
+- **`--save_path` must be inside the project**, so captures land under
+  `Assets/`, where Unity imports them and git sees them. Write to
+  `Temp/shots/` and delete the folder with `AssetDatabase.DeleteAsset` before
+  finishing, or the screenshots end up in a commit.
+- **The Game view only repaints when it is actually drawing.** A capture
+  taken while the Editor is busy can return the previous frame, so an empty
+  one is worth repeating once before believing it.
+
+`eval` has edges of its own: the code is compiled as a **method body**, so
+`using` directives are a parse error and extension methods do not resolve —
+`Q()` and `Query()` included, which means walking a visual tree by
+`childCount` and the indexer, or fully qualifying. The default timeout is 5
+seconds and anything touching many objects needs `--timeout 30`; a timed-out
+call still ran, so re-issuing one that mutates state can apply it twice.
+
+## Reaching a phase that only exists mid-match
+
+`Gameplay.unity` decides what to run from `MatchConnection.Instance`, which
+normally comes from the lobby. Without one, `GameManager` skips the draft
+entirely. A temporary GameObject carrying a `MatchConnection` with
+`isBotMatch = true`, added in Edit mode, is enough — its `Awake` runs before
+`GameManager` reads the singleton.
+
+Two things about that to know in advance, because both read as "my code is
+broken" when they happen:
+
+- **Reopening the scene discards it.** `open_scene` reloads from disk, so the
+  temporary object has to be re-added after every reopen.
+- **A bot match is short.** The draft can be over within seconds and the
+  whole match inside a minute, after which the game returns to the Lobby
+  scene and every lookup answers `null`. Freeze the phase you want
+  (`Time.timeScale = 0`, or the phase machine's own timer) in the *same*
+  `eval` that finds it, rather than in a second call.
+
+Delete the temporary object and re-save the scene when finished.
 
 ## Targeting the right Editor
 
