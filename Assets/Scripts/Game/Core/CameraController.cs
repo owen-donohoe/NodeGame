@@ -51,11 +51,43 @@ namespace NodeWar.Core
         [SerializeField] private AnimationCurve shakeFalloffCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
 
         [Header("Draft Mode Framing")]
-        [Tooltip("Multiplier on largest grid dimension to determine zoom distance during draft.")]
+        //
+        // The draft opens on an authored framing rather than a derived one.
+        // Fitting the board by multiplying its largest dimension produced a
+        // near-top-down plan view that was technically complete and read as
+        // flat: the whole point of the phase is choosing WHERE, and where needs
+        // depth to be legible. These three values are that framing, measured
+        // off the rig in the Editor.
+        //
+        // They are NEW fields on purpose. Gameplay.unity already serializes
+        // draftZoomBoardMultiplier and the old draftPivotAngle, and a
+        // serialized value outranks a code default - re-defaulting the old
+        // pitch would have changed nothing, because the scene would keep
+        // feeding 76.3 back in. A field the scene has never heard of takes the
+        // default below, which is what makes this land without hand-editing
+        // scene YAML.
+        //
+        // The board is 4x7 at nodeScale 6, so it spans x 0..18 and z 0..36 and
+        // its centre is (9, 0, 18). ResetToCenter puts the rig there and
+        // draftRigOffset pulls it back to z 12, which is the pivot the framing
+        // below was measured against. Changing nodeScale or the grid moves the
+        // pivot with it; these two numbers are the shot, not the position.
+        [Tooltip("Pivot X angle during the draft. Higher = more top-down.")]
+        [SerializeField][Range(30f, 90f)] private float draftPitch = 60f;
+
+        [Tooltip("Camera dolly distance during the draft. The camera sits this " +
+                 "far back along the pivot's -Z.")]
+        [SerializeField][Range(10f, 120f)] private float draftZoomDistance = 50f;
+
+        [Tooltip("Rig offset from board centre during the draft, in world units. " +
+                 "Pulling back on Z re-centres the board in frame once the " +
+                 "pitch is shallow enough to see along it.")]
+        [SerializeField] private Vector3 draftRigOffset = new Vector3(0f, 0f, -6f);
+
+        [Tooltip("Multiplier on largest grid dimension. No longer sets the " +
+                 "opening framing - it sets how far out the pinch may go.")]
         [SerializeField][Range(1.0f, 3.0f)] private float draftZoomBoardMultiplier = 1.3f;
-        [Tooltip("Pivot X angle during draft. Higher = more top-down.")]
-        [SerializeField][Range(30f, 90f)] private float draftPivotAngle = 70f;
-        [Tooltip("If true, draft zoom never goes below zoomMaxDistance.")]
+        [Tooltip("If true, the draft zoom-out limit never falls below zoomMaxDistance.")]
         [SerializeField] private bool draftZoomNeverBelowMax = true;
 
         [Header("Per-Side Defaults")]
@@ -138,8 +170,21 @@ namespace NodeWar.Core
             if (cameraPivot == null && transform.childCount > 0)
                 cameraPivot = transform.GetChild(0);
 
-            currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
-            targetZoomDistance = currentZoomDistance;
+            // The authored transform is the opening zoom - but only while it is
+            // still the truth. GameManager builds the DraftManager from its own
+            // Awake, and Awake order between two scene objects is arbitrary, so
+            // SetDraftMode can and does run before this one. Seeding
+            // unconditionally then overwrote a framing the draft had already
+            // applied, and the draft opened at the match's zoom instead of the
+            // whole-board one - with everything else about the draft camera,
+            // the rig position and the pitch, correctly in place, which is what
+            // made it read as a framing problem rather than an ordering one.
+            if (!isDraftMode)
+            {
+                currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
+                targetZoomDistance = currentZoomDistance;
+            }
+
             panVelocity = Vector3.zero;
         }
 
@@ -1045,9 +1090,19 @@ namespace NodeWar.Core
             }
 
             panVelocity = Vector3.zero;
-            ResetToCenter();
 
-            // Fit board with configured padding
+            // Centre first, then the authored offset. Expressed as an offset
+            // rather than an absolute position so it survives a board of a
+            // different size: X stays on the board's midline and Z pulls back
+            // toward the near edge, which is what a 55-degree pitch needs to
+            // put the far row in frame.
+            ResetToCenter();
+            transform.position += draftRigOffset;
+
+            // The zoom-out ceiling, not the opening distance. Seeing the whole
+            // board is the point of the phase, so the pinch may go past the
+            // gameplay clamp - but never so short that the authored opening
+            // framing would itself be clamped away.
             float gridWidth = 0f;
             float gridHeight = 0f;
             if (boardConfig != null)
@@ -1056,19 +1111,20 @@ namespace NodeWar.Core
                 gridHeight = (boardConfig.Data.gridRows - 1) * boardConfig.nodeScale;
             }
 
-            float neededZoom = Mathf.Max(gridWidth, gridHeight) * draftZoomBoardMultiplier;
+            float ceiling = Mathf.Max(gridWidth, gridHeight) * draftZoomBoardMultiplier;
             if (draftZoomNeverBelowMax)
-                neededZoom = Mathf.Max(neededZoom, zoomMaxDistance);
+                ceiling = Mathf.Max(ceiling, zoomMaxDistance);
 
-            draftFitZoomDistance = neededZoom;
-            targetZoomDistance = neededZoom;
-            currentZoomDistance = neededZoom;
+            draftFitZoomDistance = Mathf.Max(ceiling, draftZoomDistance);
+
+            targetZoomDistance = Mathf.Clamp(draftZoomDistance, zoomMinDistance, draftFitZoomDistance);
+            currentZoomDistance = targetZoomDistance;
 
             if (cameraPivot != null)
             {
                 stashedPitch = cameraPivot.localRotation.eulerAngles.x;
                 hasStashedPitch = true;
-                cameraPivot.localRotation = Quaternion.Euler(draftPivotAngle, 0f, 0f);
+                cameraPivot.localRotation = Quaternion.Euler(draftPitch, 0f, 0f);
             }
         }
 

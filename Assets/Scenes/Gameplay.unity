@@ -119,6 +119,122 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &195915153
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 195915156}
+  - component: {fileID: 195915155}
+  - component: {fileID: 195915154}
+  m_Layer: 0
+  m_Name: UIToolkitDraft
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &195915154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 195915153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a36ab7004a3426e498df3094650b4be9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.UI.DraftScreenController
+  draftLayout: {fileID: 9197481963319205126, guid: 7388425502559f74f8ef960fb9593e22, type: 3}
+  ghostPreviewPrefab: {fileID: 1879787182496836857, guid: 98b61a6da97a6d148acb674bbbad90ad, type: 3}
+  confirmedPlacementPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
+  pieceYOffset: 0.1
+  validCellTint: {r: 0.3, g: 1, b: 0.3, a: 0.7}
+  invalidCellTint: {r: 1, g: 0.3, b: 0.3, a: 0.5}
+  placementDropHeight: 6
+  placementDropDuration: 0.4
+  placementDropEase: 5
+  placementBounceStrength: 0.15
+  placementBounceDuration: 0.25
+  stickerMappings:
+  - districtType: 1
+    sprite: {fileID: -1163881572, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 13
+    sprite: {fileID: 1932555571, guid: 4529beb66b7c32c4c9d18ee8685cbc32, type: 3}
+  - districtType: 8
+    sprite: {fileID: -1749986298, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 7
+    sprite: {fileID: -1084826701, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 4
+    sprite: {fileID: 984913607, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 2
+    sprite: {fileID: 2038435977, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 12
+    sprite: {fileID: -1979648809, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 10
+    sprite: {fileID: 1457306146, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 6
+    sprite: {fileID: -573322024, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 9
+    sprite: {fileID: 1953576264, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 3
+    sprite: {fileID: -661655534, guid: 4529beb66b7c32c4c9d18ee8685cbc32, type: 3}
+  - districtType: 5
+    sprite: {fileID: 107567208, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  - districtType: 11
+    sprite: {fileID: 1501339176, guid: dc2324a36ca4bda4fb2c52752e40942e, type: 3}
+  nodeDefinitions:
+  - {fileID: 11400000, guid: 849cb286a669b74408d05b49163290b9, type: 2}
+  - {fileID: 11400000, guid: 899ee923d3d3f6e4e810bbd6bbc49a9b, type: 2}
+  - {fileID: 11400000, guid: 22d89299d8dfee040bb1f3ac5a36d492, type: 2}
+  - {fileID: 11400000, guid: 91c82d924a3a0b14194e55e224ddd795, type: 2}
+  - {fileID: 11400000, guid: 3c2b9bab274708d4381a60c6ecc91cf0, type: 2}
+  - {fileID: 11400000, guid: 8994035d2313d6f4a98792d0ec9883e5, type: 2}
+  - {fileID: 11400000, guid: e8b493de0aa6fed4cb36835d2f88b1ec, type: 2}
+  - {fileID: 11400000, guid: f433fca0b2497c44eab0a8e23383aca5, type: 2}
+  - {fileID: 11400000, guid: 1a0d21c585871084698b8853ab338b35, type: 2}
+--- !u!114 &195915155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 195915153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 26afe012c6be0e943b2a819f45821712, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 7388425502559f74f8ef960fb9593e22, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &195915156
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 195915153}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -550,6 +666,8 @@ MonoBehaviour:
   uiToolkitHudRoot: {fileID: 1710263983}
   transitionController: {fileID: 571336745}
   draftUIPrefab: {fileID: 3595327956611536689, guid: 1144ccd5ea8a087499052f23d215f97f, type: 3}
+  useUIToolkitDraft: 1
+  uiToolkitDraftRoot: {fileID: 195915153}
   placementPreviewPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
   gridCellMarkerPrefab: {fileID: 4001519955181544305, guid: 9ae5f97e745e82a4aa4f454412956bf7, type: 3}
   state:
@@ -575,7 +693,9 @@ MonoBehaviour:
   placeholderFlyUpDistance: 10
   placeholderFlyDuration: 0.8
   placeholderStaggerDelay: 0.12
-  placeholderFlyEase: 26
+  placeholderSquashDuration: 0.14
+  placeholderSquashScale: {x: 1.18, y: 0.72, z: 1.18}
+  placeholderLaunchScale: {x: 0.55, y: 1.5, z: 0.55}
   delayAfterPlaceholderRemoval: 1.5
   delayAfterNodeStartup: 1
   nodeStartupDelayPerGridDistance: 0.14
@@ -652,11 +772,13 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  draftPitch: 60
+  draftZoomDistance: 50
+  draftRigOffset: {x: 0, y: 0, z: -6}
   draftZoomBoardMultiplier: 1.853
-  draftPivotAngle: 76.3
   draftZoomNeverBelowMax: 1
-  draftScrollPanSensitivity: 2
   sideDefaultZoomNormalized: 0.65
+  sideOpponentBiasFactor: 0.18
   sideZOffsetFactor: 0.35
   sideP0LateralNudgeFactor: 0.5
   sideP1ZPositionFactor: 0.6
@@ -793,6 +915,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.UI.GameplayHUDController
   hudLayout: {fileID: 9197481963319205126, guid: c39605c3a76a9ad4aba3b6d1cb2593bf, type: 3}
   nodeSheetLayout: {fileID: 9197481963319205126, guid: eb380d1039ac19b43847d852d0505d73, type: 3}
+  zoomInGain: 10
+  zoomOutGain: 17
+  zoomDragRange: 260
+  zoomHandleClickSlop: 6
 --- !u!114 &1710263985
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -841,3 +967,4 @@ SceneRoots:
   - {fileID: 571336743}
   - {fileID: 387783233}
   - {fileID: 1710263986}
+  - {fileID: 195915156}

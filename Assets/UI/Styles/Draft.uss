@@ -1,0 +1,371 @@
+/*
+    The draft, after ingame-prototype.html.
+
+    Tokens and the shared pieces (player marks, monogram tiles) come from the
+    panel theme. The banner uses the --hud-* dark glass because it floats over
+    a lit board; the bar is paper, because it is a tray of things you hold.
+
+    Four things here are not taste:
+
+    1. NOTHING PAINTS A FULL-SCREEN BACKGROUND. The board is the placement
+       surface, so the only two filled areas are the banner strip and the bar,
+       and everything between them is left alone.
+
+    2. THE SWEEP IS A TRANSLATE, NOT A DISPLAY TOGGLE. Both chrome pieces sit
+       fully off screen at -102% / +102% and slide in when .draft--on lands.
+       102 rather than 100 so a shadow or a border does not peek.
+
+    3. THE ARMED CARD GROWS FROM ITS BOTTOM EDGE, AND NOTHING MAY CLIP IT.
+       transform-origin is bottom centre so the row it sits in does not appear
+       to shift - only the card gets bigger and lifts clear of the tray. That
+       lift leaves the bar's bounds by design, so no ancestor of a card may
+       set overflow: hidden, and the row is a plain element rather than a
+       ScrollView for exactly that reason. A ScrollView clips to its own
+       contentViewport, and padding on it moves that clip edge rather than
+       widening it, so the grown card came back sheared.
+
+    4. THE CONFIRM PAIR IS POSITIONED FROM THE WORLD. Its left/top are written
+       by the controller each frame from the parked cell's world position, so
+       it follows a zoom. Everything here only says what it looks like.
+
+    No text is set below --type-min.
+*/
+
+.draft {
+    background-color: var(--clear);
+}
+
+/* ===================================================================
+   D1/D2 - the turn banner
+   =================================================================== */
+
+.draft__banner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    background-color: var(--hud-glass-strong);
+    border-bottom-width: var(--stroke-thin);
+    border-bottom-color: var(--hud-edge);
+    translate: 0 -102%;
+    transition-property: translate;
+    transition-duration: 400ms;
+    transition-timing-function: ease-out-cubic;
+}
+
+.draft--on .draft__banner {
+    translate: 0 0;
+}
+
+/* SafeAreaBinder writes padding-top here; nothing else should. The banner's
+   fill still reaches the top edge, so the notch sits on glass rather than on
+   a seam. */
+.draft__banner-inner {
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-3);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+}
+
+.draft__turn-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.draft__who {
+    font-size: var(--type-body);
+    color: var(--hud-ink);
+    letter-spacing: 0.5px;
+    margin-left: var(--space-2);
+}
+
+.draft__seconds {
+    font-size: var(--type-heading);
+    color: var(--hud-ink);
+    margin-left: auto;
+    -unity-text-align: middle-right;
+}
+
+/* Under five seconds. The number changes colour and so does the bar, but the
+   number is the channel that survives - a bar this short is a sliver. */
+.draft__seconds--low {
+    color: var(--p1);
+}
+
+.draft__track {
+    height: 6px;
+    margin-top: 9px;
+    background-color: var(--hud-bar-past);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    overflow: hidden;
+}
+
+.draft__track-fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--action);
+}
+
+.draft__track-fill--low {
+    background-color: var(--p1);
+}
+
+/* ===================================================================
+   D3/D4 - the piece bar
+   =================================================================== */
+
+.draft__bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--surface);
+    border-top-width: var(--stroke-mid);
+    border-top-color: var(--edge);
+    border-top-left-radius: var(--corner-lg);
+    border-top-right-radius: var(--corner-lg);
+    padding-top: var(--space-3);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    padding-bottom: var(--space-2);
+    translate: 0 102%;
+    transition-property: translate;
+    transition-duration: 400ms;
+    transition-timing-function: ease-out-cubic;
+}
+
+.draft--on .draft__bar {
+    translate: 0 0;
+}
+
+/* Not your turn. The whole tray dims and the controller stops reading its
+   pointers, so a card cannot be armed by a press that looks like it worked. */
+.draft__bar--inert {
+    opacity: 0.55;
+}
+
+.draft__bar-label {
+    font-size: var(--type-min);
+    color: var(--ink-mute);
+    letter-spacing: 0.9px;
+    margin-bottom: 7px;
+}
+
+/* Nothing here clips, which is the whole point - see note 3 at the top. The
+   row keeps a stable height so the bar does not resize as cards leave it, and
+   the cards sit on its floor so an armed one grows upward and out. */
+.draft__cards {
+    flex-direction: row;
+    align-items: flex-end;
+    min-height: 82px;
+}
+
+.draft__bar-empty {
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+    -unity-text-align: middle-center;
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-4);
+    display: none;
+}
+
+.draft__bar-empty--on {
+    display: flex;
+}
+
+/* ===================================================================
+   A card, and the proxy that copies it under the finger
+   =================================================================== */
+
+.draft__card {
+    width: 68px;
+    min-width: 56px;
+    flex-shrink: 1;
+    margin-right: var(--space-2);
+    align-items: center;
+    align-self: flex-end;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    transform-origin: bottom center;
+    transition-property: scale, opacity, background-color;
+    transition-duration: 180ms, 150ms, 150ms;
+    transition-timing-function: ease-out-back;
+}
+
+/* Armed by a tap: this is the piece in hand, and the next free cell tapped
+   takes it. */
+.draft__card--armed {
+    scale: 1.18 1.18;
+    background-color: var(--action);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+}
+
+/* D8 - the card being dragged dims in the bar, because the proxy under the
+   finger is now the one you are looking at. */
+.draft__card--dragging {
+    opacity: 0.4;
+}
+
+.draft__card-tile {
+    width: 100%;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.draft__card-monogram {
+    font-size: var(--type-body);
+    color: var(--ink-white);
+    -unity-text-align: middle-center;
+}
+
+.draft__card-name {
+    font-size: var(--type-min);
+    color: var(--ink);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* The finger's copy of the card. Absolute, written in panel coordinates by
+   the controller, and never picks - it sits under the finger, which is
+   exactly where a press must reach the board. */
+.draft__proxy {
+    position: absolute;
+    width: 68px;
+    align-items: center;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    opacity: 0;
+    display: none;
+    transition-property: opacity;
+    transition-duration: 120ms;
+}
+
+.draft__proxy--on {
+    display: flex;
+    opacity: 1;
+}
+
+/* Over the board. Still present, so the drag has something to come back to
+   when the finger returns to the bar, but out of the way of the ghost. */
+.draft__proxy--faded {
+    opacity: 0;
+}
+
+/* ===================================================================
+   D6 - Confirm, and the cancel the phone never had
+   =================================================================== */
+
+.draft__confirm {
+    position: absolute;
+    flex-direction: row;
+    align-items: center;
+    transform-origin: bottom center;
+    scale: 0.55 0.55;
+    opacity: 0;
+    display: none;
+    transition-property: scale, opacity;
+    transition-duration: 300ms, 160ms;
+    transition-timing-function: ease-out-back;
+}
+
+.draft__confirm--on {
+    display: flex;
+    scale: 1 1;
+    opacity: 1;
+}
+
+.draft__ok {
+    height: 40px;
+    min-width: 96px;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    font-size: var(--type-body);
+    color: var(--ink-white);
+    background-color: var(--confirm);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--confirm-edge);
+    border-right-color: var(--confirm-edge);
+    border-top-color: var(--confirm-edge);
+    border-bottom-color: var(--confirm-edge);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.draft__ok:active {
+    background-color: var(--confirm-edge);
+}
+
+/* Forty-four square, not forty: this is the only way back from a misdrop on
+   a phone, and it is being pressed with a thumb over a live board. */
+.draft__cancel {
+    width: var(--target-min);
+    height: var(--target-min);
+    margin-left: var(--space-2);
+    font-size: var(--type-body);
+    color: var(--hud-ink);
+    background-color: var(--hud-glass-strong);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+}
+
+.draft__cancel:active {
+    background-color: var(--p1);
+}

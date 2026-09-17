@@ -71,6 +71,16 @@ namespace NodeWar.Core
 
         [Header("Draft")]
         [SerializeField] private GameObject draftUIPrefab;
+
+        [Tooltip("Swap the uGUI draft screen for the UI Toolkit one. Independent " +
+                 "of the HUD toggle: the two phases never overlap, so there is no " +
+                 "reason a half-finished migration has to move them together.")]
+        [SerializeField] private bool useUIToolkitDraft;
+
+        [Tooltip("Scene object carrying the UIDocument and DraftScreenController. " +
+                 "Created by Tools > Node War > Set Up UI Toolkit Draft.")]
+        [SerializeField] private GameObject uiToolkitDraftRoot;
+
         [SerializeField] private GameObject placementPreviewPrefab;
         [SerializeField] private GameObject gridCellMarkerPrefab;
 
@@ -183,17 +193,68 @@ namespace NodeWar.Core
             draftManager.OnDraftComplete += OnDraftComplete;
             draftManager.OnDraftDisconnect += OnDraftDisconnect;
 
-            if (draftUIPrefab != null)
+            draftPresenter = CreateDraftPresenter(match);
+
+            if (draftPresenter != null)
             {
-                GameObject uiGO = Instantiate(draftUIPrefab);
-                NodeWar.UI.DraftUI draftUI = uiGO.GetComponent<NodeWar.UI.DraftUI>();
-                if (draftUI != null)
-                {
-                    draftUI.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
-                    draftManager.SetDraftUI(draftUI);
-                }
+                draftPresenter.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
+                draftManager.SetDraftUI(draftPresenter);
             }
         }
+
+        /// <summary>
+        /// Which draft surface draws this match, and the guarantee that only one
+        /// of them does.
+        ///
+        /// The uGUI draft is a prefab instantiated per match; the UI Toolkit one
+        /// is a scene object that is switched on. So the two are turned off in
+        /// different ways, and the check that only one is live is that this
+        /// method returns exactly one presenter and instantiates nothing it did
+        /// not choose.
+        ///
+        /// A toggle with nothing wired to it keeps the old draft rather than
+        /// leaving the phase with no UI at all - a draft you cannot see is a
+        /// match you cannot start.
+        /// </summary>
+        private IDraftPresenter CreateDraftPresenter(MatchConnection match)
+        {
+            if (useUIToolkitDraft)
+            {
+                if (uiToolkitDraftRoot == null)
+                {
+                    Debug.LogWarning("[GameManager] useUIToolkitDraft is on but no " +
+                                     "uiToolkitDraftRoot is assigned. Keeping the uGUI draft. " +
+                                     "Run Tools > Node War > Set Up UI Toolkit Draft.");
+                }
+                else
+                {
+                    uiToolkitDraftRoot.SetActive(true);
+
+                    IDraftPresenter presenter =
+                        uiToolkitDraftRoot.GetComponent<NodeWar.UI.DraftScreenController>();
+
+                    if (presenter != null) return presenter;
+
+                    Debug.LogError("[GameManager] uiToolkitDraftRoot has no " +
+                                   "DraftScreenController. Keeping the uGUI draft.");
+                    uiToolkitDraftRoot.SetActive(false);
+                }
+            }
+            else if (uiToolkitDraftRoot != null)
+            {
+                uiToolkitDraftRoot.SetActive(false);
+            }
+
+            if (draftUIPrefab == null) return null;
+
+            GameObject uiGO = Instantiate(draftUIPrefab);
+            return uiGO.GetComponent<NodeWar.UI.DraftUI>();
+        }
+
+        // Whichever draft surface drew this match. Held rather than searched for
+        // later: the uGUI one is a prefab instance and the UI Toolkit one is a
+        // scene object, so there is no one FindAnyObjectByType that finds both.
+        private IDraftPresenter draftPresenter;
 
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
@@ -279,9 +340,11 @@ namespace NodeWar.Core
             if (cameraController != null)
                 cameraController.SetDraftMode(false);
 
-            // Gather placeholders from DraftUI before it becomes irrelevant
-            DraftUI draftUI = FindAnyObjectByType<DraftUI>();
-            List<GameObject> placeholders = draftUI != null ? draftUI.GetPersistentPlacements() : null;
+            // Gather placeholders from whichever draft surface drew them, before
+            // it becomes irrelevant. They outlive it: the transition dissolves
+            // them as the real nodes arrive.
+            List<GameObject> placeholders =
+                draftPresenter != null ? draftPresenter.GetPersistentPlacements() : null;
 
             int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
 

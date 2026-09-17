@@ -68,8 +68,9 @@ namespace NodeWar.Core
         // Bot
         private bool botTurnHandled = false;
 
-        // UI
-        private NodeWar.UI.DraftUI draftUI;
+        // UI. The interface, not the uGUI class: two draft surfaces are live at
+        // once and the turn machine must not know which one is drawing.
+        private IDraftPresenter draftUI;
 
         // Grid markers
         private List<GameObject> gridMarkers = new List<GameObject>();
@@ -140,7 +141,7 @@ namespace NodeWar.Core
             SpawnPlacementGrid();
         }
 
-        public void SetDraftUI(NodeWar.UI.DraftUI ui)
+        public void SetDraftUI(IDraftPresenter ui)
         {
             draftUI = ui;
         }
@@ -286,12 +287,29 @@ namespace NodeWar.Core
             DraftSlot[] slots = draftState.GetPlayerSlots(activePlayer);
             DistrictType district = slots[slotIndex].districtType;
 
-            // Deterministic random cell selection using turn-based seed
-            int seed = draftState.turnNumber * 7919 + activePlayer * 31;
-            if (!draftState.FindRandomAvailableCell(seed, out int gridX, out int gridZ))
+            int gridX, gridZ;
+
+            // A piece parked on a cell and waiting on Confirm is already the
+            // answer to "where". Running out of time should not discard a
+            // decision the player has visibly made and send the piece somewhere
+            // random instead. The slot is taken from the parked placement too,
+            // not just the cell - a parked Forge belongs on that cell, and
+            // placing the first unconsumed piece there would be a different
+            // move than the one on screen.
+            //
+            // Only the local player can have one: HandleTimeout runs on the
+            // peer whose turn it is, and the result is sent as a placement
+            // packet, so the two sides never have to agree on this independently.
+            if (!TryUseParkedPlacement(activePlayer, slots, ref slotIndex, ref district,
+                                       out gridX, out gridZ))
             {
-                CompleteDraft();
-                return;
+                // Nothing on the board. Deterministic random cell, turn-seeded.
+                int seed = draftState.turnNumber * 7919 + activePlayer * 31;
+                if (!draftState.FindRandomAvailableCell(seed, out gridX, out gridZ))
+                {
+                    CompleteDraft();
+                    return;
+                }
             }
 
             ApplyPlacement(activePlayer, district, gridX, gridZ, slotIndex, true);
@@ -302,6 +320,36 @@ namespace NodeWar.Core
                     localPlayerID, (int)district, gridX, gridZ, true);
                 networkManager.Send(packet);
             }
+        }
+
+        /// <summary>
+        /// Takes the placement the player parked but never confirmed, if it is
+        /// still legal. Rejects it rather than forcing it when the slot has been
+        /// consumed or the cell has been taken since - the opponent may have
+        /// landed on that cell while the Confirm button was sitting there.
+        /// </summary>
+        private bool TryUseParkedPlacement(int activePlayer, DraftSlot[] slots,
+            ref int slotIndex, ref DistrictType district, out int gridX, out int gridZ)
+        {
+            gridX = -1;
+            gridZ = -1;
+
+            if (draftUI == null) return false;
+            if (activePlayer != localPlayerID) return false;
+
+            if (!draftUI.TryGetPendingPlacement(out int parkedSlot, out int x, out int z))
+                return false;
+
+            if (parkedSlot < 0 || parkedSlot >= slots.Length) return false;
+            if (slots[parkedSlot].isConsumed) return false;
+            if (!draftState.IsCellAvailable(x, z)) return false;
+
+            slotIndex = parkedSlot;
+            district = slots[parkedSlot].districtType;
+            gridX = x;
+            gridZ = z;
+
+            return true;
         }
 
         private void HandleBotTurn()

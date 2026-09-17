@@ -147,6 +147,26 @@ namespace NodeWar.UI
 
         public bool IsActive => dragMode != DragMode.Idle;
 
+        /// <summary>
+        /// The placement the player has parked but not confirmed, if there is
+        /// one. DraftManager asks at timeout: a piece sitting on a cell awaiting
+        /// Confirm is already the answer to "where", and throwing it away for a
+        /// random cell punishes the player for the clock rather than for the
+        /// decision. Only Placed counts - mid-drag the pointer is still moving
+        /// and nothing has been chosen.
+        /// </summary>
+        public bool TryGetPendingPlacement(out int slotIndex, out int gridX, out int gridZ)
+        {
+            slotIndex = activeSlotIndex;
+            gridX = previewGridX;
+            gridZ = previewGridZ;
+
+            return dragMode == DragMode.Placed &&
+                   activeSlotIndex >= 0 &&
+                   previewOnValidCell &&
+                   previewGridX >= 0 && previewGridZ >= 0;
+        }
+
         // ===== UPDATE =====
 
         private void Update()
