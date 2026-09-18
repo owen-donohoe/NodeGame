@@ -211,6 +211,9 @@ namespace NodeWar.View
 
         private void DiscoverTargets()
         {
+            // Capture authored scales only on first initialization, before hiding or tweening.
+            if (sprites != null) return;
+
             // Discover gfxRoot
             if (gfxRoot == null)
             {
