@@ -5,6 +5,151 @@ namespace NodeWar.Tests
 {
     public class SimulationFixTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Respawn_ResetsStatsAndProduction(bool paid)
+        {
+            SimulationState state = RunRespawn(paid);
+            GameBalanceData balance = GameBalanceData.Default();
+            VillagerData v = state.villagers[0];
+            Assert.AreEqual(VillagerState.Idle, v.state);
+            Assert.AreEqual(0, v.currentNodeID);
+            Assert.AreEqual(0, v.previousNodeID);
+            Assert.AreEqual(balance.baseHP, v.hp);
+            Assert.AreEqual(balance.baseHP, v.maxHP);
+            Assert.AreEqual(0, v.fightPriority);
+            Assert.AreEqual(0, v.productionTicksRemaining);
+            Assert.AreEqual(0, v.productionTicksMax);
+            Assert.AreEqual(SuitType.None, v.suit);
+            Assert.AreEqual(balance.baseAttackDamage, v.attackDamage);
+            Assert.AreEqual(balance.baseMoveSpeedTicks, v.moveSpeedTicks);
+            Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownMax);
+            Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownRemaining);
+            Assert.AreEqual(0, v.respawnTicksRemaining);
+            Assert.IsFalse(v.hasRampartBonus);
+            Assert.AreEqual(paid ? 0 : 1, state.players[0].food);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Respawn_ResetsStatsAndProduction_Determinism(bool paid)
+        {
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRespawn(paid)),
+                SimulationStateHasher.ComputeHash(RunRespawn(paid)));
+        }
+
+        private static SimulationState RunRespawn(bool paid)
+        {
+            GameBalanceData balance = SetDefaultBalance();
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            // A dead, previously equipped worker with stale stats and one timer tick left.
+            state.players[0].food = 1;
+            state.villagers[0].state = VillagerState.Dead;
+            state.villagers[0].currentNodeID = 1;
+            state.villagers[0].respawnTicksRemaining = 1;
+            state.villagers[0].hp = 0;
+            state.villagers[0].maxHP = 12;
+            state.villagers[0].fightPriority = 7;
+            state.villagers[0].productionTicksRemaining = 9;
+            state.villagers[0].productionTicksMax = 30;
+            state.villagers[0].suit = SuitType.Guardian;
+            state.villagers[0].attackDamage = 4;
+            state.villagers[0].moveSpeedTicks = 8;
+            state.villagers[0].attackCooldownMax = 40;
+            state.villagers[0].attackCooldownRemaining = 3;
+            if (paid)
+                CommandProcessor.ProcessCommand(state, new GameCommand
+                { type = CommandType.Respawn, playerID = 0, villagerID = 0 });
+            else
+                GameSimulation.SimulateTick(state);
+            return state;
+        }
+
+        [Test]
+        public void Rampart_DeathRemovesBonusAcrossRepeatedRespawns()
+        {
+            RunRampartCycles(true);
+        }
+
+        [Test]
+        public void Rampart_DeathRemovesBonusAcrossRepeatedRespawns_Determinism()
+        {
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRampartCycles(false)),
+                SimulationStateHasher.ComputeHash(RunRampartCycles(false)));
+        }
+
+        private static SimulationState RunRampartCycles(bool verify)
+        {
+            GameBalanceData balance = SetDefaultBalance();
+            balance.respawnTicks = 2; // Death tick decrements to one; next tick respawns.
+            GameSimulation.SetBalance(balance);
+            CommandProcessor.SetBalance(balance);
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            state.nodes[1].districtType = DistrictType.Rampart;
+            state.nodes[1].ownerID = 0;
+            state.nodes[1].claimBar = balance.claimThreshold;
+            state.villagers[1].currentNodeID = 1;
+            state.villagers[1].attackDamage = 100;
+            state.villagers[1].attackCooldownMax = 1;
+            for (int cycle = 0; cycle < 3; cycle++)
+            {
+                // Each life walks onto its own Rampart and dies to the waiting enemy.
+                CommandProcessor.ProcessCommand(state, new GameCommand
+                { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 1 });
+                for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(state);
+                if (verify)
+                {
+                    Assert.AreEqual(VillagerState.Dead, state.villagers[0].state);
+                    Assert.AreEqual(balance.baseHP, state.villagers[0].maxHP, "death cycle " + cycle);
+                    Assert.IsFalse(state.villagers[0].hasRampartBonus);
+                }
+                GameSimulation.SimulateTick(state);
+                if (verify)
+                {
+                    Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
+                    Assert.AreEqual(balance.baseHP, state.villagers[0].maxHP);
+                    Assert.AreEqual(balance.baseHP, state.villagers[0].hp);
+                }
+            }
+            return state;
+        }
+
+        [Test]
+        public void Rampart_BreachRemovesBonus()
+        {
+            SimulationState state = RunRampartBreach();
+            Assert.IsTrue(state.villagers[0].isConsumed);
+            Assert.IsFalse(state.villagers[0].hasRampartBonus);
+            Assert.AreEqual(GameBalanceData.Default().baseHP, state.villagers[0].maxHP);
+            Assert.AreEqual(1, state.players[1].breachCount);
+        }
+
+        [Test]
+        public void Rampart_BreachRemovesBonus_Determinism()
+        {
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRampartBreach()),
+                SimulationStateHasher.ComputeHash(RunRampartBreach()));
+        }
+
+        private static SimulationState RunRampartBreach()
+        {
+            GameBalanceData balance = SetDefaultBalance();
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            state.nodes[1].districtType = DistrictType.Rampart;
+            state.nodes[1].ownerID = 0;
+            state.nodes[1].claimBar = balance.claimThreshold;
+            state.villagers[0].currentNodeID = 1;
+            state.villagers[0].hasRampartBonus = true;
+            state.villagers[0].maxHP += balance.rampartMaxHPBonus;
+            state.villagers[0].hp += balance.rampartMaxHPBonus;
+            state.villagers[1].state = VillagerState.Dead;
+            state.villagers[1].isConsumed = true; // Empty enemy Core allows immediate breach.
+            CommandProcessor.ProcessCommand(state, new GameCommand
+            { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 2 });
+            for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(state);
+            return state;
+        }
+
         [TestCase(20, 4, 3)]
         [TestCase(30, 4, 4)]
         public void Healing_UsesEachVillagersOwnInterval(int tick, int shrineHP, int normalHP)

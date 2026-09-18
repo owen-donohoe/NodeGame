@@ -243,27 +243,7 @@ namespace NodeWar.Simulation
             if (state.players[command.playerID].food < finalCost) return;
             // Apply
             state.players[command.playerID].food -= finalCost;
-            int coreNode = state.players[command.playerID].coreNodeID;
-            state.villagers[vid].state = VillagerState.Idle;
-            state.villagers[vid].currentNodeID = coreNode;
-            state.villagers[vid].previousNodeID = coreNode;
-            state.villagers[vid].targetNodeID = -1;
-            state.villagers[vid].movePath = new int[0];
-            state.villagers[vid].movePathIndex = 0;
-            state.villagers[vid].moveProgress = 0;
-            state.villagers[vid].hp = bal.baseHP;
-            state.villagers[vid].maxHP = bal.baseHP;
-            state.villagers[vid].suit = SuitType.None;
-            state.villagers[vid].attackDamage = bal.baseAttackDamage;
-            state.villagers[vid].moveSpeedTicks = bal.baseMoveSpeedTicks;
-            state.villagers[vid].attackCooldownMax = bal.baseAttackCooldownMax;
-            state.villagers[vid].attackCooldownRemaining = bal.baseAttackCooldownMax;
-            state.villagers[vid].combatTargetID = -1;
-            state.villagers[vid].fightPriority = 0;
-            state.villagers[vid].respawnTicksRemaining = 0;
-            state.villagers[vid].productionTicksRemaining = 0;
-            state.villagers[vid].productionTicksMax = 0;
-            state.villagers[vid].hasRampartBonus = false;
+            GameSimulation.ResetToCore(state, vid, bal);
         }
 
         private static bool PlayerHasSuitDrafted(SimulationState state, int playerID, SuitType suit)

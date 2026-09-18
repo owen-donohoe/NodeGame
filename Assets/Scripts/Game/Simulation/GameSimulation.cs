@@ -391,6 +391,8 @@ namespace NodeWar.Simulation
                     state.villagers[v].moveProgress = 0;
                     state.villagers[v].targetNodeID = -1;
                     state.villagers[v].combatTargetID = -1;
+                    if (state.villagers[v].hasRampartBonus)
+                        state.villagers[v].maxHP -= bal.rampartMaxHPBonus;
                     state.villagers[v].hasRampartBonus = false;
                 }
             }
@@ -862,26 +864,35 @@ namespace NodeWar.Simulation
 
                 if (state.villagers[i].respawnTicksRemaining <= 0)
                 {
-                    int coreNode = state.players[v.ownerID].coreNodeID;
-
-                    state.villagers[i].state = VillagerState.Idle;
-                    state.villagers[i].currentNodeID = coreNode;
-                    state.villagers[i].previousNodeID = coreNode;
-                    state.villagers[i].targetNodeID = -1;
-                    state.villagers[i].movePath = new int[0];
-                    state.villagers[i].movePathIndex = 0;
-                    state.villagers[i].moveProgress = 0;
-                    state.villagers[i].hp = state.villagers[i].maxHP;
-                    state.villagers[i].suit = SuitType.None;
-                    state.villagers[i].attackDamage = bal.baseAttackDamage;
-                    state.villagers[i].moveSpeedTicks = bal.baseMoveSpeedTicks;
-                    state.villagers[i].attackCooldownMax = bal.baseAttackCooldownMax;
-                    state.villagers[i].attackCooldownRemaining = bal.baseAttackCooldownMax;
-                    state.villagers[i].combatTargetID = -1;
-                    state.villagers[i].respawnTicksRemaining = 0;
-                    state.villagers[i].hasRampartBonus = false;
+                    ResetToCore(state, i, bal);
                 }
             }
+        }
+
+        // Shared by paid and timer respawns so every life starts with base stats.
+        internal static void ResetToCore(SimulationState state, int vid, GameBalanceData balance)
+        {
+            int coreNode = state.players[state.villagers[vid].ownerID].coreNodeID;
+            state.villagers[vid].state = VillagerState.Idle;
+            state.villagers[vid].currentNodeID = coreNode;
+            state.villagers[vid].previousNodeID = coreNode;
+            state.villagers[vid].targetNodeID = -1;
+            state.villagers[vid].movePath = new int[0];
+            state.villagers[vid].movePathIndex = 0;
+            state.villagers[vid].moveProgress = 0;
+            state.villagers[vid].hp = balance.baseHP;
+            state.villagers[vid].maxHP = balance.baseHP;
+            state.villagers[vid].suit = SuitType.None;
+            state.villagers[vid].attackDamage = balance.baseAttackDamage;
+            state.villagers[vid].moveSpeedTicks = balance.baseMoveSpeedTicks;
+            state.villagers[vid].attackCooldownMax = balance.baseAttackCooldownMax;
+            state.villagers[vid].attackCooldownRemaining = balance.baseAttackCooldownMax;
+            state.villagers[vid].combatTargetID = -1;
+            state.villagers[vid].fightPriority = 0;
+            state.villagers[vid].respawnTicksRemaining = 0;
+            state.villagers[vid].productionTicksRemaining = 0;
+            state.villagers[vid].productionTicksMax = 0;
+            state.villagers[vid].hasRampartBonus = false;
         }
 
         // ===== STEP 8: WIN CONDITION =====
@@ -1009,6 +1020,8 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].moveProgress = 0;
             state.villagers[villagerIndex].targetNodeID = -1;
             state.villagers[villagerIndex].combatTargetID = -1;
+            if (state.villagers[villagerIndex].hasRampartBonus)
+                state.villagers[villagerIndex].maxHP -= bal.rampartMaxHPBonus;
             state.villagers[villagerIndex].hasRampartBonus = false;
         }
 
