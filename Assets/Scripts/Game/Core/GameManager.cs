@@ -528,9 +528,6 @@ namespace NodeWar.Core
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
 
-            //Vector3 spriteRot = cameraController != null
-            //    ? cameraController.GetSpriteRotation()
-            //    : new Vector3(50f, playerID == 0 ? 180f : 0f, 0f);
             float rotation = playerID == 0 ? 180f : 0f;
 
             if (nodePresentations != null)

@@ -6,15 +6,17 @@ using UnityEngine.InputSystem;
 namespace NodeWar.Core
 {
     /// <summary>
-    /// Perspective camera controller with drag-to-pan, momentum, dolly zoom, 
-    /// bounds, shake, draft-mode framing, and per-player-side memory.
-    /// 
+    /// Perspective camera controller with drag-to-pan, momentum, dolly zoom,
+    /// bounds, draft-mode framing, and per-player-side memory.
+    ///
     /// Hierarchy (set up in Editor):
     ///   CameraRig [this script] — world X/Z position
     ///     ? CameraPivot — rotation only (viewing angle)
     ///           ? Camera — local Z = -zoomDistance (dolly)
     ///
-    /// Middle mouse to drag. Scroll to zoom.
+    /// Middle mouse to drag and scroll to zoom on desktop. The one-finger pan
+    /// and pinch zoom published by PointerGestureSource drive the same two
+    /// operations on touch, and are the primary interface the project targets.
     /// </summary>
     public class CameraController : MonoBehaviour
     {
@@ -41,15 +43,6 @@ namespace NodeWar.Core
         [Tooltip("Spring force pushing camera back inside BoardConfig bounds.")]
         [SerializeField] private float boundsPushbackForce = 10f;
 
-        [Header("Shake Defaults")]
-        [SerializeField] private float defaultShakeIntensity = 0.15f;
-        [SerializeField] private float defaultShakeRotationalIntensity = 0.5f;
-        [SerializeField] private float defaultShakeDuration = 0.4f;
-        [SerializeField] private float defaultShakeFrequency = 25f;
-        [SerializeField] private float shakeMaxPositionalOffset = 0.5f;
-        [SerializeField] private float shakeMaxRotationalOffset = 3f;
-        [SerializeField] private AnimationCurve shakeFalloffCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
-
         [Header("Draft Mode Framing")]
         //
         // The draft opens on an authored framing rather than a derived one.
@@ -57,15 +50,9 @@ namespace NodeWar.Core
         // near-top-down plan view that was technically complete and read as
         // flat: the whole point of the phase is choosing WHERE, and where needs
         // depth to be legible. These three values are that framing, measured
-        // off the rig in the Editor.
-        //
-        // They are NEW fields on purpose. Gameplay.unity already serializes
-        // draftZoomBoardMultiplier and the old draftPivotAngle, and a
-        // serialized value outranks a code default - re-defaulting the old
-        // pitch would have changed nothing, because the scene would keep
-        // feeding 76.3 back in. A field the scene has never heard of takes the
-        // default below, which is what makes this land without hand-editing
-        // scene YAML.
+        // off the rig in the Editor. Gameplay.unity now serializes draftPitch
+        // and draftZoomDistance directly, so the defaults below are only what
+        // a scene that has not set them falls back to.
         //
         // The board is 4x7 at nodeScale 6, so it spans x 0..18 and z 0..36 and
         // its centre is (9, 0, 18). ResetToCenter puts the rig there and
@@ -86,6 +73,7 @@ namespace NodeWar.Core
 
         [Tooltip("Multiplier on largest grid dimension. No longer sets the " +
                  "opening framing - it sets how far out the pinch may go.")]
+        // NOTE: Gameplay.unity serializes 1.853, which overrides this default.
         [SerializeField][Range(1.0f, 3.0f)] private float draftZoomBoardMultiplier = 1.3f;
         [Tooltip("If true, the draft zoom-out limit never falls below zoomMaxDistance.")]
         [SerializeField] private bool draftZoomNeverBelowMax = true;
@@ -106,10 +94,6 @@ namespace NodeWar.Core
         [SerializeField][Range(0f, 1f)] private float sideP0LateralNudgeFactor = 0.5f;
         [SerializeField][Range(0f, 1f)] private float sideP1ZPositionFactor = 0.6f;
 
-        [Header("Sprite Rotation Fallback")]
-        [Tooltip("Returned by GetSpriteRotation() if cameraPivot is null.")]
-        [SerializeField] private Vector3 spriteRotationFallback = new Vector3(50f, 0f, 0f);
-
         // Pan state
         private Vector3 panVelocity;
         private bool isDragging;
@@ -118,14 +102,6 @@ namespace NodeWar.Core
         // Zoom state
         private float targetZoomDistance;
         private float currentZoomDistance;
-
-        // Shake state
-        private float shakeTimeRemaining;
-        private float shakeDuration;
-        private float shakeIntensity;
-        private float shakeRotationalIntensity;
-        private float shakeFrequency;
-        private float shakeSeed;
 
         // Side memory
         private struct SideState
@@ -179,7 +155,7 @@ namespace NodeWar.Core
             // whole-board one - with everything else about the draft camera,
             // the rig position and the pitch, correctly in place, which is what
             // made it read as a framing problem rather than an ordering one.
-            if (!isDraftMode)
+            if (!isDraftMode && cam != null)
             {
                 currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
                 targetZoomDistance = currentZoomDistance;
@@ -194,10 +170,11 @@ namespace NodeWar.Core
             HandleZoomInput();
             HandleDraftScroll();
             ApplyFocus();
+
+            // Consume the spring correction in this frame's momentum step.
+            ApplyBounds();
             ApplyMomentum();
             ApplyZoom();
-            ApplyBounds();
-            ApplyShake();
         }
 
         // ===== PAN =====
@@ -205,6 +182,12 @@ namespace NodeWar.Core
         private void HandleDragInput()
         {
             if (isDraftMode) return;
+            if (gestureSource != null && gestureSource.PanSuppressed)
+            {
+                isDragging = false;
+                panVelocity = Vector3.zero;
+                return;
+            }
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
@@ -224,20 +207,33 @@ namespace NodeWar.Core
             if (mouse.middleButton.isPressed && isDragging)
             {
                 Vector3 currentMouseWorld = GetMouseWorldPosition(mouse);
-                Vector3 delta = lastMouseWorldPos - currentMouseWorld;
+                ApplyPanDelta(lastMouseWorldPos - currentMouseWorld);
 
-                transform.position += delta * panSpeed;
-                panVelocity = delta * panSpeed / Time.deltaTime;
-
-                if (panVelocity.magnitude > panMaxVelocity)
-                    panVelocity = panVelocity.normalized * panMaxVelocity;
-
-                // Recalculate after move to prevent perspective drift
+                // Recalculate after move to prevent perspective drift -- exact
+                // only at panSpeed == 1, for the same reason noted on the
+                // gesture path's equivalent line below.
                 lastMouseWorldPos = GetMouseWorldPosition(mouse);
             }
 
             if (mouse.middleButton.wasReleasedThisFrame)
                 isDragging = false;
+        }
+
+        /// <summary>
+        /// Moves the rig and derives capped momentum for mouse and gesture pan.
+        /// Both paths yield to an armed lasso.
+        /// </summary>
+        private void ApplyPanDelta(Vector3 delta)
+        {
+            if (gestureSource != null && gestureSource.PanSuppressed) return;
+
+            transform.position += delta * panSpeed;
+
+            if (Time.deltaTime <= 0f) return;
+
+            panVelocity = delta * panSpeed / Time.deltaTime;
+            if (panVelocity.magnitude > panMaxVelocity)
+                panVelocity = panVelocity.normalized * panMaxVelocity;
         }
 
         /// <summary>
@@ -258,11 +254,9 @@ namespace NodeWar.Core
 
             float fit = draftFitZoomDistance > 0f ? draftFitZoomDistance : zoomMaxDistance;
 
-            targetZoomDistance = Mathf.Clamp(
+            SetTargetZoomClamped(
                 targetZoomDistance - scroll * zoomScrollSensitivity * 0.01f * targetZoomDistance,
-                zoomMinDistance, fit);
-
-            RaiseZoomChanged();
+                fit, manual: false);
         }
 
         private void ApplyMomentum()
@@ -277,12 +271,13 @@ namespace NodeWar.Core
             // driving the position directly.
             if (gesturePanActive) return;
 
-            if (panVelocity.sqrMagnitude < 0.0001f) return;
-
             transform.position += panVelocity * Time.deltaTime;
             panVelocity = Vector3.Lerp(panVelocity, Vector3.zero, panMomentumDamping * Time.deltaTime);
 
-            if (panVelocity.sqrMagnitude < 0.001f)
+            // Keep small spring corrections alive outside the bounds. Otherwise
+            // damping's stop threshold can strand the rig just beyond an edge.
+            if (panVelocity.sqrMagnitude < 0.001f &&
+                transform.position.Equals(ClampToBounds(transform.position)))
                 panVelocity = Vector3.zero;
         }
 
@@ -308,26 +303,37 @@ namespace NodeWar.Core
         /// <summary>
         /// Every zoom in the game lands here. Pinch, the HUD zoom handle, the
         /// scroll wheel and the draft all write targetZoomDistance through this
-        /// one setter and let ApplyZoom smooth it.
+        /// one setter (or SetTargetZoomClamped, for the draft's own ceiling)
+        /// and let ApplyZoom smooth it.
         ///
-        /// Nothing may set cam.transform.localPosition to zoom instead.
-        /// ApplyShake rewrites that transform every frame from
-        /// currentZoomDistance, so a second writer is not an alternative route
-        /// to the same place -- it is a fight, resolved differently depending
-        /// on which ran last, and it reads as jitter.
+        /// Nothing may set cam.transform.localPosition to zoom instead -- a
+        /// second writer is not an alternative route to the same place, it is
+        /// a fight, resolved differently depending on which ran last, and it
+        /// reads as jitter.
         /// </summary>
         public void SetTargetZoom(float distance)
         {
-            float clamped = Mathf.Clamp(distance, zoomMinDistance, zoomMaxDistance);
+            SetTargetZoomClamped(distance, zoomMaxDistance, manual: true);
+        }
+
+        /// <summary>
+        /// Shared zoom input writer. The draft supplies its own ceiling and
+        /// does not mark a gameplay focus session dirty.
+        /// </summary>
+        private void SetTargetZoomClamped(float distance, float ceiling, bool manual)
+        {
+            float clamped = Mathf.Clamp(distance, zoomMinDistance, ceiling);
             if (Mathf.Approximately(clamped, targetZoomDistance)) return;
 
             targetZoomDistance = clamped;
 
-            // A zoom is the player moving the camera, so it counts against the
-            // focus session exactly as a pan does. Without this, dismissing the
-            // node sheet would tween the camera back to where it sat before the
-            // sheet opened and silently undo the zoom.
-            NotifyManualPan();
+            // A manual zoom is the player moving the camera, so it counts
+            // against the focus session exactly as a pan does. Without this,
+            // dismissing the node sheet would tween the camera back to where
+            // it sat before the sheet opened and silently undo the zoom. The
+            // draft has no focus session to disturb, so its two writers pass
+            // manual: false.
+            if (manual) NotifyManualPan();
 
             RaiseZoomChanged();
         }
@@ -357,77 +363,27 @@ namespace NodeWar.Core
             if (isFocusing) return;
 
             Vector3 pos = transform.position;
+            Vector3 push = Vector3.zero;
 
             // Soft spring pushback rather than hard clamp — feels natural
             if (pos.x < boardConfig.boundsMinX)
-                panVelocity.x += boundsPushbackForce * (boardConfig.boundsMinX - pos.x) * Time.deltaTime;
+                push.x = boundsPushbackForce * (boardConfig.boundsMinX - pos.x) * Time.deltaTime;
             if (pos.x > boardConfig.boundsMaxX)
-                panVelocity.x += boundsPushbackForce * (boardConfig.boundsMaxX - pos.x) * Time.deltaTime;
+                push.x = boundsPushbackForce * (boardConfig.boundsMaxX - pos.x) * Time.deltaTime;
             if (pos.z < boardConfig.boundsMinZ)
-                panVelocity.z += boundsPushbackForce * (boardConfig.boundsMinZ - pos.z) * Time.deltaTime;
+                push.z = boundsPushbackForce * (boardConfig.boundsMinZ - pos.z) * Time.deltaTime;
             if (pos.z > boardConfig.boundsMaxZ)
-                panVelocity.z += boundsPushbackForce * (boardConfig.boundsMaxZ - pos.z) * Time.deltaTime;
-        }
+                push.z = boundsPushbackForce * (boardConfig.boundsMaxZ - pos.z) * Time.deltaTime;
 
-        // ===== SHAKE =====
+            if (push.Equals(Vector3.zero)) return;
 
-        public void Shake()
-        {
-            Shake(defaultShakeIntensity, defaultShakeRotationalIntensity,
-                  defaultShakeDuration, defaultShakeFrequency);
-        }
-
-        /// <summary>
-        /// Stronger shake wins if one is already active.
-        /// </summary>
-        public void Shake(float intensity, float rotationalIntensity, float duration, float frequency)
-        {
-            if (intensity >= shakeIntensity || shakeTimeRemaining < 0.05f)
-            {
-                shakeIntensity = intensity;
-                shakeRotationalIntensity = rotationalIntensity;
-                shakeDuration = duration;
-                shakeTimeRemaining = duration;
-                shakeFrequency = frequency;
-                shakeSeed = Random.Range(0f, 1000f);
-            }
-        }
-
-        private void ApplyShake()
-        {
-            if (cam == null) return;
-
-            if (shakeTimeRemaining <= 0f)
-            {
-                cam.transform.localRotation = Quaternion.identity;
-                return;
-            }
-
-            shakeTimeRemaining -= Time.deltaTime;
-            if (shakeTimeRemaining < 0f) shakeTimeRemaining = 0f;
-
-            float normalizedTime = 1f - (shakeTimeRemaining / shakeDuration);
-            float envelope = shakeFalloffCurve.Evaluate(normalizedTime);
-            float time = (shakeDuration - shakeTimeRemaining) * shakeFrequency;
-
-            // Perlin noise per axis with offset seeds for variety
-            float noiseX = (Mathf.PerlinNoise(shakeSeed + time, 0f) - 0.5f) * 2f;
-            float noiseY = (Mathf.PerlinNoise(0f, shakeSeed + time) - 0.5f) * 2f;
-            float noiseZ = (Mathf.PerlinNoise(shakeSeed + time, shakeSeed + time) - 0.5f) * 2f;
-
-            Vector3 posOffset = new Vector3(noiseX, noiseY, 0f) * shakeIntensity * envelope;
-            posOffset.x = Mathf.Clamp(posOffset.x, -shakeMaxPositionalOffset, shakeMaxPositionalOffset);
-            posOffset.y = Mathf.Clamp(posOffset.y, -shakeMaxPositionalOffset, shakeMaxPositionalOffset);
-
-            cam.transform.localPosition = new Vector3(
-                posOffset.x, posOffset.y, -currentZoomDistance + posOffset.z * 0.5f);
-
-            Vector3 rotOffset = new Vector3(noiseY, noiseX, noiseZ) * shakeRotationalIntensity * envelope;
-            rotOffset.x = Mathf.Clamp(rotOffset.x, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
-            rotOffset.y = Mathf.Clamp(rotOffset.y, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
-            rotOffset.z = Mathf.Clamp(rotOffset.z, -shakeMaxRotationalOffset, shakeMaxRotationalOffset);
-
-            cam.transform.localRotation = Quaternion.Euler(rotOffset);
+            // A live drag writes position directly and suspends momentum, so
+            // apply the soft return to position while held. Once released, the
+            // same spring accelerates momentum before it is integrated.
+            if (isDragging || gesturePanActive)
+                transform.position += push;
+            else
+                panVelocity += push;
         }
 
         // ===== GESTURE PAN =====
@@ -556,9 +512,15 @@ namespace NodeWar.Core
         {
             if (ZoomChanged == null) return;
 
-            // Clamped because the draft's fit distance sits beyond
-            // zoomMaxDistance on purpose, and the readout's bar is a 0-1 fill.
-            float range = zoomMaxDistance - zoomMinDistance;
+            // The draft's fit distance sits beyond zoomMaxDistance on purpose,
+            // so normalizing against the gameplay ceiling during the draft
+            // pegged this at exactly 1.0 for every draft zoom level -- the
+            // readout's own ceiling is used instead whenever one is in play.
+            float ceiling = isDraftMode
+                ? (draftFitZoomDistance > 0f ? draftFitZoomDistance : zoomMaxDistance)
+                : zoomMaxDistance;
+
+            float range = ceiling - zoomMinDistance;
             float normalized = range <= 0f
                 ? 0f
                 : Mathf.Clamp01((targetZoomDistance - zoomMinDistance) / range);
@@ -597,19 +559,12 @@ namespace NodeWar.Core
             }
 
             Vector3 currentWorld = ScreenToGroundPoint(screenPos);
-            Vector3 delta = gesturePanLastWorld - currentWorld;
-
-            transform.position += delta * panSpeed;
-
-            if (Time.deltaTime > 0f)
-            {
-                panVelocity = delta * panSpeed / Time.deltaTime;
-                if (panVelocity.magnitude > panMaxVelocity)
-                    panVelocity = panVelocity.normalized * panMaxVelocity;
-            }
+            ApplyPanDelta(gesturePanLastWorld - currentWorld);
 
             // Re-sampled after the move so the world point under the finger
-            // stays pinned; sampling before would drift under perspective.
+            // stays pinned -- exactly at panSpeed == 1, which is what the
+            // scene serializes today; a different panSpeed would drift by the
+            // same fraction ApplyPanDelta scales the move by.
             gesturePanLastWorld = ScreenToGroundPoint(screenPos);
         }
 
@@ -662,18 +617,9 @@ namespace NodeWar.Core
         private bool sessionPanDirty;
 
         /// <summary>
-        /// True once the player has panned during the current session. Manual
-        /// input is never undone, so this decides whether dismissal restores
-        /// the previous position or leaves the camera where they put it.
+        /// Marks the focus session dirty after a manual pan, zoom or recentre.
         /// </summary>
-        public bool SessionPanDirty => sessionPanDirty;
-
-        /// <summary>
-        /// Marks the current session as manually panned. Called by any
-        /// player-initiated camera movement -- including a notification tap,
-        /// which is an instruction, not an automatic move.
-        /// </summary>
-        public void NotifyManualPan()
+        private void NotifyManualPan()
         {
             if (sessionActive) sessionPanDirty = true;
         }
@@ -835,21 +781,6 @@ namespace NodeWar.Core
             return position;
         }
 
-        /// <summary>
-        /// True if a world point projects inside the viewport, inset by a
-        /// normalised margin. Used by off-screen notification indicators.
-        /// </summary>
-        public bool IsPointOnScreen(Vector3 worldPos, float viewportMargin)
-        {
-            if (cam == null) return false;
-
-            Vector3 vp = cam.WorldToViewportPoint(worldPos);
-            if (vp.z < 0f) return false;
-
-            return vp.x >= viewportMargin && vp.x <= 1f - viewportMargin
-                && vp.y >= viewportMargin && vp.y <= 1f - viewportMargin;
-        }
-
         // ===== PUBLIC API =====
 
         /// <summary>
@@ -968,7 +899,7 @@ namespace NodeWar.Core
             currentSide = playerID;
             sideHasBeenSet = true;
 
-            if (sideHomeStates[currentSide].initialized)
+            if (sideStates[currentSide].initialized)
             {
                 transform.position = sideStates[currentSide].position;
                 targetZoomDistance = sideStates[currentSide].zoomDistance;
@@ -990,12 +921,6 @@ namespace NodeWar.Core
             float yRotation = (playerID == 0) ? 180f : 0f;
             cameraPivot.localRotation = Quaternion.Euler(
                 cameraPivot.localRotation.eulerAngles.x, yRotation, 0f);
-        }
-
-        public Vector3 GetSpriteRotation()
-        {
-            if (cameraPivot == null) return spriteRotationFallback;
-            return cameraPivot.localRotation.eulerAngles;
         }
 
         public float GetCurrentZoomDistance() => currentZoomDistance;
@@ -1024,20 +949,6 @@ namespace NodeWar.Core
             }
         }
 
-        /// <summary>
-        /// 0 = fully zoomed in, 1 = fully zoomed out.
-        ///
-        /// This is where the smoothing has actually reached. Use
-        /// GetTargetZoomNormalized for where it is heading -- a control that
-        /// reads this one as the origin of a drag will fight ApplyZoom, because
-        /// the value keeps moving underneath it while the finger is down.
-        /// </summary>
-        public float GetZoomNormalized()
-        {
-            if (zoomMaxDistance <= zoomMinDistance) return 0f;
-            return (currentZoomDistance - zoomMinDistance) / (zoomMaxDistance - zoomMinDistance);
-        }
-
         // ===== RECENTRE =====
         //
         // The click half of the HUD's zoom handle. The drag half zooms; this
@@ -1058,7 +969,7 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Locks camera to centered bird's-eye for draft phase. Disables pan/zoom input.
+        /// Frames the board for the draft. Locks pan; scroll and pinch still zoom.
         /// </summary>
         public void SetDraftMode(bool enabled)
         {
@@ -1094,7 +1005,7 @@ namespace NodeWar.Core
             // Centre first, then the authored offset. Expressed as an offset
             // rather than an absolute position so it survives a board of a
             // different size: X stays on the board's midline and Z pulls back
-            // toward the near edge, which is what a 55-degree pitch needs to
+            // toward the near edge, which is what a 60-degree pitch needs to
             // put the far row in frame.
             ResetToCenter();
             transform.position += draftRigOffset;
@@ -1149,13 +1060,10 @@ namespace NodeWar.Core
 
             float fit = draftFitZoomDistance > 0f ? draftFitZoomDistance : zoomMaxDistance;
 
-            targetZoomDistance = Mathf.Clamp(
-                zoomGestureStartDistance / scaleFromStart, zoomMinDistance, fit);
-
-            RaiseZoomChanged();
+            SetTargetZoomClamped(zoomGestureStartDistance / scaleFromStart, fit, manual: false);
         }
 
-        public void ResetToCenter()
+        private void ResetToCenter()
         {
             panVelocity = Vector3.zero;
 
