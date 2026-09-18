@@ -17,10 +17,11 @@ namespace NodeWar.View
     /// different nodes still get their own, merging where the routes genuinely
     /// coincide. Every line drawn is a route somebody is really walking.
     ///
-    /// Curve geometry comes from PathCurve, driven by the same PathCurveSettings
-    /// instance VillagerView holds. That sharing is the point: a second copy of
-    /// the corner radius that drifted would put every villager visibly beside its
-    /// own route.
+    /// Curve geometry is read from RouteCurveCache, which VillagerView populates
+    /// for its own villager every frame it moves. VillagerView is the one place
+    /// the curve is built; a second copy of the corner radius that drifted would
+    /// put every villager visibly beside its own route, so this reads the same
+    /// curve rather than rebuilding one from PathCurveSettings itself.
     ///
     /// The opponent half is an information gate, and the gate is the geometry.
     /// Drawing a whole route and tapering its alpha would leave the destination
@@ -44,7 +45,6 @@ namespace NodeWar.View
         private OpponentRouteSettings opponentSettings = new OpponentRouteSettings();
 
         private readonly List<LineRenderer> pool = new List<LineRenderer>();
-        private readonly List<Vector3> waypoints = new List<Vector3>();
         private readonly List<Vector3> remainder = new List<Vector3>();
 
         // Villagers whose route has already been drawn this frame, kept apart by
@@ -146,7 +146,7 @@ namespace NodeWar.View
                 int compareNodes = mine ? int.MaxValue : opponentSettings.revealLegs + 1;
 
                 if (AlreadyDrawn(i, mine ? drawnOwn : drawnOpponent, compareNodes)) continue;
-                if (!BuildRemainder(villager, mine, legs)) continue;
+                if (!BuildRemainder(villager, i, mine, legs)) continue;
                 if (remainder.Count < 2) continue;
 
                 DrawRoute(used, i, mine, screenAlpha);
@@ -307,38 +307,53 @@ namespace NodeWar.View
         }
 
         /// <summary>
-        /// Builds the whole route curve, then keeps the stretch to be drawn. The
-        /// whole route, because building from the current node would unround the
-        /// corner the villager is banking through and shift the leg indices the
-        /// sprite is placed by.
+        /// Reads the whole route curve from RouteCurveCache -- built this same
+        /// frame by this villager's VillagerView, whose Update runs before this
+        /// LateUpdate -- then keeps the stretch to be drawn. The whole route,
+        /// because building from the current node would unround the corner the
+        /// villager is banking through and shift the leg indices the sprite is
+        /// placed by.
+        ///
+        /// False if nothing is cached yet, which only happens for a villager
+        /// whose VillagerView could not place it this frame either (e.g. no tick
+        /// provider) -- the route line and the sprite it belongs to fail the
+        /// same way rather than one drawing without the other.
         /// </summary>
-        private bool BuildRemainder(VillagerData villager, bool mine, int legs)
+        private bool BuildRemainder(VillagerData villager, int villagerIndex, bool mine, int legs)
         {
-            waypoints.Clear();
+            if (!RouteCurveCache.TryGetCurrent(villagerIndex, villager.movePath, out List<Vector3> curvePoints, out List<int> curveLegStarts))
+                return false;
 
-            float height = settings.lineHeight;
+            int fromNode = villager.movePath[villager.movePathIndex];
+            int toNode = villager.movePath[villager.movePathIndex + 1];
 
-            for (int i = 0; i < villager.movePath.Length; i++)
-            {
-                int nodeID = villager.movePath[i];
-                if (nodeID < 0 || nodeID >= nodeSlotManagers.Length) return false;
-                if (nodeSlotManagers[nodeID] == null) return false;
-
-                Vector3 point = nodeSlotManagers[nodeID].transform.position;
-                point.y = height;
-                waypoints.Add(point);
-            }
-
-            if (waypoints.Count < 2) return false;
-
-            PathCurve.Build(waypoints, settings.cornerRadius, settings.cornerSegments);
-            PathCurve.AppendRemainder(villager.movePathIndex, LegFraction(villager), legs, remainder);
+            if (fromNode < 0 || fromNode >= nodeSlotManagers.Length) return false;
+            if (toNode < 0 || toNode >= nodeSlotManagers.Length) return false;
+            if (nodeSlotManagers[fromNode] == null || nodeSlotManagers[toNode] == null) return false;
 
             // Measured once here so DrawRoute can express the fade in nodes
             // rather than in the 0..1 line parameter, which would stretch and
-            // shrink with wherever the truncation happened to land.
-            lastNodeSpacing = (waypoints[villager.movePathIndex + 1] -
-                               waypoints[villager.movePathIndex]).magnitude;
+            // shrink with wherever the truncation happened to land. Straight-line
+            // node spacing, not the rounded curve length -- this is only a
+            // yardstick for that fade and has always meant the Euclidean
+            // distance between the two centres.
+            lastNodeSpacing = (nodeSlotManagers[toNode].transform.position -
+                               nodeSlotManagers[fromNode].transform.position).magnitude;
+
+            PathCurve.AppendRemainder(curvePoints, curveLegStarts, villager.movePathIndex, LegFraction(villager), legs, remainder);
+            if (remainder.Count == 0) return false;
+
+            // The cached curve is built at VillagerViewHeight, the sprite's
+            // height -- not settings.lineHeight, the line's own. Restamp the
+            // height the route has always drawn at rather than letting a route
+            // sourced from someone else's cache silently take on their height.
+            float height = settings.lineHeight;
+            for (int i = 0; i < remainder.Count; i++)
+            {
+                Vector3 p = remainder[i];
+                p.y = height;
+                remainder[i] = p;
+            }
 
             lastStubLength = 0f;
             for (int i = 1; i < remainder.Count; i++)
