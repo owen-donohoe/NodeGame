@@ -8,11 +8,11 @@ namespace NodeWar.Input
     /// Priority-based evaluation with per-villager command cooldowns to prevent oscillation.
     /// 
     /// Priority order:
-    /// 0. Core emergency (enemies ON core — everyone responds)
-    /// 1. Core intercept (enemies heading toward core — soldiers intercept)
+    /// 0. Core emergency (enemies ON core -- everyone responds)
+    /// 1. Core intercept (enemies heading toward core -- soldiers intercept)
     /// 2. Respawn dead villagers
     /// 3. Node defense (enemies ON owned farm/mine/barracks)
-    /// 4. Expansion (village ? farm ? mine ? barracks ? second village)
+    /// 4. Expansion (village -> farm -> mine -> barracks -> second village)
     /// 5. Military (equip at barracks, attack in wolfpacks of 3)
     /// 6. Economy management (fill/reduce workers based on resource levels)
     /// </summary>
@@ -264,7 +264,7 @@ namespace NodeWar.Input
         {
             int maxClaimers = 4; // matches simulation MAX_CLAIMERS_PER_NODE
 
-            // Order: Village ? Farm ? Mine ? Barracks ? second Village
+            // Order: Village -> Farm -> Mine -> Barracks -> second Village
             // For each type: if we don't own enough, send max claimers to the closest unowned
 
             int ownedVillages = CountOwnedOfType(DistrictType.Village);
@@ -437,7 +437,7 @@ namespace NodeWar.Input
 
                 if (workers > desiredWorkers)
                 {
-                    // Pull excess workers — send to barracks if owned, else core
+                    // Pull excess workers -- send to barracks if owned, else core
                     int toRemove = workers - desiredWorkers;
                     for (int i = 0; i < state.villagers.Length && toRemove > 0; i++)
                     {
