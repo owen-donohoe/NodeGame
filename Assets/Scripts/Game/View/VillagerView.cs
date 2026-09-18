@@ -295,12 +295,9 @@ namespace NodeWar.View
 
         private void SetRenderersColor(Color color)
         {
-            //ONLY THE FIRST ONE THIS IS FOR TESTING BECAUSE I JUST WANT ONE SPRITE TO BE COLORED CURRENTLY
-
-            for (int i = 0; i < spriteRenderers.Length; i++)
-            {
-                spriteRenderers[0].color = color;
-            }
+            // Only the primary sprite carries colour; any additional renderers
+            // (e.g. accessory overlays) are intentionally left untinted.
+            spriteRenderers[0].color = color;
         }
 
         private Color GetStateColor(VillagerData villager)
