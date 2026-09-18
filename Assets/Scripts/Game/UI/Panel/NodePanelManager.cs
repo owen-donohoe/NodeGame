@@ -694,10 +694,6 @@ namespace NodeWar.UI
         private void InitializeContent(NodeData node, bool isOwned, int controlledPID)
         {
             // Try each content type
-            // ProductionPanelContent and GenericPanelContent are deliberately
-            // absent. Farms, mines and the passive districts open no panel at
-            // all now, so nothing instantiates them -- and leaving the
-            // GetComponent calls here would block deleting those scripts.
             ForgePanelContent forgeContent = currentContent.GetComponent<ForgePanelContent>();
             if (forgeContent != null)
             {
