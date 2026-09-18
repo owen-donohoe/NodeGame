@@ -50,7 +50,7 @@ sources:
 
 # Run the simulation suite without Unity
 
-The same 14 simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
+The same 28 simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
 `dotnet test` instead of Unity's Test Runner. No Editor, no licence, no Windows requirement.
 
 The solution holds two test projects. Run everything for pass/fail:
@@ -59,11 +59,11 @@ The solution holds two test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **86 passed** — 14 from `NodeWar.Simulation.Tests`, 72 from `NodeWar.Lobby.Tests`.
+Expect **100 passed** — 28 from `NodeWar.Simulation.Tests`, 72 from `NodeWar.Lobby.Tests`.
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 14 | the determinism baseline, edge weights, movement correctness, a smoke test |
+| `NodeWar.Simulation.Tests` | 28 | the determinism baseline, edge weights, movement correctness, a smoke test |
 | `NodeWar.Lobby.Tests` | 72 | `LoadoutData`'s wire format, the loadout editor rules (including when a side is short), item tints, district families, and the in-match command checks held against `CommandProcessor` |
 
 ## Producing the receipt
@@ -80,7 +80,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 14 passed, and both pinned fingerprints from
+Expect 28 passed, and both pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 
