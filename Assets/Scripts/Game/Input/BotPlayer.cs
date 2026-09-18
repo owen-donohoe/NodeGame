@@ -28,6 +28,8 @@ namespace NodeWar.Input
 
         // Per-tick scratch
         private bool[] claimedThisTick;
+        private int[] pathCostFrom;   // path cost from node i to the current sort target
+        private int[] pathCostStamp;  // target that cost was computed for (-1 = none)
 
         // Balance references (read once, used for cooldown calculation)
         private int defaultEdgeWeight;
@@ -61,6 +63,14 @@ namespace NodeWar.Input
 
             for (int i = 0; i < claimedThisTick.Length; i++)
                 claimedThisTick[i] = false;
+
+            if (pathCostFrom == null || pathCostFrom.Length < state.nodes.Length)
+            {
+                pathCostFrom = new int[state.nodes.Length];
+                pathCostStamp = new int[state.nodes.Length];
+            }
+            for (int i = 0; i < pathCostStamp.Length; i++)
+                pathCostStamp[i] = -1;
 
             CoreEmergency();
             CoreIntercept();
@@ -140,10 +150,8 @@ namespace NodeWar.Input
             List<int> others = GetAvailableNonSoldiers(false);
 
             // Sort both by distance to core
-            soldiers.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, myCoreNode)
-                .CompareTo(PathCost(state.villagers[b].currentNodeID, myCoreNode)));
-            others.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, myCoreNode)
-                .CompareTo(PathCost(state.villagers[b].currentNodeID, myCoreNode)));
+            SortByPathCostTo(soldiers, myCoreNode);
+            SortByPathCostTo(others, myCoreNode);
 
             // Send soldiers first
             for (int i = 0; i < soldiers.Count && toSend > 0; i++)
@@ -221,8 +229,7 @@ namespace NodeWar.Input
 
                 // Prefer soldiers
                 List<int> soldiers = GetAvailableSoldiers();
-                soldiers.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, n)
-                    .CompareTo(PathCost(state.villagers[b].currentNodeID, n)));
+                SortByPathCostTo(soldiers, n);
 
                 for (int i = 0; i < soldiers.Count && toSend > 0; i++)
                 {
@@ -237,8 +244,7 @@ namespace NodeWar.Input
                 if (toSend > 0)
                 {
                     List<int> others = GetAvailableNonSoldiers(false);
-                    others.Sort((a, b) => PathCost(state.villagers[a].currentNodeID, n)
-                        .CompareTo(PathCost(state.villagers[b].currentNodeID, n)));
+                    SortByPathCostTo(others, n);
 
                     for (int i = 0; i < others.Count && toSend > 0; i++)
                     {
@@ -740,6 +746,28 @@ namespace NodeWar.Input
             for (int i = 0; i < path.Length - 1; i++)
                 cost += GameSimulation.GetEdgeWeight(state, path[i], path[i + 1]);
             return cost;
+        }
+
+        /// <summary>
+        /// Sorts villager IDs by path cost to a target, nearest first, ID as tiebreak.
+        /// Costs are computed once per source node and cached for this tick.
+        /// </summary>
+        private void SortByPathCostTo(List<int> villagerIDs, int targetNode)
+        {
+            for (int i = 0; i < villagerIDs.Count; i++)
+            {
+                int from = state.villagers[villagerIDs[i]].currentNodeID;
+                if (pathCostStamp[from] == targetNode) continue;
+                pathCostFrom[from] = PathCost(from, targetNode);
+                pathCostStamp[from] = targetNode;
+            }
+
+            villagerIDs.Sort((a, b) =>
+            {
+                int byCost = pathCostFrom[state.villagers[a].currentNodeID]
+                    .CompareTo(pathCostFrom[state.villagers[b].currentNodeID]);
+                return byCost != 0 ? byCost : a.CompareTo(b);
+            });
         }
 
         private int PathLength(int fromNode, int toNode)
