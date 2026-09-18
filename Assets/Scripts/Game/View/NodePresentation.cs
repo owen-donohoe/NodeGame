@@ -211,9 +211,6 @@ namespace NodeWar.View
 
         private void DiscoverTargets()
         {
-            // Capture authored scales only on first initialization, before hiding or tweening.
-            if (sprites != null) return;
-
             // Discover gfxRoot
             if (gfxRoot == null)
             {
@@ -233,6 +230,9 @@ namespace NodeWar.View
                     ?? transform.Find("WORKPOINTS");
             }
 
+            Transform[] previousSprites = sprites;
+            Vector3[] previousScales = baseScales;
+
             if (gfxRoot == null)
             {
                 sprites = new Transform[0];
@@ -251,9 +251,22 @@ namespace NodeWar.View
             }
 
             sprites = spriteList.ToArray();
+            // Authored scales are captured once per sprite, before hiding or tweening.
+            // A rediscovery keeps them for sprites it has already seen.
             baseScales = new Vector3[sprites.Length];
             for (int i = 0; i < sprites.Length; i++)
+            {
                 baseScales[i] = sprites[i].localScale;
+                if (previousSprites == null || previousScales == null) continue;
+                for (int j = 0; j < previousSprites.Length && j < previousScales.Length; j++)
+                {
+                    if (previousSprites[j] == sprites[i])
+                    {
+                        baseScales[i] = previousScales[j];
+                        break;
+                    }
+                }
+            }
         }
 
         // ===== EDITOR =====
