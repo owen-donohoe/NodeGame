@@ -7,9 +7,9 @@ namespace NodeWar.View
     {
         // Fixed facing direction (not "look at camera" -- a consistent world angle).
         // One facing is shared by every Billboard so sprites created at different
-        // moments (draft, match start, mid-match spawns) never disagree. It is
-        // captured per scene: draft and play frame the camera differently, so a
-        // Billboard in a new scene recaptures rather than inheriting a stale one.
+        // moments (draft, match start, mid-match spawns) never disagree. The first
+        // Billboard to Start in a scene captures it; a later scene load (the next
+        // match) recaptures rather than inheriting the previous scene's value.
         private static Quaternion sharedFacing;
         private static SceneHandle facingSceneHandle;
         private static bool facingInitialized;
