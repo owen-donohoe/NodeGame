@@ -10,7 +10,8 @@ namespace NodeWar.Network
         Heartbeat = 3,
         DraftReady = 4,
         DraftPlacement = 5,
-        DraftLoadout = 6
+        DraftLoadout = 6,
+        DraftAck = 7
     }
 
     /// <summary>
@@ -122,6 +123,55 @@ namespace NodeWar.Network
         public static byte[] SerializeHeartbeat()
         {
             return new byte[] { (byte)PacketType.Heartbeat };
+        }
+
+        // ===== DRAFT ACK =====
+        // A control packet, like the handshake ack and the heartbeat, so it sits
+        // with them. DraftSerializer holds the packets it acknowledges.
+
+        private const int DRAFT_ACK_BYTES = 1 + 1 + 4;
+        private const byte DRAFT_ACK_READY = 1;
+        private const byte DRAFT_ACK_LOADOUT = 2;
+
+        /// <summary>
+        /// DraftAck: [type:1][flags:1][placementsApplied:4] = 6 bytes.
+        /// What the sender holds of the peer's draft packets: whether its ready
+        /// and loadout have arrived, and how many placements (both players',
+        /// in draft order) are on its board. Cumulative, so any later ack
+        /// covers everything an earlier lost one did.
+        /// </summary>
+        public static byte[] SerializeDraftAck(bool readyReceived, bool loadoutReceived, int placementsApplied)
+        {
+            byte[] data = new byte[DRAFT_ACK_BYTES];
+            int offset = 0;
+
+            data[offset++] = (byte)PacketType.DraftAck;
+            data[offset++] = (byte)((readyReceived ? DRAFT_ACK_READY : 0) |
+                                    (loadoutReceived ? DRAFT_ACK_LOADOUT : 0));
+            WriteInt(data, ref offset, placementsApplied);
+
+            return data;
+        }
+
+        public static bool TryDeserializeDraftAck(byte[] data,
+            out bool readyReceived, out bool loadoutReceived, out int placementsApplied)
+        {
+            readyReceived = false;
+            loadoutReceived = false;
+            placementsApplied = 0;
+
+            if (data == null || data.Length != DRAFT_ACK_BYTES ||
+                data[0] != (byte)PacketType.DraftAck) return false;
+
+            int offset = 1; // skip PacketType byte
+            byte flags = data[offset++];
+            if ((flags & ~(DRAFT_ACK_READY | DRAFT_ACK_LOADOUT)) != 0) return false;
+            readyReceived = (flags & DRAFT_ACK_READY) != 0;
+            loadoutReceived = (flags & DRAFT_ACK_LOADOUT) != 0;
+            placementsApplied = ReadInt(data, ref offset);
+            if (placementsApplied < 0) return false;
+
+            return true;
         }
 
         public static PacketType ReadPacketType(byte[] data)

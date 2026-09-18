@@ -39,6 +39,11 @@ namespace NodeWar.Network
         private readonly object outgoingQueueLock = new object();
         private readonly Queue<byte[]> outgoingQueue = new Queue<byte[]>();
 
+        // Main-thread draft/gameplay handoff state. Retained until the next draft
+        // or shutdown so a lost final ack can be recovered after DraftManager dies.
+        private byte[] completedDraftAck;
+        private readonly List<byte[]> deferredTickInputs = new List<byte[]>();
+
         // Connection state
         public bool IsConnected { get; private set; }
         public bool IsHost { get; private set; }
@@ -242,9 +247,49 @@ namespace NodeWar.Network
 
         /// <summary>
         /// Drain all packets received since last call. Returns empty array if none.
-        /// Call from main thread only (Update loop).
+        /// Call from main thread only (Update loop). During draft, deferTickInputs
+        /// preserves early gameplay packets for the next non-draft consumer.
         /// </summary>
-        public byte[][] ReceiveAll()
+        public byte[][] ReceiveAll(bool deferTickInputs = false)
+        {
+            byte[][] received = ReceiveTransportPackets();
+            var packets = new List<byte[]>();
+            if (!deferTickInputs)
+            {
+                packets.AddRange(deferredTickInputs);
+                deferredTickInputs.Clear();
+            }
+            bool retryReceived = false;
+            foreach (byte[] packet in received)
+            {
+                if (packet == null || packet.Length == 0) continue;
+                PacketType type = InputSerializer.ReadPacketType(packet);
+                if (completedDraftAck != null && (type == PacketType.DraftReady ||
+                    type == PacketType.DraftLoadout || type == PacketType.DraftPlacement))
+                    retryReceived = true;
+
+                if (deferTickInputs && type == PacketType.TickInput)
+                    deferredTickInputs.Add(packet);
+                else
+                    packets.Add(packet);
+            }
+            if (retryReceived) Send(completedDraftAck);
+            return packets.ToArray();
+        }
+
+        public void ResetDraftDelivery()
+        {
+            completedDraftAck = null;
+            deferredTickInputs.Clear();
+        }
+
+        public void CompleteDraftDelivery(byte[] acknowledgement)
+        {
+            completedDraftAck = acknowledgement;
+            Send(completedDraftAck);
+        }
+
+        private byte[][] ReceiveTransportPackets()
         {
             if (mode == TransportMode.DirectUDP)
             {
@@ -350,6 +395,7 @@ namespace NodeWar.Network
 
         public void Shutdown()
         {
+            ResetDraftDelivery();
             isRunning = false;
             IsConnected = false;
 
