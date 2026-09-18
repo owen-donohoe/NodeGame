@@ -114,9 +114,11 @@ namespace NodeWar.Input
 
         private void TryIssueMoveCommand()
         {
-            //if (UnityEngine.EventSystems.EventSystem.current != null &&
-            //    UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-            //    return;
+            // A right-click on an open panel must not raycast through it to
+            // the node behind -- the panel is visually on top and otherwise
+            // does not consume the input.
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                return;
 
             if (selectionSystem.SelectedVillagerIDs.Count == 0)
             {
@@ -126,28 +128,14 @@ namespace NodeWar.Input
             Vector2 screenPos = Mouse.current.position.ReadValue();
             Ray ray = mainCam.ScreenPointToRay(screenPos);
 
-            // Draw the ray for 20 seconds in the Scene view
-            //Debug.DrawRay(ray.origin, ray.direction * 100f, Color.yellow, 20f);
-
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, 100f, nodeLayer))
             {
-                Debug.DrawLine(ray.origin, hit.point, Color.green, 20f);
-
                 NodeWar.View.NodeView nodeView = hit.collider.GetComponentInParent<NodeWar.View.NodeView>();
                 if (nodeView != null)
                 {
                     IssueMoveTo(nodeView.GetNodeID());
                 }
-                else
-                {
-                    Debug.Log("[CMD] Hit object has no NodeView in parents: " + hit.collider.gameObject.name);
-                }
-            }
-            else
-            {
-                // Red = miss
-                Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 20f);
             }
         }
 

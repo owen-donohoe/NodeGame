@@ -150,10 +150,14 @@ desyncs/disconnects.
 `GameCommand`s queued for the next tick. Never mutates `SimulationState`
 directly.
 
-Exactly one component reads a pointer device: `PointerGestureSource`. It
-resolves a press once into a tap, a pan or a long-press lasso, raycasts
-once for what was under it, and publishes the outcome. Everything else in
-this layer consumes that outcome rather than polling input itself.
+`PointerGestureSource` resolves a press once into a tap, a pan or a
+long-press lasso, raycasts once for what was under it, and publishes the
+outcome. Everything else in this layer consumes that outcome rather than
+polling input itself, with one standing exception: `CommandSystem` still
+reads `Mouse.current.rightButton` directly for the desktop right-click
+move order, guarding it with its own `EventSystem.IsPointerOverGameObject`
+check rather than a `PointerGestureSource` event. Migrating it the way
+`SelectionSystem` was is tracked, not done.
 Thresholds are authored in millimetres and converted against screen
 density, so they mean the same thing to a finger on any device.
 
@@ -354,8 +358,9 @@ Two objects are carried across the Lobby → Gameplay scene load via
   placement, loadout).
 
 **Input/**
-- `PointerGestureSource` — the only device reader. Resolves a press into a
-  tap, pan or long-press lasso and publishes it.
+- `PointerGestureSource` — resolves a press into a tap, pan or long-press
+  lasso and publishes it. Not quite the only device reader: `CommandSystem`
+  still reads the right mouse button directly (see above).
 - `TapRouter` — the tap priority ladder: villager, then node-with-selection
   (move), then node (panel), then empty (clear).
 - `SelectionSystem` — tracks selected villagers; applies lasso results.
