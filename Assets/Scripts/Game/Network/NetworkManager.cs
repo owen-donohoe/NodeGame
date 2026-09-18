@@ -253,6 +253,9 @@ namespace NodeWar.Network
         public byte[][] ReceiveAll(bool deferTickInputs = false)
         {
             byte[][] received = ReceiveTransportPackets();
+            // Common case, every frame: nothing arrived and nothing to flush. Skip the allocations.
+            if (received.Length == 0 && (deferTickInputs || deferredTickInputs.Count == 0))
+                return received;
             var packets = new List<byte[]>();
             if (!deferTickInputs)
             {
