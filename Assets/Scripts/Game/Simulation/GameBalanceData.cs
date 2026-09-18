@@ -97,13 +97,25 @@ namespace NodeWar.Simulation
 
         public SuitStats GetSuitStats(SuitType type)
         {
-            if (suitStats == null) return default;
+            TryGetSuitStats(type, out SuitStats stats);
+            return stats;
+        }
 
-            for (int i = 0; i < suitStats.Length; i++)
+        public bool TryGetSuitStats(SuitType type, out SuitStats stats)
+        {
+            if (suitStats != null)
             {
-                if (suitStats[i].suitType == type) return suitStats[i];
+                for (int i = 0; i < suitStats.Length; i++)
+                {
+                    if (suitStats[i].suitType == type)
+                    {
+                        stats = suitStats[i];
+                        return true;
+                    }
+                }
             }
-            return default;
+            stats = default;
+            return false;
         }
 
         public bool CanEquipSuitAtNode(SuitType suit, DistrictType district)

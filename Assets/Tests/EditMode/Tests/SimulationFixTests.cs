@@ -182,6 +182,54 @@ namespace NodeWar.Tests
             return state;
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void Equip_UnlistedSuitIsRefusedWithoutSideEffects(bool listed)
+        {
+            SimulationState state = RunEquip(listed);
+            VillagerData v = state.villagers[0];
+            if (listed)
+            {
+                Assert.AreEqual(SuitType.Guardian, v.suit);
+                return;
+            }
+            GameBalanceData balance = GameBalanceData.Default();
+            Assert.AreEqual(SuitType.None, v.suit);
+            Assert.AreEqual(1000, state.players[0].food);
+            Assert.AreEqual(1000, state.players[0].materials);
+            Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownMax);
+            Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownRemaining);
+        }
+
+        [Test]
+        public void Equip_UnlistedSuitIsRefusedWithoutSideEffects_Determinism()
+        {
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunEquip(false)),
+                SimulationStateHasher.ComputeHash(RunEquip(false)));
+        }
+
+        private static SimulationState RunEquip(bool listed)
+        {
+            GameBalanceData balance = GameBalanceData.Default();
+            // Warrior is always listed; Guardian is listed only when the case asks for it.
+            var table = new System.Collections.Generic.List<SuitStats>();
+            table.Add(new SuitStats { suitType = SuitType.Warrior, bonusHP = 1, attackDamage = 3, moveSpeedTicks = 5, attackCooldownMax = 9, foodCost = 10, materialCost = 10, fightPriority = 1 });
+            if (listed)
+                table.Add(new SuitStats { suitType = SuitType.Guardian, bonusHP = 4, attackDamage = 2, moveSpeedTicks = 6, attackCooldownMax = 12, foodCost = 10, materialCost = 10, fightPriority = 2 });
+            balance.suitStats = table.ToArray();
+            GameSimulation.SetBalance(balance);
+            CommandProcessor.SetBalance(balance);
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            state.nodes[1].districtType = DistrictType.Barracks;
+            state.nodes[1].ownerID = 0;
+            state.villagers[0].currentNodeID = 1;
+            state.players[0].food = 1000;
+            state.players[0].materials = 1000;
+            state.players[0].draftedSuits = new[] { (int)SuitType.Guardian };
+            CommandProcessor.ProcessCommand(state, new GameCommand
+            { type = CommandType.Equip, playerID = 0, villagerID = 0, value = (int)SuitType.Guardian });
+            return state;
+        }
         private static GameBalanceData SetDefaultBalance()
         {
             GameBalanceData balance = GameBalanceData.Default();

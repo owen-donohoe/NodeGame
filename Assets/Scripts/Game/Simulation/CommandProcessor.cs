@@ -206,7 +206,7 @@ namespace NodeWar.Simulation
             if (state.nodes[nodeID].ownerID != command.playerID) return;
             if (!bal.CanEquipSuitAtNode(requestedSuit, state.nodes[nodeID].districtType)) return;
             if (!PlayerHasSuitDrafted(state, command.playerID, requestedSuit)) return;
-            SuitStats stats = bal.GetSuitStats(requestedSuit);
+            if (!bal.TryGetSuitStats(requestedSuit, out SuitStats stats)) return;
             if (state.players[command.playerID].food < stats.foodCost) return;
             if (state.players[command.playerID].materials < stats.materialCost) return;
             // Apply costs
