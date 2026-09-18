@@ -225,6 +225,18 @@ namespace NodeWar.Simulation
             state.villagers[vid].maxHP = newMaxHP;
             state.villagers[vid].hp = newMaxHP;
         }
+        public static int GetRespawnCost(SimulationState state, int playerID)
+        {
+            // Sanctuary cost reduction
+            int baseCost = bal.respawnCostFood;
+            int sanctuaryWorkers = CountSanctuaryWorkers(state, playerID);
+            int reductionPercent = bal.sanctuaryRespawnCostReductionPercent * sanctuaryWorkers;
+            int reduction = (baseCost * reductionPercent) / 100;
+            int finalCost = baseCost - reduction;
+            if (finalCost < 1) finalCost = 1;
+            return finalCost;
+        }
+
         private static void ProcessRespawnCommand(SimulationState state, GameCommand command)
         {
             int vid = command.villagerID;
@@ -233,13 +245,7 @@ namespace NodeWar.Simulation
             if (villager.ownerID != command.playerID) return;
             if (villager.state != VillagerState.Dead) return;
             if (villager.isConsumed) return;
-            // Sanctuary cost reduction
-            int baseCost = bal.respawnCostFood;
-            int sanctuaryWorkers = CountSanctuaryWorkers(state, command.playerID);
-            int reductionPercent = bal.sanctuaryRespawnCostReductionPercent * sanctuaryWorkers;
-            int reduction = (baseCost * reductionPercent) / 100;
-            int finalCost = baseCost - reduction;
-            if (finalCost < 1) finalCost = 1;
+            int finalCost = GetRespawnCost(state, command.playerID);
             if (state.players[command.playerID].food < finalCost) return;
             // Apply
             state.players[command.playerID].food -= finalCost;
