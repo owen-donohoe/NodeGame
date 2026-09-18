@@ -1,6 +1,5 @@
 using UnityEngine;
 using NodeWar.Simulation;
-using Unity.VisualScripting.Antlr3.Runtime;
 
 namespace NodeWar.Core
 {
