@@ -506,6 +506,7 @@ namespace NodeWar.Core
 
         private void FinishDraft()
         {
+            DestroyPlacementGrid();
             // NetworkManager outlives us and re-acks late retries if this final
             // ack is lost. No quiet-time guess can guarantee its delivery.
             if (isNetworked && !isBotMatch)
@@ -740,6 +741,12 @@ namespace NodeWar.Core
                     gridMarkers.Add(marker);
                 }
             }
+        }
+
+        private void OnDestroy()
+        {
+            // Disconnects and scene teardown can skip normal draft completion.
+            DestroyPlacementGrid();
         }
 
         private void DestroyPlacementGrid()
