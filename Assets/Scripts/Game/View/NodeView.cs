@@ -99,7 +99,7 @@ namespace NodeWar.View
             if (node.ownerID == 1)
                 return Color.Lerp(neutralColor, player1ClaimedColor, (float)(-node.claimBar) / (float)claimThreshold);
 
-            // Unowned but contested � show partial progress toward whichever player is claiming
+            // Unowned but contested -- show partial progress toward whichever player is claiming
             if (node.claimBar > 0)
                 return Color.Lerp(neutralColor, player0ClaimedColor, (float)node.claimBar / (float)claimThreshold);
             if (node.claimBar < 0)

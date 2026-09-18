@@ -292,7 +292,7 @@ namespace NodeWar.UI
             RaycastHit villagerHit;
             if (Physics.Raycast(ray, out villagerHit, 100f, villagerLayer))
             {
-                // Click is on a villager � let SelectionSystem handle it, don't open panel
+                // Click is on a villager -- let SelectionSystem handle it, don't open panel
                 if (isOpen) ClosePanel();
                 return;
             }
@@ -315,7 +315,7 @@ namespace NodeWar.UI
             }
             else if (isOpen)
             {
-                // Clicked away from any node � close
+                // Clicked away from any node -- close
                 ClosePanel();
             }
         }

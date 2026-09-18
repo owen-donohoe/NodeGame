@@ -51,7 +51,7 @@ namespace NodeWar.UI
 
             if (v.state != VillagerState.Dead || v.isConsumed)
             {
-                // This entry should be removed by parent — hide for now
+                // This entry should be removed by parent -- hide for now
                 gameObject.SetActive(false);
                 return;
             }

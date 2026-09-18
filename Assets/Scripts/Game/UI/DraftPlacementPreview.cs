@@ -5,7 +5,7 @@ namespace NodeWar.UI
 {
     /// <summary>
     /// Self-describing component on preview prefabs (ghost and confirmed variants).
-    /// Exposes direct references to its own renderers — no hierarchy searching.
+    /// Exposes direct references to its own renderers -- no hierarchy searching.
     /// Both the ghost preview (during drag) and confirmed placeholder prefabs carry this.
     /// </summary>
     public class DraftPlacementPreview : MonoBehaviour
@@ -18,7 +18,7 @@ namespace NodeWar.UI
         {
             if (stickerRenderer == null) return;
             stickerRenderer.sprite = sprite;
-            // Don't disable renderer — keep it enabled so base tint remains visible.
+            // Don't disable renderer -- keep it enabled so base tint remains visible.
             // Null sprite simply means no icon overlay; the base quad still shows.
         }
 

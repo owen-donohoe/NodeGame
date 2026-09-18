@@ -7,7 +7,7 @@ namespace NodeWar.UI
 {
     /// <summary>
     /// Orchestrates the always-visible HUD elements.
-    /// Holds serialized references to prefab children � does zero layout/construction.
+    /// Holds serialized references to prefab children -- does zero layout/construction.
     /// Updates resource wheels, breach bars, and villager count every frame.
     /// Detects Tab-switch and snaps resource display to new player.
     /// </summary>
@@ -29,7 +29,7 @@ namespace NodeWar.UI
         [SerializeField] private Color p0Color = new Color(0.40f, 0.60f, 1.00f);
         [SerializeField] private Color p1Color = new Color(1.00f, 0.40f, 0.40f);
 
-        // Dependencies � set via Initialize
+        // Dependencies -- set via Initialize
         private SimulationState simState;
         private DebugPlayerSwitch debugPlayerSwitch;
         private bool initialized = false;
@@ -75,7 +75,7 @@ namespace NodeWar.UI
         {
             int pid = debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
 
-            // Tab was pressed � snap all wheels to new player's values (no animation)
+            // Tab was pressed -- snap all wheels to new player's values (no animation)
             if (pid != lastControlledPID)
             {
                 lastControlledPID = pid;
