@@ -1,31 +1,50 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace NodeWar.View
 {
     public class Billboard : MonoBehaviour
     {
-        // Fixed facing direction (not "look at camera" � a consistent world angle)
-        // Capture the camera facing once per instance.
-        private Quaternion facing;
+        // Fixed facing direction (not "look at camera" -- a consistent world angle).
+        // One facing is shared by every Billboard so sprites created at different
+        // moments (draft, match start, mid-match spawns) never disagree. It is
+        // captured per scene: draft and play frame the camera differently, so a
+        // Billboard in a new scene recaptures rather than inheriting a stale one.
+        private static Quaternion sharedFacing;
+        private static SceneHandle facingSceneHandle;
+        private static bool facingInitialized;
 
-        [Tooltip("Override the camera facing for this object")]
+        [Tooltip("Override the shared facing for this specific object")]
         public bool useCustomAngle = false;
         public Vector3 customEulerAngles;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnEnterPlayMode()
+        {
+            facingInitialized = false;
+            facingSceneHandle = default;
+        }
+
         private void Start()
         {
-            // Default: face toward camera's forward direction, but fixed
-            // For isometric with camera at (45, 0, 0) rotation, sprites
-            // should face roughly (45, 0, 0) to appear upright to the viewer
-            Camera cam = Camera.main;
-            if (cam != null)
+            SceneHandle sceneHandle = gameObject.scene.handle;
+            if (!facingInitialized || facingSceneHandle != sceneHandle)
             {
-                // Keep the initial camera rotation as the camera moves.
-                facing = cam.transform.rotation;
-            }
-            else
-            {
-                facing = Quaternion.Euler(50f, 0f, 0f);
+                // Default: face toward camera's forward direction, but fixed
+                // For isometric with camera at (45, 0, 0) rotation, sprites
+                // should face roughly (45, 0, 0) to appear upright to the viewer
+                Camera cam = Camera.main;
+                if (cam != null)
+                {
+                    // Keep the camera rotation seen at capture as the camera moves.
+                    sharedFacing = cam.transform.rotation;
+                }
+                else
+                {
+                    sharedFacing = Quaternion.Euler(50f, 0f, 0f);
+                }
+                facingInitialized = true;
+                facingSceneHandle = sceneHandle;
             }
 
             ApplyFacing();
@@ -36,7 +55,7 @@ namespace NodeWar.View
             // LateUpdate so it runs after any parent position changes
             if (!useCustomAngle)
             {
-                transform.rotation = facing;
+                transform.rotation = sharedFacing;
             }
         }
 
@@ -48,7 +67,7 @@ namespace NodeWar.View
             }
             else
             {
-                transform.rotation = facing;
+                transform.rotation = sharedFacing;
             }
         }
     }
