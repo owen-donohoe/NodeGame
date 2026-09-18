@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using NodeWar.Simulation;
-using UnityEngine.EventSystems;
 
 namespace NodeWar.Input
 {
@@ -12,12 +11,11 @@ namespace NodeWar.Input
         private SelectionSystem selectionSystem;
         private int localPlayerID = 0;
 
-        private Camera mainCam;
+        private PointerGestureSource gestureSource;
+        private bool gestureRouted;
 
         private static readonly Color p0HighlightColor = new Color(0.4f, 0.7f, 1f, 0.9f);
         private static readonly Color p1HighlightColor = new Color(1f, 0.4f, 0.5f, 0.9f);
-
-        private LayerMask nodeLayer;
 
         public void Initialize(SimulationState state, InputBuffer buffer, SelectionSystem selection, int playerID)
         {
@@ -25,8 +23,34 @@ namespace NodeWar.Input
             inputBuffer = buffer;
             selectionSystem = selection;
             localPlayerID = playerID;
-            mainCam = Camera.main;
-            nodeLayer = LayerMask.GetMask("Nodes");
+        }
+
+        /// <summary>Enables resolved right-click orders; keyboard shortcuts remain independent.</summary>
+        public void SetGestureRouted(bool routed)
+        {
+            gestureRouted = routed;
+        }
+
+        public void SetGestureSource(PointerGestureSource source)
+        {
+            if (gestureSource != null)
+                gestureSource.OnSecondaryClick -= HandleSecondaryClick;
+
+            gestureSource = source;
+
+            if (gestureSource != null)
+                gestureSource.OnSecondaryClick += HandleSecondaryClick;
+        }
+
+        private void HandleSecondaryClick(GestureTarget target)
+        {
+            if (!gestureRouted || !isActiveAndEnabled) return;
+            if (target.kind == GestureTargetKind.Node) IssueMoveTo(target.id);
+        }
+
+        private void OnDestroy()
+        {
+            SetGestureSource(null);
         }
 
         public void SetPlayerID(int id)
@@ -90,14 +114,7 @@ namespace NodeWar.Input
         {
             if (simState == null) return;
 
-            Mouse mouse = Mouse.current;
             Keyboard keyboard = Keyboard.current;
-
-            // Right-click: move command
-            if (mouse != null && mouse.rightButton.wasPressedThisFrame)
-            {
-                TryIssueMoveCommand();
-            }
 
             // E key: equip selected villagers as Soldiers
             if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
@@ -109,33 +126,6 @@ namespace NodeWar.Input
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
             {
                 TryIssueRespawnCommand();
-            }
-        }
-
-        private void TryIssueMoveCommand()
-        {
-            // A right-click on an open panel must not raycast through it to
-            // the node behind -- the panel is visually on top and otherwise
-            // does not consume the input.
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                return;
-
-            if (selectionSystem.SelectedVillagerIDs.Count == 0)
-            {
-                return;
-            }
-
-            Vector2 screenPos = Mouse.current.position.ReadValue();
-            Ray ray = mainCam.ScreenPointToRay(screenPos);
-
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 100f, nodeLayer))
-            {
-                NodeWar.View.NodeView nodeView = hit.collider.GetComponentInParent<NodeWar.View.NodeView>();
-                if (nodeView != null)
-                {
-                    IssueMoveTo(nodeView.GetNodeID());
-                }
             }
         }
 

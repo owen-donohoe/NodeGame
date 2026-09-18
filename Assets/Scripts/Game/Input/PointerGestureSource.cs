@@ -27,7 +27,8 @@ namespace NodeWar.Input
     }
 
     /// <summary>
-    /// The single reader of pointer devices during gameplay.
+    /// The single pointer reader for gameplay selection and move orders.
+    /// CameraController separately handles desktop middle-drag and scroll.
     ///
     /// Previously SelectionSystem, CommandSystem and NodePanelManager each
     /// raycast the same press independently and guessed at what the others would
@@ -70,6 +71,9 @@ namespace NodeWar.Input
         /// <summary>Short press and release within the slop. The only thing that changes selection by touch.</summary>
         public event Action<GestureTarget> OnTap;
 
+        /// <summary>Desktop right-click destination, resolved against nodes only after the UI guard.</summary>
+        public event Action<GestureTarget> OnSecondaryClick;
+
         public event Action<Vector2> OnPanBegin;
         public event Action<Vector2> OnPanUpdate;
         public event Action OnPanEnd;
@@ -104,6 +108,7 @@ namespace NodeWar.Input
         private GestureTarget downTarget;
 
         private readonly List<Vector2> strokePoints = new List<Vector2>();
+        private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
 
         private float pinchStartSpan;
 
@@ -152,6 +157,17 @@ namespace NodeWar.Input
         private void Update()
         {
             if (!initialized) return;
+
+            // Right-click is an immediate move intent, independent of the
+            // primary pointer's tap/pan/lasso state. Villagers do not occlude
+            // its destination node.
+            Mouse mouse = Mouse.current;
+            if (mouse != null && mouse.rightButton.wasPressedThisFrame)
+            {
+                Vector2 mousePos = mouse.position.ReadValue();
+                if (!IsMouseOverUI(mousePos))
+                    OnSecondaryClick?.Invoke(ResolveTarget(mousePos, nodesOnly: true));
+            }
 
             Pointer pointer = Pointer.current;
             if (pointer == null) return;
@@ -232,7 +248,7 @@ namespace NodeWar.Input
             if (IsPointerOverUI())
             {
                 state = GestureState.Blocked;
-                downTarget = GestureTarget.None(pos);
+                downTarget = GestureTarget.None();
                 Log("down over UI -> Blocked");
                 return;
             }
@@ -437,17 +453,17 @@ namespace NodeWar.Input
         // ===== RESOLUTION =====
 
         /// <summary>
-        /// One raycast pair, at press time. Villager wins over node when both
-        /// are under the finger -- decided here so no consumer re-decides it.
+        /// Resolves the world target at press time. Primary presses prefer a
+        /// selectable villager; right-click destinations search only nodes.
         /// </summary>
-        private GestureTarget ResolveTarget(Vector2 screenPos)
+        private GestureTarget ResolveTarget(Vector2 screenPos, bool nodesOnly = false)
         {
-            if (cam == null) return GestureTarget.None(screenPos);
+            if (cam == null) return GestureTarget.None();
 
             Ray ray = cam.ScreenPointToRay(screenPos);
             RaycastHit hit;
 
-            if (Physics.Raycast(ray, out hit, raycastDistance, villagerMask))
+            if (!nodesOnly && Physics.Raycast(ray, out hit, raycastDistance, villagerMask))
             {
                 var villager = hit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
                 if (villager != null)
@@ -460,7 +476,7 @@ namespace NodeWar.Input
                     // block you from opening it -- and their touch targets are
                     // finger-sized, so they cover a lot of board.
                     if (villagerFilter == null || villagerFilter(id))
-                        return new GestureTarget(GestureTargetKind.Villager, id, screenPos);
+                        return new GestureTarget(GestureTargetKind.Villager, id);
                 }
             }
 
@@ -468,10 +484,35 @@ namespace NodeWar.Input
             {
                 var node = hit.collider.GetComponentInParent<NodeWar.View.NodeView>();
                 if (node != null)
-                    return new GestureTarget(GestureTargetKind.Node, node.GetNodeID(), screenPos);
+                    return new GestureTarget(GestureTargetKind.Node, node.GetNodeID());
             }
 
-            return GestureTarget.None(screenPos);
+            return GestureTarget.None();
+        }
+
+        private bool IsMouseOverUI(Vector2 screenPos)
+        {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null) return false;
+
+            // Query this click's position, not the input module's cached hover
+            // from a potentially earlier Update. PanelRaycaster covers the
+            // UI Toolkit HUD and sheet; GraphicRaycaster covers legacy uGUI.
+            var pointerData = new PointerEventData(eventSystem)
+            {
+                position = screenPos,
+                pointerId = -1,
+                button = PointerEventData.InputButton.Right
+            };
+            uiHits.Clear();
+            eventSystem.RaycastAll(pointerData, uiHits);
+            for (int i = 0; i < uiHits.Count; i++)
+            {
+                if (uiHits[i].module is UnityEngine.UI.GraphicRaycaster ||
+                    uiHits[i].module is UnityEngine.UIElements.PanelRaycaster)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
