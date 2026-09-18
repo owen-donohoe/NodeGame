@@ -5,6 +5,38 @@ namespace NodeWar.Tests
 {
     public class SimulationFixTests
     {
+        [TestCase(20, 4, 3)]
+        [TestCase(30, 4, 4)]
+        public void Healing_UsesEachVillagersOwnInterval(int tick, int shrineHP, int normalHP)
+        {
+            SimulationState state = RunHealing(tick);
+            Assert.AreEqual(shrineHP, state.villagers[0].hp);
+            Assert.AreEqual(normalHP, state.villagers[1].hp);
+        }
+
+        [TestCase(20)]
+        [TestCase(30)]
+        public void Healing_UsesEachVillagersOwnInterval_Determinism(int tick)
+        {
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunHealing(tick)),
+                SimulationStateHasher.ComputeHash(RunHealing(tick)));
+        }
+
+        private static SimulationState RunHealing(int tick)
+        {
+            GameBalanceData balance = SetDefaultBalance();
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            state.nodes[1].districtType = DistrictType.Shrine;
+            state.nodes[1].ownerID = 0;
+            state.nodes[1].claimBar = balance.claimThreshold;
+            state.villagers[0].currentNodeID = 1;
+            state.villagers[0].hp = 3;
+            state.villagers[1].hp = 3;
+            // No commands: wait for the first Shrine interval, then the first normal one.
+            for (int i = 0; i < tick; i++) GameSimulation.SimulateTick(state);
+            return state;
+        }
+
         private static GameBalanceData SetDefaultBalance()
         {
             GameBalanceData balance = GameBalanceData.Default();

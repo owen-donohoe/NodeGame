@@ -21,7 +21,7 @@ namespace NodeWar.Simulation
         /// 3. Combat (detect fights, process cooldowns, deal damage, handle deaths)
         /// 4. Claim bars
         /// 5. Production
-        /// 6. Healing (every 30 ticks)
+        /// 6. Healing (normal or owned-Shrine interval)
         /// 7. Respawn timers
         /// 8. Win condition (breachCount >= 3)
         /// 9. Post-combat resume (fight ended, determine next state)
@@ -822,12 +822,14 @@ namespace NodeWar.Simulation
         // ===== STEP 6 =: HEALING =====
 
         /// <summary>
-        /// Every 30 ticks (3 seconds), heal all damaged non-fighting, non-dead villagers by 1 HP.
-        /// Simple approach: no per-villager heal timer needed.
+        /// Heal damaged, living, non-fighting villagers by 1 HP on their applicable
+        /// interval: owned-Shrine occupants use the Shrine interval, others the normal one.
         /// </summary>
         private static void TickHealing(SimulationState state)
         {
-            if (state.tickCount % bal.healIntervalTicks != 0) return;
+            bool normalDue = state.tickCount % bal.healIntervalTicks == 0;
+            bool shrineDue = state.tickCount % bal.shrineHealIntervalTicks == 0;
+            if (!normalDue && !shrineDue) return;
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -839,8 +841,7 @@ namespace NodeWar.Simulation
 
                 bool onOwnedShrine = state.nodes[v.currentNodeID].districtType == DistrictType.Shrine &&
                                      state.nodes[v.currentNodeID].ownerID == v.ownerID;
-                int interval = onOwnedShrine ? bal.shrineHealIntervalTicks : bal.healIntervalTicks;
-                if (state.tickCount % interval == 0)
+                if (onOwnedShrine ? shrineDue : normalDue)
                     state.villagers[i].hp++;
             }
         }
