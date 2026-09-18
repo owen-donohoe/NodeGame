@@ -296,12 +296,6 @@ namespace NodeWar.UI
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
             BuildNodeSheet(root);
-
-            // The tree was just rebuilt, so any subscription from a previous
-            // enable is pointed at discarded elements. Re-hooking here keeps
-            // the readout alive across a disable without GameManager having to
-            // know the HUD was ever switched off.
-            if (boardCamera != null) BindCamera(boardCamera);
         }
 
         /// <summary>
