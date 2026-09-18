@@ -451,7 +451,7 @@ namespace NodeWar.Network
                 }
                 catch (SocketException)
                 {
-                    // Socket closed during Receive � expected on shutdown
+                    // Socket closed during Receive -- expected on shutdown
                     if (!isRunning) break;
                 }
                 catch (ObjectDisposedException)
