@@ -303,48 +303,30 @@ namespace NodeWar.Simulation
 
         private static void TickCombat(SimulationState state)
         {
-            // Phase A: For each node, detect if both players have living villagers present.
-            //          Set all living villagers on contested nodes to Fighting state.
-            for (int nodeIndex = 0; nodeIndex < state.nodes.Length; nodeIndex++)
+            // Phase A: Build player presence once, then interrupt villagers on contested nodes.
+            int[] presence = new int[state.nodes.Length];
+            for (int v = 0; v < state.villagers.Length; v++)
             {
-                bool hasP0 = false;
-                bool hasP1 = false;
+                VillagerData vil = state.villagers[v];
+                if (vil.state == VillagerState.Dead || vil.isConsumed) continue;
+                presence[vil.currentNodeID] |= vil.ownerID == 0 ? 1 : 2;
+            }
 
-                for (int v = 0; v < state.villagers.Length; v++)
-                {
-                    VillagerData vil = state.villagers[v];
-                    if (vil.currentNodeID != nodeIndex) continue;
-                    if (vil.state == VillagerState.Dead) continue;
-                    if (vil.isConsumed) continue;
+            for (int v = 0; v < state.villagers.Length; v++)
+            {
+                VillagerData vil = state.villagers[v];
+                if (vil.state == VillagerState.Dead || vil.isConsumed) continue;
+                if (presence[vil.currentNodeID] != 3) continue;
+                if (vil.state == VillagerState.Fighting) continue;
 
-                    if (vil.ownerID == 0) hasP0 = true;
-                    else hasP1 = true;
-                }
+                state.villagers[v].state = VillagerState.Fighting;
+                state.villagers[v].attackCooldownRemaining = vil.attackCooldownMax;
+                state.villagers[v].combatTargetID = -1;
+                state.villagers[v].moveProgress = 0;
 
-                if (!hasP0 || !hasP1) continue;
-
-                // Both players present on this node: set everyone to Fighting
-                for (int v = 0; v < state.villagers.Length; v++)
-                {
-                    VillagerData vil = state.villagers[v];
-                    if (vil.currentNodeID != nodeIndex) continue;
-                    if (vil.state == VillagerState.Dead) continue;
-                    if (vil.isConsumed) continue;
-
-                    if (vil.state != VillagerState.Fighting)
-                    {
-                        state.villagers[v].state = VillagerState.Fighting;
-                        state.villagers[v].attackCooldownRemaining = state.villagers[v].attackCooldownMax;
-                        state.villagers[v].combatTargetID = -1;
-                        state.villagers[v].moveProgress = 0;
-
-                        // Zeroing progress above means "standing on
-                        // movePath[movePathIndex]". For a villager part-way
-                        // through a reversal that node is the one it turned
-                        // around before ever reaching, so the leg goes with it.
-                        CollapseReversalLeg(state, v);
-                    }
-                }
+                // Zero progress leaves the villager on its current node, so discard
+                // any half-walked reversal leg that points at a different node.
+                CollapseReversalLeg(state, v);
             }
 
             // Phase B: Assign round-robin targets for all contested nodes
@@ -420,47 +402,52 @@ namespace NodeWar.Simulation
         /// </summary>
         private static void AssignAllCombatTargets(SimulationState state)
         {
-            // Track which nodes have combat
+            // Array-backed per-node chains preserve ascending villager ID in one pass.
+            int[] first = new int[state.nodes.Length];
+            int[] last = new int[state.nodes.Length];
+            int[] next = new int[state.villagers.Length];
+            for (int n = 0; n < first.Length; n++)
+                first[n] = last[n] = -1;
+            for (int v = 0; v < state.villagers.Length; v++)
+            {
+                VillagerData vil = state.villagers[v];
+                if (vil.state != VillagerState.Fighting || vil.isConsumed) continue;
+                int node = vil.currentNodeID;
+                next[v] = -1;
+                if (first[node] < 0) first[node] = v;
+                else next[last[node]] = v;
+                last[node] = v;
+            }
+
+            List<int> p0Fighters = new List<int>();
+            List<int> p1Fighters = new List<int>();
+            List<int> p0Targets = new List<int>();
+            List<int> p1Targets = new List<int>();
+            System.Comparison<int> compareTargets = (a, b) =>
+            {
+                int priority = state.villagers[b].fightPriority.CompareTo(state.villagers[a].fightPriority);
+                return priority != 0 ? priority : a.CompareTo(b);
+            };
+
             for (int nodeIndex = 0; nodeIndex < state.nodes.Length; nodeIndex++)
             {
-                // Gather fighters per side on this node
-                List<int> p0Fighters = new List<int>();
-                List<int> p1Fighters = new List<int>();
-
-                for (int v = 0; v < state.villagers.Length; v++)
+                p0Fighters.Clear();
+                p1Fighters.Clear();
+                p0Targets.Clear();
+                p1Targets.Clear();
+                for (int v = first[nodeIndex]; v >= 0; v = next[v])
                 {
-                    VillagerData vil = state.villagers[v];
-                    if (vil.currentNodeID != nodeIndex) continue;
-                    if (vil.state != VillagerState.Fighting) continue;
-                    if (vil.isConsumed) continue;
-
-                    if (vil.ownerID == 0) p0Fighters.Add(v);
+                    if (state.villagers[v].ownerID == 0) p0Fighters.Add(v);
                     else p1Fighters.Add(v);
                 }
 
-                // Need both sides for combat assignments
                 if (p0Fighters.Count == 0 || p1Fighters.Count == 0) continue;
 
-                // Sort targets by fightPriority descending, then villagerID ascending
-                // P0 attackers target P1 fighters
-                List<int> p1Targets = new List<int>(p1Fighters);
-                p1Targets.Sort((a, b) =>
-                {
-                    int priA = state.villagers[a].fightPriority;
-                    int priB = state.villagers[b].fightPriority;
-                    if (priB != priA) return priB.CompareTo(priA); // descending priority
-                    return a.CompareTo(b); // ascending ID
-                });
-
-                // P1 attackers target P0 fighters
-                List<int> p0Targets = new List<int>(p0Fighters);
-                p0Targets.Sort((a, b) =>
-                {
-                    int priA = state.villagers[a].fightPriority;
-                    int priB = state.villagers[b].fightPriority;
-                    if (priB != priA) return priB.CompareTo(priA);
-                    return a.CompareTo(b);
-                });
+                // Only targets are priority-sorted; attackers retain ascending ID order.
+                p0Targets.AddRange(p0Fighters);
+                p1Targets.AddRange(p1Fighters);
+                p0Targets.Sort(compareTargets);
+                p1Targets.Sort(compareTargets);
 
                 // Assign round-robin: P0 attackers -> P1 targets
                 for (int i = 0; i < p0Fighters.Count; i++)
