@@ -35,6 +35,11 @@ namespace NodeWar.Core
             botPlayer = bot;
         }
 
+        /// <summary>
+        /// Fraction of the current tick interval already elapsed, for View interpolation.
+        /// Not clamped: Update drains whole ticks, so it reads in [0, 1) once Initialize has
+        /// run. Before Initialize the interval is zero and the value is not meaningful.
+        /// </summary>
         public float TickAlpha
         {
             get { return accumulator / tickInterval; }
