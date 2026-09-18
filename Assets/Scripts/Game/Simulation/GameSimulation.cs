@@ -263,84 +263,16 @@ namespace NodeWar.Simulation
                     return;
                 }
 
-                if (node.districtType == DistrictType.Farm)
+                SuitType expectedSuit = GetExpectedSuit(node.districtType);
+                if (expectedSuit != SuitType.None)
                 {
-                    state.villagers[villagerIndex].suit = SuitType.Farmer;
+                    state.villagers[villagerIndex].suit = expectedSuit;
                     int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
                     if (workers < bal.maxWorkersPerNode)
                     {
-                        state.villagers[villagerIndex].productionTicksMax = bal.foodProductionTicks;
-                        state.villagers[villagerIndex].productionTicksRemaining = bal.foodProductionTicks;
-                        state.villagers[villagerIndex].state = VillagerState.Working;
-                    }
-                    else state.villagers[villagerIndex].state = VillagerState.Idle;
-                    return;
-                }
-
-                if (node.districtType == DistrictType.Mine)
-                {
-                    state.villagers[villagerIndex].suit = SuitType.Miner;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < bal.maxWorkersPerNode)
-                    {
-                        state.villagers[villagerIndex].productionTicksMax = bal.materialProductionTicks;
-                        state.villagers[villagerIndex].productionTicksRemaining = bal.materialProductionTicks;
-                        state.villagers[villagerIndex].state = VillagerState.Working;
-                    }
-                    else state.villagers[villagerIndex].state = VillagerState.Idle;
-                    return;
-                }
-
-                if (node.districtType == DistrictType.Forge)
-                {
-                    state.villagers[villagerIndex].suit = SuitType.Smelter;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < bal.maxWorkersPerNode)
-                    {
-                        state.villagers[villagerIndex].productionTicksMax = bal.metalProductionTicks;
-                        state.villagers[villagerIndex].productionTicksRemaining = bal.metalProductionTicks;
-                        state.villagers[villagerIndex].state = VillagerState.Working;
-                    }
-                    else state.villagers[villagerIndex].state = VillagerState.Idle;
-                    return;
-                }
-
-                if (node.districtType == DistrictType.Market)
-                {
-                    state.villagers[villagerIndex].suit = SuitType.Merchant;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < bal.maxWorkersPerNode)
-                    {
-                        state.villagers[villagerIndex].productionTicksMax = bal.marketFoodProductionTicks;
-                        state.villagers[villagerIndex].productionTicksRemaining = bal.marketFoodProductionTicks;
-                        state.villagers[villagerIndex].state = VillagerState.Working;
-                    }
-                    else state.villagers[villagerIndex].state = VillagerState.Idle;
-                    return;
-                }
-
-                if (node.districtType == DistrictType.Sanctuary)
-                {
-                    state.villagers[villagerIndex].suit = SuitType.Acolyte;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < bal.maxWorkersPerNode)
-                    {
-                        state.villagers[villagerIndex].productionTicksMax = 0;
-                        state.villagers[villagerIndex].productionTicksRemaining = 0;
-                        state.villagers[villagerIndex].state = VillagerState.Working;
-                    }
-                    else state.villagers[villagerIndex].state = VillagerState.Idle;
-                    return;
-                }
-
-                if (node.districtType == DistrictType.Watchtower)
-                {
-                    state.villagers[villagerIndex].suit = SuitType.Watcher;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < bal.maxWorkersPerNode)
-                    {
-                        state.villagers[villagerIndex].productionTicksMax = 0;
-                        state.villagers[villagerIndex].productionTicksRemaining = 0;
+                        int ticks = GetProductionTicks(node.districtType);
+                        state.villagers[villagerIndex].productionTicksMax = ticks;
+                        state.villagers[villagerIndex].productionTicksRemaining = ticks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
                     }
                     else state.villagers[villagerIndex].state = VillagerState.Idle;
