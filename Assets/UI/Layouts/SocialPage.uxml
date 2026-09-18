@@ -22,16 +22,16 @@
 
     <engine:VisualElement name="social-page" class="social">
 
-        <engine:VisualElement class="placeholder social__band">
-            <engine:Label class="placeholder__label social__heading" text="SOCIAL" />
-            <engine:Label class="placeholder__label"
+        <engine:VisualElement class="lb-placeholder social__band">
+            <engine:Label class="lb-placeholder__label social__heading" text="SOCIAL" />
+            <engine:Label class="lb-placeholder__label"
                           text="Friends, clubs and chat are not designed yet - there is nothing behind this screen to show." />
         </engine:VisualElement>
 
-        <engine:VisualElement class="card social__aside">
-            <engine:Label class="body"
+        <engine:VisualElement class="social__card social__aside">
+            <engine:Label class="social__body"
                           text="To play someone you know, use Play and share the join code." />
-            <engine:Label class="caption social__aside-note"
+            <engine:Label class="social__caption social__aside-note"
                           text="Local network by direct IP works too, on the same Wi-Fi." />
         </engine:VisualElement>
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
+using NodeWar.Lobby;
 
 namespace NodeWar.UI
 {
@@ -8,44 +9,79 @@ namespace NodeWar.UI
     /// The equip bench, shared by Barracks, Camp, Arsenal and Sanctuary - the
     /// four districts CanEquipSuitAtNode accepts. They differ only in which
     /// suits they permit, and that difference is data, so one content covers
-    /// all four rather than four near-identical ones.
+    /// all four.
+    ///
+    /// SUIT FIRST, THEN UNIT, THEN EQUIP, after the prototype. The suits that
+    /// fit here sit in a row of cards; the villagers standing here sit below as
+    /// chips. Pick one of each and the action bar's button equips.
     ///
     /// EVERY REFUSAL IS NAMED. ProcessEquipCommand drops a command it will not
-    /// run without a word, and there are seven separate ways it can refuse:
-    /// wrong owner, dead, consumed, not idle, already wearing a combat suit,
-    /// suit not drafted, or not enough food and materials. A bench that just
-    /// greys a button out leaves the player guessing which one applies, so each
-    /// villager row says.
+    /// run without a word. A card says "not drafted", or shows the price when
+    /// you are short; a chip says what the villager is busy doing or which suit
+    /// it already wears; the button says what is still missing. Each answer
+    /// comes from CommandEligibility, in CommandProcessor's own order.
     /// </summary>
     public class EquipContent : NodeSheetContent
     {
-        private Label districtLabel;
-        private VisualElement rosterHost;
+        private readonly List<SuitType> fits = new List<SuitType>();
+        private readonly List<SuitCard> cards = new List<SuitCard>();
+        private readonly List<UnitChip> chips = new List<UnitChip>();
+
+        private Label fitsLine;
+        private Label enemyNote;
+        private VisualElement yourSide;
+        private VisualElement unitHost;
         private Label emptyLabel;
+        private Button equipButton;
 
-        private readonly List<VillagerRow> rows = new List<VillagerRow>();
-        private readonly List<SuitType> permittedSuits = new List<SuitType>();
+        private SuitType pickedSuit = SuitType.None;
+        private int pickedUnit = -1;
 
-        private int selectedVillager = -1;
+        public override bool Tall { get { return true; } }
 
         protected override void OnBind()
         {
-            Root.Clear();
-            rows.Clear();
-            selectedVillager = -1;
+            cards.Clear();
+            chips.Clear();
+            pickedSuit = SuitType.None;
+            pickedUnit = -1;
 
-            CollectPermittedSuits();
+            CollectFits();
 
-            districtLabel = Caption("");
-            Root.Add(districtLabel);
+            fitsLine = Heading("FITS HERE · " + DescribeFits());
+            Root.Add(fitsLine);
 
-            rosterHost = new VisualElement();
-            rosterHost.AddToClassList("equip__roster");
-            rosterHost.pickingMode = PickingMode.Ignore;
-            Root.Add(rosterHost);
+            enemyNote = Caption("Not your district. You cannot equip here.");
+            Root.Add(enemyNote);
 
-            emptyLabel = Caption("");
-            Root.Add(emptyLabel);
+            yourSide = Box("equip__yours");
+
+            ScrollView rail = new ScrollView(ScrollViewMode.Horizontal);
+            rail.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            rail.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            rail.contentContainer.AddToClassList("equip__rail");
+
+            for (int i = 0; i < fits.Count; i++)
+            {
+                SuitCard card = new SuitCard(fits[i], OnCardPressed);
+                cards.Add(card);
+                rail.Add(card.Root);
+            }
+
+            yourSide.Add(rail);
+            yourSide.Add(Box("equip__gap"));
+            yourSide.Add(Heading("UNITS HERE"));
+
+            unitHost = Box("equip__units");
+            yourSide.Add(unitHost);
+
+            emptyLabel = Caption("No villagers of yours are standing here.");
+            yourSide.Add(emptyLabel);
+
+            Root.Add(yourSide);
+
+            equipButton = PrimaryButton(OnEquipPressed);
+            Actions.Add(equipButton);
         }
 
         /// <summary>
@@ -53,9 +89,9 @@ namespace NodeWar.UI
         /// than restated. Iterating the enum means a new SuitType shows up here
         /// the moment CanEquipSuitAtNode admits it.
         /// </summary>
-        private void CollectPermittedSuits()
+        private void CollectFits()
         {
-            permittedSuits.Clear();
+            fits.Clear();
 
             DistrictType district = State.nodes[NodeID].districtType;
             System.Array all = System.Enum.GetValues(typeof(SuitType));
@@ -67,251 +103,246 @@ namespace NodeWar.UI
                 if (!GameBalanceData.IsCombatSuit(suit)) continue;
                 if (!Balance.CanEquipSuitAtNode(suit, district)) continue;
 
-                permittedSuits.Add(suit);
+                fits.Add(suit);
             }
+        }
+
+        private string DescribeFits()
+        {
+            if (fits.Count == 0) return "nothing";
+
+            string result = "";
+            for (int i = 0; i < fits.Count; i++)
+                result += (i > 0 ? ", " : "") + fits[i];
+
+            return result;
         }
 
         public override void Refresh()
         {
-            bool owned = State.nodes[NodeID].ownerID == ControlledPID;
+            bool yours = State.nodes[NodeID].ownerID == ControlledPID;
 
-            districtLabel.text = "Fits here: " + DescribeSuits();
+            Show(enemyNote, !yours);
+            Show(yourSide, yours);
+            Show(equipButton, yours && fits.Count > 0);
 
-            if (!owned)
-            {
-                rosterHost.AddToClassList("sheet__hidden");
-                emptyLabel.RemoveFromClassList("sheet__hidden");
-                emptyLabel.text = "Not your district. You cannot equip here.";
-                return;
-            }
+            if (!yours) return;
 
-            rosterHost.RemoveFromClassList("sheet__hidden");
+            for (int i = 0; i < cards.Count; i++)
+                cards[i].Set(CommandEligibility.EquipSuit(State, Balance, ControlledPID, cards[i].Suit),
+                             Balance.GetSuitStats(cards[i].Suit), pickedSuit == cards[i].Suit);
 
+            int shown = RefreshUnits();
+            Show(emptyLabel, shown == 0);
+
+            RefreshButton();
+        }
+
+        private int RefreshUnits()
+        {
             int shown = 0;
+            bool pickedStillHere = false;
 
             for (int i = 0; i < State.villagers.Length; i++)
             {
                 VillagerData v = State.villagers[i];
 
+                // The roster is your living villagers standing on this node.
+                // Equip applies at the villager's currentNodeID, so that is
+                // what "standing here" has to mean.
                 if (v.ownerID != ControlledPID) continue;
                 if (v.currentNodeID != NodeID) continue;
                 if (v.isConsumed) continue;
                 if (v.state == VillagerState.Dead) continue;
 
-                VillagerRow row = RowAt(shown);
-                row.Set(i, v, this);
+                EquipRefusal refusal = CommandEligibility.EquipVillager(State, ControlledPID, i);
+                ChipAt(shown).Set(i, v, refusal, pickedUnit == i);
+                if (pickedUnit == i) pickedStillHere = true;
                 shown++;
             }
 
-            for (int i = shown; i < rows.Count; i++)
-                rows[i].Hide();
+            for (int i = shown; i < chips.Count; i++)
+                chips[i].Hide();
 
-            emptyLabel.EnableInClassList("sheet__hidden", shown > 0);
+            if (!pickedStillHere) pickedUnit = -1;
 
-            if (shown == 0)
-                emptyLabel.text = "No villagers of yours are standing here.";
+            return shown;
         }
 
-        private string DescribeSuits()
+        private UnitChip ChipAt(int index)
         {
-            if (permittedSuits.Count == 0) return "nothing";
-
-            string result = "";
-
-            for (int i = 0; i < permittedSuits.Count; i++)
-                result += (result.Length > 0 ? ", " : "") + permittedSuits[i];
-
-            return result;
-        }
-
-        private VillagerRow RowAt(int index)
-        {
-            while (rows.Count <= index)
+            while (chips.Count <= index)
             {
-                VillagerRow created = new VillagerRow(OnVillagerSelected, OnSuitChosen);
-                rows.Add(created);
-                rosterHost.Add(created.Root);
+                UnitChip created = new UnitChip(OnUnitPressed);
+                chips.Add(created);
+                unitHost.Add(created.Root);
             }
 
-            return rows[index];
+            return chips[index];
         }
 
-        private void OnVillagerSelected(int villagerID)
+        /// <summary>
+        /// The button says what is still missing, or what stands in the way,
+        /// and is enabled only when the simulation would accept the command.
+        /// </summary>
+        private void RefreshButton()
         {
-            selectedVillager = selectedVillager == villagerID ? -1 : villagerID;
+            if (pickedSuit == SuitType.None)
+            {
+                equipButton.text = "Pick a suit";
+                equipButton.SetEnabled(false);
+                return;
+            }
+
+            if (pickedUnit < 0)
+            {
+                equipButton.text = "Pick a unit";
+                equipButton.SetEnabled(false);
+                return;
+            }
+
+            EquipRefusal refusal = CommandEligibility.Equip(State, Balance, ControlledPID, pickedUnit, pickedSuit);
+            equipButton.SetEnabled(refusal == EquipRefusal.None);
+            equipButton.text = refusal == EquipRefusal.None
+                ? "Equip " + pickedSuit
+                : RefusalText(refusal, State.villagers[pickedUnit], Balance.GetSuitStats(pickedSuit));
+        }
+
+        private void OnCardPressed(SuitType suit)
+        {
+            pickedSuit = pickedSuit == suit ? SuitType.None : suit;
             Refresh();
         }
 
-        private void OnSuitChosen(int villagerID, SuitType suit)
+        private void OnUnitPressed(int villagerID)
         {
+            pickedUnit = pickedUnit == villagerID ? -1 : villagerID;
+            Refresh();
+        }
+
+        private void OnEquipPressed()
+        {
+            if (pickedSuit == SuitType.None || pickedUnit < 0) return;
+            if (CommandEligibility.Equip(State, Balance, ControlledPID, pickedUnit, pickedSuit) != EquipRefusal.None) return;
+
             Send(new GameCommand
             {
                 type = CommandType.Equip,
                 playerID = ControlledPID,
-                villagerID = villagerID,
-                value = (int)suit
+                villagerID = pickedUnit,
+                value = (int)pickedSuit
             });
 
-            selectedVillager = -1;
+            pickedSuit = SuitType.None;
+            pickedUnit = -1;
         }
 
-        /// <summary>
-        /// Why ProcessEquipCommand would refuse this villager, in its own order
-        /// of checks, or null when it would accept. Kept as one method so the
-        /// reason shown and the reason the simulation acts on cannot drift into
-        /// disagreeing.
-        /// </summary>
-        private string RefusalFor(VillagerData villager)
+        private static string CostText(SuitStats stats)
         {
-            if (villager.state != VillagerState.Idle)
-                return "Busy - " + villager.state.ToString().ToLowerInvariant();
-
-            if (GameBalanceData.IsCombatSuit(villager.suit))
-                return "Already wearing " + villager.suit;
-
-            if (permittedSuits.Count == 0)
-                return "This district fits no suits";
-
-            return null;
+            if (stats.foodCost == 0 && stats.materialCost == 0) return "free";
+            return stats.foodCost + "f " + stats.materialCost + "m";
         }
 
-        /// <summary>
-        /// Whether this suit could actually be put on, and what stops it. Drafted
-        /// state and cost are both checked, because both are refusals the player
-        /// can do something about - one in the Workshop, one by waiting.
-        /// </summary>
-        private string SuitRefusal(SuitType suit)
+        private static string RefusalText(EquipRefusal refusal, VillagerData villager, SuitStats stats)
         {
-            if (!PlayerHasDrafted(suit))
-                return "not drafted";
-
-            SuitStats stats = Balance.GetSuitStats(suit);
-            PlayerData player = State.players[ControlledPID];
-
-            if (player.food < stats.foodCost || player.materials < stats.materialCost)
-                return stats.foodCost + "f " + stats.materialCost + "m";
-
-            return null;
-        }
-
-        private bool PlayerHasDrafted(SuitType suit)
-        {
-            int[] drafted = State.players[ControlledPID].draftedSuits;
-            if (drafted == null) return false;
-
-            for (int i = 0; i < drafted.Length; i++)
+            switch (refusal)
             {
-                if (drafted[i] == (int)suit) return true;
+                case EquipRefusal.Busy: return "Unit is " + villager.state.ToString().ToLowerInvariant();
+                case EquipRefusal.AlreadySuited: return "Already wearing " + villager.suit;
+                case EquipRefusal.NotDrafted: return "Not drafted";
+                case EquipRefusal.CannotAfford: return "Need " + CostText(stats);
+                case EquipRefusal.DoesNotFit: return "Does not fit here";
+                case EquipRefusal.NodeNotYours: return "Not your district";
+                default: return "Cannot equip";
+            }
+        }
+
+        /// <summary>One suit that fits here: its tile, name, and price or refusal.</summary>
+        private class SuitCard
+        {
+            public VisualElement Root { get; private set; }
+            public SuitType Suit { get; private set; }
+
+            private readonly Label sub;
+
+            public SuitCard(SuitType suit, System.Action<SuitType> pressed)
+            {
+                Suit = suit;
+
+                Button button = new Button(() => pressed(suit));
+                button.AddToClassList("ui-reset-button");
+                button.AddToClassList("equip__card");
+                Root = button;
+
+                string name = suit.ToString();
+
+                VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor("suit_" + name.ToLowerInvariant()));
+                tile.Add(Text(name.Substring(0, 1), "ui-tile__monogram", "equip__card-letter"));
+
+                sub = Text("", "equip__card-sub");
+
+                button.Add(tile);
+                button.Add(Text(name, "equip__card-name", "ui-w600"));
+                button.Add(sub);
             }
 
-            return false;
+            public void Set(EquipRefusal refusal, SuitStats stats, bool picked)
+            {
+                bool notDrafted = refusal == EquipRefusal.NotDrafted;
+
+                // Always the price, unless it is not yours to buy at all. Short
+                // is dimmed and the price turns the short-ink colour - never red,
+                // which on this surface means player 2.
+                sub.text = notDrafted ? "not drafted" : CostText(stats);
+                sub.EnableInClassList("equip__card-sub--short", refusal == EquipRefusal.CannotAfford);
+
+                Root.EnableInClassList("equip__card--dim", refusal != EquipRefusal.None);
+                Root.EnableInClassList("equip__card--picked", picked);
+            }
         }
 
-        /// <summary>
-        /// One villager standing at this district. Tapping it opens the suit
-        /// choices underneath, so the bench does not show every suit for every
-        /// villager at once on a phone-width sheet.
-        /// </summary>
-        private class VillagerRow
+        /// <summary>One of your villagers standing here, and whether it can take a suit.</summary>
+        private class UnitChip
         {
             public VisualElement Root { get; private set; }
 
-            private readonly Button header;
-            private readonly Label title;
-            private readonly Label subtitle;
-            private readonly VisualElement suitHost;
-            private readonly System.Action<int> onSelected;
-            private readonly System.Action<int, SuitType> onSuitChosen;
-
+            private readonly Button button;
+            private readonly Label name;
+            private readonly Label state;
             private int villagerID = -1;
 
-            public VillagerRow(System.Action<int> selected, System.Action<int, SuitType> suitChosen)
+            public UnitChip(System.Action<int> pressed)
             {
-                onSelected = selected;
-                onSuitChosen = suitChosen;
+                button = new Button(() => { if (villagerID >= 0) pressed(villagerID); });
+                button.AddToClassList("ui-reset-button");
+                button.AddToClassList("equip__unit");
+                Root = button;
 
-                Root = new VisualElement();
-                Root.AddToClassList("equip__villager");
-                Root.pickingMode = PickingMode.Ignore;
-
-                header = new Button(() => { if (villagerID >= 0) onSelected(villagerID); });
-                header.AddToClassList("equip__villager-header");
-
-                VisualElement text = new VisualElement();
-                text.AddToClassList("equip__villager-text");
-                text.pickingMode = PickingMode.Ignore;
-
-                title = new Label();
-                title.AddToClassList("body");
-                title.pickingMode = PickingMode.Ignore;
-
-                subtitle = new Label();
-                subtitle.AddToClassList("caption");
-                subtitle.pickingMode = PickingMode.Ignore;
-
-                text.Add(title);
-                text.Add(subtitle);
-                header.Add(text);
-
-                suitHost = new VisualElement();
-                suitHost.AddToClassList("equip__suits");
-                suitHost.pickingMode = PickingMode.Ignore;
-
-                Root.Add(header);
-                Root.Add(suitHost);
+                name = Text("", "equip__unit-name", "ui-w600");
+                state = Text("", "equip__unit-state");
+                button.Add(name);
+                button.Add(state);
             }
 
-            public void Set(int id, VillagerData villager, EquipContent owner)
+            public void Set(int id, VillagerData villager, EquipRefusal refusal, bool picked)
             {
                 villagerID = id;
-                Root.RemoveFromClassList("sheet__hidden");
+                Show(Root, true);
 
-                title.text = "Villager " + id;
+                name.text = "Villager " + id;
 
-                string refusal = owner.RefusalFor(villager);
-                bool equippable = refusal == null;
+                if (refusal == EquipRefusal.AlreadySuited) state.text = "has " + villager.suit;
+                else if (refusal == EquipRefusal.Busy) state.text = villager.state.ToString().ToLowerInvariant();
+                else state.text = "idle";
 
-                subtitle.text = equippable ? "Ready to equip" : refusal;
-                header.SetEnabled(equippable);
-
-                bool open = equippable && owner.selectedVillager == id;
-                suitHost.EnableInClassList("sheet__hidden", !open);
-
-                if (!open) return;
-
-                BuildSuitButtons(owner);
-            }
-
-            private void BuildSuitButtons(EquipContent owner)
-            {
-                suitHost.Clear();
-
-                for (int i = 0; i < owner.permittedSuits.Count; i++)
-                {
-                    SuitType suit = owner.permittedSuits[i];
-                    string refusal = owner.SuitRefusal(suit);
-
-                    Button button = new Button();
-                    button.AddToClassList("sheet__action");
-                    button.AddToClassList("equip__suit");
-                    button.text = refusal == null ? suit.ToString() : suit + " - " + refusal;
-                    button.SetEnabled(refusal == null);
-
-                    if (refusal == null)
-                    {
-                        int captured = villagerID;
-                        SuitType capturedSuit = suit;
-                        button.clicked += () => onSuitChosen(captured, capturedSuit);
-                    }
-
-                    suitHost.Add(button);
-                }
+                button.SetEnabled(refusal == EquipRefusal.None);
+                Root.EnableInClassList("equip__unit--picked", picked);
             }
 
             public void Hide()
             {
                 villagerID = -1;
-                Root.AddToClassList("sheet__hidden");
+                Show(Root, false);
             }
         }
     }

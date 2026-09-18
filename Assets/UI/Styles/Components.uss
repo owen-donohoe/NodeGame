@@ -1,0 +1,473 @@
+/*
+    Node War - shared components.
+
+    The pieces both scenes draw the same way: type, buttons, the bottom
+    sheet, bars, chips, the toast, player marks and monogram tiles. Loaded
+    through UnityDefaultRuntimeTheme.tss after Tokens.uss, so every panel has
+    them and a page stylesheet only adds what is particular to it.
+
+    Classes are prefixed ui-. Page stylesheets keep their own prefixes (lb-
+    in the lobby shell, hud__ in the match), so a shared rule and a page rule
+    never share a name.
+
+    Rules here read meaning tokens only, never --pal-*.
+
+    PRECEDENCE. These rules arrive through the panel theme, and a theme rule
+    loses to ANY rule in a stylesheet a layout imports, whatever the
+    specificity (measured in 6000.5.9f1). So a page overrides a component with
+    a plain single-class rule - and the .ui-root Label reset below yields to
+    any page rule that sets a label's margin or padding. Set those only where
+    the spacing is meant.
+
+    Measured against 6000.5.9f1, where the prototypes use CSS that USS lacks:
+      box-shadow, drop-shadow        -> a sibling element behind (.ui-sticker__shadow)
+      gradients                      -> flat fill, or vertex colours from C#
+      gap, :last-child, :nth-child   -> margins on each child, a --last class
+      @keyframes                     -> class ping-pong from C#
+      picking-mode                   -> not USS; set it in UXML or C#
+*/
+
+/* ===================================================================
+   Root and type
+   =================================================================== */
+
+/* On the root of every document. Transparent: the match draws over a
+   board, and the lobby gives its own root a surface. */
+.ui-root {
+    flex-grow: 1;
+    -unity-font-definition: var(--font-medium);
+    color: var(--ink);
+    font-size: var(--type-body);
+}
+
+.ui-root Label {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.ui-w500 { -unity-font-definition: var(--font-medium); -unity-font-style: normal; }
+.ui-w600 { -unity-font-definition: var(--font-semibold); -unity-font-style: normal; }
+.ui-w700 { -unity-font-definition: var(--font-bold); -unity-font-style: normal; }
+
+/* A Button with every runtime-theme default removed, so its class alone
+   decides how it looks. */
+.ui-reset-button {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    background-color: var(--clear);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* ===================================================================
+   Shadows. A shadow is an absolutely placed sibling drawn first.
+   =================================================================== */
+
+.ui-sticker {
+    position: relative;
+}
+
+.ui-sticker__shadow {
+    position: absolute;
+    left: 3px;
+    top: 4px;
+    right: -3px;
+    bottom: -4px;
+    background-color: var(--shadow);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
+.ui-soft-shadow {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    bottom: -8px;
+    background-color: var(--shadow-deep);
+    filter: blur(11px);
+}
+
+/* ===================================================================
+   Buttons. The big button sits on a solid lip - the prototype's
+   0 5px 0 box-shadow - which is a block behind it, not a border.
+   =================================================================== */
+
+.ui-lip {
+    position: relative;
+}
+
+.ui-lip__block {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 5px;
+    bottom: -5px;
+}
+
+.ui-lip__block--gold { background-color: var(--action-edge); }
+.ui-lip__block--green { background-color: var(--confirm-edge); }
+
+.ui-button-wrap {
+    margin-bottom: var(--space-3);
+}
+
+.ui-button-wrap > .ui-lip__block {
+    top: 4px;
+    bottom: -4px;
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
+.ui-button {
+    height: 60px;
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+    font-size: 21px;
+    transition-property: translate;
+    transition-duration: var(--motion-press);
+}
+
+.ui-button:active {
+    translate: 0 3px;
+}
+
+.ui-button--gold {
+    background-color: var(--action);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+    color: var(--action-ink);
+}
+
+.ui-button--green {
+    background-color: var(--confirm);
+    border-left-color: var(--confirm-edge);
+    border-right-color: var(--confirm-edge);
+    border-top-color: var(--confirm-edge);
+    border-bottom-color: var(--confirm-edge);
+    color: var(--confirm-ink);
+}
+
+.ui-button--quiet {
+    background-color: var(--surface-sunk);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    color: var(--ink);
+}
+
+/* Disabled is dimmed, never recoloured grey: the label carries the reason,
+   and the button must stay readable enough to say it. */
+.ui-button:disabled {
+    opacity: 0.55;
+    translate: 0 0;
+}
+
+/* ===================================================================
+   Bottom sheet. Pinned to the bottom edge by construction, so it cannot
+   render off-screen. Never positioned with top: and a computed value.
+   The scrim is the lobby's; the match sheet has none (settled 2026-09-02).
+   =================================================================== */
+
+.ui-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--scrim);
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--motion-sheet);
+}
+
+.ui-scrim--on {
+    opacity: 1;
+}
+
+.ui-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--surface);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: 0;
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-top-left-radius: var(--corner-sheet);
+    border-top-right-radius: var(--corner-sheet);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    translate: 0 100%;
+    transition-property: translate;
+    transition-duration: var(--motion-sheet);
+    transition-timing-function: ease-out;
+}
+
+.ui-sheet--open {
+    translate: 0 0;
+}
+
+.ui-handle-hit {
+    height: 33px;
+    align-items: center;
+}
+
+.ui-handle {
+    width: 44px;
+    height: 5px;
+    margin-top: var(--space-3);
+    border-top-left-radius: 2.5px;
+    border-top-right-radius: 2.5px;
+    border-bottom-left-radius: 2.5px;
+    border-bottom-right-radius: 2.5px;
+    background-color: var(--ink-mute);
+}
+
+.ui-root .ui-sheet__title {
+    font-size: var(--type-title);
+    color: var(--ink);
+    margin-bottom: var(--space-4);
+    white-space: normal;
+}
+
+.ui-root .ui-sheet__note {
+    font-size: var(--type-body);
+    color: var(--ink-mute);
+    margin-bottom: 18px;
+    white-space: normal;
+}
+
+.ui-root .ui-sheet__note--error {
+    color: var(--badge);
+}
+
+/* ===================================================================
+   Bar. A track and a fill; the fill's width is set from C#.
+   =================================================================== */
+
+.ui-bar {
+    height: 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: var(--surface-track);
+    border-left-width: var(--stroke-mid);
+    border-right-width: var(--stroke-mid);
+    border-top-width: var(--stroke-mid);
+    border-bottom-width: var(--stroke-mid);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    overflow: hidden;
+}
+
+.ui-bar__fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--action);
+}
+
+/* ===================================================================
+   Chip. A small dark-glass pill for a readout over scenery or the board.
+   Height 38, so the radius is exactly half.
+   =================================================================== */
+
+.ui-chip {
+    flex-direction: row;
+    align-items: center;
+    height: 38px;
+    padding-left: 14px;
+    padding-right: 14px;
+    border-top-left-radius: 19px;
+    border-top-right-radius: 19px;
+    border-bottom-left-radius: 19px;
+    border-bottom-right-radius: 19px;
+    background-color: var(--glass);
+    color: var(--ink-inverse);
+}
+
+.ui-root .ui-chip__text {
+    color: var(--ink-inverse);
+    font-size: var(--type-body);
+}
+
+/* The chip that is also the main action of the moment. */
+.ui-chip--action {
+    background-color: var(--action);
+    color: var(--action-ink);
+}
+
+.ui-root .ui-chip--action > .ui-chip__text {
+    color: var(--action-ink);
+}
+
+/* ===================================================================
+   Toast
+   =================================================================== */
+
+.ui-root .ui-toast {
+    max-width: 300px;
+    background-color: var(--glass-toast);
+    border-top-left-radius: 23px;
+    border-top-right-radius: 23px;
+    border-bottom-left-radius: 23px;
+    border-bottom-right-radius: 23px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    color: var(--ink-inverse);
+    font-size: var(--type-body);
+    white-space: normal;
+    -unity-text-align: middle-center;
+    opacity: 0;
+    translate: 0 8px;
+    transition-property: opacity, translate;
+    transition-duration: 200ms;
+}
+
+.ui-root .ui-toast--on {
+    opacity: 1;
+    translate: 0 0;
+}
+
+/* ===================================================================
+   Player mark - colour PLUS shape, always. Player 0 is a blue square
+   marked 1, player 1 a red circle marked 2, nobody a grey square with a
+   dash. Distinguishable in greyscale by shape alone.
+   =================================================================== */
+
+.ui-mark {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+}
+
+.ui-root .ui-mark__label {
+    font-size: var(--type-min);
+    color: var(--mark-ink);
+    -unity-font-definition: var(--font-bold);
+    -unity-text-align: middle-center;
+}
+
+.ui-mark--p0 {
+    background-color: var(--p0);
+    border-left-color: var(--p0-edge);
+    border-right-color: var(--p0-edge);
+    border-top-color: var(--p0-edge);
+    border-bottom-color: var(--p0-edge);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.ui-mark--p1 {
+    background-color: var(--p1);
+    border-left-color: var(--p1-edge);
+    border-right-color: var(--p1-edge);
+    border-top-color: var(--p1-edge);
+    border-bottom-color: var(--p1-edge);
+    border-top-left-radius: 50%;
+    border-top-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+}
+
+.ui-mark--unowned {
+    background-color: var(--unowned);
+    border-left-color: var(--unowned-edge);
+    border-right-color: var(--unowned-edge);
+    border-top-color: var(--unowned-edge);
+    border-bottom-color: var(--unowned-edge);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.ui-mark--small {
+    width: 15px;
+    height: 15px;
+}
+
+/* ===================================================================
+   Monogram tile - the stand-in for art that does not exist. The letter
+   carries the identity; the tint, hashed from the item's ID by ItemTint,
+   only reinforces it. Sized by whatever contains it.
+   =================================================================== */
+
+.ui-tile {
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--shadow-deep);
+    border-right-color: var(--shadow-deep);
+    border-top-color: var(--shadow-deep);
+    border-bottom-color: var(--shadow-deep);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+}
+
+.ui-root .ui-tile__monogram {
+    color: var(--ink-white);
+    -unity-font-definition: var(--font-semibold);
+    -unity-text-align: middle-center;
+}
+
+.ui-tile-tint--0 { background-color: var(--tile-tint-0); }
+.ui-tile-tint--1 { background-color: var(--tile-tint-1); }
+.ui-tile-tint--2 { background-color: var(--tile-tint-2); }
+.ui-tile-tint--3 { background-color: var(--tile-tint-3); }
+.ui-tile-tint--4 { background-color: var(--tile-tint-4); }
+.ui-tile-tint--5 { background-color: var(--tile-tint-5); }
+.ui-tile-tint--6 { background-color: var(--tile-tint-6); }
+.ui-tile-tint--7 { background-color: var(--tile-tint-7); }

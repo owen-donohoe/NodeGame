@@ -356,7 +356,7 @@ namespace NodeWar.Lobby
 
                 int slot = i;
                 Button button = new Button();
-                button.AddToClassList("lb-reset-button");
+                button.AddToClassList("ui-reset-button");
                 button.AddToClassList("lb-slot");
                 if (i == count - 1) button.AddToClassList("lb-slot--last");
                 button.EnableInClassList("lb-slot--filled", filled);
@@ -369,12 +369,12 @@ namespace NodeWar.Lobby
                 if (filled)
                 {
                     string name = item != null ? item.Name : id;
-                    button.Add(MakeLabel(ItemTint.MonogramFor(name, id), "lb-slot__letter", "lb-w600"));
-                    button.Add(MakeLabel(name, "lb-slot__text", "lb-w600"));
+                    button.Add(MakeLabel(ItemTint.MonogramFor(name, id), "lb-slot__letter", "ui-w600"));
+                    button.Add(MakeLabel(name, "lb-slot__text", "ui-w600"));
                 }
                 else
                 {
-                    button.Add(MakeLabel("Slot\n" + (i + 1), "lb-slot__text", "lb-w500"));
+                    button.Add(MakeLabel("Slot\n" + (i + 1), "lb-slot__text", "ui-w500"));
                 }
 
                 button.clicked += () => OnSlotClicked(slot);
@@ -414,7 +414,7 @@ namespace NodeWar.Lobby
                 bool used = activeTab == Tab.Suits ? loadout.IsSuitEquipped(item.ID) : loadout.IsNodeEquipped(item.ID);
 
                 VisualElement wrap = new VisualElement();
-                wrap.AddToClassList("lb-sticker");
+                wrap.AddToClassList("ui-sticker");
                 wrap.AddToClassList("lb-gcard-wrap");
                 if (i % GridColumns != GridColumns - 1) wrap.AddToClassList("lb-gcard-wrap--gap");
                 wrap.EnableInClassList("lb-gcard-wrap--used", used);
@@ -422,12 +422,12 @@ namespace NodeWar.Lobby
                 wrap.pickingMode = PickingMode.Ignore;
 
                 VisualElement shadow = new VisualElement();
-                shadow.AddToClassList("lb-sticker__shadow");
+                shadow.AddToClassList("ui-sticker__shadow");
                 shadow.pickingMode = PickingMode.Ignore;
                 wrap.Add(shadow);
 
                 Button card = new Button();
-                card.AddToClassList("lb-reset-button");
+                card.AddToClassList("ui-reset-button");
                 card.AddToClassList("lb-gcard");
 
                 VisualElement art = new VisualElement();
@@ -437,11 +437,11 @@ namespace NodeWar.Lobby
                 if (locked)
                     art.Add(new LobbyIcon(LobbyIconKind.Lock));
                 else
-                    art.Add(MakeLabel(ItemTint.MonogramFor(item.Name, item.ID), "lb-gcard__letter", "lb-w600"));
+                    art.Add(MakeLabel(ItemTint.MonogramFor(item.Name, item.ID), "lb-gcard__letter", "ui-w600"));
                 card.Add(art);
 
-                card.Add(MakeLabel(item.Name, "lb-gcard__name", "lb-w600"));
-                card.Add(MakeLabel(item.Note, "lb-gcard__note", "lb-w500"));
+                card.Add(MakeLabel(item.Name, "lb-gcard__name", "ui-w600"));
+                card.Add(MakeLabel(item.Note, "lb-gcard__note", "ui-w500"));
 
                 card.clicked += () => OnCardClicked(item);
 

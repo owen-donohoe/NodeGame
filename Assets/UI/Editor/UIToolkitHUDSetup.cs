@@ -135,11 +135,14 @@ namespace NodeWar.EditorTools
             PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
             settings.themeStyleSheet = theme;
 
-            // Same reasoning as the lobby: ConstantPhysicalSize is what makes a
-            // 44px touch target in Theme.uss about 44 real points on the device.
-            settings.scaleMode = PanelScaleMode.ConstantPhysicalSize;
-            settings.referenceDpi = 96f;
-            settings.fallbackDpi = 96f;
+            // Same frame as the lobby: the prototypes are drawn at 390x844, so
+            // the panel scales to that reference and matches width. A unit here
+            // is then about a point on a phone, which is what makes the 44
+            // minimum touch target mean what it says.
+            settings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            settings.referenceResolution = new Vector2Int(390, 844);
+            settings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            settings.match = 0f;
 
             AssetDatabase.CreateAsset(settings, PanelSettingsPath);
             AssetDatabase.SaveAssets();

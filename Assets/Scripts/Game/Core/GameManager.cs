@@ -71,6 +71,16 @@ namespace NodeWar.Core
 
         [Header("Draft")]
         [SerializeField] private GameObject draftUIPrefab;
+
+        [Tooltip("Swap the uGUI draft screen for the UI Toolkit one. Independent " +
+                 "of the HUD toggle: the two phases never overlap, so there is no " +
+                 "reason a half-finished migration has to move them together.")]
+        [SerializeField] private bool useUIToolkitDraft;
+
+        [Tooltip("Scene object carrying the UIDocument and DraftScreenController. " +
+                 "Created by Tools > Node War > Set Up UI Toolkit Draft.")]
+        [SerializeField] private GameObject uiToolkitDraftRoot;
+
         [SerializeField] private GameObject placementPreviewPrefab;
         [SerializeField] private GameObject gridCellMarkerPrefab;
 
@@ -183,17 +193,68 @@ namespace NodeWar.Core
             draftManager.OnDraftComplete += OnDraftComplete;
             draftManager.OnDraftDisconnect += OnDraftDisconnect;
 
-            if (draftUIPrefab != null)
+            draftPresenter = CreateDraftPresenter(match);
+
+            if (draftPresenter != null)
             {
-                GameObject uiGO = Instantiate(draftUIPrefab);
-                NodeWar.UI.DraftUI draftUI = uiGO.GetComponent<NodeWar.UI.DraftUI>();
-                if (draftUI != null)
-                {
-                    draftUI.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
-                    draftManager.SetDraftUI(draftUI);
-                }
+                draftPresenter.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
+                draftManager.SetDraftUI(draftPresenter);
             }
         }
+
+        /// <summary>
+        /// Which draft surface draws this match, and the guarantee that only one
+        /// of them does.
+        ///
+        /// The uGUI draft is a prefab instantiated per match; the UI Toolkit one
+        /// is a scene object that is switched on. So the two are turned off in
+        /// different ways, and the check that only one is live is that this
+        /// method returns exactly one presenter and instantiates nothing it did
+        /// not choose.
+        ///
+        /// A toggle with nothing wired to it keeps the old draft rather than
+        /// leaving the phase with no UI at all - a draft you cannot see is a
+        /// match you cannot start.
+        /// </summary>
+        private IDraftPresenter CreateDraftPresenter(MatchConnection match)
+        {
+            if (useUIToolkitDraft)
+            {
+                if (uiToolkitDraftRoot == null)
+                {
+                    Debug.LogWarning("[GameManager] useUIToolkitDraft is on but no " +
+                                     "uiToolkitDraftRoot is assigned. Keeping the uGUI draft. " +
+                                     "Run Tools > Node War > Set Up UI Toolkit Draft.");
+                }
+                else
+                {
+                    uiToolkitDraftRoot.SetActive(true);
+
+                    IDraftPresenter presenter =
+                        uiToolkitDraftRoot.GetComponent<NodeWar.UI.DraftScreenController>();
+
+                    if (presenter != null) return presenter;
+
+                    Debug.LogError("[GameManager] uiToolkitDraftRoot has no " +
+                                   "DraftScreenController. Keeping the uGUI draft.");
+                    uiToolkitDraftRoot.SetActive(false);
+                }
+            }
+            else if (uiToolkitDraftRoot != null)
+            {
+                uiToolkitDraftRoot.SetActive(false);
+            }
+
+            if (draftUIPrefab == null) return null;
+
+            GameObject uiGO = Instantiate(draftUIPrefab);
+            return uiGO.GetComponent<NodeWar.UI.DraftUI>();
+        }
+
+        // Whichever draft surface drew this match. Held rather than searched for
+        // later: the uGUI one is a prefab instance and the UI Toolkit one is a
+        // scene object, so there is no one FindAnyObjectByType that finds both.
+        private IDraftPresenter draftPresenter;
 
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
@@ -279,9 +340,11 @@ namespace NodeWar.Core
             if (cameraController != null)
                 cameraController.SetDraftMode(false);
 
-            // Gather placeholders from DraftUI before it becomes irrelevant
-            DraftUI draftUI = FindAnyObjectByType<DraftUI>();
-            List<GameObject> placeholders = draftUI != null ? draftUI.GetPersistentPlacements() : null;
+            // Gather placeholders from whichever draft surface drew them, before
+            // it becomes irrelevant. They outlive it: the transition dissolves
+            // them as the real nodes arrive.
+            List<GameObject> placeholders =
+                draftPresenter != null ? draftPresenter.GetPersistentPlacements() : null;
 
             int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
 
@@ -532,42 +595,72 @@ namespace NodeWar.Core
 
         // ===== GAME OVER =====
 
+        /// <summary>
+        /// Which player is watching: the local one in a networked match, and
+        /// otherwise whoever the debug switch is controlling. The result screen
+        /// is written from this side, so it is asked rather than assumed to be
+        /// player 0.
+        /// </summary>
+        private int ViewerPlayerID()
+        {
+            MatchConnection match = MatchConnection.Instance;
+            if (match != null && match.isNetworked) return match.localPlayerID;
+
+            return debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
+        }
+
+        /// <summary>
+        /// Ends the match on whichever HUD stack is live. Neither one is handed
+        /// a string to print: both are told the state and who is looking, and
+        /// word the result themselves.
+        /// </summary>
         private void ShowGameOver()
         {
             if (transitionController != null)
                 transitionController.PlayNodeBreakdownWave(nodePresentations, state);
 
+            int viewer = ViewerPlayerID();
+
+            if (uiToolkitHud != null)
+            {
+                uiToolkitHud.ShowMatchEnd(viewer);
+                return;
+            }
+
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found.");
                 return;
             }
 
-            Color winnerColor = (state.winnerID == 0)
-                ? new Color(0.3f, 0.5f, 1f)
-                : new Color(1f, 0.3f, 0.3f);
-
-            string title = "PLAYER " + state.winnerID + " WINS!";
-            string info = "Breaches - P0: " + state.players[0].breachCount +
-                          "  P1: " + state.players[1].breachCount +
-                          "\nGame ended at tick " + state.tickCount;
-
-            gameOverPanel.Show(title, winnerColor, info);
+            gameOverPanel.ShowResult(state, viewer, balance.Data.breachThreshold);
         }
 
         private void ShowDisconnect()
         {
+            int viewer = ViewerPlayerID();
+
+            if (uiToolkitHud != null && state != null)
+            {
+                uiToolkitHud.ShowDisconnected(viewer);
+                return;
+            }
+
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found.");
                 return;
             }
 
-            gameOverPanel.Show(
-                "DISCONNECTED",
-                new Color(1f, 0.8f, 0.2f),
-                "Opponent has disconnected."
-            );
+            if (state != null)
+            {
+                gameOverPanel.ShowDisconnected(state, viewer, balance.Data.breachThreshold);
+                return;
+            }
+
+            // A disconnect during the draft, before any simulation exists.
+            gameOverPanel.Show("DISCONNECTED", new Color(1f, 0.8f, 0.2f),
+                               "Opponent has disconnected.");
         }
 
         private void ReturnToLobby()
@@ -678,7 +771,19 @@ namespace NodeWar.Core
             }
 
             uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
-                                    inputBuffer, tickProvider, balance.Data, nodePanelManager);
+                                    inputBuffer, tickProvider, balance.Data, nodePanelManager,
+                                    selectionSystem);
+
+            uiToolkitHud.ReturnToLobby += ReturnToLobby;
+
+            // The zoom readout and the zoom handle. Without this the handle
+            // still takes the press but has nothing to drive, and says so.
+            uiToolkitHud.BindCamera(cameraController);
+
+            // The countdown belongs to whichever stack is live, or two would
+            // run at once. The uGUI prefab is used when this is not set.
+            if (transitionController != null)
+                transitionController.SetCountdownPresenter(uiToolkitHud);
 
             // Only hand the node panel over if the new sheet actually exists.
             // Without a layout assigned the uGUI panel keeps the job, which is
@@ -883,6 +988,30 @@ namespace NodeWar.Core
             state.nodes[p0CoreID].claimBar = balance.Data.claimThreshold;
             state.nodes[p1CoreID].ownerID = 1;
             state.nodes[p1CoreID].claimBar = -balance.Data.claimThreshold;
+
+            // Where "home" actually is. InitializeSides runs in Awake, before
+            // the board exists, so it can only guess from grid dimensions -- and
+            // its guess is the middle of your back row, which is the board's
+            // centre line, not your core. The cores sit wherever the layout puts
+            // them, so the real positions have to come back here once known.
+            if (cameraController != null)
+            {
+                cameraController.SetHomeAnchor(0, CoreWorldPosition(p0CoreID));
+                cameraController.SetHomeAnchor(1, CoreWorldPosition(p1CoreID));
+            }
+        }
+
+        /// <summary>
+        /// Node world positions are laid out by SpawnNodeViews as grid index
+        /// times nodeScale. Duplicated as one line here rather than read off a
+        /// NodeView, because the cameras need it before the views exist.
+        /// </summary>
+        private Vector3 CoreWorldPosition(int nodeID)
+        {
+            return new Vector3(
+                state.nodes[nodeID].gridX * boardConfig.nodeScale,
+                0f,
+                state.nodes[nodeID].gridZ * boardConfig.nodeScale);
         }
 
         private int FindCoreNodeID(int playerID)

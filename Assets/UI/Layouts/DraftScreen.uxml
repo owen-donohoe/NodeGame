@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <!--
+        The draft, after ingame-prototype.html. Turn banner sweeps down from
+        the top, piece bar sweeps up from the bottom, and everything between
+        them is board.
+
+        THE BOARD IS THE PLACEMENT SURFACE. Unlike the prototype, whose grid
+        was HTML, the cells here are the 3D board. So the ghost that shows
+        where a piece would land is a world-space object, not an element in
+        this tree - the controller instantiates the same ghost prefab the uGUI
+        draft used. What UI Toolkit owns is the chrome: the banner, the bar,
+        the card that follows the finger, and the Confirm pair, which is
+        positioned each frame from the cell's world position.
+
+        PICKING MODE IS LOAD-BEARING, exactly as in GameplayHUD.uxml. The board
+        underneath has to receive presses - tapping a free cell is half the
+        placement interaction - so every container here is Ignore and only the
+        bar, the cards and the two confirm buttons take a touch.
+
+        A CARD IS NOT A BUTTON. Button carries a Clickable that fires on
+        release however far the finger travelled, so every drag would also fire
+        a click. The cards are plain elements and the controller owns their
+        pointer, which is also what makes the drag keep working once the finger
+        leaves the card and goes out over the board.
+
+        Tokens and shared components arrive through the panel theme; only the
+        draft's own sheet is imported here.
+    -->
+
+    <engine:Style src="project://database/Assets/UI/Styles/Draft.uss" />
+
+    <engine:VisualElement name="draft-root" class="ui-root draft" picking-mode="Ignore">
+
+        <!--
+            D1 and D2: whose turn, and how long is left. The mark travels with
+            the colour so the turn owner is never named by colour alone, and
+            the seconds are a number as well as a bar because the bar alone
+            cannot be read at a glance under five seconds.
+        -->
+        <engine:VisualElement name="draft-banner" class="draft__banner" picking-mode="Ignore">
+            <engine:VisualElement name="draft-banner-inner" class="draft__banner-inner" picking-mode="Ignore">
+                <engine:VisualElement class="draft__turn-row" picking-mode="Ignore">
+                    <engine:VisualElement name="draft-mark" class="ui-mark ui-mark--p0" picking-mode="Ignore">
+                        <engine:Label name="draft-mark-label" class="ui-mark__label" text="1" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:Label name="draft-who" class="draft__who ui-w600" text="YOUR TURN" picking-mode="Ignore" />
+                    <engine:Label name="draft-seconds" class="draft__seconds ui-w600" text="15" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement class="draft__track" picking-mode="Ignore">
+                    <engine:VisualElement name="draft-track-fill" class="draft__track-fill" picking-mode="Ignore" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!--
+            The card under the finger while a drag is in the bar zone. It fades
+            out as the finger climbs onto the board and the world ghost fades
+            in, so at no point are both the answer to "what am I holding".
+        -->
+        <engine:VisualElement name="draft-proxy" class="draft__proxy" picking-mode="Ignore">
+            <engine:VisualElement name="draft-proxy-tile" class="draft__card-tile" picking-mode="Ignore">
+                <engine:Label name="draft-proxy-monogram" class="draft__card-monogram ui-w600" text="F" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:Label name="draft-proxy-name" class="draft__card-name ui-w600" text="Farm" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
+            D6: releasing on a valid cell parks the piece, it does not commit.
+            Confirm springs up above the cell it is parked on and is the only
+            thing that commits; the ✕ puts the piece back in the bar. A misdrop
+            cannot be undone once confirmed, and before this the phone had no
+            way to cancel at all - the uGUI draft cancels on right-click.
+        -->
+        <engine:VisualElement name="draft-confirm" class="draft__confirm" picking-mode="Ignore">
+            <engine:Button name="draft-confirm-ok" class="ui-reset-button draft__ok ui-w600" text="Confirm" />
+            <engine:Button name="draft-confirm-cancel" class="ui-reset-button draft__cancel ui-w600" text="✕" />
+        </engine:VisualElement>
+
+        <!--
+            D3 and D4: one card per unplaced piece, visibly inert when it is
+            not your turn. The bar is the only part of this surface with a
+            background, and it is the only part allowed to reach the bottom
+            edge - its own padding keeps the cards clear of the home indicator.
+        -->
+        <engine:VisualElement name="draft-bar" class="draft__bar">
+            <engine:Label name="draft-bar-label" class="draft__bar-label ui-w600" text="YOUR PIECES · 5 LEFT" picking-mode="Ignore" />
+            <!--
+                A plain row, deliberately NOT a ScrollView. A ScrollView clips
+                to its contentViewport, and an armed card grows past the top of
+                that box and is sheared off. Padding on the ScrollView does not
+                buy headroom the way it does in the HTML prototype: there the
+                padding is inside the overflow box, here it insets the viewport
+                and moves the clip edge down with it (measured: viewport top
+                sat exactly padding-top below the ScrollView's own top).
+
+                A row can afford to be plain because the hand is bounded and
+                small: three base draft nodes plus the loadout's two node
+                slots, five cards, which fit the 366px row. The cards may
+                shrink a little if that ever grows.
+            -->
+            <engine:VisualElement name="draft-cards" class="draft__cards" />
+            <engine:Label name="draft-bar-empty" class="draft__bar-empty" text="Waiting on your opponent." picking-mode="Ignore" />
+        </engine:VisualElement>
+
+    </engine:VisualElement>
+
+</engine:UXML>

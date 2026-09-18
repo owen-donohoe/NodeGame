@@ -40,7 +40,7 @@ namespace NodeWar.Lobby
         {
             ID = id;
             Root = root;
-            Root.AddToClassList("page");
+            Root.AddToClassList("lb-page");
         }
 
         /// <summary>Called when this page becomes the visible one. Refresh data here.</summary>

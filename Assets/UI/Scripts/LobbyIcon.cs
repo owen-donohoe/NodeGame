@@ -23,7 +23,8 @@ namespace NodeWar.Lobby
         District, // prototype: 🏛
         Suit,     // prototype: 🥋
         Lock,     // prototype: 🔒
-        Pip       // prototype: ◆
+        Pip,      // prototype: ◆
+        Close     // the match sheet's close button: ✕
     }
 
     /// <summary>
@@ -111,6 +112,7 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Suit: DrawSuit(p); break;
                 case LobbyIconKind.Lock: DrawLock(p); break;
                 case LobbyIconKind.Pip: Diamond(p, 12f, 12f, 10f); break;
+                case LobbyIconKind.Close: DrawClose(p); break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();
@@ -289,6 +291,18 @@ namespace NodeWar.Lobby
             p.MoveTo(new Vector2(11f, 5f));
             p.LineTo(new Vector2(4f, 12f));
             p.LineTo(new Vector2(11f, 19f));
+            p.Stroke();
+        }
+
+        // ✕ - two strokes, drawn rather than typed so no font has to carry it.
+        private static void DrawClose(Painter2D p)
+        {
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(6f, 6f));
+            p.LineTo(new Vector2(18f, 18f));
+            p.MoveTo(new Vector2(18f, 6f));
+            p.LineTo(new Vector2(6f, 18f));
             p.Stroke();
         }
 

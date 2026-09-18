@@ -1,48 +1,42 @@
 ---
 type: Inventory
 title: UI Inventory
-description: Every sprite asset in the project, the district-to-sprite mapping derived from the node prefabs, and the art that does not exist. Taken as Phase 0 of the lobby rebuild; §6 and §7 describe Assets/UI/ before that rebuild.
-tags: [ui, sprites, lobby, inventory, phase-0]
+description: Every sprite asset in the project, the district-to-sprite mapping derived from the node prefabs, and the art that does not exist. The art inventory for the art-and-feel phase.
+tags: [ui, sprites, art, inventory]
 generated: { by: claude-opus-5, at: 2026-09-04T00:00:00Z }
 status: historical
 snapshot_of_commit: b72fc6d
 # No `sources:`, deliberately - see docs/index.md, "Historical snapshots".
-# §6 and §7 describe Assets/UI/ as it stood before the rebuild, which has since
-# replaced most of it, so tracking sources would report a permanent false alarm.
-# The sprite sections (§1-§5) were re-checked on 2026-09-15; see the note below.
+# The sprite sections were re-checked on 2026-09-15; see the note below.
 ---
 
-> **Snapshot note (added 2026-09-15, claude-opus-5).** This was written on the
-> `ui-toolkit-migration` branch as Phase 0 of `docs/lobby-brief.md`. The brief
-> was not kept in the repo; its section references (§1.2, §6.3 and so on) are
-> left as they were, and point at nothing.
+> **Snapshot note.** Derived at `b72fc6d`; sprite sections re-checked at
+> `9d08dae` on 2026-09-15. No commit since has touched `Assets/Sprites/` or
+> `Assets/Prefabs/Game/RevisedNodes/`: the seven PNGs and their slice counts
+> (89 / 19 / 29) hold; `Icons/`, `Suits/` and `Villagers/` are still empty; no
+> prefab for Forge, Village or Watchtower, and Watchtower still
+> default-unlocked; Market's two references to the missing GUID are still
+> present. Still no `.uss`, `.uxml` or `.cs` that loads a sprite by name.
 >
-> **§1–§5 still hold at `9d08dae`.** No commit since `b72fc6d` touches
-> `Assets/Sprites/` or `Assets/Prefabs/Game/RevisedNodes/`. Re-checked against
-> the files: the seven PNGs and their slice counts (89 / 19 / 29); `Icons/`,
-> `Suits/` and `Villagers/` still empty; no prefab for Forge, Village or
-> Watchtower, and Watchtower still default-unlocked; Market's two references to
-> the missing GUID still present; `Lobby.unity` still uses five `UI_Shop`
-> slices (the retired uGUI lobby). One literal change: `Lobby.uss` now contains
-> `url(` — for the three Fredoka font assets only. Still no `.uss`, `.uxml` or
-> `.cs` loads a sprite.
+> Two sections describing `Assets/UI/` before the rebuild were deleted on
+> 2026-09-17, along with a subagent handoff block for a brief that is not in
+> the repo. For what `Assets/UI/` is now, read
+> [architecture](architecture.md), "Where the UI lives".
 >
-> **§6 and §7 are superseded.** For what `Assets/UI/` is now, read
-> [architecture](architecture.md), "Where the UI lives". The lobby's tokens are
-> in `Lobby.uss`, not `Theme.uss`, and several files §6 lists as missing
-> (`SettingsPage.uxml`, `LongPressManipulator`) now exist.
+> References below to "the brief" mean a lobby brief that was never kept in
+> the repo. Its section numbers point at nothing; the facts around them were
+> checked against the files and stand on their own.
 
 # UI Inventory
 
-Phase 0 of `docs/lobby-brief.md` §8.2. Derived at commit `b72fc6d`, Unity
-`6000.5.9f1`.
+**This is the art inventory.** What exists, what each district's art is
+actually made of, and what has to be drawn or commissioned before the board
+can look like anything. Derived at commit `b72fc6d`, Unity `6000.5.9f1`.
 
-**Read §5 and §7 before writing any page.** The brief (§1.7) assumes the sprite
-folders hold named, per-district and per-suit art that a subagent spec can
-reference by name. They do not. What exists is three large auto-sliced atlases
-with machine-generated sub-sprite names, consumed only by scene and prefab
-references. This document maps what is recoverable and states plainly what is
-absent.
+The short version: there are three large auto-sliced atlases with
+machine-generated sub-sprite names, consumed only through scene and prefab
+serialisation. Nothing loads a sprite by name anywhere in the project, so
+doing so is new work rather than a pattern to copy.
 
 ---
 
@@ -205,114 +199,15 @@ every atlas slice is downscaled 5–10×. Import settings are the node-world's
 
 ---
 
-## 6. `Assets/UI/` as it stands
+## 6. Still open
 
-7,547 lines across 41 files. Phases 1–2 of the brief are **substantially already
-written** — this is not a green field.
-
-**Layouts** (`Assets/UI/Layouts/`)
-
-| File | Lines | Status |
-|---|---|---|
-| `LobbyRoot.uxml` | 57 | Rework — check against §3.1 layer stack |
-| `HomePage.uxml` | 47 | Rework per §6.1 |
-| `WorkshopPage.uxml` | 95 | Audit per §6.3 (slot counts) |
-| `ShopPage.uxml` | 70 | Extend per §6.5 |
-| `SocialPage.uxml` | 40 | Likely done per §6.6 |
-| `ProfilePage.uxml` | 108 | Replaced by Road (§6.4). Do not delete before Phase 6 |
-| `PlayPopup.uxml` | 95 | Replaced by the Match sheet (§6.2 / §4.1). Do not delete before Phase 6 |
-| `GameplayHUD.uxml`, `NodeSheet.uxml` | 181 | **Out of scope** — in-match HUD, brief §0 |
-
-Missing against §9: `RoadPage.uxml`, `SettingsPage.uxml`, `BoxOpenPage.uxml`,
-and all eight sheet layouts.
-
-**Styles** (`Assets/UI/Styles/`)
-
-`Theme.uss` 444 · `Workshop.uss` 314 · `Home.uss` 223 · `Profile.uss` 164 ·
-`Shop.uss` 92 · `Social.uss` 32 — plus `NodeSheet.uss` 347 and `HUD.uss` 209
-(out of scope).
-
-`Theme.uss` exists at 444 lines. **Audit it against §2.1 before adding tokens** —
-Phase 1 assumes writing it fresh, which would discard work. Missing per §9:
-`Sheet.uss`, `ContextMenu.uss`, `Road.uss`, `Settings.uss`.
-
-**Scripts** (`Assets/UI/Scripts/`)
-
-`WorkshopPage.cs` 700 · `MatchLauncher.cs` 408 · `PlayPopup.cs` 298 ·
-`LobbyUIController.cs` 257 · `ProfilePage.cs` 255 · `LoadoutEditor.cs` 210 ·
-`ShopPage.cs` 124 · `SafeAreaBinder.cs` 111 · `NavigationController.cs` 110 ·
-`HomePage.cs` 96 · `ItemTint.cs` 95 · `ItemTile.cs` 66 · `LobbyPage.cs` 57 ·
-`SocialPage.cs` 49 · `PlaceholderPage.cs` 47.
-
-`Assets/UI/Scripts/Gameplay/` (6 files, 1,588 lines) is the in-match HUD —
-**out of scope entirely**, brief §0.
-
-`Assets/UI/Editor/` — `UIToolkitLobbySetup.cs` 320, `UIToolkitHUDSetup.cs` 238.
-These build the scene wiring from the editor menu; scene changes go through
-them, not by hand.
-
-Missing per §9: `TabBarController`, `SheetController`, `LongPressManipulator`,
-`ContextMenuController`, `ToastController`, `RoadController`,
-`SettingsController`, `BoxOpenController`, `LobbyPlaceholders`.
-`SafeAreaBinder.cs` already covers §3.4 — reuse it, do not write a second one.
-
-**Assets:** `LobbyPanelSettings.asset` (committed) and
-`HUDPanelSettings.asset` (**untracked** — commit it before it is lost).
-
-**Assembly definitions:** there are only three in the project —
-`NodeWar.Simulation`, `NodeWar.TestBridge`, `NodeWar.Simulation.Tests`.
-`Assets/Scripts/Lobby/` has **no `.asmdef`**, and neither does `Assets/UI/`.
-Both compile into the default `Assembly-CSharp`. **§9's asmdef question is
-answered: create none.** Adding one would break the free access the lobby UI
-currently has to `PlayerProfile`, `NetworkManager` and `GameBalanceData`.
-
----
-
-## 7. Handoff block for page-builder subagents
-
-Paste this verbatim into any `lobby-page-builder` spec.
-
-> **Available art.** The project has three sliced sprite atlases and four solid
-> shapes. Every sub-sprite name is machine-generated (`AssetsSpriteSheet_0`…`_89`,
-> `HousesSpriteSheet_0`…`_18`, `UI_Shop_0`…`_28`) and none says what it depicts.
-> No `.uss` or `.uxml` in this project loads a sprite today, and no controller
-> loads one by name — you have no working pattern to copy.
->
-> **There is no per-district icon.** A district's art is a stack of 6–18 sprite
-> layers inside a prefab under `Assets/Prefabs/Game/RevisedNodes/`. The closest
-> single image is the one `HousesSpriteSheet` slice each prefab uses:
-> Arsenal `_16` · Barracks `_17` · Camp `_1` · Core `_15` · Farm `_10` ·
-> Market `_0` · Mine `_2` · Rampart `_5` · Sanctuary `_9` · Shrine `_13`-or-`_14`
-> (ambiguous). **Forge, Village and Watchtower have no art whatsoever.**
->
-> **There is no suit art, no villager art, and no icon art.** `Sprites/Suits/`,
-> `Sprites/Villagers/` and `Sprites/Icons/` are empty directories.
->
-> **Therefore:** render every card, tile, avatar and icon as a themed
-> placeholder built from `Theme.uss` tokens — a `--card` block with
-> `--card-border`, the item's name in the correct type size, and the sticker
-> treatment from §2.4. Do **not** reference a sprite by name. Leave one
-> `TODO(art):` per placeholder naming exactly what asset belongs there, so a
-> single later pass can swap them all. Never invent a sprite path or a slice
-> name; a wrong reference fails silently at runtime rather than at compile.
->
-> **Reuse, do not rewrite:** `SafeAreaBinder.cs` (safe area), `GestureThresholds`
-> (all gesture distances, authored in millimetres), `PanelSwipeDismiss` (sheet
-> drag physics), and the existing `Theme.uss`.
-
----
-
-## 8. Raised to the user
-
-Three decisions this phase surfaced and did not make:
-
-1. **Suit and villager art does not exist.** §6.1's costumed villager and §6.3's
-   suit cards are placeholder-only until it is commissioned. Worth settling
-   before Phase 3.
+1. **Suit art and villager art do not exist.** Both are placeholder-only until
+   drawn or commissioned. `VillagerPrefab` itself uses only `Circle` and
+   `Square` — there is no villager sprite in the project at all.
 2. **Forge, Village and Watchtower have no district art**, and Watchtower is
-   default-unlocked.
-3. **`Theme.uss` is already 444 lines.** Phase 1 as written assumes authoring it
-   fresh; it should be an audit against §2.1 instead.
-
-Plus one pre-existing defect: `Market_Node Variant.prefab` has two sprite
-references to a GUID that is not in the project.
+   default-unlocked, so a new player sees a blank district on first launch.
+3. **`Market_Node Variant.prefab` has two sprite references to a GUID that is
+   not in the project.** A pre-existing defect, still present.
+4. **Nobody has named the 60 unmapped slices** (§4). A human pass over the
+   atlases in the sprite editor is the only way; it is also the cheapest art
+   win available, because the art may already exist and just be unfindable.

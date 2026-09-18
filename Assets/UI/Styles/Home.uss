@@ -8,6 +8,13 @@
     outrank the label reset in Lobby.uss. Follow that in any new rule.
 */
 
+:root {
+    --home-chip: rgba(150, 128, 95, 0.2);
+    --home-hat: rgb(201, 168, 95);
+    --home-meter-bg: rgba(45, 35, 25, 0.8);
+    --home-meter-track: rgb(74, 59, 42);
+}
+
 /* ===================================================================
    HOME
    =================================================================== */
@@ -24,7 +31,7 @@
 
 .lb-boxcol {
     position: absolute;
-    left: var(--lb-sp4);
+    left: var(--space-4);
     top: 24px;
     width: 130px;
 }
@@ -32,21 +39,21 @@
 .lb-box {
     align-items: center;
     justify-content: center;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: var(--lb-r-md);
-    border-top-right-radius: var(--lb-r-md);
-    border-bottom-left-radius: var(--lb-r-md);
-    border-bottom-right-radius: var(--lb-r-md);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
     transition-property: scale, translate;
-    transition-duration: var(--lb-t-press);
+    transition-duration: var(--motion-press);
     transition-timing-function: ease-in;
 }
 
@@ -57,7 +64,7 @@
 
 .lb-box-wrap--big {
     height: 130px;
-    margin-bottom: var(--lb-sp3);
+    margin-bottom: var(--space-3);
 }
 
 .lb-box-wrap--small {
@@ -71,7 +78,7 @@
 .lb-box .lb-icon {
     width: 38px;
     height: 38px;
-    -unity-background-image-tint-color: var(--lb-ink-mute);
+    -unity-background-image-tint-color: var(--ink-mute);
 }
 
 .lb-box-wrap--small .lb-icon {
@@ -81,7 +88,7 @@
 
 .lb-root .lb-box__label {
     font-size: 14px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     margin-top: 4px;
     -unity-text-align: middle-center;
 }
@@ -98,38 +105,38 @@
     border-top-right-radius: 15px;
     border-bottom-left-radius: 15px;
     border-bottom-right-radius: 15px;
-    background-color: var(--lb-badge);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-badge-edge);
-    border-right-color: var(--lb-badge-edge);
-    border-top-color: var(--lb-badge-edge);
-    border-bottom-color: var(--lb-badge-edge);
-    color: var(--lb-white);
+    background-color: var(--badge);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--badge-edge);
+    border-right-color: var(--badge-edge);
+    border-top-color: var(--badge-edge);
+    border-bottom-color: var(--badge-edge);
+    color: var(--ink-white);
     font-size: 16px;
     -unity-text-align: middle-center;
 }
 
 .lb-root .lb-badge--zero {
-    background-color: var(--lb-off);
-    border-left-color: var(--lb-off-edge);
-    border-right-color: var(--lb-off-edge);
-    border-top-color: var(--lb-off-edge);
-    border-bottom-color: var(--lb-off-edge);
+    background-color: var(--off);
+    border-left-color: var(--off-edge);
+    border-right-color: var(--off-edge);
+    border-top-color: var(--off-edge);
+    border-bottom-color: var(--off-edge);
 }
 
 /* ---- loadout preview: deliberately quiet - no border, no shadow ---- */
 
 .lb-loadcol {
     position: absolute;
-    right: var(--lb-sp4);
+    right: var(--space-4);
     top: 28px;
     align-items: center;
     opacity: 0.62;
     transition-property: opacity;
-    transition-duration: var(--lb-t-rel);
+    transition-duration: var(--motion-release);
 }
 
 .lb-loadcol:hover {
@@ -144,7 +151,7 @@
     border-top-right-radius: 11px;
     border-bottom-left-radius: 11px;
     border-bottom-right-radius: 11px;
-    background-color: var(--lb-chip-bg);
+    background-color: var(--home-chip);
     align-items: center;
     justify-content: center;
 }
@@ -155,28 +162,28 @@
 
 /* A filled slot: faded navy, with the item's letter. */
 .lb-lpi--filled {
-    background-color: var(--lb-loadout-ok-bg);
+    background-color: var(--status-ready);
 }
 
 /* An empty slot the player could fill: faded orange. The same orange marks
    the short side in the battle sheet's loadout line. */
 .lb-lpi--short {
-    background-color: var(--lb-loadout-short-bg);
+    background-color: var(--status-short);
 }
 
 .lb-root .lb-lpi__letter {
     font-size: 19px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     -unity-text-align: middle-center;
 }
 
 .lb-root .lb-lpi--filled > .lb-lpi__letter {
-    color: var(--lb-loadout-ok-ink);
+    color: var(--status-ready-ink);
 }
 
 .lb-root .lb-lpcap {
     font-size: 11px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     letter-spacing: 0.7px;
     margin-top: 3px;
     -unity-text-align: middle-center;
@@ -194,14 +201,14 @@
 
 .lb-root .lb-tapedit {
     font-size: 15px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     margin-bottom: 14px;
 }
 
 .lb-villager {
     align-items: center;
     transition-property: translate;
-    transition-duration: var(--lb-t-bob);
+    transition-duration: var(--motion-bob);
     transition-timing-function: ease-in-out;
 }
 
@@ -212,15 +219,15 @@
 .lb-villager__body {
     width: 56px;
     height: 78px;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 26px;
     border-top-right-radius: 26px;
     border-bottom-left-radius: 12px;
@@ -228,7 +235,7 @@
     align-items: center;
 }
 
-.lb-villager > .lb-sticker__shadow {
+.lb-villager > .ui-sticker__shadow {
     top: 5px;
     bottom: -5px;
     border-top-left-radius: 26px;
@@ -242,15 +249,15 @@
     top: -11px;
     width: 52px;
     height: 14px;
-    background-color: var(--lb-hat);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--home-hat);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 9px;
     border-top-right-radius: 9px;
     border-bottom-left-radius: 9px;
@@ -262,38 +269,38 @@
     top: 17px;
     width: 26px;
     height: 26px;
-    -unity-background-image-tint-color: var(--lb-edge);
+    -unity-background-image-tint-color: var(--edge);
 }
 
 /* ---- call to action ---- */
 
 .lb-cta {
     position: absolute;
-    left: var(--lb-sp4);
-    right: var(--lb-sp4);
+    left: var(--space-4);
+    right: var(--space-4);
     bottom: 100px;
 }
 
 .lb-battle {
     height: 74px;
-    background-color: var(--lb-gold);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-gold-edge);
-    border-right-color: var(--lb-gold-edge);
-    border-top-color: var(--lb-gold-edge);
-    border-bottom-color: var(--lb-gold-edge);
-    border-top-left-radius: var(--lb-r-lg);
-    border-top-right-radius: var(--lb-r-lg);
-    border-bottom-left-radius: var(--lb-r-lg);
-    border-bottom-right-radius: var(--lb-r-lg);
+    background-color: var(--action);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+    border-top-left-radius: var(--corner-lg);
+    border-top-right-radius: var(--corner-lg);
+    border-bottom-left-radius: var(--corner-lg);
+    border-bottom-right-radius: var(--corner-lg);
     font-size: 30px;
     letter-spacing: 0.5px;
-    color: var(--lb-gold-text);
+    color: var(--action-ink);
     transition-property: translate;
-    transition-duration: var(--lb-t-press);
+    transition-duration: var(--motion-press);
     transition-timing-function: ease-in;
 }
 
@@ -302,18 +309,18 @@
 }
 
 .lb-battle-lip {
-    background-color: var(--lb-gold-edge);
-    border-top-left-radius: var(--lb-r-lg);
-    border-top-right-radius: var(--lb-r-lg);
-    border-bottom-left-radius: var(--lb-r-lg);
-    border-bottom-right-radius: var(--lb-r-lg);
+    background-color: var(--action-edge);
+    border-top-left-radius: var(--corner-lg);
+    border-top-right-radius: var(--corner-lg);
+    border-bottom-left-radius: var(--corner-lg);
+    border-bottom-right-radius: var(--corner-lg);
 }
 
 .lb-boxmeter {
-    margin-top: var(--lb-sp3);
+    margin-top: var(--space-3);
     flex-direction: row;
     align-items: center;
-    background-color: var(--lb-meter-bg);
+    background-color: var(--home-meter-bg);
     border-top-left-radius: 14px;
     border-top-right-radius: 14px;
     border-bottom-left-radius: 14px;
@@ -326,8 +333,8 @@
 
 .lb-root .lb-boxmeter__label {
     font-size: 15px;
-    color: var(--lb-ink-inv);
-    margin-right: var(--lb-sp3);
+    color: var(--ink-inverse);
+    margin-right: var(--space-3);
     flex-shrink: 0;
 }
 
@@ -338,13 +345,13 @@
     border-top-right-radius: 6px;
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
-    background-color: var(--lb-meter-track);
+    background-color: var(--home-meter-track);
     overflow: hidden;
 }
 
 .lb-boxmeter__fill {
     height: 100%;
     width: 0;
-    background-color: var(--lb-green);
+    background-color: var(--confirm);
 }
 

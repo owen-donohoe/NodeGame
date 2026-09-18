@@ -29,29 +29,31 @@
         one element bound once.
 
         Four tabs. Profile is reached from the player name, not a tab.
+
+        Tokens and shared components arrive through the panel theme
+        (UnityDefaultRuntimeTheme.tss); only the lobby's own sheet is imported here.
     -->
 
-    <engine:Style src="project://database/Assets/UI/Styles/Theme.uss" />
     <engine:Style src="project://database/Assets/UI/Styles/Lobby.uss" />
 
-    <engine:VisualElement name="lobby-root" class="lobby-root lb-root">
+    <engine:VisualElement name="lobby-root" class="ui-root lb-root">
 
         <lobby:LobbyBackdrop name="backdrop" class="lb-backdrop" picking-mode="Ignore">
             <engine:VisualElement class="lb-ground-edge" picking-mode="Ignore" />
             <engine:VisualElement name="prop-a" class="lb-prop" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-prop__body" picking-mode="Ignore" />
             </engine:VisualElement>
             <engine:VisualElement name="prop-b" class="lb-prop" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-prop__body" picking-mode="Ignore" />
             </engine:VisualElement>
             <engine:VisualElement name="prop-c" class="lb-prop" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-prop__body" picking-mode="Ignore" />
             </engine:VisualElement>
             <engine:VisualElement name="prop-d" class="lb-prop" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-prop__body" picking-mode="Ignore" />
             </engine:VisualElement>
         </lobby:LobbyBackdrop>
@@ -59,42 +61,42 @@
         <engine:VisualElement name="safe-area" class="lb-safe-area" picking-mode="Ignore">
 
             <engine:VisualElement name="top-bar" class="lb-topbar" picking-mode="Ignore">
-                <engine:Button name="purse-coin" class="lb-reset-button lb-purse">
+                <engine:Button name="purse-coin" class="ui-reset-button lb-purse">
                     <engine:VisualElement class="lb-coin" picking-mode="Ignore">
                         <engine:VisualElement class="lb-coin__hole" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:Label name="purse-coin-value" class="lb-purse__value lb-w600" text="—" picking-mode="Ignore" />
+                    <engine:Label name="purse-coin-value" class="lb-purse__value ui-w600" text="—" picking-mode="Ignore" />
                 </engine:Button>
-                <engine:Button name="purse-leaf" class="lb-reset-button lb-purse">
+                <engine:Button name="purse-leaf" class="ui-reset-button lb-purse">
                     <engine:VisualElement class="lb-leaf" picking-mode="Ignore" />
-                    <engine:Label name="purse-leaf-value" class="lb-purse__value lb-w600" text="—" picking-mode="Ignore" />
+                    <engine:Label name="purse-leaf-value" class="lb-purse__value ui-w600" text="—" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:VisualElement class="lb-spacer" picking-mode="Ignore" />
-                <engine:Button name="history" class="lb-reset-button lb-gear lb-gear--history" tooltip="Match history">
+                <engine:Button name="history" class="ui-reset-button lb-gear lb-gear--history" tooltip="Match history">
                     <lobby:LobbyIcon kind="Tv" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
-                <engine:Button name="gear" class="lb-reset-button lb-gear" tooltip="Settings">
+                <engine:Button name="gear" class="ui-reset-button lb-gear" tooltip="Settings">
                     <lobby:LobbyIcon kind="Gear" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
 
-            <engine:VisualElement name="strip-wrap" class="lb-sticker lb-strip-wrap" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+            <engine:VisualElement name="strip-wrap" class="ui-sticker lb-strip-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement name="trophy-strip" class="lb-strip">
                     <engine:VisualElement class="lb-strip__row" picking-mode="Ignore">
-                        <engine:Button name="name-button" class="lb-reset-button lb-name-btn">
-                            <engine:Label name="name-text" class="lb-name-btn__text lb-w600" text="player" picking-mode="Ignore" />
-                            <engine:Label class="lb-name-btn__chev lb-w600" text="›" picking-mode="Ignore" />
+                        <engine:Button name="name-button" class="ui-reset-button lb-name-btn">
+                            <engine:Label name="name-text" class="lb-name-btn__text ui-w600" text="player" picking-mode="Ignore" />
+                            <engine:Label class="lb-name-btn__chev ui-w600" text="›" picking-mode="Ignore" />
                         </engine:Button>
                         <engine:VisualElement class="lb-trophy" picking-mode="Ignore">
-                            <engine:Label name="trophy-count" class="lb-trophy__count lb-w700" text="0" picking-mode="Ignore" />
-                            <engine:Label name="trophy-max" class="lb-trophy__max lb-w500" text=" /—" picking-mode="Ignore" />
+                            <engine:Label name="trophy-count" class="lb-trophy__count ui-w700" text="0" picking-mode="Ignore" />
+                            <engine:Label name="trophy-max" class="lb-trophy__max ui-w500" text=" /—" picking-mode="Ignore" />
                         </engine:VisualElement>
                     </engine:VisualElement>
-                    <engine:VisualElement class="lb-track" picking-mode="Ignore">
-                        <engine:VisualElement name="trophy-fill" class="lb-track__fill" picking-mode="Ignore" />
+                    <engine:VisualElement class="ui-bar lb-track" picking-mode="Ignore">
+                        <engine:VisualElement name="trophy-fill" class="ui-bar__fill" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:Label name="arena-text" class="lb-arena lb-w500" text="Arena —" picking-mode="Ignore" />
+                    <engine:Label name="arena-text" class="lb-arena ui-w500" text="Arena —" picking-mode="Ignore" />
                 </engine:VisualElement>
             </engine:VisualElement>
 
@@ -102,18 +104,18 @@
 
             <engine:VisualElement name="tabbar-dock" class="lb-tabbar-dock" picking-mode="Ignore">
                 <engine:VisualElement class="lb-tabbar-wrap" picking-mode="Ignore">
-                    <engine:VisualElement class="lb-soft-shadow" picking-mode="Ignore" />
+                    <engine:VisualElement class="ui-soft-shadow" picking-mode="Ignore" />
                     <engine:VisualElement name="tabbar" class="lb-tabbar">
-                        <engine:Button name="nav-shop" class="lb-reset-button lb-tab" tooltip="Shop">
+                        <engine:Button name="nav-shop" class="ui-reset-button lb-tab" tooltip="Shop">
                             <lobby:LobbyIcon kind="Shop" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
-                        <engine:Button name="nav-home" class="lb-reset-button lb-tab" tooltip="Home">
+                        <engine:Button name="nav-home" class="ui-reset-button lb-tab" tooltip="Home">
                             <lobby:LobbyIcon kind="Spark" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
-                        <engine:Button name="nav-workshop" class="lb-reset-button lb-tab" tooltip="Workshop">
+                        <engine:Button name="nav-workshop" class="ui-reset-button lb-tab" tooltip="Workshop">
                             <lobby:LobbyIcon kind="Tools" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
-                        <engine:Button name="nav-social" class="lb-reset-button lb-tab lb-tab--last" tooltip="Social">
+                        <engine:Button name="nav-social" class="ui-reset-button lb-tab lb-tab--last" tooltip="Social">
                             <lobby:LobbyIcon kind="Smile" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
                     </engine:VisualElement>
@@ -125,22 +127,22 @@
         <engine:VisualElement name="overlay-host" class="lb-sheet-layer" picking-mode="Ignore" />
 
         <engine:VisualElement name="sheet-layer" class="lb-sheet-layer" picking-mode="Ignore">
-            <engine:VisualElement name="sheet-scrim" class="lb-scrim" picking-mode="Ignore" />
-            <engine:VisualElement name="sheet" class="lb-sheet">
-                <engine:VisualElement name="sheet-handle" class="lb-handle-hit">
-                    <engine:VisualElement class="lb-handle" picking-mode="Ignore" />
+            <engine:VisualElement name="sheet-scrim" class="ui-scrim" picking-mode="Ignore" />
+            <engine:VisualElement name="sheet" class="ui-sheet lb-sheet">
+                <engine:VisualElement name="sheet-handle" class="ui-handle-hit">
+                    <engine:VisualElement class="ui-handle" picking-mode="Ignore" />
                 </engine:VisualElement>
                 <engine:VisualElement name="sheet-body" picking-mode="Ignore" />
             </engine:VisualElement>
         </engine:VisualElement>
 
         <engine:VisualElement name="menu-layer" class="lb-menu-layer" picking-mode="Ignore">
-            <engine:VisualElement name="menu-scrim" class="lb-scrim" picking-mode="Ignore" />
+            <engine:VisualElement name="menu-scrim" class="ui-scrim" picking-mode="Ignore" />
             <engine:VisualElement name="menu" class="lb-menu" picking-mode="Ignore" />
         </engine:VisualElement>
 
         <engine:VisualElement name="toast-dock" class="lb-toast-dock" picking-mode="Ignore">
-            <engine:Label name="toast" class="lb-toast lb-w500" text="" picking-mode="Ignore" />
+            <engine:Label name="toast" class="ui-toast ui-w500" text="" picking-mode="Ignore" />
         </engine:VisualElement>
 
     </engine:VisualElement>

@@ -12,21 +12,34 @@
     outrank the label reset in Lobby.uss.
 */
 
+:root {
+    --arena-sorcery: rgb(43, 33, 56);
+    --arena-sorcery-ink: rgb(237, 227, 200);
+    --arena-sorcery-edge: rgb(15, 10, 22);
+    --arena-steam: rgb(221, 230, 240);
+    --arena-bronze: rgb(228, 210, 172);
+    --arena-ancient: rgb(185, 172, 151);
+    --arena-chip-got: rgba(255, 255, 255, 0.4);
+
+    /* A shade heavier than the shared --shadow-soft, as the prototype drew it. */
+    --arena-shadow: rgba(90, 70, 40, 0.28);
+}
+
 .lb-arena {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: var(--lb-paper);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     overflow: hidden;
     transform-origin: left top;
     opacity: 0;
@@ -70,29 +83,29 @@
     padding-top: 16px;
     padding-bottom: 12px;
     padding-left: 12px;
-    padding-right: var(--lb-sp4);
-    background-color: var(--lb-paper-hi);
-    border-bottom-width: var(--lb-bw);
-    border-bottom-color: var(--lb-edge);
+    padding-right: var(--space-4);
+    background-color: var(--surface-raised);
+    border-bottom-width: var(--stroke);
+    border-bottom-color: var(--edge);
 }
 
 .lb-arena__name {
     flex-grow: 1;
     flex-shrink: 1;
-    margin-left: var(--lb-sp2);
-    margin-right: var(--lb-sp2);
+    margin-left: var(--space-2);
+    margin-right: var(--space-2);
     overflow: hidden;
 }
 
 .lb-root .lb-arena__name-text {
     font-size: 23px;
-    color: var(--lb-ink);
+    color: var(--ink);
     text-overflow: ellipsis;
 }
 
 .lb-root .lb-arena__name-sub {
     font-size: 14px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     margin-top: 2px;
 }
 
@@ -100,13 +113,13 @@
     flex-shrink: 0;
 }
 
-.lb-rename-wrap > .lb-lip__block {
+.lb-rename-wrap > .ui-lip__block {
     top: 3px;
     bottom: -3px;
 }
 
 .lb-rename-lip {
-    background-color: var(--lb-shadow);
+    background-color: var(--shadow);
     border-top-left-radius: 22px;
     border-top-right-radius: 22px;
     border-bottom-left-radius: 22px;
@@ -117,23 +130,23 @@
     height: 44px;
     padding-left: 15px;
     padding-right: 15px;
-    background-color: var(--lb-card);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-sunk);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 22px;
     border-top-right-radius: 22px;
     border-bottom-left-radius: 22px;
     border-bottom-right-radius: 22px;
     font-size: 16px;
-    color: var(--lb-ink);
+    color: var(--ink);
     transition-property: translate;
-    transition-duration: var(--lb-t-press);
+    transition-duration: var(--motion-press);
 }
 
 .lb-rename:active {
@@ -151,59 +164,59 @@
 .lb-record {
     width: 45%;
     flex-shrink: 0;
-    background-color: var(--lb-paper);
-    border-right-width: var(--lb-bw);
-    border-right-color: var(--lb-edge);
+    background-color: var(--surface);
+    border-right-width: var(--stroke);
+    border-right-color: var(--edge);
 }
 
 .lb-record .unity-scroll-view__content-container {
-    padding-top: var(--lb-sp4);
+    padding-top: var(--space-4);
     padding-bottom: 40px;
-    padding-left: var(--lb-sp3);
-    padding-right: var(--lb-sp3);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
 }
 
 .lb-root .lb-stat__label {
     font-size: 12px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     letter-spacing: 0.3px;
     margin-bottom: 3px;
     padding-left: 3px;
 }
 
 .lb-stat__wrap {
-    margin-bottom: var(--lb-sp3);
+    margin-bottom: var(--space-3);
 }
 
-.lb-stat__wrap > .lb-sticker__shadow {
+.lb-stat__wrap > .ui-sticker__shadow {
     left: 2px;
     top: 3px;
     right: -2px;
     bottom: -3px;
-    background-color: rgba(90, 70, 40, 0.28);
-    border-top-left-radius: var(--lb-r-sm);
-    border-top-right-radius: var(--lb-r-sm);
-    border-bottom-left-radius: var(--lb-r-sm);
-    border-bottom-right-radius: var(--lb-r-sm);
+    background-color: var(--arena-shadow);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
 }
 
 .lb-root .lb-stat__panel {
     height: 54px;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: var(--lb-r-sm);
-    border-top-right-radius: var(--lb-r-sm);
-    border-bottom-left-radius: var(--lb-r-sm);
-    border-bottom-right-radius: var(--lb-r-sm);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
     font-size: 24px;
-    color: var(--lb-ink);
+    color: var(--ink);
     -unity-text-align: middle-center;
 }
 
@@ -211,7 +224,7 @@
 
 .lb-road {
     flex-grow: 1;
-    background-color: var(--lb-paper);
+    background-color: var(--surface);
 }
 
 .lb-road__inner {
@@ -228,15 +241,15 @@
     top: 28px;
     bottom: 40px;
     width: 14px;
-    background-color: var(--lb-track);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-track);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 7px;
     border-top-right-radius: 7px;
     border-bottom-left-radius: 7px;
@@ -251,7 +264,7 @@
     right: 0;
     bottom: 0;
     height: 0;
-    background-color: var(--lb-gold);
+    background-color: var(--action);
     transition-property: height;
     transition-duration: 700ms;
     transition-delay: 250ms;
@@ -263,15 +276,15 @@
     left: 18px;
     width: 22px;
     height: 22px;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 11px;
     border-top-right-radius: 11px;
     border-bottom-left-radius: 11px;
@@ -285,15 +298,15 @@
     left: 14px;
     width: 30px;
     height: 30px;
-    background-color: var(--lb-badge);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-badge-edge);
-    border-right-color: var(--lb-badge-edge);
-    border-top-color: var(--lb-badge-edge);
-    border-bottom-color: var(--lb-badge-edge);
+    background-color: var(--badge);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--badge-edge);
+    border-right-color: var(--badge-edge);
+    border-top-color: var(--badge-edge);
+    border-bottom-color: var(--badge-edge);
     border-top-left-radius: 15px;
     border-top-right-radius: 15px;
     border-bottom-left-radius: 15px;
@@ -305,29 +318,29 @@
 .lb-road__you > .lb-icon {
     width: 13px;
     height: 13px;
-    -unity-background-image-tint-color: var(--lb-white);
+    -unity-background-image-tint-color: var(--ink-white);
 }
 
 .lb-era {
     min-height: 540px;
-    margin-bottom: var(--lb-sp5);
-    padding-top: var(--lb-sp4);
-    padding-bottom: var(--lb-sp4);
-    padding-left: var(--lb-sp3);
-    padding-right: var(--lb-sp3);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: var(--lb-r-md);
-    border-top-right-radius: var(--lb-r-md);
-    border-bottom-left-radius: var(--lb-r-md);
-    border-bottom-right-radius: var(--lb-r-md);
-    color: var(--lb-ink);
+    margin-bottom: var(--space-5);
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-4);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+    color: var(--ink);
 }
 
 .lb-era--last {
@@ -336,17 +349,17 @@
 
 /* Flat era fills: the prototype's grid and dot textures are gradients. */
 .lb-era--sorcery {
-    background-color: var(--lb-era-sorcery);
-    color: var(--lb-era-sorcery-ink);
-    border-left-color: var(--lb-era-sorcery-edge);
-    border-right-color: var(--lb-era-sorcery-edge);
-    border-top-color: var(--lb-era-sorcery-edge);
-    border-bottom-color: var(--lb-era-sorcery-edge);
+    background-color: var(--arena-sorcery);
+    color: var(--arena-sorcery-ink);
+    border-left-color: var(--arena-sorcery-edge);
+    border-right-color: var(--arena-sorcery-edge);
+    border-top-color: var(--arena-sorcery-edge);
+    border-bottom-color: var(--arena-sorcery-edge);
 }
 
-.lb-era--steam { background-color: var(--lb-era-steam); }
-.lb-era--bronze { background-color: var(--lb-era-bronze); }
-.lb-era--ancient { background-color: var(--lb-era-ancient); }
+.lb-era--steam { background-color: var(--arena-steam); }
+.lb-era--bronze { background-color: var(--arena-bronze); }
+.lb-era--ancient { background-color: var(--arena-ancient); }
 
 .lb-root .lb-era__name {
     font-size: 22px;
@@ -355,7 +368,7 @@
 .lb-root .lb-era__range {
     font-size: 15px;
     opacity: 0.75;
-    margin-bottom: var(--lb-sp4);
+    margin-bottom: var(--space-4);
     white-space: normal;
 }
 
@@ -369,12 +382,12 @@
 .lb-chip {
     width: 46px;
     height: 46px;
-    margin-right: var(--lb-sp2);
-    margin-bottom: var(--lb-sp2);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
+    margin-right: var(--space-2);
+    margin-bottom: var(--space-2);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
     border-top-left-radius: 11px;
     border-top-right-radius: 11px;
     border-bottom-left-radius: 11px;
@@ -384,27 +397,27 @@
 
 /* The prototype draws chip borders in the era's text colour (currentColor). */
 .lb-chip {
-    border-left-color: var(--lb-ink);
-    border-right-color: var(--lb-ink);
-    border-top-color: var(--lb-ink);
-    border-bottom-color: var(--lb-ink);
+    border-left-color: var(--ink);
+    border-right-color: var(--ink);
+    border-top-color: var(--ink);
+    border-bottom-color: var(--ink);
 }
 
 .lb-era--sorcery .lb-chip {
-    border-left-color: var(--lb-era-sorcery-ink);
-    border-right-color: var(--lb-era-sorcery-ink);
-    border-top-color: var(--lb-era-sorcery-ink);
-    border-bottom-color: var(--lb-era-sorcery-ink);
+    border-left-color: var(--arena-sorcery-ink);
+    border-right-color: var(--arena-sorcery-ink);
+    border-top-color: var(--arena-sorcery-ink);
+    border-bottom-color: var(--arena-sorcery-ink);
 }
 
 .lb-chip--got {
     opacity: 1;
-    background-color: var(--lb-chip-got);
+    background-color: var(--arena-chip-got);
 }
 
 .lb-root .lb-era__foot {
     font-size: 14px;
     opacity: 0.62;
-    margin-top: var(--lb-sp3);
+    margin-top: var(--space-3);
     white-space: normal;
 }

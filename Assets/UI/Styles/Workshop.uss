@@ -15,6 +15,18 @@
         :nth-child.
 */
 
+:root {
+    --workshop-slot-empty: rgba(244, 233, 213, 0.5);
+    --workshop-slot-empty-edge: rgba(45, 35, 25, 0.45);
+    --workshop-ready-ring: rgba(245, 195, 60, 0.7);
+    --workshop-fam-round: rgb(127, 175, 99);
+    --workshop-fam-square: rgb(126, 140, 168);
+    --workshop-fam-triangle: rgb(195, 112, 90);
+    --workshop-fam-combat: rgb(201, 139, 94);
+    --workshop-veil: rgba(235, 220, 195, 0.55);
+    --workshop-pick-lip: rgba(90, 70, 40, 0.4);
+}
+
 .lb-workshop {
     flex-grow: 1;
 }
@@ -22,22 +34,22 @@
 /* ---- segmented switcher ---- */
 
 .lb-wsbar {
-    padding-top: var(--lb-sp4);
-    padding-left: var(--lb-sp4);
-    padding-right: var(--lb-sp4);
+    padding-top: var(--space-4);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
 }
 
 .lb-wsseg {
     flex-direction: row;
-    background-color: var(--lb-card);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-sunk);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 29px;
     border-top-right-radius: 29px;
     border-bottom-left-radius: 29px;
@@ -61,7 +73,7 @@
     border-bottom-left-radius: 22px;
     border-bottom-right-radius: 22px;
     transition-property: background-color;
-    transition-duration: var(--lb-t-rel);
+    transition-duration: var(--motion-release);
 }
 
 .lb-wsseg__btn--last {
@@ -72,27 +84,27 @@
     width: 18px;
     height: 18px;
     margin-right: 7px;
-    -unity-background-image-tint-color: var(--lb-ink-mute);
+    -unity-background-image-tint-color: var(--ink-mute);
 }
 
 .lb-root .lb-wsseg__text {
     font-size: 17px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
 }
 
 /* The prototype's 0 2px 0 lift, as a bottom border. */
 .lb-wsseg__btn--on {
-    background-color: var(--lb-paper-hi);
-    border-bottom-width: var(--lb-bw-thin);
-    border-bottom-color: var(--lb-shadow-soft);
+    background-color: var(--surface-raised);
+    border-bottom-width: var(--stroke-thin);
+    border-bottom-color: var(--shadow-soft);
 }
 
 .lb-wsseg__btn--on > .lb-icon {
-    -unity-background-image-tint-color: var(--lb-ink);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-wsseg__btn--on > .lb-wsseg__text {
-    color: var(--lb-ink);
+    color: var(--ink);
 }
 
 /* ---- slots ---- */
@@ -100,34 +112,34 @@
 .lb-slots {
     flex-direction: row;
     justify-content: center;
-    padding-top: var(--lb-sp3);
-    padding-bottom: var(--lb-sp2);
-    padding-left: var(--lb-sp4);
-    padding-right: var(--lb-sp4);
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-2);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
 }
 
 .lb-slot {
     width: 72px;
     height: 72px;
-    margin-right: var(--lb-sp2);
+    margin-right: var(--space-2);
     align-items: center;
     justify-content: center;
-    background-color: var(--lb-slot-empty);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-slot-empty-edge);
-    border-right-color: var(--lb-slot-empty-edge);
-    border-top-color: var(--lb-slot-empty-edge);
-    border-bottom-color: var(--lb-slot-empty-edge);
-    border-top-left-radius: var(--lb-r-md);
-    border-top-right-radius: var(--lb-r-md);
-    border-bottom-left-radius: var(--lb-r-md);
-    border-bottom-right-radius: var(--lb-r-md);
+    background-color: var(--workshop-slot-empty);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--workshop-slot-empty-edge);
+    border-right-color: var(--workshop-slot-empty-edge);
+    border-top-color: var(--workshop-slot-empty-edge);
+    border-bottom-color: var(--workshop-slot-empty-edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
     white-space: normal;
     transition-property: scale;
-    transition-duration: var(--lb-t-rel);
+    transition-duration: var(--motion-release);
     transition-timing-function: ease-out-back;
 }
 
@@ -140,27 +152,27 @@
 }
 
 .lb-slot--filled {
-    background-color: var(--lb-paper-hi);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-raised);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
 }
 
 .lb-root .lb-slot__text {
     font-size: 13px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     white-space: normal;
     -unity-text-align: middle-center;
 }
 
 .lb-root .lb-slot--filled .lb-slot__text {
-    color: var(--lb-ink);
+    color: var(--ink);
 }
 
 .lb-root .lb-slot__letter {
     font-size: 24px;
-    color: var(--lb-ink);
+    color: var(--ink);
     margin-bottom: 1px;
     -unity-text-align: middle-center;
 }
@@ -172,14 +184,14 @@
     top: -6px;
     right: -6px;
     bottom: -6px;
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-ready-ring);
-    border-right-color: var(--lb-ready-ring);
-    border-top-color: var(--lb-ready-ring);
-    border-bottom-color: var(--lb-ready-ring);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--workshop-ready-ring);
+    border-right-color: var(--workshop-ready-ring);
+    border-top-color: var(--workshop-ready-ring);
+    border-bottom-color: var(--workshop-ready-ring);
     border-top-left-radius: 19px;
     border-top-right-radius: 19px;
     border-bottom-left-radius: 19px;
@@ -194,11 +206,11 @@
 .lb-root .lb-readytag {
     height: 20px;
     font-size: 16px;
-    color: var(--lb-ink-trophy);
+    color: var(--trophy-ink);
     -unity-text-align: middle-center;
     opacity: 0;
     transition-property: opacity;
-    transition-duration: var(--lb-t-rel);
+    transition-duration: var(--motion-release);
 }
 
 .lb-root .lb-slotwrap--ready > .lb-readytag {
@@ -219,29 +231,29 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-content: flex-start;
-    padding-top: var(--lb-sp3);
-    padding-left: var(--lb-sp4);
-    padding-right: var(--lb-sp4);
+    padding-top: var(--space-3);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
     padding-bottom: 160px;
 }
 
 .lb-gcard-wrap {
     width: 31.33%;
-    margin-bottom: var(--lb-sp3);
+    margin-bottom: var(--space-3);
     transition-property: opacity;
-    transition-duration: var(--lb-t-rel);
+    transition-duration: var(--motion-release);
 }
 
 .lb-gcard-wrap--gap {
     margin-right: 3%;
 }
 
-.lb-gcard-wrap > .lb-sticker__shadow {
+.lb-gcard-wrap > .ui-sticker__shadow {
     left: 2px;
     top: 3px;
     right: -2px;
     bottom: -3px;
-    background-color: var(--lb-shadow-soft);
+    background-color: var(--shadow-soft);
 }
 
 .lb-gcard-wrap--used {
@@ -254,25 +266,25 @@
 
 .lb-gcard {
     align-items: center;
-    padding-top: var(--lb-sp2);
-    padding-bottom: var(--lb-sp2);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
     padding-left: 3px;
     padding-right: 3px;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: var(--lb-r-md);
-    border-top-right-radius: var(--lb-r-md);
-    border-bottom-left-radius: var(--lb-r-md);
-    border-bottom-right-radius: var(--lb-r-md);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
     transition-property: scale, translate;
-    transition-duration: var(--lb-t-press);
+    transition-duration: var(--motion-press);
     transition-timing-function: ease-in;
 }
 
@@ -287,48 +299,48 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 4px;
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
-    border-top-left-radius: var(--lb-r-sm);
-    border-top-right-radius: var(--lb-r-sm);
-    border-bottom-left-radius: var(--lb-r-sm);
-    border-bottom-right-radius: var(--lb-r-sm);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
 }
 
-.lb-art--round { background-color: var(--lb-fam-round); }
-.lb-art--square { background-color: var(--lb-fam-square); }
-.lb-art--triangle { background-color: var(--lb-fam-triangle); }
-.lb-art--combat { background-color: var(--lb-fam-combat); }
+.lb-art--round { background-color: var(--workshop-fam-round); }
+.lb-art--square { background-color: var(--workshop-fam-square); }
+.lb-art--triangle { background-color: var(--workshop-fam-triangle); }
+.lb-art--combat { background-color: var(--workshop-fam-combat); }
 
 /* TODO(art): a monogram stands where the item's art goes. */
 .lb-root .lb-gcard__letter {
     font-size: 22px;
-    color: var(--lb-ink);
+    color: var(--ink);
     -unity-text-align: middle-center;
 }
 
 .lb-gcard__art > .lb-icon {
     width: 14px;
     height: 14px;
-    -unity-background-image-tint-color: var(--lb-ink);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-gcard__name {
     font-size: 14px;
-    color: var(--lb-ink);
+    color: var(--ink);
     -unity-text-align: middle-center;
     white-space: normal;
 }
 
 .lb-root .lb-gcard__note {
     font-size: 12px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     -unity-text-align: middle-center;
     white-space: normal;
     padding-left: 2px;
@@ -343,10 +355,10 @@
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: var(--lb-veil);
+    background-color: var(--workshop-veil);
     opacity: 0;
     transition-property: opacity;
-    transition-duration: var(--lb-t-rel);
+    transition-duration: var(--motion-release);
 }
 
 .lb-pickveil--on {
@@ -355,7 +367,7 @@
 
 .lb-picker {
     position: absolute;
-    right: var(--lb-sp3);
+    right: var(--space-3);
     bottom: 150px;
     flex-direction: column-reverse;
     align-items: flex-end;
@@ -364,7 +376,7 @@
 .lb-pick-lip {
     top: 4px;
     bottom: -4px;
-    background-color: var(--lb-pick-lip);
+    background-color: var(--workshop-pick-lip);
 }
 
 .lb-pickbtn-wrap {
@@ -383,21 +395,21 @@
     height: 62px;
     align-items: center;
     justify-content: center;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 31px;
     border-top-right-radius: 31px;
     border-bottom-left-radius: 31px;
     border-bottom-right-radius: 31px;
     transition-property: translate;
-    transition-duration: var(--lb-t-press);
+    transition-duration: var(--motion-press);
 }
 
 .lb-pickbtn:active {
@@ -407,19 +419,19 @@
 .lb-pickbtn > .lb-icon {
     width: 22px;
     height: 22px;
-    -unity-background-image-tint-color: var(--lb-ink);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-pickbtn__label {
     font-size: 10px;
-    color: var(--lb-ink-mute);
+    color: var(--ink-mute);
     letter-spacing: 0.4px;
     -unity-text-align: middle-center;
 }
 
 .lb-pickopts {
     align-items: flex-end;
-    margin-bottom: var(--lb-sp2);
+    margin-bottom: var(--space-2);
     opacity: 0;
     translate: 0 14px;
     scale: 0.9 0.9;
@@ -437,7 +449,7 @@
 
 .lb-pickopt-wrap {
     position: relative;
-    margin-bottom: var(--lb-sp2);
+    margin-bottom: var(--space-2);
 }
 
 .lb-pickopt-wrap > .lb-pick-lip {
@@ -451,23 +463,23 @@
     height: 56px;
     flex-direction: row;
     align-items: center;
-    padding-left: var(--lb-sp4);
+    padding-left: var(--space-4);
     padding-right: 20px;
-    background-color: var(--lb-paper-hi);
-    border-left-width: var(--lb-bw);
-    border-right-width: var(--lb-bw);
-    border-top-width: var(--lb-bw);
-    border-bottom-width: var(--lb-bw);
-    border-left-color: var(--lb-edge);
-    border-right-color: var(--lb-edge);
-    border-top-color: var(--lb-edge);
-    border-bottom-color: var(--lb-edge);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
     border-top-left-radius: 28px;
     border-top-right-radius: 28px;
     border-bottom-left-radius: 28px;
     border-bottom-right-radius: 28px;
     transition-property: translate;
-    transition-duration: var(--lb-t-press);
+    transition-duration: var(--motion-press);
 }
 
 .lb-pickopt:active {
@@ -478,26 +490,26 @@
     width: 18px;
     height: 18px;
     margin-right: 10px;
-    -unity-background-image-tint-color: var(--lb-ink);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-pickopt__text {
     font-size: 17px;
-    color: var(--lb-ink);
+    color: var(--ink);
 }
 
 .lb-pickopt--on {
-    background-color: var(--lb-gold);
-    border-left-color: var(--lb-gold-edge);
-    border-right-color: var(--lb-gold-edge);
-    border-top-color: var(--lb-gold-edge);
-    border-bottom-color: var(--lb-gold-edge);
+    background-color: var(--action);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
 }
 
 .lb-root .lb-pickopt--on > .lb-pickopt__text {
-    color: var(--lb-gold-text);
+    color: var(--action-ink);
 }
 
 .lb-pickopt--on > .lb-icon {
-    -unity-background-image-tint-color: var(--lb-gold-text);
+    -unity-background-image-tint-color: var(--action-ink);
 }

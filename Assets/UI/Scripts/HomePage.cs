@@ -190,7 +190,7 @@ namespace NodeWar.Lobby
 
             Label letter = new Label(ItemTint.MonogramFor(displayName, id));
             letter.AddToClassList("lb-lpi__letter");
-            letter.AddToClassList("lb-w600");
+            letter.AddToClassList("ui-w600");
             letter.pickingMode = PickingMode.Ignore;
             chip.Add(letter);
         }

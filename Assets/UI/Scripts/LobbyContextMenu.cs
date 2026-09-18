@@ -86,9 +86,9 @@ namespace NodeWar.Lobby
 
                 Button row = new Button();
                 row.text = item.Label;
-                row.AddToClassList("lb-reset-button");
+                row.AddToClassList("ui-reset-button");
                 row.AddToClassList("lb-menu__row");
-                row.AddToClassList("lb-w500");
+                row.AddToClassList("ui-w500");
                 if (i == items.Count - 1) row.AddToClassList("lb-menu__row--last");
 
                 row.clicked += () =>
@@ -118,7 +118,7 @@ namespace NodeWar.Lobby
 
             if (scrim != null)
             {
-                scrim.AddToClassList("lb-scrim--on");
+                scrim.AddToClassList("ui-scrim--on");
                 scrim.pickingMode = PickingMode.Position;
             }
 
@@ -148,7 +148,7 @@ namespace NodeWar.Lobby
 
             if (scrim != null)
             {
-                scrim.RemoveFromClassList("lb-scrim--on");
+                scrim.RemoveFromClassList("ui-scrim--on");
                 scrim.pickingMode = PickingMode.Ignore;
             }
 

@@ -1,347 +1,605 @@
 /*
-    Node sheet.
+    Node sheet, after ingame-prototype.html.
 
-    Colour, spacing and type come from Theme.uss. The player marks come from
-    there too, unchanged, so a node owner reads the same here as on the HUD and
-    in the lobby.
+    The sheet is the shared .ui-sheet - pinned to the bottom edge, sliding up
+    when open - with the match's own look on top: no scrim, a hairline top
+    edge, fixed heights so the board keeps the top of the screen, and a body
+    that scrolls when a roster runs long.
 
-    THE SHEET NEVER COVERS MORE THAN THE BOTTOM. max-height is a proportion of
-    the screen rather than a pixel count, so it holds on any aspect from 16:9
-    to 21:9 - and the board above it stays visible, which is the whole reason
-    this is a sheet and not a takeover.
+    Colour and type come from the theme's tokens. No text below --type-min.
 */
 
 .sheet {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    max-height: 55%;
-    flex-direction: column;
-    background-color: var(--paper);
-    border-top-width: var(--border-width);
-    border-top-color: var(--border-ink);
-    border-top-left-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
-    padding: var(--space-sm);
-    transition-property: translate;
-    transition-duration: 0.22s;
+    height: 262px;
+    padding-left: 0;
+    padding-right: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: var(--stroke-thin);
+    border-top-color: var(--rule);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    translate: 0 101%;
+    transition-property: translate, height;
+    transition-duration: 300ms, 260ms;
+    transition-timing-function: ease-out;
 }
 
-/*
-    Slid away rather than display:none, so it animates out. 110% clears the
-    border and any shadow the theme adds later.
-*/
-.sheet--hidden {
-    translate: 0 110%;
+/* Written as a compound because a layout stylesheet outranks the theme:
+   plain .ui-sheet--open would lose to the translate above. */
+.sheet.ui-sheet--open {
+    translate: 0 0;
 }
+
+.sheet--tall { height: 320px; }
+.sheet--claim { height: 306px; }
+.sheet--tall.sheet--claim { height: 364px; }
 
 /* ===================================================================
-   Header
+   Head
    =================================================================== */
 
-.sheet__header {
+.sheet__grab {
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.sheet__handle {
+    width: 36px;
+    height: 4px;
+    margin-top: 7px;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+.sheet__head {
     flex-direction: row;
     align-items: center;
+    padding-left: var(--space-4);
+    padding-right: var(--space-3);
+    padding-bottom: var(--space-2);
     flex-shrink: 0;
 }
 
-.sheet__mark {
-    flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+.sheet__thumb {
+    width: 42px;
+    height: 42px;
+    margin-right: var(--space-3);
 }
 
-/* Unclaimed: no player colour, so no shape claim either. */
-.sheet__mark--none {
-    background-color: var(--disabled);
-    border-radius: var(--radius-sm);
+.ui-root .sheet__thumb-letter {
+    font-size: 18px;
 }
 
-.sheet__title {
+.sheet__name {
     flex-grow: 1;
-    flex-direction: column;
-    margin-left: var(--space-sm);
+    flex-shrink: 1;
 }
 
+.ui-root .sheet__title {
+    font-size: var(--type-heading);
+    color: var(--ink);
+}
+
+.sheet__owner-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.ui-root .sheet__owner {
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--ink-mute);
+    margin-right: 5px;
+}
+
+.ui-root .sheet__mark-label {
+    font-size: var(--type-min);
+}
+
+/* 44 for the thumb; the ring inside is drawn smaller. */
 .sheet__close {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    min-height: var(--touch-min);
-    min-width: var(--touch-min);
-    margin: 0;
-    padding-left: var(--space-sm);
-    padding-right: var(--space-sm);
-    background-image: none;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: var(--border-width);
-    border-color: var(--ink-muted);
-    border-radius: var(--radius-md);
-    color: var(--ink-dark);
-    font-size: var(--text-sm);
-    -unity-font-style: bold;
+}
+
+.sheet__close-ring {
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+}
+
+.sheet__close-ring > .lb-icon {
+    width: 14px;
+    height: 14px;
+    -unity-background-image-tint-color: var(--ink-mute);
+}
+
+.sheet__close:active > .sheet__close-ring {
+    background-color: var(--press-tint);
 }
 
 /* ===================================================================
-   Claim - a tug of war, not a progress bar
+   Claim tug of war
    =================================================================== */
 
 .sheet__claim {
+    display: none;
+    margin-left: var(--space-4);
+    margin-right: var(--space-4);
+    margin-bottom: var(--space-2);
     flex-shrink: 0;
-    margin-top: var(--space-sm);
 }
 
-.sheet__claim-track {
+.sheet__claim--on {
+    display: flex;
+}
+
+.sheet__claimbar {
+    height: 12px;
     flex-direction: row;
-    align-items: center;
-    height: 14px;
-    background-color: rgba(72, 56, 40, 0.15);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-sm);
     overflow: hidden;
+    background-color: var(--surface-sunk);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--rule);
+    border-right-color: var(--rule);
+    border-top-color: var(--rule);
+    border-bottom-color: var(--rule);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
 }
 
-/*
-    Two halves of equal width meeting at a centre line. Each fill grows from
-    the centre outward, so the eye reads distance-from-neutral in both
-    directions rather than progress in one.
-*/
 .sheet__claim-half {
     flex-grow: 1;
     flex-basis: 0;
-    height: 100%;
     flex-direction: row;
 }
 
-.sheet__claim-half--left {
+/* Player 1's half grows leftward from the centre. */
+.sheet__claim-half--p1 {
     justify-content: flex-end;
-}
-
-.sheet__claim-half--right {
-    justify-content: flex-start;
-}
-
-.sheet__claim-centre {
-    width: 2px;
-    height: 100%;
-    flex-shrink: 0;
-    background-color: var(--border-ink);
 }
 
 .sheet__claim-fill {
     height: 100%;
     width: 0;
-    transition-property: width;
-    transition-duration: 0.2s;
 }
 
-.sheet__claim-fill--p0 { background-color: var(--player-0); }
-.sheet__claim-fill--p1 { background-color: var(--player-1); }
+.sheet__claim-fill--p0 { background-color: var(--p0); }
+.sheet__claim-fill--p1 { background-color: var(--p1); }
 
-.sheet__claim-label {
+.sheet__claim-mid {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    translate: -1px 0;
+    background-color: var(--ink);
+    opacity: 0.35;
+}
+
+.sheet__claim-labels {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 3px;
+}
+
+.ui-root .sheet__claim-label {
+    flex-grow: 1;
+    font-size: 12px;
+    color: var(--ink-mute);
     -unity-text-align: middle-center;
-    margin-top: var(--space-xs);
 }
 
 /* ===================================================================
-   Content
+   Body and action bar
    =================================================================== */
 
-.sheet__scroll {
+.sheet__body {
     flex-grow: 1;
-    margin-top: var(--space-sm);
-}
-
-.sheet__content-host {
-    flex-direction: column;
+    flex-shrink: 1;
 }
 
 .sheet__content {
-    flex-direction: column;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-bottom: var(--space-2);
+}
+
+.sheet__actions {
+    flex-shrink: 0;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-top-width: 1px;
+    border-top-color: var(--rule);
+    background-color: var(--surface);
+}
+
+.sheet__actions--empty {
+    display: none;
+}
+
+/* SafeAreaBinder writes the bottom inset here. */
+.sheet__safe-bottom {
+    flex-shrink: 0;
+    background-color: var(--surface);
 }
 
 .sheet__hidden {
     display: none;
 }
 
-.sheet__headline {
-    -unity-font-style: bold;
-}
-
-/* Why a control is refused. Never left as a silently dead button. */
-.sheet__reason {
-    color: var(--accent);
-    margin-top: var(--space-xs);
-}
-
-.sheet__action {
-    min-height: var(--touch-min);
-    margin: 0;
-    margin-left: var(--space-sm);
-    padding-left: var(--space-sm);
-    padding-right: var(--space-sm);
-    background-image: none;
-    background-color: var(--primary);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-md);
-    color: var(--ink-dark);
-    font-size: var(--text-sm);
-    -unity-font-style: bold;
-    flex-shrink: 0;
-}
-
-.sheet__action:disabled {
-    background-color: var(--disabled);
-    color: var(--ink-muted);
-}
-
-.sheet__step {
-    min-width: var(--touch-min);
-    min-height: var(--touch-min);
-    margin: 0;
-    padding: 0;
-    background-image: none;
-    background-color: var(--card);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-sm);
-    color: var(--ink-dark);
-    font-size: var(--text-lg);
-    -unity-font-style: bold;
-}
-
-.sheet__step:disabled {
-    background-color: var(--disabled);
-    color: var(--ink-muted);
-}
-
 /* ===================================================================
-   Forge
+   Shared text
    =================================================================== */
 
-.forge__slots {
-    flex-direction: column;
-    margin-top: var(--space-xs);
+.ui-root .sheet__caption {
+    font-size: 13px;
+    color: var(--ink-mute);
+    white-space: normal;
 }
 
-.forge__slot {
-    height: 10px;
-    margin-bottom: var(--space-xs);
-    background-color: rgba(72, 56, 40, 0.15);
-    border-width: 1px;
-    border-color: var(--border-ink);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    flex-direction: row;
+.ui-root .sheet__microcap {
+    font-size: var(--type-min);
+    color: var(--ink-mute);
+    white-space: normal;
+    margin-top: 4px;
 }
 
-.forge__slot-fill {
-    height: 100%;
-    width: 0;
-    background-color: var(--secondary);
+.ui-root .sheet__label {
+    font-size: var(--type-min);
+    letter-spacing: 1px;
+    color: var(--ink-mute);
+    margin-bottom: 5px;
 }
 
-.forge__allocation {
-    margin-top: var(--space-sm);
-}
-
-.forge__allocation-row {
-    flex-direction: row;
-    align-items: center;
-    margin-top: var(--space-xs);
-}
-
-.forge__allocation-value {
-    flex-grow: 1;
-    font-size: var(--text-lg);
-    color: var(--ink-dark);
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
+/* The one main control of a sheet. Shorter than the lobby's big button. */
+.ui-root .sheet__primary {
+    height: 50px;
+    font-size: 16px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 /* ===================================================================
    Core
    =================================================================== */
 
-.core__roster {
-    flex-direction: column;
-    margin-top: var(--space-sm);
+.core__cols {
+    flex-direction: row;
+}
+
+.core__left {
+    width: 96px;
+    flex-shrink: 0;
+    margin-right: var(--space-3);
+}
+
+.core__right {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.core__stat {
+    align-items: center;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--rule);
+    border-right-color: var(--rule);
+    border-top-color: var(--rule);
+    border-bottom-color: var(--rule);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+}
+
+.ui-root .core__stat-value {
+    font-size: 27px;
+    color: var(--ink);
+}
+
+.ui-root .core__stat-label {
+    font-size: var(--type-min);
+    letter-spacing: 1px;
+    color: var(--ink-mute);
+    margin-top: 3px;
 }
 
 .core__row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: var(--space-sm);
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--rule);
 }
 
 .core__row-text {
     flex-grow: 1;
-    flex-direction: column;
+}
+
+.ui-root .core__row-name {
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.ui-root .core__row-time {
+    font-size: var(--type-min);
+    color: var(--ink-mute);
+}
+
+/* The villager a single Respawn brings back. Marked in words, not colour. */
+.ui-root .core__row-next {
+    font-size: var(--type-min);
+    color: var(--action-edge);
+    margin-right: var(--space-2);
 }
 
 .core__track {
-    height: 8px;
-    margin-top: var(--space-xs);
-    background-color: rgba(72, 56, 40, 0.15);
-    border-radius: var(--radius-sm);
+    width: 44px;
+    height: 4px;
     overflow: hidden;
-    flex-direction: row;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    background-color: var(--surface-sunk);
 }
 
 .core__track-fill {
     height: 100%;
     width: 0;
-    background-color: var(--primary);
+    background-color: var(--confirm);
+}
+
+/* ===================================================================
+   Forge
+   =================================================================== */
+
+.forge__gauges {
+    flex-direction: row;
+    justify-content: center;
+    padding-top: var(--space-1);
+}
+
+.forge__gauge {
+    align-items: center;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+/* The dial draws its arcs from these: color is the fill, the tint the track. */
+.forge__dial {
+    width: 66px;
+    height: 66px;
+    align-items: center;
+    justify-content: center;
+    color: var(--confirm);
+    -unity-background-image-tint-color: var(--surface-sunk);
+}
+
+.ui-root .forge__dial-text {
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.ui-root .forge__gauge-label {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 4px;
+}
+
+.forge__stepper {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ui-root .forge__step {
+    width: 54px;
+    height: 50px;
+    font-size: 22px;
+    color: var(--ink);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--rule);
+    border-right-color: var(--rule);
+    border-top-color: var(--rule);
+    border-bottom-color: var(--rule);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+}
+
+.forge__step:disabled {
+    opacity: 0.33;
+}
+
+.forge__step-value {
+    flex-grow: 1;
+    align-items: center;
+}
+
+.ui-root .forge__step-number {
+    font-size: 26px;
+    color: var(--ink);
+}
+
+.ui-root .forge__step-label {
+    font-size: var(--type-min);
+    letter-spacing: 1px;
+    color: var(--ink-mute);
 }
 
 /* ===================================================================
    Equip
    =================================================================== */
 
-.equip__roster {
-    flex-direction: column;
-    margin-top: var(--space-sm);
-}
-
-.equip__villager {
-    flex-direction: column;
-    margin-bottom: var(--space-sm);
-    background-color: var(--card);
-    border-width: var(--border-width);
-    border-color: var(--border-ink);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
-
-.equip__villager-header {
+.equip__rail {
     flex-direction: row;
-    align-items: center;
-    min-height: var(--touch-min);
-    margin: 0;
-    padding: var(--space-sm);
-    background-image: none;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
+    padding-bottom: 3px;
 }
 
-.equip__villager-header:disabled {
-    opacity: 0.6;
+.ui-root .equip__card {
+    width: 80px;
+    margin-right: var(--space-2);
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    flex-direction: column;
+    align-items: stretch;
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--rule);
+    border-right-color: var(--rule);
+    border-top-color: var(--rule);
+    border-bottom-color: var(--rule);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    transition-property: scale;
+    transition-duration: var(--motion-press);
 }
 
-.equip__villager-text {
-    flex-grow: 1;
+.equip__card:active {
+    scale: 0.95 0.95;
+}
+
+.equip__card--dim {
+    opacity: 0.45;
+}
+
+.ui-root .equip__card--picked {
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+}
+
+.equip__card-tile {
+    height: 28px;
+    margin-bottom: 4px;
+}
+
+.ui-root .equip__card-letter {
+    font-size: 13px;
+}
+
+.ui-root .equip__card-name {
+    font-size: 12px;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+}
+
+.ui-root .equip__card-sub {
+    font-size: var(--type-min);
+    color: var(--ink-mute);
+    -unity-text-align: middle-center;
+}
+
+.ui-root .equip__card-sub--short {
+    color: var(--status-short-ink);
+}
+
+.equip__units {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.ui-root .equip__unit {
+    min-height: 44px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--rule);
+    border-right-color: var(--rule);
+    border-top-color: var(--rule);
+    border-bottom-color: var(--rule);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
 }
 
-.equip__suits {
-    flex-direction: column;
-    padding: var(--space-sm);
-    padding-top: 0;
+.ui-root .equip__unit--picked {
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--confirm-edge);
+    border-right-color: var(--confirm-edge);
+    border-top-color: var(--confirm-edge);
+    border-bottom-color: var(--confirm-edge);
 }
 
-.equip__suit {
-    margin-left: 0;
-    margin-bottom: var(--space-xs);
+.ui-root .equip__unit-name {
+    font-size: 12px;
+    color: var(--ink);
+}
+
+.ui-root .equip__unit-state {
+    font-size: var(--type-min);
+    color: var(--ink-mute);
+}
+
+.equip__gap {
+    height: var(--space-3);
 }

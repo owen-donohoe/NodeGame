@@ -30,9 +30,9 @@ namespace NodeWar.Lobby
     public static class ItemTint
     {
         /// <summary>
-        /// How many tints exist. Matches the --tile-0 .. --tile-7 custom
-        /// properties and the .tile-tint--0 .. --7 classes in Theme.uss; adding
-        /// a tint means adding it in both places.
+        /// How many tints exist. Matches the --tile-tint-0 .. -7 tokens in
+        /// Tokens.uss and the .ui-tile-tint--0 .. --7 classes in Components.uss;
+        /// adding a tint means adding it in both places.
         /// </summary>
         public const int Count = 8;
 
@@ -63,12 +63,12 @@ namespace NodeWar.Lobby
 
         /// <summary>
         /// The USS class carrying that tint's background colour. The colour
-        /// itself lives in Theme.uss, so the rule that no page invents a colour
-        /// value holds here too.
+        /// itself lives in the theme's tokens, so the rule that no page invents
+        /// a colour value holds here too.
         /// </summary>
         public static string ClassFor(string itemID)
         {
-            return "tile-tint--" + IndexFor(itemID);
+            return "ui-tile-tint--" + IndexFor(itemID);
         }
 
         /// <summary>

@@ -24,7 +24,7 @@ namespace NodeWar.UI
     /// Does NOT own: placement state machine, input, preview lifecycle, confirm button.
     /// Those live on DraftPlacementController and DraftConfirmPresenter.
     /// </summary>
-    public class DraftUI : MonoBehaviour
+    public class DraftUI : MonoBehaviour, NodeWar.Core.IDraftPresenter
     {
         [Header("Bar Panel")]
         [SerializeField] private RectTransform barPanel;
@@ -193,6 +193,21 @@ namespace NodeWar.UI
         }
 
         public List<GameObject> GetPersistentPlacements() => persistentPlacements;
+
+        /// <summary>
+        /// Forwards the parked-but-unconfirmed placement to DraftManager, which
+        /// asks at timeout. DraftUI is what DraftManager talks to, so the query
+        /// goes through here rather than reaching past it into the controller.
+        /// </summary>
+        public bool TryGetPendingPlacement(out int slotIndex, out int gridX, out int gridZ)
+        {
+            slotIndex = -1;
+            gridX = -1;
+            gridZ = -1;
+
+            return placementController != null &&
+                   placementController.TryGetPendingPlacement(out slotIndex, out gridX, out gridZ);
+        }
 
         // ===== SLOT INTERACTION (called by DraftSlotUI) =====
 

@@ -33,11 +33,11 @@ namespace NodeWar.Lobby
             else
             {
                 VisualElement box = new VisualElement();
-                box.AddToClassList("placeholder");
+                box.AddToClassList("lb-placeholder");
                 box.style.flexGrow = 1;
 
                 Label note = new Label("Social layout missing - assign SocialPage.uxml");
-                note.AddToClassList("placeholder__label");
+                note.AddToClassList("lb-placeholder__label");
 
                 box.Add(note);
                 root.Add(box);

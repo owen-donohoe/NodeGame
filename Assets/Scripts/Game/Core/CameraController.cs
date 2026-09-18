@@ -51,18 +51,56 @@ namespace NodeWar.Core
         [SerializeField] private AnimationCurve shakeFalloffCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
 
         [Header("Draft Mode Framing")]
-        [Tooltip("Multiplier on largest grid dimension to determine zoom distance during draft.")]
+        //
+        // The draft opens on an authored framing rather than a derived one.
+        // Fitting the board by multiplying its largest dimension produced a
+        // near-top-down plan view that was technically complete and read as
+        // flat: the whole point of the phase is choosing WHERE, and where needs
+        // depth to be legible. These three values are that framing, measured
+        // off the rig in the Editor.
+        //
+        // They are NEW fields on purpose. Gameplay.unity already serializes
+        // draftZoomBoardMultiplier and the old draftPivotAngle, and a
+        // serialized value outranks a code default - re-defaulting the old
+        // pitch would have changed nothing, because the scene would keep
+        // feeding 76.3 back in. A field the scene has never heard of takes the
+        // default below, which is what makes this land without hand-editing
+        // scene YAML.
+        //
+        // The board is 4x7 at nodeScale 6, so it spans x 0..18 and z 0..36 and
+        // its centre is (9, 0, 18). ResetToCenter puts the rig there and
+        // draftRigOffset pulls it back to z 12, which is the pivot the framing
+        // below was measured against. Changing nodeScale or the grid moves the
+        // pivot with it; these two numbers are the shot, not the position.
+        [Tooltip("Pivot X angle during the draft. Higher = more top-down.")]
+        [SerializeField][Range(30f, 90f)] private float draftPitch = 60f;
+
+        [Tooltip("Camera dolly distance during the draft. The camera sits this " +
+                 "far back along the pivot's -Z.")]
+        [SerializeField][Range(10f, 120f)] private float draftZoomDistance = 50f;
+
+        [Tooltip("Rig offset from board centre during the draft, in world units. " +
+                 "Pulling back on Z re-centres the board in frame once the " +
+                 "pitch is shallow enough to see along it.")]
+        [SerializeField] private Vector3 draftRigOffset = new Vector3(0f, 0f, -6f);
+
+        [Tooltip("Multiplier on largest grid dimension. No longer sets the " +
+                 "opening framing - it sets how far out the pinch may go.")]
         [SerializeField][Range(1.0f, 3.0f)] private float draftZoomBoardMultiplier = 1.3f;
-        [Tooltip("Pivot X angle during draft. Higher = more top-down.")]
-        [SerializeField][Range(30f, 90f)] private float draftPivotAngle = 70f;
-        [Tooltip("If true, draft zoom never goes below zoomMaxDistance.")]
+        [Tooltip("If true, the draft zoom-out limit never falls below zoomMaxDistance.")]
         [SerializeField] private bool draftZoomNeverBelowMax = true;
-        [Tooltip("Scroll sensitivity for vertical panning during draft mode. Allows seeing full board.")]
-        [SerializeField] private float draftScrollPanSensitivity = 2f;
 
         [Header("Per-Side Defaults")]
+        // NOTE: Gameplay.unity serializes 0.65, which overrides this default.
+        // Raising how far out the match starts is an Inspector change on the
+        // CameraRig, not a code one.
         [Tooltip("Normalized position between min/max zoom for gameplay start. 0=closest, 1=farthest.")]
         [SerializeField][Range(0f, 1f)] private float sideDefaultZoomNormalized = 0.65f;
+
+        [Tooltip("How far the starting camera is pushed from your own edge " +
+                 "toward the opponent's, as a fraction of the board's depth. " +
+                 "0 sits on your edge as before; higher shows more of their half.")]
+        [SerializeField][Range(0f, 0.5f)] private float sideOpponentBiasFactor = 0.18f;
         [Tooltip("Fraction of nodeScale used as Z offset from board edge.")]
         [SerializeField][Range(0f, 1f)] private float sideZOffsetFactor = 0.35f;
         [SerializeField][Range(0f, 1f)] private float sideP0LateralNudgeFactor = 0.5f;
@@ -98,6 +136,19 @@ namespace NodeWar.Core
         }
 
         private SideState[] sideStates = new SideState[2];
+
+        // The framing each side was *given*, captured once and never written
+        // again. sideStates is overwritten on every side switch so a player
+        // returning to their own side finds the camera where they left it --
+        // useful, but it means it is not a fixed point, and recentre needs one.
+        // Without this pair, panning and then switching sides twice would make
+        // "home" wherever the player last happened to stop.
+        private SideState[] sideHomeStates = new SideState[2];
+
+        // World units each side's framing is pushed toward the opponent,
+        // computed once from the board's depth in InitializeSides.
+        private float opponentBias;
+
         private int currentSide = 0;
         private bool sideHasBeenSet = false;
 
@@ -119,8 +170,21 @@ namespace NodeWar.Core
             if (cameraPivot == null && transform.childCount > 0)
                 cameraPivot = transform.GetChild(0);
 
-            currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
-            targetZoomDistance = currentZoomDistance;
+            // The authored transform is the opening zoom - but only while it is
+            // still the truth. GameManager builds the DraftManager from its own
+            // Awake, and Awake order between two scene objects is arbitrary, so
+            // SetDraftMode can and does run before this one. Seeding
+            // unconditionally then overwrote a framing the draft had already
+            // applied, and the draft opened at the match's zoom instead of the
+            // whole-board one - with everything else about the draft camera,
+            // the rig position and the pitch, correctly in place, which is what
+            // made it read as a framing problem rather than an ordering one.
+            if (!isDraftMode)
+            {
+                currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
+                targetZoomDistance = currentZoomDistance;
+            }
+
             panVelocity = Vector3.zero;
         }
 
@@ -176,6 +240,12 @@ namespace NodeWar.Core
                 isDragging = false;
         }
 
+        /// <summary>
+        /// Draft zoom on desktop. Scroll used to nudge the rig along Z, which
+        /// panned a camera the phase had otherwise locked and gave the draft a
+        /// control the match did not have. It zooms now, matching gameplay and
+        /// matching the pinch.
+        /// </summary>
         private void HandleDraftScroll()
         {
             if (!isDraftMode) return;
@@ -186,10 +256,13 @@ namespace NodeWar.Core
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) < 0.01f) return;
 
-            // Scroll moves camera along Z axis to view different parts of the board
-            Vector3 pos = transform.position;
-            pos.z += scroll * draftScrollPanSensitivity * 0.1f;
-            transform.position = pos;
+            float fit = draftFitZoomDistance > 0f ? draftFitZoomDistance : zoomMaxDistance;
+
+            targetZoomDistance = Mathf.Clamp(
+                targetZoomDistance - scroll * zoomScrollSensitivity * 0.01f * targetZoomDistance,
+                zoomMinDistance, fit);
+
+            RaiseZoomChanged();
         }
 
         private void ApplyMomentum()
@@ -217,6 +290,8 @@ namespace NodeWar.Core
 
         private void HandleZoomInput()
         {
+            // The draft has its own clamp, so its scroll is handled by
+            // HandleDraftScroll. Reading it here too would apply every notch twice.
             if (isDraftMode) return;
 
             Mouse mouse = Mouse.current;
@@ -226,9 +301,35 @@ namespace NodeWar.Core
             if (Mathf.Abs(scroll) > 0.01f)
             {
                 // Proportional: zoom feels consistent at any distance
-                targetZoomDistance -= scroll * zoomScrollSensitivity * 0.01f * targetZoomDistance;
-                targetZoomDistance = Mathf.Clamp(targetZoomDistance, zoomMinDistance, zoomMaxDistance);
+                SetTargetZoom(targetZoomDistance - scroll * zoomScrollSensitivity * 0.01f * targetZoomDistance);
             }
+        }
+
+        /// <summary>
+        /// Every zoom in the game lands here. Pinch, the HUD zoom handle, the
+        /// scroll wheel and the draft all write targetZoomDistance through this
+        /// one setter and let ApplyZoom smooth it.
+        ///
+        /// Nothing may set cam.transform.localPosition to zoom instead.
+        /// ApplyShake rewrites that transform every frame from
+        /// currentZoomDistance, so a second writer is not an alternative route
+        /// to the same place -- it is a fight, resolved differently depending
+        /// on which ran last, and it reads as jitter.
+        /// </summary>
+        public void SetTargetZoom(float distance)
+        {
+            float clamped = Mathf.Clamp(distance, zoomMinDistance, zoomMaxDistance);
+            if (Mathf.Approximately(clamped, targetZoomDistance)) return;
+
+            targetZoomDistance = clamped;
+
+            // A zoom is the player moving the camera, so it counts against the
+            // focus session exactly as a pan does. Without this, dismissing the
+            // node sheet would tween the camera back to where it sat before the
+            // sheet opened and silently undo the zoom.
+            NotifyManualPan();
+
+            RaiseZoomChanged();
         }
 
         private void ApplyZoom()
@@ -345,6 +446,9 @@ namespace NodeWar.Core
                 gestureSource.OnPanBegin -= HandlePanBegin;
                 gestureSource.OnPanUpdate -= HandlePanUpdate;
                 gestureSource.OnPanEnd -= HandlePanEnd;
+                gestureSource.OnZoomBegin -= HandleZoomBegin;
+                gestureSource.OnZoomUpdate -= HandleZoomUpdate;
+                gestureSource.OnZoomEnd -= HandleZoomEnd;
             }
 
             gestureSource = source;
@@ -354,7 +458,112 @@ namespace NodeWar.Core
                 gestureSource.OnPanBegin += HandlePanBegin;
                 gestureSource.OnPanUpdate += HandlePanUpdate;
                 gestureSource.OnPanEnd += HandlePanEnd;
+                gestureSource.OnZoomBegin += HandleZoomBegin;
+                gestureSource.OnZoomUpdate += HandleZoomUpdate;
+                gestureSource.OnZoomEnd += HandleZoomEnd;
             }
+        }
+
+        // ===== GESTURE ZOOM =====
+        //
+        // Pinch and the HUD zoom handle arrive through the same three events
+        // and are not told apart here. Both report a scale measured from where
+        // the gesture began, so the distance is recomputed from a captured
+        // origin every frame rather than accumulated -- returning the fingers
+        // to where they started returns the camera with them.
+
+        private float zoomGestureStartDistance;
+
+        /// <summary>
+        /// Raised whenever the target distance changes, with 0 = fully zoomed
+        /// in and 1 = fully out. The HUD's transient readout listens; nothing
+        /// polls, so a camera at rest costs nothing.
+        /// </summary>
+        public event System.Action<float> ZoomChanged;
+
+        /// <summary>
+        /// Raised when a zoom gesture starts and ends. The readout shows itself
+        /// on the first and schedules its own fade on the second, so it answers
+        /// "am I in zoom mode" and then leaves.
+        /// </summary>
+        public event System.Action<bool> ZoomGestureActiveChanged;
+
+        private void HandleZoomBegin()
+        {
+            BeginZoomGesture();
+        }
+
+        /// <summary>
+        /// Opens a zoom gesture from outside the gesture source. The HUD's zoom
+        /// handle uses this: its press begins over UI, so PointerGestureSource
+        /// latches the stroke Blocked and publishes nothing, and the handle
+        /// drives the camera directly instead.
+        /// </summary>
+        public void BeginZoomGesture()
+        {
+            zoomGestureStartDistance = targetZoomDistance;
+            isFocusing = false;
+            ZoomGestureActiveChanged?.Invoke(true);
+        }
+
+        public void EndZoomGesture()
+        {
+            ZoomGestureActiveChanged?.Invoke(false);
+        }
+
+        /// <summary>
+        /// 0 = fully zoomed in, 1 = fully out. The zoom handle works in this
+        /// space rather than in scale, because a handle has a fixed throw and
+        /// wants a fixed fraction of the range per millimetre of travel -- a
+        /// multiplicative scale would move much further at one end than the other.
+        /// </summary>
+        public void SetZoomNormalized(float normalized)
+        {
+            SetTargetZoom(Mathf.Lerp(zoomMinDistance, zoomMaxDistance, Mathf.Clamp01(normalized)));
+        }
+
+        /// <summary>The target the smoothing is heading toward, not where it is now.</summary>
+        public float GetTargetZoomNormalized()
+        {
+            float range = zoomMaxDistance - zoomMinDistance;
+            if (range <= 0f) return 0f;
+
+            return Mathf.Clamp01((targetZoomDistance - zoomMinDistance) / range);
+        }
+
+        private void HandleZoomUpdate(float scaleFromStart)
+        {
+            if (scaleFromStart <= 0.01f) return;
+
+            if (isDraftMode)
+            {
+                ApplyDraftZoom(scaleFromStart);
+                return;
+            }
+
+            // Scale above 1 means the player asked to come closer, and closer
+            // is a *smaller* dolly distance -- hence divide rather than
+            // multiply. Getting this backwards is the classic inverted pinch.
+            SetTargetZoom(zoomGestureStartDistance / scaleFromStart);
+        }
+
+        private void HandleZoomEnd()
+        {
+            EndZoomGesture();
+        }
+
+        private void RaiseZoomChanged()
+        {
+            if (ZoomChanged == null) return;
+
+            // Clamped because the draft's fit distance sits beyond
+            // zoomMaxDistance on purpose, and the readout's bar is a 0-1 fill.
+            float range = zoomMaxDistance - zoomMinDistance;
+            float normalized = range <= 0f
+                ? 0f
+                : Mathf.Clamp01((targetZoomDistance - zoomMinDistance) / range);
+
+            ZoomChanged.Invoke(normalized);
         }
 
         private void HandlePanBegin(Vector2 screenPos)
@@ -416,6 +625,9 @@ namespace NodeWar.Core
                 gestureSource.OnPanBegin -= HandlePanBegin;
                 gestureSource.OnPanUpdate -= HandlePanUpdate;
                 gestureSource.OnPanEnd -= HandlePanEnd;
+                gestureSource.OnZoomBegin -= HandleZoomBegin;
+                gestureSource.OnZoomUpdate -= HandleZoomUpdate;
+                gestureSource.OnZoomEnd -= HandleZoomEnd;
             }
         }
 
@@ -651,21 +863,92 @@ namespace NodeWar.Core
             float zOffset = config.nodeScale * sideZOffsetFactor;
             float defaultZoom = Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
 
-            // P0: high-Z side, looking toward -Z
+            // Pushed off your own edge toward the middle. The old framing sat
+            // the rig on the player's back row, which spent most of the screen
+            // on empty space behind them and cut the opponent's half off at the
+            // top. Biasing down-board costs nothing at your end -- your core is
+            // still comfortably in frame -- and buys the half of the board where
+            // the threat comes from.
+            float bias = maxZ * sideOpponentBiasFactor;
+
+            // P0: high-Z side, looking toward -Z. Their opponent is at low Z,
+            // so the bias subtracts.
             sideStates[0] = new SideState
             {
-                position = new Vector3(centerX + zOffset * sideP0LateralNudgeFactor, 0f, maxZ + zOffset),
+                position = new Vector3(centerX + zOffset * sideP0LateralNudgeFactor, 0f, maxZ + zOffset - bias),
                 zoomDistance = defaultZoom,
                 initialized = true
             };
 
-            // P1: low-Z side, looking toward +Z
+            // P1: low-Z side, looking toward +Z. Their opponent is at high Z,
+            // so the same bias adds.
             sideStates[1] = new SideState
             {
-                position = new Vector3(centerX, 0f, zOffset * sideP1ZPositionFactor),
+                position = new Vector3(centerX, 0f, zOffset * sideP1ZPositionFactor + bias),
                 zoomDistance = defaultZoom,
                 initialized = true
             };
+
+            sideHomeStates[0] = sideStates[0];
+            sideHomeStates[1] = sideStates[1];
+
+            // Kept so SetHomeAnchor can apply the same push when the real core
+            // positions arrive, without recomputing the board's depth.
+            opponentBias = bias;
+        }
+
+        /// <summary>
+        /// Replaces a side's guessed framing with one built on where that
+        /// player's Core actually is, once the board exists.
+        ///
+        /// The rig position is what the camera looks at, so this is the point
+        /// that ends up in the middle of the screen. Your core, pushed toward
+        /// the opponent by the same bias the defaults use -- centred exactly on
+        /// the core would spend half the screen on the empty ground behind you.
+        ///
+        /// Called during setup, before the player has touched anything, so a
+        /// side that has not been visited is moved outright rather than tweened.
+        /// </summary>
+        public void SetHomeAnchor(int playerID, Vector3 coreWorldPosition)
+        {
+            if (playerID < 0 || playerID > 1) return;
+
+            // P0 sits at high Z and faces -Z, so its opponent is the way the
+            // bias subtracts; P1 is the mirror.
+            float bias = playerID == 0 ? -opponentBias : opponentBias;
+
+            Vector3 home = new Vector3(
+                coreWorldPosition.x,
+                0f,
+                coreWorldPosition.z + bias);
+
+            sideHomeStates[playerID].position = home;
+            sideHomeStates[playerID].initialized = true;
+
+            // InitializeSides normally set this already. If it did not, a zero
+            // would recentre the player to the closest clamp every time.
+            if (sideHomeStates[playerID].zoomDistance <= 0f)
+            {
+                sideHomeStates[playerID].zoomDistance =
+                    Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
+            }
+
+            // The stored framing is only overwritten while it is still the
+            // guess. Once a side has been played, that is the player's camera
+            // and setup has no business moving it.
+            if (!sideHasBeenSet || playerID != currentSide)
+            {
+                sideStates[playerID].position = home;
+                sideStates[playerID].initialized = true;
+            }
+
+            // Never during the draft: that phase has deliberately framed the
+            // whole board from its centre, and this would drag it to one end.
+            if (playerID == currentSide && !sessionActive && !isDraftMode)
+            {
+                transform.position = new Vector3(home.x, transform.position.y, home.z);
+                panVelocity = Vector3.zero;
+            }
         }
 
         /// <summary>
@@ -685,7 +968,7 @@ namespace NodeWar.Core
             currentSide = playerID;
             sideHasBeenSet = true;
 
-            if (sideStates[currentSide].initialized)
+            if (sideHomeStates[currentSide].initialized)
             {
                 transform.position = sideStates[currentSide].position;
                 targetZoomDistance = sideStates[currentSide].zoomDistance;
@@ -715,15 +998,39 @@ namespace NodeWar.Core
             return cameraPivot.localRotation.eulerAngles;
         }
 
-        public void SetTargetZoom(float distance)
-        {
-            targetZoomDistance = Mathf.Clamp(distance, zoomMinDistance, zoomMaxDistance);
-        }
-
         public float GetCurrentZoomDistance() => currentZoomDistance;
 
         /// <summary>
+        /// Where the zoom is heading, before smoothing. Anything reporting the
+        /// zoom to the player wants this: ZoomChanged fires the moment the
+        /// target moves, and the current distance at that moment is still the
+        /// old one.
+        /// </summary>
+        public float GetTargetZoomDistance() => targetZoomDistance;
+
+        /// <summary>
+        /// The distance the match starts at for the current side. The readout
+        /// divides by this to show a magnification, so "1.0x" means the framing
+        /// the player was given rather than an arbitrary point in the range.
+        /// </summary>
+        public float DefaultZoomDistance
+        {
+            get
+            {
+                if (sideHomeStates[currentSide].initialized)
+                    return sideHomeStates[currentSide].zoomDistance;
+
+                return Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
+            }
+        }
+
+        /// <summary>
         /// 0 = fully zoomed in, 1 = fully zoomed out.
+        ///
+        /// This is where the smoothing has actually reached. Use
+        /// GetTargetZoomNormalized for where it is heading -- a control that
+        /// reads this one as the origin of a drag will fight ApplyZoom, because
+        /// the value keeps moving underneath it while the finger is down.
         /// </summary>
         public float GetZoomNormalized()
         {
@@ -731,19 +1038,71 @@ namespace NodeWar.Core
             return (currentZoomDistance - zoomMinDistance) / (zoomMaxDistance - zoomMinDistance);
         }
 
+        // ===== RECENTRE =====
+        //
+        // The click half of the HUD's zoom handle. The drag half zooms; this
+        // puts the camera back where the match started it.
+
+        /// <summary>
+        /// Returns to this side's default framing and zoom. Routed through the
+        /// focus tween so it is one eased motion rather than a snap, and marked
+        /// as manual so dismissing a sheet afterwards does not undo it.
+        /// </summary>
+        public void RecentreOnHome()
+        {
+            if (isDraftMode || !sideHomeStates[currentSide].initialized) return;
+
+            NotifyManualPan();
+            SetTargetZoom(sideHomeStates[currentSide].zoomDistance);
+            StartFocusTween(sideHomeStates[currentSide].position);
+        }
+
         /// <summary>
         /// Locks camera to centered bird's-eye for draft phase. Disables pan/zoom input.
         /// </summary>
         public void SetDraftMode(bool enabled)
         {
+            if (enabled == isDraftMode) return;
+
             isDraftMode = enabled;
 
-            if (!enabled) return;
+            if (!enabled)
+            {
+                // The draft borrows the pivot's pitch and must give it back.
+                // Without this the near-top-down draft angle survived into
+                // play: SetPlayerSide rebuilds the rotation as
+                // Euler(eulerAngles.x, yaw, 0), preserving whatever X it finds,
+                // so every match after a draft ran at the draft's angle instead
+                // of the one authored on the pivot.
+                if (cameraPivot != null && hasStashedPitch)
+                {
+                    Vector3 euler = cameraPivot.localRotation.eulerAngles;
+                    cameraPivot.localRotation = Quaternion.Euler(stashedPitch, euler.y, 0f);
+                    hasStashedPitch = false;
+                }
+
+                // The draft fits the whole board, which is far outside the
+                // gameplay clamp. Leaving it there would strand the first zoom
+                // input at the maximum with no visible response.
+                targetZoomDistance = Mathf.Clamp(targetZoomDistance, zoomMinDistance, zoomMaxDistance);
+                currentZoomDistance = targetZoomDistance;
+                return;
+            }
 
             panVelocity = Vector3.zero;
-            ResetToCenter();
 
-            // Fit board with configured padding
+            // Centre first, then the authored offset. Expressed as an offset
+            // rather than an absolute position so it survives a board of a
+            // different size: X stays on the board's midline and Z pulls back
+            // toward the near edge, which is what a 55-degree pitch needs to
+            // put the far row in frame.
+            ResetToCenter();
+            transform.position += draftRigOffset;
+
+            // The zoom-out ceiling, not the opening distance. Seeing the whole
+            // board is the point of the phase, so the pinch may go past the
+            // gameplay clamp - but never so short that the authored opening
+            // framing would itself be clamped away.
             float gridWidth = 0f;
             float gridHeight = 0f;
             if (boardConfig != null)
@@ -752,15 +1111,48 @@ namespace NodeWar.Core
                 gridHeight = (boardConfig.Data.gridRows - 1) * boardConfig.nodeScale;
             }
 
-            float neededZoom = Mathf.Max(gridWidth, gridHeight) * draftZoomBoardMultiplier;
+            float ceiling = Mathf.Max(gridWidth, gridHeight) * draftZoomBoardMultiplier;
             if (draftZoomNeverBelowMax)
-                neededZoom = Mathf.Max(neededZoom, zoomMaxDistance);
+                ceiling = Mathf.Max(ceiling, zoomMaxDistance);
 
-            targetZoomDistance = neededZoom;
-            currentZoomDistance = neededZoom;
+            draftFitZoomDistance = Mathf.Max(ceiling, draftZoomDistance);
+
+            targetZoomDistance = Mathf.Clamp(draftZoomDistance, zoomMinDistance, draftFitZoomDistance);
+            currentZoomDistance = targetZoomDistance;
 
             if (cameraPivot != null)
-                cameraPivot.localRotation = Quaternion.Euler(draftPivotAngle, 0f, 0f);
+            {
+                stashedPitch = cameraPivot.localRotation.eulerAngles.x;
+                hasStashedPitch = true;
+                cameraPivot.localRotation = Quaternion.Euler(draftPitch, 0f, 0f);
+            }
+        }
+
+        // The pivot pitch the draft displaced, held so it can be restored.
+        private float stashedPitch;
+        private bool hasStashedPitch;
+
+        // The whole-board fit computed when the draft opened. Zooming out during
+        // the draft stops here rather than at the gameplay clamp -- seeing the
+        // board is the point of the phase, and further out is only void.
+        private float draftFitZoomDistance;
+
+        /// <summary>
+        /// Draft zoom. The gameplay clamp does not apply: the draft's fit
+        /// distance is deliberately beyond zoomMaxDistance, so clamping to the
+        /// gameplay range here would snap the board out of frame the moment the
+        /// player touched the pinch.
+        /// </summary>
+        private void ApplyDraftZoom(float scaleFromStart)
+        {
+            if (scaleFromStart <= 0.01f) return;
+
+            float fit = draftFitZoomDistance > 0f ? draftFitZoomDistance : zoomMaxDistance;
+
+            targetZoomDistance = Mathf.Clamp(
+                zoomGestureStartDistance / scaleFromStart, zoomMinDistance, fit);
+
+            RaiseZoomChanged();
         }
 
         public void ResetToCenter()

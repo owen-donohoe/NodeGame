@@ -129,6 +129,15 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Use `ITickProvider.TickAlpha` for interpolation so the feature works
      identically under `TickRunner` (local) and `LockstepRunner`
      (networked).
+   - **Ask which UI it belongs in before writing any of it.** Three trees
+     are live and which one draws is a scene value, not a code value —
+     `docs/architecture.md`, "Where the UI lives". A screen with a toggle
+     needs the feature in whichever tree is *on*, or in both, and a change
+     to only the off one is a change nobody sees.
+   - A phase drawn by either stack goes behind a presenter interface
+     (`IDraftPresenter`, `ICountdownPresenter`) rather than a concrete
+     class, so the phase machine keeps the rules and neither stack has to
+     know the other exists.
 
 9. **Does it add a new tunable number?**
    Put it on `GameBalance` or `BoardConfig` as an inspector-exposed field,

@@ -20,6 +20,9 @@ directly. This index exists so the set can be traversed as a graph, and so
   classes, networking model.
 * [simulation-rules](simulation-rules.md) — the determinism contract `Simulation/` must uphold.
 * [adding-a-feature](adding-a-feature.md) — the 11-step checklist for any new feature.
+* [direction](direction.md) — where the architecture goes next: a feel layer, one input vocabulary
+  across desktop and mobile, and a headless match environment for bot training and balance
+  testing. Direction rather than plan; declares no sources because it describes work not yet done.
 * [notion-workspace](notion-workspace.md) — identifiers and property schemas for the Notion
   workspace that owns future and current work. Declares no sources: its subject is not code in
   this repo, so no commit here can make it stale.
@@ -33,11 +36,10 @@ directly. This index exists so the set can be traversed as a graph, and so
 
 ## Historical snapshots
 
-* [ui-migration-inventory](ui-migration-inventory.md) — the UI layer as it stood at `d0f4420`,
-  before the phone-UI rebuild replaced it.
 * [ui-inventory](ui-inventory.md) — every sprite asset, the district-to-sprite mapping, and the
-  art that does not exist, taken at `b72fc6d`. Its sprite sections were re-checked at `9d08dae`;
-  its `Assets/UI/` section predates the rebuild.
+  art that does not exist, taken at `b72fc6d` and re-checked at `9d08dae`. The sections
+  describing `Assets/UI/` before the rebuild were removed on 2026-09-17; what remains is the
+  art inventory, and it is live reading for the art-and-feel phase.
 
 A snapshot carries `status: historical` and a `snapshot_of_commit:` instead of `sources:` and
 `verified_at_commit:`. It is frozen on purpose, so its ground moving is expected rather than

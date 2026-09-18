@@ -28,7 +28,30 @@ namespace NodeWar.Core
         [SerializeField] private float placeholderFlyDuration = 0.8f;
         [Tooltip("Delay between each successive placeholder starting its fly-up.")]
         [SerializeField] private float placeholderStaggerDelay = 0.12f;
-        [SerializeField] private Ease placeholderFlyEase = Ease.InBack;
+
+        [Tooltip("How long the squash before launch takes.")]
+        [SerializeField] private float placeholderSquashDuration = 0.14f;
+        [Tooltip("Scale multiplier at the bottom of the squash. Wider and shorter " +
+                 "than 1 reads as gathering to jump.")]
+        [SerializeField] private Vector3 placeholderSquashScale = new Vector3(1.18f, 0.72f, 1.18f);
+        [Tooltip("Scale multiplier at the top of the launch. Thinner and taller " +
+                 "than 1 reads as speed.")]
+        [SerializeField] private Vector3 placeholderLaunchScale = new Vector3(0.55f, 1.5f, 0.55f);
+
+        // There is deliberately no serialized ease for the launch.
+        //
+        // There used to be, and Gameplay.unity had Ease.InBack serialized into
+        // it. InBack UNDERSHOOTS before it overshoots, so a tween from the
+        // board to ten units above it first travelled about one unit DOWNWARD -
+        // and the placeholders sit 0.1 above the grid, so every one of them
+        // sank through the floor before flying up. Staggered across the board
+        // that read as the whole set collapsing inward.
+        //
+        // Anticipation was the right instinct and it is kept, but it is now a
+        // squash in scale rather than a dip in position, so it cannot clip
+        // through anything however it is tuned. The field is gone rather than
+        // re-defaulted because a serialized value outranks a code default: the
+        // scene would have kept feeding InBack back in.
 
         [Header("Post-Removal Timing")]
         [Tooltip("Seconds to wait after all placeholders begin removal before starting node startup.")]
@@ -47,6 +70,18 @@ namespace NodeWar.Core
         [Header("Countdown")]
         [Tooltip("Prefab with CountdownUI component. Screen-space overlay canvas.")]
         [SerializeField] private GameObject countdownPrefab;
+
+        // Set by GameManager when the UI Toolkit HUD is on, so the countdown is
+        // drawn by whichever stack is live rather than by both.
+        private ICountdownPresenter countdownPresenter;
+
+        /// <summary>
+        /// Hands the countdown to another UI stack. Null restores the prefab.
+        /// </summary>
+        public void SetCountdownPresenter(ICountdownPresenter presenter)
+        {
+            countdownPresenter = presenter;
+        }
 
         // Events
         /// <summary>
@@ -156,8 +191,16 @@ namespace NodeWar.Core
             // Step 5: Wait for wave to settle before countdown
             yield return new WaitForSeconds(delayAfterNodeStartup);
 
-            // Step 6: Countdown (or skip if no prefab)
-            if (countdownPrefab != null)
+            // Step 6: Countdown, by whichever UI stack is live (or skipped)
+            if (countdownPresenter != null)
+            {
+                bool presenterFinished = false;
+                countdownPresenter.PlayCountdown(() => presenterFinished = true);
+
+                while (!presenterFinished)
+                    yield return null;
+            }
+            else if (countdownPrefab != null)
             {
                 GameObject countdownGO = Instantiate(countdownPrefab);
                 CountdownUI countdown = countdownGO.GetComponent<CountdownUI>();
@@ -185,14 +228,36 @@ namespace NodeWar.Core
                 if (placeholders[i] == null) continue;
 
                 GameObject obj = placeholders[i];
+                Transform t = obj.transform;
                 float delay = i * placeholderStaggerDelay;
 
-                obj.transform.DOMove(
-                        obj.transform.position + Vector3.up * placeholderFlyUpDistance,
-                        placeholderFlyDuration)
-                    .SetDelay(delay)
-                    .SetEase(placeholderFlyEase)
-                    .OnComplete(() => Destroy(obj));
+                // DraftUI ends every placement with a punch scale. A piece
+                // placed on the last turn can still be inside it when this
+                // runs, and two tweens writing one scale is how a box ends up
+                // inside out.
+                t.DOKill();
+
+                Vector3 baseScale = t.localScale;
+
+                // Squash, then launch. The position tween starts only after the
+                // squash, and nothing in either leg moves downward.
+                Sequence seq = DOTween.Sequence();
+
+                seq.AppendInterval(delay);
+
+                seq.Append(t.DOScale(Vector3.Scale(baseScale, placeholderSquashScale),
+                                     placeholderSquashDuration)
+                            .SetEase(Ease.OutQuad));
+
+                seq.Append(t.DOMove(t.position + Vector3.up * placeholderFlyUpDistance,
+                                    placeholderFlyDuration)
+                            .SetEase(Ease.InQuad));
+
+                seq.Join(t.DOScale(Vector3.Scale(baseScale, placeholderLaunchScale),
+                                   placeholderFlyDuration)
+                          .SetEase(Ease.InQuad));
+
+                seq.OnComplete(() => { if (obj != null) Destroy(obj); });
             }
         }
     }

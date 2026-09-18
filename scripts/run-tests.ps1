@@ -28,7 +28,7 @@
     will fail to acquire the project lock. Use run-tests-live.ps1 instead.
 #>
 
-$UnityExe = "C:\Program Files\Unity\Hub\Editor\6000.5.9f1\Editor\Unity.exe"
+$UnityExe = "C:\Program Files\Unity\Hub\Editor\6000.6.1f1\Editor\Unity.exe"
 $ProjectPath = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $ResultsFile = "$PSScriptRoot\..\TestResults\results.xml"
 $LogFile = "$PSScriptRoot\..\TestResults\unity-test.log"

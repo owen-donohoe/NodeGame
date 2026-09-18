@@ -26,82 +26,82 @@
         <engine:ScrollView name="settings-scroll" class="lb-push__scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
 
             <engine:VisualElement class="lb-push__header" picking-mode="Ignore">
-                <engine:Button name="push-back" class="lb-reset-button lb-back">
+                <engine:Button name="push-back" class="ui-reset-button lb-back">
                     <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
-                <engine:Label class="lb-push__title lb-w600" text="Settings" />
+                <engine:Label class="lb-push__title ui-w600" text="Settings" />
             </engine:VisualElement>
 
-            <engine:Label class="lb-group-label lb-group-label--first lb-w600" text="Audio" />
-            <engine:VisualElement class="lb-group-wrap lb-sticker" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+            <engine:Label class="lb-group-label lb-group-label--first ui-w600" text="Audio" />
+            <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-group">
                     <engine:VisualElement class="lb-grow">
-                        <engine:Label class="lb-grow__label lb-w500" text="Master" />
+                        <engine:Label class="lb-grow__label ui-w500" text="Master" />
                         <engine:Slider name="settings-master" class="lb-slider" low-value="0" high-value="1" value="0.64" />
                     </engine:VisualElement>
                     <engine:VisualElement class="lb-grow">
-                        <engine:Label class="lb-grow__label lb-w500" text="Music" />
+                        <engine:Label class="lb-grow__label ui-w500" text="Music" />
                         <engine:Slider name="settings-music" class="lb-slider" low-value="0" high-value="1" value="0.40" />
                     </engine:VisualElement>
                     <engine:VisualElement class="lb-grow lb-grow--last">
-                        <engine:Label class="lb-grow__label lb-w500" text="Effects" />
+                        <engine:Label class="lb-grow__label ui-w500" text="Effects" />
                         <engine:Slider name="settings-effects" class="lb-slider" low-value="0" high-value="1" value="0.78" />
                     </engine:VisualElement>
                 </engine:VisualElement>
             </engine:VisualElement>
 
-            <engine:Label class="lb-group-label lb-w600" text="Accessibility" />
-            <engine:VisualElement class="lb-group-wrap lb-sticker" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+            <engine:Label class="lb-group-label ui-w600" text="Accessibility" />
+            <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-group">
-                    <engine:Button name="settings-row-colourblind" class="lb-reset-button lb-grow">
-                        <engine:Label class="lb-grow__label lb-w500" text="Colourblind marks" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-colourblind" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Colourblind marks" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-colourblind" value="true" />
                     </engine:Button>
-                    <engine:Button name="settings-row-motion" class="lb-reset-button lb-grow">
-                        <engine:Label class="lb-grow__label lb-w500" text="Reduced motion" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-motion" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Reduced motion" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-motion" value="false" />
                     </engine:Button>
-                    <engine:Button name="settings-row-size" class="lb-reset-button lb-grow lb-grow--last">
-                        <engine:Label class="lb-grow__label lb-w500" text="Interface size" picking-mode="Ignore" />
-                        <engine:Label name="settings-size" class="lb-grow__value lb-w500" text="Default" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-size" class="ui-reset-button lb-grow lb-grow--last">
+                        <engine:Label class="lb-grow__label ui-w500" text="Interface size" picking-mode="Ignore" />
+                        <engine:Label name="settings-size" class="lb-grow__value ui-w500" text="Default" picking-mode="Ignore" />
                     </engine:Button>
                 </engine:VisualElement>
             </engine:VisualElement>
 
-            <engine:Label class="lb-group-label lb-w600" text="Gameplay" />
-            <engine:VisualElement class="lb-group-wrap lb-sticker" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+            <engine:Label class="lb-group-label ui-w600" text="Gameplay" />
+            <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-group">
                     <engine:VisualElement class="lb-grow">
-                        <engine:Label class="lb-grow__label lb-w500" text="Camera speed" />
+                        <engine:Label class="lb-grow__label ui-w500" text="Camera speed" />
                         <engine:Slider name="settings-camera" class="lb-slider" low-value="0" high-value="1" value="0.52" />
                     </engine:VisualElement>
-                    <engine:Button name="settings-row-confirm" class="lb-reset-button lb-grow lb-grow--last">
-                        <engine:Label class="lb-grow__label lb-w500" text="Confirm each command" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-confirm" class="ui-reset-button lb-grow lb-grow--last">
+                        <engine:Label class="lb-grow__label ui-w500" text="Confirm each command" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-confirm" value="false" />
                     </engine:Button>
                 </engine:VisualElement>
             </engine:VisualElement>
 
-            <engine:Label class="lb-group-label lb-w600" text="Mobile" />
-            <engine:VisualElement class="lb-group-wrap lb-sticker" picking-mode="Ignore">
-                <engine:VisualElement class="lb-sticker__shadow" picking-mode="Ignore" />
+            <engine:Label class="lb-group-label ui-w600" text="Mobile" />
+            <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-group">
-                    <engine:Button name="settings-row-haptics" class="lb-reset-button lb-grow">
-                        <engine:Label class="lb-grow__label lb-w500" text="Haptics" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-haptics" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Haptics" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-haptics" value="true" />
                     </engine:Button>
-                    <engine:Button name="settings-row-battery" class="lb-reset-button lb-grow lb-grow--last">
-                        <engine:Label class="lb-grow__label lb-w500" text="Battery saver" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
+                        <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-battery" value="false" />
                     </engine:Button>
                 </engine:VisualElement>
             </engine:VisualElement>
 
             <!-- TODO(settings): remove once these rows read and write saved values. -->
-            <engine:Label class="lb-settings-footnote lb-w500" text="Settings are not saved yet." />
+            <engine:Label class="lb-settings-footnote ui-w500" text="Settings are not saved yet." />
 
         </engine:ScrollView>
     </engine:VisualElement>

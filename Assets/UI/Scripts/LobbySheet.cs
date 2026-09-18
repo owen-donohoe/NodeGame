@@ -112,10 +112,10 @@ namespace NodeWar.Lobby
         {
             IsOpen = open;
 
-            if (sheet != null) sheet.EnableInClassList("lb-sheet--open", open);
+            if (sheet != null) sheet.EnableInClassList("ui-sheet--open", open);
             if (scrim != null)
             {
-                scrim.EnableInClassList("lb-scrim--on", open);
+                scrim.EnableInClassList("ui-scrim--on", open);
                 scrim.pickingMode = open ? PickingMode.Position : PickingMode.Ignore;
             }
         }
