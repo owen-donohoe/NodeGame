@@ -38,7 +38,7 @@ everything in it still compiles into `Assembly-CSharp` exactly as before.
 | `Lobby/UI/GroupSlotDisplay.cs` | `WorkshopPage.SlotView` |
 | `Lobby/UI/SelectableItemDisplay.cs` | `WorkshopPage.ItemCell` |
 | `Lobby/UI/TrophyBarDisplay.cs` | the trophy bar on `ProfilePage` |
-| `Game/UI/SafeAreaFitter.cs` | `Assets/UI/Scripts/SafeAreaBinder.cs` |
+| `Game/UI/SafeAreaFitter.cs` (since deleted; it was attached to nothing) | `Assets/UI/Scripts/SafeAreaBinder.cs` |
 | `Prefabs/Lobby/**` | nothing — the new stack uses UXML and no prefabs |
 
 `GamemodePanel.cs` declares class `GameModePanel`, capital M. The filename and

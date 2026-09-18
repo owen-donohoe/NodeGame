@@ -181,7 +181,7 @@ still being proven.
 |---|---|---|
 | `Assets/Scripts/Game/UI/` | in-match uGUI: `HUDManager`, `NodePanelManager`, draft UI, world-space bars | compiled; `NodePanelManager` still owns tap arbitration, but the uGUI HUD band and the uGUI draft are both off |
 | `Assets/UI/` | UI Toolkit: the whole lobby, plus the in-match HUD, node sheet, countdown, end screen and draft | live; all three toggles are on |
-| `Assets/Legacy/` | the retired uGUI lobby panels, and `SafeAreaFitter` | compiled, unreachable when the new lobby is on |
+| `Assets/Legacy/` | the retired uGUI lobby panels | compiled, unreachable when the new lobby is on |
 
 **Which one runs is a scene value, not a code value.** All three toggles are
 `[SerializeField]` booleans, so their live setting exists only in scene
@@ -419,7 +419,6 @@ Two objects are carried across the Lobby → Gameplay scene load via
   what a player picked; the enum name is the fallback for the four base
   draft districts no loadout slot can hold.
 - `SafeAreaBinder` — the UI Toolkit reader of `Screen.safeArea`.
-  `Assets/Legacy/Game/UI/SafeAreaFitter.cs` is the uGUI equivalent.
 - Layouts in `Assets/UI/Layouts/*.uxml`, styles in `Assets/UI/Styles/*.uss`.
   One theme serves both scenes: `Tokens.uss` (palette, then tokens named for
   their job) and `Components.uss` (the `ui-` classes both draw - button,
