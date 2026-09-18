@@ -269,7 +269,15 @@ namespace NodeWar.Network
                 switch (type)
                 {
                     case PacketType.TickInput:
-                        TickInput remote = InputSerializer.Deserialize(packets[i]);
+                        // A malformed packet is treated as a lost one, which the
+                        // transport already has to survive. Nothing half-read
+                        // reaches CommandProcessor.
+                        if (!InputSerializer.TryDeserialize(packets[i], out TickInput remote))
+                        {
+                            Debug.LogWarning("[LOCKSTEP] Dropped malformed TickInput packet (" +
+                                packets[i].Length + " bytes).");
+                            break;
+                        }
                         // Store if not already received (ignore duplicate resends)
                         if (!remoteInputs.ContainsKey(remote.forTick))
                         {

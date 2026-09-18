@@ -36,6 +36,7 @@ namespace NodeWar.Network
     public static class InputSerializer
     {
         private const int BYTES_PER_COMMAND = 24;
+        private const int HEADER_BYTES = 1 + 4 + 4 + 4; // type, forTick, stateHash, commandCount
 
         public static byte[] Serialize(TickInput input)
         {
@@ -62,15 +63,38 @@ namespace NodeWar.Network
             return data;
         }
 
-        public static TickInput Deserialize(byte[] data)
+        /// <summary>
+        /// Reads a TickInput packet. Returns false, with nothing read past the
+        /// header, when the bytes cannot be one: shorter than the header, or a
+        /// declared command count that does not match the bytes that arrived.
+        ///
+        /// The count is checked before anything is allocated or read, so a
+        /// truncated or corrupted packet is refused here, as a loss the
+        /// transport already has to survive, rather than read past its end or
+        /// turned into commands. The length must match exactly, not merely be
+        /// enough: Serialize never pads, so any other length means the sender
+        /// wrote a different layout - a peer on a build whose GameCommand no
+        /// longer matches this one.
+        /// </summary>
+        public static bool TryDeserialize(byte[] data, out TickInput input)
         {
-            int offset = 1; // skip PacketType byte
-            TickInput input = new TickInput();
+            input = default;
 
-            input.forTick = ReadInt(data, ref offset);
-            input.stateHash = ReadInt(data, ref offset);
+            if (data == null || data.Length < HEADER_BYTES) return false;
+
+            int offset = 1; // skip PacketType byte
+            int forTick = ReadInt(data, ref offset);
+            int stateHash = ReadInt(data, ref offset);
             int commandCount = ReadInt(data, ref offset);
 
+            // Divide rather than multiply, so a hostile count cannot overflow
+            // its way past the check.
+            if (commandCount < 0) return false;
+            if (commandCount > (data.Length - HEADER_BYTES) / BYTES_PER_COMMAND) return false;
+            if (data.Length != HEADER_BYTES + commandCount * BYTES_PER_COMMAND) return false;
+
+            input.forTick = forTick;
+            input.stateHash = stateHash;
             input.commands = new GameCommand[commandCount];
             for (int i = 0; i < commandCount; i++)
             {
@@ -82,7 +106,7 @@ namespace NodeWar.Network
                 input.commands[i].value = ReadInt(data, ref offset);
             }
 
-            return input;
+            return true;
         }
 
         public static byte[] SerializeHandshake()
