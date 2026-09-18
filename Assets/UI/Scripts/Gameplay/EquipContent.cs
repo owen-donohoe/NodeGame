@@ -39,6 +39,8 @@ namespace NodeWar.UI
 
         public override bool Tall { get { return true; } }
 
+        protected override int LayoutKey { get { return (int)State.nodes[NodeID].districtType; } }
+
         protected override void OnBind()
         {
             cards.Clear();

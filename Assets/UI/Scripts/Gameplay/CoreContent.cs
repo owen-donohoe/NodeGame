@@ -144,7 +144,7 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Rows are pooled rather than rebuilt. The roster changes every time
+        /// Rows are pooled across sheet opens. The roster changes every time
         /// anything dies or returns, and rebuilding the subtree each frame would
         /// churn elements for nothing.
         /// </summary>

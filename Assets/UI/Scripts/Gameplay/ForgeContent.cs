@@ -34,6 +34,8 @@ namespace NodeWar.UI
         private Button increase;
         private Label allocationValue;
 
+        protected override int LayoutKey { get { return Balance.maxWorkersPerNode; } }
+
         protected override void OnBind()
         {
             int cap = Balance.maxWorkersPerNode > 0 ? Balance.maxWorkersPerNode : 2;

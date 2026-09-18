@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
 using NodeWar.Input;
@@ -30,6 +31,13 @@ namespace NodeWar.UI
     public abstract class NodeSheetContent
     {
         public VisualElement Root { get; private set; }
+
+        private readonly List<VisualElement> actionElements = new List<VisualElement>();
+        private SimulationState builtState;
+        private int builtLayoutKey;
+
+        // Core and Forge share a layout across nodes; Equip depends on the district.
+        protected virtual int LayoutKey { get { return 0; } }
 
         protected SimulationState State { get; private set; }
         protected InputBuffer Input { get; private set; }
@@ -66,8 +74,26 @@ namespace NodeWar.UI
             ControlledPID = controlledPID;
             Actions = actions;
 
-            Root.Clear();
-            OnBind();
+            int layoutKey = LayoutKey;
+            if (builtState != state || builtLayoutKey != layoutKey)
+            {
+                Root.Clear();
+                Actions.Clear();
+                actionElements.Clear();
+                OnBind();
+                for (int i = 0; i < Actions.childCount; i++)
+                    actionElements.Add(Actions[i]);
+                builtState = state;
+                builtLayoutKey = layoutKey;
+            }
+            else
+            {
+                // Switching content detaches controls without discarding their callbacks.
+                for (int i = 0; i < actionElements.Count; i++)
+                {
+                    if (actionElements[i].parent != Actions) Actions.Add(actionElements[i]);
+                }
+            }
             Refresh();
         }
 
@@ -77,7 +103,7 @@ namespace NodeWar.UI
             ControlledPID = controlledPID;
         }
 
-        /// <summary>Called once when the sheet opens on a node. Build here.</summary>
+        /// <summary>Called when the content layout changes. Build here.</summary>
         protected virtual void OnBind() { }
 
         /// <summary>Called every frame while the sheet is open. Read state here.</summary>
