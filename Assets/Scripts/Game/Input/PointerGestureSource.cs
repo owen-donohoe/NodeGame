@@ -364,6 +364,14 @@ namespace NodeWar.Input
             float span;
             if (!TryReadPinchSpan(out span)) return;
 
+            // A pan interrupted by a second finger has, in fact, ended -- fire
+            // the real end event so every existing OnPanEnd subscriber gets
+            // the same cleanup a normal release would have given it.
+            // CameraController.gesturePanActive in particular is only ever
+            // cleared by OnPanEnd; without this it stayed true through the
+            // pinch and for the rest of the match.
+            if (state == GestureState.Panning) OnPanEnd?.Invoke();
+
             // Whatever the first finger was doing is abandoned before the
             // pinch starts, so a half-formed pan does not leave a consumer
             // believing a drag is still live.
