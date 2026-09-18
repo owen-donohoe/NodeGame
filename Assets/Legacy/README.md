@@ -54,8 +54,15 @@ search does.
 - **`PlayerProfile.cs`, `LoadoutData.cs`, `NodeDefinition.cs`,
   `SuitDefinition.cs`** — data, used by both stacks.
 - The in-match uGUI HUD (`HUDManager`, `WheelDisplay`, `BreachDisplay` and
-  `UI_Manager.prefab`). S6 wrote a replacement but it has not been run, and
-  `GameManager` still initialises the old one on every match.
+  `UI_Manager.prefab`). `Gameplay.unity` now sets `useUIToolkitHUD: 1`, so
+  `GameManager.ApplyHUDStackChoice` hides `HUD_Canvas` at runtime and the UI
+  Toolkit HUD draws instead — but the prefab is still instantiated every match,
+  because `NodePanelManager` lives on it and is not what S6 replaced.
+- **`NodePanelManager`** — the uGUI node panel, on the same prefab. It is
+  suppressed (`SetSuppressed(true)`) whenever the UI Toolkit node sheet exists,
+  so it draws nothing, but it still owns tap arbitration wiring and the
+  camera-clearance call. See `NodePanelManager.cs:498` for the one behaviour
+  the new sheet does not inherit yet.
 
 ## Changing your mind
 

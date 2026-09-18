@@ -63,6 +63,9 @@ Read the file. Do not ask me to summarise it here.
   win condition. Read this before any gameplay or balance question; the code
   will tell you what happens, not what it is for.
 - `docs/simulation-rules.md` — the full determinism contract.
+- `docs/direction.md` — where the architecture is going next: the feel layer,
+  desktop/mobile as one input vocabulary and two layouts, and the headless
+  match environment. Read before starting art, feel, platform or RL work.
 - `docs/adding-a-feature.md` — 11-step checklist for any new feature.
 - `docs/notion-workspace.md` — Notion identifiers and the Phases/Tasks
   schemas. Needed by `/update` and `/audit`, and by nothing else.
@@ -70,9 +73,6 @@ Read the file. Do not ask me to summarise it here.
   how the freshness and determinism guards are wired.
 - `docs/design-history/` — the v2.1 design document. Historical. Notion is
   authoritative for future work.
-- `docs/ui-migration-inventory.md` — historical. The S0 snapshot of the uGUI
-  layer taken *before* the rebuild that replaced it. Read it for why the
-  migration was scoped as it was, never for what the UI is now.
 - `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
   Glob-scoped, so they load themselves when you touch those paths.
 
