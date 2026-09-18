@@ -117,7 +117,12 @@ namespace NodeWar.View
             if (simState == null || nodeSlotManagers == null) return;
 
             EnsureTracking();
-            ComputeHopsFromPlayer();
+
+            // The BFS only feeds OpponentRouteVisible's hop-range gate, which
+            // itself returns false immediately when opponent routes are off.
+            // Skip the board-wide walk entirely rather than paying for it and
+            // then discarding the result villager by villager.
+            if (opponentSettings.show) ComputeHopsFromPlayer();
 
             drawnOwn.Clear();
             drawnOpponent.Clear();

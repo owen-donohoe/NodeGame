@@ -23,6 +23,8 @@ namespace NodeWar.View
 
         private MeshRenderer meshRenderer;
         private MaterialPropertyBlock propBlock;
+        private Color lastPushedColor;
+        private bool hasPushedColor;
 
         private NodeHighlight highlight;
         private NodeWar.UI.NodeClaimBar claimBar;
@@ -68,10 +70,18 @@ namespace NodeWar.View
 
             Color color = CalculateNodeColor(simState.nodes[nodeID]);
 
+            // Ownership and claim progress change on claim/production ticks,
+            // not every frame -- skip the property block push when the colour
+            // it would set is the same one already there.
+            if (hasPushedColor && color == lastPushedColor) return;
+
             meshRenderer.GetPropertyBlock(propBlock);
             propBlock.SetColor("_Color", color);
             propBlock.SetColor("_BaseColor", color);
             meshRenderer.SetPropertyBlock(propBlock);
+
+            lastPushedColor = color;
+            hasPushedColor = true;
         }
 
         /// <summary>

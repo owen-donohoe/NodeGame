@@ -21,6 +21,27 @@ namespace NodeWar.View
         private bool isPulsing;
         private int segments = 24;
 
+        // One material shared by every node's ring rather than one per node:
+        // nodes are instantiated once by GameManager.SpawnNodeViews and never
+        // destroyed, so a per-instance Material would both pay Shader.Find
+        // once per node at startup and leak for the scene's lifetime, since
+        // nothing would ever be left to destroy it. Colour is set per-instance
+        // on the LineRenderer itself, not the material, so sharing is safe.
+        private static Material sharedRingMaterial;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSharedMaterialOnEnterPlayMode()
+        {
+            sharedRingMaterial = null;
+        }
+
+        private static Material GetSharedRingMaterial()
+        {
+            if (sharedRingMaterial == null)
+                sharedRingMaterial = new Material(Shader.Find("Sprites/Default"));
+            return sharedRingMaterial;
+        }
+
         private void Awake()
         {
             CreateRingRenderer();
@@ -40,7 +61,7 @@ namespace NodeWar.View
             ringRenderer.useWorldSpace = false;
 
             // Material
-            ringRenderer.material = new Material(Shader.Find("Sprites/Default"));
+            ringRenderer.material = GetSharedRingMaterial();
             ringRenderer.startColor = highlightColor;
             ringRenderer.endColor = highlightColor;
             ringRenderer.enabled = false;
