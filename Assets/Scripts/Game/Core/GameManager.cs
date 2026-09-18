@@ -1113,7 +1113,7 @@ namespace NodeWar.Core
         private void AddNodeFromID(List<int> nodes, string nodeID)
         {
             if (string.IsNullOrEmpty(nodeID)) return;
-            DistrictType type = MapNodeIDToDistrict(nodeID);
+            DistrictType type = DraftManager.MapNodeIDToDistrict(nodeID);
             if (type == DistrictType.None) return;
             int intType = (int)type;
             for (int i = 0; i < nodes.Count; i++)
@@ -1135,28 +1135,6 @@ namespace NodeWar.Core
             if (lower.Contains("medic")) return SuitType.Medic;
 
             return SuitType.None;
-        }
-
-        private DistrictType MapNodeIDToDistrict(string nodeID)
-        {
-            if (nodeID == null) return DistrictType.None;
-            string lower = nodeID.ToLower();
-
-            if (lower.Contains("farm")) return DistrictType.Farm;
-            if (lower.Contains("mine")) return DistrictType.Mine;
-            if (lower.Contains("village")) return DistrictType.Village;
-            if (lower.Contains("barracks")) return DistrictType.Barracks;
-            if (lower.Contains("forge")) return DistrictType.Forge;
-            if (lower.Contains("camp")) return DistrictType.Camp;
-            if (lower.Contains("shrine")) return DistrictType.Shrine;
-            if (lower.Contains("arsenal")) return DistrictType.Arsenal;
-            if (lower.Contains("sanctuary")) return DistrictType.Sanctuary;
-            if (lower.Contains("watchtower")) return DistrictType.Watchtower;
-            if (lower.Contains("rampart")) return DistrictType.Rampart;
-            if (lower.Contains("market")) return DistrictType.Market;
-            //if (lower.Contains("crossroads")) return DistrictType.Crossroads;
-
-            return DistrictType.None;
         }
 
         private void InitializeVillagers()

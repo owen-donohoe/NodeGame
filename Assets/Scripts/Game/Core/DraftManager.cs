@@ -845,7 +845,7 @@ namespace NodeWar.Core
         /// Convention: nodeID format is "node_[lowercase district name]".
         /// Informal string matching — a registry would be more robust long-term.
         /// </summary>
-        private DistrictType MapNodeIDToDistrict(string nodeID)
+        internal static DistrictType MapNodeIDToDistrict(string nodeID)
         {
             if (nodeID == null) return DistrictType.None;
             string lower = nodeID.ToLower();
