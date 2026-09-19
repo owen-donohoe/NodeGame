@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="../../Styles/SceneTransition.uss" />
+    <ui:VisualElement name="transition-shield" class="ui-root transition-shield" focusable="true" picking-mode="Position">
+        <ui:VisualElement name="loading-sheet" class="ui-sheet transition-sheet" picking-mode="Ignore">
+            <ui:Label text="NODE WAR" class="ui-w700 transition-title" picking-mode="Ignore" />
+            <ui:Label text="Loading..." class="transition-note" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
