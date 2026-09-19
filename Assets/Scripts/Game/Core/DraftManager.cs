@@ -146,6 +146,7 @@ namespace NodeWar.Core
             else
             {
                 draftState.phase = DraftPhase.WaitingForReady;
+                if (draftUI != null) draftUI.ShowWaiting(true);
                 localReady = false;
                 remoteReady = false;
                 remoteLoadoutReceived = false;
@@ -200,6 +201,8 @@ namespace NodeWar.Core
         {
             draftState.phase = DraftPhase.InitialReveal;
             revealTimer = 0f;
+
+            if (draftUI != null) draftUI.ShowWaiting(false);
 
             // Both loadouts are now known - rebuild slots with full information
             draftState.player0Slots = BuildPlayerSlots(0);

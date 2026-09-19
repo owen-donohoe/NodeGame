@@ -27,6 +27,12 @@ namespace NodeWar.Core
         /// <summary>Called by GameManager once, before the draft starts.</summary>
         void Initialize(DraftManager manager, int localPlayerID);
 
+        /// <summary>
+        /// True while a networked draft waits for the opponent's ready handshake,
+        /// false once the reveal begins. Nothing else is on screen until SweepIn.
+        /// </summary>
+        void ShowWaiting(bool waiting);
+
         /// <summary>The fixed placements (cores) drop in before turns begin.</summary>
         void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements);
 
