@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace NodeWar.Input
 {
     public enum GestureTargetKind
@@ -19,8 +17,8 @@ namespace NodeWar.Input
     /// time also means the flash can fire immediately, before the gesture has
     /// resolved into a tap, pan or long press.
     ///
-    /// Villager wins over node when both are under the finger; that priority is
-    /// applied when this struct is built, so consumers never re-decide it.
+    /// Primary presses prefer a villager; secondary clicks resolve nodes only.
+    /// The source applies that priority so consumers never re-decide it.
     /// </summary>
     public readonly struct GestureTarget
     {
@@ -29,23 +27,16 @@ namespace NodeWar.Input
         /// <summary>Villager ID or node ID depending on <see cref="kind"/>. -1 when None.</summary>
         public readonly int id;
 
-        /// <summary>Screen position of the press that produced this target.</summary>
-        public readonly Vector2 screenPos;
-
-        public GestureTarget(GestureTargetKind kind, int id, Vector2 screenPos)
+        public GestureTarget(GestureTargetKind kind, int id)
         {
             this.kind = kind;
             this.id = id;
-            this.screenPos = screenPos;
         }
 
-        public static GestureTarget None(Vector2 screenPos)
+        public static GestureTarget None()
         {
-            return new GestureTarget(GestureTargetKind.None, -1, screenPos);
+            return new GestureTarget(GestureTargetKind.None, -1);
         }
-
-        public bool IsVillager => kind == GestureTargetKind.Villager;
-        public bool IsNode => kind == GestureTargetKind.Node;
 
         public override string ToString()
         {

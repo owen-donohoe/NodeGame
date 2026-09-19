@@ -464,8 +464,7 @@ namespace NodeWar.Core
             outlineDriver.Initialize(state, selectionSystem, Camera.main);
             debugPlayerSwitch.OnPlayerSwitched += outlineDriver.OnPlayerSideChanged;
 
-            // The gesture source must be the only device reader, so it is built
-            // before anything that could otherwise be tempted to read one.
+            // Selection and move orders share one pointer reader.
             // The router is wired in InitializeUI, once the panel exists.
             gestureSource = gameObject.AddComponent<NodeWar.Input.PointerGestureSource>();
             gestureSource.Initialize(Camera.main);
@@ -528,9 +527,6 @@ namespace NodeWar.Core
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
 
-            //Vector3 spriteRot = cameraController != null
-            //    ? cameraController.GetSpriteRotation()
-            //    : new Vector3(50f, playerID == 0 ? 180f : 0f, 0f);
             float rotation = playerID == 0 ? 180f : 0f;
 
             if (nodePresentations != null)
@@ -793,13 +789,12 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Hands tap arbitration to the router and silences the three legacy
-        /// input paths. Deferred to here because the router needs the panel,
+        /// Hands tap arbitration to the router and right-clicks to commands.
+        /// Deferred to here because the router needs the panel,
         /// which only exists once the UI prefab is instantiated.
         ///
-        /// The legacy paths are gated rather than deleted: flipping both
-        /// SetGestureRouted calls to false restores the old behaviour intact,
-        /// which is the comparison the thresholds still need.
+        /// Selection and panel legacy reads are gated off. CommandSystem only
+        /// consumes resolved pointer intent; its keyboard shortcuts stay live.
         /// </summary>
         private void WireGestureRouting()
         {
@@ -808,6 +803,12 @@ namespace NodeWar.Core
             tapRouter.Initialize(gestureSource, selectionSystem, commandSystem, nodePanelManager);
 
             if (selectionSystem != null) selectionSystem.SetGestureRouted(true);
+
+            if (commandSystem != null)
+            {
+                commandSystem.SetGestureSource(gestureSource);
+                commandSystem.SetGestureRouted(true);
+            }
 
             if (nodePanelManager != null)
             {

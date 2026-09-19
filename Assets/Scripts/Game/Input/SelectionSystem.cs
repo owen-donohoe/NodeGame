@@ -18,8 +18,6 @@ namespace NodeWar.Input
         private List<int> selectedVillagerIDs = new List<int>();
         public IReadOnlyList<int> SelectedVillagerIDs => selectedVillagerIDs;
 
-        public int SelectedVillagerID => selectedVillagerIDs.Count > 0 ? selectedVillagerIDs[0] : -1;
-
         private bool isDragging = false;
         private Vector2 dragStartScreenPos;
         private const float DRAG_THRESHOLD = 10f;

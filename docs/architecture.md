@@ -150,10 +150,15 @@ desyncs/disconnects.
 `GameCommand`s queued for the next tick. Never mutates `SimulationState`
 directly.
 
-Exactly one component reads a pointer device: `PointerGestureSource`. It
-resolves a press once into a tap, a pan or a long-press lasso, raycasts
-once for what was under it, and publishes the outcome. Everything else in
-this layer consumes that outcome rather than polling input itself.
+`PointerGestureSource` is the single pointer reader for live selection and
+move orders. It resolves a primary press into a tap, a pan or a long-press
+lasso and publishes the target. Desktop right-clicks publish a node-only
+destination to `CommandSystem`, after a current-position UI raycast blocks
+both uGUI and UI Toolkit (including the HUD and node sheet). Consumers do
+not repeat the world raycast. `GameManager` enables gesture routing for
+selection, commands and panel arbitration; command keyboard shortcuts
+remain independent. `CameraController` still reads desktop middle-drag
+and scroll directly; those camera controls are outside this routing.
 Thresholds are authored in millimetres and converted against screen
 density, so they mean the same thing to a finger on any device.
 
@@ -354,8 +359,8 @@ Two objects are carried across the Lobby → Gameplay scene load via
   placement, loadout).
 
 **Input/**
-- `PointerGestureSource` — the only device reader. Resolves a press into a
-  tap, pan or long-press lasso and publishes it.
+- `PointerGestureSource` — the shared pointer reader for selection and
+  commands; publishes taps, pans, lassos, pinches and right-click destinations.
 - `TapRouter` — the tap priority ladder: villager, then node-with-selection
   (move), then node (panel), then empty (clear).
 - `SelectionSystem` — tracks selected villagers; applies lasso results.
