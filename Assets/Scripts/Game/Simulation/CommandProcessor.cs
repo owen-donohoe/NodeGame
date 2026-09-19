@@ -206,7 +206,7 @@ namespace NodeWar.Simulation
             if (state.nodes[nodeID].ownerID != command.playerID) return;
             if (!bal.CanEquipSuitAtNode(requestedSuit, state.nodes[nodeID].districtType)) return;
             if (!PlayerHasSuitDrafted(state, command.playerID, requestedSuit)) return;
-            SuitStats stats = bal.GetSuitStats(requestedSuit);
+            if (!bal.TryGetSuitStats(requestedSuit, out SuitStats stats)) return;
             if (state.players[command.playerID].food < stats.foodCost) return;
             if (state.players[command.playerID].materials < stats.materialCost) return;
             // Apply costs
@@ -225,6 +225,18 @@ namespace NodeWar.Simulation
             state.villagers[vid].maxHP = newMaxHP;
             state.villagers[vid].hp = newMaxHP;
         }
+        public static int GetRespawnCost(SimulationState state, int playerID)
+        {
+            // Sanctuary cost reduction
+            int baseCost = bal.respawnCostFood;
+            int sanctuaryWorkers = CountSanctuaryWorkers(state, playerID);
+            int reductionPercent = bal.sanctuaryRespawnCostReductionPercent * sanctuaryWorkers;
+            int reduction = (baseCost * reductionPercent) / 100;
+            int finalCost = baseCost - reduction;
+            if (finalCost < 1) finalCost = 1;
+            return finalCost;
+        }
+
         private static void ProcessRespawnCommand(SimulationState state, GameCommand command)
         {
             int vid = command.villagerID;
@@ -233,37 +245,11 @@ namespace NodeWar.Simulation
             if (villager.ownerID != command.playerID) return;
             if (villager.state != VillagerState.Dead) return;
             if (villager.isConsumed) return;
-            // Sanctuary cost reduction
-            int baseCost = bal.respawnCostFood;
-            int sanctuaryWorkers = CountSanctuaryWorkers(state, command.playerID);
-            int reductionPercent = bal.sanctuaryRespawnCostReductionPercent * sanctuaryWorkers;
-            int reduction = (baseCost * reductionPercent) / 100;
-            int finalCost = baseCost - reduction;
-            if (finalCost < 1) finalCost = 1;
+            int finalCost = GetRespawnCost(state, command.playerID);
             if (state.players[command.playerID].food < finalCost) return;
             // Apply
             state.players[command.playerID].food -= finalCost;
-            int coreNode = state.players[command.playerID].coreNodeID;
-            state.villagers[vid].state = VillagerState.Idle;
-            state.villagers[vid].currentNodeID = coreNode;
-            state.villagers[vid].previousNodeID = coreNode;
-            state.villagers[vid].targetNodeID = -1;
-            state.villagers[vid].movePath = new int[0];
-            state.villagers[vid].movePathIndex = 0;
-            state.villagers[vid].moveProgress = 0;
-            state.villagers[vid].hp = bal.baseHP;
-            state.villagers[vid].maxHP = bal.baseHP;
-            state.villagers[vid].suit = SuitType.None;
-            state.villagers[vid].attackDamage = bal.baseAttackDamage;
-            state.villagers[vid].moveSpeedTicks = bal.baseMoveSpeedTicks;
-            state.villagers[vid].attackCooldownMax = bal.baseAttackCooldownMax;
-            state.villagers[vid].attackCooldownRemaining = bal.baseAttackCooldownMax;
-            state.villagers[vid].combatTargetID = -1;
-            state.villagers[vid].fightPriority = 0;
-            state.villagers[vid].respawnTicksRemaining = 0;
-            state.villagers[vid].productionTicksRemaining = 0;
-            state.villagers[vid].productionTicksMax = 0;
-            state.villagers[vid].hasRampartBonus = false;
+            GameSimulation.ResetToCore(state, vid, bal);
         }
 
         private static bool PlayerHasSuitDrafted(SimulationState state, int playerID, SuitType suit)
