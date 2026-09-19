@@ -522,7 +522,11 @@ namespace NodeWar.Core
         private void OnPlayerSideChanged(int playerID)
         {
             if (cameraController != null)
+            {
                 cameraController.SetPlayerSide(playerID);
+                // The shared billboard facing was captured at the draft's pitch.
+                NodeWar.View.Billboard.RecaptureFacing();
+            }
 
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
