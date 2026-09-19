@@ -300,6 +300,12 @@ namespace NodeWar.View.Outline
         // delegate per frame.
         private static int executeTraced;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnEnterPlayMode()
+        {
+            executeTraced = 0;
+        }
+
         private OutlineDebugView lastDebugView = OutlineDebugView.Off;
 
         /// <summary>
