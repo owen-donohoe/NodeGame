@@ -115,6 +115,9 @@ namespace NodeWar.UI
 
         // ===== PUBLIC API (called by DraftManager) =====
 
+        // The uGUI draft has no waiting surface.
+        public void ShowWaiting(bool waiting) { }
+
         public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
         {
             if (placements == null) return;

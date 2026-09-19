@@ -177,6 +177,34 @@
 }
 
 /* ===================================================================
+   Waiting for the opponent - centred over the board, only during the
+   networked ready handshake
+   =================================================================== */
+
+.draft__waiting {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 42%;
+    align-items: center;
+    display: none;
+}
+
+.draft__waiting--on {
+    display: flex;
+}
+
+.draft__waiting-label {
+    font-size: var(--type-body);
+    color: var(--hud-ink);
+    background-color: var(--hud-glass-strong);
+    border-width: var(--stroke-thin);
+    border-color: var(--hud-edge);
+    border-radius: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+}
+
+/* ===================================================================
    A card, and the proxy that copies it under the finger
    =================================================================== */
 
