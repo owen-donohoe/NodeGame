@@ -130,7 +130,7 @@ namespace NodeWar.Core
             }
 
             if (cameraController != null)
-                cameraController.SetDraftMode(true);
+                cameraController.SetDraftMode(true, localPlayerID);
 
             // Networked matches require ready handshake; local/bot skip straight to reveal
             if (!isNetworked || isBotMatch)

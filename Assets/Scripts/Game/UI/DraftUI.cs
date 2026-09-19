@@ -307,6 +307,8 @@ namespace NodeWar.UI
 
             GameObject ph = Instantiate(confirmedPlacementPrefab);
             ph.transform.position = pos + Vector3.up * confirmedPlacementYOffset;
+            // Stickers are authored reading upright from P1's side; turn with the viewer.
+            ph.transform.rotation = Quaternion.Euler(0f, CameraController.SideYaw(localPlayerID), 0f);
 
             // Set sticker via component
             DraftPlacementPreview preview = ph.GetComponent<DraftPlacementPreview>();

@@ -906,21 +906,34 @@ namespace NodeWar.Core
                 currentZoomDistance = targetZoomDistance;
             }
 
-            if (cam != null)
-            {
-                // P0 faces -Z (pivot Y=180): higher Z is further back, axis points +Z
-                // P1 faces +Z (pivot Y=0): lower Z is further back, axis points -Z
-                cam.transparencySortAxis = (playerID == 0)
-                    ? new Vector3(0f, 0f, 1f)
-                    : new Vector3(0f, 0f, -1f);
-            }
+            ApplySideSortAxis(playerID);
 
             panVelocity = Vector3.zero;
 
-            // P0 faces -Z (Y=180), P1 faces +Z (Y=0)
-            float yRotation = (playerID == 0) ? 180f : 0f;
             cameraPivot.localRotation = Quaternion.Euler(
-                cameraPivot.localRotation.eulerAngles.x, yRotation, 0f);
+                cameraPivot.localRotation.eulerAngles.x, SideYaw(playerID), 0f);
+        }
+
+        /// <summary>
+        /// The pivot yaw that puts a player's own side nearest the camera.
+        /// P0 faces -Z (Y=180), P1 faces +Z (Y=0). The draft framing, the match
+        /// and the draft's world-space pieces all read it, so a player never
+        /// drafts from the side they will not play, or reads its stickers upside down.
+        /// </summary>
+        public static float SideYaw(int playerID)
+        {
+            return (playerID == 0) ? 180f : 0f;
+        }
+
+        private void ApplySideSortAxis(int playerID)
+        {
+            if (cam == null) return;
+
+            // P0 faces -Z (pivot Y=180): higher Z is further back, axis points +Z
+            // P1 faces +Z (pivot Y=0): lower Z is further back, axis points -Z
+            cam.transparencySortAxis = (playerID == 0)
+                ? new Vector3(0f, 0f, 1f)
+                : new Vector3(0f, 0f, -1f);
         }
 
         public float GetCurrentZoomDistance() => currentZoomDistance;
@@ -970,8 +983,10 @@ namespace NodeWar.Core
 
         /// <summary>
         /// Frames the board for the draft. Locks pan; scroll and pinch still zoom.
+        /// viewerPlayerID is whose side the board is framed from, so each player
+        /// drafts looking at their own half; it is only read when enabling.
         /// </summary>
-        public void SetDraftMode(bool enabled)
+        public void SetDraftMode(bool enabled, int viewerPlayerID = 1)
         {
             if (enabled == isDraftMode) return;
 
@@ -1006,9 +1021,12 @@ namespace NodeWar.Core
             // rather than an absolute position so it survives a board of a
             // different size: X stays on the board's midline and Z pulls back
             // toward the near edge, which is what a 60-degree pitch needs to
-            // put the far row in frame.
+            // put the far row in frame. The offset is authored for P1's view
+            // (yaw 0), so it turns with the viewer's yaw to stay on their edge.
+            float draftYaw = SideYaw(viewerPlayerID);
             ResetToCenter();
-            transform.position += draftRigOffset;
+            transform.position += Quaternion.Euler(0f, draftYaw, 0f) * draftRigOffset;
+            ApplySideSortAxis(viewerPlayerID);
 
             // The zoom-out ceiling, not the opening distance. Seeing the whole
             // board is the point of the phase, so the pinch may go past the
@@ -1035,7 +1053,7 @@ namespace NodeWar.Core
             {
                 stashedPitch = cameraPivot.localRotation.eulerAngles.x;
                 hasStashedPitch = true;
-                cameraPivot.localRotation = Quaternion.Euler(draftPitch, 0f, 0f);
+                cameraPivot.localRotation = Quaternion.Euler(draftPitch, draftYaw, 0f);
             }
         }
 

@@ -304,6 +304,7 @@ namespace NodeWar.UI
             if (ghostPreviewPrefab == null) return;
 
             previewInstance = Instantiate(ghostPreviewPrefab);
+            previewInstance.transform.rotation = Quaternion.Euler(0f, CameraController.SideYaw(localPlayerID), 0f);
             previewComponent = previewInstance.GetComponent<DraftPlacementPreview>();
 
             if (previewComponent != null && stickerLookup != null)
