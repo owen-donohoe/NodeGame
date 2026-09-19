@@ -65,6 +65,7 @@ namespace NodeWar.Core
         private bool remoteReady;
         private float lastHeartbeatTime;
         private float lastReceiveTime;
+        private bool peerHeardFrom;
 
         // Retain and resend until acknowledged, as in LockstepRunner.
         private const float RESEND_INTERVAL = 0.1f;
@@ -115,6 +116,7 @@ namespace NodeWar.Core
             lastHeartbeatTime = now;
             lastReceiveTime = now;
             lastResendTime = now;
+            peerHeardFrom = false;
             if (isNetworked && !isBotMatch) networkManager.ResetDraftDelivery();
 
             // Build draft state and mark initial placements as occupied
@@ -547,28 +549,40 @@ namespace NodeWar.Core
             {
                 if (packets[i] == null || packets[i].Length == 0) continue;
                 lastReceiveTime = Time.time;
+                peerHeardFrom = true;
 
-                PacketType type = InputSerializer.ReadPacketType(packets[i]);
-
-                switch (type)
+                // One bad packet must never wedge the draft: log it and move on.
+                string typeLabel = "unread (first byte " + packets[i][0] + ")";
+                try
                 {
-                    case PacketType.DraftReady:
-                        if (packets[i].Length != 5 ||
-                            DraftSerializer.DeserializeDraftReady(packets[i]) != 1 - localPlayerID) break;
-                        remoteReady = true;
-                        SendDraftAck();
-                        break;
-                    case PacketType.DraftPlacement:
-                        HandleRemotePlacement(packets[i]);
-                        break;
-                    case PacketType.Heartbeat:
-                        break;
-                    case PacketType.DraftLoadout:
-                        HandleRemoteLoadout(packets[i]);
-                        break;
-                    case PacketType.DraftAck:
-                        HandleDraftAck(packets[i]);
-                        break;
+                    PacketType type = InputSerializer.ReadPacketType(packets[i]);
+                    typeLabel = type.ToString();
+
+                    switch (type)
+                    {
+                        case PacketType.DraftReady:
+                            if (packets[i].Length != 5 ||
+                                DraftSerializer.DeserializeDraftReady(packets[i]) != 1 - localPlayerID) break;
+                            remoteReady = true;
+                            SendDraftAck();
+                            break;
+                        case PacketType.DraftPlacement:
+                            HandleRemotePlacement(packets[i]);
+                            break;
+                        case PacketType.Heartbeat:
+                            break;
+                        case PacketType.DraftLoadout:
+                            HandleRemoteLoadout(packets[i]);
+                            break;
+                        case PacketType.DraftAck:
+                            HandleDraftAck(packets[i]);
+                            break;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("[DraftManager] Dropped packet " + typeLabel + " (" +
+                        packets[i].Length + " bytes): " + e);
                 }
                 if (!enabled) return;
             }
@@ -716,6 +730,10 @@ namespace NodeWar.Core
 
         private bool CheckDisconnect()
         {
+            // A peer still loading the Gameplay scene has not sent anything yet, and
+            // the clock started at Initialize. Only judge silence once it has spoken.
+            if (draftState.phase == DraftPhase.WaitingForReady && !peerHeardFrom) return false;
+
             if (Time.time - lastReceiveTime > disconnectTimeout)
             {
                 Debug.LogError("[DraftManager] Opponent disconnected during draft.");
