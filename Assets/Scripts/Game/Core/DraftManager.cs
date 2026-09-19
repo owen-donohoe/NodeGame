@@ -39,6 +39,8 @@ namespace NodeWar.Core
         [SerializeField] private float heartbeatInterval = 0.5f;
         [Tooltip("Seconds without receiving data before declaring opponent disconnected.")]
         [SerializeField] private float disconnectTimeout = 5.0f;
+        [Tooltip("Seconds to wait for a peer that has sent nothing yet, such as one still loading the scene.")]
+        [SerializeField] private float firstContactTimeout = 60.0f;
 
         [Header("Grid Markers")]
         [Tooltip("Y offset for placement grid markers. Slightly below ground to avoid z-fighting with previews.")]
@@ -65,6 +67,7 @@ namespace NodeWar.Core
         private bool remoteReady;
         private float lastHeartbeatTime;
         private float lastReceiveTime;
+        private bool peerHeardFrom;
 
         // Retain and resend until acknowledged, as in LockstepRunner.
         private const float RESEND_INTERVAL = 0.1f;
@@ -115,6 +118,7 @@ namespace NodeWar.Core
             lastHeartbeatTime = now;
             lastReceiveTime = now;
             lastResendTime = now;
+            peerHeardFrom = false;
             if (isNetworked && !isBotMatch) networkManager.ResetDraftDelivery();
 
             // Build draft state and mark initial placements as occupied
@@ -144,6 +148,7 @@ namespace NodeWar.Core
             else
             {
                 draftState.phase = DraftPhase.WaitingForReady;
+                if (draftUI != null) draftUI.ShowWaiting(true);
                 localReady = false;
                 remoteReady = false;
                 remoteLoadoutReceived = false;
@@ -198,6 +203,8 @@ namespace NodeWar.Core
         {
             draftState.phase = DraftPhase.InitialReveal;
             revealTimer = 0f;
+
+            if (draftUI != null) draftUI.ShowWaiting(false);
 
             // Both loadouts are now known - rebuild slots with full information
             draftState.player0Slots = BuildPlayerSlots(0);
@@ -542,28 +549,40 @@ namespace NodeWar.Core
             {
                 if (packets[i] == null || packets[i].Length == 0) continue;
                 lastReceiveTime = Time.time;
+                peerHeardFrom = true;
 
-                PacketType type = InputSerializer.ReadPacketType(packets[i]);
-
-                switch (type)
+                // One bad packet must never wedge the draft: log it and move on.
+                string typeLabel = "unread (first byte " + packets[i][0] + ")";
+                try
                 {
-                    case PacketType.DraftReady:
-                        if (packets[i].Length != 5 ||
-                            DraftSerializer.DeserializeDraftReady(packets[i]) != 1 - localPlayerID) break;
-                        remoteReady = true;
-                        SendDraftAck();
-                        break;
-                    case PacketType.DraftPlacement:
-                        HandleRemotePlacement(packets[i]);
-                        break;
-                    case PacketType.Heartbeat:
-                        break;
-                    case PacketType.DraftLoadout:
-                        HandleRemoteLoadout(packets[i]);
-                        break;
-                    case PacketType.DraftAck:
-                        HandleDraftAck(packets[i]);
-                        break;
+                    PacketType type = InputSerializer.ReadPacketType(packets[i]);
+                    typeLabel = type.ToString();
+
+                    switch (type)
+                    {
+                        case PacketType.DraftReady:
+                            if (packets[i].Length != 5 ||
+                                DraftSerializer.DeserializeDraftReady(packets[i]) != 1 - localPlayerID) break;
+                            remoteReady = true;
+                            SendDraftAck();
+                            break;
+                        case PacketType.DraftPlacement:
+                            HandleRemotePlacement(packets[i]);
+                            break;
+                        case PacketType.Heartbeat:
+                            break;
+                        case PacketType.DraftLoadout:
+                            HandleRemoteLoadout(packets[i]);
+                            break;
+                        case PacketType.DraftAck:
+                            HandleDraftAck(packets[i]);
+                            break;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("[DraftManager] Dropped packet " + typeLabel + " (" +
+                        packets[i].Length + " bytes): " + e);
                 }
                 if (!enabled) return;
             }
@@ -711,7 +730,14 @@ namespace NodeWar.Core
 
         private bool CheckDisconnect()
         {
-            if (Time.time - lastReceiveTime > disconnectTimeout)
+            // A peer still loading the Gameplay scene has not sent anything yet, and
+            // the clock started at Initialize. Give it the longer first-contact
+            // window, but not forever: one that never arrives still ends the draft.
+            float timeout = (draftState.phase == DraftPhase.WaitingForReady && !peerHeardFrom)
+                ? firstContactTimeout
+                : disconnectTimeout;
+
+            if (Time.time - lastReceiveTime > timeout)
             {
                 Debug.LogError("[DraftManager] Opponent disconnected during draft.");
                 OnDraftDisconnect?.Invoke();

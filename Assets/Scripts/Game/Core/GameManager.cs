@@ -179,6 +179,18 @@ namespace NodeWar.Core
 
             NodeWar.Lobby.LoadoutData loadout = (match != null) ? match.loadout : new NodeWar.Lobby.LoadoutData();
 
+            // The presenter is attached before Initialize: local and bot matches
+            // begin the initial reveal inside it, and a presenter attached later
+            // never sees ShowInitialReveal. Presenter.Initialize only stores the
+            // manager and builds its own UI; it reads no draft state.
+            draftPresenter = CreateDraftPresenter(match);
+
+            if (draftPresenter != null)
+            {
+                draftPresenter.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
+                draftManager.SetDraftUI(draftPresenter);
+            }
+
             draftManager.Initialize(
                 boardConfig,
                 match.isNetworked ? match.networkManager : null,
@@ -192,14 +204,6 @@ namespace NodeWar.Core
 
             draftManager.OnDraftComplete += OnDraftComplete;
             draftManager.OnDraftDisconnect += OnDraftDisconnect;
-
-            draftPresenter = CreateDraftPresenter(match);
-
-            if (draftPresenter != null)
-            {
-                draftPresenter.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
-                draftManager.SetDraftUI(draftPresenter);
-            }
         }
 
         /// <summary>
@@ -522,7 +526,11 @@ namespace NodeWar.Core
         private void OnPlayerSideChanged(int playerID)
         {
             if (cameraController != null)
+            {
                 cameraController.SetPlayerSide(playerID);
+                // The shared billboard facing was captured at the draft's pitch.
+                NodeWar.View.Billboard.RecaptureFacing();
+            }
 
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
