@@ -39,6 +39,8 @@ namespace NodeWar.Core
         [SerializeField] private float heartbeatInterval = 0.5f;
         [Tooltip("Seconds without receiving data before declaring opponent disconnected.")]
         [SerializeField] private float disconnectTimeout = 5.0f;
+        [Tooltip("Seconds to wait for a peer that has sent nothing yet, such as one still loading the scene.")]
+        [SerializeField] private float firstContactTimeout = 60.0f;
 
         [Header("Grid Markers")]
         [Tooltip("Y offset for placement grid markers. Slightly below ground to avoid z-fighting with previews.")]
@@ -729,10 +731,13 @@ namespace NodeWar.Core
         private bool CheckDisconnect()
         {
             // A peer still loading the Gameplay scene has not sent anything yet, and
-            // the clock started at Initialize. Only judge silence once it has spoken.
-            if (draftState.phase == DraftPhase.WaitingForReady && !peerHeardFrom) return false;
+            // the clock started at Initialize. Give it the longer first-contact
+            // window, but not forever: one that never arrives still ends the draft.
+            float timeout = (draftState.phase == DraftPhase.WaitingForReady && !peerHeardFrom)
+                ? firstContactTimeout
+                : disconnectTimeout;
 
-            if (Time.time - lastReceiveTime > disconnectTimeout)
+            if (Time.time - lastReceiveTime > timeout)
             {
                 Debug.LogError("[DraftManager] Opponent disconnected during draft.");
                 OnDraftDisconnect?.Invoke();
