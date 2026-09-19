@@ -288,7 +288,7 @@ Three `.unity` scenes exist under `Assets/Scenes/`:
 - **`GFX Testing.unity`** — a separate scene, not part of the lobby →
   match flow; used for isolated visual/graphics iteration.
 
-Two objects are carried across the Lobby → Gameplay scene load via
+Three objects are carried across the Lobby → Gameplay scene load via
 `DontDestroyOnLoad`:
 
 - **`MatchConnection`** — created when a match is started from the lobby
@@ -301,6 +301,21 @@ Two objects are carried across the Lobby → Gameplay scene load via
   (username, uuid, trophies, unlocked suits/nodes, selected loadout),
   loaded from/saved to local JSON. Survives every scene transition for
   the life of the application.
+
+- **`SceneTransition`** (`Assets/UI/Scripts/`) — created on demand by
+  `SceneTransition.Load` for bot, local and online match starts and return to
+  Lobby. Its full-screen sheet slides from below, loads asynchronously in
+  Single mode while covered, then exits above after load completion and at
+  least one destination frame (minimum cover time 0.25 s). The temporary
+  `DontDestroyOnLoad` root and runtime `PanelSettings` are destroyed after
+  reveal. The panel matches HUD's 390×844 width-based scaling and uses sort
+  order 32768, above the other panels and uGUI. Resources UXML and a TSS
+  wrapper import the existing shared theme; no Editor setup is needed.
+  A full-screen picking shield and consumption of control-device input
+  events block UI and direct polling during the transition without pausing
+  the frame loop or network. Peers load independently; MatchConnection's
+  NetworkManager ownership and the draft ready handshake are unchanged.
+  Lobby tab/page navigation does not use this entry point.
 
 ## Key classes per layer
 

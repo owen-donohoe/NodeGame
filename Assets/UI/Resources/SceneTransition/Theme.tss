@@ -1,0 +1,2 @@
+/* Keep one theme source; this wrapper makes it reachable in player builds. */
+@import url("../../UnityDefaultRuntimeTheme.tss");

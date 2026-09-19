@@ -207,7 +207,7 @@ namespace NodeWar.Lobby
             if (PlayerProfile.Instance != null)
                 mc.loadout = PlayerProfile.Instance.Loadout;
 
-            SceneManager.LoadScene("Gameplay");
+            NodeWar.UI.SceneTransition.Load("Gameplay");
         }
 
         private void LaunchTestingMatch()
@@ -222,7 +222,7 @@ namespace NodeWar.Lobby
             if (PlayerProfile.Instance != null)
                 mc.loadout = PlayerProfile.Instance.Loadout;
 
-            SceneManager.LoadScene("Gameplay");
+            NodeWar.UI.SceneTransition.Load("Gameplay");
         }
 
         // LEGACY - the only path LaunchMatch has for GameMode.OneVsOne, and it

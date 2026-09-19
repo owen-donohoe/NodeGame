@@ -341,7 +341,7 @@ namespace NodeWar.Lobby
             networkManager = null;
             networkManagerGO = null;
 
-            SceneManager.LoadScene("Gameplay");
+            NodeWar.UI.SceneTransition.Load("Gameplay");
         }
 
         // ===== PLUMBING =====
