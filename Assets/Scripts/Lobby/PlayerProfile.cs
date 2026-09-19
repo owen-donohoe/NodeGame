@@ -12,6 +12,12 @@ namespace NodeWar.Lobby
         private static PlayerProfile instance;
         public static PlayerProfile Instance => instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnEnterPlayMode()
+        {
+            instance = null;
+        }
+
         [System.Serializable]
         public struct PlayerProfileData
         {

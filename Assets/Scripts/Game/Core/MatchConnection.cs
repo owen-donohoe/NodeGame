@@ -21,6 +21,12 @@ namespace NodeWar.Core
         private static MatchConnection instance;
         public static MatchConnection Instance => instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnEnterPlayMode()
+        {
+            instance = null;
+        }
+
         private void Awake()
         {
             if (instance != null && instance != this)

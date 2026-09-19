@@ -50,6 +50,12 @@ namespace NodeWar.Lobby
         private static readonly Dictionary<LobbyIconKind, VectorImage> cache =
             new Dictionary<LobbyIconKind, VectorImage>();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnEnterPlayMode()
+        {
+            cache.Clear();
+        }
+
         private LobbyIconKind kind;
 
         [UxmlAttribute]
