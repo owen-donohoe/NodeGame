@@ -15,11 +15,15 @@ namespace NodeWar.Core
     /// Lifecycle:
     ///   1. GameManager creates GameObject, adds this component
     ///   2. GameManager calls Initialize() with match configuration
-    ///   3. DraftManager runs phases: WaitingForReady ? InitialReveal ? ActiveDraft ? Complete
-    ///   4. On completion, fires OnDraftComplete with placement results
+    ///   3. DraftManager runs phases: WaitingForReady -> InitialReveal -> ActiveDraft -> Complete
+    ///   4. On completion, fires OnDraftComplete with placement results. Networked,
+    ///      it first waits in Complete until the peer has everything (see DELIVERY)
     ///   5. GameManager destroys this GameObject
-    /// 
-    /// Networking: uses the same NetworkManager/packet system as gameplay.
+    ///
+    /// Networking: uses the same NetworkManager/packet system as gameplay, which
+    /// delivers nothing reliably on either transport. Every packet the peer must
+    /// see is retained and resent until the peer acknowledges it, and every
+    /// receive handler treats a repeat as a no-op.
     /// Bot matches: bot places after a configurable delay, choosing closest-to-core cells.
     /// </summary>
     public class DraftManager : MonoBehaviour
@@ -62,6 +66,14 @@ namespace NodeWar.Core
         private float lastHeartbeatTime;
         private float lastReceiveTime;
 
+        // Retain and resend until acknowledged, as in LockstepRunner.
+        private const float RESEND_INTERVAL = 0.1f;
+        private byte[] pendingReady;
+        private byte[] pendingLoadout;
+        private byte[] pendingPlacement;
+        private int pendingPlacementCount;
+        private float lastResendTime;
+
         // Reveal
         private float revealTimer;
 
@@ -102,6 +114,8 @@ namespace NodeWar.Core
             float now = Time.time;
             lastHeartbeatTime = now;
             lastReceiveTime = now;
+            lastResendTime = now;
+            if (isNetworked && !isBotMatch) networkManager.ResetDraftDelivery();
 
             // Build draft state and mark initial placements as occupied
             draftState = new DraftState(config.Data.gridCols, config.Data.gridRows);
@@ -153,6 +167,8 @@ namespace NodeWar.Core
             if (isNetworked && !isBotMatch)
             {
                 ProcessIncomingPackets();
+                if (!enabled) return;
+                ResendIfNeeded();
                 SendHeartbeatIfNeeded();
                 if (CheckDisconnect()) return;
             }
@@ -168,6 +184,10 @@ namespace NodeWar.Core
                     break;
                 case DraftPhase.ActiveDraft:
                     UpdateActiveDraft();
+                    break;
+                case DraftPhase.Complete:
+                    if (pendingReady == null && pendingLoadout == null && pendingPlacement == null)
+                        FinishDraft();
                     break;
             }
         }
@@ -217,6 +237,10 @@ namespace NodeWar.Core
 
         private void UpdateActiveDraft()
         {
+            // A player can have consecutive turns when the other has no pieces.
+            // Wait for delivery before starting another, preserving placement order.
+            if (pendingPlacement != null) return;
+
             turnTimer -= Time.deltaTime;
 
             if (draftUI != null)
@@ -254,23 +278,16 @@ namespace NodeWar.Core
         /// </summary>
         public void ConfirmLocalPlacement(int slotIndex, int gridX, int gridZ)
         {
-            if (draftState.currentTurnPlayerID != localPlayerID) return;
+            if (!IsLocalPlayerTurn()) return;
             if (!draftState.IsCellAvailable(gridX, gridZ)) return;
 
             DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 
+            SendDraftPlacement(slots[slotIndex].districtType, gridX, gridZ, false);
             ApplyPlacement(localPlayerID, slots[slotIndex].districtType,
                 gridX, gridZ, slotIndex, false);
-
-            if (isNetworked && !isBotMatch)
-            {
-                byte[] packet = DraftSerializer.SerializeDraftPlacement(
-                    localPlayerID, (int)slots[slotIndex].districtType,
-                    gridX, gridZ, false);
-                networkManager.Send(packet);
-            }
         }
 
         private void HandleTimeout()
@@ -312,14 +329,8 @@ namespace NodeWar.Core
                 }
             }
 
+            SendDraftPlacement(district, gridX, gridZ, true);
             ApplyPlacement(activePlayer, district, gridX, gridZ, slotIndex, true);
-
-            if (isNetworked && !isBotMatch && activePlayer == localPlayerID)
-            {
-                byte[] packet = DraftSerializer.SerializeDraftPlacement(
-                    localPlayerID, (int)district, gridX, gridZ, true);
-                networkManager.Send(packet);
-            }
         }
 
         /// <summary>
@@ -490,6 +501,16 @@ namespace NodeWar.Core
         private void CompleteDraft()
         {
             draftState.phase = DraftPhase.Complete;
+            if (!isNetworked || isBotMatch) FinishDraft();
+        }
+
+        private void FinishDraft()
+        {
+            DestroyPlacementGrid();
+            // NetworkManager outlives us and re-acks late retries if this final
+            // ack is lost. No quiet-time guess can guarantee its delivery.
+            if (isNetworked && !isBotMatch)
+                networkManager.CompleteDraftDelivery(CreateDraftAck());
 
             DraftResult result = new DraftResult
             {
@@ -516,7 +537,7 @@ namespace NodeWar.Core
         {
             if (networkManager == null) return;
 
-            byte[][] packets = networkManager.ReceiveAll();
+            byte[][] packets = networkManager.ReceiveAll(deferTickInputs: true);
             for (int i = 0; i < packets.Length; i++)
             {
                 if (packets[i] == null || packets[i].Length == 0) continue;
@@ -527,7 +548,10 @@ namespace NodeWar.Core
                 switch (type)
                 {
                     case PacketType.DraftReady:
+                        if (packets[i].Length != 5 ||
+                            DraftSerializer.DeserializeDraftReady(packets[i]) != 1 - localPlayerID) break;
                         remoteReady = true;
+                        SendDraftAck();
                         break;
                     case PacketType.DraftPlacement:
                         HandleRemotePlacement(packets[i]);
@@ -537,31 +561,70 @@ namespace NodeWar.Core
                     case PacketType.DraftLoadout:
                         HandleRemoteLoadout(packets[i]);
                         break;
+                    case PacketType.DraftAck:
+                        HandleDraftAck(packets[i]);
+                        break;
                 }
+                if (!enabled) return;
             }
         }
 
         private void HandleRemoteLoadout(byte[] data)
         {
+            // Validate both length-prefixed arrays before the existing reader.
+            if (data.Length < 7) return;
+            int offset = 5;
+            for (int array = 0; array < 2; array++)
+            {
+                if (offset >= data.Length) return;
+                int count = data[offset++];
+                for (int i = 0; i < count; i++)
+                {
+                    if (offset >= data.Length) return;
+                    int length = data[offset++];
+                    if (length > data.Length - offset) return;
+                    offset += length;
+                }
+            }
+            if (offset != data.Length) return;
             DraftSerializer.DeserializeDraftLoadout(data, out int playerID, out NodeWar.Lobby.LoadoutData loadout);
-            if (playerID == localPlayerID) return; // ignore our own loadout echoed back
-            remoteLoadout = loadout;
-            remoteLoadoutReceived = true;
+            if (playerID != 1 - localPlayerID) return;
+            if (!remoteLoadoutReceived)
+            {
+                remoteLoadout = loadout;
+                remoteLoadoutReceived = true;
+            }
+            SendDraftAck();
         }
         private void SendDraftLoadout()
         {
             if (networkManager == null) return;
-            byte[] packet = DraftSerializer.SerializeDraftLoadout(localPlayerID, localLoadout);
-            networkManager.Send(packet);
+            pendingLoadout = DraftSerializer.SerializeDraftLoadout(localPlayerID, localLoadout);
+            networkManager.Send(pendingLoadout);
         }
 
         private void HandleRemotePlacement(byte[] data)
         {
+            if (data.Length != 18) return;
             DraftSerializer.DeserializeDraftPlacement(data,
                 out int playerID, out int districtType, out int gridX, out int gridZ, out bool wasTimeout);
 
+            if (playerID != 1 - localPlayerID) return;
+
+            // Check duplicates before phase/turn/occupancy: a valid retry may
+            // arrive after advancing the turn or completing the entire draft.
+            foreach (DraftPlacement placed in draftState.confirmedPlacements)
+            {
+                if (placed.playerID == playerID && (int)placed.districtType == districtType &&
+                    placed.gridX == gridX && placed.gridZ == gridZ && placed.wasTimeout == wasTimeout)
+                {
+                    SendDraftAck();
+                    return;
+                }
+            }
+            // Early arrivals during reveal will be retried by their sender.
+            if (draftState.phase != DraftPhase.ActiveDraft) return;
             if (playerID != draftState.currentTurnPlayerID) return;
-            if (playerID == localPlayerID) return;
 
             // Find first unconsumed slot matching the district type
             DraftSlot[] slots = draftState.GetPlayerSlots(playerID);
@@ -580,13 +643,62 @@ namespace NodeWar.Core
 
             ApplyPlacement(playerID, (DistrictType)districtType,
                 gridX, gridZ, slotIndex, wasTimeout);
+            SendDraftAck();
         }
 
         private void SendDraftReady()
         {
             if (networkManager == null) return;
-            byte[] packet = DraftSerializer.SerializeDraftReady(localPlayerID);
-            networkManager.Send(packet);
+            pendingReady = DraftSerializer.SerializeDraftReady(localPlayerID);
+            networkManager.Send(pendingReady);
+        }
+
+        // ===== DELIVERY =====
+
+        private void SendDraftPlacement(DistrictType district, int gridX, int gridZ, bool wasTimeout)
+        {
+            if (!isNetworked || isBotMatch) return;
+            pendingPlacement = DraftSerializer.SerializeDraftPlacement(
+                localPlayerID, (int)district, gridX, gridZ, wasTimeout);
+            pendingPlacementCount = draftState.confirmedPlacements.Count + 1;
+            networkManager.Send(pendingPlacement);
+        }
+
+        private byte[] CreateDraftAck()
+        {
+            return InputSerializer.SerializeDraftAck(remoteReady, remoteLoadoutReceived,
+                draftState.confirmedPlacements.Count);
+        }
+
+        private void SendDraftAck()
+        {
+            networkManager.Send(CreateDraftAck());
+        }
+
+        private void HandleDraftAck(byte[] data)
+        {
+            if (!InputSerializer.TryDeserializeDraftAck(data, out bool ready, out bool loadout,
+                    out int count)) return;
+            if (count > draftState.confirmedPlacements.Count) return;
+            if (ready) pendingReady = null;
+            if (loadout) pendingLoadout = null;
+            if (pendingPlacement != null && count >= pendingPlacementCount)
+            {
+                pendingPlacement = null;
+                // Both presenters rebuild card interactivity on turn changes.
+                // Refresh when delivery releases a consecutive local turn.
+                if (draftState.phase == DraftPhase.ActiveDraft && draftUI != null)
+                    draftUI.OnTurnChanged(draftState, localPlayerID);
+            }
+        }
+
+        private void ResendIfNeeded()
+        {
+            if (Time.time - lastResendTime < RESEND_INTERVAL) return;
+            if (pendingReady != null) networkManager.Send(pendingReady);
+            if (pendingLoadout != null) networkManager.Send(pendingLoadout);
+            if (pendingPlacement != null) networkManager.Send(pendingPlacement);
+            lastResendTime = Time.time;
         }
 
         private void SendHeartbeatIfNeeded()
@@ -629,6 +741,12 @@ namespace NodeWar.Core
                     gridMarkers.Add(marker);
                 }
             }
+        }
+
+        private void OnDestroy()
+        {
+            // Disconnects and scene teardown can skip normal draft completion.
+            DestroyPlacementGrid();
         }
 
         private void DestroyPlacementGrid()
@@ -727,7 +845,7 @@ namespace NodeWar.Core
         /// Convention: nodeID format is "node_[lowercase district name]".
         /// Informal string matching — a registry would be more robust long-term.
         /// </summary>
-        private DistrictType MapNodeIDToDistrict(string nodeID)
+        internal static DistrictType MapNodeIDToDistrict(string nodeID)
         {
             if (nodeID == null) return DistrictType.None;
             string lower = nodeID.ToLower();
@@ -752,7 +870,7 @@ namespace NodeWar.Core
 
         public bool IsLocalPlayerTurn()
         {
-            return draftState.phase == DraftPhase.ActiveDraft &&
+            return draftState.phase == DraftPhase.ActiveDraft && pendingPlacement == null &&
                    draftState.currentTurnPlayerID == localPlayerID;
         }
 

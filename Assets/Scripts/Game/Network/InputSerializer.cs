@@ -10,7 +10,8 @@ namespace NodeWar.Network
         Heartbeat = 3,
         DraftReady = 4,
         DraftPlacement = 5,
-        DraftLoadout = 6
+        DraftLoadout = 6,
+        DraftAck = 7
     }
 
     /// <summary>
@@ -36,6 +37,7 @@ namespace NodeWar.Network
     public static class InputSerializer
     {
         private const int BYTES_PER_COMMAND = 24;
+        private const int HEADER_BYTES = 1 + 4 + 4 + 4; // type, forTick, stateHash, commandCount
 
         public static byte[] Serialize(TickInput input)
         {
@@ -62,15 +64,38 @@ namespace NodeWar.Network
             return data;
         }
 
-        public static TickInput Deserialize(byte[] data)
+        /// <summary>
+        /// Reads a TickInput packet. Returns false, with nothing read past the
+        /// header, when the bytes cannot be one: shorter than the header, or a
+        /// declared command count that does not match the bytes that arrived.
+        ///
+        /// The count is checked before anything is allocated or read, so a
+        /// truncated or corrupted packet is refused here, as a loss the
+        /// transport already has to survive, rather than read past its end or
+        /// turned into commands. The length must match exactly, not merely be
+        /// enough: Serialize never pads, so any other length means the sender
+        /// wrote a different layout - a peer on a build whose GameCommand no
+        /// longer matches this one.
+        /// </summary>
+        public static bool TryDeserialize(byte[] data, out TickInput input)
         {
-            int offset = 1; // skip PacketType byte
-            TickInput input = new TickInput();
+            input = default;
 
-            input.forTick = ReadInt(data, ref offset);
-            input.stateHash = ReadInt(data, ref offset);
+            if (data == null || data.Length < HEADER_BYTES) return false;
+
+            int offset = 1; // skip PacketType byte
+            int forTick = ReadInt(data, ref offset);
+            int stateHash = ReadInt(data, ref offset);
             int commandCount = ReadInt(data, ref offset);
 
+            // Divide rather than multiply, so a hostile count cannot overflow
+            // its way past the check.
+            if (commandCount < 0) return false;
+            if (commandCount > (data.Length - HEADER_BYTES) / BYTES_PER_COMMAND) return false;
+            if (data.Length != HEADER_BYTES + commandCount * BYTES_PER_COMMAND) return false;
+
+            input.forTick = forTick;
+            input.stateHash = stateHash;
             input.commands = new GameCommand[commandCount];
             for (int i = 0; i < commandCount; i++)
             {
@@ -82,7 +107,7 @@ namespace NodeWar.Network
                 input.commands[i].value = ReadInt(data, ref offset);
             }
 
-            return input;
+            return true;
         }
 
         public static byte[] SerializeHandshake()
@@ -98,6 +123,55 @@ namespace NodeWar.Network
         public static byte[] SerializeHeartbeat()
         {
             return new byte[] { (byte)PacketType.Heartbeat };
+        }
+
+        // ===== DRAFT ACK =====
+        // A control packet, like the handshake ack and the heartbeat, so it sits
+        // with them. DraftSerializer holds the packets it acknowledges.
+
+        private const int DRAFT_ACK_BYTES = 1 + 1 + 4;
+        private const byte DRAFT_ACK_READY = 1;
+        private const byte DRAFT_ACK_LOADOUT = 2;
+
+        /// <summary>
+        /// DraftAck: [type:1][flags:1][placementsApplied:4] = 6 bytes.
+        /// What the sender holds of the peer's draft packets: whether its ready
+        /// and loadout have arrived, and how many placements (both players',
+        /// in draft order) are on its board. Cumulative, so any later ack
+        /// covers everything an earlier lost one did.
+        /// </summary>
+        public static byte[] SerializeDraftAck(bool readyReceived, bool loadoutReceived, int placementsApplied)
+        {
+            byte[] data = new byte[DRAFT_ACK_BYTES];
+            int offset = 0;
+
+            data[offset++] = (byte)PacketType.DraftAck;
+            data[offset++] = (byte)((readyReceived ? DRAFT_ACK_READY : 0) |
+                                    (loadoutReceived ? DRAFT_ACK_LOADOUT : 0));
+            WriteInt(data, ref offset, placementsApplied);
+
+            return data;
+        }
+
+        public static bool TryDeserializeDraftAck(byte[] data,
+            out bool readyReceived, out bool loadoutReceived, out int placementsApplied)
+        {
+            readyReceived = false;
+            loadoutReceived = false;
+            placementsApplied = 0;
+
+            if (data == null || data.Length != DRAFT_ACK_BYTES ||
+                data[0] != (byte)PacketType.DraftAck) return false;
+
+            int offset = 1; // skip PacketType byte
+            byte flags = data[offset++];
+            if ((flags & ~(DRAFT_ACK_READY | DRAFT_ACK_LOADOUT)) != 0) return false;
+            readyReceived = (flags & DRAFT_ACK_READY) != 0;
+            loadoutReceived = (flags & DRAFT_ACK_LOADOUT) != 0;
+            placementsApplied = ReadInt(data, ref offset);
+            if (placementsApplied < 0) return false;
+
+            return true;
         }
 
         public static PacketType ReadPacketType(byte[] data)
