@@ -51,7 +51,7 @@ namespace NodeWar.Lobby
         public void Close()
         {
             modalRoot.SetActive(false);
-            // Do NOT null onComplete here — caller handles it
+            // Do NOT null onComplete here -- caller handles it
         }
 
         private void OnInputChanged(string value)

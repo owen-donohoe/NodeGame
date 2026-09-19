@@ -33,14 +33,19 @@ namespace NodeWar.UI
         private VisualElement unitHost;
         private Label emptyLabel;
         private Button equipButton;
+        private (SuitType picked, EquipRefusal refusal, VillagerState state,
+                 SuitType worn, int food, int materials)? shownEquip;
 
         private SuitType pickedSuit = SuitType.None;
         private int pickedUnit = -1;
 
         public override bool Tall { get { return true; } }
 
+        protected override int LayoutKey { get { return (int)State.nodes[NodeID].districtType; } }
+
         protected override void OnBind()
         {
+            shownEquip = null;
             cards.Clear();
             chips.Clear();
             pickedSuit = SuitType.None;
@@ -189,6 +194,7 @@ namespace NodeWar.UI
         {
             if (pickedSuit == SuitType.None)
             {
+                shownEquip = null;
                 equipButton.text = "Pick a suit";
                 equipButton.SetEnabled(false);
                 return;
@@ -196,6 +202,7 @@ namespace NodeWar.UI
 
             if (pickedUnit < 0)
             {
+                shownEquip = null;
                 equipButton.text = "Pick a unit";
                 equipButton.SetEnabled(false);
                 return;
@@ -203,9 +210,17 @@ namespace NodeWar.UI
 
             EquipRefusal refusal = CommandEligibility.Equip(State, Balance, ControlledPID, pickedUnit, pickedSuit);
             equipButton.SetEnabled(refusal == EquipRefusal.None);
-            equipButton.text = refusal == EquipRefusal.None
-                ? "Equip " + pickedSuit
-                : RefusalText(refusal, State.villagers[pickedUnit], Balance.GetSuitStats(pickedSuit));
+            VillagerData villager = State.villagers[pickedUnit];
+            SuitStats stats = Balance.GetSuitStats(pickedSuit);
+            var equipValue = (pickedSuit, refusal, villager.state, villager.suit,
+                              stats.foodCost, stats.materialCost);
+            if (shownEquip != equipValue)
+            {
+                shownEquip = equipValue;
+                equipButton.text = refusal == EquipRefusal.None
+                    ? "Equip " + pickedSuit
+                    : RefusalText(refusal, villager, stats);
+            }
         }
 
         private void OnCardPressed(SuitType suit)
@@ -264,6 +279,7 @@ namespace NodeWar.UI
             public SuitType Suit { get; private set; }
 
             private readonly Label sub;
+            private (bool notDrafted, int food, int materials)? shownCost;
 
             public SuitCard(SuitType suit, System.Action<SuitType> pressed)
             {
@@ -293,7 +309,12 @@ namespace NodeWar.UI
                 // Always the price, unless it is not yours to buy at all. Short
                 // is dimmed and the price turns the short-ink colour - never red,
                 // which on this surface means player 2.
-                sub.text = notDrafted ? "not drafted" : CostText(stats);
+                var costValue = (notDrafted, stats.foodCost, stats.materialCost);
+                if (shownCost != costValue)
+                {
+                    shownCost = costValue;
+                    sub.text = notDrafted ? "not drafted" : CostText(stats);
+                }
                 sub.EnableInClassList("equip__card-sub--short", refusal == EquipRefusal.CannotAfford);
 
                 Root.EnableInClassList("equip__card--dim", refusal != EquipRefusal.None);
@@ -310,6 +331,8 @@ namespace NodeWar.UI
             private readonly Label name;
             private readonly Label state;
             private int villagerID = -1;
+            private int shownID = -1;
+            private (EquipRefusal refusal, VillagerState state, SuitType suit)? shownState;
 
             public UnitChip(System.Action<int> pressed)
             {
@@ -329,11 +352,20 @@ namespace NodeWar.UI
                 villagerID = id;
                 Show(Root, true);
 
-                name.text = "Villager " + id;
+                if (shownID != id)
+                {
+                    shownID = id;
+                    name.text = "Villager " + id;
+                }
 
-                if (refusal == EquipRefusal.AlreadySuited) state.text = "has " + villager.suit;
-                else if (refusal == EquipRefusal.Busy) state.text = villager.state.ToString().ToLowerInvariant();
-                else state.text = "idle";
+                var stateValue = (refusal, villager.state, villager.suit);
+                if (shownState != stateValue)
+                {
+                    shownState = stateValue;
+                    if (refusal == EquipRefusal.AlreadySuited) state.text = "has " + villager.suit;
+                    else if (refusal == EquipRefusal.Busy) state.text = villager.state.ToString().ToLowerInvariant();
+                    else state.text = "idle";
+                }
 
                 button.SetEnabled(refusal == EquipRefusal.None);
                 Root.EnableInClassList("equip__unit--picked", picked);

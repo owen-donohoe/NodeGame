@@ -105,8 +105,19 @@ namespace NodeWar.View
 
         private PathCurveSettings curveSettings = new PathCurveSettings();
 
+        // The curve BuildRouteCurve most recently produced, or reused from
+        // RouteCurveCache. Read by the position query right after a call to
+        // BuildRouteCurve returns true.
+        private List<Vector3> curvePoints;
+        private List<int> curveLegStarts;
+
         /// <summary>
-        /// Builds the curve for the whole route into PathCurve.
+        /// Builds the curve for the whole route, or reuses the one already
+        /// cached for this villager if the route has not changed since --
+        /// RouteCurveCache keys on the movePath reference, which CommandProcessor
+        /// only ever replaces when the route actually does. This is the one
+        /// place the curve is built; MovementPathRenderer reads the same cache
+        /// rather than building its own copy.
         ///
         /// Waypoints are node centres, not per-villager idle slots: two villagers
         /// ordered together must produce the same curve, or MovementPathRenderer
@@ -120,6 +131,9 @@ namespace NodeWar.View
         private bool BuildRouteCurve(VillagerData villager)
         {
             if (nodeSlotManagers == null) return false;
+
+            if (RouteCurveCache.TryGetCurrent(villagerID, villager.movePath, out curvePoints, out curveLegStarts))
+                return true;
 
             routeWaypoints.Clear();
 
@@ -137,7 +151,9 @@ namespace NodeWar.View
             if (routeWaypoints.Count < 2) return false;
 
             PathCurve.Build(routeWaypoints, curveSettings.cornerRadius, curveSettings.cornerSegments);
-            return true;
+            RouteCurveCache.Store(villagerID, villager.movePath);
+
+            return RouteCurveCache.TryGetCurrent(villagerID, villager.movePath, out curvePoints, out curveLegStarts);
         }
 
         private void Update()
@@ -186,7 +202,7 @@ namespace NodeWar.View
                 // would jump from the corner to the node centre once per node.
                 if (BuildRouteCurve(villager))
                 {
-                    targetPos = PathCurve.PositionOnLeg(legIndex, legT);
+                    targetPos = PathCurve.PositionOnLeg(curvePoints, curveLegStarts, legIndex, legT);
                 }
                 else
                 {
@@ -295,12 +311,9 @@ namespace NodeWar.View
 
         private void SetRenderersColor(Color color)
         {
-            //ONLY THE FIRST ONE THIS IS FOR TESTING BECAUSE I JUST WANT ONE SPRITE TO BE COLORED CURRENTLY
-
-            for (int i = 0; i < spriteRenderers.Length; i++)
-            {
-                spriteRenderers[0].color = color;
-            }
+            // Only the primary sprite carries colour; any additional renderers
+            // (e.g. accessory overlays) are intentionally left untinted.
+            spriteRenderers[0].color = color;
         }
 
         private Color GetStateColor(VillagerData villager)

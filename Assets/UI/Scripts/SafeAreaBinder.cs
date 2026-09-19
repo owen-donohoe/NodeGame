@@ -8,11 +8,11 @@ namespace NodeWar.Lobby
     /// notches, punch-holes and the home indicator.
     ///
     /// This exists because the project's safe-area handling was never actually
-    /// wired up. Assets/Scripts/Game/UI/SafeAreaFitter.cs is a correct and
-    /// complete component that is attached to nothing - no scene, no prefab, no
-    /// script references it (docs/ui-migration-inventory.md, finding 1). Its
-    /// doc comment claims to be the only reader of Screen.safeArea, which is
-    /// true and also the problem: nothing reads it. So the new stack gets a
+    /// wired up. The old uGUI SafeAreaFitter (since deleted) was a correct and
+    /// complete component that was attached to nothing - no scene, no prefab, no
+    /// script referenced it (docs/ui-migration-inventory.md, finding 1). Its
+    /// doc comment claimed to be the only reader of Screen.safeArea, which was
+    /// true and also the problem: nothing read it. So the new stack gets a
     /// working equivalent rather than inheriting a dormant one.
     ///
     /// Insets are computed as a PROPORTION of the screen and applied to the

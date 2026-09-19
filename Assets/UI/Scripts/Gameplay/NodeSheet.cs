@@ -185,12 +185,12 @@ namespace NodeWar.UI
 
             if (current != next)
             {
+                actionHost.Clear();
                 contentHost.Clear();
                 contentHost.Add(next.Root);
                 current = next;
             }
 
-            actionHost.Clear();
             current.Bind(state, input, ticks, balance, node, controlledPID, actionHost);
 
             if (body != null) body.scrollOffset = Vector2.zero;

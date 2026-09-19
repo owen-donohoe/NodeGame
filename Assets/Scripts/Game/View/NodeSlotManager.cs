@@ -23,12 +23,10 @@ namespace NodeWar.View
         private Transform claimCenter;
 
         private int nodeID;
-        private bool initialized = false;
 
         public void Initialize(int id, float nodeScale)
         {
             nodeID = id;
-            initialized = true;
 
             // Scale spacing relative to node size
             //idleRadius *= nodeScale;

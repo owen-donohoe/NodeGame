@@ -31,6 +31,9 @@ namespace NodeWar.UI
         private VisualElement roster;
         private Label emptyLabel;
         private Button respawnButton;
+        private (int breaches, int threshold)? shownBreach;
+        private (int cost, int food)? shownCost;
+        private (RespawnRefusal refusal, int cost, int food)? shownRespawn;
 
         private readonly List<RespawnRow> rows = new List<RespawnRow>();
 
@@ -39,6 +42,9 @@ namespace NodeWar.UI
         protected override void OnBind()
         {
             rows.Clear();
+            shownBreach = null;
+            shownCost = null;
+            shownRespawn = null;
 
             VisualElement cols = Box("core__cols");
 
@@ -87,7 +93,12 @@ namespace NodeWar.UI
             int corePlayer = CorePlayer();
             int breaches = corePlayer >= 0 ? State.players[corePlayer].breachCount : 0;
 
-            statValue.text = breaches + "/" + Balance.breachThreshold;
+            var breachValue = (breaches, Balance.breachThreshold);
+            if (shownBreach != breachValue)
+            {
+                shownBreach = breachValue;
+                statValue.text = breaches + "/" + Balance.breachThreshold;
+            }
 
             bool yours = corePlayer == ControlledPID;
 
@@ -104,7 +115,12 @@ namespace NodeWar.UI
 
             int cost = CommandEligibility.RespawnCost(State, Balance, ControlledPID);
             int food = State.players[ControlledPID].food;
-            costLine.text = "Respawn costs " + cost + " food. You have " + food + ".";
+            var costValue = (cost, food);
+            if (shownCost != costValue)
+            {
+                shownCost = costValue;
+                costLine.text = "Respawn costs " + cost + " food. You have " + food + ".";
+            }
 
             int next = CommandEligibility.RespawnTarget(State, ControlledPID);
             int shown = RefreshRoster(next);
@@ -116,9 +132,14 @@ namespace NodeWar.UI
 
             RespawnRefusal refusal = CommandEligibility.Respawn(State, Balance, ControlledPID, next);
             respawnButton.SetEnabled(refusal == RespawnRefusal.None);
-            respawnButton.text = refusal == RespawnRefusal.CannotAfford
-                ? "Need " + (cost - food) + " more food"
-                : "Respawn longest wait · " + cost + " food";
+            var respawnValue = (refusal, cost, food);
+            if (shownRespawn != respawnValue)
+            {
+                shownRespawn = respawnValue;
+                respawnButton.text = refusal == RespawnRefusal.CannotAfford
+                    ? "Need " + (cost - food) + " more food"
+                    : "Respawn longest wait · " + cost + " food";
+            }
         }
 
         private int RefreshRoster(int next)
@@ -144,7 +165,7 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Rows are pooled rather than rebuilt. The roster changes every time
+        /// Rows are pooled across sheet opens. The roster changes every time
         /// anything dies or returns, and rebuilding the subtree each frame would
         /// churn elements for nothing.
         /// </summary>
@@ -187,6 +208,8 @@ namespace NodeWar.UI
             private readonly Label time;
             private readonly Label nextTag;
             private readonly VisualElement fill;
+            private int shownID = -1;
+            private (int remaining, int ticksPerSecond)? shownTime;
 
             public RespawnRow()
             {
@@ -214,11 +237,20 @@ namespace NodeWar.UI
                 Show(Root, true);
                 Show(nextTag, isNext);
 
-                name.text = "Villager " + id;
+                if (shownID != id)
+                {
+                    shownID = id;
+                    name.text = "Villager " + id;
+                }
 
                 int remaining = villager.respawnTicksRemaining;
                 int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
-                time.text = (remaining / (float)ticksPerSecond).ToString("0.0") + "s left";
+                var timeValue = (remaining, ticksPerSecond);
+                if (shownTime != timeValue)
+                {
+                    shownTime = timeValue;
+                    time.text = (remaining / (float)ticksPerSecond).ToString("0.0") + "s left";
+                }
 
                 // How much of the wait is done, from the balance rather than a
                 // literal - the uGUI roster hardcoded 50 ticks. TickAlpha adds

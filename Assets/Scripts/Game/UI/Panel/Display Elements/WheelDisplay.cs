@@ -71,7 +71,7 @@ namespace NodeWar.UI
 
             if (newValue > currentDisplayValue)
             {
-                // Value increasing — strip moves UP, new value enters from below
+                // Value increasing -- strip moves UP, new value enters from below
                 bottomText.text = newValue.ToString();
                 topText.text = "";
                 middleText.text = currentDisplayValue.ToString();
@@ -82,7 +82,7 @@ namespace NodeWar.UI
             }
             else
             {
-                // Value decreasing — strip moves DOWN, new value enters from above
+                // Value decreasing -- strip moves DOWN, new value enters from above
                 topText.text = newValue.ToString();
                 bottomText.text = "";
                 middleText.text = currentDisplayValue.ToString();

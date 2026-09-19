@@ -33,6 +33,11 @@ namespace NodeWar.UI
         private Button decrease;
         private Button increase;
         private Label allocationValue;
+        private int shownAllocation = -1;
+        private int shownWorkers = -1;
+        private int[] shownPercentages;
+
+        protected override int LayoutKey { get { return Balance.maxWorkersPerNode; } }
 
         protected override void OnBind()
         {
@@ -42,9 +47,13 @@ namespace NodeWar.UI
             smelterDials = new ProgressDial[cap];
             smelterTexts = new Label[cap];
             smelterGauges = new VisualElement[cap];
+            shownPercentages = new int[cap];
+            shownAllocation = -1;
+            shownWorkers = -1;
 
             for (int i = 0; i < cap; i++)
             {
+                shownPercentages[i] = -1;
                 VisualElement gauge = Gauge(out smelterDials[i], out smelterTexts[i], "Smelter " + (i + 1));
                 smelterGauges[i] = gauge;
                 gauges.Add(gauge);
@@ -134,7 +143,11 @@ namespace NodeWar.UI
             if (!yours) return;
 
             int allocation = State.nodes[NodeID].materialAllocation;
-            allocationValue.text = allocation.ToString();
+            if (shownAllocation != allocation)
+            {
+                shownAllocation = allocation;
+                allocationValue.text = allocation.ToString();
+            }
             decrease.SetEnabled(CommandEligibility.Allocation(State, ControlledPID, NodeID, allocation - 1) == AllocationRefusal.None);
         }
 
@@ -161,7 +174,12 @@ namespace NodeWar.UI
 
                 float progress = Progress(v);
                 smelterDials[found].Progress = progress;
-                smelterTexts[found].text = (int)(progress * 100f) + "%";
+                int percentage = (int)(progress * 100f);
+                if (shownPercentages[found] != percentage)
+                {
+                    shownPercentages[found] = percentage;
+                    smelterTexts[found].text = percentage + "%";
+                }
                 Show(smelterGauges[found], true);
                 found++;
             }
@@ -170,7 +188,11 @@ namespace NodeWar.UI
                 Show(smelterGauges[i], false);
 
             workerDial.Progress = found / (float)cap;
-            workerText.text = found + "/" + cap;
+            if (shownWorkers != found)
+            {
+                shownWorkers = found;
+                workerText.text = found + "/" + cap;
+            }
 
             return found;
         }

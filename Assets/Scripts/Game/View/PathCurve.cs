@@ -130,36 +130,60 @@ namespace NodeWar.View
         /// length along that leg so it moves at a steady pace and arrives on the
         /// tick the simulation says it does.
         /// </summary>
-        public static Vector3 PositionOnLeg(int legIndex, float t)
+        public static Vector3 PositionOnLeg(int legIndex, float t) => PositionOnLeg(points, legStarts, legIndex, t);
+
+        /// <summary>
+        /// Same as <see cref="PositionOnLeg(int, float)"/>, but reads an explicit
+        /// curve rather than these scratch buffers -- for a cached curve a
+        /// caller is holding onto across frames, after some other Build call has
+        /// long since overwritten <see cref="points"/>. See
+        /// <see cref="CopyTo"/>.
+        /// </summary>
+        public static Vector3 PositionOnLeg(IReadOnlyList<Vector3> curvePoints, IReadOnlyList<int> curveLegStarts, int legIndex, float t)
         {
-            if (points.Count == 0) return Vector3.zero;
-            if (legIndex < 0 || legIndex >= legStarts.Count) return points[points.Count - 1];
+            if (curvePoints.Count == 0) return Vector3.zero;
+            if (legIndex < 0 || legIndex >= curveLegStarts.Count) return curvePoints[curvePoints.Count - 1];
 
-            int from = legStarts[legIndex];
-            int to = LegEnd(legIndex);
+            int from = curveLegStarts[legIndex];
+            int to = LegEnd(curvePoints, curveLegStarts, legIndex);
 
-            if (to <= from) return points[from];
+            if (to <= from) return curvePoints[from];
 
             t = Mathf.Clamp01(t);
 
-            float total = LegLength(from, to);
-            if (total <= 0.0001f) return points[from];
+            float total = LegLength(curvePoints, from, to);
+            if (total <= 0.0001f) return curvePoints[from];
 
             float wanted = total * t;
             float walked = 0f;
 
             for (int i = from; i < to; i++)
             {
-                float step = (points[i + 1] - points[i]).magnitude;
+                float step = (curvePoints[i + 1] - curvePoints[i]).magnitude;
                 if (walked + step >= wanted)
                 {
                     float within = step > 0.0001f ? (wanted - walked) / step : 0f;
-                    return Vector3.Lerp(points[i], points[i + 1], within);
+                    return Vector3.Lerp(curvePoints[i], curvePoints[i + 1], within);
                 }
                 walked += step;
             }
 
-            return points[to];
+            return curvePoints[to];
+        }
+
+        /// <summary>
+        /// Copies the curve just built into caller-owned buffers. These scratch
+        /// buffers are shared by every caller and overwritten by the next Build
+        /// -- for a different villager, most frames -- so anything meant to
+        /// outlive this call has to leave with its own copy. See
+        /// <see cref="RouteCurveCache"/>.
+        /// </summary>
+        public static void CopyTo(List<Vector3> destinationPoints, List<int> destinationLegStarts)
+        {
+            destinationPoints.Clear();
+            destinationPoints.AddRange(points);
+            destinationLegStarts.Clear();
+            destinationLegStarts.AddRange(legStarts);
         }
 
         /// <summary>
@@ -189,31 +213,42 @@ namespace NodeWar.View
         /// </summary>
         public static void AppendRemainder(int legIndex, float t, int maxLegs, List<Vector3> destination)
         {
+            AppendRemainder(points, legStarts, legIndex, t, maxLegs, destination);
+        }
+
+        /// <summary>
+        /// Same as <see cref="AppendRemainder(int, float, int, List{Vector3})"/>,
+        /// but reads an explicit curve rather than these scratch buffers -- the
+        /// counterpart to the explicit <see cref="PositionOnLeg(IReadOnlyList{Vector3}, IReadOnlyList{int}, int, float)"/>.
+        /// </summary>
+        public static void AppendRemainder(IReadOnlyList<Vector3> curvePoints, IReadOnlyList<int> curveLegStarts,
+                                            int legIndex, float t, int maxLegs, List<Vector3> destination)
+        {
             if (destination == null) return;
             destination.Clear();
 
-            if (points.Count == 0) return;
+            if (curvePoints.Count == 0) return;
             if (maxLegs < 1) return;
 
             if (legIndex < 0) legIndex = 0;
-            if (legIndex >= legStarts.Count)
+            if (legIndex >= curveLegStarts.Count)
             {
-                destination.Add(points[points.Count - 1]);
+                destination.Add(curvePoints[curvePoints.Count - 1]);
                 return;
             }
 
-            destination.Add(PositionOnLeg(legIndex, t));
+            destination.Add(PositionOnLeg(curvePoints, curveLegStarts, legIndex, t));
 
-            int from = legStarts[legIndex];
-            int to = LegEnd(legIndex);
+            int from = curveLegStarts[legIndex];
+            int to = LegEnd(curvePoints, curveLegStarts, legIndex);
 
-            float wanted = LegLength(from, to) * Mathf.Clamp01(t);
+            float wanted = LegLength(curvePoints, from, to) * Mathf.Clamp01(t);
             float walked = 0f;
             int firstWhole = to;
 
             for (int i = from; i < to; i++)
             {
-                float step = (points[i + 1] - points[i]).magnitude;
+                float step = (curvePoints[i + 1] - curvePoints[i]).magnitude;
                 if (walked + step > wanted)
                 {
                     firstWhole = i + 1;
@@ -225,8 +260,8 @@ namespace NodeWar.View
             // At the very end of a leg the walk above lands exactly on the point
             // PositionOnLeg already returned. Skip it rather than emitting a
             // zero-length segment, which a dashed material renders as a blot.
-            if (firstWhole < points.Count &&
-                (points[firstWhole] - destination[0]).sqrMagnitude < 0.000001f)
+            if (firstWhole < curvePoints.Count &&
+                (curvePoints[firstWhole] - destination[0]).sqrMagnitude < 0.000001f)
             {
                 firstWhole++;
             }
@@ -235,26 +270,26 @@ namespace NodeWar.View
             // walked, so revealing "two nodes ahead" is two legs, and the cut
             // lands on the far boundary of the second.
             int lastLeg;
-            if (maxLegs >= legStarts.Count - legIndex) lastLeg = legStarts.Count - 1;
+            if (maxLegs >= curveLegStarts.Count - legIndex) lastLeg = curveLegStarts.Count - 1;
             else lastLeg = legIndex + maxLegs - 1;
 
-            int stopAt = LegEnd(lastLeg);
+            int stopAt = LegEnd(curvePoints, curveLegStarts, lastLeg);
 
-            for (int i = firstWhole; i <= stopAt && i < points.Count; i++)
-                destination.Add(points[i]);
+            for (int i = firstWhole; i <= stopAt && i < curvePoints.Count; i++)
+                destination.Add(curvePoints[i]);
         }
 
-        private static float LegLength(int from, int to)
+        private static float LegLength(IReadOnlyList<Vector3> curvePoints, int from, int to)
         {
             float total = 0f;
             for (int i = from; i < to; i++)
-                total += (points[i + 1] - points[i]).magnitude;
+                total += (curvePoints[i + 1] - curvePoints[i]).magnitude;
             return total;
         }
 
-        private static int LegEnd(int legIndex)
+        private static int LegEnd(IReadOnlyList<Vector3> curvePoints, IReadOnlyList<int> curveLegStarts, int legIndex)
         {
-            return (legIndex + 1 < legStarts.Count) ? legStarts[legIndex + 1] : points.Count - 1;
+            return (legIndex + 1 < curveLegStarts.Count) ? curveLegStarts[legIndex + 1] : curvePoints.Count - 1;
         }
 
         private static Vector3 Quadratic(Vector3 a, Vector3 control, Vector3 b, float t)

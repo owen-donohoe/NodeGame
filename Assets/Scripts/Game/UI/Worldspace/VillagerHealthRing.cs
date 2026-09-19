@@ -89,7 +89,7 @@ namespace NodeWar.UI
                 lastHP = villager.hp;
             }
 
-            // Timer countdown — runs independently, nothing resets it except an HP change
+            // Timer countdown -- runs independently, nothing resets it except an HP change
             if (showTimer > 0f)
             {
                 showTimer -= Time.deltaTime;

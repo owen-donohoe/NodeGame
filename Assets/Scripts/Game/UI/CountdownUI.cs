@@ -8,7 +8,7 @@ namespace NodeWar.UI
     /// <summary>
     /// Screen-space countdown overlay shown between draft completion and match start.
     /// Spawned by MatchTransitionController. Destroys itself after completion.
-    /// Fires OnCountdownComplete when the sequence finishes — controller waits on this.
+    /// Fires OnCountdownComplete when the sequence finishes -- controller waits on this.
     /// </summary>
     public class CountdownUI : MonoBehaviour
     {
