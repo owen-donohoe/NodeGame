@@ -129,9 +129,21 @@ namespace NodeWar.Core
         private bool sideHasBeenSet = false;
 
         private bool isDraftMode = false;
+        private bool cameraInitialized;
 
         private void Awake()
         {
+            EnsureCameraInitialized();
+        }
+
+        private void EnsureCameraInitialized()
+        {
+            // GameManager can apply draft or match framing from its Awake before
+            // ours runs. Resolve references and seed defaults once, before either
+            // setter, so a later Awake cannot overwrite the selected side or zoom.
+            if (cameraInitialized) return;
+            cameraInitialized = true;
+
             if (cam == null)
                 cam = GetComponentInChildren<Camera>();
             if (cam == null)
@@ -146,16 +158,7 @@ namespace NodeWar.Core
             if (cameraPivot == null && transform.childCount > 0)
                 cameraPivot = transform.GetChild(0);
 
-            // The authored transform is the opening zoom - but only while it is
-            // still the truth. GameManager builds the DraftManager from its own
-            // Awake, and Awake order between two scene objects is arbitrary, so
-            // SetDraftMode can and does run before this one. Seeding
-            // unconditionally then overwrote a framing the draft had already
-            // applied, and the draft opened at the match's zoom instead of the
-            // whole-board one - with everything else about the draft camera,
-            // the rig position and the pitch, correctly in place, which is what
-            // made it read as a framing problem rather than an ordering one.
-            if (!isDraftMode && cam != null)
+            if (cam != null)
             {
                 currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
                 targetZoomDistance = currentZoomDistance;
@@ -887,6 +890,7 @@ namespace NodeWar.Core
         /// </summary>
         public void SetPlayerSide(int playerID)
         {
+            EnsureCameraInitialized();
             if (cameraPivot == null) return;
 
             // Store current (skip first call — scene start position is meaningless)
@@ -988,6 +992,7 @@ namespace NodeWar.Core
         /// </summary>
         public void SetDraftMode(bool enabled, int viewerPlayerID = 1)
         {
+            EnsureCameraInitialized();
             if (enabled == isDraftMode) return;
 
             isDraftMode = enabled;
