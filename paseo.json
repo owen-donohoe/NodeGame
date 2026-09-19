@@ -1,0 +1,21 @@
+{
+  "scripts": {
+    "dotnet-test": {
+      "command": "dotnet test dotnet/NodeWar.sln"
+    },
+    "compile-check": {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/compile-check.ps1"
+    }
+  },
+  "metadataGeneration": {
+    "branchName": {
+      "instructions": "Use <type>/<short-kebab-description>, where type is one of feat, fix, chore, docs, perf, refactor or ui. Example: ui/ingame-theme, chore/add-agents-md. Personal experiments use mb/<description>."
+    },
+    "commitMessage": {
+      "instructions": "Use Conventional Commits in the form '<type>: <lowercase summary>' with no scope, matching this repo's history (feat, fix, chore, docs, perf, refactor). Use 'done: <task title>' only when the commit completes a Notion task. Explain the why in the body when it is not obvious."
+    },
+    "pullRequest": {
+      "instructions": "Summarize the change in a few bullets. Include a Testing section listing what was run (dotnet test, scripts/compile-check.ps1). State explicitly whether Simulation/ was touched and needs determinism review, whether networking changed and needs lockstep/desync review, and what needs manual verification in the Unity Editor."
+    }
+  }
+}
