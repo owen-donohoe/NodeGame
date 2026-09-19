@@ -1026,6 +1026,8 @@ namespace NodeWar.UI
             if (ghostPreviewPrefab == null) return;
 
             ghost = Instantiate(ghostPreviewPrefab);
+            // Stickers are authored reading upright from P1's side; turn with the viewer.
+            ghost.transform.rotation = Quaternion.Euler(0f, CameraController.SideYaw(localPlayerID), 0f);
             ghostPreview = ghost.GetComponent<DraftPlacementPreview>();
 
             if (ghostPreview != null)
@@ -1092,6 +1094,7 @@ namespace NodeWar.UI
 
             GameObject piece = Instantiate(confirmedPlacementPrefab);
             piece.transform.position = pos + Vector3.up * pieceYOffset;
+            piece.transform.rotation = Quaternion.Euler(0f, CameraController.SideYaw(localPlayerID), 0f);
 
             DraftPlacementPreview preview = piece.GetComponent<DraftPlacementPreview>();
             if (preview != null)
