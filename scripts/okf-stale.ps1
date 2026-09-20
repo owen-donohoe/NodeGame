@@ -164,6 +164,64 @@ function Test-BodyChanged {
 # frontmatter is not a case worth optimising for.
 $FrontmatterWalkLimit = 50
 
+# A moved source is not the same thing as a falsified claim. Across the first
+# measured run of this check, 30 document/source pairs were reported SUSPECT
+# and exactly one was real drift -- 3% precision, which is the rate at which a
+# warning stops being read.
+#
+# So a moved source is now triaged. If the diff between the verified commit
+# and HEAD changed a declaration -- an access modifier, a type, a const, a
+# readonly -- the document's claims about that file could have been falsified
+# and it is escalated for review. If the change was only inside method bodies,
+# it is counted and not listed.
+#
+# This is a heuristic and the output says so. It is tuned to under-report
+# quiet changes rather than to hide loud ones: anything that is not C# is
+# escalated, because this pattern cannot read it.
+$DeclarationPattern = '^[+-]\s*(\[.*\]\s*)?((public|internal|protected|private|static|abstract|sealed|virtual|override|const|readonly)\s+)+\S'
+
+function Test-SurfaceChanged {
+    param([string]$FromCommit, [string]$RepoRelativePath)
+
+    if ($RepoRelativePath -notmatch '\.cs$') { return $true }
+
+    Push-Location $RepoRoot
+    try {
+        $diff = @(& git diff "$FromCommit..HEAD" -- $RepoRelativePath)
+        if ($LASTEXITCODE -ne 0) { return $true }
+    }
+    finally {
+        Pop-Location
+    }
+
+    foreach ($line in $diff) {
+        if ($line -match '^(\+\+\+|---)') { continue }
+        if ($line -match $DeclarationPattern) { return $true }
+    }
+    return $false
+}
+
+# Sources changed in the index or the working tree. `git log` cannot see
+# either, so the pre-commit invocation was blind to the very change that
+# triggered it: it reported old debt and found the current commit's drift only
+# on the next run.
+function Get-PendingChangedPaths {
+    Push-Location $RepoRoot
+    try {
+        $staged   = @(& git diff --cached --name-only)
+        $unstaged = @(& git diff --name-only)
+    }
+    finally {
+        Pop-Location
+    }
+
+    $set = @{}
+    foreach ($p in ($staged + $unstaged)) {
+        if (-not [string]::IsNullOrWhiteSpace($p)) { $set[$p.Trim()] = $true }
+    }
+    return $set
+}
+
 # Last commit that substantively touched a path, or $null if git does not track
 # it.
 #
@@ -228,6 +286,7 @@ $suspect = @()
 $stale = @()
 $warnings = @()
 $checkedDocs = 0
+$pending = Get-PendingChangedPaths
 $checkedSources = 0
 
 foreach ($dir in $SearchDirs) {
@@ -296,12 +355,23 @@ foreach ($dir in $SearchDirs) {
                 continue
             }
 
-            if (-not $isAncestor) {
+            $pendingHere = $pending.ContainsKey($source)
+
+            if ((-not $isAncestor) -or $pendingHere) {
+                $movedIn = $sourceCommit.Substring(0, 7)
+                if ($pendingHere) { $movedIn = "uncommitted" }
+
+                $surface = $true
+                if (-not $pendingHere) {
+                    $surface = Test-SurfaceChanged -FromCommit $fm.VerifiedAtCommit -RepoRelativePath $source
+                }
+
                 $suspect += [pscustomobject]@{
                     Doc          = $rel
                     Source       = $source
-                    MovedIn      = $sourceCommit.Substring(0, 7)
+                    MovedIn      = $movedIn
                     VerifiedAt   = $fm.VerifiedAtCommit
+                    Surface      = $surface
                 }
             }
         }
@@ -316,12 +386,37 @@ Write-Host "Documents checked: $checkedDocs"
 Write-Host "Sources checked:   $checkedSources"
 Write-Host ""
 
-if ($suspect.Count -gt 0) {
-    Write-Host "SUSPECT -- a source moved after the document was verified:"
-    foreach ($s in $suspect) {
-        Write-Host "  $($s.Doc)"
-        Write-Host "      source:   $($s.Source)"
-        Write-Host "      moved in: $($s.MovedIn)   verified at: $($s.VerifiedAt)"
+$review  = @($suspect | Where-Object { $_.Surface })
+$touched = @($suspect | Where-Object { -not $_.Surface })
+
+if ($review.Count -gt 0) {
+    Write-Host "REVIEW -- a declaration changed in a source, so a claim may now be false:"
+    foreach ($group in ($review | Group-Object Doc)) {
+        Write-Host "  $($group.Name)   (verified at $($group.Group[0].VerifiedAt))"
+        foreach ($s in $group.Group) {
+            Write-Host "      $($s.Source)  [$($s.MovedIn)]"
+        }
+    }
+    Write-Host ""
+}
+
+if ($touched.Count -gt 0) {
+    Write-Host "Touched -- sources moved, but only below the declaration line. Not escalated:"
+    foreach ($group in ($touched | Group-Object Doc)) {
+        Write-Host "  $($group.Name)  ($($group.Count) source(s))"
+    }
+    Write-Host ""
+}
+
+# The escalation count overstates the work. One commit to a widely-cited file
+# invalidates every document citing it, so a list of N pairs is usually far
+# fewer than N decisions. Naming the fan-out is what turns "25 warnings" back
+# into "four commits to read".
+if ($review.Count -gt 1) {
+    Write-Host "Fan-out -- each commit below is one thing to read, not one per line above:"
+    foreach ($group in ($review | Group-Object MovedIn | Sort-Object Count -Descending)) {
+        $docs = @($group.Group | Select-Object -ExpandProperty Doc -Unique).Count
+        Write-Host "  $($group.Name)  -> $($group.Count) escalation(s) across $docs document(s)"
     }
     Write-Host ""
 }
@@ -340,8 +435,13 @@ if ($warnings.Count -gt 0) {
     Write-Host ""
 }
 
-if ($suspect.Count -eq 0 -and $stale.Count -eq 0) {
-    Write-Host "All documents current."
+if ($review.Count -eq 0 -and $stale.Count -eq 0) {
+    if ($touched.Count -gt 0) {
+        Write-Host "Nothing to review. The touched list above is for information."
+    }
+    else {
+        Write-Host "All documents current."
+    }
     Write-Host ""
     exit 0
 }
@@ -350,5 +450,7 @@ if ($suspect.Count -eq 0 -and $stale.Count -eq 0) {
 # correct what drifted, then bump verified_at_commit and add a `verified:` entry.
 # An agent may record an agent-tier entry; only a human: actor may claim the
 # human-reviewed tier. See docs/index.md.
-Write-Host "Re-verify each document above against its changed sources, then bump verified_at_commit."
+Write-Host "Re-verify each REVIEW document against its changed sources, then bump verified_at_commit."
+Write-Host "The split is a heuristic: a declaration-shaped diff line, or any non-C# source."
+Write-Host "It can put a real drift in the quiet list. Trust it to triage, not to decide."
 exit 1
