@@ -324,13 +324,11 @@ namespace NodeWar.UI
             if (previewInstance == null) return;
 
             // Raycast to ground plane
-            Ray ray = mainCam.ScreenPointToRay(screenPos);
-            if (Mathf.Abs(ray.direction.y) < 0.0001f) { previewOnValidCell = false; return; }
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0) { previewOnValidCell = false; return; }
-
-            Vector3 worldHit = ray.origin + ray.direction * t;
+            if (!CameraController.TryScreenToGroundPoint(mainCam, screenPos, out Vector3 worldHit))
+            {
+                previewOnValidCell = false;
+                return;
+            }
 
             if (!draftManager.WorldToGrid(worldHit, out int gx, out int gz))
             {
@@ -408,13 +406,8 @@ namespace NodeWar.UI
         {
             if (previewGridX < 0 || previewGridZ < 0) return false;
 
-            Ray ray = mainCam.ScreenPointToRay(screenPos);
-            if (Mathf.Abs(ray.direction.y) < 0.0001f) return false;
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0) return false;
-
-            Vector3 worldHit = ray.origin + ray.direction * t;
+            if (!CameraController.TryScreenToGroundPoint(mainCam, screenPos, out Vector3 worldHit))
+                return false;
             if (!draftManager.WorldToGrid(worldHit, out int gx, out int gz)) return false;
 
             return gx == previewGridX && gz == previewGridZ;

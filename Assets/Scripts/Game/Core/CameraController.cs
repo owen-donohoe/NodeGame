@@ -205,35 +205,35 @@ namespace NodeWar.Core
             }
 
             if (mouse.middleButton.isPressed && isDragging)
-            {
-                Vector3 currentMouseWorld = GetMouseWorldPosition(mouse);
-                ApplyPanDelta(lastMouseWorldPos - currentMouseWorld);
-
-                // Recalculate after move to prevent perspective drift -- exact
-                // only at panSpeed == 1, for the same reason noted on the
-                // gesture path's equivalent line below.
-                lastMouseWorldPos = GetMouseWorldPosition(mouse);
-            }
+                ApplyPanDelta(mouse.position.ReadValue(), ref lastMouseWorldPos);
 
             if (mouse.middleButton.wasReleasedThisFrame)
                 isDragging = false;
         }
 
         /// <summary>
-        /// Moves the rig and derives capped momentum for mouse and gesture pan.
-        /// Both paths yield to an armed lasso.
+        /// Samples the ground, moves the rig, and derives capped momentum for
+        /// mouse and gesture pan. Each input keeps its own anchor, and both
+        /// paths yield to an armed lasso.
         /// </summary>
-        private void ApplyPanDelta(Vector3 delta)
+        private void ApplyPanDelta(Vector2 screenPos, ref Vector3 lastWorld)
         {
             if (gestureSource != null && gestureSource.PanSuppressed) return;
 
+            Vector3 delta = lastWorld - ScreenToGroundPoint(screenPos);
             transform.position += delta * panSpeed;
 
-            if (Time.deltaTime <= 0f) return;
+            if (Time.deltaTime > 0f)
+            {
+                panVelocity = delta * panSpeed / Time.deltaTime;
+                if (panVelocity.magnitude > panMaxVelocity)
+                    panVelocity = panVelocity.normalized * panMaxVelocity;
+            }
 
-            panVelocity = delta * panSpeed / Time.deltaTime;
-            if (panVelocity.magnitude > panMaxVelocity)
-                panVelocity = panVelocity.normalized * panMaxVelocity;
+            // Re-sample for the next delta. The pan follows the pointer
+            // exactly at panSpeed == 1 (Gameplay.unity's value); bounds
+            // pushback may then move the rig and rebase this anchor.
+            lastWorld = ScreenToGroundPoint(screenPos);
         }
 
         /// <summary>
@@ -381,7 +381,15 @@ namespace NodeWar.Core
             // apply the soft return to position while held. Once released, the
             // same spring accelerates momentum before it is integrated.
             if (isDragging || gesturePanActive)
+            {
                 transform.position += push;
+
+                // Ground projections move with the rig. Rebase the held
+                // anchors too, or the next pan sample undoes this correction
+                // even when the pointer has not moved.
+                if (isDragging) lastMouseWorldPos += push;
+                if (gesturePanActive) gesturePanLastWorld += push;
+            }
             else
                 panVelocity += push;
         }
@@ -558,14 +566,7 @@ namespace NodeWar.Core
                 return;
             }
 
-            Vector3 currentWorld = ScreenToGroundPoint(screenPos);
-            ApplyPanDelta(gesturePanLastWorld - currentWorld);
-
-            // Re-sampled after the move so the world point under the finger
-            // stays pinned -- exactly at panSpeed == 1, which is what the
-            // scene serializes today; a different panSpeed would drift by the
-            // same fraction ApplyPanDelta scales the move by.
-            gesturePanLastWorld = ScreenToGroundPoint(screenPos);
+            ApplyPanDelta(screenPos, ref gesturePanLastWorld);
         }
 
         private void HandlePanEnd()
@@ -1094,25 +1095,43 @@ namespace NodeWar.Core
 
         /// <summary>
         /// Raycast from any screen position to the XZ ground plane (Y=0).
-        ///
-        /// Generalised from the mouse-only version because the focus rule needs
-        /// it for two arbitrary screen points. Every projection in this file
-        /// goes through here, so the degenerate cases -- a ray parallel to the
-        /// plane, and a plane behind the camera -- are handled once.
+        /// Returns the rig position for a missing camera or parallel ray, and
+        /// the ray origin when the plane is behind the ray.
         /// </summary>
         public Vector3 ScreenToGroundPoint(Vector2 screenPos)
         {
-            if (cam == null) return transform.position;
+            return TryScreenToGroundPoint(cam, screenPos, out Vector3 point, clampBehindCamera: true)
+                ? point
+                : transform.position;
+        }
 
-            Ray ray = cam.ScreenPointToRay(screenPos);
+        /// <summary>
+        /// Shared ground projection for camera controls and UI. The supplied
+        /// camera preserves each caller's view without requiring rig wiring.
+        /// Missing cameras and parallel rays return false. By default a plane
+        /// behind the ray also returns false; clamping instead returns the ray
+        /// origin and true. The output is zero on failure.
+        /// </summary>
+        public static bool TryScreenToGroundPoint(Camera camera, Vector2 screenPos,
+            out Vector3 point, bool clampBehindCamera = false)
+        {
+            point = Vector3.zero;
+            if (camera == null) return false;
+
+            Ray ray = camera.ScreenPointToRay(screenPos);
 
             if (Mathf.Abs(ray.direction.y) < 0.0001f)
-                return transform.position;
+                return false;
 
             float t = -ray.origin.y / ray.direction.y;
-            if (t < 0) t = 0;
+            if (t < 0f)
+            {
+                if (!clampBehindCamera) return false;
+                t = 0f;
+            }
 
-            return ray.origin + ray.direction * t;
+            point = ray.origin + ray.direction * t;
+            return true;
         }
 
 #if UNITY_EDITOR
