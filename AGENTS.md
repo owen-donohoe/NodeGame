@@ -39,12 +39,39 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 - Do not merge into `main` automatically — leave that for review
 - After `Simulation/` changes: flag which tests should be run
 
+## When you are a delegated agent
+
+You are usually dispatched by the Claude orchestrator with a bounded task and
+no one watching. That changes four things:
+
+- **Commit each step as you finish it.** You can be killed mid-edit by a
+  provider usage limit, without warning and without a chance to save. It has
+  happened: on 2026-09-20 five agents died at once and one lost an uncommitted
+  change that had to be salvaged from its worktree by hand. Committed work
+  survives; work in your editor buffer does not.
+- **Do not spawn sub-agents.** Delegation is the orchestrator's decision,
+  because it is the only place the remaining budget across both providers is
+  known. See `.claude/skills/delegation.md` for what that budget looks like.
+- **Stay inside the scope you were given.** Findings outside it go in your
+  report with `file:line` and the smallest fix you would make — not into the
+  diff. A branch that fixes more than it was asked to cannot be reviewed
+  against its brief.
+- **Keep your turn count down.** Cost is turns times context, not lines
+  written, and roughly 99% of it is input. Batch your reads, do not re-read
+  what you have already read, and do not explore what the prompt already told
+  you.
+
+Say what you did **not** do, and why. Silence reads as coverage.
+
 ## Checking your work
 
 - `dotnet test dotnet/NodeWar.sln` — Simulation and Lobby assemblies, the two
   that compile without UnityEngine
 - `scripts/compile-check.ps1` — type-checks everything else against the real
-  Unity assemblies (HUD, network, view, `Assets/UI/`)
+  Unity assemblies (HUD, network, view, `Assets/UI/`). In a fresh worktree it
+  needs the Unity assemblies first: `cmd /c mklink /J Library C:\Dev\NodeGame\Library`
+  from the worktree root, once. `Library` is gitignored, so the junction never
+  reaches a commit
 - Neither of these replaces manual Unity verification for scene/prefab
   wiring — flag that as a manual step rather than claiming it's covered
 
