@@ -42,6 +42,7 @@
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
     <Compile Include="CommandEligibilityTests.cs" />
+    <Compile Include="TrophyBarLogicTests.cs" />
 
     <!--
       The real sources, linked not copied - the same arrangement the other two
@@ -52,6 +53,10 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+
+    <!-- The trophy bar's sliding window, independent of its Unity display. -->
+    <Compile Include="../../Assets/Scripts/Lobby/TrophyBarLogic.cs"
+             Link="Lobby/TrophyBarLogic.cs" />
 
     <!--
       The Workshop's UnityEngine-free pieces. Everything else under
