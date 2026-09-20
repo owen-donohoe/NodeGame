@@ -2,6 +2,7 @@
 <engine:UXML
     xmlns:engine="UnityEngine.UIElements"
     xmlns:editor="UnityEditor.UIElements"
+    xmlns:lobby="NodeWar.Lobby"
     xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
@@ -222,6 +223,67 @@
 
                 <engine:Button name="hud-end-return" class="ui-button ui-button--gold ui-w600 hud__end-button" text="Return to Lobby" />
             </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!--
+            In-match settings. Three rules shape this, and all three come from
+            the match being live the whole time it is open.
+
+            NOTHING HERE IS DESTRUCTIVE. A mis-tap costs the player a toggle
+            they can see and undo, never a turn and never the match. Surrender
+            is the obvious thing to want here and is deliberately absent: it is
+            a GameCommand, not a setting, and it belongs behind its own confirm
+            rather than one row away from a volume slider.
+
+            THE SCRIM PICKS ONLY WHILE OPEN. Everything else on this surface is
+            picking-mode Ignore, because a panel that picks over the board
+            swallows the taps the game is played with. The scrim breaks that
+            rule on purpose so a tap outside closes the panel - so it carries
+            display: none when closed, which is what keeps the rule intact for
+            the 99% of a match when settings are shut.
+
+            IT IS NOT A TAKEOVER. Same settlement as the node sheet: the
+            opponent keeps playing, so the board stays visible. The panel is a
+            corner card, not a page, and the scrim is invisible rather than a
+            dim - it is there to catch one tap, not to say "stop".
+        -->
+        <engine:VisualElement name="hud-settings-scrim" class="hud__settings-scrim" />
+
+        <!--
+            The panel itself picks, unlike every other container here. It has
+            to: it sits over the scrim, and if taps fell through it, touching
+            the card's own background would close it. It is display:none when
+            shut, so it costs the board nothing for the rest of the match.
+        -->
+        <engine:VisualElement name="hud-settings" class="hud__settings">
+            <engine:Label class="hud__settings-title ui-w700" text="Settings" picking-mode="Ignore" />
+
+            <engine:VisualElement class="hud__settings-row" picking-mode="Ignore">
+                <engine:Label class="hud__settings-label ui-w500" text="Music" picking-mode="Ignore" />
+                <engine:Slider name="hud-settings-music" class="hud__settings-slider" low-value="0" high-value="1" value="0.40" />
+            </engine:VisualElement>
+
+            <engine:VisualElement class="hud__settings-row" picking-mode="Ignore">
+                <engine:Label class="hud__settings-label ui-w500" text="Effects" picking-mode="Ignore" />
+                <engine:Slider name="hud-settings-effects" class="hud__settings-slider" low-value="0" high-value="1" value="0.78" />
+            </engine:VisualElement>
+
+            <!-- The whole row is the target, as in the lobby's settings rows. -->
+            <engine:Button name="hud-settings-row-routes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Opponent routes" picking-mode="Ignore" />
+                <lobby:LobbySwitch name="hud-settings-routes" value="true" />
+            </engine:Button>
+
+            <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
+            The gear, in the bottom-right corner: the one place a thumb reaches
+            without the hand moving. Same 46px circle as the zoom handle above
+            it, so the right edge reads as one column of controls.
+        -->
+        <engine:VisualElement name="hud-settings-dock" class="hud__settings-dock" picking-mode="Ignore">
+            <engine:Button name="hud-settings-gear" class="ui-reset-button hud__gear" text="⚙" />
         </engine:VisualElement>
 
     </engine:VisualElement>

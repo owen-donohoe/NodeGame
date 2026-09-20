@@ -27,7 +27,15 @@ namespace NodeWar.Lobby
         /// here, which is how <see cref="Normalized"/> tells "absent" from
         /// "deliberately silent".
         /// </summary>
-        public const int CurrentVersion = 1;
+        /// <remarks>
+        /// 1 - the lobby Settings page's ten values.
+        /// 2 - adds <see cref="opponentRoutes"/>, whose default is true. A
+        ///     version 1 save has the field as false simply because that is
+        ///     what a bool deserialises to, which is why 1 cannot just be read
+        ///     as 2 and why <see cref="Normalized"/> migrates rather than
+        ///     resetting: resetting would throw away settings the player set.
+        /// </remarks>
+        public const int CurrentVersion = 2;
 
         /// <summary>Small, Default, Large. The page owns what they are called.</summary>
         public const int InterfaceSizeCount = 3;
@@ -54,6 +62,14 @@ namespace NodeWar.Lobby
         public float cameraSpeed;
         public bool confirmEachCommand;
 
+        /// <summary>
+        /// Draw opponent movement routes. Backs the in-match panel's only
+        /// toggle and feeds OpponentRouteSettings.show, which is a real
+        /// information gate rather than a cosmetic one - see that class for
+        /// what it does and does not reveal. Added in version 2.
+        /// </summary>
+        public bool opponentRoutes;
+
         // ---- Mobile.
         public bool haptics;
         public bool batterySaver;
@@ -79,6 +95,7 @@ namespace NodeWar.Lobby
 
                 cameraSpeed = 0.52f,
                 confirmEachCommand = false,
+                opponentRoutes = true,
 
                 haptics = true,
                 batterySaver = false
@@ -92,15 +109,24 @@ namespace NodeWar.Lobby
         /// A struct carrying version 0 is a save written before settings
         /// existed — JsonUtility leaves the whole block zeroed rather than
         /// failing — so it becomes the defaults wholesale. That is the only
-        /// case where stored values are discarded; from version 1 on, fields
-        /// are carried across and only clamped, so a future migration adds a
-        /// case here rather than another save path.
+        /// case where stored values are discarded.
+        ///
+        /// Every later version is migrated rather than reset: the fields it
+        /// did have are carried across, and fields added since take their
+        /// default. Resetting instead would be a silent wipe of settings the
+        /// player chose, which is the failure this whole version scheme exists
+        /// to avoid. A new version adds a step here, not another save path.
         ///
         /// Call this at every boundary rather than trusting the fields.
         /// </summary>
         public static GameSettingsData Normalized(GameSettingsData source)
         {
-            if (source.version < CurrentVersion) return CreateDefault();
+            // Written before settings existed: nothing to carry.
+            if (source.version <= 0) return CreateDefault();
+
+            // 1 -> 2. The field did not exist, so its stored false means
+            // "absent", not "off"; everything else the player set is kept.
+            if (source.version < 2) source.opponentRoutes = true;
 
             return new GameSettingsData
             {
@@ -116,6 +142,7 @@ namespace NodeWar.Lobby
 
                 cameraSpeed = Clamp01(source.cameraSpeed),
                 confirmEachCommand = source.confirmEachCommand,
+                opponentRoutes = source.opponentRoutes,
 
                 haptics = source.haptics,
                 batterySaver = source.batterySaver
@@ -136,6 +163,7 @@ namespace NodeWar.Lobby
                 || a.interfaceSize != b.interfaceSize
                 || a.cameraSpeed != b.cameraSpeed
                 || a.confirmEachCommand != b.confirmEachCommand
+                || a.opponentRoutes != b.opponentRoutes
                 || a.haptics != b.haptics
                 || a.batterySaver != b.batterySaver;
         }
