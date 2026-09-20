@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The camera POV and sprite-order maths, run without Unity.
+
+    ViewSide is the UnityEngine-free half of the four-way POV system: side/yaw
+    conversion, the sort axis, ResolveViewer and the height/depth sort keys.
+    Everything that needs a Camera or a SpriteRenderer (CameraController,
+    SpriteDepthSorter) stays in Unity and is only type-checked here.
+
+    Like NodeWar.Lobby.Tests, the tests live in this folder and the source is
+    linked from Assets/, because Unity has no way to run these against
+    Assembly-CSharp.
+
+    Run it directly:
+      dotnet test dotnet/NodeWar.View.Tests
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>NodeWar.View.Tests</AssemblyName>
+    <RootNamespace>NodeWar.View.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ViewSideTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs"
+             Link="View/ViewSide.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same NUnit 3.x pin as the other test projects, for the same reason. -->
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+  </ItemGroup>
+
+</Project>
