@@ -10,35 +10,27 @@ sources:
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: DistrictType, SuitType, VillagerState, NodeData, VillagerData, PlayerData
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick and all tick steps
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: balance
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: GameBalanceData.Default, IsCombatSuit, CanEquipSuitAtNode, GetSlotTypeForDistrict
-    last_modified: 2026-08-29T10:56:17-04:00
   - id: board
     resource: Assets/Scripts/Game/Simulation/BoardConfigData.cs
     title: BoardConfigData.Default and InitialNodePlacement
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: pathfinding
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding.FindPath and ownership preference multipliers
-    last_modified: 2026-08-29T01:52:16-04:00
   - id: commands
     resource: Assets/Scripts/Game/Simulation/Commands.cs
     title: CommandType and GameCommand
-    last_modified: 2026-08-14T00:06:30-04:00
   - id: command-processor
     resource: Assets/Scripts/Game/Simulation/CommandProcessor.cs
     title: CommandProcessor.ProcessCommand
-    last_modified: 2026-08-29T10:56:17-04:00
   - id: draft-state
     resource: Assets/Scripts/Game/Simulation/DraftState.cs
     title: DraftState grid occupancy and per-player slots
-    last_modified: 2026-08-24T09:08:13-04:00
   - id: design-history
     resource: docs/design-history/README.md
     title: Design history and v2.1 reconciliation
