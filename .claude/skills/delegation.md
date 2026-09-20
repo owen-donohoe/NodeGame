@@ -33,6 +33,13 @@ six minutes of each other:
 | Two research questions, `gpt-5.6-luna` at low | 18 | 0.86M |
 | Handshake audit (died at the limit, 8 turns in) | 8 | 0.22M |
 
+A second wave later the same day, with the estimates above in hand:
+
+| Task | Turns | Tokens |
+|---|---:|---:|
+| Web research: this repo's doc system vs published practice | 34 | **4.13M** |
+| Fix one issue, file and candidate fix named in the prompt | 14 | **0.70M** |
+
 **Total 6.4M tokens in about 35 minutes. That took the Codex budget from 0% to
 100%.** The limit reset roughly five hours after the first call, so treat the
 Codex allowance as **~6M tokens per rolling 5-hour window** until measurement
@@ -51,10 +58,30 @@ Three things that table says, which are not obvious:
   1.89M tokens for two small commits, because auditing means reading
   everything and changing almost nothing.
 
-Working estimate before dispatching: **~1M per bounded task, ~1.8M for an audit
-over large unfamiliar files.** Multiply by the number of agents and compare
-against what is left in the window. Five agents is 5–9M against a ~6M window;
-that arithmetic could have been done in advance, and should have been.
+Those two are the controlled experiment for everything below.
+
+- **Naming the file and the candidate fix halves the cost.** 0.70M against
+  1.27M for a comparable task the day before, 14 turns against 21. Same model,
+  same settings. The difference was the prompt.
+- **Web research is the most expensive shape there is, by a wide margin.**
+  4.13M for one agent — 69% of the window, alone. Every fetched page lands in
+  context and is re-sent every turn afterwards. Budget a web-research task as
+  most of a window, or split the questions across two waves.
+
+Working estimate before dispatching:
+
+| Shape | Estimate |
+|---|---|
+| Bounded task, files and fix named | **0.7M** |
+| Bounded task, agent finds its own way | **1.2M** |
+| Audit over large unfamiliar files | **1.9M** |
+| Anything with web search | **4M+** |
+
+Multiply by the number of agents and compare against what is left in the
+window. Five agents is 5–9M against a ~6M window; that arithmetic could have
+been done in advance, and should have been. A wave of two containing one web
+research task is 4.8M, which is also too much — the pair matters, not just the
+count.
 
 ## The rule
 
