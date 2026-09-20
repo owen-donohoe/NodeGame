@@ -59,6 +59,8 @@ namespace NodeWar.UI
         private UIDocument document;
         private SafeAreaBinder safeArea;
         private NodeSheet nodeSheet;
+        private MatchSettingsPanel settingsPanel;
+        private NodeWar.View.OpponentRouteSettings routeSettings;
         private VisualElement hudRoot;
 
         private SimulationState state;
@@ -167,6 +169,17 @@ namespace NodeWar.UI
             zoomHideJob = null;
             handleDragging = false;
             handleZoomed = false;
+
+            // Same reason as the camera above: the panel writes into a tree
+            // that OnEnable rebuilds, so the subscription must not outlive it.
+            if (settingsPanel != null)
+            {
+                settingsPanel.Changed -= ApplyMatchSettings;
+                settingsPanel.ForceClose();
+                settingsPanel = null;
+            }
+
+            routeSettings = null;
 
             safeArea = null;
             nodeSheet = null;
@@ -296,6 +309,7 @@ namespace NodeWar.UI
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
             BuildNodeSheet(root);
+            BuildSettingsPanel();
         }
 
         /// <summary>
@@ -318,6 +332,51 @@ namespace NodeWar.UI
 
             VisualElement host = hudRoot != null ? hudRoot : root;
             host.Add(nodeSheet.Root);
+        }
+
+        /// <summary>
+        /// The in-match settings card. Its elements are authored in
+        /// GameplayHUD.uxml rather than built here, because the scrim's picking
+        /// behaviour is the load-bearing part of this surface and belongs where
+        /// the rest of the picking rules are stated.
+        /// </summary>
+        private void BuildSettingsPanel()
+        {
+            if (hudRoot == null) return;
+
+            settingsPanel = new MatchSettingsPanel(hudRoot);
+            settingsPanel.Changed += ApplyMatchSettings;
+
+            ApplyMatchSettings(settingsPanel.Settings);
+        }
+
+        /// <summary>
+        /// Route visibility is shared by reference with MovementPathRenderer,
+        /// which reads <c>show</c> every frame, so writing it here takes effect
+        /// on the next draw with nothing to notify.
+        ///
+        /// This writes view configuration, never SimulationState - the setting
+        /// changes what this player is shown and cannot change what either
+        /// simulation computes. A setting that did would desync the match the
+        /// moment the two players chose differently.
+        /// </summary>
+        private void ApplyMatchSettings(NodeWar.Lobby.GameSettingsData settings)
+        {
+            if (routeSettings != null)
+                routeSettings.show = settings.opponentRoutes;
+        }
+
+        /// <summary>
+        /// Handed the same OpponentRouteSettings instance GameManager gave the
+        /// path renderer. Without it the routes toggle stores a preference that
+        /// draws nothing.
+        /// </summary>
+        public void BindRouteSettings(NodeWar.View.OpponentRouteSettings settings)
+        {
+            routeSettings = settings;
+
+            if (settingsPanel != null)
+                ApplyMatchSettings(settingsPanel.Settings);
         }
 
         /// <summary>

@@ -50,6 +50,73 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void Normalized_Version1_KeepsWhatThePlayerSet()
+        {
+            // The migration that matters: a version 1 save is not a stranger
+            // to be replaced, it is a player's settings missing one field.
+            GameSettingsData stored = new GameSettingsData
+            {
+                version = 1,
+                masterVolume = 0.1f,
+                musicVolume = 0.2f,
+                effectsVolume = 0.3f,
+                colourblindMarks = false,
+                reducedMotion = true,
+                interfaceSize = 2,
+                cameraSpeed = 0.9f,
+                confirmEachCommand = true,
+                haptics = false,
+                batterySaver = true
+
+                // opponentRoutes absent - the field did not exist at version 1.
+            };
+
+            GameSettingsData result = GameSettingsData.Normalized(stored);
+
+            Assert.AreEqual(0.1f, result.masterVolume, "master");
+            Assert.AreEqual(0.2f, result.musicVolume, "music");
+            Assert.AreEqual(0.3f, result.effectsVolume, "effects");
+            Assert.IsFalse(result.colourblindMarks, "colourblind");
+            Assert.IsTrue(result.reducedMotion, "reduced motion");
+            Assert.AreEqual(2, result.interfaceSize, "interface size");
+            Assert.AreEqual(0.9f, result.cameraSpeed, "camera speed");
+            Assert.IsTrue(result.confirmEachCommand, "confirm");
+            Assert.IsFalse(result.haptics, "haptics");
+            Assert.IsTrue(result.batterySaver, "battery saver");
+        }
+
+        [Test]
+        public void Normalized_Version1_GivesTheNewFieldItsDefaultNotItsZero()
+        {
+            // opponentRoutes defaults to true, but a bool absent from an older
+            // save deserialises to false. Reading that as "the player turned
+            // routes off" would quietly change what they see in a match.
+            GameSettingsData stored = new GameSettingsData { version = 1 };
+
+            Assert.IsTrue(GameSettingsData.Normalized(stored).opponentRoutes);
+        }
+
+        [Test]
+        public void Normalized_Version1_IsNotAWholesaleReset()
+        {
+            // Guards the specific regression of migrating by returning
+            // CreateDefault(), which passes a "defaults are sane" test while
+            // wiping every value the player chose.
+            GameSettingsData stored = new GameSettingsData
+            {
+                version = 1,
+                masterVolume = 0f,
+                interfaceSize = 0
+            };
+
+            GameSettingsData result = GameSettingsData.Normalized(stored);
+            GameSettingsData defaults = GameSettingsData.CreateDefault();
+
+            Assert.AreNotEqual(defaults.masterVolume, result.masterVolume);
+            Assert.AreNotEqual(defaults.interfaceSize, result.interfaceSize);
+        }
+
+        [Test]
         public void Normalized_StampsCurrentVersion()
         {
             GameSettingsData result = GameSettingsData.Normalized(new GameSettingsData());

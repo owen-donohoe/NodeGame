@@ -643,3 +643,142 @@
     margin-top: 0;
     margin-bottom: 0;
 }
+
+/* ===================================================================
+   In-match settings
+
+   A corner card, not a page. The match is live behind it, so it covers
+   the smallest area that still fits three rows, and it sits in the
+   bottom-right where a thumb already is.
+
+   The scrim is the one element on this surface allowed to pick, and only
+   while the panel is open - display:none the rest of the time. That is
+   what lets a tap outside close the panel without the HUD swallowing
+   board taps for the whole match.
+   =================================================================== */
+
+.hud__settings-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.hud__settings-scrim--on {
+    display: flex;
+}
+
+/* The gear: bottom-right corner, same circle as the zoom handle above it. */
+.hud__settings-dock {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    align-items: center;
+}
+
+.hud__gear {
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    color: var(--hud-ink);
+    font-size: 19px;
+    -unity-text-align: middle-center;
+}
+
+.hud__gear:active {
+    background-color: var(--hud-glass);
+    scale: 0.94 0.94;
+}
+
+/* Rises out of the gear. Width is fixed rather than a percentage so it
+   stays a card on a tablet instead of growing into a page. */
+.hud__settings {
+    position: absolute;
+    right: 12px;
+    bottom: 70px;
+    width: 264px;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-3);
+    background-color: var(--surface);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--ink);
+    border-right-color: var(--ink);
+    border-top-color: var(--ink);
+    border-bottom-color: var(--ink);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+    display: none;
+    opacity: 0;
+    translate: 0 8px;
+    transition-property: opacity, translate;
+    transition-duration: 140ms;
+}
+
+.hud__settings--shown {
+    display: flex;
+}
+
+.hud__settings--on {
+    opacity: 1;
+    translate: 0 0;
+}
+
+.hud__settings-title {
+    font-size: 15px;
+    color: var(--ink);
+    margin-bottom: var(--space-3);
+}
+
+.hud__settings-row {
+    flex-direction: column;
+    margin-bottom: var(--space-3);
+}
+
+/* A switch row is one line, label and control facing each other. */
+.hud__settings-row--switch {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hud__settings-label {
+    font-size: 13px;
+    color: var(--ink);
+    margin-bottom: 4px;
+}
+
+.hud__settings-row--switch > .hud__settings-label {
+    margin-bottom: 0;
+}
+
+.hud__settings-slider {
+    height: 20px;
+}
+
+.hud__settings-note {
+    font-size: 10px;
+    color: var(--ink-mute);
+    white-space: normal;
+    margin-top: 2px;
+}

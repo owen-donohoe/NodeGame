@@ -766,6 +766,13 @@ namespace NodeWar.Core
                 return;
             }
 
+            // The settings card's routes toggle writes the same
+            // OpponentRouteSettings instance the path renderer reads every
+            // frame. Bound here rather than where the renderer is created,
+            // because InitializeInputSystems runs before InitializeUI and
+            // uiToolkitHud is still null at that point.
+            uiToolkitHud.BindRouteSettings(opponentRouteSettings);
+
             uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
                                     inputBuffer, tickProvider, balance.Data, nodePanelManager,
                                     selectionSystem);
