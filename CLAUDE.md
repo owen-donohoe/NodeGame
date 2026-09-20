@@ -74,7 +74,10 @@ Read the file. Do not ask me to summarise it here.
 - `docs/design-history/` — the v2.1 design document. Historical. Notion is
   authoritative for future work.
 - `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
-  Glob-scoped, so they load themselves when you touch those paths.
+  Path-scoped via `paths:`, so they load themselves when you touch those
+  paths. If all three ever appear in context at session start, the scoping
+  has stopped working and they are loading unconditionally — check with
+  `/context` after any change to their frontmatter.
 
 ## Checking your work
 

@@ -59,11 +59,18 @@ OKF's conformance rules require consumers to tolerate a member outside the root,
 
 **Two directories are deliberately left out of the signal layer:**
 
-* `.claude/rules/*.md` carry a `glob:` key, and `.claude/commands/*.md` carry a `description:` key.
-  Both are Claude Code's own frontmatter schema, and both are load-bearing — `glob:` scopes a rule
+* `.claude/rules/*.md` carry a `paths:` key, and `.claude/commands/*.md` carry a `description:` key.
+  Both are Claude Code's own frontmatter schema, and both are load-bearing — `paths:` scopes a rule
   to matching paths, and a rules file that fails to parse would silently stop enforcing the
   determinism boundary in every session. Adding unrecognised keys to them is not worth that risk
   for freshness metadata alone.
+
+  These files said `glob:` until 2026-09-20, which Claude Code does not recognise. A rule with no
+  key it recognises loads unconditionally, so all three were in context from the first turn of
+  every session rather than when their paths were touched — confirmed by observation, not inferred.
+  The failure was in the safe direction, but it was silent, and the claim above was false for as
+  long as it lasted. **This is the failure mode to watch for: an unrecognised key here does not
+  error.** Verify with `/context` in a fresh session rather than by reading the frontmatter.
 * `scripts/okf-stale.ps1` still walks both directories. It reports them as carrying no sources and
   moves on, so adding OKF keys later is a change of mind, not a migration.
 
