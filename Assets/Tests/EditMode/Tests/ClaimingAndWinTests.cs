@@ -105,7 +105,7 @@ namespace NodeWar.Tests
         // ===== OWNERSHIP TRANSITIONS =====
 
         [Test]
-        public void Claim_ReachingTheThresholdFlipsTheOwnerButDiscardsTheClampedBar()
+        public void Claim_ReachingTheThresholdFlipsTheOwnerAndPublishesTheClampedBar()
         {
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = BoardWithPlayerZeroOnNeutral(balance, 1);
@@ -117,24 +117,7 @@ namespace NodeWar.Tests
 
             Assert.AreEqual(0, state.nodes[NeutralNode].ownerID);
 
-            // THIS IS PINNING A BUG, not a rule. The bar should read 10000 here
-            // and reads 9999 -- the value it had before the tick that won it.
-            //
-            // GameSimulation.cs:525-530 clamps `node.claimBar` on a local copy
-            // of the struct, calls CompleteClaimForPlayer (which writes ownerID
-            // straight into state.nodes), and then re-reads the array into the
-            // same local to pick up any slot upgrade. The re-read restores the
-            // pre-clamp bar, and the write-back at the end of the loop persists
-            // it. Lines 560-565 are the same shape for player 1.
-            //
-            // Both peers run the identical code, so this is not a desync. What
-            // it does mean is that a claimed node's bar sits one tick's worth
-            // short of full for the rest of the match, and an enemy retaking it
-            // starts from a number the previous claimer's last tick happened to
-            // leave. The fix is one line -- publish the clamp with
-            // `state.nodes[nodeIndex] = node;` before CompleteClaimForPlayer --
-            // but it is a Simulation/ change and wants its own review.
-            Assert.AreEqual(balance.claimThreshold - 1, state.nodes[NeutralNode].claimBar);
+            Assert.AreEqual(balance.claimThreshold, state.nodes[NeutralNode].claimBar);
         }
 
         [Test]
@@ -308,7 +291,7 @@ namespace NodeWar.Tests
         // ===== DETERMINISM COMPANIONS =====
 
         [Test]
-        public void Claim_ReachingTheThresholdFlipsTheOwnerButDiscardsTheClampedBar_Determinism()
+        public void Claim_ReachingTheThresholdFlipsTheOwnerAndPublishesTheClampedBar_Determinism()
         {
             GameBalanceData balance = UseDefaultBalance();
 
