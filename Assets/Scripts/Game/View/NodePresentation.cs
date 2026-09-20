@@ -42,7 +42,6 @@ namespace NodeWar.View
 
         private Transform[] sprites;
         private Vector3[] baseScales;
-        private bool isPresented;
         private Sequence activeSequence;
 
         private void OnEnable()
@@ -111,7 +110,6 @@ namespace NodeWar.View
                      .SetEase(startupEase, startupOvershoot));
             }
 
-            seq.OnComplete(() => isPresented = true);
             activeSequence = seq;
         }
 
@@ -140,7 +138,6 @@ namespace NodeWar.View
                      .SetEase(breakdownEase));
             }
 
-            seq.OnComplete(() => isPresented = false);
             activeSequence = seq;
         }
 
@@ -153,7 +150,6 @@ namespace NodeWar.View
                 if (sprites[i] == null) continue;
                 sprites[i].localScale = baseScales[i];
             }
-            isPresented = true;
         }
 
         public void SetHidden()
@@ -167,7 +163,6 @@ namespace NodeWar.View
                 scale.y = 0f;
                 sprites[i].localScale = scale;
             }
-            isPresented = false;
         }
 
         /// <summary>

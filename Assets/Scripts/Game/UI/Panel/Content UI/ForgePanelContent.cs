@@ -30,9 +30,7 @@ namespace NodeWar.UI
 
         private SimulationState simState;
         private NodeWar.Core.ITickProvider tickProvider;
-        private InputBuffer inputBuffer;
         private int nodeID;
-        private int controlledPID;
         private bool isOwned;
 
         public void Initialize(SimulationState state, NodeWar.Core.ITickProvider provider,
@@ -40,9 +38,7 @@ namespace NodeWar.UI
         {
             simState = state;
             tickProvider = provider;
-            inputBuffer = buffer;
             nodeID = node;
-            controlledPID = pid;
             isOwned = owned;
 
             if (!owned)

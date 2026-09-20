@@ -27,7 +27,6 @@ namespace NodeWar.View
         private bool hasPushedColor;
 
         private NodeHighlight highlight;
-        private NodeWar.UI.NodeClaimBar claimBar;
 
         public void Initialize(SimulationState state, int id, int claimThreshold)
         {
@@ -49,7 +48,7 @@ namespace NodeWar.View
 
         public void SetClaimBar(NodeWar.UI.NodeClaimBar bar)
         {
-            claimBar = bar;
+            // Retained public API; NodeClaimBar reads simulation state independently.
         }
 
         public void TriggerHighlight(Color color)

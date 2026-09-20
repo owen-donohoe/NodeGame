@@ -55,7 +55,6 @@ namespace NodeWar.UI
         private DraftManager draftManager;
         private DraftState draftState;
         private Camera mainCam;
-        private int localPlayerID;
 
         // Sticker lookup - provided by DraftUI
         private System.Func<DistrictType, Sprite> stickerLookup;
@@ -85,7 +84,6 @@ namespace NodeWar.UI
             System.Func<DistrictType, Sprite> stickerFunc)
         {
             draftManager = manager;
-            localPlayerID = playerID;
             mainCam = Camera.main;
             stickerLookup = stickerFunc;
 
