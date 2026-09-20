@@ -56,9 +56,13 @@ Full contract in `docs/simulation-rules.md`.
 Read the file. Do not ask me to summarise it here.
 
 - `docs/architecture.md` — the seven layers, information flow, scene structure,
-  persistent objects, key classes per layer, networking model. **Start here.**
-  Its *Where the UI lives* section is required reading before touching any UI:
-  presentation spans three trees and which one runs is a scene value.
+  the networking model, and where a villager is mid-edge. Read the section you
+  need; reading it end to end is how agents spend a fifth of a task's budget
+  on a catalogue they had no use for. Its *Where the UI lives* section is
+  required before touching any UI: presentation spans three trees and which
+  one runs is a scene value.
+- `docs/class-map.md` — what each named class is for, layer by layer. For
+  looking one up, not for learning the shape of the project.
 - `docs/game-model.md` — what the game *is*: districts, suits, resources, the
   win condition. Read this before any gameplay or balance question; the code
   will tell you what happens, not what it is for.

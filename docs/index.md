@@ -16,8 +16,12 @@ directly. This index exists so the set can be traversed as a graph, and so
 
 * [game-model](game-model.md) — what Node War *is*: the match model, districts, suits, resources,
   and the win condition.
-* [architecture](architecture.md) — the seven layers, information flow, scene structure, key
-  classes, networking model.
+* [architecture](architecture.md) — the seven layers, information flow, scene structure, the
+  networking model, and the mid-edge villager representation.
+* [class-map](class-map.md) — what each named class is for, layer by layer. Split out of
+  architecture on 2026-09-20 so that reading "how does this project fit together" no longer
+  drags a 200-line catalogue into context with it. Unverified: the text moved unchanged, but
+  no human has yet read it against its sources, so it carries no `verified_at_commit`.
 * [simulation-rules](simulation-rules.md) — the determinism contract `Simulation/` must uphold.
 * [adding-a-feature](adding-a-feature.md) — the 11-step checklist for any new feature.
 * [direction](direction.md) — where the architecture goes next: a feel layer, one input vocabulary
