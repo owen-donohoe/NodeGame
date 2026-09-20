@@ -88,6 +88,7 @@ namespace NodeWar.Lobby
         private PlayPopup playPopup;
         private ProfilePage profilePage;
         private SettingsPage settingsPage;
+        private VisualElement lobbyRoot;
         private MatchHistoryPage matchHistoryPage;
 
         /// <summary>
@@ -144,6 +145,7 @@ namespace NodeWar.Lobby
             playPopup = null;
             profilePage = null;
             settingsPage = null;
+            lobbyRoot = null;
             matchHistoryPage = null;
             catalog = null;
             toast = null;
@@ -193,6 +195,7 @@ namespace NodeWar.Lobby
 
             BuildOverlays(overlayHost);
             BuildChrome(root);
+            BindLobbySettings(root);
 
             // Four tabs, in track order. Profile is reached from the player name.
             BindNav(root, "nav-shop", LobbyPageID.Shop);
@@ -222,6 +225,40 @@ namespace NodeWar.Lobby
             chrome.HistoryRequested += () => { if (matchHistoryPage != null) matchHistoryPage.Open(); };
 
             if (profilePage != null) profilePage.Renamed += chrome.Refresh;
+        }
+
+        /// <summary>
+        /// The settings the lobby itself can act on. Reduced motion is the
+        /// only one today - it is a class on #lobby-root, so the stylesheet
+        /// decides what "reduced" means rather than this file doing it one
+        /// animation at a time. The rest of the page's values are stored for
+        /// systems that do not exist yet; see SettingsPage.
+        ///
+        /// Applied once from the saved profile, because the page raises
+        /// Changed while loading and nothing is subscribed that early.
+        /// </summary>
+        private void BindLobbySettings(VisualElement root)
+        {
+            lobbyRoot = root.Q<VisualElement>("lobby-root");
+
+            if (lobbyRoot == null)
+            {
+                Debug.LogWarning("[LobbyUI] LobbyRoot.uxml is missing #lobby-root; " +
+                                 "settings that style the lobby will not apply.");
+                return;
+            }
+
+            if (settingsPage == null) return;
+
+            settingsPage.Changed += ApplyLobbySettings;
+            ApplyLobbySettings(settingsPage.Settings);
+        }
+
+        private void ApplyLobbySettings(GameSettingsData settings)
+        {
+            if (lobbyRoot == null) return;
+
+            lobbyRoot.EnableInClassList("lb-reduced-motion", settings.reducedMotion);
         }
 
         /// <summary>

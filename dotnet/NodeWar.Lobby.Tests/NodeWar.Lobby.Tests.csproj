@@ -42,6 +42,7 @@
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
     <Compile Include="CommandEligibilityTests.cs" />
+    <Compile Include="GameSettingsTests.cs" />
 
     <!--
       The real sources, linked not copied - the same arrangement the other two
@@ -52,6 +53,15 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+
+    <!--
+      The Settings page's values. PlayerProfile itself is a MonoBehaviour and
+      cannot come here, so the defaults, clamping and the version boundary
+      that separates "absent" from "turned everything off" live in their own
+      UnityEngine-free struct - which is the part worth testing anyway.
+    -->
+    <Compile Include="../../Assets/Scripts/Lobby/Data/GameSettingsData.cs"
+             Link="Lobby/GameSettingsData.cs" />
 
     <!--
       The Workshop's UnityEngine-free pieces. Everything else under
