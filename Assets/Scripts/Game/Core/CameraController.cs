@@ -209,9 +209,9 @@ namespace NodeWar.Core
                 Vector3 currentMouseWorld = GetMouseWorldPosition(mouse);
                 ApplyPanDelta(lastMouseWorldPos - currentMouseWorld);
 
-                // Recalculate after move to prevent perspective drift -- exact
-                // only at panSpeed == 1, for the same reason noted on the
-                // gesture path's equivalent line below.
+                // Re-sample for the next delta. The pan follows the pointer
+                // exactly at panSpeed == 1 (Gameplay.unity's value); bounds
+                // pushback may then move the rig and rebase this anchor.
                 lastMouseWorldPos = GetMouseWorldPosition(mouse);
             }
 
@@ -569,10 +569,9 @@ namespace NodeWar.Core
             Vector3 currentWorld = ScreenToGroundPoint(screenPos);
             ApplyPanDelta(gesturePanLastWorld - currentWorld);
 
-            // Re-sampled after the move so the world point under the finger
-            // stays pinned -- exactly at panSpeed == 1, which is what the
-            // scene serializes today; a different panSpeed would drift by the
-            // same fraction ApplyPanDelta scales the move by.
+            // Re-sample for the next delta. The pan follows the finger exactly
+            // at panSpeed == 1 (Gameplay.unity's value); bounds pushback may
+            // then move the rig and rebase this anchor.
             gesturePanLastWorld = ScreenToGroundPoint(screenPos);
         }
 
