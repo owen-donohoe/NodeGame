@@ -192,6 +192,12 @@ namespace NodeWar.Tests
 
         // ===== THE MULTIPLIERS ARE OUTSIDE THE STATE (ISSUE #20) =====
 
+        // DELETE THIS TEST IN THE COMMIT THAT MERGES #20. The fix on
+        // fix/pathfinding-multipliers-in-state removes the five public statics
+        // from Pathfinding entirely, so this does not fail there -- it stops
+        // compiling. It is here to document what main does today and to be
+        // removed by the change that makes it false.
+
         [Test]
         public void FindPath_TheRouteDependsOnMutableStaticsThatAreNotPartOfTheState()
         {
