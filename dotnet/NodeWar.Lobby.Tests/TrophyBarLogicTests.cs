@@ -159,5 +159,77 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(160, bar.RangeMin);
             Assert.AreEqual(260, bar.RangeMax);
         }
+
+        // ===== Range size =====
+
+        [TestCase(1, 100, 101, 0f)]
+        [TestCase(2, 100, 102, 0f)]
+        [TestCase(3, 99, 102, 1f / 3f)]
+        [TestCase(7, 98, 105, 2f / 7f)]
+        [TestCase(137, 46, 183, 54f / 137f)]
+        public void Constructor_CustomWidthTruncatesTheFortyPercentOffset(int size, int expectedMin,
+                                                                         int expectedMax, float expectedFill)
+        {
+            TrophyBarLogic bar = new TrophyBarLogic(100, size);
+
+            Assert.AreEqual(expectedMin, bar.RangeMin);
+            Assert.AreEqual(expectedMax, bar.RangeMax);
+            Assert.AreEqual(expectedFill, bar.GetFill(100));
+        }
+
+        [Test]
+        public void Update_OddWidthTruncatesThresholdAndBothShiftOffsets()
+        {
+            TrophyBarLogic bar = new TrophyBarLogic(100, 13);
+
+            // The window starts at 95. Its 70% threshold is 104, not 105;
+            // shifting up leaves five trophies below current, down leaves three.
+            Assert.AreEqual(9f / 13f, bar.UpdateAndGetFill(104));
+            Assert.AreEqual(95, bar.RangeMin);
+            Assert.AreEqual(108, bar.RangeMax);
+
+            Assert.AreEqual(5f / 13f, bar.UpdateAndGetFill(105));
+            Assert.AreEqual(100, bar.RangeMin);
+            Assert.AreEqual(113, bar.RangeMax);
+
+            Assert.AreEqual(3f / 13f, bar.UpdateAndGetFill(99));
+            Assert.AreEqual(96, bar.RangeMin);
+            Assert.AreEqual(109, bar.RangeMax);
+        }
+
+        [Test]
+        public void ZeroWidth_ReturnsZeroFillAndTracksTheCurrentValue()
+        {
+            TrophyBarLogic bar = new TrophyBarLogic(100, 0);
+
+            Assert.AreEqual(100, bar.RangeMin);
+            Assert.AreEqual(100, bar.RangeMax);
+            Assert.AreEqual(0f, bar.GetFill(100));
+            Assert.AreEqual(0f, bar.GetFill(120));
+
+            Assert.AreEqual(0f, bar.UpdateAndGetFill(120));
+            Assert.AreEqual(120, bar.RangeMin);
+            Assert.AreEqual(120, bar.RangeMax);
+
+            Assert.AreEqual(0f, bar.UpdateAndGetFill(90));
+            Assert.AreEqual(90, bar.RangeMin);
+            Assert.AreEqual(90, bar.RangeMax);
+        }
+
+        [Test]
+        public void NegativeWidth_ReturnsZeroFillButLeavesAnInvertedWindow()
+        {
+            TrophyBarLogic bar = new TrophyBarLogic(100, -10);
+
+            // Suspected bug: a negative width is accepted and puts RangeMax
+            // below RangeMin. Returning zero fill hides the invalid window.
+            Assert.AreEqual(104, bar.RangeMin);
+            Assert.AreEqual(94, bar.RangeMax);
+            Assert.AreEqual(0f, bar.GetFill(100));
+
+            Assert.AreEqual(0f, bar.UpdateAndGetFill(100));
+            Assert.AreEqual(103, bar.RangeMin);
+            Assert.AreEqual(93, bar.RangeMax);
+        }
     }
 }
