@@ -16,6 +16,9 @@ namespace NodeWar.Core
         public int localPlayerID;
         public bool isNetworked;
         public bool isBotMatch;
+        // Watching rather than playing: the camera takes a side-on view and can
+        // be rotated. Nothing in the lobby sets this yet.
+        public bool isSpectator;
         public LoadoutData loadout;
 
         private static MatchConnection instance;

@@ -29,25 +29,41 @@ namespace NodeWar.View
         {
             SceneHandle sceneHandle = gameObject.scene.handle;
             if (!facingInitialized || facingSceneHandle != sceneHandle)
-            {
-                // Default: face toward camera's forward direction, but fixed
-                // For isometric with camera at (45, 0, 0) rotation, sprites
-                // should face roughly (45, 0, 0) to appear upright to the viewer
-                Camera cam = Camera.main;
-                if (cam != null)
-                {
-                    // Keep the camera rotation seen at capture as the camera moves.
-                    sharedFacing = cam.transform.rotation;
-                }
-                else
-                {
-                    sharedFacing = Quaternion.Euler(50f, 0f, 0f);
-                }
-                facingInitialized = true;
-                facingSceneHandle = sceneHandle;
-            }
+                Capture(sceneHandle, Camera.main);
 
             ApplyFacing();
+        }
+
+        /// <summary>
+        /// Captures the shared facing from a camera now. The first capture in a
+        /// scene happens at whatever the camera shows when the first Billboard
+        /// starts (the draft's pitch, say), so anything that turns the camera
+        /// afterwards -- a side change, the draft giving its pitch back -- must
+        /// call this. Billboards re-apply the shared facing every LateUpdate.
+        /// CameraController.SetPOV is the caller.
+        /// </summary>
+        public static void RecaptureFacing(Camera cam = null)
+        {
+            if (cam == null) cam = Camera.main;
+            Capture(cam != null ? cam.gameObject.scene.handle : SceneManager.GetActiveScene().handle, cam);
+        }
+
+        private static void Capture(SceneHandle sceneHandle, Camera cam)
+        {
+            // Default: face toward camera's forward direction, but fixed
+            // For isometric with camera at (45, 0, 0) rotation, sprites
+            // should face roughly (45, 0, 0) to appear upright to the viewer
+            if (cam != null)
+            {
+                // Keep the camera rotation seen at capture as the camera moves.
+                sharedFacing = cam.transform.rotation;
+            }
+            else
+            {
+                sharedFacing = Quaternion.Euler(50f, 0f, 0f);
+            }
+            facingInitialized = true;
+            facingSceneHandle = sceneHandle;
         }
 
         private void LateUpdate()

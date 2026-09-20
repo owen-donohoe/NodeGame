@@ -1,13 +1,20 @@
 using NodeWar.Simulation;
 using NodeWar.Config;
+using NodeWar.View;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 namespace NodeWar.Core
 {
     /// <summary>
     /// Perspective camera controller with drag-to-pan, momentum, dolly zoom,
-    /// bounds, draft-mode framing, and per-player-side memory.
+    /// bounds, draft-mode framing, and per-side memory.
+    ///
+    /// The camera looks from one of four sides (ViewSide, 0..3, yaw = 90 * side).
+    /// SetPOV is the only thing that turns it; the draft, every match mode and the
+    /// spectator's rotate all arrive there, and ResolveViewer is the only thing
+    /// that picks a side.
     ///
     /// Hierarchy (set up in Editor):
     ///   CameraRig [this script] — world X/Z position
@@ -89,10 +96,11 @@ namespace NodeWar.Core
                  "toward the opponent's, as a fraction of the board's depth. " +
                  "0 sits on your edge as before; higher shows more of their half.")]
         [SerializeField][Range(0f, 0.5f)] private float sideOpponentBiasFactor = 0.18f;
-        [Tooltip("Fraction of nodeScale used as Z offset from board edge.")]
+        [Tooltip("Fraction of nodeScale used as offset from the board edge.")]
         [SerializeField][Range(0f, 1f)] private float sideZOffsetFactor = 0.35f;
-        [SerializeField][Range(0f, 1f)] private float sideP0LateralNudgeFactor = 0.5f;
-        [SerializeField][Range(0f, 1f)] private float sideP1ZPositionFactor = 0.6f;
+        [Tooltip("How far in from the edge the guessed framing sits, before the real core position arrives.")]
+        [FormerlySerializedAs("sideP1ZPositionFactor")]
+        [SerializeField][Range(0f, 1f)] private float sideEdgeFactor = 0.6f;
 
         // Pan state
         private Vector3 panVelocity;
@@ -103,7 +111,7 @@ namespace NodeWar.Core
         private float targetZoomDistance;
         private float currentZoomDistance;
 
-        // Side memory
+        // Side memory, one slot per ViewSide
         private struct SideState
         {
             public Vector3 position;
@@ -111,7 +119,7 @@ namespace NodeWar.Core
             public bool initialized;
         }
 
-        private SideState[] sideStates = new SideState[2];
+        private SideState[] sideStates = new SideState[ViewSide.Count];
 
         // The framing each side was *given*, captured once and never written
         // again. sideStates is overwritten on every side switch so a player
@@ -119,44 +127,69 @@ namespace NodeWar.Core
         // useful, but it means it is not a fixed point, and recentre needs one.
         // Without this pair, panning and then switching sides twice would make
         // "home" wherever the player last happened to stop.
-        private SideState[] sideHomeStates = new SideState[2];
+        private SideState[] sideHomeStates = new SideState[ViewSide.Count];
 
-        // World units each side's framing is pushed toward the opponent,
-        // computed once from the board's depth in InitializeSides.
-        private float opponentBias;
+        // The board's depth along each axis and its centre, computed once in
+        // InitializeSides. Framing is derived from these, not from a player.
+        private float boardDepthX;
+        private float boardDepthZ;
+        private float boardCentreX;
+        private float boardCentreZ;
+
+        // Where each player's core sits, indexed by player ID, NaN until known.
+        // ResolveViewer turns these into a side.
+        private float[] coreX = { float.NaN, float.NaN };
+        private float[] coreZ = { float.NaN, float.NaN };
 
         private int currentSide = 0;
         private bool sideHasBeenSet = false;
+        private ViewerMode viewerMode = ViewerMode.Player;
 
         private bool isDraftMode = false;
+        private bool cameraInitialized;
+
+        /// <summary>The side the camera looks from now, 0..3.</summary>
+        public int CurrentViewSide => currentSide;
+
+        /// <summary>The pivot's world rotation: what POVChanged last reported.</summary>
+        public Quaternion POV => cameraPivot != null ? cameraPivot.rotation : Quaternion.identity;
+
+        /// <summary>
+        /// Raised by SetPOV with the pivot's world rotation, after the sort axis
+        /// and the shared billboard facing have been updated. World presentation
+        /// that depends on where the viewer is (node layout, depth sorting)
+        /// re-derives itself here rather than polling.
+        /// </summary>
+        public event System.Action<Quaternion> POVChanged;
 
         private void Awake()
         {
+            EnsureCameraInitialized();
+        }
+
+        private void EnsureCameraInitialized()
+        {
+            // GameManager can apply draft or match framing from its Awake before
+            // ours runs, and Awake order between two scene objects is arbitrary.
+            // Resolve references and seed the zoom once, ahead of either setter,
+            // so a later Awake cannot overwrite a side or zoom that was already
+            // chosen -- the draft used to open at the match's zoom this way, with
+            // the rig position and pitch correct, which read as a framing problem.
+            if (cameraInitialized) return;
+            cameraInitialized = true;
+
             if (cam == null)
                 cam = GetComponentInChildren<Camera>();
             if (cam == null)
                 cam = Camera.main;
 
-            if (cam != null)
-            {
-                cam.transparencySortMode = UnityEngine.TransparencySortMode.CustomAxis;
-                cam.transparencySortAxis = new Vector3(0f, 0f, -1f); // P1 default before SetPlayerSide is called
-            }
-
             if (cameraPivot == null && transform.childCount > 0)
                 cameraPivot = transform.GetChild(0);
 
-            // The authored transform is the opening zoom - but only while it is
-            // still the truth. GameManager builds the DraftManager from its own
-            // Awake, and Awake order between two scene objects is arbitrary, so
-            // SetDraftMode can and does run before this one. Seeding
-            // unconditionally then overwrote a framing the draft had already
-            // applied, and the draft opened at the match's zoom instead of the
-            // whole-board one - with everything else about the draft camera,
-            // the rig position and the pitch, correctly in place, which is what
-            // made it read as a framing problem rather than an ordering one.
-            if (!isDraftMode && cam != null)
+            if (cam != null)
             {
+                ApplySortAxis(currentSide);
+
                 currentZoomDistance = Mathf.Abs(cam.transform.localPosition.z);
                 targetZoomDistance = currentZoomDistance;
             }
@@ -166,6 +199,7 @@ namespace NodeWar.Core
 
         private void Update()
         {
+            HandleRotateInput();
             HandleDragInput();
             HandleZoomInput();
             HandleDraftScroll();
@@ -178,6 +212,25 @@ namespace NodeWar.Core
         }
 
         // ===== PAN =====
+        //
+        // Every pan path samples the ground under the pointer and moves the rig
+        // by the difference, so the direction follows the camera's yaw with no
+        // basis maths of its own. The bounds below are the one world-axis part.
+
+        /// <summary>
+        /// Q and E turn a spectator a quarter turn either way. Players do not
+        /// get this: their side is where their core is.
+        /// </summary>
+        private void HandleRotateInput()
+        {
+            if (viewerMode != ViewerMode.Spectator || isDraftMode) return;
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null) return;
+
+            if (keyboard.qKey.wasPressedThisFrame) RotateView(-1);
+            if (keyboard.eKey.wasPressedThisFrame) RotateView(1);
+        }
 
         private void HandleDragInput()
         {
@@ -352,6 +405,9 @@ namespace NodeWar.Core
 
         // ===== BOUNDS =====
 
+        // Bounds are world-axis rectangles on the rig position, on purpose: they
+        // say where on the board the camera may look, which does not change with
+        // the viewing side. Only the screen-space feel of hitting one does.
         private void ApplyBounds()
         {
             if (!useBounds || boardConfig == null) return;
@@ -790,43 +846,83 @@ namespace NodeWar.Core
         /// </summary>
         public void InitializeSides(BoardConfig config)
         {
-            float centerX = (config.Data.gridCols - 1) * config.nodeScale * 0.5f;
-            float maxZ = (config.Data.gridRows - 1) * config.nodeScale;
-            float zOffset = config.nodeScale * sideZOffsetFactor;
+            boardDepthX = (config.Data.gridCols - 1) * config.nodeScale;
+            boardDepthZ = (config.Data.gridRows - 1) * config.nodeScale;
+            boardCentreX = boardDepthX * 0.5f;
+            boardCentreZ = boardDepthZ * 0.5f;
+
+            float edgeOffset = config.nodeScale * sideZOffsetFactor * sideEdgeFactor;
             float defaultZoom = Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
 
-            // Pushed off your own edge toward the middle. The old framing sat
-            // the rig on the player's back row, which spent most of the screen
-            // on empty space behind them and cut the opponent's half off at the
-            // top. Biasing down-board costs nothing at your end -- your core is
-            // still comfortably in frame -- and buys the half of the board where
-            // the threat comes from.
-            float bias = maxZ * sideOpponentBiasFactor;
-
-            // P0: high-Z side, looking toward -Z. Their opponent is at low Z,
-            // so the bias subtracts.
-            sideStates[0] = new SideState
+            // One guess per side, all the same shape: start on the viewer's own
+            // edge, come in a little, then push toward the far edge. The push
+            // matters -- sitting on the player's back row spent most of the
+            // screen on empty space behind them and cut the opponent's half off
+            // at the top. Biasing down-board costs nothing at your end (your
+            // core is still comfortably in frame) and buys the half of the board
+            // where the threat comes from.
+            for (int side = 0; side < ViewSide.Count; side++)
             {
-                position = new Vector3(centerX + zOffset * sideP0LateralNudgeFactor, 0f, maxZ + zOffset - bias),
-                zoomDistance = defaultZoom,
-                initialized = true
-            };
+                ViewSide.Forward(side, out float fx, out float fz);
+                float depth = DepthAlong(side);
+                float along = -depth * 0.5f + edgeOffset + depth * sideOpponentBiasFactor;
 
-            // P1: low-Z side, looking toward +Z. Their opponent is at high Z,
-            // so the same bias adds.
-            sideStates[1] = new SideState
+                sideStates[side] = new SideState
+                {
+                    position = new Vector3(boardCentreX + fx * along, 0f, boardCentreZ + fz * along),
+                    zoomDistance = defaultZoom,
+                    initialized = true
+                };
+                sideHomeStates[side] = sideStates[side];
+            }
+
+            // The draft runs before any node exists, so a player's side has to
+            // be resolvable from the layout alone. The same placements the
+            // board is built from say where each core will be.
+            BoardConfigData.InitialNodePlacement[] placements = config.Data.initialPlacements;
+            if (placements == null) return;
+
+            for (int i = 0; i < placements.Length; i++)
             {
-                position = new Vector3(centerX, 0f, zOffset * sideP1ZPositionFactor + bias),
-                zoomDistance = defaultZoom,
-                initialized = true
-            };
+                if (placements[i].districtType != DistrictType.Core || placements[i].ownerID < 0) continue;
+                SetCore(placements[i].ownerID,
+                    placements[i].gridX * config.nodeScale,
+                    placements[i].gridZ * config.nodeScale);
+            }
+        }
 
-            sideHomeStates[0] = sideStates[0];
-            sideHomeStates[1] = sideStates[1];
+        /// <summary>How deep the board is when looked at from a side: Z for 0 and 2, X for 1 and 3.</summary>
+        private float DepthAlong(int side)
+        {
+            return (ViewSide.Wrap(side) & 1) == 0 ? boardDepthZ : boardDepthX;
+        }
 
-            // Kept so SetHomeAnchor can apply the same push when the real core
-            // positions arrive, without recomputing the board's depth.
-            opponentBias = bias;
+        private void SetCore(int playerID, float x, float z)
+        {
+            if (playerID >= coreX.Length)
+            {
+                int previous = coreX.Length;
+                System.Array.Resize(ref coreX, playerID + 1);
+                System.Array.Resize(ref coreZ, playerID + 1);
+                for (int i = previous; i < coreX.Length; i++)
+                {
+                    coreX[i] = float.NaN;
+                    coreZ[i] = float.NaN;
+                }
+            }
+
+            coreX[playerID] = x;
+            coreZ[playerID] = z;
+        }
+
+        /// <summary>
+        /// The one function that decides which side a viewer looks from.
+        /// A player looks from behind their own core, so it holds for any
+        /// player count and board layout. A spectator gets a side-on view.
+        /// </summary>
+        public int ResolveViewer(ViewerMode mode, int playerID)
+        {
+            return ViewSide.ResolveViewer(mode, playerID, coreX, coreZ, boardCentreX, boardCentreZ);
         }
 
         /// <summary>
@@ -843,40 +939,45 @@ namespace NodeWar.Core
         /// </summary>
         public void SetHomeAnchor(int playerID, Vector3 coreWorldPosition)
         {
-            if (playerID < 0 || playerID > 1) return;
+            if (playerID < 0) return;
 
-            // P0 sits at high Z and faces -Z, so its opponent is the way the
-            // bias subtracts; P1 is the mirror.
-            float bias = playerID == 0 ? -opponentBias : opponentBias;
+            SetCore(playerID, coreWorldPosition.x, coreWorldPosition.z);
+
+            // The push toward the opponent runs along the way this player
+            // looks: -Z for the side at high Z, +Z for the mirror, and along X
+            // for a board laid out sideways.
+            int side = ResolveViewer(ViewerMode.Player, playerID);
+            ViewSide.Forward(side, out float fx, out float fz);
+            float bias = DepthAlong(side) * sideOpponentBiasFactor;
 
             Vector3 home = new Vector3(
-                coreWorldPosition.x,
+                coreWorldPosition.x + fx * bias,
                 0f,
-                coreWorldPosition.z + bias);
+                coreWorldPosition.z + fz * bias);
 
-            sideHomeStates[playerID].position = home;
-            sideHomeStates[playerID].initialized = true;
+            sideHomeStates[side].position = home;
+            sideHomeStates[side].initialized = true;
 
             // InitializeSides normally set this already. If it did not, a zero
             // would recentre the player to the closest clamp every time.
-            if (sideHomeStates[playerID].zoomDistance <= 0f)
+            if (sideHomeStates[side].zoomDistance <= 0f)
             {
-                sideHomeStates[playerID].zoomDistance =
+                sideHomeStates[side].zoomDistance =
                     Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
             }
 
             // The stored framing is only overwritten while it is still the
             // guess. Once a side has been played, that is the player's camera
             // and setup has no business moving it.
-            if (!sideHasBeenSet || playerID != currentSide)
+            if (!sideHasBeenSet || side != currentSide)
             {
-                sideStates[playerID].position = home;
-                sideStates[playerID].initialized = true;
+                sideStates[side].position = home;
+                sideStates[side].initialized = true;
             }
 
             // Never during the draft: that phase has deliberately framed the
             // whole board from its centre, and this would drag it to one end.
-            if (playerID == currentSide && !sessionActive && !isDraftMode)
+            if (sideHasBeenSet && side == currentSide && !sessionActive && !isDraftMode)
             {
                 transform.position = new Vector3(home.x, transform.position.y, home.z);
                 panVelocity = Vector3.zero;
@@ -884,11 +985,17 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Stores departing side's state, restores arriving side's state, flips pivot rotation.
+        /// Puts a viewer on their side: stores the departing side's framing,
+        /// restores the arriving side's, then turns through SetPOV. A player
+        /// keeps their pitch; a spectator is also given the rotate keys.
         /// </summary>
-        public void SetPlayerSide(int playerID)
+        public void SetViewer(ViewerMode mode, int playerID)
         {
+            EnsureCameraInitialized();
             if (cameraPivot == null) return;
+
+            viewerMode = mode;
+            int side = ResolveViewer(mode, playerID);
 
             // Store current (skip first call — scene start position is meaningless)
             if (sideHasBeenSet && sideStates[currentSide].initialized)
@@ -897,31 +1004,75 @@ namespace NodeWar.Core
                 sideStates[currentSide].zoomDistance = targetZoomDistance;
             }
 
-            currentSide = playerID;
             sideHasBeenSet = true;
 
-            if (sideStates[currentSide].initialized)
+            if (sideStates[side].initialized)
             {
-                transform.position = sideStates[currentSide].position;
-                targetZoomDistance = sideStates[currentSide].zoomDistance;
+                transform.position = sideStates[side].position;
+                targetZoomDistance = sideStates[side].zoomDistance;
                 currentZoomDistance = targetZoomDistance;
             }
 
+            SetViewSide(side);
+        }
+
+        /// <summary>Steps the view by quarter turns about the point being looked at. Framing is untouched.</summary>
+        public void RotateView(int quarterTurns)
+        {
+            SetViewSide(ViewSide.Rotate(currentSide, quarterTurns));
+        }
+
+        /// <summary>SetPOV at the pitch the pivot already has.</summary>
+        public void SetViewSide(int side)
+        {
+            EnsureCameraInitialized();
+            if (cameraPivot == null) return;
+
+            SetPOV(side, cameraPivot.localRotation.eulerAngles.x);
+        }
+
+        /// <summary>
+        /// The only place the camera turns. Orientation, the transparency sort
+        /// axis, the shared billboard facing and POVChanged always change
+        /// together, so nothing can be left facing the old side. Framing and
+        /// zoom stay with the caller.
+        ///
+        /// The sort axis is CustomAxis, not Orthographic: orthographic sorting
+        /// measures along the live camera direction, so sprites flicker and clip
+        /// as the camera moves side to side. An axis fixed to the side changes
+        /// here and nowhere else, never while panning.
+        /// </summary>
+        public void SetPOV(int side, float pitch)
+        {
+            EnsureCameraInitialized();
+            if (cameraPivot == null) return;
+
+            side = ViewSide.Wrap(side);
+            currentSide = side;
+
+            cameraPivot.localRotation = Quaternion.Euler(pitch, ViewSide.Yaw(side), 0f);
+
+            // Both pan anchors are ground points seen from the old orientation.
+            panVelocity = Vector3.zero;
+            isDragging = false;
+            gesturePanActive = false;
+
             if (cam != null)
             {
-                // P0 faces -Z (pivot Y=180): higher Z is further back, axis points +Z
-                // P1 faces +Z (pivot Y=0): lower Z is further back, axis points -Z
-                cam.transparencySortAxis = (playerID == 0)
-                    ? new Vector3(0f, 0f, 1f)
-                    : new Vector3(0f, 0f, -1f);
+                ApplySortAxis(side);
+                NodeWar.View.Billboard.RecaptureFacing(cam);
             }
 
-            panVelocity = Vector3.zero;
+            POVChanged?.Invoke(cameraPivot.rotation);
+        }
 
-            // P0 faces -Z (Y=180), P1 faces +Z (Y=0)
-            float yRotation = (playerID == 0) ? 180f : 0f;
-            cameraPivot.localRotation = Quaternion.Euler(
-                cameraPivot.localRotation.eulerAngles.x, yRotation, 0f);
+        private void ApplySortAxis(int side)
+        {
+            if (cam == null) return;
+
+            ViewSide.SortAxis(side, out float x, out float z);
+            cam.transparencySortMode = TransparencySortMode.CustomAxis;
+            cam.transparencySortAxis = new Vector3(x, 0f, z);
         }
 
         public float GetCurrentZoomDistance() => currentZoomDistance;
@@ -971,9 +1122,12 @@ namespace NodeWar.Core
 
         /// <summary>
         /// Frames the board for the draft. Locks pan; scroll and pinch still zoom.
+        /// viewSide is where the board is framed from, so each player drafts
+        /// looking at their own half; ResolveViewer picks it. Only read when enabling.
         /// </summary>
-        public void SetDraftMode(bool enabled)
+        public void SetDraftMode(bool enabled, int viewSide = 0)
         {
+            EnsureCameraInitialized();
             if (enabled == isDraftMode) return;
 
             isDraftMode = enabled;
@@ -981,15 +1135,13 @@ namespace NodeWar.Core
             if (!enabled)
             {
                 // The draft borrows the pivot's pitch and must give it back.
-                // Without this the near-top-down draft angle survived into
-                // play: SetPlayerSide rebuilds the rotation as
-                // Euler(eulerAngles.x, yaw, 0), preserving whatever X it finds,
-                // so every match after a draft ran at the draft's angle instead
-                // of the one authored on the pivot.
+                // SetViewSide keeps whatever pitch it finds, so without this the
+                // near-top-down draft angle survived into play and every match
+                // after a draft ran at the draft's angle instead of the one
+                // authored on the pivot.
                 if (cameraPivot != null && hasStashedPitch)
                 {
-                    Vector3 euler = cameraPivot.localRotation.eulerAngles;
-                    cameraPivot.localRotation = Quaternion.Euler(stashedPitch, euler.y, 0f);
+                    SetPOV(currentSide, stashedPitch);
                     hasStashedPitch = false;
                 }
 
@@ -1007,9 +1159,13 @@ namespace NodeWar.Core
             // rather than an absolute position so it survives a board of a
             // different size: X stays on the board's midline and Z pulls back
             // toward the near edge, which is what a 60-degree pitch needs to
-            // put the far row in frame.
+            // put the far row in frame. The offset is authored for a view along
+            // Z, as a fraction of the board's depth on that axis, so it is
+            // scaled to the depth along the chosen side and turned with its yaw
+            // to stay on the viewer's edge.
             ResetToCenter();
-            transform.position += draftRigOffset;
+            float offsetScale = boardDepthZ > 0f ? DepthAlong(viewSide) / boardDepthZ : 1f;
+            transform.position += Quaternion.Euler(0f, ViewSide.Yaw(viewSide), 0f) * (draftRigOffset * offsetScale);
 
             // The zoom-out ceiling, not the opening distance. Seeing the whole
             // board is the point of the phase, so the pinch may go past the
@@ -1036,7 +1192,7 @@ namespace NodeWar.Core
             {
                 stashedPitch = cameraPivot.localRotation.eulerAngles.x;
                 hasStashedPitch = true;
-                cameraPivot.localRotation = Quaternion.Euler(draftPitch, 0f, 0f);
+                SetPOV(viewSide, draftPitch);
             }
         }
 

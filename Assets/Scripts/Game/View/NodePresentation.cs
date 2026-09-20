@@ -43,6 +43,7 @@ namespace NodeWar.View
         private Transform[] sprites;
         private Vector3[] baseScales;
         private Sequence activeSequence;
+        private SpriteDepthSorter sorter;
 
         private void OnEnable()
         {
@@ -51,6 +52,46 @@ namespace NodeWar.View
         }
 
         // ===== ORIENTATION =====
+
+        /// <summary>
+        /// Turns the node for the viewer: lays the GFX and work points out from
+        /// the viewing yaw, faces each sprite along the camera's rotation, then
+        /// re-orders the sprites for the new side. In that order, because the
+        /// depth rank reads the sprites' world positions after the layout turns.
+        /// </summary>
+        public void SetPOV(Quaternion orientation)
+        {
+            RotateNode(orientation.eulerAngles.y);
+            spriteRotation = orientation.eulerAngles;
+            ApplyOrientation();
+
+            EnsureSorter();
+            if (sorter != null) sorter.Apply(ViewSide.FromYaw(orientation.eulerAngles.y));
+        }
+
+        /// <summary>
+        /// Makes GFX one SortingGroup so the node is drawn as a unit, and its
+        /// sprites are ordered inside it by SpriteDepthSorter. Runtime only:
+        /// nothing here should be written into the prefab.
+        /// </summary>
+        private void EnsureSorter()
+        {
+            if (sorter != null || gfxRoot == null || !Application.isPlaying) return;
+
+            // The ground quad carries a SortingGroup of its own on the Ground
+            // layer. Left under GFX it would become a group nested in this one
+            // and sort as part of the node, so a villager behind the node's
+            // centre would be drawn under its own ground. Hoisted to the node
+            // root it stays a separate, lower layer, exactly as before.
+            MeshRenderer[] meshes = gfxRoot.GetComponentsInChildren<MeshRenderer>(true);
+            for (int i = 0; i < meshes.Length; i++)
+                meshes[i].transform.SetParent(transform, true);
+
+            // Villagers share the layer, so a villager and a building are put
+            // in order by the camera's sort axis rather than by layer.
+            sorter = SpriteDepthSorter.Attach(gfxRoot.gameObject,
+                SortingLayer.NameToID("Villagers"), 0);
+        }
 
         [ContextMenu("Apply Orientation")]
         private void ApplyOrientation()
@@ -262,6 +303,9 @@ namespace NodeWar.View
                     }
                 }
             }
+
+            // Sprites found after the group was made still need an order.
+            if (sorter != null) sorter.Refresh();
         }
 
         // ===== EDITOR =====

@@ -151,7 +151,10 @@ namespace NodeWar.Core
 
             cameraController = FindAnyObjectByType<CameraController>();
             if (cameraController != null)
+            {
                 cameraController.InitializeSides(boardConfig);
+                cameraController.POVChanged += OnPOVChanged;
+            }
 
             // Wire transition controller events
             if (transitionController != null)
@@ -519,24 +522,45 @@ namespace NodeWar.Core
             pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
         }
 
+        /// <summary>
+        /// Every mode that puts a viewer somewhere -- the post-draft transition,
+        /// the local-test player switch, a bot match, a networked match, a
+        /// spectator -- comes through here and on to CameraController.SetViewer.
+        /// </summary>
         private void OnPlayerSideChanged(int playerID)
         {
+            MatchConnection match = MatchConnection.Instance;
+            NodeWar.View.ViewerMode mode = (match != null && match.isSpectator)
+                ? NodeWar.View.ViewerMode.Spectator
+                : NodeWar.View.ViewerMode.Player;
+
             if (cameraController != null)
-                cameraController.SetPlayerSide(playerID);
+                cameraController.SetViewer(mode, playerID);
 
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
+        }
 
-            float rotation = playerID == 0 ? 180f : 0f;
+        /// <summary>
+        /// The camera turned. Node sprites are laid out and faced for the viewer,
+        /// so if this ever disagreed with the camera every node on the board
+        /// would face away from the player looking at it.
+        /// </summary>
+        private void OnPOVChanged(Quaternion orientation)
+        {
+            if (nodePresentations == null) return;
 
-            if (nodePresentations != null)
+            for (int i = 0; i < nodePresentations.Length; i++)
             {
-                for (int i = 0; i < nodePresentations.Length; i++)
-                {
-                    if (nodePresentations[i] != null)
-                        nodePresentations[i].RotateNode(rotation);
-                }
+                if (nodePresentations[i] != null)
+                    nodePresentations[i].SetPOV(orientation);
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (cameraController != null)
+                cameraController.POVChanged -= OnPOVChanged;
         }
 
         private void StartLocalPlay()
@@ -1242,6 +1266,12 @@ namespace NodeWar.Core
                 if (presentation == null)
                     presentation = nodeGO.AddComponent<NodeWar.View.NodePresentation>();
                 nodePresentations[i] = presentation;
+
+                // Nodes are built after the camera has settled on a side (the
+                // draft's, or the skip-draft board's), and POVChanged only
+                // reports later turns.
+                if (cameraController != null)
+                    presentation.SetPOV(cameraController.POV);
 
                 // One group for the whole node: the ground quad and every
                 // building sprite share an ID, so the seams between them grow

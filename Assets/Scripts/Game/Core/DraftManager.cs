@@ -129,8 +129,13 @@ namespace NodeWar.Core
                 }
             }
 
+            // Each player drafts looking at their own half, from the side the
+            // match will give them.
             if (cameraController != null)
-                cameraController.SetDraftMode(true);
+            {
+                cameraController.SetDraftMode(true,
+                    cameraController.ResolveViewer(NodeWar.View.ViewerMode.Player, localPlayerID));
+            }
 
             // Networked matches require ready handshake; local/bot skip straight to reveal
             if (!isNetworked || isBotMatch)
