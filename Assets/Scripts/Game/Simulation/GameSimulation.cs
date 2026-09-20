@@ -525,6 +525,7 @@ namespace NodeWar.Simulation
                     if (node.claimBar >= bal.claimThreshold)
                     {
                         node.claimBar = bal.claimThreshold;
+                        state.nodes[nodeIndex] = node;
                         CompleteClaimForPlayer(state, nodeIndex, 0);
                         node = state.nodes[nodeIndex];
                     }
@@ -560,6 +561,7 @@ namespace NodeWar.Simulation
                     if (node.claimBar <= -bal.claimThreshold)
                     {
                         node.claimBar = -bal.claimThreshold;
+                        state.nodes[nodeIndex] = node;
                         CompleteClaimForPlayer(state, nodeIndex, 1);
                         node = state.nodes[nodeIndex];
                     }

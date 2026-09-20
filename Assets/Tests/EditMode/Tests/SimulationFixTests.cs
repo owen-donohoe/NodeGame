@@ -5,6 +5,54 @@ namespace NodeWar.Tests
 {
     public class SimulationFixTests
     {
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void Claim_ReachingThresholdPreservesClampedBarAndUpgrade(int playerID, bool upgrade)
+        {
+            SimulationState state = RunThresholdClaim(playerID, upgrade);
+            int expectedBar = (playerID == 0 ? 1 : -1) * GameBalanceData.Default().claimThreshold;
+            Assert.AreEqual(expectedBar, state.nodes[1].claimBar);
+            Assert.AreEqual(playerID, state.nodes[1].ownerID);
+            Assert.AreEqual(upgrade ? DistrictType.Barracks : DistrictType.None,
+                state.nodes[1].districtType);
+            Assert.AreEqual(VillagerState.Idle, state.villagers[playerID].state);
+
+            // Once the claimer idles, a later tick must leave the owned bar full.
+            GameSimulation.SimulateTick(state);
+            Assert.AreEqual(expectedBar, state.nodes[1].claimBar);
+        }
+
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void Claim_ReachingThresholdPreservesClampedBarAndUpgrade_Determinism(int playerID, bool upgrade)
+        {
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunThresholdClaim(playerID, upgrade)),
+                SimulationStateHasher.ComputeHash(RunThresholdClaim(playerID, upgrade)));
+        }
+
+        private static SimulationState RunThresholdClaim(int playerID, bool upgrade)
+        {
+            GameBalanceData balance = SetDefaultBalance();
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            // One point short in either direction; the default rate of 17 overshoots.
+            state.nodes[1].claimBar = (playerID == 0 ? 1 : -1) * (balance.claimThreshold - 1);
+            state.villagers[playerID].currentNodeID = 1;
+            if (upgrade)
+            {
+                state.nodes[1].slotType = NodeSlotType.Army;
+                state.nodes[1].baseDistrictType = DistrictType.Camp;
+                state.nodes[1].districtType = DistrictType.Camp;
+                state.players[playerID].draftedNodes = new[] { (int)DistrictType.Barracks };
+            }
+            // No commands: the villager is already on the neutral node; one tick completes it.
+            GameSimulation.SimulateTick(state);
+            return state;
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void Respawn_ResetsStatsAndProduction(bool paid)
