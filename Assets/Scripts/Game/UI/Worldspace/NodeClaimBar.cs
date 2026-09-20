@@ -35,6 +35,8 @@ namespace NodeWar.UI
         private int lastClaimBar;
         private float showTimer;
         private float targetAlpha;
+        private Canvas worldCanvas;
+        private Camera viewCamera;
 
         private int claimThreshold = 10000;
 
@@ -44,6 +46,18 @@ namespace NodeWar.UI
             nodeID = id;
             this.claimThreshold = claimThreshold;
             initialized = true;
+
+            worldCanvas = GetComponentInParent<Canvas>();
+            viewCamera = Camera.main;
+            if (worldCanvas != null && worldCanvas.renderMode == RenderMode.WorldSpace)
+                worldCanvas.worldCamera = viewCamera;
+
+            // These are indicators, not controls. Do not intercept node taps.
+            if (canvasGroup != null)
+            {
+                canvasGroup.interactable = false;
+                canvasGroup.blocksRaycasts = false;
+            }
 
             if (backgroundImage != null)
                 backgroundImage.color = backgroundColor;
@@ -143,9 +157,34 @@ namespace NodeWar.UI
             showTimer = duration;
             targetAlpha = 1f;
         }
+
+        private void LateUpdate()
+        {
+            if (!initialized || worldCanvas == null || worldCanvas.renderMode != RenderMode.WorldSpace)
+                return;
+
+            if (viewCamera == null) viewCamera = Camera.main;
+            if (viewCamera != null)
+                worldCanvas.transform.rotation = viewCamera.transform.rotation;
+        }
+
+        // Unity serializes a newly added Gradient as white-to-white, not empty.
+        // The base node prefab carries that untouched default for both players.
+        private static bool NeedsPlayerGradient(Gradient gradient)
+        {
+            if (gradient == null) return true;
+            GradientColorKey[] keys = gradient.colorKeys;
+            if (keys.Length == 0) return true;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (keys[i].color != Color.white) return false;
+            }
+            return true;
+        }
+
         private void EnsureGradients()
         {
-            if (p0Gradient == null || p0Gradient.colorKeys.Length == 0)
+            if (NeedsPlayerGradient(p0Gradient))
             {
                 p0Gradient = new Gradient();
                 GradientColorKey[] keys = new GradientColorKey[2];
@@ -157,7 +196,7 @@ namespace NodeWar.UI
                 p0Gradient.SetKeys(keys, alpha);
             }
 
-            if (p1Gradient == null || p1Gradient.colorKeys.Length == 0)
+            if (NeedsPlayerGradient(p1Gradient))
             {
                 p1Gradient = new Gradient();
                 GradientColorKey[] keys = new GradientColorKey[2];
