@@ -342,7 +342,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `TickRunner` — local (non-networked) fixed-tick driver.
 - `MatchConnection` — persists match configuration across the Lobby →
   Gameplay scene load.
-- `CameraController` — camera rig and per-player orientation.
+- `CameraController` — camera rig, framing, and the one place the viewing
+  side changes. See [Camera POV and sprite order](#camera-pov-and-sprite-order).
 - `MatchTransitionController` — scripted transition sequences (startup
   wave, post-draft reveal, breakdown-on-game-over).
 - `ITickProvider` — shared interface exposing tick-interpolation alpha so
@@ -477,6 +478,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `OpponentRouteSettings` — the rules of the one information gate in the
   game. Everything else is fully visible to both players, so an opponent
   route hands the player something new rather than withholding it.
+- `ViewSide` — the UnityEngine-free maths behind the camera POV. Tested by
+  `dotnet/NodeWar.View.Tests`.
+- `SortHeight` / `SpriteDepthSorter` — height and depth order inside a node or
+  draft piece.
 - `OutlineDriver` — the only thing that sets outline intents. Reads hover,
   villager selection and the open node, and is read-only against the
   simulation. `GameManager` builds it before the views that register with
@@ -513,6 +518,48 @@ object with no GameObject, no scene and no render pipeline — the reason
   (`Assets/Settings/OutlineSettings.asset`), and the screen-space scissor.
 
 Tested by `Assets/Tests/EditMode/Outline/`, its own test assembly.
+
+### Camera POV and sprite order
+
+The camera looks from one of four sides. A **view side** is 0..3 quarter turns,
+yaw = 90 x side. It is a viewing direction, not a player ID: nothing maps a
+player to a yaw by table.
+
+- **One way in.** `CameraController.SetPOV(side, pitch)` is the only thing that
+  turns the camera. The draft, a networked or bot match, the local-test player
+  switch and a spectator all reach it (through `SetDraftMode` or `SetViewer`),
+  and it is where the sort axis, the shared `Billboard` facing and the
+  `POVChanged` event change together. `RotateView(±1)` steps a spectator through
+  the same call; Q and E do it from the keyboard while `MatchConnection.isSpectator`.
+- **One place picks the side.** `ResolveViewer(mode, playerID)` puts a player
+  behind their own core, snapped to the nearest quarter turn from the board
+  centre, so it holds for two or four players and any layout. On the default
+  board that gives P0 yaw 180 and P1 yaw 0. A spectator gets side 1, side-on for
+  a board that runs along Z. Core positions come from the board's
+  `initialPlacements` (so the draft can resolve before any node exists) and are
+  refined by `SetHomeAnchor`.
+- **Framing follows the side.** The per-side default, the home anchor and its
+  push toward the opponent, and the draft's rig offset are all computed along the
+  side's forward direction, not from a player slot. Pan, momentum and focus work
+  from ground points under the pointer, so they turn with the camera. Bounds are
+  the exception on purpose: world-axis rectangles on the rig position, which say
+  where on the board the camera may look and do not depend on the side.
+- **Sort mode is `CustomAxis`, not `Orthographic`**, because orthographic
+  sorting measures along the live camera direction and flickers between close
+  sprites as the camera moves. The axis is the side's horizontal forward, so it
+  points away from the camera and Unity draws the nearer sprite last. It changes
+  in `SetPOV` and nowhere else, never while panning.
+- **Height, then depth.** Each node (its `GFX`) and each draft piece is one
+  `SortingGroup`, ordered against its neighbours by that axis. Inside it,
+  `SpriteDepthSorter` sets `sortingOrder = height x 256 + depth rank`. Height is
+  the authored `SortHeight` (default 0): a sprite physically on top of another
+  always draws in front of it. Equal heights order by depth along the axis, ties
+  by index. It recomputes on `POVChanged` and when sprites are added, never per
+  frame. The ground quad is hoisted out of `GFX` at runtime so it stays its own
+  group on the Ground layer.
+- **Draft pieces** (`DraftPlacementPreview`, ghost and confirmed) take the
+  camera's yaw and follow it if the side changes; the sticker is one height above
+  the cube.
 
 ### Where a villager is, mid-edge
 
