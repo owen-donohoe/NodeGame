@@ -663,7 +663,7 @@ namespace NodeWar.Core
         {
             if (MatchConnection.Instance != null)
                 MatchConnection.Instance.Shutdown();
-            SceneManager.LoadScene("Lobby");
+            SceneTransition.Load("Lobby");
         }
 
         // ===== UI =====
