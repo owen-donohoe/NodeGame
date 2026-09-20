@@ -108,6 +108,10 @@ Read the file. Do not ask me to summarise it here.
 - After `Simulation/` changes: flag which tests should be run
 - Do not spawn a subagent for work that would use 2 or fewer of them. Managed
   skills that fan out internally (`/code-review`, `/security-review`) are exempt
+- Before any fan-out through Paseo: `.claude/skills/delegation.md`. Two agents
+  in flight at most, in waves, and the cost estimated against the remaining
+  window first. Five at once emptied the whole GPT budget in 35 minutes on
+  2026-09-20. The goal is both budgets approaching full use, not one at 100%
 
 ## C# Conventions
 
@@ -150,8 +154,9 @@ touches a system is not work that finished.
 
 `.claude/skills/*.md` are review procedures with no invocation syntax — read
 the file by path and follow it: `determinism-guard.md` · `write-sim-test.md` ·
-`cs-review.md` · `session-summary.md` · `phase-plan.md` (largely superseded by
-Notion Phases). `docs/skills/*.md` are a different thing: executor
+`cs-review.md` · `session-summary.md` · `delegation.md` · `phase-plan.md`
+(largely superseded by Notion Phases). `docs/skills/*.md` are a different
+thing: executor
 instructions for running something, listed above.
 
 ## Response Style
