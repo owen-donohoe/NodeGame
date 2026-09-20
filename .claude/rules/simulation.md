@@ -1,5 +1,6 @@
 ---
-glob: Assets/Scripts/Game/Simulation/**
+paths:
+  - "Assets/Scripts/Game/Simulation/**"
 ---
 
 # Simulation Rules

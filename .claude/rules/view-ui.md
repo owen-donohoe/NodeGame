@@ -1,8 +1,9 @@
 ---
-# Quoted, and no nested braces: the value starts with '{', which YAML would
-# otherwise read as a flow mapping. A rules file that fails to parse stops
-# enforcing this boundary silently.
-glob: "{Assets/Scripts/Game/View/**,Assets/Scripts/Game/UI/**,Assets/UI/**,Assets/Legacy/**}"
+paths:
+  - "Assets/Scripts/Game/View/**"
+  - "Assets/Scripts/Game/UI/**"
+  - "Assets/UI/**"
+  - "Assets/Legacy/**"
 ---
 
 # View / UI Rules
