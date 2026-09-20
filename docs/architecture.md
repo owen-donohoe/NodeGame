@@ -5,12 +5,7 @@ description: The seven layers of Assets/Scripts/, where the three UI trees live 
 tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T04:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
 verified_at_commit: 2241e47
 status: stable
