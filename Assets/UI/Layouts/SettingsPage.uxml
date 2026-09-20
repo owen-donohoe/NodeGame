@@ -11,11 +11,16 @@
         right. Every row the prototype has, in its groups and order, with its
         default values.
 
-        Layout pass. The controls move, but nothing reads or saves them yet -
-        that is the settings system, which extends PlayerProfile's save path
-        rather than adding a second one. The footnote says so, because a
-        control that looks live and does nothing is the thing this lobby does
-        not allow. Remove the footnote in the same change that wires the rows.
+        Every row now reads and writes PlayerProfile, through the save path it
+        already owned rather than a second one. What a saved value then drives
+        is a separate question and mostly still open - the footnote below names
+        what is stored but not yet acted on, and narrows as each system lands.
+        A control that looks live and does nothing is the thing this lobby does
+        not allow, so that footnote stays until there is nothing left to admit.
+
+        The values below are duplicated in GameSettingsData.CreateDefault, so a
+        profile that does not exist yet and a page that has not loaded show the
+        same thing. If either side moves, move both.
 
         Rows that hold a switch are Buttons, so the whole row is the target.
     -->
@@ -100,8 +105,8 @@
                 </engine:VisualElement>
             </engine:VisualElement>
 
-            <!-- TODO(settings): remove once these rows read and write saved values. -->
-            <engine:Label class="lb-settings-footnote ui-w500" text="Settings are not saved yet." />
+            <!-- TODO(settings): narrow as each system lands; delete the label when none are left. -->
+            <engine:Label class="lb-settings-footnote ui-w500" text="Saved, but only Reduced motion changes anything so far." />
 
         </engine:ScrollView>
     </engine:VisualElement>

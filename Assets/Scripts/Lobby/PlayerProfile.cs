@@ -35,6 +35,14 @@ namespace NodeWar.Lobby
             // what an older save without this field deserialises to - so the
             // requested default costs no migration.
             public int workshopTabIndex;
+
+            // The Settings page's values. Unlike workshopTabIndex this one
+            // cannot lean on zero being the wanted default - every slider at 0
+            // and every switch off is a state a player can legitimately choose.
+            // GameSettingsData.version carries that distinction; Load() runs
+            // the block through Normalized, which turns an absent one into the
+            // defaults and rewrites the file.
+            public GameSettingsData settings;
         }
 
         public PlayerProfileData data;
@@ -116,6 +124,26 @@ namespace NodeWar.Lobby
             Save();
         }
 
+        /// <summary>
+        /// The Settings page's values, always normalised - sliders inside 0..1
+        /// and the interface size inside its range, whatever the file held.
+        /// </summary>
+        public GameSettingsData Settings => data.settings;
+
+        /// <summary>
+        /// Writes the settings back, skipping the disk entirely when nothing
+        /// actually moved. The Settings page commits on close rather than on
+        /// every slider frame, so this runs once per visit, not once per pixel.
+        /// </summary>
+        public void SetSettings(GameSettingsData settings)
+        {
+            GameSettingsData normalized = GameSettingsData.Normalized(settings);
+            if (!GameSettingsData.Differ(normalized, data.settings)) return;
+
+            data.settings = normalized;
+            Save();
+        }
+
         // Unlock gating has not shipped: every caller is deliberately told "yes".
         // Before setting this to false, ensure profile creation seeds the starter
         // set in unlockedSuitIDs/unlockedNodeIDs (CreateDefaults already seeds a
@@ -176,11 +204,20 @@ namespace NodeWar.Lobby
                 bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
                 data.loadout = LoadoutData.Normalized(data.loadout);
 
+                // A save written before settings existed deserialises to an
+                // all-zero block, which Normalized turns into the defaults.
+                // Rewriting the file here makes that a one-time cost rather
+                // than something re-derived on every launch.
+                bool settingsAbsent = data.settings.version < GameSettingsData.CurrentVersion;
+                data.settings = GameSettingsData.Normalized(data.settings);
+
                 if (migrated)
-                {
                     Debug.Log("[PlayerProfile] Migrated flat loadout fields to arrays.");
-                    Save();
-                }
+
+                if (settingsAbsent)
+                    Debug.Log("[PlayerProfile] Added default settings to an older save.");
+
+                if (migrated || settingsAbsent) Save();
             }
             else
             {
@@ -265,7 +302,8 @@ namespace NodeWar.Lobby
                 unlockedNodeIDs = new string[] { "node_watchtower", "node_market" },
                 selectedGameModeIndex = (int)GameMode.Bot,
                 boxesAvailable = 0,
-                boxProgress = 0f
+                boxProgress = 0f,
+                settings = GameSettingsData.CreateDefault()
             };
         }
 

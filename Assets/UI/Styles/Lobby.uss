@@ -983,3 +983,35 @@
 .lb-root .lb-loadout-line__part--short {
     color: var(--status-short-ink);
 }
+
+/* ===================================================================
+   Reduced motion - Settings > Accessibility.
+
+   SettingsPage stores the preference and LobbyUIController puts this class
+   on #lobby-root. Zeroing the motion tokens covers everything that animates
+   through them, which is most of the lobby. The two durations written as
+   literals - the push page above and the toast in Components.uss - are not
+   reached that way, so they are named here explicitly. A transition added
+   later with a literal duration will not be covered; use a token.
+
+   Durations go to 0s rather than the transitions being dropped, so the end
+   state is still the one the open/close classes describe. The element
+   arrives; it just does not travel to get there.
+   =================================================================== */
+
+.lb-reduced-motion {
+    --motion-press: 0s;
+    --motion-release: 0s;
+    --motion-page: 0s;
+    --motion-sheet: 0s;
+}
+
+.lb-reduced-motion .lb-push {
+    transition-duration: 0s;
+}
+
+/* #lobby-root carries ui-root as well, so this outranks .ui-root .ui-toast
+   whichever order the two sheets happen to load in. */
+.lb-reduced-motion.ui-root .ui-toast {
+    transition-duration: 0s;
+}
