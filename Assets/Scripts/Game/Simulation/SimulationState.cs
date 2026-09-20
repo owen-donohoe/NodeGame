@@ -138,6 +138,13 @@ namespace NodeWar.Simulation
         public int winnerID;
         public int defaultEdgeWeight;
 
+        // Pathfinding costs as integer percentages, configured once at match setup.
+        public int ownedMultiplier = 50;
+        public int partiallyOwnedMultiplier = 75;
+        public int unownedMultiplier = 100;
+        public int enemyPartiallyOwnedMultiplier = 150;
+        public int enemyOwnedMultiplier = 200;
+
         public SimulationState()
         {
             tickCount = 0;

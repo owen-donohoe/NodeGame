@@ -21,8 +21,10 @@ namespace NodeWar.Tests
         //
         // Declared in docs/computations/determinism-baseline.md as an Attested
         // Computation; docs/attesters/hash_baseline.ps1 verifies a run's receipt.
-        private const int EmptyTick100Hash = 17457352;
-        private const int MoveAndCombat4Hash = 626950565;
+        // Issue #20 adds five pathfinding multipliers to the hash. Gameplay is
+        // unchanged: the previous hasher still gives 17457352 and 626950565.
+        private const int EmptyTick100Hash = 170778799;
+        private const int MoveAndCombat4Hash = -294115188;
 
         [Test]
         public void EmptyTick_100Iterations_ProducesDeterministicHash()
