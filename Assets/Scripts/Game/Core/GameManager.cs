@@ -527,7 +527,11 @@ namespace NodeWar.Core
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
 
-            float rotation = playerID == 0 ? 180f : 0f;
+            // The same yaw the camera takes for this side. Read from there
+            // rather than repeated here: node sprites are rotated to face the
+            // viewer, so if the two ever disagreed every node on the board
+            // would face away from the player looking at it.
+            float rotation = CameraController.SideYaw(playerID);
 
             if (nodePresentations != null)
             {
