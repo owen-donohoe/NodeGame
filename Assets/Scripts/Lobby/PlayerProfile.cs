@@ -120,7 +120,11 @@ namespace NodeWar.Lobby
         // Before setting this to false, ensure profile creation seeds the starter
         // set in unlockedSuitIDs/unlockedNodeIDs (CreateDefaults already seeds a
         // small set), and migrate existing saves to preserve intended access.
-        private const bool AllContentUnlocked = true;
+        // static readonly rather than const on purpose: a const true folds the
+        // lookup away at compile time, and every call site then compiles with an
+        // unreachable-expression warning. This way the gate reads the same and
+        // flipping it is still a one-line change.
+        private static readonly bool AllContentUnlocked = true;
 
         public bool IsSuitUnlocked(string suitID) =>
             AllContentUnlocked || ContainsUnlockedID(data.unlockedSuitIDs, suitID);

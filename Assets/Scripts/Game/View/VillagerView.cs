@@ -74,11 +74,6 @@ namespace NodeWar.View
             tickProvider = provider;
         }
 
-        public void SetSelectionSystem(SelectionSystem system)
-        {
-            // Retained for existing callers; this view does not consume selection.
-        }
-
         public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
         {
             nodeSlotManagers = managers;

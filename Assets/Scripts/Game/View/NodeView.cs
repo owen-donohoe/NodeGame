@@ -46,11 +46,6 @@ namespace NodeWar.View
             UpdateVisuals();
         }
 
-        public void SetClaimBar(NodeWar.UI.NodeClaimBar bar)
-        {
-            // Retained public API; NodeClaimBar reads simulation state independently.
-        }
-
         public void TriggerHighlight(Color color)
         {
             if (highlight != null)
