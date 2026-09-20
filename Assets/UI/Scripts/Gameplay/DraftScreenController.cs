@@ -1200,19 +1200,8 @@ namespace NodeWar.UI
 
         private bool ScreenToWorldOnGround(Vector2 screenPos, out Vector3 world)
         {
-            world = Vector3.zero;
-
             if (cam == null) cam = Camera.main;
-            if (cam == null) return false;
-
-            Ray ray = cam.ScreenPointToRay(screenPos);
-            if (Mathf.Abs(ray.direction.y) < 0.0001f) return false;
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0f) return false;
-
-            world = ray.origin + ray.direction * t;
-            return true;
+            return CameraController.TryScreenToGroundPoint(cam, screenPos, out world);
         }
 
         private bool ScreenToCell(Vector2 screenPos, out int gridX, out int gridZ)

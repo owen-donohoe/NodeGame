@@ -102,22 +102,15 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Projects a screen point onto the Y=0 ground plane. Guards the
-        /// degenerate cases the same way the camera's own helper does: a ray
-        /// parallel to the plane never intersects, and a negative parameter
-        /// means the plane is behind the camera.
+        /// Uses the camera's clamping projection, then lifts the cue above the
+        /// ground. A parallel ray leaves the cue at its previous position.
         /// </summary>
         private Vector3 ScreenToGround(Vector2 screenPos)
         {
-            Ray ray = cam.ScreenPointToRay(screenPos);
-
-            if (Mathf.Abs(ray.direction.y) < 0.0001f)
+            if (!NodeWar.Core.CameraController.TryScreenToGroundPoint(
+                cam, screenPos, out Vector3 point, clampBehindCamera: true))
                 return transform.position;
 
-            float t = -ray.origin.y / ray.direction.y;
-            if (t < 0f) t = 0f;
-
-            Vector3 point = ray.origin + ray.direction * t;
             point.y = groundY;
             return point;
         }
