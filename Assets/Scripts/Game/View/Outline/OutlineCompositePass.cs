@@ -89,7 +89,8 @@ namespace NodeWar.View.Outline
         {
             ResetTracingIfDebugViewChanged();
 
-            if (enterTraced < TraceBudget)
+            if (settings != null && settings.DebugView != OutlineDebugView.Off &&
+                enterTraced < TraceBudget)
             {
                 enterTraced++;
                 Trace($"composite RecordRenderGraph called, renderPassEvent={renderPassEvent} " +
@@ -275,6 +276,7 @@ namespace NodeWar.View.Outline
         /// </summary>
         private void Bail(string reason)
         {
+            if (settings == null || settings.DebugView == OutlineDebugView.Off) return;
             if (bailTraced >= TraceBudget) return;
 
             bailTraced++;
