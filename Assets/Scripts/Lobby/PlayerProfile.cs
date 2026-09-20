@@ -115,27 +115,32 @@ namespace NodeWar.Lobby
             data.loadout = LoadoutData.Normalized(loadout);
             Save();
         }
-        public bool IsSuitUnlocked(string suitID) { return true; }
-        public bool IsNodeUnlocked(string nodeID) { return true; }
-        //public bool IsSuitUnlocked(string suitID)
-        //{
-        //    if (data.unlockedSuitIDs == null) return false;
-        //    for (int i = 0; i < data.unlockedSuitIDs.Length; i++)
-        //    {
-        //        if (data.unlockedSuitIDs[i] == suitID) return true;
-        //    }
-        //    return false;
-        //}
 
-        //public bool IsNodeUnlocked(string nodeID)
-        //{
-        //    if (data.unlockedNodeIDs == null) return false;
-        //    for (int i = 0; i < data.unlockedNodeIDs.Length; i++)
-        //    {
-        //        if (data.unlockedNodeIDs[i] == nodeID) return true;
-        //    }
-        //    return false;
-        //}
+        // Unlock gating has not shipped: every caller is deliberately told "yes".
+        // Before setting this to false, ensure profile creation seeds the starter
+        // set in unlockedSuitIDs/unlockedNodeIDs (CreateDefaults already seeds a
+        // small set), and migrate existing saves to preserve intended access.
+        // static readonly rather than const on purpose: a const true folds the
+        // lookup away at compile time, and every call site then compiles with an
+        // unreachable-expression warning. This way the gate reads the same and
+        // flipping it is still a one-line change.
+        private static readonly bool AllContentUnlocked = true;
+
+        public bool IsSuitUnlocked(string suitID) =>
+            AllContentUnlocked || ContainsUnlockedID(data.unlockedSuitIDs, suitID);
+
+        public bool IsNodeUnlocked(string nodeID) =>
+            AllContentUnlocked || ContainsUnlockedID(data.unlockedNodeIDs, nodeID);
+
+        private static bool ContainsUnlockedID(string[] unlockedIDs, string contentID)
+        {
+            if (unlockedIDs == null) return false;
+            for (int i = 0; i < unlockedIDs.Length; i++)
+            {
+                if (unlockedIDs[i] == contentID) return true;
+            }
+            return false;
+        }
 
         // ===== VALIDATION =====
 

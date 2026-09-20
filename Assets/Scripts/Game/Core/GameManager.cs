@@ -1324,7 +1324,6 @@ namespace NodeWar.Core
             {
                 view.Initialize(state, index);
                 view.SetTickProvider(tickProvider);
-                view.SetSelectionSystem(selectionSystem);
                 view.SetNodeSlotManagers(nodeSlotManagers);
                 view.SetPathCurveSettings(pathCurveSettings);
 

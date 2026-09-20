@@ -44,11 +44,9 @@ namespace NodeWar.View
 
         // Cached references
         private SpriteRenderer[] spriteRenderers;
-        private MaterialPropertyBlock[] propBlocks;
         private Transform gfxTransform;
 
         private NodeWar.Core.ITickProvider tickProvider;
-        private SelectionSystem selectionSystem;
         private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
 
         public void Initialize(SimulationState state, int id)
@@ -68,23 +66,12 @@ namespace NodeWar.View
                 spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
             }
 
-            propBlocks = new MaterialPropertyBlock[spriteRenderers.Length];
-            for (int i = 0; i < propBlocks.Length; i++)
-            {
-                propBlocks[i] = new MaterialPropertyBlock();
-            }
-
             UpdateVisuals();
         }
 
         public void SetTickProvider(NodeWar.Core.ITickProvider provider)
         {
             tickProvider = provider;
-        }
-
-        public void SetSelectionSystem(SelectionSystem system)
-        {
-            selectionSystem = system;
         }
 
         public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
