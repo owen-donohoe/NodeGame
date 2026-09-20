@@ -381,7 +381,15 @@ namespace NodeWar.Core
             // apply the soft return to position while held. Once released, the
             // same spring accelerates momentum before it is integrated.
             if (isDragging || gesturePanActive)
+            {
                 transform.position += push;
+
+                // Ground projections move with the rig. Rebase the held
+                // anchors too, or the next pan sample undoes this correction
+                // even when the pointer has not moved.
+                if (isDragging) lastMouseWorldPos += push;
+                if (gesturePanActive) gesturePanLastWorld += push;
+            }
             else
                 panVelocity += push;
         }
