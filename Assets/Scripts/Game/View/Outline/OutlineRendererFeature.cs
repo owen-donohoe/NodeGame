@@ -117,7 +117,11 @@ namespace NodeWar.View.Outline
 
         private static Material EnsureMaterial(Material existing, Shader shader)
         {
-            if (existing != null) return existing;
+            if (existing != null && existing.shader == shader) return existing;
+
+            // The serialized shader can change while the feature is alive.
+            // Release the old material before replacing it or clearing the slot.
+            CoreUtils.Destroy(existing);
             if (shader == null || !shader.isSupported) return null;
 
             return CoreUtils.CreateEngineMaterial(shader);
