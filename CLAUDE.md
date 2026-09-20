@@ -90,11 +90,12 @@ Read the file. Do not ask me to summarise it here.
   UnityEngine. A lobby change has real tests; run them rather than settling
   for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.
 - `scripts/compile-check.ps1` — type-checks everything else (HUD, network,
-  view, `Assets/UI/`) against the real Unity assemblies. Catches syntax,
-  missing usings, wrong API names, broken call sites. Unity need not be
-  running and an open editor need not be closed. It cannot see prefab or scene
-  wiring, and it is not a test run. Run it after any edit you could not
-  otherwise compile.
+  view, `Assets/UI/`) against the real Unity assemblies: syntax, usings, API
+  names, call sites. Unity need not be running, nor an open editor closed. It
+  cannot see prefab or scene wiring and is not a test run. Run it after any
+  edit you could not otherwise compile. In a fresh worktree it needs
+  `cmd /c mklink /J Library C:\Dev\NodeGame\Library` first, or it reports
+  errors that are not there.
 - `docs/skills/drive-the-editor.md` — if `unity status` reports a ready
   instance, the Unity CLI can drive it and close that prefab-and-scene blind
   spot. Read that file before using it. If `unity status` reports nothing,
@@ -124,42 +125,40 @@ Read the file. Do not ask me to summarise it here.
 
 ## Automatic Guards
 
-Three checks run without being asked, and none replaces the reading they point
-at. **SessionStart** injects the list of documents whose sources moved since
-they were last verified. **pre-commit** blocks on `scripts/sim-guard.ps1` when
-the commit touches `Simulation/`, and reports staleness without blocking.
-**CI** (`.github/workflows/determinism.yml`) blocks on the simulation suite and
-the pinned hash baselines across Linux and Windows. How all of it is wired:
-`docs/index.md`.
+**SessionStart** reports documents whose sources moved. **pre-commit** blocks
+on `scripts/sim-guard.ps1` for `Simulation/` commits, and reports staleness
+without blocking. **CI** blocks on the simulation suite and the pinned hash
+baselines, Linux and Windows. None of the three replaces the reading it points
+at. Wiring: `docs/index.md`.
 
-Two rules those guards cannot enforce on themselves:
+Two rules the guards cannot enforce on themselves:
 
 - **Never stamp `verified:` or bump `verified_at_commit` on my behalf.**
-  Re-verification is reading a document against its changed sources. It is a
-  human act, and reconciling commits is not it.
+  Re-verification is reading a document against its changed sources — a human
+  act, and reconciling commits is not it.
 - **A hash that differs between CI legs is a finding about the simulation, not
   a CI problem. Never re-pin a baseline to make it green.**
 
-`sim-guard.ps1` is only the mechanical subset of `.claude/skills/determinism-guard.md`.
-Sort tiebreakers, tick order, hasher registration, command/serializer pairing
-and the view boundary are not in it and still need the checklist.
+`sim-guard.ps1` is only the mechanical subset. Sort tiebreakers, tick order,
+hasher registration, command/serializer pairing and the view boundary are in
+`.claude/skills/determinism-guard.md` and still need reading.
 
 ## Commit Convention
 
-`done: <task title>` in a commit message marks that task **Done** on the next
-`/update`. Without it, tasks move to **In Progress** at most — a commit that
-touches a system is not work that finished.
+`done: <task title>` marks that task **Done** on the next `/update`. Without
+it a task reaches **In Progress** at most: touching a system is not finishing
+the work.
 
 ## Commands and Skills
 
 - `/update` — reconcile Notion against new commits. The only time Notion is written.
 - `/audit` — re-check a chapter's plan against the code before it goes Active.
 
-`.claude/skills/*.md` are review procedures with no invocation syntax — read
-the file by path and follow it: `determinism-guard.md` · `write-sim-test.md` ·
-`cs-review.md` · `session-summary.md` · `phase-plan.md` (largely superseded by
-Notion Phases). `docs/skills/*.md` are a different thing: executor
-instructions for running something, listed above.
+`.claude/skills/*.md` are procedures with no invocation syntax — read by path:
+`determinism-guard.md` · `write-sim-test.md` · `cs-review.md` ·
+`session-summary.md` · `phase-plan.md` (superseded by Notion Phases).
+`docs/skills/*.md` are a different thing: instructions for running something,
+listed under *Checking your work*.
 
 ## Response Style
 
