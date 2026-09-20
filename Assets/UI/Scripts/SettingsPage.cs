@@ -119,6 +119,22 @@ namespace NodeWar.Lobby
             Commit();
         }
 
+        /// <summary>
+        /// Writes out anything still outstanding without the page having to be
+        /// closed first.
+        ///
+        /// The lobby calls this as it is torn down. Closing is the ordinary
+        /// commit point, but it only happens if the player presses Back - quit
+        /// from the settings page, unload the scene, or switch the UI Toolkit
+        /// lobby off, and a slider moved since the last commit would otherwise
+        /// be back where it started on the next launch. OnDisable is the last
+        /// moment there is still somewhere to write it.
+        /// </summary>
+        public void Flush()
+        {
+            Commit();
+        }
+
         private void Load()
         {
             PlayerProfile profile = PlayerProfile.Instance;

@@ -144,6 +144,17 @@ namespace NodeWar.Lobby
 
             playPopup = null;
             profilePage = null;
+
+            // Before dropping it: a slider moved without the page being closed
+            // has not reached the profile yet, and this is the last chance to
+            // write it. Unsubscribe first so the flush cannot drive a tree that
+            // is about to be rebuilt.
+            if (settingsPage != null)
+            {
+                settingsPage.Changed -= ApplyLobbySettings;
+                settingsPage.Flush();
+            }
+
             settingsPage = null;
             lobbyRoot = null;
             matchHistoryPage = null;
