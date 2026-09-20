@@ -90,7 +90,27 @@ same failure mode as the documents it polices.
   silent when every document is current and injects the suspect list when one is not. Silence
   when clean is deliberate: a check that reports "all current" every time trains the reader to
   skip it.
-* **pre-commit** runs the same check as advisory — it reports and lets the commit through.
+
+  Since 2026-09-20 the list is triaged rather than flat, because a flat one was being skipped
+  anyway. Its first measured run reported 30 pairs of which one was real drift, and a warning
+  right 3% of the time is a warning nobody reads. A moved source is now **REVIEW** only when the
+  diff since the verified commit contains a declaration-shaped line — an access modifier, a type,
+  a `const`, a `readonly` — or when the source is not C# and the pattern cannot read it.
+  Everything else is counted under **Touched** and does not affect the exit code.
+
+  Two things that is not. It is not precision: on the first run it demoted 4 of 29, because this
+  repo's large commits do change declarations. And it is not claim-level — a document citing
+  `GameSimulation.cs` is still flagged when any declaration in 1,188 lines moves, whether or not
+  it is one the document mentions. Getting past that needs per-symbol sources, which is a schema
+  change and a design decision, not a heuristic.
+
+  What does carry its weight is the **Fan-out** summary. 25 escalations were 9 commits, one of
+  which accounted for 11 of them. The count of pairs was never the count of decisions, and saying
+  so out loud is most of the fix.
+* **pre-commit** runs the same check as advisory — it reports and lets the commit through. It
+  used to be blind to the commit being made: `git log` cannot see the index, so it reported old
+  debt and noticed the current change only on the next run. It now reads `git diff --cached` and
+  the working tree too, and marks those sources `[uncommitted]`.
   Re-reading a document against moved sources is human work a commit cannot be compelled to
   contain, and blocking on it would mean every code change dragged a documentation review behind
   it until the hook got bypassed. It also runs `scripts/sim-guard.ps1`, which **does** block, and
