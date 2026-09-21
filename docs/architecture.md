@@ -454,6 +454,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
   covers.
 - `MatchLauncher` — the lobby's route into a match.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+- `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
+  layer is brought to the front so a closing emote shows over the end card, and
+  its dock stands aside while the node sheet is open.
 - `IndicatorLayer` — draws `IndicatorDirector`'s list over the board. The
   first child of `hud-root`, so every readout, dock, sheet and card draws over
   it. See [In-match indicators](#in-match-indicators).
@@ -682,6 +685,16 @@ and must therefore arrive at identical results every tick.
   fixed command-processing order (all of P0's commands, then all of P1's)
   and applies an input delay so local input for tick *N* is generated and
   sent ahead of when tick *N* actually simulates, to hide network latency.
+- **Emotes ride beside lockstep, not inside it.** They are cosmetic, so they
+  are never a `GameCommand`: `PacketType.Emote` (8) is a 5-byte packet sent
+  twice over UDP and de-duplicated on its sequence number. It never waits for a
+  tick and never reaches `CommandProcessor`. `LockstepRunner` is the networked
+  `IEmoteChannel`, and a local or bot match gets a `LocalEmoteChannel`. After
+  game over the runner keeps pumping emotes and heartbeats, with no disconnect
+  check, so a closing emote still arrives. An older build ignores type 8,
+  because the packet switch has no default. `EmotePanel` (HUD) applies the
+  rate limit (under 5 per 1 s and under 10 per 5 s) on send and again on
+  receive, and owns mute.
 - **Desync detection** — every 50 ticks
   (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its
