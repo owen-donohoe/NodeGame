@@ -787,6 +787,19 @@ namespace NodeWar.Core
             StartFocusTween(transform.position + delta);
         }
 
+        /// <summary>
+        /// Eases the camera to look at a ground point: what a tapped edge
+        /// indicator does. Counted as the player moving the camera, like a
+        /// recentre, so dismissing a sheet afterwards does not undo it.
+        /// </summary>
+        public void FocusOnWorldPoint(Vector3 worldPos)
+        {
+            if (isDraftMode) return;
+
+            NotifyManualPan();
+            StartFocusTween(worldPos);
+        }
+
         private void StartFocusTween(Vector3 target)
         {
             focusFrom = transform.position;

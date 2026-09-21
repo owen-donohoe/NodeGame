@@ -782,3 +782,194 @@
     white-space: normal;
     margin-top: 2px;
 }
+
+/* ===================================================================
+   In-match indicators
+
+   IndicatorLayer positions each .ind by translate every frame; the
+   element itself sits at the layer's top-left and is pulled back by
+   half its box so the translate lands on its centre.
+
+   Motion is here, not in code. .ind--in pops the icon in with
+   ease-out-back, which is the overshoot; removing it falls back to
+   .ind, whose ease-in tapers it out. The transition in force is the
+   target style's, so the same scale property does both - and the
+   taper can never overshoot below zero into a mirrored icon.
+
+   Colour says what kind of news it is; size says how loud (tier).
+   Nothing here picks but a visible edge icon, and that is set from
+   code, not USS.
+   =================================================================== */
+
+.ind-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.ind {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: -22px;
+    margin-top: -22px;
+    align-items: center;
+    justify-content: center;
+    scale: 0 0;
+    transition-property: scale;
+    transition-duration: 160ms;
+    transition-timing-function: ease-in;
+
+    --ind-colour: var(--hud-ink);
+}
+
+.ind--in {
+    scale: 1 1;
+    transition-duration: 260ms;
+    transition-timing-function: ease-out-back;
+}
+
+/* The in-view form: the same icon, smaller, because the player is
+   already looking at it. */
+.ind--in.ind--small {
+    scale: 0.55 0.55;
+}
+
+.ind-layer--calm .ind--in {
+    transition-timing-function: ease-out;
+}
+
+.ind__bubble {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--hud-glass-strong);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--ind-colour);
+    border-right-color: var(--ind-colour);
+    border-top-color: var(--ind-colour);
+    border-bottom-color: var(--ind-colour);
+    transition-property: scale, background-color;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out-back;
+}
+
+.ind__icon {
+    width: 60%;
+    height: 60%;
+    -unity-background-image-tint-color: var(--ind-colour);
+}
+
+/* ---- tier: how loud ---- */
+
+.ind--high > .ind__bubble {
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+}
+
+.ind--low > .ind__bubble {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+}
+
+/* ---- kind: what the news is ---- */
+
+.ind--battle,
+.ind--attack,
+.ind--threat {
+    --ind-colour: var(--badge);
+}
+
+.ind--contested,
+.ind--incursion {
+    --ind-colour: var(--status-short);
+}
+
+.ind--idle {
+    --ind-colour: var(--hud-ink-mute);
+}
+
+.ind--respawn {
+    --ind-colour: var(--confirm);
+}
+
+.ind--effect {
+    --ind-colour: var(--action);
+}
+
+/* A node of yours has just fallen: the bubble fills and swells. */
+.ind--lost > .ind__bubble {
+    scale: 1.15 1.15;
+    background-color: var(--badge);
+}
+
+.ind--lost .ind__icon {
+    -unity-background-image-tint-color: var(--hud-ink);
+}
+
+/* ---- the edge arrow ---- */
+
+/* Spans the box and is rotated about its centre, so the triangle at
+   its right edge swings round the bubble to face the subject. */
+.ind__pointer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.ind--pointing > .ind__pointer {
+    display: flex;
+}
+
+.ind__pointer-icon {
+    position: absolute;
+    left: 36px;
+    top: 16px;
+    width: 12px;
+    height: 12px;
+    -unity-background-image-tint-color: var(--ind-colour);
+}
+
+.ind--high .ind__pointer-icon {
+    left: 38px;
+}
+
+/* ---- merged: how many share this spot ---- */
+
+.ind__count {
+    position: absolute;
+    right: 0;
+    top: 0;
+    min-width: 18px;
+    height: 18px;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 9px;
+    background-color: var(--ind-colour);
+    color: var(--ink);
+    font-size: var(--type-min);
+    -unity-text-align: middle-center;
+    display: none;
+}
+
+.ind--grouped > .ind__count {
+    display: flex;
+}

@@ -50,6 +50,15 @@ namespace NodeWar.Core
         [SerializeField] private NodeWar.View.OpponentRouteSettings opponentRouteSettings =
             new NodeWar.View.OpponentRouteSettings();
 
+        [Header("Indicators")]
+        [Tooltip("The in-match indicators: which kinds show, how loudly, when, " +
+                 "and how they sit at the screen edge. Drawn by the UI Toolkit " +
+                 "HUD only.")]
+        [SerializeField] private NodeWar.View.IndicatorSettings indicatorSettings =
+            new NodeWar.View.IndicatorSettings();
+
+        private NodeWar.View.IndicatorDirector indicatorDirector;
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -561,6 +570,8 @@ namespace NodeWar.Core
         {
             if (cameraController != null)
                 cameraController.POVChanged -= OnPOVChanged;
+
+            if (indicatorDirector != null) indicatorDirector.Dispose();
         }
 
         private void StartLocalPlay()
@@ -806,6 +817,16 @@ namespace NodeWar.Core
             // The zoom readout and the zoom handle. Without this the handle
             // still takes the press but has nothing to drive, and says so.
             uiToolkitHud.BindCamera(cameraController);
+
+            // Indicators hang off the tick loop, so they need the runner that
+            // is actually driving this match; the views they anchor to exist
+            // by now. Local player comes from the switch, which a networked
+            // match has already locked.
+            indicatorDirector = new NodeWar.View.IndicatorDirector(state, tickProvider, indicatorSettings,
+                () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
+            indicatorDirector.SetNodeSlotManagers(nodeSlotManagers);
+            indicatorDirector.SetVillagerTransforms(villagerTransforms);
+            uiToolkitHud.BindIndicators(indicatorDirector);
 
             // The countdown belongs to whichever stack is live, or two would
             // run at once. The uGUI prefab is used when this is not set.
@@ -1345,6 +1366,8 @@ namespace NodeWar.Core
                 pathRenderer.SetTickProvider(tickProvider);
             if (hitFlashRouter != null)
                 hitFlashRouter.SetVillagerTransforms(villagerTransforms);
+            if (indicatorDirector != null)
+                indicatorDirector.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnSingleVillagerView(int index)

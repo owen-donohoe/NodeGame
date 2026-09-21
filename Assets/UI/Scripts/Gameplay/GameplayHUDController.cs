@@ -63,6 +63,11 @@ namespace NodeWar.UI
         private NodeWar.View.OpponentRouteSettings routeSettings;
         private VisualElement hudRoot;
 
+        // Kept here as well as in the layer: OnEnable rebuilds the layer, and
+        // GameManager binds the director only once.
+        private IndicatorLayer indicatorLayer;
+        private NodeWar.View.IndicatorDirector indicatorDirector;
+
         private SimulationState state;
         private GameBalanceData balance;
         private DebugPlayerSwitch playerSwitch;
@@ -181,6 +186,9 @@ namespace NodeWar.UI
 
             routeSettings = null;
 
+            // The director outlives this; only its drawing is rebuilt.
+            indicatorLayer = null;
+
             safeArea = null;
             nodeSheet = null;
             initialized = false;
@@ -259,6 +267,15 @@ namespace NodeWar.UI
             if (nodeSheet != null) nodeSheet.Update(CurrentPlayerID());
         }
 
+        /// <summary>
+        /// Late, so indicators are projected after the camera and every villager
+        /// have moved this frame rather than trailing them by one.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (indicatorLayer != null) indicatorLayer.LateUpdate();
+        }
+
         // ===== BINDING =====
 
         private void Bind(VisualElement root)
@@ -310,6 +327,38 @@ namespace NodeWar.UI
 
             BuildNodeSheet(root);
             BuildSettingsPanel();
+            BuildIndicatorLayer(root);
+        }
+
+        /// <summary>
+        /// The indicators draw under everything else here. Edge icons keep clear
+        /// of the right-hand column of controls, and of the node sheet while it
+        /// is up.
+        /// </summary>
+        private void BuildIndicatorLayer(VisualElement root)
+        {
+            if (hudRoot == null) return;
+
+            indicatorLayer = new IndicatorLayer(hudRoot);
+            indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-recentre-dock"));
+            indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-settings-dock"));
+
+            VisualElement sheetPanel = nodeSheet != null ? nodeSheet.Root.Q<VisualElement>("node-sheet") : null;
+            indicatorLayer.SetSheet(() => nodeSheet != null && nodeSheet.IsOpen ? sheetPanel : null);
+
+            if (settingsPanel != null) indicatorLayer.SetCalm(settingsPanel.Settings.reducedMotion);
+            if (indicatorDirector != null) indicatorLayer.Bind(indicatorDirector);
+            if (boardCamera != null) indicatorLayer.SetCameraController(boardCamera);
+        }
+
+        /// <summary>
+        /// Hands over the director that decides which indicators exist. Called
+        /// by GameManager once the board and its views are built.
+        /// </summary>
+        public void BindIndicators(NodeWar.View.IndicatorDirector director)
+        {
+            indicatorDirector = director;
+            if (indicatorLayer != null) indicatorLayer.Bind(director);
         }
 
         /// <summary>
@@ -364,6 +413,9 @@ namespace NodeWar.UI
         {
             if (routeSettings != null)
                 routeSettings.show = settings.opponentRoutes;
+
+            if (indicatorLayer != null)
+                indicatorLayer.SetCalm(settings.reducedMotion);
         }
 
         /// <summary>
@@ -603,6 +655,9 @@ namespace NodeWar.UI
                 boardCamera.ZoomChanged += OnZoomChanged;
                 boardCamera.ZoomGestureActiveChanged += OnZoomGestureActiveChanged;
             }
+
+            // A tapped edge indicator moves this camera to its subject.
+            if (indicatorLayer != null) indicatorLayer.SetCameraController(boardCamera);
         }
 
         private void OnZoomChanged(float normalized)
@@ -861,6 +916,8 @@ namespace NodeWar.UI
 
             endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, breachThreshold);
             endRows[1].Set(other, "Opponent", state.players[other].breachCount, breachThreshold);
+
+            if (indicatorLayer != null) indicatorLayer.Suppress();
 
             endRoot.AddToClassList("hud__end--on");
         }

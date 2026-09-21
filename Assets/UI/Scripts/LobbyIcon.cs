@@ -24,11 +24,23 @@ namespace NodeWar.Lobby
         Suit,     // prototype: 🥋
         Lock,     // prototype: 🔒
         Pip,      // prototype: ◆
-        Close     // the match sheet's close button: ✕
+        Close,    // the match sheet's close button: ✕
+
+        // In-match indicators and emotes. Same reason as the rest: Fredoka
+        // carries none of these, and a fallback font would differ by platform.
+        Alert,    // !  - an enemy headed for something of yours
+        Swords,   // ⚔  - a fight
+        Capture,  // ↓  - a node being pushed toward the enemy
+        Sleep,    // zz - an idle villager
+        Respawn,  // ↻  - a villager back at the Core
+        Pointer,  // ▶  - the edge arrow, drawn pointing right and rotated
+        Frown,    // ☹  - the sad emote
+        Angry     // the angry emote
     }
 
     /// <summary>
-    /// A small vector glyph for the lobby.
+    /// A small vector glyph for the lobby, and for the in-match HUD's
+    /// indicators and emotes, which have the same font problem.
     ///
     /// The prototype uses Unicode symbols and emoji, which Fredoka does not
     /// carry. Rather than add a second fallback font for seven glyphs, each is
@@ -119,6 +131,14 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Lock: DrawLock(p); break;
                 case LobbyIconKind.Pip: Diamond(p, 12f, 12f, 10f); break;
                 case LobbyIconKind.Close: DrawClose(p); break;
+                case LobbyIconKind.Alert: DrawAlert(p); break;
+                case LobbyIconKind.Swords: DrawSwords(p); break;
+                case LobbyIconKind.Capture: DrawCapture(p); break;
+                case LobbyIconKind.Sleep: DrawSleep(p); break;
+                case LobbyIconKind.Respawn: DrawRespawn(p); break;
+                case LobbyIconKind.Pointer: DrawPointer(p); break;
+                case LobbyIconKind.Frown: DrawFrown(p); break;
+                case LobbyIconKind.Angry: DrawAngry(p); break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();
@@ -405,6 +425,167 @@ namespace NodeWar.Lobby
 
             RoundedRect(p, 4f, 10.5f, 16f, 11.5f, 2f);
             p.Fill();
+        }
+
+        // ! - a rounded bar over a dot.
+        private static void DrawAlert(Painter2D p)
+        {
+            p.lineWidth = 4.2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(12f, 4f));
+            p.LineTo(new Vector2(12f, 13.5f));
+            p.Stroke();
+
+            p.BeginPath();
+            p.Arc(new Vector2(12f, 19.5f), 2.4f, 0f, 360f);
+            p.Fill();
+        }
+
+        // ⚔ - two swords crossed, hilts down.
+        private static void DrawSwords(Painter2D p)
+        {
+            // Blades.
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(4f, 4f));
+            p.LineTo(new Vector2(16f, 16f));
+            p.MoveTo(new Vector2(20f, 4f));
+            p.LineTo(new Vector2(8f, 16f));
+            p.Stroke();
+
+            // Crossguards, square to each blade.
+            p.lineWidth = 2.2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(13f, 19f));
+            p.LineTo(new Vector2(19f, 13f));
+            p.MoveTo(new Vector2(5f, 13f));
+            p.LineTo(new Vector2(11f, 19f));
+            p.Stroke();
+
+            // Grips.
+            p.lineWidth = 3f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(16.5f, 16.5f));
+            p.LineTo(new Vector2(20.5f, 20.5f));
+            p.MoveTo(new Vector2(7.5f, 16.5f));
+            p.LineTo(new Vector2(3.5f, 20.5f));
+            p.Stroke();
+        }
+
+        // ↓ onto a line - ground being pushed away from you.
+        private static void DrawCapture(Painter2D p)
+        {
+            p.lineWidth = 2.6f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(12f, 3f));
+            p.LineTo(new Vector2(12f, 14.5f));
+            p.MoveTo(new Vector2(6.5f, 9.5f));
+            p.LineTo(new Vector2(12f, 15f));
+            p.LineTo(new Vector2(17.5f, 9.5f));
+            p.MoveTo(new Vector2(4f, 20.5f));
+            p.LineTo(new Vector2(20f, 20.5f));
+            p.Stroke();
+        }
+
+        // zz - a large Z and a small one above it.
+        private static void DrawSleep(Painter2D p)
+        {
+            p.lineWidth = 2.3f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(3.5f, 10f));
+            p.LineTo(new Vector2(12.5f, 10f));
+            p.LineTo(new Vector2(3.5f, 20.5f));
+            p.LineTo(new Vector2(12.5f, 20.5f));
+            p.Stroke();
+
+            p.lineWidth = 2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(14.5f, 3.5f));
+            p.LineTo(new Vector2(20.5f, 3.5f));
+            p.LineTo(new Vector2(14.5f, 10.5f));
+            p.LineTo(new Vector2(20.5f, 10.5f));
+            p.Stroke();
+        }
+
+        // ↻ - most of a circle, with a head on its clockwise end.
+        private static void DrawRespawn(Painter2D p)
+        {
+            Vector2 c = new Vector2(12f, 12.5f);
+            const float r = 7.5f;
+            const float end = 260f;
+
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.Arc(c, r, -30f, end);
+            p.Stroke();
+
+            // Painter2D measures from +x and turns clockwise on screen, so the
+            // clockwise tangent at an angle is (-sin, cos).
+            float rad = end * Mathf.Deg2Rad;
+            Vector2 radial = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+            Vector2 tangent = new Vector2(-radial.y, radial.x);
+            Vector2 tip = c + radial * r;
+
+            p.BeginPath();
+            p.MoveTo(tip + tangent * 4f);
+            p.LineTo(tip + radial * 3.6f);
+            p.LineTo(tip - radial * 3.6f);
+            p.ClosePath();
+            p.Fill();
+        }
+
+        // ▶ - a solid triangle pointing right. The edge arrow rotates it.
+        private static void DrawPointer(Painter2D p)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(6f, 4f));
+            p.LineTo(new Vector2(20f, 12f));
+            p.LineTo(new Vector2(6f, 20f));
+            p.ClosePath();
+            p.Fill();
+        }
+
+        // ☹ - the smile's face with the mouth turned over.
+        private static void DrawFrown(Painter2D p)
+        {
+            p.lineWidth = 2f;
+            p.BeginPath();
+            p.Arc(new Vector2(12f, 12f), 10f, 0f, 360f);
+            p.Stroke();
+
+            p.BeginPath(); p.Arc(new Vector2(8.6f, 9.5f), 1.5f, 0f, 360f); p.Fill();
+            p.BeginPath(); p.Arc(new Vector2(15.4f, 9.5f), 1.5f, 0f, 360f); p.Fill();
+
+            p.lineWidth = 1.9f;
+            p.BeginPath();
+            p.Arc(new Vector2(12f, 20f), 5.2f, 215f, 325f);
+            p.Stroke();
+        }
+
+        // A face with its brows pulled down and in.
+        private static void DrawAngry(Painter2D p)
+        {
+            p.lineWidth = 2f;
+            p.BeginPath();
+            p.Arc(new Vector2(12f, 12f), 10f, 0f, 360f);
+            p.Stroke();
+
+            p.lineWidth = 2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(6.5f, 7f));
+            p.LineTo(new Vector2(10.5f, 9.2f));
+            p.MoveTo(new Vector2(17.5f, 7f));
+            p.LineTo(new Vector2(13.5f, 9.2f));
+            p.Stroke();
+
+            p.BeginPath(); p.Arc(new Vector2(8.8f, 11.5f), 1.4f, 0f, 360f); p.Fill();
+            p.BeginPath(); p.Arc(new Vector2(15.2f, 11.5f), 1.4f, 0f, 360f); p.Fill();
+
+            p.lineWidth = 1.9f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(8f, 17.5f));
+            p.LineTo(new Vector2(16f, 17.5f));
+            p.Stroke();
         }
 
         private static void Diamond(Painter2D p, float cx, float cy, float r)

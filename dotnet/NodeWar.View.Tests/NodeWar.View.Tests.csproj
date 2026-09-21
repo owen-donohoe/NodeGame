@@ -27,6 +27,12 @@
     <Compile Include="ViewSideTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs"
              Link="View/ViewSide.cs" />
+
+    <!-- Indicator zones, edge clamping and clustering: the maths half of the
+         in-match indicators, with the camera and UI Toolkit left in Unity. -->
+    <Compile Include="IndicatorPlacementTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/IndicatorPlacement.cs"
+             Link="View/IndicatorPlacement.cs" />
   </ItemGroup>
 
   <ItemGroup>
