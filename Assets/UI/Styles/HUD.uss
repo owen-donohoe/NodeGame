@@ -1020,7 +1020,7 @@
 }
 
 .hud__emote-mute-label {
-    color: var(--hud-ink);
+    color: var(--ink);
     font-size: 13px;
     margin-left: 8px;
 }
@@ -1034,6 +1034,12 @@
 
 .hud__settings-emotes-icon {
     margin-right: 6px;
+}
+
+.hud__emote-mute > .hud__speaker,
+.hud__settings-emotes-icon {
+    background-color: var(--hud-glass-strong);
+    border-radius: 13px;
 }
 
 .hud__speaker--muted,
