@@ -37,6 +37,7 @@ namespace NodeWar.UI
         private readonly Slider musicSlider;
         private readonly Slider effectsSlider;
         private readonly LobbySwitch routesSwitch;
+        private readonly LobbySwitch emotesSwitch;
 
         private GameSettingsData current;
 
@@ -66,6 +67,7 @@ namespace NodeWar.UI
             musicSlider = hudRoot.Q<Slider>("hud-settings-music");
             effectsSlider = hudRoot.Q<Slider>("hud-settings-effects");
             routesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-routes");
+            emotesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-emotes");
 
             if (gear != null) gear.clicked += Toggle;
 
@@ -85,6 +87,13 @@ namespace NodeWar.UI
                 // A switch is a decision, so it saves as it happens. Sliders
                 // raise a change per drag frame and flush on close instead.
                 routesSwitch.Changed += _ => OnValueChanged(commitNow: true);
+            }
+
+            Button emotesRow = hudRoot.Q<Button>("hud-settings-row-emotes");
+            if (emotesRow != null && emotesSwitch != null)
+            {
+                emotesRow.clicked += emotesSwitch.Flip;
+                emotesSwitch.Changed += _ => OnValueChanged(commitNow: true);
             }
 
             Load();
@@ -189,6 +198,7 @@ namespace NodeWar.UI
             if (musicSlider != null) musicSlider.value = current.musicVolume;
             if (effectsSlider != null) effectsSlider.value = current.effectsVolume;
             if (routesSwitch != null) routesSwitch.Value = current.opponentRoutes;
+            if (emotesSwitch != null) emotesSwitch.Value = current.opponentEmotes;
 
             loading = false;
             dirty = false;
@@ -209,7 +219,7 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Reads the controls back over the stored value. Only the three rows
+        /// Reads the controls back over the stored value. Only the rows
         /// this panel shows are taken from controls; everything else the lobby
         /// owns is carried through untouched, so saving here never reverts a
         /// setting this screen does not display.
@@ -222,6 +232,7 @@ namespace NodeWar.UI
             if (musicSlider != null) captured.musicVolume = musicSlider.value;
             if (effectsSlider != null) captured.effectsVolume = effectsSlider.value;
             if (routesSwitch != null) captured.opponentRoutes = routesSwitch.Value;
+            if (emotesSwitch != null) captured.opponentEmotes = emotesSwitch.Value;
 
             return GameSettingsData.Normalized(captured);
         }

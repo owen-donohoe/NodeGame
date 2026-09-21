@@ -25,6 +25,9 @@
 
   <ItemGroup>
     <Compile Include="ViewSideTests.cs" />
+    <Compile Include="EmoteRateLimiterTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Core/EmoteRateLimiter.cs"
+             Link="Core/EmoteRateLimiter.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs"
              Link="View/ViewSide.cs" />
 

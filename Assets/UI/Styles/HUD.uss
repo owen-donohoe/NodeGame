@@ -648,7 +648,7 @@
    In-match settings
 
    A corner card, not a page. The match is live behind it, so it covers
-   the smallest area that still fits three rows, and it sits in the
+   the smallest area that still fits its rows, and it sits in the
    bottom-right where a thumb already is.
 
    The scrim is the one element on this surface allowed to pick, and only
@@ -971,5 +971,136 @@
 }
 
 .ind--grouped > .ind__count {
+    display: flex;
+}
+
+/* Emotes share the indicator pop, with opposite travel at the two anchors.
+   Only the live opponent bubble picks; the layer and empty slots never do. */
+.hud__emotes {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.hud__emote-dock {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    align-items: center;
+}
+
+/* Out of the node sheet's way while it is open; see EmotePanel.SetNodeSheetOpen. */
+.hud__emotes--sheet .hud__emote-dock {
+    display: none;
+}
+
+.hud__emote-sheet {
+    left: 12px;
+    right: auto;
+    width: 228px;
+    flex-direction: row;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.hud__emote-option {
+    flex-shrink: 0;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+.hud__emote-icon {
+    width: 28px;
+    height: 28px;
+    -unity-background-image-tint-color: var(--hud-ink);
+}
+
+.hud__emote-icon--flag {
+    -unity-background-image-tint-color: white;
+}
+
+.hud__emote--cooldown {
+    opacity: 0.4;
+}
+
+.hud__emote-you {
+    position: absolute;
+    left: 12px;
+    bottom: 76px;
+    width: 46px;
+    height: 46px;
+}
+
+/* Positioned from hud-side-them's bounds so the safe area is respected. */
+.hud__emote-them {
+    position: absolute;
+    width: 46px;
+    height: 46px;
+}
+
+.hud__emote-side {
+    display: none;
+}
+
+.hud__emote-bubble {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 23px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    scale: 0 0;
+    translate: 0 64px;
+    transition-property: scale, translate;
+    transition-duration: 160ms;
+    transition-timing-function: ease-in;
+}
+
+.hud__emote-them > .hud__emote-bubble {
+    translate: 0 -31px;
+}
+
+.hud__emote-bubble--in,
+.hud__emote-them > .hud__emote-bubble--in {
+    scale: 1 1;
+    translate: 0 0;
+    transition-duration: 260ms;
+    transition-timing-function: ease-out-back;
+}
+
+.hud__emotes--calm .hud__emote-bubble--in {
+    transition-timing-function: ease-out;
+}
+
+.hud__emote-feedback {
+    position: absolute;
+    right: 0;
+    top: 0;
+    white-space: nowrap;
+    color: var(--hud-ink);
+    background-color: var(--hud-glass-strong);
+    border-radius: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 12px;
+    display: none;
+}
+
+.hud__emote-feedback--on {
     display: flex;
 }

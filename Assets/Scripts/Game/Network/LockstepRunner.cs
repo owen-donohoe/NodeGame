@@ -1,5 +1,6 @@
 using UnityEngine;
 using NodeWar.Simulation;
+using NodeWar.Core;
 using System.Collections.Generic;
 
 namespace NodeWar.Network
@@ -11,7 +12,7 @@ namespace NodeWar.Network
     /// Enforces command processing order: P0 first, P1 second, then simulate.
     /// Stamps local inputs for tick N+INPUT_DELAY to hide network latency.
     /// </summary>
-    public class LockstepRunner : MonoBehaviour, NodeWar.Core.ITickProvider
+    public class LockstepRunner : MonoBehaviour, NodeWar.Core.ITickProvider, IEmoteChannel
     {
         private const int INPUT_DELAY = 2;
         private const int DESYNC_CHECK_INTERVAL = 50;
@@ -64,6 +65,20 @@ namespace NodeWar.Network
 
         public event System.Action<TickEventLog> TickSimulated;
 
+        public event System.Action<int, EmoteType> EmoteReceived;
+        private ushort emoteSequence;
+        private readonly ushort[] lastEmoteSequence = new ushort[2];
+        private readonly bool[] hasEmoteSequence = new bool[2];
+
+        public void Send(EmoteType emote)
+        {
+            if (networkManager == null) return;
+            byte[] packet = InputSerializer.SerializeEmote(localPlayerID, emote, emoteSequence);
+            emoteSequence = unchecked((ushort)(emoteSequence + 1));
+            networkManager.Send(packet);
+            networkManager.Send(packet);
+        }
+
         public void Unpause()
         {
             // Re-stamp the timing baselines. Initialize() runs before the
@@ -95,6 +110,8 @@ namespace NodeWar.Network
             inputBuffer = buffer;
             networkManager = netManager;
             localPlayerID = playerID;
+            emoteSequence = 0;
+            System.Array.Clear(hasEmoteSequence, 0, hasEmoteSequence.Length);
 
             tickInterval = 1f / ticksPerSecond;
             accumulator = 0f;
@@ -128,7 +145,14 @@ namespace NodeWar.Network
         private void Update()
         {
             if (simState == null || networkManager == null) return;
-            if (simState.gameOver) return;
+            if (simState.gameOver)
+            {
+                // The end card still carries emotes. Keep the link alive without
+                // turning a peer leaving that card into a match disconnect.
+                ProcessIncomingPackets();
+                SendHeartbeatIfNeeded();
+                return;
+            }
 
             // Pump the transport even while paused. Keeps lastReceiveTime fresh
             // and preserves any TickInput a peer sends if its transition
@@ -278,6 +302,7 @@ namespace NodeWar.Network
                 switch (type)
                 {
                     case PacketType.TickInput:
+                        if (simState.gameOver) break;
                         // A malformed packet is treated as a lost one, which the
                         // transport already has to survive. Nothing half-read
                         // reaches CommandProcessor.
@@ -292,6 +317,20 @@ namespace NodeWar.Network
                         {
                             remoteInputs[remote.forTick] = remote;
                         }
+                        break;
+
+                    case PacketType.Emote:
+                        if (!InputSerializer.TryDeserializeEmote(packets[i],
+                            out int player, out EmoteType emote, out ushort sequence) ||
+                            player == localPlayerID) break;
+
+                        // Serial arithmetic survives ushort wrap. Late copies
+                        // cannot replace a newer bubble with an older emote.
+                        int advance = (sequence - lastEmoteSequence[player]) & 0xffff;
+                        if (hasEmoteSequence[player] && (advance == 0 || advance >= 0x8000)) break;
+                        hasEmoteSequence[player] = true;
+                        lastEmoteSequence[player] = sequence;
+                        EmoteReceived?.Invoke(player, emote);
                         break;
 
                     case PacketType.Heartbeat:

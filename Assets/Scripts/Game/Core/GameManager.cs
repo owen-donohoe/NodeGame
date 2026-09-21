@@ -829,6 +829,13 @@ namespace NodeWar.Core
             indicatorDirector.SetVillagerTransforms(villagerTransforms);
             uiToolkitHud.BindIndicators(indicatorDirector);
 
+            MatchConnection emoteMatch = MatchConnection.Instance;
+            if (emoteMatch != null && emoteMatch.isNetworked)
+                uiToolkitHud.BindEmotes(lockstepRunner, () => emoteMatch.localPlayerID);
+            else
+                uiToolkitHud.BindEmotes(new LocalEmoteChannel(),
+                    () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
+
             // The countdown belongs to whichever stack is live, or two would
             // run at once. The uGUI prefab is used when this is not set.
             if (transitionController != null)

@@ -60,6 +60,8 @@ namespace NodeWar.UI
         private SafeAreaBinder safeArea;
         private NodeSheet nodeSheet;
         private MatchSettingsPanel settingsPanel;
+        // Match-local mute and cooldown survive a rebuild of the visual tree.
+        private readonly EmotePanel emotePanel = new EmotePanel();
         private NodeWar.View.OpponentRouteSettings routeSettings;
         private VisualElement hudRoot;
 
@@ -155,6 +157,7 @@ namespace NodeWar.UI
 
         private void OnDisable()
         {
+            emotePanel.Detach();
             if (panelSource != null)
             {
                 panelSource.NodeOpened -= OnNodeOpened;
@@ -260,6 +263,8 @@ namespace NodeWar.UI
             if (safeArea != null) safeArea.Update();
             if (nodeSheet != null) nodeSheet.UpdateSafeArea();
 
+            emotePanel.SetNodeSheetOpen(nodeSheet != null && nodeSheet.IsOpen);
+
             if (!initialized || state == null) return;
 
             Refresh();
@@ -326,6 +331,9 @@ namespace NodeWar.UI
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
             BuildNodeSheet(root);
+            emotePanel.Attach(hudRoot);
+            emotePanel.Opening -= CloseSettingsForEmotes;
+            emotePanel.Opening += CloseSettingsForEmotes;
             BuildSettingsPanel();
             BuildIndicatorLayer(root);
         }
@@ -342,6 +350,7 @@ namespace NodeWar.UI
             indicatorLayer = new IndicatorLayer(hudRoot);
             indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-recentre-dock"));
             indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-settings-dock"));
+            indicatorLayer.AvoidLeft(root.Q<VisualElement>("hud-emote-dock"));
 
             VisualElement sheetPanel = nodeSheet != null ? nodeSheet.Root.Q<VisualElement>("node-sheet") : null;
             indicatorLayer.SetSheet(() => nodeSheet != null && nodeSheet.IsOpen ? sheetPanel : null);
@@ -359,6 +368,16 @@ namespace NodeWar.UI
         {
             indicatorDirector = director;
             if (indicatorLayer != null) indicatorLayer.Bind(director);
+        }
+
+        public void BindEmotes(NodeWar.Core.IEmoteChannel channel, System.Func<int> localPlayer)
+        {
+            emotePanel.Bind(channel, localPlayer);
+        }
+
+        private void CloseSettingsForEmotes()
+        {
+            if (settingsPanel != null) settingsPanel.ForceClose();
         }
 
         /// <summary>
@@ -411,6 +430,7 @@ namespace NodeWar.UI
         /// </summary>
         private void ApplyMatchSettings(NodeWar.Lobby.GameSettingsData settings)
         {
+            emotePanel.ApplySettings(settings);
             if (routeSettings != null)
                 routeSettings.show = settings.opponentRoutes;
 
