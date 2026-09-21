@@ -72,7 +72,7 @@ namespace NodeWar.Lobby
         /// </summary>
         public bool opponentRoutes;
 
-        /// <summary>Show opponent emotes. Presentation only; added in version 3.</summary>
+        /// <summary>Allow incoming and outgoing emotes. Presentation only; added in version 3.</summary>
         public bool opponentEmotes;
 
         // ---- Mobile.

@@ -108,6 +108,9 @@ namespace NodeWar.View
         [Tooltip("How far above a node its indicator floats, in world units.")]
         public float nodeHeight = 2.5f;
 
+        [Tooltip("Battle icon height above the node. Its edge arrow aims at the node centre.")]
+        public float battleHeight = 0.75f;
+
         [Tooltip("How far above a villager its indicator floats, in world units.")]
         public float villagerHeight = 1.6f;
 

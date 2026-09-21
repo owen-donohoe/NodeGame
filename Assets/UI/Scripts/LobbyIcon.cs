@@ -35,7 +35,8 @@ namespace NodeWar.Lobby
         Respawn,  // ↻  - a villager back at the Core
         Pointer,  // ▶  - the edge arrow, drawn pointing right and rotated
         Frown,    // ☹  - the sad emote
-        Angry     // the angry emote
+        Angry,    // the angry emote
+        Speaker   // emote mute state
     }
 
     /// <summary>
@@ -139,6 +140,7 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Pointer: DrawPointer(p); break;
                 case LobbyIconKind.Frown: DrawFrown(p); break;
                 case LobbyIconKind.Angry: DrawAngry(p); break;
+                case LobbyIconKind.Speaker: DrawSpeaker(p); break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();
@@ -532,6 +534,27 @@ namespace NodeWar.Lobby
             p.LineTo(tip - radial * 3.6f);
             p.ClosePath();
             p.Fill();
+        }
+
+        // Speaker and sound waves, tinted by the current mute state.
+        private static void DrawSpeaker(Painter2D p)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(3f, 9f));
+            p.LineTo(new Vector2(7f, 9f));
+            p.LineTo(new Vector2(12f, 5f));
+            p.LineTo(new Vector2(12f, 19f));
+            p.LineTo(new Vector2(7f, 15f));
+            p.LineTo(new Vector2(3f, 15f));
+            p.ClosePath();
+            p.Fill();
+            p.lineWidth = 2f;
+            p.BeginPath();
+            p.Arc(new Vector2(12f, 12f), 5f, -45f, 45f);
+            p.Stroke();
+            p.BeginPath();
+            p.Arc(new Vector2(12f, 12f), 9f, -45f, 45f);
+            p.Stroke();
         }
 
         // ▶ - a solid triangle pointing right. The edge arrow rotates it.

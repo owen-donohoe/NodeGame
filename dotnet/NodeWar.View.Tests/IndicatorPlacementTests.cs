@@ -63,6 +63,21 @@ namespace NodeWar.View.Tests
 
         // ===== edge position =====
 
+        [TestCase(500f, 220f, 45f)]
+        [TestCase(500f, -20f, -45f)]
+        [TestCase(260f, 220f, 135f)]
+        [TestCase(260f, -20f, -135f)]
+        public void Arrow_aims_at_node_centre_independently_of_icon_lift(float targetX, float targetY, float expected)
+        {
+            // The lifted icon clamps to (380, 100). Aim at the node centre,
+            // including its vertical displacement, instead of the lifted anchor.
+            var rect = new PlacementRect(0f, 0f, 400f, 600f);
+            IndicatorPlacement.EdgePosition(500f, 100f, false, rect, 20f,
+                out float x, out float y, out _, out _);
+
+            Assert.AreEqual(expected, IndicatorPlacement.Direction(x, y, targetX, targetY), 0.001f);
+        }
+
         [Test]
         public void A_subject_inside_the_rect_is_not_moved_and_needs_no_arrow()
         {

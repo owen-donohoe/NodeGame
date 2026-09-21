@@ -65,8 +65,8 @@ Say what you did **not** do, and why. Silence reads as coverage.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — Simulation and Lobby assemblies, the two
-  that compile without UnityEngine
+- `dotnet test dotnet/NodeWar.sln` — Simulation, Lobby, and UnityEngine-free
+  view maths, including indicator placement and emote rate limiting
 - `scripts/compile-check.ps1` — type-checks everything else against the real
   Unity assemblies (HUD, network, view, `Assets/UI/`). In a fresh worktree it
   needs the Unity assemblies first: `cmd /c mklink /J Library C:\Dev\NodeGame\Library`

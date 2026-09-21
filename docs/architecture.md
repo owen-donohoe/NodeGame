@@ -456,7 +456,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
 - `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
   layer is brought to the front so a closing emote shows over the end card, and
-  its dock stands aside while the node sheet is open.
+  its dock stands aside while the node sheet is open. The popup mute is reversible
+  and match-local; the Settings toggle is saved across matches and takes precedence.
+  Either mute hides bubbles and disables/dims outgoing emotes. Speaker icons turn
+  from white to red; the popup stays reachable during mute and cooldown.
 - `IndicatorLayer` — draws `IndicatorDirector`'s list over the board. The
   first child of `hud-root`, so every readout, dock, sheet and card draws over
   it. See [In-match indicators](#in-match-indicators).
@@ -628,6 +631,10 @@ the layer line.
   rectangles differ on purpose: measuring the zone against the dock-inset area
   would pull the centre of attention off the centre of the screen. Overlapping
   edge icons merge into the most important one with a count, up to a cap.
+- **Battle icon lift is separate from arrow aim.** Its default lift is 0.75
+  world units (`battleHeight`); other node indicators use `nodeHeight`.
+  A clamped battle arrow aims at the projected node centre with `atan2`, using
+  one extra projection only when it points, so changing lift cannot skew its aim.
 - **Only visible edge icons pick.** A tap eases the camera to the subject through
   `CameraController.FocusOnWorldPoint`, which counts as a manual move so closing
   a sheet does not undo it. The gesture source's EventSystem check stops the

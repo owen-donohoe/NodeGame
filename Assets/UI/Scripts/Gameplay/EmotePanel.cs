@@ -11,15 +11,15 @@ namespace NodeWar.UI
     {
         private readonly EmoteRateLimiter sendLimiter = new EmoteRateLimiter();
         private readonly EmoteRateLimiter[] receiveLimiters = { new EmoteRateLimiter(), new EmoteRateLimiter() };
-        private readonly bool[] muted = new bool[2];
+        private bool matchMuted;
         private readonly Bubble[] bubbles = new Bubble[2];
         private readonly Button[] options = new Button[4];
         private IEmoteChannel channel;
         private Func<int> localPlayer;
         private VisualElement root, layer, scrim, sheet, yours, theirs, opponentAnchor;
-        private Button button;
-        private Label feedback;
-        private IVisualElementScheduledItem refreshJob, sheetJob, feedbackJob;
+        private Button button, muteButton;
+        private Label muteLabel;
+        private IVisualElementScheduledItem refreshJob, sheetJob;
         private bool open;
         private bool opponentEmotes = true;
         private bool calm;
@@ -28,7 +28,6 @@ namespace NodeWar.UI
         {
             public VisualElement element;
             public IVisualElementScheduledItem pop, hide, remove;
-            public bool visible;
 
             public void Cancel()
             {
@@ -41,6 +40,7 @@ namespace NodeWar.UI
 
         public event Action Opening;
         public double NextAllowedTime => sendLimiter.NextAllowedTime(Time.unscaledTimeAsDouble);
+        private bool IsMuted => !opponentEmotes || matchMuted;
 
         public void Bind(IEmoteChannel value, Func<int> player)
         {
@@ -62,6 +62,8 @@ namespace NodeWar.UI
             theirs = root.Q<VisualElement>("hud-emote-them");
             opponentAnchor = root.Q<VisualElement>(className: "hud__board-space");
             button = root.Q<Button>("hud-emote-button");
+            muteButton = root.Q<Button>("hud-emote-mute");
+            muteLabel = root.Q<Label>("hud-emote-mute-label");
             if (layer == null || button == null) return;
 
             // BuildNodeSheet appends to the HUD too. Emotes must also clear it
@@ -69,15 +71,13 @@ namespace NodeWar.UI
             layer.BringToFront();
             layer.EnableInClassList("hud__emotes--calm", calm);
             button.clicked += Toggle;
+            muteButton.clicked += ToggleMute;
             scrim.RegisterCallback<PointerDownEvent>(OnScrimDown);
             BindOption(0, "happy", EmoteType.Happy);
             BindOption(1, "sad", EmoteType.Sad);
             BindOption(2, "angry", EmoteType.Angry);
             BindOption(3, "flag", EmoteType.WhiteFlag);
 
-            feedback = new Label("Opponent muted") { pickingMode = PickingMode.Ignore };
-            feedback.AddToClassList("hud__emote-feedback");
-            theirs.Add(feedback);
             if (channel != null) channel.EmoteReceived += Receive;
             refreshJob = root.schedule.Execute(Refresh).Every(50);
             Refresh();
@@ -88,15 +88,15 @@ namespace NodeWar.UI
             if (channel != null) channel.EmoteReceived -= Receive;
             refreshJob?.Pause();
             sheetJob?.Pause();
-            feedbackJob?.Pause();
             for (int i = 0; i < bubbles.Length; i++) ClearBubble(i);
             if (button != null) button.clicked -= Toggle;
+            if (muteButton != null) muteButton.clicked -= ToggleMute;
             if (scrim != null) scrim.UnregisterCallback<PointerDownEvent>(OnScrimDown);
-            feedback?.RemoveFromHierarchy();
             open = false;
             root = null;
             layer = null;
             button = null;
+            muteButton = null;
         }
 
         /// <summary>
@@ -137,6 +137,7 @@ namespace NodeWar.UI
             scrim.AddToClassList("hud__settings-scrim--on");
             sheet.AddToClassList("hud__settings--shown");
             foreach (Button option in options) option.pickingMode = PickingMode.Position;
+            muteButton.pickingMode = PickingMode.Position;
             sheetJob = root.schedule.Execute(() => sheet.AddToClassList("hud__settings--on")).StartingIn(16);
         }
 
@@ -149,6 +150,7 @@ namespace NodeWar.UI
             scrim.RemoveFromClassList("hud__settings-scrim--on");
             sheet.RemoveFromClassList("hud__settings--on");
             foreach (Button option in options) option.pickingMode = PickingMode.Ignore;
+            muteButton.pickingMode = PickingMode.Ignore;
             sheetJob = root.schedule.Execute(() => sheet.RemoveFromClassList("hud__settings--shown")).StartingIn(160);
         }
 
@@ -161,7 +163,7 @@ namespace NodeWar.UI
         private void Send(EmoteType emote)
         {
             int player = localPlayer != null ? localPlayer() : -1;
-            if (channel == null || player < 0 || player > 1) return;
+            if (IsMuted || channel == null || player < 0 || player > 1) return;
             if (!sendLimiter.TryAccept(Time.unscaledTimeAsDouble)) { Refresh(); return; }
             channel.Send(emote);
             Show(player, emote);
@@ -174,7 +176,7 @@ namespace NodeWar.UI
             if (root == null || localPlayer == null || player < 0 || player > 1 ||
                 player == localPlayer() || (byte)emote > (byte)EmoteType.WhiteFlag) return;
             if (!receiveLimiters[player].TryAccept(Time.unscaledTimeAsDouble)) return;
-            if (!opponentEmotes || muted[player]) return;
+            if (IsMuted) return;
             Show(player, emote);
         }
 
@@ -190,30 +192,16 @@ namespace NodeWar.UI
             icon.EnableInClassList("hud__emote-icon--flag", emote == EmoteType.WhiteFlag);
             bubble.element.Add(icon);
             (own ? yours : theirs).Add(bubble.element);
-            bubble.element.RegisterCallback<PointerDownEvent>(evt =>
-            {
-                if (player == localPlayer() || !bubble.visible) return;
-                muted[player] = true;
-                ClearBubble(player);
-                feedback.AddToClassList("hud__emote-feedback--on");
-                feedbackJob?.Pause();
-                feedbackJob = root.schedule.Execute(() =>
-                    feedback.RemoveFromClassList("hud__emote-feedback--on")).StartingIn(1500);
-                evt.StopPropagation();
-            });
 
             // Timers belong to the persistent root. A replaced bubble is
             // detached; its own scheduler would pause and later replay work.
             bubble.pop = root.schedule.Execute(() =>
             {
-                bubble.visible = true;
                 bubble.element.AddToClassList("hud__emote-bubble--in");
                 Refresh();
             }).StartingIn(16);
             bubble.hide = root.schedule.Execute(() =>
             {
-                bubble.visible = false;
-                bubble.element.pickingMode = PickingMode.Ignore;
                 bubble.element.RemoveFromClassList("hud__emote-bubble--in");
             }).StartingIn(2516);
             bubble.remove = root.schedule.Execute(() => ClearBubble(player)).StartingIn(2736);
@@ -225,17 +213,33 @@ namespace NodeWar.UI
             bubbles[player] = null;
         }
 
+        private void ToggleMute()
+        {
+            // A saved mute can only be lifted in Settings. This toggle never
+            // writes to the profile and survives only this match's HUD rebuilds.
+            if (!opponentEmotes) return;
+            matchMuted = !matchMuted;
+            Refresh();
+        }
+
         private void Refresh()
         {
             if (layer == null || button == null) return;
             int player = localPlayer != null ? localPlayer() : -1;
-            bool ready = channel != null && player >= 0 && player <= 1 &&
+            bool ready = !IsMuted && channel != null && player >= 0 && player <= 1 &&
                 NextAllowedTime <= Time.unscaledTimeAsDouble;
-            button.SetEnabled(ready);
-            button.EnableInClassList("hud__emote--cooldown", !ready);
+            // Keep the popup reachable during mute and cooldown so the player
+            // can always inspect or change the match mute.
+            layer.EnableInClassList("hud__emotes--muted", IsMuted);
+            button.tooltip = IsMuted ? "Emotes muted" : "Emotes";
+            muteButton.SetEnabled(opponentEmotes);
+            muteButton.pickingMode = open ? PickingMode.Position : PickingMode.Ignore;
+            muteLabel.text = !opponentEmotes ? "Muted in Settings" :
+                matchMuted ? "Unmute this match" : "Mute this match";
             foreach (Button option in options)
             {
                 option.SetEnabled(ready);
+                option.EnableInClassList("hud__emote-option--disabled", !ready);
                 option.pickingMode = open ? PickingMode.Position : PickingMode.Ignore;
             }
 
@@ -255,10 +259,9 @@ namespace NodeWar.UI
                 Bubble bubble = bubbles[i];
                 if (bubble == null) continue;
                 bool own = i == player;
-                if (!own && (!opponentEmotes || muted[i])) { ClearBubble(i); continue; }
+                if (IsMuted) { ClearBubble(i); continue; }
                 VisualElement host = own ? yours : theirs;
                 if (bubble.element.parent != host) host.Add(bubble.element);
-                bubble.element.pickingMode = !own && bubble.visible ? PickingMode.Position : PickingMode.Ignore;
             }
         }
 

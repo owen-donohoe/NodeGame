@@ -1000,11 +1000,45 @@
     left: 12px;
     right: auto;
     width: 228px;
-    flex-direction: row;
+    flex-direction: column;
     padding-left: 8px;
     padding-right: 8px;
     padding-top: 8px;
     padding-bottom: 8px;
+}
+
+.hud__emote-options {
+    flex-direction: row;
+}
+
+.hud__emote-mute {
+    flex-direction: row;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 6px;
+    padding-left: 10px;
+}
+
+.hud__emote-mute-label {
+    color: var(--hud-ink);
+    font-size: 13px;
+    margin-left: 8px;
+}
+
+.hud__speaker {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    -unity-background-image-tint-color: white;
+}
+
+.hud__settings-emotes-icon {
+    margin-right: 6px;
+}
+
+.hud__speaker--muted,
+.hud__emotes--muted .hud__speaker {
+    -unity-background-image-tint-color: var(--badge);
 }
 
 .hud__emote-option {
@@ -1023,8 +1057,8 @@
     -unity-background-image-tint-color: white;
 }
 
-.hud__emote--cooldown {
-    opacity: 0.4;
+.hud__emote-option--disabled {
+    opacity: 0.35;
 }
 
 .hud__emote-you {
@@ -1084,24 +1118,4 @@
 
 .hud__emotes--calm .hud__emote-bubble--in {
     transition-timing-function: ease-out;
-}
-
-.hud__emote-feedback {
-    position: absolute;
-    right: 0;
-    top: 0;
-    white-space: nowrap;
-    color: var(--hud-ink);
-    background-color: var(--hud-glass-strong);
-    border-radius: 8px;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-    font-size: 12px;
-    display: none;
-}
-
-.hud__emote-feedback--on {
-    display: flex;
 }

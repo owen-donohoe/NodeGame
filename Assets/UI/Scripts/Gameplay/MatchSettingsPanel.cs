@@ -38,6 +38,7 @@ namespace NodeWar.UI
         private readonly Slider effectsSlider;
         private readonly LobbySwitch routesSwitch;
         private readonly LobbySwitch emotesSwitch;
+        private readonly LobbyIcon emotesIcon;
 
         private GameSettingsData current;
 
@@ -68,6 +69,7 @@ namespace NodeWar.UI
             effectsSlider = hudRoot.Q<Slider>("hud-settings-effects");
             routesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-routes");
             emotesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-emotes");
+            emotesIcon = hudRoot.Q<LobbyIcon>("hud-settings-emotes-icon");
 
             if (gear != null) gear.clicked += Toggle;
 
@@ -250,6 +252,7 @@ namespace NodeWar.UI
 
         private void RaiseChanged()
         {
+            emotesIcon?.EnableInClassList("hud__speaker--muted", !current.opponentEmotes);
             if (Changed != null) Changed(current);
         }
     }

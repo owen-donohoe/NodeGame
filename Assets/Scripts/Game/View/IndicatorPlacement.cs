@@ -138,8 +138,14 @@ namespace NodeWar.View
 
             clamped = behind || px != x || py != y;
             angleDegrees = clamped
-                ? (float)(Math.Atan2(y - py, x - px) * (180.0 / Math.PI))
+                ? Direction(px, py, x, y)
                 : 0f;
+        }
+
+        /// <summary>Direction from the drawn icon to its target in a y-down panel.</summary>
+        public static float Direction(float iconX, float iconY, float targetX, float targetY)
+        {
+            return (float)(Math.Atan2(targetY - iconY, targetX - iconX) * (180.0 / Math.PI));
         }
 
         /// <summary>

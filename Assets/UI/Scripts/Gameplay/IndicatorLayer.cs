@@ -275,6 +275,20 @@ namespace NodeWar.UI
             IndicatorPlacement.EdgePosition(panelPoint.x, panelPoint.y, behind, clampRect, EdgeMargin,
                                             out entry.x, out entry.y, out entry.pointing, out entry.angle);
 
+            // Icon lift is cosmetic; a battle arrow points at the node itself.
+            // Keep the existing behind-camera fallback, whose mirrored screen
+            // point is not a directly aimable target.
+            if (entry.pointing && !behind && entry.model.kind == IndicatorKind.Battle)
+            {
+                Vector3 targetScreen = cam.WorldToScreenPoint(ground);
+                if (targetScreen.z > 0f)
+                {
+                    Vector2 target = RuntimePanelUtils.ScreenToPanel(layer.panel,
+                        new Vector2(targetScreen.x, Screen.height - targetScreen.y));
+                    entry.angle = IndicatorPlacement.Direction(entry.x, entry.y, target.x, target.y);
+                }
+            }
+
             entry.visible = rules.showAtEdge;
             entry.small = false;
             entry.tappable = true;

@@ -274,7 +274,8 @@
             </engine:Button>
 
             <engine:Button name="hud-settings-row-emotes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
-                <engine:Label class="hud__settings-label ui-w500" text="Opponent emotes" picking-mode="Ignore" />
+                <lobby:LobbyIcon name="hud-settings-emotes-icon" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
+                <engine:Label class="hud__settings-label ui-w500" text="Emotes (saved)" picking-mode="Ignore" />
                 <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
             </engine:Button>
 
@@ -292,13 +293,14 @@
 
         <!-- Above the end card: a closing emote is still part of the match.
              The scrim and sheet pick only while open; the empty bubble slots
-             never pick. EmotePanel enables picking on a visible peer bubble. -->
+             and the bubbles never pick. Mute lives in the popup. -->
         <engine:VisualElement name="hud-emotes" class="hud__emotes" picking-mode="Ignore">
             <engine:VisualElement name="hud-emote-you" class="hud__emote-you" picking-mode="Ignore" />
             <engine:VisualElement name="hud-emote-them" class="hud__emote-them" picking-mode="Ignore" />
             <engine:VisualElement name="hud-emote-side" class="hud__emote-side" picking-mode="Ignore" />
             <engine:VisualElement name="hud-emote-scrim" class="hud__settings-scrim" picking-mode="Ignore" />
             <engine:VisualElement name="hud-emote-sheet" class="hud__settings hud__emote-sheet" picking-mode="Ignore">
+              <engine:VisualElement class="hud__emote-options" picking-mode="Ignore">
                 <engine:Button name="hud-emote-happy" class="ui-reset-button hud__gear hud__emote-option">
                     <lobby:LobbyIcon kind="Smile" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
@@ -311,10 +313,15 @@
                 <engine:Button name="hud-emote-flag" class="ui-reset-button hud__gear hud__emote-option">
                     <lobby:LobbyIcon kind="Flag" class="hud__emote-icon hud__emote-icon--flag" picking-mode="Ignore" />
                 </engine:Button>
+              </engine:VisualElement>
+              <engine:Button name="hud-emote-mute" class="ui-reset-button hud__emote-mute" picking-mode="Ignore">
+                  <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                  <engine:Label name="hud-emote-mute-label" class="hud__emote-mute-label ui-w500" text="Mute this match" picking-mode="Ignore" />
+              </engine:Button>
             </engine:VisualElement>
             <engine:VisualElement name="hud-emote-dock" class="hud__emote-dock" picking-mode="Ignore">
                 <engine:Button name="hud-emote-button" class="ui-reset-button hud__gear">
-                    <lobby:LobbyIcon kind="Smile" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
         </engine:VisualElement>

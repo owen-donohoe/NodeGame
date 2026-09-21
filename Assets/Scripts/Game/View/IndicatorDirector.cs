@@ -136,7 +136,8 @@ namespace NodeWar.View
                 if (node == null) return false;
 
                 ground = node.transform.position;
-                world = ground + Vector3.up * settings.nodeHeight;
+                float height = indicator.kind == IndicatorKind.Battle ? settings.battleHeight : settings.nodeHeight;
+                world = ground + Vector3.up * height;
                 return true;
             }
 
