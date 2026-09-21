@@ -16,7 +16,7 @@ namespace NodeWar.UI
         private readonly Button[] options = new Button[4];
         private IEmoteChannel channel;
         private Func<int> localPlayer;
-        private VisualElement root, layer, scrim, sheet, yours, theirs, opponentWall;
+        private VisualElement root, layer, scrim, sheet, yours, theirs, opponentAnchor;
         private Button button;
         private Label feedback;
         private IVisualElementScheduledItem refreshJob, sheetJob, feedbackJob;
@@ -60,7 +60,7 @@ namespace NodeWar.UI
             sheet = root.Q<VisualElement>("hud-emote-sheet");
             yours = root.Q<VisualElement>("hud-emote-you");
             theirs = root.Q<VisualElement>("hud-emote-them");
-            opponentWall = root.Q<VisualElement>("hud-side-them");
+            opponentAnchor = root.Q<VisualElement>(className: "hud__board-space");
             button = root.Q<Button>("hud-emote-button");
             if (layer == null || button == null) return;
 
@@ -239,12 +239,15 @@ namespace NodeWar.UI
                 option.pickingMode = open ? PickingMode.Position : PickingMode.Ignore;
             }
 
-            // Measure the actual wall so this follows safe-area and size changes.
-            Vector2 anchor = layer.WorldToLocal(new Vector2(opponentWall.worldBound.xMax,
-                opponentWall.worldBound.yMax));
+            // The top-right corner of the board space: under the opponent's side
+            // of the HUD, but below every readout. Directly under their wall it
+            // covered the metal count, and the resources are never to be hidden.
+            // Measured, so it follows the safe area and the units card opening.
+            Vector2 anchor = layer.WorldToLocal(new Vector2(opponentAnchor.worldBound.xMax,
+                opponentAnchor.worldBound.yMin));
             if (!float.IsNaN(anchor.x) && !float.IsNaN(anchor.y))
             {
-                theirs.style.left = anchor.x - 46f;
+                theirs.style.left = anchor.x - 46f - 12f;
                 theirs.style.top = anchor.y + 8f;
             }
             for (int i = 0; i < bubbles.Length; i++)

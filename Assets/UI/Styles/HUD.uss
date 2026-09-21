@@ -1035,7 +1035,8 @@
     height: 46px;
 }
 
-/* Positioned from hud-side-them's bounds so the safe area is respected. */
+/* Positioned in code at the top-right of the board space, below every
+   readout, so the safe area and the units card are respected. */
 .hud__emote-them {
     position: absolute;
     width: 46px;
