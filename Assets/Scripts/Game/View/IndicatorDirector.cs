@@ -51,6 +51,7 @@ namespace NodeWar.View
     {
         private readonly SimulationState state;
         private readonly IndicatorSettings settings;
+        private readonly OpponentRouteSettings opponentSettings;
         private readonly System.Func<int> localPlayer;
         private readonly NodeWar.Core.ITickProvider tickProvider;
 
@@ -64,16 +65,23 @@ namespace NodeWar.View
         private int[] fighting;
         private int[] enemyClaimers;
 
+        private readonly OpponentRouteGate opponentGate = new OpponentRouteGate();
+        private int[] threatLeaders;
+
         public IReadOnlyList<ActiveIndicator> Active => active;
 
         public IndicatorSettings Settings => settings;
 
         public IndicatorDirector(SimulationState state, NodeWar.Core.ITickProvider tickProvider,
-                                 IndicatorSettings settings, System.Func<int> localPlayer)
+                                 IndicatorSettings settings, OpponentRouteSettings opponentSettings,
+                                 System.Func<int> localPlayer)
         {
             this.state = state;
             this.tickProvider = tickProvider;
             this.settings = settings ?? new IndicatorSettings();
+            // The live route limits apply to warnings too. show only hides
+            // lines; an off-screen threat still deserves its indicator.
+            this.opponentSettings = opponentSettings ?? new OpponentRouteSettings();
             this.localPlayer = localPlayer;
 
             if (tickProvider != null)
@@ -149,6 +157,7 @@ namespace NodeWar.View
 
             if (log != null) ReadEvents(log, me, now);
             ReadConditions(me, now);
+            ReadThreats(me, now);
             Settle(now);
         }
 
@@ -167,6 +176,10 @@ namespace NodeWar.View
                     case TickEventType.NodeNeutralised:
                         if (e.playerID == me) MarkLost(e.nodeID, now);
                         break;
+
+                    case TickEventType.VillagerRespawned:
+                        if (e.playerID == me) MarkRespawned(e.villagerID, now);
+                        break;
                 }
             }
         }
@@ -179,6 +192,8 @@ namespace NodeWar.View
         private void ReadConditions(int me, float now)
         {
             int nodeCount = state.nodes.Length;
+            int core = state.players != null && me >= 0 && me < state.players.Length
+                ? state.players[me].coreNodeID : -1;
 
             if (fighting == null || fighting.Length < nodeCount)
             {
@@ -202,6 +217,12 @@ namespace NodeWar.View
 
                 if (villager.state == VillagerState.Fighting) fighting[node]++;
                 else if (villager.state == VillagerState.Claiming && villager.ownerID != me) enemyClaimers[node]++;
+
+                // Waiting at home is expected; an unsuited villager elsewhere
+                // only needs attention after the normal Idle debounce.
+                if (villager.ownerID == me && villager.suit == SuitType.None &&
+                    villager.state == VillagerState.Idle && core >= 0 && node != core)
+                    Touch(IndicatorKind.Idle, -1, v, now);
             }
 
             for (int n = 0; n < nodeCount; n++)
@@ -223,6 +244,86 @@ namespace NodeWar.View
                     Touch(IndicatorKind.NodeContested, n, -1, now);
                 }
             }
+        }
+
+        /// <summary>
+        /// Only the revealed next nodes can earn a warning. Neither the route
+        /// line switch nor the camera bounds change what the player knows.
+        /// </summary>
+        private void ReadThreats(int me, float now)
+        {
+            if (state.players == null || me < 0 || me >= state.players.Length) return;
+
+            int core = state.players[me].coreNodeID;
+            int legs = opponentSettings.revealLegs;
+            opponentGate.ComputeHopsFromPlayer(state, me, opponentSettings.withinHopsOfYou);
+
+            if (threatLeaders == null || threatLeaders.Length < state.villagers.Length)
+                threatLeaders = new int[state.villagers.Length];
+            int leaderCount = 0;
+
+            for (int v = 0; v < state.villagers.Length; v++)
+            {
+                VillagerData villager = state.villagers[v];
+                if (villager.ownerID == me || villager.isConsumed || villager.state != VillagerState.Moving) continue;
+                if (!opponentGate.WithinHops(villager.currentNodeID, opponentSettings.withinHopsOfYou)) continue;
+
+                IndicatorKind kind;
+                if (RouteReveal.Contains(villager.movePath, villager.movePathIndex, legs, core))
+                {
+                    kind = IndicatorKind.ThreatToCore;
+                }
+                else
+                {
+                    bool territory = false;
+                    int count = RouteReveal.LegCount(villager.movePath, villager.movePathIndex, legs);
+                    for (int k = 1; k <= count; k++)
+                    {
+                        int node = villager.movePath[villager.movePathIndex + k];
+                        if (node != core && node >= 0 && node < state.nodes.Length && state.nodes[node].ownerID == me)
+                        {
+                            territory = true;
+                            break;
+                        }
+                    }
+                    if (!territory) continue;
+                    kind = IndicatorKind.ThreatToTerritory;
+                }
+
+                // Ascending indices make the first member the stable subject.
+                // Comparing only the window keeps hidden orders out of grouping.
+                bool merged = false;
+                for (int i = 0; i < leaderCount; i++)
+                {
+                    VillagerData leader = state.villagers[threatLeaders[i]];
+                    if (RouteReveal.SameWindow(villager.movePath, villager.movePathIndex,
+                                               leader.movePath, leader.movePathIndex, legs))
+                    {
+                        merged = true;
+                        break;
+                    }
+                }
+
+                if (merged)
+                {
+                    RemoveThreat(IndicatorKind.ThreatToCore, v);
+                    RemoveThreat(IndicatorKind.ThreatToTerritory, v);
+                    continue;
+                }
+
+                threatLeaders[leaderCount++] = v;
+                RemoveThreat(kind == IndicatorKind.ThreatToCore
+                    ? IndicatorKind.ThreatToTerritory : IndicatorKind.ThreatToCore, v);
+                Touch(kind, -1, v, now);
+            }
+        }
+
+        private void RemoveThreat(IndicatorKind kind, int villagerID)
+        {
+            // Grace is for a vanished condition, not a second warning beside
+            // its replacement when a route changes kind or joins a squad.
+            ActiveIndicator a = Find(kind, -1, villagerID);
+            if (a != null) active.Remove(a);
         }
 
         /// <summary>Positive claim is player 0's, negative player 1's.</summary>
@@ -315,6 +416,25 @@ namespace NodeWar.View
             if (a == null) return;
 
             a.lost = true;
+            a.shown = true;
+            a.held = true;
+            a.expiresAt = now + rules.holdSeconds;
+        }
+
+        /// <summary>
+        /// Paid and timer respawns say the same thing: this villager is back.
+        /// A second respawn during the hold refreshes it rather than stacking.
+        /// </summary>
+        private void MarkRespawned(int villagerID, float now)
+        {
+            IndicatorKindSettings rules = settings.respawn;
+            if (!rules.enabled) return;
+
+            Touch(IndicatorKind.Respawn, -1, villagerID, now);
+
+            ActiveIndicator a = Find(IndicatorKind.Respawn, -1, villagerID);
+            if (a == null) return;
+
             a.shown = true;
             a.held = true;
             a.expiresAt = now + rules.holdSeconds;

@@ -823,6 +823,7 @@ namespace NodeWar.Core
             // by now. Local player comes from the switch, which a networked
             // match has already locked.
             indicatorDirector = new NodeWar.View.IndicatorDirector(state, tickProvider, indicatorSettings,
+                opponentRouteSettings,
                 () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
             indicatorDirector.SetNodeSlotManagers(nodeSlotManagers);
             indicatorDirector.SetVillagerTransforms(villagerTransforms);

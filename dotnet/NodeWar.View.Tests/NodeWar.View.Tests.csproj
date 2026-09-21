@@ -33,6 +33,10 @@
     <Compile Include="IndicatorPlacementTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/IndicatorPlacement.cs"
              Link="View/IndicatorPlacement.cs" />
+
+    <Compile Include="RouteRevealTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
+             Link="View/RouteReveal.cs" />
   </ItemGroup>
 
   <ItemGroup>
