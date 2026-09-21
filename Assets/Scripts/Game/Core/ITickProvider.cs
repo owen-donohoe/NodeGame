@@ -8,5 +8,15 @@ namespace NodeWar.Core
     public interface ITickProvider
     {
         float TickAlpha { get; }
+
+        /// <summary>
+        /// Raised once per simulated tick, straight after it, with what that
+        /// tick did. Raised inside the runner's catch-up loop, so a frame that
+        /// runs three ticks raises it three times and nothing is lost.
+        ///
+        /// The log is the runner's own and is cleared before the next tick, so
+        /// a subscriber copies what it needs rather than holding the log.
+        /// </summary>
+        event System.Action<NodeWar.Simulation.TickEventLog> TickSimulated;
     }
 }

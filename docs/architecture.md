@@ -275,6 +275,37 @@ Pointer (mouse / touch)        or  BotPlayer
 `SimulationState` is the single source of truth. Nothing outside
 `Simulation/` writes to it directly — see `docs/simulation-rules.md`.
 
+### What a tick did
+
+Beside the state it produces, a tick can report the moments it passed through,
+into a `TickEventLog` (`Simulation/TickEvents.cs`):
+
+```
+SimulationState   what the world IS.        Hashed. Replicated.
+TickEventLog      what just HAPPENED.       Not hashed. Output only.
+```
+
+A `TickEvent` is flat and integer-only, in the style of `GameCommand`: a type
+plus a node, villager, player and value, `-1` where unused. The types are
+`CombatStarted`, `VillagerDied`, `VillagerRespawned` (value 1 if paid),
+`NodeNeutralised`, `NodeClaimed` and `Breach`.
+
+- **Moments only.** A fight still going, or a node still being pushed, is read
+  off `SimulationState` the way the claim bar always was. A log that had to say
+  "still happening" every tick would just be the state again.
+- **Output only, and off the state.** The simulation appends and never reads
+  back, so a wrong entry is a cosmetic bug. The log is not a `SimulationState`
+  field, so it is not in `SimulationStateHasher` and never replicates. Both
+  peers write the same entries anyway, from integer state in tick order.
+- **Passed in, null by default.** `SimulateTick(state, log)` and
+  `ProcessCommand(state, command, log)` record only when handed a log, so tests
+  and any headless run are unchanged. `ProcessCommand` takes it because a paid
+  respawn happens there, outside `SimulateTick`.
+- **The driver owns it.** `TickRunner` and `LockstepRunner` clear one log before
+  each tick, and after the tick raise `ITickProvider.TickSimulated` with it.
+  They raise it inside their catch-up loop, so a frame that runs three ticks
+  raises it three times. The log is reused, so subscribers copy what they need.
+
 ## Scene structure
 
 Three `.unity` scenes exist under `Assets/Scenes/`:
@@ -354,6 +385,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `SimulationState` — the entire mutable match state: `NodeData[]`,
   `VillagerData[]`, `PlayerData[]`, tick count, game-over/winner.
 - `GameSimulation.SimulateTick` — the deterministic tick loop.
+- `TickEventLog` — what a tick did, output only and unhashed. See
+  [What a tick did](#what-a-tick-did).
 - `CommandProcessor` — validates and applies a `GameCommand` to
   `SimulationState`.
 - `Commands.cs` — `GameCommand` struct and `CommandType` enum.

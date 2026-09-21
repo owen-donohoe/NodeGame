@@ -17,6 +17,11 @@ namespace NodeWar.Core
 
         private bool paused = true;
 
+        // One log for the life of the runner, cleared before every tick.
+        private readonly TickEventLog tickEvents = new TickEventLog();
+
+        public event System.Action<TickEventLog> TickSimulated;
+
         public void Unpause()
         {
             paused = false;
@@ -58,8 +63,9 @@ namespace NodeWar.Core
                 if (botPlayer != null)
                     botPlayer.Evaluate();
 
+                tickEvents.Clear();
                 ProcessBufferedCommands();
-                GameSimulation.SimulateTick(simState);
+                GameSimulation.SimulateTick(simState, tickEvents);
 
                 if (simState.tickCount % 50 == 0)
                 {
@@ -68,6 +74,8 @@ namespace NodeWar.Core
                 }
 
                 accumulator -= tickInterval;
+
+                TickSimulated?.Invoke(tickEvents);
             }
         }
 
@@ -78,7 +86,7 @@ namespace NodeWar.Core
             GameCommand[] commands = inputBuffer.DrainCommands();
             for (int i = 0; i < commands.Length; i++)
             {
-                CommandProcessor.ProcessCommand(simState, commands[i]);
+                CommandProcessor.ProcessCommand(simState, commands[i], tickEvents);
             }
         }
     }

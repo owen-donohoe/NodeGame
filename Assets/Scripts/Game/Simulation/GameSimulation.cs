@@ -25,21 +25,24 @@ namespace NodeWar.Simulation
         /// 7. Respawn timers
         /// 8. Win condition (breachCount >= 3)
         /// 9. Post-combat resume (fight ended, determine next state)
+        ///
+        /// log, when given, receives what the tick did (see TickEventLog). It is
+        /// only ever appended to, so passing one or not cannot change the result.
         /// </summary>
-        public static void SimulateTick(SimulationState state)
+        public static void SimulateTick(SimulationState state, TickEventLog log = null)
         {
             state.tickCount++;
 
             // Step 2: Movement
-            TickAllMovement(state);
+            TickAllMovement(state, log);
 
             TickRampartBonuses(state);   // NEW
 
             // Step 3: Combat
-            TickCombat(state);
+            TickCombat(state, log);
 
             // Step 4: Claiming
-            TickClaiming(state);
+            TickClaiming(state, log);
 
             // Step 5: Production
             TickProduction(state);
@@ -48,7 +51,7 @@ namespace NodeWar.Simulation
             TickHealing(state);
 
             // Step 7: Respawns
-            TickRespawns(state);
+            TickRespawns(state, log);
 
             // Step 8: Win condition
             TickWinCondition(state);
@@ -59,23 +62,23 @@ namespace NodeWar.Simulation
             // This prevents a villager from killing an enemy and immediately starting to
             // claim in the same tick, which could cause edge cases with the claim
             // evaluation also running in step 4.
-            TickPostCombatResume(state);
+            TickPostCombatResume(state, log);
         }
 
         // ===== STEP 2: MOVEMENT =====
 
-        private static void TickAllMovement(SimulationState state)
+        private static void TickAllMovement(SimulationState state, TickEventLog log)
         {
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 if (state.villagers[i].state == VillagerState.Moving)
                 {
-                    TickMovement(state, i);
+                    TickMovement(state, i, log);
                 }
             }
         }
 
-        private static void TickMovement(SimulationState state, int villagerIndex)
+        private static void TickMovement(SimulationState state, int villagerIndex, TickEventLog log)
         {
             VillagerData v = state.villagers[villagerIndex];
 
@@ -126,7 +129,7 @@ namespace NodeWar.Simulation
                     }
                     else
                     {
-                        ProcessBreach(state, villagerIndex, v);
+                        ProcessBreach(state, villagerIndex, v, log);
                         return;
                     }
                 }
@@ -301,7 +304,7 @@ namespace NodeWar.Simulation
 
         // ===== STEP 3: COMBAT =====
 
-        private static void TickCombat(SimulationState state)
+        private static void TickCombat(SimulationState state, TickEventLog log)
         {
             // Phase A: Build player presence once, then interrupt villagers on contested nodes.
             int[] presence = new int[state.nodes.Length];
@@ -312,12 +315,26 @@ namespace NodeWar.Simulation
                 presence[vil.currentNodeID] |= vil.ownerID == 0 ? 1 : 2;
             }
 
+            // A fight starts on a node when someone there is first pulled into
+            // it here. An arrival that walks into enemies is already Fighting by
+            // now, but whoever it walked into is not, so every new fight passes
+            // through this loop once; a villager joining a fight already under
+            // way finds nobody left to pull in and starts nothing. Only built
+            // when recording, so the unrecorded tick allocates what it always did.
+            bool[] combatAnnounced = log != null ? new bool[state.nodes.Length] : null;
+
             for (int v = 0; v < state.villagers.Length; v++)
             {
                 VillagerData vil = state.villagers[v];
                 if (vil.state == VillagerState.Dead || vil.isConsumed) continue;
                 if (presence[vil.currentNodeID] != 3) continue;
                 if (vil.state == VillagerState.Fighting) continue;
+
+                if (combatAnnounced != null && !combatAnnounced[vil.currentNodeID])
+                {
+                    combatAnnounced[vil.currentNodeID] = true;
+                    log.Add(TickEventType.CombatStarted, vil.currentNodeID, -1, -1, 0);
+                }
 
                 state.villagers[v].state = VillagerState.Fighting;
                 state.villagers[v].attackCooldownRemaining = vil.attackCooldownMax;
@@ -383,6 +400,9 @@ namespace NodeWar.Simulation
 
                 if (state.villagers[v].hp <= 0)
                 {
+                    log?.Add(TickEventType.VillagerDied, state.villagers[v].currentNodeID, v,
+                             state.villagers[v].ownerID, 0);
+
                     state.villagers[v].state = VillagerState.Dead;
                     state.villagers[v].hp = 0;
                     state.villagers[v].respawnTicksRemaining = bal.respawnTicks;
@@ -469,7 +489,7 @@ namespace NodeWar.Simulation
 
         // ===== STEP 4: CLAIMING =====
 
-        private static void TickClaiming(SimulationState state)
+        private static void TickClaiming(SimulationState state, TickEventLog log)
         {
             // Re-evaluate Idle/Claiming states based on current ownership
             UpdateVillagerClaimStates(state);
@@ -526,13 +546,14 @@ namespace NodeWar.Simulation
                     {
                         node.claimBar = bal.claimThreshold;
                         state.nodes[nodeIndex] = node;
-                        CompleteClaimForPlayer(state, nodeIndex, 0);
+                        CompleteClaimForPlayer(state, nodeIndex, 0, log);
                         node = state.nodes[nodeIndex];
                     }
                     else if (node.ownerID == 1 && node.claimBar >= 0)
                     {
                         node.claimBar = 0;
                         node.ownerID = -1;
+                        log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 1, 0);
                     }
                 }
 
@@ -562,13 +583,14 @@ namespace NodeWar.Simulation
                     {
                         node.claimBar = -bal.claimThreshold;
                         state.nodes[nodeIndex] = node;
-                        CompleteClaimForPlayer(state, nodeIndex, 1);
+                        CompleteClaimForPlayer(state, nodeIndex, 1, log);
                         node = state.nodes[nodeIndex];
                     }
                     else if (node.ownerID == 0 && node.claimBar <= 0)
                     {
                         node.claimBar = 0;
                         node.ownerID = -1;
+                        log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 0, 1);
                     }
                 }
 
@@ -723,8 +745,10 @@ namespace NodeWar.Simulation
             }
         }
 
-        private static void CompleteClaimForPlayer(SimulationState state, int nodeIndex, int playerID)
+        private static void CompleteClaimForPlayer(SimulationState state, int nodeIndex, int playerID, TickEventLog log)
         {
+            log?.Add(TickEventType.NodeClaimed, nodeIndex, -1, playerID, state.nodes[nodeIndex].ownerID);
+
             state.nodes[nodeIndex].ownerID = playerID;
 
             if (state.nodes[nodeIndex].slotType != NodeSlotType.Fixed)
@@ -852,7 +876,7 @@ namespace NodeWar.Simulation
 
         // ===== STEP 6: RESPAWNS =====
 
-        private static void TickRespawns(SimulationState state)
+        private static void TickRespawns(SimulationState state, TickEventLog log)
         {
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -866,15 +890,21 @@ namespace NodeWar.Simulation
 
                 if (state.villagers[i].respawnTicksRemaining <= 0)
                 {
-                    ResetToCore(state, i, bal);
+                    ResetToCore(state, i, bal, log, paid: false);
                 }
             }
         }
 
-        // Shared by paid and timer respawns so every life starts with base stats.
-        internal static void ResetToCore(SimulationState state, int vid, GameBalanceData balance)
+        // Shared by paid and timer respawns so every life starts with base stats,
+        // and so both announce themselves: a paid respawn runs from
+        // CommandProcessor, outside SimulateTick, and would otherwise be the
+        // one return nothing reported.
+        internal static void ResetToCore(SimulationState state, int vid, GameBalanceData balance,
+                                         TickEventLog log = null, bool paid = false)
         {
             int coreNode = state.players[state.villagers[vid].ownerID].coreNodeID;
+            log?.Add(TickEventType.VillagerRespawned, coreNode, vid, state.villagers[vid].ownerID, paid ? 1 : 0);
+
             state.villagers[vid].state = VillagerState.Idle;
             state.villagers[vid].currentNodeID = coreNode;
             state.villagers[vid].previousNodeID = coreNode;
@@ -925,7 +955,7 @@ namespace NodeWar.Simulation
         /// claiming in the same tick that TickClaiming also evaluates, potentially causing
         /// double-counting or ordering-dependent bugs.
         /// </summary>
-        private static void TickPostCombatResume(SimulationState state)
+        private static void TickPostCombatResume(SimulationState state, TickEventLog log)
         {
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -942,7 +972,7 @@ namespace NodeWar.Simulation
                 int enemyCoreID = state.players[1 - v.ownerID].coreNodeID;
                 if (v.currentNodeID == enemyCoreID)
                 {
-                    ProcessBreach(state, i, v);
+                    ProcessBreach(state, i, v, log);
                     continue;
                 }
 
@@ -1007,11 +1037,12 @@ namespace NodeWar.Simulation
 
         // ===== BREACH PROCESSING =====
 
-        private static void ProcessBreach(SimulationState state, int villagerIndex, VillagerData v)
+        private static void ProcessBreach(SimulationState state, int villagerIndex, VillagerData v, TickEventLog log)
         {
             // Increment breach count for the defending player
             int defendingPlayer = 1 - v.ownerID;
             state.players[defendingPlayer].breachCount++;
+            log?.Add(TickEventType.Breach, v.currentNodeID, villagerIndex, defendingPlayer, 0);
 
             // Consume the breaching villager permanently
             state.villagers[villagerIndex].state = VillagerState.Dead;

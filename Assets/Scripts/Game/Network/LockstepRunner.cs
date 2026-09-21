@@ -59,6 +59,11 @@ namespace NodeWar.Network
 
         private bool paused = true;
 
+        // One log for the life of the runner, cleared before every tick.
+        private readonly TickEventLog tickEvents = new TickEventLog();
+
+        public event System.Action<TickEventLog> TickSimulated;
+
         public void Unpause()
         {
             // Re-stamp the timing baselines. Initialize() runs before the
@@ -224,14 +229,16 @@ namespace NodeWar.Network
                 p1Commands = local.commands;
             }
 
+            tickEvents.Clear();
+
             for (int i = 0; i < p0Commands.Length; i++)
-                CommandProcessor.ProcessCommand(simState, p0Commands[i]);
+                CommandProcessor.ProcessCommand(simState, p0Commands[i], tickEvents);
 
             for (int i = 0; i < p1Commands.Length; i++)
-                CommandProcessor.ProcessCommand(simState, p1Commands[i]);
+                CommandProcessor.ProcessCommand(simState, p1Commands[i], tickEvents);
 
             // Advance simulation
-            GameSimulation.SimulateTick(simState);
+            GameSimulation.SimulateTick(simState, tickEvents);
 
             // Desync hash: compute after tick completes, store for next outgoing packet
             if (tick > 0 && tick % DESYNC_CHECK_INTERVAL == 0)
@@ -251,6 +258,8 @@ namespace NodeWar.Network
 
             // Memory cleanup
             CleanupOldInputs(tick);
+
+            TickSimulated?.Invoke(tickEvents);
         }
 
         // ===== NETWORK RECEIVE =====

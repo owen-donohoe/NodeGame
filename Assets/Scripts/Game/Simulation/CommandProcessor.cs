@@ -7,7 +7,12 @@ namespace NodeWar.Simulation
         {
             bal = balance;
         }
-        public static void ProcessCommand(SimulationState state, GameCommand command)
+        /// <summary>
+        /// Validates and applies one command. log, when given, is the same
+        /// TickEventLog the tick about to run will append to; only a paid
+        /// respawn writes to it from here.
+        /// </summary>
+        public static void ProcessCommand(SimulationState state, GameCommand command, TickEventLog log = null)
         {
             switch (command.type)
             {
@@ -21,7 +26,7 @@ namespace NodeWar.Simulation
                     ProcessEquipCommand(state, command);
                     break;
                 case CommandType.Respawn:
-                    ProcessRespawnCommand(state, command);
+                    ProcessRespawnCommand(state, command, log);
                     break;
             }
         }
@@ -237,7 +242,7 @@ namespace NodeWar.Simulation
             return finalCost;
         }
 
-        private static void ProcessRespawnCommand(SimulationState state, GameCommand command)
+        private static void ProcessRespawnCommand(SimulationState state, GameCommand command, TickEventLog log)
         {
             int vid = command.villagerID;
             if (vid < 0 || vid >= state.villagers.Length) return;
@@ -249,7 +254,7 @@ namespace NodeWar.Simulation
             if (state.players[command.playerID].food < finalCost) return;
             // Apply
             state.players[command.playerID].food -= finalCost;
-            GameSimulation.ResetToCore(state, vid, bal);
+            GameSimulation.ResetToCore(state, vid, bal, log, paid: true);
         }
 
         private static bool PlayerHasSuitDrafted(SimulationState state, int playerID, SuitType suit)

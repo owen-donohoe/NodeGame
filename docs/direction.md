@@ -61,32 +61,11 @@ feel feature that wants one of those has to independently diff the state and
 guess when the moment was, which means the diffing logic gets written once per
 effect. That is the same failure the camera audit found, just not written yet.
 
-## The change
+## The change — landed
 
-**`SimulateTick` should produce a list of what happened, alongside the state it
-already produces.**
-
-```
-SimulationState   — what the world IS.     Hashed. Replicated. Sacred.
-TickEvents        — what just HAPPENED.    Not hashed. Output only. Disposable.
-```
-
-A `TickEvent` is small and flat, in the style of `GameCommand`: a type, a node
-or villager id, a player id, maybe an int. Combat resolved at node 12.
-Node 12 changed owner to player 1. Villager 7 died at node 12. Player 0's core
-took breach damage.
-
-The list is cleared at the start of every tick and refilled during it. The
-simulation never reads it. Nothing in it enters `SimulationStateHasher`.
-
-Three properties make this safe, and they are the whole argument:
-
-1. **It is additive.** `SimulationState` does not change, so there is no hasher
-   change and no new desync surface. The determinism contract is untouched.
-2. **It is output-only.** If the simulation never reads it back, it cannot
-   affect the result, so even a bug in it is a cosmetic bug.
-3. **It is deterministic for free.** It is generated inside `SimulateTick` from
-   integer state, so both peers produce the same list without anyone trying.
+`SimulateTick` now produces a `TickEventLog` of what happened, alongside the
+state it already produces. What it is and why it is safe now lives in
+[architecture](architecture.md#what-a-tick-did).
 
 ## What it unlocks, in order of cheapness
 
@@ -392,7 +371,7 @@ expensive ones.
 | When | What | Why then |
 |---|---|---|
 | First | `DistrictVisual` assets | Turns "we need art" into a named list. Small. |
-| First | Tick event list | Everything in the feel phase depends on it. |
+| Done | Tick event list | Landed: `TickEventLog`, see architecture.md. |
 | Then | Sound, shake, hit flash, hitstop | The actual feel phase. Shake gets its caller. |
 | Alongside | Camera input fix (issue #41 B1) | Small, and it is the whole desktop input story. |
 | Alongside | Two layout classes, desktop build | A week of evenings, not a phase. |
