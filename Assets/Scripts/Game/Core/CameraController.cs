@@ -86,9 +86,12 @@ namespace NodeWar.Core
         [SerializeField] private bool draftZoomNeverBelowMax = true;
 
         [Header("Per-Side Defaults")]
-        // NOTE: Gameplay.unity serializes 0.65, which overrides this default.
-        // Raising how far out the match starts is an Inspector change on the
-        // CameraRig, not a code one.
+        // NOTE: Gameplay.unity serializes 0.4545 with zoomMaxDistance 60, which
+        // overrides both defaults. That pair puts the start at distance 30, and
+        // the HUD readout divides by the start distance, so 30 reads 1.0x and
+        // the 60 limit reads 0.5x. Move one and the other has to follow, or
+        // the readout stops landing on 0.5x. Raising how far out the match
+        // starts is an Inspector change on the CameraRig, not a code one.
         [Tooltip("Normalized position between min/max zoom for gameplay start. 0=closest, 1=farthest.")]
         [SerializeField][Range(0f, 1f)] private float sideDefaultZoomNormalized = 0.65f;
 

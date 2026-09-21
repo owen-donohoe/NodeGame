@@ -738,51 +738,19 @@ MonoBehaviour:
   panMaxVelocity: 20
   zoomScrollSensitivity: 2
   zoomMinDistance: 5
-  zoomMaxDistance: 30
+  zoomMaxDistance: 60
   zoomSmoothingSpeed: 8
   useBounds: 1
   boundsPushbackForce: 10
-  defaultShakeIntensity: 0.15
-  defaultShakeRotationalIntensity: 0.5
-  defaultShakeDuration: 0.4
-  defaultShakeFrequency: 25
-  shakeMaxPositionalOffset: 0.5
-  shakeMaxRotationalOffset: 3
-  shakeFalloffCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
   draftPitch: 60
   draftZoomDistance: 50
   draftRigOffset: {x: 0, y: 0, z: -6}
   draftZoomBoardMultiplier: 1.853
   draftZoomNeverBelowMax: 1
-  sideDefaultZoomNormalized: 0.65
+  sideDefaultZoomNormalized: 0.45454547
   sideOpponentBiasFactor: 0.18
   sideZOffsetFactor: 0.35
-  sideP0LateralNudgeFactor: 0.5
-  sideP1ZPositionFactor: 0.6
-  spriteRotationFallback: {x: 50, y: 0, z: 0}
+  sideEdgeFactor: 0.6
   focusDuration: 0.28
   focusMarginPx: 48
   verboseFocusLogging: 0
