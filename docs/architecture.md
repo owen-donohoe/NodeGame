@@ -454,6 +454,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
   covers.
 - `MatchLauncher` — the lobby's route into a match.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+- `IndicatorLayer` — draws `IndicatorDirector`'s list over the board. The
+  first child of `hud-root`, so every readout, dock, sheet and card draws over
+  it. See [In-match indicators](#in-match-indicators).
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
   to open; `NodePanelManager` still owns that.
 - `NodeSheetContent` and its three subclasses — `ForgeContent`,
@@ -513,6 +516,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
   route hands the player something new rather than withholding it.
 - `ViewSide` — the UnityEngine-free maths behind the camera POV. Tested by
   `dotnet/NodeWar.View.Tests`.
+- `IndicatorDirector` / `IndicatorSettings` / `IndicatorPlacement` — which
+  in-match indicators exist, their tunables on `GameManager`, and the
+  UnityEngine-free placement maths. See
+  [In-match indicators](#in-match-indicators).
 - `SortHeight` / `SpriteDepthSorter` — height and depth order inside a node or
   draft piece.
 - `OutlineDriver` — the only thing that sets outline intents. Reads hover,
@@ -593,6 +600,46 @@ player to a yaw by table.
 - **Draft pieces** (`DraftPlacementPreview`, ghost and confirmed) take the
   camera's yaw and follow it if the side changes; the sticker is one height above
   the cube.
+
+### In-match indicators
+
+Popups that tell the player something happened somewhere: a fight, a node of
+theirs being taken, an enemy headed for their Core. Two halves, split along
+the layer line.
+
+- **`IndicatorDirector` (View/) decides what exists.** It is a plain class
+  driven by `ITickProvider.TickSimulated`, so a paused or finished match changes
+  nothing. Moments come from the tick's `TickEventLog` (`CombatStarted` starts a
+  battle; `NodeNeutralised` turns "under attack" into a brief "lost" pulse).
+  Conditions are read off `SimulationState` once per tick. Each kind has a
+  debounce before it shows and a grace before it goes (`IndicatorSettings`, on
+  `GameManager`), so a one-tick flicker neither pops nor re-pops. It is
+  read-only against the simulation, and its timing is wall-clock presentation
+  only.
+- **`IndicatorLayer` (UI Toolkit HUD) draws it.** The in-view zone is the central
+  60% of the board the player can see: the HUD's `hud__board-space`, less the
+  node sheet while it is open. It has hysteresis, entering at 0.60 and leaving
+  at 0.66. Inside it a subject takes its in-view form (smaller, or nothing).
+  Outside it the icon sits on the subject clamped inside the board, clear of the
+  control docks, with an arrow when the subject is off screen. The two
+  rectangles differ on purpose: measuring the zone against the dock-inset area
+  would pull the centre of attention off the centre of the screen. Overlapping
+  edge icons merge into the most important one with a count, up to a cap.
+- **Only visible edge icons pick.** A tap eases the camera to the subject through
+  `CameraController.FocusOnWorldPoint`, which counts as a manual move so closing
+  a sheet does not undo it. The gesture source's EventSystem check stops the
+  same press reaching the board.
+- **Motion is USS.** Adding `.ind--in` pops an icon with `ease-out-back`;
+  removing it falls back to `.ind`'s `ease-in` taper. The target style's
+  transition is the one in force, so one scale property overshoots in and
+  tapers out, and reduced motion drops the overshoot.
+- **Timers run on the layer, not on an element.** An element's scheduled items
+  pause while it is detached and resume when it is attached again, so a recycle
+  timer on a pooled element fires into its next life. That detached a freshly
+  reused indicator in play; the layer's scheduler plus a generation stamp is
+  the fix.
+- **Icons are `LobbyIcon` glyphs drawn with Painter2D.** Fredoka carries no
+  symbol glyphs, and a fallback font would differ by platform.
 
 ### Where a villager is, mid-edge
 
