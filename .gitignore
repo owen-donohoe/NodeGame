@@ -128,3 +128,7 @@ UIElementsSchema/
 
 # Rider workspace state. Per-machine, and it rewrites itself on every reindex.
 .idea/
+
+# Local agent worktrees are complete, independent Unity checkouts. Keep their
+# source and generated Library caches out of this repository.
+/.claude/worktrees/
