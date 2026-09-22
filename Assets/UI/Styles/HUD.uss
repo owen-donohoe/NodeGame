@@ -703,9 +703,9 @@
 /* ===================================================================
    In-match settings
 
-   A corner card, not a page. The match is live behind it, so it covers
-   the smallest area that still fits its rows, and it sits in the
-   bottom-right where a thumb already is.
+   A small card, not a page. The match is live behind it, so it covers
+   the smallest area that still fits its rows, and it drops down from
+   directly under the burger that opens it.
 
    The scrim is the one element on this surface allowed to pick, and only
    while the panel is open - display:none the rest of the time. That is
@@ -730,9 +730,8 @@
 /*
     The burger: centred under the match timer rather than in a corner, so it
     sits in normal flow inside .hud__clock-column instead of being
-    absolute-positioned. It still opens the same settings card below, which
-    keeps its own bottom-right position - a corner card the thumb already
-    reaches, independent of where the button that opens it lives.
+    absolute-positioned. The card it opens (.hud__settings-main below) now
+    drops down from directly under it instead of rising from a corner.
 */
 .hud__settings-dock {
     align-items: center;
@@ -803,10 +802,13 @@
 
 /* Rises out of the gear. Width is fixed rather than a percentage so it
    stays a card on a tablet instead of growing into a page. */
+/*
+    Shape only - background, border, radius, the display/opacity/translate
+    open transition. Position is per-instance: hud__settings-main drops down
+    from under the burger, hud__emote-sheet keeps its own bottom-left corner.
+*/
 .hud__settings {
     position: absolute;
-    right: 12px;
-    bottom: 70px;
     width: 264px;
     padding-left: var(--space-4);
     padding-right: var(--space-4);
@@ -839,6 +841,21 @@
 .hud__settings--on {
     opacity: 1;
     translate: 0 0;
+}
+
+/*
+    The real settings card: centred under the burger and dropping down into
+    place, so it starts above its resting position (negative Y) rather than
+    below it. 100px clears the topbar's tallest column - padding-top(8) +
+    clock(50) + dock margin(6) + burger(30) = 94 - with a small gap; 132px is
+    half this card's own 264px width. Ends at the shared .hud__settings--on
+    translate: 0 0, same as the emote sheet's rise.
+*/
+.hud__settings-main {
+    top: 100px;
+    left: 50%;
+    margin-left: -132px;
+    translate: 0 -8px;
 }
 
 .hud__settings-title {
@@ -1093,9 +1110,13 @@
     display: none;
 }
 
+/* Its own bottom-left corner: unlike hud__settings-main, this sheet still
+   rises from beside the emote dock it belongs to, so bottom is stated here
+   rather than inherited from the now-positionless hud__settings base. */
 .hud__emote-sheet {
     left: 12px;
     right: auto;
+    bottom: 70px;
     width: 228px;
     flex-direction: column;
     padding-left: 8px;

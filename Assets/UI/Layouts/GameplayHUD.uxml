@@ -276,7 +276,7 @@
 
             IT IS NOT A TAKEOVER. Same settlement as the node sheet: the
             opponent keeps playing, so the board stays visible. The panel is a
-            corner card, not a page, and the scrim is invisible rather than a
+            small card, not a page, and the scrim is invisible rather than a
             dim - it is there to catch one tap, not to say "stop".
         -->
         <engine:VisualElement name="hud-settings-scrim" class="hud__settings-scrim" />
@@ -286,8 +286,12 @@
             to: it sits over the scrim, and if taps fell through it, touching
             the card's own background would close it. It is display:none when
             shut, so it costs the board nothing for the rest of the match.
+
+            hud__settings-main positions it under the burger - see HUD.uss -
+            while hud__settings stays the shape/shadow/transition shared with
+            the emote options sheet below, which keeps its own corner.
         -->
-        <engine:VisualElement name="hud-settings" class="hud__settings">
+        <engine:VisualElement name="hud-settings" class="hud__settings hud__settings-main">
             <engine:Label class="hud__settings-title ui-w700" text="Settings" picking-mode="Ignore" />
 
             <engine:VisualElement class="hud__settings-row" picking-mode="Ignore">
