@@ -131,7 +131,7 @@
                 dark glass card holding three concentric segmented semicircles
                 - outer 1-10, middle 11-20, inner 21-30, flat side down - with
                 the live count centred inside and a LobbyIcon glyph above,
-                tinted the same --hud-ink-mute the text label it replaced
+                tinted the same muted HUD ink the text label it replaced
                 used. The rings are built in code (ResourceRing/
                 ResourceRingMath); the number is the non-colour channel next
                 to the ring's own colour.
