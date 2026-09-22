@@ -55,6 +55,13 @@ namespace NodeWar.UI
         private readonly EquipContent equip = new EquipContent();
         private readonly ProductionContent production = new ProductionContent();
 
+        // One chip per resource, pinned above the sheet's own top edge (see
+        // NodeSheet.uss) so they ride its slide and resize for free rather
+        // than being repositioned here every frame.
+        private readonly ResourceChip foodChip = new ResourceChip(LobbyIconKind.Food);
+        private readonly ResourceChip materialsChip = new ResourceChip(LobbyIconKind.Materials);
+        private readonly ResourceChip metalChip = new ResourceChip(LobbyIconKind.Metal);
+
         private SimulationState state;
         private InputBuffer input;
         private NodeWar.Core.ITickProvider ticks;
@@ -140,6 +147,21 @@ namespace NodeWar.UI
                 grab.RegisterCallback<PointerUpEvent>(OnGrabUp);
             }
 
+            // A child of the sheet itself, not of Root: riding the same
+            // translate and height transitions the sheet already has means
+            // this never needs its own per-frame position math.
+            if (sheet != null)
+            {
+                VisualElement chips = new VisualElement();
+                chips.name = "sheet-res-chips";
+                chips.AddToClassList("sheet__res-chips");
+                chips.pickingMode = PickingMode.Ignore;
+                chips.Add(foodChip.Root);
+                chips.Add(materialsChip.Root);
+                chips.Add(metalChip.Root);
+                sheet.Add(chips);
+            }
+
             Close();
         }
 
@@ -205,6 +227,7 @@ namespace NodeWar.UI
             }
 
             RefreshHeader(controlledPID);
+            RefreshResourceChips(controlledPID);
             actionHost.EnableInClassList("sheet__actions--empty", !HasVisibleChild(actionHost));
         }
 
@@ -239,7 +262,25 @@ namespace NodeWar.UI
                 current.Refresh();
             }
 
+            RefreshResourceChips(controlledPID);
             actionHost.EnableInClassList("sheet__actions--empty", !HasVisibleChild(actionHost));
+        }
+
+        /// <summary>
+        /// Live amount and emphasis for each resource chip. Emphasis comes
+        /// from the open content, not a district lookup here - see
+        /// NodeSheetContent.InvolvedResources.
+        /// </summary>
+        private void RefreshResourceChips(int controlledPID)
+        {
+            if (current == null) return;
+
+            PlayerData player = state.players[controlledPID];
+            ResourceKind involved = current.InvolvedResources;
+
+            foodChip.Refresh(player.food, (involved & ResourceKind.Food) != 0);
+            materialsChip.Refresh(player.materials, (involved & ResourceKind.Materials) != 0);
+            metalChip.Refresh(player.metal, (involved & ResourceKind.Metal) != 0);
         }
 
         private static bool HasVisibleChild(VisualElement host)
@@ -423,6 +464,143 @@ namespace NodeWar.UI
         {
             dragPointer = -1;
             if (grab != null && grab.HasPointerCapture(pointerId)) grab.ReleasePointer(pointerId);
+        }
+
+        /// <summary>
+        /// One resource's chip: icon, the player's live amount, and a colour
+        /// read the same way ResourceRing reads its own - through the
+        /// --ring-critical.. --ring-rich custom properties HUD.uss declares
+        /// on the "hud__res-ring" class - so this never invents a colour of
+        /// its own. When the open content says this resource is involved it
+        /// grows, bolds and bounces once; ResourceRingMath decides the shade
+        /// either way.
+        /// </summary>
+        private class ResourceChip
+        {
+            private const long BounceMilliseconds = 220;
+
+            public VisualElement Root { get; private set; }
+
+            private readonly LobbyIcon icon;
+            private readonly Label valueLabel;
+
+            private Color colorCritical = Color.gray;
+            private Color colorLow = Color.gray;
+            private Color colorWarn = Color.gray;
+            private Color colorOk = Color.gray;
+            private Color colorGood = Color.gray;
+            private Color colorRich = Color.gray;
+
+            private int shownValue = int.MinValue;
+            private bool shownEmphasis;
+            private IVisualElementScheduledItem bounceJob;
+
+            public ResourceChip(LobbyIconKind kind)
+            {
+                Root = new VisualElement();
+                Root.pickingMode = PickingMode.Ignore;
+                Root.AddToClassList("sheet__res-chip");
+
+                // The class the ring itself carries: custom properties only
+                // resolve reliably where a selector matches the element or an
+                // ancestor, so this chip has to wear it too, not just inherit
+                // the tokens from a distant :root.
+                Root.AddToClassList("hud__res-ring");
+                Root.RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
+
+                icon = new LobbyIcon(kind);
+                icon.AddToClassList("sheet__res-chip-icon");
+
+                valueLabel = new Label("0");
+                valueLabel.pickingMode = PickingMode.Ignore;
+                valueLabel.AddToClassList("sheet__res-chip-value");
+                valueLabel.AddToClassList("ui-w600");
+
+                Root.Add(icon);
+                Root.Add(valueLabel);
+            }
+
+            private void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
+            {
+                ICustomStyle style = evt.customStyle;
+
+                TryRead(style, "--ring-critical", ref colorCritical);
+                TryRead(style, "--ring-low", ref colorLow);
+                TryRead(style, "--ring-warn", ref colorWarn);
+                TryRead(style, "--ring-ok", ref colorOk);
+                TryRead(style, "--ring-good", ref colorGood);
+                TryRead(style, "--ring-rich", ref colorRich);
+
+                Repaint();
+            }
+
+            private static void TryRead(ICustomStyle style, string name, ref Color target)
+            {
+                CustomStyleProperty<Color> property = new CustomStyleProperty<Color>(name);
+                if (style.TryGetValue(property, out Color value)) target = value;
+            }
+
+            public void Refresh(int value, bool emphasis)
+            {
+                if (value != shownValue)
+                {
+                    shownValue = value;
+                    valueLabel.text = value.ToString();
+                    Repaint();
+                }
+
+                if (emphasis == shownEmphasis) return;
+                shownEmphasis = emphasis;
+
+                Root.EnableInClassList("sheet__res-chip--on", emphasis);
+                valueLabel.EnableInClassList("ui-w700", emphasis);
+                if (emphasis) Bounce();
+            }
+
+            private void Repaint()
+            {
+                Color tint = BaseColorFor(shownValue);
+                icon.style.unityBackgroundImageTintColor = tint;
+                valueLabel.style.color = tint;
+                Root.style.backgroundColor = new Color(tint.r, tint.g, tint.b, 0.22f);
+                Root.style.borderLeftColor = tint;
+                Root.style.borderRightColor = tint;
+                Root.style.borderTopColor = tint;
+                Root.style.borderBottomColor = tint;
+            }
+
+            private Color BaseColorFor(int value)
+            {
+                switch (ResourceRingMath.ColorStopIndex(value))
+                {
+                    case ResourceRingMath.StopCritical: return colorCritical;
+                    case ResourceRingMath.StopLow: return colorLow;
+                    case ResourceRingMath.StopWarn: return colorWarn;
+                    case ResourceRingMath.StopOk: return colorOk;
+                    case ResourceRingMath.StopGood:
+                        return Color.Lerp(colorOk, colorGood, ResourceRingMath.GoodBlendFraction(value));
+                    default: return colorRich;
+                }
+            }
+
+            /// <summary>One short overshoot-and-settle on the beat the chip becomes relevant. Same idiom as GameplayHUDController.ResourceReadout.Pop.</summary>
+            private void Bounce()
+            {
+                if (bounceJob != null)
+                {
+                    bounceJob.Pause();
+                    bounceJob = null;
+                }
+
+                Root.RemoveFromClassList("sheet__res-chip--bounce");
+                Root.AddToClassList("sheet__res-chip--bounce");
+
+                bounceJob = Root.schedule.Execute(() =>
+                {
+                    Root.RemoveFromClassList("sheet__res-chip--bounce");
+                    bounceJob = null;
+                }).StartingIn(BounceMilliseconds);
+            }
         }
     }
 }

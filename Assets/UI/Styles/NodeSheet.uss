@@ -262,6 +262,70 @@
 }
 
 /* ===================================================================
+   Resource chips
+
+   One per resource, pinned above the sheet's own top-left corner as a
+   child of .sheet (not Root) so its translate and height transitions
+   carry the chips along for free - see NodeSheet's constructor.
+   Colour is read at runtime from the same --ring-* custom properties
+   as the HUD's resource rings; nothing here hard-codes one.
+   =================================================================== */
+
+.sheet__res-chips {
+    position: absolute;
+    left: var(--space-4);
+    top: -34px;
+    flex-direction: row;
+}
+
+.sheet__res-chip {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 6px;
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    background-color: var(--hud-glass);
+    transition-property: scale;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out-back;
+}
+
+.sheet__res-chip-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+}
+
+.ui-root .sheet__res-chip-value {
+    font-size: 13px;
+}
+
+/* Involved in whatever the sheet is showing: about 10% bigger, both ways. */
+.sheet__res-chip--on {
+    scale: 1.1 1.1;
+}
+
+.ui-root .sheet__res-chip--on .sheet__res-chip-value {
+    font-size: 14px;
+}
+
+/* One overshoot past the --on scale, removed a beat later so it settles
+   back down to it rather than to 1. */
+.sheet__res-chip--bounce {
+    scale: 1.28 1.28;
+}
+
+/* ===================================================================
    Resource text
 
    A resource-naming line, e.g. "Respawn costs 20 [food icon]": a
