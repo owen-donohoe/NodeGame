@@ -36,7 +36,13 @@ namespace NodeWar.Lobby
         Pointer,  // ▶  - the edge arrow, drawn pointing right and rotated
         Frown,    // ☹  - the sad emote
         Angry,    // the angry emote
-        Speaker   // emote mute state
+        Speaker,  // emote mute state
+
+        // In-match resources. The HUD's readouts and the sheet's costs both
+        // need these inline, and Fredoka carries no emoji for them either.
+        Food,      // 🍖 - a ham on the bone
+        Materials, // 🪨 - a stone
+        Metal      // an ingot
     }
 
     /// <summary>
@@ -141,6 +147,9 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Frown: DrawFrown(p); break;
                 case LobbyIconKind.Angry: DrawAngry(p); break;
                 case LobbyIconKind.Speaker: DrawSpeaker(p); break;
+                case LobbyIconKind.Food: DrawFood(p); break;
+                case LobbyIconKind.Materials: DrawMaterials(p); break;
+                case LobbyIconKind.Metal: DrawMetal(p); break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();
@@ -608,6 +617,72 @@ namespace NodeWar.Lobby
             p.BeginPath();
             p.MoveTo(new Vector2(8f, 17.5f));
             p.LineTo(new Vector2(16f, 17.5f));
+            p.Stroke();
+        }
+
+        // 🍖 - a lumpy meat mass, filled, on a stroked bone so the drumstick
+        // reads as two-tone the way DrawLock's shackle-and-body does.
+        private static void DrawFood(Painter2D p)
+        {
+            p.BeginPath();
+            p.Arc(new Vector2(9.5f, 8.5f), 7f, 0f, 360f);
+            p.Fill();
+            p.BeginPath();
+            p.Arc(new Vector2(15f, 12f), 5.5f, 0f, 360f);
+            p.Fill();
+
+            p.lineWidth = 2.4f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(13.5f, 15f));
+            p.LineTo(new Vector2(19.5f, 21f));
+            p.Stroke();
+
+            p.BeginPath(); p.Arc(new Vector2(19f, 18.5f), 2.4f, 0f, 360f); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(21f, 20.5f), 2f, 0f, 360f); p.Stroke();
+        }
+
+        // 🪨 - a faceted rock: a stroked outline with one filled facet, the
+        // same fill-plus-outline contrast as the rest of this set.
+        private static void DrawMaterials(Painter2D p)
+        {
+            p.lineWidth = 2.2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(6f, 17.5f));
+            p.LineTo(new Vector2(3f, 11f));
+            p.LineTo(new Vector2(8.5f, 4.5f));
+            p.LineTo(new Vector2(16.5f, 4f));
+            p.LineTo(new Vector2(21f, 10f));
+            p.LineTo(new Vector2(19f, 18f));
+            p.LineTo(new Vector2(11.5f, 21f));
+            p.ClosePath();
+            p.Stroke();
+
+            p.BeginPath();
+            p.MoveTo(new Vector2(8.5f, 4.5f));
+            p.LineTo(new Vector2(16.5f, 4f));
+            p.LineTo(new Vector2(12.5f, 11f));
+            p.ClosePath();
+            p.Fill();
+        }
+
+        // A filled ingot bar under a stroked top facet - the raised face that
+        // reads as its second tone.
+        private static void DrawMetal(Painter2D p)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(4f, 18.5f));
+            p.LineTo(new Vector2(6.5f, 9.5f));
+            p.LineTo(new Vector2(17.5f, 9.5f));
+            p.LineTo(new Vector2(20f, 18.5f));
+            p.ClosePath();
+            p.Fill();
+
+            p.lineWidth = 2f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(6.5f, 9.5f));
+            p.LineTo(new Vector2(9f, 6f));
+            p.LineTo(new Vector2(15f, 6f));
+            p.LineTo(new Vector2(17.5f, 9.5f));
             p.Stroke();
         }
 
