@@ -40,6 +40,12 @@
     <Compile Include="RouteRevealTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
              Link="View/RouteReveal.cs" />
+
+    <!-- The resource ring's value -> segments/colour maths; the UI Toolkit
+         drawing that reads it stays in Unity. -->
+    <Compile Include="ResourceRingMathTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceRingMath.cs"
+             Link="Gameplay/ResourceRingMath.cs" />
   </ItemGroup>
 
   <ItemGroup>
