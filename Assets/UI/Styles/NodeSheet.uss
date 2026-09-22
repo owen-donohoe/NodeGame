@@ -276,6 +276,11 @@
     left: var(--space-4);
     top: -34px;
     flex-direction: row;
+    visibility: hidden;
+}
+
+.sheet.ui-sheet--open .sheet__res-chips {
+    visibility: visible;
 }
 
 .sheet__res-chip {
