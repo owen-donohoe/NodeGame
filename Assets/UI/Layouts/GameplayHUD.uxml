@@ -38,20 +38,24 @@
     <engine:VisualElement name="hud-root" class="ui-root hud" picking-mode="Ignore">
         <engine:VisualElement name="hud-safe-area" class="hud__safe" picking-mode="Ignore">
 
-            <!-- Breach walls either side of the match clock. -->
+            <!--
+                Breach walls either side of the match clock, bar first and its
+                mark/name/count label below it - so the wall itself, the thing
+                that actually changes, sits at the very top edge.
+            -->
             <engine:VisualElement class="hud__topbar" picking-mode="Ignore">
 
                 <engine:VisualElement name="hud-side-you" class="hud__side hud__side--you" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-ghost-you" class="hud__wall-ghost" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-fill-you" class="hud__wall-fill" picking-mode="Ignore" />
+                    </engine:VisualElement>
                     <engine:VisualElement class="hud__side-row" picking-mode="Ignore">
                         <engine:VisualElement name="hud-mark-you" class="ui-mark ui-mark--p0" picking-mode="Ignore">
                             <engine:Label name="hud-mark-you-label" class="ui-mark__label" text="1" picking-mode="Ignore" />
                         </engine:VisualElement>
                         <engine:Label class="hud__you ui-w700" text="YOU" picking-mode="Ignore" />
                         <engine:Label name="hud-breach-count-you" class="hud__breach-count ui-w600" text="0/3" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
-                        <engine:VisualElement name="hud-ghost-you" class="hud__wall-ghost" picking-mode="Ignore" />
-                        <engine:VisualElement name="hud-fill-you" class="hud__wall-fill" picking-mode="Ignore" />
                     </engine:VisualElement>
                 </engine:VisualElement>
 
@@ -61,15 +65,15 @@
                 </engine:VisualElement>
 
                 <engine:VisualElement name="hud-side-them" class="hud__side hud__side--them" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-ghost-them" class="hud__wall-ghost" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-fill-them" class="hud__wall-fill" picking-mode="Ignore" />
+                    </engine:VisualElement>
                     <engine:VisualElement class="hud__side-row" picking-mode="Ignore">
                         <engine:VisualElement name="hud-mark-them" class="ui-mark ui-mark--p1" picking-mode="Ignore">
                             <engine:Label name="hud-mark-them-label" class="ui-mark__label" text="2" picking-mode="Ignore" />
                         </engine:VisualElement>
                         <engine:Label name="hud-breach-count-them" class="hud__breach-count ui-w600" text="0/3" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
-                        <engine:VisualElement name="hud-ghost-them" class="hud__wall-ghost" picking-mode="Ignore" />
-                        <engine:VisualElement name="hud-fill-them" class="hud__wall-fill" picking-mode="Ignore" />
                     </engine:VisualElement>
                 </engine:VisualElement>
 
