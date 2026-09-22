@@ -5,12 +5,16 @@ namespace NodeWar.UI
     /// <summary>
     /// Decides which districts get a panel.
     ///
-    /// The rule: a district is *functional* if there is something to press.
-    /// That makes an open panel a reliable signal rather than a thing that
-    /// sometimes appears with nothing in it, and it is why farms and mines
-    /// stop opening one -- their state belongs on the node itself.
+    /// Two questions, not one. IsFunctional asks whether there is something to
+    /// press -- true for anyone, friend or enemy, because an enemy Forge or
+    /// Core is worth reading even with its controls withheld. HasOnNodeState
+    /// marks the districts with per-node state worth a small sheet even
+    /// without an action -- Farm, Mine and Market -- and those only earn one
+    /// for their own owner: an opponent's farm has nothing you couldn't
+    /// already see on the node itself. HasSheet is the single rule both feed,
+    /// and the one OpenForNode calls.
     ///
-    /// Five of the six fall straight out of the simulation:
+    /// Five of the six functional districts fall straight out of the simulation:
     ///
     ///   Forge  -- ProcessSetAllocation rejects any district but Forge
     ///             (CommandProcessor.cs:54).
@@ -45,12 +49,12 @@ namespace NodeWar.UI
                 case DistrictType.Sanctuary:   // Equip
                     return true;
 
-                // Farm, Mine      -- production only, shown on the node
+                // Farm, Mine, Market -- no action; HasOnNodeState covers their
+                //                       sheet, and only for their own owner
                 // Village         -- passive spawn bonus
                 // Shrine          -- passive heal, no equip
                 // Watchtower      -- passive vision
                 // Rampart         -- passive max-HP bonus
-                // Market          -- produces food, but no command targets it
                 // None            -- crossroads, no state and no action
                 default:
                     return false;
@@ -60,7 +64,8 @@ namespace NodeWar.UI
         /// <summary>
         /// Districts that carry per-node state a player will want to read even
         /// though they have no action: worker presence and task progress. These
-        /// are the ones the on-node display exists for.
+        /// are the ones the on-node display exists for, and the ones HasSheet
+        /// opens a sheet for when the viewer owns them.
         ///
         /// Kept separate from IsFunctional because "has nothing to press" and
         /// "has nothing to show" are different questions, and a crossroads is
@@ -78,6 +83,23 @@ namespace NodeWar.UI
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// True if a tap on this node should open a sheet for the given
+        /// viewer.
+        ///
+        /// A functional district opens for anyone once it is owned -- there is
+        /// something worth reading even for an enemy's Forge or Core. A
+        /// Farm, Mine or Market opens only for its own owner: it has no
+        /// action either way, so the only reason to cover the board with one
+        /// is to read state that belongs to you.
+        /// </summary>
+        public static bool HasSheet(NodeData node, int viewerID)
+        {
+            if (IsFunctional(node.districtType)) return node.ownerID != -1;
+            if (HasOnNodeState(node.districtType)) return node.ownerID == viewerID;
+            return false;
         }
     }
 }

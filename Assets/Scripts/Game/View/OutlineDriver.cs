@@ -15,7 +15,7 @@ namespace NodeWar.View
     /// screen came from the debugStyle field in the Inspector. This is what
     /// connects it to the game: hover follows the pointer over the local
     /// player's own villagers, and Selected follows villager selection and the
-    /// open node.
+    /// inspected node.
     ///
     /// Read-only against the simulation, and it issues no commands. It reads
     /// SimulationState and SelectionSystem and writes neither, which is what
@@ -33,7 +33,7 @@ namespace NodeWar.View
         private OutlineGroup[] nodeGroups;
 
         private int hoveredVillager = -1;
-        private int openNode = -1;
+        private int inspectedNode = -1;
 
         private LayerMask villagerLayer;
 
@@ -55,26 +55,25 @@ namespace NodeWar.View
         public void SetNodeGroups(OutlineGroup[] groups) => nodeGroups = groups;
 
         /// <summary>
-        /// Subscribes to node open and close.
+        /// Subscribes to node inspection.
         ///
-        /// One subscription covers both presentation trees. The UI Toolkit node
-        /// sheet raises no open event of its own -- GameplayHUDController drives
-        /// it from these same two events -- so listening here follows whichever
-        /// tree the scene has switched on.
+        /// Deliberately not NodeOpened/NodeClosed: those track whether a sheet
+        /// is showing, and GameplayHUDController still drives NodeSheet from
+        /// them. Inspection is a separate, wider question -- it fires for
+        /// every node a tap lands on, sheet or no sheet -- so the outline
+        /// follows the tap even on a node with nothing to open.
         /// </summary>
         public void BindPanel(NodePanelManager panelManager)
         {
             if (panel != null)
             {
-                panel.NodeOpened -= OnNodeOpened;
-                panel.NodeClosed -= OnNodeClosed;
+                panel.NodeInspected -= OnNodeInspected;
             }
 
             panel = panelManager;
             if (panel == null) return;
 
-            panel.NodeOpened += OnNodeOpened;
-            panel.NodeClosed += OnNodeClosed;
+            panel.NodeInspected += OnNodeInspected;
         }
 
         /// <summary>
@@ -91,16 +90,13 @@ namespace NodeWar.View
             SetHovered(-1);
         }
 
-        private void OnNodeOpened(int nodeID) => openNode = nodeID;
-
-        private void OnNodeClosed() => openNode = -1;
+        private void OnNodeInspected(int nodeID) => inspectedNode = nodeID;
 
         private void OnDestroy()
         {
             if (panel == null) return;
 
-            panel.NodeOpened -= OnNodeOpened;
-            panel.NodeClosed -= OnNodeClosed;
+            panel.NodeInspected -= OnNodeInspected;
         }
 
         // After the movement and slot code has placed things for the frame, so
@@ -197,7 +193,7 @@ namespace NodeWar.View
                 OutlineGroup group = nodeGroups[i];
                 if (group == null) continue;
 
-                group.SetIntent(OutlineStyle.Selected, i == openNode);
+                group.SetIntent(OutlineStyle.Selected, i == inspectedNode);
             }
         }
 

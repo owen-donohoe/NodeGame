@@ -8,12 +8,15 @@ namespace NodeWar.UI
     /// <summary>
     /// One district's worth of node-sheet content.
     ///
-    /// There are three of these and there should stay three. DistrictPanelPolicy
-    /// already settled which districts open a sheet at all - only the six with
-    /// something to press - and the rest are informational, with their state
-    /// shown on the node itself. So Forge, Core and Equip cover every case, with
-    /// Equip shared by Barracks, Camp, Arsenal and Sanctuary because those four
-    /// differ only in which suits they permit.
+    /// There are four of these and there should stay four. DistrictPanelPolicy.
+    /// HasSheet already settled which districts open a sheet at all - the six
+    /// with something to press, for anyone, plus Farm, Mine and Market for
+    /// their own owner - and the rest are informational, with their state
+    /// shown on the node itself. So Forge, Core, Equip and Production cover
+    /// every case: Equip is shared by Barracks, Camp, Arsenal and Sanctuary
+    /// because those four differ only in which suits they permit, and
+    /// Production is shared by Farm, Mine and Market because those three
+    /// differ only in what a working villager there produces.
     ///
     /// Each content fills two places: the sheet's scrolling body (Root) and its
     /// action bar, which holds the content's one main control and stays put

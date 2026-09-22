@@ -470,6 +470,43 @@
 }
 
 /* ===================================================================
+   Production (Farm, Mine, Market)
+   =================================================================== */
+
+.production__gauges {
+    flex-direction: row;
+    justify-content: center;
+    padding-top: var(--space-1);
+}
+
+.production__gauge {
+    align-items: center;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+/* The dial draws its arcs from these: color is the fill, the tint the track. */
+.production__dial {
+    width: 66px;
+    height: 66px;
+    align-items: center;
+    justify-content: center;
+    color: var(--confirm);
+    -unity-background-image-tint-color: var(--surface-sunk);
+}
+
+.ui-root .production__dial-text {
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.ui-root .production__gauge-label {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 4px;
+}
+
+/* ===================================================================
    Equip
    =================================================================== */
 

@@ -21,7 +21,9 @@ namespace NodeWar.UI
     /// one tap. So the old manager keeps the input path and, when suppressed,
     /// tells this what to show instead of showing it itself.
     ///
-    /// Three contents cover all six functional districts. See NodeSheetContent.
+    /// Four contents cover it: three for the six functional districts, plus
+    /// ProductionContent for the Farm, Mine and Market a sheet now opens for
+    /// their own owner. See NodeSheetContent and DistrictPanelPolicy.HasSheet.
     /// </summary>
     public class NodeSheet
     {
@@ -51,6 +53,7 @@ namespace NodeWar.UI
         private readonly ForgeContent forge = new ForgeContent();
         private readonly CoreContent core = new CoreContent();
         private readonly EquipContent equip = new EquipContent();
+        private readonly ProductionContent production = new ProductionContent();
 
         private SimulationState state;
         private InputBuffer input;
@@ -265,6 +268,14 @@ namespace NodeWar.UI
                 case DistrictType.Arsenal:
                 case DistrictType.Sanctuary:
                     return equip;
+
+                // DistrictPanelPolicy.HasSheet only lets these through for
+                // their own owner, so this content never has to draw for an
+                // opponent's node.
+                case DistrictType.Farm:
+                case DistrictType.Mine:
+                case DistrictType.Market:
+                    return production;
 
                 default:
                     return null;
