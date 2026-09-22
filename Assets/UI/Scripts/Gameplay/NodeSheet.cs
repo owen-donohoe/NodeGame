@@ -468,12 +468,12 @@ namespace NodeWar.UI
 
         /// <summary>
         /// One resource's chip: icon, the player's live amount, and a colour
-        /// read the same way ResourceRing reads its own - through the
-        /// --ring-critical.. --ring-rich custom properties HUD.uss declares
-        /// on the "hud__res-ring" class - so this never invents a colour of
-        /// its own. When the open content says this resource is involved it
-        /// grows, bolds and bounces once; ResourceRingMath decides the shade
-        /// either way.
+        /// read through ResourceRingColors - the same --ring-critical..
+        /// --ring-rich custom properties HUD.uss declares on the
+        /// "hud__res-ring" class, and the same blend ResourceRing itself
+        /// uses - so this never invents a colour of its own. When the open
+        /// content says this resource is involved it grows, bolds and
+        /// bounces once; the colour stop decides the shade either way.
         /// </summary>
         private class ResourceChip
         {
@@ -524,20 +524,10 @@ namespace NodeWar.UI
             {
                 ICustomStyle style = evt.customStyle;
 
-                TryRead(style, "--ring-critical", ref colorCritical);
-                TryRead(style, "--ring-low", ref colorLow);
-                TryRead(style, "--ring-warn", ref colorWarn);
-                TryRead(style, "--ring-ok", ref colorOk);
-                TryRead(style, "--ring-good", ref colorGood);
-                TryRead(style, "--ring-rich", ref colorRich);
+                ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
+                    ref colorOk, ref colorGood, ref colorRich);
 
                 Repaint();
-            }
-
-            private static void TryRead(ICustomStyle style, string name, ref Color target)
-            {
-                CustomStyleProperty<Color> property = new CustomStyleProperty<Color>(name);
-                if (style.TryGetValue(property, out Color value)) target = value;
             }
 
             public void Refresh(int value, bool emphasis)
@@ -571,16 +561,8 @@ namespace NodeWar.UI
 
             private Color BaseColorFor(int value)
             {
-                switch (ResourceRingMath.ColorStopIndex(value))
-                {
-                    case ResourceRingMath.StopCritical: return colorCritical;
-                    case ResourceRingMath.StopLow: return colorLow;
-                    case ResourceRingMath.StopWarn: return colorWarn;
-                    case ResourceRingMath.StopOk: return colorOk;
-                    case ResourceRingMath.StopGood:
-                        return Color.Lerp(colorOk, colorGood, ResourceRingMath.GoodBlendFraction(value));
-                    default: return colorRich;
-                }
+                return ResourceRingColors.BaseColorFor(value, colorCritical, colorLow, colorWarn,
+                    colorOk, colorGood, colorRich);
             }
 
             /// <summary>One short overshoot-and-settle on the beat the chip becomes relevant. Same idiom as GameplayHUDController.ResourceReadout.Pop.</summary>

@@ -16,7 +16,9 @@ namespace NodeWar.UI
     ///
     /// Colours are read from the stylesheet via CustomStyleResolvedEvent, the
     /// same as ProgressDial, so the ring restyles with the theme rather than
-    /// hard-coding a palette here.
+    /// hard-coding a palette here. The six-stop read and blend are
+    /// ResourceRingColors, shared with NodeSheet's ResourceChip; only the
+    /// track colour, which nothing else draws, is read directly here.
     /// </summary>
     public class ResourceRing : VisualElement
     {
@@ -64,21 +66,11 @@ namespace NodeWar.UI
         {
             ICustomStyle style = customStyle;
 
-            TryRead(style, "--ring-critical", ref colorCritical);
-            TryRead(style, "--ring-low", ref colorLow);
-            TryRead(style, "--ring-warn", ref colorWarn);
-            TryRead(style, "--ring-ok", ref colorOk);
-            TryRead(style, "--ring-good", ref colorGood);
-            TryRead(style, "--ring-rich", ref colorRich);
-            TryRead(style, "--ring-track", ref colorTrack);
+            ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
+                ref colorOk, ref colorGood, ref colorRich);
+            ResourceRingColors.TryRead(style, "--ring-track", ref colorTrack);
 
             MarkDirtyRepaint();
-        }
-
-        private static void TryRead(ICustomStyle style, string name, ref Color target)
-        {
-            CustomStyleProperty<Color> property = new CustomStyleProperty<Color>(name);
-            if (style.TryGetValue(property, out Color value)) target = value;
         }
 
         /// <summary>Sets the resource amount the rings show. Repaints only when it changes.</summary>
@@ -137,16 +129,8 @@ namespace NodeWar.UI
 
         private Color BaseColorFor(int value)
         {
-            switch (ResourceRingMath.ColorStopIndex(value))
-            {
-                case ResourceRingMath.StopCritical: return colorCritical;
-                case ResourceRingMath.StopLow: return colorLow;
-                case ResourceRingMath.StopWarn: return colorWarn;
-                case ResourceRingMath.StopOk: return colorOk;
-                case ResourceRingMath.StopGood:
-                    return Color.Lerp(colorOk, colorGood, ResourceRingMath.GoodBlendFraction(value));
-                default: return colorRich;
-            }
+            return ResourceRingColors.BaseColorFor(value, colorCritical, colorLow, colorWarn,
+                colorOk, colorGood, colorRich);
         }
 
         private static Color ShadeForRing(Color baseColor, int ring)
