@@ -708,6 +708,8 @@ namespace NodeWar.UI
 
                 dragMoved = true;
 
+                if (!dragFromBoard) ShrinkReplacedPendingPiece(dragSlot);
+
                 // A new drag drops whatever was parked. The piece is in the
                 // air again and the old cell is no longer an answer.
                 parked = false;
@@ -818,6 +820,8 @@ namespace NodeWar.UI
 
         private void ArmSlot(int slotIndex, DistrictType district)
         {
+            ShrinkReplacedPendingPiece(slotIndex);
+
             handSlot = slotIndex;
             handDistrict = district;
             parked = false;
@@ -827,6 +831,25 @@ namespace NodeWar.UI
             DestroyGhost();
             HideConfirm();
             SetArmedCard(slotIndex);
+        }
+
+        private void ShrinkReplacedPendingPiece(int replacementSlot)
+        {
+            if (!parked || handSlot == replacementSlot) return;
+
+            // Detach the outgoing visual before clearing the hand. It stops
+            // being pending now, and a new selection can own its own ghost
+            // while this one finishes shrinking.
+            GameObject piece = ghost;
+            ghost = null;
+            ClearHand();
+
+            if (piece == null) return;
+
+            piece.transform.DOScale(Vector3.zero, 0.18f)
+                .SetEase(Ease.InQuad)
+                .SetLink(piece)
+                .OnComplete(() => Destroy(piece));
         }
 
         private void ClearHand()
