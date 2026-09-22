@@ -262,6 +262,41 @@
 }
 
 /* ===================================================================
+   Resource text
+
+   A resource-naming line, e.g. "Respawn costs 20 [food icon]": a
+   wrapping flex row of plain Labels and inline LobbyIcons rather than
+   a single Label, which cannot hold a VisualElement mid-text. Font
+   size, colour and white-space all come from whichever text class the
+   row itself carries (sheet__caption, sheet__microcap, ...) and
+   inherit down to the Labels inside it. See NodeSheetContent.
+   =================================================================== */
+
+.sheet__resource-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.sheet__resource-icon {
+    width: 15px;
+    height: 15px;
+    margin-left: 2px;
+    margin-right: 2px;
+    -unity-background-image-tint-color: var(--ink-mute);
+}
+
+/* Inside the gold primary button the text is --action-ink, not --ink-mute. */
+.sheet__resource-row--on-button .sheet__resource-icon {
+    -unity-background-image-tint-color: var(--action-ink);
+}
+
+/* A short suit card's price turns the short-ink colour; its icons follow. */
+.equip__card-sub--short .sheet__resource-icon {
+    -unity-background-image-tint-color: var(--status-short-ink);
+}
+
+/* ===================================================================
    Shared text
    =================================================================== */
 

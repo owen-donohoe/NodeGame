@@ -33,6 +33,7 @@ namespace NodeWar.UI
         private VisualElement unitHost;
         private Label emptyLabel;
         private Button equipButton;
+        private VisualElement equipRow;
         private (SuitType picked, EquipRefusal refusal, VillagerState state,
                  SuitType worn, int food, int materials)? shownEquip;
 
@@ -42,6 +43,10 @@ namespace NodeWar.UI
         public override bool Tall { get { return true; } }
 
         protected override int LayoutKey { get { return (int)State.nodes[NodeID].districtType; } }
+
+        // Every suit's cost is drawn from food and materials, whichever
+        // district this bench happens to be serving.
+        public override ResourceKind InvolvedResources { get { return ResourceKind.Food | ResourceKind.Materials; } }
 
         protected override void OnBind()
         {
@@ -86,6 +91,8 @@ namespace NodeWar.UI
             Root.Add(yourSide);
 
             equipButton = PrimaryButton(OnEquipPressed);
+            equipRow = ResourceRow("sheet__resource-row--on-button");
+            equipButton.Add(equipRow);
             Actions.Add(equipButton);
         }
 
@@ -195,7 +202,7 @@ namespace NodeWar.UI
             if (pickedSuit == SuitType.None)
             {
                 shownEquip = null;
-                equipButton.text = "Pick a suit";
+                SetResourceText(equipRow, "Pick a suit");
                 equipButton.SetEnabled(false);
                 return;
             }
@@ -203,7 +210,7 @@ namespace NodeWar.UI
             if (pickedUnit < 0)
             {
                 shownEquip = null;
-                equipButton.text = "Pick a unit";
+                SetResourceText(equipRow, "Pick a unit");
                 equipButton.SetEnabled(false);
                 return;
             }
@@ -217,9 +224,9 @@ namespace NodeWar.UI
             if (shownEquip != equipValue)
             {
                 shownEquip = equipValue;
-                equipButton.text = refusal == EquipRefusal.None
+                SetResourceText(equipRow, refusal == EquipRefusal.None
                     ? "Equip " + pickedSuit
-                    : RefusalText(refusal, villager, stats);
+                    : RefusalText(refusal, villager, stats));
             }
         }
 
@@ -255,7 +262,7 @@ namespace NodeWar.UI
         private static string CostText(SuitStats stats)
         {
             if (stats.foodCost == 0 && stats.materialCost == 0) return "free";
-            return stats.foodCost + "f " + stats.materialCost + "m";
+            return stats.foodCost + " {food} " + stats.materialCost + " {materials}";
         }
 
         private static string RefusalText(EquipRefusal refusal, VillagerData villager, SuitStats stats)
@@ -278,7 +285,7 @@ namespace NodeWar.UI
             public VisualElement Root { get; private set; }
             public SuitType Suit { get; private set; }
 
-            private readonly Label sub;
+            private readonly VisualElement sub;
             private (bool notDrafted, int food, int materials)? shownCost;
 
             public SuitCard(SuitType suit, System.Action<SuitType> pressed)
@@ -295,7 +302,7 @@ namespace NodeWar.UI
                 VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor("suit_" + name.ToLowerInvariant()));
                 tile.Add(Text(name.Substring(0, 1), "ui-tile__monogram", "equip__card-letter"));
 
-                sub = Text("", "equip__card-sub");
+                sub = ResourceRow("equip__card-sub");
 
                 button.Add(tile);
                 button.Add(Text(name, "equip__card-name", "ui-w600"));
@@ -313,7 +320,7 @@ namespace NodeWar.UI
                 if (shownCost != costValue)
                 {
                     shownCost = costValue;
-                    sub.text = notDrafted ? "not drafted" : CostText(stats);
+                    SetResourceText(sub, notDrafted ? "not drafted" : CostText(stats));
                 }
                 sub.EnableInClassList("equip__card-sub--short", refusal == EquipRefusal.CannotAfford);
 

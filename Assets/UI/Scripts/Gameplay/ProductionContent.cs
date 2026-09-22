@@ -28,7 +28,7 @@ namespace NodeWar.UI
 
         private Label idleCaption;
         private Label slotsLabel;
-        private Label workingCaption;
+        private VisualElement workingCaption;
         private Label notYoursCaption;
 
         private DistrictType shownDistrict = (DistrictType)(-1);
@@ -39,6 +39,25 @@ namespace NodeWar.UI
 
         // A few lines and at most two dials, and nothing to press.
         public override bool Compact { get { return true; } }
+
+        /// <summary>
+        /// Farm, Mine and Market share this content, so which resources it is
+        /// about depends on the node it is currently bound to rather than
+        /// being fixed per class.
+        /// </summary>
+        public override ResourceKind InvolvedResources
+        {
+            get
+            {
+                switch (State.nodes[NodeID].districtType)
+                {
+                    case DistrictType.Farm: return ResourceKind.Food;
+                    case DistrictType.Mine: return ResourceKind.Materials;
+                    case DistrictType.Market: return ResourceKind.Food | ResourceKind.Materials;
+                    default: return ResourceKind.None;
+                }
+            }
+        }
 
         protected override void OnBind()
         {
@@ -62,7 +81,7 @@ namespace NodeWar.UI
 
             idleCaption = Caption("No one is working here.");
             slotsLabel = Text("", "ui-w600");
-            workingCaption = Caption("");
+            workingCaption = ResourceRow("sheet__caption");
             notYoursCaption = Caption("This node is no longer yours.");
 
             Root.Add(idleCaption);
@@ -141,7 +160,7 @@ namespace NodeWar.UI
             if (shownWorking != working)
             {
                 shownWorking = working;
-                workingCaption.text = working + "/" + cap + " working · " + CycleFor(node.districtType);
+                SetResourceText(workingCaption, working + "/" + cap + " working · " + CycleFor(node.districtType));
             }
         }
 
@@ -207,9 +226,9 @@ namespace NodeWar.UI
         {
             switch (district)
             {
-                case DistrictType.Farm: return "+1 food each cycle";
-                case DistrictType.Mine: return "+1 material each cycle";
-                case DistrictType.Market: return "alternates food and material";
+                case DistrictType.Farm: return "+1 {food} each cycle";
+                case DistrictType.Mine: return "+1 {materials} each cycle";
+                case DistrictType.Market: return "alternates {food} and {materials}";
                 default: return "";
             }
         }

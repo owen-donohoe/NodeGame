@@ -2,9 +2,24 @@ using System.Collections.Generic;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
 using NodeWar.Input;
+using NodeWar.Lobby;
 
 namespace NodeWar.UI
 {
+    /// <summary>
+    /// Which of the three resources a sheet's content is currently about, for
+    /// the resource chip row NodeSheet draws above itself. A flags enum
+    /// because Market and Equip involve more than one at once.
+    /// </summary>
+    [System.Flags]
+    public enum ResourceKind
+    {
+        None = 0,
+        Food = 1,
+        Materials = 2,
+        Metal = 4
+    }
+
     /// <summary>
     /// One district's worth of node-sheet content.
     ///
@@ -64,6 +79,13 @@ namespace NodeWar.UI
         /// actions, which should cover as little of the board as it can.
         /// </summary>
         public virtual bool Compact { get { return false; } }
+
+        /// <summary>
+        /// Which resources this content's sheet is currently about, for the
+        /// resource chip row's emphasis. None by default; a content overrides
+        /// this rather than NodeSheet holding a district->resource lookup.
+        /// </summary>
+        public virtual ResourceKind InvolvedResources { get { return ResourceKind.None; } }
 
         protected NodeSheetContent()
         {
@@ -174,6 +196,77 @@ namespace NodeWar.UI
             button.AddToClassList("sheet__primary");
             button.AddToClassList("ui-w600");
             return button;
+        }
+
+        // ===== RESOURCE TEXT =====
+        //
+        // A Label cannot hold a VisualElement mid-text, so a line naming a
+        // resource is built as a small wrapping flex row of Labels and
+        // LobbyIcons instead. Write the resource inline as {food}, {materials}
+        // or {metal} - e.g. "Respawn costs 20 {food}" - and SetResourceText
+        // splits the template into text spans and icons. Font size, colour
+        // and white-space all inherit from whatever classes the row itself
+        // carries, the same way they would on a Label.
+
+        /// <summary>An empty resource row, ready for SetResourceText. Add classes as for Caption/Heading.</summary>
+        protected static VisualElement ResourceRow(params string[] classes)
+        {
+            VisualElement row = Box(classes);
+            row.AddToClassList("sheet__resource-row");
+            return row;
+        }
+
+        /// <summary>Rebuilds a resource row's children from a template. See ResourceRow.</summary>
+        protected static void SetResourceText(VisualElement row, string template)
+        {
+            row.Clear();
+
+            int i = 0;
+            while (i < template.Length)
+            {
+                int open = template.IndexOf('{', i);
+                if (open < 0)
+                {
+                    AddSpan(row, template.Substring(i));
+                    return;
+                }
+
+                if (open > i) AddSpan(row, template.Substring(i, open - i));
+
+                int close = template.IndexOf('}', open);
+                if (close < 0)
+                {
+                    AddSpan(row, template.Substring(open));
+                    return;
+                }
+
+                LobbyIconKind icon = IconFor(template.Substring(open + 1, close - open - 1));
+                if (icon != LobbyIconKind.None)
+                {
+                    LobbyIcon glyph = new LobbyIcon(icon);
+                    glyph.AddToClassList("sheet__resource-icon");
+                    row.Add(glyph);
+                }
+
+                i = close + 1;
+            }
+        }
+
+        private static void AddSpan(VisualElement row, string text)
+        {
+            if (text.Length == 0) return;
+            row.Add(Text(text));
+        }
+
+        private static LobbyIconKind IconFor(string token)
+        {
+            switch (token)
+            {
+                case "food": return LobbyIconKind.Food;
+                case "materials": return LobbyIconKind.Materials;
+                case "metal": return LobbyIconKind.Metal;
+                default: return LobbyIconKind.None;
+            }
         }
     }
 }

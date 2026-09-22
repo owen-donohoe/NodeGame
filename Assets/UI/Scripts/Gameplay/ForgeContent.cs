@@ -26,7 +26,7 @@ namespace NodeWar.UI
         private ProgressDial workerDial;
         private Label workerText;
         private Label idleNote;
-        private Label explain;
+        private VisualElement explain;
         private Label enemyNote;
 
         private VisualElement stepper;
@@ -38,6 +38,8 @@ namespace NodeWar.UI
         private int[] shownPercentages;
 
         protected override int LayoutKey { get { return Balance.maxWorkersPerNode; } }
+
+        public override ResourceKind InvolvedResources { get { return ResourceKind.Materials | ResourceKind.Metal; } }
 
         protected override void OnBind()
         {
@@ -63,7 +65,8 @@ namespace NodeWar.UI
             Root.Add(gauges);
 
             idleNote = Caption("No smelter is working here.");
-            explain = Text("The forge turns up to this many materials into metal, one each cycle.", "sheet__microcap");
+            explain = ResourceRow("sheet__microcap");
+            SetResourceText(explain, "The forge turns up to this many {materials} into {metal}, one each cycle.");
             enemyNote = Caption("This forge belongs to your opponent. You can see what it is doing, not change it.");
             Root.Add(idleNote);
             Root.Add(explain);
@@ -99,7 +102,9 @@ namespace NodeWar.UI
             VisualElement value = Box("forge__step-value");
             allocationValue = Text("0", "forge__step-number", "ui-w600");
             value.Add(allocationValue);
-            value.Add(Text("MATERIALS ALLOCATED", "forge__step-label", "ui-w600"));
+            VisualElement allocatedLabel = ResourceRow("forge__step-label", "ui-w600");
+            SetResourceText(allocatedLabel, "{materials} ALLOCATED");
+            value.Add(allocatedLabel);
 
             increase = new Button(() => ChangeAllocation(1));
             increase.AddToClassList("forge__step");
