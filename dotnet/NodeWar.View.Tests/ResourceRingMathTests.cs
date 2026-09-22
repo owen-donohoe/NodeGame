@@ -62,6 +62,26 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(1f, ResourceRingMath.GoodBlendFraction(value));
         }
 
+        // ===== semicircle sweep: the upper half of a ring, flat side down =====
+
+        [Test]
+        public void SweepDegrees_is_half_a_circle()
+        {
+            Assert.AreEqual(180f, ResourceRingMath.SweepDegrees);
+        }
+
+        [Test]
+        public void StartDegrees_is_the_flat_bases_left_end()
+        {
+            Assert.AreEqual(-180f, ResourceRingMath.StartDegrees);
+        }
+
+        [Test]
+        public void The_sweep_ends_at_the_flat_bases_right_end()
+        {
+            Assert.AreEqual(0f, ResourceRingMath.StartDegrees + ResourceRingMath.SweepDegrees);
+        }
+
         // ===== lit segments per ring =====
         // Ring 0 = outer (units 1-10), ring 1 = middle (11-20), ring 2 =
         // inner (21-30). Above 30 every ring is full and the value keeps

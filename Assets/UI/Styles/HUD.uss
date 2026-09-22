@@ -12,8 +12,10 @@
        have a fill, and they are as small as they can be.
 
     2. THE BOTTOM OF THE SCREEN IS LEFT TO THE BOARD. .hud__board-space takes
-       all the slack, so every readout is pinned to the top. The node sheet is
-       the only element allowed to reach the bottom edge.
+       all the slack, so the breach walls stay pinned to the top and the
+       resources - the one readout below the board space - stay pinned to the
+       bottom rather than floating mid-board. The node sheet is the only
+       element allowed to reach the very bottom edge.
 
     No text is set below --type-min.
 */
@@ -192,9 +194,17 @@
    render.
    =================================================================== */
 
+/*
+    margin-bottom clears the recentre dock and the whole emote stack -
+    the dock button and the slot your own bubble pops into above it, which
+    reaches highest at 122px (bottom:76 + 46 tall). Both are absolute-
+    positioned siblings of hud-safe-area rather than children of it, so this
+    row does not push past them on its own; the margin has to do it.
+*/
 .hud__resources {
     flex-direction: row;
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
+    margin-bottom: 130px;
     margin-left: var(--space-3);
     margin-right: var(--space-3);
     flex-shrink: 0;
@@ -235,9 +245,12 @@
     margin-bottom: 4px;
 }
 
+/* Height is roughly half of width, not a square: the ring itself is only
+   the upper semicircle, flat side down, so it needs the diameter's width
+   but just the radius's height. See ResourceRing.Draw. */
 .hud__res-ring-host {
     width: 84px;
-    height: 84px;
+    height: 50px;
     align-items: center;
     justify-content: center;
     transition-property: scale;

@@ -4,13 +4,15 @@ using UnityEngine.UIElements;
 namespace NodeWar.UI
 {
     /// <summary>
-    /// Three concentric segmented rings for one resource - outer 1-10, middle
-    /// 11-20, inner 21-30 - drawn with Painter2D the way ProgressDial draws
-    /// its single arc. Segment counts and the colour stop come from
-    /// ResourceRingMath; only the HSV shade per ring (middle darker and more
-    /// saturated, inner darker and more saturated again) lives here, since it
-    /// is a rendering detail rather than presentation maths worth testing in
-    /// isolation.
+    /// Three concentric segmented semicircles for one resource - outer 1-10,
+    /// middle 11-20, inner 21-30 - drawn with Painter2D the way ProgressDial
+    /// draws its single arc. Each ring is the upper half of a circle, flat
+    /// side down: all three share one centre sitting on the host's bottom
+    /// edge, so every ring's flat base lines up along it. Segment counts and
+    /// the colour stop come from ResourceRingMath; only the HSV shade per ring
+    /// (middle darker and more saturated, inner darker and more saturated
+    /// again) lives here, since it is a rendering detail rather than
+    /// presentation maths worth testing in isolation.
     ///
     /// Colours are read from the stylesheet via CustomStyleResolvedEvent, the
     /// same as ProgressDial, so the ring restyles with the theme rather than
@@ -90,14 +92,16 @@ namespace NodeWar.UI
         private void Draw(MeshGenerationContext context)
         {
             Rect rect = contentRect;
-            float size = Mathf.Min(rect.width, rect.height);
 
             float step = Thickness + RingGap;
-            float minSize = 2f * (ResourceRingMath.RingCount * Thickness + (ResourceRingMath.RingCount - 1) * RingGap);
-            if (size <= minSize) return;
+            float minWidth = 2f * (ResourceRingMath.RingCount * Thickness + (ResourceRingMath.RingCount - 1) * RingGap);
+            if (rect.width <= minWidth) return;
 
-            Vector2 centre = rect.center;
-            float outerRadius = size * 0.5f - Thickness * 0.5f;
+            // Flat side down: the diameter runs along the host's bottom edge,
+            // so the centre sits there too and every ring bulges upward from
+            // it rather than surrounding a mid-box centre.
+            Vector2 centre = new Vector2(rect.center.x, rect.yMax - Thickness * 0.5f);
+            float outerRadius = rect.width * 0.5f - Thickness * 0.5f;
 
             Painter2D painter = context.painter2D;
             painter.lineWidth = Thickness;
@@ -117,14 +121,14 @@ namespace NodeWar.UI
 
         private void DrawRing(Painter2D painter, Vector2 centre, float radius, int litSegments, Color litColor)
         {
-            float sweepPerSegment = 360f / ResourceRingMath.SegmentsPerRing;
+            float sweepPerSegment = ResourceRingMath.SweepDegrees / ResourceRingMath.SegmentsPerRing;
             float drawSweep = sweepPerSegment - SegmentGapDegrees;
 
             for (int i = 0; i < ResourceRingMath.SegmentsPerRing; i++)
             {
                 painter.strokeColor = i < litSegments ? litColor : colorTrack;
 
-                float start = -90f + i * sweepPerSegment + SegmentGapDegrees * 0.5f;
+                float start = ResourceRingMath.StartDegrees + i * sweepPerSegment + SegmentGapDegrees * 0.5f;
                 painter.BeginPath();
                 painter.Arc(centre, radius, start, start + drawSweep);
                 painter.Stroke();

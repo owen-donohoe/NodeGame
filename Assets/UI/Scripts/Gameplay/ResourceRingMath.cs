@@ -17,6 +17,21 @@ namespace NodeWar.UI
         public const int SegmentsPerRing = 10;
         public const int RingCount = 3;
 
+        /// <summary>
+        /// Degrees a ring's ten segments sweep across. The rings are the upper
+        /// half of a circle, flat side down, so this is 180 rather than a full
+        /// circle's 360 - half the segments' angular width, same segment count.
+        /// </summary>
+        public const float SweepDegrees = 180f;
+
+        /// <summary>
+        /// Painter2D start angle for segment 0: the left end of the flat base
+        /// (9 o'clock in the 0=right/90=down/180=left/270=up convention the
+        /// ring is drawn in), so the sweep crosses the top (12 o'clock) at its
+        /// midpoint and ends at the flat base's right end (3 o'clock).
+        /// </summary>
+        public const float StartDegrees = -180f;
+
         public const int StopCritical = 0; // v < 3, dark red
         public const int StopLow = 1;      // v < 5, red
         public const int StopWarn = 2;     // v < 8, yellow

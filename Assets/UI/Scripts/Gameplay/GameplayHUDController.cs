@@ -23,9 +23,11 @@ namespace NodeWar.UI
     /// HUDManager in the layer it replaces. The folder says which stack it is
     /// in; the namespace says which layer.
     ///
-    /// WHAT IT SHOWS is settled, not preference: both breach walls and three
-    /// resources are always visible, and only the villager count collapses.
-    /// Breach is the win condition, so it is first and it never hides.
+    /// WHAT IT SHOWS is settled, not preference: both breach walls are always
+    /// visible, and only the villager count collapses. Breach is the win
+    /// condition, so it is first and it never hides. The resources sit at the
+    /// bottom of the screen and, like the rest of that row, can be covered by
+    /// the node sheet while it is open.
     ///
     /// YOU ARE ON THE LEFT. The left wall belongs to whichever player is being
     /// controlled - in a networked match that may be player 1 - and each wall
