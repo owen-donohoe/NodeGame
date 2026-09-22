@@ -42,6 +42,9 @@
                 Breach walls either side of the match clock, bar first and its
                 mark/name/count label below it - so the wall itself, the thing
                 that actually changes, sits at the very top edge.
+
+                The clock and the settings entry share one centred column, so
+                the burger reads as sitting directly under the match time.
             -->
             <engine:VisualElement class="hud__topbar" picking-mode="Ignore">
 
@@ -59,9 +62,25 @@
                     </engine:VisualElement>
                 </engine:VisualElement>
 
-                <engine:VisualElement class="hud__clock" picking-mode="Ignore">
-                    <engine:Label name="hud-clock" class="hud__clock-time ui-w600" text="0:00" picking-mode="Ignore" />
-                    <engine:Label class="hud__clock-label ui-w600" text="MATCH" picking-mode="Ignore" />
+                <engine:VisualElement class="hud__clock-column" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__clock" picking-mode="Ignore">
+                        <engine:Label name="hud-clock" class="hud__clock-time ui-w600" text="0:00" picking-mode="Ignore" />
+                        <engine:Label class="hud__clock-label ui-w600" text="MATCH" picking-mode="Ignore" />
+                    </engine:VisualElement>
+
+                    <!--
+                        The burger: three USS-styled bars, not a glyph, so it
+                        draws the same on every platform. Opens the same
+                        settings card the gear always has - MatchSettingsPanel
+                        still queries this button by name.
+                    -->
+                    <engine:VisualElement name="hud-settings-dock" class="hud__settings-dock" picking-mode="Ignore">
+                        <engine:Button name="hud-settings-gear" class="ui-reset-button hud__burger">
+                            <engine:VisualElement class="hud__burger-bar" picking-mode="Ignore" />
+                            <engine:VisualElement class="hud__burger-bar" picking-mode="Ignore" />
+                            <engine:VisualElement class="hud__burger-bar" picking-mode="Ignore" />
+                        </engine:Button>
+                    </engine:VisualElement>
                 </engine:VisualElement>
 
                 <engine:VisualElement name="hud-side-them" class="hud__side hud__side--them" picking-mode="Ignore">
@@ -292,15 +311,6 @@
             </engine:Button>
 
             <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
-        </engine:VisualElement>
-
-        <!--
-            The gear, in the bottom-right corner: the one place a thumb reaches
-            without the hand moving. Same 46px circle as the zoom handle above
-            it, so the right edge reads as one column of controls.
-        -->
-        <engine:VisualElement name="hud-settings-dock" class="hud__settings-dock" picking-mode="Ignore">
-            <engine:Button name="hud-settings-gear" class="ui-reset-button hud__gear" text="⚙" />
         </engine:VisualElement>
 
         <!-- Above the end card: a closing emote is still part of the match.

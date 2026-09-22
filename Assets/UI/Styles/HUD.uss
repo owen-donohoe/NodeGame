@@ -145,11 +145,18 @@
     transition-delay: 0s;
 }
 
+/* The clock and the burger below it share one width, so the two read as one
+   centred column of controls under the match time. */
+.hud__clock-column {
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: var(--space-2);
+    margin-right: var(--space-2);
+}
+
 .hud__clock {
     width: 58px;
     height: 58px;
-    margin-left: var(--space-2);
-    margin-right: var(--space-2);
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
@@ -473,13 +480,15 @@
    once you have moved is missing exactly when you want to zoom out to
    look around at the start of a match.
 
-   The dock ignores picking; only the button itself takes a touch.
+   The dock ignores picking; only the button itself takes a touch. Now that
+   the burger has moved to the top, this is the only control in the
+   bottom-right corner - the resources row's margin-bottom keeps clear of it.
    =================================================================== */
 
 .hud__recentre-dock {
     position: absolute;
     right: 12px;
-    bottom: 290px;
+    bottom: 12px;
     align-items: center;
 }
 
@@ -715,12 +724,53 @@
     display: flex;
 }
 
-/* The gear: bottom-right corner, same circle as the zoom handle above it. */
+/*
+    The burger: centred under the match timer rather than in a corner, so it
+    sits in normal flow inside .hud__clock-column instead of being
+    absolute-positioned. It still opens the same settings card below, which
+    keeps its own bottom-right position - a corner card the thumb already
+    reaches, independent of where the button that opens it lives.
+*/
 .hud__settings-dock {
-    position: absolute;
-    right: 12px;
-    bottom: 12px;
     align-items: center;
+    margin-top: 6px;
+}
+
+.hud__burger {
+    width: 58px;
+    height: 30px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    transition-property: scale;
+    transition-duration: var(--motion-press);
+}
+
+.hud__burger:active {
+    background-color: var(--hud-glass);
+    scale: 0.94 0.94;
+}
+
+.hud__burger-bar {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+    background-color: var(--hud-ink);
 }
 
 .hud__gear {

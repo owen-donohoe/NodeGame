@@ -340,7 +340,6 @@ namespace NodeWar.UI
 
             indicatorLayer = new IndicatorLayer(hudRoot);
             indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-recentre-dock"));
-            indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-settings-dock"));
             indicatorLayer.AvoidLeft(root.Q<VisualElement>("hud-emote-dock"));
 
             VisualElement sheetPanel = nodeSheet != null ? nodeSheet.Root.Q<VisualElement>("node-sheet") : null;
