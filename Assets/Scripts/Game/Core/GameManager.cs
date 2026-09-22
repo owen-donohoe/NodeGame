@@ -59,6 +59,11 @@ namespace NodeWar.Core
 
         private NodeWar.View.IndicatorDirector indicatorDirector;
 
+        [Tooltip("How hard the camera shakes on a breach, a capture and game over.")]
+        [SerializeField] private NodeWar.View.ScreenShakeSettings screenShakeSettings =
+            new NodeWar.View.ScreenShakeSettings();
+        private NodeWar.View.ScreenShakeDirector screenShake;
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -572,6 +577,7 @@ namespace NodeWar.Core
                 cameraController.POVChanged -= OnPOVChanged;
 
             if (indicatorDirector != null) indicatorDirector.Dispose();
+            if (screenShake != null) screenShake.Dispose();
         }
 
         private void StartLocalPlay()
@@ -828,6 +834,11 @@ namespace NodeWar.Core
             indicatorDirector.SetNodeSlotManagers(nodeSlotManagers);
             indicatorDirector.SetVillagerTransforms(villagerTransforms);
             uiToolkitHud.BindIndicators(indicatorDirector);
+
+            // Same tick stream as the indicators, and the same local player.
+            screenShake = new NodeWar.View.ScreenShakeDirector(state, tickProvider, screenShakeSettings,
+                () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0,
+                (strength, seconds) => { if (cameraController != null) cameraController.Shake(strength, seconds); });
 
             MatchConnection emoteMatch = MatchConnection.Instance;
             if (emoteMatch != null && emoteMatch.isNetworked)
