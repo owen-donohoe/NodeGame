@@ -858,6 +858,10 @@
     translate: 0 -8px;
 }
 
+.hud__settings-main.hud__settings--on {
+    translate: 0 0;
+}
+
 .hud__settings-title {
     font-size: 15px;
     color: var(--ink);
