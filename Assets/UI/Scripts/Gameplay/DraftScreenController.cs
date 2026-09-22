@@ -777,8 +777,6 @@ namespace NodeWar.UI
 
             if (asTap || !moved)
             {
-                DestroyGhost();
-
                 if (fromBoard)
                 {
                     // A tap on the parked piece changes nothing. Put the
