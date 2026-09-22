@@ -37,12 +37,26 @@ namespace NodeWar.View
 
         private LayerMask villagerLayer;
 
+        // How far a node's outline leans from grey toward its owner's colour.
+        // Fields rather than constants so they can be tuned live in Play mode;
+        // this component is added at runtime, so there is no Inspector value to
+        // persist and the defaults here are the shipped ones.
+        [Tooltip("Tint of a fully held node's outline, 0 = grey, 1 = the owner's colour. " +
+                 "A node part-way claimed, either way, is proportionally closer to grey.")]
+        [SerializeField, Range(0f, 1f)] private float ownedTintStrength = 0.8f;
+
+        [Tooltip("Tint of a Core's outline. A Core has no claim bar, so it is always fully held.")]
+        [SerializeField, Range(0f, 1f)] private float coreTintStrength = 0.8f;
+
+        private int claimThreshold = 10000;
+
         public void Initialize(SimulationState simulationState, SelectionSystem selectionSystem,
-                               Camera camera)
+                               Camera camera, int claimThresholdValue)
         {
             state = simulationState;
             selection = selectionSystem;
             cam = camera;
+            claimThreshold = claimThresholdValue > 0 ? claimThresholdValue : 10000;
 
             // The same mask SelectionSystem raycasts against, so hover and the
             // tap that follows it can never disagree about what is under the
@@ -193,8 +207,52 @@ namespace NodeWar.View
                 OutlineGroup group = nodeGroups[i];
                 if (group == null) continue;
 
-                group.SetIntent(OutlineStyle.Selected, i == inspectedNode);
+                bool inspected = i == inspectedNode;
+
+                // Re-read every frame while inspected: the claim bar moves under
+                // an open node, and the outline is how the player watches it go.
+                // Cleared as soon as it is not, so nothing else that outlines a
+                // node later inherits a stale ownership colour.
+                group.SetTint(inspected && i < state.nodes.Length ? OwnershipTint(state.nodes[i]) : Color.clear);
+                group.SetIntent(OutlineStyle.Selected, inspected);
             }
+        }
+
+        /// <summary>
+        /// Grey for nobody's, leaning toward the colour of whoever the claim bar
+        /// leans to, by how far it leans. A fully held node is the owner's colour
+        /// at ownedTintStrength; a node half taken either way sits half way to
+        /// grey. Owner colours, not "you and them": blue is player 0 (mark 1) on both
+        /// screens, the same as every other mark in the game.
+        ///
+        /// The claim bar is signed, positive for player 0, and a Core has none,
+        /// so its owner is read directly.
+        /// </summary>
+        private Color OwnershipTint(NodeData node)
+        {
+            int leaner;
+            float strength;
+
+            if (node.districtType == DistrictType.Core && node.ownerID >= 0)
+            {
+                leaner = node.ownerID;
+                strength = coreTintStrength;
+            }
+            else if (node.claimBar != 0)
+            {
+                leaner = node.claimBar > 0 ? 0 : 1;
+                float lean = Mathf.Abs((float)node.claimBar) / claimThreshold;
+                strength = Mathf.Clamp01(lean) * ownedTintStrength;
+            }
+            else
+            {
+                leaner = -1;
+                strength = 0f;
+            }
+
+            Color tint = Color.Lerp(PlayerColors.Neutral, PlayerColors.For(leaner), strength);
+            tint.a = 1f;
+            return tint;
         }
 
         /// <summary>

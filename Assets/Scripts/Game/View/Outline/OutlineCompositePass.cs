@@ -24,6 +24,7 @@ namespace NodeWar.View.Outline
         private static readonly int StyleRadiusId = Shader.PropertyToID("_OutlineStyleRadius");
         private static readonly int StylesPresentId = Shader.PropertyToID("_OutlineStylesPresent");
         private static readonly int DebugModeId = Shader.PropertyToID("_OutlineDebugMode");
+        private static readonly int GroupTintId = Shader.PropertyToID("_OutlineGroupTint");
 
         private sealed class PassData
         {
@@ -60,6 +61,14 @@ namespace NodeWar.View.Outline
         // in a constant buffer are the kind of detail that works until a
         // platform disagrees.
         private readonly Vector4[] styleRadius = new Vector4[OutlineStyleMask.StyleCount];
+
+        // Each group's IOutlineGroup.Tint, one texel per mask ID, so the shader
+        // can colour a line by the group it belongs to. A texture rather than a
+        // uniform array: 256 float4s is past the 224 fragment uniform vectors
+        // GLES 3.0 guarantees, and this ships on phones. Texel 0 is the "no
+        // group" ID and is never written, so it stays clear and means "palette".
+        private Texture2D groupTint;
+        private readonly Color32[] groupTintTexels = new Color32[OutlineIdAllocator.MaxId + 1];
 
         private OutlineSettings settings;
         private Material compositeMaterial;
@@ -132,6 +141,7 @@ namespace NodeWar.View.Outline
             }
 
             UploadPalette();
+            UploadGroupTints();
 
             compositeMaterial.SetVector(TexelSizeId, new Vector4(
                 1f / maskData.width, 1f / maskData.height, maskData.width, maskData.height));
@@ -266,6 +276,78 @@ namespace NodeWar.View.Outline
 
             compositeMaterial.SetVectorArray(PaletteId, palette);
             compositeMaterial.SetVectorArray(StyleRadiusId, styleRadius);
+        }
+
+        /// <summary>
+        /// Writes every outlined group's tint at its ID, and uploads only when
+        /// one changed. Stale texels for IDs no group holds are never read: the
+        /// mask only carries IDs that are active this frame, and an ID handed to
+        /// a new group is overwritten here before the pass that could read it.
+        ///
+        /// Converted to linear like the palette, and stored in a linear texture
+        /// so sampling applies no conversion of its own.
+        /// </summary>
+        private void UploadGroupTints()
+        {
+            if (groupTint == null)
+            {
+                groupTint = new Texture2D(groupTintTexels.Length, 1, TextureFormat.RGBA32, false, true)
+                {
+                    name = "NodeWar Outline Group Tint",
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Clamp,
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+
+                groupTint.SetPixels32(groupTintTexels);
+                groupTint.Apply(false);
+            }
+
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            bool changed = false;
+
+            OutlineRegistry registry = OutlineRegistry.Instance;
+            int count = registry.ActiveCount;
+
+            for (int i = 0; i < count; i++)
+            {
+                IOutlineGroup group = registry.GetActive(i);
+                if (group == null) continue;
+
+                int id = group.OutlineId;
+                if (id < OutlineIdAllocator.MinId || id > OutlineIdAllocator.MaxId) continue;
+
+                Color color = group.Tint;
+                if (linear)
+                {
+                    Color converted = color.linear;
+                    converted.a = color.a;
+                    color = converted;
+                }
+
+                Color32 texel = color;
+                Color32 current = groupTintTexels[id];
+                if (texel.r == current.r && texel.g == current.g &&
+                    texel.b == current.b && texel.a == current.a) continue;
+
+                groupTintTexels[id] = texel;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                groupTint.SetPixels32(groupTintTexels);
+                groupTint.Apply(false);
+            }
+
+            compositeMaterial.SetTexture(GroupTintId, groupTint);
+        }
+
+        /// <summary>Releases the tint texture. Called by the feature's Dispose.</summary>
+        public void Dispose()
+        {
+            CoreUtils.Destroy(groupTint);
+            groupTint = null;
         }
 
         /// <summary>

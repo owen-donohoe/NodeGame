@@ -473,7 +473,7 @@ namespace NodeWar.Core
             // agree about ownership by construction rather than by two copies
             // of the same rule.
             outlineDriver = gameObject.AddComponent<NodeWar.View.OutlineDriver>();
-            outlineDriver.Initialize(state, selectionSystem, Camera.main);
+            outlineDriver.Initialize(state, selectionSystem, Camera.main, balance.Data.claimThreshold);
             debugPlayerSwitch.OnPlayerSwitched += outlineDriver.OnPlayerSideChanged;
 
             // Selection and move orders share one pointer reader.
