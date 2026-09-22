@@ -156,14 +156,14 @@
 
 .hud__clock {
     width: 58px;
-    height: 58px;
+    height: 50px;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border-top-left-radius: 29px;
-    border-top-right-radius: 29px;
-    border-bottom-left-radius: 29px;
-    border-bottom-right-radius: 29px;
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
     border-left-width: var(--stroke-thin);
     border-right-width: var(--stroke-thin);
     border-top-width: var(--stroke-thin);
