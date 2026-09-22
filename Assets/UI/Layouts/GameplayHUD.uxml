@@ -74,31 +74,30 @@
             </engine:VisualElement>
 
             <!--
-                Resources. The prototype's locked readout: five past samples
-                and the current value, which is wider. The bars are built in
-                code; the number beside each label is the non-colour channel.
+                Resources. Each is a dark glass card holding three concentric
+                segmented rings - outer 1-10, middle 11-20, inner 21-30 - with
+                the live count centred inside and the label above. The rings
+                are built in code (ResourceRing/ResourceRingMath); the number
+                is the non-colour channel next to the ring's own colour.
             -->
             <engine:VisualElement class="hud__resources" picking-mode="Ignore">
-                <engine:VisualElement name="hud-res-food" class="hud__res" picking-mode="Ignore">
-                    <engine:VisualElement class="hud__res-head" picking-mode="Ignore">
-                        <engine:Label class="hud__res-label ui-w600" text="FOOD" picking-mode="Ignore" />
-                        <engine:Label name="hud-food" class="hud__res-value ui-w600" text="0" picking-mode="Ignore" />
+                <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
+                    <engine:Label class="hud__res-label ui-w600" text="FOOD" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
+                        <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:VisualElement name="hud-hist-food" class="hud__hist" picking-mode="Ignore" />
                 </engine:VisualElement>
-                <engine:VisualElement name="hud-res-materials" class="hud__res" picking-mode="Ignore">
-                    <engine:VisualElement class="hud__res-head" picking-mode="Ignore">
-                        <engine:Label class="hud__res-label ui-w600" text="MAT" picking-mode="Ignore" />
-                        <engine:Label name="hud-materials" class="hud__res-value ui-w600" text="0" picking-mode="Ignore" />
+                <engine:VisualElement name="hud-res-materials" class="hud__res-card" picking-mode="Ignore">
+                    <engine:Label class="hud__res-label ui-w600" text="MAT" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
+                        <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:VisualElement name="hud-hist-materials" class="hud__hist" picking-mode="Ignore" />
                 </engine:VisualElement>
-                <engine:VisualElement name="hud-res-metal" class="hud__res hud__res--last" picking-mode="Ignore">
-                    <engine:VisualElement class="hud__res-head" picking-mode="Ignore">
-                        <engine:Label class="hud__res-label ui-w600" text="METAL" picking-mode="Ignore" />
-                        <engine:Label name="hud-metal" class="hud__res-value ui-w600" text="0" picking-mode="Ignore" />
+                <engine:VisualElement name="hud-res-metal" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
+                    <engine:Label class="hud__res-label ui-w600" text="METAL" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-ring-metal" class="hud__res-ring-host" picking-mode="Ignore">
+                        <engine:Label name="hud-metal" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:VisualElement name="hud-hist-metal" class="hud__hist" picking-mode="Ignore" />
                 </engine:VisualElement>
             </engine:VisualElement>
 

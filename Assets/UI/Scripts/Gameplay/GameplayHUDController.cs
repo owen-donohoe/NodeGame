@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
@@ -46,15 +45,6 @@ namespace NodeWar.UI
         [Tooltip("NodeSheet.uxml. Without it no node sheet is shown and the old " +
                  "uGUI panel keeps the job.")]
         [SerializeField] private VisualTreeAsset nodeSheetLayout;
-
-        // The prototype's locked resource readout: five past samples, a full
-        // bar at 15, and colour zones at 2 and 6. Presentation only - nothing
-        // in the simulation knows about these numbers.
-        private const int HistorySamples = 5;
-        private const int ReadoutCap = 15;
-        private const float ReadoutHeight = 40f;
-        private const int LowZoneMax = 2;
-        private const int MidZoneMax = 6;
 
         private UIDocument document;
         private SafeAreaBinder safeArea;
@@ -113,7 +103,6 @@ namespace NodeWar.UI
 
         private int lastControlledPID = -1;
         private int lastClockSeconds = -1;
-        private int lastSampleSecond = -1;
         private int lastUnitsP0 = -1;
         private int lastUnitsP1 = -1;
         private int lastSelected = -1;
@@ -295,9 +284,9 @@ namespace NodeWar.UI
             clockLabel = root.Q<Label>("hud-clock");
             flash = root.Q<VisualElement>("hud-flash");
 
-            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-hist-food"));
-            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-hist-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-hist-metal"));
+            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"), root.Q<VisualElement>("hud-res-food"));
+            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"), root.Q<VisualElement>("hud-res-materials"));
+            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"), root.Q<VisualElement>("hud-res-metal"));
 
             villagerToggle = root.Q<Button>("hud-villager-toggle");
             villagerCard = root.Q<VisualElement>("hud-villagers");
@@ -480,8 +469,8 @@ namespace NodeWar.UI
             int pid = CurrentPlayerID();
 
             // A viewer switch changes whose numbers these are, not the numbers.
-            // Everything redraws at once, with no breach punch and no bars
-            // sliding, because nothing happened in the match.
+            // Everything redraws at once, with no breach punch and no
+            // resource-ring pop, because nothing happened in the match.
             bool switched = pid != lastControlledPID;
             lastControlledPID = pid;
 
@@ -533,9 +522,9 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Your three resources. History is sampled once per simulated second,
-        /// keyed on the tick count so a paused tick loop records nothing, and it
-        /// starts again from the current values when the viewer switches.
+        /// Your three resources, as segmented rings. A viewer switch resets
+        /// each readout's baseline so the redraw carries no pop; otherwise
+        /// Render decides for itself whether the value moved and which way.
         /// </summary>
         private void RefreshResources(int pid, bool switched)
         {
@@ -545,17 +534,11 @@ namespace NodeWar.UI
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
 
-            int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
-            int second = state.tickCount / ticksPerSecond;
-            bool sample = second != lastSampleSecond;
-            lastSampleSecond = second;
-
             for (int i = 0; i < resources.Length; i++)
             {
                 if (resources[i] == null) continue;
 
-                if (switched) resources[i].Reset(resourceValues[i]);
-                else if (sample) resources[i].Sample(resourceValues[i]);
+                if (switched) resources[i].Reset();
 
                 resources[i].Render(resourceValues[i]);
             }
@@ -1056,113 +1039,114 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// One resource's readout: the number, five fading past bars and the
-        /// current bar.
+        /// One resource's readout: the number, centred inside a ResourceRing
+        /// hosted on "hud-ring-*". The ring always reads, even at zero -
+        /// unlit segments draw as a faint track - so unlike the bars this
+        /// replaced there is nothing to hide until the resource is earned.
         ///
-        /// The staircase stays hidden until this resource has been held at all.
-        /// A row of flat minimum-height bars sitting under a zero says nothing
-        /// except that nothing has happened yet, and three of them across the
-        /// top of the board is noise over the only thing worth looking at. Once
-        /// the resource has been earned the history means something, so it
-        /// appears and then stays -- dropping back to zero is exactly the case
-        /// the staircase is for.
+        /// POP ON CHANGE. An increase scales the ring host (rings and number
+        /// together) up and back; a decrease scales it down and tints the
+        /// card's border red for the same beat, via a USS class added here
+        /// and removed a moment later by schedule.Execute(...).StartingIn(...)
+        /// - the same idiom BreachSide uses for hud__side--hit. Neither fires
+        /// on the sentinel left by Reset, so a viewer switch and the very
+        /// first render redraw silently.
         /// </summary>
         private class ResourceReadout
         {
+            private const long PopMilliseconds = 150;
+
             private readonly Label value;
-            private readonly VisualElement barHost;
-            private readonly VisualElement[] bars = new VisualElement[HistorySamples + 1];
-            private readonly List<int> history = new List<int>(HistorySamples + 1);
+            private readonly VisualElement ringHost;
+            private readonly VisualElement card;
+            private readonly ResourceRing ring;
 
             private int shownValue = int.MinValue;
-            private bool everHeld;
-            private bool barsShown = true;
+            private IVisualElementScheduledItem popJob;
 
-            public ResourceReadout(Label valueLabel, VisualElement host)
+            public ResourceReadout(Label valueLabel, VisualElement host, VisualElement cardElement)
             {
                 value = valueLabel;
-                barHost = host;
+                ringHost = host;
+                card = cardElement;
                 if (host == null) return;
 
-                for (int i = 0; i < bars.Length; i++)
-                {
-                    VisualElement bar = new VisualElement();
-                    bar.AddToClassList("hud__bar");
-                    bar.AddToClassList(i < HistorySamples ? "hud__bar--age-" + i : "hud__bar--current");
-                    bar.pickingMode = PickingMode.Ignore;
-                    host.Add(bar);
-                    bars[i] = bar;
-                }
+                ring = new ResourceRing();
 
-                SetBarsShown(false);
+                // Inserted first so the value label - already in the UXML
+                // host - draws on top of it.
+                host.Insert(0, ring);
             }
 
             /// <summary>
-            /// Kept in the layout rather than collapsed, so the readouts do not
-            /// jump upward the first time a resource is earned mid-match.
+            /// Drops the baseline so the next Render redraws with no pop:
+            /// used on a viewer switch, where the numbers change but nothing
+            /// happened in the match.
             /// </summary>
-            private void SetBarsShown(bool shown)
+            public void Reset()
             {
-                if (barHost == null || shown == barsShown) return;
-                barsShown = shown;
-
-                barHost.style.visibility = shown ? Visibility.Visible : Visibility.Hidden;
-            }
-
-            public void Reset(int current)
-            {
-                history.Clear();
-                for (int i = 0; i < HistorySamples; i++) history.Add(current);
-                shownValue = int.MinValue;
-
-                // Latched per viewer, not per match: the debug switch resets the
-                // history, and the new viewer's own holdings decide afresh.
-                everHeld = current > 0;
-                SetBarsShown(everHeld);
-            }
-
-            public void Sample(int current)
-            {
-                if (history.Count == 0) { Reset(current); return; }
-
-                history.Add(current);
-                while (history.Count > HistorySamples) history.RemoveAt(0);
+                CancelPop();
                 shownValue = int.MinValue;
             }
 
             public void Render(int current)
             {
-                if (history.Count == 0) Reset(current);
+                if (current == shownValue) return;
 
-                if (!everHeld && current > 0)
-                {
-                    everHeld = true;
-                    SetBarsShown(true);
-                }
+                bool isFirst = shownValue == int.MinValue;
+                bool increased = !isFirst && current > shownValue;
+                bool decreased = !isFirst && current < shownValue;
 
-                if (current != shownValue)
-                {
-                    shownValue = current;
+                shownValue = current;
 
-                    if (value != null) value.text = current.ToString();
+                if (value != null) value.text = current.ToString();
+                if (ring != null) ring.SetValue(current);
 
-                    for (int i = 0; i < HistorySamples && bars[i] != null; i++)
-                        bars[i].style.height = HeightFor(history[i]);
-
-                    VisualElement now = bars[HistorySamples];
-                    if (now != null)
-                    {
-                        now.style.height = HeightFor(current);
-                        now.EnableInClassList("hud__bar--low", current <= LowZoneMax);
-                        now.EnableInClassList("hud__bar--mid", current > LowZoneMax && current <= MidZoneMax);
-                        now.EnableInClassList("hud__bar--high", current > MidZoneMax);
-                    }
-                }
+                if (increased) Pop("hud__res-ring-host--up", null);
+                else if (decreased) Pop("hud__res-ring-host--down", "hud__res-card--down");
             }
 
-            private static float HeightFor(int amount)
+            private void Pop(string ringHostClass, string cardClass)
             {
-                return Mathf.Max(2f, Mathf.Min(1f, amount / (float)ReadoutCap) * ReadoutHeight);
+                CancelPop();
+
+                if (ringHost != null)
+                {
+                    ringHost.RemoveFromClassList("hud__res-ring-host--up");
+                    ringHost.RemoveFromClassList("hud__res-ring-host--down");
+                    ringHost.AddToClassList(ringHostClass);
+                }
+
+                if (card != null)
+                {
+                    card.RemoveFromClassList("hud__res-card--down");
+                    if (cardClass != null) card.AddToClassList(cardClass);
+                }
+
+                VisualElement scheduler = ringHost != null ? ringHost : card;
+                if (scheduler == null) return;
+
+                popJob = scheduler.schedule.Execute(() =>
+                {
+                    if (ringHost != null) ringHost.RemoveFromClassList(ringHostClass);
+                    if (card != null && cardClass != null) card.RemoveFromClassList(cardClass);
+                    popJob = null;
+                }).StartingIn(PopMilliseconds);
+            }
+
+            private void CancelPop()
+            {
+                if (popJob == null) return;
+                popJob.Pause();
+                popJob = null;
+
+                if (ringHost != null)
+                {
+                    ringHost.RemoveFromClassList("hud__res-ring-host--up");
+                    ringHost.RemoveFromClassList("hud__res-ring-host--down");
+                }
+
+                if (card != null) card.RemoveFromClassList("hud__res-card--down");
             }
         }
     }

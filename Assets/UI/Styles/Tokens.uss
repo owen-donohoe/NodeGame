@@ -114,10 +114,14 @@
     --pal-white-a60: rgba(255, 255, 255, 0.6);
     --pal-night-a60: rgba(18, 17, 10, 0.6);
 
-    /* resource readout zones */
-    --pal-clay: rgb(192, 138, 110);
-    --pal-wheat: rgb(201, 179, 126);
-    --pal-sage: rgb(143, 168, 124);
+    /* resource ring stops - a fixed urgency gradient (low to rich), unlike
+       the player/tile palettes which name an identity */
+    --pal-ring-critical: rgb(120, 24, 20);
+    --pal-ring-low: rgb(196, 58, 48);
+    --pal-ring-warn: rgb(226, 188, 42);
+    --pal-ring-ok: rgb(178, 196, 64);
+    --pal-ring-good: rgb(42, 122, 58);
+    --pal-ring-rich: rgb(28, 110, 112);
 
     /* monogram tiles - ItemTint picks one by hashing the item's ID */
     --pal-tile-0: rgb(58, 110, 108);
@@ -199,9 +203,15 @@
     --hud-ghost: var(--pal-white-a60);
     --hud-flash: var(--pal-white);
     --hud-dim: var(--pal-night-a60);
-    --resource-low: var(--pal-clay);
-    --resource-mid: var(--pal-wheat);
-    --resource-high: var(--pal-sage);
+
+    /* ---- resource rings: colour follows the value, see ResourceRingMath ---- */
+    --resource-ring-critical: var(--pal-ring-critical);
+    --resource-ring-low: var(--pal-ring-low);
+    --resource-ring-warn: var(--pal-ring-warn);
+    --resource-ring-ok: var(--pal-ring-ok);
+    --resource-ring-good: var(--pal-ring-good);
+    --resource-ring-rich: var(--pal-ring-rich);
+    --resource-ring-track: var(--pal-cream-a28);
 
     /* ---- monogram tiles ---- */
     --tile-tint-0: var(--pal-tile-0);

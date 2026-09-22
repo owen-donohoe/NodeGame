@@ -178,6 +178,18 @@
 
 /* ===================================================================
    Resources
+
+   Each card is a rounded dark-glass rectangle holding three concentric
+   segmented rings (ResourceRing, drawn in code) with the live count
+   centred inside and the label above. Ring colour follows the value -
+   see ResourceRingMath - so the card itself and the label stay neutral.
+
+   POP ON CHANGE. hud__res-ring-host--up/--down are added by code and
+   removed a beat later via schedule.Execute(...).StartingIn(...), the
+   same idiom as .hud__side--hit: an increase scales the rings and number
+   up and back, a decrease scales them down and tints the card's border
+   red for the same beat. Neither fires on a viewer switch or the first
+   render.
    =================================================================== */
 
 .hud__resources {
@@ -188,76 +200,93 @@
     flex-shrink: 0;
 }
 
-.hud__res {
+.hud__res-card {
     flex-grow: 1;
     flex-basis: 0;
     margin-right: 11px;
+    align-items: center;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    background-color: var(--hud-glass);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    transition-property: border-left-color, border-right-color, border-top-color, border-bottom-color;
+    transition-duration: 150ms;
 }
 
-.hud__res--last {
+.hud__res-card--last {
     margin-right: 0;
-}
-
-.hud__res-head {
-    flex-direction: row;
-    align-items: flex-end;
-    margin-bottom: 5px;
 }
 
 .ui-root .hud__res-label {
-    flex-grow: 1;
     font-size: var(--type-min);
     letter-spacing: 1px;
     color: var(--hud-ink-mute);
+    margin-bottom: 4px;
 }
 
-.ui-root .hud__res-value {
-    font-size: var(--type-number);
-    color: var(--hud-ink);
-    -unity-text-align: lower-right;
+.hud__res-ring-host {
+    width: 84px;
+    height: 84px;
+    align-items: center;
+    justify-content: center;
+    transition-property: scale;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out-back;
 }
 
 /*
-    Five past samples and the current value, bottom-aligned in a 40px box.
-    Heights are set from code; the current bar is 2.5x as wide as a past one,
-    and older bars fade. A spend reads for free: the current bar drops while
-    the one behind it stays tall.
+    The ring reads these through CustomStyleResolvedEvent. Declared again
+    here, on the class the ring element itself carries, rather than left to
+    inherit from Tokens.uss's :root alone -- custom properties only resolve
+    reliably where a selector matches the element or an ancestor.
 */
-.hud__hist {
-    height: 40px;
-    flex-direction: row;
-    align-items: flex-end;
+.hud__res-ring {
+    --resource-ring-critical: var(--resource-ring-critical);
+    --resource-ring-low: var(--resource-ring-low);
+    --resource-ring-warn: var(--resource-ring-warn);
+    --resource-ring-ok: var(--resource-ring-ok);
+    --resource-ring-good: var(--resource-ring-good);
+    --resource-ring-rich: var(--resource-ring-rich);
+    --resource-ring-track: var(--resource-ring-track);
 }
 
-.hud__bar {
-    flex-grow: 1;
-    flex-basis: 0;
-    margin-right: 1.5px;
-    min-height: 2px;
-    background-color: var(--hud-bar-past);
-    border-top-left-radius: 1.5px;
-    border-top-right-radius: 1.5px;
-    transition-property: height;
-    transition-duration: 220ms;
-    transition-timing-function: ease-out;
+.hud__res-ring-host--up {
+    scale: 1.12 1.12;
 }
 
-.hud__bar--age-0 { opacity: 0.1; }
-.hud__bar--age-1 { opacity: 0.23; }
-.hud__bar--age-2 { opacity: 0.36; }
-.hud__bar--age-3 { opacity: 0.49; }
-.hud__bar--age-4 { opacity: 0.62; }
-
-.hud__bar--current {
-    flex-grow: 2.5;
-    margin-right: 0;
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
+.hud__res-ring-host--down {
+    scale: 0.9 0.9;
 }
 
-.hud__bar--low { background-color: var(--resource-low); }
-.hud__bar--mid { background-color: var(--resource-mid); }
-.hud__bar--high { background-color: var(--resource-high); }
+.ui-root .hud__res-value {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    font-size: var(--type-heading);
+    color: var(--hud-ink);
+    -unity-text-align: middle-center;
+}
+
+/* The decrease pop's card-border tint. */
+.hud__res-card--down {
+    border-left-color: var(--badge);
+    border-right-color: var(--badge);
+    border-top-color: var(--badge);
+    border-bottom-color: var(--badge);
+}
 
 /* ===================================================================
    Units
