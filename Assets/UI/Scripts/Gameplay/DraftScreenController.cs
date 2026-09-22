@@ -82,9 +82,20 @@ namespace NodeWar.UI
         [Tooltip("Height above the grid plane for ghosts and placed pieces.")]
         [SerializeField] private float pieceYOffset = 0.1f;
 
-        [Header("Ghost tints")]
-        [SerializeField] private Color validCellTint = new Color(0.3f, 1f, 0.3f, 0.7f);
-        [SerializeField] private Color invalidCellTint = new Color(1f, 0.3f, 0.3f, 0.5f);
+        // Every piece wears its owner's colour, the ghost included, so the board
+        // says whose piece is whose at a glance. That is why a blocked cell is
+        // grey rather than the old red: red is player 2's colour, and a red
+        // ghost over a taken cell would read as "this is theirs".
+        [Header("Piece tints")]
+        [Tooltip("Opacity of the ghost over a cell it can take. Its colour is the local player's.")]
+        [SerializeField] private float ghostAlpha = 0.75f;
+
+        [Tooltip("The ghost over a cell it cannot take, or off the grid.")]
+        [SerializeField] private Color blockedCellTint = new Color(0.55f, 0.55f, 0.58f, 0.45f);
+
+        [Tooltip("Opacity of a placed piece. Its colour is its owner's; an unowned " +
+                 "initial node is left white.")]
+        [SerializeField] private float placedAlpha = 0.9f;
 
         [Header("Placement drop")]
         [SerializeField] private float placementDropHeight = 6f;
@@ -332,7 +343,7 @@ namespace NodeWar.UI
             for (int i = 0; i < placements.Length; i++)
             {
                 Vector3 pos = draftManager.GridToWorld(placements[i].gridX, placements[i].gridZ);
-                SpawnConfirmedPlaceholder(pos, placements[i].districtType);
+                SpawnConfirmedPlaceholder(pos, placements[i].districtType, placements[i].ownerID);
             }
         }
 
@@ -423,7 +434,7 @@ namespace NodeWar.UI
             if (draftManager == null) return;
 
             Vector3 pos = draftManager.GridToWorld(placement.gridX, placement.gridZ);
-            SpawnConfirmedPlaceholder(pos, placement.districtType);
+            SpawnConfirmedPlaceholder(pos, placement.districtType, placement.playerID);
 
             CancelHand();
             RebuildCards();
@@ -1031,8 +1042,19 @@ namespace NodeWar.UI
             if (ghostPreview != null)
             {
                 ghostPreview.SetSticker(GetStickerSprite(dragging ? dragDistrict : handDistrict));
-                ghostPreview.SetAlpha(1f);
+                ghostPreview.SetTintWithAlpha(GhostTint(true));
             }
+        }
+
+        // With alpha, not SetTint: SetTint keeps whatever alpha the material
+        // already has, so the ghost never became see-through at all.
+        private Color GhostTint(bool valid)
+        {
+            if (!valid) return blockedCellTint;
+
+            Color tint = NodeWar.View.PlayerColors.For(localPlayerID);
+            tint.a = ghostAlpha;
+            return tint;
         }
 
         private void DestroyGhost()
@@ -1063,7 +1085,7 @@ namespace NodeWar.UI
                 // ghost that will not move reads as a frozen game.
                 ghostOnValidCell = false;
                 ghost.transform.position = world + Vector3.up * pieceYOffset;
-                if (ghostPreview != null) ghostPreview.SetTint(invalidCellTint);
+                if (ghostPreview != null) ghostPreview.SetTintWithAlpha(GhostTint(false));
                 return;
             }
 
@@ -1081,12 +1103,12 @@ namespace NodeWar.UI
             ghost.transform.position = draftManager.GridToWorld(gx, gz) + Vector3.up * pieceYOffset;
 
             if (ghostPreview != null)
-                ghostPreview.SetTint(valid ? validCellTint : invalidCellTint);
+                ghostPreview.SetTintWithAlpha(GhostTint(valid));
         }
 
         // ===== CONFIRMED PIECES =====
 
-        private void SpawnConfirmedPlaceholder(Vector3 pos, DistrictType type)
+        private void SpawnConfirmedPlaceholder(Vector3 pos, DistrictType type, int ownerID)
         {
             if (confirmedPlacementPrefab == null) return;
 
@@ -1097,7 +1119,10 @@ namespace NodeWar.UI
             if (preview != null)
             {
                 preview.SetSticker(GetStickerSprite(type));
-                preview.SetTintWithAlpha(new Color(1f, 1f, 1f, 0.85f));
+
+                Color tint = ownerID >= 0 ? NodeWar.View.PlayerColors.For(ownerID) : Color.white;
+                tint.a = placedAlpha;
+                preview.SetTintWithAlpha(tint);
             }
 
             // D7: it drops onto the cell. Both players' pieces do, which is how
