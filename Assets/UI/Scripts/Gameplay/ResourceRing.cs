@@ -62,13 +62,13 @@ namespace NodeWar.UI
         {
             ICustomStyle style = customStyle;
 
-            TryRead(style, "--resource-ring-critical", ref colorCritical);
-            TryRead(style, "--resource-ring-low", ref colorLow);
-            TryRead(style, "--resource-ring-warn", ref colorWarn);
-            TryRead(style, "--resource-ring-ok", ref colorOk);
-            TryRead(style, "--resource-ring-good", ref colorGood);
-            TryRead(style, "--resource-ring-rich", ref colorRich);
-            TryRead(style, "--resource-ring-track", ref colorTrack);
+            TryRead(style, "--ring-critical", ref colorCritical);
+            TryRead(style, "--ring-low", ref colorLow);
+            TryRead(style, "--ring-warn", ref colorWarn);
+            TryRead(style, "--ring-ok", ref colorOk);
+            TryRead(style, "--ring-good", ref colorGood);
+            TryRead(style, "--ring-rich", ref colorRich);
+            TryRead(style, "--ring-track", ref colorTrack);
 
             MarkDirtyRepaint();
         }

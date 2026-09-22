@@ -252,13 +252,13 @@
     reliably where a selector matches the element or an ancestor.
 */
 .hud__res-ring {
-    --resource-ring-critical: var(--resource-ring-critical);
-    --resource-ring-low: var(--resource-ring-low);
-    --resource-ring-warn: var(--resource-ring-warn);
-    --resource-ring-ok: var(--resource-ring-ok);
-    --resource-ring-good: var(--resource-ring-good);
-    --resource-ring-rich: var(--resource-ring-rich);
-    --resource-ring-track: var(--resource-ring-track);
+    --ring-critical: var(--resource-ring-critical);
+    --ring-low: var(--resource-ring-low);
+    --ring-warn: var(--resource-ring-warn);
+    --ring-ok: var(--resource-ring-ok);
+    --ring-good: var(--resource-ring-good);
+    --ring-rich: var(--resource-ring-rich);
+    --ring-track: var(--resource-ring-track);
 }
 
 .hud__res-ring-host--up {
