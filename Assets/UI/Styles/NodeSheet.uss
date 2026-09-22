@@ -35,6 +35,11 @@
 .sheet--claim { height: 306px; }
 .sheet--tall.sheet--claim { height: 364px; }
 
+/* A reading, not a panel: an owned farm, mine or market. The claim strip
+   adds the same 44px here as at the other two sizes. */
+.sheet--compact { height: 224px; }
+.sheet--compact.sheet--claim { height: 268px; }
+
 /* ===================================================================
    Head
    =================================================================== */

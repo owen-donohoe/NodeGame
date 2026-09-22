@@ -59,6 +59,12 @@ namespace NodeWar.UI
         /// <summary>Whether this content wants the taller sheet.</summary>
         public virtual bool Tall { get { return false; } }
 
+        /// <summary>
+        /// Whether this content wants the short sheet: a reading with no
+        /// actions, which should cover as little of the board as it can.
+        /// </summary>
+        public virtual bool Compact { get { return false; } }
+
         protected NodeSheetContent()
         {
             Root = new VisualElement();

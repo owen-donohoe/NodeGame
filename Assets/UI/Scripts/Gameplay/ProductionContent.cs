@@ -37,6 +37,9 @@ namespace NodeWar.UI
 
         protected override int LayoutKey { get { return Balance.maxWorkersPerNode; } }
 
+        // A few lines and at most two dials, and nothing to press.
+        public override bool Compact { get { return true; } }
+
         protected override void OnBind()
         {
             int cap = Balance.maxWorkersPerNode > 0 ? Balance.maxWorkersPerNode : 2;

@@ -201,6 +201,7 @@ namespace NodeWar.UI
             {
                 sheet.AddToClassList("ui-sheet--open");
                 sheet.EnableInClassList("sheet--tall", current.Tall);
+                sheet.EnableInClassList("sheet--compact", current.Compact);
             }
 
             RefreshHeader(controlledPID);
