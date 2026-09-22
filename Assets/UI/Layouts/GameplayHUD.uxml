@@ -130,9 +130,11 @@
                 Resources, pinned to the bottom of the safe area. Each is a
                 dark glass card holding three concentric segmented semicircles
                 - outer 1-10, middle 11-20, inner 21-30, flat side down - with
-                the live count centred inside and the label above. The rings
-                are built in code (ResourceRing/ResourceRingMath); the number
-                is the non-colour channel next to the ring's own colour.
+                the live count centred inside and a LobbyIcon glyph above,
+                tinted the same --hud-ink-mute the text label it replaced
+                used. The rings are built in code (ResourceRing/
+                ResourceRingMath); the number is the non-colour channel next
+                to the ring's own colour.
 
                 margin-bottom clears the recentre dock and the emote stack -
                 including the slot your own bubble pops into - which are
@@ -142,19 +144,19 @@
             -->
             <engine:VisualElement class="hud__resources" picking-mode="Ignore">
                 <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
-                    <engine:Label class="hud__res-label ui-w600" text="FOOD" picking-mode="Ignore" />
+                    <lobby:LobbyIcon kind="Food" class="hud__res-icon" picking-mode="Ignore" />
                     <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
                         <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                     </engine:VisualElement>
                 </engine:VisualElement>
                 <engine:VisualElement name="hud-res-materials" class="hud__res-card" picking-mode="Ignore">
-                    <engine:Label class="hud__res-label ui-w600" text="MAT" picking-mode="Ignore" />
+                    <lobby:LobbyIcon kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
                     <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
                         <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                     </engine:VisualElement>
                 </engine:VisualElement>
                 <engine:VisualElement name="hud-res-metal" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
-                    <engine:Label class="hud__res-label ui-w600" text="METAL" picking-mode="Ignore" />
+                    <lobby:LobbyIcon kind="Metal" class="hud__res-icon" picking-mode="Ignore" />
                     <engine:VisualElement name="hud-ring-metal" class="hud__res-ring-host" picking-mode="Ignore">
                         <engine:Label name="hud-metal" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                     </engine:VisualElement>

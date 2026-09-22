@@ -247,11 +247,14 @@
     margin-right: 0;
 }
 
-.ui-root .hud__res-label {
-    font-size: var(--type-min);
-    letter-spacing: 1px;
-    color: var(--hud-ink-mute);
+/* Same slot and margin the text label it replaced used, same
+   --hud-ink-mute treatment via tint instead of colour. Sized to read clearly
+   above an 84x50 semicircle without dominating the card. */
+.hud__res-icon {
+    width: 18px;
+    height: 18px;
     margin-bottom: 4px;
+    -unity-background-image-tint-color: var(--hud-ink-mute);
 }
 
 /* Height is roughly half of width, not a square: the ring itself is only
