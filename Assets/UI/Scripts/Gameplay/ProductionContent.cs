@@ -107,6 +107,11 @@ namespace NodeWar.UI
             if (shownDistrict != node.districtType)
             {
                 shownDistrict = node.districtType;
+
+                // One content serves every farm, mine and market, so a new
+                // district is a new caption even at the same worker count.
+                shownWorking = -1;
+                shownSlots = int.MinValue;
                 string role = RoleFor(node.districtType);
                 for (int i = 0; i < dialLabels.Length; i++) dialLabels[i].text = role;
             }

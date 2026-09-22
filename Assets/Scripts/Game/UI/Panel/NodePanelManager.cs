@@ -550,7 +550,12 @@ namespace NodeWar.UI
         private void CloseSheetKeepingInspection()
         {
             if (isOpen) Dismiss(HiddenPosition, restingAtHandle: false);
-            if (suppressed && NodeClosed != null) NodeClosed();
+            if (!suppressed) return;
+
+            // The same bookkeeping ClosePanel's suppressed path does, less the
+            // inspection: the sheet is gone, the node is still picked out.
+            currentNodeID = -1;
+            if (NodeClosed != null) NodeClosed();
         }
 
         public void OpenPanel(int nodeID)
