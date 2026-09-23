@@ -40,6 +40,13 @@ directly. This index exists so the set can be traversed as a graph, and so
   art that does not exist, taken at `b72fc6d` and re-checked at `9d08dae`. The sections
   describing `Assets/UI/` before the rebuild were removed on 2026-09-17; what remains is the
   art inventory, and it is live reading for the art-and-feel phase.
+* [art-manifest](art-manifest.md) — what has to be drawn for the world layer: the districts with no
+  art, the villagers and suits that do not exist at all, the render settings fine linework has to
+  survive, and the billboard-sprite/mesh-environment arrangement the board is moving to. Taken at
+  `256d33e`, alongside the Feather 3D style decision.
+* [ui-art-manifest](ui-art-manifest.md) — the screen-layer half of the same list: the 29 `LobbyIcon`
+  glyphs still drawn as placeholder vectors, the empty `Sprite` slots already wired, and what art
+  each UI Toolkit surface is missing. Taken at `256d33e`.
 
 A snapshot carries `status: historical` and a `snapshot_of_commit:` instead of `sources:` and
 `verified_at_commit:`. It is frozen on purpose, so its ground moving is expected rather than
