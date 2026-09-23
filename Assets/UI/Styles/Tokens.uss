@@ -111,6 +111,7 @@
     --pal-cream-a28: rgba(247, 242, 231, 0.28);
     --pal-cream-a40: rgba(247, 242, 231, 0.4);
     --pal-cream-a60: rgba(247, 242, 231, 0.6);
+    --pal-white-a30: rgba(255, 255, 255, 0.3);
     --pal-white-a60: rgba(255, 255, 255, 0.6);
     --pal-night-a60: rgba(18, 17, 10, 0.6);
 
@@ -208,7 +209,9 @@
          ghost is the breach wall's, because a spend and a breach are the same
          gesture - the real value lands at once and white lags behind it. Same
          colour as --hud-ghost and pointed at the palette rather than at it,
-         so the two can part later; C# reads this one. ---- */
+         so the two can part later; C# reads this one. The pending white, what
+         is on its way rather than what just left, is dimmer on purpose:
+         leaving should read heavier than arriving. ---- */
     --resource-ring-critical: var(--pal-ring-critical);
     --resource-ring-low: var(--pal-ring-low);
     --resource-ring-warn: var(--pal-ring-warn);
@@ -216,6 +219,7 @@
     --resource-ring-good: var(--pal-ring-good);
     --resource-ring-rich: var(--pal-ring-rich);
     --resource-ring-ghost: var(--pal-white-a60);
+    --resource-ring-pending: var(--pal-white-a30);
 
     /* ---- monogram tiles ---- */
     --tile-tint-0: var(--pal-tile-0);

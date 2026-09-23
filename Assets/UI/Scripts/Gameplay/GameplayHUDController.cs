@@ -65,6 +65,7 @@ namespace NodeWar.UI
 
         private SimulationState state;
         private GameBalanceData balance;
+        private NodeWar.Core.ITickProvider ticks;
         private DebugPlayerSwitch playerSwitch;
         private SelectionSystem selection;
         private NodePanelManager panelSource;
@@ -113,6 +114,16 @@ namespace NodeWar.UI
         // Reused rather than rebuilt: Refresh runs every frame, and two fresh
         // arrays a frame is litter a phone has to collect.
         private readonly int[] resourceValues = new int[3];
+
+        // The three, in the order the readouts sit in. Spelled out rather than
+        // cast from the loop index: the enum and the array agreeing is a fact
+        // about this list, not something to leave to their declaration order.
+        private static readonly ResourceKind[] ResourceOrder =
+            { ResourceKind.Food, ResourceKind.Materials, ResourceKind.Metal };
+
+        // Refilled per resource per frame. One buffer, because the three are
+        // read one after another and nothing holds on to it.
+        private readonly float[] productionBuffer = new float[ResourceProduction.MaxInFlight];
 
         private void OnEnable()
         {
@@ -224,6 +235,7 @@ namespace NodeWar.UI
         {
             state = simulationState;
             balance = balanceData;
+            ticks = tickProvider;
             playerSwitch = debugSwitch;
             selection = selectionSystem;
             breachThreshold = breachThresholdValue > 0 ? breachThresholdValue : 1;
@@ -550,6 +562,10 @@ namespace NodeWar.UI
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
 
+            // Sub-tick, so the production fill moves at render rate rather than
+            // stepping ten times a second. Same alpha ProductionContent reads.
+            float alpha = ticks != null ? ticks.TickAlpha : 0f;
+
             for (int i = 0; i < resources.Length; i++)
             {
                 if (resources[i] == null) continue;
@@ -557,6 +573,10 @@ namespace NodeWar.UI
                 if (switched) resources[i].Reset();
 
                 resources[i].Render(resourceValues[i]);
+
+                int jobs = ResourceProduction.InFlight(state, balance, pid, ResourceOrder[i],
+                    alpha, productionBuffer);
+                resources[i].SetProduction(productionBuffer, jobs);
             }
         }
 
@@ -1127,6 +1147,12 @@ namespace NodeWar.UI
 
                 if (increased) Pop("hud__res-ring-host--up");
                 else if (decreased) Pop("hud__res-ring-host--down");
+            }
+
+            /// <summary>Passes the resource's in-flight production to the ring.</summary>
+            public void SetProduction(float[] fractions, int count)
+            {
+                if (ring != null) ring.SetProduction(fractions, count);
             }
 
             private void Pop(string ringHostClass)

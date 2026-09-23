@@ -287,6 +287,7 @@
     --ring-good: var(--resource-ring-good);
     --ring-rich: var(--resource-ring-rich);
     --ring-ghost: var(--resource-ring-ghost);
+    --ring-pending: var(--resource-ring-pending);
 }
 
 .hud__res-ring-host--up {

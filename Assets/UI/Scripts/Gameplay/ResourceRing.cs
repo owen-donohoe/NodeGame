@@ -18,13 +18,21 @@ namespace NodeWar.UI
     /// the resource has not reached is not drawn at all, so the ring is the
     /// amount and the sheet behind it is the background.
     ///
-    /// TWO ANIMATIONS, ONE PRIMITIVE. Both are ResourceRingMath.SegmentFraction
-    /// asked per segment, which is what keeps the gaps between segments intact
-    /// - a gain of two sweeps in as two separate sections rather than one
-    /// merged arc.
+    /// THREE THINGS IN ONE ARC. Lit, production, spend ghost - all of them
+    /// ResourceRingMath.SegmentFraction asked per segment, which is what keeps
+    /// the gaps between them intact - a gain of two sweeps in as two separate
+    /// sections rather than one merged arc. See DrawRing for the stacking
+    /// order and why the ghost goes on last.
     ///
     ///   A GAIN sweeps. The arc eases from where it stood up to the new value
     ///   over ResourceRingMath.FillSeconds.
+    ///
+    ///   PRODUCTION shows what is on its way, in a dimmer white, one job per
+    ///   segment above the current value - four food with two farms half done
+    ///   puts both segments five and six at half. It is not animated here at
+    ///   all: ResourceProduction reads the simulation's own timers, so the
+    ///   fill moves at the rate the thing it reports moves at, and a job that
+    ///   stops before landing simply stops being reported.
     ///
     ///   A SPEND lands at once and leaves white behind it. The lit arc snaps
     ///   to the new value - the pop belongs to the host, see
@@ -34,14 +42,16 @@ namespace NodeWar.UI
     ///   wall's ghost, in a curve rather than a USS transition because
     ///   Painter2D cannot be transitioned.
     ///
-    /// Both run off one scheduled tick that pauses the moment nothing is
-    /// moving, so a ring at rest costs a repaint only when its value changes.
+    /// The two animated ones run off one scheduled tick that pauses the moment
+    /// nothing is moving, so a ring at rest costs a repaint only when its value
+    /// changes - production, which changes every frame it exists, repaints
+    /// through SetProduction instead.
     ///
     /// Colours are read from the stylesheet via CustomStyleResolvedEvent, the
     /// same as ProgressDial, so the ring restyles with the theme rather than
     /// hard-coding a palette here. The six-stop read and blend are
     /// ResourceRingColors, shared with NodeSheet's ResourceChip; only the
-    /// ghost colour, which nothing else draws, is read directly here.
+    /// two whites, which nothing else draws, are read directly here.
     /// </summary>
     public class ResourceRing : VisualElement
     {
@@ -65,6 +75,7 @@ namespace NodeWar.UI
         private Color colorGood = Color.gray;
         private Color colorRich = Color.gray;
         private Color colorGhost = new Color(1f, 1f, 1f, 0.6f);
+        private Color colorPending = new Color(1f, 1f, 1f, 0.3f);
 
         /// <summary>The real value. Colour and both animations aim at this.</summary>
         private int currentValue;
@@ -81,6 +92,12 @@ namespace NodeWar.UI
         private float ghostValue;
         private float ghostFrom;
         private float ghostElapsed;
+
+        // Production in flight, nearest to landing first: job i fills the
+        // segment at unit currentValue + i. Written whole by SetProduction,
+        // never animated here - the progress is the simulation's, not a curve.
+        private readonly float[] production = new float[ResourceProduction.MaxInFlight];
+        private int productionCount;
 
         private IVisualElementScheduledItem tick;
         private double lastTickTime;
@@ -112,6 +129,7 @@ namespace NodeWar.UI
             ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
                 ref colorOk, ref colorGood, ref colorRich);
             ResourceRingColors.TryRead(style, "--ring-ghost", ref colorGhost);
+            ResourceRingColors.TryRead(style, "--ring-pending", ref colorPending);
 
             MarkDirtyRepaint();
         }
@@ -170,6 +188,34 @@ namespace NodeWar.UI
             }
 
             StartTicking();
+        }
+
+        /// <summary>
+        /// The player's in-flight production for this resource, nearest to
+        /// landing first - see ResourceProduction. Job 0 fills the segment
+        /// that will light next, job 1 the one after it, and so on.
+        ///
+        /// Nothing is eased here. The fraction is the simulation's own timer
+        /// read through the tick alpha, so the fill moves at exactly the rate
+        /// the thing it reports moves at; inventing a curve on top would make
+        /// it lie about when the resource lands. A job that stops - the
+        /// villager moved, died, or a forge ran out of materials - simply
+        /// stops being reported and its white goes.
+        /// </summary>
+        public void SetProduction(float[] fractions, int count)
+        {
+            if (fractions == null) count = 0;
+            if (count > production.Length) count = production.Length;
+            if (count < 0) count = 0;
+
+            bool changed = count != productionCount;
+            for (int i = 0; i < count && !changed; i++) changed = production[i] != fractions[i];
+            if (!changed) return;
+
+            productionCount = count;
+            for (int i = 0; i < count; i++) production[i] = fractions[i];
+
+            MarkDirtyRepaint();
         }
 
         private void StartTicking()
@@ -274,9 +320,20 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// One ring, segment by segment. Each segment draws its lit head and,
-        /// above it, whatever of the white band falls inside the same segment
-        /// - so the gap between segments is never painted over by either.
+        /// One ring, segment by segment. Each segment draws up to three things
+        /// stacked in the same arc, and asking per segment rather than per ring
+        /// is what keeps the gaps between them unpainted by any of the three.
+        ///
+        ///   THE LIT HEAD, in the resource's colour: what the player has.
+        ///   PRODUCTION, dim white: what is on its way, one job per segment,
+        ///     filling at the rate its timer is actually running at.
+        ///   THE SPEND GHOST, solid white: what just left.
+        ///
+        /// The ghost goes on last, so where a spend covers a segment that is
+        /// also producing, the heavier white wins - and as the ghost closes it
+        /// uncovers the dimmer one underneath rather than hiding it for the
+        /// whole beat. Leaving is louder than arriving, which is the right way
+        /// round.
         /// </summary>
         private void DrawRing(Painter2D painter, Vector2 centre, float radius, int ring, Color litColor)
         {
@@ -287,14 +344,29 @@ namespace NodeWar.UI
             {
                 float lit = ResourceRingMath.SegmentFraction(shownValue, ring, i);
                 float ghost = ResourceRingMath.SegmentFraction(ghostValue, ring, i);
+                float pending = PendingFor(ring, i);
 
-                if (lit <= 0f && ghost <= 0f) continue;
+                if (lit <= 0f && ghost <= 0f && pending <= 0f) continue;
 
                 float start = ResourceRingMath.StartDegrees + i * sweepPerSegment + SegmentGapDegrees * 0.5f;
 
                 if (lit > 0f) StrokeArc(painter, centre, radius, start, drawSweep, 0f, lit, litColor);
+                if (pending > lit) StrokeArc(painter, centre, radius, start, drawSweep, lit, pending, colorPending);
                 if (ghost > lit) StrokeArc(painter, centre, radius, start, drawSweep, lit, ghost, colorGhost);
             }
+        }
+
+        /// <summary>
+        /// The in-flight job sitting on this segment, if there is one. Segments
+        /// are counted in whole units from zero, so the segment at unit
+        /// currentValue holds job 0 - the next one to land - and the queue runs
+        /// upward from there.
+        /// </summary>
+        private float PendingFor(int ring, int segment)
+        {
+            int job = ring * ResourceRingMath.SegmentsPerRing + segment - currentValue;
+            if (job < 0 || job >= productionCount) return 0f;
+            return production[job];
         }
 
         /// <summary>Strokes the from..to fraction of one segment's arc.</summary>

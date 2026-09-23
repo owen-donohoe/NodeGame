@@ -7,20 +7,6 @@ using NodeWar.Lobby;
 namespace NodeWar.UI
 {
     /// <summary>
-    /// Which of the three resources a sheet's content is currently about, for
-    /// the resource chip row NodeSheet draws above itself. A flags enum
-    /// because Market and Equip involve more than one at once.
-    /// </summary>
-    [System.Flags]
-    public enum ResourceKind
-    {
-        None = 0,
-        Food = 1,
-        Materials = 2,
-        Metal = 4
-    }
-
-    /// <summary>
     /// One district's worth of node-sheet content.
     ///
     /// There are four of these and there should stay four. DistrictPanelPolicy.

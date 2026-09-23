@@ -46,9 +46,21 @@
     <Compile Include="ResourceRingMathTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceRingMath.cs"
              Link="Gameplay/ResourceRingMath.cs" />
+
+    <!-- Which production jobs a player has in flight for one resource, read
+         back off the simulation's own timers. Needs the simulation itself,
+         which is UnityEngine-free too, so it comes in as a project reference
+         rather than more linked files. -->
+    <Compile Include="ResourceProductionTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceProduction.cs"
+             Link="Gameplay/ResourceProduction.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceKind.cs"
+             Link="Gameplay/ResourceKind.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+
     <!-- Same NUnit 3.x pin as the other test projects, for the same reason. -->
     <PackageReference Include="NUnit" Version="3.14.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
