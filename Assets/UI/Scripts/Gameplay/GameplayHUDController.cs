@@ -1045,9 +1045,9 @@ namespace NodeWar.UI
 
         /// <summary>
         /// One resource's readout: the number, centred inside a ResourceRing
-        /// hosted on "hud-ring-*". The ring always reads, even at zero -
-        /// unlit segments draw as a faint track - so unlike the bars this
-        /// replaced there is nothing to hide until the resource is earned.
+        /// hosted on "hud-ring-*". The ring draws only what the player has -
+        /// there is no unlit track behind it - so at zero the card is the icon
+        /// and the number alone.
         ///
         /// POP ON CHANGE. An increase scales the ring host (rings and number
         /// together) up and back; a decrease scales it down and tints the
@@ -1105,7 +1105,7 @@ namespace NodeWar.UI
                 shownValue = current;
 
                 if (value != null) value.text = current.ToString();
-                if (ring != null) ring.SetValue(current);
+                if (ring != null) ring.SetValue(current, isFirst);
 
                 if (increased) Pop("hud__res-ring-host--up", null);
                 else if (decreased) Pop("hud__res-ring-host--down", "hud__res-card--down");

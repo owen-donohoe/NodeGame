@@ -204,14 +204,18 @@
     --hud-flash: var(--pal-white);
     --hud-dim: var(--pal-night-a60);
 
-    /* ---- resource rings: colour follows the value, see ResourceRingMath ---- */
+    /* ---- resource rings: colour follows the value, see ResourceRingMath. The
+         ghost is the breach wall's, because a spend and a breach are the same
+         gesture - the real value lands at once and white lags behind it. Same
+         colour as --hud-ghost and pointed at the palette rather than at it,
+         so the two can part later; C# reads this one. ---- */
     --resource-ring-critical: var(--pal-ring-critical);
     --resource-ring-low: var(--pal-ring-low);
     --resource-ring-warn: var(--pal-ring-warn);
     --resource-ring-ok: var(--pal-ring-ok);
     --resource-ring-good: var(--pal-ring-good);
     --resource-ring-rich: var(--pal-ring-rich);
-    --resource-ring-track: var(--pal-cream-a28);
+    --resource-ring-ghost: var(--pal-white-a60);
 
     /* ---- monogram tiles ---- */
     --tile-tint-0: var(--pal-tile-0);

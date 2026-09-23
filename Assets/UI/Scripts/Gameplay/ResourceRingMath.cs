@@ -4,7 +4,9 @@ namespace NodeWar.UI
     /// Pure value -> ring presentation maths for the resource rings: how many
     /// of each ring's 10 segments are lit, and which named colour stop (plus
     /// the blend fraction, in the one range that blends) the current value
-    /// falls in.
+    /// falls in. Then the progress maths both animations are built from:
+    /// how much of one segment a fractional value covers, the spend ghost's
+    /// catch-up curve, and the gain sweep's duration and ease.
     ///
     /// No UnityEngine types, so dotnet/NodeWar.View.Tests can run it directly,
     /// the same reason ViewSide.cs lives where it does. The HSV shade applied
@@ -78,6 +80,90 @@ namespace NodeWar.UI
             if (value <= 10) return 0f;
             if (value >= 19) return 1f;
             return (value - 10) / 9f;
+        }
+
+        /// <summary>
+        /// How much of one segment a value covers: 0 for untouched, 1 for
+        /// whole, a fraction for the one segment the value is partway
+        /// through. Ring r's segment s spans values r*10+s .. r*10+s+1, so
+        /// 4.3 fills the outer ring's segments 0-3 whole and segment 4 by
+        /// 0.3.
+        ///
+        /// This is the ring's whole notion of "progress", and both animations
+        /// are built out of it: the lit arc runs 0 -> SegmentFraction(shown),
+        /// and the white ghost left by a spend runs SegmentFraction(real) ->
+        /// SegmentFraction(ghost). Because it is asked per segment rather
+        /// than per ring, the gaps between segments survive - a gain of two
+        /// sweeps in as two separate sections rather than one merged arc.
+        /// </summary>
+        public static float SegmentFraction(float value, int ring, int segment)
+        {
+            float local = value - ring * SegmentsPerRing - segment;
+            if (local <= 0f) return 0f;
+            if (local >= 1f) return 1f;
+            return local;
+        }
+
+        /// <summary>
+        /// The spend ghost creeps this far into the gap - 6% - over
+        /// <see cref="GhostHoldSeconds"/>, then covers the rest over
+        /// <see cref="GhostCatchSeconds"/>. Not zero, because a ghost frozen
+        /// dead still for six tenths of a second reads as a rendering fault
+        /// rather than a beat.
+        /// </summary>
+        public const float GhostHoldFraction = 0.06f;
+        public const float GhostHoldSeconds = 0.6f;
+        public const float GhostCatchSeconds = 0.55f;
+        public const float GhostTotalSeconds = GhostHoldSeconds + GhostCatchSeconds;
+
+        /// <summary>
+        /// How far the white ghost has closed on the real value, 0 at the
+        /// moment of the spend to 1 once it has caught up. The shape is the
+        /// breach wall's, in a curve rather than a USS transition because
+        /// Painter2D cannot be transitioned: a near-still hold, then fast
+        /// to slow (ease-out cubic) into the real value.
+        /// </summary>
+        public static float GhostFraction(float elapsedSeconds)
+        {
+            if (elapsedSeconds <= 0f) return 0f;
+
+            if (elapsedSeconds < GhostHoldSeconds)
+                return GhostHoldFraction * (elapsedSeconds / GhostHoldSeconds);
+
+            float t = (elapsedSeconds - GhostHoldSeconds) / GhostCatchSeconds;
+            if (t >= 1f) return 1f;
+
+            float inverse = 1f - t;
+            float eased = 1f - inverse * inverse * inverse;
+            return GhostHoldFraction + (1f - GhostHoldFraction) * eased;
+        }
+
+        /// <summary>
+        /// How long a gain sweeps for. Proportional to the units gained so a
+        /// single point is a flick and a run of five reads as five, but
+        /// clamped at both ends: below the floor the sweep is a pop, and
+        /// above the ceiling a windfall of twenty would hold the eye longer
+        /// than the thing it is reporting is worth.
+        /// </summary>
+        public const float FillSecondsPerUnit = 0.11f;
+        public const float FillSecondsMin = 0.16f;
+        public const float FillSecondsMax = 0.45f;
+
+        public static float FillSeconds(float units)
+        {
+            float seconds = units * FillSecondsPerUnit;
+            if (seconds < FillSecondsMin) return FillSecondsMin;
+            if (seconds > FillSecondsMax) return FillSecondsMax;
+            return seconds;
+        }
+
+        /// <summary>Ease-out quad, 0 to 1, for the gain sweep.</summary>
+        public static float FillEase(float t)
+        {
+            if (t <= 0f) return 0f;
+            if (t >= 1f) return 1f;
+            float inverse = 1f - t;
+            return 1f - inverse * inverse;
         }
     }
 }

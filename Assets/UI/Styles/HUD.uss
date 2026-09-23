@@ -283,7 +283,7 @@
     --ring-ok: var(--resource-ring-ok);
     --ring-good: var(--resource-ring-good);
     --ring-rich: var(--resource-ring-rich);
-    --ring-track: var(--resource-ring-track);
+    --ring-ghost: var(--resource-ring-ghost);
 }
 
 .hud__res-ring-host--up {
