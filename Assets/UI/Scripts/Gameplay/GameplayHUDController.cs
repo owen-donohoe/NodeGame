@@ -50,6 +50,7 @@ namespace NodeWar.UI
 
         private UIDocument document;
         private SafeAreaBinder safeArea;
+        private SafeAreaBinder resSheetInset;
         private NodeSheet nodeSheet;
         private MatchSettingsPanel settingsPanel;
         // Match-local mute and cooldown survive a rebuild of the visual tree.
@@ -184,6 +185,7 @@ namespace NodeWar.UI
             indicatorLayer = null;
 
             safeArea = null;
+            resSheetInset = null;
             nodeSheet = null;
             initialized = false;
         }
@@ -252,6 +254,7 @@ namespace NodeWar.UI
         private void Update()
         {
             if (safeArea != null) safeArea.Update();
+            if (resSheetInset != null) resSheetInset.Update();
             if (nodeSheet != null) nodeSheet.UpdateSafeArea();
 
             emotePanel.SetNodeSheetOpen(nodeSheet != null && nodeSheet.IsOpen);
@@ -279,16 +282,26 @@ namespace NodeWar.UI
             hudRoot = root.Q<VisualElement>("hud-root");
 
             VisualElement safeAreaElement = root.Q<VisualElement>("hud-safe-area");
-            if (safeAreaElement != null) safeArea = new SafeAreaBinder(safeAreaElement);
+            // Not Edges.All. The resource sheet is the last thing in this
+            // column and has to reach the true bottom edge, the way the node
+            // sheet does; it takes the bottom inset itself, on a spacer of its
+            // own inside it, so that the sheet reaches past it.
+            if (safeAreaElement != null)
+                safeArea = new SafeAreaBinder(safeAreaElement,
+                    SafeAreaBinder.Edges.Left | SafeAreaBinder.Edges.Right | SafeAreaBinder.Edges.Top);
+
+            VisualElement resSafeBottom = root.Q<VisualElement>("hud-res-safe-bottom");
+            if (resSafeBottom != null)
+                resSheetInset = new SafeAreaBinder(resSafeBottom, SafeAreaBinder.Edges.Bottom);
 
             you = new BreachSide(root, "you");
             them = new BreachSide(root, "them");
             clockLabel = root.Q<Label>("hud-clock");
             flash = root.Q<VisualElement>("hud-flash");
 
-            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"), root.Q<VisualElement>("hud-res-food"));
-            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"), root.Q<VisualElement>("hud-res-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"), root.Q<VisualElement>("hud-res-metal"));
+            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"));
+            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"));
+            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"));
 
             villagerToggle = root.Q<Button>("hud-villager-toggle");
             villagerCard = root.Q<VisualElement>("hud-villagers");
@@ -1044,18 +1057,25 @@ namespace NodeWar.UI
         }
 
         /// <summary>
+        /// <summary>
         /// One resource's readout: the number, centred inside a ResourceRing
         /// hosted on "hud-ring-*". The ring draws only what the player has -
-        /// there is no unlit track behind it - so at zero the card is the icon
-        /// and the number alone.
+        /// there is no unlit track behind it - so at zero the resource is the
+        /// icon and the number alone.
         ///
-        /// POP ON CHANGE. An increase scales the ring host (rings and number
-        /// together) up and back; a decrease scales it down and tints the
-        /// card's border red for the same beat, via a USS class added here
-        /// and removed a moment later by schedule.Execute(...).StartingIn(...)
-        /// - the same idiom BreachSide uses for hud__side--hit. Neither fires
-        /// on the sentinel left by Reset, so a viewer switch and the very
-        /// first render redraw silently.
+        /// POP ON CHANGE, and only the pop. An increase scales the ring host
+        /// (rings and number together) up and back; a decrease scales it down
+        /// and back, so a spend lands with a bounce while the number changes
+        /// instantly. The class is added here and removed a moment later by
+        /// schedule.Execute(...).StartingIn(...) - the same idiom BreachSide
+        /// uses for hud__side--hit. Neither fires on the sentinel left by
+        /// Reset, so a viewer switch and the very first render redraw
+        /// silently, and the ring is told to snap on those too.
+        ///
+        /// A decrease used to also tint the resource card's border red for
+        /// the same beat. The cards lost their borders when the three moved
+        /// onto one sheet, and the ring's own white spend ghost says it
+        /// better anyway - see ResourceRing.
         /// </summary>
         private class ResourceReadout
         {
@@ -1063,17 +1083,15 @@ namespace NodeWar.UI
 
             private readonly Label value;
             private readonly VisualElement ringHost;
-            private readonly VisualElement card;
             private readonly ResourceRing ring;
 
             private int shownValue = int.MinValue;
             private IVisualElementScheduledItem popJob;
 
-            public ResourceReadout(Label valueLabel, VisualElement host, VisualElement cardElement)
+            public ResourceReadout(Label valueLabel, VisualElement host)
             {
                 value = valueLabel;
                 ringHost = host;
-                card = cardElement;
                 if (host == null) return;
 
                 ring = new ResourceRing();
@@ -1107,34 +1125,22 @@ namespace NodeWar.UI
                 if (value != null) value.text = current.ToString();
                 if (ring != null) ring.SetValue(current, isFirst);
 
-                if (increased) Pop("hud__res-ring-host--up", null);
-                else if (decreased) Pop("hud__res-ring-host--down", "hud__res-card--down");
+                if (increased) Pop("hud__res-ring-host--up");
+                else if (decreased) Pop("hud__res-ring-host--down");
             }
 
-            private void Pop(string ringHostClass, string cardClass)
+            private void Pop(string ringHostClass)
             {
                 CancelPop();
+                if (ringHost == null) return;
 
-                if (ringHost != null)
+                ringHost.RemoveFromClassList("hud__res-ring-host--up");
+                ringHost.RemoveFromClassList("hud__res-ring-host--down");
+                ringHost.AddToClassList(ringHostClass);
+
+                popJob = ringHost.schedule.Execute(() =>
                 {
-                    ringHost.RemoveFromClassList("hud__res-ring-host--up");
-                    ringHost.RemoveFromClassList("hud__res-ring-host--down");
-                    ringHost.AddToClassList(ringHostClass);
-                }
-
-                if (card != null)
-                {
-                    card.RemoveFromClassList("hud__res-card--down");
-                    if (cardClass != null) card.AddToClassList(cardClass);
-                }
-
-                VisualElement scheduler = ringHost != null ? ringHost : card;
-                if (scheduler == null) return;
-
-                popJob = scheduler.schedule.Execute(() =>
-                {
-                    if (ringHost != null) ringHost.RemoveFromClassList(ringHostClass);
-                    if (card != null && cardClass != null) card.RemoveFromClassList(cardClass);
+                    ringHost.RemoveFromClassList(ringHostClass);
                     popJob = null;
                 }).StartingIn(PopMilliseconds);
             }
@@ -1145,13 +1151,9 @@ namespace NodeWar.UI
                 popJob.Pause();
                 popJob = null;
 
-                if (ringHost != null)
-                {
-                    ringHost.RemoveFromClassList("hud__res-ring-host--up");
-                    ringHost.RemoveFromClassList("hud__res-ring-host--down");
-                }
-
-                if (card != null) card.RemoveFromClassList("hud__res-card--down");
+                if (ringHost == null) return;
+                ringHost.RemoveFromClassList("hud__res-ring-host--up");
+                ringHost.RemoveFromClassList("hud__res-ring-host--down");
             }
         }
     }

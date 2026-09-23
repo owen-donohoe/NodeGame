@@ -24,6 +24,9 @@ namespace NodeWar.UI
         private bool opponentEmotes = true;
         private bool calm;
 
+        /// <summary>Gap between the emote tab and the options sheet above it.</summary>
+        private const float SheetGap = 8f;
+
         private class Bubble
         {
             public VisualElement element;
@@ -100,16 +103,17 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// The node sheet is up. This layer draws above everything so a bubble
-        /// can clear the end card, which also puts the dock over the sheet's
-        /// bottom-left corner, where it would take taps meant for the sheet. So
-        /// the dock steps aside, and an open emote sheet closes, until it goes.
+        /// The node sheet is up. The tab the emote button lives in moved onto
+        /// the resource sheet, so the node sheet covers it along with the rest
+        /// of that sheet - there is nothing left to step aside. What remains is
+        /// the options sheet, which draws in this layer above everything so a
+        /// bubble can clear the end card, and would otherwise stand over the
+        /// node sheet. It closes instead.
         /// </summary>
         public void SetNodeSheetOpen(bool sheetOpen)
         {
             if (layer == null) return;
             if (sheetOpen && open) Close();
-            layer.EnableInClassList("hud__emotes--sheet", sheetOpen);
         }
 
         public void ApplySettings(GameSettingsData settings)
@@ -126,10 +130,37 @@ namespace NodeWar.UI
             options[index].clicked += () => Send(emote);
         }
 
+        /// <summary>
+        /// Puts the options sheet directly above the emote tab, in this
+        /// layer's coordinates. The tab is a child of the resource sheet and
+        /// so sits inside the safe area; this layer spans the raw panel. On a
+        /// device with a bottom inset those two differ, and a USS constant
+        /// would part the sheet from the tab it is supposed to rise out of.
+        ///
+        /// Same world-to-panel move DraftScreenController.PositionConfirm
+        /// makes, and for the same reason: one element has to follow another
+        /// that no selector can reach.
+        /// </summary>
+        private void PositionSheet()
+        {
+            if (sheet == null || button == null || layer == null) return;
+
+            VisualElement tab = button.parent;
+            if (tab == null) return;
+
+            Rect tabBound = tab.worldBound;
+            Rect layerBound = layer.worldBound;
+            if (float.IsNaN(tabBound.yMin) || layerBound.height <= 0f) return;
+
+            sheet.style.left = tabBound.xMin - layerBound.xMin;
+            sheet.style.bottom = layerBound.yMax - tabBound.yMin + SheetGap;
+        }
+
         private void Toggle()
         {
             if (open) { Close(); return; }
             Opening?.Invoke();
+            PositionSheet();
             open = true;
             sheetJob?.Pause();
             scrim.pickingMode = PickingMode.Position;

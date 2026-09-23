@@ -125,42 +125,71 @@
 
             <!-- Everything below here is board. Nothing may cover it. -->
             <engine:VisualElement class="hud__board-space" picking-mode="Ignore" />
-
             <!--
-                Resources, pinned to the bottom of the safe area. Each is a
-                dark glass card holding three concentric segmented semicircles
-                - outer 1-10, middle 11-20, inner 21-30, flat side down - with
-                the live count centred inside and a LobbyIcon glyph above,
-                tinted the same muted HUD ink the text label it replaced
-                used. The rings are built in code (ResourceRing/
-                ResourceRingMath); the number is the non-colour channel next
-                to the ring's own colour.
+                Resources, on their own sheet along the bottom edge. The node
+                sheet's shape - full bleed, rounded top corners, a hairline
+                top rule - in the HUD's dark glass rather than paper, because
+                this is a readout over the board and not a page, and with no
+                handle, because it does not open or close. It is the last
+                thing in the safe area's flow, so hud__board-space's
+                flex-grow pins it to the bottom; the node sheet slides over
+                it when it opens, which is why that sheet carries resource
+                chips of its own.
 
-                margin-bottom clears the recentre dock and the emote stack -
-                including the slot your own bubble pops into - which are
-                absolute-positioned siblings of hud-safe-area rather than
-                children of it, so they sit under this row rather than inside
-                its flow.
+                Each resource is three concentric segmented semicircles
+                - outer 1-10, middle 11-20, inner 21-30, flat side down -
+                with the live count centred inside and a LobbyIcon glyph
+                above, tinted the same muted HUD ink the text label it
+                replaced used. The rings are built in code (ResourceRing/
+                ResourceRingMath); the number is the non-colour channel next
+                to the ring's own colour. Nothing is drawn behind a ring, so
+                the three no longer carry dark glass cards of their own - the
+                sheet is the background now.
+
+                THE EMOTE BUTTON GROWS OUT OF THE SHEET, a lug in the sheet's
+                own material rather than a free-standing circle. It moved
+                here out of the hud-emotes layer below, which keeps the
+                bubbles, the options sheet and the scrim; EmotePanel finds
+                every one of them by name off the HUD root, so the move costs
+                it nothing. Leaving that layer is also what lets the node
+                sheet cover the tab the way it covers the rest of this sheet,
+                rather than the tab drawing over it.
             -->
-            <engine:VisualElement class="hud__resources" picking-mode="Ignore">
-                <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
-                    <lobby:LobbyIcon kind="Food" class="hud__res-icon" picking-mode="Ignore" />
-                    <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
-                        <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+            <engine:VisualElement name="hud-res-sheet" class="hud__res-sheet" picking-mode="Ignore">
+
+                <engine:VisualElement name="hud-emote-dock" class="hud__emote-tab" picking-mode="Ignore">
+                    <engine:Button name="hud-emote-button" class="ui-reset-button hud__emote-tab-button">
+                        <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                    </engine:Button>
+                </engine:VisualElement>
+
+                <engine:VisualElement class="hud__res-row" picking-mode="Ignore">
+                    <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
+                        <lobby:LobbyIcon kind="Food" class="hud__res-icon" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
+                            <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                    </engine:VisualElement>
+                    <engine:VisualElement name="hud-res-materials" class="hud__res-card" picking-mode="Ignore">
+                        <lobby:LobbyIcon kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
+                            <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                    </engine:VisualElement>
+                    <engine:VisualElement name="hud-res-metal" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
+                        <lobby:LobbyIcon kind="Metal" class="hud__res-icon" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-ring-metal" class="hud__res-ring-host" picking-mode="Ignore">
+                            <engine:Label name="hud-metal" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+                        </engine:VisualElement>
                     </engine:VisualElement>
                 </engine:VisualElement>
-                <engine:VisualElement name="hud-res-materials" class="hud__res-card" picking-mode="Ignore">
-                    <lobby:LobbyIcon kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
-                    <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
-                        <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                </engine:VisualElement>
-                <engine:VisualElement name="hud-res-metal" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
-                    <lobby:LobbyIcon kind="Metal" class="hud__res-icon" picking-mode="Ignore" />
-                    <engine:VisualElement name="hud-ring-metal" class="hud__res-ring-host" picking-mode="Ignore">
-                        <engine:Label name="hud-metal" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                </engine:VisualElement>
+
+                <!-- SafeAreaBinder writes the bottom inset here, the way the
+                     node sheet does: the sheet itself runs to the true screen
+                     edge, and this spacer keeps its contents off a home
+                     indicator. That is why hud-safe-area no longer takes the
+                     bottom edge - see GameplayHUDController.Bind. -->
+                <engine:VisualElement name="hud-res-safe-bottom" class="hud__res-safe-bottom" picking-mode="Ignore" />
             </engine:VisualElement>
 
         </engine:VisualElement>
@@ -346,11 +375,6 @@
                   <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
                   <engine:Label name="hud-emote-mute-label" class="hud__emote-mute-label ui-w500" text="Mute this match" picking-mode="Ignore" />
               </engine:Button>
-            </engine:VisualElement>
-            <engine:VisualElement name="hud-emote-dock" class="hud__emote-dock" picking-mode="Ignore">
-                <engine:Button name="hud-emote-button" class="ui-reset-button hud__gear">
-                    <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
-                </engine:Button>
             </engine:VisualElement>
         </engine:VisualElement>
 

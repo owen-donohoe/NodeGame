@@ -13,9 +13,10 @@
 
     2. THE BOTTOM OF THE SCREEN IS LEFT TO THE BOARD. .hud__board-space takes
        all the slack, so the breach walls stay pinned to the top and the
-       resources - the one readout below the board space - stay pinned to the
-       bottom rather than floating mid-board. The node sheet is the only
-       element allowed to reach the very bottom edge.
+       resource sheet - the one readout below the board space - stays pinned
+       to the bottom rather than floating mid-board. That sheet and the node
+       sheet are the only two elements allowed to reach the very bottom edge,
+       and each takes the bottom safe inset on a spacer of its own inside it.
 
     No text is set below --type-min.
 */
@@ -24,7 +25,10 @@
     background-color: var(--clear);
 }
 
-/* SafeAreaBinder writes the padding here; nothing else should. */
+/* SafeAreaBinder writes the left, right and top padding here, and nothing
+   else should. The bottom is not this element's: the resource sheet runs
+   past it to the screen edge and insets itself. See
+   GameplayHUDController.Bind. */
 .hud__safe {
     flex-grow: 1;
     flex-direction: column;
@@ -190,32 +194,48 @@
 /* ===================================================================
    Resources
 
-   Each card is a rounded dark-glass rectangle holding three concentric
-   segmented rings (ResourceRing, drawn in code) with the live count
-   centred inside and the label above. Ring colour follows the value -
-   see ResourceRingMath - so the card itself and the label stay neutral.
+   Their own sheet along the bottom edge: the node sheet's shape - full
+   bleed, rounded top corners, a hairline top rule - in the HUD's dark
+   glass rather than paper, because this is a readout over the board and
+   not a page, and with no handle because it never opens or closes.
+   hud__board-space's flex-grow pins it there as the last thing in the
+   safe area's flow, and the node sheet slides over it, which is why that
+   sheet carries resource chips of its own.
+
+   The three resources sit flat on it. They used to be dark glass cards
+   in their own right, which is one surface too many now that the sheet
+   is a surface and the rings draw no track behind themselves.
 
    POP ON CHANGE. hud__res-ring-host--up/--down are added by code and
    removed a beat later via schedule.Execute(...).StartingIn(...), the
    same idiom as .hud__side--hit: an increase scales the rings and number
-   up and back, a decrease scales them down and tints the card's border
-   red for the same beat. Neither fires on a viewer switch or the first
-   render.
+   up and back, a decrease scales them down and back. Neither fires on a
+   viewer switch or the first render. A decrease used to also tint the
+   card's border red; the ring's own white spend ghost says it better,
+   and there is no card border left to tint.
    =================================================================== */
 
-/*
-    margin-bottom clears the recentre dock and the whole emote stack -
-    the dock button and the slot your own bubble pops into above it, which
-    reaches highest at 122px (bottom:76 + 46 tall). Both are absolute-
-    positioned siblings of hud-safe-area rather than children of it, so this
-    row does not push past them on its own; the margin has to do it.
-*/
-.hud__resources {
+.hud__res-sheet {
+    flex-shrink: 0;
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    background-color: var(--hud-glass);
+    border-top-width: var(--stroke-thin);
+    border-top-color: var(--hud-edge);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+}
+
+/* The three, side by side. Their own row rather than the sheet itself,
+   because the sheet is a column: the row, then the bottom inset below it. */
+.hud__res-row {
     flex-direction: row;
-    margin-top: var(--space-3);
-    margin-bottom: 130px;
-    margin-left: var(--space-3);
-    margin-right: var(--space-3);
+}
+
+/* SafeAreaBinder writes the bottom inset here. */
+.hud__res-safe-bottom {
     flex-shrink: 0;
 }
 
@@ -224,23 +244,6 @@
     flex-basis: 0;
     margin-right: 11px;
     align-items: center;
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-2);
-    border-top-left-radius: var(--corner-sm);
-    border-top-right-radius: var(--corner-sm);
-    border-bottom-left-radius: var(--corner-sm);
-    border-bottom-right-radius: var(--corner-sm);
-    background-color: var(--hud-glass);
-    border-left-width: var(--stroke-thin);
-    border-right-width: var(--stroke-thin);
-    border-top-width: var(--stroke-thin);
-    border-bottom-width: var(--stroke-thin);
-    border-left-color: var(--hud-edge);
-    border-right-color: var(--hud-edge);
-    border-top-color: var(--hud-edge);
-    border-bottom-color: var(--hud-edge);
-    transition-property: border-left-color, border-right-color, border-top-color, border-bottom-color;
-    transition-duration: 150ms;
 }
 
 .hud__res-card--last {
@@ -305,12 +308,47 @@
     -unity-text-align: middle-center;
 }
 
-/* The decrease pop's card-border tint. */
-.hud__res-card--down {
-    border-left-color: var(--badge);
-    border-right-color: var(--badge);
-    border-top-color: var(--badge);
-    border-bottom-color: var(--badge);
+/* ===================================================================
+   The emote tab
+
+   Not a stand-alone button any more: a lug in the resource sheet's own
+   material, growing out of its top-left edge. bottom:100% puts it
+   directly above the sheet; the -2px - one --stroke-thin - pulls it back
+   down over the sheet's hairline top border, so along the tab's width
+   there is no rule between them and the two read as one shape.
+
+   It carries no bottom border for the same reason, and the button inside
+   is flat: the tab is the shape, so the button must not bring a second.
+   =================================================================== */
+
+.hud__emote-tab {
+    position: absolute;
+    left: var(--space-4);
+    bottom: 100%;
+    margin-bottom: -2px;
+    background-color: var(--hud-glass);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: 0;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+}
+
+.hud__emote-tab-button {
+    width: 58px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--clear);
+    color: var(--hud-ink);
+}
+
+.hud__emote-tab-button:active {
+    scale: 0.94 0.94;
 }
 
 /* ===================================================================
@@ -483,15 +521,16 @@
    once you have moved is missing exactly when you want to zoom out to
    look around at the start of a match.
 
-   The dock ignores picking; only the button itself takes a touch. Now that
-   the burger has moved to the top, this is the only control in the
-   bottom-right corner - the resources row's margin-bottom keeps clear of it.
+   The dock ignores picking; only the button itself takes a touch. It sits
+   a little over a third of the way up the right edge rather than in the
+   bottom-right corner: the resource sheet owns the bottom now, and thumb
+   height on the right is where the hand already is.
    =================================================================== */
 
 .hud__recentre-dock {
     position: absolute;
     right: 12px;
-    bottom: 12px;
+    bottom: 38%;
     align-items: center;
 }
 
@@ -1102,25 +1141,15 @@
     bottom: 0;
 }
 
-.hud__emote-dock {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
-    align-items: center;
-}
-
-/* Out of the node sheet's way while it is open; see EmotePanel.SetNodeSheetOpen. */
-.hud__emotes--sheet .hud__emote-dock {
-    display: none;
-}
-
-/* Its own bottom-left corner: unlike hud__settings-main, this sheet still
-   rises from beside the emote dock it belongs to, so bottom is stated here
-   rather than inherited from the now-positionless hud__settings base. */
+/* Rises from the emote tab on the resource sheet. Its left and bottom are
+   written by EmotePanel.PositionSheet from the tab's resolved layout rather
+   than set here: the tab lives inside the safe area and this layer does not,
+   so a device with a bottom inset would part the two if USS guessed. The
+   values below are the desktop answer, and stand until the first open. */
 .hud__emote-sheet {
-    left: 12px;
+    left: var(--space-4);
     right: auto;
-    bottom: 70px;
+    bottom: 154px;
     width: 228px;
     flex-direction: column;
     padding-left: 8px;
