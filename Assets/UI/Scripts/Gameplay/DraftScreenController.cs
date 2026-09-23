@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UIElements;
 using DG.Tweening;
 using NodeWar.Simulation;
@@ -34,16 +35,19 @@ namespace NodeWar.UI
     /// Those are DraftManager's, and this class only ever asks it two things:
     /// is it my turn, and please confirm this placement.
     ///
-    /// ================= THE TWO INPUT ROUTES =================
+    /// ================= THE THREE INPUT ROUTES =================
     ///
-    /// TAP a card to arm it, then tap a cell. DRAG a card onto a cell. Both end
-    /// in the same parked state, which is why there is one `handSlot` and not a
-    /// mode flag - a piece dragged out can then be moved by tapping a different
-    /// cell, and neither route has a step the other lacks.
+    /// TAP a card to arm it, then tap a cell. TAP a card, then press the board
+    /// and move - the piece comes out under the finger already dragged. DRAG a
+    /// card onto a cell. All three end in the same parked state, which is why
+    /// there is one `handSlot` and not a mode flag - a piece dragged out can
+    /// then be moved by tapping a different cell, and no route has a step
+    /// another lacks.
     ///
-    /// A press on a card resolves late. Under the slop it was a tap; past it, a
-    /// drag. Nothing visible happens until it is decided, because a card that
-    /// armed itself on touch-down would flicker under every drag.
+    /// A press resolves late, on a card and on the board alike. Under the slop
+    /// it was a tap; past it, a drag. Nothing visible happens until it is
+    /// decided, because a card that armed itself on touch-down would flicker
+    /// under every drag, and a board press that did would fight the camera.
     ///
     /// ================= WHY POINTER AND NOT MOUSE =================
     ///
@@ -631,8 +635,19 @@ namespace NodeWar.UI
 
         /// <summary>
         /// A press on the board, read raw because the board is not a UI Toolkit
-        /// element. Two things can come of it: picking a parked piece back up,
-        /// or dropping the piece in hand onto a free cell.
+        /// element. Three things can come of it: picking a parked piece back
+        /// up, dropping the piece in hand onto a free cell, or - if the press
+        /// travels with a piece in hand - becoming a drag of that piece.
+        ///
+        /// THE PRESS IS THE PLACEMENT, AND ALSO THE DRAG. Tap a card, then tap
+        /// the board and the piece is there at once. Tap a card, then press the
+        /// board and move, and the piece comes out under the finger already
+        /// dragged, as if it had been pulled off its card. Neither is a mode:
+        /// both end in the same parked state, and the finger decides which by
+        /// whether it travels. This is what a travelled press used to be
+        /// thrown away for, and it could be, because the draft locks one-finger
+        /// pan (see CameraController.isDraftMode) - pinch is the only camera
+        /// gesture the phase has, and a pinch is two fingers, not one.
         ///
         /// A press that lands on the bar or on Confirm is not a board press at
         /// all. panel.Pick skips every element whose picking-mode is Ignore, and
@@ -667,17 +682,18 @@ namespace NodeWar.UI
 
             if (!boardPressActive) return;
 
+            Vector2 screen = pointer.position.ReadValue();
+
+            // The release is settled first, so a flick that travels and lifts
+            // inside one frame cannot start a drag that nothing is left to end.
             if (pointer.press.wasReleasedThisFrame)
             {
                 boardPressActive = false;
 
                 if (boardPressOverUI) return;
 
-                Vector2 screen = pointer.position.ReadValue();
-
-                // A press that travelled was a camera gesture, not a tap. The
-                // draft leaves pinch-zoom live, and a zoom that also placed a
-                // piece would be unusable.
+                // Travelled and released without ever being converted below:
+                // a pinch, or a press with an empty hand. Not a tap either way.
                 if (Vector2.Distance(screen, boardPressScreen) > DragSlop) return;
 
                 if (handSlot < 0) return;
@@ -685,7 +701,90 @@ namespace NodeWar.UI
                 if (!draftState.IsCellAvailable(gx, gz)) return;
 
                 ParkAt(gx, gz);
+                return;
             }
+
+            // Still down, and past the slop. With a piece in hand that is a
+            // drag; with an empty hand it is nothing, which is what leaves a
+            // pinch alone.
+            if (boardPressOverUI) return;
+            if (handSlot < 0) return;
+            if (Vector2.Distance(screen, boardPressScreen) <= DragSlop) return;
+
+            boardPressActive = false;
+
+            if (IsPinching()) return;
+
+            BeginBoardDrag();
+        }
+
+        /// <summary>
+        /// The piece in hand comes out onto the board mid-press, already
+        /// dragged. Everything a drag off a card does the moment it passes the
+        /// slop - drop whatever was parked, put the ghost under the finger -
+        /// except that the card is not lifted out of the bar, because the piece
+        /// never came from there this time.
+        /// </summary>
+        private void BeginBoardDrag()
+        {
+            // The piece is in the air again and the old cell is no longer an
+            // answer, the same reason UpdateDrag drops it when a card drag
+            // passes the slop.
+            parked = false;
+            HideConfirm();
+
+            BeginDrag(handSlot, handDistrict, FindCard(handSlot), -1, true);
+
+            // Already past the slop - that is what got us here - so the piece
+            // comes out dragged rather than waiting to be decided again.
+            dragMoved = true;
+        }
+
+        /// <summary>
+        /// A second finger is down, so this is a pinch. Pinch-zoom is the only
+        /// camera control the draft has, and it outranks a placement that has
+        /// not landed: the drag ends and the piece falls back to merely armed,
+        /// where a tap can still place it.
+        /// </summary>
+        private static bool IsPinching()
+        {
+            Touchscreen touchscreen = Touchscreen.current;
+            if (touchscreen == null) return false;
+
+            int down = 0;
+            foreach (TouchControl touch in touchscreen.touches)
+            {
+                if (!touch.press.isPressed) continue;
+                if (++down > 1) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Ends a board drag without placing anything and leaves the piece
+        /// armed. Used when a pinch arrives part-way through one - the first
+        /// finger may well have travelled before the second landed.
+        /// </summary>
+        private void AbandonBoardDrag()
+        {
+            int slot = dragSlot;
+            DistrictType district = dragDistrict;
+
+            ReleaseDragCapture();
+
+            dragging = false;
+            dragMoved = false;
+            dragFromBoard = false;
+            dragSlot = -1;
+            dragCard = null;
+            boardPressActive = false;
+
+            HideProxy();
+
+            // ArmSlot destroys the ghost and clears the parked cell itself.
+            if (slot >= 0) ArmSlot(slot, district);
+            else ClearHand();
         }
 
         // ===== THE DRAG =====
@@ -696,6 +795,11 @@ namespace NodeWar.UI
             if (pointer == null) { EndDrag(false); return; }
 
             Vector2 screen = pointer.position.ReadValue();
+
+            // A pinch arriving part-way through a board drag takes the finger
+            // back: the first one may well have travelled before the second
+            // landed. See AbandonBoardDrag.
+            if (dragFromBoard && IsPinching()) { AbandonBoardDrag(); return; }
 
             if (!dragMoved)
             {
