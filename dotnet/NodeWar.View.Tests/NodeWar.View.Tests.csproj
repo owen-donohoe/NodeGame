@@ -56,6 +56,12 @@
              Link="Gameplay/ResourceProduction.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceKind.cs"
              Link="Gameplay/ResourceKind.cs" />
+
+    <!-- The card-to-board cross-fade's two opacity curves. The drag that
+         reads them needs a Camera and a panel and stays in Unity. -->
+    <Compile Include="DraftHandoverTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/DraftHandover.cs"
+             Link="Gameplay/DraftHandover.cs" />
   </ItemGroup>
 
   <ItemGroup>

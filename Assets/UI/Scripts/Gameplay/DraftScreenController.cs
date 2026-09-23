@@ -44,10 +44,17 @@ namespace NodeWar.UI
     /// then be moved by tapping a different cell, and no route has a step
     /// another lacks.
     ///
-    /// A press resolves late, on a card and on the board alike. Under the slop
-    /// it was a tap; past it, a drag. Nothing visible happens until it is
-    /// decided, because a card that armed itself on touch-down would flicker
-    /// under every drag, and a board press that did would fight the camera.
+    /// A CARD PRESS RESOLVES LATE. Under the slop it was a tap; past it, a
+    /// drag. Nothing visible happens until it is decided, because a card that
+    /// armed itself on touch-down would flicker under every drag.
+    ///
+    /// A BOARD PRESS RESOLVES AT ONCE. With a piece in hand the cell takes it
+    /// the instant the finger lands, and travelling afterwards lifts it off
+    /// again into a drag. The card cannot afford that and the board can,
+    /// because every part of a landed placement is reversible - move it, pick
+    /// it up, cancel it - so landing early costs nothing and waiting for the
+    /// lift is a delay you can feel. Confirm is the one thing held back until
+    /// the press resolves, or a press that became a drag would flash it.
     ///
     /// ================= WHY POINTER AND NOT MOUSE =================
     ///
@@ -216,6 +223,12 @@ namespace NodeWar.UI
         private DraftPlacementPreview ghostPreview;
         private int ghostX = -1;
         private int ghostZ = -1;
+
+        // How solid the ghost draws, 0 to 1. Its half of the card-to-board
+        // cross-fade - see DraftHandover - multiplied into the tint rather
+        // than replacing it, so a blocked cell still reads as blocked while
+        // it fades. 1 whenever nothing is being dragged.
+        private float ghostFade = 1f;
         private bool ghostOnValidCell;
 
         // A board press that has begun but not yet resolved into a tap.
@@ -675,6 +688,22 @@ namespace NodeWar.UI
                     HideConfirm();
                     BeginDrag(handSlot, handDistrict, FindCard(handSlot), -1, true);
                     boardPressActive = false;
+                    return;
+                }
+
+                // The piece lands on touch-down, not on release. A tap that
+                // waits for the finger to lift is a tap you can feel waiting,
+                // and the placement is reversible in every direction anyway -
+                // move it, pick it up, cancel it.
+                //
+                // Confirm is held back until the press resolves, though. A
+                // press that turns into a drag would otherwise flash the
+                // Confirm pair for the frame between landing and lifting off.
+                if (!boardPressOverUI && handSlot >= 0 &&
+                    ScreenToCell(boardPressScreen, out int pressX, out int pressZ) &&
+                    draftState.IsCellAvailable(pressX, pressZ))
+                {
+                    ParkAt(pressX, pressZ, false);
                 }
 
                 return;
@@ -826,17 +855,23 @@ namespace NodeWar.UI
                 }
             }
 
-            bool overBar = IsOverBar(screen);
+            // D5, since revised: the proxy and the ghost used to swap at the
+            // bar's edge, never both at once, which made the piece look like it
+            // teleported between two drawings of itself at a line nobody can
+            // see. They cross-fade over a band now, and the proxy gives up its
+            // weight more slowly than the ghost takes it on, so the board has
+            // the piece before the card lets go. See DraftHandover.
+            float aboveBar = DistanceAboveBar(screen);
 
             if (!dragFromBoard)
             {
                 MoveProxy(screen);
-                // D5: the proxy is the piece while it is in the bar, the ghost
-                // is the piece once it is over the board. Never both.
-                proxy.EnableInClassList("draft__proxy--faded", !overBar);
+                proxy.style.opacity = DraftHandover.ProxyOpacity(aboveBar);
             }
 
-            if (overBar)
+            ghostFade = DraftHandover.GhostOpacity(aboveBar);
+
+            if (aboveBar <= 0f)
             {
                 DestroyGhost();
             }
@@ -994,7 +1029,7 @@ namespace NodeWar.UI
         /// D6. The one place a placement becomes pending, whichever route put
         /// it there - so a drag and a tap cannot drift apart.
         /// </summary>
-        private void ParkAt(int gridX, int gridZ)
+        private void ParkAt(int gridX, int gridZ, bool confirm = true)
         {
             if (draftState == null || !draftState.IsCellAvailable(gridX, gridZ)) return;
 
@@ -1002,13 +1037,17 @@ namespace NodeWar.UI
             parkedX = gridX;
             parkedZ = gridZ;
 
+            // A parked piece is never mid-handover, so it draws solid whatever
+            // a drag left behind.
+            ghostFade = 1f;
+
             EnsureGhost();
             PlaceGhostOnCell(gridX, gridZ, true);
 
             // Stays armed: the piece is still in hand, so tapping a different
             // cell moves it rather than starting over.
             SetArmedCard(handSlot);
-            ShowConfirm();
+            if (confirm) ShowConfirm();
         }
 
         // ===== CONFIRM =====
@@ -1127,14 +1166,14 @@ namespace NodeWar.UI
             }
 
             proxy.AddToClassList("draft__proxy--on");
-            proxy.RemoveFromClassList("draft__proxy--faded");
+            proxy.style.opacity = 1f;
         }
 
         private void HideProxy()
         {
             if (proxy == null) return;
             proxy.RemoveFromClassList("draft__proxy--on");
-            proxy.RemoveFromClassList("draft__proxy--faded");
+            proxy.style.opacity = 1f;
         }
 
         private void MoveProxy(Vector2 screenPos)
@@ -1175,10 +1214,17 @@ namespace NodeWar.UI
         // already has, so the ghost never became see-through at all.
         private Color GhostTint(bool valid)
         {
-            if (!valid) return blockedCellTint;
+            Color tint = blockedCellTint;
 
-            Color tint = NodeWar.View.PlayerColors.For(localPlayerID);
-            tint.a = ghostAlpha;
+            if (valid)
+            {
+                tint = NodeWar.View.PlayerColors.For(localPlayerID);
+                tint.a = ghostAlpha;
+            }
+
+            // The cross-fade scales whatever alpha the state already chose, so
+            // a blocked cell still reads as blocked while it fades in.
+            tint.a *= ghostFade;
             return tint;
         }
 
@@ -1333,19 +1379,29 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// The bar's own rectangle, asked directly rather than through Pick.
+        /// The bar's own geometry, asked directly rather than through Pick.
         /// During a drag the card has the pointer captured, so Pick would still
-        /// answer for the card wherever the finger went - and "is the finger
-        /// back over the tray" is a question about geometry, not about capture.
+        /// answer for the card wherever the finger went - and where the finger
+        /// is relative to the tray is a question about geometry, not capture.
+        ///
+        /// How far above the card bar's top edge the finger is, in panel units:
+        /// zero at the edge, positive over the board. This is the axis the
+        /// card-to-board cross-fade runs along, and it replaces the old "is the
+        /// finger inside the bar's rect" question - a handover needs a distance,
+        /// not a side of a line.
+        ///
+        /// No bar, or one that has not laid out yet, means the whole surface is
+        /// board.
         /// </summary>
-        private bool IsOverBar(Vector2 screenPos)
+        private float DistanceAboveBar(Vector2 screenPos)
         {
-            if (bar == null) return false;
+            if (bar == null) return float.MaxValue;
 
             Rect rect = bar.worldBound;
-            if (float.IsNaN(rect.width) || rect.width <= 0f) return false;
+            if (float.IsNaN(rect.yMin) || rect.width <= 0f) return float.MaxValue;
 
-            return rect.Contains(ScreenToPanel(screenPos));
+            // Panel y runs down, so a finger above the bar has the smaller y.
+            return rect.yMin - ScreenToPanel(screenPos).y;
         }
 
         private bool ScreenToWorldOnGround(Vector2 screenPos, out Vector3 world)
