@@ -78,9 +78,10 @@ Read the file. Do not ask me to summarise it here.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 352 cases: 118 over `Simulation/`, 157
-  over the lobby (including the wire formats), and 77 over the UnityEngine-free
-  view maths (camera POV, indicator placement, route reveal, emote rate limit).
+- `dotnet test dotnet/NodeWar.sln` — 464 cases: 118 over `Simulation/`, 157
+  over the lobby (including the wire formats), and 189 over the UnityEngine-free
+  view maths (camera POV, indicator placement, route reveal, emote rate limit,
+  resource rings, production readout, draft handover).
   A lobby or view-maths change has real tests; run them rather than settling
   for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.
 - `scripts/compile-check.ps1` — type-checks everything else (HUD, network,
