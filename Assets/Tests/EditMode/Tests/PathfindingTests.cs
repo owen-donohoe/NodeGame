@@ -189,58 +189,5 @@ namespace NodeWar.Tests
             Assert.AreEqual(Pathfinding.NodeOwnership.Unowned, Pathfinding.GetOwnershipStatus(node, 0));
             Assert.AreEqual(Pathfinding.NodeOwnership.Unowned, Pathfinding.GetOwnershipStatus(node, 1));
         }
-
-        // ===== THE MULTIPLIERS ARE OUTSIDE THE STATE (ISSUE #20) =====
-
-        // DELETE THIS TEST IN THE COMMIT THAT MERGES #20. The fix on
-        // fix/pathfinding-multipliers-in-state removes the five public statics
-        // from Pathfinding entirely, so this does not fail there -- it stops
-        // compiling. It is here to document what main does today and to be
-        // removed by the change that makes it false.
-
-        [Test]
-        public void FindPath_TheRouteDependsOnMutableStaticsThatAreNotPartOfTheState()
-        {
-            GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = TestBoardFactory.BuildSquareBoard(balance);
-
-            // Node 1 is unowned but leaning the enemy's way, so at the default
-            // 150% it costs 2 against node 2's 1 and the route goes round.
-            state.nodes[1].claimBar = -100;
-
-            int stateHash = SimulationStateHasher.ComputeHash(state);
-            int original = Pathfinding.EnemyPartiallyOwnedMultiplier;
-
-            try
-            {
-                int[] withDefaults = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
-                Assert.AreEqual(new int[] { 0, 2, 3 }, withDefaults);
-
-                Pathfinding.EnemyPartiallyOwnedMultiplier = 100;
-
-                int[] withTweak = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
-
-                // Same state, same hash, different route. This is issue #20 in
-                // one assertion: Pathfinding's five multipliers are mutable
-                // public statics, they are simulation inputs, and
-                // SimulationStateHasher cannot see them. Two peers that
-                // disagree about them route villagers differently from the
-                // first move order.
-                //
-                // The divergence is not silent forever -- movePath contents are
-                // hashed, so the next desync check catches it -- but nothing
-                // prevents it, and what it reports is "the simulations
-                // diverged", not "your configuration differs".
-                Assert.AreEqual(new int[] { 0, 1, 3 }, withTweak);
-                Assert.AreEqual(stateHash, SimulationStateHasher.ComputeHash(state));
-            }
-            finally
-            {
-                // Restored by hand, because the statics outlive the test. That
-                // this is necessary at all is the same finding from the other
-                // side: shared mutable simulation input with no owner.
-                Pathfinding.EnemyPartiallyOwnedMultiplier = original;
-            }
-        }
     }
 }

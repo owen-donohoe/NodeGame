@@ -4,13 +4,6 @@ namespace NodeWar.Simulation
 {
     public static class Pathfinding
     {
-        // Integer percentages: 50 = 0.5x, 75 = 0.75x, 100 = 1.0x, 150 = 1.5x, 200 = 2.0x
-        public static int OwnedMultiplier = 50;
-        public static int PartiallyOwnedMultiplier = 75;
-        public static int UnownedMultiplier = 100;
-        public static int EnemyPartiallyOwnedMultiplier = 150;
-        public static int EnemyOwnedMultiplier = 200;
-
         /// <summary>
         /// Dijkstra's algorithm from startNode to endNode using edge weights.
         /// Returns array of node IDs representing the path (inclusive of start and end).
@@ -117,11 +110,11 @@ namespace NodeWar.Simulation
         {
             switch (GetOwnershipStatus(state.nodes[nodeID], askingPlayerID))
             {
-                case NodeOwnership.Owned: return OwnedMultiplier;
-                case NodeOwnership.PartiallyOwned: return PartiallyOwnedMultiplier;
-                case NodeOwnership.EnemyPartiallyOwned: return EnemyPartiallyOwnedMultiplier;
-                case NodeOwnership.EnemyOwned: return EnemyOwnedMultiplier;
-                default: return UnownedMultiplier;
+                case NodeOwnership.Owned: return state.ownedMultiplier;
+                case NodeOwnership.PartiallyOwned: return state.partiallyOwnedMultiplier;
+                case NodeOwnership.EnemyPartiallyOwned: return state.enemyPartiallyOwnedMultiplier;
+                case NodeOwnership.EnemyOwned: return state.enemyOwnedMultiplier;
+                default: return state.unownedMultiplier;
             }
         }
     }

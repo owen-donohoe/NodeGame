@@ -155,11 +155,11 @@ namespace NodeWar.Core
             CommandProcessor.SetBalance(balance.Data);
             state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
 
-            Pathfinding.OwnedMultiplier = boardConfig.Data.ownedMultiplier;
-            Pathfinding.PartiallyOwnedMultiplier = boardConfig.Data.partiallyOwnedMultiplier;
-            Pathfinding.UnownedMultiplier = boardConfig.Data.unownedMultiplier;
-            Pathfinding.EnemyPartiallyOwnedMultiplier = boardConfig.Data.enemyPartiallyOwnedMultiplier;
-            Pathfinding.EnemyOwnedMultiplier = boardConfig.Data.enemyOwnedMultiplier;
+            state.ownedMultiplier = boardConfig.Data.ownedMultiplier;
+            state.partiallyOwnedMultiplier = boardConfig.Data.partiallyOwnedMultiplier;
+            state.unownedMultiplier = boardConfig.Data.unownedMultiplier;
+            state.enemyPartiallyOwnedMultiplier = boardConfig.Data.enemyPartiallyOwnedMultiplier;
+            state.enemyOwnedMultiplier = boardConfig.Data.enemyOwnedMultiplier;
 
             inputBuffer = new InputBuffer();
 

@@ -23,6 +23,11 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + (state.gameOver ? 1 : 0);
                 hash = hash * 31 + state.winnerID;
                 hash = hash * 31 + state.defaultEdgeWeight;
+                hash = hash * 31 + state.ownedMultiplier;
+                hash = hash * 31 + state.partiallyOwnedMultiplier;
+                hash = hash * 31 + state.unownedMultiplier;
+                hash = hash * 31 + state.enemyPartiallyOwnedMultiplier;
+                hash = hash * 31 + state.enemyOwnedMultiplier;
 
                 // Players
                 for (int i = 0; i < state.players.Length; i++)

@@ -58,8 +58,14 @@ each, edge weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `17457352` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `626950565` |
+| `EmptyTick` | 100 | none | `170778799` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `-294115188` |
+
+Issue #20 adds the five per-match pathfinding multipliers to the hash, in the order
+owned, partially owned, unowned, enemy partially owned, enemy owned, immediately after
+`defaultEdgeWeight`. Their defaults are `50`, `75`, `100`, `150`, `200`. This changes
+the fingerprints without changing gameplay: applying the previous hasher to the resulting
+states still produces the previous baselines, `17457352` and `626950565`, respectively.
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
