@@ -83,6 +83,15 @@
         </engine:VisualElement>
 
         <!--
+            Shown only while a networked draft waits for the opponent to finish
+            loading. Without it that stretch is a bare board and looks like a
+            draft that never started.
+        -->
+        <engine:VisualElement name="draft-waiting" class="draft__waiting" picking-mode="Ignore">
+            <engine:Label class="draft__waiting-label ui-w600" text="Waiting for opponent&#8230;" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
             D3 and D4: one card per unplaced piece, visibly inert when it is
             not your turn. The bar is the only part of this surface with a
             background, and it is the only part allowed to reach the bottom
