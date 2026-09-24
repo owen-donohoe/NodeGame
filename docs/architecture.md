@@ -231,6 +231,30 @@ it reads `SimulationState` and reaches the simulation only by enqueuing a
 choke point for that, and nothing under `Assets/UI/` calls
 `GameSimulation` or `CommandProcessor`.
 
+The in-match HUD keeps both breach walls at the top, with player marks and
+breach counts below the bars. The match timer is a rounded rectangle between
+them; a three-bar settings button sits directly below it in the same column.
+The settings card drops down from beneath that button. The recentre/zoom
+handle sits at the bottom right, with the emote dock at the bottom left.
+
+Resources sit in three cards near the bottom of the safe area, above the
+control docks and emote stack. Each card has a `LobbyIcon` resource glyph,
+a live count and three concentric segmented semicircles, flat side down:
+outer 1–10, middle 11–20, inner 21–30, ten segments each. `ResourceRing`
+draws them; `ResourceRingMath` owns the segment and colour-stop maths.
+`ResourceRingColors` reads and blends the six shared colour stops, so the
+rings and the node sheet's resource chips agree on what a count means.
+
+The open node sheet can cover those cards, so it carries its own food,
+materials and metal chips just above its top edge. They show the controlled
+player's live totals and move with the sheet. Each `NodeSheetContent`
+declares `InvolvedResources`; the sheet reads that declaration rather than
+keeping a second district lookup. An involved chip grows 10%, bolds its
+count and bounces once when it becomes involved. `LobbyIcon` supplies the
+same Food (ham), Materials (stone) and Metal (ingot) glyphs for cards, chips
+and sheet text. `NodeSheetContent.SetResourceText` turns `{food}`,
+`{materials}` and `{metal}` templates into inline icons beside text spans.
+
 Legacy code is kept compiling rather than commented out or deleted, so
 that a break in it is a compiler error rather than a discovery made later.
 See `Assets/Legacy/README.md`.
@@ -465,9 +489,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
   it. See [In-match indicators](#in-match-indicators).
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
   to open; `NodePanelManager` still owns that.
-- `NodeSheetContent` and its three subclasses — `ForgeContent`,
-  `CoreContent`, `EquipContent` cover all six actionable districts.
-  `Send` is the only path to the simulation.
+- `NodeSheetContent` and its four subclasses — `ProductionContent`,
+  `ForgeContent`, `CoreContent`, `EquipContent` — own the district contents.
+  `ProductionContent` serves Farm, Mine and Market. Each declares
+  `InvolvedResources`; `Send` is the only path to the simulation.
 - `DraftScreenController` — the draft screen, and the one place in this
   tree that owns an interaction end to end. The chrome and the placement
   cannot be separated here: the drag begins on a UI Toolkit card and ends
