@@ -12,8 +12,11 @@
        have a fill, and they are as small as they can be.
 
     2. THE BOTTOM OF THE SCREEN IS LEFT TO THE BOARD. .hud__board-space takes
-       all the slack, so every readout is pinned to the top. The node sheet is
-       the only element allowed to reach the bottom edge.
+       all the slack, so the breach walls stay pinned to the top and the
+       resource sheet - the one readout below the board space - stays pinned
+       to the bottom rather than floating mid-board. That sheet and the node
+       sheet are the only two elements allowed to reach the very bottom edge,
+       and each takes the bottom safe inset on a spacer of its own inside it.
 
     No text is set below --type-min.
 */
@@ -22,7 +25,10 @@
     background-color: var(--clear);
 }
 
-/* SafeAreaBinder writes the padding here; nothing else should. */
+/* SafeAreaBinder writes the left, right and top padding here, and nothing
+   else should. The bottom is not this element's: the resource sheet runs
+   past it to the screen edge and insets itself. See
+   GameplayHUDController.Bind. */
 .hud__safe {
     flex-grow: 1;
     flex-direction: column;
@@ -38,7 +44,7 @@
 
 .hud__topbar {
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     padding-top: var(--space-2);
     padding-left: var(--space-3);
     padding-right: var(--space-3);
@@ -57,9 +63,12 @@
     scale: 1.05 1.05;
 }
 
+/* The wall is first, so its label row carries the gap below it instead of
+   the wall carrying one above. */
 .hud__side-row {
     flex-direction: row;
     align-items: center;
+    margin-top: 5px;
 }
 
 .hud__side--them > .hud__side-row {
@@ -92,7 +101,6 @@
 */
 .hud__wall {
     height: 14px;
-    margin-top: 5px;
     border-top-left-radius: 7px;
     border-top-right-radius: 7px;
     border-bottom-left-radius: 7px;
@@ -141,18 +149,25 @@
     transition-delay: 0s;
 }
 
-.hud__clock {
-    width: 58px;
-    height: 58px;
+/* The clock and the burger below it share one width, so the two read as one
+   centred column of controls under the match time. */
+.hud__clock-column {
+    align-items: center;
+    flex-shrink: 0;
     margin-left: var(--space-2);
     margin-right: var(--space-2);
+}
+
+.hud__clock {
+    width: 58px;
+    height: 50px;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border-top-left-radius: 29px;
-    border-top-right-radius: 29px;
-    border-bottom-left-radius: 29px;
-    border-bottom-right-radius: 29px;
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
     border-left-width: var(--stroke-thin);
     border-right-width: var(--stroke-thin);
     border-top-width: var(--stroke-thin);
@@ -178,86 +193,164 @@
 
 /* ===================================================================
    Resources
+
+   Their own sheet along the bottom edge: the node sheet's shape - full
+   bleed, rounded top corners, a hairline top rule - in the HUD's dark
+   glass rather than paper, because this is a readout over the board and
+   not a page, and with no handle because it never opens or closes.
+   hud__board-space's flex-grow pins it there as the last thing in the
+   safe area's flow, and the node sheet slides over it, which is why that
+   sheet carries resource chips of its own.
+
+   The three resources sit flat on it. They used to be dark glass cards
+   in their own right, which is one surface too many now that the sheet
+   is a surface and the rings draw no track behind themselves.
+
+   POP ON CHANGE. hud__res-ring-host--up/--down are added by code and
+   removed a beat later via schedule.Execute(...).StartingIn(...), the
+   same idiom as .hud__side--hit: an increase scales the rings and number
+   up and back, a decrease scales them down and back. Neither fires on a
+   viewer switch or the first render. A decrease used to also tint the
+   card's border red; the ring's own white spend ghost says it better,
+   and there is no card border left to tint.
    =================================================================== */
 
-.hud__resources {
+.hud__res-sheet {
+    flex-shrink: 0;
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    background-color: var(--hud-glass);
+    border-top-width: var(--stroke-thin);
+    border-top-color: var(--hud-edge);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+}
+
+/* The three, side by side. Their own row rather than the sheet itself,
+   because the sheet is a column: the row, then the bottom inset below it. */
+.hud__res-row {
     flex-direction: row;
-    margin-top: var(--space-4);
-    margin-left: var(--space-3);
-    margin-right: var(--space-3);
+}
+
+/* SafeAreaBinder writes the bottom inset here. */
+.hud__res-safe-bottom {
     flex-shrink: 0;
 }
 
-.hud__res {
+.hud__res-card {
     flex-grow: 1;
     flex-basis: 0;
     margin-right: 11px;
+    align-items: center;
 }
 
-.hud__res--last {
+.hud__res-card--last {
     margin-right: 0;
 }
 
-.hud__res-head {
-    flex-direction: row;
-    align-items: flex-end;
-    margin-bottom: 5px;
+/* Same slot and margin the text label it replaced used, same
+   --hud-ink-mute treatment via tint instead of colour. Sized to read clearly
+   above an 84x50 semicircle without dominating the card. */
+.hud__res-icon {
+    width: 18px;
+    height: 18px;
+    margin-bottom: 4px;
+    -unity-background-image-tint-color: var(--hud-ink-mute);
 }
 
-.ui-root .hud__res-label {
-    flex-grow: 1;
-    font-size: var(--type-min);
-    letter-spacing: 1px;
-    color: var(--hud-ink-mute);
-}
-
-.ui-root .hud__res-value {
-    font-size: var(--type-number);
-    color: var(--hud-ink);
-    -unity-text-align: lower-right;
+/* Height is roughly half of width, not a square: the ring itself is only
+   the upper semicircle, flat side down, so it needs the diameter's width
+   but just the radius's height. See ResourceRing.Draw. */
+.hud__res-ring-host {
+    width: 84px;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    transition-property: scale;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out-back;
 }
 
 /*
-    Five past samples and the current value, bottom-aligned in a 40px box.
-    Heights are set from code; the current bar is 2.5x as wide as a past one,
-    and older bars fade. A spend reads for free: the current bar drops while
-    the one behind it stays tall.
+    The ring reads these through CustomStyleResolvedEvent. Declared again
+    here, on the class the ring element itself carries, rather than left to
+    inherit from Tokens.uss's :root alone -- custom properties only resolve
+    reliably where a selector matches the element or an ancestor.
 */
-.hud__hist {
-    height: 40px;
-    flex-direction: row;
-    align-items: flex-end;
+.hud__res-ring {
+    --ring-critical: var(--resource-ring-critical);
+    --ring-low: var(--resource-ring-low);
+    --ring-warn: var(--resource-ring-warn);
+    --ring-ok: var(--resource-ring-ok);
+    --ring-good: var(--resource-ring-good);
+    --ring-rich: var(--resource-ring-rich);
+    --ring-ghost: var(--resource-ring-ghost);
+    --ring-pending: var(--resource-ring-pending);
 }
 
-.hud__bar {
-    flex-grow: 1;
-    flex-basis: 0;
-    margin-right: 1.5px;
-    min-height: 2px;
-    background-color: var(--hud-bar-past);
-    border-top-left-radius: 1.5px;
-    border-top-right-radius: 1.5px;
-    transition-property: height;
-    transition-duration: 220ms;
-    transition-timing-function: ease-out;
+.hud__res-ring-host--up {
+    scale: 1.12 1.12;
 }
 
-.hud__bar--age-0 { opacity: 0.1; }
-.hud__bar--age-1 { opacity: 0.23; }
-.hud__bar--age-2 { opacity: 0.36; }
-.hud__bar--age-3 { opacity: 0.49; }
-.hud__bar--age-4 { opacity: 0.62; }
-
-.hud__bar--current {
-    flex-grow: 2.5;
-    margin-right: 0;
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
+.hud__res-ring-host--down {
+    scale: 0.9 0.9;
 }
 
-.hud__bar--low { background-color: var(--resource-low); }
-.hud__bar--mid { background-color: var(--resource-mid); }
-.hud__bar--high { background-color: var(--resource-high); }
+.ui-root .hud__res-value {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    font-size: var(--type-heading);
+    color: var(--hud-ink);
+    -unity-text-align: middle-center;
+}
+
+/* ===================================================================
+   The emote tab
+
+   Not a stand-alone button any more: a lug in the resource sheet's own
+   material, growing out of its top-left edge. bottom:100% puts it
+   directly above the sheet; the -2px - one --stroke-thin - pulls it back
+   down over the sheet's hairline top border, so along the tab's width
+   there is no rule between them and the two read as one shape.
+
+   It carries no bottom border for the same reason, and the button inside
+   is flat: the tab is the shape, so the button must not bring a second.
+   =================================================================== */
+
+.hud__emote-tab {
+    position: absolute;
+    left: var(--space-4);
+    bottom: 100%;
+    margin-bottom: -2px;
+    background-color: var(--hud-glass);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: 0;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+}
+
+.hud__emote-tab-button {
+    width: 58px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--clear);
+    color: var(--hud-ink);
+}
+
+.hud__emote-tab-button:active {
+    scale: 0.94 0.94;
+}
 
 /* ===================================================================
    Units
@@ -429,13 +522,16 @@
    once you have moved is missing exactly when you want to zoom out to
    look around at the start of a match.
 
-   The dock ignores picking; only the button itself takes a touch.
+   The dock ignores picking; only the button itself takes a touch. It sits
+   a little over a third of the way up the right edge rather than in the
+   bottom-right corner: the resource sheet owns the bottom now, and thumb
+   height on the right is where the hand already is.
    =================================================================== */
 
 .hud__recentre-dock {
     position: absolute;
     right: 12px;
-    bottom: 290px;
+    bottom: 38%;
     align-items: center;
 }
 
@@ -647,9 +743,9 @@
 /* ===================================================================
    In-match settings
 
-   A corner card, not a page. The match is live behind it, so it covers
-   the smallest area that still fits three rows, and it sits in the
-   bottom-right where a thumb already is.
+   A small card, not a page. The match is live behind it, so it covers
+   the smallest area that still fits its rows, and it drops down from
+   directly under the burger that opens it.
 
    The scrim is the one element on this surface allowed to pick, and only
    while the panel is open - display:none the rest of the time. That is
@@ -671,12 +767,52 @@
     display: flex;
 }
 
-/* The gear: bottom-right corner, same circle as the zoom handle above it. */
+/*
+    The burger: centred under the match timer rather than in a corner, so it
+    sits in normal flow inside .hud__clock-column instead of being
+    absolute-positioned. The card it opens (.hud__settings-main below) now
+    drops down from directly under it instead of rising from a corner.
+*/
 .hud__settings-dock {
-    position: absolute;
-    right: 12px;
-    bottom: 12px;
     align-items: center;
+    margin-top: 6px;
+}
+
+.hud__burger {
+    width: 58px;
+    height: 30px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    transition-property: scale;
+    transition-duration: var(--motion-press);
+}
+
+.hud__burger:active {
+    background-color: var(--hud-glass);
+    scale: 0.94 0.94;
+}
+
+.hud__burger-bar {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+    background-color: var(--hud-ink);
 }
 
 .hud__gear {
@@ -706,10 +842,13 @@
 
 /* Rises out of the gear. Width is fixed rather than a percentage so it
    stays a card on a tablet instead of growing into a page. */
+/*
+    Shape only - background, border, radius, the display/opacity/translate
+    open transition. Position is per-instance: hud__settings-main drops down
+    from under the burger, hud__emote-sheet keeps its own bottom-left corner.
+*/
 .hud__settings {
     position: absolute;
-    right: 12px;
-    bottom: 70px;
     width: 264px;
     padding-left: var(--space-4);
     padding-right: var(--space-4);
@@ -741,6 +880,25 @@
 
 .hud__settings--on {
     opacity: 1;
+    translate: 0 0;
+}
+
+/*
+    The real settings card: centred under the burger and dropping down into
+    place, so it starts above its resting position (negative Y) rather than
+    below it. 100px clears the topbar's tallest column - padding-top(8) +
+    clock(50) + dock margin(6) + burger(30) = 94 - with a small gap; 132px is
+    half this card's own 264px width. Ends at the shared .hud__settings--on
+    translate: 0 0, same as the emote sheet's rise.
+*/
+.hud__settings-main {
+    top: 100px;
+    left: 50%;
+    margin-left: -132px;
+    translate: 0 -8px;
+}
+
+.hud__settings-main.hud__settings--on {
     translate: 0 0;
 }
 
@@ -781,4 +939,341 @@
     color: var(--ink-mute);
     white-space: normal;
     margin-top: 2px;
+}
+
+/* ===================================================================
+   In-match indicators
+
+   IndicatorLayer positions each .ind by translate every frame; the
+   element itself sits at the layer's top-left and is pulled back by
+   half its box so the translate lands on its centre.
+
+   Motion is here, not in code. .ind--in pops the icon in with
+   ease-out-back, which is the overshoot; removing it falls back to
+   .ind, whose ease-in tapers it out. The transition in force is the
+   target style's, so the same scale property does both - and the
+   taper can never overshoot below zero into a mirrored icon.
+
+   Colour says what kind of news it is; size says how loud (tier).
+   Nothing here picks but a visible edge icon, and that is set from
+   code, not USS.
+   =================================================================== */
+
+.ind-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.ind {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: -22px;
+    margin-top: -22px;
+    align-items: center;
+    justify-content: center;
+    scale: 0 0;
+    transition-property: scale;
+    transition-duration: 160ms;
+    transition-timing-function: ease-in;
+
+    --ind-colour: var(--hud-ink);
+}
+
+.ind--in {
+    scale: 1 1;
+    transition-duration: 260ms;
+    transition-timing-function: ease-out-back;
+}
+
+/* The in-view form: the same icon, smaller, because the player is
+   already looking at it. */
+.ind--in.ind--small {
+    scale: 0.55 0.55;
+}
+
+.ind-layer--calm .ind--in {
+    transition-timing-function: ease-out;
+}
+
+.ind__bubble {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--hud-glass-strong);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--ind-colour);
+    border-right-color: var(--ind-colour);
+    border-top-color: var(--ind-colour);
+    border-bottom-color: var(--ind-colour);
+    transition-property: scale, background-color;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out-back;
+}
+
+.ind__icon {
+    width: 60%;
+    height: 60%;
+    -unity-background-image-tint-color: var(--ind-colour);
+}
+
+/* ---- tier: how loud ---- */
+
+.ind--high > .ind__bubble {
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+}
+
+.ind--low > .ind__bubble {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+}
+
+/* ---- kind: what the news is ---- */
+
+.ind--battle,
+.ind--attack,
+.ind--threat {
+    --ind-colour: var(--badge);
+}
+
+.ind--contested,
+.ind--incursion {
+    --ind-colour: var(--status-short);
+}
+
+.ind--idle {
+    --ind-colour: var(--hud-ink-mute);
+}
+
+.ind--respawn {
+    --ind-colour: var(--confirm);
+}
+
+.ind--effect {
+    --ind-colour: var(--action);
+}
+
+/* A node of yours has just fallen: the bubble fills and swells. */
+.ind--lost > .ind__bubble {
+    scale: 1.15 1.15;
+    background-color: var(--badge);
+}
+
+.ind--lost .ind__icon {
+    -unity-background-image-tint-color: var(--hud-ink);
+}
+
+/* ---- the edge arrow ---- */
+
+/* Spans the box and is rotated about its centre, so the triangle at
+   its right edge swings round the bubble to face the subject. */
+.ind__pointer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.ind--pointing > .ind__pointer {
+    display: flex;
+}
+
+.ind__pointer-icon {
+    position: absolute;
+    left: 36px;
+    top: 16px;
+    width: 12px;
+    height: 12px;
+    -unity-background-image-tint-color: var(--ind-colour);
+}
+
+.ind--high .ind__pointer-icon {
+    left: 38px;
+}
+
+/* ---- merged: how many share this spot ---- */
+
+.ind__count {
+    position: absolute;
+    right: 0;
+    top: 0;
+    min-width: 18px;
+    height: 18px;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 9px;
+    background-color: var(--ind-colour);
+    color: var(--ink);
+    font-size: var(--type-min);
+    -unity-text-align: middle-center;
+    display: none;
+}
+
+.ind--grouped > .ind__count {
+    display: flex;
+}
+
+/* Emotes share the indicator pop, with opposite travel at the two anchors.
+   Only the live opponent bubble picks; the layer and empty slots never do. */
+.hud__emotes {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/* Rises from the emote tab on the resource sheet. Its left and bottom are
+   written by EmotePanel.PositionSheet from the tab's resolved layout rather
+   than set here: the tab lives inside the safe area and this layer does not,
+   so a device with a bottom inset would part the two if USS guessed. The
+   values below are the desktop answer, and stand until the first open. */
+.hud__emote-sheet {
+    left: var(--space-4);
+    right: auto;
+    bottom: 154px;
+    width: 228px;
+    flex-direction: column;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.hud__emote-options {
+    flex-direction: row;
+}
+
+.hud__emote-mute {
+    flex-direction: row;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 6px;
+    padding-left: 10px;
+}
+
+.hud__emote-mute-label {
+    color: var(--ink);
+    font-size: 13px;
+    margin-left: 8px;
+}
+
+.hud__speaker {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    -unity-background-image-tint-color: white;
+}
+
+.hud__settings-emotes-icon {
+    margin-right: 6px;
+}
+
+.hud__emote-mute > .hud__speaker,
+.hud__settings-emotes-icon {
+    background-color: var(--hud-glass-strong);
+    border-radius: 13px;
+}
+
+.hud__speaker--muted,
+.hud__emotes--muted .hud__speaker {
+    -unity-background-image-tint-color: var(--badge);
+}
+
+.hud__emote-option {
+    flex-shrink: 0;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+.hud__emote-icon {
+    width: 28px;
+    height: 28px;
+    -unity-background-image-tint-color: var(--hud-ink);
+}
+
+.hud__emote-icon--flag {
+    -unity-background-image-tint-color: white;
+}
+
+.hud__emote-option--disabled {
+    opacity: 0.35;
+}
+
+.hud__emote-you {
+    position: absolute;
+    left: 12px;
+    bottom: 76px;
+    width: 46px;
+    height: 46px;
+}
+
+/* Positioned in code at the top-right of the board space, below every
+   readout, so the safe area and the units card are respected. */
+.hud__emote-them {
+    position: absolute;
+    width: 46px;
+    height: 46px;
+}
+
+.hud__emote-side {
+    display: none;
+}
+
+.hud__emote-bubble {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 23px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+    scale: 0 0;
+    translate: 0 64px;
+    transition-property: scale, translate;
+    transition-duration: 160ms;
+    transition-timing-function: ease-in;
+}
+
+.hud__emote-them > .hud__emote-bubble {
+    translate: 0 -31px;
+}
+
+.hud__emote-bubble--in,
+.hud__emote-them > .hud__emote-bubble--in {
+    scale: 1 1;
+    translate: 0 0;
+    transition-duration: 260ms;
+    transition-timing-function: ease-out-back;
+}
+
+.hud__emotes--calm .hud__emote-bubble--in {
+    transition-timing-function: ease-out;
 }

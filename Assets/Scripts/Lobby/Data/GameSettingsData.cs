@@ -34,8 +34,10 @@ namespace NodeWar.Lobby
         ///     what a bool deserialises to, which is why 1 cannot just be read
         ///     as 2 and why <see cref="Normalized"/> migrates rather than
         ///     resetting: resetting would throw away settings the player set.
+        /// 3 - adds <see cref="opponentEmotes"/>, default true. Earlier saves
+        ///     enable emotes while keeping all existing preferences.
         /// </remarks>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         /// <summary>Small, Default, Large. The page owns what they are called.</summary>
         public const int InterfaceSizeCount = 3;
@@ -63,12 +65,15 @@ namespace NodeWar.Lobby
         public bool confirmEachCommand;
 
         /// <summary>
-        /// Draw opponent movement routes. Backs the in-match panel's only
+        /// Draw opponent movement routes. Backs the in-match panel's routes
         /// toggle and feeds OpponentRouteSettings.show, which is a real
         /// information gate rather than a cosmetic one - see that class for
         /// what it does and does not reveal. Added in version 2.
         /// </summary>
         public bool opponentRoutes;
+
+        /// <summary>Allow incoming and outgoing emotes. Presentation only; added in version 3.</summary>
+        public bool opponentEmotes;
 
         // ---- Mobile.
         public bool haptics;
@@ -96,6 +101,7 @@ namespace NodeWar.Lobby
                 cameraSpeed = 0.52f,
                 confirmEachCommand = false,
                 opponentRoutes = true,
+                opponentEmotes = true,
 
                 haptics = true,
                 batterySaver = false
@@ -127,6 +133,7 @@ namespace NodeWar.Lobby
             // 1 -> 2. The field did not exist, so its stored false means
             // "absent", not "off"; everything else the player set is kept.
             if (source.version < 2) source.opponentRoutes = true;
+            if (source.version < 3) source.opponentEmotes = true;
 
             return new GameSettingsData
             {
@@ -143,6 +150,7 @@ namespace NodeWar.Lobby
                 cameraSpeed = Clamp01(source.cameraSpeed),
                 confirmEachCommand = source.confirmEachCommand,
                 opponentRoutes = source.opponentRoutes,
+                opponentEmotes = source.opponentEmotes,
 
                 haptics = source.haptics,
                 batterySaver = source.batterySaver
@@ -164,6 +172,7 @@ namespace NodeWar.Lobby
                 || a.cameraSpeed != b.cameraSpeed
                 || a.confirmEachCommand != b.confirmEachCommand
                 || a.opponentRoutes != b.opponentRoutes
+                || a.opponentEmotes != b.opponentEmotes
                 || a.haptics != b.haptics
                 || a.batterySaver != b.batterySaver;
         }

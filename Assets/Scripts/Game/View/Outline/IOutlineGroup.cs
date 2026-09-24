@@ -35,5 +35,16 @@ namespace NodeWar.View.Outline
         /// disabled renderers.
         /// </summary>
         Renderer[] Renderers { get; }
+
+        /// <summary>
+        /// A colour this group's line is drawn in over its style's palette
+        /// colour, blended by alpha: 0 leaves the palette colour, 1 replaces it.
+        ///
+        /// Node ownership is what this exists for. The style still decides
+        /// whether there is a line, how thick it is and which line wins a pixel;
+        /// the tint only changes what colour that line is. Read by the composite
+        /// pass at draw time, so it needs no registry sync.
+        /// </summary>
+        Color Tint { get; }
     }
 }

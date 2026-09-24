@@ -50,6 +50,21 @@ namespace NodeWar.Core
         [Tooltip("Spring force pushing camera back inside BoardConfig bounds.")]
         [SerializeField] private float boundsPushbackForce = 10f;
 
+        [Header("Screen shake")]
+        [Tooltip("Largest shake offset, at strength 1, as a fraction of the current " +
+                 "zoom distance, so a shake reads the same at any zoom.")]
+        [SerializeField] private float shakeAmplitude = 0.012f;
+
+        [Tooltip("How fast the shake wanders, in noise cycles per second.")]
+        [SerializeField] private float shakeFrequency = 25f;
+
+        private float shakeStrength;
+        private float shakeDuration;
+        private float shakeRemaining;
+
+        /// <summary>Off under reduced motion. The HUD sets it from the player's settings.</summary>
+        public bool ShakeEnabled { get; set; } = true;
+
         [Header("Draft Mode Framing")]
         //
         // The draft opens on an authored framing rather than a derived one.
@@ -86,9 +101,12 @@ namespace NodeWar.Core
         [SerializeField] private bool draftZoomNeverBelowMax = true;
 
         [Header("Per-Side Defaults")]
-        // NOTE: Gameplay.unity serializes 0.65, which overrides this default.
-        // Raising how far out the match starts is an Inspector change on the
-        // CameraRig, not a code one.
+        // NOTE: Gameplay.unity serializes 0.4545 with zoomMaxDistance 60, which
+        // overrides both defaults. That pair puts the start at distance 30, and
+        // the HUD readout divides by the start distance, so 30 reads 1.0x and
+        // the 60 limit reads 0.5x. Move one and the other has to follow, or
+        // the readout stops landing on 0.5x. Raising how far out the match
+        // starts is an Inspector change on the CameraRig, not a code one.
         [Tooltip("Normalized position between min/max zoom for gameplay start. 0=closest, 1=farthest.")]
         [SerializeField][Range(0f, 1f)] private float sideDefaultZoomNormalized = 0.65f;
 
@@ -362,7 +380,8 @@ namespace NodeWar.Core
         /// Nothing may set cam.transform.localPosition to zoom instead -- a
         /// second writer is not an alternative route to the same place, it is
         /// a fight, resolved differently depending on which ran last, and it
-        /// reads as jitter.
+        /// reads as jitter. The screen shake is applied inside ApplyZoom for
+        /// the same reason.
         /// </summary>
         public void SetTargetZoom(float distance)
         {
@@ -391,6 +410,49 @@ namespace NodeWar.Core
             RaiseZoomChanged();
         }
 
+        /// <summary>
+        /// Shakes the camera for a moment; strength 1 is the biggest the game
+        /// asks for. A weaker request arriving during a stronger shake is ignored
+        /// rather than cutting it short, so a capture landing in the same beat as
+        /// a breach does not shrink the breach's shake.
+        /// </summary>
+        public void Shake(float strength, float seconds)
+        {
+            if (!ShakeEnabled || strength <= 0f || seconds <= 0f) return;
+            if (strength < CurrentShakeStrength()) return;
+
+            shakeStrength = strength;
+            shakeDuration = seconds;
+            shakeRemaining = seconds;
+        }
+
+        // Eases out: strongest on the hit, gone by the end.
+        private float CurrentShakeStrength()
+        {
+            if (shakeRemaining <= 0f || shakeDuration <= 0f) return 0f;
+
+            float t = shakeRemaining / shakeDuration;
+            return shakeStrength * t * t;
+        }
+
+        /// <summary>
+        /// This frame's offset in the camera's own x/y, so it is always across
+        /// the screen whichever side the camera looks from. Unscaled time, so a
+        /// shake still plays out if the match is paused at game over.
+        /// </summary>
+        private Vector2 SampleShake()
+        {
+            if (shakeRemaining <= 0f) return Vector2.zero;
+
+            shakeRemaining = Mathf.Max(0f, shakeRemaining - Time.unscaledDeltaTime);
+
+            float amplitude = CurrentShakeStrength() * shakeAmplitude * currentZoomDistance;
+            float time = Time.unscaledTime * shakeFrequency;
+
+            return new Vector2((Mathf.PerlinNoise(time, 0.37f) * 2f - 1f) * amplitude,
+                               (Mathf.PerlinNoise(0.71f, time) * 2f - 1f) * amplitude);
+        }
+
         private void ApplyZoom()
         {
             if (cam == null) return;
@@ -400,7 +462,10 @@ namespace NodeWar.Core
             else
                 currentZoomDistance = targetZoomDistance;
 
-            cam.transform.localPosition = new Vector3(0f, 0f, -currentZoomDistance);
+            // The shake rides on the same write, so there is still one writer of
+            // the camera's local position.
+            Vector2 shake = SampleShake();
+            cam.transform.localPosition = new Vector3(shake.x, shake.y, -currentZoomDistance);
         }
 
         // ===== BOUNDS =====
@@ -782,6 +847,19 @@ namespace NodeWar.Core
                 Debug.Log("[FOCUS] need +" + needed.ToString("0") + "px -> world delta " + delta);
 
             StartFocusTween(transform.position + delta);
+        }
+
+        /// <summary>
+        /// Eases the camera to look at a ground point: what a tapped edge
+        /// indicator does. Counted as the player moving the camera, like a
+        /// recentre, so dismissing a sheet afterwards does not undo it.
+        /// </summary>
+        public void FocusOnWorldPoint(Vector3 worldPos)
+        {
+            if (isDraftMode) return;
+
+            NotifyManualPan();
+            StartFocusTween(worldPos);
         }
 
         private void StartFocusTween(Vector3 target)

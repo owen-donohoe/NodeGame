@@ -26,11 +26,12 @@ namespace NodeWar.UI
     public class CoreContent : NodeSheetContent
     {
         private Label statValue;
-        private Label costLine;
+        private VisualElement costLine;
         private Label enemyNote;
         private VisualElement roster;
         private Label emptyLabel;
         private Button respawnButton;
+        private VisualElement respawnRow;
         private (int breaches, int threshold)? shownBreach;
         private (int cost, int food)? shownCost;
         private (RespawnRefusal refusal, int cost, int food)? shownRespawn;
@@ -57,7 +58,7 @@ namespace NodeWar.UI
             left.Add(Text("A villager that breaches is spent for good.", "sheet__microcap"));
 
             VisualElement right = Box("core__right");
-            costLine = Caption("");
+            costLine = ResourceRow("sheet__caption");
             enemyNote = Caption("Enemy core. Breach pressure is public; their casualties are not.");
             roster = Box("core__roster");
             emptyLabel = Caption("Everyone is alive.");
@@ -71,8 +72,12 @@ namespace NodeWar.UI
             Root.Add(cols);
 
             respawnButton = PrimaryButton(OnRespawnPressed);
+            respawnRow = ResourceRow("sheet__resource-row--on-button");
+            respawnButton.Add(respawnRow);
             Actions.Add(respawnButton);
         }
+
+        public override ResourceKind InvolvedResources { get { return ResourceKind.Food; } }
 
         /// <summary>
         /// Whose core this is. A core belongs to the player whose coreNodeID it
@@ -119,7 +124,7 @@ namespace NodeWar.UI
             if (shownCost != costValue)
             {
                 shownCost = costValue;
-                costLine.text = "Respawn costs " + cost + " food. You have " + food + ".";
+                SetResourceText(costLine, "Respawn costs " + cost + " {food}. You have " + food + " {food}.");
             }
 
             int next = CommandEligibility.RespawnTarget(State, ControlledPID);
@@ -136,9 +141,9 @@ namespace NodeWar.UI
             if (shownRespawn != respawnValue)
             {
                 shownRespawn = respawnValue;
-                respawnButton.text = refusal == RespawnRefusal.CannotAfford
-                    ? "Need " + (cost - food) + " more food"
-                    : "Respawn longest wait · " + cost + " food";
+                SetResourceText(respawnRow, refusal == RespawnRefusal.CannotAfford
+                    ? "Need " + (cost - food) + " more {food}"
+                    : "Respawn longest wait · " + cost + " {food}");
             }
         }
 

@@ -41,6 +41,7 @@ namespace NodeWar.View.Outline
         private OutlineRegistry registry;
         private uint intents;
         private OutlineStyle appliedDebugStyle = OutlineStyle.None;
+        private Color tint = Color.clear;
 
         /// <summary>
         /// The resolved style, highest intent wins. There is no setter: several
@@ -53,6 +54,16 @@ namespace NodeWar.View.Outline
         public int OutlineId { get; set; }
 
         public Renderer[] Renderers => renderers ?? NoRenderers;
+
+        public Color Tint => tint;
+
+        /// <summary>
+        /// Sets the colour the line is drawn in, over the style's own. Clear by
+        /// default, which leaves the palette alone. No registry sync: the tint
+        /// is read when the line is drawn, and costs nothing while the group is
+        /// not outlined.
+        /// </summary>
+        public void SetTint(Color value) => tint = value;
 
         private OutlineRegistry Registry => registry ?? (registry = OutlineRegistry.Instance);
 

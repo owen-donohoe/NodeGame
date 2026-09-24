@@ -255,7 +255,11 @@
 
 /* The finger's copy of the card. Absolute, written in panel coordinates by
    the controller, and never picks - it sits under the finger, which is
-   exactly where a press must reach the board. */
+   exactly where a press must reach the board.
+
+   Opacity is the controller's during a drag: it cross-fades the proxy against
+   the board ghost over a band, so there is no transition here to fight the
+   per-frame write. See DraftHandover. */
 .draft__proxy {
     position: absolute;
     width: 68px;
@@ -279,19 +283,11 @@
     border-bottom-right-radius: var(--corner-sm);
     opacity: 0;
     display: none;
-    transition-property: opacity;
-    transition-duration: 120ms;
 }
 
 .draft__proxy--on {
     display: flex;
     opacity: 1;
-}
-
-/* Over the board. Still present, so the drag has something to come back to
-   when the finger returns to the bar, but out of the way of the ghost. */
-.draft__proxy--faded {
-    opacity: 0;
 }
 
 /* ===================================================================

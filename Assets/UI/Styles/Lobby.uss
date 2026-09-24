@@ -865,42 +865,6 @@
    SWITCH and SLIDER - the prototype's settings controls.
    =================================================================== */
 
-.lb-switch {
-    width: 52px;
-    height: 31px;
-    flex-shrink: 0;
-    border-top-left-radius: 15.5px;
-    border-top-right-radius: 15.5px;
-    border-bottom-left-radius: 15.5px;
-    border-bottom-right-radius: 15.5px;
-    background-color: var(--off);
-    transition-property: background-color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-switch__knob {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 25px;
-    height: 25px;
-    border-top-left-radius: 12.5px;
-    border-top-right-radius: 12.5px;
-    border-bottom-left-radius: 12.5px;
-    border-bottom-right-radius: 12.5px;
-    background-color: var(--ink-white);
-    transition-property: translate;
-    transition-duration: var(--motion-release);
-}
-
-.lb-switch--on {
-    background-color: var(--confirm);
-}
-
-.lb-switch--on > .lb-switch__knob {
-    translate: 21px 0;
-}
-
 /* UI Toolkit's Slider, restyled. The tracker and dragger are its children. */
 .lb-slider {
     flex-grow: 1.4;

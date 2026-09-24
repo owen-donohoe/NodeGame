@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
@@ -24,9 +23,11 @@ namespace NodeWar.UI
     /// HUDManager in the layer it replaces. The folder says which stack it is
     /// in; the namespace says which layer.
     ///
-    /// WHAT IT SHOWS is settled, not preference: both breach walls and three
-    /// resources are always visible, and only the villager count collapses.
-    /// Breach is the win condition, so it is first and it never hides.
+    /// WHAT IT SHOWS is settled, not preference: both breach walls are always
+    /// visible, and only the villager count collapses. Breach is the win
+    /// condition, so it is first and it never hides. The resources sit at the
+    /// bottom of the screen and, like the rest of that row, can be covered by
+    /// the node sheet while it is open.
     ///
     /// YOU ARE ON THE LEFT. The left wall belongs to whichever player is being
     /// controlled - in a networked match that may be player 1 - and each wall
@@ -47,24 +48,24 @@ namespace NodeWar.UI
                  "uGUI panel keeps the job.")]
         [SerializeField] private VisualTreeAsset nodeSheetLayout;
 
-        // The prototype's locked resource readout: five past samples, a full
-        // bar at 15, and colour zones at 2 and 6. Presentation only - nothing
-        // in the simulation knows about these numbers.
-        private const int HistorySamples = 5;
-        private const int ReadoutCap = 15;
-        private const float ReadoutHeight = 40f;
-        private const int LowZoneMax = 2;
-        private const int MidZoneMax = 6;
-
         private UIDocument document;
         private SafeAreaBinder safeArea;
+        private SafeAreaBinder resSheetInset;
         private NodeSheet nodeSheet;
         private MatchSettingsPanel settingsPanel;
+        // Match-local mute and cooldown survive a rebuild of the visual tree.
+        private readonly EmotePanel emotePanel = new EmotePanel();
         private NodeWar.View.OpponentRouteSettings routeSettings;
         private VisualElement hudRoot;
 
+        // Kept here as well as in the layer: OnEnable rebuilds the layer, and
+        // GameManager binds the director only once.
+        private IndicatorLayer indicatorLayer;
+        private NodeWar.View.IndicatorDirector indicatorDirector;
+
         private SimulationState state;
         private GameBalanceData balance;
+        private NodeWar.Core.ITickProvider ticks;
         private DebugPlayerSwitch playerSwitch;
         private SelectionSystem selection;
         private NodePanelManager panelSource;
@@ -106,7 +107,6 @@ namespace NodeWar.UI
 
         private int lastControlledPID = -1;
         private int lastClockSeconds = -1;
-        private int lastSampleSecond = -1;
         private int lastUnitsP0 = -1;
         private int lastUnitsP1 = -1;
         private int lastSelected = -1;
@@ -114,6 +114,16 @@ namespace NodeWar.UI
         // Reused rather than rebuilt: Refresh runs every frame, and two fresh
         // arrays a frame is litter a phone has to collect.
         private readonly int[] resourceValues = new int[3];
+
+        // The three, in the order the readouts sit in. Spelled out rather than
+        // cast from the loop index: the enum and the array agreeing is a fact
+        // about this list, not something to leave to their declaration order.
+        private static readonly ResourceKind[] ResourceOrder =
+            { ResourceKind.Food, ResourceKind.Materials, ResourceKind.Metal };
+
+        // Refilled per resource per frame. One buffer, because the three are
+        // read one after another and nothing holds on to it.
+        private readonly float[] productionBuffer = new float[ResourceProduction.MaxInFlight];
 
         private void OnEnable()
         {
@@ -150,6 +160,7 @@ namespace NodeWar.UI
 
         private void OnDisable()
         {
+            emotePanel.Detach();
             if (panelSource != null)
             {
                 panelSource.NodeOpened -= OnNodeOpened;
@@ -181,7 +192,11 @@ namespace NodeWar.UI
 
             routeSettings = null;
 
+            // The director outlives this; only its drawing is rebuilt.
+            indicatorLayer = null;
+
             safeArea = null;
+            resSheetInset = null;
             nodeSheet = null;
             initialized = false;
         }
@@ -220,6 +235,7 @@ namespace NodeWar.UI
         {
             state = simulationState;
             balance = balanceData;
+            ticks = tickProvider;
             playerSwitch = debugSwitch;
             selection = selectionSystem;
             breachThreshold = breachThresholdValue > 0 ? breachThresholdValue : 1;
@@ -250,13 +266,25 @@ namespace NodeWar.UI
         private void Update()
         {
             if (safeArea != null) safeArea.Update();
+            if (resSheetInset != null) resSheetInset.Update();
             if (nodeSheet != null) nodeSheet.UpdateSafeArea();
+
+            emotePanel.SetNodeSheetOpen(nodeSheet != null && nodeSheet.IsOpen);
 
             if (!initialized || state == null) return;
 
             Refresh();
 
             if (nodeSheet != null) nodeSheet.Update(CurrentPlayerID());
+        }
+
+        /// <summary>
+        /// Late, so indicators are projected after the camera and every villager
+        /// have moved this frame rather than trailing them by one.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (indicatorLayer != null) indicatorLayer.LateUpdate();
         }
 
         // ===== BINDING =====
@@ -266,16 +294,26 @@ namespace NodeWar.UI
             hudRoot = root.Q<VisualElement>("hud-root");
 
             VisualElement safeAreaElement = root.Q<VisualElement>("hud-safe-area");
-            if (safeAreaElement != null) safeArea = new SafeAreaBinder(safeAreaElement);
+            // Not Edges.All. The resource sheet is the last thing in this
+            // column and has to reach the true bottom edge, the way the node
+            // sheet does; it takes the bottom inset itself, on a spacer of its
+            // own inside it, so that the sheet reaches past it.
+            if (safeAreaElement != null)
+                safeArea = new SafeAreaBinder(safeAreaElement,
+                    SafeAreaBinder.Edges.Left | SafeAreaBinder.Edges.Right | SafeAreaBinder.Edges.Top);
+
+            VisualElement resSafeBottom = root.Q<VisualElement>("hud-res-safe-bottom");
+            if (resSafeBottom != null)
+                resSheetInset = new SafeAreaBinder(resSafeBottom, SafeAreaBinder.Edges.Bottom);
 
             you = new BreachSide(root, "you");
             them = new BreachSide(root, "them");
             clockLabel = root.Q<Label>("hud-clock");
             flash = root.Q<VisualElement>("hud-flash");
 
-            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-hist-food"));
-            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-hist-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-hist-metal"));
+            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"));
+            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"));
+            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"));
 
             villagerToggle = root.Q<Button>("hud-villager-toggle");
             villagerCard = root.Q<VisualElement>("hud-villagers");
@@ -309,7 +347,52 @@ namespace NodeWar.UI
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
             BuildNodeSheet(root);
+            emotePanel.Attach(hudRoot);
+            emotePanel.Opening -= CloseSettingsForEmotes;
+            emotePanel.Opening += CloseSettingsForEmotes;
             BuildSettingsPanel();
+            BuildIndicatorLayer(root);
+        }
+
+        /// <summary>
+        /// The indicators draw under everything else here. Edge icons keep clear
+        /// of the right-hand column of controls, and of the node sheet while it
+        /// is up.
+        /// </summary>
+        private void BuildIndicatorLayer(VisualElement root)
+        {
+            if (hudRoot == null) return;
+
+            indicatorLayer = new IndicatorLayer(hudRoot);
+            indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-recentre-dock"));
+            indicatorLayer.AvoidLeft(root.Q<VisualElement>("hud-emote-dock"));
+
+            VisualElement sheetPanel = nodeSheet != null ? nodeSheet.Root.Q<VisualElement>("node-sheet") : null;
+            indicatorLayer.SetSheet(() => nodeSheet != null && nodeSheet.IsOpen ? sheetPanel : null);
+
+            if (settingsPanel != null) indicatorLayer.SetCalm(settingsPanel.Settings.reducedMotion);
+            if (indicatorDirector != null) indicatorLayer.Bind(indicatorDirector);
+            if (boardCamera != null) indicatorLayer.SetCameraController(boardCamera);
+        }
+
+        /// <summary>
+        /// Hands over the director that decides which indicators exist. Called
+        /// by GameManager once the board and its views are built.
+        /// </summary>
+        public void BindIndicators(NodeWar.View.IndicatorDirector director)
+        {
+            indicatorDirector = director;
+            if (indicatorLayer != null) indicatorLayer.Bind(director);
+        }
+
+        public void BindEmotes(NodeWar.Core.IEmoteChannel channel, System.Func<int> localPlayer)
+        {
+            emotePanel.Bind(channel, localPlayer);
+        }
+
+        private void CloseSettingsForEmotes()
+        {
+            if (settingsPanel != null) settingsPanel.ForceClose();
         }
 
         /// <summary>
@@ -362,8 +445,14 @@ namespace NodeWar.UI
         /// </summary>
         private void ApplyMatchSettings(NodeWar.Lobby.GameSettingsData settings)
         {
+            emotePanel.ApplySettings(settings);
             if (routeSettings != null)
                 routeSettings.show = settings.opponentRoutes;
+
+            if (indicatorLayer != null)
+                indicatorLayer.SetCalm(settings.reducedMotion);
+
+            if (boardCamera != null) boardCamera.ShakeEnabled = !settings.reducedMotion;
         }
 
         /// <summary>
@@ -408,8 +497,8 @@ namespace NodeWar.UI
             int pid = CurrentPlayerID();
 
             // A viewer switch changes whose numbers these are, not the numbers.
-            // Everything redraws at once, with no breach punch and no bars
-            // sliding, because nothing happened in the match.
+            // Everything redraws at once, with no breach punch and no
+            // resource-ring pop, because nothing happened in the match.
             bool switched = pid != lastControlledPID;
             lastControlledPID = pid;
 
@@ -461,9 +550,9 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Your three resources. History is sampled once per simulated second,
-        /// keyed on the tick count so a paused tick loop records nothing, and it
-        /// starts again from the current values when the viewer switches.
+        /// Your three resources, as segmented rings. A viewer switch resets
+        /// each readout's baseline so the redraw carries no pop; otherwise
+        /// Render decides for itself whether the value moved and which way.
         /// </summary>
         private void RefreshResources(int pid, bool switched)
         {
@@ -473,19 +562,21 @@ namespace NodeWar.UI
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
 
-            int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
-            int second = state.tickCount / ticksPerSecond;
-            bool sample = second != lastSampleSecond;
-            lastSampleSecond = second;
+            // Sub-tick, so the production fill moves at render rate rather than
+            // stepping ten times a second. Same alpha ProductionContent reads.
+            float alpha = ticks != null ? ticks.TickAlpha : 0f;
 
             for (int i = 0; i < resources.Length; i++)
             {
                 if (resources[i] == null) continue;
 
-                if (switched) resources[i].Reset(resourceValues[i]);
-                else if (sample) resources[i].Sample(resourceValues[i]);
+                if (switched) resources[i].Reset();
 
                 resources[i].Render(resourceValues[i]);
+
+                int jobs = ResourceProduction.InFlight(state, balance, pid, ResourceOrder[i],
+                    alpha, productionBuffer);
+                resources[i].SetProduction(productionBuffer, jobs);
             }
         }
 
@@ -602,7 +693,12 @@ namespace NodeWar.UI
             {
                 boardCamera.ZoomChanged += OnZoomChanged;
                 boardCamera.ZoomGestureActiveChanged += OnZoomGestureActiveChanged;
+
+                if (settingsPanel != null) boardCamera.ShakeEnabled = !settingsPanel.Settings.reducedMotion;
             }
+
+            // A tapped edge indicator moves this camera to its subject.
+            if (indicatorLayer != null) indicatorLayer.SetCameraController(boardCamera);
         }
 
         private void OnZoomChanged(float normalized)
@@ -862,6 +958,8 @@ namespace NodeWar.UI
             endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, breachThreshold);
             endRows[1].Set(other, "Opponent", state.players[other].breachCount, breachThreshold);
 
+            if (indicatorLayer != null) indicatorLayer.Suppress();
+
             endRoot.AddToClassList("hud__end--on");
         }
 
@@ -979,113 +1077,109 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// One resource's readout: the number, five fading past bars and the
-        /// current bar.
+        /// <summary>
+        /// One resource's readout: the number, centred inside a ResourceRing
+        /// hosted on "hud-ring-*". The ring draws only what the player has -
+        /// there is no unlit track behind it - so at zero the resource is the
+        /// icon and the number alone.
         ///
-        /// The staircase stays hidden until this resource has been held at all.
-        /// A row of flat minimum-height bars sitting under a zero says nothing
-        /// except that nothing has happened yet, and three of them across the
-        /// top of the board is noise over the only thing worth looking at. Once
-        /// the resource has been earned the history means something, so it
-        /// appears and then stays -- dropping back to zero is exactly the case
-        /// the staircase is for.
+        /// POP ON CHANGE, and only the pop. An increase scales the ring host
+        /// (rings and number together) up and back; a decrease scales it down
+        /// and back, so a spend lands with a bounce while the number changes
+        /// instantly. The class is added here and removed a moment later by
+        /// schedule.Execute(...).StartingIn(...) - the same idiom BreachSide
+        /// uses for hud__side--hit. Neither fires on the sentinel left by
+        /// Reset, so a viewer switch and the very first render redraw
+        /// silently, and the ring is told to snap on those too.
+        ///
+        /// A decrease used to also tint the resource card's border red for
+        /// the same beat. The cards lost their borders when the three moved
+        /// onto one sheet, and the ring's own white spend ghost says it
+        /// better anyway - see ResourceRing.
         /// </summary>
         private class ResourceReadout
         {
+            private const long PopMilliseconds = 150;
+
             private readonly Label value;
-            private readonly VisualElement barHost;
-            private readonly VisualElement[] bars = new VisualElement[HistorySamples + 1];
-            private readonly List<int> history = new List<int>(HistorySamples + 1);
+            private readonly VisualElement ringHost;
+            private readonly ResourceRing ring;
 
             private int shownValue = int.MinValue;
-            private bool everHeld;
-            private bool barsShown = true;
+            private IVisualElementScheduledItem popJob;
 
             public ResourceReadout(Label valueLabel, VisualElement host)
             {
                 value = valueLabel;
-                barHost = host;
+                ringHost = host;
                 if (host == null) return;
 
-                for (int i = 0; i < bars.Length; i++)
-                {
-                    VisualElement bar = new VisualElement();
-                    bar.AddToClassList("hud__bar");
-                    bar.AddToClassList(i < HistorySamples ? "hud__bar--age-" + i : "hud__bar--current");
-                    bar.pickingMode = PickingMode.Ignore;
-                    host.Add(bar);
-                    bars[i] = bar;
-                }
+                ring = new ResourceRing();
 
-                SetBarsShown(false);
+                // Inserted first so the value label - already in the UXML
+                // host - draws on top of it.
+                host.Insert(0, ring);
             }
 
             /// <summary>
-            /// Kept in the layout rather than collapsed, so the readouts do not
-            /// jump upward the first time a resource is earned mid-match.
+            /// Drops the baseline so the next Render redraws with no pop:
+            /// used on a viewer switch, where the numbers change but nothing
+            /// happened in the match.
             /// </summary>
-            private void SetBarsShown(bool shown)
+            public void Reset()
             {
-                if (barHost == null || shown == barsShown) return;
-                barsShown = shown;
-
-                barHost.style.visibility = shown ? Visibility.Visible : Visibility.Hidden;
-            }
-
-            public void Reset(int current)
-            {
-                history.Clear();
-                for (int i = 0; i < HistorySamples; i++) history.Add(current);
-                shownValue = int.MinValue;
-
-                // Latched per viewer, not per match: the debug switch resets the
-                // history, and the new viewer's own holdings decide afresh.
-                everHeld = current > 0;
-                SetBarsShown(everHeld);
-            }
-
-            public void Sample(int current)
-            {
-                if (history.Count == 0) { Reset(current); return; }
-
-                history.Add(current);
-                while (history.Count > HistorySamples) history.RemoveAt(0);
+                CancelPop();
                 shownValue = int.MinValue;
             }
 
             public void Render(int current)
             {
-                if (history.Count == 0) Reset(current);
+                if (current == shownValue) return;
 
-                if (!everHeld && current > 0)
-                {
-                    everHeld = true;
-                    SetBarsShown(true);
-                }
+                bool isFirst = shownValue == int.MinValue;
+                bool increased = !isFirst && current > shownValue;
+                bool decreased = !isFirst && current < shownValue;
 
-                if (current != shownValue)
-                {
-                    shownValue = current;
+                shownValue = current;
 
-                    if (value != null) value.text = current.ToString();
+                if (value != null) value.text = current.ToString();
+                if (ring != null) ring.SetValue(current, isFirst);
 
-                    for (int i = 0; i < HistorySamples && bars[i] != null; i++)
-                        bars[i].style.height = HeightFor(history[i]);
-
-                    VisualElement now = bars[HistorySamples];
-                    if (now != null)
-                    {
-                        now.style.height = HeightFor(current);
-                        now.EnableInClassList("hud__bar--low", current <= LowZoneMax);
-                        now.EnableInClassList("hud__bar--mid", current > LowZoneMax && current <= MidZoneMax);
-                        now.EnableInClassList("hud__bar--high", current > MidZoneMax);
-                    }
-                }
+                if (increased) Pop("hud__res-ring-host--up");
+                else if (decreased) Pop("hud__res-ring-host--down");
             }
 
-            private static float HeightFor(int amount)
+            /// <summary>Passes the resource's in-flight production to the ring.</summary>
+            public void SetProduction(float[] fractions, int count)
             {
-                return Mathf.Max(2f, Mathf.Min(1f, amount / (float)ReadoutCap) * ReadoutHeight);
+                if (ring != null) ring.SetProduction(fractions, count);
+            }
+
+            private void Pop(string ringHostClass)
+            {
+                CancelPop();
+                if (ringHost == null) return;
+
+                ringHost.RemoveFromClassList("hud__res-ring-host--up");
+                ringHost.RemoveFromClassList("hud__res-ring-host--down");
+                ringHost.AddToClassList(ringHostClass);
+
+                popJob = ringHost.schedule.Execute(() =>
+                {
+                    ringHost.RemoveFromClassList(ringHostClass);
+                    popJob = null;
+                }).StartingIn(PopMilliseconds);
+            }
+
+            private void CancelPop()
+            {
+                if (popJob == null) return;
+                popJob.Pause();
+                popJob = null;
+
+                if (ringHost == null) return;
+                ringHost.RemoveFromClassList("hud__res-ring-host--up");
+                ringHost.RemoveFromClassList("hud__res-ring-host--down");
             }
         }
     }

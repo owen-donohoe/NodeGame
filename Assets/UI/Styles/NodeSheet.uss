@@ -35,6 +35,11 @@
 .sheet--claim { height: 306px; }
 .sheet--tall.sheet--claim { height: 364px; }
 
+/* A reading, not a panel: an owned farm, mine or market. The claim strip
+   adds the same 44px here as at the other two sizes. */
+.sheet--compact { height: 224px; }
+.sheet--compact.sheet--claim { height: 268px; }
+
 /* ===================================================================
    Head
    =================================================================== */
@@ -257,6 +262,110 @@
 }
 
 /* ===================================================================
+   Resource chips
+
+   One per resource, pinned above the sheet's own top-left corner as a
+   child of .sheet (not Root) so its translate and height transitions
+   carry the chips along for free - see NodeSheet's constructor.
+   Colour is read at runtime from the same --ring-* custom properties
+   as the HUD's resource rings; nothing here hard-codes one.
+   =================================================================== */
+
+.sheet__res-chips {
+    position: absolute;
+    left: var(--space-4);
+    top: -34px;
+    flex-direction: row;
+    visibility: hidden;
+}
+
+.sheet.ui-sheet--open .sheet__res-chips {
+    visibility: visible;
+}
+
+.sheet__res-chip {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 6px;
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    background-color: var(--hud-glass);
+    transition-property: scale;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out-back;
+}
+
+.sheet__res-chip-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+}
+
+.ui-root .sheet__res-chip-value {
+    font-size: 13px;
+}
+
+/* Involved in whatever the sheet is showing: about 10% bigger, both ways. */
+.sheet__res-chip--on {
+    scale: 1.1 1.1;
+}
+
+.ui-root .sheet__res-chip--on .sheet__res-chip-value {
+    font-size: 14px;
+}
+
+/* One overshoot past the --on scale, removed a beat later so it settles
+   back down to it rather than to 1. */
+.sheet__res-chip--bounce {
+    scale: 1.28 1.28;
+}
+
+/* ===================================================================
+   Resource text
+
+   A resource-naming line, e.g. "Respawn costs 20 [food icon]": a
+   wrapping flex row of plain Labels and inline LobbyIcons rather than
+   a single Label, which cannot hold a VisualElement mid-text. Font
+   size, colour and white-space all come from whichever text class the
+   row itself carries (sheet__caption, sheet__microcap, ...) and
+   inherit down to the Labels inside it. See NodeSheetContent.
+   =================================================================== */
+
+.sheet__resource-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.sheet__resource-icon {
+    width: 15px;
+    height: 15px;
+    margin-left: 2px;
+    margin-right: 2px;
+    -unity-background-image-tint-color: var(--ink-mute);
+}
+
+/* Inside the gold primary button the text is --action-ink, not --ink-mute. */
+.sheet__resource-row--on-button .sheet__resource-icon {
+    -unity-background-image-tint-color: var(--action-ink);
+}
+
+/* A short suit card's price turns the short-ink colour; its icons follow. */
+.equip__card-sub--short .sheet__resource-icon {
+    -unity-background-image-tint-color: var(--status-short-ink);
+}
+
+/* ===================================================================
    Shared text
    =================================================================== */
 
@@ -467,6 +576,43 @@
     font-size: var(--type-min);
     letter-spacing: 1px;
     color: var(--ink-mute);
+}
+
+/* ===================================================================
+   Production (Farm, Mine, Market)
+   =================================================================== */
+
+.production__gauges {
+    flex-direction: row;
+    justify-content: center;
+    padding-top: var(--space-1);
+}
+
+.production__gauge {
+    align-items: center;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+/* The dial draws its arcs from these: color is the fill, the tint the track. */
+.production__dial {
+    width: 66px;
+    height: 66px;
+    align-items: center;
+    justify-content: center;
+    color: var(--confirm);
+    -unity-background-image-tint-color: var(--surface-sunk);
+}
+
+.ui-root .production__dial-text {
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.ui-root .production__gauge-label {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 4px;
 }
 
 /* ===================================================================

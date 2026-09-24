@@ -71,6 +71,10 @@ namespace NodeWar.Debugging
 
         private void OnGUI()
         {
+            // Locked matches already identify both players in the HUD. This
+            // debug label has no switch to offer and covers the breach bar.
+            if (isLocked) return;
+
             if (!styleInitialized)
             {
                 labelStyle = new GUIStyle(GUI.skin.label);

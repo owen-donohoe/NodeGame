@@ -10,17 +10,18 @@
         The in-match HUD, after ingame-prototype.html - an estimate of the
         look, corrected wherever it disagreed with the game.
 
-        WHAT IS ALWAYS VISIBLE, AND WHY. Settled 2026-09-02: both breach walls
-        and the three resources never hide, and the villager count collapses
-        behind a tap. Breach is the win condition - a player who cannot see how
-        close either side is to losing cannot play - so it is at the top, it is
-        first, and it has no collapsed state.
+        WHAT IS ALWAYS VISIBLE, AND WHY. Settled 2026-09-02: neither breach
+        wall ever hides, and the villager count collapses behind a tap. Breach
+        is the win condition - a player who cannot see how close either side
+        is to losing cannot play - so it is at the top, it is first, and it
+        has no collapsed state. The resources moved to the bottom of the
+        screen for the portrait rearrangement and can now be covered by the
+        node sheet while it is open, same as the rest of the board-space row.
 
         PICKING MODE IS LOAD-BEARING. Every container here is picking-mode
         Ignore. A runtime panel that picks over its whole area swallows every
-        tap before the board sees it, and the board is the game. The units
-        toggle is the only thing on this surface you can press; the node sheet,
-        added by the controller, is the only other control.
+        tap before the board sees it, and the board is the game. Only controls,
+        open cards and their scrims, and the visible opponent emote pick.
 
         YOUR SIDE IS ON THE LEFT. The left wall is the controlled player's,
         tagged YOU, and the right is the opponent's. Each carries its player
@@ -37,10 +38,21 @@
     <engine:VisualElement name="hud-root" class="ui-root hud" picking-mode="Ignore">
         <engine:VisualElement name="hud-safe-area" class="hud__safe" picking-mode="Ignore">
 
-            <!-- Breach walls either side of the match clock. -->
+            <!--
+                Breach walls either side of the match clock, bar first and its
+                mark/name/count label below it - so the wall itself, the thing
+                that actually changes, sits at the very top edge.
+
+                The clock and the settings entry share one centred column, so
+                the burger reads as sitting directly under the match time.
+            -->
             <engine:VisualElement class="hud__topbar" picking-mode="Ignore">
 
                 <engine:VisualElement name="hud-side-you" class="hud__side hud__side--you" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-ghost-you" class="hud__wall-ghost" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-fill-you" class="hud__wall-fill" picking-mode="Ignore" />
+                    </engine:VisualElement>
                     <engine:VisualElement class="hud__side-row" picking-mode="Ignore">
                         <engine:VisualElement name="hud-mark-you" class="ui-mark ui-mark--p0" picking-mode="Ignore">
                             <engine:Label name="hud-mark-you-label" class="ui-mark__label" text="1" picking-mode="Ignore" />
@@ -48,59 +60,42 @@
                         <engine:Label class="hud__you ui-w700" text="YOU" picking-mode="Ignore" />
                         <engine:Label name="hud-breach-count-you" class="hud__breach-count ui-w600" text="0/3" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
-                        <engine:VisualElement name="hud-ghost-you" class="hud__wall-ghost" picking-mode="Ignore" />
-                        <engine:VisualElement name="hud-fill-you" class="hud__wall-fill" picking-mode="Ignore" />
+                </engine:VisualElement>
+
+                <engine:VisualElement class="hud__clock-column" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__clock" picking-mode="Ignore">
+                        <engine:Label name="hud-clock" class="hud__clock-time ui-w600" text="0:00" picking-mode="Ignore" />
+                        <engine:Label class="hud__clock-label ui-w600" text="MATCH" picking-mode="Ignore" />
+                    </engine:VisualElement>
+
+                    <!--
+                        The burger: three USS-styled bars, not a glyph, so it
+                        draws the same on every platform. Opens the same
+                        settings card the gear always has - MatchSettingsPanel
+                        still queries this button by name.
+                    -->
+                    <engine:VisualElement name="hud-settings-dock" class="hud__settings-dock" picking-mode="Ignore">
+                        <engine:Button name="hud-settings-gear" class="ui-reset-button hud__burger">
+                            <engine:VisualElement class="hud__burger-bar" picking-mode="Ignore" />
+                            <engine:VisualElement class="hud__burger-bar" picking-mode="Ignore" />
+                            <engine:VisualElement class="hud__burger-bar" picking-mode="Ignore" />
+                        </engine:Button>
                     </engine:VisualElement>
                 </engine:VisualElement>
 
-                <engine:VisualElement class="hud__clock" picking-mode="Ignore">
-                    <engine:Label name="hud-clock" class="hud__clock-time ui-w600" text="0:00" picking-mode="Ignore" />
-                    <engine:Label class="hud__clock-label ui-w600" text="MATCH" picking-mode="Ignore" />
-                </engine:VisualElement>
-
                 <engine:VisualElement name="hud-side-them" class="hud__side hud__side--them" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
+                        <engine:VisualElement name="hud-ghost-them" class="hud__wall-ghost" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-fill-them" class="hud__wall-fill" picking-mode="Ignore" />
+                    </engine:VisualElement>
                     <engine:VisualElement class="hud__side-row" picking-mode="Ignore">
                         <engine:VisualElement name="hud-mark-them" class="ui-mark ui-mark--p1" picking-mode="Ignore">
                             <engine:Label name="hud-mark-them-label" class="ui-mark__label" text="2" picking-mode="Ignore" />
                         </engine:VisualElement>
                         <engine:Label name="hud-breach-count-them" class="hud__breach-count ui-w600" text="0/3" picking-mode="Ignore" />
                     </engine:VisualElement>
-                    <engine:VisualElement class="hud__wall" picking-mode="Ignore">
-                        <engine:VisualElement name="hud-ghost-them" class="hud__wall-ghost" picking-mode="Ignore" />
-                        <engine:VisualElement name="hud-fill-them" class="hud__wall-fill" picking-mode="Ignore" />
-                    </engine:VisualElement>
                 </engine:VisualElement>
 
-            </engine:VisualElement>
-
-            <!--
-                Resources. The prototype's locked readout: five past samples
-                and the current value, which is wider. The bars are built in
-                code; the number beside each label is the non-colour channel.
-            -->
-            <engine:VisualElement class="hud__resources" picking-mode="Ignore">
-                <engine:VisualElement name="hud-res-food" class="hud__res" picking-mode="Ignore">
-                    <engine:VisualElement class="hud__res-head" picking-mode="Ignore">
-                        <engine:Label class="hud__res-label ui-w600" text="FOOD" picking-mode="Ignore" />
-                        <engine:Label name="hud-food" class="hud__res-value ui-w600" text="0" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                    <engine:VisualElement name="hud-hist-food" class="hud__hist" picking-mode="Ignore" />
-                </engine:VisualElement>
-                <engine:VisualElement name="hud-res-materials" class="hud__res" picking-mode="Ignore">
-                    <engine:VisualElement class="hud__res-head" picking-mode="Ignore">
-                        <engine:Label class="hud__res-label ui-w600" text="MAT" picking-mode="Ignore" />
-                        <engine:Label name="hud-materials" class="hud__res-value ui-w600" text="0" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                    <engine:VisualElement name="hud-hist-materials" class="hud__hist" picking-mode="Ignore" />
-                </engine:VisualElement>
-                <engine:VisualElement name="hud-res-metal" class="hud__res hud__res--last" picking-mode="Ignore">
-                    <engine:VisualElement class="hud__res-head" picking-mode="Ignore">
-                        <engine:Label class="hud__res-label ui-w600" text="METAL" picking-mode="Ignore" />
-                        <engine:Label name="hud-metal" class="hud__res-value ui-w600" text="0" picking-mode="Ignore" />
-                    </engine:VisualElement>
-                    <engine:VisualElement name="hud-hist-metal" class="hud__hist" picking-mode="Ignore" />
-                </engine:VisualElement>
             </engine:VisualElement>
 
             <!--
@@ -130,6 +125,72 @@
 
             <!-- Everything below here is board. Nothing may cover it. -->
             <engine:VisualElement class="hud__board-space" picking-mode="Ignore" />
+            <!--
+                Resources, on their own sheet along the bottom edge. The node
+                sheet's shape - full bleed, rounded top corners, a hairline
+                top rule - in the HUD's dark glass rather than paper, because
+                this is a readout over the board and not a page, and with no
+                handle, because it does not open or close. It is the last
+                thing in the safe area's flow, so hud__board-space's
+                flex-grow pins it to the bottom; the node sheet slides over
+                it when it opens, which is why that sheet carries resource
+                chips of its own.
+
+                Each resource is three concentric segmented semicircles
+                - outer 1-10, middle 11-20, inner 21-30, flat side down -
+                with the live count centred inside and a LobbyIcon glyph
+                above, tinted the same muted HUD ink the text label it
+                replaced used. The rings are built in code (ResourceRing/
+                ResourceRingMath); the number is the non-colour channel next
+                to the ring's own colour. Nothing is drawn behind a ring, so
+                the three no longer carry dark glass cards of their own - the
+                sheet is the background now.
+
+                THE EMOTE BUTTON GROWS OUT OF THE SHEET, a lug in the sheet's
+                own material rather than a free-standing circle. It moved
+                here out of the hud-emotes layer below, which keeps the
+                bubbles, the options sheet and the scrim; EmotePanel finds
+                every one of them by name off the HUD root, so the move costs
+                it nothing. Leaving that layer is also what lets the node
+                sheet cover the tab the way it covers the rest of this sheet,
+                rather than the tab drawing over it.
+            -->
+            <engine:VisualElement name="hud-res-sheet" class="hud__res-sheet" picking-mode="Ignore">
+
+                <engine:VisualElement name="hud-emote-dock" class="hud__emote-tab" picking-mode="Ignore">
+                    <engine:Button name="hud-emote-button" class="ui-reset-button hud__emote-tab-button">
+                        <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                    </engine:Button>
+                </engine:VisualElement>
+
+                <engine:VisualElement class="hud__res-row" picking-mode="Ignore">
+                    <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
+                        <lobby:LobbyIcon kind="Food" class="hud__res-icon" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
+                            <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                    </engine:VisualElement>
+                    <engine:VisualElement name="hud-res-materials" class="hud__res-card" picking-mode="Ignore">
+                        <lobby:LobbyIcon kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
+                            <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                    </engine:VisualElement>
+                    <engine:VisualElement name="hud-res-metal" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
+                        <lobby:LobbyIcon kind="Metal" class="hud__res-icon" picking-mode="Ignore" />
+                        <engine:VisualElement name="hud-ring-metal" class="hud__res-ring-host" picking-mode="Ignore">
+                            <engine:Label name="hud-metal" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
+                        </engine:VisualElement>
+                    </engine:VisualElement>
+                </engine:VisualElement>
+
+                <!-- SafeAreaBinder writes the bottom inset here, the way the
+                     node sheet does: the sheet itself runs to the true screen
+                     edge, and this spacer keeps its contents off a home
+                     indicator. That is why hud-safe-area no longer takes the
+                     bottom edge - see GameplayHUDController.Bind. -->
+                <engine:VisualElement name="hud-res-safe-bottom" class="hud__res-safe-bottom" picking-mode="Ignore" />
+            </engine:VisualElement>
 
         </engine:VisualElement>
 
@@ -244,7 +305,7 @@
 
             IT IS NOT A TAKEOVER. Same settlement as the node sheet: the
             opponent keeps playing, so the board stays visible. The panel is a
-            corner card, not a page, and the scrim is invisible rather than a
+            small card, not a page, and the scrim is invisible rather than a
             dim - it is there to catch one tap, not to say "stop".
         -->
         <engine:VisualElement name="hud-settings-scrim" class="hud__settings-scrim" />
@@ -254,8 +315,12 @@
             to: it sits over the scrim, and if taps fell through it, touching
             the card's own background would close it. It is display:none when
             shut, so it costs the board nothing for the rest of the match.
+
+            hud__settings-main positions it under the burger - see HUD.uss -
+            while hud__settings stays the shape/shadow/transition shared with
+            the emote options sheet below, which keeps its own corner.
         -->
-        <engine:VisualElement name="hud-settings" class="hud__settings">
+        <engine:VisualElement name="hud-settings" class="hud__settings hud__settings-main">
             <engine:Label class="hud__settings-title ui-w700" text="Settings" picking-mode="Ignore" />
 
             <engine:VisualElement class="hud__settings-row" picking-mode="Ignore">
@@ -274,16 +339,43 @@
                 <lobby:LobbySwitch name="hud-settings-routes" value="true" />
             </engine:Button>
 
+            <engine:Button name="hud-settings-row-emotes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <lobby:LobbyIcon name="hud-settings-emotes-icon" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
+                <engine:Label class="hud__settings-label ui-w500" text="Emotes (saved)" picking-mode="Ignore" />
+                <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
+            </engine:Button>
+
             <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
         </engine:VisualElement>
 
-        <!--
-            The gear, in the bottom-right corner: the one place a thumb reaches
-            without the hand moving. Same 46px circle as the zoom handle above
-            it, so the right edge reads as one column of controls.
-        -->
-        <engine:VisualElement name="hud-settings-dock" class="hud__settings-dock" picking-mode="Ignore">
-            <engine:Button name="hud-settings-gear" class="ui-reset-button hud__gear" text="⚙" />
+        <!-- Above the end card: a closing emote is still part of the match.
+             The scrim and sheet pick only while open; the empty bubble slots
+             and the bubbles never pick. Mute lives in the popup. -->
+        <engine:VisualElement name="hud-emotes" class="hud__emotes" picking-mode="Ignore">
+            <engine:VisualElement name="hud-emote-you" class="hud__emote-you" picking-mode="Ignore" />
+            <engine:VisualElement name="hud-emote-them" class="hud__emote-them" picking-mode="Ignore" />
+            <engine:VisualElement name="hud-emote-side" class="hud__emote-side" picking-mode="Ignore" />
+            <engine:VisualElement name="hud-emote-scrim" class="hud__settings-scrim" picking-mode="Ignore" />
+            <engine:VisualElement name="hud-emote-sheet" class="hud__settings hud__emote-sheet" picking-mode="Ignore">
+              <engine:VisualElement class="hud__emote-options" picking-mode="Ignore">
+                <engine:Button name="hud-emote-happy" class="ui-reset-button hud__gear hud__emote-option">
+                    <lobby:LobbyIcon kind="Smile" class="hud__emote-icon" picking-mode="Ignore" />
+                </engine:Button>
+                <engine:Button name="hud-emote-sad" class="ui-reset-button hud__gear hud__emote-option">
+                    <lobby:LobbyIcon kind="Frown" class="hud__emote-icon" picking-mode="Ignore" />
+                </engine:Button>
+                <engine:Button name="hud-emote-angry" class="ui-reset-button hud__gear hud__emote-option">
+                    <lobby:LobbyIcon kind="Angry" class="hud__emote-icon" picking-mode="Ignore" />
+                </engine:Button>
+                <engine:Button name="hud-emote-flag" class="ui-reset-button hud__gear hud__emote-option">
+                    <lobby:LobbyIcon kind="Flag" class="hud__emote-icon hud__emote-icon--flag" picking-mode="Ignore" />
+                </engine:Button>
+              </engine:VisualElement>
+              <engine:Button name="hud-emote-mute" class="ui-reset-button hud__emote-mute" picking-mode="Ignore">
+                  <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                  <engine:Label name="hud-emote-mute-label" class="hud__emote-mute-label ui-w500" text="Mute this match" picking-mode="Ignore" />
+              </engine:Button>
+            </engine:VisualElement>
         </engine:VisualElement>
 
     </engine:VisualElement>

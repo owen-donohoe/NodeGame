@@ -275,6 +275,37 @@ Pointer (mouse / touch)        or  BotPlayer
 `SimulationState` is the single source of truth. Nothing outside
 `Simulation/` writes to it directly — see `docs/simulation-rules.md`.
 
+### What a tick did
+
+Beside the state it produces, a tick can report the moments it passed through,
+into a `TickEventLog` (`Simulation/TickEvents.cs`):
+
+```
+SimulationState   what the world IS.        Hashed. Replicated.
+TickEventLog      what just HAPPENED.       Not hashed. Output only.
+```
+
+A `TickEvent` is flat and integer-only, in the style of `GameCommand`: a type
+plus a node, villager, player and value, `-1` where unused. The types are
+`CombatStarted`, `VillagerDied`, `VillagerRespawned` (value 1 if paid),
+`NodeNeutralised`, `NodeClaimed` and `Breach`.
+
+- **Moments only.** A fight still going, or a node still being pushed, is read
+  off `SimulationState` the way the claim bar always was. A log that had to say
+  "still happening" every tick would just be the state again.
+- **Output only, and off the state.** The simulation appends and never reads
+  back, so a wrong entry is a cosmetic bug. The log is not a `SimulationState`
+  field, so it is not in `SimulationStateHasher` and never replicates. Both
+  peers write the same entries anyway, from integer state in tick order.
+- **Passed in, null by default.** `SimulateTick(state, log)` and
+  `ProcessCommand(state, command, log)` record only when handed a log, so tests
+  and any headless run are unchanged. `ProcessCommand` takes it because a paid
+  respawn happens there, outside `SimulateTick`.
+- **The driver owns it.** `TickRunner` and `LockstepRunner` clear one log before
+  each tick, and after the tick raise `ITickProvider.TickSimulated` with it.
+  They raise it inside their catch-up loop, so a frame that runs three ticks
+  raises it three times. The log is reused, so subscribers copy what they need.
+
 ## Scene structure
 
 Three `.unity` scenes exist under `Assets/Scenes/`:
@@ -354,6 +385,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `SimulationState` — the entire mutable match state: `NodeData[]`,
   `VillagerData[]`, `PlayerData[]`, tick count, game-over/winner.
 - `GameSimulation.SimulateTick` — the deterministic tick loop.
+- `TickEventLog` — what a tick did, output only and unhashed. See
+  [What a tick did](#what-a-tick-did).
 - `CommandProcessor` — validates and applies a `GameCommand` to
   `SimulationState`.
 - `Commands.cs` — `GameCommand` struct and `CommandType` enum.
@@ -421,6 +454,15 @@ Three objects are carried across the Lobby → Gameplay scene load via
   covers.
 - `MatchLauncher` — the lobby's route into a match.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+- `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
+  layer is brought to the front so a closing emote shows over the end card, and
+  its dock stands aside while the node sheet is open. The popup mute is reversible
+  and match-local; the Settings toggle is saved across matches and takes precedence.
+  Either mute hides bubbles and disables/dims outgoing emotes. Speaker icons turn
+  from white to red; the popup stays reachable during mute and cooldown.
+- `IndicatorLayer` — draws `IndicatorDirector`'s list over the board. The
+  first child of `hud-root`, so every readout, dock, sheet and card draws over
+  it. See [In-match indicators](#in-match-indicators).
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
   to open; `NodePanelManager` still owns that.
 - `NodeSheetContent` and its three subclasses — `ForgeContent`,
@@ -480,6 +522,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
   route hands the player something new rather than withholding it.
 - `ViewSide` — the UnityEngine-free maths behind the camera POV. Tested by
   `dotnet/NodeWar.View.Tests`.
+- `IndicatorDirector` / `IndicatorSettings` / `IndicatorPlacement` — which
+  in-match indicators exist, their tunables on `GameManager`, and the
+  UnityEngine-free placement maths. See
+  [In-match indicators](#in-match-indicators).
 - `SortHeight` / `SpriteDepthSorter` — height and depth order inside a node or
   draft piece.
 - `OutlineDriver` — the only thing that sets outline intents. Reads hover,
@@ -561,6 +607,50 @@ player to a yaw by table.
   camera's yaw and follow it if the side changes; the sticker is one height above
   the cube.
 
+### In-match indicators
+
+Popups that tell the player something happened somewhere: a fight, a node of
+theirs being taken, an enemy headed for their Core. Two halves, split along
+the layer line.
+
+- **`IndicatorDirector` (View/) decides what exists.** It is a plain class
+  driven by `ITickProvider.TickSimulated`, so a paused or finished match changes
+  nothing. Moments come from the tick's `TickEventLog` (`CombatStarted` starts a
+  battle; `NodeNeutralised` turns "under attack" into a brief "lost" pulse).
+  Conditions are read off `SimulationState` once per tick. Each kind has a
+  debounce before it shows and a grace before it goes (`IndicatorSettings`, on
+  `GameManager`), so a one-tick flicker neither pops nor re-pops. It is
+  read-only against the simulation, and its timing is wall-clock presentation
+  only.
+- **`IndicatorLayer` (UI Toolkit HUD) draws it.** The in-view zone is the central
+  60% of the board the player can see: the HUD's `hud__board-space`, less the
+  node sheet while it is open. It has hysteresis, entering at 0.60 and leaving
+  at 0.66. Inside it a subject takes its in-view form (smaller, or nothing).
+  Outside it the icon sits on the subject clamped inside the board, clear of the
+  control docks, with an arrow when the subject is off screen. The two
+  rectangles differ on purpose: measuring the zone against the dock-inset area
+  would pull the centre of attention off the centre of the screen. Overlapping
+  edge icons merge into the most important one with a count, up to a cap.
+- **Battle icon lift is separate from arrow aim.** Its default lift is 0.75
+  world units (`battleHeight`); other node indicators use `nodeHeight`.
+  A clamped battle arrow aims at the projected node centre with `atan2`, using
+  one extra projection only when it points, so changing lift cannot skew its aim.
+- **Only visible edge icons pick.** A tap eases the camera to the subject through
+  `CameraController.FocusOnWorldPoint`, which counts as a manual move so closing
+  a sheet does not undo it. The gesture source's EventSystem check stops the
+  same press reaching the board.
+- **Motion is USS.** Adding `.ind--in` pops an icon with `ease-out-back`;
+  removing it falls back to `.ind`'s `ease-in` taper. The target style's
+  transition is the one in force, so one scale property overshoots in and
+  tapers out, and reduced motion drops the overshoot.
+- **Timers run on the layer, not on an element.** An element's scheduled items
+  pause while it is detached and resume when it is attached again, so a recycle
+  timer on a pooled element fires into its next life. That detached a freshly
+  reused indicator in play; the layer's scheduler plus a generation stamp is
+  the fix.
+- **Icons are `LobbyIcon` glyphs drawn with Painter2D.** Fredoka carries no
+  symbol glyphs, and a fallback font would differ by platform.
+
 ### Where a villager is, mid-edge
 
 A villager in transit has no position of its own. `currentNodeID` is the node
@@ -602,6 +692,16 @@ and must therefore arrive at identical results every tick.
   fixed command-processing order (all of P0's commands, then all of P1's)
   and applies an input delay so local input for tick *N* is generated and
   sent ahead of when tick *N* actually simulates, to hide network latency.
+- **Emotes ride beside lockstep, not inside it.** They are cosmetic, so they
+  are never a `GameCommand`: `PacketType.Emote` (8) is a 5-byte packet sent
+  twice over UDP and de-duplicated on its sequence number. It never waits for a
+  tick and never reaches `CommandProcessor`. `LockstepRunner` is the networked
+  `IEmoteChannel`, and a local or bot match gets a `LocalEmoteChannel`. After
+  game over the runner keeps pumping emotes and heartbeats, with no disconnect
+  check, so a closing emote still arrives. An older build ignores type 8,
+  because the packet switch has no default. `EmotePanel` (HUD) applies the
+  rate limit (under 5 per 1 s and under 10 per 5 s) on send and again on
+  receive, and owns mute.
 - **Desync detection** — every 50 ticks
   (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its

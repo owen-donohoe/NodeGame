@@ -60,10 +60,7 @@ namespace NodeWar.View
         private float[] routeOrderedAt;
         private int[] lastTargetNode;
 
-        // Graph hops from anything the local player holds. Recomputed once a
-        // frame and shared by every opponent test.
-        private int[] hopsFromPlayer;
-        private int[] bfsQueue;
+        private readonly OpponentRouteGate opponentGate = new OpponentRouteGate();
 
         // Geometry of the stub drawn this pass, so the node-based fade can be
         // converted into a fraction of it.
@@ -122,7 +119,8 @@ namespace NodeWar.View
             // itself returns false immediately when opponent routes are off.
             // Skip the board-wide walk entirely rather than paying for it and
             // then discarding the result villager by villager.
-            if (opponentSettings.show) ComputeHopsFromPlayer();
+            if (opponentSettings.show)
+                opponentGate.ComputeHopsFromPlayer(simState, localPlayerID, opponentSettings.withinHopsOfYou);
 
             drawnOwn.Clear();
             drawnOpponent.Clear();
@@ -147,7 +145,8 @@ namespace NodeWar.View
                 float screenAlpha = 1f;
                 if (!mine && !OpponentRouteVisible(villager, out screenAlpha)) continue;
 
-                int legs = mine ? int.MaxValue : opponentSettings.revealLegs;
+                int legs = mine ? int.MaxValue :
+                    RouteReveal.LegCount(villager.movePath, villager.movePathIndex, opponentSettings.revealLegs);
                 int compareNodes = mine ? int.MaxValue : opponentSettings.revealLegs + 1;
 
                 if (AlreadyDrawn(i, mine ? drawnOwn : drawnOpponent, compareNodes)) continue;
@@ -181,13 +180,7 @@ namespace NodeWar.View
 
             int node = villager.currentNodeID;
 
-            if (opponentSettings.withinHopsOfYou > 0)
-            {
-                if (node < 0 || node >= hopsFromPlayer.Length) return false;
-
-                int hops = hopsFromPlayer[node];
-                if (hops < 0 || hops > opponentSettings.withinHopsOfYou) return false;
-            }
+            if (!opponentGate.WithinHops(node, opponentSettings.withinHopsOfYou)) return false;
 
             if (cam == null) return false;
             if (node < 0 || node >= nodeSlotManagers.Length) return false;
@@ -212,68 +205,6 @@ namespace NodeWar.View
         }
 
         /// <summary>
-        /// Multi-source breadth-first search out from every node the local player
-        /// owns or is standing on. Hops, not travel cost: the question is board
-        /// presence, not how long a walk would take.
-        /// </summary>
-        private void ComputeHopsFromPlayer()
-        {
-            int nodeCount = simState.nodes.Length;
-
-            if (hopsFromPlayer == null || hopsFromPlayer.Length < nodeCount)
-            {
-                hopsFromPlayer = new int[nodeCount];
-                bfsQueue = new int[nodeCount];
-            }
-
-            for (int i = 0; i < nodeCount; i++)
-                hopsFromPlayer[i] = -1;
-
-            int tail = 0;
-
-            for (int i = 0; i < nodeCount; i++)
-            {
-                if (simState.nodes[i].ownerID != localPlayerID) continue;
-                hopsFromPlayer[i] = 0;
-                bfsQueue[tail++] = i;
-            }
-
-            for (int i = 0; i < simState.villagers.Length; i++)
-            {
-                VillagerData v = simState.villagers[i];
-                if (v.ownerID != localPlayerID) continue;
-                if (v.isConsumed || v.state == VillagerState.Dead) continue;
-
-                int node = v.currentNodeID;
-                if (node < 0 || node >= nodeCount) continue;
-                if (hopsFromPlayer[node] >= 0) continue;
-
-                hopsFromPlayer[node] = 0;
-                bfsQueue[tail++] = node;
-            }
-
-            int limit = opponentSettings.withinHopsOfYou;
-            int head = 0;
-
-            while (head < tail)
-            {
-                int current = bfsQueue[head++];
-                if (hopsFromPlayer[current] >= limit) continue;
-
-                Edge[] edges = simState.nodes[current].edges;
-                for (int e = 0; e < edges.Length; e++)
-                {
-                    int next = edges[e].toNode;
-                    if (next < 0 || next >= nodeCount) continue;
-                    if (hopsFromPlayer[next] >= 0) continue;
-
-                    hopsFromPlayer[next] = hopsFromPlayer[current] + 1;
-                    bfsQueue[tail++] = next;
-                }
-            }
-        }
-
-        /// <summary>
         /// True if a villager already drawn this frame walks the same route over
         /// the stretch that will actually be shown. That is what collapses a
         /// squad to one line.
@@ -292,23 +223,8 @@ namespace NodeWar.View
             VillagerData va = simState.villagers[a];
             VillagerData vb = simState.villagers[b];
 
-            int remainingA = va.movePath.Length - va.movePathIndex;
-            int remainingB = vb.movePath.Length - vb.movePathIndex;
-
-            // Only the shown stretch matters. Two opponents whose visible stubs
-            // coincide draw one line even if they part company past the cut --
-            // and drawing two would stack the dashes and read brighter, which is
-            // itself a hint the player has not earned.
-            int compareA = remainingA < compareNodes ? remainingA : compareNodes;
-            int compareB = remainingB < compareNodes ? remainingB : compareNodes;
-            if (compareA != compareB) return false;
-
-            for (int k = 0; k < compareA; k++)
-            {
-                if (va.movePath[va.movePathIndex + k] != vb.movePath[vb.movePathIndex + k])
-                    return false;
-            }
-            return true;
+            return RouteReveal.SameRoute(va.movePath, va.movePathIndex,
+                                         vb.movePath, vb.movePathIndex, compareNodes);
         }
 
         /// <summary>

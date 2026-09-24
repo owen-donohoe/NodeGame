@@ -133,6 +133,7 @@ namespace NodeWar.View.Outline
             CoreUtils.Destroy(compositeMaterial);
             maskMaterial = null;
             compositeMaterial = null;
+            if (compositePass != null) compositePass.Dispose();
             maskPass = null;
             compositePass = null;
         }

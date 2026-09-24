@@ -18,6 +18,41 @@ namespace NodeWar.Lobby.Tests
         // ===== MIGRATION =====
 
         [Test]
+        public void CreateDefault_EnablesOpponentEmotesAtVersion3()
+        {
+            GameSettingsData defaults = GameSettingsData.CreateDefault();
+            Assert.AreEqual(3, defaults.version);
+            Assert.IsTrue(defaults.opponentEmotes);
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        public void Normalized_OlderSettings_EnableEmotesAndKeepPreferences(int version)
+        {
+            GameSettingsData stored = GameSettingsData.CreateDefault();
+            stored.version = version;
+            stored.opponentEmotes = false;
+            stored.opponentRoutes = false;
+            stored.musicVolume = 0.12f;
+            stored.reducedMotion = true;
+
+            GameSettingsData result = GameSettingsData.Normalized(stored);
+            Assert.AreEqual(3, result.version);
+            Assert.IsTrue(result.opponentEmotes);
+            Assert.AreEqual(version < 2, result.opponentRoutes);
+            Assert.AreEqual(0.12f, result.musicVolume);
+            Assert.IsTrue(result.reducedMotion);
+        }
+
+        [Test]
+        public void Normalized_Version3_PreservesEmotesOff()
+        {
+            GameSettingsData stored = GameSettingsData.CreateDefault();
+            stored.opponentEmotes = false;
+            Assert.IsFalse(GameSettingsData.Normalized(stored).opponentEmotes);
+        }
+
+        [Test]
         public void Normalized_VersionZero_BecomesDefaults()
         {
             // What a save written before settings existed deserialises to.

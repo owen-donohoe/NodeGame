@@ -113,6 +113,13 @@ Shader "NodeWar/Outline Composite"
 
             float4 _OutlinePalette[OUTLINE_STYLE_COUNT];
 
+            // One texel per mask ID: that group's own line colour, blended over
+            // its style's palette colour by alpha. A texture rather than a
+            // uniform array because 256 float4s is past what GLES 3.0 promises a
+            // fragment shader. Texel 0 is never written, so a lane with no group
+            // reads clear and keeps the palette.
+            TEXTURE2D(_OutlineGroupTint);
+
             // .x is the style's line width as a fraction of the tap radius, so
             // Selected can read as a thin line while still winning every pixel
             // it contests.
@@ -219,6 +226,17 @@ Shader "NodeWar/Outline Composite"
                 accumulated.a   = colour.a             + accumulated.a   * (1.0 - colour.a);
             }
 
+            /// The colour a line is drawn in: its style's palette entry, under
+            /// the tint of the group the line belongs to. Only the colour moves.
+            /// The palette's alpha is the style's opacity and is kept, so a
+            /// tinted Selected line is exactly as solid as an untinted one.
+            float4 TintedColour(float4 paletteColour, uint groupId)
+            {
+                float4 tint = LOAD_TEXTURE2D(_OutlineGroupTint, uint2(groupId, 0u));
+                paletteColour.rgb = lerp(paletteColour.rgb, tint.rgb, tint.a);
+                return paletteColour;
+            }
+
             float4 OutlineFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
@@ -279,6 +297,10 @@ Shader "NodeWar/Outline Composite"
                 // dynamically -- an indexable temp is the one thing in this
                 // shader that would be genuinely slow on a tile-based GPU.
                 float4 styleDist = 1.0e6;
+
+                // The group each lane's nearest boundary belongs to, for its
+                // tint. Same lanes, same reason for not using an array.
+                uint4 styleId = 0u;
 
                 uint stylesPresent = (uint)_OutlineStylesPresent;
                 uint stylesFound = 0u;
@@ -356,10 +378,10 @@ Shader "NodeWar/Outline Composite"
                     // pixel still draws there.
                     if (tap.z <= _OutlineStyleRadius[tapStyle].x)
                     {
-                        if (tapStyle == 1u)      styleDist.x = tap.z;
-                        else if (tapStyle == 2u) styleDist.y = tap.z;
-                        else if (tapStyle == 3u) styleDist.z = tap.z;
-                        else                     styleDist.w = tap.z;
+                        if (tapStyle == 1u)      { styleDist.x = tap.z; styleId.x = tapId; }
+                        else if (tapStyle == 2u) { styleDist.y = tap.z; styleId.y = tapId; }
+                        else if (tapStyle == 3u) { styleDist.z = tap.z; styleId.z = tapId; }
+                        else                     { styleDist.w = tap.z; styleId.w = tapId; }
                     }
 
                     // Every style on screen has been accounted for, so no later
@@ -389,13 +411,13 @@ Shader "NodeWar/Outline Composite"
                 // Coverage is measured against each style's own radius, so a
                 // thinner style fades out over its own edge rather than over a
                 // boundary it never reaches.
-                OutlineLayerOver(_OutlinePalette[1], _OutlineStyleRadius[1].x,
+                OutlineLayerOver(TintedColour(_OutlinePalette[1], styleId.x), _OutlineStyleRadius[1].x,
                                  styleDist.x, fadeFrac, accum);
-                OutlineLayerOver(_OutlinePalette[2], _OutlineStyleRadius[2].x,
+                OutlineLayerOver(TintedColour(_OutlinePalette[2], styleId.y), _OutlineStyleRadius[2].x,
                                  styleDist.y, fadeFrac, accum);
-                OutlineLayerOver(_OutlinePalette[3], _OutlineStyleRadius[3].x,
+                OutlineLayerOver(TintedColour(_OutlinePalette[3], styleId.z), _OutlineStyleRadius[3].x,
                                  styleDist.z, fadeFrac, accum);
-                OutlineLayerOver(_OutlinePalette[4], _OutlineStyleRadius[4].x,
+                OutlineLayerOver(TintedColour(_OutlinePalette[4], styleId.w), _OutlineStyleRadius[4].x,
                                  styleDist.w, fadeFrac, accum);
 
                 // No layer covered this pixel. Discard rather than returning a

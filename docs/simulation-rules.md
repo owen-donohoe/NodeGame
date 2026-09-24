@@ -154,6 +154,13 @@ Fields that are set once at construction and never mutated during play
 (on `NodeData`: `gridX`/`gridZ`, `edges`, `bonusVillagersOnClaim`) are
 intentionally excluded — keep it that way rather than hashing static data.
 
+`TickEventLog` is outside this rule because it is outside `SimulationState`:
+the simulation only ever appends to it and never reads it back, so nothing in
+it can change a result, and it is deliberately not hashed. That holds only
+while both halves are true. A step that **reads** the log, or a log that
+moves **onto** `SimulationState`, makes it state, and then it needs hashing
+like everything else. See `docs/architecture.md`, *What a tick did*.
+
 ## Desync detection
 
 Every 50 ticks (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer

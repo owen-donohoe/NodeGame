@@ -40,6 +40,18 @@ A second wave later the same day, with the estimates above in hand:
 | Web research: this repo's doc system vs published practice | 34 | **4.13M** |
 | Fix one issue, file and candidate fix named in the prompt | 14 | **0.70M** |
 
+A third wave, 2026-09-21, two feature implementations with files, decisions
+and verification commands named in the prompt (estimated 2.4M together):
+
+| Task | Tokens |
+|---|---:|
+| Four indicator producers plus a gate extraction, 6 commits, 12 tests | **1.20M** |
+| Emotes end to end: packet, limiter, settings v3, HUD, 27 tests | **1.41M** |
+
+Both fall on the "bounded, files named" and "finds its own way" estimates
+below, and both needed a review pass: `done:` commit prefixes (which mark
+Notion tasks on `/update`), one UI overlap, and one per-poll allocation.
+
 **Total 6.4M tokens in about 35 minutes. That took the Codex budget from 0% to
 100%.** The limit reset roughly five hours after the first call, so treat the
 Codex allowance as **~6M tokens per rolling 5-hour window** until measurement

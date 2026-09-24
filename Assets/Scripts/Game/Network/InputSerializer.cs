@@ -1,4 +1,5 @@
 using NodeWar.Simulation;
+using NodeWar.Core;
 
 namespace NodeWar.Network
 {
@@ -11,7 +12,8 @@ namespace NodeWar.Network
         DraftReady = 4,
         DraftPlacement = 5,
         DraftLoadout = 6,
-        DraftAck = 7
+        DraftAck = 7,
+        Emote = 8
     }
 
     /// <summary>
@@ -107,6 +109,28 @@ namespace NodeWar.Network
                 input.commands[i].value = ReadInt(data, ref offset);
             }
 
+            return true;
+        }
+
+        /// <summary>Emote: [type:1][player:1][emote:1][seq:2], little-endian.</summary>
+        public static byte[] SerializeEmote(int player, EmoteType emote, ushort sequence)
+        {
+            return new byte[] { (byte)PacketType.Emote, (byte)player, (byte)emote,
+                (byte)sequence, (byte)(sequence >> 8) };
+        }
+
+        public static bool TryDeserializeEmote(byte[] data,
+            out int player, out EmoteType emote, out ushort sequence)
+        {
+            player = 0;
+            emote = default;
+            sequence = 0;
+            if (data == null || data.Length != 5 || data[0] != (byte)PacketType.Emote ||
+                data[1] > 1 || data[2] > (byte)EmoteType.WhiteFlag) return false;
+
+            player = data[1];
+            emote = (EmoteType)data[2];
+            sequence = (ushort)(data[3] | (data[4] << 8));
             return true;
         }
 

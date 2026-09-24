@@ -22,6 +22,7 @@ namespace NodeWar.Tests
             public OutlineStyle Style { get; set; }
             public int OutlineId { get; set; }
             public Renderer[] Renderers => System.Array.Empty<Renderer>();
+            public Color Tint => Color.clear;
         }
 
         private static OutlineRegistry NewRegistry() => new OutlineRegistry();

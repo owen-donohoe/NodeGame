@@ -2,18 +2,22 @@ using System.Collections.Generic;
 using UnityEngine.UIElements;
 using NodeWar.Simulation;
 using NodeWar.Input;
+using NodeWar.Lobby;
 
 namespace NodeWar.UI
 {
     /// <summary>
     /// One district's worth of node-sheet content.
     ///
-    /// There are three of these and there should stay three. DistrictPanelPolicy
-    /// already settled which districts open a sheet at all - only the six with
-    /// something to press - and the rest are informational, with their state
-    /// shown on the node itself. So Forge, Core and Equip cover every case, with
-    /// Equip shared by Barracks, Camp, Arsenal and Sanctuary because those four
-    /// differ only in which suits they permit.
+    /// There are four of these and there should stay four. DistrictPanelPolicy.
+    /// HasSheet already settled which districts open a sheet at all - the six
+    /// with something to press, for anyone, plus Farm, Mine and Market for
+    /// their own owner - and the rest are informational, with their state
+    /// shown on the node itself. So Forge, Core, Equip and Production cover
+    /// every case: Equip is shared by Barracks, Camp, Arsenal and Sanctuary
+    /// because those four differ only in which suits they permit, and
+    /// Production is shared by Farm, Mine and Market because those three
+    /// differ only in what a working villager there produces.
     ///
     /// Each content fills two places: the sheet's scrolling body (Root) and its
     /// action bar, which holds the content's one main control and stays put
@@ -55,6 +59,19 @@ namespace NodeWar.UI
 
         /// <summary>Whether this content wants the taller sheet.</summary>
         public virtual bool Tall { get { return false; } }
+
+        /// <summary>
+        /// Whether this content wants the short sheet: a reading with no
+        /// actions, which should cover as little of the board as it can.
+        /// </summary>
+        public virtual bool Compact { get { return false; } }
+
+        /// <summary>
+        /// Which resources this content's sheet is currently about, for the
+        /// resource chip row's emphasis. None by default; a content overrides
+        /// this rather than NodeSheet holding a district->resource lookup.
+        /// </summary>
+        public virtual ResourceKind InvolvedResources { get { return ResourceKind.None; } }
 
         protected NodeSheetContent()
         {
@@ -165,6 +182,77 @@ namespace NodeWar.UI
             button.AddToClassList("sheet__primary");
             button.AddToClassList("ui-w600");
             return button;
+        }
+
+        // ===== RESOURCE TEXT =====
+        //
+        // A Label cannot hold a VisualElement mid-text, so a line naming a
+        // resource is built as a small wrapping flex row of Labels and
+        // LobbyIcons instead. Write the resource inline as {food}, {materials}
+        // or {metal} - e.g. "Respawn costs 20 {food}" - and SetResourceText
+        // splits the template into text spans and icons. Font size, colour
+        // and white-space all inherit from whatever classes the row itself
+        // carries, the same way they would on a Label.
+
+        /// <summary>An empty resource row, ready for SetResourceText. Add classes as for Caption/Heading.</summary>
+        protected static VisualElement ResourceRow(params string[] classes)
+        {
+            VisualElement row = Box(classes);
+            row.AddToClassList("sheet__resource-row");
+            return row;
+        }
+
+        /// <summary>Rebuilds a resource row's children from a template. See ResourceRow.</summary>
+        protected static void SetResourceText(VisualElement row, string template)
+        {
+            row.Clear();
+
+            int i = 0;
+            while (i < template.Length)
+            {
+                int open = template.IndexOf('{', i);
+                if (open < 0)
+                {
+                    AddSpan(row, template.Substring(i));
+                    return;
+                }
+
+                if (open > i) AddSpan(row, template.Substring(i, open - i));
+
+                int close = template.IndexOf('}', open);
+                if (close < 0)
+                {
+                    AddSpan(row, template.Substring(open));
+                    return;
+                }
+
+                LobbyIconKind icon = IconFor(template.Substring(open + 1, close - open - 1));
+                if (icon != LobbyIconKind.None)
+                {
+                    LobbyIcon glyph = new LobbyIcon(icon);
+                    glyph.AddToClassList("sheet__resource-icon");
+                    row.Add(glyph);
+                }
+
+                i = close + 1;
+            }
+        }
+
+        private static void AddSpan(VisualElement row, string text)
+        {
+            if (text.Length == 0) return;
+            row.Add(Text(text));
+        }
+
+        private static LobbyIconKind IconFor(string token)
+        {
+            switch (token)
+            {
+                case "food": return LobbyIconKind.Food;
+                case "materials": return LobbyIconKind.Materials;
+                case "metal": return LobbyIconKind.Metal;
+                default: return LobbyIconKind.None;
+            }
         }
     }
 }

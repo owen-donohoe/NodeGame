@@ -128,3 +128,13 @@ UIElementsSchema/
 
 # Rider workspace state. Per-machine, and it rewrites itself on every reindex.
 .idea/
+
+# Local agent worktrees are complete, independent Unity checkouts. Keep their
+# source and generated Library caches out of this repository.
+/.claude/worktrees/
+
+# Editor captures. docs/skills/drive-the-editor.md requires --save_path to be
+# inside the project, so screenshots land under Assets/ where Unity imports
+# them and git sees them. They are session scratch, never content.
+/[Aa]ssets/[Tt]emp/
+/[Aa]ssets/[Tt]emp.meta

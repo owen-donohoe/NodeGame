@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UIElements;
 using DG.Tweening;
 using NodeWar.Simulation;
@@ -34,16 +35,26 @@ namespace NodeWar.UI
     /// Those are DraftManager's, and this class only ever asks it two things:
     /// is it my turn, and please confirm this placement.
     ///
-    /// ================= THE TWO INPUT ROUTES =================
+    /// ================= THE THREE INPUT ROUTES =================
     ///
-    /// TAP a card to arm it, then tap a cell. DRAG a card onto a cell. Both end
-    /// in the same parked state, which is why there is one `handSlot` and not a
-    /// mode flag - a piece dragged out can then be moved by tapping a different
-    /// cell, and neither route has a step the other lacks.
+    /// TAP a card to arm it, then tap a cell. TAP a card, then press the board
+    /// and move - the piece comes out under the finger already dragged. DRAG a
+    /// card onto a cell. All three end in the same parked state, which is why
+    /// there is one `handSlot` and not a mode flag - a piece dragged out can
+    /// then be moved by tapping a different cell, and no route has a step
+    /// another lacks.
     ///
-    /// A press on a card resolves late. Under the slop it was a tap; past it, a
+    /// A CARD PRESS RESOLVES LATE. Under the slop it was a tap; past it, a
     /// drag. Nothing visible happens until it is decided, because a card that
     /// armed itself on touch-down would flicker under every drag.
+    ///
+    /// A BOARD PRESS RESOLVES AT ONCE. With a piece in hand the cell takes it
+    /// the instant the finger lands, and travelling afterwards lifts it off
+    /// again into a drag. The card cannot afford that and the board can,
+    /// because every part of a landed placement is reversible - move it, pick
+    /// it up, cancel it - so landing early costs nothing and waiting for the
+    /// lift is a delay you can feel. Confirm is the one thing held back until
+    /// the press resolves, or a press that became a drag would flash it.
     ///
     /// ================= WHY POINTER AND NOT MOUSE =================
     ///
@@ -82,9 +93,20 @@ namespace NodeWar.UI
         [Tooltip("Height above the grid plane for ghosts and placed pieces.")]
         [SerializeField] private float pieceYOffset = 0.1f;
 
-        [Header("Ghost tints")]
-        [SerializeField] private Color validCellTint = new Color(0.3f, 1f, 0.3f, 0.7f);
-        [SerializeField] private Color invalidCellTint = new Color(1f, 0.3f, 0.3f, 0.5f);
+        // Every piece wears its owner's colour, the ghost included, so the board
+        // says whose piece is whose at a glance. That is why a blocked cell is
+        // grey rather than the old red: red is player 2's colour, and a red
+        // ghost over a taken cell would read as "this is theirs".
+        [Header("Piece tints")]
+        [Tooltip("Opacity of the ghost over a cell it can take. Its colour is the local player's.")]
+        [SerializeField] private float ghostAlpha = 0.75f;
+
+        [Tooltip("The ghost over a cell it cannot take, or off the grid.")]
+        [SerializeField] private Color blockedCellTint = new Color(0.55f, 0.55f, 0.58f, 0.45f);
+
+        [Tooltip("Opacity of a placed piece. Its colour is its owner's; an unowned " +
+                 "initial node is left white.")]
+        [SerializeField] private float placedAlpha = 0.9f;
 
         [Header("Placement drop")]
         [SerializeField] private float placementDropHeight = 6f;
@@ -201,6 +223,12 @@ namespace NodeWar.UI
         private DraftPlacementPreview ghostPreview;
         private int ghostX = -1;
         private int ghostZ = -1;
+
+        // How solid the ghost draws, 0 to 1. Its half of the card-to-board
+        // cross-fade - see DraftHandover - multiplied into the tint rather
+        // than replacing it, so a blocked cell still reads as blocked while
+        // it fades. 1 whenever nothing is being dragged.
+        private float ghostFade = 1f;
         private bool ghostOnValidCell;
 
         // A board press that has begun but not yet resolved into a tap.
@@ -332,7 +360,7 @@ namespace NodeWar.UI
             for (int i = 0; i < placements.Length; i++)
             {
                 Vector3 pos = draftManager.GridToWorld(placements[i].gridX, placements[i].gridZ);
-                SpawnConfirmedPlaceholder(pos, placements[i].districtType);
+                SpawnConfirmedPlaceholder(pos, placements[i].districtType, placements[i].ownerID);
             }
         }
 
@@ -423,7 +451,7 @@ namespace NodeWar.UI
             if (draftManager == null) return;
 
             Vector3 pos = draftManager.GridToWorld(placement.gridX, placement.gridZ);
-            SpawnConfirmedPlaceholder(pos, placement.districtType);
+            SpawnConfirmedPlaceholder(pos, placement.districtType, placement.playerID);
 
             CancelHand();
             RebuildCards();
@@ -620,8 +648,19 @@ namespace NodeWar.UI
 
         /// <summary>
         /// A press on the board, read raw because the board is not a UI Toolkit
-        /// element. Two things can come of it: picking a parked piece back up,
-        /// or dropping the piece in hand onto a free cell.
+        /// element. Three things can come of it: picking a parked piece back
+        /// up, dropping the piece in hand onto a free cell, or - if the press
+        /// travels with a piece in hand - becoming a drag of that piece.
+        ///
+        /// THE PRESS IS THE PLACEMENT, AND ALSO THE DRAG. Tap a card, then tap
+        /// the board and the piece is there at once. Tap a card, then press the
+        /// board and move, and the piece comes out under the finger already
+        /// dragged, as if it had been pulled off its card. Neither is a mode:
+        /// both end in the same parked state, and the finger decides which by
+        /// whether it travels. This is what a travelled press used to be
+        /// thrown away for, and it could be, because the draft locks one-finger
+        /// pan (see CameraController.isDraftMode) - pinch is the only camera
+        /// gesture the phase has, and a pinch is two fingers, not one.
         ///
         /// A press that lands on the bar or on Confirm is not a board press at
         /// all. panel.Pick skips every element whose picking-mode is Ignore, and
@@ -649,6 +688,22 @@ namespace NodeWar.UI
                     HideConfirm();
                     BeginDrag(handSlot, handDistrict, FindCard(handSlot), -1, true);
                     boardPressActive = false;
+                    return;
+                }
+
+                // The piece lands on touch-down, not on release. A tap that
+                // waits for the finger to lift is a tap you can feel waiting,
+                // and the placement is reversible in every direction anyway -
+                // move it, pick it up, cancel it.
+                //
+                // Confirm is held back until the press resolves, though. A
+                // press that turns into a drag would otherwise flash the
+                // Confirm pair for the frame between landing and lifting off.
+                if (!boardPressOverUI && handSlot >= 0 &&
+                    ScreenToCell(boardPressScreen, out int pressX, out int pressZ) &&
+                    draftState.IsCellAvailable(pressX, pressZ))
+                {
+                    ParkAt(pressX, pressZ, false);
                 }
 
                 return;
@@ -656,17 +711,18 @@ namespace NodeWar.UI
 
             if (!boardPressActive) return;
 
+            Vector2 screen = pointer.position.ReadValue();
+
+            // The release is settled first, so a flick that travels and lifts
+            // inside one frame cannot start a drag that nothing is left to end.
             if (pointer.press.wasReleasedThisFrame)
             {
                 boardPressActive = false;
 
                 if (boardPressOverUI) return;
 
-                Vector2 screen = pointer.position.ReadValue();
-
-                // A press that travelled was a camera gesture, not a tap. The
-                // draft leaves pinch-zoom live, and a zoom that also placed a
-                // piece would be unusable.
+                // Travelled and released without ever being converted below:
+                // a pinch, or a press with an empty hand. Not a tap either way.
                 if (Vector2.Distance(screen, boardPressScreen) > DragSlop) return;
 
                 if (handSlot < 0) return;
@@ -674,7 +730,90 @@ namespace NodeWar.UI
                 if (!draftState.IsCellAvailable(gx, gz)) return;
 
                 ParkAt(gx, gz);
+                return;
             }
+
+            // Still down, and past the slop. With a piece in hand that is a
+            // drag; with an empty hand it is nothing, which is what leaves a
+            // pinch alone.
+            if (boardPressOverUI) return;
+            if (handSlot < 0) return;
+            if (Vector2.Distance(screen, boardPressScreen) <= DragSlop) return;
+
+            boardPressActive = false;
+
+            if (IsPinching()) return;
+
+            BeginBoardDrag();
+        }
+
+        /// <summary>
+        /// The piece in hand comes out onto the board mid-press, already
+        /// dragged. Everything a drag off a card does the moment it passes the
+        /// slop - drop whatever was parked, put the ghost under the finger -
+        /// except that the card is not lifted out of the bar, because the piece
+        /// never came from there this time.
+        /// </summary>
+        private void BeginBoardDrag()
+        {
+            // The piece is in the air again and the old cell is no longer an
+            // answer, the same reason UpdateDrag drops it when a card drag
+            // passes the slop.
+            parked = false;
+            HideConfirm();
+
+            BeginDrag(handSlot, handDistrict, FindCard(handSlot), -1, true);
+
+            // Already past the slop - that is what got us here - so the piece
+            // comes out dragged rather than waiting to be decided again.
+            dragMoved = true;
+        }
+
+        /// <summary>
+        /// A second finger is down, so this is a pinch. Pinch-zoom is the only
+        /// camera control the draft has, and it outranks a placement that has
+        /// not landed: the drag ends and the piece falls back to merely armed,
+        /// where a tap can still place it.
+        /// </summary>
+        private static bool IsPinching()
+        {
+            Touchscreen touchscreen = Touchscreen.current;
+            if (touchscreen == null) return false;
+
+            int down = 0;
+            foreach (TouchControl touch in touchscreen.touches)
+            {
+                if (!touch.press.isPressed) continue;
+                if (++down > 1) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Ends a board drag without placing anything and leaves the piece
+        /// armed. Used when a pinch arrives part-way through one - the first
+        /// finger may well have travelled before the second landed.
+        /// </summary>
+        private void AbandonBoardDrag()
+        {
+            int slot = dragSlot;
+            DistrictType district = dragDistrict;
+
+            ReleaseDragCapture();
+
+            dragging = false;
+            dragMoved = false;
+            dragFromBoard = false;
+            dragSlot = -1;
+            dragCard = null;
+            boardPressActive = false;
+
+            HideProxy();
+
+            // ArmSlot destroys the ghost and clears the parked cell itself.
+            if (slot >= 0) ArmSlot(slot, district);
+            else ClearHand();
         }
 
         // ===== THE DRAG =====
@@ -686,6 +825,11 @@ namespace NodeWar.UI
 
             Vector2 screen = pointer.position.ReadValue();
 
+            // A pinch arriving part-way through a board drag takes the finger
+            // back: the first one may well have travelled before the second
+            // landed. See AbandonBoardDrag.
+            if (dragFromBoard && IsPinching()) { AbandonBoardDrag(); return; }
+
             if (!dragMoved)
             {
                 if (Vector2.Distance(screen, dragStartScreen) < DragSlop)
@@ -696,6 +840,8 @@ namespace NodeWar.UI
                 }
 
                 dragMoved = true;
+
+                if (!dragFromBoard) ShrinkReplacedPendingPiece(dragSlot);
 
                 // A new drag drops whatever was parked. The piece is in the
                 // air again and the old cell is no longer an answer.
@@ -709,17 +855,23 @@ namespace NodeWar.UI
                 }
             }
 
-            bool overBar = IsOverBar(screen);
+            // D5, since revised: the proxy and the ghost used to swap at the
+            // bar's edge, never both at once, which made the piece look like it
+            // teleported between two drawings of itself at a line nobody can
+            // see. They cross-fade over a band now, and the proxy gives up its
+            // weight more slowly than the ghost takes it on, so the board has
+            // the piece before the card lets go. See DraftHandover.
+            float aboveBar = DistanceAboveBar(screen);
 
             if (!dragFromBoard)
             {
                 MoveProxy(screen);
-                // D5: the proxy is the piece while it is in the bar, the ghost
-                // is the piece once it is over the board. Never both.
-                proxy.EnableInClassList("draft__proxy--faded", !overBar);
+                proxy.style.opacity = DraftHandover.ProxyOpacity(aboveBar);
             }
 
-            if (overBar)
+            ghostFade = DraftHandover.GhostOpacity(aboveBar);
+
+            if (aboveBar <= 0f)
             {
                 DestroyGhost();
             }
@@ -766,8 +918,6 @@ namespace NodeWar.UI
 
             if (asTap || !moved)
             {
-                DestroyGhost();
-
                 if (fromBoard)
                 {
                     // A tap on the parked piece changes nothing. Put the
@@ -809,6 +959,8 @@ namespace NodeWar.UI
 
         private void ArmSlot(int slotIndex, DistrictType district)
         {
+            ShrinkReplacedPendingPiece(slotIndex);
+
             handSlot = slotIndex;
             handDistrict = district;
             parked = false;
@@ -818,6 +970,25 @@ namespace NodeWar.UI
             DestroyGhost();
             HideConfirm();
             SetArmedCard(slotIndex);
+        }
+
+        private void ShrinkReplacedPendingPiece(int replacementSlot)
+        {
+            if (!parked || handSlot == replacementSlot) return;
+
+            // Detach the outgoing visual before clearing the hand. It stops
+            // being pending now, and a new selection can own its own ghost
+            // while this one finishes shrinking.
+            GameObject piece = ghost;
+            ghost = null;
+            ClearHand();
+
+            if (piece == null) return;
+
+            piece.transform.DOScale(Vector3.zero, 0.18f)
+                .SetEase(Ease.InQuad)
+                .SetLink(piece)
+                .OnComplete(() => Destroy(piece));
         }
 
         private void ClearHand()
@@ -858,7 +1029,7 @@ namespace NodeWar.UI
         /// D6. The one place a placement becomes pending, whichever route put
         /// it there - so a drag and a tap cannot drift apart.
         /// </summary>
-        private void ParkAt(int gridX, int gridZ)
+        private void ParkAt(int gridX, int gridZ, bool confirm = true)
         {
             if (draftState == null || !draftState.IsCellAvailable(gridX, gridZ)) return;
 
@@ -866,13 +1037,17 @@ namespace NodeWar.UI
             parkedX = gridX;
             parkedZ = gridZ;
 
+            // A parked piece is never mid-handover, so it draws solid whatever
+            // a drag left behind.
+            ghostFade = 1f;
+
             EnsureGhost();
             PlaceGhostOnCell(gridX, gridZ, true);
 
             // Stays armed: the piece is still in hand, so tapping a different
             // cell moves it rather than starting over.
             SetArmedCard(handSlot);
-            ShowConfirm();
+            if (confirm) ShowConfirm();
         }
 
         // ===== CONFIRM =====
@@ -991,14 +1166,14 @@ namespace NodeWar.UI
             }
 
             proxy.AddToClassList("draft__proxy--on");
-            proxy.RemoveFromClassList("draft__proxy--faded");
+            proxy.style.opacity = 1f;
         }
 
         private void HideProxy()
         {
             if (proxy == null) return;
             proxy.RemoveFromClassList("draft__proxy--on");
-            proxy.RemoveFromClassList("draft__proxy--faded");
+            proxy.style.opacity = 1f;
         }
 
         private void MoveProxy(Vector2 screenPos)
@@ -1031,8 +1206,26 @@ namespace NodeWar.UI
             if (ghostPreview != null)
             {
                 ghostPreview.SetSticker(GetStickerSprite(dragging ? dragDistrict : handDistrict));
-                ghostPreview.SetAlpha(1f);
+                ghostPreview.SetTintWithAlpha(GhostTint(true));
             }
+        }
+
+        // With alpha, not SetTint: SetTint keeps whatever alpha the material
+        // already has, so the ghost never became see-through at all.
+        private Color GhostTint(bool valid)
+        {
+            Color tint = blockedCellTint;
+
+            if (valid)
+            {
+                tint = NodeWar.View.PlayerColors.For(localPlayerID);
+                tint.a = ghostAlpha;
+            }
+
+            // The cross-fade scales whatever alpha the state already chose, so
+            // a blocked cell still reads as blocked while it fades in.
+            tint.a *= ghostFade;
+            return tint;
         }
 
         private void DestroyGhost()
@@ -1063,7 +1256,7 @@ namespace NodeWar.UI
                 // ghost that will not move reads as a frozen game.
                 ghostOnValidCell = false;
                 ghost.transform.position = world + Vector3.up * pieceYOffset;
-                if (ghostPreview != null) ghostPreview.SetTint(invalidCellTint);
+                if (ghostPreview != null) ghostPreview.SetTintWithAlpha(GhostTint(false));
                 return;
             }
 
@@ -1081,12 +1274,12 @@ namespace NodeWar.UI
             ghost.transform.position = draftManager.GridToWorld(gx, gz) + Vector3.up * pieceYOffset;
 
             if (ghostPreview != null)
-                ghostPreview.SetTint(valid ? validCellTint : invalidCellTint);
+                ghostPreview.SetTintWithAlpha(GhostTint(valid));
         }
 
         // ===== CONFIRMED PIECES =====
 
-        private void SpawnConfirmedPlaceholder(Vector3 pos, DistrictType type)
+        private void SpawnConfirmedPlaceholder(Vector3 pos, DistrictType type, int ownerID)
         {
             if (confirmedPlacementPrefab == null) return;
 
@@ -1097,7 +1290,10 @@ namespace NodeWar.UI
             if (preview != null)
             {
                 preview.SetSticker(GetStickerSprite(type));
-                preview.SetTintWithAlpha(new Color(1f, 1f, 1f, 0.85f));
+
+                Color tint = ownerID >= 0 ? NodeWar.View.PlayerColors.For(ownerID) : Color.white;
+                tint.a = placedAlpha;
+                preview.SetTintWithAlpha(tint);
             }
 
             // D7: it drops onto the cell. Both players' pieces do, which is how
@@ -1183,19 +1379,29 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// The bar's own rectangle, asked directly rather than through Pick.
+        /// The bar's own geometry, asked directly rather than through Pick.
         /// During a drag the card has the pointer captured, so Pick would still
-        /// answer for the card wherever the finger went - and "is the finger
-        /// back over the tray" is a question about geometry, not about capture.
+        /// answer for the card wherever the finger went - and where the finger
+        /// is relative to the tray is a question about geometry, not capture.
+        ///
+        /// How far above the card bar's top edge the finger is, in panel units:
+        /// zero at the edge, positive over the board. This is the axis the
+        /// card-to-board cross-fade runs along, and it replaces the old "is the
+        /// finger inside the bar's rect" question - a handover needs a distance,
+        /// not a side of a line.
+        ///
+        /// No bar, or one that has not laid out yet, means the whole surface is
+        /// board.
         /// </summary>
-        private bool IsOverBar(Vector2 screenPos)
+        private float DistanceAboveBar(Vector2 screenPos)
         {
-            if (bar == null) return false;
+            if (bar == null) return float.MaxValue;
 
             Rect rect = bar.worldBound;
-            if (float.IsNaN(rect.width) || rect.width <= 0f) return false;
+            if (float.IsNaN(rect.yMin) || rect.width <= 0f) return float.MaxValue;
 
-            return rect.Contains(ScreenToPanel(screenPos));
+            // Panel y runs down, so a finger above the bar has the smaller y.
+            return rect.yMin - ScreenToPanel(screenPos).y;
         }
 
         private bool ScreenToWorldOnGround(Vector2 screenPos, out Vector3 world)

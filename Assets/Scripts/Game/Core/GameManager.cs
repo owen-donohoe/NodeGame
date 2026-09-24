@@ -50,6 +50,20 @@ namespace NodeWar.Core
         [SerializeField] private NodeWar.View.OpponentRouteSettings opponentRouteSettings =
             new NodeWar.View.OpponentRouteSettings();
 
+        [Header("Indicators")]
+        [Tooltip("The in-match indicators: which kinds show, how loudly, when, " +
+                 "and how they sit at the screen edge. Drawn by the UI Toolkit " +
+                 "HUD only.")]
+        [SerializeField] private NodeWar.View.IndicatorSettings indicatorSettings =
+            new NodeWar.View.IndicatorSettings();
+
+        private NodeWar.View.IndicatorDirector indicatorDirector;
+
+        [Tooltip("How hard the camera shakes on a breach, a capture and game over.")]
+        [SerializeField] private NodeWar.View.ScreenShakeSettings screenShakeSettings =
+            new NodeWar.View.ScreenShakeSettings();
+        private NodeWar.View.ScreenShakeDirector screenShake;
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -464,7 +478,7 @@ namespace NodeWar.Core
             // agree about ownership by construction rather than by two copies
             // of the same rule.
             outlineDriver = gameObject.AddComponent<NodeWar.View.OutlineDriver>();
-            outlineDriver.Initialize(state, selectionSystem, Camera.main);
+            outlineDriver.Initialize(state, selectionSystem, Camera.main, balance.Data.claimThreshold);
             debugPlayerSwitch.OnPlayerSwitched += outlineDriver.OnPlayerSideChanged;
 
             // Selection and move orders share one pointer reader.
@@ -561,6 +575,9 @@ namespace NodeWar.Core
         {
             if (cameraController != null)
                 cameraController.POVChanged -= OnPOVChanged;
+
+            if (indicatorDirector != null) indicatorDirector.Dispose();
+            if (screenShake != null) screenShake.Dispose();
         }
 
         private void StartLocalPlay()
@@ -806,6 +823,29 @@ namespace NodeWar.Core
             // The zoom readout and the zoom handle. Without this the handle
             // still takes the press but has nothing to drive, and says so.
             uiToolkitHud.BindCamera(cameraController);
+
+            // Indicators hang off the tick loop, so they need the runner that
+            // is actually driving this match; the views they anchor to exist
+            // by now. Local player comes from the switch, which a networked
+            // match has already locked.
+            indicatorDirector = new NodeWar.View.IndicatorDirector(state, tickProvider, indicatorSettings,
+                opponentRouteSettings,
+                () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
+            indicatorDirector.SetNodeSlotManagers(nodeSlotManagers);
+            indicatorDirector.SetVillagerTransforms(villagerTransforms);
+            uiToolkitHud.BindIndicators(indicatorDirector);
+
+            // Same tick stream as the indicators, and the same local player.
+            screenShake = new NodeWar.View.ScreenShakeDirector(state, tickProvider, screenShakeSettings,
+                () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0,
+                (strength, seconds) => { if (cameraController != null) cameraController.Shake(strength, seconds); });
+
+            MatchConnection emoteMatch = MatchConnection.Instance;
+            if (emoteMatch != null && emoteMatch.isNetworked)
+                uiToolkitHud.BindEmotes(lockstepRunner, () => emoteMatch.localPlayerID);
+            else
+                uiToolkitHud.BindEmotes(new LocalEmoteChannel(),
+                    () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
 
             // The countdown belongs to whichever stack is live, or two would
             // run at once. The uGUI prefab is used when this is not set.
@@ -1345,6 +1385,8 @@ namespace NodeWar.Core
                 pathRenderer.SetTickProvider(tickProvider);
             if (hitFlashRouter != null)
                 hitFlashRouter.SetVillagerTransforms(villagerTransforms);
+            if (indicatorDirector != null)
+                indicatorDirector.SetVillagerTransforms(villagerTransforms);
         }
 
         private void SpawnSingleVillagerView(int index)

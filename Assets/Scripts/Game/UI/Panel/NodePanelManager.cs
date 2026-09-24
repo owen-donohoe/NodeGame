@@ -428,16 +428,6 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Opens the panel for a node identified by ID, applying the same
-        /// ownership rule the click path used: an unclaimed node has nothing to
-        /// show, so the tap closes any open panel instead of opening a new one.
-        ///
-        /// The functional-versus-informational split -- farms and mines opening
-        /// no panel at all -- is a later commit on the panel branch. This
-        /// preserves today's behaviour so the router changes what *routes*
-        /// input, not what the panel decides.
-        /// </summary>
-        /// <summary>
         /// Raised when a node should be shown, and by which node. The UI Toolkit
         /// sheet listens; nothing else does.
         /// </summary>
@@ -445,6 +435,25 @@ namespace NodeWar.UI
 
         /// <summary>Raised when whatever was showing should stop.</summary>
         public event System.Action NodeClosed;
+
+        /// <summary>
+        /// Raised whenever inspection moves to a different node, or to nothing
+        /// (-1). Fires for every tap that reaches OpenForNode, whether or not
+        /// that tap also earns a sheet -- inspection is what the outline
+        /// follows, and a node with nothing to show still deserves an outline.
+        /// </summary>
+        public event System.Action<int> NodeInspected;
+
+        /// <summary>The node currently inspected, or -1 when nothing is.</summary>
+        public int InspectedNodeID { get; private set; } = -1;
+
+        /// <summary>Raises NodeInspected only when the value actually changes.</summary>
+        private void SetInspected(int nodeID)
+        {
+            if (InspectedNodeID == nodeID) return;
+            InspectedNodeID = nodeID;
+            if (NodeInspected != null) NodeInspected(nodeID);
+        }
 
         /// <summary>
         /// Stops this manager sliding its own uGUI sheet, leaving it as the
@@ -470,6 +479,21 @@ namespace NodeWar.UI
 
         private bool suppressed;
 
+        /// <summary>
+        /// Opens the panel for a node identified by ID, applying the same
+        /// ownership rule the click path used: an unclaimed node has nothing to
+        /// show, so the tap closes any open sheet instead of opening a new one.
+        ///
+        /// Inspection is set for any valid node before any of that is decided,
+        /// and survives every early return below -- a tap outlines the node it
+        /// hit even when there is nothing to open.
+        ///
+        /// Which nodes earn a sheet differs by path. The suppressed path (the
+        /// UI Toolkit sheet) asks DistrictPanelPolicy.HasSheet, which lets a
+        /// Farm, Mine or Market through for its own owner. The unsuppressed
+        /// uGUI path keeps the older IsFunctional-only rule -- that path is
+        /// being deleted later, so it is never taught the new one.
+        /// </summary>
         public void OpenForNode(int nodeID)
         {
             if (simState == null) return;
@@ -477,26 +501,25 @@ namespace NodeWar.UI
 
             NodeData node = simState.nodes[nodeID];
 
+            SetInspected(nodeID);
+
             // Unclaimed: nothing to show and nothing to act on.
             if (node.ownerID == -1)
             {
-                if (isOpen) ClosePanel();
-                if (suppressed && NodeClosed != null) NodeClosed();
-                return;
-            }
-
-            // Informational districts never open a sheet. This is what makes an
-            // open panel mean "there is something to press" -- a farm's state
-            // belongs on the farm, not behind a sheet that covers the board.
-            if (!DistrictPanelPolicy.IsFunctional(node.districtType))
-            {
-                if (isOpen) ClosePanel();
-                if (suppressed && NodeClosed != null) NodeClosed();
+                CloseSheetKeepingInspection();
                 return;
             }
 
             if (suppressed)
             {
+                int controlledPID = debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
+
+                if (!DistrictPanelPolicy.HasSheet(node, controlledPID))
+                {
+                    CloseSheetKeepingInspection();
+                    return;
+                }
+
                 // Camera focus still belongs here, but it is bound up with the
                 // slide in OpenPanel. Leaving it out is the one behaviour the
                 // new sheet does not inherit yet, and it is noted rather than
@@ -507,7 +530,32 @@ namespace NodeWar.UI
                 return;
             }
 
+            // Informational districts never open a sheet here. This path is
+            // being deleted later, so Farm/Mine/Market are not routed into it
+            // even though HasSheet would allow them for their owner.
+            if (!DistrictPanelPolicy.IsFunctional(node.districtType))
+            {
+                CloseSheetKeepingInspection();
+                return;
+            }
+
             OpenPanel(nodeID);
+        }
+
+        /// <summary>
+        /// Closes whichever sheet is showing -- suppressed or not -- without
+        /// touching the inspection. Shared by OpenForNode's early returns, so a
+        /// node with nothing to open still keeps its outline.
+        /// </summary>
+        private void CloseSheetKeepingInspection()
+        {
+            if (isOpen) Dismiss(HiddenPosition, restingAtHandle: false);
+            if (!suppressed) return;
+
+            // The same bookkeeping ClosePanel's suppressed path does, less the
+            // inspection: the sheet is gone, the node is still picked out.
+            currentNodeID = -1;
+            if (NodeClosed != null) NodeClosed();
         }
 
         public void OpenPanel(int nodeID)
@@ -639,6 +687,8 @@ namespace NodeWar.UI
         /// </summary>
         public void ClosePanel()
         {
+            SetInspected(-1);
+
             if (suppressed)
             {
                 currentNodeID = -1;
