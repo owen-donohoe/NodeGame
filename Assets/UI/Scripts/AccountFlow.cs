@@ -33,29 +33,52 @@ namespace NodeWar.Lobby
 
         public Task LinkAsync(Func<bool> isActive)
         {
-            return RunAsync("Linking account...", async () =>
-            {
-                AccountInfo guest = BackendServices.Account.Current;
-                LinkResult result = await BackendServices.Account.LinkAsync();
-                if (result != LinkResult.AlreadyLinkedElsewhere)
-                {
-                    ShowResult(result);
-                    return;
-                }
+            return RunAsync("Linking account...", () => LinkCoreAsync(isActive));
+        }
 
-                if (!CanContinue(isActive, guest)) return;
-                SetBusyText("Choose an account");
-                bool switchAccount = await ConfirmAsync("account-conflict",
-                    "That Unity account already has its own Node War progress.",
-                    "Switch to that account", "This device's guest progress will be abandoned");
-                if (!switchAccount)
-                {
-                    Message = "Account switch cancelled";
-                    return;
-                }
-                if (!CanContinue(isActive, guest)) return;
-                SetBusyText("Switching account...");
-                await BackendServices.Account.SwitchToLinkedAccountAsync();
+        private async Task LinkCoreAsync(Func<bool> isActive)
+        {
+            AccountInfo guest = BackendServices.Account.Current;
+            LinkResult result = await BackendServices.Account.LinkAsync();
+            if (result != LinkResult.AlreadyLinkedElsewhere)
+            {
+                ShowResult(result);
+                return;
+            }
+
+            if (!CanContinue(isActive, guest)) return;
+            SetBusyText("Choose an account");
+            bool switchAccount = await ConfirmAsync("account-conflict",
+                "That Unity account already has its own Node War progress.",
+                "Switch to that account", "This device's guest progress will be abandoned");
+            if (!switchAccount)
+            {
+                Message = "Account switch cancelled";
+                return;
+            }
+            if (!CanContinue(isActive, guest)) return;
+            SetBusyText("Switching account...");
+            await BackendServices.Account.SwitchToLinkedAccountAsync();
+        }
+
+        public Task CheckLinkPromptAsync(PlayerProfile profile, Func<bool> isActive)
+        {
+            return RunAsync("Checking account...", async () =>
+            {
+                await BackendServices.Account.EnsureSignedInAsync();
+                if (!isActive()) return;
+                AccountInfo guest = BackendServices.Account.Current;
+                PlayerState state = await BackendServices.PlayerState.GetAsync();
+                if (!CanContinue(isActive, guest)
+                    || !LinkPromptPolicy.ShouldPrompt(guest, state, profile.AccountLinkPromptShown)) return;
+
+                SetBusyText("Link your account");
+                bool link = await ConfirmAsync("account-link-prompt",
+                    "Link your account so you don't lose your progress", "Link account",
+                    cancelText: "Not now", onShown: profile.MarkAccountLinkPromptShown);
+                if (!link || !CanContinue(isActive, guest)) return;
+                SetBusyText("Linking account...");
+                await LinkCoreAsync(isActive);
             });
         }
 
@@ -117,7 +140,7 @@ namespace NodeWar.Lobby
 
         /// <summary>The shared sheet owns dismissal, including its scrim and handle.</summary>
         private async Task<bool> ConfirmAsync(string name, string title, string confirm,
-            string subtitle = null)
+            string subtitle = null, string cancelText = "Cancel", Action onShown = null)
         {
             if (sheet.IsOpen) return false;
 
@@ -137,9 +160,9 @@ namespace NodeWar.Lobby
                 note.AddToClassList("lb-account-dialog__subtitle");
                 accept.Add(note);
             }
-            accept.clicked += () => { accepted = true; sheet.Close(); };
+            accept.clicked += () => { accepted = true; content.SetEnabled(false); sheet.Close(); };
             content.Add(accept);
-            Button cancel = DialogButton(name + "-cancel", "Cancel", "ui-button--quiet");
+            Button cancel = DialogButton(name + "-cancel", cancelText, "ui-button--quiet");
             cancel.clicked += sheet.Close;
             content.Add(cancel);
 
@@ -153,12 +176,14 @@ namespace NodeWar.Lobby
             {
                 sheet.Open(content);
                 if (!sheet.IsShowing(content)) return false;
+                onShown?.Invoke();
                 cancel.Focus();
                 return await completion.Task;
             }
             finally
             {
                 sheet.Closed -= onClosed;
+                if (sheet.IsShowing(content)) sheet.Close();
                 if (dialog == content) dialog = null;
             }
         }

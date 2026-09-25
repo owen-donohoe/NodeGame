@@ -7,7 +7,8 @@ namespace NodeWar.Lobby
     /// <summary>
     /// Settings: a push page opened from the gear.
     ///
-    /// Every row reads its value from <see cref="PlayerProfile"/> when the page
+    /// Account identity and actions come from BackendServices. Preference
+    /// rows read their values from <see cref="PlayerProfile"/> when the page
     /// opens and writes it back when it changes, through the profile's existing
     /// save path rather than a second one of its own.
     ///
@@ -194,7 +195,8 @@ namespace NodeWar.Lobby
             bool linked = info.Status == AccountStatus.Linked;
             if (accountStatus != null)
                 accountStatus.text = guest ? "Guest — progress is saved on this device only"
-                    : linked ? "Signed in as " + info.DisplayName : "Signed out";
+                    : linked ? (string.IsNullOrEmpty(info.DisplayName) ? "Signed in" : "Signed in as " + info.DisplayName)
+                    : "Signed out";
             if (accountMessage != null)
             {
                 accountMessage.text = accountFlow.Busy ? accountFlow.BusyText : accountFlow.Message;

@@ -11,7 +11,7 @@
         right. Every row the prototype has, in its groups and order, with its
         default values.
 
-        Every row now reads and writes PlayerProfile, through the save path it
+        Preference rows read and write PlayerProfile, through the save path it
         already owned rather than a second one. What a saved value then drives
         is a separate question and mostly still open - the footnote below names
         what is stored but not yet acted on, and narrows as each system lands.
@@ -23,6 +23,7 @@
         same thing. If either side moves, move both.
 
         Rows that hold a switch are Buttons, so the whole row is the target.
+        Account status and actions are rendered from BackendServices.Account.
     -->
 
     <engine:Style src="project://database/Assets/UI/Styles/Settings.uss" />

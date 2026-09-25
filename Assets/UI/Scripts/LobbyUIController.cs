@@ -156,6 +156,9 @@ namespace NodeWar.Lobby
                 settingsPage.Flush();
             }
 
+            if (accountFlow != null) accountFlow.CloseDialog();
+            accountFlow = null;
+
             settingsPage = null;
             lobbyRoot = null;
             matchHistoryPage = null;
@@ -324,7 +327,10 @@ namespace NodeWar.Lobby
 
             if (homePageLayout != null)
             {
-                HomePage home = new HomePage(homePageLayout, toast, menu, catalog);
+                HomePage home = new HomePage(homePageLayout, toast, menu, catalog, accountFlow,
+                    () => isActiveAndEnabled && lobbyRoot != null
+                        && !settingsPage.IsOpen && !profilePage.IsOpen && !matchHistoryPage.IsOpen
+                        && !menu.IsOpen);
                 home.PlayRequested += OnPlayRequested;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
