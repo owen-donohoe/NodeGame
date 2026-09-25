@@ -88,6 +88,7 @@ namespace NodeWar.Lobby
         private PlayPopup playPopup;
         private ProfilePage profilePage;
         private SettingsPage settingsPage;
+        private AccountFlow accountFlow;
         private VisualElement lobbyRoot;
         private MatchHistoryPage matchHistoryPage;
 
@@ -202,6 +203,7 @@ namespace NodeWar.Lobby
             catalog = new LoadoutCatalog(allSuits, allNodes);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
+            accountFlow = new AccountFlow();
             menu = new LobbyContextMenu(root);
 
             BuildOverlays(overlayHost);
@@ -283,7 +285,7 @@ namespace NodeWar.Lobby
             profilePage = new ProfilePage(profilePageLayout, sheet, toast);
             overlayHost.Add(profilePage.Root);
 
-            settingsPage = new SettingsPage(settingsPageLayout);
+            settingsPage = new SettingsPage(settingsPageLayout, accountFlow);
             overlayHost.Add(settingsPage.Root);
 
             matchHistoryPage = new MatchHistoryPage(matchHistoryPageLayout);
