@@ -18,7 +18,8 @@ namespace NodeWar.Tests
         [Test]
         public void StyleOrder_IsThePriorityOrder_HighestWins()
         {
-            Assert.Less((int)OutlineStyle.None, (int)OutlineStyle.Hover);
+            Assert.Less((int)OutlineStyle.None, (int)OutlineStyle.Present);
+            Assert.Less((int)OutlineStyle.Present, (int)OutlineStyle.Hover);
             Assert.Less((int)OutlineStyle.Hover, (int)OutlineStyle.Contested);
             Assert.Less((int)OutlineStyle.Contested, (int)OutlineStyle.Selected);
             Assert.Less((int)OutlineStyle.Selected, (int)OutlineStyle.CommandAck);
@@ -36,6 +37,37 @@ namespace NodeWar.Tests
         public void Highest_OfAnEmptyMask_IsNone()
         {
             Assert.AreEqual(OutlineStyle.None, OutlineStyleMask.Highest(0u));
+        }
+
+        [Test]
+        public void Highest_OfPresentAndAnythingElse_IsTheAnythingElse()
+        {
+            // Present is on every living villager for the whole match, so it is
+            // the style every other one has to paint over. If it ever won a tie,
+            // hovering or selecting a villager would visibly do nothing.
+            uint mask = OutlineStyleMask.With(0u, OutlineStyle.Present, true);
+
+            Assert.AreEqual(OutlineStyle.Present, OutlineStyleMask.Highest(mask));
+
+            Assert.AreEqual(OutlineStyle.Hover, OutlineStyleMask.Highest(
+                OutlineStyleMask.With(mask, OutlineStyle.Hover, true)));
+
+            Assert.AreEqual(OutlineStyle.Selected, OutlineStyleMask.Highest(
+                OutlineStyleMask.With(mask, OutlineStyle.Selected, true)));
+        }
+
+        [Test]
+        public void With_DeselectingAPresentVillager_LeavesTheThinLine()
+        {
+            uint mask = OutlineStyleMask.With(0u, OutlineStyle.Present, true);
+            mask = OutlineStyleMask.With(mask, OutlineStyle.Selected, true);
+
+            mask = OutlineStyleMask.With(mask, OutlineStyle.Selected, false);
+
+            // The villager is still on the board, so it still carries a line.
+            // Dropping to None here would mean the outline vanishing on deselect
+            // and the group giving up its ID.
+            Assert.AreEqual(OutlineStyle.Present, OutlineStyleMask.Highest(mask));
         }
 
         [Test]

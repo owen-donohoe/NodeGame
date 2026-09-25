@@ -1,13 +1,16 @@
 namespace NodeWar.View.Outline
 {
     /// <summary>
-    /// The transient state an outline can express, and the palette index the
-    /// composite pass looks colour up by.
+    /// The state an outline can express, and the palette index the composite
+    /// pass looks colour up by.
     ///
     /// This carries state only. Player ownership is deliberately not a style --
     /// ownership gets its own shape/badge channel, and a redundant owner tint on
     /// top of an outline colour is a later addition that must never become the
-    /// only way to tell two players apart.
+    /// only way to tell two players apart. <see cref="Present"/> does not change
+    /// that: it says nothing about *whose* the thing is, and the owner tint that
+    /// OutlineDriver puts on it rides the group's tint channel, alongside the
+    /// sprite marks rather than in place of them.
     ///
     /// The numeric order of these members *is* the priority order, lowest to
     /// highest. A node can be Selected and Contested in the same frame and only
@@ -24,10 +27,28 @@ namespace NodeWar.View.Outline
         /// </summary>
         None = 0,
 
-        Hover = 1,
-        Contested = 2,
-        Selected = 3,
-        CommandAck = 4,
+        /// <summary>
+        /// The thin contact line every living villager carries, all match, both
+        /// sides. The one member that is not transient: every other style says
+        /// something is *happening* to the object, and this one only says the
+        /// object is there.
+        ///
+        /// Lowest priority on purpose, so hover and selection paint over it
+        /// rather than fight it, and thinnest in the palette for the same
+        /// reason -- it is on screen constantly, so it has to sit under
+        /// everything else without ever being the thing you notice.
+        ///
+        /// It costs an outline ID per villager for as long as that villager is
+        /// alive. The allocator has 255 and the board tops out at fifty
+        /// villagers plus its nodes, so the pool still has room to spare; see
+        /// OutlineIdAllocator before adding a second always-on style.
+        /// </summary>
+        Present = 1,
+
+        Hover = 2,
+        Contested = 3,
+        Selected = 4,
+        CommandAck = 5,
     }
 
     /// <summary>
@@ -47,7 +68,7 @@ namespace NodeWar.View.Outline
     public static class OutlineStyleMask
     {
         /// <summary>Number of members in <see cref="OutlineStyle"/>, including None. Palette length.</summary>
-        public const int StyleCount = 5;
+        public const int StyleCount = 6;
 
         public static uint Bit(OutlineStyle style) => 1u << (int)style;
 
@@ -68,7 +89,8 @@ namespace NodeWar.View.Outline
 
         /// <summary>
         /// The style that wins. Walks down from the highest member so the first
-        /// hit is the answer: CommandAck &gt; Selected &gt; Contested &gt; Hover &gt; None.
+        /// hit is the answer: CommandAck &gt; Selected &gt; Contested &gt; Hover &gt;
+        /// Present &gt; None.
         /// </summary>
         public static OutlineStyle Highest(uint mask)
         {

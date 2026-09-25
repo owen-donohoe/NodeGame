@@ -13,7 +13,8 @@ namespace NodeWar.View
     ///
     /// The outline system shipped with no callers at all -- every outline on
     /// screen came from the debugStyle field in the Inspector. This is what
-    /// connects it to the game: hover follows the pointer over the local
+    /// connects it to the game: Present is on every living villager on both
+    /// sides for the whole match, hover follows the pointer over the local
     /// player's own villagers, and Selected follows villager selection and the
     /// inspected node.
     ///
@@ -47,6 +48,16 @@ namespace NodeWar.View
 
         [Tooltip("Tint of a Core's outline. A Core has no claim bar, so it is always fully held.")]
         [SerializeField, Range(0f, 1f)] private float coreTintStrength = 0.8f;
+
+        [Tooltip("How far a villager's Present line leans from the palette's " +
+                 "near-white toward its owner's colour. Full, so the line is the " +
+                 "player's colour rather than a wash of it. PlayerColors are " +
+                 "already pale -- P0 is (0.40, 0.60, 1.00) -- so a lerp toward " +
+                 "white costs hue before it costs brightness, and whose villager " +
+                 "it is stops reading at a glance. The earlier 0.85 was chosen " +
+                 "when the line was 1.6px, where a saturated hairline read as " +
+                 "dirt on the board; at 6px it reads as the player.")]
+        [SerializeField, Range(0f, 1f)] private float presenceTintStrength = 1f;
 
         private int claimThreshold = 10000;
 
@@ -120,8 +131,11 @@ namespace NodeWar.View
         {
             if (state == null || selection == null) return;
 
+            // Hover first. SyncVillagers reads the group's *resolved* style to
+            // decide whether the owner tint applies, so the hover intent for
+            // this frame has to already be on the group by the time it runs.
             UpdateHover();
-            SyncVillagerSelection();
+            SyncVillagers();
             SyncNodeSelection();
         }
 
@@ -176,14 +190,19 @@ namespace NodeWar.View
         }
 
         /// <summary>
-        /// Mirrors the selection onto the villager groups.
+        /// Mirrors presence and selection onto the villager groups.
         ///
         /// Walks every villager rather than diffing against the previous
         /// selection. SetIntent returns immediately when the resolved mask does
         /// not change, so the steady-state cost is a comparison per villager,
         /// and the bookkeeping a diff would need is not worth owning.
+        ///
+        /// Presence is the same question as aliveness, and deliberately not the
+        /// same question as ownership: an opponent's villager is as much a thing
+        /// on the board as one of yours, and the line that says so is the one
+        /// thing in this file that does not care whose side it is on.
         /// </summary>
-        private void SyncVillagerSelection()
+        private void SyncVillagers()
         {
             if (villagerGroups == null) return;
 
@@ -194,8 +213,33 @@ namespace NodeWar.View
                 OutlineGroup group = villagerGroups[i];
                 if (group == null) continue;
 
-                group.SetIntent(OutlineStyle.Selected, selection.IsSelected(i) && IsAlive(i));
+                bool alive = IsAlive(i);
+
+                group.SetIntent(OutlineStyle.Present, alive);
+                group.SetIntent(OutlineStyle.Selected, alive && selection.IsSelected(i));
+
+                group.SetTint(PresenceTint(group, i));
             }
+        }
+
+        /// <summary>
+        /// The owner tint, but only while the thin line is the line being drawn.
+        ///
+        /// The tint is a property of the group rather than of the style, so it
+        /// colours whatever outline that group ends up with. Left on
+        /// unconditionally it would drag hover's white and selection's gold
+        /// toward blue or red -- and gold that goes red on one player's
+        /// villagers is no longer a selection colour. Clearing it the moment a
+        /// higher style takes over is what keeps those two readable, at the cost
+        /// of the tint being re-resolved every frame.
+        /// </summary>
+        private Color PresenceTint(OutlineGroup group, int villagerID)
+        {
+            if (group.Style != OutlineStyle.Present) return Color.clear;
+
+            Color tint = PlayerColors.For(state.villagers[villagerID].ownerID);
+            tint.a = presenceTintStrength;
+            return tint;
         }
 
         private void SyncNodeSelection()

@@ -16,16 +16,16 @@ MonoBehaviour:
     ticksPerSecond: 10
     baseClaimPerTick: 17
     decrementMultiplier: 4
-    claimThreshold: 10000
+    claimThreshold: 5000
     maxClaimersPerNode: 4
     respawnTicks: 50
     healIntervalTicks: 30
     breachThreshold: 3
-    foodProductionTicks: 30
-    materialProductionTicks: 40
-    metalProductionTicks: 50
+    foodProductionTicks: 40
+    materialProductionTicks: 50
+    metalProductionTicks: 60
     marketFoodProductionTicks: 45
-    marketMaterialProductionTicks: 60
+    marketMaterialProductionTicks: 55
     maxWorkersPerNode: 2
     maxVillagersPerPlayer: 25
     respawnCostFood: 1
