@@ -15,6 +15,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWar.Progression", "Node
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWar.Progression.Tests", "NodeWar.Progression.Tests\NodeWar.Progression.Tests.csproj", "{E2CA2087-E1FE-4BAE-8D0E-CE5D83A664AB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NodeWarCloud", "NodeWarCloud", "{C72DBECA-E69B-3C8F-0B4F-D5209D6978EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWarCloud", "NodeWarCloud\NodeWarCloud\NodeWarCloud.csproj", "{B6BF95AA-AC44-4DC4-949E-373C72DE416C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWarCloud.Tests", "NodeWarCloud.Tests\NodeWarCloud.Tests.csproj", "{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,8 +103,35 @@ Global
 		{E2CA2087-E1FE-4BAE-8D0E-CE5D83A664AB}.Release|x64.Build.0 = Release|Any CPU
 		{E2CA2087-E1FE-4BAE-8D0E-CE5D83A664AB}.Release|x86.ActiveCfg = Release|Any CPU
 		{E2CA2087-E1FE-4BAE-8D0E-CE5D83A664AB}.Release|x86.Build.0 = Release|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Debug|x64.Build.0 = Debug|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Debug|x86.Build.0 = Debug|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Release|x64.ActiveCfg = Release|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Release|x64.Build.0 = Release|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Release|x86.ActiveCfg = Release|Any CPU
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C}.Release|x86.Build.0 = Release|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Debug|x64.Build.0 = Debug|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Debug|x86.Build.0 = Debug|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Release|x64.ActiveCfg = Release|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Release|x64.Build.0 = Release|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Release|x86.ActiveCfg = Release|Any CPU
+		{EBBC9DC7-56AA-4089-9B37-53B0702AA51E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B6BF95AA-AC44-4DC4-949E-373C72DE416C} = {C72DBECA-E69B-3C8F-0B4F-D5209D6978EF}
 	EndGlobalSection
 EndGlobal
