@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Server-side progression has no Unity source or runtime dependency, so its
+    tests live here and exercise the library through a project reference.
+
+    IN NodeWar.sln, BUT NEVER IN THE RECEIPT. TestResults/results.xml belongs
+    exclusively to NodeWar.Simulation.Tests: the determinism attester needs
+    those cases, and a shared logger path would overwrite their receipt.
+    Run the solution without a logger, or run this project directly:
+      dotnet test dotnet/NodeWar.Progression.Tests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NodeWar.Progression.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Glicko2Tests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NunitXml.TestLogger" Version="3.1.20" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NodeWar.Progression/NodeWar.Progression.csproj" />
+  </ItemGroup>
+</Project>

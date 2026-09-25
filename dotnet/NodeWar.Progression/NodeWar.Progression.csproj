@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>NodeWar.Progression</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Glicko2.cs" />
+  </ItemGroup>
+</Project>
