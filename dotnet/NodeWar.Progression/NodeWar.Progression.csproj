@@ -7,5 +7,7 @@
     <Compile Include="Glicko2.cs" />
     <Compile Include="RankPoints.cs" />
     <Compile Include="Arenas.cs" />
+    <Compile Include="Catalog.cs" />
+    <Compile Include="EraUnlocks.cs" />
   </ItemGroup>
 </Project>
