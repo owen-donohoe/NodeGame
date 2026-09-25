@@ -49,12 +49,15 @@ namespace NodeWar.View
         [Tooltip("Tint of a Core's outline. A Core has no claim bar, so it is always fully held.")]
         [SerializeField, Range(0f, 1f)] private float coreTintStrength = 0.8f;
 
-        [Tooltip("How far a villager's thin Present line leans from the palette's " +
-                 "near-white toward its owner's colour. Short of 1 on purpose: a " +
-                 "one-pixel line in the flat player blue reads as dark against the " +
-                 "board, and keeping some white in it is what makes it read as a " +
-                 "contact line rather than as a coloured halo.")]
-        [SerializeField, Range(0f, 1f)] private float presenceTintStrength = 0.85f;
+        [Tooltip("How far a villager's Present line leans from the palette's " +
+                 "near-white toward its owner's colour. Full, so the line is the " +
+                 "player's colour rather than a wash of it. PlayerColors are " +
+                 "already pale -- P0 is (0.40, 0.60, 1.00) -- so a lerp toward " +
+                 "white costs hue before it costs brightness, and whose villager " +
+                 "it is stops reading at a glance. The earlier 0.85 was chosen " +
+                 "when the line was 1.6px, where a saturated hairline read as " +
+                 "dirt on the board; at 6px it reads as the player.")]
+        [SerializeField, Range(0f, 1f)] private float presenceTintStrength = 1f;
 
         private int claimThreshold = 10000;
 

@@ -17,7 +17,7 @@ MonoBehaviour:
     thicknessScale: 1
     drawThrough: 0
   - color: {r: 1, g: 1, b: 1, a: 0.7}
-    thicknessScale: 0.4
+    thicknessScale: 0.7
     drawThrough: 0
   - color: {r: 1, g: 1, b: 1, a: 0.85}
     thicknessScale: 1
@@ -31,8 +31,8 @@ MonoBehaviour:
   - color: {r: 0.55, g: 1, b: 0.65, a: 1}
     thicknessScale: 1
     drawThrough: 0
-  thicknessReferencePixels: 4
-  edgeSoftness: 0.4
+  thicknessReferencePixels: 6
+  edgeSoftness: 0.2
   referenceHeight: 1080
   maskResolution: 0
   alphaClipThreshold: 0.5
