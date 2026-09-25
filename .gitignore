@@ -115,6 +115,8 @@ InitTestScene*.unity*
 # will not resurrect a file from inside an excluded directory.
 !dotnet/**/*.csproj
 !dotnet/NodeWar.sln
+# The Cloud Code module deploys from its own solution (ugs deploy dotnet/NodeWarCloud).
+!dotnet/NodeWarCloud/NodeWarCloud.sln
 
 # .NET build output. The /[Oo]bj/ and /[Bb]uild/ rules above are anchored to the
 # repo root and do not reach these.
