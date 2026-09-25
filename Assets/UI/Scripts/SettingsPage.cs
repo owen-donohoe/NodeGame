@@ -51,6 +51,7 @@ namespace NodeWar.Lobby
         private readonly Button accountSignOut;
         private readonly Button accountGuest;
         private IAccountService account;
+        private int accountVisit;
 
         private GameSettingsData current;
         private int sizeIndex;
@@ -88,8 +89,16 @@ namespace NodeWar.Lobby
             accountSignIn = Root.Q<Button>("settings-account-sign-in");
             accountSignOut = Root.Q<Button>("settings-account-sign-out");
             accountGuest = Root.Q<Button>("settings-account-guest");
-            if (accountLink != null) accountLink.clicked += async () => await accountFlow.LinkAsync();
-            if (accountSignIn != null) accountSignIn.clicked += async () => await accountFlow.SignInAsync();
+            if (accountLink != null) accountLink.clicked += async () =>
+            {
+                int visit = accountVisit;
+                await accountFlow.LinkAsync(() => IsOpen && accountVisit == visit);
+            };
+            if (accountSignIn != null) accountSignIn.clicked += async () =>
+            {
+                int visit = accountVisit;
+                await accountFlow.SignInAsync(() => IsOpen && accountVisit == visit);
+            };
             if (accountSignOut != null) accountSignOut.clicked += async () => await accountFlow.SignOutAsync();
             if (accountGuest != null) accountGuest.clicked += async () => await accountFlow.EnsureAsync();
 
@@ -166,6 +175,8 @@ namespace NodeWar.Lobby
 
         private void UnsubscribeAccount()
         {
+            accountVisit++;
+            if (account != null) accountFlow.CloseDialog();
             if (account != null) account.Changed -= OnAccountChanged;
             accountFlow.Changed -= RenderAccount;
             account = null;

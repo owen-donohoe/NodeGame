@@ -203,7 +203,7 @@ namespace NodeWar.Lobby
             catalog = new LoadoutCatalog(allSuits, allNodes);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
-            accountFlow = new AccountFlow();
+            accountFlow = new AccountFlow(sheet);
             menu = new LobbyContextMenu(root);
 
             BuildOverlays(overlayHost);
