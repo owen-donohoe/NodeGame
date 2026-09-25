@@ -50,16 +50,23 @@ namespace NodeWar.Backend
 
         /// <summary>
         /// Safe to call from anywhere, any number of times. Concurrent callers
-        /// share one attempt; a failed attempt is retried by the next caller.
+        /// share one attempt; a failed attempt is retried by the next caller,
+        /// and so is a finished one after the player has signed out.
         /// </summary>
         public static Task EnsureReadyAsync()
         {
-            if (ready == null || ready.IsFaulted || ready.IsCanceled)
+            bool signedOutSince = ready != null && ready.Status == TaskStatus.RanToCompletion
+                && !AuthenticationService.Instance.IsSignedIn;
+            if (ready == null || ready.IsFaulted || ready.IsCanceled || signedOutSince)
                 ready = InitializeAndSignInAsync();
             return ready;
         }
 
-        private static async Task InitializeAndSignInAsync()
+        /// <summary>
+        /// Initialises UGS without signing anyone in. For the one caller that must
+        /// not create a guest: signing in to an existing account.
+        /// </summary>
+        public static async Task InitializeAsync()
         {
             if (UnityServices.State != ServicesInitializationState.Initialized)
             {
@@ -72,7 +79,14 @@ namespace NodeWar.Backend
                 Debug.Log("[GameServices] Initialised, environment: "
                     + (environment ?? "Editor setting"));
             }
+        }
 
+        private static async Task InitializeAndSignInAsync()
+        {
+            await InitializeAsync();
+
+            // With a cached session token this resumes whoever the device last
+            // was, linked or not; only a device with none gets a new guest.
             if (!AuthenticationService.Instance.IsSignedIn)
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
         }

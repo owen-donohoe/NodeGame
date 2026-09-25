@@ -17,11 +17,13 @@ namespace NodeWar.Backend
         public const string CloudModule = "NodeWarCloud";
 
         private static IPlayerStateService playerState;
+        private static IAccountService account;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
             playerState = null;
+            account = null;
         }
 
         public static IPlayerStateService PlayerState
@@ -33,6 +35,18 @@ namespace NodeWar.Backend
                         ? (IPlayerStateService)new LocalPlayerStateService()
                         : new UgsPlayerStateService();
                 return playerState;
+            }
+        }
+
+        public static IAccountService Account
+        {
+            get
+            {
+                if (account == null)
+                    account = UseLocalFakes
+                        ? (IAccountService)new LocalAccountService()
+                        : new UgsAccountService();
+                return account;
             }
         }
 
