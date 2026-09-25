@@ -17,6 +17,10 @@
   <ItemGroup>
     <Compile Include="Glicko2Tests.cs" />
     <Compile Include="RankPointsTests.cs" />
+    <Compile Include="ArenasTests.cs" />
+    <Compile Include="CatalogTests.cs" />
+    <Compile Include="EraUnlocksTests.cs" />
+    <Compile Include="MatchmakingTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.14.0" />
