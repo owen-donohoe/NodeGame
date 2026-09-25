@@ -5,5 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Glicko2.cs" />
+    <Compile Include="RankPoints.cs" />
   </ItemGroup>
 </Project>
