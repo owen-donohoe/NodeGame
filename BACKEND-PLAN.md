@@ -185,6 +185,8 @@ Format defined in §8. The deliverables:
    - If no: fall back to verifying hash checkpoints only, with a full replay run offline on disputes. Record which one and why.
 2. **Headless match runner:** builds a `SimulationState` from a match log header and runs `SimulateTick` to completion. It is the same component as the headless `MatchFactory` in `docs/direction.md` (RL). Build it once.
 
+**Spike result, 2026-09-26: full replay, continue.** Module `NodeWarCloud` references `NodeWar.Simulation` and `NodeWar.MatchLog` and deploys fine. `VerifyMatch` on a 12,000-tick (~20 min) log of 81 KB replayed in 100 ms server-side on the first call and 57 ms warm (192–283 ms round trip), against Cloud Code's 15 s execution and 256 MB limits (docs, same date). The referee serializes replays with one lock because the simulation's balance and path costs are statics; at these timings that costs nothing. A log played on a balance the server does not hold is refused ("unknown balance"): every shipped balance must be exported (`Tools > Node War > Backend > Export Balance For Server`) and deployed.
+
 ### Stage 6: progression — catalog, eras, skins, inventory (plan mode: changes `Simulation/`)
 
 - **Eras:** arena N = era N (e.g. early → metal → … → magic in arena 4, mastered in 5). Each suit and district has one variant per era, and each variant is a balance entry.
