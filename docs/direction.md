@@ -261,17 +261,28 @@ designed for exactly this.
 
 Very little, which is the point.
 
-1. **Promote `TestBoardFactory` out of the test assembly.** It already builds a
-   complete `SimulationState` headlessly — `Assets/Tests/EditMode/Tests/TestBoardFactory.cs`.
-   That is precisely `reset()`. It should live beside `Simulation/` as a
-   `MatchFactory` so both the tests and the environment use one copy.
-2. **Extract initial board setup from `GameManager`.** `InitializeNodesFromDraft`
-   currently builds the starting board inside a MonoBehaviour. The environment
-   needs that logic without Unity. This is a move, not a rewrite — it is already
-   integer-only work on `BoardConfigData`, which is already in `Simulation/`.
+1. **Done: `MatchFactory`.** `Simulation/MatchFactory.cs` builds a match's
+   tick-0 state from a `BoardConfigData`, draft placements and per-player
+   setup, and sets the statics the simulation reads. It is a move of
+   `GameManager`'s setup, which now calls it, so a headless match starts
+   exactly as a live one does. That is `reset()`. (`TestBoardFactory` stays in
+   the test assembly for the small hand-built boards the unit tests use.)
+2. **Done: a headless runner.** `MatchReplay` (`Assets/Scripts/MatchLog/`)
+   drives `MatchFactory` and `SimulateTick` from a recorded match log, and the
+   Cloud Code referee runs it; it is the shape `step()` takes, minus the policy.
+   Every drafted match also leaves a `.nwml` log, which is imitation and
+   evaluation data.
 3. **Skip or randomise the draft.** Matches currently begin with a placement
    draft. For training, generate a random legal placement. Training the draft
    itself is a separate and much later problem.
+4. **Eras are part of the observation.** Each player fields an era per suit
+   and district type (`PlayerData.suitEras` / `districtEras`), and each
+   district plays its placer's era. A policy that ignores them sees a board
+   that behaves inconsistently once eras differ.
+
+One constraint the environment inherits: the simulation reads balance and
+path costs from statics, so **one process runs one match at a time**. Run
+parallel environments as separate processes.
 
 `BoardConfigData` and `GameBalanceData` are already inside `Simulation/`, so
 configuration crosses the boundary cleanly already. That was lucky and it saves
@@ -375,7 +386,7 @@ expensive ones.
 | Then | Sound, shake, hit flash, hitstop | The actual feel phase. Shake gets its caller. |
 | Alongside | Camera input fix (issue #41 B1) | Small, and it is the whole desktop input story. |
 | Alongside | Two layout classes, desktop build | A week of evenings, not a phase. |
-| Then | Headless `MatchFactory` + environment | Useful immediately as a balance rig. |
+| Then | Environment over `MatchFactory` (factory and replay runner landed) | Useful immediately as a balance rig. |
 | Then | Balance passes using it | The "make it fun" phase, with data. |
 | Last | Actually train a bot | The environment has to be boring and trustworthy first. |
 

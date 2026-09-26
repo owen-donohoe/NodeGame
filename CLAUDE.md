@@ -48,6 +48,7 @@ Full contract in `docs/simulation-rules.md`.
 - `GameSimulation.SimulateTick()` — deterministic tick loop, 10Hz
 - `CommandProcessor` — applies `GameCommand`s to `SimulationState`
 - `GameManager` — match lifecycle (PreDraft → Drafting → PostDraft → Countdown → Playing)
+- `MatchFactory` — the one tick-0 board: live matches, the referee and headless runs
 - `LockstepRunner` / `TickRunner` — tick timing, shared via `ITickProvider`
 - `SimulationStateHasher` — desync fingerprint, checked every 50 ticks
 
@@ -56,7 +57,8 @@ Full contract in `docs/simulation-rules.md`.
 Read the file. Do not ask me to summarise it here.
 
 - `docs/architecture.md` — the seven layers, information flow, scene structure,
-  persistent objects, key classes per layer, networking model. **Start here.**
+  persistent objects, key classes per layer, networking model, and the backend,
+  match logs and referee beside them. **Start here.**
   Its *Where the UI lives* section is required reading before touching any UI:
   presentation spans three trees and which one runs is a scene value.
 - `docs/game-model.md` — what the game *is*: districts, suits, resources, the
@@ -78,11 +80,10 @@ Read the file. Do not ask me to summarise it here.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 464 cases: 118 over `Simulation/`, 157
-  over the lobby (including the wire formats), and 189 over the UnityEngine-free
-  view maths (camera POV, indicator placement, route reveal, emote rate limit,
-  resource rings, production readout, draft handover).
-  A lobby or view-maths change has real tests; run them rather than settling
+- `dotnet test dotnet/NodeWar.sln` — 840 cases in six projects: `Simulation/`,
+  the lobby and wire formats, the UnityEngine-free view maths, the match log,
+  the progression rules, and the Cloud Code module. Per-project counts are in
+  the doc below. A lobby, view-maths, match-log or backend change has real tests; run them rather than settling
   for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.
 - `scripts/compile-check.ps1` — type-checks everything else (HUD, network,
   view, `Assets/UI/`) against the real Unity assemblies. Catches syntax,

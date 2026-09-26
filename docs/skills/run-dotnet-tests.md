@@ -50,25 +50,30 @@ sources:
 
 # Run the simulation suite without Unity
 
-The same 43 simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
+The same simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
 `dotnet test` instead of Unity's Test Runner. No Editor, no licence, no Windows requirement.
 
-The solution holds two test projects. Run everything for pass/fail:
+The solution holds six test projects. Run everything for pass/fail:
 
 ```
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **115 passed** — 43 from `NodeWar.Simulation.Tests`, 72 from `NodeWar.Lobby.Tests`.
+Expect **840 passed** (counted 2026-09-26; the table says where each lives, so a changed total
+is easy to place).
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 43 | the determinism baseline, edge weights, movement correctness, a smoke test |
-| `NodeWar.Lobby.Tests` | 72 | `LoadoutData`'s wire format, the loadout editor rules (including when a side is short), item tints, district families, and the in-match command checks held against `CommandProcessor` |
+| `NodeWar.Simulation.Tests` | 142 | `Assets/Tests/EditMode/Tests/`: the determinism baseline, edge weights, movement, production, combat fixes, `MatchFactory`, eras, the balance hash |
+| `NodeWar.Lobby.Tests` | 198 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, item tints, families, the in-match command checks, handshake and emote packets |
+| `NodeWar.View.Tests` | 189 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings, production readout, draft handover |
+| `NodeWar.MatchLog.Tests` | 64 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS |
+| `NodeWar.Progression.Tests` | 146 | Glicko-2, RR, arenas, catalog validation, era unlocks, matchmaking rules |
+| `NodeWarCloud.Tests` | 101 | the Cloud Code module: player state, accounts, catalog, inventory and Equip, the referee and its balance catalog |
 
 ## Producing the receipt
 
-**Do not pass `--logger` to the solution.** Both projects would write the same absolute
+**Do not pass `--logger` to the solution.** Every project would write the same absolute
 `LogFilePath`, and the last to finish overwrites the other — leaving a receipt with no determinism
 cases in it, which the attester correctly rejects but which reads like a broken tool rather than a
 misuse.
@@ -80,7 +85,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 43 passed, and both pinned fingerprints from
+Expect 142 passed, and both pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 

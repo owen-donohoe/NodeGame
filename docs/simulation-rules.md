@@ -35,6 +35,18 @@ sources:
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager.HandleTimeout seed derivation
     last_modified: 2026-08-30T22:15:29-04:00
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: MatchFactory, the one starting board and the statics it sets
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: balance-data
+    resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
+    title: Per-era SuitStats and DistrictStats
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: match-replay
+    resource: Assets/Scripts/MatchLog/MatchReplay.cs
+    title: MatchReplay, refusing other simulation versions
+    last_modified: 2026-09-26T08:52:10-04:00
 ---
 
 # Simulation Determinism Contract
@@ -154,6 +166,15 @@ Fields that are set once at construction and never mutated during play
 (on `NodeData`: `gridX`/`gridZ`, `edges`, `bonusVillagersOnClaim`) are
 intentionally excluded — keep it that way rather than hashing static data.
 
+**Era fields are hashed only where they are not 0**: `PlayerData.suitEras`
+/ `districtEras` (index and value, the two tables kept apart by an offset),
+`NodeData.districtEra` and `VillagerData.rampartBonusEra`. An all-era-0
+match therefore hashes exactly as matches did before eras existed, which
+is what keeps the pinned baselines and older match logs valid, while any
+era the peers disagree on still moves the hash. A new field that is 0 in
+every existing match may follow the same pattern for the same reason; any
+other field is hashed unconditionally.
+
 `TickEventLog` is outside this rule because it is outside `SimulationState`:
 the simulation only ever appends to it and never reads it back, so nothing in
 it can change a result, and it is deliberately not hashed. That holds only
@@ -178,8 +199,28 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 - **Balance edits need no bump.** They move the content hash, which the
   handshake already compares. `BalanceHasherTests` fails when a
   `GameBalanceData` field is added without being hashed.
-- The match log (a later stage) records all three, so a replay only runs
-  on the simulation that produced it.
+- The match log (`Assets/Scripts/MatchLog/`) records all three, and
+  `MatchReplay` refuses a log from another `SimulationVersion`, so a
+  replay only runs on the simulation that produced it. The referee looks
+  the balance up by content hash, so every shipped balance must be
+  exported for the server (`Tools > Node War > Backend > Export Balance
+  For Server`).
+- Per-era numbers live in the balance (`GameBalanceData.districtStats`,
+  `SuitStats.era`), so tuning an era is a balance edit, not a bump.
+
+## The starting board: `MatchFactory`
+
+`MatchFactory` (`Simulation/`) is the one place a match's tick-0 state is
+built: `Configure` sets the statics the simulation reads (balance on
+`GameSimulation` and `CommandProcessor`, the `Pathfinding` multipliers),
+and `Build`/`Fill` lay out the grid, the board's fixed placements, the
+draft's placements at their placer's era, both players and their starting
+villagers. The live game (`GameManager`), the referee (`MatchReplay`) and
+any headless run all start here, so they cannot disagree about tick 0. A
+change to it changes every match: treat it like a tick-rule change.
+
+Those statics also mean **two matches cannot run at once in one process**.
+The Cloud Code referee serializes replays behind one lock for this reason.
 
 ## Desync detection
 

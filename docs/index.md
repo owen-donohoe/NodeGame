@@ -17,7 +17,7 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [game-model](game-model.md) — what Node War *is*: the match model, districts, suits, resources,
   and the win condition.
 * [architecture](architecture.md) — the seven layers, information flow, scene structure, key
-  classes, networking model.
+  classes, networking model, and the backend, match logs and referee beside them.
 * [simulation-rules](simulation-rules.md) — the determinism contract `Simulation/` must uphold.
 * [adding-a-feature](adding-a-feature.md) — the 11-step checklist for any new feature.
 * [direction](direction.md) — where the architecture goes next: a feel layer, one input vocabulary

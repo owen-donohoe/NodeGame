@@ -6,7 +6,7 @@
 > code, `docs/` and Notion own everything (CLAUDE.md). If this file disagrees
 > with them, this file is wrong.
 >
-> Written 2026-09-25, second revision. Read all of it before starting any stage.
+> Written 2026-09-25, second revision; state updated 2026-09-26. Read all of it before starting any stage.
 > Where a question is still open, §13 gives the default to build towards.
 
 ---
@@ -50,44 +50,37 @@
 
 ---
 
-## 3. Current state (end of 2026-09-25)
+## 3. Current state (2026-09-26)
 
 ### Branch
 
-`feat/backend`, based on `feat/rating`, based on `main` at `b4cc316f`. Not
-pushed. `feat/present-outline` (3 outline/balance commits) is separate.
+`feat/backend`, not pushed; based on `feat/rating`, based on `main` at
+`b4cc316f`. `feat/present-outline` (3 outline/balance commits) is separate.
+Stages 0-6 are done on it. The lasting architecture is written up in
+`docs/architecture.md` (*Backend, match logs and the referee*),
+`docs/simulation-rules.md` (era hashing, `MatchFactory`) and
+`docs/game-model.md` (*Eras*); this file only tracks the stages.
 
-| Commit | Contents |
-|---|---|
-| `ec48892a`, `6f78fd91` | `dotnet/NodeWar.Progression` (netstandard2.1): `Glicko2.cs`, `RankPoints.cs`. `dotnet/NodeWar.Progression.Tests`: 41 tests, including Glickman's worked example (1464.06 / 151.52 / 0.05999). |
-| `0a125fd2` | `Assets/Scripts/Backend/GameServices.cs` (`NodeWar.Backend`): the one `EnsureReadyAsync()` for UGS init + **anonymous** sign-in, environment chosen by build type. `NetworkManager` uses it for both Relay paths. Adds `com.unity.services.cloudcode` 2.10.4, `com.unity.services.cloudsave` 3.4.1, `com.unity.remote-config` 4.2.5. |
-
-- `dotnet test dotnet/NodeWar.sln`: **505 passing** (118 sim, 157 lobby, 189 view, 41 progression). CLAUDE.md still says 464 and doesn't list the progression project. Fix that when the branch merges.
-- `compile-check.ps1` is clean.
+- `dotnet test dotnet/NodeWar.sln`: **840 passing** in six projects
+  (per-project counts in `docs/skills/run-dotnet-tests.md`).
+- `compile-check.ps1` clean.
 
 ### UGS project
 
 - Project **"Node"**, id `b0178b5c-011c-4e8c-8913-6ffe4286c614`, org `owendonohoe2020`.
 - Environments: `production` `57a165d3-0f39-40a3-9cc5-30aa0a010663`; `development` `43bfa2d2-5974-435a-b82d-b0af55911d8c`.
-- UGS CLI 1.9.0 is logged in with a service account, configured to this project and `environment-name development`.
-- Service-account roles: Unity Environments Viewer, plus every Cloud Code, Cloud Save and Remote Config role.
-- Verified empty and not refused: `ugs cloud-code modules list`, `ugs cloud-save data player list`, `ugs fetch <dir> --services remote-config`.
+- Unity Player Accounts is an identity provider for the **whole project** (no per-environment setting), client ID `b6e214b9-6b3b-43e8-8182-f273dc818064`, in `Assets/Resources/UnityPlayerAccountSettings.asset`.
+- UGS CLI logged in with service account `Account_1` (org level: Manage organization > Service accounts). Roles: Environments Viewer, Cloud Code, Cloud Save, Remote Config. No Player Authentication role, so `ugs player` commands are refused.
+- Module `NodeWarCloud` is deployed to `development` with GetPlayerState, Equip and VerifyMatch. Deploy from PowerShell with `C:\Program Files\dotnet` on PATH: `ugs deploy dotnet/NodeWarCloud -e development`. Production has never been deployed to.
+- `ugs cloud-save data player get` reads only the default access class; the player records are protected, so check them in the dashboard or through GetPlayerState.
 - Remote Config has no settings. Matchmaker is **not enabled** (it may require a payment method on file).
 - **Never paste a service-account secret into a chat.** The user runs `ugs login` in their own terminal.
 
-### Code this work replaces or extends
+### Still to carry
 
-| Code | Today | Becomes |
-|---|---|---|
-| `Assets/Scripts/Lobby/PlayerProfile.cs` | Local `player_profile.json`: `username`, `uuid`, `trophies`, `unlockedSuitIDs`, `unlockedNodeIDs`, `boxesAvailable`, `boxProgress` (float), `loadout`, plus local `settings`, `workshopTabIndex` | A local cache of server state, plus settings that stay local. `uuid` becomes the UGS Player ID; `username` becomes the UGS player name; `trophies` becomes RR. |
-| `TrophyBarLogic` | Sliding trophy bar | Reused for RR. |
-| `Assets/Scripts/Lobby/Data/LoadoutData.cs` | `suitIDs[3]`, `nodeIDs[2]`, strings | Gains a variant (era) per entry and a skin per entry. |
-| `Assets/Scripts/Game/Network/InputSerializer.cs` | `Handshake` is 1 byte, no version. `TickInput` is 24 bytes/command with an exact-length check, so a peer on another build is silently dropped as loss. | Versioned handshake with an explicit refusal (Stage 3). |
-| `Assets/Scripts/Game/Network/DraftSerializer.cs` | `DraftLoadout` carries suit and node IDs | Also carries variants and skins. |
-| `SimulationState.PlayerData.draftedSuits/draftedNodes` | `int` of `SuitType`/`DistrictType` | Needs the era per entry (Stage 6, plan mode). |
-| `Assets/UI/Scripts/MatchHistoryPage.cs` | Stub (TV button beside the gear); always empty | The list of stored replays (Stage 7). |
-| `Assets/UI/Scripts/SettingsPage.cs` | No account section | Account section (Stage 2). |
-| `Assets/UI/Scripts/ShopPage.cs` | Layout pass, fake offers | Untouched until Stage 10. |
+- The referee checks a log's consistency, not that its eras were owned: that needs both Player IDs in the log (Stage 7/8), or signed loadouts.
+- Every shipped balance must be exported (`Export Balance For Server`) and deployed, or the referee refuses matches played on it.
+- The Workshop era row needs its style pass (the chips wrap at phone width; the equipped chip is disabled, so it renders as faded as the locked ones).
 
 ---
 
@@ -133,7 +126,7 @@ Matchmaking may move earlier once rating exists (after Stage 7); keep it after r
 
 ### Stage 0: environment. **DONE** (§3)
 
-### Stage 1: backend skeleton (about one session)
+### Stage 1: backend skeleton. **DONE**
 
 1. Cloud Code module project (net8.0) referencing `NodeWar.Progression`. Find out how it is packaged and deployed (`ugs deploy` and its module-reference / `.ccmr` form).
 2. Cloud Code `GetPlayerState`: creates first-time defaults in Cloud Save and returns the whole state. This is the hello-world. **Do not build `ClaimDaily`**: daily rewards belong to the shop, which is on hold.
@@ -141,7 +134,7 @@ Matchmaking may move earlier once rating exists (after Stage 7); keep it after r
 4. End to end: call from the Editor against `development`, see the data in the dashboard and through `ugs cloud-save data player list`.
 - Done when: the round trip works and the fake passes the same client-side tests.
 
-### Stage 2: accounts (Unity Player Accounts)
+### Stage 2: accounts (Unity Player Accounts). **DONE**, verified live 2026-09-25
 
 - **Dashboard:** enable Unity Player Accounts as an Authentication identity provider for both environments. The user does this if the CLI cannot.
 - **Flow:**
@@ -160,7 +153,7 @@ Matchmaking may move earlier once rating exists (after Stage 7); keep it after r
 
   The style pass afterwards uses `Tokens.uss` / `Components.uss`. UXML/USS are text and may be edited. Assigning a new layout in the lobby scene is scene wiring: do it through a connected Editor, never by editing `.unity` text.
 
-### Stage 3: versioned handshake (plan mode: touches `Network/`)
+### Stage 3: versioned handshake. **DONE**
 
 - **Constants:**
   - `ProtocolVersion` (wire layout).
@@ -171,14 +164,14 @@ Matchmaking may move earlier once rating exists (after Stage 7); keep it after r
 - **Lobby:** put the same values in lobby data, so incompatible players never reach Relay.
 - **Pairing:** `GameCommand` / `InputSerializer` changes stay paired in one commit (CLAUDE.md), and any wire change bumps `ProtocolVersion`.
 
-### Stage 4: match log format (plan mode)
+### Stage 4: match log format. **DONE**
 
 Format defined in §8. The deliverables:
 - A writer that records during a live match.
 - A reader.
 - Tests: round-trip; an older reader skipping a newer chunk; a truncated file refused.
 
-### Stage 5: referee spike, then headless runner (plan mode: reads `Simulation/`)
+### Stage 5: referee spike, then headless runner. **DONE**
 
 1. **Spike first.** Can a Cloud Code module reference the Simulation sources, and does a full match replay finish within Cloud Code's execution-time and memory limits?
    - If yes: continue.
@@ -187,7 +180,7 @@ Format defined in §8. The deliverables:
 
 **Spike result, 2026-09-26: full replay, continue.** Module `NodeWarCloud` references `NodeWar.Simulation` and `NodeWar.MatchLog` and deploys fine. `VerifyMatch` on a 12,000-tick (~20 min) log of 81 KB replayed in 100 ms server-side on the first call and 57 ms warm (192–283 ms round trip), against Cloud Code's 15 s execution and 256 MB limits (docs, same date). The referee serializes replays with one lock because the simulation's balance and path costs are statics; at these timings that costs nothing. A log played on a balance the server does not hold is refused ("unknown balance"): every shipped balance must be exported (`Tools > Node War > Backend > Export Balance For Server`) and deployed.
 
-### Stage 6: progression — catalog, eras, skins, inventory (plan mode: changes `Simulation/`)
+### Stage 6: progression — catalog, eras, skins, inventory. **DONE** (the referee does not yet check loadout ownership; signed loadouts not built)
 
 - **Eras:** arena N = era N (e.g. early → metal → … → magic in arena 4, mastered in 5). Each suit and district has one variant per era, and each variant is a balance entry.
 - **Unlock:** reaching arena N grants era-N variants (server-side, in `ReportMatch`). What happens on demotion is §13.
@@ -320,6 +313,8 @@ The live wire only needs "same version or refuse". A log outlives builds: it mus
 | `HASHES` | (tick, state hash) every 50 ticks |
 | `RESULT` | Winner, end tick, final hash, reason (win / surrender / disconnect) |
 | `SIGNATURES` | Per player: session-key signature over that player's commands |
+
+**As built (v1, 2026-09-26):** tags 1-7 are HEADER, BOARD, LOADOUTS, DRAFT, TICKS, HASHES, RESULT, then ERAS (8) and SKINS (9). BOARD is `BoardConfigData` rather than a free-form graph, the variants are per-type era tables in ERAS, and `SIGNATURES` is not written yet (it arrives with Stage 7's session keys). Match ID, start time and the opponent's Player ID are local placeholders until the server issues them.
 
 - **Signing:** at match start the server issues each player a session key. Each player signs their own commands. Any single uploaded log is then verifiable: a cheater cannot forge the opponent's inputs.
 - **Size:** a few bytes per command, with most ticks empty. Compression is optional; measure first.
