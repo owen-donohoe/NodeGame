@@ -29,6 +29,8 @@ directly. This index exists so the set can be traversed as a graph, and so
 
 ## Subdirectories
 
+* [codebase atlas](codebase/README.md) — an Obsidian-friendly engineering guide:
+  connected subsystem chapters, end-to-end flows, decisions, and extension seams.
 * [computations](computations/index.md) — sanctioned procedures declared as Attested Computations.
 * [skills](skills/index.md) — executor instructions for running those computations.
 * [design-history](design-history/README.md) — the v2.1 master design document. Historical, and
