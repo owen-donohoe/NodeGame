@@ -284,6 +284,10 @@ namespace NodeWar.Core
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
 
+        // The match log of a drafted match. Null on the testing path, whose
+        // hardcoded board a log's BOARD and DRAFT chunks cannot describe.
+        private NodeWar.MatchLog.MatchRecorder recorder;
+
         private void OnDraftComplete(DraftResult result)
         {
             pendingDraftResult = result;
@@ -345,6 +349,8 @@ namespace NodeWar.Core
                         runner.SetBot(botPlayer);
                 }
             }
+
+            BeginRecording(match, result);
 
             SpawnNodeViews();
             SpawnVillagerViews();
@@ -459,6 +465,7 @@ namespace NodeWar.Core
             if (state.gameOver && !gameOverHandled)
             {
                 gameOverHandled = true;
+                FinishRecording(NodeWar.MatchLog.MatchEndReason.Win, state.winnerID);
                 ShowGameOver();
             }
         }
@@ -581,6 +588,10 @@ namespace NodeWar.Core
 
         private void OnDestroy()
         {
+            // Quitting or any other scene change mid-match. A no-op once the
+            // match has ended some other way.
+            FinishRecording(NodeWar.MatchLog.MatchEndReason.Abandoned, -1);
+
             if (cameraController != null)
                 cameraController.POVChanged -= OnPOVChanged;
 
@@ -616,12 +627,82 @@ namespace NodeWar.Core
             Debug.LogError("[GameManager] Opponent disconnected.");
             if (gameOverHandled) return;
             gameOverHandled = true;
+            FinishRecording(NodeWar.MatchLog.MatchEndReason.Disconnect, -1);
             ShowDisconnect();
         }
 
         private void OnDesyncDetected(int tick)
         {
             Debug.LogError("[GameManager] DESYNC at tick " + tick + "! Determinism bug exists.");
+
+            // The runner reports its tick index; the log counts ticks completed.
+            if (recorder != null) recorder.RecordDesync(tick + 1);
+        }
+
+        // ===== MATCH LOG =====
+
+        private void BeginRecording(MatchConnection match, DraftResult result)
+        {
+            int localPlayer = match.isNetworked ? match.localPlayerID : 0;
+            string localId = NodeWar.Backend.BackendServices.Account.Current.PlayerId ?? "";
+            BuildIdentity build = LocalBuildIdentity.Current;
+
+            var header = new NodeWar.MatchLog.MatchLogHeader
+            {
+                protocol = build.protocol,
+                sim = build.sim,
+                content = build.content,
+                // Local until the server issues match IDs and start times (Stage 7).
+                matchId = System.Guid.NewGuid().ToString("N"),
+                // The opponent's Player ID never crosses the wire today.
+                playerIds = new[] { localPlayer == 0 ? localId : "", localPlayer == 1 ? localId : "" },
+                localPlayer = (byte)localPlayer,
+                startUnixSeconds = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                kind = match.isNetworked ? NodeWar.MatchLog.MatchKind.Networked : NodeWar.MatchLog.MatchKind.Bot
+            };
+
+            var loadouts = new NodeWar.MatchLog.PlayerLoadout[2];
+            for (int p = 0; p < 2; p++)
+                loadouts[p] = new NodeWar.MatchLog.PlayerLoadout
+                {
+                    suits = (int[])state.players[p].draftedSuits.Clone(),
+                    nodes = (int[])state.players[p].draftedNodes.Clone()
+                };
+
+            recorder = new NodeWar.MatchLog.MatchRecorder(header, boardConfig.Data, loadouts,
+                result.placements ?? new DraftPlacement[0]);
+
+            if (lockstepRunner != null)
+            {
+                lockstepRunner.CommandsApplied += recorder.RecordTick;
+                lockstepRunner.HashComputed += recorder.RecordHash;
+            }
+            else
+            {
+                TickRunner tickRunner = GetComponent<TickRunner>();
+                tickRunner.CommandsApplied += recorder.RecordTick;
+                tickRunner.HashComputed += recorder.RecordHash;
+            }
+        }
+
+        /// <summary>
+        /// Ends the log and saves it. Safe to call from every way a match ends:
+        /// only the first call counts, so a win followed by leaving the end card
+        /// stays a win.
+        /// </summary>
+        private void FinishRecording(NodeWar.MatchLog.MatchEndReason reason, int winner)
+        {
+            if (recorder == null || recorder.IsFinished) return;
+
+            recorder.Finish(new NodeWar.MatchLog.MatchResult
+            {
+                reason = reason,
+                winner = winner,
+                endTick = state.tickCount,
+                finalHash = SimulationStateHasher.ComputeHash(state),
+                firstDesyncTick = -1
+            });
+            NodeWar.Backend.LocalMatchLogStore.Save(recorder.Log.header.matchId, recorder.ToBytes());
         }
 
         private void CreateSelectionLasso()
@@ -710,6 +791,7 @@ namespace NodeWar.Core
 
         private void ReturnToLobby()
         {
+            FinishRecording(NodeWar.MatchLog.MatchEndReason.Abandoned, -1);
             if (MatchConnection.Instance != null)
                 MatchConnection.Instance.Shutdown();
             SceneTransition.Load("Lobby");
