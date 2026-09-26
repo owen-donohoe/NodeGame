@@ -979,3 +979,27 @@
 .lb-reduced-motion.ui-root .ui-toast {
     transition-duration: 0s;
 }
+.lb-account-dialog__choice {
+    flex-direction: column;
+    height: auto;
+    min-height: 60px;
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    white-space: normal;
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-root .lb-account-dialog__choice > Label {
+    align-self: stretch;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.lb-root .lb-account-dialog__subtitle {
+    margin-top: var(--space-2);
+    font-size: var(--type-body);
+    -unity-font-definition: var(--font-medium);
+}

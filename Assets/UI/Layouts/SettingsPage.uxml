@@ -11,7 +11,7 @@
         right. Every row the prototype has, in its groups and order, with its
         default values.
 
-        Every row now reads and writes PlayerProfile, through the save path it
+        Preference rows read and write PlayerProfile, through the save path it
         already owned rather than a second one. What a saved value then drives
         is a separate question and mostly still open - the footnote below names
         what is stored but not yet acted on, and narrows as each system lands.
@@ -23,6 +23,7 @@
         same thing. If either side moves, move both.
 
         Rows that hold a switch are Buttons, so the whole row is the target.
+        Account status and actions are rendered from BackendServices.Account.
     -->
 
     <engine:Style src="project://database/Assets/UI/Styles/Settings.uss" />
@@ -37,7 +38,20 @@
                 <engine:Label class="lb-push__title ui-w600" text="Settings" />
             </engine:VisualElement>
 
-            <engine:Label class="lb-group-label lb-group-label--first ui-w600" text="Audio" />
+            <engine:Label class="lb-group-label lb-group-label--first ui-w600" text="Account" />
+            <engine:VisualElement name="settings-account" class="lb-group-wrap ui-sticker" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="lb-group">
+                    <engine:Label name="settings-account-status" class="lb-account-status ui-w500" />
+                    <engine:Button name="settings-account-link" class="ui-reset-button lb-grow lb-account-action ui-w500" text="Link account" />
+                    <engine:Button name="settings-account-sign-in" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Sign in" />
+                    <engine:Button name="settings-account-sign-out" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Sign out" />
+                    <engine:Button name="settings-account-guest" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Continue as guest" />
+                    <engine:Label name="settings-account-message" class="lb-account-message ui-w500" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+
+            <engine:Label class="lb-group-label ui-w600" text="Audio" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-group">
