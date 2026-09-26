@@ -26,5 +26,6 @@
   <ItemGroup>
     <ProjectReference Include="../NodeWarCloud/NodeWarCloud/NodeWarCloud.csproj" />
     <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+    <ProjectReference Include="../NodeWar.MatchLog/NodeWar.MatchLog.csproj" />
   </ItemGroup>
 </Project>
