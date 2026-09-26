@@ -116,5 +116,18 @@ namespace NodeWar.Tests
             Assert.AreEqual(MoveAndCombat4Hash, hashA,
                 "Simulation output changed against the recorded baseline. See the note on EmptyTick100Hash.");
         }
+
+        // The baselines above belong to one SimulationVersion. A deliberate
+        // re-pin means the same inputs now produce a different game, which is
+        // exactly what SimulationVersion exists to announce.
+        private const int BaselinesPinnedAtSimVersion = 1;
+
+        [Test]
+        public void SimVersion_MatchesPinnedBaselines()
+        {
+            Assert.AreEqual(BaselinesPinnedAtSimVersion, SimulationVersion.Current,
+                "These baselines were pinned at SimVersion " + BaselinesPinnedAtSimVersion + ". Re-pinning them on purpose "
+                + "means bumping SimulationVersion.Current and this number in the same commit.");
+        }
     }
 }
