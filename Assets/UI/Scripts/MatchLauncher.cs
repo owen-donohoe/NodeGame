@@ -15,9 +15,11 @@ namespace NodeWar.Lobby
     /// safety story is that the old path is untouched until S5. The duplication
     /// is temporary and dies with NetworkingModal.
     ///
-    /// Flow, unchanged from the shipped one because both peers must agree:
-    ///   Host: create room, wait for a Handshake, reply HandshakeAck x3
+    /// Flow, shared with the shipped one because both peers must agree:
+    ///   Host: create room, wait for a Handshake, reply HandshakeAck x3, or
+    ///         HandshakeReject x3 if the peer's build cannot play this one
     ///   Join: wait for transport, send Handshake every 0.3s until HandshakeAck
+    ///         or HandshakeReject; both carry the host's BuildIdentity
     ///   Both: create MatchConnection, parent the NetworkManager under it, load Gameplay
     ///
     /// What is NOT the same is failure handling. NetworkManager.StartAsRelayHost
@@ -269,13 +271,27 @@ namespace NodeWar.Lobby
             {
                 if (InputSerializer.ReadPacketType(packets[i]) != PacketType.Handshake) continue;
 
-                // Three acks, as the shipped flow does: the reply is unreliable
-                // and a dropped ack would strand the client.
-                networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                networkManager.Send(InputSerializer.SerializeHandshakeAck());
+                BuildIdentity self = LocalBuildIdentity.Current;
 
-                Succeed();
+                // A handshake this build cannot read comes from a build before
+                // versioning (a single byte), so it is older by definition.
+                HandshakeVerdict verdict = InputSerializer.TryDeserializeHandshake(packets[i], out BuildIdentity peer)
+                    ? InputSerializer.Compare(self, peer)
+                    : HandshakeVerdict.PeerOlder;
+
+                // Three of each, as the shipped flow does: the reply is
+                // unreliable and a dropped one would strand the client.
+                byte[] reply = verdict == HandshakeVerdict.Compatible
+                    ? InputSerializer.SerializeHandshakeAck(self)
+                    : InputSerializer.SerializeHandshakeReject(self);
+                networkManager.Send(reply);
+                networkManager.Send(reply);
+                networkManager.Send(reply);
+
+                if (verdict == HandshakeVerdict.Compatible)
+                    Succeed();
+                else
+                    FailIncompatible(verdict);
                 return;
             }
         }
@@ -294,7 +310,7 @@ namespace NodeWar.Lobby
 
                 if (handshakeRetryTimer >= HandshakeRetryInterval)
                 {
-                    networkManager.Send(InputSerializer.SerializeHandshake());
+                    networkManager.Send(InputSerializer.SerializeHandshake(LocalBuildIdentity.Current));
                     handshakeRetryTimer = 0f;
                 }
             }
@@ -303,9 +319,27 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < packets.Length; i++)
             {
-                if (InputSerializer.ReadPacketType(packets[i]) != PacketType.HandshakeAck) continue;
+                PacketType type = InputSerializer.ReadPacketType(packets[i]);
+                if (type != PacketType.HandshakeAck && type != PacketType.HandshakeReject) continue;
 
-                Succeed();
+                // Checked here as well as on the host: a host from before
+                // versioning acks anything, with a single byte this cannot read.
+                bool readable = type == PacketType.HandshakeAck
+                    ? InputSerializer.TryDeserializeHandshakeAck(packets[i], out BuildIdentity peer)
+                    : InputSerializer.TryDeserializeHandshakeReject(packets[i], out peer);
+                HandshakeVerdict verdict = readable
+                    ? InputSerializer.Compare(LocalBuildIdentity.Current, peer)
+                    : HandshakeVerdict.PeerOlder;
+
+                if (type == PacketType.HandshakeAck && verdict == HandshakeVerdict.Compatible)
+                {
+                    Succeed();
+                    return;
+                }
+
+                // A reject from a host whose identity matches ours cannot come
+                // from this build; call it a data mismatch rather than succeed.
+                FailIncompatible(verdict == HandshakeVerdict.Compatible ? HandshakeVerdict.ContentMismatch : verdict);
                 return;
             }
 
@@ -365,6 +399,27 @@ namespace NodeWar.Lobby
             FailureMessage = message;
             FailureRecovery = recovery;
             Notify();
+        }
+
+        /// <summary>The peer's build cannot play this one. Says which side has to change.</summary>
+        private void FailIncompatible(HandshakeVerdict verdict)
+        {
+            Cleanup();
+            switch (verdict)
+            {
+                case HandshakeVerdict.PeerOlder:
+                    Fail("Your opponent is on an older version of Node War.",
+                         "They need to update before you can play.");
+                    break;
+                case HandshakeVerdict.PeerNewer:
+                    Fail("Your opponent is on a newer version of Node War.",
+                         "Update the game, then try again.");
+                    break;
+                default:
+                    Fail("Your opponent's game data doesn't match yours.",
+                         "Both players need the same build.");
+                    break;
+            }
         }
 
         private void ClearFailure()

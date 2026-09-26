@@ -180,10 +180,18 @@ namespace NodeWar.Lobby
             {
                 if (InputSerializer.ReadPacketType(packets[i]) == PacketType.Handshake)
                 {
-                    networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                    networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                    networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                    OnConnected();
+                    BuildIdentity self = LocalBuildIdentity.Current;
+                    bool compatible = InputSerializer.TryDeserializeHandshake(packets[i], out BuildIdentity peer)
+                        && InputSerializer.Compare(self, peer) == HandshakeVerdict.Compatible;
+                    byte[] reply = compatible
+                        ? InputSerializer.SerializeHandshakeAck(self)
+                        : InputSerializer.SerializeHandshakeReject(self);
+                    networkManager.Send(reply);
+                    networkManager.Send(reply);
+                    networkManager.Send(reply);
+
+                    if (compatible) OnConnected();
+                    else RefuseIncompatible();
                     return;
                 }
             }
@@ -217,7 +225,7 @@ namespace NodeWar.Lobby
                 handshakeRetryTimer = 0f;
                 localPlayerID = 1;
                 ShowActiveState("Connecting to " + input + "...");
-                networkManager.Send(InputSerializer.SerializeHandshake());
+                networkManager.Send(InputSerializer.SerializeHandshake(LocalBuildIdentity.Current));
             }
             else
             {
@@ -242,7 +250,7 @@ namespace NodeWar.Lobby
                 handshakeRetryTimer += Time.deltaTime;
                 if (handshakeRetryTimer >= HANDSHAKE_RETRY_INTERVAL)
                 {
-                    networkManager.Send(InputSerializer.SerializeHandshake());
+                    networkManager.Send(InputSerializer.SerializeHandshake(LocalBuildIdentity.Current));
                     handshakeRetryTimer = 0f;
                 }
             }
@@ -250,9 +258,17 @@ namespace NodeWar.Lobby
             byte[][] packets = networkManager.ReceiveAll();
             for (int i = 0; i < packets.Length; i++)
             {
-                if (InputSerializer.ReadPacketType(packets[i]) == PacketType.HandshakeAck)
+                PacketType type = InputSerializer.ReadPacketType(packets[i]);
+                if (type == PacketType.HandshakeAck
+                    && InputSerializer.TryDeserializeHandshakeAck(packets[i], out BuildIdentity host)
+                    && InputSerializer.Compare(LocalBuildIdentity.Current, host) == HandshakeVerdict.Compatible)
                 {
                     OnConnected();
+                    return;
+                }
+                if (type == PacketType.HandshakeAck || type == PacketType.HandshakeReject)
+                {
+                    RefuseIncompatible();
                     return;
                 }
             }
@@ -298,6 +314,15 @@ namespace NodeWar.Lobby
 
         private void OnCancelClicked()
         {
+            CleanupNetworkManager();
+            ShowIdleState();
+        }
+
+        // Legacy path: one message for every kind of mismatch. MatchLauncher
+        // says which side needs to update.
+        private void RefuseIncompatible()
+        {
+            statusText.text = "Opponent is on a different version.";
             CleanupNetworkManager();
             ShowIdleState();
         }

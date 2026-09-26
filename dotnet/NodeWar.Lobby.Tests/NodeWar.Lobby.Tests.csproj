@@ -45,6 +45,7 @@
     <Compile Include="TrophyBarLogicTests.cs" />
     <Compile Include="GameSettingsTests.cs" />
     <Compile Include="EmotePacketTests.cs" />
+    <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 

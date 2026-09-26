@@ -13,7 +13,38 @@ namespace NodeWar.Network
         DraftPlacement = 5,
         DraftLoadout = 6,
         DraftAck = 7,
-        Emote = 8
+        Emote = 8,
+        HandshakeReject = 9
+    }
+
+    /// <summary>
+    /// What a build is, for deciding whether two builds may play each other.
+    /// See <see cref="InputSerializer.ProtocolVersion"/>,
+    /// <see cref="NodeWar.Simulation.SimulationVersion"/> and
+    /// <see cref="NodeWar.Simulation.BalanceHasher"/>.
+    /// </summary>
+    public struct BuildIdentity
+    {
+        public ushort protocol;
+        public ushort sim;
+        public int content;
+
+        public BuildIdentity(ushort protocol, ushort sim, int content)
+        {
+            this.protocol = protocol;
+            this.sim = sim;
+            this.content = content;
+        }
+    }
+
+    public enum HandshakeVerdict
+    {
+        Compatible,
+        PeerOlder,
+        PeerNewer,
+
+        /// <summary>Same versions, different balance: two builds of the same code with different data.</summary>
+        ContentMismatch
     }
 
     /// <summary>
@@ -38,6 +69,16 @@ namespace NodeWar.Network
     /// </summary>
     public static class InputSerializer
     {
+        /// <summary>
+        /// The wire layout's version. Bump it with any change to any packet's
+        /// layout, including GameCommand's (which changes BYTES_PER_COMMAND and
+        /// must also land in the same commit as this serializer). Builds from
+        /// before the versioned handshake are protocol 0: their handshake is a
+        /// single byte.
+        /// </summary>
+        public const ushort ProtocolVersion = 1;
+
+        // Keep in step with GameCommand; a change here is a ProtocolVersion bump.
         private const int BYTES_PER_COMMAND = 24;
         private const int HEADER_BYTES = 1 + 4 + 4 + 4; // type, forTick, stateHash, commandCount
 
@@ -134,14 +175,86 @@ namespace NodeWar.Network
             return true;
         }
 
-        public static byte[] SerializeHandshake()
+        // ===== HANDSHAKE =====
+        // Handshake, HandshakeAck and HandshakeReject share one layout, each
+        // carrying the sender's own identity:
+        //   [type:1][protocol:2][sim:2][content:4] = 9 bytes, little-endian.
+        // Bytes 0-2 (type and protocol) never change meaning, so any later build
+        // can still tell which protocol a peer speaks, whatever follows. A reject
+        // carries no reason code: the receiver compares identities itself, so
+        // there is nothing extra to version.
+
+        private const int HANDSHAKE_BYTES = 1 + 2 + 2 + 4;
+
+        public static byte[] SerializeHandshake(BuildIdentity self)
         {
-            return new byte[] { (byte)PacketType.Handshake };
+            return SerializeIdentity(PacketType.Handshake, self);
         }
 
-        public static byte[] SerializeHandshakeAck()
+        public static byte[] SerializeHandshakeAck(BuildIdentity self)
         {
-            return new byte[] { (byte)PacketType.HandshakeAck };
+            return SerializeIdentity(PacketType.HandshakeAck, self);
+        }
+
+        public static byte[] SerializeHandshakeReject(BuildIdentity self)
+        {
+            return SerializeIdentity(PacketType.HandshakeReject, self);
+        }
+
+        /// <summary>
+        /// False when the packet is not a readable handshake of this layout. A
+        /// one-byte handshake from a protocol-0 build lands here: treat it as
+        /// <see cref="HandshakeVerdict.PeerOlder"/>.
+        /// </summary>
+        public static bool TryDeserializeHandshake(byte[] data, out BuildIdentity peer)
+        {
+            return TryDeserializeIdentity(data, PacketType.Handshake, out peer);
+        }
+
+        public static bool TryDeserializeHandshakeAck(byte[] data, out BuildIdentity peer)
+        {
+            return TryDeserializeIdentity(data, PacketType.HandshakeAck, out peer);
+        }
+
+        public static bool TryDeserializeHandshakeReject(byte[] data, out BuildIdentity peer)
+        {
+            return TryDeserializeIdentity(data, PacketType.HandshakeReject, out peer);
+        }
+
+        /// <summary>
+        /// Whether this build may play a peer. Protocol decides first, then the
+        /// simulation; only with both equal does a balance difference count.
+        /// </summary>
+        public static HandshakeVerdict Compare(BuildIdentity local, BuildIdentity peer)
+        {
+            if (peer.protocol != local.protocol)
+                return peer.protocol < local.protocol ? HandshakeVerdict.PeerOlder : HandshakeVerdict.PeerNewer;
+            if (peer.sim != local.sim)
+                return peer.sim < local.sim ? HandshakeVerdict.PeerOlder : HandshakeVerdict.PeerNewer;
+            return peer.content == local.content ? HandshakeVerdict.Compatible : HandshakeVerdict.ContentMismatch;
+        }
+
+        private static byte[] SerializeIdentity(PacketType type, BuildIdentity self)
+        {
+            byte[] data = new byte[HANDSHAKE_BYTES];
+            int offset = 0;
+            data[offset++] = (byte)type;
+            WriteUShort(data, ref offset, self.protocol);
+            WriteUShort(data, ref offset, self.sim);
+            WriteInt(data, ref offset, self.content);
+            return data;
+        }
+
+        private static bool TryDeserializeIdentity(byte[] data, PacketType type, out BuildIdentity peer)
+        {
+            peer = default;
+            if (data == null || data.Length != HANDSHAKE_BYTES || data[0] != (byte)type) return false;
+
+            int offset = 1;
+            peer.protocol = ReadUShort(data, ref offset);
+            peer.sim = ReadUShort(data, ref offset);
+            peer.content = ReadInt(data, ref offset);
+            return true;
         }
 
         public static byte[] SerializeHeartbeat()
@@ -214,6 +327,20 @@ namespace NodeWar.Network
             buffer[offset + 2] = (byte)(value >> 16);
             buffer[offset + 3] = (byte)(value >> 24);
             offset += 4;
+        }
+
+        private static void WriteUShort(byte[] buffer, ref int offset, ushort value)
+        {
+            buffer[offset] = (byte)(value);
+            buffer[offset + 1] = (byte)(value >> 8);
+            offset += 2;
+        }
+
+        private static ushort ReadUShort(byte[] buffer, ref int offset)
+        {
+            ushort value = (ushort)(buffer[offset] | (buffer[offset + 1] << 8));
+            offset += 2;
+            return value;
         }
 
         private static int ReadInt(byte[] buffer, ref int offset)

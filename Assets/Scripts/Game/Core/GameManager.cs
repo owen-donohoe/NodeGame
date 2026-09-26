@@ -153,6 +153,14 @@ namespace NodeWar.Core
 
             GameSimulation.SetBalance(balance.Data);
             CommandProcessor.SetBalance(balance.Data);
+
+            // The lobby's handshake advertised the shared asset's hash. Playing
+            // anything else would pass the handshake and desync mid-match.
+            if (NodeWar.Network.LocalBuildIdentity.ContentHashOf(balance)
+                != NodeWar.Network.LocalBuildIdentity.Current.content)
+                Debug.LogError("[GameManager] GameBalance '" + balance.name + "' is not the shared balance ("
+                    + NodeWar.Config.GameBalance.SharedResourceName + ") the handshake advertised. Peers will desync.");
+
             state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
 
             Pathfinding.OwnedMultiplier = boardConfig.Data.ownedMultiplier;
