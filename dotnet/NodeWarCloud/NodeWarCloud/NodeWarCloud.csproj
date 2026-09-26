@@ -31,5 +31,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../NodeWar.Progression/NodeWar.Progression.csproj" />
+    <ProjectReference Include="../../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+    <ProjectReference Include="../../NodeWar.MatchLog/NodeWar.MatchLog.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Balances/*.json" />
   </ItemGroup>
 </Project>
