@@ -161,6 +161,26 @@ while both halves are true. A step that **reads** the log, or a log that
 moves **onto** `SimulationState`, makes it state, and then it needs hashing
 like everything else. See `docs/architecture.md`, *What a tick did*.
 
+## `SimulationVersion` and the content hash
+
+Two builds that play the same inputs differently must refuse each other
+instead of desyncing. The lobby handshake (`InputSerializer`'s
+`BuildIdentity`, sent from `MatchLauncher`) compares three numbers:
+`InputSerializer.ProtocolVersion` (wire layout),
+`SimulationVersion.Current`, and a content hash,
+`BalanceHasher.Hash` over the shared `GameBalance` asset.
+
+- **Bump `SimulationVersion.Current`** in the same commit as any change
+  that alters what the same inputs produce: tick rules, a state field
+  that feeds a result, a deliberate re-pin of the determinism baselines.
+  `DeterminismBaselineTests.SimVersion_MatchesPinnedBaselines` pins the
+  version beside the baselines, so re-pinning without a bump fails.
+- **Balance edits need no bump.** They move the content hash, which the
+  handshake already compares. `BalanceHasherTests` fails when a
+  `GameBalanceData` field is added without being hashed.
+- The match log (a later stage) records all three, so a replay only runs
+  on the simulation that produced it.
+
 ## Desync detection
 
 Every 50 ticks (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer
