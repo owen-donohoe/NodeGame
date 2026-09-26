@@ -1,7 +1,7 @@
 ---
 type: Architecture
 title: Architecture
-description: The seven layers of Assets/Scripts/, where the three UI trees live and which one runs, how information flows between them, and the lockstep networking model.
+description: The seven layers of Assets/Scripts/, where the three UI trees live and which one runs, how information flows between them, the lockstep networking model, and the backend, match logs and referee beside it.
 tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
@@ -87,6 +87,30 @@ sources:
   - id: outline-feature
     resource: Assets/Scripts/Game/View/Outline/OutlineRendererFeature.cs
     title: OutlineRendererFeature, the URP entry point
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: MatchFactory, how GameManager builds the starting state
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: backend-services
+    resource: Assets/Scripts/Backend/BackendServices.cs
+    title: BackendServices, UGS or local fakes, LastKnownState
+    last_modified: 2026-09-26T08:52:10-04:00
+  - id: match-log-format
+    resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
+    title: Match log chunks
+    last_modified: 2026-09-26T08:52:10-04:00
+  - id: referee
+    resource: dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
+    title: The Cloud Code referee
+    last_modified: 2026-09-25T22:46:13-04:00
+  - id: loadout-types
+    resource: Assets/Scripts/Lobby/Data/LoadoutTypes.cs
+    title: LoadoutTypes, lobby IDs to sim types and catalog bases
+    last_modified: 2026-09-26T08:52:10-04:00
+  - id: input-serializer
+    resource: Assets/Scripts/Game/Network/InputSerializer.cs
+    title: InputSerializer, ProtocolVersion and the handshake
+    last_modified: 2026-09-26T08:52:10-04:00
 ---
 
 # Architecture
@@ -114,16 +138,21 @@ Assets/Scripts/
       Outline/              own assembly, NodeWar.View.Outline
     Config/    not a layer   GameBalance / BoardConfig ScriptableObjects
     Debug/     not a layer   development aids
+  Backend/     beside        accounts, player state, inventory (UGS); Shared/ also builds into Cloud Code
+  MatchLog/    beside        match log format, recorder, headless replay; own assembly
   Editor/      not a layer   TestBridge and other editor-only tooling
 
 Assets/UI/                  UI Toolkit — the replacement for layers 1 and 6
 Assets/Legacy/              retired uGUI lobby, still compiled
+dotnet/                     .NET projects over the same sources, plus the Cloud Code module
 ```
 
 The three marked *not a layer* carry no gameplay rules and sit outside the
 information flow below. `Config/` matters anyway: it is where a new tunable
 number goes, and the only place the `GameBalance` and `BoardConfig`
-`ScriptableObject`s exist.
+`ScriptableObject`s exist. The two marked *beside* sit outside the match's
+information flow too, but hold rules of their own: see
+[Backend, match logs and the referee](#backend-match-logs-and-the-referee).
 
 **1. Lobby/** — Pre-match menu flow: game mode selection, player profile,
 loadout/node/suit selection. Runs entirely in the Lobby scene, before a
@@ -135,7 +164,9 @@ is `Assets/UI/`.
 **2. Core/** — Match lifecycle orchestration. Owns the top-level state
 machine (`GameManager`), the pre-match draft (`DraftManager`), local tick
 timing (`TickRunner`), and camera/transition control. This is the layer
-that constructs `SimulationState` and wires every other layer together.
+that starts a match and wires every other layer together. It builds the
+starting `SimulationState` through `Simulation/MatchFactory`, the same
+builder the referee and headless runs use, rather than by hand.
 
 **3. Simulation/** — All gameplay rules and the entire mutable match
 state. Pure C#, no `UnityEngine` dependency (see `docs/simulation-rules.md`
@@ -355,7 +386,12 @@ Three objects are carried across the Lobby → Gameplay scene load via
   Profile, Shop, GroupSelection).
 - `PlayerProfile` — persistent player identity/progression singleton.
 - `LoadoutData`, `NodeDefinition`, `SuitDefinition` — data describing a
-  player's drafted nodes/suits.
+  player's drafted nodes/suits. `LoadoutData` also carries the player's
+  era per suit and district type and their equipped skin IDs; those are
+  stamped on at match launch from the server's equipped state
+  (`LoadoutTypes.WithEquipment`), not chosen in the lobby's local data.
+- `LoadoutTypes` — the one translation between lobby item IDs
+  (`suit_warrior`), simulation types and catalog base IDs (`suit.warrior`).
 
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
@@ -392,8 +428,16 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `Commands.cs` — `GameCommand` struct and `CommandType` enum.
 - `Pathfinding` — Dijkstra over the node graph with ownership-based
   integer cost multipliers.
-- `GameBalance`, `BoardConfig` — `ScriptableObject` tuning data, read once
-  at match start.
+- `MatchFactory` — builds a match's tick-0 state from board, draft and
+  per-player setup, and sets the simulation's statics. See
+  `docs/simulation-rules.md`, *The starting board*.
+- `GameBalanceData` / `BoardConfigData` — the plain tuning structs behind
+  the `GameBalance` and `BoardConfig` assets in `Config/`, read at match
+  start. Suits and districts have one stats entry per era
+  (`SuitStats.era`, `DistrictStats`); a lookup for a missing era falls back
+  to era 0.
+- `BalanceHasher` / `SimulationVersion` — the content hash and version a
+  build is identified by in the handshake and the match log.
 - `DraftState` — grid occupancy and per-player slots during the draft
   phase.
 - `SimulationStateHasher` — deterministic integer fingerprint of
@@ -403,9 +447,13 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `LockstepRunner` — networked tick driver; stalls a tick until both
   local and remote inputs exist for it.
 - `NetworkManager` — transport abstraction (send/receive raw packets).
-- `InputSerializer` — wire format for tick inputs and heartbeats.
+- `InputSerializer` — wire format for tick inputs, heartbeats and the
+  versioned handshake. `ProtocolVersion` changes with any packet layout.
+- `LocalBuildIdentity` — this build's `BuildIdentity` (protocol, simulation
+  version, balance content hash). Peers compare it in the handshake and
+  refuse a mismatch rather than desync.
 - `DraftSerializer` — wire format for draft-phase packets (ready,
-  placement, loadout).
+  placement, loadout). The loadout carries eras and skins (protocol 2).
 
 **Input/**
 - `PointerGestureSource` — the shared pointer reader for selection and
@@ -453,6 +501,13 @@ Three objects are carried across the Lobby → Gameplay scene load via
   UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
   covers.
 - `MatchLauncher` — the lobby's route into a match.
+- `SettingsPage` account section and `AccountFlow` — guest / link / sign
+  in / sign out, the conflict and warning sheets, and the one-time link
+  prompt (`LinkPromptPolicy`: starter items are not progress).
+- `WorkshopPage` era and skin chips — per item, one chip per era from the
+  server's `PlayerState` (owned, usable at the current arena, equipped).
+  Equipping calls `IInventoryService` and shows what the server returns.
+  The chip rules are the UnityEngine-free `EraChips`.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
 - `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
   layer is brought to the front so a closing emote shows over the end card, and
@@ -702,6 +757,11 @@ and must therefore arrive at identical results every tick.
   because the packet switch has no default. `EmotePanel` (HUD) applies the
   rate limit (under 5 per 1 s and under 10 per 5 s) on send and again on
   receive, and owns mute.
+- **Recording** — both runners raise `CommandsApplied` (the tick count
+  before, and the commands in the order they were applied — lockstep's P0
+  then P1, the local runner's buffer order) and `HashComputed` (the tick
+  count after, and the hash). `GameManager` feeds both to a
+  `MatchRecorder`; the runners know nothing about logs.
 - **Desync detection** — every 50 ticks
   (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its
@@ -711,3 +771,55 @@ and must therefore arrive at identical results every tick.
   `LockstepRunner` (during the match) track time since the last received
   packet and fire a disconnect callback if it exceeds a timeout,
   independent of heartbeat packets sent to keep the connection alive.
+
+## Backend, match logs and the referee
+
+Everything that must not be trusted to a client lives on Unity Gaming
+Services: Cloud Code (C#) plus Cloud Save, no custom server. Matches stay
+peer-to-peer lockstep; the server's authority comes from replaying a
+match's log after it ends. The staged plan is `BACKEND-PLAN.md` (temporary;
+Notion **Phases** own future work).
+
+```
+Assets/Scripts/Backend/          client services, NodeWar.Backend
+  GameServices                   UGS init + sign-in; the environment follows the build type
+  BackendServices                picks the UGS service or its local fake (Tools > Node War >
+                                 Backend > Use Local Fakes); remembers LastKnownState
+  Ugs*Service / Local*Service    accounts (Unity Player Accounts), player state, inventory
+  Shared/                        DTOs and rules compiled by Unity AND linked into Cloud Code:
+                                 PlayerState records, CatalogIds, InventoryEquip, LinkPromptPolicy
+  Catalog/                       CatalogDefinition asset + editor Generate / Export
+  Editor/BalanceExport           writes the shared balance for the server, named by content hash
+  LocalMatchLogStore             finished logs on disk, newest 20
+Assets/Scripts/MatchLog/         NodeWar.MatchLog: format, MatchRecorder, MatchReplay
+dotnet/NodeWarCloud/             the Cloud Code module (deploy: ugs deploy dotnet/NodeWarCloud -e development)
+dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unlocks, matchmaking rules
+```
+
+- **Services are async and may refuse.** Every client call can fail, and
+  the UI shows what the server returned, never an optimistic guess. Each
+  service has a local fake that runs the same shared rules, for offline
+  Editor work and tests.
+- **Player data** is four protected Cloud Save records (`rating`, `rank`,
+  `inventory`, `history`): the player reads them, only Cloud Code writes.
+  `GetPlayerState` creates them, grants the era-0 variant and default skin
+  of every catalog base, and equips them.
+- **Catalog and eras.** Arena N plays era N. Every suit and district type
+  is a catalog base (`suit.warrior`, `district.rampart`) with one variant
+  per era (`suit.warrior.e3`) and skins (`skin.suit.warrior.default`).
+  Item IDs are never renamed or reused: the export refuses a catalog that
+  breaks `CatalogValidation.ValidateAgainstPrevious`. `Equip` checks
+  ownership, the base, and that the era is usable at the current arena.
+  A match launches with the equipped eras and skins (`LoadoutData`), the
+  simulation plays each district at its placer's era, and skins never
+  reach the simulation.
+- **Match log** (`.nwml`): magic, format version, then tagged,
+  length-prefixed chunks — HEADER, BOARD, LOADOUTS, DRAFT, TICKS, HASHES,
+  RESULT, ERAS, SKINS. A reader skips tags it does not know; a known tag
+  never changes meaning, so a changed payload gets a new tag. The header
+  carries protocol, simulation version and content hash.
+- **Referee.** `VerifyMatch` rebuilds the match with `MatchFactory`,
+  replays the logged commands with `MatchReplay`, and checks every logged
+  hash, the final hash and the winner. It proves a log is consistent, not
+  that it is honest: signed commands come with result reporting.
+  A 20-minute match replays in about 0.1 s against Cloud Code's 15 s limit.

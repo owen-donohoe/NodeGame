@@ -62,7 +62,7 @@ namespace NodeWar.Tests
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = BoardWithWorkerOn(balance, DistrictType.Farm);
 
-            Tick(state, balance.foodProductionTicks - 1);
+            Tick(state, balance.GetDistrictStats(DistrictType.Farm, 0).productionTicks - 1);
             Assert.AreEqual(0, state.players[0].food, "paid out early");
 
             Tick(state, 1);
@@ -71,7 +71,7 @@ namespace NodeWar.Tests
 
             // The timer resets to productionTicksMax rather than stopping, so
             // the second loaf costs exactly what the first did.
-            Tick(state, balance.foodProductionTicks);
+            Tick(state, balance.GetDistrictStats(DistrictType.Farm, 0).productionTicks);
             Assert.AreEqual(2, state.players[0].food);
         }
 
@@ -81,7 +81,7 @@ namespace NodeWar.Tests
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = BoardWithWorkerOn(balance, DistrictType.Mine);
 
-            Tick(state, balance.materialProductionTicks);
+            Tick(state, balance.GetDistrictStats(DistrictType.Mine, 0).productionTicks);
 
             Assert.AreEqual(1, state.players[0].materials);
             Assert.AreEqual(0, state.players[0].food);
@@ -99,7 +99,7 @@ namespace NodeWar.Tests
             state.players[0].materials = 5;
             state.nodes[WorkNode].materialAllocation = 0;
 
-            Tick(state, balance.metalProductionTicks * 2);
+            Tick(state, balance.GetDistrictStats(DistrictType.Forge, 0).productionTicks * 2);
 
             // The cycle still runs and still resets -- it just yields nothing.
             // The stock must be untouched: a forge that eats material without
@@ -117,7 +117,7 @@ namespace NodeWar.Tests
             state.players[0].materials = 5;
             state.nodes[WorkNode].materialAllocation = 1;
 
-            Tick(state, balance.metalProductionTicks);
+            Tick(state, balance.GetDistrictStats(DistrictType.Forge, 0).productionTicks);
 
             Assert.AreEqual(4, state.players[0].materials);
             Assert.AreEqual(1, state.players[0].metal);
@@ -132,7 +132,7 @@ namespace NodeWar.Tests
             state.players[0].materials = 0;
             state.nodes[WorkNode].materialAllocation = 1;
 
-            Tick(state, balance.metalProductionTicks * 2);
+            Tick(state, balance.GetDistrictStats(DistrictType.Forge, 0).productionTicks * 2);
 
             Assert.AreEqual(0, state.players[0].materials);
             Assert.AreEqual(0, state.players[0].metal);
@@ -151,15 +151,15 @@ namespace NodeWar.Tests
             // the longer material clock and back again. The switch is decided by
             // comparing productionTicksMax against the food clock, so a market
             // worker whose timer was reset by anything else resumes on food.
-            Tick(state, balance.marketFoodProductionTicks);
+            Tick(state, balance.GetDistrictStats(DistrictType.Market, 0).productionTicks);
             Assert.AreEqual(1, state.players[0].food);
             Assert.AreEqual(0, state.players[0].materials);
 
-            Tick(state, balance.marketMaterialProductionTicks);
+            Tick(state, balance.GetDistrictStats(DistrictType.Market, 0).secondaryProductionTicks);
             Assert.AreEqual(1, state.players[0].food);
             Assert.AreEqual(1, state.players[0].materials);
 
-            Tick(state, balance.marketFoodProductionTicks);
+            Tick(state, balance.GetDistrictStats(DistrictType.Market, 0).productionTicks);
             Assert.AreEqual(2, state.players[0].food);
             Assert.AreEqual(1, state.players[0].materials);
 

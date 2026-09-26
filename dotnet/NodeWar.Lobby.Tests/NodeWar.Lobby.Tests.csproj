@@ -38,13 +38,16 @@
   <ItemGroup>
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
+    <Compile Include="LoadoutEraTests.cs" />
     <Compile Include="LoadoutEditorTests.cs" />
+    <Compile Include="EraChipsTests.cs" />
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
     <Compile Include="CommandEligibilityTests.cs" />
     <Compile Include="TrophyBarLogicTests.cs" />
     <Compile Include="GameSettingsTests.cs" />
     <Compile Include="EmotePacketTests.cs" />
+    <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 
@@ -57,6 +60,8 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutTypes.cs"
+             Link="Lobby/LoadoutTypes.cs" />
 
     <!-- The trophy bar's sliding window, independent of its Unity display. -->
     <Compile Include="../../Assets/Scripts/Lobby/TrophyBarLogic.cs"
@@ -78,6 +83,12 @@
     -->
     <Compile Include="../../Assets/UI/Scripts/LoadoutEditor.cs"
              Link="Lobby/LoadoutEditor.cs" />
+    <Compile Include="../../Assets/UI/Scripts/EraChips.cs"
+             Link="Lobby/EraChips.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/CatalogIds.cs"
+             Link="Backend/CatalogIds.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerState.cs"
+             Link="Backend/PlayerState.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
              Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemFamily.cs"

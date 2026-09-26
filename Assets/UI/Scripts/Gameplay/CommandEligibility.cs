@@ -109,7 +109,7 @@ namespace NodeWar.UI
         {
             if (!HasDrafted(state, playerID, suit)) return EquipRefusal.NotDrafted;
 
-            SuitStats stats = balance.GetSuitStats(suit);
+            SuitStats stats = balance.GetSuitStats(suit, state.players[playerID].SuitEra(suit));
             if (state.players[playerID].food < stats.foodCost) return EquipRefusal.CannotAfford;
             if (state.players[playerID].materials < stats.materialCost) return EquipRefusal.CannotAfford;
 
@@ -133,14 +133,15 @@ namespace NodeWar.UI
 
         /// <summary>
         /// What a respawn costs this player right now. The same integer
-        /// arithmetic as ProcessRespawnCommand: a percentage off per Sanctuary
-        /// worker, where the worker is the player's, working, not consumed, and
-        /// standing on a Sanctuary the player owns - floor 1.
+        /// arithmetic as ProcessRespawnCommand: each Sanctuary worker takes its
+        /// Sanctuary era's percentage off, where the worker is the player's,
+        /// working, not consumed, and standing on a Sanctuary the player owns -
+        /// floor 1.
         /// </summary>
         public static int RespawnCost(SimulationState state, GameBalanceData balance, int playerID)
         {
             int baseCost = balance.respawnCostFood;
-            int reductionPercent = balance.sanctuaryRespawnCostReductionPercent * SanctuaryWorkers(state, playerID);
+            int reductionPercent = SanctuaryReductionPercent(state, balance, playerID);
             int cost = baseCost - (baseCost * reductionPercent) / 100;
 
             return cost < 1 ? 1 : cost;
@@ -185,9 +186,9 @@ namespace NodeWar.UI
             return best;
         }
 
-        private static int SanctuaryWorkers(SimulationState state, int playerID)
+        private static int SanctuaryReductionPercent(SimulationState state, GameBalanceData balance, int playerID)
         {
-            int count = 0;
+            int percent = 0;
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -201,10 +202,11 @@ namespace NodeWar.UI
                 if (state.nodes[node].districtType != DistrictType.Sanctuary) continue;
                 if (state.nodes[node].ownerID != playerID) continue;
 
-                count++;
+                percent += balance.GetDistrictStats(DistrictType.Sanctuary, state.nodes[node].districtEra)
+                    .respawnCostReductionPercent;
             }
 
-            return count;
+            return percent;
         }
 
         // ===== ALLOCATION =====

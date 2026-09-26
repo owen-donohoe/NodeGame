@@ -142,7 +142,8 @@ namespace NodeWar.UI
 
             for (int i = 0; i < cards.Count; i++)
                 cards[i].Set(CommandEligibility.EquipSuit(State, Balance, ControlledPID, cards[i].Suit),
-                             Balance.GetSuitStats(cards[i].Suit), pickedSuit == cards[i].Suit);
+                             Balance.GetSuitStats(cards[i].Suit, State.players[ControlledPID].SuitEra(cards[i].Suit)),
+                             pickedSuit == cards[i].Suit);
 
             int shown = RefreshUnits();
             Show(emptyLabel, shown == 0);
@@ -218,7 +219,7 @@ namespace NodeWar.UI
             EquipRefusal refusal = CommandEligibility.Equip(State, Balance, ControlledPID, pickedUnit, pickedSuit);
             equipButton.SetEnabled(refusal == EquipRefusal.None);
             VillagerData villager = State.villagers[pickedUnit];
-            SuitStats stats = Balance.GetSuitStats(pickedSuit);
+            SuitStats stats = Balance.GetSuitStats(pickedSuit, State.players[ControlledPID].SuitEra(pickedSuit));
             var equipValue = (pickedSuit, refusal, villager.state, villager.suit,
                               stats.foodCost, stats.materialCost);
             if (shownEquip != equipValue)

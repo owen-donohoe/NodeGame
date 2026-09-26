@@ -1,7 +1,7 @@
 ---
 type: Domain Model
 title: Game Model
-description: What Node War is — the match model, board, villagers, districts, suits, resources, and win condition, as the simulation actually implements them.
+description: What Node War is — the match model, board, villagers, districts, suits, resources, win condition and eras, as the simulation actually implements them.
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified_at_commit: 67fea34
@@ -216,6 +216,23 @@ become for each slot type.
 
 The draft is a **manual placement** system. The v2.1 design document describes a different
 auto-population scheme; the code is canon. See [design-history](design-history/README.md).
+
+## Eras
+
+Progression is by **arena** (0–5, climbed with rank points), and arena N is **era N**. Every suit
+and every district has one variant per era, and a variant **changes gameplay**: its numbers are its
+own entry in the balance (`SuitStats.era`, `DistrictStats` per district and era). Power creep with
+arena is the progression, deliberately; matchmaking keeps opponents within one arena of each other
+because rating cannot see the era gap.
+
+- A player owns a variant once they have reached its arena, and may field it only while at or above
+  that arena. The server grants and checks this; the lobby only shows it.
+- In a match, a district plays **its placer's era**: the era of whoever drafted it there, or of the
+  claimer when a claim upgrades a slot. The board's own fixed placements are era 0. A suit plays the
+  era its owner fields.
+- Today eras 1–5 are copies of era 0, so every match plays as before until someone tunes them.
+- **Skins** are cosmetic variants of the same items. They travel to the opponent and into the match
+  log, and never reach the simulation.
 
 ## Player commands
 

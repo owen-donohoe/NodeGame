@@ -75,6 +75,9 @@ Read the changed or proposed code, then check each item:
    - Does any new SimulationState field appear in 
      SimulationStateHasher?
    - Does any removed field get removed from the hasher too?
+   - A field hashed only when non-zero (the era fields) counts as
+     registered, but only if it is 0 in every match that existed before
+     it; otherwise it must be hashed unconditionally.
 
 9. Command/serializer pairing
    - Does any new CommandType have a case in CommandProcessor?

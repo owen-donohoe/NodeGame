@@ -29,4 +29,8 @@ glob: Assets/Scripts/Game/Simulation/**
   to SimulationStateHasher
 - New GameCommand types require a corresponding case in
   CommandProcessor
+- MatchFactory is the one starting board (live match, referee,
+  headless runs). A change there changes every match
+- A number belonging to one suit or district goes on its SuitStats /
+  DistrictStats entry, per era, never as a new global
 - Before touching this folder: read docs/simulation-rules.md

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The Cloud Code module. The solution's name is the module's name on the
+    server. Deploy from the repo root with
+      ugs deploy dotnet/NodeWarCloud -e development
+    which publishes this project through its FolderProfile (the deployer finds
+    the main project by that profile). Keep the assembly and solution names
+    the same.
+
+    Shared rules and data shapes are not copied here. They live once, in
+    Assets/Scripts/Backend/Shared/, and are compiled both by Unity and by this
+    project, the same arrangement as NodeWar.Simulation.
+
+    net8.0, not the template's net9.0: this machine's test runtime is .NET 8,
+    and Cloud Code runs both.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>NodeWarCloud</AssemblyName>
+    <RootNamespace>NodeWar.Cloud</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <EmbeddedResource Include="Catalog/catalog.json" LogicalName="NodeWarCloud.Catalog.catalog.json" />
+    <Compile Include="../../../Assets/Scripts/Backend/Shared/**/*.cs"
+             Link="Shared/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Com.Unity.Services.CloudCode.Apis" Version="0.0.22" />
+    <PackageReference Include="Com.Unity.Services.CloudCode.Core" Version="0.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../NodeWar.Progression/NodeWar.Progression.csproj" />
+    <ProjectReference Include="../../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+    <ProjectReference Include="../../NodeWar.MatchLog/NodeWar.MatchLog.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Balances/*.json" />
+  </ItemGroup>
+</Project>

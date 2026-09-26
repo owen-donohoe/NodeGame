@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Match log tests exercise the same UnityEngine-free source Unity compiles,
+    including replay through the simulation rather than a substitute tick loop.
+
+    IN NodeWar.sln, BUT NEVER IN THE RECEIPT. TestResults/results.xml belongs
+    exclusively to NodeWar.Simulation.Tests: the determinism attester needs
+    those cases, and a shared logger path would overwrite their receipt.
+    Run the solution without a logger, or run this project directly:
+      dotnet test dotnet/NodeWar.MatchLog.Tests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NodeWar.MatchLog</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="TestLogs.cs" />
+    <Compile Include="MatchLogFormatTests.cs" />
+    <Compile Include="MatchRecorderTests.cs" />
+    <Compile Include="ReplayTests.cs" />
+    <Compile Include="MatchReplayTests.cs" />
+    <Compile Include="MatchLogErasTests.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/Tests/TestBoardFactory.cs"
+             Link="Tests/TestBoardFactory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NunitXml.TestLogger" Version="3.1.20" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NodeWar.MatchLog/NodeWar.MatchLog.csproj" />
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+  </ItemGroup>
+</Project>

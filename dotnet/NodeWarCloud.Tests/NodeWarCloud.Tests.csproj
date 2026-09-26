@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Tests for the Cloud Code module and the shared backend rules it links from
+    Assets/Scripts/Backend/Shared/. The local fake runs the same rules, so these
+    cases cover the server and the fake at once.
+
+    IN NodeWar.sln, BUT NEVER IN THE RECEIPT (see NodeWar.Progression.Tests).
+    Run it directly:
+      dotnet test dotnet/NodeWarCloud.Tests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NodeWar.Cloud.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NunitXml.TestLogger" Version="3.1.20" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NodeWarCloud/NodeWarCloud/NodeWarCloud.csproj" />
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+    <ProjectReference Include="../NodeWar.MatchLog/NodeWar.MatchLog.csproj" />
+  </ItemGroup>
+</Project>

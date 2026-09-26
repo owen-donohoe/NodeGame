@@ -65,6 +65,19 @@ namespace NodeWar.Network
 
         public event System.Action<TickEventLog> TickSimulated;
 
+        /// <summary>
+        /// Every tick's commands in the order they were applied (all of P0's,
+        /// then all of P1's), with the tick count before them. For recording
+        /// only. Not raised for a tick with no commands.
+        /// </summary>
+        public event System.Action<int, GameCommand[]> CommandsApplied;
+
+        /// <summary>
+        /// A desync-check hash, with the tick count it was taken after. That
+        /// count is one more than the tick index OnDesync reports.
+        /// </summary>
+        public event System.Action<int, int> HashComputed;
+
         public event System.Action<int, EmoteType> EmoteReceived;
         private ushort emoteSequence;
         private readonly ushort[] lastEmoteSequence = new ushort[2];
@@ -255,6 +268,14 @@ namespace NodeWar.Network
 
             tickEvents.Clear();
 
+            if (CommandsApplied != null && p0Commands.Length + p1Commands.Length > 0)
+            {
+                GameCommand[] applied = new GameCommand[p0Commands.Length + p1Commands.Length];
+                System.Array.Copy(p0Commands, applied, p0Commands.Length);
+                System.Array.Copy(p1Commands, 0, applied, p0Commands.Length, p1Commands.Length);
+                CommandsApplied(simState.tickCount, applied);
+            }
+
             for (int i = 0; i < p0Commands.Length; i++)
                 CommandProcessor.ProcessCommand(simState, p0Commands[i], tickEvents);
 
@@ -272,6 +293,7 @@ namespace NodeWar.Network
                 pendingHash = computedHash;
                 pendingHashTick = tick;
                 Debug.Log("[LOCKSTEP] Tick " + tick + " Hash: " + computedHash);
+                HashComputed?.Invoke(simState.tickCount, computedHash);
             }
 
             // Compare remote's hash if they sent one

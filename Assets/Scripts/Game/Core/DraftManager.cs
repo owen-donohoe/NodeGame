@@ -852,23 +852,7 @@ namespace NodeWar.Core
         /// </summary>
         internal static DistrictType MapNodeIDToDistrict(string nodeID)
         {
-            if (nodeID == null) return DistrictType.None;
-            string lower = nodeID.ToLower();
-
-            if (lower.Contains("farm")) return DistrictType.Farm;
-            if (lower.Contains("mine")) return DistrictType.Mine;
-            if (lower.Contains("village")) return DistrictType.Village;
-            if (lower.Contains("barracks")) return DistrictType.Barracks;
-            if (lower.Contains("forge")) return DistrictType.Forge;
-            if (lower.Contains("camp")) return DistrictType.Camp;
-            if (lower.Contains("shrine")) return DistrictType.Shrine;
-            if (lower.Contains("arsenal")) return DistrictType.Arsenal;
-            if (lower.Contains("sanctuary")) return DistrictType.Sanctuary;
-            if (lower.Contains("watchtower")) return DistrictType.Watchtower;
-            if (lower.Contains("rampart")) return DistrictType.Rampart;
-            if (lower.Contains("market")) return DistrictType.Market;
-
-            return DistrictType.None;
+            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(nodeID);
         }
 
         // ===== PUBLIC API FOR UI =====

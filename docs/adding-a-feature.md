@@ -42,6 +42,10 @@ sources:
     resource: scripts/run-tests.ps1
     title: EditMode test runner
     last_modified: 2026-08-30T16:44:10-04:00
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: MatchFactory, where a new field gets its starting value
+    last_modified: 2026-09-25T22:52:42-04:00
 ---
 
 # Adding a Feature — Checklist
@@ -62,14 +66,20 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Type must be `int`, `bool`, an existing enum, or an array of one of
      those — no `float`/`double`, no `UnityEngine` types.
    - Set its initial value everywhere that entity is constructed
-     (`GameManager.InitializeVillagers` / `InitializePlayers` /
-     `InitializeNodesFromDraft`, and anywhere else new instances are
+     (`MatchFactory.BuildNodes` / `InitializePlayers` /
+     `InitializeVillagers`, the one starting board the live game, the
+     referee and headless runs share, and anywhere else new instances are
      created mid-match).
    - **Add it to `SimulationStateHasher.ComputeHash` now, not later.**
      Every new mutable field on `NodeData`, `VillagerData`, `PlayerData`,
      or `SimulationState` must be included, in the same order/section as
      its siblings. Skipping this makes desync detection blind to bugs
      involving the field.
+   - If it changes what the same inputs produce, bump
+     `SimulationVersion.Current` in the same commit (see
+     `docs/simulation-rules.md`). A field that is 0 in every existing
+     match can instead be hashed only when non-zero, as the era fields
+     are, which keeps the baselines and older match logs valid.
 
 3. **Does it need a new player-triggerable action?**
    - Add a `CommandType` in `Commands.cs` if no existing type fits.
@@ -84,6 +94,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - If the command needs new data on the wire, extend `InputSerializer`
      (or `DraftSerializer` for draft-phase actions) — both peers must
      encode/decode it identically.
+   - Any wire layout change bumps `InputSerializer.ProtocolVersion` in the
+     same commit. A `GameCommand` change also needs a new TICKS tag in
+     `MatchLogFormat` (`GameCommandLayout_RequiresCoordinatedSerializerChanges`
+     fails until it has one).
 
 4. **Does it involve randomness?**
    - Never use `UnityEngine.Random` or anything seeded from wall-clock
@@ -143,7 +157,13 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    Put it on `GameBalance` or `BoardConfig` as an inspector-exposed field,
    read through the existing `bal` / `boardConfig` reference already
    available in `Simulation/` — don't hardcode it or add a new plumbing
-   path.
+   path. A number that belongs to one suit or district goes on its
+   `SuitStats` / `DistrictStats` entry, so it can differ by era, and is
+   read through `GetSuitStats(type, era)` / `GetDistrictStats(type, era)`.
+   Add it to `BalanceHasher` (a test walks the structs and fails if you
+   do not), then export the balance for the server (`Tools > Node War >
+   Backend > Export Balance For Server`) so the referee can verify matches
+   played on it.
 
 10. **C# conventions.**
     - Keep `[SerializeField]` fields in the same file as their

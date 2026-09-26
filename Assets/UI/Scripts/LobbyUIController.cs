@@ -88,6 +88,7 @@ namespace NodeWar.Lobby
         private PlayPopup playPopup;
         private ProfilePage profilePage;
         private SettingsPage settingsPage;
+        private AccountFlow accountFlow;
         private VisualElement lobbyRoot;
         private MatchHistoryPage matchHistoryPage;
 
@@ -98,6 +99,24 @@ namespace NodeWar.Lobby
         public NavigationController Navigation
         {
             get { return navigation; }
+        }
+
+        /// <summary>
+        /// Fetched once per lobby visit so the next match launches with the
+        /// eras the server has equipped (BackendServices.LastKnownState), even
+        /// if the player never opens the Workshop. Offline is not an error
+        /// here: the match then plays era 0.
+        /// </summary>
+        private static async System.Threading.Tasks.Task RefreshPlayerStateAsync()
+        {
+            try
+            {
+                await NodeWar.Backend.BackendServices.PlayerState.GetAsync();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[LobbyUI] Could not fetch player state: " + e.Message);
+            }
         }
 
         private void OnEnable()
@@ -133,6 +152,8 @@ namespace NodeWar.Lobby
 
             layout.CloneTree(root);
 
+            _ = RefreshPlayerStateAsync();
+
             BuildShell(root);
         }
 
@@ -154,6 +175,9 @@ namespace NodeWar.Lobby
                 settingsPage.Changed -= ApplyLobbySettings;
                 settingsPage.Flush();
             }
+
+            if (accountFlow != null) accountFlow.CloseDialog();
+            accountFlow = null;
 
             settingsPage = null;
             lobbyRoot = null;
@@ -202,6 +226,7 @@ namespace NodeWar.Lobby
             catalog = new LoadoutCatalog(allSuits, allNodes);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
+            accountFlow = new AccountFlow(sheet);
             menu = new LobbyContextMenu(root);
 
             BuildOverlays(overlayHost);
@@ -283,7 +308,7 @@ namespace NodeWar.Lobby
             profilePage = new ProfilePage(profilePageLayout, sheet, toast);
             overlayHost.Add(profilePage.Root);
 
-            settingsPage = new SettingsPage(settingsPageLayout);
+            settingsPage = new SettingsPage(settingsPageLayout, accountFlow);
             overlayHost.Add(settingsPage.Root);
 
             matchHistoryPage = new MatchHistoryPage(matchHistoryPageLayout);
@@ -322,7 +347,10 @@ namespace NodeWar.Lobby
 
             if (homePageLayout != null)
             {
-                HomePage home = new HomePage(homePageLayout, toast, menu, catalog);
+                HomePage home = new HomePage(homePageLayout, toast, menu, catalog, accountFlow,
+                    () => isActiveAndEnabled && lobbyRoot != null
+                        && !settingsPage.IsOpen && !profilePage.IsOpen && !matchHistoryPage.IsOpen
+                        && !menu.IsOpen);
                 home.PlayRequested += OnPlayRequested;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);

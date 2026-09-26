@@ -5,8 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
-using Unity.Services.Core;
-using Unity.Services.Authentication;
+using NodeWar.Backend;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using Unity.Networking.Transport;
@@ -65,10 +64,7 @@ namespace NodeWar.Network
             isRunning = true;
             relayReady = false;
 
-            await UnityServices.InitializeAsync();
-
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            await GameServices.EnsureReadyAsync();
 
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
             JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
@@ -96,10 +92,7 @@ namespace NodeWar.Network
             relayReady = false;
             JoinCode = joinCode;
 
-            await UnityServices.InitializeAsync();
-
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            await GameServices.EnsureReadyAsync();
 
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
