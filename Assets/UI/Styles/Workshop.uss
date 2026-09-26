@@ -27,6 +27,49 @@
     --workshop-pick-lip: rgba(90, 70, 40, 0.4);
 }
 
+.lb-workshop-details {
+    flex-shrink: 0;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-2);
+}
+
+.lb-workshop-details__text, .lb-era-message {
+    white-space: normal;
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+}
+
+.lb-era-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: var(--space-1);
+}
+
+.lb-era-chip {
+    min-width: var(--target-min);
+    min-height: var(--target-min);
+    margin-right: var(--space-1);
+    margin-bottom: var(--space-1);
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+    border-radius: var(--corner-sm);
+    background-color: var(--surface-raised);
+    color: var(--ink);
+    font-size: var(--type-caption);
+    white-space: normal;
+}
+
+.lb-era-chip--locked {
+    background-color: var(--surface-sunk);
+    color: var(--ink-mute);
+}
+
+.lb-era-chip--equipped {
+    background-color: var(--action);
+    color: var(--action-ink);
+}
+
 .lb-workshop {
     flex-grow: 1;
 }
@@ -220,11 +263,9 @@
 /* ---- card grid ---- */
 
 .lb-grid {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 184px;
-    bottom: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
 }
 
 .lb-grid .unity-scroll-view__content-container {

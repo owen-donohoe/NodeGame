@@ -39,6 +39,7 @@
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
     <Compile Include="LoadoutEditorTests.cs" />
+    <Compile Include="EraChipsTests.cs" />
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
     <Compile Include="CommandEligibilityTests.cs" />
@@ -79,6 +80,12 @@
     -->
     <Compile Include="../../Assets/UI/Scripts/LoadoutEditor.cs"
              Link="Lobby/LoadoutEditor.cs" />
+    <Compile Include="../../Assets/UI/Scripts/EraChips.cs"
+             Link="Lobby/EraChips.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/CatalogIds.cs"
+             Link="Backend/CatalogIds.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerState.cs"
+             Link="Backend/PlayerState.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
              Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemFamily.cs"

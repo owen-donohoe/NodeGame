@@ -7,12 +7,12 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
-        Workshop, after lobby-prototype.html. This layout is the one wanted in
-        game; match it before changing it.
+        Workshop, after lobby-prototype.html, with server inventory choices.
 
         Top to bottom:
           - a segmented pill: Districts | Suits
           - the loadout slots for the chosen side, and "Ready" once they are full
+          - inspected item details, era chips and optional skin chips
           - a three-across grid of cards, scrolling under everything above it
           - a floating round button bottom-right that unfurls the same choice
             upward, drawn over the cards with a veil behind
@@ -44,6 +44,13 @@
         <engine:VisualElement name="workshop-slotwrap" class="lb-slotwrap" picking-mode="Ignore">
             <engine:VisualElement name="workshop-slots" class="lb-slots" picking-mode="Ignore" />
             <engine:Label class="lb-readytag ui-w600" text="Ready" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <engine:VisualElement class="lb-workshop-details" picking-mode="Ignore">
+            <engine:Label name="workshop-details" class="lb-workshop-details__text" picking-mode="Ignore" />
+            <engine:VisualElement name="workshop-era-row" class="lb-era-row" picking-mode="Ignore" />
+            <engine:VisualElement name="workshop-skin-row" class="lb-era-row" picking-mode="Ignore" />
+            <engine:Label name="workshop-era-message" class="lb-era-message" picking-mode="Ignore" />
         </engine:VisualElement>
 
         <engine:ScrollView name="workshop-grid" class="lb-grid" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
