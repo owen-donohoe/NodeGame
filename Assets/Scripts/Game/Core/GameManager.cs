@@ -151,8 +151,7 @@ namespace NodeWar.Core
             if (balance == null) { Debug.LogError("[GameManager] GameBalance not assigned!"); return; }
             if (boardConfig == null) { Debug.LogError("[GameManager] BoardConfig not assigned!"); return; }
 
-            GameSimulation.SetBalance(balance.Data);
-            CommandProcessor.SetBalance(balance.Data);
+            MatchFactory.Configure(balance.Data, boardConfig.Data);
 
             // The lobby's handshake advertised the shared asset's hash. Playing
             // anything else would pass the handshake and desync mid-match.
@@ -162,12 +161,6 @@ namespace NodeWar.Core
                     + NodeWar.Config.GameBalance.SharedResourceName + ") the handshake advertised. Peers will desync.");
 
             state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
-
-            Pathfinding.OwnedMultiplier = boardConfig.Data.ownedMultiplier;
-            Pathfinding.PartiallyOwnedMultiplier = boardConfig.Data.partiallyOwnedMultiplier;
-            Pathfinding.UnownedMultiplier = boardConfig.Data.unownedMultiplier;
-            Pathfinding.EnemyPartiallyOwnedMultiplier = boardConfig.Data.enemyPartiallyOwnedMultiplier;
-            Pathfinding.EnemyOwnedMultiplier = boardConfig.Data.enemyOwnedMultiplier;
 
             inputBuffer = new InputBuffer();
 
@@ -324,9 +317,8 @@ namespace NodeWar.Core
 
         private void InitializeFromDraftResult(DraftResult result)
         {
-            InitializeNodesFromDraft(result);
-            InitializePlayers();
-            InitializeVillagers();
+            MatchFactory.Fill(state, balance.Data, boardConfig.Data, result.placements, BuildPlayerSetups());
+            SetCameraHomeAnchors();
             InitializeInputSystems();
 
             MatchConnection match = MatchConnection.Instance;
@@ -410,8 +402,9 @@ namespace NodeWar.Core
             matchPhase = MatchPhase.Playing;
 
             InitializeNodes();
-            InitializePlayers();
-            InitializeVillagers();
+            MatchFactory.InitializePlayers(state, balance.Data, boardConfig.Data, BuildPlayerSetups());
+            MatchFactory.InitializeVillagers(state, balance.Data, boardConfig.Data);
+            SetCameraHomeAnchors();
             InitializeInputSystems();
 
             MatchConnection match = MatchConnection.Instance;
@@ -980,79 +973,6 @@ namespace NodeWar.Core
             }
         }
 
-        // ===== NODE INITIALIZATION (from draft) =====
-
-        private void InitializeNodesFromDraft(DraftResult result)
-        {
-            int GRID_COLS = boardConfig.Data.gridCols;
-            int GRID_ROWS = boardConfig.Data.gridRows;
-            state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
-
-            // Step 1: Create all nodes with grid topology, no district types
-            for (int z = 0; z < GRID_ROWS; z++)
-            {
-                for (int x = 0; x < GRID_COLS; x++)
-                {
-                    int nodeID = z * GRID_COLS + x;
-                    List<int> neighborIDs = new List<int>();
-                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
-                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
-                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
-                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
-
-                    Edge[] edges = new Edge[neighborIDs.Count];
-                    for (int i = 0; i < neighborIDs.Count; i++)
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
-
-                    state.nodes[nodeID] = new NodeData
-                    {
-                        nodeID = nodeID,
-                        gridX = x,
-                        gridZ = z,
-                        edges = edges,
-                        districtType = DistrictType.None,
-                        baseDistrictType = DistrictType.None,
-                        slotType = NodeSlotType.Fixed,
-                        claimBar = 0,
-                        ownerID = -1,
-                        bonusVillagersOnClaim = 0,
-                        materialAllocation = 0
-                    };
-                }
-            }
-
-            // Step 2: Apply BoardConfig initial placements (cores, fixed nodes)
-            if (boardConfig.Data.initialPlacements != null)
-            {
-                for (int i = 0; i < boardConfig.Data.initialPlacements.Length; i++)
-                {
-                    var ip = boardConfig.Data.initialPlacements[i];
-                    int nodeID = ip.gridZ * GRID_COLS + ip.gridX;
-                    state.nodes[nodeID].districtType = ip.districtType;
-                    state.nodes[nodeID].baseDistrictType = ip.districtType;
-                    state.nodes[nodeID].ownerID = ip.ownerID;
-                    state.nodes[nodeID].claimBar = ip.claimBar;
-                }
-            }
-
-            // Step 3: Apply draft placements (unowned, player-chosen positions)
-            if (result.placements != null)
-            {
-                for (int i = 0; i < result.placements.Length; i++)
-                {
-                    var dp = result.placements[i];
-                    int nodeID = dp.gridZ * GRID_COLS + dp.gridX;
-                    state.nodes[nodeID].districtType = dp.districtType;
-                    state.nodes[nodeID].baseDistrictType = dp.districtType;
-                    state.nodes[nodeID].ownerID = -1;
-                    state.nodes[nodeID].slotType = NodeSlotType.Fixed;
-
-                    if (dp.districtType == DistrictType.Village)
-                        state.nodes[nodeID].bonusVillagersOnClaim = balance.Data.bonusVillagersOnVillageClaim;
-                }
-            }
-        }
-
         // ===== NODE INITIALIZATION (legacy testing mode) =====
 
         private void InitializeNodes()
@@ -1109,58 +1029,37 @@ namespace NodeWar.Core
             }
         }
 
-        private void InitializePlayers()
+        /// <summary>
+        /// Both players' drafted suits and districts, resolved from the lobby
+        /// loadouts. The simulation takes them as types; which loadout belongs
+        /// to which seat is only known here.
+        /// </summary>
+        private PlayerSetup[] BuildPlayerSetups()
         {
-            state.players = new PlayerData[2];
-
             MatchConnection match = MatchConnection.Instance;
             NodeWar.Lobby.LoadoutData loadout = (match != null)
                 ? match.loadout
                 : new NodeWar.Lobby.LoadoutData();
 
-            state.players[0] = new PlayerData
+            return new[]
             {
-                playerID = 0,
-                coreNodeID = FindCoreNodeID(0),
-                food = boardConfig.Data.startingFood,
-                materials = boardConfig.Data.startingMaterials,
-                metal = boardConfig.Data.startingMetal,
-                breachCount = 0,
-                draftedSuits = BuildDraftedSuits(0, loadout),
-                draftedNodes = BuildDraftedNodes(0, loadout)
+                new PlayerSetup { suits = BuildDraftedSuits(0, loadout), nodes = BuildDraftedNodes(0, loadout) },
+                new PlayerSetup { suits = BuildDraftedSuits(1, loadout), nodes = BuildDraftedNodes(1, loadout) }
             };
-            state.players[1] = new PlayerData
-            {
-                playerID = 1,
-                coreNodeID = FindCoreNodeID(1),
-                food = boardConfig.Data.startingFood,
-                materials = boardConfig.Data.startingMaterials,
-                metal = boardConfig.Data.startingMetal,
-                breachCount = 0,
-                draftedSuits = BuildDraftedSuits(1, loadout),
-                draftedNodes = BuildDraftedNodes(1, loadout)
-            };
+        }
 
-            // Correct core node data to match resolved player assignments.
-            // Guards against misconfigured BoardConfig asset ownerID values.
-            int p0CoreID = state.players[0].coreNodeID;
-            int p1CoreID = state.players[1].coreNodeID;
-
-            state.nodes[p0CoreID].ownerID = 0;
-            state.nodes[p0CoreID].claimBar = balance.Data.claimThreshold;
-            state.nodes[p1CoreID].ownerID = 1;
-            state.nodes[p1CoreID].claimBar = -balance.Data.claimThreshold;
-
-            // Where "home" actually is. InitializeSides runs in Awake, before
-            // the board exists, so it can only guess from grid dimensions -- and
-            // its guess is the middle of your back row, which is the board's
-            // centre line, not your core. The cores sit wherever the layout puts
-            // them, so the real positions have to come back here once known.
-            if (cameraController != null)
-            {
-                cameraController.SetHomeAnchor(0, CoreWorldPosition(p0CoreID));
-                cameraController.SetHomeAnchor(1, CoreWorldPosition(p1CoreID));
-            }
+        /// <summary>
+        /// Where "home" actually is. InitializeSides runs in Awake, before the
+        /// board exists, so it can only guess from grid dimensions -- and its
+        /// guess is the middle of your back row, which is the board's centre
+        /// line, not your core. The cores sit wherever the layout puts them, so
+        /// the real positions have to come back here once known.
+        /// </summary>
+        private void SetCameraHomeAnchors()
+        {
+            if (cameraController == null) return;
+            cameraController.SetHomeAnchor(0, CoreWorldPosition(state.players[0].coreNodeID));
+            cameraController.SetHomeAnchor(1, CoreWorldPosition(state.players[1].coreNodeID));
         }
 
         /// <summary>
@@ -1174,30 +1073,6 @@ namespace NodeWar.Core
                 state.nodes[nodeID].gridX * boardConfig.nodeScale,
                 0f,
                 state.nodes[nodeID].gridZ * boardConfig.nodeScale);
-        }
-
-        private int FindCoreNodeID(int playerID)
-        {
-            // Position-based: P0 owns the highest-Z core, P1 owns the lowest-Z core.
-            // This is robust regardless of ownerID values in the asset.
-            int lowestZNode = -1;
-            int highestZNode = -1;
-            int lowestZ = int.MaxValue;
-            int highestZ = int.MinValue;
-
-            for (int i = 0; i < state.nodes.Length; i++)
-            {
-                if (state.nodes[i].districtType != DistrictType.Core) continue;
-
-                int z = state.nodes[i].gridZ;
-                if (z < lowestZ) { lowestZ = z; lowestZNode = i; }
-                if (z > highestZ) { highestZ = z; highestZNode = i; }
-            }
-
-            if (playerID == 0)
-                return highestZNode >= 0 ? highestZNode : 25;
-            else
-                return lowestZNode >= 0 ? lowestZNode : 2;
         }
 
         private int[] BuildDraftedSuits(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
@@ -1297,44 +1172,6 @@ namespace NodeWar.Core
             if (lower.Contains("medic")) return SuitType.Medic;
 
             return SuitType.None;
-        }
-
-        private void InitializeVillagers()
-        {
-            int totalVillagers = boardConfig.Data.startingVillagersPerPlayer * 2;
-            state.villagers = new VillagerData[totalVillagers];
-
-            for (int i = 0; i < totalVillagers; i++)
-            {
-                int owner = (i < boardConfig.Data.startingVillagersPerPlayer) ? 0 : 1;
-                int coreNode = state.players[owner].coreNodeID;
-
-                state.villagers[i] = new VillagerData
-                {
-                    villagerID = i,
-                    ownerID = owner,
-                    currentNodeID = coreNode,
-                    targetNodeID = -1,
-                    movePath = new int[0],
-                    movePathIndex = 0,
-                    moveProgress = 0,
-                    previousNodeID = coreNode,
-                    state = VillagerState.Idle,
-                    suit = SuitType.None,
-                    hp = balance.Data.baseHP,
-                    maxHP = balance.Data.baseHP,
-                    attackDamage = balance.Data.baseAttackDamage,
-                    moveSpeedTicks = balance.Data.baseMoveSpeedTicks,
-                    respawnTicksRemaining = 0,
-                    attackCooldownRemaining = balance.Data.baseAttackCooldownMax,
-                    attackCooldownMax = balance.Data.baseAttackCooldownMax,
-                    combatTargetID = -1,
-                    fightPriority = 0,
-                    isConsumed = false,
-                    productionTicksRemaining = 0,
-                    productionTicksMax = 0
-                };
-            }
         }
 
         // ===== VIEW SPAWNING =====
