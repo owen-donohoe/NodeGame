@@ -17,7 +17,8 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 - No UnityEngine references anywhere in `Simulation/`
 - Integer-only math — no float, double, decimal
 - No `DateTime`, `Time.deltaTime`, or any frame/wall-clock API
-- No `UnityEngine.Random`
+- No `UnityEngine.Random`. Any future stored RNG must live on
+  `SimulationState` and advance only inside `SimulateTick`
 - Arrays or `List<T>` only — no Dictionary/HashSet iteration
 - All sorts need total-order comparators with ID tiebreakers
 - Tick order is canonical, never reordered:
@@ -33,7 +34,7 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 ## How to Work
 
 - Read `CLAUDE.md`, then the relevant `docs/*.md` before proposing anything
-- For anything touching `Simulation/`: plan before editing
+- For anything touching `Simulation/`: use plan mode before editing
 - Prefer the smallest change that satisfies the goal; no unrelated refactors
 - Work in an isolated git worktree/branch, not directly on `main`
 - Do not merge into `main` automatically — leave that for review
@@ -65,8 +66,9 @@ Say what you did **not** do, and why. Silence reads as coverage.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — Simulation, Lobby, and UnityEngine-free
-  view maths, including indicator placement and emote rate limiting
+- `dotnet test dotnet/NodeWar.sln` — Simulation, Lobby, UnityEngine-free
+  view maths, match logs/replay, progression rules, and the Cloud Code module.
+  Receipt rules and project coverage: `docs/skills/run-dotnet-tests.md`
 - `scripts/compile-check.ps1` — type-checks everything else against the real
   Unity assemblies (HUD, network, view, `Assets/UI/`). In a fresh worktree it
   needs the Unity assemblies first: `cmd /c mklink /J Library C:\Dev\NodeGame\Library`

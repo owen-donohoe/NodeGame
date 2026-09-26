@@ -61,6 +61,8 @@ Read the file. Do not ask me to summarise it here.
   match logs and referee beside them. **Start here.**
   Its *Where the UI lives* section is required reading before touching any UI:
   presentation spans three trees and which one runs is a scene value.
+- `docs/codebase/README.md` — the connected engineering guide: reading routes,
+  subsystem responsibilities, decision tradeoffs, and future extension seams.
 - `docs/game-model.md` — what the game *is*: districts, suits, resources, the
   win condition. Read this before any gameplay or balance question; the code
   will tell you what happens, not what it is for.
