@@ -48,6 +48,9 @@ namespace NodeWar.Simulation
                             hash = hash * 31 + state.players[i].draftedNodes[n];
                     }
                     else hash = hash * 31 + 0;
+
+                    hash = HashEras(hash, state.players[i].suitEras, 0);
+                    hash = HashEras(hash, state.players[i].districtEras, 1000);
                 }
 
                 // Nodes (mutable gameplay fields only)
@@ -60,6 +63,8 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (int)state.nodes[i].districtType;
                     hash = hash * 31 + (int)state.nodes[i].slotType;
                     hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
+                    if (state.nodes[i].districtEra != 0)
+                        hash = hash * 31 + state.nodes[i].districtEra;
                 }
 
                 // Villagers (all mutable fields)
@@ -88,6 +93,8 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + v.productionTicksRemaining;
                     hash = hash * 31 + v.productionTicksMax;
                     hash = hash * 31 + (v.hasRampartBonus ? 1 : 0);
+                    if (v.rampartBonusEra != 0)
+                        hash = hash * 31 + v.rampartBonusEra;
 
                     // movePath contents
                     if (v.movePath != null)
@@ -104,6 +111,29 @@ namespace NodeWar.Simulation
                     }
                 }
 
+                return hash;
+            }
+        }
+
+        /// <summary>
+        /// Era fields are hashed only where they are not 0. Every era-0 match
+        /// then hashes exactly as it did before eras existed, so the pinned
+        /// baselines and older match logs still verify, while any era a peer
+        /// disagrees on still changes the hash. Index and value both go in, so
+        /// the same era on a different type hashes differently; the table offset
+        /// keeps a suit era apart from a district era at the same index.
+        /// </summary>
+        private static int HashEras(int hash, int[] eras, int tableOffset)
+        {
+            unchecked
+            {
+                if (eras == null) return hash;
+                for (int i = 0; i < eras.Length; i++)
+                {
+                    if (eras[i] == 0) continue;
+                    hash = hash * 31 + tableOffset + i;
+                    hash = hash * 31 + eras[i];
+                }
                 return hash;
             }
         }

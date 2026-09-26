@@ -84,7 +84,7 @@ namespace NodeWar.Tests
             Assert.AreEqual(DistrictType.Village, state.nodes[12].districtType);
             Assert.AreEqual(DistrictType.Village, state.nodes[12].baseDistrictType);
             Assert.AreEqual(-1, state.nodes[12].ownerID);
-            Assert.AreEqual(balance.bonusVillagersOnVillageClaim, state.nodes[12].bonusVillagersOnClaim);
+            Assert.AreEqual(balance.GetDistrictStats(DistrictType.Village, 0).bonusVillagersOnClaim, state.nodes[12].bonusVillagersOnClaim);
             Assert.AreEqual(DistrictType.Farm, state.nodes[15].districtType);
             Assert.AreEqual(0, state.nodes[15].bonusVillagersOnClaim);
         }

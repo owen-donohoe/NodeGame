@@ -35,7 +35,7 @@ namespace NodeWar.Tests
 
             foreach (FieldInfo field in typeof(GameBalanceData).GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
-                if (field.FieldType == typeof(SuitStats[])) continue;
+                if (field.FieldType == typeof(SuitStats[]) || field.FieldType == typeof(DistrictStats[])) continue;
                 Assert.AreEqual(typeof(int), field.FieldType,
                     field.Name + " is not an int: BalanceHasher and this test need to learn its type.");
 
@@ -64,6 +64,27 @@ namespace NodeWar.Tests
                 b.suitStats[0] = (SuitStats)boxed;
 
                 Assert.AreNotEqual(baseline, BalanceHasher.Hash(b), "SuitStats." + field.Name + " does not reach BalanceHasher.");
+            }
+        }
+
+        [Test]
+        public void EveryDistrictStatsField_MovesTheHash()
+        {
+            int baseline = BalanceHasher.Hash(WithOneSuit());
+
+            foreach (FieldInfo field in typeof(DistrictStats).GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                GameBalanceData b = WithOneSuit();
+                object boxed = b.districtStats[0];
+                if (field.FieldType == typeof(int))
+                    field.SetValue(boxed, (int)field.GetValue(boxed) + 1);
+                else if (field.FieldType == typeof(DistrictType))
+                    field.SetValue(boxed, DistrictType.Camp);
+                else
+                    Assert.Fail(field.Name + " has a type BalanceHasher and this test do not handle.");
+                b.districtStats[0] = (DistrictStats)boxed;
+
+                Assert.AreNotEqual(baseline, BalanceHasher.Hash(b), "DistrictStats." + field.Name + " does not reach BalanceHasher.");
             }
         }
 

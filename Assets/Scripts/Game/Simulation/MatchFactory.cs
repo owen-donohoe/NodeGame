@@ -9,6 +9,19 @@ namespace NodeWar.Simulation
     {
         public int[] suits; // (int)SuitType values
         public int[] nodes; // (int)DistrictType values
+
+        /// <summary>
+        /// The era this player fields for each suit and district, indexed by
+        /// (int)SuitType / (int)DistrictType. Null or short means era 0.
+        /// </summary>
+        public int[] suitEras;
+        public int[] districtEras;
+
+        public int DistrictEra(DistrictType district)
+        {
+            int i = (int)district;
+            return districtEras != null && i >= 0 && i < districtEras.Length ? districtEras[i] : 0;
+        }
     }
 
     /// <summary>
@@ -60,7 +73,7 @@ namespace NodeWar.Simulation
             DraftPlacement[] draft, PlayerSetup[] players)
         {
             state.defaultEdgeWeight = board.defaultEdgeWeight;
-            BuildNodes(state, balance, board, draft);
+            BuildNodes(state, balance, board, draft, players);
             InitializePlayers(state, balance, board, players);
             InitializeVillagers(state, balance, board);
         }
@@ -68,10 +81,11 @@ namespace NodeWar.Simulation
         /// <summary>
         /// The grid, with every node connected to its four neighbours at the
         /// board's default weight, then the board's fixed placements, then the
-        /// draft's. Draft placements start unowned.
+        /// draft's. Draft placements start unowned, at the era their placer
+        /// fields for that district; the board's own placements are era 0.
         /// </summary>
         public static void BuildNodes(SimulationState state, GameBalanceData balance,
-            BoardConfigData board, DraftPlacement[] draft)
+            BoardConfigData board, DraftPlacement[] draft, PlayerSetup[] players)
         {
             int cols = board.gridCols;
             int rows = board.gridRows;
@@ -123,8 +137,11 @@ namespace NodeWar.Simulation
                     state.nodes[nodeID].ownerID = -1;
                     state.nodes[nodeID].slotType = NodeSlotType.Fixed;
 
-                    if (dp.districtType == DistrictType.Village)
-                        state.nodes[nodeID].bonusVillagersOnClaim = balance.bonusVillagersOnVillageClaim;
+                    int era = dp.playerID >= 0 && players != null && dp.playerID < players.Length
+                        ? players[dp.playerID].DistrictEra(dp.districtType) : 0;
+                    state.nodes[nodeID].districtEra = era;
+                    state.nodes[nodeID].bonusVillagersOnClaim =
+                        balance.GetDistrictStats(dp.districtType, era).bonusVillagersOnClaim;
                 }
             }
         }
@@ -166,7 +183,9 @@ namespace NodeWar.Simulation
                     metal = board.startingMetal,
                     breachCount = 0,
                     draftedSuits = setup.suits ?? new int[0],
-                    draftedNodes = setup.nodes ?? new int[0]
+                    draftedNodes = setup.nodes ?? new int[0],
+                    suitEras = setup.suitEras,
+                    districtEras = setup.districtEras
                 };
             }
 

@@ -20,8 +20,11 @@ namespace NodeWar.View.Tests
         {
             return new GameBalanceData
             {
-                marketFoodProductionTicks = MarketFoodTicks,
-                marketMaterialProductionTicks = MarketMaterialTicks
+                districtStats = new[]
+                {
+                    new DistrictStats { districtType = DistrictType.Market, productionTicks = MarketFoodTicks,
+                        secondaryProductionTicks = MarketMaterialTicks }
+                }
             };
         }
 

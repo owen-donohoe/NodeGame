@@ -72,6 +72,13 @@ namespace NodeWar.Simulation
 
         public NodeSlotType slotType;
         public DistrictType baseDistrictType;
+
+        /// <summary>
+        /// Which era of its district this node plays: the era of the player who
+        /// put the district here (by draft, or by upgrading it on claim). The
+        /// board's own fixed placements are era 0.
+        /// </summary>
+        public int districtEra;
     }
 
     [System.Serializable]
@@ -109,6 +116,13 @@ namespace NodeWar.Simulation
         public int productionTicksRemaining;
         public int productionTicksMax;
         public bool hasRampartBonus;
+
+        /// <summary>
+        /// The era of the Rampart whose bonus this villager holds, so leaving
+        /// takes back exactly what arriving gave. Meaningless without
+        /// hasRampartBonus.
+        /// </summary>
+        public int rampartBonusEra;
     }
 
     [System.Serializable]
@@ -122,6 +136,25 @@ namespace NodeWar.Simulation
         public int breachCount;
         public int[] draftedSuits; // (int)SuitType values this player can equip
         public int[] draftedNodes; // (int)DistrictType values for draft upgrades
+
+        /// <summary>
+        /// The era of each suit and district this player fields, indexed by
+        /// (int)SuitType and (int)DistrictType. Missing or short means era 0.
+        /// </summary>
+        public int[] suitEras;
+        public int[] districtEras;
+
+        public int SuitEra(SuitType suit)
+        {
+            int i = (int)suit;
+            return suitEras != null && i >= 0 && i < suitEras.Length ? suitEras[i] : 0;
+        }
+
+        public int DistrictEra(DistrictType district)
+        {
+            int i = (int)district;
+            return districtEras != null && i >= 0 && i < districtEras.Length ? districtEras[i] : 0;
+        }
     }
 
     // ===== SIMULATION STATE =====

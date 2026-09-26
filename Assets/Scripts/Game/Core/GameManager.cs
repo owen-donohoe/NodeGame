@@ -1005,7 +1005,8 @@ namespace NodeWar.Core
                     for (int i = 0; i < neighborIDs.Count; i++)
                         edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
 
-                    int bonus = layout[z, x] == DistrictType.Village ? balance.Data.bonusVillagersOnVillageClaim : 0;
+                    int bonus = layout[z, x] == DistrictType.Village
+                        ? balance.Data.GetDistrictStats(DistrictType.Village, 0).bonusVillagersOnClaim : 0;
                     int ownerID = -1;
                     int claimBar = 0;
                     if (z == 6 && x == 1) { ownerID = 0; claimBar = balance.Data.claimThreshold; }
