@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace NodeWar.Backend
@@ -21,17 +22,19 @@ namespace NodeWar.Backend
     public sealed class LocalPlayerStateService : IPlayerStateService
     {
         private readonly IPlayerRecordStore store;
+        private readonly Func<PlayerState, bool> updateInventory;
 
         public LocalPlayerStateService() : this(new InMemoryPlayerRecordStore()) { }
 
-        public LocalPlayerStateService(IPlayerRecordStore store)
+        public LocalPlayerStateService(IPlayerRecordStore store, Func<PlayerState, bool> updateInventory = null)
         {
             this.store = store;
+            this.updateInventory = updateInventory;
         }
 
         public Task<PlayerState> GetAsync()
         {
-            return PlayerStateLogic.GetOrCreateAsync(store);
+            return PlayerStateLogic.GetOrCreateAsync(store, updateInventory);
         }
     }
 

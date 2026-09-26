@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -28,7 +29,8 @@ namespace NodeWar.Backend
         /// player does not have yet. Only the missing records are written, so
         /// calling this never resets anything.
         /// </summary>
-        public static async Task<PlayerState> GetOrCreateAsync(IPlayerRecordStore store)
+        public static async Task<PlayerState> GetOrCreateAsync(IPlayerRecordStore store,
+            Func<PlayerState, bool> updateInventory = null)
         {
             PlayerState stored = await store.ReadAsync() ?? new PlayerState();
             var created = new PlayerState();
@@ -38,11 +40,28 @@ namespace NodeWar.Backend
             if (stored.Inventory == null) stored.Inventory = created.Inventory = PlayerStateDefaults.Inventory();
             if (stored.History == null) stored.History = created.History = PlayerStateDefaults.History();
 
+            if (NormalizeInventory(stored.Inventory)) created.Inventory = stored.Inventory;
+            if (updateInventory != null && updateInventory(stored)) created.Inventory = stored.Inventory;
+
             if (created.Rating != null || created.Rank != null
                 || created.Inventory != null || created.History != null)
                 await store.WriteAsync(created);
 
             return stored;
+        }
+
+        /// <summary>Old records may predate Equipped or have null collections.</summary>
+        public static bool NormalizeInventory(InventoryRecord inventory)
+        {
+            bool changed = false;
+            if (inventory.OwnedVariants == null) { inventory.OwnedVariants = new List<string>(); changed = true; }
+            if (inventory.OwnedSkins == null) { inventory.OwnedSkins = new List<string>(); changed = true; }
+            if (inventory.Equipped == null) { inventory.Equipped = new EquippedRecord(); changed = true; }
+            if (inventory.Equipped.Variants == null)
+            { inventory.Equipped.Variants = new Dictionary<string, string>(StringComparer.Ordinal); changed = true; }
+            if (inventory.Equipped.Skins == null)
+            { inventory.Equipped.Skins = new Dictionary<string, string>(StringComparer.Ordinal); changed = true; }
+            return changed;
         }
     }
 
@@ -72,7 +91,12 @@ namespace NodeWar.Backend
                 OwnedVariants = new List<string>(),
                 OwnedSkins = new List<string>(),
                 EquippedSuitIDs = new string[0],
-                EquippedNodeIDs = new string[0]
+                EquippedNodeIDs = new string[0],
+                Equipped = new EquippedRecord
+                {
+                    Variants = new Dictionary<string, string>(StringComparer.Ordinal),
+                    Skins = new Dictionary<string, string>(StringComparer.Ordinal)
+                }
             };
         }
 

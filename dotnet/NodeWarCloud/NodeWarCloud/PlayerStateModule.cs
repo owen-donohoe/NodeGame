@@ -12,6 +12,7 @@ namespace NodeWar.Cloud
     public class PlayerStateModule
     {
         private readonly IGameApiClient api;
+        private static readonly InventoryRules Inventory = new InventoryRules(ServerCatalog.Items);
 
         public PlayerStateModule(IGameApiClient api)
         {
@@ -21,7 +22,16 @@ namespace NodeWar.Cloud
         [CloudCodeFunction("GetPlayerState")]
         public Task<PlayerState> GetPlayerState(IExecutionContext context)
         {
-            return PlayerStateLogic.GetOrCreateAsync(new CloudSavePlayerRecordStore(api, context));
+            return Service(context).GetAsync();
         }
+
+        [CloudCodeFunction("Equip")]
+        public Task<PlayerState> Equip(IExecutionContext context, EquippedRecord changes)
+        {
+            return Service(context).EquipAsync(changes);
+        }
+
+        private InventoryPlayerStateService Service(IExecutionContext context) =>
+            new InventoryPlayerStateService(new CloudSavePlayerRecordStore(api, context), Inventory);
     }
 }

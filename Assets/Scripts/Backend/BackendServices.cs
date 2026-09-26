@@ -18,12 +18,14 @@ namespace NodeWar.Backend
 
         private static IPlayerStateService playerState;
         private static IAccountService account;
+        private static IInventoryService inventory;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
             playerState = null;
             account = null;
+            inventory = null;
         }
 
         public static IPlayerStateService PlayerState
@@ -31,11 +33,33 @@ namespace NodeWar.Backend
             get
             {
                 if (playerState == null)
-                    playerState = UseLocalFakes
-                        ? (IPlayerStateService)new LocalPlayerStateService()
-                        : new UgsPlayerStateService();
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else playerState = new UgsPlayerStateService();
+                }
                 return playerState;
             }
+        }
+
+        public static IInventoryService Inventory
+        {
+            get
+            {
+                if (inventory == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else inventory = new UgsInventoryService();
+                }
+                return inventory;
+            }
+        }
+
+        private static void CreateLocalServices()
+        {
+            var store = new InMemoryPlayerRecordStore();
+            var localInventory = new LocalInventoryService(store, CatalogBases.All());
+            inventory = localInventory;
+            playerState = new LocalPlayerStateService(store, localInventory.GrantDefaults);
         }
 
         public static IAccountService Account
