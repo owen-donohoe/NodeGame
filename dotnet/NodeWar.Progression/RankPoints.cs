@@ -5,7 +5,7 @@ namespace NodeWar.Progression
     /// <summary>These numbers are placeholders pending design.</summary>
     public sealed class RankConfig
     {
-        public int[] ArenaThresholds { get; set; } = { 0, 300, 700, 1200, 1800, 2500 };
+        public int[] ArenaThresholds { get; set; } = new ArenaConfig().Thresholds;
         public int BaseGain { get; set; } = 20;
         public int MinGain { get; set; } = 8;
         public int MaxGain { get; set; } = 40;
@@ -45,21 +45,7 @@ namespace NodeWar.Progression
         public static int ArenaFor(int rr, RankConfig cfg)
         {
             if (cfg == null) throw new ArgumentNullException(nameof(cfg));
-            var thresholds = cfg.ArenaThresholds;
-            if (thresholds == null || thresholds.Length == 0 || thresholds[0] != 0)
-                throw new ArgumentException("Arena thresholds must start at zero.", nameof(cfg));
-            for (int i = 1; i < thresholds.Length; i++)
-            {
-                if (thresholds[i] <= thresholds[i - 1])
-                    throw new ArgumentException("Arena thresholds must be strictly increasing.", nameof(cfg));
-            }
-
-            rr = Math.Max(0, rr);
-            for (int i = thresholds.Length - 1; i > 0; i--)
-            {
-                if (rr >= thresholds[i]) return i;
-            }
-            return 0;
+            return Arenas.ArenaForRR(rr, new ArenaConfig { Thresholds = cfg.ArenaThresholds });
         }
     }
 }
