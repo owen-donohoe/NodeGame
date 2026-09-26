@@ -659,7 +659,10 @@ namespace NodeWar.Core
                 loadouts[p] = new NodeWar.MatchLog.PlayerLoadout
                 {
                     suits = (int[])state.players[p].draftedSuits.Clone(),
-                    nodes = (int[])state.players[p].draftedNodes.Clone()
+                    nodes = (int[])state.players[p].draftedNodes.Clone(),
+                    suitEras = (int[])state.players[p].suitEras?.Clone(),
+                    districtEras = (int[])state.players[p].districtEras?.Clone(),
+                    skins = LoadoutForPlayer(p, match.loadout).skinIDs
                 };
 
             recorder = new NodeWar.MatchLog.MatchRecorder(header, boardConfig.Data, loadouts,
@@ -1042,11 +1045,33 @@ namespace NodeWar.Core
                 ? match.loadout
                 : new NodeWar.Lobby.LoadoutData();
 
-            return new[]
+            var setups = new PlayerSetup[2];
+            for (int p = 0; p < 2; p++)
             {
-                new PlayerSetup { suits = BuildDraftedSuits(0, loadout), nodes = BuildDraftedNodes(0, loadout) },
-                new PlayerSetup { suits = BuildDraftedSuits(1, loadout), nodes = BuildDraftedNodes(1, loadout) }
-            };
+                NodeWar.Lobby.LoadoutData own = LoadoutForPlayer(p, loadout);
+                setups[p] = new PlayerSetup
+                {
+                    suits = BuildDraftedSuits(p, loadout),
+                    nodes = BuildDraftedNodes(p, loadout),
+                    suitEras = own.suitEras,
+                    districtEras = own.districtEras
+                };
+            }
+            return setups;
+        }
+
+        /// <summary>
+        /// Which loadout a seat plays: the lobby's own outside a match
+        /// connection, otherwise the local or the remote one captured when the
+        /// draft ended. Normalized, so every array is present.
+        /// </summary>
+        private NodeWar.Lobby.LoadoutData LoadoutForPlayer(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
+        {
+            MatchConnection match = MatchConnection.Instance;
+            NodeWar.Lobby.LoadoutData chosen = match == null ? localLoadout
+                : playerID == match.localPlayerID ? cachedLocalLoadout
+                : cachedRemoteLoadout;
+            return NodeWar.Lobby.LoadoutData.Normalized(chosen);
         }
 
         /// <summary>

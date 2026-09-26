@@ -85,6 +85,29 @@ namespace NodeWar.Lobby
                 districtEras[d] = EraOf(equipped.Variants, CatalogIds.DistrictBase(((DistrictType)d).ToString()));
         }
 
+        /// <summary>
+        /// The loadout a match launches with: the player's own slot choices,
+        /// plus the eras and skins the server says they have equipped. Without
+        /// a known server state everything plays era 0 with no skins, the same
+        /// game a brand-new player gets.
+        /// </summary>
+        public static LoadoutData WithEquipment(LoadoutData loadout, PlayerState state)
+        {
+            loadout = LoadoutData.Normalized(loadout);
+            EquippedRecord equipped = state?.Inventory?.Equipped;
+            ErasFromEquipped(equipped, out loadout.suitEras, out loadout.districtEras);
+
+            var skins = new List<string>();
+            if (equipped?.Skins != null)
+                foreach (KeyValuePair<string, string> pair in equipped.Skins)
+                    if (!string.IsNullOrEmpty(pair.Value)) skins.Add(pair.Value);
+            // Dictionary order is not guaranteed; the wire and the log should
+            // not depend on it.
+            skins.Sort(StringComparer.Ordinal);
+            loadout.skinIDs = skins.ToArray();
+            return LoadoutData.Normalized(loadout);
+        }
+
         private static int EraOf(Dictionary<string, string> variants, string baseId)
         {
             if (!variants.TryGetValue(baseId, out string variantId)) return 0;

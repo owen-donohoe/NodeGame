@@ -20,12 +20,41 @@ namespace NodeWar.Backend
         private static IAccountService account;
         private static IInventoryService inventory;
 
+        /// <summary>
+        /// The last player state any backend call returned this session, or null
+        /// before the first. For what must be read synchronously, such as the
+        /// equipped eras a match launches with; anything that can wait should
+        /// ask the service. Only returned while the player it was fetched for is
+        /// still the one signed in, so it never describes someone else.
+        /// </summary>
+        public static PlayerState LastKnownState
+        {
+            get
+            {
+                string current = account?.Current?.PlayerId;
+                return current != null && current == lastKnownFor ? lastKnown : null;
+            }
+        }
+
+        private static PlayerState lastKnown;
+        private static string lastKnownFor;
+
+        /// <summary>Called with every player state a service returns.</summary>
+        internal static void Remember(PlayerState state)
+        {
+            if (state == null) return;
+            lastKnown = state;
+            lastKnownFor = Account.Current?.PlayerId;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
             playerState = null;
             account = null;
             inventory = null;
+            lastKnown = null;
+            lastKnownFor = null;
         }
 
         public static IPlayerStateService PlayerState
@@ -35,7 +64,7 @@ namespace NodeWar.Backend
                 if (playerState == null)
                 {
                     if (UseLocalFakes) CreateLocalServices();
-                    else playerState = new UgsPlayerStateService();
+                    else playerState = new RememberingPlayerStateService(new UgsPlayerStateService());
                 }
                 return playerState;
             }
@@ -48,7 +77,7 @@ namespace NodeWar.Backend
                 if (inventory == null)
                 {
                     if (UseLocalFakes) CreateLocalServices();
-                    else inventory = new UgsInventoryService();
+                    else inventory = new RememberingInventoryService(new UgsInventoryService());
                 }
                 return inventory;
             }
@@ -58,8 +87,8 @@ namespace NodeWar.Backend
         {
             var store = new InMemoryPlayerRecordStore();
             var localInventory = new LocalInventoryService(store, CatalogBases.All());
-            inventory = localInventory;
-            playerState = new LocalPlayerStateService(store, localInventory.GrantDefaults);
+            inventory = new RememberingInventoryService(localInventory);
+            playerState = new RememberingPlayerStateService(new LocalPlayerStateService(store, localInventory.GrantDefaults));
         }
 
         public static IAccountService Account
@@ -96,5 +125,35 @@ namespace NodeWar.Backend
 #else
         public static bool UseLocalFakes => false;
 #endif
+    }
+}
+
+namespace NodeWar.Backend
+{
+    /// <summary>Passes calls through and remembers what came back (BackendServices.LastKnownState).</summary>
+    internal sealed class RememberingPlayerStateService : IPlayerStateService
+    {
+        private readonly IPlayerStateService inner;
+        public RememberingPlayerStateService(IPlayerStateService inner) { this.inner = inner; }
+
+        public async System.Threading.Tasks.Task<PlayerState> GetAsync()
+        {
+            PlayerState state = await inner.GetAsync();
+            BackendServices.Remember(state);
+            return state;
+        }
+    }
+
+    internal sealed class RememberingInventoryService : IInventoryService
+    {
+        private readonly IInventoryService inner;
+        public RememberingInventoryService(IInventoryService inner) { this.inner = inner; }
+
+        public async System.Threading.Tasks.Task<PlayerState> EquipAsync(EquippedRecord changes)
+        {
+            PlayerState state = await inner.EquipAsync(changes);
+            BackendServices.Remember(state);
+            return state;
+        }
     }
 }

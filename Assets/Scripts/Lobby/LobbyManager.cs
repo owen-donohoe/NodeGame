@@ -205,7 +205,8 @@ namespace NodeWar.Lobby
             mc.networkManager = null;
 
             if (PlayerProfile.Instance != null)
-                mc.loadout = PlayerProfile.Instance.Loadout;
+                mc.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
+                    NodeWar.Backend.BackendServices.LastKnownState);
 
             NodeWar.UI.SceneTransition.Load("Gameplay");
         }
@@ -220,7 +221,8 @@ namespace NodeWar.Lobby
             mc.networkManager = null;
 
             if (PlayerProfile.Instance != null)
-                mc.loadout = PlayerProfile.Instance.Loadout;
+                mc.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
+                    NodeWar.Backend.BackendServices.LastKnownState);
 
             NodeWar.UI.SceneTransition.Load("Gameplay");
         }

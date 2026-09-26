@@ -101,6 +101,24 @@ namespace NodeWar.Lobby
             get { return navigation; }
         }
 
+        /// <summary>
+        /// Fetched once per lobby visit so the next match launches with the
+        /// eras the server has equipped (BackendServices.LastKnownState), even
+        /// if the player never opens the Workshop. Offline is not an error
+        /// here: the match then plays era 0.
+        /// </summary>
+        private static async System.Threading.Tasks.Task RefreshPlayerStateAsync()
+        {
+            try
+            {
+                await NodeWar.Backend.BackendServices.PlayerState.GetAsync();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[LobbyUI] Could not fetch player state: " + e.Message);
+            }
+        }
+
         private void OnEnable()
         {
             document = GetComponent<UIDocument>();
@@ -133,6 +151,8 @@ namespace NodeWar.Lobby
             }
 
             layout.CloneTree(root);
+
+            _ = RefreshPlayerStateAsync();
 
             BuildShell(root);
         }

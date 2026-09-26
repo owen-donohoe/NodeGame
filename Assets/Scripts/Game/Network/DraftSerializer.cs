@@ -54,6 +54,12 @@ namespace NodeWar.Network
         /// DraftLoadout: [type:1][playerID:4]
         ///               [suitCount:1][ (len:1)(utf8:len) x suitCount ]
         ///               [nodeCount:1][ (len:1)(utf8:len) x nodeCount ]
+        ///               [suitEraCount:1][ era:1 x suitEraCount ]
+        ///               [districtEraCount:1][ era:1 x districtEraCount ]
+        ///               [skinCount:1][ (len:1)(utf8:len) x skinCount ]
+        ///
+        /// The era tables and skins were added in protocol 2. Eras are a byte
+        /// each (there are six); skins are catalog IDs, cosmetic only.
         ///
         /// Variable length. String IDs are length-prefixed UTF8, and each array
         /// is count-prefixed, so changing LoadoutData.SuitSlots or NodeSlots
@@ -72,10 +78,14 @@ namespace NodeWar.Network
 
             byte[][] suitBytes = EncodeAll(loadout.suitIDs);
             byte[][] nodeBytes = EncodeAll(loadout.nodeIDs);
+            byte[][] skinBytes = EncodeAll(Capped(loadout.skinIDs));
 
             int size = 1 + 4                        // type, playerID
                      + 1 + MeasureAll(suitBytes)    // suit count + entries
-                     + 1 + MeasureAll(nodeBytes);   // node count + entries
+                     + 1 + MeasureAll(nodeBytes)    // node count + entries
+                     + 1 + loadout.suitEras.Length
+                     + 1 + loadout.districtEras.Length
+                     + 1 + MeasureAll(skinBytes);   // skin count + entries
 
             byte[] data = new byte[size];
             int offset = 0;
@@ -84,6 +94,9 @@ namespace NodeWar.Network
             WriteInt(data, ref offset, playerID);
             WriteStringArray(data, ref offset, suitBytes);
             WriteStringArray(data, ref offset, nodeBytes);
+            WriteEras(data, ref offset, loadout.suitEras);
+            WriteEras(data, ref offset, loadout.districtEras);
+            WriteStringArray(data, ref offset, skinBytes);
 
             return data;
         }
@@ -97,7 +110,10 @@ namespace NodeWar.Network
             loadout = new NodeWar.Lobby.LoadoutData
             {
                 suitIDs = ReadStringArray(data, ref offset),
-                nodeIDs = ReadStringArray(data, ref offset)
+                nodeIDs = ReadStringArray(data, ref offset),
+                suitEras = ReadEras(data, ref offset),
+                districtEras = ReadEras(data, ref offset),
+                skinIDs = offset < data.Length ? ReadStringArray(data, ref offset) : null
             };
 
             // Reconcile with this build's slot counts before anyone reads it.
@@ -147,6 +163,37 @@ namespace NodeWar.Network
                 System.Array.Copy(encoded[i], 0, buffer, offset, encoded[i].Length);
                 offset += encoded[i].Length;
             }
+        }
+
+        /// <summary>A count byte caps an array at 255 entries.</summary>
+        private static string[] Capped(string[] values)
+        {
+            if (values == null || values.Length <= 255) return values ?? new string[0];
+            string[] capped = new string[255];
+            System.Array.Copy(values, capped, 255);
+            return capped;
+        }
+
+        private static void WriteEras(byte[] buffer, ref int offset, int[] eras)
+        {
+            buffer[offset++] = (byte)eras.Length;
+            for (int i = 0; i < eras.Length; i++)
+                buffer[offset++] = (byte)eras[i];
+        }
+
+        /// <summary>
+        /// An era table, or null when the packet ends first. Null reads as all
+        /// era 0 once LoadoutData.Normalized has run.
+        /// </summary>
+        private static int[] ReadEras(byte[] buffer, ref int offset)
+        {
+            if (offset >= buffer.Length) return null;
+            int count = buffer[offset++];
+            if (count > buffer.Length - offset) { offset = buffer.Length; return null; }
+            int[] eras = new int[count];
+            for (int i = 0; i < count; i++)
+                eras[i] = buffer[offset++];
+            return eras;
         }
 
         private static string[] ReadStringArray(byte[] buffer, ref int offset)

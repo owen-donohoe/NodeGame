@@ -75,8 +75,9 @@ namespace NodeWar.Network
         /// must also land in the same commit as this serializer). Builds from
         /// before the versioned handshake are protocol 0: their handshake is a
         /// single byte.
+        /// 2: DraftLoadout carries era tables and skin IDs.
         /// </summary>
-        public const ushort ProtocolVersion = 1;
+        public const ushort ProtocolVersion = 2;
 
         // Keep in step with GameCommand; a change here is a ProtocolVersion bump.
         private const int BYTES_PER_COMMAND = 24;

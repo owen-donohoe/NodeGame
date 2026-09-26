@@ -365,7 +365,8 @@ namespace NodeWar.Lobby
             match.networkManager = networkManager;
 
             if (PlayerProfile.Instance != null)
-                match.loadout = PlayerProfile.Instance.Loadout;
+                match.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
+                    NodeWar.Backend.BackendServices.LastKnownState);
 
             // MatchConnection owns the NetworkManager from here, and is
             // DontDestroyOnLoad, so parenting is what carries the socket across

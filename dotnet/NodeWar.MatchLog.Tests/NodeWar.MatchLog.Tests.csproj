@@ -20,6 +20,7 @@
     <Compile Include="MatchRecorderTests.cs" />
     <Compile Include="ReplayTests.cs" />
     <Compile Include="MatchReplayTests.cs" />
+    <Compile Include="MatchLogErasTests.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/TestBoardFactory.cs"
              Link="Tests/TestBoardFactory.cs" />
   </ItemGroup>

@@ -38,6 +38,7 @@
   <ItemGroup>
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
+    <Compile Include="LoadoutEraTests.cs" />
     <Compile Include="LoadoutEditorTests.cs" />
     <Compile Include="EraChipsTests.cs" />
     <Compile Include="ItemTintTests.cs" />
@@ -59,6 +60,8 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutTypes.cs"
+             Link="Lobby/LoadoutTypes.cs" />
 
     <!-- The trophy bar's sliding window, independent of its Unity display. -->
     <Compile Include="../../Assets/Scripts/Lobby/TrophyBarLogic.cs"

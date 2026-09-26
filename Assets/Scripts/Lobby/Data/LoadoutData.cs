@@ -29,6 +29,27 @@ namespace NodeWar.Lobby
         public string[] suitIDs;
         public string[] nodeIDs;
 
+        /// <summary>Length of <see cref="suitEras"/>: one entry per SuitType value.</summary>
+        public const int SuitEraSlots = (int)NodeWar.Simulation.SuitType.Watcher + 1;
+
+        /// <summary>Length of <see cref="districtEras"/>: one entry per DistrictType value.</summary>
+        public const int DistrictEraSlots = (int)NodeWar.Simulation.DistrictType.Market + 1;
+
+        /// <summary>
+        /// The era of every suit and district this player fields, indexed by
+        /// (int)SuitType and (int)DistrictType. The server owns what is
+        /// equipped; these are filled from it when a match launches
+        /// (LoadoutEquipment) and then travel to the opponent with the loadout.
+        /// </summary>
+        public int[] suitEras;
+        public int[] districtEras;
+
+        /// <summary>
+        /// Catalog skin IDs the player has equipped. Cosmetic only: shown to
+        /// the opponent and recorded for replays, never read by the simulation.
+        /// </summary>
+        public string[] skinIDs;
+
         /// <summary>
         /// A loadout with both arrays allocated at the current slot counts and
         /// every entry an empty string. This is what an unset loadout looks
@@ -54,8 +75,36 @@ namespace NodeWar.Lobby
             return new LoadoutData
             {
                 suitIDs = NormalizeSlots(source.suitIDs, SuitSlots),
-                nodeIDs = NormalizeSlots(source.nodeIDs, NodeSlots)
+                nodeIDs = NormalizeSlots(source.nodeIDs, NodeSlots),
+                suitEras = NormalizeEras(source.suitEras, SuitEraSlots),
+                districtEras = NormalizeEras(source.districtEras, DistrictEraSlots),
+                skinIDs = NormalizeSkins(source.skinIDs)
             };
+        }
+
+        /// <summary>
+        /// Exactly <paramref name="count"/> long; missing entries and eras
+        /// outside 0..EraCount-1 are era 0, so a peer can never field an era
+        /// this build has no numbers for.
+        /// </summary>
+        private static int[] NormalizeEras(int[] source, int count)
+        {
+            int[] result = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                int era = source != null && i < source.Length ? source[i] : 0;
+                result[i] = era >= 0 && era < NodeWar.Simulation.GameBalanceData.EraCount ? era : 0;
+            }
+            return result;
+        }
+
+        private static string[] NormalizeSkins(string[] source)
+        {
+            if (source == null) return new string[0];
+            var kept = new System.Collections.Generic.List<string>(source.Length);
+            for (int i = 0; i < source.Length; i++)
+                if (!string.IsNullOrEmpty(source[i])) kept.Add(source[i]);
+            return kept.ToArray();
         }
 
         private static string[] NormalizeSlots(string[] source, int count)

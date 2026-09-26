@@ -20,6 +20,8 @@ namespace NodeWar.MatchLog
         internal const ushort TicksTag = 5;
         internal const ushort HashesTag = 6;
         internal const ushort ResultTag = 7;
+        internal const ushort ErasTag = 8;
+        internal const ushort SkinsTag = 9;
         private const int BytesPerCommand = 24;
 
         public static byte[] Write(MatchLog log)
@@ -116,6 +118,29 @@ namespace NodeWar.MatchLog
                 payload.I32(log.result.firstDesyncTick);
                 file.Chunk(ResultTag, payload);
             }
+
+            if (Any(log.loadouts, l => l.suitEras != null || l.districtEras != null))
+            {
+                payload = new Writer();
+                for (int i = 0; i < 2; i++)
+                {
+                    payload.Ints(log.loadouts[i].suitEras);
+                    payload.Ints(log.loadouts[i].districtEras);
+                }
+                file.Chunk(ErasTag, payload);
+            }
+
+            if (Any(log.loadouts, l => l.skins != null))
+            {
+                payload = new Writer();
+                for (int i = 0; i < 2; i++)
+                {
+                    string[] skins = log.loadouts[i].skins ?? new string[0];
+                    payload.I32(skins.Length);
+                    foreach (string skin in skins) payload.String(skin);
+                }
+                file.Chunk(SkinsTag, payload);
+            }
             return file.Bytes();
         }
 
@@ -149,7 +174,7 @@ namespace NodeWar.MatchLog
                     uint length = unchecked((uint)file.I32());
                     if (length > (uint)file.Remaining) throw new FormatException("Chunk payload is truncated.");
                     Reader payload = file.Slice((int)length);
-                    if (tag < HeaderTag || tag > ResultTag) continue;
+                    if (tag < HeaderTag || tag > SkinsTag) continue;
                     int bit = 1 << tag;
                     if ((seen & bit) != 0) throw new FormatException("Duplicate known chunk.");
                     seen |= bit;
@@ -208,9 +233,12 @@ namespace NodeWar.MatchLog
                     log.board = b;
                     break;
                 case LoadoutsTag:
-                    log.loadouts = new PlayerLoadout[2];
                     for (int i = 0; i < 2; i++)
-                        log.loadouts[i] = new PlayerLoadout { suits = r.Ints(), nodes = r.Ints() };
+                    {
+                        PlayerLoadout loadout = LoadoutOf(log, i);
+                        loadout.suits = r.Ints();
+                        loadout.nodes = r.Ints();
+                    }
                     break;
                 case DraftTag:
                     log.draft = new DraftPlacement[r.Count(17)];
@@ -253,7 +281,39 @@ namespace NodeWar.MatchLog
                     };
                     if (!ValidReason(log.result.reason)) throw new FormatException("Invalid match end reason.");
                     break;
+                case ErasTag:
+                    for (int i = 0; i < 2; i++)
+                    {
+                        PlayerLoadout withEras = LoadoutOf(log, i);
+                        withEras.suitEras = r.Ints();
+                        withEras.districtEras = r.Ints();
+                    }
+                    break;
+                case SkinsTag:
+                    for (int i = 0; i < 2; i++)
+                    {
+                        string[] skins = new string[r.Count(2)];
+                        for (int s = 0; s < skins.Length; s++) skins[s] = r.String();
+                        LoadoutOf(log, i).skins = skins;
+                    }
+                    break;
             }
+        }
+
+        /// <summary>
+        /// LOADOUTS, ERAS and SKINS each fill part of the same two loadouts, in
+        /// whatever order the chunks arrive.
+        /// </summary>
+        private static PlayerLoadout LoadoutOf(MatchLog log, int player)
+        {
+            if (log.loadouts == null) log.loadouts = new PlayerLoadout[2];
+            if (log.loadouts[player] == null) log.loadouts[player] = new PlayerLoadout();
+            return log.loadouts[player];
+        }
+
+        private static bool Any(PlayerLoadout[] loadouts, Func<PlayerLoadout, bool> test)
+        {
+            return test(loadouts[0]) || test(loadouts[1]);
         }
 
         private static bool ValidKind(MatchKind kind)

@@ -298,7 +298,8 @@ namespace NodeWar.Lobby
 
             // Pass loadout
             if (PlayerProfile.Instance != null)
-                mc.loadout = PlayerProfile.Instance.Loadout;
+                mc.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
+                    NodeWar.Backend.BackendServices.LastKnownState);
 
             // Parent NetworkManager under MatchConnection for DontDestroyOnLoad coverage
             networkManagerGO.transform.SetParent(mcGO.transform);

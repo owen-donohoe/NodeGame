@@ -210,7 +210,11 @@ namespace NodeWar.Lobby.Tests
             // type(1) + playerID(4)
             // + suitCount(1) + one length byte per suit slot + 2 payload bytes
             // + nodeCount(1) + one length byte per node slot + 2 payload bytes
-            int expected = 1 + 4 + (1 + S + 2) + (1 + N + 2);
+            // + suitEraCount(1) + one byte per suit type
+            // + districtEraCount(1) + one byte per district type
+            // + skinCount(1), no skins
+            int expected = 1 + 4 + (1 + S + 2) + (1 + N + 2)
+                + (1 + LoadoutData.SuitEraSlots) + (1 + LoadoutData.DistrictEraSlots) + 1;
 
             Assert.AreEqual(expected, packet.Length);
         }

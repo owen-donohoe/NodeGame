@@ -30,6 +30,19 @@ namespace NodeWar.MatchLog
     {
         public int[] suits;
         public int[] nodes;
+
+        /// <summary>
+        /// Era per suit and district type, indexed by enum value (chunk ERAS,
+        /// tag 8). Null in logs from before eras: every type plays era 0.
+        /// </summary>
+        public int[] suitEras;
+        public int[] districtEras;
+
+        /// <summary>
+        /// Equipped skin IDs (chunk SKINS, tag 9). Cosmetic: for replays only,
+        /// never given to the simulation.
+        /// </summary>
+        public string[] skins;
     }
 
     public struct LoggedTick
