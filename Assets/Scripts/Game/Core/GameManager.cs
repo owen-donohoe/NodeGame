@@ -1163,16 +1163,7 @@ namespace NodeWar.Core
 
         private SuitType MapSuitIDToType(string suitID)
         {
-            if (suitID == null) return SuitType.None;
-            string lower = suitID.ToLower();
-
-            if (lower.Contains("warrior")) return SuitType.Warrior;
-            if (lower.Contains("guardian")) return SuitType.Guardian;
-            if (lower.Contains("scout")) return SuitType.Scout;
-            if (lower.Contains("berserker")) return SuitType.Berserker;
-            if (lower.Contains("medic")) return SuitType.Medic;
-
-            return SuitType.None;
+            return NodeWar.Lobby.LoadoutTypes.SuitForLobbyId(suitID);
         }
 
         // ===== VIEW SPAWNING =====
