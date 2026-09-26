@@ -25,7 +25,9 @@ namespace NodeWar.Progression
                         knot.Window < WindowKnots[i - 1].Window)))
                     throw new ArgumentException("Knot times must increase and non-negative windows must not shrink.", nameof(WindowKnots));
             }
-            if (MaxArenaGap < 0) throw new ArgumentOutOfRangeException(nameof(MaxArenaGap));
+            // +/-1 is the hard cap (BACKEND-PLAN section 7): eras differ in power across arenas and MMR cannot
+            // see it. A stricter 0 is allowed; anything wider is not a tuning choice.
+            if (MaxArenaGap < 0 || MaxArenaGap > 1) throw new ArgumentOutOfRangeException(nameof(MaxArenaGap));
             ValidateWait(BotOfferSeconds, nameof(BotOfferSeconds));
         }
 

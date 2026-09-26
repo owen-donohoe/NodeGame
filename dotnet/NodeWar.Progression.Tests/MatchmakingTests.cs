@@ -144,6 +144,7 @@ namespace NodeWar.Progression.Tests
                 new MatchmakingConfig { WindowKnots = new[] { (0d, double.NegativeInfinity) } },
                 new MatchmakingConfig { WindowKnots = new[] { (0d, 200d), (1d, 100d) } },
                 new MatchmakingConfig { MaxArenaGap = -1 },
+                new MatchmakingConfig { MaxArenaGap = 2 },
                 new MatchmakingConfig { BotOfferSeconds = -1 },
                 new MatchmakingConfig { BotOfferSeconds = double.NaN },
                 new MatchmakingConfig { BotOfferSeconds = double.PositiveInfinity }
