@@ -48,14 +48,22 @@ namespace NodeWar.Backend
 
     /// <summary>
     /// What the player owns and has equipped. Item IDs are stable catalog
-    /// strings. The equipped shape is provisional until variants exist.
+    /// strings. Equipped entries are keyed by base ID, independently of draft slots.
     /// </summary>
     public sealed class InventoryRecord
     {
         public List<string> OwnedVariants;
         public List<string> OwnedSkins;
+        // Obsolete stored fields: retained for compatibility, never read by equip logic.
         public string[] EquippedSuitIDs;
         public string[] EquippedNodeIDs;
+        public EquippedRecord Equipped;
+    }
+
+    public sealed class EquippedRecord
+    {
+        public Dictionary<string, string> Variants; // baseId -> variantId
+        public Dictionary<string, string> Skins; // baseId -> skinId
     }
 
     /// <summary>Most recent match IDs, newest first.</summary>

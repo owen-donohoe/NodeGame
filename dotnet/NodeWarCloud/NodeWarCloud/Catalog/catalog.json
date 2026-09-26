@@ -1,0 +1,1129 @@
+[
+    {
+        "Id":  "suit.farmer.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.farmer",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.farmer.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.farmer",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.farmer.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.farmer",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.farmer.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.farmer",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.farmer.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.farmer",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.farmer.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.farmer",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.farmer.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.farmer",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.miner.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.miner",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.miner.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.miner",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.miner.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.miner",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.miner.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.miner",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.miner.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.miner",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.miner.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.miner",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.miner.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.miner",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.warrior.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.warrior",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.warrior.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.warrior",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.warrior.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.warrior",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.warrior.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.warrior",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.warrior.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.warrior",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.warrior.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.warrior",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.warrior.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.warrior",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.smelter.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.smelter",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.smelter.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.smelter",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.smelter.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.smelter",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.smelter.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.smelter",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.smelter.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.smelter",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.smelter.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.smelter",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.smelter.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.smelter",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.guardian.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.guardian",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.guardian.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.guardian",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.guardian.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.guardian",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.guardian.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.guardian",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.guardian.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.guardian",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.guardian.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.guardian",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.guardian.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.guardian",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.scout.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.scout",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.scout.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.scout",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.scout.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.scout",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.scout.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.scout",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.scout.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.scout",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.scout.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.scout",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.scout.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.scout",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.berserker.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.berserker",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.berserker.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.berserker",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.berserker.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.berserker",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.berserker.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.berserker",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.berserker.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.berserker",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.berserker.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.berserker",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.berserker.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.berserker",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.medic.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.medic",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.medic.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.medic",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.medic.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.medic",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.medic.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.medic",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.medic.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.medic",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.medic.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.medic",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.medic.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.medic",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.merchant.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.merchant",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.merchant.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.merchant",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.merchant.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.merchant",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.merchant.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.merchant",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.merchant.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.merchant",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.merchant.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.merchant",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.merchant.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.merchant",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.acolyte.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.acolyte",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.acolyte.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.acolyte",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.acolyte.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.acolyte",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.acolyte.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.acolyte",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.acolyte.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.acolyte",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.acolyte.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.acolyte",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.acolyte.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.acolyte",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.watcher.e0",
+        "Kind":  "Variant",
+        "BaseId":  "suit.watcher",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.watcher.e1",
+        "Kind":  "Variant",
+        "BaseId":  "suit.watcher",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.watcher.e2",
+        "Kind":  "Variant",
+        "BaseId":  "suit.watcher",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.watcher.e3",
+        "Kind":  "Variant",
+        "BaseId":  "suit.watcher",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.watcher.e4",
+        "Kind":  "Variant",
+        "BaseId":  "suit.watcher",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "suit.watcher.e5",
+        "Kind":  "Variant",
+        "BaseId":  "suit.watcher",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.suit.watcher.default",
+        "Kind":  "Skin",
+        "BaseId":  "suit.watcher",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.farm.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.farm",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.farm.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.farm",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.farm.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.farm",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.farm.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.farm",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.farm.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.farm",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.farm.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.farm",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.farm.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.farm",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.mine.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.mine",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.mine.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.mine",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.mine.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.mine",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.mine.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.mine",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.mine.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.mine",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.mine.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.mine",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.mine.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.mine",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.village.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.village",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.village.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.village",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.village.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.village",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.village.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.village",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.village.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.village",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.village.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.village",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.village.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.village",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.barracks.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.barracks",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.barracks.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.barracks",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.barracks.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.barracks",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.barracks.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.barracks",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.barracks.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.barracks",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.barracks.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.barracks",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.barracks.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.barracks",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.forge.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.forge",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.forge.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.forge",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.forge.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.forge",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.forge.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.forge",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.forge.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.forge",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.forge.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.forge",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.forge.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.forge",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.camp.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.camp",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.camp.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.camp",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.camp.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.camp",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.camp.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.camp",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.camp.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.camp",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.camp.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.camp",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.camp.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.camp",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.shrine.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.shrine",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.shrine.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.shrine",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.shrine.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.shrine",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.shrine.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.shrine",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.shrine.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.shrine",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.shrine.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.shrine",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.shrine.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.shrine",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.arsenal.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.arsenal",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.arsenal.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.arsenal",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.arsenal.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.arsenal",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.arsenal.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.arsenal",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.arsenal.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.arsenal",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.arsenal.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.arsenal",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.arsenal.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.arsenal",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.sanctuary.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.sanctuary",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.sanctuary.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.sanctuary",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.sanctuary.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.sanctuary",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.sanctuary.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.sanctuary",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.sanctuary.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.sanctuary",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.sanctuary.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.sanctuary",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.sanctuary.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.sanctuary",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.watchtower.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.watchtower",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.watchtower.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.watchtower",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.watchtower.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.watchtower",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.watchtower.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.watchtower",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.watchtower.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.watchtower",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.watchtower.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.watchtower",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.watchtower.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.watchtower",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.rampart.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.rampart",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.rampart.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.rampart",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.rampart.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.rampart",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.rampart.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.rampart",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.rampart.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.rampart",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.rampart.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.rampart",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.rampart.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.rampart",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.market.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.market",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.market.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.market",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.market.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.market",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.market.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.market",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.market.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.market",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.market.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.market",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.market.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.market",
+        "Era":  -1,
+        "Retired":  false
+    }
+]

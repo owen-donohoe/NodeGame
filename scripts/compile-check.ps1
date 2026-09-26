@@ -78,6 +78,7 @@ $asmdefDirs = @(
 )
 
 $pluginsDir = Join-Path $AssetsDir 'Plugins'
+$backendSharedDir = Join-Path $AssetsDir 'Scripts/Backend/Shared'
 
 # Compared with a trailing separator, so a directory only excludes files that
 # are actually inside it. Without one, any sibling whose name merely starts with
@@ -90,6 +91,9 @@ $sep = [System.IO.Path]::DirectorySeparatorChar
 
 $sources = Get-ChildItem -Path $AssetsDir -Recurse -Filter '*.cs' -File | Where-Object {
     $path = $_.FullName
+    # Backend DTOs/services change alongside their callers. Compile their current
+    # source, not the older Shared DLL from the main worktree's Library junction.
+    if ($path.StartsWith($backendSharedDir + $sep, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
     if ($path.StartsWith($pluginsDir + $sep, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
     foreach ($dir in $asmdefDirs) {
         if ($path.StartsWith($dir + $sep, [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
@@ -123,7 +127,7 @@ $refs = [ordered]@{}
 $scriptAssemblies = Join-Path $RepoRoot 'Library/ScriptAssemblies'
 if (Test-Path $scriptAssemblies) {
     Add-Refs $refs (Get-ChildItem $scriptAssemblies -Filter '*.dll' -File |
-        Where-Object { $_.Name -ne 'Assembly-CSharp.dll' })
+        Where-Object { $_.Name -ne 'Assembly-CSharp.dll' -and $_.Name -ne 'NodeWar.Backend.Shared.dll' })
 }
 
 Add-Refs $refs (Get-ChildItem (Join-Path $managed 'UnityEngine') -Filter '*.dll' -File)
