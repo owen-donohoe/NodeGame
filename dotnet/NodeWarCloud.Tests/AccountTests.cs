@@ -63,12 +63,27 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
+        public async Task LinkPrompt_StarterGrantsAreNotProgress()
+        {
+            PlayerState starter = await new LocalPlayerStateService().GetAsync();
+            string warrior = CatalogIds.SuitBase("Warrior");
+            starter.Inventory.OwnedVariants.Add(CatalogIds.Variant(warrior, 0));
+            starter.Inventory.OwnedSkins.Add(CatalogIds.DefaultSkin(warrior));
+
+            Assert.That(LinkPromptPolicy.ShouldPrompt(Guest, starter, alreadyShown: false), Is.False);
+
+            starter.Inventory.OwnedSkins.Add("skin." + warrior + ".gilded");
+            Assert.That(LinkPromptPolicy.ShouldPrompt(Guest, starter, alreadyShown: false), Is.True,
+                "an earned skin is progress");
+        }
+
+        [Test]
         public async Task LinkPrompt_ShownOnceAGuestHasPlayedOrUnlocked()
         {
             PlayerState played = await new LocalPlayerStateService().GetAsync();
             played.History.MatchIds.Add("m1");
             PlayerState unlocked = await new LocalPlayerStateService().GetAsync();
-            unlocked.Inventory.OwnedVariants.Add("suit.warrior.era1");
+            unlocked.Inventory.OwnedVariants.Add(CatalogIds.Variant(CatalogIds.SuitBase("Warrior"), 1));
 
             Assert.That(LinkPromptPolicy.ShouldPrompt(Guest, played, alreadyShown: false), Is.True);
             Assert.That(LinkPromptPolicy.ShouldPrompt(Guest, unlocked, alreadyShown: false), Is.True);

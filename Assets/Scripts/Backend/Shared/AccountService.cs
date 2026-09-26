@@ -162,14 +162,27 @@ namespace NodeWar.Backend
             return HasProgress(state);
         }
 
-        /// <summary>A ranked result or an unlock: anything the server would lose with this guest.</summary>
+        /// <summary>
+        /// A ranked result or an unlock: anything the server would lose with this
+        /// guest. Every new player is granted the era-0 variants and default
+        /// skins, so those are not progress; only something earned beyond them is.
+        /// </summary>
         public static bool HasProgress(PlayerState state)
         {
             bool played = state.History?.MatchIds != null && state.History.MatchIds.Count > 0;
-            bool unlocked = state.Inventory != null
-                && ((state.Inventory.OwnedVariants != null && state.Inventory.OwnedVariants.Count > 0)
-                    || (state.Inventory.OwnedSkins != null && state.Inventory.OwnedSkins.Count > 0));
-            return played || unlocked;
+            return played || HasEarnedItem(state.Inventory);
+        }
+
+        private static bool HasEarnedItem(InventoryRecord inventory)
+        {
+            if (inventory == null) return false;
+            if (inventory.OwnedVariants != null)
+                foreach (string id in inventory.OwnedVariants)
+                    if (!CatalogIds.TryParseVariant(id, out _, out int era) || era > 0) return true;
+            if (inventory.OwnedSkins != null)
+                foreach (string id in inventory.OwnedSkins)
+                    if (!CatalogIds.TryParseSkin(id, out string baseId) || id != CatalogIds.DefaultSkin(baseId)) return true;
+            return false;
         }
     }
 }

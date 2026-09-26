@@ -149,7 +149,8 @@ namespace NodeWar.Cloud.Tests
         {
             Assert.That(BalanceCatalog.Embedded, Is.SameAs(BalanceCatalog.Embedded));
             var assembly = typeof(BalanceCatalog).Assembly;
-            foreach (string name in assembly.GetManifestResourceNames().Where(n => n.EndsWith(".json")))
+            foreach (string name in assembly.GetManifestResourceNames()
+                .Where(n => n.StartsWith("NodeWar.Cloud.Balances.") && n.EndsWith(".json")))
             {
                 using var stream = assembly.GetManifestResourceStream(name);
                 using var reader = new StreamReader(stream);
