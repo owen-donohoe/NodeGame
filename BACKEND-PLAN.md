@@ -254,6 +254,12 @@ Era grants and the equipped clamp are **not** in 7.1: they need the catalog, and
   5. **Settle:** `MatchSettlement.Settle` from the snapshots → era grants (`EraUnlocks.GrantsFor` on the new `HighestArena`) → **clamp equipped variants** above the new current arena down to the highest owned era at or below it (demotion) → prepend the match ID to both `history` records (keep 20) → `Settled`.
 - **Concurrency.** Two uploads can arrive together. Record state changes use Cloud Save write locks: on a conflict, re-read and re-decide. A settlement that dies halfway must be safely re-runnable, so each player's `history` is the guard: a player whose history already holds the match ID is not settled again.
 - **Timeout.** A match `Pending` longer than 10 minutes becomes `Void` lazily, when either player next calls `ReportMatch` or `GetPlayerState`. No scheduler.
+- **Decided after Sol's review (2026-09-27):**
+  - *Era rule is "owned and ≤ snapshot arena", not "equals what was equipped".* Fielding an owned, eligible era gives no edge that equipping it would not, and the opponent sees the loadout in the draft either way. Do not tighten it to the equipped era.
+  - *Timeout is evaluated only when a report arrives.* A `Pending` match changes nothing in a player's state, and a late second report is voided on arrival. `GetPlayerState` needs no hook until the queue must refuse a player with an open match (8.x).
+  - *A refused report does not take the player's slot*: the first **accepted** report is authoritative; refusals are kept for audit, capped.
+  - *Equip writes inventory with a write lock*, and re-reads and revalidates on conflict, so it cannot undo a settlement's clamp or grants.
+  - *The idempotency guard is a separate bounded list of settled match IDs* (last 200, on the player's rating record, written in the same batch as the settlement), not the 20-entry history.
 - **The equipped clamp goes in `Backend/Shared`**, called from both `InventoryRules` (server) and `LocalInventoryService` (fake). The two equip validators are already duplicated; do not add a third copy.
 
 #### 7.3 Rank display and Workshop style pass (client, no new page)
