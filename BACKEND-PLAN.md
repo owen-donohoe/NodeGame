@@ -218,7 +218,7 @@ Decided with the user on 2026-09-27:
 | 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | Blocked: Matchmaker not enabled |
 | 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | Blocked on 8.1 |
 | 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 | 7.4a service **done**; wiring into GameManager waits for 8.2 |
-| 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 | 7.5a server history **done**; 7.5c client page in progress; 7.5b retention **deferred** (unlimited custom items, small logs; revisit with real volume) |
+| 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 | 7.5a server history and 7.5c client page **done** (visuals unverified); 7.5b retention **deferred** (unlimited custom items, small logs; revisit with real volume) |
 | 7.6 | Session keys and per-command signatures; single-log settlement | all of the above | Not started |
 
 #### R: research result (2026-09-27, docs-sourced; "inferred" items need a live check)
