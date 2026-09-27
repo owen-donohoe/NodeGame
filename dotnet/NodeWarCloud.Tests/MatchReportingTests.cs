@@ -156,16 +156,23 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task RefereeRefusalThenValidOpponentStaysPendingAndRefusalCannotBeReplaced()
+        public async Task RefusedReportDoesNotConsumeTheSlotAndCanRecoverToSettle()
         {
             var bad = ReadLog(winningBytes);
             bad.result.finalHash ^= 1;
             await Report(0, MatchLogFormat.Write(bad));
             Assert.That((await Record()).reports.Single().accepted, Is.False);
-            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Pending));
+            AssertNoPlayerWrites();
+
+            // The same player retries with a valid log: the earlier refusal must
+            // not have consumed player 0's slot.
             Assert.That((await Report(0)).state, Is.EqualTo(MatchRecordState.Pending));
             Assert.That((await Record()).reports.Count(r => r.accepted), Is.EqualTo(1));
+            Assert.That((await Record()).reports.Count(r => r.playerIndex == 0), Is.EqualTo(2));
             AssertNoPlayerWrites();
+
+            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
         }
 
         [Test]
