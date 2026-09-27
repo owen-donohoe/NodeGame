@@ -11,9 +11,10 @@
         button beside the gear. It lives here rather than on Profile so the
         arena view stays about progress, not a log.
 
-        No match result is written anywhere in the project yet, so this is the
-        empty state. #history-list is where rows go once there is a system;
-        MatchHistoryPage hides the empty state when it has any.
+        MatchHistoryPage fetches the caller's ranked matches from the server
+        on open and fills #history-list with one row per entry, toggling
+        #history-empty (also reused for the loading and error states) when
+        there are none.
     -->
 
     <engine:Style src="project://database/Assets/UI/Styles/Settings.uss" />
