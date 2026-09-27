@@ -19,6 +19,7 @@ namespace NodeWar.Backend
         private static IPlayerStateService playerState;
         private static IAccountService account;
         private static IInventoryService inventory;
+        private static IMatchReportService matchReports;
 
         /// <summary>
         /// The last player state any backend call returned this session, or null
@@ -57,6 +58,7 @@ namespace NodeWar.Backend
             playerState = null;
             account = null;
             inventory = null;
+            matchReports = null;
             lastKnown = null;
             lastKnownFor = null;
             StateChanged = null;
@@ -94,6 +96,20 @@ namespace NodeWar.Backend
             var localInventory = new LocalInventoryService(store, CatalogBases.All());
             inventory = new RememberingInventoryService(localInventory);
             playerState = new RememberingPlayerStateService(new LocalPlayerStateService(store, localInventory.GrantDefaults));
+            matchReports = new LocalMatchReportService();
+        }
+
+        public static IMatchReportService MatchReports
+        {
+            get
+            {
+                if (matchReports == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else matchReports = new UgsMatchReportService();
+                }
+                return matchReports;
+            }
         }
 
         public static IAccountService Account
