@@ -1,4 +1,4 @@
-using UnityEngine;
+using NodeWar.Backend;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -14,9 +14,6 @@ namespace NodeWar.Lobby
     /// </summary>
     public class LobbyChrome
     {
-        // Same window ProfilePage uses, so the two bars agree.
-        private const int TrophyWindow = 100;
-
         private const string Dash = "—";
 
         private readonly Label nameText;
@@ -50,6 +47,23 @@ namespace NodeWar.Lobby
 
             Bind(root, "gear", () => { if (SettingsRequested != null) SettingsRequested(); });
             Bind(root, "history", () => { if (HistoryRequested != null) HistoryRequested(); });
+
+            root.RegisterCallback<AttachToPanelEvent>(evt =>
+            {
+                if (evt.target == root) ObserveState();
+            });
+            root.RegisterCallback<DetachFromPanelEvent>(evt =>
+            {
+                if (evt.target == root) BackendServices.StateChanged -= Refresh;
+            });
+            if (root.panel != null) ObserveState();
+        }
+
+        private void ObserveState()
+        {
+            BackendServices.StateChanged -= Refresh;
+            BackendServices.StateChanged += Refresh;
+            Refresh();
         }
 
         private static void Bind(VisualElement root, string name, System.Action action)
@@ -61,22 +75,20 @@ namespace NodeWar.Lobby
         public void Refresh()
         {
             PlayerProfile profile = PlayerProfile.Instance;
-            int trophies = profile != null ? profile.Trophies : 0;
 
             if (nameText != null)
                 nameText.text = profile != null ? profile.Username : "player";
 
-            TrophyBarLogic bar = new TrophyBarLogic(trophies, TrophyWindow);
-
-            if (trophyCount != null) trophyCount.text = trophies.ToString();
-            if (trophyMax != null) trophyMax.text = " /" + bar.RangeMax;
-
+            RankRecord rank = BackendServices.LastKnownState?.Rank;
+            RankDisplay display = new RankDisplay(rank?.RR ?? 0);
+            if (trophyCount != null) trophyCount.text = rank != null ? display.RR.ToString() : Dash;
+            if (trophyMax != null) trophyMax.text = rank != null ? " RR" : "";
             if (trophyFill != null)
-                trophyFill.style.width = Length.Percent(Mathf.Clamp01(bar.GetFill(trophies)) * 100f);
-
-            // TODO(arenas): the prototype shows "Ancient · 350 to Bronze Age".
-            // No arena tiers exist in the game model yet.
-            if (arenaText != null) arenaText.text = "Arena " + Dash;
+                trophyFill.style.width = Length.Percent(rank != null ? display.Fill * 100f : 0f);
+            if (arenaText != null)
+                arenaText.text = rank == null ? "Arena " + Dash : display.Name + (display.Span.HasValue
+                    ? " · " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
+                    : " · Top arena");
         }
     }
 }

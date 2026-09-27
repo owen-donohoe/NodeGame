@@ -39,12 +39,16 @@ namespace NodeWar.Backend
         private static PlayerState lastKnown;
         private static string lastKnownFor;
 
+        /// <summary>Raised after a returned player state becomes available to views.</summary>
+        public static event System.Action StateChanged;
+
         /// <summary>Called with every player state a service returns.</summary>
         internal static void Remember(PlayerState state)
         {
             if (state == null) return;
             lastKnown = state;
             lastKnownFor = Account.Current?.PlayerId;
+            StateChanged?.Invoke();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -55,6 +59,7 @@ namespace NodeWar.Backend
             inventory = null;
             lastKnown = null;
             lastKnownFor = null;
+            StateChanged = null;
         }
 
         public static IPlayerStateService PlayerState
