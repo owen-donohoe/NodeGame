@@ -209,17 +209,17 @@ Decided with the user on 2026-09-27:
 
 **Why 7 and 8 are interleaved.** Once private lobbies are unrated, only Matchmaker can create a ranked match, so a lobby-based `BeginMatch` would be thrown away. The server-side **match record** is designed once, around Matchmaker, and settlement is built against it with fakes. It is verified live once Stage 8 creates real records. That costs a live end-to-end test until 8.2; it buys no throwaway endpoint and no development-only ranked path that could leak into production.
 
-| Step | What | Depends on |
-|---|---|---|
-| 7.1 | `MatchSettlement.Settle`: pure rules plus tests (`NodeWar.Progression`) | nothing |
-| R | Research: Matchmaker for P2P/Relay, Cloud Save and Cloud Code limits | nothing |
-| 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R |
-| 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) |
-| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record |
-| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 |
-| 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 |
-| 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 |
-| 7.6 | Session keys and per-command signatures; single-log settlement | all of the above |
+| Step | What | Depends on | Status (2026-09-27) |
+|---|---|---|---|
+| 7.1 | `MatchSettlement.Settle`: pure rules plus tests (`NodeWar.Progression`) | nothing | **Done** |
+| R | Research: Matchmaker for P2P/Relay, Cloud Save and Cloud Code limits | nothing | **Done** |
+| 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R | **Done**, plus review fixes; not deployed |
+| 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) | **Done**; visuals unverified |
+| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | Blocked: Matchmaker not enabled |
+| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | Blocked on 8.1 |
+| 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 | 7.4a service **done**; wiring into GameManager waits for 8.2 |
+| 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 | 7.5a server history **done**; 7.5c client page in progress; 7.5b retention **deferred** (unlimited custom items, small logs; revisit with real volume) |
+| 7.6 | Session keys and per-command signatures; single-log settlement | all of the above | Not started |
 
 #### R: research result (2026-09-27, docs-sourced; "inferred" items need a live check)
 
@@ -550,3 +550,5 @@ Standing constraints:
 | — | 7.6 signatures | Sol review 0.8M | Main session (wire change) |
 
 GPT total ≈ **15M, about 2.5 windows**; waves 1-2r fit the first window (~6.9M, so 2r may slip past the reset). The lead's share is specs, the R decision, `.meta`s, merges, deploys, 8.2 and 7.6, plus reading findings rather than whole diffs. Measure after each wave with the command in `.claude/skills/delegation.md` and correct this table.
+
+**Measured 2026-09-27** (replace the estimates above with these): Codex R research 0.41M (capped at 15 fetches); Codex 7.3 1.05M; Codex 7.1 + 7.2 on one reused agent 2.97M; **Sol whole-branch review 2.44M** (2x estimate). The Codex window emptied in ~35 min. Then Claude Sonnet via the Agent tool: the three review fixes 208k; 7.4a 94k; 7.5a 122k. Lessons: small bounded packages with files named cost 0.1-0.2M on Sonnet; Sol reviews should get only the changed files and their spec lines; start a fresh agent once one's context passes ~1.5M instead of reusing it.
