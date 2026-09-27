@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NodeWar.Backend;
@@ -212,12 +213,20 @@ namespace NodeWar.Cloud
                 {
                     var read = await store.ReadForSettlementAsync();
                     var state = read.State;
-                    if (state?.History?.MatchIds == null || state.Inventory == null)
+                    if (state?.History?.MatchIds == null || state.Inventory == null || state.Rating == null)
                         throw new InvalidOperationException("Match players must have initialized server records.");
-                    if (state.History.MatchIds.Contains(record.matchId)) break;
+                    // The idempotency guard is this bounded, 200-entry list on the
+                    // rating record, not the 20-entry history: a player who plays
+                    // enough matches to evict this one from history must still not
+                    // be settled twice for it.
+                    var settledIds = state.Rating.SettledMatchIds ?? new List<string>();
+                    if (settledIds.Contains(record.matchId)) break;
                     var settled = outcome.Players[p];
+                    settledIds.Insert(0, record.matchId);
+                    if (settledIds.Count > 200) settledIds.RemoveRange(200, settledIds.Count - 200);
                     state.Rating = new RatingRecord { R = settled.Rating.R, Rd = settled.Rating.RD,
-                        Sigma = settled.Rating.Sigma, LastMatchUnixSeconds = settled.LastMatchUnixSeconds };
+                        Sigma = settled.Rating.Sigma, LastMatchUnixSeconds = settled.LastMatchUnixSeconds,
+                        SettledMatchIds = settledIds };
                     state.Rank = new RankRecord { RR = settled.Rank.RR, Arena = settled.Rank.Arena,
                         HighestArena = settled.Rank.HighestArena };
                     inventory.GrantDefaults(state);

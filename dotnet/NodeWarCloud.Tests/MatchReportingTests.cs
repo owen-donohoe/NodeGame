@@ -262,6 +262,38 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
+        public async Task IdempotencyGuardSurvivesHistoryEvictionUsingSettledMatchIds()
+        {
+            await Report(0);
+            players[1].BeforeWrite = () => throw new IOException("simulated crash");
+            Assert.ThrowsAsync<IOException>(() => Report(1, now: 110));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 0 }));
+            players[1].BeforeWrite = null;
+
+            // Player 0 plays and settles 20 more matches elsewhere: enough to
+            // evict MatchId from the 20-entry display history, but not from the
+            // 200-entry SettledMatchIds guard.
+            players[0].Mutate(s =>
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    s.History.MatchIds.Insert(0, "other-" + i);
+                    s.Rating.SettledMatchIds.Insert(0, "other-" + i);
+                }
+                if (s.History.MatchIds.Count > 20)
+                    s.History.MatchIds.RemoveRange(20, s.History.MatchIds.Count - 20);
+            });
+            Assert.That((await State(0)).History.MatchIds, Does.Not.Contain(MatchId));
+            Assert.That((await State(0)).Rating.SettledMatchIds, Does.Contain(MatchId));
+
+            string before = JsonConvert.SerializeObject(await State(0));
+            Assert.That((await Report(1, now: 5000)).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(JsonConvert.SerializeObject(await State(0)), Is.EqualTo(before));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
+            Assert.That((await State(1)).Rating.SettledMatchIds, Is.EqualTo(new[] { MatchId }));
+        }
+
+        [Test]
         public async Task CrashAfterReportCommitBeforeLogCopyRecoversOriginalBytes()
         {
             matches.FailLog = true;

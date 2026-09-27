@@ -36,6 +36,14 @@ namespace NodeWar.Backend
 
         /// <summary>Server time of the last rated match, Unix seconds. 0 means never.</summary>
         public long LastMatchUnixSeconds;
+
+        /// <summary>
+        /// Idempotency guard for settlement, newest first, capped at 200. Separate
+        /// from HistoryRecord.MatchIds (capped at 20, display-oriented): a player
+        /// who plays enough matches to evict one from history must still not be
+        /// settled twice for it. Written in the same batch as the settlement.
+        /// </summary>
+        public List<string> SettledMatchIds;
     }
 
     /// <summary>Visible rank: RR and the arena it places the player in.</summary>
