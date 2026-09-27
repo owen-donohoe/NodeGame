@@ -54,9 +54,13 @@
 
 ### Branch
 
-`feat/backend`, not pushed; based on `feat/rating`, based on `main` at
-`b4cc316f`. `feat/present-outline` (3 outline/balance commits) is separate.
-Stages 0-6 are done on it. The lasting architecture is written up in
+`feat/backend` is PR #72 against `main` at `b4cc316f` (it contains
+`feat/rating`); #73 (docs atlas) is stacked on it. Stages 7-8 are built on
+`feat/stage7`, branched from `feat/backend`. `feat/present-outline` (#71)
+carries a balance change and so needs a balance re-export when it lands.
+Stages 0-6 are done on `feat/backend`, audited 2026-09-27: every sub-branch
+merge is intact, nothing was orphaned, and the deployed module (12:56Z on
+09-26) postdates the eras commit. The lasting architecture is written up in
 `docs/architecture.md` (*Backend, match logs and the referee*),
 `docs/simulation-rules.md` (era hashing, `MatchFactory`) and
 `docs/game-model.md` (*Eras*); this file only tracks the stages.
@@ -189,30 +193,86 @@ Format defined in §8. The deliverables:
   - Balance lookups become per (type, era).
   - New state fields are registered in `SimulationStateHasher`.
   - Follow `docs/adding-a-feature.md` and `.claude/skills/determinism-guard.md`.
-- **Wire:** `DraftLoadout` carries variants (gameplay) and skins (cosmetic). Bump `ProtocolVersion` and `SimVersion`.
+- **Wire:** `DraftLoadout` carries variants (gameplay) and skins (cosmetic). As built: `ProtocolVersion` 2; `SimVersion` stays 1, because era fields hash only when non-zero, so era-0 matches and older logs keep their hashes.
 - **Skins:** never in `SimulationState`, never hashed, never read by the simulation. They are in the match log only so replays look right, and they travel to the opponent only for display.
 - **Server validation:** the referee refuses a result whose loadout used a variant the player doesn't own, or isn't allowed at the match's tier. Better still: the server issues a signed loadout at match start (it ties into §8's session keys), so a modified client can't field unowned variants at all.
 - **Catalog:** Editor-authored, exported for the server (§4).
 - **Inventory/equip:** Cloud Code `Equip(loadout)` validates ownership and writes `inventory.equipped`.
 - **UI:** the Workshop shows variants and locked eras. A skins panel handles preview and equip.
 
-### Stage 7: match reporting, rating, replay storage
+### Stages 7 and 8, as re-planned 2026-09-27
 
-- **Flow:** both clients upload the match log at match end. The server replays it, gets the winner and final hash, then:
-  `Glicko2.UpdateSingleMatch` both players → `RankPoints.RRDelta` → floor RR at 0 → arena → era unlock → store replay → append to both players' `history`.
-- **If only one log arrives** (rage-quit): the honest log is enough, since it holds both players' inputs, each signed by its sender.
-- **If two logs disagree:** flag the match, store both, apply no rating change.
-- **Inactivity:** `Glicko2.DecayForInactivity(idlePeriods)`, with periods counted by the server from `lastMatchUtc`.
-- **Replay storage:** one copy per match ID, not one per player. Both histories point at it. Keep the last N (default 20) per player. Choose between Cloud Save player files and game data in this stage, after checking size and quota limits.
-- **UI:**
-  - Rank page with the RR bar (reuse `TrophyBarLogic`).
-  - `MatchHistoryPage` lists the stored matches. Each opens the Stage 9 replay scene; until then, a "replay coming" state.
+Decided with the user on 2026-09-27:
+- **Private lobby matches are never rated.** Only a match the server created (through Matchmaker) is ranked.
+- **Matchmaker is the queue** (not a Lobby-based queue).
+- **Signatures come last** (7.6). Nothing ships between Stages 7 and 8, so until 7.6 a match settles only when **both** logs arrive and agree.
 
-### Stage 8: matchmaking
+**Why 7 and 8 are interleaved.** Once private lobbies are unrated, only Matchmaker can create a ranked match, so a lobby-based `BeginMatch` would be thrown away. The server-side **match record** is designed once, around Matchmaker, and settlement is built against it with fakes. It is verified live once Stage 8 creates real records. That costs a live end-to-end test until 8.2; it buys no throwaway endpoint and no development-only ranked path that could leak into production.
 
-- Enable Matchmaker. This may need a payment method: ask the user first.
-- **Tickets are created by Cloud Code**, which reads the real MMR, arena and version from Cloud Save. The client never supplies its own MMR.
-- Rules in §7. `MatchmakeSessionAsync` returns a Session with Relay allocated, which feeds the existing Relay path.
+| Step | What | Depends on |
+|---|---|---|
+| 7.1 | `MatchSettlement.Settle`: pure rules plus tests (`NodeWar.Progression`) | nothing |
+| R | Research: Matchmaker for P2P/Relay, Cloud Save and Cloud Code limits | nothing |
+| 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R |
+| 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) |
+| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record |
+| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 |
+| 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 |
+| 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 |
+| 7.6 | Session keys and per-command signatures; single-log settlement | all of the above |
+
+#### 7.1 Settlement rules (pure, `NodeWar.Progression`)
+
+`MatchSettlement.Settle(SettlementInput, SettlementConfig) → SettlementOutcome`. No I/O and no clock: `NowUnixSeconds` is an input.
+
+1. **Decay first.** For each player with `LastMatchUnixSeconds > 0`: `idle = max(0, (now − last) / InactivityPeriodSeconds)` (integer division; default one week), then `Glicko2.DecayForInactivity`. `last == 0` is a new player: no decay.
+2. **Simultaneous update.** Each player's `UpdateSingleMatch` uses the opponent's **decayed, pre-match** rating, never the opponent's updated one. Score 1 for the winner, 0 for the loser.
+3. **RR.** `RankPoints.RRDelta(currentRR, hiddenAfterMatch, won)`, then `Arenas.ApplyRRDelta` (floors at 0, tracks `HighestArena`).
+4. **Outcome per player:** new `Rating`, `LastMatchUnixSeconds = now`, the signed `RRDelta`, the new `RankState`, `Promoted` / `Demoted`.
+5. **A winner outside {0, 1} throws `ArgumentException`.** The caller decides what is rated; `Settle` never sees a void match.
+
+Era grants and the equipped clamp are **not** in 7.1: they need the catalog, and live in 7.2.
+
+#### 7.2 Match record and `ReportMatch` (Cloud Code)
+
+- **Match record**, server-owned, keyed by match ID (storage per R). Fields: `matchId`; both `playerIds`; `createdUnixSeconds` (server time); expected `protocol` / `sim` / `content`; a **pre-match snapshot** per player of rating, rank and equipped variants (never re-read at settlement); state `Open → Pending → Settled | Void | Disputed`; the reports received (uploader, verdict winner, `endTick`, `finalHash`).
+- **`ReportMatch(matchId, logBase64)`**:
+  1. The caller (`context.PlayerId`) must be one of the record's players. The log header's match ID and player IDs must equal the record's.
+  2. Run the existing `Referee`. Then check each player's logged eras against their snapshot: every era a player fielded must be one they had equipped. This closes Stage 6's deferred ownership check.
+  3. **Agreement means equal verdict `winner`, `endTick` and `finalHash`.** Not byte equality: `localPlayer` differs between the two logs by design.
+  4. First valid report → `Pending`. A second that agrees → settle. One that disagrees → `Disputed`: keep both, apply no rating. A refused report is recorded; before 7.6 the other log alone cannot settle.
+  5. **Settle:** `MatchSettlement.Settle` from the snapshots → era grants (`EraUnlocks.GrantsFor` on the new `HighestArena`) → **clamp equipped variants** above the new current arena down to the highest owned era at or below it (demotion) → prepend the match ID to both `history` records (keep 20) → `Settled`.
+- **Concurrency.** Two uploads can arrive together. Record state changes use Cloud Save write locks: on a conflict, re-read and re-decide. A settlement that dies halfway must be safely re-runnable, so each player's `history` is the guard: a player whose history already holds the match ID is not settled again.
+- **Timeout.** A match `Pending` longer than 10 minutes becomes `Void` lazily, when either player next calls `ReportMatch` or `GetPlayerState`. No scheduler.
+- **The equipped clamp goes in `Backend/Shared`**, called from both `InventoryRules` (server) and `LocalInventoryService` (fake). The two equip validators are already duplicated; do not add a third copy.
+
+#### 8.1 / 8.2 Matchmaking
+
+- Enable Matchmaker. **User action:** the dashboard (payment method if asked), and the Matchmaker role on service account `Account_1` so `ugs deploy` can publish the queue config.
+- **Tickets carry no client-supplied MMR or arena.** Either Cloud Code creates the ticket, or the queue rules read the rating from Cloud Save server-side; R finds which the service supports.
+- Rules as §7: same `ProtocolVersion` / `SimVersion` / `ContentHash`; arena difference ≤ 1; MMR window 100 / 250 / 500, unbounded from **120 s** (user decision) but still inside the arena cap; offer an unranked bot match at 90 s.
+- A found match creates the **match record** before either client starts the draft. The client puts its match ID, both Player IDs and server start time into the log header, replacing the placeholders in `GameManager.BeginRecording`.
+- R's biggest question: does Matchmaker hand back a Relay allocation directly (Multiplayer Services **Sessions**), or only an assignment that the existing Lobby/Relay path then joins? If it means moving `Network/` onto Sessions, 8.2 is plan mode and stays in the main session.
+
+#### 7.5 Replay storage
+
+Decided after R. Default: server-owned game data keyed by match ID, one copy per match, deleted once it has left **both** players' last 20. The history page lists stored matches, each "replay coming" until Stage 9. Measure compressed log size before choosing (most ticks are empty).
+
+#### 7.6 Signatures
+
+As §8: a server-issued session key per player in the match record; each player signs their own command batches; the peer's log keeps them (`SIGNATURES` chunk). A wire change: bump `ProtocolVersion`, and add a new `TICKS` tag if the command layout changes. After 7.6, one valid signed log may settle a `Pending` match on timeout.
+
+#### Objections weighed, and why the plan stands
+
+| Objection | Answer |
+|---|---|
+| `ReportMatch` is built before anything can create a ranked match, so it goes unverified live | Until 8.2. Fakes and `dotnet test` cover it meanwhile; the alternative, a development-only rated path, risks leaking into production for a tester's convenience. |
+| Waiting for both logs lets a loser block a loss by never uploading | Until 7.6. Accepted because nothing ships between 7 and 8. The lazy timeout voids the match rather than leaving it open. |
+| A snapshot at creation instead of a read at settlement looks redundant | Settlement changes rank, and the opponent's settlement can land first. Eligibility and rating must use the state the match was played at. |
+| Cross-player writes are not transactional in Cloud Save | Each player's history is the idempotency guard, so a partial settlement re-runs safely. |
+| Matchmaker may force a Sessions migration of the whole network layer | That is why R runs first, and 8.2 is not sized until it reports. |
+| Delegating Cloud Code work contradicts §12 | §12 predates §15. `ReportMatch` is now fully specified and testable with fakes. The network handoff (8.2) and signatures (7.6) stay in the main session. |
+| Doubles in settlement | `NodeWar.Progression` is server-only and never enters `Simulation/`; §6 already allows it. |
 
 ### Stage 9: replay viewer scene (plan mode: snapshots touch `Simulation/`)
 
@@ -375,11 +435,9 @@ The live wire only needs "same version or refuse". A log outlives builds: it mus
 
 ## 12. How to run the work
 
-**To be agreed with the user before any stage starts.** They want a deliberate
-split between the main session and subagents: avoid re-reading and re-planning
-costs, and avoid over-delegating (hallucination, context compaction). Until
-that is settled, `.claude/skills/delegation.md` governs: at most two agents in
-flight, in waves, with cost estimated first.
+Agreed 2026-09-27 for Stages 7-8: the waves and contract in §15.
+`.claude/skills/delegation.md` still governs: at most two agents in flight,
+in waves, with cost estimated first.
 
 Standing constraints:
 - **Plan mode first:** Stages 3, 4, 5, 6, 9 (network path, match log, `Simulation/` reads or changes).
@@ -427,3 +485,44 @@ Standing constraints:
 - Remote Config package: https://docs.unity3d.com/6000.4/Documentation/Manual/com.unity.remote-config.html
 - Unity Authentication (identity providers, Unity Player Accounts, Steam, linking): https://docs.unity.com/ugs/en-us/manual/authentication/manual/overview
 - Glicko-2 paper: https://glicko.net/glicko/glicko2.pdf
+
+---
+
+## 15. Delegated work, Stages 7-8: contract, waves, budget
+
+### Contract every delegated agent gets (paste it, do not paraphrase)
+
+1. **Worktree first.** `git worktree add .claude/worktrees/<pkg> -b stage7/<pkg> feat/stage7`, work only there, then from its root `cmd /c mklink /J Library C:\Dev\NodeGame\Library`. `dotnet` lives in `C:\Program Files\dotnet`: prepend it to PATH.
+2. **Read before writing:** this file's section for your package, `CLAUDE.md`, and only the files the prompt names. Ask nothing; if the spec is ambiguous, pick the reading closest to the spec, and list it under "Assumptions" in the final report.
+3. **Never:** touch `Assets/Scripts/Game/Simulation/`; hand-edit `.unity`, `.prefab` or `.meta`; prefix a commit with `done:`; stamp `verified:` / `verified_at_commit`; deploy (`ugs deploy`); push; put a secret anywhere; trust a client-supplied value (MMR, arena, result, time, loadout).
+4. **New `.cs` files under `Assets/`** have no `.meta`. Leave them missing and list them: the lead creates them through the Editor.
+5. **Code rules.** `Backend/Shared` and anything compiled into Cloud Code: C# 9, no UnityEngine. Stored record fields are never renamed (add a new one). Server time only. Doubles are fine in `NodeWar.Progression`, never in `Simulation/`. Match the surrounding code's comment density and naming.
+6. **Commit after every step that compiles**, message `feat|test|fix: <what>` plus the co-author line from the prompt. Work that is not committed is lost if the agent dies at a usage limit.
+7. **Checks, with receipts in the final report:** `dotnet test dotnet/NodeWar.sln` (paste the per-project pass counts), and `scripts/compile-check.ps1` for anything under `Assets/`. Red is reported as red, not worked around.
+8. **Final report:** commits (sha + subject); files touched; tests added; assumptions; anything left undone and why. Under 300 words.
+
+### Who does what
+
+| Role | Profile | Takes |
+|---|---|---|
+| Lead (Claude, this session) | Opus | Specs, R's decision, `.meta`s through the Editor, merges into `feat/stage7`, deploys, 8.2 (network handoff), 7.6, final read of each package |
+| Engineer | Codex astra, high | 7.1, 7.2, 7.3, 7.4, 7.5, 8.1 |
+| Reviewer | Codex Sol, high | **First-pass review of every package**, against its section here and the contract: correctness, concurrency, trust boundaries, tests that assert the spec rather than the implementation |
+| Utility | Codex luna, low | R (research), mechanical fixes from a review |
+
+**Why review goes to Sol first.** Reading diffs is where the lead's budget went unaccounted before (GPT ~70% vs Claude 100% at the end of past sessions). Sol reads the whole diff; the lead reads Sol's findings plus the hunks they cite, and reruns the test suite (cheap output) rather than rereading everything.
+
+### Waves and estimates (GPT window ≈ 6M tokens per rolling 5 h)
+
+| Wave | Agents | GPT est. | Lead (Claude) work |
+|---|---|---:|---|
+| 1 | 7.1 Engineer · R Utility (web, capped at ~15 fetches) | 0.8M + 2.5M | Read R's report; decide storage and matchmaking shape; update 7.2/8.x here |
+| 2 | 7.2 Engineer · 7.3 Engineer | 1.4M + 1.0M | `.meta`s; merge |
+| 2r | Sol reviews 7.1 + 7.2 | 1.2M | Read findings; fixes go back to the same Engineer (warm context) |
+| 3 | 8.1 Engineer · 7.5 Engineer | 1.2M + 1.2M | Matchmaker enablement with user; deploy to `development` |
+| 3r | Sol reviews 8.1 + 7.5 | 1.2M | as 2r |
+| 4 | 7.4 Engineer | 0.8M | **8.2 in the main session** (plan mode if Sessions) |
+| 5 | Sol reviews the whole of `feat/stage7` vs `feat/backend` | 1.9M | Live two-client ranked match on `development`; fixes |
+| — | 7.6 signatures | Sol review 0.8M | Main session (wire change) |
+
+GPT total ≈ **15M, about 2.5 windows**; waves 1-2r fit the first window (~6.9M, so 2r may slip past the reset). The lead's share is specs, the R decision, `.meta`s, merges, deploys, 8.2 and 7.6, plus reading findings rather than whole diffs. Measure after each wave with the command in `.claude/skills/delegation.md` and correct this table.
