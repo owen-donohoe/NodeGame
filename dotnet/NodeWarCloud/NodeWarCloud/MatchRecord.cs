@@ -18,6 +18,21 @@ namespace NodeWar.Cloud
         public List<MatchReport> reports = new List<MatchReport>();
         public long pendingUnixSeconds;
         public long settlementUnixSeconds;
+        // Indexed like players/playerIds. Set once, in the same write that moves
+        // the record to Settled. Null for Open/Pending/Void/Disputed records.
+        public MatchOutcome[] outcomes;
+    }
+
+    // A settled player's result on this match. Never re-derived from current
+    // state: it is the outcome this match itself produced.
+    public sealed class MatchOutcome
+    {
+        public bool won;
+        public int rrDelta;
+        public int rrAfter;
+        public int arenaAfter;
+        public bool promoted;
+        public bool demoted;
     }
 
     public sealed class MatchPlayerSnapshot
