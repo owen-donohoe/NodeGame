@@ -48,8 +48,8 @@
 
         <engine:VisualElement class="lb-workshop-details" picking-mode="Ignore">
             <engine:Label name="workshop-details" class="lb-workshop-details__text" picking-mode="Ignore" />
-            <engine:VisualElement name="workshop-era-row" class="lb-era-row" picking-mode="Ignore" />
-            <engine:VisualElement name="workshop-skin-row" class="lb-era-row" picking-mode="Ignore" />
+            <engine:ScrollView name="workshop-era-row" class="lb-era-row" mode="Horizontal" horizontal-scroller-visibility="Auto" vertical-scroller-visibility="Hidden" />
+            <engine:ScrollView name="workshop-skin-row" class="lb-era-row" mode="Horizontal" horizontal-scroller-visibility="Auto" vertical-scroller-visibility="Hidden" />
             <engine:Label name="workshop-era-message" class="lb-era-message" picking-mode="Ignore" />
         </engine:VisualElement>
 
