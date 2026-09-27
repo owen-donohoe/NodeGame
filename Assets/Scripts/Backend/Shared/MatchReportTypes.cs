@@ -17,4 +17,20 @@ namespace NodeWar.Backend
         public string message;
         public PlayerState playerState;
     }
+
+    /// <summary>
+    /// One match in the caller's own history, newest first. `won`, `rrDelta`
+    /// and `arenaAfter` are only meaningful when `state` is `Settled`; they are
+    /// null otherwise (Open, Pending, Void or Disputed carry no outcome).
+    /// </summary>
+    public sealed class MatchHistoryEntry
+    {
+        public string matchId;
+        public string opponentPlayerId;
+        public MatchRecordState state;
+        public long createdUnixSeconds;
+        public bool? won;
+        public int? rrDelta;
+        public int? arenaAfter;
+    }
 }
