@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,18 +11,52 @@ namespace NodeWar.Cloud.Tests
 {
     public class InventoryTests
     {
-        private sealed class RecordingStore : IPlayerRecordStore
+        private sealed class RecordingStore : ILockedPlayerRecordStore
         {
             private readonly InMemoryPlayerRecordStore inner = new InMemoryPlayerRecordStore();
+            // Cloud Save bumps a key's write lock on every set, locked or not, so
+            // an unlocked GrantDefaults write must invalidate a concurrently held
+            // inventory lock the same way a locked write would.
+            private int inventoryVersion = 1;
             public readonly List<PlayerState> Writes = new List<PlayerState>();
+            // Fires once, right before the version check in a locked inventory
+            // write, to model another write (e.g. a settlement clamp) landing
+            // between this call's read and its write.
+            public Action BeforeInventoryWriteLocked;
+
             public Task<PlayerState> ReadAsync() => inner.ReadAsync();
-            public Task WriteAsync(PlayerState records) { Writes.Add(records); return inner.WriteAsync(records); }
+
+            public Task WriteAsync(PlayerState records)
+            {
+                Writes.Add(records);
+                if (records.Inventory != null) inventoryVersion++;
+                return inner.WriteAsync(records);
+            }
+
+            public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
+            {
+                var state = await inner.ReadAsync();
+                return (state, inventoryVersion.ToString());
+            }
+
+            public Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock)
+            {
+                var hook = BeforeInventoryWriteLocked;
+                BeforeInventoryWriteLocked = null;
+                hook?.Invoke();
+                if (expectedWriteLock != inventoryVersion.ToString())
+                    throw new RecordConflictException("Inventory changed.");
+                var written = new PlayerState { Inventory = inventory };
+                Writes.Add(written);
+                inventoryVersion++;
+                return inner.WriteAsync(written);
+            }
         }
 
         private static EquippedRecord Variant(string baseId, string id) => new EquippedRecord
         { Variants = new Dictionary<string, string> { { baseId, id } } };
 
-        private static InventoryPlayerStateService Server(IPlayerRecordStore store, IReadOnlyList<CatalogItem> catalog = null) =>
+        private static InventoryPlayerStateService Server(ILockedPlayerRecordStore store, IReadOnlyList<CatalogItem> catalog = null) =>
             new InventoryPlayerStateService(store, new InventoryRules(catalog ?? ServerCatalog.Items));
 
         [TestCase(false)]
@@ -93,6 +128,37 @@ namespace NodeWar.Cloud.Tests
             var reloaded = await states.GetAsync();
             Assert.That(reloaded.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e2"));
             Assert.That(store.Writes, Has.Count.EqualTo(writes));
+        }
+
+        [Test]
+        public async Task Equip_ConflictFromConcurrentSettlementDemotion_RevalidatesAndRefusesStaleEraVariant()
+        {
+            // Cloud-only path: EquipAsync is InventoryPlayerStateService, whose
+            // locked inventory write must conflict against a concurrent
+            // settlement clamp rather than silently overwrite it.
+            var store = new RecordingStore();
+            var service = Server(store);
+            var state = await service.GetAsync();
+            state.Rank.HighestArena = 1;
+            state.Rank.Arena = 1;
+            await service.GetAsync(); // grants era-1 variants at the current arena
+
+            // Simulate a settlement landing between this Equip's read and its
+            // write: it demotes the arena and clamps the equipped suit back to
+            // era 0, writing Inventory unlocked (as SettlePlayers does).
+            store.BeforeInventoryWriteLocked = () =>
+            {
+                state.Rank.Arena = 0;
+                state.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e0";
+                store.WriteAsync(new PlayerState { Rank = state.Rank, Inventory = state.Inventory }).GetAwaiter().GetResult();
+            };
+
+            var ex = Assert.ThrowsAsync<InventoryValidationException>(
+                () => service.EquipAsync(Variant("suit.warrior", "suit.warrior.e1")));
+            Assert.That(ex.Message, Does.Contain("locked"));
+
+            var reloaded = await service.GetAsync();
+            Assert.That(reloaded.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e0"));
         }
 
         [Test]

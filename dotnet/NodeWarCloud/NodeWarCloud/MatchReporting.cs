@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NodeWar.Backend;
@@ -32,11 +33,20 @@ namespace NodeWar.Cloud
             this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         }
 
+        // Caps how many refused attempts we keep per player once they have an
+        // accepted report or keep retrying: audit trail only, not decision state.
+        private const int MaxRefusalsPerPlayer = 3;
+
         public async Task<MatchReportingResult> Report(string matchId, string callerId, byte[] logBytes, long now)
         {
             if (string.IsNullOrWhiteSpace(matchId) || string.IsNullOrWhiteSpace(callerId))
                 return new MatchReportingResult { message = "Match and authenticated caller are required." };
             int conflicts = 0;
+            // Set once this call has added its own report to the in-flight record.
+            // A write conflict discards the record and this flag together, so the
+            // retry re-verifies against fresh state rather than re-reading a report
+            // object that no longer exists in the freshly read record.
+            bool haveOwnReport = false;
             while (true)
             {
                 var read = await matches.ReadAsync(matchId);
@@ -80,22 +90,44 @@ namespace NodeWar.Cloud
                 }
                 else
                 {
-                    var previous = record.reports.SingleOrDefault(r => r.playerIndex == caller);
-                    if (previous != null)
+                    if (haveOwnReport)
+                    {
+                        // This call already added its report on an earlier pass
+                        // through the loop (log copy, agreement or timeout took
+                        // priority first). Report the outcome of that report
+                        // rather than verifying the same bytes again.
+                        var mine = record.reports.LastOrDefault(r => r.playerIndex == caller);
                         return new MatchReportingResult { state = record.state,
-                            message = previous.accepted ? "Awaiting opponent report." : previous.error };
+                            message = mine != null && mine.accepted ? "Awaiting opponent report." : mine?.error };
+                    }
+
+                    // Only an ACCEPTED report is authoritative and blocks a retry.
+                    // A refused report never consumes the player's slot: keep it for
+                    // audit (capped) and let a later valid upload from the same
+                    // player still settle the match.
+                    var acceptedPrevious = record.reports.FirstOrDefault(r => r.playerIndex == caller && r.accepted);
+                    if (acceptedPrevious != null)
+                        return new MatchReportingResult { state = record.state, message = "Awaiting opponent report." };
 
                     var report = Verify(record, caller, logBytes);
                     record.reports.Add(report);
-                    if (report.accepted && record.state == MatchRecordState.Open)
+                    haveOwnReport = true;
+                    if (!report.accepted)
                     {
-                        record.state = MatchRecordState.Pending;
-                        record.pendingUnixSeconds = now;
+                        TrimRefusals(record, caller);
                     }
-                    if (record.reports.Count == 2 && record.reports.All(r => r.accepted))
+                    else
                     {
-                        if (Agreed(record)) record.settlementUnixSeconds = now;
-                        else record.state = MatchRecordState.Disputed;
+                        if (record.state == MatchRecordState.Open)
+                        {
+                            record.state = MatchRecordState.Pending;
+                            record.pendingUnixSeconds = now;
+                        }
+                        if (record.reports.Count(r => r.accepted) == 2)
+                        {
+                            if (Agreed(record)) record.settlementUnixSeconds = now;
+                            else record.state = MatchRecordState.Disputed;
+                        }
                     }
                 }
 
@@ -105,6 +137,7 @@ namespace NodeWar.Cloud
                     if (++conflicts >= RetryLimit) throw;
                     // Discard this decision and all its mutable objects. Re-read
                     // membership, reports, timeout and terminal state on every retry.
+                    haveOwnReport = false;
                 }
             }
         }
@@ -131,11 +164,26 @@ namespace NodeWar.Cloud
 
         private static bool Agreed(MatchRecord record)
         {
-            if (record.reports.Count != 2 || !record.reports.All(r => r.accepted)) return false;
-            var first = record.reports[0];
-            var second = record.reports[1];
+            // Refusals may sit alongside accepted reports for audit; only the
+            // accepted ones are ever compared for agreement or settlement.
+            var accepted = record.reports.Where(r => r.accepted).ToList();
+            if (accepted.Count != 2) return false;
+            var first = accepted[0];
+            var second = accepted[1];
             return first.playerIndex != second.playerIndex && first.winner == second.winner &&
                 first.endTick == second.endTick && first.finalHash == second.finalHash;
+        }
+
+        // Keeps only the last MaxRefusalsPerPlayer refused reports for the given
+        // player. Accepted reports are never trimmed by this.
+        private static void TrimRefusals(MatchRecord record, int caller)
+        {
+            var refusals = record.reports.Where(r => r.playerIndex == caller && !r.accepted).ToList();
+            while (refusals.Count > MaxRefusalsPerPlayer)
+            {
+                record.reports.Remove(refusals[0]);
+                refusals.RemoveAt(0);
+            }
         }
 
         // Arena thresholds come from the one table the client also displays.
@@ -154,7 +202,8 @@ namespace NodeWar.Cloud
             }).ToArray();
             var outcome = MatchSettlement.Settle(new SettlementInput
             {
-                Players = inputs, Winner = record.reports[0].winner, NowUnixSeconds = record.settlementUnixSeconds
+                Players = inputs, Winner = record.reports.First(r => r.accepted).winner,
+                NowUnixSeconds = record.settlementUnixSeconds
             }, Config);
 
             for (int p = 0; p < 2; p++)
@@ -164,12 +213,20 @@ namespace NodeWar.Cloud
                 {
                     var read = await store.ReadForSettlementAsync();
                     var state = read.State;
-                    if (state?.History?.MatchIds == null || state.Inventory == null)
+                    if (state?.History?.MatchIds == null || state.Inventory == null || state.Rating == null)
                         throw new InvalidOperationException("Match players must have initialized server records.");
-                    if (state.History.MatchIds.Contains(record.matchId)) break;
+                    // The idempotency guard is this bounded, 200-entry list on the
+                    // rating record, not the 20-entry history: a player who plays
+                    // enough matches to evict this one from history must still not
+                    // be settled twice for it.
+                    var settledIds = state.Rating.SettledMatchIds ?? new List<string>();
+                    if (settledIds.Contains(record.matchId)) break;
                     var settled = outcome.Players[p];
+                    settledIds.Insert(0, record.matchId);
+                    if (settledIds.Count > 200) settledIds.RemoveRange(200, settledIds.Count - 200);
                     state.Rating = new RatingRecord { R = settled.Rating.R, Rd = settled.Rating.RD,
-                        Sigma = settled.Rating.Sigma, LastMatchUnixSeconds = settled.LastMatchUnixSeconds };
+                        Sigma = settled.Rating.Sigma, LastMatchUnixSeconds = settled.LastMatchUnixSeconds,
+                        SettledMatchIds = settledIds };
                     state.Rank = new RankRecord { RR = settled.Rank.RR, Arena = settled.Rank.Arena,
                         HighestArena = settled.Rank.HighestArena };
                     inventory.GrantDefaults(state);

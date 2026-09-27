@@ -156,16 +156,23 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task RefereeRefusalThenValidOpponentStaysPendingAndRefusalCannotBeReplaced()
+        public async Task RefusedReportDoesNotConsumeTheSlotAndCanRecoverToSettle()
         {
             var bad = ReadLog(winningBytes);
             bad.result.finalHash ^= 1;
             await Report(0, MatchLogFormat.Write(bad));
             Assert.That((await Record()).reports.Single().accepted, Is.False);
-            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Pending));
+            AssertNoPlayerWrites();
+
+            // The same player retries with a valid log: the earlier refusal must
+            // not have consumed player 0's slot.
             Assert.That((await Report(0)).state, Is.EqualTo(MatchRecordState.Pending));
             Assert.That((await Record()).reports.Count(r => r.accepted), Is.EqualTo(1));
+            Assert.That((await Record()).reports.Count(r => r.playerIndex == 0), Is.EqualTo(2));
             AssertNoPlayerWrites();
+
+            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
         }
 
         [Test]
@@ -252,6 +259,38 @@ namespace NodeWar.Cloud.Tests
             Assert.That(JsonConvert.SerializeObject(await State(0)), Is.EqualTo(first));
             Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
             Assert.That((await State(1)).Rating.LastMatchUnixSeconds, Is.EqualTo(110));
+        }
+
+        [Test]
+        public async Task IdempotencyGuardSurvivesHistoryEvictionUsingSettledMatchIds()
+        {
+            await Report(0);
+            players[1].BeforeWrite = () => throw new IOException("simulated crash");
+            Assert.ThrowsAsync<IOException>(() => Report(1, now: 110));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 0 }));
+            players[1].BeforeWrite = null;
+
+            // Player 0 plays and settles 20 more matches elsewhere: enough to
+            // evict MatchId from the 20-entry display history, but not from the
+            // 200-entry SettledMatchIds guard.
+            players[0].Mutate(s =>
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    s.History.MatchIds.Insert(0, "other-" + i);
+                    s.Rating.SettledMatchIds.Insert(0, "other-" + i);
+                }
+                if (s.History.MatchIds.Count > 20)
+                    s.History.MatchIds.RemoveRange(20, s.History.MatchIds.Count - 20);
+            });
+            Assert.That((await State(0)).History.MatchIds, Does.Not.Contain(MatchId));
+            Assert.That((await State(0)).Rating.SettledMatchIds, Does.Contain(MatchId));
+
+            string before = JsonConvert.SerializeObject(await State(0));
+            Assert.That((await Report(1, now: 5000)).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(JsonConvert.SerializeObject(await State(0)), Is.EqualTo(before));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
+            Assert.That((await State(1)).Rating.SettledMatchIds, Is.EqualTo(new[] { MatchId }));
         }
 
         [Test]

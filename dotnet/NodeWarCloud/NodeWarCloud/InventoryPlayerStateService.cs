@@ -6,10 +6,14 @@ namespace NodeWar.Cloud
     /// <summary>One write for creation/grants, inventory-only writes for equip, no writes on refusal.</summary>
     public sealed class InventoryPlayerStateService : IPlayerStateService, IInventoryService
     {
-        private readonly IPlayerRecordStore store;
+        // Bounded so a live conflict storm cannot loop forever; matches
+        // MatchReporting's retry bound for the same class of Cloud Save conflict.
+        private const int RetryLimit = 3;
+
+        private readonly ILockedPlayerRecordStore store;
         private readonly InventoryRules rules;
 
-        public InventoryPlayerStateService(IPlayerRecordStore store, InventoryRules rules)
+        public InventoryPlayerStateService(ILockedPlayerRecordStore store, InventoryRules rules)
         {
             this.store = store;
             this.rules = rules;
@@ -20,10 +24,23 @@ namespace NodeWar.Cloud
         public async Task<PlayerState> EquipAsync(EquippedRecord changes)
         {
             // Do not get-or-create here: an invalid request must not cause even a defaults write.
-            PlayerState state = await store.ReadAsync();
-            if (rules.Equip(state, changes))
-                await store.WriteAsync(new PlayerState { Inventory = state.Inventory });
-            return state;
+            // Read and write Inventory with the same write lock, so a settlement
+            // that clamps Inventory concurrently (e.g. a demotion) makes this
+            // write conflict instead of silently overwriting the clamp. On
+            // conflict, re-read fresh state and revalidate the same requested
+            // change against it -- a change valid a moment ago (era now above the
+            // new arena) must be refused, not blindly retried.
+            for (int attempt = 0; ; attempt++)
+            {
+                var (state, inventoryLock) = await store.ReadInventoryLockedAsync();
+                if (!rules.Equip(state, changes)) return state;
+                try
+                {
+                    await store.WriteInventoryLockedAsync(state.Inventory, inventoryLock);
+                    return state;
+                }
+                catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
+            }
         }
     }
 }

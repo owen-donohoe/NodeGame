@@ -13,10 +13,24 @@ using Unity.Services.CloudSave.Model;
 namespace NodeWar.Cloud
 {
     /// <summary>
+    /// A single-record locked read/write for Inventory. Equip only ever
+    /// touches Inventory, never all four records, so it does not need (and must
+    /// not take) ISettlementPlayerStore's four-record lock set. Reading the
+    /// Inventory write lock with the read, and writing with it, means a
+    /// concurrent settlement's clamp (which writes Inventory in its own batch)
+    /// conflicts with a stale Equip instead of being silently overwritten by it.
+    /// </summary>
+    public interface ILockedPlayerRecordStore : IPlayerRecordStore
+    {
+        Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync();
+        Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock);
+    }
+
+    /// <summary>
     /// Player records in Cloud Save's protected access class: the player can
     /// read them, and only a service token (this module) can write them.
     /// </summary>
-    public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore
+    public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore, ILockedPlayerRecordStore
     {
         private readonly IGameApiClient api;
         private readonly IExecutionContext context;
@@ -57,6 +71,34 @@ namespace NodeWar.Cloud
         }
 
         public Task WriteAsync(PlayerState records) => WriteAsync(records, null);
+
+        public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
+        {
+            var response = await api.CloudSaveData.GetProtectedItemsAsync(
+                context, context.ServiceToken, context.ProjectId, playerId,
+                new List<string> { PlayerStateKeys.Inventory, PlayerStateKeys.Rank });
+
+            var state = new PlayerState();
+            string inventoryLock = null;
+            foreach (Item item in response.Data.Results)
+            {
+                switch (item.Key)
+                {
+                    case PlayerStateKeys.Inventory:
+                        state.Inventory = Convert<InventoryRecord>(item.Value);
+                        inventoryLock = item.WriteLock;
+                        break;
+                    case PlayerStateKeys.Rank: state.Rank = Convert<RankRecord>(item.Value); break;
+                }
+            }
+            return (state, inventoryLock);
+        }
+
+        // Writes Inventory alone, using only the Inventory write lock: a stale
+        // lock (a settlement clamped the same key meanwhile) conflicts here.
+        public Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock) =>
+            WriteAsync(new PlayerState { Inventory = inventory },
+                new Dictionary<string, string> { [PlayerStateKeys.Inventory] = expectedWriteLock });
 
         public Task WriteForSettlementAsync(PlayerState state, IReadOnlyDictionary<string, string> expectedWriteLocks)
         {
