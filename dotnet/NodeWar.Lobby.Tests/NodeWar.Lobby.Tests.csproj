@@ -49,6 +49,7 @@
     <Compile Include="GameSettingsTests.cs" />
     <Compile Include="EmotePacketTests.cs" />
     <Compile Include="HandshakePacketTests.cs" />
+    <Compile Include="MatchHistoryRowTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 
@@ -88,8 +89,12 @@
              Link="Lobby/EraChips.cs" />
     <Compile Include="../../Assets/UI/Scripts/RankDisplay.cs"
              Link="Lobby/RankDisplay.cs" />
+    <Compile Include="../../Assets/UI/Scripts/MatchHistoryRow.cs"
+             Link="Lobby/MatchHistoryRow.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankTable.cs"
              Link="Backend/RankTable.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/MatchReportTypes.cs"
+             Link="Backend/MatchReportTypes.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/CatalogIds.cs"
              Link="Backend/CatalogIds.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerState.cs"
