@@ -516,7 +516,7 @@ Standing constraints:
 4. **New `.cs` files under `Assets/`** have no `.meta`. Leave them missing and list them: the lead creates them through the Editor.
 5. **Code rules.** `Backend/Shared` and anything compiled into Cloud Code: C# 9, no UnityEngine. Stored record fields are never renamed (add a new one). Server time only. Doubles are fine in `NodeWar.Progression`, never in `Simulation/`. Match the surrounding code's comment density and naming.
 6. **Commit after every step that compiles**, message `feat|test|fix: <what>` plus the co-author line from the prompt. Work that is not committed is lost if the agent dies at a usage limit.
-7. **Checks, with receipts in the final report:** `dotnet test dotnet/NodeWar.sln` (paste the per-project pass counts), and `scripts/compile-check.ps1` for anything under `Assets/`. Red is reported as red, not worked around.
+7. **Checks, with receipts in the final report:** `dotnet test dotnet/NodeWar.sln` (paste the per-project pass counts **before and after**; the difference must equal the tests added, because the projects under `dotnet/` list sources explicitly with `<Compile Include>` and an unlisted file is silently not built), and `scripts/compile-check.ps1` for anything under `Assets/`. Red is reported as red, not worked around.
 8. **Final report:** commits (sha + subject); files touched; tests added; assumptions; anything left undone and why. Under 300 words.
 
 ### Who does what
