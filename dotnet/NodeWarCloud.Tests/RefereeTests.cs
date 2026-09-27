@@ -243,14 +243,14 @@ namespace NodeWar.Cloud.Tests
             Assert.That(verdict.firstMismatchTick, Is.EqualTo(-1));
         }
 
-        private static BalanceCatalog Catalog(params GameBalanceData[] balances) =>
+        internal static BalanceCatalog Catalog(params GameBalanceData[] balances) =>
             new BalanceCatalog(balances.Select(BalanceFile), message => Assert.Fail(message));
 
         private static KeyValuePair<string, string> BalanceFile(GameBalanceData balance) =>
             new KeyValuePair<string, string>(BalanceHasher.Hash(balance).ToString(CultureInfo.InvariantCulture) + ".json",
                 JsonConvert.SerializeObject(balance, Formatting.Indented));
 
-        private static Log Record(GameBalanceData balance, int maxTicks, Func<SimulationState, GameCommand[]> script,
+        internal static Log Record(GameBalanceData balance, int maxTicks, Func<SimulationState, GameCommand[]> script,
             BoardConfigData? boardOverride = null)
         {
             BoardConfigData board = boardOverride ?? BoardConfigData.Default();
@@ -322,7 +322,7 @@ namespace NodeWar.Cloud.Tests
             return commands.ToArray();
         }
 
-        private static GameCommand[] Rush(SimulationState state)
+        internal static GameCommand[] Rush(SimulationState state)
         {
             if (state.tickCount == 0) return new[] { Move(3, 1, 3), Move(4, 1, 3), Move(5, 1, 3) };
             if (state.tickCount % 20 != 0) return null;

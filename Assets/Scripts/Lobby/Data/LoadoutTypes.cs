@@ -59,14 +59,20 @@ namespace NodeWar.Lobby
         public static string CatalogBaseForLobbyId(string lobbyID)
         {
             SuitType suit = SuitForLobbyId(lobbyID);
-            if (suit != SuitType.None) return CatalogIds.SuitBase(suit.ToString());
+            if (suit != SuitType.None) return CatalogBaseForSuit((int)suit);
             DistrictType district = DistrictForLobbyId(lobbyID);
-            if (district != DistrictType.None) return CatalogIds.DistrictBase(district.ToString());
+            if (district != DistrictType.None) return CatalogBaseForDistrict((int)district);
             return null;
         }
 
         public const int SuitTypeCount = (int)SuitType.Watcher + 1;
         public const int DistrictTypeCount = (int)DistrictType.Market + 1;
+
+        public static string CatalogBaseForSuit(int type) => type > 0 && Enum.IsDefined(typeof(SuitType), type)
+            ? CatalogIds.SuitBase(((SuitType)type).ToString()) : null;
+
+        public static string CatalogBaseForDistrict(int type) => type > 0 && Enum.IsDefined(typeof(DistrictType), type)
+            ? CatalogIds.DistrictBase(((DistrictType)type).ToString()) : null;
 
         /// <summary>
         /// The era of every suit and district a player has equipped, as the
@@ -80,9 +86,9 @@ namespace NodeWar.Lobby
             if (equipped?.Variants == null) return;
 
             for (int s = 1; s < SuitTypeCount; s++)
-                suitEras[s] = EraOf(equipped.Variants, CatalogIds.SuitBase(((SuitType)s).ToString()));
+                suitEras[s] = EraOf(equipped.Variants, CatalogBaseForSuit(s));
             for (int d = 1; d < DistrictTypeCount; d++)
-                districtEras[d] = EraOf(equipped.Variants, CatalogIds.DistrictBase(((DistrictType)d).ToString()));
+                districtEras[d] = EraOf(equipped.Variants, CatalogBaseForDistrict(d));
         }
 
         /// <summary>
