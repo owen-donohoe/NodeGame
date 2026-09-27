@@ -1,3 +1,4 @@
+using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -8,51 +9,19 @@ namespace NodeWar.Lobby
     /// strip when the player name is pressed. Not a tab page - it covers the
     /// whole lobby, chrome included, and closes back into the strip.
     ///
-    /// Real: the username, the trophy count, and Rename, which validates with
+    /// Real: the username, server rank, and Rename, which validates with
     /// PlayerProfile.ValidateUsername and saves through SetUsername.
     ///
-    /// Layout only, pending systems (layout, then system, then layout revised):
-    ///   - the record is em-dashes; no match result is written anywhere;
-    ///   - the arena road is the prototype's four placeholder eras, all in
-    ///     <see cref="Eras"/>, so the arena system replaces one table.
+    /// The stats record remains em-dashes pending its backend integration.
     /// Match history lives on its own page, from the TV button.
     /// </summary>
     public class ProfilePage
     {
         private const string Dash = "—";
 
-        private struct Era
-        {
-            public string Name;
-            public string StyleClass;
-            public int Min;
-            public int Max;
-            public int Chips;
-            public int ChipsGot;
-            public string Foot;
-
-            public Era(string name, string styleClass, int min, int max, int chips, int chipsGot, string foot)
-            {
-                Name = name;
-                StyleClass = styleClass;
-                Min = min;
-                Max = max;
-                Chips = chips;
-                ChipsGot = chipsGot;
-                Foot = foot;
-            }
-        }
-
-        // TODO(arenas): placeholder tiers from lobby-prototype.html, top of the
-        // road first. No arena system exists and the tier scheme is undecided
-        // (docs/ui-migration-inventory.md); this table is what it replaces.
-        private static readonly Era[] Eras =
-        {
-            new Era("Sorcery", "lb-era--sorcery", 2400, 3200, 4, 0, "Ritual circles, leyline nodes, breach effects"),
-            new Era("Steam Era", "lb-era--steam", 1600, 2400, 4, 0, "Chain production, mechanised troops"),
-            new Era("Bronze Age", "lb-era--bronze", 800, 1600, 4, 0, "Conditional production, first buff districts"),
-            new Era("Ancient", "lb-era--ancient", 0, 800, 6, 4, "Base districts. Learn the core loop."),
-        };
+        private readonly Label[] arenaRanges = new Label[RankTable.Thresholds.Count];
+        private readonly Label[] arenaProgress = new Label[RankTable.Thresholds.Count];
+        private readonly VisualElement[] waypoints = new VisualElement[RankTable.Thresholds.Count - 1];
 
         // TODO(stats): no match result is recorded, so every value is a dash.
         private static readonly string[] StatNames = { "MATCHES", "WINS", "LOSSES", "WIN RATE", "STREAK", "BEST" };
@@ -139,6 +108,16 @@ namespace NodeWar.Lobby
 
             BuildRecord(Root.Q<ScrollView>("profile-record"));
             BuildRoad();
+            Root.RegisterCallback<DetachFromPanelEvent>(evt =>
+            {
+                if (evt.target == Root) BackendServices.StateChanged -= Refresh;
+            });
+            Root.RegisterCallback<AttachToPanelEvent>(evt =>
+            {
+                if (evt.target == Root && IsOpen) ObserveState();
+            });
+            if (roadInner != null)
+                roadInner.RegisterCallback<GeometryChangedEvent>(evt => PlaceMarkers());
         }
 
         private static void Bind(VisualElement scope, string name, System.Action action)
@@ -168,7 +147,7 @@ namespace NodeWar.Lobby
             sourceRect = source;
             if (hideLater != null) hideLater.Pause();
 
-            Refresh();
+            ObserveState();
 
             Root.style.display = DisplayStyle.Flex;
             Root.AddToClassList("lb-arena--instant");
@@ -196,6 +175,7 @@ namespace NodeWar.Lobby
             if (!IsOpen) return;
 
             IsOpen = false;
+            BackendServices.StateChanged -= Refresh;
             if (sheet != null && sheet.IsShowing(renameContent)) sheet.Close();
 
             if (railFill != null) railFill.style.height = Length.Percent(0);
@@ -221,17 +201,39 @@ namespace NodeWar.Lobby
 
         // ===== CONTENT =====
 
+        private void ObserveState()
+        {
+            BackendServices.StateChanged -= Refresh;
+            BackendServices.StateChanged += Refresh;
+            Refresh();
+        }
+
         private void Refresh()
         {
             PlayerProfile profile = PlayerProfile.Instance;
-            int trophies = profile != null ? profile.Trophies : 0;
+            RankRecord rank = BackendServices.LastKnownState?.Rank;
+            RankDisplay display = new RankDisplay(rank?.RR ?? 0);
 
             if (usernameLabel != null)
                 usernameLabel.text = profile != null ? profile.Username : "player";
 
-            // TODO(arenas): "Ancient · 450 trophies" in the prototype.
             if (subtitleLabel != null)
-                subtitleLabel.text = "Arena " + Dash + " · " + trophies + " trophies";
+                subtitleLabel.text = rank != null ? display.Name + " · " + display.RR + " RR" : "Arena " + Dash;
+
+            for (int i = 0; i < arenaRanges.Length; i++)
+            {
+                bool here = rank != null && display.Arena == i;
+                string range = i + 1 < arenaRanges.Length
+                    ? RankTable.Thresholds[i] + " – " + (RankTable.Thresholds[i + 1] - 1)
+                    : RankTable.Thresholds[i] + "+";
+                if (arenaRanges[i] != null)
+                    arenaRanges[i].text = range + " RR" + (here ? " · you are here" : "");
+                if (arenaProgress[i] != null)
+                    arenaProgress[i].text = !here ? "" : display.Span.HasValue
+                        ? display.RRIntoArena + " / " + display.Span.Value + " RR to " + RankTable.Names[i + 1]
+                        : "Top arena";
+            }
+            PlaceMarkers();
         }
 
         /// <summary>The record, one stat per row: label above, the value alone in its panel.</summary>
@@ -269,43 +271,22 @@ namespace NodeWar.Lobby
         {
             if (roadInner == null) return;
 
-            int trophies = PlayerProfile.Instance != null ? PlayerProfile.Instance.Trophies : 0;
-
-            for (int i = 0; i < Eras.Length; i++)
+            for (int i = RankTable.Thresholds.Count - 1; i >= 0; i--)
             {
-                Era era = Eras[i];
-
                 VisualElement box = new VisualElement();
                 box.AddToClassList("lb-era");
-                box.AddToClassList(era.StyleClass);
-                if (i == Eras.Length - 1) box.AddToClassList("lb-era--last");
+                box.AddToClassList("lb-era--ancient");
+                if (i == 0) box.AddToClassList("lb-era--last");
                 box.pickingMode = PickingMode.Ignore;
 
-                box.Add(MakeLabel(era.Name, "lb-era__name", "ui-w600"));
-
-                bool here = trophies >= era.Min && (trophies < era.Max || i == 0);
-                box.Add(MakeLabel(era.Min + " – " + era.Max + (here ? " · you are here" : ""),
-                                  "lb-era__range", "ui-w500"));
-
-                VisualElement items = new VisualElement();
-                items.AddToClassList("lb-era__items");
-                items.pickingMode = PickingMode.Ignore;
-
-                // TODO(art): the prototype's chips carry unlock icons.
-                for (int c = 0; c < era.Chips; c++)
-                {
-                    VisualElement chip = new VisualElement();
-                    chip.AddToClassList("lb-chip");
-                    if (c < era.ChipsGot) chip.AddToClassList("lb-chip--got");
-                    chip.pickingMode = PickingMode.Ignore;
-                    items.Add(chip);
-                }
-
-                box.Add(items);
-                box.Add(MakeLabel(era.Foot, "lb-era__foot", "ui-w500"));
-
+                box.Add(MakeLabel(RankTable.Names[i], "lb-era__name", "ui-w600"));
+                arenaRanges[i] = MakeLabel("", "lb-era__range", "ui-w500");
+                arenaProgress[i] = MakeLabel("", "lb-era__foot", "ui-w500");
+                box.Add(arenaRanges[i]);
+                box.Add(arenaProgress[i]);
                 roadInner.Add(box);
             }
+            Refresh();
         }
 
         private static Label MakeLabel(string text, string styleClass, string weightClass)
@@ -318,8 +299,8 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>
-        /// The "you" marker and three waypoint nodes, placed along the rail by
-        /// fraction of its height from the bottom, and the rail filled to you.
+        /// The "you" marker and arena boundaries, placed along the rail by
+        /// arena progress from the bottom, and the rail filled to you.
         /// Done after layout, because the rail's height is the road's.
         /// </summary>
         private void PlaceMarkers()
@@ -330,19 +311,18 @@ namespace NodeWar.Lobby
             if (float.IsNaN(railHeight) || railHeight <= 0f) return;
 
             float railBottom = rail.layout.yMax;
-            int trophies = PlayerProfile.Instance != null ? PlayerProfile.Instance.Trophies : 0;
-            int top = Eras[0].Max;
-            float progress = top > 0 ? Mathf.Clamp01((float)trophies / top) : 0f;
+            RankRecord rank = BackendServices.LastKnownState?.Rank;
+            RankDisplay display = new RankDisplay(rank?.RR ?? 0);
+            float progress = rank != null ? (display.Arena + display.Fill) / RankTable.Thresholds.Count : 0f;
 
             if (youMarker == null)
             {
-                float[] waypoints = { 0.25f, 0.5f, 0.75f };
                 for (int i = 0; i < waypoints.Length; i++)
                 {
                     VisualElement node = new VisualElement();
                     node.AddToClassList("lb-road__node");
                     node.pickingMode = PickingMode.Ignore;
-                    node.style.top = railBottom - railHeight * waypoints[i] - 11f;
+                    waypoints[i] = node;
                     roadInner.Add(node);
                 }
 
@@ -353,6 +333,9 @@ namespace NodeWar.Lobby
                 roadInner.Add(youMarker);
             }
 
+            for (int i = 0; i < waypoints.Length; i++)
+                waypoints[i].style.top = railBottom - railHeight * (i + 1f) / RankTable.Thresholds.Count - 11f;
+            youMarker.style.display = rank != null ? DisplayStyle.Flex : DisplayStyle.None;
             youMarker.style.top = railBottom - railHeight * progress - 15f;
             if (railFill != null) railFill.style.height = Length.Percent(progress * 100f);
         }
