@@ -138,6 +138,12 @@ namespace NodeWar.Cloud
                 first.endTick == second.endTick && first.finalHash == second.finalHash;
         }
 
+        // Arena thresholds come from the one table the client also displays.
+        private static readonly SettlementConfig Config = new SettlementConfig
+        {
+            Rank = new RankConfig { ArenaThresholds = RankTable.Thresholds.ToArray() }
+        };
+
         private async Task SettlePlayers(MatchRecord record)
         {
             var inputs = record.players.Select(p => new SettlementPlayer
@@ -149,7 +155,7 @@ namespace NodeWar.Cloud
             var outcome = MatchSettlement.Settle(new SettlementInput
             {
                 Players = inputs, Winner = record.reports[0].winner, NowUnixSeconds = record.settlementUnixSeconds
-            }, new SettlementConfig());
+            }, Config);
 
             for (int p = 0; p < 2; p++)
             {
