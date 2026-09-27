@@ -4,8 +4,6 @@ using NodeWar.Backend;
 
 namespace NodeWar.Cloud
 {
-    public enum MatchRecordState { Open, Pending, Settled, Void, Disputed }
-
     // Server-only stored fields. Never rename: names are the persisted schema.
     public sealed class MatchRecord
     {

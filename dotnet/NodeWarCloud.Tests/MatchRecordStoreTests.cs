@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using NodeWar.Backend;
 
 namespace NodeWar.Cloud.Tests
 {

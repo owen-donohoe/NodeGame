@@ -8,12 +8,6 @@ using NodeWar.Progression;
 
 namespace NodeWar.Cloud
 {
-    public sealed class MatchReportingResult
-    {
-        public MatchRecordState? state;
-        public string message;
-        public PlayerState playerState;
-    }
 
     public sealed class MatchReporting
     {
