@@ -200,6 +200,21 @@ namespace NodeWar.Cloud
                 NowUnixSeconds = record.settlementUnixSeconds
             }, Config);
 
+            record.outcomes = new MatchOutcome[2];
+            for (int p = 0; p < 2; p++)
+            {
+                var settledOutcome = outcome.Players[p];
+                record.outcomes[p] = new MatchOutcome
+                {
+                    won = record.reports.First(r => r.accepted).winner == p,
+                    rrDelta = settledOutcome.RRDelta,
+                    rrAfter = settledOutcome.Rank.RR,
+                    arenaAfter = settledOutcome.Rank.Arena,
+                    promoted = settledOutcome.Promoted,
+                    demoted = settledOutcome.Demoted
+                };
+            }
+
             for (int p = 0; p < 2; p++)
             {
                 var store = players(record.playerIds[p]);
