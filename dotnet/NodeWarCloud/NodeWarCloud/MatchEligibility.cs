@@ -47,8 +47,9 @@ namespace NodeWar.Cloud
         private static string CheckVariant(MatchPlayerSnapshot player, string baseId, int type, int[] eras)
         {
             if (baseId == null) return "Unknown drafted type.";
-            if (eras != null && type >= eras.Length) return "Incomplete era table.";
-            int era = eras == null ? 0 : eras[type];
+            // ERAS encodes a null table as an empty array when another table is present.
+            if (eras != null && eras.Length > 0 && type >= eras.Length) return "Incomplete era table.";
+            int era = eras == null || eras.Length == 0 ? 0 : eras[type];
             if (era < 0 || era >= CatalogIds.EraCount || era > player.Rank.Arena)
                 return "Drafted era exceeds the snapshot arena.";
             if (!player.OwnedVariants.Contains(CatalogIds.Variant(baseId, era)))
