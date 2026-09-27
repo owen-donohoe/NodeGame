@@ -221,6 +221,16 @@ Decided with the user on 2026-09-27:
 | 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 |
 | 7.6 | Session keys and per-command signatures; single-log settlement | all of the above |
 
+#### R: research result (2026-09-27, docs-sourced; "inferred" items need a live check)
+
+- **No network migration.** The project already runs `com.unity.services.multiplayer` 2.3.1 (no standalone lobby/relay/matchmaker packages). Matchmaker supports client-hosted P2P over Relay without Multiplay. Its results can feed the **existing** Lobby/Relay orchestration: the host creates the lobby, and the opponent joins by match ID. Sessions (`MatchmakeSessionAsync`) is optional and not adopted.
+- **Ratings stay server-side:** queue rules can read `ExternalData.CloudSave` from the **Protected** access class. Ticket creation from Cloud Code via `ServiceToken` is *inferred* (the API reference did not load).
+- **Roster problem and chosen answer.** No documented match-formed trigger exists for client hosting. So **Cloud Code creates every ranked ticket** (`QueueRanked`) and records ticket → player; clients poll through Cloud Code (`PollRanked`), which reads the ticket's assignment with the service token. The server pairs the two players by the assigned match ID itself and never trusts a client-supplied match ID. **Live check first in 8.1:** create and poll a ticket from Cloud Code.
+- **Storage:** player data 5 MiB per access class per player; a **Private custom item** holds up to 5 MiB per access class, readable by servers only, and custom items are unlimited. Match record **and** replay go in one Private custom item per match (`match-<id>`). Files (1 GiB per player) are owner-only, so not used.
+- **Concurrency:** `writeLock` → 409 on version mismatch; omitting it on update bypasses the check. Cross-player Protected writes with `ServiceToken`: confirmed.
+- **Cloud Code limits:** request 1 MB (a 512 KiB log is ~699 KB in base64: fits), response 2 MiB, 15 s, 256 MB per worker, 600 requests/min/player.
+- **Unknown: Matchmaker pricing and whether it needs a payment method.** The user checks the dashboard.
+
 #### 7.1 Settlement rules (pure, `NodeWar.Progression`)
 
 `MatchSettlement.Settle(SettlementInput, SettlementConfig) → SettlementOutcome`. No I/O and no clock: `NowUnixSeconds` is an input.
@@ -245,6 +255,14 @@ Era grants and the equipped clamp are **not** in 7.1: they need the catalog, and
 - **Concurrency.** Two uploads can arrive together. Record state changes use Cloud Save write locks: on a conflict, re-read and re-decide. A settlement that dies halfway must be safely re-runnable, so each player's `history` is the guard: a player whose history already holds the match ID is not settled again.
 - **Timeout.** A match `Pending` longer than 10 minutes becomes `Void` lazily, when either player next calls `ReportMatch` or `GetPlayerState`. No scheduler.
 - **The equipped clamp goes in `Backend/Shared`**, called from both `InventoryRules` (server) and `LocalInventoryService` (fake). The two equip validators are already duplicated; do not add a third copy.
+
+#### 7.3 Rank display and Workshop style pass (client, no new page)
+
+- The trophy strip (`LobbyChrome`) and the Profile arena road (`ProfilePage`) show local `PlayerProfile.Trophies` behind `TODO(arenas)`. Drive both from the server's `RankRecord` (`BackendServices.LastKnownState`) instead: RR, arena, progress to the next threshold. The top arena is open-ended.
+- **One threshold table.** Add `RankTable` to `Backend/Shared` (thresholds 0/300/700/1200/1800/2500, and a display name per arena, "Arena 1"…"Arena 6" until the user names them). A Cloud test asserts it equals `new ArenaConfig().Thresholds`, and 7.2 builds its configs from it.
+- The pure display maths (arena, RR within the arena, span, fill 0-1) is a UnityEngine-free class, tested in `NodeWar.Lobby.Tests`. `TrophyBarLogic`'s sliding window does not fit arenas and stays for anything else still using it.
+- `BackendServices` raises a `StateChanged` event from `Remember`, so the strip refreshes when an Equip or a later report returns new state. With no known state (offline, or before the first fetch), show "Arena –" as today.
+- Workshop: the era chips wrap at phone width; the equipped chip is disabled and so looks as faded as a locked one. Give equipped its own class (selected look, not disabled look) in `Workshop.uss`, and make the row fit or scroll horizontally at 360 px.
 
 #### 8.1 / 8.2 Matchmaking
 
