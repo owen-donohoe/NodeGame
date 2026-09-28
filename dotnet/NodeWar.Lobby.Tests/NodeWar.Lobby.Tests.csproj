@@ -51,6 +51,7 @@
     <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="MatchHistoryRowTests.cs" />
     <Compile Include="RankedQueuePresenterTests.cs" />
+    <Compile Include="RankedRendezvousTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 
@@ -108,6 +109,8 @@
              Link="Backend/RankedQueuePresenter.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankedMatchTypes.cs"
              Link="Backend/RankedMatchTypes.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/RankedRendezvous.cs"
+             Link="Backend/RankedRendezvous.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
              Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemFamily.cs"
