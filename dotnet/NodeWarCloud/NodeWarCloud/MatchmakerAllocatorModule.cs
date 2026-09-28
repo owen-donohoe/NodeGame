@@ -40,9 +40,18 @@ namespace NodeWar.Cloud
             this.serverTime = serverTime;
         }
 
+        public const string PlayerCallRefused = "Only Matchmaker may call this function.";
+
+        public static bool IsPlayerCall(IExecutionContext context) => !string.IsNullOrEmpty(context?.PlayerId);
+
         [CloudCodeFunction("Matchmaker_Allocate")]
         public async Task<AllocateResponse> Allocate(IExecutionContext context, AllocateRequest request)
         {
+            // Matchmaker calls as a service. A call carrying a player identity is a
+            // client forging a roster: verified live on 2026-09-28 that a player
+            // could otherwise create a match record against any opponent.
+            if (IsPlayerCall(context))
+                return new AllocateResponse(AllocateStatus.Error) { Message = PlayerCallRefused };
             if (string.IsNullOrWhiteSpace(request?.MatchId))
                 return new AllocateResponse(AllocateStatus.Error) { Message = "Match ID is required." };
             try
@@ -68,6 +77,8 @@ namespace NodeWar.Cloud
         [CloudCodeFunction("Matchmaker_Poll")]
         public async Task<PollResponse> Poll(IExecutionContext context, PollRequest request)
         {
+            if (IsPlayerCall(context))
+                return new PollResponse(PollStatus.Error) { Message = PlayerCallRefused };
             if (string.IsNullOrWhiteSpace(request?.MatchId))
                 return new PollResponse(PollStatus.Error) { Message = "Match ID is required." };
             try
