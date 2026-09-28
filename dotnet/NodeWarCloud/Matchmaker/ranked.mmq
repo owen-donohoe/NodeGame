@@ -15,8 +15,16 @@
         "teams": [
           {
             "name": "Side",
-            "teamCount": { "min": 2, "max": 2, "relaxations": [] },
-            "playerCount": { "min": 1, "max": 1, "relaxations": [] },
+            "teamCount": {
+              "min": 2,
+              "max": 2,
+              "relaxations": []
+            },
+            "playerCount": {
+              "min": 1,
+              "max": 1,
+              "relaxations": []
+            },
             "teamRules": []
           }
         ],
@@ -25,35 +33,54 @@
             "name": "same-protocol",
             "source": "Players.CustomData.protocol",
             "type": "Difference",
-            "reference": 0
+            "reference": 0,
+            "enableRule": true
           },
           {
             "name": "same-sim",
             "source": "Players.CustomData.sim",
             "type": "Difference",
-            "reference": 0
+            "reference": 0,
+            "enableRule": true
           },
           {
             "name": "same-content",
             "source": "Players.CustomData.content",
             "type": "Difference",
-            "reference": 0
+            "reference": 0,
+            "enableRule": true
           },
           {
             "name": "arena-cap",
             "source": "Players.CustomData.ExternalData.CloudSave.rank.Arena",
             "type": "Difference",
             "reference": 1,
-            "ExternalData": { "cloudSave": { "accessClass": "Protected", "default": 0 } }
+            "enableRule": true,
+            "ExternalData": {
+              "cloudSave": {
+                "accessClass": "Protected",
+                "default": 0
+              }
+            }
           },
           {
             "name": "arena-same-first",
             "source": "Players.CustomData.ExternalData.CloudSave.rank.Arena",
             "type": "Difference",
             "reference": 0,
-            "ExternalData": { "cloudSave": { "accessClass": "Protected", "default": 0 } },
+            "enableRule": true,
+            "ExternalData": {
+              "cloudSave": {
+                "accessClass": "Protected",
+                "default": 0
+              }
+            },
             "relaxations": [
-              { "type": "RuleControl.Disable", "ageType": "Oldest", "atSeconds": 30 }
+              {
+                "type": "RuleControl.Disable",
+                "ageType": "Oldest",
+                "atSeconds": 30
+              }
             ]
           },
           {
@@ -61,17 +88,39 @@
             "source": "Players.CustomData.ExternalData.CloudSave.rating.R",
             "type": "Difference",
             "reference": 100,
-            "ExternalData": { "cloudSave": { "accessClass": "Protected", "default": 1500 } },
+            "enableRule": true,
+            "ExternalData": {
+              "cloudSave": {
+                "accessClass": "Protected",
+                "default": 1500
+              }
+            },
             "relaxations": [
-              { "type": "ReferenceControl.Replace", "ageType": "Oldest", "atSeconds": 20, "value": 250 },
-              { "type": "ReferenceControl.Replace", "ageType": "Oldest", "atSeconds": 60, "value": 500 },
-              { "type": "RuleControl.Disable", "ageType": "Oldest", "atSeconds": 120 }
+              {
+                "type": "ReferenceControl.Replace",
+                "ageType": "Oldest",
+                "atSeconds": 20,
+                "value": 250
+              },
+              {
+                "type": "ReferenceControl.Replace",
+                "ageType": "Oldest",
+                "atSeconds": 60,
+                "value": 500
+              },
+              {
+                "type": "RuleControl.Disable",
+                "ageType": "Oldest",
+                "atSeconds": 120
+              }
             ]
           }
         ]
       }
     },
-    "matchHosting": { "type": "MatchId" }
+    "matchHosting": {
+      "type": "MatchId"
+    }
   },
   "filteredPools": []
 }
