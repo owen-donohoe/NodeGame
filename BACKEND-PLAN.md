@@ -585,3 +585,11 @@ GPT total ≈ **15M, about 2.5 windows**; waves 1-2r fit the first window (~6.9M
 1. **Audit Stages 7-8 for bad code, systems view first:** trust boundaries, failure modes (a service down, a call retried, a player leaving mid-flow), data ownership, then line-level issues.
 2. **Check that commits and branches line up as intended:** `feat/stage7` against `feat/backend` / PR #72, the stacked PR #73, leftover worktrees and branches, merges that went sideways.
 3. **A minimal, swappable ranked-queue UI:** an entry point plus a searching / found / failed status view, driven through an interface so the visuals can be replaced without touching `IRankedQueueService`.
+
+#### Systems audit result (Sol, 2026-09-28) and triage
+
+- **Fixed live:** players could call `Matchmaker_Allocate` directly and forge a match against any opponent (reproduced in development). Allocate/Poll now refuse calls carrying a player identity; the Matchmaker calls as a service (`b1d40bf0`, verified both ways). Dev junk from the reproduction: records `forged-test-1..3` and possibly records for fake player IDs `someoneElse123/456/789`.
+- **Fix, package A (server):** one active ranked match per player, claimed in Allocate (refused if another unexpired claim exists), released on Settled/Void/Disputed, expiring so a stuck match cannot lock a player out (the Critical: a win and a loss settled from the same snapshot erased the loss). Allocate accepts only this server's `SimulationVersion` and `ProtocolVersion`. `GetPlayerState` writes inventory with the lock (as Equip). The in-memory store throws the production conflict exception.
+- **Fix, package B (client):** `BackendServices.Remember` binds a result to the player the request started for. Delete `NodeWar.Progression/Matchmaking.cs` and its tests (D5: the live queue is proven, and its same-arena rule already disagrees with the deployed 30 s rule).
+- **Accepted before release:** account deletion mid-settlement (define a terminal policy before launch); keeping old referee builds per supported version tuple; unsigned logs forcing `Disputed` (7.6).
+- **Deferred:** abandoned-record cleanup (7.5b retention; the claim expiry bounds harm); client timeouts and retries (8.2b).
