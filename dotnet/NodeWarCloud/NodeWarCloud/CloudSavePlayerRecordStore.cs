@@ -52,7 +52,7 @@ namespace NodeWar.Cloud
         {
             var response = await api.CloudSaveData.GetProtectedItemsAsync(
                 context, context.ServiceToken, context.ProjectId, playerId,
-                PlayerStateKeys.All.ToList());
+                PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch }).ToList());
 
             var state = new PlayerState();
             var locks = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -65,9 +65,31 @@ namespace NodeWar.Cloud
                     case PlayerStateKeys.Rank: state.Rank = Convert<RankRecord>(item.Value); break;
                     case PlayerStateKeys.Inventory: state.Inventory = Convert<InventoryRecord>(item.Value); break;
                     case PlayerStateKeys.History: state.History = Convert<HistoryRecord>(item.Value); break;
+                    case PlayerStateKeys.ActiveMatch: state.ActiveMatch = Convert<ActiveMatchRecord>(item.Value); break;
                 }
             }
             return new LockedPlayerState(state, locks);
+        }
+
+        public async Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read)
+        {
+            if (read.State.Rating == null || !read.WriteLocks.TryGetValue(PlayerStateKeys.Rating, out string ratingLock) ||
+                string.IsNullOrEmpty(ratingLock))
+                throw new InvalidOperationException("Initialize player records before claiming a match.");
+            read.WriteLocks.TryGetValue(PlayerStateKeys.ActiveMatch, out string claimLock);
+            try
+            {
+                // Null locks bypass CAS in Cloud Save. Including the existing rating
+                // key makes even the first claim a conditional, atomic batch.
+                await api.CloudSaveData.SetProtectedItemBatchAsync(context, context.ServiceToken,
+                    context.ProjectId, playerId, new SetItemBatchBody(new List<SetItemBody>
+                    {
+                        new SetItemBody(PlayerStateKeys.Rating, read.State.Rating, ratingLock),
+                        new SetItemBody(PlayerStateKeys.ActiveMatch, claim, claimLock)
+                    }));
+            }
+            catch (ApiException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
+            { throw new RecordConflictException("Active match changed.", ex); }
         }
 
         public Task WriteAsync(PlayerState records) => WriteAsync(records, null);

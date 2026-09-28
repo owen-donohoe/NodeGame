@@ -38,8 +38,50 @@ namespace NodeWar.Cloud
     public interface ISettlementPlayerStore
     {
         Task<LockedPlayerState> ReadForSettlementAsync();
+        // Atomically checks the rating lock even when the claim key is missing.
+        Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read);
         // All four records, including history, must commit atomically or none do.
         Task WriteForSettlementAsync(PlayerState state, IReadOnlyDictionary<string, string> expectedWriteLocks);
+    }
+
+    public static class ActiveMatchClaims
+    {
+        public const long LifetimeSeconds = 2 * 60 * 60;
+        private const int RetryLimit = 3;
+
+        public static async Task<ActiveMatchRecord> Claim(ISettlementPlayerStore store, string matchId, long now,
+            long? expiresUnixSeconds = null)
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                var read = await store.ReadForSettlementAsync();
+                var claim = read.State.ActiveMatch;
+                if (claim != null && claim.expiresUnixSeconds > now)
+                    return claim.matchId == matchId ? claim : null;
+                // An expired retry must not revive a snapshot's old lease.
+                if (claim?.matchId == matchId) return null;
+                claim = new ActiveMatchRecord { matchId = matchId,
+                    expiresUnixSeconds = expiresUnixSeconds ?? now + LifetimeSeconds };
+                try { await store.WriteActiveMatchAsync(claim, read); return claim; }
+                catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
+            }
+        }
+
+        public static async Task Release(ISettlementPlayerStore store, string matchId)
+        {
+            try
+            {
+                for (int attempt = 0; ; attempt++)
+                {
+                    var read = await store.ReadForSettlementAsync();
+                    if (read.State.ActiveMatch?.matchId != matchId) return;
+                    try { await store.WriteActiveMatchAsync(new ActiveMatchRecord(), read); return; }
+                    catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
+                }
+            }
+            // Cleanup never reverses a terminal record. The lease bounds a failed release.
+            catch (Exception) { }
+        }
     }
 
     public sealed class InMemoryMatchRecordStore : IMatchRecordStore

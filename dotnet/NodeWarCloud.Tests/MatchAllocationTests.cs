@@ -21,6 +21,7 @@ namespace NodeWar.Cloud.Tests
         private BalanceCatalog balances;
         private int content;
         private MatchAllocation allocation;
+        private Dictionary<string, ClaimStore> claims;
         private MatchmakerAllocatorModule module;
         private const long Now = 1234567;
 
@@ -36,8 +37,9 @@ namespace NodeWar.Cloud.Tests
                 ["p0"] = MatchRecordTests.Player(), ["p1"] = MatchRecordTests.Player()
             };
             reads = new List<string>();
-            allocation = new MatchAllocation(ReadPlayer, matches, balances);
-            module = new MatchmakerAllocatorModule(_ => matches, (_, id) => ReadPlayer(id), balances, () => Now);
+            claims = new Dictionary<string, ClaimStore> { ["p0"] = new ClaimStore(states["p0"]), ["p1"] = new ClaimStore(states["p1"]) };
+            allocation = new MatchAllocation(ReadPlayer, matches, balances, id => claims[id]);
+            module = new MatchmakerAllocatorModule(_ => matches, (_, id) => ReadPlayer(id), balances, () => Now, (_, id) => claims[id]);
         }
 
         [Test]
@@ -251,13 +253,71 @@ namespace NodeWar.Cloud.Tests
         public async Task StorageFailureDoesNotReportCreatedOrAllocated()
         {
             var failing = new MatchmakerAllocatorModule(_ => throw new InvalidOperationException("private detail"),
-                (_, id) => ReadPlayer(id), balances, () => Now);
+                (_, id) => ReadPlayer(id), balances, () => Now, (_, id) => claims[id]);
             var create = await failing.Allocate(null, Request(SdkPlayers()));
             var poll = await failing.Poll(null, new PollRequest("m", null, DateTimeOffset.MinValue));
             Assert.That(create.Status, Is.EqualTo(AllocateStatus.Error));
             Assert.That(poll.Status, Is.EqualTo(PollStatus.Error));
             Assert.That(create.Message, Does.Not.Contain("private detail"));
             Assert.That(poll.Message, Does.Not.Contain("private detail"));
+        }
+
+        [Test]
+        public async Task ConcurrentAllocationForSamePlayerLosesClaimAndCreatesNoRecord()
+        {
+            claims["p0"].BeforeClaimWrite = async () =>
+                Assert.That((await allocation.Allocate("winner", Roster(), Now)).ok, Is.True);
+            Assert.That((await allocation.Allocate("loser", Roster(), Now)).ok, Is.False);
+            Assert.That((await matches.ReadAsync("loser")).Record, Is.Null);
+            Assert.That(states["p0"].ActiveMatch.matchId, Is.EqualTo("winner"));
+            Assert.That(states["p1"].ActiveMatch.matchId, Is.EqualTo("winner"));
+        }
+
+        [Test]
+        public async Task ExpiredClaimAllowsNewMatchAtExactExpiry()
+        {
+            await allocation.Allocate("old", Roster(), Now);
+            long expiry = Now + ActiveMatchClaims.LifetimeSeconds;
+            Assert.That(states["p0"].ActiveMatch.expiresUnixSeconds, Is.EqualTo(expiry));
+            Assert.That((await allocation.Allocate("new", Roster(), expiry)).ok, Is.True);
+            Assert.That(states["p0"].ActiveMatch.matchId, Is.EqualTo("new"));
+            Assert.That(states["p1"].ActiveMatch.expiresUnixSeconds, Is.EqualTo(expiry + ActiveMatchClaims.LifetimeSeconds));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task SecondClaimFailureRollsBackFirst(bool throws)
+        {
+            if (throws) claims["p1"].BeforeClaimWrite = () => throw new InvalidOperationException("storage unavailable");
+            else states["p1"].ActiveMatch = new ActiveMatchRecord { matchId = "other", expiresUnixSeconds = Now + 100 };
+            Assert.That((await allocation.Allocate("m", Roster(), Now)).ok, Is.False);
+            Assert.That((await matches.ReadAsync("m")).Record, Is.Null);
+            Assert.That(states["p0"].ActiveMatch.matchId, Is.Null);
+            if (!throws) Assert.That(states["p1"].ActiveMatch.matchId, Is.EqualTo("other"));
+        }
+
+        [Test]
+        public async Task SameMatchRetryPreservesClaimExpiry()
+        {
+            await allocation.Allocate("m", Roster(), Now);
+            await allocation.Allocate("m", Roster(), Now + 100);
+            foreach (var state in states.Values)
+            {
+                Assert.That(state.ActiveMatch.matchId, Is.EqualTo("m"));
+                Assert.That(state.ActiveMatch.expiresUnixSeconds, Is.EqualTo(Now + ActiveMatchClaims.LifetimeSeconds));
+            }
+        }
+
+        [Test]
+        public async Task RetryAfterCrashWithOneClaimKeepsOriginalLeaseForBothPlayers()
+        {
+            await ActiveMatchClaims.Claim(claims["p0"], "m", Now);
+            Assert.That((await allocation.Allocate("m", Roster(), Now + 50)).ok, Is.True);
+            var record = (await matches.ReadAsync("m")).Record;
+            Assert.That(record.createdUnixSeconds, Is.EqualTo(Now));
+            foreach (var state in states.Values)
+                Assert.That(state.ActiveMatch.expiresUnixSeconds,
+                    Is.EqualTo(record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds));
         }
 
         private Task<PlayerState> ReadPlayer(string id)
@@ -288,6 +348,29 @@ namespace NodeWar.Cloud.Tests
             StringAssert.Contains(reason, result.error);
             Assert.That(matches.Writes, Is.Zero);
             Assert.That((await matches.ReadAsync("m")).Record, Is.Null);
+        }
+
+        private sealed class ClaimStore : ISettlementPlayerStore
+        {
+            private readonly PlayerState state;
+            private int version = 1;
+            public Func<Task> BeforeClaimWrite;
+            public ClaimStore(PlayerState state) { this.state = state; }
+            public Task<LockedPlayerState> ReadForSettlementAsync() => Task.FromResult(new LockedPlayerState(
+                JsonConvert.DeserializeObject<PlayerState>(JsonConvert.SerializeObject(state)),
+                new Dictionary<string, string> { [PlayerStateKeys.Rating] = version.ToString() }));
+            public async Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read)
+            {
+                var hook = BeforeClaimWrite;
+                BeforeClaimWrite = null;
+                if (hook != null) await hook();
+                if (read.WriteLocks[PlayerStateKeys.Rating] != version.ToString())
+                    throw new RecordConflictException("Claim changed.");
+                state.ActiveMatch = claim;
+                version++;
+            }
+            public Task WriteForSettlementAsync(PlayerState value, IReadOnlyDictionary<string, string> tokens) =>
+                throw new NotSupportedException();
         }
 
         private sealed class CountingStore : IMatchRecordStore

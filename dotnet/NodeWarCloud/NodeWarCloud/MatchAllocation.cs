@@ -25,13 +25,15 @@ namespace NodeWar.Cloud
         private readonly Func<string, Task<PlayerState>> readPlayer;
         private readonly IMatchRecordStore matches;
         private readonly BalanceCatalog balances;
+        private readonly Func<string, ISettlementPlayerStore> playerStores;
 
         public MatchAllocation(Func<string, Task<PlayerState>> readPlayer,
-            IMatchRecordStore matches, BalanceCatalog balances)
+            IMatchRecordStore matches, BalanceCatalog balances, Func<string, ISettlementPlayerStore> playerStores)
         {
             this.readPlayer = readPlayer;
             this.matches = matches;
             this.balances = balances;
+            this.playerStores = playerStores;
         }
 
         public async Task<MatchAllocationResult> Allocate(string matchId,
@@ -61,17 +63,52 @@ namespace NodeWar.Cloud
             if (Math.Abs((long)states[0].Rank.Arena - states[1].Rank.Arena) > 1)
                 return Error("Players must be within one arena.");
 
-            var record = MatchRecords.Create(matchId, new[] { first.PlayerId, second.PlayerId }, states,
-                nowUnixSeconds, first.Protocol.Value, first.Sim.Value, first.Content.Value);
+            var firstStore = playerStores(first.PlayerId);
+            var secondStore = playerStores(second.PlayerId);
+            bool created = false;
             try
             {
-                await matches.WriteAsync(record, null);
+                var firstClaim = await ActiveMatchClaims.Claim(firstStore, matchId, nowUnixSeconds);
+                if (firstClaim == null) return Error("Player already has an active match.");
+                var secondClaim = await ActiveMatchClaims.Claim(secondStore, matchId, nowUnixSeconds,
+                    firstClaim.expiresUnixSeconds);
+                if (secondClaim == null) return Error("Player already has an active match.");
+                // A previous settlement may have finished between initialization and
+                // acquiring the claims. Only snapshot state read under our claims.
+                states = new[] { (await firstStore.ReadForSettlementAsync()).State,
+                    (await secondStore.ReadForSettlementAsync()).State };
+                if (Math.Abs((long)states[0].Rank.Arena - states[1].Rank.Arena) > 1)
+                    return Error("Players must be within one arena.");
+                long createdAt = Math.Min(firstClaim.expiresUnixSeconds, secondClaim.expiresUnixSeconds)
+                    - ActiveMatchClaims.LifetimeSeconds;
+                var record = MatchRecords.Create(matchId, new[] { first.PlayerId, second.PlayerId }, states,
+                    createdAt, first.Protocol.Value, first.Sim.Value, first.Content.Value);
+                try { await matches.WriteAsync(record, null); }
+                catch (RecordConflictException)
+                {
+                    if ((await matches.ReadAsync(matchId)).Record == null) throw;
+                }
+                created = true;
+                return Success();
             }
-            catch (RecordConflictException)
+            catch (Exception) { return Error("Unable to claim players or create match."); }
+            finally
             {
-                if ((await matches.ReadAsync(matchId)).Record == null) throw;
+                // Do not release a concurrent retry's successfully created record.
+                // A failed read leaves leases to expire instead of risking that record.
+                if (!created)
+                {
+                    try
+                    {
+                        if ((await matches.ReadAsync(matchId)).Record == null)
+                        {
+                            await ActiveMatchClaims.Release(firstStore, matchId);
+                            await ActiveMatchClaims.Release(secondStore, matchId);
+                        }
+                    }
+                    catch (Exception) { }
+                }
             }
-            return Success();
         }
 
         private static MatchAllocationResult Success() => new MatchAllocationResult { ok = true };
