@@ -36,10 +36,10 @@
             <engine:Label class="ui-sheet__title ui-w600" text="Find a match" />
 
             <engine:VisualElement class="lb-seg" picking-mode="Ignore">
+                <engine:Button name="play-mode-locked" class="ui-reset-button lb-seg__btn ui-w600" text="Ranked" />
                 <engine:Button name="play-mode-1v1" class="ui-reset-button lb-seg__btn ui-w600" text="1 vs 1" />
                 <engine:Button name="play-mode-bot" class="ui-reset-button lb-seg__btn ui-w600" text="Bot" />
-                <engine:Button name="play-mode-testing" class="ui-reset-button lb-seg__btn ui-w600" text="Testing" />
-                <engine:Button name="play-mode-locked" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Ranked" />
+                <engine:Button name="play-mode-testing" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Testing" />
             </engine:VisualElement>
 
             <engine:VisualElement name="play-transport" class="lb-seg" picking-mode="Ignore">

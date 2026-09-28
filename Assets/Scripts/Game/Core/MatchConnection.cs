@@ -21,6 +21,13 @@ namespace NodeWar.Core
         public bool isSpectator;
         public LoadoutData loadout;
 
+        // A match the server created through the ranked queue. Its log must
+        // carry the server's match ID and both player IDs in the record's order
+        // (slot 0 hosts as simulation player 0), or the referee refuses it.
+        public bool isRanked;
+        public string matchId;
+        public string[] playerIds;
+
         private static MatchConnection instance;
         public static MatchConnection Instance => instance;
 

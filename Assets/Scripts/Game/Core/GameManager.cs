@@ -640,15 +640,20 @@ namespace NodeWar.Core
             string localId = NodeWar.Backend.BackendServices.Account.Current.PlayerId ?? "";
             BuildIdentity build = LocalBuildIdentity.Current;
 
+            // A ranked match's ID and roster come from the server's match record,
+            // in its order, which the referee checks. Anything else is local: the
+            // opponent's Player ID never crosses the wire.
+            bool ranked = match.isRanked && match.playerIds != null && match.playerIds.Length == 2;
+
             var header = new NodeWar.MatchLog.MatchLogHeader
             {
                 protocol = build.protocol,
                 sim = build.sim,
                 content = build.content,
-                // Local until the server issues match IDs and start times (Stage 7).
-                matchId = System.Guid.NewGuid().ToString("N"),
-                // The opponent's Player ID never crosses the wire today.
-                playerIds = new[] { localPlayer == 0 ? localId : "", localPlayer == 1 ? localId : "" },
+                matchId = ranked ? match.matchId : System.Guid.NewGuid().ToString("N"),
+                playerIds = ranked
+                    ? (string[])match.playerIds.Clone()
+                    : new[] { localPlayer == 0 ? localId : "", localPlayer == 1 ? localId : "" },
                 localPlayer = (byte)localPlayer,
                 startUnixSeconds = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 kind = match.isNetworked ? NodeWar.MatchLog.MatchKind.Networked : NodeWar.MatchLog.MatchKind.Bot
@@ -698,7 +703,34 @@ namespace NodeWar.Core
                 finalHash = SimulationStateHasher.ComputeHash(state),
                 firstDesyncTick = -1
             });
-            NodeWar.Backend.LocalMatchLogStore.Save(recorder.Log.header.matchId, recorder.ToBytes());
+            byte[] log = recorder.ToBytes();
+            NodeWar.Backend.LocalMatchLogStore.Save(recorder.Log.header.matchId, log);
+
+            // Only a match the server created is reported. Bot and private matches
+            // have no record, so there is nothing to settle and nothing to send.
+            MatchConnection match = MatchConnection.Instance;
+            if (match != null && match.isRanked && !string.IsNullOrEmpty(match.matchId))
+                _ = ReportRankedMatchAsync(match.matchId, log);
+        }
+
+        /// <summary>
+        /// Uploads a ranked log for settlement. Not awaited: the player can leave
+        /// the result screen, and the upload must outlive this scene. The result
+        /// screen does not show the outcome yet (7.4).
+        /// </summary>
+        private static async System.Threading.Tasks.Task ReportRankedMatchAsync(string matchId, byte[] log)
+        {
+            try
+            {
+                NodeWar.Backend.MatchReportingResult result =
+                    await NodeWar.Backend.BackendServices.MatchReports.ReportAsync(matchId, log);
+                Debug.Log("[GameManager] Ranked report " + matchId + ": " +
+                          (result?.state?.ToString() ?? "refused") + " " + (result?.message ?? ""));
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[GameManager] Ranked report failed for " + matchId + ": " + e.Message);
+            }
         }
 
         private void CreateSelectionLasso()

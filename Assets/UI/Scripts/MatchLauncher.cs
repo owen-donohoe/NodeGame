@@ -81,15 +81,60 @@ namespace NodeWar.Lobby
         private float phaseEnterTime;
         private float handshakeRetryTimer;
 
+        // Ranked matches have deadlines everywhere, because nobody is reading a
+        // code out to a friend: a silent peer is a failed rendezvous, and the
+        // ranked flow re-queues. Private play keeps the open-ended host wait.
+        private const float NoDeadline = -1f;
+        private float waitForOpponentTimeout = NoDeadline;
+        private float handshakeTimeout = HandshakeTimeout;
+
+        private string rankedMatchId;
+        private string[] rankedPlayerIds;
+
         // ===== ENTRY POINTS =====
 
         public void HostRelay()
         {
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginHost(false, null);
+        }
+
+        /// <summary>
+        /// Hosts a ranked match as simulation player 0: record slot 0 always
+        /// hosts, because the referee reads the log's player order as the
+        /// record's. Fails if the guest has not connected within the deadline.
+        /// </summary>
+        public void HostRanked(string matchId, string[] playerIds, float waitForOpponentSeconds,
+                               float handshakeSeconds)
+        {
+            SetRanked(matchId, playerIds, waitForOpponentSeconds, handshakeSeconds);
+            BeginHost(false, null);
+        }
+
+        /// <summary>Joins a ranked match's room as simulation player 1 (record slot 1).</summary>
+        public void JoinRanked(string matchId, string[] playerIds, string joinCode, float handshakeSeconds)
+        {
+            SetRanked(matchId, playerIds, NoDeadline, handshakeSeconds);
+            string code = (joinCode ?? "").Trim();
+            if (code.Length == 0)
+            {
+                Fail("The host published no room code.", "Finding a new match.");
+                return;
+            }
+            BeginJoin(false, code.ToUpperInvariant());
+        }
+
+        private void SetRanked(string matchId, string[] playerIds, float waitSeconds, float handshakeSeconds)
+        {
+            rankedMatchId = matchId;
+            rankedPlayerIds = playerIds != null ? (string[])playerIds.Clone() : null;
+            waitForOpponentTimeout = waitSeconds;
+            handshakeTimeout = handshakeSeconds;
         }
 
         public void HostLan()
         {
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginHost(true, null);
         }
 
@@ -107,11 +152,13 @@ namespace NodeWar.Lobby
                 return;
             }
 
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginJoin(false, code.ToUpperInvariant());
         }
 
         public void JoinLan(string address)
         {
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             string ip = (address ?? "").Trim();
 
             if (ip.Length == 0)
@@ -294,6 +341,11 @@ namespace NodeWar.Lobby
                     FailIncompatible(verdict);
                 return;
             }
+
+            if (waitForOpponentTimeout < 0f || Time.time - phaseEnterTime <= waitForOpponentTimeout) return;
+
+            Cleanup();
+            Fail("Your opponent didn't connect.", "Finding a new match.");
         }
 
         private void UpdateConnecting()
@@ -343,7 +395,7 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            if (Time.time - phaseEnterTime <= HandshakeTimeout) return;
+            if (Time.time - phaseEnterTime <= handshakeTimeout) return;
 
             Cleanup();
             Fail("The host didn't answer.",
@@ -363,6 +415,9 @@ namespace NodeWar.Lobby
             match.isBotMatch = false;
             match.localPlayerID = localPlayerID;
             match.networkManager = networkManager;
+            match.isRanked = rankedMatchId != null;
+            match.matchId = rankedMatchId;
+            match.playerIds = rankedPlayerIds;
 
             if (PlayerProfile.Instance != null)
                 match.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
