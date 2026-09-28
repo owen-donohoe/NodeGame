@@ -215,8 +215,8 @@ Decided with the user on 2026-09-27:
 | R | Research: Matchmaker for P2P/Relay, Cloud Save and Cloud Code limits | nothing | **Done** |
 | 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R | **Done**, plus review fixes; not deployed |
 | 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) | **Done**; visuals unverified |
-| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | Queue + pool live in development (8.0); next: evaluate Cloud Code hosting, then the live ticket spike |
-| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | Blocked on 8.1 |
+| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | Queue + pool live (8.0); **8.1a allocator** and **8.1b pool switch + spike** next |
+| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | **8.2a queue service** can start now; 8.2b waits for 8.1b |
 | 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 | 7.4a service **done**; wiring into GameManager waits for 8.2 |
 | 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 | 7.5a server history and 7.5c client page **done** (visuals unverified); 7.5b retention **deferred** (unlimited custom items, small logs; revisit with real volume) |
 | 7.6 | Session keys and per-command signatures; single-log settlement | all of the above | Not started |
@@ -224,8 +224,8 @@ Decided with the user on 2026-09-27:
 #### R: research result (2026-09-27, docs-sourced; "inferred" items need a live check)
 
 - **No network migration.** The project already runs `com.unity.services.multiplayer` 2.3.1 (no standalone lobby/relay/matchmaker packages). Matchmaker supports client-hosted P2P over Relay without Multiplay. Its results can feed the **existing** Lobby/Relay orchestration: the host creates the lobby, and the opponent joins by match ID. Sessions (`MatchmakeSessionAsync`) is optional and not adopted.
-- **Ratings stay server-side:** queue rules can read `ExternalData.CloudSave` from the **Protected** access class. Ticket creation from Cloud Code via `ServiceToken` is *inferred* (the API reference did not load).
-- **Roster problem and chosen answer.** No documented match-formed trigger exists for client hosting. So **Cloud Code creates every ranked ticket** (`QueueRanked`) and records ticket → player; clients poll through Cloud Code (`PollRanked`), which reads the ticket's assignment with the service token. The server pairs the two players by the assigned match ID itself and never trusts a client-supplied match ID. **Live check first in 8.1:** create and poll a ticket from Cloud Code.
+- **Ratings stay server-side:** queue rules can read `ExternalData.CloudSave` from the **Protected** access class.
+- ~~Roster answer: Cloud Code creates every ticket (`QueueRanked`/`PollRanked`).~~ **Superseded 2026-09-28** by the pool's Cloud Code hosting (8.0): Matchmaker hands the roster to our `Allocate` itself. See "8.1 / 8.2 Matchmaking" for the decisions.
 - **Storage:** player data 5 MiB per access class per player; a **Private custom item** holds up to 5 MiB per access class, readable by servers only, and custom items are unlimited. Match record **and** replay go in one Private custom item per match (`match-<id>`). Files (1 GiB per player) are owner-only, so not used.
 - **Concurrency:** `writeLock` → 409 on version mismatch; omitting it on update bypasses the check. Cross-player Protected writes with `ServiceToken`: confirmed.
 - **Cloud Code limits:** request 1 MB (a 512 KiB log is ~699 KB in base64: fits), response 2 MiB, 15 s, 256 MB per worker, 600 requests/min/player.
@@ -279,11 +279,28 @@ Era grants and the equipped clamp are **not** in 7.1: they need the catalog, and
 
 #### 8.1 / 8.2 Matchmaking
 
-- Enable Matchmaker. **User action:** the dashboard (payment method if asked), and the Matchmaker role on service account `Account_1` so `ugs deploy` can publish the queue config.
-- **Tickets carry no client-supplied MMR or arena.** Either Cloud Code creates the ticket, or the queue rules read the rating from Cloud Save server-side; R finds which the service supports.
-- Rules as §7: same `ProtocolVersion` / `SimVersion` / `ContentHash`; arena difference ≤ 1; MMR window 100 / 250 / 500, unbounded from **120 s** (user decision) but still inside the arena cap; offer an unranked bot match at 90 s.
-- A found match creates the **match record** before either client starts the draft. The client puts its match ID, both Player IDs and server start time into the log header, replacing the placeholders in `GameManager.BeginRecording`.
-- R's biggest question: does Matchmaker hand back a Relay allocation directly (Multiplayer Services **Sessions**), or only an assignment that the existing Lobby/Relay path then joins? If it means moving `Network/` onto Sessions, 8.2 is plan mode and stays in the main session.
+Matchmaker is enabled and the queue is deployed (8.0). Rules as §7: same `ProtocolVersion` / `SimVersion` / `ContentHash`; arena difference ≤ 1; MMR window 100 / 250 / 500, unbounded from **120 s**; an unranked bot match offered at 90 s (client side).
+
+**Decisions (2026-09-28), with the options weighed:**
+
+| # | Decision | Options | Chosen, and why |
+|---|---|---|---|
+| D1 | Where the server learns the roster | (a) Cloud Code creates and polls tickets (b) **pool hosting via Cloud Code: Matchmaker calls our `Allocate`** (c) clients report a match ID for the server to check | **(b)**: the roster arrives server to server; no custom queue endpoints; documented. Costs: SDK bump 0.0.22 → 0.0.24; the P2P assignment form is unproven. (a) is more code on an inferred API; (c) trusts clients. |
+| D2 | Who creates tickets | (a) Cloud Code proxy (b) **the client, via `com.unity.services.multiplayer`'s matchmaker API (not Sessions)** | **(b)**: rules read rating and arena from Protected Cloud Save; the client supplies only protocol/sim/content, and lying about those yields a record whose logs the server refuses. |
+| D3 | When the match record is created | (a) lazily, at the first report (b) **in `Allocate`, idempotently** | **(b)**: the pre-match snapshot must predate play. A retried `Allocate` finds the record and answers Created again. |
+| D4 | Hard caps in `Allocate` | (a) trust the queue rules (b) **re-check invariants: balance known to the server, equal versions, arena gap ≤ 1** | **(b)**: cheap, and it survives a queue misconfiguration (the dashboard silently disabled every rule once). The soft rating window stays queue-only. |
+| D5 | `NodeWar.Progression/Matchmaking.cs` | (a) delete now (b) keep (c) **keep until the live queue is proven, then delete in its own commit** | **(c)**: its windows now duplicate the queue rules; don't delete before the replacement is proven. |
+| D6 | Rendezvous (8.2) | (a) public lobby filtered by match ID (b) **host publishes its lobby join code into the match record; the guest reads it through Cloud Code** | **(b)**: only the record's two players can read it. Two small endpoints. |
+
+**Packages:**
+
+- **8.1a Allocator (server).** Bump `Com.Unity.Services.CloudCode.Apis` to 0.0.24 (all Cloud tests must still pass). `MatchAllocation` (pure, testable) + `MatchmakerAllocatorModule : IMatchmakerAllocator`:
+  - `Allocate`: player IDs from `MatchmakingResults.MatchProperties.Players[].Id` (exactly two, distinct), versions from each player's ticket `CustomData` (`protocol`, `sim`, `content`), both players' `PlayerState` read with the service token (get-or-create), D4 checks, then `MatchRecords.Create` + store write with no lock (create). An existing record for the match ID → `Created` (idempotent); a failed check → `Error` with a reason. `AllocationData` = `{ matchId }`.
+  - `Poll`: record exists → `Allocated`; missing → `Error`. `AssignmentData`: whatever non-`IpPort` form the SDK offers; if none, `IpPort` with a placeholder is **not** acceptable without the spike's evidence. Record the finding here.
+  - Tests with fakes: two players → record with snapshots; retry idempotent; unknown balance / version mismatch / arena gap 2 / one player / duplicate player → `Error`, no record.
+- **8.1b Pool switch + live spike (lead).** Deploy the module; set the pool's hosting to Cloud Code (`moduleName`, `allocateFunctionName`, `pollFunctionName`) in `ranked.mmq`; deploy with CLI 2.0.0. Spike: two anonymous players (Authentication REST) create tickets (Matchmaker REST) → confirm `Allocate` ran, a `match-<id>` record exists, and what each ticket's assignment returns.
+- **8.2a Client queue service.** `IRankedQueueService` (`EnqueueAsync`, `PollAsync`, `CancelAsync`) + fake + UGS impl over the matchmaker client API in `com.unity.services.multiplayer` 2.3.1 (check its exact type names first). Ticket `CustomData` = `LocalBuildIdentity` values. No UI, no lobby.
+- **8.2b Rendezvous + queue UI + draft handoff**, after 8.1b's evidence. Network-adjacent: main session, plan mode.
 
 #### 7.5 Replay storage
 
@@ -301,7 +318,7 @@ As §8: a server-issued session key per player in the match record; each player 
 | Waiting for both logs lets a loser block a loss by never uploading | Until 7.6. Accepted because nothing ships between 7 and 8. The lazy timeout voids the match rather than leaving it open. |
 | A snapshot at creation instead of a read at settlement looks redundant | Settlement changes rank, and the opponent's settlement can land first. Eligibility and rating must use the state the match was played at. |
 | Cross-player writes are not transactional in Cloud Save | Each player's history is the idempotency guard, so a partial settlement re-runs safely. |
-| Matchmaker may force a Sessions migration of the whole network layer | That is why R runs first, and 8.2 is not sized until it reports. |
+| Matchmaker may force a Sessions migration of the whole network layer | Resolved: no. The multiplayer package is already installed, and the assignment feeds the existing Lobby/Relay path (D1, D6). |
 | Delegating Cloud Code work contradicts §12 | §12 predates §15. `ReportMatch` is now fully specified and testable with fakes. The network handoff (8.2) and signatures (7.6) stay in the main session. |
 | Doubles in settlement | `NodeWar.Progression` is server-only and never enters `Simulation/`; §6 already allows it. |
 
@@ -537,7 +554,7 @@ Standing constraints:
 | Role | Profile | Takes |
 |---|---|---|
 | Lead (Claude, this session) | Opus | Specs, R's decision, `.meta`s through the Editor, merges into `feat/stage7`, deploys, 8.2 (network handoff), 7.6, final read of each package |
-| Engineer | Codex astra, high | 7.1, 7.2, 7.3, 7.4, 7.5, 8.1 |
+| Engineer | Codex astra, high (Claude Sonnet when GPT is spent) | 7.1-7.5 done; 8.1a, 8.2a |
 | Reviewer | Codex Sol, high | **First-pass review of every package**, against its section here and the contract: correctness, concurrency, trust boundaries, tests that assert the spec rather than the implementation |
 | Utility | Codex luna, low | R (research), mechanical fixes from a review |
 
