@@ -577,3 +577,9 @@ Standing constraints:
 GPT total ≈ **15M, about 2.5 windows**; waves 1-2r fit the first window (~6.9M, so 2r may slip past the reset). The lead's share is specs, the R decision, `.meta`s, merges, deploys, 8.2 and 7.6, plus reading findings rather than whole diffs. Measure after each wave with the command in `.claude/skills/delegation.md` and correct this table.
 
 **Measured 2026-09-27** (replace the estimates above with these): Codex R research 0.41M (capped at 15 fetches); Codex 7.3 1.05M; Codex 7.1 + 7.2 on one reused agent 2.97M; **Sol whole-branch review 2.44M** (2x estimate). The Codex window emptied in ~35 min. Then Claude Sonnet via the Agent tool: the three review fixes 208k; 7.4a 94k; 7.5a 122k. Lessons: small bounded packages with files named cost 0.1-0.2M on Sonnet; Sol reviews should get only the changed files and their spec lines; start a fresh agent once one's context passes ~1.5M instead of reusing it.
+
+### Queued by the user (2026-09-28), after 8.1a and 8.1b land
+
+1. **Audit Stages 7-8 for bad code, systems view first:** trust boundaries, failure modes (a service down, a call retried, a player leaving mid-flow), data ownership, then line-level issues.
+2. **Check that commits and branches line up as intended:** `feat/stage7` against `feat/backend` / PR #72, the stacked PR #73, leftover worktrees and branches, merges that went sideways.
+3. **A minimal, swappable ranked-queue UI:** an entry point plus a searching / found / failed status view, driven through an interface so the visuals can be replaced without touching `IRankedQueueService`.
