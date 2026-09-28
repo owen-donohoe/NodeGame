@@ -21,6 +21,7 @@ namespace NodeWar.Backend
         private static IInventoryService inventory;
         private static IMatchReportService matchReports;
         private static IMatchHistoryService matchHistory;
+        private static IRankedQueueService rankedQueue;
 
         /// <summary>
         /// The last player state any backend call returned this session, or null
@@ -61,6 +62,7 @@ namespace NodeWar.Backend
             inventory = null;
             matchReports = null;
             matchHistory = null;
+            rankedQueue = null;
             lastKnown = null;
             lastKnownFor = null;
             StateChanged = null;
@@ -100,6 +102,20 @@ namespace NodeWar.Backend
             playerState = new RememberingPlayerStateService(new LocalPlayerStateService(store, localInventory.GrantDefaults));
             matchReports = new LocalMatchReportService();
             matchHistory = new LocalMatchHistoryService();
+            rankedQueue = new LocalRankedQueueService();
+        }
+
+        public static IRankedQueueService RankedQueue
+        {
+            get
+            {
+                if (rankedQueue == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else rankedQueue = new UgsRankedQueueService();
+                }
+                return rankedQueue;
+            }
         }
 
         public static IMatchReportService MatchReports
