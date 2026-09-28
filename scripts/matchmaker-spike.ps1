@@ -13,7 +13,10 @@ param(
     [int]$Protocol = 2,
     [int]$Sim = 1,
     [int]$Content = 1966419918,
-    [switch]$EnsureRecords
+    [switch]$EnsureRecords,
+    # After a match forms: publish a code as slot 0, read it as slot 1, then
+    # leave before connecting, which must void the match and free both players.
+    [switch]$Rendezvous
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +45,13 @@ function Get-TicketStatus($player, $ticketId) {
     Invoke-RestMethod -Method Get -Uri "$TicketsUrl/status?id=$ticketId" -Headers $headers
 }
 
+function Invoke-Module($player, $function, $params) {
+    $url = "https://cloud-code.services.api.unity.com/v1/projects/$ProjectId/modules/NodeWarCloud/$function"
+    $headers = @{ "Authorization" = "Bearer $($player.Token)" }
+    $body = @{ params = $params } | ConvertTo-Json -Depth 6 -Compress
+    (Invoke-RestMethod -Method Post -Uri $url -Headers $headers -ContentType "application/json" -Body $body).output
+}
+
 function Initialize-Records($player) {
     # What the lobby does on open: GetPlayerState creates the protected
     # rating/rank records that the queue's Cloud Save rules read.
@@ -66,7 +76,28 @@ while ((Get-Date) -lt $deadline -and ($done -contains $false)) {
         $status = Get-TicketStatus $players[$i] $tickets[$i]
         $json = $status | ConvertTo-Json -Depth 10 -Compress
         Write-Host "P$i $json"
+        if ($status.matchId) { $foundMatchId = $status.matchId }
         if ($status.status -and $status.status -ne "InProgress") { $done[$i] = $true }
     }
 }
 if ($done -contains $false) { Write-Host "Timed out after $Seconds s." ; exit 1 }
+
+if ($Rendezvous) {
+    $matchId = $foundMatchId
+    if (-not $matchId) { Write-Host "No match ID to rendezvous on."; exit 1 }
+    $views = @($players | ForEach-Object { Invoke-Module $_ "Rendezvous" @{ matchId = $matchId; joinCode = $null } })
+    for ($i = 0; $i -lt 2; $i++) { Write-Host "Roster P$i $($views[$i] | ConvertTo-Json -Compress)" }
+    $host0 = if ($views[0].slot -eq 0) { 0 } else { 1 }
+    $guest = 1 - $host0
+    Invoke-Module $players[$host0] "Rendezvous" @{ matchId = $matchId; joinCode = "SPIKE1" } | Out-Null
+    $seen = Invoke-Module $players[$guest] "Rendezvous" @{ matchId = $matchId; joinCode = $null }
+    Write-Host "Guest reads joinCode: $($seen.joinCode)"
+    $leave = Invoke-Module $players[$guest] "LeaveMatch" @{ matchId = $matchId; forfeit = $false }
+    Write-Host "Leave before connecting: $($leave | ConvertTo-Json -Compress)"
+    $after = Invoke-Module $players[$host0] "Rendezvous" @{ matchId = $matchId; joinCode = $null }
+    Write-Host "Record state afterwards: $($after.state)"
+    foreach ($p in $players) {
+        $s = Invoke-Module $p "GetPlayerState" @{}
+        Write-Host "Active match for $($p.Id): '$($s.ActiveMatch.matchId)'"
+    }
+}
