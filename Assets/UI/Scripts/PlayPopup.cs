@@ -97,6 +97,7 @@ namespace NodeWar.Lobby
             rankedView = Root.Q<VisualElement>("play-ranked");
             if (rankedView != null && rankedQueueView is VisualElement rankedQueueVisual)
                 rankedView.Add(rankedQueueVisual);
+            rankedQueueView.CancelRequested += OnRankedBack;
 
             modeOnline = Root.Q<Button>("play-mode-1v1");
             modeBot = Root.Q<Button>("play-mode-bot");
@@ -183,10 +184,9 @@ namespace NodeWar.Lobby
 
         public void Show()
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-            GameMode saved = profile != null ? profile.SelectedGameMode : GameMode.OneVsOne;
-            if (saved == GameMode.Bot || saved == GameMode.Testing || saved == GameMode.OneVsOne)
-                mode = saved;
+            // Ranked is the default play (D14). Private modes stay one tap away
+            // until the Social tab takes them over.
+            mode = GameMode.Locked;
 
             SetTransport(useLan);
             SetMode(mode);
@@ -299,10 +299,39 @@ namespace NodeWar.Lobby
 
         private void StartRankedQueue()
         {
-            rankedPresenter?.Dispose();
-            rankedPresenter = new RankedQueuePresenter(BackendServices.RankedQueue, rankedQueueView);
+            DisposeRankedPresenter();
+
+            // The rendezvous drives this popup's own launcher, which Update()
+            // already pumps; its Succeed() loads Gameplay once both peers agree.
+            rankedPresenter = new RankedQueuePresenter(BackendServices.RankedQueue, rankedQueueView,
+                BackendServices.RankedMatch, BackendServices.PlayerState,
+                () => new MatchLauncherConnection(launcher));
+            rankedPresenter.BotMatchAccepted += OnRankedBotAccepted;
             ShowView(View.Ranked);
+
+            // Not awaited: the attempt can pause on a forfeit prompt indefinitely.
             _ = rankedPresenter.StartAsync(NowSeconds());
+        }
+
+        /// <summary>Bot offer accepted: the ticket is already cancelled. Unranked by construction.</summary>
+        private void OnRankedBotAccepted()
+        {
+            LaunchLocal(GameMode.Bot);
+        }
+
+        /// <summary>The view's Cancel/Back. While an attempt runs the presenter handles it.</summary>
+        private void OnRankedBack()
+        {
+            if (rankedPresenter != null && rankedPresenter.IsActive) return;
+            ShowView(View.Find);
+        }
+
+        private void DisposeRankedPresenter()
+        {
+            if (rankedPresenter == null) return;
+            rankedPresenter.BotMatchAccepted -= OnRankedBotAccepted;
+            rankedPresenter.Dispose();
+            rankedPresenter = null;
         }
 
         private static double NowSeconds()
@@ -438,8 +467,9 @@ namespace NodeWar.Lobby
         public void Dispose()
         {
             launcher.Changed -= RefreshStatus;
+            rankedQueueView.CancelRequested -= OnRankedBack;
+            DisposeRankedPresenter();
             launcher.Dispose();
-            rankedPresenter?.Dispose();
         }
     }
 }

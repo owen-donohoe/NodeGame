@@ -6,21 +6,32 @@ namespace NodeWar.Lobby
 {
     /// <summary>
     /// The default, deliberately plain <see cref="IRankedQueueView"/>: a status
-    /// line, an elapsed timer, and a Cancel button. Built in code rather than
+    /// line, an elapsed timer, and up to two buttons. Built in code rather than
     /// its own UXML because there is nothing here worth hand-laying-out yet.
     ///
     /// This is one implementation of the interface, not the interface itself.
     /// A redesign swaps the single place PlayPopup constructs this class for
     /// another IRankedQueueView - RankedQueuePresenter and IRankedQueueService
     /// never change.
+    ///
+    /// The secondary button (Cancel / Back) always raises CancelRequested; the
+    /// presenter treats it as "stop" while an attempt runs, and PlayPopup as
+    /// "back to the mode list" once it has ended. The primary button is the
+    /// bot offer while searching, and Forfeit on the forfeit prompt.
     /// </summary>
     public sealed class RankedQueueViewElement : VisualElement, IRankedQueueView
     {
         private readonly Label statusLabel;
         private readonly Label timerLabel;
+        private readonly Button primaryButton;
         private readonly Button cancelButton;
 
+        private Action primaryAction;
+        private bool botOffered;
+
         public event Action CancelRequested;
+        public event Action ForfeitConfirmed;
+        public event Action BotAccepted;
 
         public RankedQueueViewElement()
         {
@@ -35,8 +46,12 @@ namespace NodeWar.Lobby
             timerLabel.AddToClassList("lb-ranked__timer");
             Add(timerLabel);
 
+            primaryButton = new Button(() => primaryAction?.Invoke());
+            primaryButton.AddToClassList("ui-reset-button");
+            primaryButton.AddToClassList("lb-ranked__cancel");
+            Add(primaryButton);
+
             cancelButton = new Button(() => CancelRequested?.Invoke());
-            cancelButton.text = "Cancel";
             cancelButton.AddToClassList("ui-reset-button");
             cancelButton.AddToClassList("lb-ranked__cancel");
             Add(cancelButton);
@@ -46,39 +61,75 @@ namespace NodeWar.Lobby
 
         public void ShowIdle()
         {
-            statusLabel.text = "Ready to search for a ranked match.";
-            timerLabel.text = "";
-            SetVisible(timerLabel, false);
-            SetVisible(cancelButton, false);
+            Show("Ready to search for a ranked match.", null, null, null, null);
         }
 
         public void ShowSearching(int elapsedSeconds)
         {
-            statusLabel.text = "Searching for a match...";
-            timerLabel.text = FormatElapsed(elapsedSeconds);
-            SetVisible(timerLabel, true);
-            SetVisible(cancelButton, true);
+            // Called every frame while searching; the bot offer stays up once made.
+            if (botOffered)
+                Show("Searching for a match...", FormatElapsed(elapsedSeconds), "Play a bot instead",
+                     () => BotAccepted?.Invoke(), "Cancel", keepBotOffer: true);
+            else
+                Show("Searching for a match...", FormatElapsed(elapsedSeconds), null, null, "Cancel");
+        }
+
+        public void ShowBotOffer()
+        {
+            botOffered = true;
         }
 
         public void ShowFound(string matchId)
         {
-            statusLabel.text = "Match found — connecting comes next.";
-            SetVisible(timerLabel, false);
-            SetVisible(cancelButton, false);
+            Show("Match found.", null, null, null, null);
+        }
+
+        public void ShowConnecting()
+        {
+            Show("Match found. Connecting to your opponent...", null, null, null, "Cancel");
+        }
+
+        public void ShowRequeueing(string message)
+        {
+            Show(message, null, null, null, "Cancel");
+        }
+
+        public void ShowForfeitPrompt()
+        {
+            Show("You left a match in progress. Forfeit it to queue again?", null, "Forfeit",
+                 () => ForfeitConfirmed?.Invoke(), "Back");
+        }
+
+        public void ShowWaitingForResult(int seconds)
+        {
+            Show("Waiting for your last match's result.", FormatElapsed(seconds), null, null, null);
         }
 
         public void ShowFailed(string message)
         {
-            statusLabel.text = "Couldn't find a match: " + message;
-            SetVisible(timerLabel, false);
-            SetVisible(cancelButton, false);
+            Show("Couldn't find a match: " + message, null, null, null, "Back");
         }
 
         public void ShowCancelled()
         {
-            statusLabel.text = "Search cancelled.";
-            SetVisible(timerLabel, false);
-            SetVisible(cancelButton, false);
+            Show("Search cancelled.", null, null, null, "Back");
+        }
+
+        private void Show(string status, string timer, string primary, Action onPrimary, string cancel,
+                          bool keepBotOffer = false)
+        {
+            if (!keepBotOffer) botOffered = false;
+
+            statusLabel.text = status;
+            timerLabel.text = timer ?? "";
+            SetVisible(timerLabel, timer != null);
+
+            primaryAction = onPrimary;
+            primaryButton.text = primary ?? "";
+            SetVisible(primaryButton, primary != null);
+
+            cancelButton.text = cancel ?? "";
+            SetVisible(cancelButton, cancel != null);
         }
 
         private static void SetVisible(VisualElement element, bool visible)
