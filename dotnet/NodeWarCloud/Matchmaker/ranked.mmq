@@ -119,7 +119,10 @@
       }
     },
     "matchHosting": {
-      "type": "MatchId"
+      "type": "CloudCode",
+      "moduleName": "NodeWarCloud",
+      "allocateFunctionName": "Matchmaker_Allocate",
+      "pollFunctionName": "Matchmaker_Poll"
     }
   },
   "filteredPools": []
