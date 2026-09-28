@@ -15,14 +15,47 @@ sources:
   - id: contract
     resource: docs/simulation-rules.md
     title: Simulation Determinism Contract
+    last_modified: 2026-09-28T14:44:08-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: sim-version
+    resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
+    title: SimulationVersion.Current and bump policy
+    last_modified: 2026-09-25T20:27:51-04:00
+  - id: baseline-tests
+    resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
+    title: Pinned version equality check
+    last_modified: 2026-09-25T20:27:51-04:00
+  - id: balance-hasher
+    resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
+    title: Balance fingerprint separate from state
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: balance-data
+    resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
+    title: Per-era suit and district entries
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: Shared drafted board and static configuration
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: input-serializer
+    resource: Assets/Scripts/Game/Network/InputSerializer.cs
+    title: Wire layout and build identity comparison
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: command-layout-test
+    resource: dotnet/NodeWar.MatchLog.Tests/MatchLogFormatTests.cs
+    title: Command field layout guard
+    last_modified: 2026-09-25T22:04:00-04:00
+  - id: draft-manager
+    resource: Assets/Scripts/Game/Core/DraftManager.cs
+    title: Timeout placement fallback
+    last_modified: 2026-09-26T08:36:52-04:00
 ---
 
 # determinism-guard
@@ -52,8 +85,10 @@ Read the changed or proposed code, then check each item:
      wall-clock time or per-machine state?
    - SimulationState holds no RNG field today, so "stored in
      SimulationState" is not yet the test. The precedent is
-     DraftManager.HandleTimeout, which derives a seed from already-
-     replicated values. If a change introduces stored RNG state, does it
+     DraftManager.HandleTimeout's random-cell fallback, which derives a
+     seed from already-replicated values when there is no valid parked
+     placement. The active peer sends the resulting placement. If a change
+     introduces stored RNG state, does it
      live on SimulationState and advance only inside SimulateTick?
 
 5. Collections
@@ -70,6 +105,8 @@ Read the changed or proposed code, then check each item:
      tick sequence?
    - Canonical order: movement -> combat -> claiming -> 
      production -> healing -> respawns -> win-check
+   - Preserve the Rampart-bonus pass after movement and the post-combat
+     resume pass after win-check too.
 
 8. Hasher registration
    - Does any new SimulationState field appear in 
@@ -78,10 +115,28 @@ Read the changed or proposed code, then check each item:
    - A field hashed only when non-zero (the era fields) counts as
      registered, but only if it is 0 in every match that existed before
      it; otherwise it must be hashed unconditionally.
+   - Conditional hashing alone does not waive a SimulationVersion bump:
+     do existing inputs still produce the same results and hashes, as
+     they did when eras were added? If not, bump SimulationVersion.Current
+     and review the pinned baseline version with the change. The version
+     test checks equality with that pin, not whether hash constants were edited.
+   - Balance is not in SimulationStateHasher. Does a new GameBalanceData,
+     SuitStats or DistrictStats field reach BalanceHasher? Per-suit and
+     per-district numbers belong on their era entries, not new globals.
+     The handshake's content-hash comparison mitigates issue #59; it does
+     not put balance into the state hash.
+   - Does starting-state setup still go through MatchFactory for live
+     drafted matches, the referee and headless matches? Its Configure
+     method installs process-global statics, so matches and test fixtures
+     must not run concurrently in one process.
 
 9. Command/serializer pairing
    - Does any new CommandType have a case in CommandProcessor?
    - Does any GameCommand struct change update InputSerializer?
+   - Does a wire layout change bump InputSerializer.ProtocolVersion, and
+     a GameCommand layout change also update MatchLogFormat with a new
+     TICKS tag? The layout test flags changed fields; it does not verify
+     that a new tag was added.
 
 10. View boundary
     - Does any simulation code read from or call into View or UI?
