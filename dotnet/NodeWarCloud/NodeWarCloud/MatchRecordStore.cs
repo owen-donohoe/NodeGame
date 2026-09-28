@@ -22,7 +22,7 @@ namespace NodeWar.Cloud
     public interface IMatchRecordStore
     {
         Task<LockedMatchRecord> ReadAsync(string matchId);
-        // Updates an existing record; creation belongs to trusted matchmaking.
+        // Null lock creates a missing record for trusted matchmaking. Updates require a lock.
         Task WriteAsync(MatchRecord record, string expectedWriteLock);
         Task SaveLog(string matchId, int playerIndex, string base64);
     }
@@ -71,9 +71,15 @@ namespace NodeWar.Cloud
 
         public Task WriteAsync(MatchRecord record, string expectedWriteLock)
         {
-            if (string.IsNullOrEmpty(expectedWriteLock)) throw new ArgumentException("An expected write lock is required.");
             lock (gate)
             {
+                if (expectedWriteLock == null && !records.ContainsKey(record.matchId))
+                {
+                    records.Add(record.matchId, JsonConvert.SerializeObject(record));
+                    versions.Add(record.matchId, 1);
+                    return Task.CompletedTask;
+                }
+                if (string.IsNullOrEmpty(expectedWriteLock)) throw new ArgumentException("An expected write lock is required.");
                 if (!versions.TryGetValue(record.matchId, out int version) ||
                     version.ToString(CultureInfo.InvariantCulture) != expectedWriteLock)
                     throw new RecordConflictException("Match record changed.");

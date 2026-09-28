@@ -30,7 +30,16 @@ namespace NodeWar.Cloud
 
         public async Task WriteAsync(MatchRecord record, string expectedWriteLock)
         {
-            if (string.IsNullOrEmpty(expectedWriteLock)) throw new ArgumentException("An expected write lock is required.");
+            if (expectedWriteLock == null)
+            {
+                // Cloud Save has no atomic create-if-absent: null bypasses write locks.
+                // Re-check here to refuse a known existing record; cross-worker first
+                // creation races still need validation in the live matchmaking spike.
+                if ((await ReadAsync(record.matchId)).Record != null)
+                    throw new RecordConflictException("Match record already exists.");
+            }
+            else if (expectedWriteLock.Length == 0)
+                throw new ArgumentException("An expected write lock is required.");
             try
             {
                 await api.CloudSaveData.SetPrivateCustomItemAsync(context, context.ServiceToken,

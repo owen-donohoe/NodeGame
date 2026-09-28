@@ -28,7 +28,7 @@
              Link="Shared/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Com.Unity.Services.CloudCode.Apis" Version="0.0.22" />
+    <PackageReference Include="Com.Unity.Services.CloudCode.Apis" Version="0.0.24" />
     <PackageReference Include="Com.Unity.Services.CloudCode.Core" Version="0.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
   </ItemGroup>
