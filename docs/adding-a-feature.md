@@ -13,11 +13,11 @@ sources:
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: NodeData, VillagerData, PlayerData, SimulationState
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: commands
     resource: Assets/Scripts/Game/Simulation/Commands.cs
     title: CommandType and GameCommand
@@ -25,27 +25,71 @@ sources:
   - id: command-processor
     resource: Assets/Scripts/Game/Simulation/CommandProcessor.cs
     title: CommandProcessor.ProcessCommand and ProcessEquipCommand
-    last_modified: 2026-08-29T10:56:17-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: SpawnBonusVillagers, AssignAllCombatTargets, SimulateTick
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: GameBalanceData tuning fields
-    last_modified: 2026-08-29T10:56:17-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: tests
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: EditMode determinism tests
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-25T20:27:51-04:00
   - id: test-runner
     resource: scripts/run-tests.ps1
     title: EditMode test runner
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-18T08:08:19-04:00
   - id: match-factory
     resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
     title: MatchFactory, where a new field gets its starting value
     last_modified: 2026-09-25T22:52:42-04:00
+  - id: sim-version
+    resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
+    title: SimulationVersion.Current and bump policy
+    last_modified: 2026-09-25T20:27:51-04:00
+  - id: balance-hasher
+    resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
+    title: Balance fingerprint separate from state
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: balance-tests
+    resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
+    title: Coverage of balance fields
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: draft-manager
+    resource: Assets/Scripts/Game/Core/DraftManager.cs
+    title: Timeout placement fallback
+    last_modified: 2026-09-26T08:36:52-04:00
+  - id: game-manager
+    resource: Assets/Scripts/Game/Core/GameManager.cs
+    title: State allocation, drafted setup and new villager views
+    last_modified: 2026-09-26T08:52:10-04:00
+  - id: lockstep
+    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
+    title: Desync checkpoint timing
+    last_modified: 2026-09-25T22:11:57-04:00
+  - id: input-serializer
+    resource: Assets/Scripts/Game/Network/InputSerializer.cs
+    title: Wire layout and build identity comparison
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: match-log-format
+    resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
+    title: Recorded identity, board and commands
+    last_modified: 2026-09-26T08:52:10-04:00
+  - id: command-layout-test
+    resource: dotnet/NodeWar.MatchLog.Tests/MatchLogFormatTests.cs
+    title: Command field layout guard
+    last_modified: 2026-09-25T22:04:00-04:00
+  - id: dotnet-runner
+    resource: docs/skills/run-dotnet-tests.md
+    title: Editor-free suite and receipt commands
+    last_modified: 2026-09-26T10:16:37-04:00
+  - id: project-rules
+    resource: CLAUDE.md
+    title: Scene, prefab and metadata editing boundary
+    last_modified: 2026-09-26T10:16:37-04:00
 ---
 
 # Adding a Feature — Checklist
@@ -78,8 +122,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - If it changes what the same inputs produce, bump
      `SimulationVersion.Current` in the same commit (see
      `docs/simulation-rules.md`). A field that is 0 in every existing
-     match can instead be hashed only when non-zero, as the era fields
-     are, which keeps the baselines and older match logs valid.
+     match can be hashed only when non-zero, as the era fields are.
+     That preserves old hashes; avoiding a version bump also requires
+     unchanged results for those existing inputs, as with eras.
 
 3. **Does it need a new player-triggerable action?**
    - Add a `CommandType` in `Commands.cs` if no existing type fits.
@@ -97,14 +142,16 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Any wire layout change bumps `InputSerializer.ProtocolVersion` in the
      same commit. A `GameCommand` change also needs a new TICKS tag in
      `MatchLogFormat` (`GameCommandLayout_RequiresCoordinatedSerializerChanges`
-     fails until it has one).
+     detects changes to the command's field layout; it does not check
+     that a new tag was added).
 
 4. **Does it involve randomness?**
    - Never use `UnityEngine.Random` or anything seeded from wall-clock
      time inside `Simulation/`.
    - Derive a seed from already-replicated state (tick count, player ID,
-     entity ID) — see `DraftManager.HandleTimeout`'s
-     `turnNumber * 7919 + activePlayer * 31` pattern.
+     entity ID) — see `DraftManager.HandleTimeout`'s fallback
+     `turnNumber * 7919 + activePlayer * 31` pattern when no valid parked
+     placement exists. The chosen placement is sent to the other peer.
    - If the feature needs randomness mid-match (after `SimulationState`
      exists), any RNG state must itself live on `SimulationState` and
      only advance inside `SimulateTick`.
@@ -154,23 +201,28 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      know the other exists.
 
 9. **Does it add a new tunable number?**
-   Put it on `GameBalance` or `BoardConfig` as an inspector-exposed field,
-   read through the existing `bal` / `boardConfig` reference already
-   available in `Simulation/` — don't hardcode it or add a new plumbing
-   path. A number that belongs to one suit or district goes on its
+   Put it in the `GameBalanceData` or `BoardConfigData` held by the
+   `GameBalance` / `BoardConfig` asset — don't hardcode it or add a new
+   plumbing path. `MatchFactory.Configure` installs balance and path
+   multipliers; `Build` / `Fill` consume the board data. A number that
+   belongs to one suit or district goes on its
    `SuitStats` / `DistrictStats` entry, so it can differ by era, and is
    read through `GetSuitStats(type, era)` / `GetDistrictStats(type, era)`.
-   Add it to `BalanceHasher` (a test walks the structs and fails if you
-   do not), then export the balance for the server (`Tools > Node War >
+   Add a balance field to `BalanceHasher` (a test walks `GameBalanceData`,
+   `SuitStats` and `DistrictStats` and fails if you do not), then export
+   the balance for the server (`Tools > Node War >
    Backend > Export Balance For Server`) so the referee can verify matches
-   played on it.
+   played on it. `BalanceHasher` does not hash `BoardConfigData`; the
+   board is recorded separately in the match log. The balance content
+   hash is compared in the handshake, not folded into `SimulationStateHasher`.
 
 10. **C# conventions.**
     - Keep `[SerializeField]` fields in the same file as their
       `MonoBehaviour` — don't split a class across files without a
       strong reason.
-    - Don't touch `.unity` scenes, prefabs, or `.meta` files unless the
-      feature explicitly requires it.
+    - Never hand-edit `.unity` scenes, prefabs, or `.meta` files. When a
+      feature explicitly requires a change, make it through the connected
+      Editor.
 
 11. **Write a test for any simulation change.**
     The project has the Unity Test Framework package installed
@@ -190,5 +242,7 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
     before generating a receipt. Any change to `Simulation/`
     should come with a test exercising the new behavior, added alongside
     the existing ones. At minimum, before calling the feature done, run a
-    local match long enough to cross a `DESYNC_CHECK_INTERVAL` boundary
-    (50 ticks) and confirm no `[DESYNC]` log appears.
+    networked match on both peers past a `DESYNC_CHECK_INTERVAL` checkpoint
+    (first at tick index 50, after 51 simulated ticks), let the peers exchange
+    the hashes, and confirm no `[DESYNC]` log appears. A local match has no
+    peer hash comparison and cannot establish this.
