@@ -266,6 +266,40 @@ namespace NodeWar.Cloud.Tests
             Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
         }
 
+        [Test]
+        public async Task OpposingConcurrentForfeitsSettleOneWinnerEverywhere()
+        {
+            await Mutate(r => r.connectedUnixSeconds = 50);
+            matches.BeforeWrite = async (_, __) =>
+            {
+                matches.BeforeWrite = null;
+                var other = await rendezvous.Leave(MatchId, "p1", true, 200);
+                Assert.That(other.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            };
+            var first = await rendezvous.Leave(MatchId, "p0", true, 200);
+            Assert.That(first.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+
+            // p1's forfeit committed first, so p0 won: in the record and in both players.
+            var record = await Record();
+            Assert.That(record.forfeitedBy, Is.EqualTo(1));
+            Assert.That(record.outcomes[0].won, Is.True);
+            Assert.That(record.outcomes[1].won, Is.False);
+            Assert.That((await State(0)).Rating.R, Is.GreaterThan(1500));
+            Assert.That((await State(1)).Rating.R, Is.LessThan(1500));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
+        }
+
+        [Test]
+        public async Task ACommittedForfeitIsFinishedByTheOtherPlayersLeave()
+        {
+            await Mutate(r => { r.connectedUnixSeconds = 50; r.forfeitedBy = 0; r.settlementUnixSeconds = 150; });
+            var result = await rendezvous.Leave(MatchId, "p1", false, 200);
+            Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            var record = await Record();
+            Assert.That(record.state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(record.outcomes[1].won, Is.True);
+        }
+
         private async Task Mutate(Action<MatchRecord> mutate)
         {
             var read = await matches.ReadAsync(MatchId);

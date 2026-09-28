@@ -27,6 +27,10 @@ namespace NodeWar.Cloud
         // Server time either peer first confirmed the connection. 0 means the
         // match never started, so leaving voids it rather than forfeiting it.
         public long connectedUnixSeconds;
+        // The slot that forfeited, or -1. Committed under the record's write
+        // lock before any player write, like agreement, so every settlement
+        // pass (Leave or ReportMatch) settles the same winner.
+        public int forfeitedBy = -1;
     }
 
     // A settled player's result on this match. Never re-derived from current

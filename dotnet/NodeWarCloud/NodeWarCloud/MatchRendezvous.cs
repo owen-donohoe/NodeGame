@@ -134,6 +134,14 @@ namespace NodeWar.Cloud
                     record.state = MatchRecordState.Void;
                     result = Cleared();
                 }
+                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1)
+                {
+                    // A forfeit is already decided; finish it, whoever is calling.
+                    settledOk = await settler.Settle(record, 1 - record.forfeitedBy, now);
+                    record.state = settledOk ? MatchRecordState.Settled : MatchRecordState.Void;
+                    if (!settledOk) record.outcomes = null;
+                    result = Cleared();
+                }
                 else if (record.state == MatchRecordState.Pending &&
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
                 {
@@ -162,12 +170,17 @@ namespace NodeWar.Cloud
 
                     if (!forfeit) return new LeaveMatchResult { outcome = LeaveOutcome.NeedsForfeit };
 
-                    int other = 1 - caller;
+                    // Commit who forfeited before any player write. Settling first
+                    // would let the other player's concurrent forfeit write player
+                    // records for one winner and the match record for the other.
+                    record.forfeitedBy = caller;
                     record.settlementUnixSeconds = now;
-                    settledOk = await settler.Settle(record, other, now);
-                    record.state = settledOk ? MatchRecordState.Settled : MatchRecordState.Void;
-                    if (!settledOk) record.outcomes = null;
-                    result = Cleared();
+                    try { await matches.WriteAsync(record, read.WriteLock); }
+                    catch (RecordConflictException)
+                    {
+                        if (++conflicts >= RetryLimit) throw;
+                    }
+                    continue;
                 }
 
                 try { await matches.WriteAsync(record, read.WriteLock); }

@@ -81,11 +81,15 @@ namespace NodeWar.Cloud
                 {
                     record.state = MatchRecordState.Void;
                 }
-                else if (Agreed(record))
+                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || Agreed(record))
                 {
-                    // Agreement and its server timestamp were committed before
-                    // either player write. Recovery is allowed only while claims are live.
-                    record.state = await settler.Settle(record, record.reports.First(r => r.accepted).winner, now)
+                    // Agreement or a forfeit, and its server timestamp, were
+                    // committed before either player write. Recovery is allowed
+                    // only while claims are live. A forfeit outranks the logs.
+                    int winner = record.forfeitedBy == 0 || record.forfeitedBy == 1
+                        ? 1 - record.forfeitedBy
+                        : record.reports.First(r => r.accepted).winner;
+                    record.state = await settler.Settle(record, winner, now)
                         ? MatchRecordState.Settled : MatchRecordState.Void;
                     if (record.state == MatchRecordState.Void) record.outcomes = null;
                 }
