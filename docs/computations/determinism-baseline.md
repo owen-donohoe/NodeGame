@@ -22,28 +22,47 @@ sources:
   - id: tests
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: DeterminismBaselineTests and the pinned constants
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-25T20:27:51-04:00
   - id: fixture
     resource: Assets/Tests/EditMode/Tests/TestBoardFactory.cs
     title: TestBoardFactory.BuildThreeNodeBoard
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-02T10:22:51-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: contract
     resource: docs/simulation-rules.md
     title: Simulation Determinism Contract
+    last_modified: 2026-09-28T14:44:08-04:00
   - id: build
     resource: dotnet/NodeWar.Simulation/NodeWar.Simulation.csproj
     title: The build definition the gate compiles the fixture through
+    last_modified: 2026-08-31T20:07:54-04:00
   - id: gate
     resource: .github/workflows/determinism.yml
     title: The CI job that runs this computation
+    last_modified: 2026-09-03T21:46:34-04:00
+  - id: sim-version
+    resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
+    title: SimulationVersion.Current and bump policy
+    last_modified: 2026-09-25T20:27:51-04:00
+  - id: balance-hasher
+    resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
+    title: Balance fingerprint separate from state
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: attester-script
+    resource: docs/attesters/hash_baseline.ps1
+    title: Required cases and receipt freshness checks
+    last_modified: 2026-08-31T20:07:23-04:00
+  - id: dotnet-runner
+    resource: docs/skills/run-dotnet-tests.md
+    title: Editor-free suite and receipt commands
+    last_modified: 2026-09-26T10:16:37-04:00
 ---
 
 # Computation
@@ -70,8 +89,15 @@ attested; adding a third to this table means recording and defending a new const
 villager crosses one edge at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ticks, arrives on
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
-The baselines live as `const int` in `DeterminismBaselineTests.cs`. That file is the computation;
-this document is its contract.
+The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
+`BaselinesPinnedAtSimVersion = 1`. `SimVersion_MatchesPinnedBaselines` checks that this version
+matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
+the hash constants. That file is the computation; this document is its contract.
+
+Era fields enter `SimulationStateHasher` only when non-zero. Both fixtures remain era 0, so their
+hashes are unchanged, older era-0 logs still verify, and adding eras required no simulation-version
+bump. The separate `BalanceHasher` covers balance data; these are state fingerprints, not balance
+fingerprints.
 
 ## Where it runs
 
@@ -114,10 +140,18 @@ pass is not a verifier.
 2. **The receipt is for current code.** `results.xml` must be newer than the last commit touching
    `Assets/Scripts/Game/Simulation/`. A stale receipt from before the change under review proves
    nothing about it.
-3. It reports the commit the verdict applies to.
+3. **The receipt is for the working tree too.** It must be at least as new as the newest `.cs`
+   source under `Assets/Scripts/Game/Simulation/` and `Assets/Tests/EditMode/Tests/`. A receipt
+   predating an uncommitted edit fails even if it is newer than the last simulation commit.
+4. It reports the commit the verdict applies to.
 
-A run whose receipt fails either check is **unattested**. Treat the determinism gate as unsatisfied
+A run whose receipt fails a check is **unattested**. Treat the determinism gate as unsatisfied
 and do not claim the simulation change is safe.
+
+The attester requires the two fingerprint cases, not `SimVersion_MatchesPinnedBaselines`; the
+full suite run in CI checks that test. If the last simulation commit date is unavailable or
+unparseable, or no watched `.cs` sources are found, the attester reports the corresponding
+freshness check as skipped rather than failing closed.
 
 ## Why this exists
 
@@ -137,7 +171,10 @@ A baseline changing is a signal, not an obstacle. When a deliberate balance or l
 it:
 
 1. Confirm the change is intended and understand *why* the hash moved.
-2. Update the `const` and the table above in the **same commit** as the change that caused it.
+2. Update the hash `const`, the table above, `SimulationVersion.Current`, and
+   `BaselinesPinnedAtSimVersion` in the **same commit** as the change that caused it. A pure
+   balance edit normally needs no simulation-version bump because the handshake compares the
+   balance hash; deliberately re-pinning these fixtures also updates their pinned version.
 3. Note it in the commit message. A baseline that moves in its own isolated commit has lost the
    context that made it reviewable.
 
