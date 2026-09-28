@@ -216,7 +216,7 @@ Decided with the user on 2026-09-27:
 | 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R | **Done**, plus review fixes; not deployed |
 | 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) | **Done**; visuals unverified |
 | 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | **Done** (2026-09-28): allocator live in development; a queued pair produced record `match-<id>` with both Matchmaker-supplied player IDs |
-| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | **8.2a queue service** can start now; 8.2b waits for 8.1b |
+| 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | 8.2a queue service and swappable queue UI **done**; 8.2b (rendezvous) next, then 8.2c (disconnects) and 8.2d (strikes): decisions D7-D14 |
 | 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 | 7.4a service **done**; wiring into GameManager waits for 8.2 |
 | 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 | 7.5a server history and 7.5c client page **done** (visuals unverified); 7.5b retention **deferred** (unlimited custom items, small logs; revisit with real volume) |
 | 7.6 | Session keys and per-command signatures; single-log settlement | all of the above | Not started |
@@ -304,6 +304,30 @@ Matchmaker is enabled and the queue is deployed (8.0). Rules as §7: same `Proto
 - **8.1b Pool switch + live spike (lead), as planned.** Deploy the module; set the pool's hosting to Cloud Code (`moduleName`, `allocateFunctionName`, `pollFunctionName`) in `ranked.mmq`; deploy with CLI 2.0.0. Spike: two anonymous players (Authentication REST) create tickets (Matchmaker REST) → confirm `Allocate` ran, a `match-<id>` record exists, and what each ticket's assignment returns.
 - **8.2a Client queue service.** `IRankedQueueService` (`EnqueueAsync`, `PollAsync`, `CancelAsync`) + fake + UGS impl over the matchmaker client API in `com.unity.services.multiplayer` 2.3.1 (check its exact type names first). Ticket `CustomData` = `LocalBuildIdentity` values. No UI, no lobby.
 - **8.2b Rendezvous + queue UI + draft handoff**, after 8.1b's evidence. Network-adjacent: main session, plan mode.
+
+**Found in the 8.2b review (2026-09-28):**
+- **The host is fixed by the record, not chosen.** `MatchEligibility.Check` requires `header.playerIds[p] == record.playerIds[p]`, and settlement awards `winner` by that index. So `record.playerIds[0]` hosts as simulation player 0 and `[1]` joins as player 1. Each client must learn the record's order and its opponent's ID from the server.
+- **Every ranked log is refused today.** `GameManager.BeginRecording` writes a fresh GUID match ID and a blank opponent ID. 8.2b carries `matchId` and both player IDs through `MatchConnection` into the header (7.4 depends on it).
+- **D6's "lobby join code" is the Relay join code.** `MatchLauncher` joins Relay directly; no UGS Lobby is involved.
+- **No wire change in 8.2b.** The handshake is unchanged, so no `ProtocolVersion` bump. Accepted: the handshake does not prove the peer's identity; the code is readable only by the record's two players.
+- **A failed rendezvous strands both players for 2 h.** Claims are released only inside `ReportMatch` on a terminal record, and an Open record with no reports never gets there. D7 closes this.
+
+**Decisions (2026-09-28), with the user:**
+
+| # | Decision |
+|---|---|
+| D7 | **`AbandonMatch(matchId)`**: before the guest confirms the connection, voids the record and releases both claims. After the connection, abandoning is a **forfeit** (a different result, settled by D11), and the "already in a match" screen offers "You left a match in progress. Forfeit to queue again?" |
+| D8 | **Rendezvous deadlines, halved from the first proposal:** guest waits 15 s for the code, host waits 22 s for the guest, handshake 15 s. On any, abandon (D7) and **re-queue automatically**, looping with "Opponent's connection failed — finding a new match…". Retention over explicit choice; a strong "connecting you" visual is later UI work. |
+| D9 | **Re-queue does not trust ticket message text.** On any failed ticket the client calls `GetPlayerState`: no live `activeMatch` → it was the innocent side, re-queue (capped, ~3 tries); a live claim → the forfeit screen (D7). The same check runs before creating a ticket. |
+| D10 | **Unranked bot offered at 90 s** (§7). The ticket stays live until the player accepts; accepting deletes the ticket first, then starts the bot match. Unrated by construction: no match record, so the report upload must never run for it. The Found-at-the-same-second race leaves the opponent to time out and re-queue (D8). |
+| D11 | **In-match disconnect, two stages (8.2c).** Replaces the 2 s `DISCONNECT_TIMEOUT` end. The simulation stays stalled: a panel "Opponent disconnected" asks for 5 s; then the text becomes a 5 s countdown ring; the ring ending ends the match. A reconnect covers a transient network drop (both peers keep state; unacked inputs already resend). It cannot cover a crash: that would need a mid-match snapshot, which touches `Simulation/`. |
+| D12 | **Who disconnected is decided by server presence.** Both peers see the same silence, so during the grace window each client calls `Presence(matchId)` about once a second. Only one seen → that player wins by forfeit, the other takes the loss and a strike; the unseen client shows "Reconnecting…" rather than "Opponent disconnected". Both seen (the peer link broke) → Void, no strike. Neither → Void. Accepted: blocking only peer traffic turns a loss into a Void; detect the pattern from logs later. Works before 7.6. |
+| D13 | **Strike ladder (8.2d), server-owned** (Protected Cloud Save; the client only displays it). In-match disconnects (D12) only; rendezvous failures cannot be attributed and never count. Disconnects 1-2: none; 3: 2 min; 4: 2 min; 5: 1 h; 6: 1 day; 7+: 2 days (cap). Every **16 h since the player's last queue** without a new disconnect drops one step (2 days → 1 day → 1 h → 2 min → none). Client checks before enqueue and shows the countdown; `Allocate` refuses a blocked player as a backstop (which fails the opponent's ticket too; D9 re-queues them). |
+| D14 | **Scope.** 8.2b: rendezvous, draft handoff, D7-D10, and ranked becomes the default play button; Host/Join stay in the play popup (not default) until the Social chapter. 8.2c: D11-D12. 8.2d: D13. The Social tab (groups, friends, custom battle, chat, replays) is its own lobby chapter, later. |
+
+**8.2b shape.** One Cloud Code function `Rendezvous(matchId, joinCode?)`: the caller must be in the record; it returns both player IDs, the caller's slot and the code once published; slot 0 publishes its code under the record's write lock. The guest polls every 2 s. A UnityEngine-free rendezvous state machine (tested like `RankedQueuePresenter`) drives the existing `MatchLauncher`, which gains ranked deadlines. `IRankedQueueView` gains connecting, re-queueing and already-in-a-match states.
+
+**Live two-player test:** Editor plus one standalone build (separate PlayerPrefs keys, so different players), then a second PC across a real network. Two builds on one machine share `HKCU\Software\<Company>\<Product>` and would sign in as the same player.
 
 #### 7.5 Replay storage
 
