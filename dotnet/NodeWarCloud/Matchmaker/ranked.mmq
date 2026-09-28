@@ -1,0 +1,77 @@
+{
+  "$schema": "https://ugs-config-schemas.unity3d.com/v1/matchmaker/matchmaker-queue.schema.json",
+  "name": "ranked",
+  "enabled": true,
+  "maxPlayersPerTicket": 1,
+  "defaultPool": {
+    "variants": [],
+    "name": "ranked-pool",
+    "enabled": true,
+    "timeoutSeconds": 300,
+    "matchLogic": {
+      "name": "Ranked 1v1",
+      "backfillEnabled": false,
+      "matchDefinition": {
+        "teams": [
+          {
+            "name": "Side",
+            "teamCount": { "min": 2, "max": 2, "relaxations": [] },
+            "playerCount": { "min": 1, "max": 1, "relaxations": [] },
+            "teamRules": []
+          }
+        ],
+        "matchRules": [
+          {
+            "name": "same-protocol",
+            "source": "Players.CustomData.protocol",
+            "type": "Difference",
+            "reference": 0
+          },
+          {
+            "name": "same-sim",
+            "source": "Players.CustomData.sim",
+            "type": "Difference",
+            "reference": 0
+          },
+          {
+            "name": "same-content",
+            "source": "Players.CustomData.content",
+            "type": "Difference",
+            "reference": 0
+          },
+          {
+            "name": "arena-cap",
+            "source": "Players.CustomData.ExternalData.CloudSave.rank.Arena",
+            "type": "Difference",
+            "reference": 1,
+            "ExternalData": { "cloudSave": { "accessClass": "Protected", "default": 0 } }
+          },
+          {
+            "name": "arena-same-first",
+            "source": "Players.CustomData.ExternalData.CloudSave.rank.Arena",
+            "type": "Difference",
+            "reference": 0,
+            "ExternalData": { "cloudSave": { "accessClass": "Protected", "default": 0 } },
+            "relaxations": [
+              { "type": "RuleControl.Disable", "ageType": "Oldest", "atSeconds": 30 }
+            ]
+          },
+          {
+            "name": "rating-window",
+            "source": "Players.CustomData.ExternalData.CloudSave.rating.R",
+            "type": "Difference",
+            "reference": 100,
+            "ExternalData": { "cloudSave": { "accessClass": "Protected", "default": 1500 } },
+            "relaxations": [
+              { "type": "ReferenceControl.Replace", "ageType": "Oldest", "atSeconds": 20, "value": 250 },
+              { "type": "ReferenceControl.Replace", "ageType": "Oldest", "atSeconds": 60, "value": 500 },
+              { "type": "RuleControl.Disable", "ageType": "Oldest", "atSeconds": 120 }
+            ]
+          }
+        ]
+      }
+    },
+    "matchHosting": { "type": "MatchId" }
+  },
+  "filteredPools": []
+}
