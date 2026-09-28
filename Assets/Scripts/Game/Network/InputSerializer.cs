@@ -77,7 +77,7 @@ namespace NodeWar.Network
         /// single byte.
         /// 2: DraftLoadout carries era tables and skin IDs.
         /// </summary>
-        public const ushort ProtocolVersion = 2;
+        public const ushort ProtocolVersion = NodeWar.Backend.ProtocolVersion.Current;
 
         // Keep in step with GameCommand; a change here is a ProtocolVersion bump.
         private const int BYTES_PER_COMMAND = 24;

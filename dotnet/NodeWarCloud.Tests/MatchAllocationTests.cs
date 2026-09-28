@@ -116,6 +116,24 @@ namespace NodeWar.Cloud.Tests
             Assert.That(reads, Is.Empty);
         }
 
+        [TestCase("protocol", -1)]
+        [TestCase("protocol", 1)]
+        [TestCase("sim", -1)]
+        [TestCase("sim", 1)]
+        public async Task MatchingButUnsupportedVersionsRefuseBeforeClaims(string field, int offset)
+        {
+            var roster = Roster();
+            foreach (var player in roster)
+            {
+                if (field == "protocol") player.Protocol = (ushort)(ProtocolVersion.Current + offset);
+                else player.Sim = (ushort)(SimulationVersion.Current + offset);
+            }
+            await AssertRefused(await allocation.Allocate("m", roster, Now), "Unsupported");
+            Assert.That(reads, Is.Empty);
+            Assert.That(states["p0"].ActiveMatch, Is.Null);
+            Assert.That(states["p1"].ActiveMatch, Is.Null);
+        }
+
         [Test]
         public async Task UnknownContentRefusesWithoutReadingPlayers()
         {

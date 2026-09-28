@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NodeWar.Backend;
+using NodeWar.Simulation;
 
 namespace NodeWar.Cloud
 {
@@ -54,6 +55,9 @@ namespace NodeWar.Cloud
             var second = players[1];
             if (first.Protocol != second.Protocol || first.Sim != second.Sim || first.Content != second.Content)
                 return Error("Players have different protocol, sim or content versions.");
+            foreach (var player in players)
+                if (player.Protocol != ProtocolVersion.Current || player.Sim != SimulationVersion.Current)
+                    return Error("Unsupported protocol or simulation version.");
             if (!balances.TryGet(first.Content.Value, out _)) return Error("Unknown content hash.");
 
             var states = new[] { await readPlayer(first.PlayerId), await readPlayer(second.PlayerId) };
