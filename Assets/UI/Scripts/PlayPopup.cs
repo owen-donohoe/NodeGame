@@ -1,3 +1,4 @@
+using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -22,7 +23,8 @@ namespace NodeWar.Lobby
         {
             Find,
             Join,
-            Status
+            Status,
+            Ranked
         }
 
         public VisualElement Root { get; private set; }
@@ -36,6 +38,14 @@ namespace NodeWar.Lobby
         private readonly VisualElement findView;
         private readonly VisualElement joinView;
         private readonly VisualElement statusView;
+        private readonly VisualElement rankedView;
+
+        // The swap point: replace this initializer with any other
+        // IRankedQueueView to restyle the ranked queue screen. It must also
+        // be a VisualElement to mount below, but RankedQueuePresenter and
+        // IRankedQueueService never need to know that.
+        private readonly IRankedQueueView rankedQueueView = new RankedQueueViewElement();
+        private RankedQueuePresenter rankedPresenter;
 
         private readonly Button modeOnline;
         private readonly Button modeBot;
@@ -84,6 +94,9 @@ namespace NodeWar.Lobby
             findView = Root.Q<VisualElement>("play-find");
             joinView = Root.Q<VisualElement>("play-join");
             statusView = Root.Q<VisualElement>("play-status");
+            rankedView = Root.Q<VisualElement>("play-ranked");
+            if (rankedView != null && rankedQueueView is VisualElement rankedQueueVisual)
+                rankedView.Add(rankedQueueVisual);
 
             modeOnline = Root.Q<Button>("play-mode-1v1");
             modeBot = Root.Q<Button>("play-mode-bot");
@@ -121,7 +134,13 @@ namespace NodeWar.Lobby
             // attempt must not outlive it, or the next attempt binds a second
             // NetworkManager while the first keeps receiving.
             if (sheet != null)
-                sheet.Closed += content => { if (content == Root) launcher.Cancel(); };
+                sheet.Closed += content =>
+                {
+                    if (content != Root) return;
+                    launcher.Cancel();
+                    if (rankedPresenter != null && rankedPresenter.IsActive)
+                        _ = rankedPresenter.RequestCancelAsync();
+                };
         }
 
         private void Wire()
@@ -130,16 +149,17 @@ namespace NodeWar.Lobby
             Bind(modeBot, () => SetMode(GameMode.Bot));
             Bind(modeTesting, () => SetMode(GameMode.Testing));
 
-            // Locked short-circuits in LobbyManager and nobody has recorded what
-            // it is for, so it looks disabled but still answers a tap.
-            Bind(modeLocked, () => Say("This mode is not available yet"));
+            // GameMode.Locked is the ranked slot: LobbyManager still short-
+            // circuits LaunchMatch for it (no local board to start), so
+            // selecting it here routes play-start to the ranked queue instead.
+            Bind(modeLocked, () => SetMode(GameMode.Locked));
 
             Bind(relayTabButton, () => SetTransport(false));
             Bind(lanTabButton, () => SetTransport(true));
 
             Bind(Root.Q<Button>("play-host"), OnHost);
             Bind(Root.Q<Button>("play-join-open"), () => ShowView(View.Join));
-            Bind(startButton, () => LaunchLocal(mode));
+            Bind(startButton, OnStart);
 
             Bind(Root.Q<Button>("play-join-go"), OnJoin);
             Bind(Root.Q<Button>("play-join-back"), () => ShowView(View.Find));
@@ -191,6 +211,7 @@ namespace NodeWar.Lobby
             SetVisible(findView, view == View.Find);
             SetVisible(joinView, view == View.Join);
             SetVisible(statusView, view == View.Status);
+            SetVisible(rankedView, view == View.Ranked);
         }
 
         private static void SetVisible(VisualElement element, bool visible)
@@ -207,6 +228,7 @@ namespace NodeWar.Lobby
             SetOn(modeOnline, mode == GameMode.OneVsOne);
             SetOn(modeBot, mode == GameMode.Bot);
             SetOn(modeTesting, mode == GameMode.Testing);
+            SetOn(modeLocked, mode == GameMode.Locked);
 
             bool online = mode == GameMode.OneVsOne;
             SetVisible(transportRow, online);
@@ -215,7 +237,11 @@ namespace NodeWar.Lobby
             SetVisible(startWrap, !online);
 
             if (startButton != null)
-                startButton.text = mode == GameMode.Testing ? "Start testing board" : "Play a Bot";
+            {
+                startButton.text = mode == GameMode.Testing ? "Start testing board"
+                    : mode == GameMode.Locked ? "Find ranked match"
+                    : "Play a Bot";
+            }
 
             RefreshNote();
         }
@@ -263,6 +289,25 @@ namespace NodeWar.Lobby
 
             label.text = filled + "/" + slots + " " + noun;
             label.EnableInClassList("lb-loadout-line__part--short", isShort);
+        }
+
+        private void OnStart()
+        {
+            if (mode == GameMode.Locked) StartRankedQueue();
+            else LaunchLocal(mode);
+        }
+
+        private void StartRankedQueue()
+        {
+            rankedPresenter?.Dispose();
+            rankedPresenter = new RankedQueuePresenter(BackendServices.RankedQueue, rankedQueueView);
+            ShowView(View.Ranked);
+            _ = rankedPresenter.StartAsync(NowSeconds());
+        }
+
+        private static double NowSeconds()
+        {
+            return Time.realtimeSinceStartupAsDouble;
         }
 
         private void LaunchLocal(GameMode value)
@@ -339,6 +384,7 @@ namespace NodeWar.Lobby
         {
             if (!IsOpen) return;
             launcher.Update();
+            rankedPresenter?.Tick(NowSeconds());
         }
 
         private void RefreshStatus()
@@ -393,6 +439,7 @@ namespace NodeWar.Lobby
         {
             launcher.Changed -= RefreshStatus;
             launcher.Dispose();
+            rankedPresenter?.Dispose();
         }
     }
 }

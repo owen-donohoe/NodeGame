@@ -1,0 +1,46 @@
+/*
+    Node War - the default ranked queue view.
+
+    Deliberately plain: a status line, a timer, a Cancel button. This is one
+    IRankedQueueView, not the contract - swap RankedQueueViewElement for a
+    redesign without touching RankedQueuePresenter or IRankedQueueService.
+    Tokens only, per Tokens.uss.
+*/
+
+.lb-ranked {
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-2);
+}
+
+.lb-ranked__status {
+    font-size: var(--type-body);
+    color: var(--ink);
+    -unity-font-definition: var(--font-medium);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    margin-bottom: var(--space-2);
+}
+
+.lb-ranked__timer {
+    font-size: var(--type-number);
+    color: var(--ink-mute);
+    -unity-font-definition: var(--font-semibold);
+    margin-bottom: var(--space-4);
+}
+
+.lb-ranked__cancel {
+    min-height: var(--target-min);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    background-color: var(--surface-sunk);
+    color: var(--ink);
+    border-radius: var(--corner-sm);
+    border-width: var(--stroke-thin);
+    border-color: var(--edge);
+}
+
+.lb-ranked__cancel:hover {
+    background-color: var(--press-tint);
+}

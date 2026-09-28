@@ -131,7 +131,17 @@ namespace NodeWar.Backend
             }
         }
 
-        private async void OnCancelRequested()
+        private void OnCancelRequested()
+        {
+            _ = RequestCancelAsync();
+        }
+
+        /// <summary>
+        /// Cancels the current attempt. Called from the view's CancelRequested
+        /// event; also safe to call directly, e.g. when the host UI closes out
+        /// from under an in-progress search.
+        /// </summary>
+        public async Task RequestCancelAsync()
         {
             if (!active) return;
             string cancelling = ticketId;

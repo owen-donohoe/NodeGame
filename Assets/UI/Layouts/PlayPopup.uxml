@@ -5,6 +5,8 @@
     xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
+    <engine:Style src="project://database/Assets/UI/Styles/RankedQueue.uss" />
+
     <!--
         The battle sheet's content, after lobby-prototype.html. The sheet itself
         (scrim, slide, handle, detents) is the lobby's shared LobbySheet in
@@ -37,7 +39,7 @@
                 <engine:Button name="play-mode-1v1" class="ui-reset-button lb-seg__btn ui-w600" text="1 vs 1" />
                 <engine:Button name="play-mode-bot" class="ui-reset-button lb-seg__btn ui-w600" text="Bot" />
                 <engine:Button name="play-mode-testing" class="ui-reset-button lb-seg__btn ui-w600" text="Testing" />
-                <engine:Button name="play-mode-locked" class="ui-reset-button lb-seg__btn lb-seg__btn--off lb-seg__btn--last ui-w600" text="Locked" />
+                <engine:Button name="play-mode-locked" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Ranked" />
             </engine:VisualElement>
 
             <engine:VisualElement name="play-transport" class="lb-seg" picking-mode="Ignore">
@@ -105,6 +107,12 @@
             <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
                 <engine:Button name="play-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
             </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!-- Ranked queue. Its content is the swappable IRankedQueueView, mounted
+             in code (PlayPopup); this element is only where it lives. -->
+        <engine:VisualElement name="play-ranked" picking-mode="Ignore">
+            <engine:Label class="ui-sheet__title ui-w600" text="Ranked match" />
         </engine:VisualElement>
 
     </engine:VisualElement>
