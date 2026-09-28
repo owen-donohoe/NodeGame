@@ -100,6 +100,8 @@
              Link="Backend/CatalogIds.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerState.cs"
              Link="Backend/PlayerState.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/ProtocolVersion.cs"
+             Link="Backend/ProtocolVersion.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankedQueueService.cs"
              Link="Backend/RankedQueueService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs"

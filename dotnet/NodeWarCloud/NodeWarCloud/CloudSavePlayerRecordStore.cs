@@ -22,8 +22,10 @@ namespace NodeWar.Cloud
     /// </summary>
     public interface ILockedPlayerRecordStore : IPlayerRecordStore
     {
+        // Includes all state records so Get can initialize only missing records.
         Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync();
         Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock);
+        Task WriteDefaultsLockedAsync(PlayerState records, string inventoryWriteLock);
     }
 
     /// <summary>
@@ -52,7 +54,7 @@ namespace NodeWar.Cloud
         {
             var response = await api.CloudSaveData.GetProtectedItemsAsync(
                 context, context.ServiceToken, context.ProjectId, playerId,
-                PlayerStateKeys.All.ToList());
+                PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch }).ToList());
 
             var state = new PlayerState();
             var locks = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -65,34 +67,47 @@ namespace NodeWar.Cloud
                     case PlayerStateKeys.Rank: state.Rank = Convert<RankRecord>(item.Value); break;
                     case PlayerStateKeys.Inventory: state.Inventory = Convert<InventoryRecord>(item.Value); break;
                     case PlayerStateKeys.History: state.History = Convert<HistoryRecord>(item.Value); break;
+                    case PlayerStateKeys.ActiveMatch: state.ActiveMatch = Convert<ActiveMatchRecord>(item.Value); break;
                 }
             }
             return new LockedPlayerState(state, locks);
+        }
+
+        public async Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read)
+        {
+            if (read.State.Rating == null || !read.WriteLocks.TryGetValue(PlayerStateKeys.Rating, out string ratingLock) ||
+                string.IsNullOrEmpty(ratingLock))
+                throw new InvalidOperationException("Initialize player records before claiming a match.");
+            read.WriteLocks.TryGetValue(PlayerStateKeys.ActiveMatch, out string claimLock);
+            try
+            {
+                // Null locks bypass CAS in Cloud Save. Including the existing rating
+                // key makes even the first claim a conditional, atomic batch.
+                await api.CloudSaveData.SetProtectedItemBatchAsync(context, context.ServiceToken,
+                    context.ProjectId, playerId, new SetItemBatchBody(new List<SetItemBody>
+                    {
+                        new SetItemBody(PlayerStateKeys.Rating, read.State.Rating, ratingLock),
+                        new SetItemBody(PlayerStateKeys.ActiveMatch, claim, claimLock)
+                    }));
+            }
+            catch (ApiException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
+            { throw new RecordConflictException("Active match changed.", ex); }
         }
 
         public Task WriteAsync(PlayerState records) => WriteAsync(records, null);
 
         public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
         {
-            var response = await api.CloudSaveData.GetProtectedItemsAsync(
-                context, context.ServiceToken, context.ProjectId, playerId,
-                new List<string> { PlayerStateKeys.Inventory, PlayerStateKeys.Rank });
-
-            var state = new PlayerState();
-            string inventoryLock = null;
-            foreach (Item item in response.Data.Results)
-            {
-                switch (item.Key)
-                {
-                    case PlayerStateKeys.Inventory:
-                        state.Inventory = Convert<InventoryRecord>(item.Value);
-                        inventoryLock = item.WriteLock;
-                        break;
-                    case PlayerStateKeys.Rank: state.Rank = Convert<RankRecord>(item.Value); break;
-                }
-            }
-            return (state, inventoryLock);
+            var read = await ReadForSettlementAsync();
+            read.WriteLocks.TryGetValue(PlayerStateKeys.Inventory, out string inventoryLock);
+            return (read.State, inventoryLock);
         }
+
+        // Other records here are missing defaults only. Existing inventory must
+        // use the lock from the same read as the normalization/grant decision.
+        public Task WriteDefaultsLockedAsync(PlayerState records, string inventoryWriteLock) =>
+            WriteAsync(records, PlayerStateKeys.All.ToDictionary(key => key,
+                key => key == PlayerStateKeys.Inventory ? inventoryWriteLock : null));
 
         // Writes Inventory alone, using only the Inventory write lock: a stale
         // lock (a settlement clamped the same key meanwhile) conflicts here.

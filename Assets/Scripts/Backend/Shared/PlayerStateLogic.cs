@@ -33,6 +33,16 @@ namespace NodeWar.Backend
             Func<PlayerState, bool> updateInventory = null)
         {
             PlayerState stored = await store.ReadAsync() ?? new PlayerState();
+            var created = ApplyDefaults(stored, updateInventory);
+            if (created.Rating != null || created.Rank != null
+                || created.Inventory != null || created.History != null)
+                await store.WriteAsync(created);
+            return stored;
+        }
+
+        /// <summary>Apply defaults to a detached read and return only records requiring a write.</summary>
+        public static PlayerState ApplyDefaults(PlayerState stored, Func<PlayerState, bool> updateInventory = null)
+        {
             var created = new PlayerState();
 
             if (stored.Rating == null) stored.Rating = created.Rating = PlayerStateDefaults.Rating();
@@ -43,11 +53,7 @@ namespace NodeWar.Backend
             if (NormalizeInventory(stored.Inventory)) created.Inventory = stored.Inventory;
             if (updateInventory != null && updateInventory(stored)) created.Inventory = stored.Inventory;
 
-            if (created.Rating != null || created.Rank != null
-                || created.Inventory != null || created.History != null)
-                await store.WriteAsync(created);
-
-            return stored;
+            return created;
         }
 
         /// <summary>Old records may predate Equipped or have null collections.</summary>

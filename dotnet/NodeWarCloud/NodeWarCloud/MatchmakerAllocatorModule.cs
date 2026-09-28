@@ -22,22 +22,26 @@ namespace NodeWar.Cloud
         private readonly Func<IExecutionContext, IMatchRecordStore> matchStore;
         private readonly Func<IExecutionContext, string, Task<PlayerState>> readPlayer;
         private readonly BalanceCatalog balances;
+        private readonly Func<IExecutionContext, string, ISettlementPlayerStore> playerStores;
         private readonly Func<long> serverTime;
 
         public MatchmakerAllocatorModule(IGameApiClient api) : this(
             context => new CloudSaveMatchRecordStore(api, context),
             (context, playerId) => new InventoryPlayerStateService(
                 new CloudSavePlayerRecordStore(api, context, playerId), Inventory).GetAsync(),
-            BalanceCatalog.Embedded, () => DateTimeOffset.UtcNow.ToUnixTimeSeconds()) { }
+            BalanceCatalog.Embedded, () => DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            (context, id) => new CloudSavePlayerRecordStore(api, context, id)) { }
 
         internal MatchmakerAllocatorModule(Func<IExecutionContext, IMatchRecordStore> matchStore,
             Func<IExecutionContext, string, Task<PlayerState>> readPlayer,
-            BalanceCatalog balances, Func<long> serverTime)
+            BalanceCatalog balances, Func<long> serverTime,
+            Func<IExecutionContext, string, ISettlementPlayerStore> playerStores)
         {
             this.matchStore = matchStore;
             this.readPlayer = readPlayer;
             this.balances = balances;
             this.serverTime = serverTime;
+            this.playerStores = playerStores;
         }
 
         public const string PlayerCallRefused = "Only Matchmaker may call this function.";
@@ -59,7 +63,8 @@ namespace NodeWar.Cloud
                 var matches = matchStore(context);
                 // An already-created match wins over a retried request's roster or ticket data.
                 if ((await matches.ReadAsync(request.MatchId)).Record != null) return Created(request.MatchId);
-                var allocation = new MatchAllocation(id => readPlayer(context, id), matches, balances);
+                var allocation = new MatchAllocation(id => readPlayer(context, id), matches, balances,
+                    id => playerStores(context, id));
                 var result = await allocation.Allocate(request.MatchId, Players(request), serverTime());
                 return result.ok ? Created(request.MatchId) :
                     new AllocateResponse(AllocateStatus.Error) { Message = result.error };

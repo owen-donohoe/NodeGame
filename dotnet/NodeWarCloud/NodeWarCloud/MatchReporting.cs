@@ -49,6 +49,13 @@ namespace NodeWar.Cloud
                 int caller = Array.IndexOf(record.playerIds, callerId);
                 if (caller < 0) return new MatchReportingResult { message = "Caller is not in this match." };
 
+                if (record.state == MatchRecordState.Settled || record.state == MatchRecordState.Void ||
+                    record.state == MatchRecordState.Disputed)
+                {
+                    foreach (string id in record.playerIds)
+                        await ActiveMatchClaims.Release(players(id), matchId);
+                }
+
                 if (record.reports.Any(r => r.pendingLogBase64 != null))
                 {
                     // Only the CAS-winning report owns log-N. Retaining the bytes
@@ -70,12 +77,17 @@ namespace NodeWar.Cloud
                             ? (await players(callerId).ReadForSettlementAsync()).State : null
                     };
                 }
+                else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
+                    !await HoldsClaims(record, now))
+                {
+                    record.state = MatchRecordState.Void;
+                }
                 else if (Agreed(record))
                 {
                     // Agreement and its server timestamp were committed before
-                    // either player write. A partial settlement must finish, not expire.
-                    await SettlePlayers(record);
-                    record.state = MatchRecordState.Settled;
+                    // either player write. Recovery is allowed only while claims are live.
+                    record.state = await SettlePlayers(record, now) ? MatchRecordState.Settled : MatchRecordState.Void;
+                    if (record.state == MatchRecordState.Void) record.outcomes = null;
                 }
                 else if (record.state == MatchRecordState.Pending && now > record.pendingUnixSeconds &&
                     now - record.pendingUnixSeconds > PendingTimeoutSeconds)
@@ -136,6 +148,16 @@ namespace NodeWar.Cloud
             }
         }
 
+        private async Task<bool> HoldsClaims(MatchRecord record, long now)
+        {
+            foreach (string id in record.playerIds)
+            {
+                var claim = (await players(id).ReadForSettlementAsync()).State.ActiveMatch;
+                if (claim?.matchId != record.matchId || claim.expiresUnixSeconds <= now) return false;
+            }
+            return true;
+        }
+
         private MatchReport Verify(MatchRecord record, int caller, byte[] bytes)
         {
             var report = new MatchReport { playerIndex = caller };
@@ -186,7 +208,7 @@ namespace NodeWar.Cloud
             Rank = new RankConfig { ArenaThresholds = RankTable.Thresholds.ToArray() }
         };
 
-        private async Task SettlePlayers(MatchRecord record)
+        private async Task<bool> SettlePlayers(MatchRecord record, long now)
         {
             var inputs = record.players.Select(p => new SettlementPlayer
             {
@@ -230,6 +252,10 @@ namespace NodeWar.Cloud
                     // be settled twice for it.
                     var settledIds = state.Rating.SettledMatchIds ?? new List<string>();
                     if (settledIds.Contains(record.matchId)) break;
+                    // The rating lock also fences a new claim acquired since HoldsClaims.
+                    // Re-check after a settlement write conflict before using old snapshots.
+                    if (state.ActiveMatch?.matchId != record.matchId || state.ActiveMatch.expiresUnixSeconds <= now)
+                        return false;
                     var settled = outcome.Players[p];
                     settledIds.Insert(0, record.matchId);
                     if (settledIds.Count > 200) settledIds.RemoveRange(200, settledIds.Count - 200);
@@ -251,6 +277,7 @@ namespace NodeWar.Cloud
                     catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
                 }
             }
+            return true;
         }
     }
 }

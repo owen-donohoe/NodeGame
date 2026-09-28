@@ -44,6 +44,8 @@ namespace NodeWar.Cloud.Tests
         private void Initialize(int firstRR, int secondRR)
         {
             var states = new[] { Player(firstRR), Player(secondRR) };
+            foreach (var state in states) state.ActiveMatch = new ActiveMatchRecord
+                { matchId = MatchId, expiresUnixSeconds = 1 + ActiveMatchClaims.LifetimeSeconds };
             players = states.Select(s => new FakeSettlementPlayerStore(s)).ToArray();
             var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1,
                 1, (ushort)SimulationVersion.Current, BalanceHasher.Hash(balance));
@@ -101,9 +103,9 @@ namespace NodeWar.Cloud.Tests
             Assert.That(matches.Inner.ReadLog(MatchId, 0), Is.EqualTo(Convert.ToBase64String(winningBytes)));
             AssertNoPlayerWrites();
             await Report(1);
-            string before = JsonConvert.SerializeObject(await State(0));
+            string before = SettlementState(await State(0));
             await Report(0, differentBytes, 9999);
-            Assert.That(JsonConvert.SerializeObject(await State(0)), Is.EqualTo(before));
+            Assert.That(SettlementState(await State(0)), Is.EqualTo(before));
             Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
         }
 
@@ -251,12 +253,12 @@ namespace NodeWar.Cloud.Tests
             await Report(0);
             players[1].BeforeWrite = () => throw new IOException("simulated crash");
             Assert.ThrowsAsync<IOException>(() => Report(1, now: 110));
-            string first = JsonConvert.SerializeObject(await State(0));
+            string first = SettlementState(await State(0));
             Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 0 }));
             players[1].BeforeWrite = null;
 
             Assert.That((await Report(1, now: 5000)).state, Is.EqualTo(MatchRecordState.Settled));
-            Assert.That(JsonConvert.SerializeObject(await State(0)), Is.EqualTo(first));
+            Assert.That(SettlementState(await State(0)), Is.EqualTo(first));
             Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
             Assert.That((await State(1)).Rating.LastMatchUnixSeconds, Is.EqualTo(110));
         }
@@ -286,9 +288,9 @@ namespace NodeWar.Cloud.Tests
             Assert.That((await State(0)).History.MatchIds, Does.Not.Contain(MatchId));
             Assert.That((await State(0)).Rating.SettledMatchIds, Does.Contain(MatchId));
 
-            string before = JsonConvert.SerializeObject(await State(0));
+            string before = SettlementState(await State(0));
             Assert.That((await Report(1, now: 5000)).state, Is.EqualTo(MatchRecordState.Settled));
-            Assert.That(JsonConvert.SerializeObject(await State(0)), Is.EqualTo(before));
+            Assert.That(SettlementState(await State(0)), Is.EqualTo(before));
             Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
             Assert.That((await State(1)).Rating.SettledMatchIds, Is.EqualTo(new[] { MatchId }));
         }
@@ -367,8 +369,85 @@ namespace NodeWar.Cloud.Tests
             Assert.That(state.Rank.RR, Is.InRange(1001, 1040));
         }
 
+        [TestCase(MatchRecordState.Settled)]
+        [TestCase(MatchRecordState.Void)]
+        [TestCase(MatchRecordState.Disputed)]
+        public async Task TerminalStateReleasesBothClaims(MatchRecordState terminal)
+        {
+            await Report(0);
+            var result = terminal == MatchRecordState.Void ? await Report(1, now: 701) :
+                await Report(1, terminal == MatchRecordState.Disputed ? differentBytes : winningBytes);
+            Assert.That(result.state, Is.EqualTo(terminal));
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.Null);
+            Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
+        }
+
+        [TestCase(MatchRecordState.Settled)]
+        [TestCase(MatchRecordState.Void)]
+        [TestCase(MatchRecordState.Disputed)]
+        public async Task ReleaseFailureDoesNotUndoTerminalStateOrSkipOtherPlayer(MatchRecordState terminal)
+        {
+            players[0].FailRelease = true;
+            await Report(0);
+            var result = terminal == MatchRecordState.Void ? await Report(1, now: 701) :
+                await Report(1, terminal == MatchRecordState.Disputed ? differentBytes : winningBytes);
+            Assert.That(result.state, Is.EqualTo(terminal));
+            Assert.That((await Record()).state, Is.EqualTo(terminal));
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo(MatchId));
+            Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task ExpiredClaimsVoidEvenAnAgreedRecord(bool agreed)
+        {
+            if (agreed)
+            {
+                await Report(0);
+                players[0].BeforeWrite = () => throw new IOException("crash before settlement");
+                Assert.ThrowsAsync<IOException>(() => Report(1));
+                players[0].BeforeWrite = null;
+            }
+            Assert.That((await Report(1, now: 1 + ActiveMatchClaims.LifetimeSeconds)).state,
+                Is.EqualTo(MatchRecordState.Void));
+            AssertNoPlayerWrites();
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.Null);
+        }
+
+        [Test]
+        public async Task OldReportCannotSettleOrReleaseNewMatchClaims()
+        {
+            foreach (var player in players) player.Mutate(s => s.ActiveMatch = new ActiveMatchRecord
+                { matchId = "new", expiresUnixSeconds = 20000 });
+            Assert.That((await Report(0, now: 8000)).state, Is.EqualTo(MatchRecordState.Void));
+            AssertNoPlayerWrites();
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo("new"));
+            Assert.That((await State(1)).ActiveMatch.matchId, Is.EqualTo("new"));
+        }
+
+        [Test]
+        public async Task NewClaimDuringSettlementConflictFencesOldSnapshot()
+        {
+            await Report(0);
+            players[0].BeforeWrite = () =>
+            {
+                players[0].BeforeWrite = null;
+                players[0].Mutate(s => s.ActiveMatch = new ActiveMatchRecord
+                    { matchId = "new", expiresUnixSeconds = 20000 });
+            };
+            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Void));
+            AssertNoPlayerWrites();
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo("new"));
+            Assert.That((await Record()).outcomes, Is.Null);
+        }
+
         private Task<MatchReportingResult> Report(int player, byte[] bytes = null, long now = 100) =>
             reporting.Report(MatchId, "p" + player, bytes ?? winningBytes, now);
+        private static string SettlementState(PlayerState state)
+        {
+            state.ActiveMatch = null;
+            return JsonConvert.SerializeObject(state);
+        }
         private async Task<PlayerState> State(int player) => (await players[player].ReadForSettlementAsync()).State;
         private async Task<MatchRecord> Record() => (await matches.ReadAsync(MatchId)).Record;
         private void AssertNoPlayerWrites() => Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 0, 0 }));
@@ -409,12 +488,22 @@ namespace NodeWar.Cloud.Tests
         {
             private PlayerState state;
             private int version = 1;
+            public bool FailRelease;
             public int WriteCount;
             public int WriteAttempts;
             public Action BeforeWrite;
             public FakeSettlementPlayerStore(PlayerState state) { this.state = Clone(state); }
             public Task<LockedPlayerState> ReadForSettlementAsync() => Task.FromResult(new LockedPlayerState(Clone(state),
                 PlayerStateKeys.All.ToDictionary(k => k, _ => version.ToString())));
+            public Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read)
+            {
+                if (FailRelease) throw new IOException("release unavailable");
+                if (read.WriteLocks[PlayerStateKeys.Rating] != version.ToString())
+                    throw new RecordConflictException("Claim changed.");
+                state.ActiveMatch = claim;
+                version++;
+                return Task.CompletedTask;
+            }
             public Task WriteForSettlementAsync(PlayerState value, IReadOnlyDictionary<string, string> tokens)
             {
                 WriteAttempts++;
