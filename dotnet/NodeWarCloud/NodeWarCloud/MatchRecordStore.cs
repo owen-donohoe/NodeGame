@@ -121,7 +121,8 @@ namespace NodeWar.Cloud
                     versions.Add(record.matchId, 1);
                     return Task.CompletedTask;
                 }
-                if (string.IsNullOrEmpty(expectedWriteLock)) throw new ArgumentException("An expected write lock is required.");
+                if (expectedWriteLock == null) throw new RecordConflictException("Match record already exists.");
+                if (expectedWriteLock.Length == 0) throw new ArgumentException("An expected write lock is required.");
                 if (!versions.TryGetValue(record.matchId, out int version) ||
                     version.ToString(CultureInfo.InvariantCulture) != expectedWriteLock)
                     throw new RecordConflictException("Match record changed.");

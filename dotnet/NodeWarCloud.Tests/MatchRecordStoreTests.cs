@@ -21,8 +21,35 @@ namespace NodeWar.Cloud.Tests
             stale.Record.state = MatchRecordState.Void;
             Assert.ThrowsAsync<RecordConflictException>(() => store.WriteAsync(stale.Record, stale.WriteLock));
             Assert.That((await store.ReadAsync("m")).Record.state, Is.EqualTo(MatchRecordState.Pending));
-            Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync(first.Record, null));
+            Assert.ThrowsAsync<RecordConflictException>(() => store.WriteAsync(first.Record, null));
             Assert.That((await store.ReadAsync("missing")).Record, Is.Null);
+        }
+
+        [Test]
+        public async Task DuplicateCreationConflictsAndPreservesOriginalRecord()
+        {
+            var store = new InMemoryMatchRecordStore();
+            await store.WriteAsync(new MatchRecord { matchId = "m", state = MatchRecordState.Pending }, null);
+            Assert.ThrowsAsync<RecordConflictException>(() =>
+                store.WriteAsync(new MatchRecord { matchId = "m", state = MatchRecordState.Open }, null));
+            Assert.That((await store.ReadAsync("m")).Record.state, Is.EqualTo(MatchRecordState.Pending));
+        }
+
+        [Test]
+        public void UpdateOfMissingRecordConflicts()
+        {
+            var store = new InMemoryMatchRecordStore();
+            Assert.ThrowsAsync<RecordConflictException>(() =>
+                store.WriteAsync(new MatchRecord { matchId = "missing" }, "stale-lock"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void EmptyLockRemainsAnArgumentErrorLikeProduction(bool exists)
+        {
+            var record = new MatchRecord { matchId = "m" };
+            var store = exists ? new InMemoryMatchRecordStore(record) : new InMemoryMatchRecordStore();
+            Assert.ThrowsAsync<ArgumentException>(() => store.WriteAsync(record, ""));
         }
 
         [Test]
