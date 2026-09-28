@@ -22,8 +22,10 @@ namespace NodeWar.Cloud
     /// </summary>
     public interface ILockedPlayerRecordStore : IPlayerRecordStore
     {
+        // Includes all state records so Get can initialize only missing records.
         Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync();
         Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock);
+        Task WriteDefaultsLockedAsync(PlayerState records, string inventoryWriteLock);
     }
 
     /// <summary>
@@ -96,25 +98,16 @@ namespace NodeWar.Cloud
 
         public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
         {
-            var response = await api.CloudSaveData.GetProtectedItemsAsync(
-                context, context.ServiceToken, context.ProjectId, playerId,
-                new List<string> { PlayerStateKeys.Inventory, PlayerStateKeys.Rank });
-
-            var state = new PlayerState();
-            string inventoryLock = null;
-            foreach (Item item in response.Data.Results)
-            {
-                switch (item.Key)
-                {
-                    case PlayerStateKeys.Inventory:
-                        state.Inventory = Convert<InventoryRecord>(item.Value);
-                        inventoryLock = item.WriteLock;
-                        break;
-                    case PlayerStateKeys.Rank: state.Rank = Convert<RankRecord>(item.Value); break;
-                }
-            }
-            return (state, inventoryLock);
+            var read = await ReadForSettlementAsync();
+            read.WriteLocks.TryGetValue(PlayerStateKeys.Inventory, out string inventoryLock);
+            return (read.State, inventoryLock);
         }
+
+        // Other records here are missing defaults only. Existing inventory must
+        // use the lock from the same read as the normalization/grant decision.
+        public Task WriteDefaultsLockedAsync(PlayerState records, string inventoryWriteLock) =>
+            WriteAsync(records, PlayerStateKeys.All.ToDictionary(key => key,
+                key => key == PlayerStateKeys.Inventory ? inventoryWriteLock : null));
 
         // Writes Inventory alone, using only the Inventory write lock: a stale
         // lock (a settlement clamped the same key meanwhile) conflicts here.

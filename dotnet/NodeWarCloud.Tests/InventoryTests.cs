@@ -23,6 +23,8 @@ namespace NodeWar.Cloud.Tests
             // write, to model another write (e.g. a settlement clamp) landing
             // between this call's read and its write.
             public Action BeforeInventoryWriteLocked;
+            public bool DetachedReads;
+            public int LockedWriteAttempts;
 
             public Task<PlayerState> ReadAsync() => inner.ReadAsync();
 
@@ -36,20 +38,24 @@ namespace NodeWar.Cloud.Tests
             public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
             {
                 var state = await inner.ReadAsync();
+                if (DetachedReads) state = JsonConvert.DeserializeObject<PlayerState>(JsonConvert.SerializeObject(state));
                 return (state, inventoryVersion.ToString());
             }
 
-            public Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock)
+            public Task WriteInventoryLockedAsync(InventoryRecord inventory, string expectedWriteLock) =>
+                WriteDefaultsLockedAsync(new PlayerState { Inventory = inventory }, expectedWriteLock);
+
+            public Task WriteDefaultsLockedAsync(PlayerState records, string expectedWriteLock)
             {
+                LockedWriteAttempts++;
                 var hook = BeforeInventoryWriteLocked;
                 BeforeInventoryWriteLocked = null;
                 hook?.Invoke();
                 if (expectedWriteLock != inventoryVersion.ToString())
                     throw new RecordConflictException("Inventory changed.");
-                var written = new PlayerState { Inventory = inventory };
-                Writes.Add(written);
-                inventoryVersion++;
-                return inner.WriteAsync(written);
+                Writes.Add(records);
+                if (records.Inventory != null) inventoryVersion++;
+                return inner.WriteAsync(records);
             }
         }
 
@@ -159,6 +165,82 @@ namespace NodeWar.Cloud.Tests
 
             var reloaded = await service.GetAsync();
             Assert.That(reloaded.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e0"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task GetConflictRereadsAndReappliesWithoutUndoingSettlement(bool normalize)
+        {
+            var store = new RecordingStore { DetachedReads = true };
+            var service = Server(store);
+            await service.GetAsync();
+            var state = await store.ReadAsync();
+            state.Rank.Arena = state.Rank.HighestArena = 1;
+            await service.GetAsync();
+            state = await store.ReadAsync();
+            state.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e1";
+            if (normalize) state.Inventory.Equipped.Skins = null;
+            else state.Inventory.OwnedVariants.Remove("suit.miner.e0");
+            int attempts = store.LockedWriteAttempts;
+            store.BeforeInventoryWriteLocked = () =>
+            {
+                state.Rank.Arena = 0;
+                state.Rank.HighestArena = 2;
+                state.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e0";
+                state.Inventory.OwnedSkins.Add("concurrent-skin");
+                store.WriteAsync(new PlayerState { Rank = state.Rank, Inventory = state.Inventory }).GetAwaiter().GetResult();
+            };
+            var result = await service.GetAsync();
+            Assert.That(store.LockedWriteAttempts - attempts, Is.EqualTo(2));
+            Assert.That(result.Rank.Arena, Is.Zero);
+            Assert.That(result.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e0"));
+            Assert.That(result.Inventory.OwnedSkins, Does.Contain("concurrent-skin"));
+            Assert.That(result.Inventory.OwnedVariants, Does.Contain("suit.miner.e0"));
+            Assert.That(result.Inventory.OwnedVariants, Does.Contain("suit.warrior.e2"));
+            Assert.That(result.Inventory.Equipped.Skins, Is.Not.Null);
+            Assert.That(JsonConvert.SerializeObject((await store.ReadAsync()).Inventory),
+                Is.EqualTo(JsonConvert.SerializeObject(result.Inventory)));
+            AssertInventoryOnly(store.Writes.Last());
+        }
+
+        [Test]
+        public async Task GetConflictsAreBoundedToThreeWrites()
+        {
+            var store = new RecordingStore { DetachedReads = true };
+            var service = Server(store);
+            await service.GetAsync();
+            var state = await store.ReadAsync();
+            state.Inventory.OwnedVariants.Remove("suit.miner.e0");
+            int attempts = store.LockedWriteAttempts;
+            Action conflict = null;
+            conflict = () =>
+            {
+                store.WriteAsync(new PlayerState { Inventory = state.Inventory }).GetAwaiter().GetResult();
+                store.BeforeInventoryWriteLocked = conflict;
+            };
+            store.BeforeInventoryWriteLocked = conflict;
+            Assert.ThrowsAsync<RecordConflictException>(() => service.GetAsync());
+            Assert.That(store.LockedWriteAttempts - attempts, Is.EqualTo(3));
+            Assert.That((await store.ReadAsync()).Inventory.OwnedVariants, Does.Not.Contain("suit.miner.e0"));
+        }
+
+        [Test]
+        public async Task GetConflictBecomesNoOpWhenConcurrentWriterAlreadyGrantedDefaults()
+        {
+            var store = new RecordingStore { DetachedReads = true };
+            var service = Server(store);
+            await service.GetAsync();
+            var state = await store.ReadAsync();
+            state.Inventory.OwnedVariants.Remove("suit.miner.e0");
+            int attempts = store.LockedWriteAttempts;
+            store.BeforeInventoryWriteLocked = () =>
+            {
+                state.Inventory.OwnedVariants.Add("suit.miner.e0");
+                store.WriteAsync(new PlayerState { Inventory = state.Inventory }).GetAwaiter().GetResult();
+            };
+            var result = await service.GetAsync();
+            Assert.That(store.LockedWriteAttempts - attempts, Is.EqualTo(1));
+            Assert.That(result.Inventory.OwnedVariants, Does.Contain("suit.miner.e0"));
         }
 
         [Test]

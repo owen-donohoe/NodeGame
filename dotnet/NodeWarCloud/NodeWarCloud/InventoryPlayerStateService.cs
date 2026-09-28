@@ -19,7 +19,25 @@ namespace NodeWar.Cloud
             this.rules = rules;
         }
 
-        public Task<PlayerState> GetAsync() => PlayerStateLogic.GetOrCreateAsync(store, rules.GrantDefaults);
+        public async Task<PlayerState> GetAsync()
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                var (state, inventoryLock) = await store.ReadInventoryLockedAsync();
+                state ??= new PlayerState();
+                var changed = PlayerStateLogic.ApplyDefaults(state, rules.GrantDefaults);
+                if (changed.Rating == null && changed.Rank == null && changed.Inventory == null && changed.History == null)
+                    return state;
+                try
+                {
+                    await store.WriteDefaultsLockedAsync(changed, inventoryLock);
+                    return state;
+                }
+                // Re-read and re-apply: a settlement may have granted items or
+                // clamped equipment since this read. Never replay a stale inventory.
+                catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
+            }
+        }
 
         public async Task<PlayerState> EquipAsync(EquippedRecord changes)
         {
