@@ -289,7 +289,7 @@ Matchmaker is enabled and the queue is deployed (8.0). Rules as §7: same `Proto
 | D2 | Who creates tickets | (a) Cloud Code proxy (b) **the client, via `com.unity.services.multiplayer`'s matchmaker API (not Sessions)** | **(b)**: rules read rating and arena from Protected Cloud Save; the client supplies only protocol/sim/content, and lying about those yields a record whose logs the server refuses. |
 | D3 | When the match record is created | (a) lazily, at the first report (b) **in `Allocate`, idempotently** | **(b)**: the pre-match snapshot must predate play. A retried `Allocate` finds the record and answers Created again. |
 | D4 | Hard caps in `Allocate` | (a) trust the queue rules (b) **re-check invariants: balance known to the server, equal versions, arena gap ≤ 1** | **(b)**: cheap, and it survives a queue misconfiguration (the dashboard silently disabled every rule once). The soft rating window stays queue-only. |
-| D5 | `NodeWar.Progression/Matchmaking.cs` | (a) delete now (b) keep (c) **keep until the live queue is proven, then delete in its own commit** | **(c)**: its windows now duplicate the queue rules; don't delete before the replacement is proven. |
+| D5 | `NodeWar.Progression/Matchmaking.cs` | (a) delete now (b) keep (c) **keep until the live queue is proven, then delete in its own commit** | **(c)**, done 2026-09-28: deleted once the live queue was proven (its same-arena rule had already drifted from the deployed one). |
 | D6 | Rendezvous (8.2) | (a) public lobby filtered by match ID (b) **host publishes its lobby join code into the match record; the guest reads it through Cloud Code** | **(b)**: only the record's two players can read it. Two small endpoints. |
 
 **Packages:**
