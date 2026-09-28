@@ -45,12 +45,18 @@ namespace NodeWar.Backend
         /// <summary>Raised after a returned player state becomes available to views.</summary>
         public static event System.Action StateChanged;
 
-        /// <summary>Called with every player state a service returns.</summary>
-        internal static void Remember(PlayerState state)
+        /// <summary>
+        /// Called with every player state a service returns, along with the
+        /// player ID the call was started for. Discarded, without raising
+        /// <see cref="StateChanged"/>, if that player is no longer the one
+        /// signed in -- the account can change while the call is in flight.
+        /// </summary>
+        internal static void Remember(PlayerState state, string requestedFor)
         {
             if (state == null) return;
+            if (!RememberGuard.ShouldRemember(requestedFor, Account.Current?.PlayerId)) return;
             lastKnown = state;
-            lastKnownFor = Account.Current?.PlayerId;
+            lastKnownFor = requestedFor;
             StateChanged?.Invoke();
         }
 
@@ -191,8 +197,9 @@ namespace NodeWar.Backend
 
         public async System.Threading.Tasks.Task<PlayerState> GetAsync()
         {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
             PlayerState state = await inner.GetAsync();
-            BackendServices.Remember(state);
+            BackendServices.Remember(state, requestedFor);
             return state;
         }
     }
@@ -204,8 +211,9 @@ namespace NodeWar.Backend
 
         public async System.Threading.Tasks.Task<PlayerState> EquipAsync(EquippedRecord changes)
         {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
             PlayerState state = await inner.EquipAsync(changes);
-            BackendServices.Remember(state);
+            BackendServices.Remember(state, requestedFor);
             return state;
         }
     }

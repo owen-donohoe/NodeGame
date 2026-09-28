@@ -15,12 +15,13 @@ namespace NodeWar.Backend
     {
         public async Task<MatchReportingResult> ReportAsync(string matchId, byte[] log)
         {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
             await GameServices.EnsureReadyAsync();
             string logBase64 = Convert.ToBase64String(log);
             MatchReportingResult result = await CloudCodeService.Instance.CallModuleEndpointAsync<MatchReportingResult>(
                 BackendServices.CloudModule, "ReportMatch",
                 new Dictionary<string, object> { { "matchId", matchId }, { "logBase64", logBase64 } });
-            if (result?.playerState != null) BackendServices.Remember(result.playerState);
+            if (result?.playerState != null) BackendServices.Remember(result.playerState, requestedFor);
             return result;
         }
     }
