@@ -215,7 +215,7 @@ Decided with the user on 2026-09-27:
 | R | Research: Matchmaker for P2P/Relay, Cloud Save and Cloud Code limits | nothing | **Done** |
 | 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R | **Done**, plus review fixes; not deployed |
 | 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) | **Done**; visuals unverified |
-| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | Blocked: Matchmaker not enabled |
+| 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | Queue + pool live in development (8.0); next: evaluate Cloud Code hosting, then the live ticket spike |
 | 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | Blocked on 8.1 |
 | 7.4 | Client: upload at match end (`IMatchReportService` + UGS impl + fake) | 7.2, 8.2 | 7.4a service **done**; wiring into GameManager waits for 8.2 |
 | 7.5 | Replay storage, retention, `MatchHistoryPage` | R, 7.2 | 7.5a server history and 7.5c client page **done** (visuals unverified); 7.5b retention **deferred** (unlimited custom items, small logs; revisit with real volume) |
@@ -229,7 +229,13 @@ Decided with the user on 2026-09-27:
 - **Storage:** player data 5 MiB per access class per player; a **Private custom item** holds up to 5 MiB per access class, readable by servers only, and custom items are unlimited. Match record **and** replay go in one Private custom item per match (`match-<id>`). Files (1 GiB per player) are owner-only, so not used.
 - **Concurrency:** `writeLock` → 409 on version mismatch; omitting it on update bypasses the check. Cross-player Protected writes with `ServiceToken`: confirmed.
 - **Cloud Code limits:** request 1 MB (a 512 KiB log is ~699 KB in base64: fits), response 2 MiB, 15 s, 256 MB per worker, 600 requests/min/player.
-- **Unknown: Matchmaker pricing and whether it needs a payment method.** The user checks the dashboard.
+- **Matchmaker pricing:** not listed on Unity's pricing page; enabling it in the dashboard asked for no payment method (checked 2026-09-28).
+
+#### 8.0 Matchmaker set up in `development` (2026-09-28, with the user, in the dashboard)
+
+- Queue `ranked` (1 player per ticket) and default pool `ranked-pool` (timeout 300 s, **Client Hosting**), with the six match rules of `dotnet/NodeWarCloud/Matchmaker/ranked.mmq`, pasted as JSON and confirmed parsed in the logic builder. Production has no queue.
+- **The dashboard is the source of truth for now; the `.mmq` file mirrors it.** Every Matchmaker CLI operation (`deploy`, even `fetch --reconcile`) first calls Multiplay's `ListFleets` and gets 403 for `Account_1`, despite the Matchmaker roles and a Multiplay role added on 2026-09-28. Until that is resolved, change the file and the dashboard together.
+- **A better roster source exists: "Hosting via Cloud Code".** A pool can name a Cloud Code module plus *allocate* and *poll* endpoints that Matchmaker calls itself when a match forms. That is the server-side match-formed hook R could not find: the roster arrives server-to-server, so clients could create their own tickets (rating and arena still come from Protected Cloud Save through the rules) and `Allocate` creates the match record. **Evaluate it before building `QueueRanked`/`PollRanked`**: check the allocate payload (match ID, player IDs) in the docs, then switch the pool's hosting type.
 
 #### 7.1 Settlement rules (pure, `NodeWar.Progression`)
 
