@@ -13,7 +13,9 @@ glob: Assets/Scripts/Game/Network/**
 - If a change requires modifying GameCommand, update
   InputSerializer in the same commit
 - No gameplay constants or balance values belong here
-- Any packet layout change bumps InputSerializer.ProtocolVersion in
+- Any packet layout change bumps ProtocolVersion.Current
+  (Assets/Scripts/Backend/Shared/ProtocolVersion.cs, which
+  InputSerializer.ProtocolVersion aliases and the server allocator checks) in
   the same commit. A GameCommand change also needs a new TICKS tag in
   MatchLogFormat: match logs outlive builds, so a known tag never
   changes meaning
