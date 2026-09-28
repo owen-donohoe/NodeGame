@@ -50,6 +50,7 @@
     <Compile Include="EmotePacketTests.cs" />
     <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="MatchHistoryRowTests.cs" />
+    <Compile Include="RankedQueuePresenterTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 
@@ -99,6 +100,10 @@
              Link="Backend/CatalogIds.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerState.cs"
              Link="Backend/PlayerState.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/RankedQueueService.cs"
+             Link="Backend/RankedQueueService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs"
+             Link="Backend/RankedQueuePresenter.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
              Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemFamily.cs"
