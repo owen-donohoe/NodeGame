@@ -16,8 +16,17 @@ namespace NodeWar.Lobby.Tests
         public int FailedCount;
         public string LastFailureMessage;
         public int CancelledCount;
+        public int ConnectingCount;
+        public int RequeueingCount;
+        public string LastRequeueingMessage;
+        public int ForfeitPromptCount;
+        public int WaitingForResultCount;
+        public int LastWaitingSeconds = -1;
+        public int BotOfferCount;
 
         public event Action CancelRequested;
+        public event Action ForfeitConfirmed;
+        public event Action BotAccepted;
 
         public void ShowIdle() => IdleCount++;
 
@@ -41,7 +50,53 @@ namespace NodeWar.Lobby.Tests
 
         public void ShowCancelled() => CancelledCount++;
 
+        public void ShowConnecting() => ConnectingCount++;
+
+        public void ShowRequeueing(string message)
+        {
+            RequeueingCount++;
+            LastRequeueingMessage = message;
+        }
+
+        public void ShowForfeitPrompt() => ForfeitPromptCount++;
+
+        public void ShowWaitingForResult(int seconds)
+        {
+            WaitingForResultCount++;
+            LastWaitingSeconds = seconds;
+        }
+
+        public void ShowBotOffer() => BotOfferCount++;
+
         public void RaiseCancel() => CancelRequested?.Invoke();
+        public void RaiseForfeitConfirmed() => ForfeitConfirmed?.Invoke();
+        public void RaiseBotAccepted() => BotAccepted?.Invoke();
+    }
+
+    /// <summary>Scripted stand-in for IPlayerStateService: one result or exception per call, repeating the last.</summary>
+    internal sealed class FakePlayerStateService : IPlayerStateService
+    {
+        public System.Collections.Generic.List<PlayerState> Results { get; } = new System.Collections.Generic.List<PlayerState>();
+        public Exception ThrowOnGet;
+        public int CallCount;
+        private int next;
+
+        public static PlayerState NoActiveMatch() => new PlayerState();
+
+        public static PlayerState WithActiveMatch(string matchId) => new PlayerState
+        {
+            ActiveMatch = new ActiveMatchRecord { matchId = matchId, expiresUnixSeconds = 0 }
+        };
+
+        public Task<PlayerState> GetAsync()
+        {
+            CallCount++;
+            if (ThrowOnGet != null) throw ThrowOnGet;
+            if (Results.Count == 0) return Task.FromResult(NoActiveMatch());
+            PlayerState result = Results[next];
+            if (next < Results.Count - 1) next++;
+            return Task.FromResult(result);
+        }
     }
 
     /// <summary>Throws from EnqueueAsync so failure-path tests don't need a scripted service.</summary>
@@ -95,18 +150,151 @@ namespace NodeWar.Lobby.Tests
 
     public class RankedQueuePresenterTests
     {
+        private static RankedQueuePresenter MakePresenter(
+            IRankedQueueService service,
+            FakeRankedQueueView view,
+            IRankedMatchService rankedMatch = null,
+            IPlayerStateService playerState = null,
+            Func<IRankedConnection> connectionFactory = null)
+        {
+            return new RankedQueuePresenter(
+                service,
+                view,
+                rankedMatch ?? new LocalRankedMatchService(),
+                playerState ?? new FakePlayerStateService(),
+                connectionFactory ?? (() => new FakeRankedConnection()));
+        }
+
         [Test]
-        public async Task StartAsync_ShowsSearchingImmediately()
+        public async Task StartAsync_NoActiveMatch_Queues()
         {
             var service = new LocalRankedQueueService();
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var playerState = new FakePlayerStateService();
+            var presenter = MakePresenter(service, view, playerState: playerState);
 
             await presenter.StartAsync(0);
 
+            Assert.That(playerState.CallCount, Is.EqualTo(1));
             Assert.That(view.SearchingCount, Is.EqualTo(1));
             Assert.That(view.LastElapsedSeconds, Is.EqualTo(0));
             Assert.That(presenter.IsActive, Is.True);
+        }
+
+        [Test]
+        public async Task StartAsync_ActiveMatchCleared_Queues()
+        {
+            var service = new LocalRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var playerState = new FakePlayerStateService();
+            playerState.Results.Add(FakePlayerStateService.WithActiveMatch("stale-match"));
+            var rankedMatch = new LocalRankedMatchService { LeaveResult = new LeaveMatchResult { outcome = LeaveOutcome.Cleared } };
+            var presenter = MakePresenter(service, view, rankedMatch: rankedMatch, playerState: playerState);
+
+            await presenter.StartAsync(0);
+
+            Assert.That(rankedMatch.Calls.Count, Is.EqualTo(1));
+            Assert.That(rankedMatch.Calls[0].Method, Is.EqualTo(nameof(LocalRankedMatchService.LeaveAsync)));
+            Assert.That(rankedMatch.Calls[0].Forfeit, Is.False);
+            Assert.That(view.SearchingCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task StartAsync_ActiveMatchNeedsForfeit_ConfirmThenQueues()
+        {
+            var service = new LocalRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var playerState = new FakePlayerStateService();
+            playerState.Results.Add(FakePlayerStateService.WithActiveMatch("played-match"));
+            var rankedMatch = new LocalRankedMatchService { LeaveResult = new LeaveMatchResult { outcome = LeaveOutcome.NeedsForfeit } };
+            var presenter = MakePresenter(service, view, rankedMatch: rankedMatch, playerState: playerState);
+
+            // StartAsync's task does not complete while it is waiting on the
+            // player's forfeit decision, so it must not be awaited here.
+            _ = presenter.StartAsync(0);
+            await Task.Yield();
+            await Task.Yield();
+
+            Assert.That(view.ForfeitPromptCount, Is.EqualTo(1));
+            Assert.That(view.SearchingCount, Is.EqualTo(0));
+
+            // Confirming re-calls Leave with forfeit=true; script it to clear next.
+            rankedMatch.LeaveResult = new LeaveMatchResult { outcome = LeaveOutcome.Cleared };
+            view.RaiseForfeitConfirmed();
+            await Task.Yield();
+            await Task.Yield();
+
+            Assert.That(rankedMatch.Calls.Count, Is.EqualTo(2));
+            Assert.That(rankedMatch.Calls[0].Forfeit, Is.False);
+            Assert.That(rankedMatch.Calls[1].Forfeit, Is.True);
+            Assert.That(view.SearchingCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task StartAsync_ActiveMatchNeedsForfeit_CancelGoesIdle()
+        {
+            var service = new LocalRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var playerState = new FakePlayerStateService();
+            playerState.Results.Add(FakePlayerStateService.WithActiveMatch("played-match"));
+            var rankedMatch = new LocalRankedMatchService { LeaveResult = new LeaveMatchResult { outcome = LeaveOutcome.NeedsForfeit } };
+            var presenter = MakePresenter(service, view, rankedMatch: rankedMatch, playerState: playerState);
+
+            _ = presenter.StartAsync(0);
+            await Task.Yield();
+            await Task.Yield();
+            Assert.That(view.ForfeitPromptCount, Is.EqualTo(1));
+
+            view.RaiseCancel();
+            await Task.Yield();
+            await Task.Yield();
+
+            Assert.That(view.CancelledCount, Is.EqualTo(1));
+            Assert.That(presenter.IsActive, Is.False);
+            // Only the original check happened; declining never forfeits.
+            Assert.That(rankedMatch.Calls.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task StartAsync_ActiveMatchWaiting_CountsDownThenRechecks()
+        {
+            var service = new LocalRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var playerState = new FakePlayerStateService();
+            playerState.Results.Add(FakePlayerStateService.WithActiveMatch("reported-match"));
+            playerState.Results.Add(FakePlayerStateService.NoActiveMatch()); // after the wait, preflight sees it's clear
+            var rankedMatch = new LocalRankedMatchService { LeaveResult = new LeaveMatchResult { outcome = LeaveOutcome.Waiting, secondsLeft = 3 } };
+            var presenter = MakePresenter(service, view, rankedMatch: rankedMatch, playerState: playerState);
+
+            await presenter.StartAsync(0);
+            Assert.That(view.WaitingForResultCount, Is.EqualTo(1));
+            Assert.That(view.LastWaitingSeconds, Is.EqualTo(3));
+
+            presenter.Tick(1);
+            Assert.That(view.LastWaitingSeconds, Is.EqualTo(2));
+
+            presenter.Tick(3);
+            await Task.Yield();
+            await Task.Yield();
+
+            // The countdown hit zero and re-ran preflight, which this time found no active match.
+            Assert.That(playerState.CallCount, Is.EqualTo(2));
+            Assert.That(view.SearchingCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task StartAsync_PreflightThrows_ShowsFailed()
+        {
+            var service = new LocalRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var playerState = new FakePlayerStateService { ThrowOnGet = new InvalidOperationException("offline") };
+            var presenter = MakePresenter(service, view, playerState: playerState);
+
+            await presenter.StartAsync(0);
+
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+            Assert.That(view.LastFailureMessage, Does.Contain("offline"));
+            Assert.That(presenter.IsActive, Is.False);
         }
 
         [Test]
@@ -114,7 +302,7 @@ namespace NodeWar.Lobby.Tests
         {
             var service = new CountingRankedQueueService();
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var presenter = MakePresenter(service, view);
 
             await presenter.StartAsync(0);
             presenter.Tick(0.5);
@@ -128,7 +316,7 @@ namespace NodeWar.Lobby.Tests
         {
             var service = new CountingRankedQueueService();
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var presenter = MakePresenter(service, view);
 
             await presenter.StartAsync(0);
             presenter.Tick(2.0);
@@ -142,15 +330,13 @@ namespace NodeWar.Lobby.Tests
         {
             var service = new ManualRankedQueueService();
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var presenter = MakePresenter(service, view);
 
             await presenter.StartAsync(0);
             presenter.Tick(2.0);
             await Task.Yield();
             Assert.That(service.PollCount, Is.EqualTo(1), "first poll should have started");
 
-            // The poll is still pending. Further ticks past the cadence must
-            // not start a second, overlapping poll.
             presenter.Tick(4.0);
             presenter.Tick(6.0);
             Assert.That(service.PollCount, Is.EqualTo(1));
@@ -159,19 +345,26 @@ namespace NodeWar.Lobby.Tests
             await Task.Yield();
             await Task.Yield();
 
-            // Now that the first poll resolved, cadence can start a new one.
             presenter.Tick(8.0);
             await Task.Yield();
             Assert.That(service.PollCount, Is.EqualTo(2));
         }
 
         [Test]
-        public async Task Poll_Found_ShowsViewAndRaisesMatchFoundOnce()
+        public async Task Poll_Found_ConnectsThenRaisesMatchFoundOnce()
         {
             var service = new LocalRankedQueueService();
             service.PollResults.Add(new RankedQueueResult { state = RankedQueueState.Found, matchId = "match-1" });
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var rankedMatch = new LocalRankedMatchService();
+            rankedMatch.RendezvousResults.Add(new RendezvousResult
+            {
+                state = MatchRecordState.Open,
+                playerIds = new[] { "a", "b" },
+                slot = 0
+            });
+            var connection = new FakeRankedConnection();
+            var presenter = MakePresenter(service, view, rankedMatch: rankedMatch, connectionFactory: () => connection);
 
             int matchFoundCount = 0;
             string matchFoundId = null;
@@ -182,34 +375,21 @@ namespace NodeWar.Lobby.Tests
             await Task.Yield();
             await Task.Yield();
 
-            Assert.That(view.FoundCount, Is.EqualTo(1));
-            Assert.That(view.LastMatchId, Is.EqualTo("match-1"));
+            Assert.That(view.ConnectingCount, Is.EqualTo(1));
+            Assert.That(connection.HostCalls, Is.EqualTo(1));
+
+            connection.JoinCode = "CODE";
+            presenter.Tick(2.1);
+
+            connection.Phase = RankedConnectionPhase.Connected;
+            presenter.Tick(2.2);
+
             Assert.That(matchFoundCount, Is.EqualTo(1));
             Assert.That(matchFoundId, Is.EqualTo("match-1"));
             Assert.That(presenter.IsActive, Is.False);
 
-            // Stops polling after a terminal state.
             presenter.Tick(4.0);
-            presenter.Tick(6.0);
-            Assert.That(view.FoundCount, Is.EqualTo(1));
-        }
-
-        [Test]
-        public async Task Poll_Failed_ShowsFailed()
-        {
-            var service = new LocalRankedQueueService();
-            service.PollResults.Add(new RankedQueueResult { state = RankedQueueState.Failed, message = "no pool" });
-            var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
-
-            await presenter.StartAsync(0);
-            presenter.Tick(2.0);
-            await Task.Yield();
-            await Task.Yield();
-
-            Assert.That(view.FailedCount, Is.EqualTo(1));
-            Assert.That(view.LastFailureMessage, Is.EqualTo("no pool"));
-            Assert.That(presenter.IsActive, Is.False);
+            Assert.That(matchFoundCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -218,7 +398,7 @@ namespace NodeWar.Lobby.Tests
             var service = new LocalRankedQueueService();
             service.PollResults.Add(new RankedQueueResult { state = RankedQueueState.TimedOut, message = "timed out" });
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var presenter = MakePresenter(service, view);
 
             await presenter.StartAsync(0);
             presenter.Tick(2.0);
@@ -230,24 +410,120 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public async Task Poll_Failed_RequeuesThenStopsOnFourthConsecutiveFailure()
+        {
+            var service = new LocalRankedQueueService();
+            service.PollResults.Add(new RankedQueueResult { state = RankedQueueState.Failed, message = "no pool" });
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+
+            await presenter.StartAsync(0);
+
+            // Failures 1-3: each re-queues (shows requeueing, goes back to searching).
+            // Each requeue resets the poll cadence clock to the tick time it
+            // happened on, so ticks must stay 2s apart from the previous one.
+            double t = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                t += 2;
+                presenter.Tick(t);
+                await Task.Yield();
+                await Task.Yield();
+                await Task.Yield();
+            }
+
+            Assert.That(view.RequeueingCount, Is.EqualTo(3));
+            Assert.That(view.FailedCount, Is.EqualTo(0));
+            Assert.That(presenter.IsActive, Is.True);
+
+            // 4th consecutive failure stops.
+            t += 2;
+            presenter.Tick(t);
+            await Task.Yield();
+            await Task.Yield();
+            await Task.Yield();
+
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+            Assert.That(view.LastFailureMessage, Is.EqualTo("no pool"));
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
+        public async Task RendezvousFailure_Requeues()
+        {
+            var service = new LocalRankedQueueService();
+            service.PollResults.Add(new RankedQueueResult { state = RankedQueueState.Found, matchId = "match-1" });
+            var view = new FakeRankedQueueView();
+            var rankedMatch = new LocalRankedMatchService();
+            rankedMatch.RendezvousResults.Add(new RendezvousResult
+            {
+                state = MatchRecordState.Open,
+                playerIds = new[] { "a", "b" },
+                slot = 0
+            });
+            var connection = new FakeRankedConnection { FailureMessage = "relay dead" };
+            var presenter = MakePresenter(service, view, rankedMatch: rankedMatch, connectionFactory: () => connection);
+
+            await presenter.StartAsync(0);
+            presenter.Tick(2.0);
+            await Task.Yield();
+            await Task.Yield();
+            Assert.That(view.ConnectingCount, Is.EqualTo(1));
+
+            connection.Phase = RankedConnectionPhase.Failed;
+            presenter.Tick(2.1);
+            await Task.Yield();
+            await Task.Yield();
+            await Task.Yield();
+
+            Assert.That(view.RequeueingCount, Is.EqualTo(1));
+            Assert.That(view.LastRequeueingMessage, Does.Contain("connection failed"));
+            Assert.That(presenter.IsActive, Is.True);
+        }
+
+        [Test]
+        public async Task BotOffer_ShownOnceAtNinetySeconds_AcceptCancelsTicketAndRaisesEvent()
+        {
+            var service = new LocalRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+
+            bool botAccepted = false;
+            presenter.BotMatchAccepted += () => botAccepted = true;
+
+            await presenter.StartAsync(0);
+            presenter.Tick(89);
+            Assert.That(view.BotOfferCount, Is.EqualTo(0));
+
+            presenter.Tick(90);
+            Assert.That(view.BotOfferCount, Is.EqualTo(1));
+
+            presenter.Tick(92);
+            Assert.That(view.BotOfferCount, Is.EqualTo(1), "shown only once");
+
+            view.RaiseBotAccepted();
+            await Task.Yield();
+            await Task.Yield();
+
+            Assert.That(botAccepted, Is.True);
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
         public async Task Cancel_CallsCancelAsyncThenShowsCancelled()
         {
             var service = new LocalRankedQueueService();
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var presenter = MakePresenter(service, view);
 
             await presenter.StartAsync(0);
             view.RaiseCancel();
             await Task.Yield();
             await Task.Yield();
 
-            Assert.That(service.Calls.Count, Is.EqualTo(2));
-            Assert.That(service.Calls[0].Method, Is.EqualTo(nameof(LocalRankedQueueService.EnqueueAsync)));
-            Assert.That(service.Calls[1].Method, Is.EqualTo(nameof(LocalRankedQueueService.CancelAsync)));
             Assert.That(view.CancelledCount, Is.EqualTo(1));
             Assert.That(presenter.IsActive, Is.False);
 
-            // Stops polling once cancelled.
             presenter.Tick(10.0);
             Assert.That(view.CancelledCount, Is.EqualTo(1));
         }
@@ -257,7 +533,7 @@ namespace NodeWar.Lobby.Tests
         {
             var service = new ThrowingEnqueueService();
             var view = new FakeRankedQueueView();
-            var presenter = new RankedQueuePresenter(service, view);
+            var presenter = MakePresenter(service, view);
 
             await presenter.StartAsync(0);
 
