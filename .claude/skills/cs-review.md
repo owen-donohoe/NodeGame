@@ -17,10 +17,12 @@ status: stable
 sources:
   - id: architecture
     resource: docs/architecture.md
-    title: The seven layers and their ownership
+    title: The seven layers and adjacent backend and replay systems
+    last_modified: 2026-09-28T14:43:33-04:00
   - id: contract
     resource: docs/simulation-rules.md
     title: Simulation Determinism Contract
+    last_modified: 2026-09-26T10:16:37-04:00
 ---
 
 # cs-review
@@ -39,9 +41,18 @@ Read all files modified in this session, then check:
      GameSimulation or CommandProcessor? Check all three trees, not
      just the layer named UI: Assets/Scripts/Game/{View,UI}/,
      Assets/UI/ (UI Toolkit), and Assets/Legacy/.
-   - Does every command sent from presentation code go through
+   - Does every gameplay GameCommand sent from presentation code go through
      InputBuffer with issuedOnTick stamped?
    - Does anything in Network/ contain game logic?
+   - Do Backend/ and dotnet/NodeWarCloud/ keep rated progression,
+     inventory and match settlement server-owned, with client UI using
+     the async service contracts and returned state?
+   - Does Backend/Shared/ remain UnityEngine-free so the same DTOs,
+     rules and service contracts compile into Cloud Code?
+   - Does MatchLog/ preserve applied command order and replay through MatchFactory,
+     CommandProcessor and GameSimulation rather than duplicate their
+     rules? Does the Cloud Code referee serialize replays that share
+     simulation statics?
 
 2. Single-file principle
    - Are SerializeField variables in the same file as their 
@@ -62,8 +73,9 @@ Read all files modified in this session, then check:
 
 5. Unnecessary complexity
    - Any abstraction added before it is needed?
-   - Any interface introduced for a class that has exactly one 
-     implementation?
+   - Any interface with one implementation and no concrete testing or
+     replacement need? IRankedQueueView is an intentional presentation
+     seam even with one shipped view.
    - Any generic type parameter that adds complexity without 
      clear benefit?
 
@@ -71,6 +83,10 @@ Read all files modified in this session, then check:
    - New SimulationState fields added to SimulationStateHasher?
    - New CommandType has a CommandProcessor case?
    - GameCommand struct and InputSerializer updated together?
+   - Wire layout changes bump ProtocolVersion.Current in
+     Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion aliases?
+   - Simulation behavior changes bump SimulationVersion.Current, with
+     balance-only edits tracked by the content hash?
 
 ## Output format
 Report each category as PASS, FAIL, or N/A.
