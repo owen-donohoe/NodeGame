@@ -47,7 +47,27 @@ namespace NodeWar.Cloud
     public static class ActiveMatchClaims
     {
         public const long LifetimeSeconds = 2 * 60 * 60;
+        // How long a Pending match (one accepted report, or one forfeiter waiting
+        // on the other side) may sit before it voids. Shared by MatchReporting
+        // and MatchRendezvous so a known tag never means two different windows.
+        public const long PendingTimeoutSeconds = 10 * 60;
         private const int RetryLimit = 3;
+
+        /// <summary>
+        /// True while both players in <paramref name="record"/> still hold an
+        /// unexpired claim naming this match. Shared by MatchReporting and
+        /// MatchRendezvous: whichever caller notices a lost claim first voids
+        /// the record.
+        /// </summary>
+        public static async Task<bool> HoldsClaims(Func<string, ISettlementPlayerStore> players, MatchRecord record, long now)
+        {
+            foreach (string id in record.playerIds)
+            {
+                var claim = (await players(id).ReadForSettlementAsync()).State.ActiveMatch;
+                if (claim?.matchId != record.matchId || claim.expiresUnixSeconds <= now) return false;
+            }
+            return true;
+        }
 
         public static async Task<ActiveMatchRecord> Claim(ISettlementPlayerStore store, string matchId, long now,
             long? expiresUnixSeconds = null)

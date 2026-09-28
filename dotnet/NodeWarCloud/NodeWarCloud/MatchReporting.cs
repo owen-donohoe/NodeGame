@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NodeWar.Backend;
@@ -12,11 +11,10 @@ namespace NodeWar.Cloud
     public sealed class MatchReporting
     {
         private const int RetryLimit = 3;
-        private const long PendingTimeoutSeconds = 10 * 60;
         private readonly IMatchRecordStore matches;
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly Referee referee;
-        private readonly InventoryRules inventory;
+        private readonly MatchSettler settler;
 
         public MatchReporting(IMatchRecordStore matches, Func<string, ISettlementPlayerStore> players,
             Referee referee, InventoryRules inventory)
@@ -24,7 +22,8 @@ namespace NodeWar.Cloud
             this.matches = matches ?? throw new ArgumentNullException(nameof(matches));
             this.players = players ?? throw new ArgumentNullException(nameof(players));
             this.referee = referee ?? throw new ArgumentNullException(nameof(referee));
-            this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            if (inventory == null) throw new ArgumentNullException(nameof(inventory));
+            this.settler = new MatchSettler(players, inventory);
         }
 
         // Caps how many refused attempts we keep per player once they have an
@@ -78,7 +77,7 @@ namespace NodeWar.Cloud
                     };
                 }
                 else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
-                    !await HoldsClaims(record, now))
+                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
                 {
                     record.state = MatchRecordState.Void;
                 }
@@ -86,11 +85,12 @@ namespace NodeWar.Cloud
                 {
                     // Agreement and its server timestamp were committed before
                     // either player write. Recovery is allowed only while claims are live.
-                    record.state = await SettlePlayers(record, now) ? MatchRecordState.Settled : MatchRecordState.Void;
+                    record.state = await settler.Settle(record, record.reports.First(r => r.accepted).winner, now)
+                        ? MatchRecordState.Settled : MatchRecordState.Void;
                     if (record.state == MatchRecordState.Void) record.outcomes = null;
                 }
                 else if (record.state == MatchRecordState.Pending && now > record.pendingUnixSeconds &&
-                    now - record.pendingUnixSeconds > PendingTimeoutSeconds)
+                    now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
                 {
                     record.state = MatchRecordState.Void;
                 }
@@ -148,16 +148,6 @@ namespace NodeWar.Cloud
             }
         }
 
-        private async Task<bool> HoldsClaims(MatchRecord record, long now)
-        {
-            foreach (string id in record.playerIds)
-            {
-                var claim = (await players(id).ReadForSettlementAsync()).State.ActiveMatch;
-                if (claim?.matchId != record.matchId || claim.expiresUnixSeconds <= now) return false;
-            }
-            return true;
-        }
-
         private MatchReport Verify(MatchRecord record, int caller, byte[] bytes)
         {
             var report = new MatchReport { playerIndex = caller };
@@ -200,84 +190,6 @@ namespace NodeWar.Cloud
                 record.reports.Remove(refusals[0]);
                 refusals.RemoveAt(0);
             }
-        }
-
-        // Arena thresholds come from the one table the client also displays.
-        private static readonly SettlementConfig Config = new SettlementConfig
-        {
-            Rank = new RankConfig { ArenaThresholds = RankTable.Thresholds.ToArray() }
-        };
-
-        private async Task<bool> SettlePlayers(MatchRecord record, long now)
-        {
-            var inputs = record.players.Select(p => new SettlementPlayer
-            {
-                Rating = new Rating(p.Rating.R, p.Rating.Rd, p.Rating.Sigma),
-                LastMatchUnixSeconds = p.Rating.LastMatchUnixSeconds,
-                Rank = new RankState(p.Rank.RR, p.Rank.Arena, p.Rank.HighestArena)
-            }).ToArray();
-            var outcome = MatchSettlement.Settle(new SettlementInput
-            {
-                Players = inputs, Winner = record.reports.First(r => r.accepted).winner,
-                NowUnixSeconds = record.settlementUnixSeconds
-            }, Config);
-
-            record.outcomes = new MatchOutcome[2];
-            for (int p = 0; p < 2; p++)
-            {
-                var settledOutcome = outcome.Players[p];
-                record.outcomes[p] = new MatchOutcome
-                {
-                    won = record.reports.First(r => r.accepted).winner == p,
-                    rrDelta = settledOutcome.RRDelta,
-                    rrAfter = settledOutcome.Rank.RR,
-                    arenaAfter = settledOutcome.Rank.Arena,
-                    promoted = settledOutcome.Promoted,
-                    demoted = settledOutcome.Demoted
-                };
-            }
-
-            for (int p = 0; p < 2; p++)
-            {
-                var store = players(record.playerIds[p]);
-                for (int attempt = 0; attempt < RetryLimit; attempt++)
-                {
-                    var read = await store.ReadForSettlementAsync();
-                    var state = read.State;
-                    if (state?.History?.MatchIds == null || state.Inventory == null || state.Rating == null)
-                        throw new InvalidOperationException("Match players must have initialized server records.");
-                    // The idempotency guard is this bounded, 200-entry list on the
-                    // rating record, not the 20-entry history: a player who plays
-                    // enough matches to evict this one from history must still not
-                    // be settled twice for it.
-                    var settledIds = state.Rating.SettledMatchIds ?? new List<string>();
-                    if (settledIds.Contains(record.matchId)) break;
-                    // The rating lock also fences a new claim acquired since HoldsClaims.
-                    // Re-check after a settlement write conflict before using old snapshots.
-                    if (state.ActiveMatch?.matchId != record.matchId || state.ActiveMatch.expiresUnixSeconds <= now)
-                        return false;
-                    var settled = outcome.Players[p];
-                    settledIds.Insert(0, record.matchId);
-                    if (settledIds.Count > 200) settledIds.RemoveRange(200, settledIds.Count - 200);
-                    state.Rating = new RatingRecord { R = settled.Rating.R, Rd = settled.Rating.RD,
-                        Sigma = settled.Rating.Sigma, LastMatchUnixSeconds = settled.LastMatchUnixSeconds,
-                        SettledMatchIds = settledIds };
-                    state.Rank = new RankRecord { RR = settled.Rank.RR, Arena = settled.Rank.Arena,
-                        HighestArena = settled.Rank.HighestArena };
-                    inventory.GrantDefaults(state);
-                    InventoryClamp.ClampToArena(state.Inventory, state.Rank.Arena);
-                    state.History.MatchIds.Insert(0, record.matchId);
-                    if (state.History.MatchIds.Count > 20)
-                        state.History.MatchIds.RemoveRange(20, state.History.MatchIds.Count - 20);
-                    try
-                    {
-                        await store.WriteForSettlementAsync(state, read.WriteLocks);
-                        break;
-                    }
-                    catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
-                }
-            }
-            return true;
         }
     }
 }
