@@ -106,6 +106,8 @@
              Link="Backend/RankedQueueService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs"
              Link="Backend/RankedQueuePresenter.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/RankedMatchTypes.cs"
+             Link="Backend/RankedMatchTypes.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemTint.cs"
              Link="Lobby/ItemTint.cs" />
     <Compile Include="../../Assets/UI/Scripts/ItemFamily.cs"

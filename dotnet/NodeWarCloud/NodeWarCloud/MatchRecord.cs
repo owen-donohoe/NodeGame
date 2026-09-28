@@ -21,6 +21,12 @@ namespace NodeWar.Cloud
         // Indexed like players/playerIds. Set once, in the same write that moves
         // the record to Settled. Null for Open/Pending/Void/Disputed records.
         public MatchOutcome[] outcomes;
+        // The host's (slot 0's) Relay join code, readable only by the two
+        // players through Rendezvous. Null until published.
+        public string joinCode;
+        // Server time either peer first confirmed the connection. 0 means the
+        // match never started, so leaving voids it rather than forfeiting it.
+        public long connectedUnixSeconds;
     }
 
     // A settled player's result on this match. Never re-derived from current
