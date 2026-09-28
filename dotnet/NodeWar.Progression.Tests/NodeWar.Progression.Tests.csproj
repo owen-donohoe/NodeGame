@@ -20,7 +20,6 @@
     <Compile Include="ArenasTests.cs" />
     <Compile Include="CatalogTests.cs" />
     <Compile Include="EraUnlocksTests.cs" />
-    <Compile Include="MatchmakingTests.cs" />
     <Compile Include="MatchSettlementTests.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -9,7 +9,6 @@
     <Compile Include="Arenas.cs" />
     <Compile Include="Catalog.cs" />
     <Compile Include="EraUnlocks.cs" />
-    <Compile Include="Matchmaking.cs" />
     <Compile Include="MatchSettlement.cs" />
   </ItemGroup>
 </Project>
