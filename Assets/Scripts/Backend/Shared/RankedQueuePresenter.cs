@@ -61,7 +61,7 @@ namespace NodeWar.Backend
         private const int MaxAutoRequeues = 3;
         private const string RequeueMessage = "Opponent's connection failed — finding a new match…";
 
-        private enum Phase { Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, Connecting, Rendezvous }
+        private enum Phase { Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, CancellingForBot, Connecting, Rendezvous }
 
         private readonly IRankedQueueService service;
         private readonly IRankedQueueView view;
@@ -308,7 +308,7 @@ namespace NodeWar.Backend
             if (elapsed < 0) elapsed = 0;
             view.ShowSearching(elapsed);
 
-            if (!botOfferShown && elapsed >= BotOfferSeconds)
+            if (!botOfferShown && ticketId != null && elapsed >= BotOfferSeconds)
             {
                 botOfferShown = true;
                 view.ShowBotOffer();
@@ -368,21 +368,39 @@ namespace NodeWar.Backend
 
         private void OnBotAccepted()
         {
-            if (phase != Phase.Queue) return;
+            if (phase != Phase.Queue || ticketId == null) return;
             _ = AcceptBotAsync();
         }
 
         private async Task AcceptBotAsync()
         {
+            InvalidateAttempt();
             int attemptGeneration = generation;
             string cancelling = ticketId;
+            phase = Phase.CancellingForBot;
             try
             {
-                if (cancelling != null) await service.CancelAsync(cancelling);
+                await service.CancelAsync(cancelling);
             }
             catch
             {
-                // Best-effort: the offer is accepted either way.
+                if (!IsCurrent(attemptGeneration)) return;
+
+                // Deletion may have lost a race with allocation. Only this
+                // fresh poll can win for ranked; older queue polls are stale.
+                RankedQueueResult result = null;
+                try { result = await service.PollAsync(cancelling); }
+                catch { /* The cancellation failure is shown below. */ }
+                if (!IsCurrent(attemptGeneration)) return;
+                if (result?.state == RankedQueueState.Found)
+                {
+                    InvalidateAttempt();
+                    await HandleFoundAsync(result.matchId, lastTickNow);
+                    return;
+                }
+
+                Fail("Couldn't leave the ranked queue. Try again.");
+                return;
             }
             if (!IsCurrent(attemptGeneration)) return;
             GoIdle();

@@ -770,6 +770,159 @@ namespace NodeWar.Lobby.Tests
             Assert.That(presenter.IsActive, Is.False);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task BotAccept_CancelFailsWithoutFound_DoesNotLaunchBot(bool pollThrows)
+        {
+            var service = new ScriptedRankedQueueService
+            {
+                Cancel = _ => throw new InvalidOperationException("cannot delete")
+            };
+            if (pollThrows) service.Poll = _ => throw new InvalidOperationException("offline");
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            int bots = 0;
+            presenter.BotMatchAccepted += () => bots++;
+            await presenter.StartAsync(0);
+            view.RaiseBotAccepted();
+
+            Assert.That(bots, Is.Zero);
+            Assert.That(service.PolledTickets, Is.EqualTo(new[] { "ticket-1" }));
+            Assert.That(view.LastFailureMessage, Is.EqualTo("Couldn't leave the ranked queue. Try again."));
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public async Task BotAccept_RacesFound_ExactlyOneLaunch(bool botFirst, bool cancelFails)
+        {
+            var oldPoll = new TaskCompletionSource<RankedQueueResult>();
+            var cancellation = new TaskCompletionSource<bool>();
+            var found = new RankedQueueResult { state = RankedQueueState.Found, matchId = "match" };
+            var service = new ScriptedRankedQueueService
+            {
+                Poll = _ => oldPoll.Task,
+                Cancel = _ => cancellation.Task
+            };
+            var match = new ScriptedRankedMatchService();
+            var connection = new FakeRankedConnection();
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view, match, connectionFactory: () => connection);
+            int bots = 0;
+            presenter.BotMatchAccepted += () => bots++;
+            await presenter.StartAsync(0);
+            presenter.Tick(90);
+
+            if (botFirst) view.RaiseBotAccepted();
+            oldPoll.SetResult(found);
+            await Task.Yield();
+            if (botFirst)
+            {
+                Assert.That(match.RosterCalls, Is.Zero, "Found from the old poll is ignored during bot cancellation");
+                Assert.That(bots, Is.Zero, "bot must wait for successful cancellation");
+            }
+            view.RaiseBotAccepted(); // A second click cannot start another cancellation.
+            service.Poll = _ => Task.FromResult(found);
+            if (botFirst && cancelFails) cancellation.SetException(new InvalidOperationException("allocated"));
+            else cancellation.SetResult(true);
+            await Task.Yield();
+
+            Assert.That(bots + connection.HostCalls, Is.EqualTo(1));
+            Assert.That(bots, Is.EqualTo(botFirst && !cancelFails ? 1 : 0));
+            Assert.That(match.RosterCalls, Is.EqualTo(bots == 1 ? 0 : 1));
+            Assert.That(service.CancelledTickets.Count, Is.EqualTo(botFirst ? 1 : 0));
+            Assert.That(view.FailedCount, Is.Zero);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task BotAccept_LateFoundAfterCancellationFinishes_IsIgnored(bool cancelFails)
+        {
+            var oldPoll = new TaskCompletionSource<RankedQueueResult>();
+            var service = new ScriptedRankedQueueService { Poll = _ => oldPoll.Task };
+            var match = new ScriptedRankedMatchService();
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view, match);
+            int bots = 0;
+            presenter.BotMatchAccepted += () => bots++;
+            await presenter.StartAsync(0);
+            presenter.Tick(90);
+            if (cancelFails) service.Cancel = _ => throw new InvalidOperationException("offline");
+            service.Poll = _ => Task.FromResult(new RankedQueueResult { state = RankedQueueState.Searching });
+            view.RaiseBotAccepted();
+            oldPoll.SetResult(new RankedQueueResult { state = RankedQueueState.Found, matchId = "late-match" });
+            await Task.Yield();
+
+            Assert.That(match.RosterCalls, Is.Zero);
+            Assert.That(bots, Is.EqualTo(cancelFails ? 0 : 1));
+            Assert.That(view.FailedCount, Is.EqualTo(cancelFails ? 1 : 0));
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public async Task BotAccept_CancelOrDisposeDuringAwait_DoesNotLaunch(bool dispose, bool recoveringFound)
+        {
+            var cancellation = new TaskCompletionSource<bool>();
+            var recovery = new TaskCompletionSource<RankedQueueResult>();
+            var service = new ScriptedRankedQueueService
+            {
+                Cancel = _ => cancellation.Task,
+                Poll = _ => recovery.Task
+            };
+            var match = new ScriptedRankedMatchService();
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view, match);
+            int bots = 0;
+            presenter.BotMatchAccepted += () => bots++;
+            await presenter.StartAsync(0);
+            view.RaiseBotAccepted();
+            if (recoveringFound)
+            {
+                cancellation.SetException(new InvalidOperationException("allocated"));
+                await Task.Yield();
+            }
+            if (dispose) presenter.Dispose();
+            else await presenter.RequestCancelAsync();
+            int calls = view.TotalCalls;
+            if (!recoveringFound) cancellation.SetResult(true);
+            recovery.SetResult(new RankedQueueResult { state = RankedQueueState.Found, matchId = "match" });
+            await Task.Yield();
+
+            Assert.That(view.TotalCalls, Is.EqualTo(calls));
+            Assert.That(match.RosterCalls, Is.Zero);
+            Assert.That(bots, Is.Zero);
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
+        public async Task BotOffer_PendingEnqueue_WaitsForKnownTicket()
+        {
+            var pending = new TaskCompletionSource<string>();
+            var service = new ScriptedRankedQueueService { Enqueue = () => pending.Task };
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            int bots = 0;
+            presenter.BotMatchAccepted += () => bots++;
+            Task start = presenter.StartAsync(0);
+            presenter.Tick(90);
+            view.RaiseBotAccepted();
+            Assert.That(bots, Is.Zero);
+            Assert.That(view.BotOfferCount, Is.Zero);
+            pending.SetResult("late-ticket");
+            await start;
+            presenter.Tick(91);
+            Assert.That(view.BotOfferCount, Is.EqualTo(1));
+            view.RaiseBotAccepted();
+            Assert.That(bots, Is.EqualTo(1));
+            Assert.That(service.CancelledTickets, Is.EqualTo(new[] { "late-ticket" }));
+        }
+
         [Test]
         public async Task Cancel_CallsCancelAsyncThenShowsCancelled()
         {
