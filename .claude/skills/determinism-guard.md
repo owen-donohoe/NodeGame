@@ -9,7 +9,8 @@ verified:
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
-verified_at_commit: 1f5c20b
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+verified_at_commit: a43b5f9
 status: stable
 sources:
   - id: contract

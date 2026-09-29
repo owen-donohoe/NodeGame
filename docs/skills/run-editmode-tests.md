@@ -6,13 +6,14 @@ tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-verified_at_commit: ea42e61
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+verified_at_commit: a43b5f9
 status: stable
 sources:
   - id: batch-runner
     resource: scripts/run-tests.ps1
     title: Batch-mode EditMode runner
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-18T08:08:19-04:00
   - id: live-runner
     resource: scripts/run-tests-live.ps1
     title: Live-Editor EditMode runner
@@ -26,7 +27,7 @@ sources:
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-25T20:27:51-04:00
   - id: tests-edge-weight
     resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
     title: Edge weight cases

@@ -4,7 +4,8 @@ title: Game Model
 description: What Node War is — the match model, board, villagers, districts, suits, resources, win condition and eras, as the simulation actually implements them.
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+verified_at_commit: a43b5f9
 status: draft
 sources:
   - id: sim-state

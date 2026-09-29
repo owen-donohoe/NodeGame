@@ -7,7 +7,8 @@ generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
-verified_at_commit: 2241e47
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+verified_at_commit: a43b5f9
 status: draft
 sources:
   - id: solution
@@ -33,7 +34,7 @@ sources:
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-    last_modified: 2026-08-30T16:44:10-04:00
+    last_modified: 2026-09-25T20:27:51-04:00
   - id: tests-edge-weight
     resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
     title: Edge weight cases
@@ -59,17 +60,17 @@ The solution holds six test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **840 passed** (counted 2026-09-26; the table says where each lives, so a changed total
+Expect **1118 passed** (counted 2026-09-29; the table says where each lives, so a changed total
 is easy to place).
 
 | Project | Cases | Covers |
 |---|---|---|
 | `NodeWar.Simulation.Tests` | 142 | `Assets/Tests/EditMode/Tests/`: the determinism baseline, edge weights, movement, production, combat fixes, `MatchFactory`, eras, the balance hash |
-| `NodeWar.Lobby.Tests` | 198 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, item tints, families, the in-match command checks, handshake and emote packets |
+| `NodeWar.Lobby.Tests` | 300 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, item tints, families, the in-match command checks, handshake and emote packets, game settings, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets |
 | `NodeWar.View.Tests` | 189 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings, production readout, draft handover |
 | `NodeWar.MatchLog.Tests` | 64 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS |
-| `NodeWar.Progression.Tests` | 146 | Glicko-2, RR, arenas, catalog validation, era unlocks, matchmaking rules |
-| `NodeWarCloud.Tests` | 101 | the Cloud Code module: player state, accounts, catalog, inventory and Equip, the referee and its balance catalog |
+| `NodeWar.Progression.Tests` | 129 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
+| `NodeWarCloud.Tests` | 294 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, era eligibility, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## Producing the receipt
 
