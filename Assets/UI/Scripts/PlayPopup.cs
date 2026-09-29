@@ -206,8 +206,11 @@ namespace NodeWar.Lobby
             get { return sheet != null && sheet.IsShowing(Root); }
         }
 
+        private View currentView = View.Find;
+
         private void ShowView(View view)
         {
+            currentView = view;
             SetVisible(findView, view == View.Find);
             SetVisible(joinView, view == View.Join);
             SetVisible(statusView, view == View.Status);
@@ -299,6 +302,19 @@ namespace NodeWar.Lobby
 
         private void StartRankedQueue()
         {
+            _ = StartRankedQueueAsync();
+        }
+
+        private async System.Threading.Tasks.Task StartRankedQueueAsync()
+        {
+            ShowView(View.Ranked);
+            rankedQueueView.ShowSearching(0);
+
+            // An unsent ranked log settles its match before preflight asks about
+            // it; otherwise the winner of that match would be offered a forfeit.
+            await PendingRankedReports.RetryAsync();
+            if (!IsOpen || currentView != View.Ranked) return;
+
             DisposeRankedPresenter();
 
             // The rendezvous drives this popup's own launcher, which Update()
@@ -307,7 +323,6 @@ namespace NodeWar.Lobby
                 BackendServices.RankedMatch, BackendServices.PlayerState,
                 () => new MatchLauncherConnection(launcher));
             rankedPresenter.BotMatchAccepted += OnRankedBotAccepted;
-            ShowView(View.Ranked);
 
             // Not awaited: the attempt can pause on a forfeit prompt indefinitely.
             _ = rankedPresenter.StartAsync(NowSeconds());

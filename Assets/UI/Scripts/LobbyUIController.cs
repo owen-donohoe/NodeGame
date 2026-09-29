@@ -112,6 +112,9 @@ namespace NodeWar.Lobby
             try
             {
                 await NodeWar.Backend.BackendServices.PlayerState.GetAsync();
+                // A ranked log that failed to upload last time goes now. A report
+                // that settles returns the new state, which BackendServices keeps.
+                await NodeWar.Backend.PendingRankedReports.RetryAsync();
             }
             catch (System.Exception e)
             {

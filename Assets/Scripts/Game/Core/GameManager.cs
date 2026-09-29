@@ -708,28 +708,16 @@ namespace NodeWar.Core
 
             // Only a match the server created is reported. Bot and private matches
             // have no record, so there is nothing to settle and nothing to send.
+            // Kept until the server answers, then uploaded; a failed upload is
+            // retried from the lobby and before the next ranked queue. Not
+            // awaited: the upload must outlive this scene. The result screen
+            // does not show the outcome yet (7.4).
             MatchConnection match = MatchConnection.Instance;
             if (match != null && match.isRanked && !string.IsNullOrEmpty(match.matchId))
-                _ = ReportRankedMatchAsync(match.matchId, log);
-        }
-
-        /// <summary>
-        /// Uploads a ranked log for settlement. Not awaited: the player can leave
-        /// the result screen, and the upload must outlive this scene. The result
-        /// screen does not show the outcome yet (7.4).
-        /// </summary>
-        private static async System.Threading.Tasks.Task ReportRankedMatchAsync(string matchId, byte[] log)
-        {
-            try
             {
-                NodeWar.Backend.MatchReportingResult result =
-                    await NodeWar.Backend.BackendServices.MatchReports.ReportAsync(matchId, log);
-                Debug.Log("[GameManager] Ranked report " + matchId + ": " +
-                          (result?.state?.ToString() ?? "refused") + " " + (result?.message ?? ""));
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning("[GameManager] Ranked report failed for " + matchId + ": " + e.Message);
+                NodeWar.Backend.PendingRankedReports.Add(
+                    NodeWar.Backend.BackendServices.Account.Current?.PlayerId, match.matchId, log);
+                _ = NodeWar.Backend.PendingRankedReports.RetryAsync();
             }
         }
 
