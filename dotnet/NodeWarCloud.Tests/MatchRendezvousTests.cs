@@ -378,6 +378,105 @@ namespace NodeWar.Cloud.Tests
             Assert.That(record.outcomes[1].won, Is.True);
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public async Task LeaveFinishesCommittedAgreementAfterPendingTimeout(int winner)
+        {
+            await CommitAgreement(winner);
+            Assert.That((await Record()).outcomes, Is.Null);
+            AssertNoPlayerWrites();
+
+            var result = await rendezvous.Leave(MatchId, "p0", false,
+                100 + ActiveMatchClaims.PendingTimeoutSeconds + 1);
+            var record = await Record();
+            Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            Assert.That(record.state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(record.settlementUnixSeconds, Is.EqualTo(150));
+            Assert.That((await State(winner)).Rating.R, Is.GreaterThan(1500));
+            Assert.That((await State(1 - winner)).Rating.R, Is.LessThan(1500));
+            for (int slot = 0; slot < 2; slot++)
+            {
+                var state = await State(slot);
+                Assert.That(record.outcomes[slot].won, Is.EqualTo(slot == winner));
+                Assert.That(record.outcomes[slot].rrAfter, Is.EqualTo(state.Rank.RR));
+                Assert.That(state.Rank.RR,
+                    Is.EqualTo(Math.Max(0, record.players[slot].Rank.RR + record.outcomes[slot].rrDelta)));
+                Assert.That(record.outcomes[slot].arenaAfter, Is.EqualTo(state.Rank.Arena));
+                Assert.That(state.Rating.LastMatchUnixSeconds, Is.EqualTo(150));
+                Assert.That(state.Rating.SettledMatchIds, Is.EqualTo(new[] { MatchId }));
+                Assert.That(state.History.MatchIds, Is.EqualTo(new[] { MatchId }));
+                Assert.That(state.ActiveMatch.matchId, Is.Null);
+            }
+            Assert.That(result.playerState.Rating.R, Is.EqualTo((await State(0)).Rating.R));
+            await rendezvous.Leave(MatchId, "p1", false, 800);
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
+        }
+
+        [Test]
+        public async Task CommittedForfeitOutranksAgreementOnLeave()
+        {
+            await CommitAgreement(0);
+            await Mutate(r => r.forfeitedBy = 0);
+            var result = await rendezvous.Leave(MatchId, "p1", false, 800);
+            Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That((await Record()).outcomes[1].won, Is.True);
+            Assert.That((await State(1)).Rating.R, Is.GreaterThan(1500));
+            Assert.That((await State(0)).Rating.R, Is.LessThan(1500));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task LeaveVoidsAgreementWhenLeaseOrClaimsAreLost(bool lostClaim)
+        {
+            await CommitAgreement(0);
+            if (lostClaim)
+                players[1].Mutate(s => s.ActiveMatch = new ActiveMatchRecord
+                    { matchId = "other", expiresUnixSeconds = 99999 });
+            var result = await rendezvous.Leave(MatchId, "p0", false,
+                lostClaim ? 800 : 1 + ActiveMatchClaims.LifetimeSeconds);
+            Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Void));
+            Assert.That((await Record()).outcomes, Is.Null);
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.Null);
+            Assert.That((await State(1)).ActiveMatch.matchId, Is.EqualTo(lostClaim ? "other" : null));
+            AssertNoPlayerWrites();
+        }
+
+        [Test]
+        public async Task LeaveClearsOutcomesWhenAgreementSettlementLosesAClaim()
+        {
+            await CommitAgreement(0);
+            players[0].BeforeWrite = () =>
+            {
+                players[0].BeforeWrite = null;
+                players[0].Mutate(s => s.ActiveMatch = new ActiveMatchRecord
+                    { matchId = "other", expiresUnixSeconds = 99999 });
+            };
+            var result = await rendezvous.Leave(MatchId, "p0", false, 800);
+            Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            Assert.That(result.playerState, Is.Null);
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Void));
+            Assert.That((await Record()).outcomes, Is.Null);
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo("other"));
+            Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
+            AssertNoPlayerWrites();
+        }
+
+        private Task CommitAgreement(int winner) => Mutate(r =>
+        {
+            // ReportMatch committed both reports and their timestamp, then died
+            // before settling either player. Connection confirmations may be absent.
+            r.state = MatchRecordState.Pending;
+            r.pendingUnixSeconds = 100;
+            r.settlementUnixSeconds = 150;
+            r.reports.Add(new MatchReport { playerIndex = 0, accepted = false, winner = 1 - winner });
+            r.reports.Add(new MatchReport { playerIndex = 1, accepted = true, winner = winner,
+                endTick = 1000, finalHash = 12345 });
+            r.reports.Add(new MatchReport { playerIndex = 0, accepted = true, winner = winner,
+                endTick = 1000, finalHash = 12345 });
+        });
+
         private async Task Mutate(Action<MatchRecord> mutate)
         {
             var read = await matches.ReadAsync(MatchId);
@@ -408,6 +507,7 @@ namespace NodeWar.Cloud.Tests
             private PlayerState state;
             private int version = 1;
             public int WriteCount;
+            public Action BeforeWrite;
             public FakeSettlementPlayerStore(PlayerState state) { this.state = Clone(state); }
             public Task<LockedPlayerState> ReadForSettlementAsync() => Task.FromResult(new LockedPlayerState(Clone(state),
                 PlayerStateKeys.All.ToDictionary(k => k, _ => version.ToString())));
@@ -421,6 +521,7 @@ namespace NodeWar.Cloud.Tests
             }
             public Task WriteForSettlementAsync(PlayerState value, IReadOnlyDictionary<string, string> tokens)
             {
+                BeforeWrite?.Invoke();
                 if (PlayerStateKeys.All.Any(k => !tokens.TryGetValue(k, out string token) || token != version.ToString()))
                     throw new RecordConflictException("Player records changed.");
                 state = Clone(value);

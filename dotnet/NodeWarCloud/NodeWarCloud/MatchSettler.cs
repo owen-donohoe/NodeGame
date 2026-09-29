@@ -26,6 +26,18 @@ namespace NodeWar.Cloud
             this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         }
 
+        public static bool Agreed(MatchRecord record)
+        {
+            // Refusals may sit alongside accepted reports for audit; only the
+            // accepted ones are ever compared for agreement or settlement.
+            var accepted = record.reports.Where(r => r.accepted).ToList();
+            if (accepted.Count != 2) return false;
+            var first = accepted[0];
+            var second = accepted[1];
+            return first.playerIndex != second.playerIndex && first.winner == second.winner &&
+                first.endTick == second.endTick && first.finalHash == second.finalHash;
+        }
+
         // Arena thresholds come from the one table the client also displays.
         private static readonly SettlementConfig Config = new SettlementConfig
         {

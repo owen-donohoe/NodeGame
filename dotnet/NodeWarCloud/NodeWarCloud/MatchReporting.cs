@@ -81,7 +81,7 @@ namespace NodeWar.Cloud
                 {
                     record.state = MatchRecordState.Void;
                 }
-                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || Agreed(record))
+                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
                 {
                     // Agreement or a forfeit, and its server timestamp, were
                     // committed before either player write. Recovery is allowed
@@ -135,7 +135,7 @@ namespace NodeWar.Cloud
                         }
                         if (record.reports.Count(r => r.accepted) == 2)
                         {
-                            if (Agreed(record)) record.settlementUnixSeconds = now;
+                            if (MatchSettler.Agreed(record)) record.settlementUnixSeconds = now;
                             else record.state = MatchRecordState.Disputed;
                         }
                     }
@@ -170,18 +170,6 @@ namespace NodeWar.Cloud
             report.accepted = verdict.ok && verdict.gameOver && (verdict.winner == 0 || verdict.winner == 1);
             report.error = report.accepted ? null : verdict.error ?? "Replay did not end in a rated win.";
             return report;
-        }
-
-        private static bool Agreed(MatchRecord record)
-        {
-            // Refusals may sit alongside accepted reports for audit; only the
-            // accepted ones are ever compared for agreement or settlement.
-            var accepted = record.reports.Where(r => r.accepted).ToList();
-            if (accepted.Count != 2) return false;
-            var first = accepted[0];
-            var second = accepted[1];
-            return first.playerIndex != second.playerIndex && first.winner == second.winner &&
-                first.endTick == second.endTick && first.finalHash == second.finalHash;
         }
 
         // Keeps only the last MaxRefusalsPerPlayer refused reports for the given
