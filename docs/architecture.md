@@ -26,11 +26,11 @@ sources:
   - id: game-manager
     resource: Assets/Scripts/Game/Core/GameManager.cs
     title: GameManager match lifecycle
-    last_modified: 2026-09-26T08:52:10-04:00
+    last_modified: 2026-09-28T15:12:16-04:00
   - id: lockstep
     resource: Assets/Scripts/Game/Network/LockstepRunner.cs
     title: LockstepRunner
-    last_modified: 2026-09-25T22:11:57-04:00
+    last_modified: 2026-09-29T12:12:27-04:00
   - id: tick-runner
     resource: Assets/Scripts/Game/Core/TickRunner.cs
     title: TickRunner
@@ -38,11 +38,11 @@ sources:
   - id: match-connection
     resource: Assets/Scripts/Game/Core/MatchConnection.cs
     title: MatchConnection
-    last_modified: 2026-09-20T16:05:33-04:00
+    last_modified: 2026-09-28T15:12:16-04:00
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager
-    last_modified: 2026-09-26T08:36:52-04:00
+    last_modified: 2026-09-29T11:55:09-04:00
   - id: draft-presenter
     resource: Assets/Scripts/Game/Core/IDraftPresenter.cs
     title: IDraftPresenter, the seam between the draft and its two UI stacks
@@ -98,7 +98,7 @@ sources:
   - id: backend-services
     resource: Assets/Scripts/Backend/BackendServices.cs
     title: BackendServices, UGS or local fakes, LastKnownState
-    last_modified: 2026-09-28T01:47:19-04:00
+    last_modified: 2026-09-28T15:24:28-04:00
   - id: match-log-format
     resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
     title: Match log chunks
@@ -122,19 +122,39 @@ sources:
   - id: ranked-presenter
     resource: Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs
     title: RankedQueuePresenter and IRankedQueueView
-    last_modified: 2026-09-28T01:38:32-04:00
+    last_modified: 2026-09-29T12:12:27-04:00
   - id: ranked-service
     resource: Assets/Scripts/Backend/UgsRankedQueueService.cs
     title: UGS ranked ticket lifecycle
     last_modified: 2026-09-28T01:19:09-04:00
   - id: ranked-popup
     resource: Assets/UI/Scripts/PlayPopup.cs
-    title: PlayPopup ranked view and the current launch boundary
-    last_modified: 2026-09-28T01:38:32-04:00
+    title: PlayPopup ranked view, default mode and bot launch
+    last_modified: 2026-09-28T15:25:56-04:00
   - id: ranked-queue
     resource: dotnet/NodeWarCloud/Matchmaker/ranked.mmq
     title: Ranked Matchmaker queue rules
     last_modified: 2026-09-28T01:29:29-04:00
+  - id: match-launcher
+    resource: Assets/UI/Scripts/MatchLauncher.cs
+    title: MatchLauncher private and ranked host/join
+    last_modified: 2026-09-28T15:12:16-04:00
+  - id: draft-serializer
+    resource: Assets/Scripts/Game/Network/DraftSerializer.cs
+    title: Draft packet layout and its receive check
+    last_modified: 2026-09-29T11:55:09-04:00
+  - id: ranked-rendezvous
+    resource: Assets/Scripts/Backend/Shared/RankedRendezvous.cs
+    title: RankedRendezvous join-code exchange
+    last_modified: 2026-09-28T15:24:28-04:00
+  - id: match-rendezvous
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchRendezvous.cs
+    title: Rendezvous, ConfirmConnected and Leave rules
+    last_modified: 2026-09-28T15:23:50-04:00
+  - id: match-settler
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
+    title: MatchSettler, the one settlement path
+    last_modified: 2026-09-28T15:22:39-04:00
   - id: player-state-module
     resource: dotnet/NodeWarCloud/NodeWarCloud/PlayerStateModule.cs
     title: GetPlayerState and Equip endpoints
@@ -150,7 +170,7 @@ sources:
   - id: match-reporting
     resource: dotnet/NodeWarCloud/NodeWarCloud/MatchReporting.cs
     title: Report agreement and progression settlement
-    last_modified: 2026-09-28T01:56:48-04:00
+    last_modified: 2026-09-28T15:23:50-04:00
   - id: match-eligibility
     resource: dotnet/NodeWarCloud/NodeWarCloud/MatchEligibility.cs
     title: Log eligibility against match snapshots
@@ -166,11 +186,11 @@ sources:
   - id: match-record
     resource: dotnet/NodeWarCloud/NodeWarCloud/MatchRecord.cs
     title: Match roster, snapshots and outcomes
-    last_modified: 2026-09-27T18:25:27-04:00
+    last_modified: 2026-09-28T15:23:50-04:00
   - id: match-record-store
     resource: dotnet/NodeWarCloud/NodeWarCloud/MatchRecordStore.cs
     title: Match record contracts and active-match claims
-    last_modified: 2026-09-28T01:56:48-04:00
+    last_modified: 2026-09-28T15:22:39-04:00
   - id: cloud-match-store
     resource: dotnet/NodeWarCloud/NodeWarCloud/CloudSaveMatchRecordStore.cs
     title: Private match records and submitted logs
@@ -443,8 +463,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
 
 - **`MatchConnection`** — created when a match is started from the lobby
   (local play, bot match, or a networked connection). Holds
-  `networkManager`, `localPlayerID`, `isNetworked`, `isBotMatch`, and the
-  chosen `LoadoutData`. Read once by `GameManager.Awake()` in the Gameplay
+  `networkManager`, `localPlayerID`, `isNetworked`, `isBotMatch`, the
+  chosen `LoadoutData`, and for a ranked match `isRanked`, the server's
+  `matchId` and the record's `playerIds` (slot 0 is simulation player 0).
+  Read once by `GameManager.Awake()` in the Gameplay
   scene, then shut down (`MatchConnection.Shutdown()`) when returning to
   the lobby.
 - **`PlayerProfile`** — the persistent player-identity singleton
@@ -549,6 +571,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
   refuse a mismatch rather than desync.
 - `DraftSerializer` — wire format for draft-phase packets (ready,
   placement, loadout). The loadout carries eras and skins (protocol 2).
+  `TryDeserializeDraftLoadout` checks the whole layout beside the writer,
+  so the receive check cannot fall behind a new section again.
 
 **Input/**
 - `PointerGestureSource` — the shared pointer reader for selection and
@@ -594,14 +618,18 @@ Three objects are carried across the Lobby → Gameplay scene load via
   whole lobby, handed to pages rather than built per page. `PlayPopup` is
   content shown in the sheet. Its ranked view uses `RankedQueueViewElement`
   through `IRankedQueueView`; `Backend/Shared/RankedQueuePresenter` owns
-  enqueue, polling and cancellation. A found match displays its ID and
-  stops polling; this path does not yet launch gameplay.
+  the whole ranked attempt (see [Backend](#backend-match-logs-and-the-referee)).
+  The sheet opens on Ranked; private modes stay one tap away.
 - `LoadoutCatalog` — what a loadout slot may hold and what the player owns
   (not globally granted, not Crossroads, unlocked). The Workshop, Home and
   the battle sheet all ask it; the slot rules themselves are in the
   UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
   covers.
-- `MatchLauncher` — the lobby's route into a match.
+- `MatchLauncher` — the lobby's route into a match. Private play hosts or
+  joins by code with an open-ended host wait; `HostRanked`/`JoinRanked`
+  add deadlines and carry the match ID and roster into `MatchConnection`.
+  `MatchLauncherConnection` adapts it to the UnityEngine-free
+  `IRankedConnection` that `RankedRendezvous` drives.
 - `SettingsPage` account section and `AccountFlow` — guest / link / sign
   in / sign out, the conflict and warning sheets, and the one-time link
   prompt (`LinkPromptPolicy`: starter items are not progress).
@@ -854,6 +882,10 @@ and must therefore arrive at identical results every tick.
   fixed command-processing order (all of P0's commands, then all of P1's)
   and applies an input delay so local input for tick *N* is generated and
   sent ahead of when tick *N* actually simulates, to hide network latency.
+  While stalled it re-sends every local input the peer may still lack
+  (from `INPUT_DELAY` ticks behind to the newest), not only the last one:
+  with inputs in flight ahead, one lost packet would otherwise stop both
+  clocks for good while heartbeats kept the link alive.
 - **Emotes ride beside lockstep, not inside it.** They are cosmetic, so they
   are never a `GameCommand`: `PacketType.Emote` (8) is a 5-byte packet sent
   twice over UDP and de-duplicated on its sequence number. It never waits for a
@@ -869,9 +901,11 @@ and must therefore arrive at identical results every tick.
   then P1, the local runner's buffer order) and `HashComputed` (the tick
   count after, and the hash). `GameManager` feeds both to a
   `MatchRecorder` for drafted matches; Testing mode is not recorded.
-  The runners know nothing about logs. Finished logs are saved locally;
-  `GameManager` still generates local match IDs and does not call
-  `ReportMatch`.
+  The runners know nothing about logs. Finished logs are saved locally.
+  A ranked match's header carries the server's match ID and the record's
+  player order, which the referee checks, and `GameManager` uploads its log
+  through `IMatchReportService` without awaiting it. Other matches use a
+  local ID and are never reported.
 - **Desync detection** — every 50 ticks
   (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its
@@ -888,8 +922,7 @@ Accounts, progression, inventory and ranked match records use Unity
 Gaming Services: Authentication, Cloud Code (C#), Cloud Save and
 Matchmaker, with no custom game server. Matches stay peer-to-peer
 lockstep. Cloud Code verifies submitted logs and settles eligible,
-agreeing reports; the live match lifecycle is not yet wired to that
-reporting path. The staged detail is in [BACKEND-PLAN.md](../BACKEND-PLAN.md)
+agreeing reports, and a ranked match uploads its log when it ends. The staged detail is in [BACKEND-PLAN.md](../BACKEND-PLAN.md)
 (temporary; Notion **Phases** own future work).
 
 ```
@@ -901,7 +934,8 @@ Assets/Scripts/Backend/          client services, NodeWar.Backend
                                  match reports, match history and ranked queue
   Shared/                        DTOs and rules compiled by Unity AND linked into Cloud Code:
                                  player records, catalog/equip rules, protocol version and service contracts
-  Shared/RankedQueuePresenter     UnityEngine-free queue controller and IRankedQueueView
+  Shared/RankedQueuePresenter     UnityEngine-free ranked attempt controller and IRankedQueueView
+  Shared/RankedRendezvous         UnityEngine-free join-code exchange around IRankedConnection
   Catalog/                       CatalogDefinition asset + editor Generate / Export
   Editor/BalanceExport           writes the shared balance for the server, named by content hash
   LocalMatchLogStore             finished logs on disk, newest 20
@@ -919,9 +953,11 @@ dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unl
   ignores calls that finish after an account switch, and raises
   `StateChanged` when accepted state arrives.
 - **Cloud Code entry points** in `NodeWarCloud` are `GetPlayerState`,
-  `Equip`, `VerifyMatch`, `ReportMatch`, `GetMatchHistory`,
-  `Matchmaker_Allocate` and `Matchmaker_Poll`. The last two are allocator
-  callbacks and refuse calls carrying a player identity.
+  `Equip`, `VerifyMatch`, `ReportMatch`, `GetMatchHistory`, `Rendezvous`,
+  `ConfirmConnected`, `LeaveMatch`, `Matchmaker_Allocate` and
+  `Matchmaker_Poll`. The last two are allocator callbacks and refuse calls
+  carrying a player identity; the three ranked-match functions refuse
+  calls without one.
 - **Player data** has four protected Cloud Save state records (`rating`,
   `rank`, `inventory`, `history`) plus an `activeMatch` claim: the player
   reads them, only Cloud Code writes.
@@ -960,7 +996,13 @@ dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unl
   winner, end tick and final hash before rating, RR, arena and inventory
   updates settle. Retries are idempotent; disputed or expired matches do
   not settle. `GetMatchHistory` reads the caller's history and stored match
-  outcomes.
+  outcomes. `MatchSettler` is the one settlement path, called with the
+  agreed winner or, for a forfeit, the opponent of `forfeitedBy`, which is
+  committed under the record's write lock before any player write.
+- **Leaving a match.** `MatchRendezvous.Leave` voids a match that never
+  connected (`connectedUnixSeconds` 0), an expired one, or a pending one
+  past its 10-minute timeout, releasing both claims. A played match needs
+  an explicit forfeit; a caller who has already reported waits.
 - **Ranked matchmaking.** The `ranked` Matchmaker queue uses protected
   Cloud Save rating and arena data, with a widening rating window and an
   arena cap. Ticket build identities must match; the allocator also
@@ -968,4 +1010,9 @@ dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unl
   balance hash. `UgsRankedQueueService` initializes player records before
   creating a ticket, polls for a match ID and deletes cancelled tickets.
   `PlayPopup` drives it through `RankedQueuePresenter` and
-  `IRankedQueueView`; finding a match currently ends at the queue view.
+  `IRankedQueueView`: preflight (leave or forfeit a held match), queue,
+  then `RankedRendezvous`. Record slot 0 hosts a Relay room and publishes
+  its join code with `Rendezvous`; slot 1 polls for it and joins. Both
+  confirm the connection, then the draft starts as in private play. A
+  failed ticket or rendezvous voids the match and re-queues, up to three
+  times in a row; a bot match, unranked, is offered after 90 s of search.
