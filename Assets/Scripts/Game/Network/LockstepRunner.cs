@@ -388,12 +388,29 @@ namespace NodeWar.Network
 
         // ===== RESEND / HEARTBEAT / DISCONNECT =====
 
+        /// <summary>
+        /// Re-sends every local input the peer may still be missing, not just
+        /// the newest. Resending only the last packet deadlocks on one loss:
+        /// if our input for tick N is dropped after N+1 has gone out, the peer
+        /// stalls on N while we stall on its N and keep resending N+1 - both
+        /// clocks stop, heartbeats keep the link "alive". The peer can need any
+        /// input from INPUT_DELAY ticks behind our simulation tick up to the
+        /// newest we generated (at most 2 * INPUT_DELAY packets). Duplicates are
+        /// ignored on receipt. No layout change.
+        /// </summary>
         private void ResendIfNeeded()
         {
             if (lastSentPacket == null) return;
             if (Time.time - lastSendTime < RESEND_INTERVAL) return;
 
-            networkManager.Send(lastSentPacket);
+            int first = Mathf.Max(0, simulationTick - INPUT_DELAY);
+            for (int tick = first; tick < nextInputTick; tick++)
+            {
+                // Ticks below INPUT_DELAY are pre-seeded on both sides, never sent.
+                if (tick < INPUT_DELAY) continue;
+                if (localInputs.TryGetValue(tick, out TickInput input))
+                    networkManager.Send(InputSerializer.Serialize(input));
+            }
             lastSendTime = Time.time;
         }
 
