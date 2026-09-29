@@ -72,6 +72,9 @@ namespace NodeWar.Backend
         private Phase phase = Phase.Idle;
         private double lastTickNow;
         private int consecutiveAutoRequeues;
+        private int generation;
+        private bool disposed;
+        private TaskCompletionSource<bool> forfeitDecision;
 
         // Queue state.
         private string ticketId;
@@ -108,6 +111,7 @@ namespace NodeWar.Backend
             this.connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
             this.view.CancelRequested += OnCancelRequested;
             this.view.BotAccepted += OnBotAccepted;
+            this.view.ForfeitConfirmed += OnForfeitConfirmed;
         }
 
         /// <summary>True while an attempt is in progress and Tick should be called.</summary>
@@ -115,6 +119,9 @@ namespace NodeWar.Backend
 
         public async Task StartAsync(double nowSeconds)
         {
+            if (disposed) return;
+            InvalidateAttempt();
+            AbandonCurrentWork();
             consecutiveAutoRequeues = 0;
             lastTickNow = nowSeconds;
             await RunPreflightAsync(nowSeconds);
@@ -142,6 +149,7 @@ namespace NodeWar.Backend
 
         private async Task RunPreflightAsync(double now)
         {
+            int attemptGeneration = generation;
             phase = Phase.Preflight;
 
             PlayerState state;
@@ -151,9 +159,11 @@ namespace NodeWar.Backend
             }
             catch (Exception ex)
             {
-                Fail(ShortMessage(ex));
+                if (IsCurrent(attemptGeneration)) Fail(ShortMessage(ex));
                 return;
             }
+
+            if (!IsCurrent(attemptGeneration)) return;
 
             string activeMatchId = state?.ActiveMatch?.matchId;
             if (string.IsNullOrWhiteSpace(activeMatchId))
@@ -169,6 +179,7 @@ namespace NodeWar.Backend
 
         private async Task ResolveActiveMatchAsync(string matchId, double now, bool forfeit)
         {
+            int attemptGeneration = generation;
             LeaveMatchResult result;
             try
             {
@@ -176,9 +187,11 @@ namespace NodeWar.Backend
             }
             catch (Exception ex)
             {
-                Fail(ShortMessage(ex));
+                if (IsCurrent(attemptGeneration)) Fail(ShortMessage(ex));
                 return;
             }
+
+            if (!IsCurrent(attemptGeneration)) return;
 
             if (result?.outcome == null)
             {
@@ -202,10 +215,14 @@ namespace NodeWar.Backend
 
         private async Task RunForfeitPromptAsync(string matchId, double now)
         {
+            int attemptGeneration = generation;
             phase = Phase.ForfeitPrompt;
+            forfeitDecision = new TaskCompletionSource<bool>();
+            Task<bool> decision = forfeitDecision.Task;
             view.ShowForfeitPrompt();
 
-            bool confirmed = await WaitForForfeitDecisionAsync();
+            bool confirmed = await decision;
+            if (!IsCurrent(attemptGeneration)) return;
             if (confirmed)
             {
                 await ResolveActiveMatchAsync(matchId, now, forfeit: true);
@@ -217,26 +234,11 @@ namespace NodeWar.Backend
             }
         }
 
-        private Task<bool> WaitForForfeitDecisionAsync()
+        private void OnForfeitConfirmed()
         {
-            var tcs = new TaskCompletionSource<bool>();
-            Action onConfirm = null;
-            Action onCancel = null;
-            onConfirm = () =>
-            {
-                view.ForfeitConfirmed -= onConfirm;
-                view.CancelRequested -= onCancel;
-                tcs.TrySetResult(true);
-            };
-            onCancel = () =>
-            {
-                view.ForfeitConfirmed -= onConfirm;
-                view.CancelRequested -= onCancel;
-                tcs.TrySetResult(false);
-            };
-            view.ForfeitConfirmed += onConfirm;
-            view.CancelRequested += onCancel;
-            return tcs.Task;
+            TaskCompletionSource<bool> decision = forfeitDecision;
+            forfeitDecision = null;
+            decision?.TrySetResult(true);
         }
 
         private void StartWaitingForResult(int secondsLeft, double now)
@@ -272,11 +274,13 @@ namespace NodeWar.Backend
 
         private async Task EnqueueAndPollAsync(double now)
         {
+            int attemptGeneration = generation;
             // The caller's time may be stale: a forfeit prompt or a server call
             // can sit between it and here. Tick keeps lastTickNow current, and
             // the search timer and bot offer must count from now.
             now = Math.Max(now, lastTickNow);
             phase = Phase.Queue;
+            pollInFlight = false;
             botOfferShown = false;
             startedAtSeconds = now;
             lastPollAtSeconds = now;
@@ -284,11 +288,17 @@ namespace NodeWar.Backend
 
             try
             {
-                ticketId = await service.EnqueueAsync();
+                string returnedTicket = await service.EnqueueAsync();
+                if (!IsCurrent(attemptGeneration))
+                {
+                    _ = CancelTicketSwallowedAsync(returnedTicket);
+                    return;
+                }
+                ticketId = returnedTicket;
             }
             catch (Exception ex)
             {
-                Fail(ShortMessage(ex));
+                if (IsCurrent(attemptGeneration)) Fail(ShortMessage(ex));
             }
         }
 
@@ -314,11 +324,12 @@ namespace NodeWar.Backend
 
         private async Task PollOnceAsync(double now)
         {
+            int attemptGeneration = generation;
             pollInFlight = true;
             try
             {
                 RankedQueueResult result = await service.PollAsync(ticketId);
-                if (phase != Phase.Queue) return;
+                if (!IsCurrent(attemptGeneration) || phase != Phase.Queue) return;
 
                 switch (result.state)
                 {
@@ -347,11 +358,11 @@ namespace NodeWar.Backend
             }
             catch (Exception ex)
             {
-                Fail(ShortMessage(ex));
+                if (IsCurrent(attemptGeneration)) Fail(ShortMessage(ex));
             }
             finally
             {
-                pollInFlight = false;
+                if (IsCurrent(attemptGeneration)) pollInFlight = false;
             }
         }
 
@@ -363,6 +374,7 @@ namespace NodeWar.Backend
 
         private async Task AcceptBotAsync()
         {
+            int attemptGeneration = generation;
             string cancelling = ticketId;
             try
             {
@@ -372,6 +384,7 @@ namespace NodeWar.Backend
             {
                 // Best-effort: the offer is accepted either way.
             }
+            if (!IsCurrent(attemptGeneration)) return;
             GoIdle();
             BotMatchAccepted?.Invoke();
         }
@@ -380,6 +393,7 @@ namespace NodeWar.Backend
 
         private async Task HandleFoundAsync(string matchId, double now)
         {
+            int attemptGeneration = generation;
             ticketId = null;
             phase = Phase.Connecting;
             view.ShowConnecting();
@@ -391,7 +405,18 @@ namespace NodeWar.Backend
             }
             catch (Exception ex)
             {
+                if (!IsCurrent(attemptGeneration))
+                {
+                    _ = LeaveMatchSwallowedAsync(matchId);
+                    return;
+                }
                 await RequeueOrFailAsync(ShortMessage(ex), RequeueMessage, now);
+                return;
+            }
+
+            if (!IsCurrent(attemptGeneration))
+            {
+                _ = LeaveMatchSwallowedAsync(matchId);
                 return;
             }
 
@@ -406,8 +431,14 @@ namespace NodeWar.Backend
             rendezvous = attempt;
             phase = Phase.Rendezvous;
 
-            attempt.Connected += () => OnRendezvousConnected(matchId);
-            attempt.Failed += OnRendezvousFailed;
+            attempt.Connected += () =>
+            {
+                if (IsCurrent(attemptGeneration)) OnRendezvousConnected(matchId);
+            };
+            attempt.Failed += reason =>
+            {
+                if (IsCurrent(attemptGeneration)) OnRendezvousFailed(reason);
+            };
 
             attempt.Start(now);
         }
@@ -428,6 +459,8 @@ namespace NodeWar.Backend
         {
             if (consecutiveAutoRequeues < MaxAutoRequeues)
             {
+                InvalidateAttempt();
+                GoIdle();
                 consecutiveAutoRequeues++;
                 view.ShowRequeueing(requeueingMessage);
                 await RunPreflightAsync(now);
@@ -461,12 +494,13 @@ namespace NodeWar.Backend
 
         /// <summary>
         /// Cancels whatever is active. Queue: deletes the ticket. Rendezvous:
-        /// cancels the connection attempt (which leaves the match). Other
-        /// phases either have their own CancelRequested handling (the forfeit
-        /// prompt) or nothing worth cancelling.
+        /// cancels the connection attempt (which leaves the match). Pending
+        /// calls are invalidated and clean up their results when they return.
         /// </summary>
         public async Task RequestCancelAsync()
         {
+            if (disposed) return;
+            InvalidateAttempt();
             switch (phase)
             {
                 case Phase.Queue:
@@ -475,11 +509,18 @@ namespace NodeWar.Backend
                 case Phase.Rendezvous:
                     CancelRendezvous();
                     break;
+                case Phase.Idle:
+                    break;
+                default:
+                    GoIdle();
+                    view.ShowCancelled();
+                    break;
             }
         }
 
         private async Task CancelQueueAsync()
         {
+            int attemptGeneration = generation;
             string cancelling = ticketId;
             GoIdle();
 
@@ -492,11 +533,11 @@ namespace NodeWar.Backend
             try
             {
                 await service.CancelAsync(cancelling);
-                view.ShowCancelled();
+                if (IsCurrent(attemptGeneration)) view.ShowCancelled();
             }
             catch (Exception ex)
             {
-                view.ShowFailed(ShortMessage(ex));
+                if (IsCurrent(attemptGeneration)) view.ShowFailed(ShortMessage(ex));
             }
         }
 
@@ -509,6 +550,37 @@ namespace NodeWar.Backend
         }
 
         // ===== SHARED =====
+
+        private bool IsCurrent(int attemptGeneration) => !disposed && generation == attemptGeneration;
+
+        private void InvalidateAttempt()
+        {
+            generation++;
+            TaskCompletionSource<bool> decision = forfeitDecision;
+            forfeitDecision = null;
+            decision?.TrySetResult(false);
+        }
+
+        private void AbandonCurrentWork()
+        {
+            string cancelling = ticketId;
+            RankedRendezvous current = rendezvous;
+            GoIdle();
+            current?.Cancel();
+            if (cancelling != null) _ = CancelTicketSwallowedAsync(cancelling);
+        }
+
+        private async Task CancelTicketSwallowedAsync(string ticket)
+        {
+            try { if (ticket != null) await service.CancelAsync(ticket); }
+            catch { /* Best-effort cleanup of an abandoned ticket. */ }
+        }
+
+        private async Task LeaveMatchSwallowedAsync(string matchId)
+        {
+            try { await rankedMatch.LeaveAsync(matchId, false); }
+            catch { /* Best-effort cleanup of an abandoned roster request. */ }
+        }
 
         private void Fail(string message)
         {
@@ -532,8 +604,13 @@ namespace NodeWar.Backend
 
         public void Dispose()
         {
+            if (disposed) return;
+            disposed = true;
+            InvalidateAttempt();
+            AbandonCurrentWork();
             view.CancelRequested -= OnCancelRequested;
             view.BotAccepted -= OnBotAccepted;
+            view.ForfeitConfirmed -= OnForfeitConfirmed;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NodeWar.Backend;
 using NUnit.Framework;
@@ -23,6 +24,8 @@ namespace NodeWar.Lobby.Tests
         public int WaitingForResultCount;
         public int LastWaitingSeconds = -1;
         public int BotOfferCount;
+        public int TotalCalls => IdleCount + SearchingCount + FoundCount + FailedCount + CancelledCount
+            + ConnectingCount + RequeueingCount + ForfeitPromptCount + WaitingForResultCount + BotOfferCount;
 
         public event Action CancelRequested;
         public event Action ForfeitConfirmed;
@@ -78,6 +81,7 @@ namespace NodeWar.Lobby.Tests
     {
         public System.Collections.Generic.List<PlayerState> Results { get; } = new System.Collections.Generic.List<PlayerState>();
         public Exception ThrowOnGet;
+        public Task<PlayerState> PendingGet;
         public int CallCount;
         private int next;
 
@@ -91,6 +95,7 @@ namespace NodeWar.Lobby.Tests
         public Task<PlayerState> GetAsync()
         {
             CallCount++;
+            if (PendingGet != null) return PendingGet;
             if (ThrowOnGet != null) throw ThrowOnGet;
             if (Results.Count == 0) return Task.FromResult(NoActiveMatch());
             PlayerState result = Results[next];
@@ -148,6 +153,52 @@ namespace NodeWar.Lobby.Tests
         public Task CancelAsync(string ticketId) => Task.CompletedTask;
     }
 
+    internal sealed class ScriptedRankedQueueService : IRankedQueueService
+    {
+        public Func<Task<string>> Enqueue = () => Task.FromResult("ticket-1");
+        public Func<string, Task<RankedQueueResult>> Poll = _ => Task.FromResult(
+            new RankedQueueResult { state = RankedQueueState.Searching });
+        public Func<string, Task> Cancel = _ => Task.CompletedTask;
+        public int EnqueueCount;
+        public readonly List<string> PolledTickets = new List<string>();
+        public readonly List<string> CancelledTickets = new List<string>();
+
+        public Task<string> EnqueueAsync() { EnqueueCount++; return Enqueue(); }
+        public Task<RankedQueueResult> PollAsync(string ticketId)
+        {
+            PolledTickets.Add(ticketId);
+            return Poll(ticketId);
+        }
+        public Task CancelAsync(string ticketId)
+        {
+            CancelledTickets.Add(ticketId);
+            return Cancel(ticketId);
+        }
+    }
+
+    internal sealed class ScriptedRankedMatchService : IRankedMatchService
+    {
+        public Func<Task<RendezvousResult>> Roster = () => Task.FromResult(new RendezvousResult
+        {
+            state = MatchRecordState.Open, slot = 0, playerIds = new[] { "a", "b" }
+        });
+        public Func<Task<LeaveMatchResult>> Leave = () => Task.FromResult(
+            new LeaveMatchResult { outcome = LeaveOutcome.Cleared });
+        public readonly List<string> LeftMatches = new List<string>();
+        public int RosterCalls;
+        public Task<RendezvousResult> RendezvousAsync(string matchId, string joinCode)
+        {
+            RosterCalls++;
+            return Roster();
+        }
+        public Task ConfirmConnectedAsync(string matchId) => Task.CompletedTask;
+        public Task<LeaveMatchResult> LeaveAsync(string matchId, bool forfeit)
+        {
+            LeftMatches.Add(matchId);
+            return Leave();
+        }
+    }
+
     public class RankedQueuePresenterTests
     {
         private static RankedQueuePresenter MakePresenter(
@@ -163,6 +214,216 @@ namespace NodeWar.Lobby.Tests
                 rankedMatch ?? new LocalRankedMatchService(),
                 playerState ?? new FakePlayerStateService(),
                 connectionFactory ?? (() => new FakeRankedConnection()));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task Cancel_PendingEnqueue_CleansUpLateTicket(bool cleanupThrows)
+        {
+            var pending = new TaskCompletionSource<string>();
+            var service = new ScriptedRankedQueueService { Enqueue = () => pending.Task };
+            if (cleanupThrows) service.Cancel = _ => throw new InvalidOperationException("offline");
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            Task start = presenter.StartAsync(0);
+
+            await presenter.RequestCancelAsync();
+            pending.SetResult("late-ticket");
+            await start;
+            presenter.Tick(10);
+
+            Assert.That(service.CancelledTickets, Is.EqualTo(new[] { "late-ticket" }));
+            Assert.That(service.PolledTickets, Is.Empty);
+            Assert.That(presenter.IsActive, Is.False);
+            Assert.That(view.CancelledCount, Is.EqualTo(1));
+            Assert.That(view.FailedCount, Is.Zero);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task Cancel_PendingPreflight_DoesNotEnqueue(bool throws)
+        {
+            var pending = new TaskCompletionSource<PlayerState>();
+            var service = new ScriptedRankedQueueService();
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view,
+                playerState: new FakePlayerStateService { PendingGet = pending.Task });
+            Task start = presenter.StartAsync(0);
+
+            await presenter.RequestCancelAsync();
+            if (throws) pending.SetException(new InvalidOperationException("offline"));
+            else pending.SetResult(FakePlayerStateService.NoActiveMatch());
+            await start;
+
+            Assert.That(service.EnqueueCount, Is.Zero);
+            Assert.That(view.CancelledCount, Is.EqualTo(1));
+            Assert.That(view.FailedCount, Is.Zero);
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
+        public async Task Cancel_PendingLeave_DoesNotEnqueue()
+        {
+            var pending = new TaskCompletionSource<LeaveMatchResult>();
+            var match = new ScriptedRankedMatchService { Leave = () => pending.Task };
+            var state = new FakePlayerStateService();
+            state.Results.Add(FakePlayerStateService.WithActiveMatch("old-match"));
+            var service = new ScriptedRankedQueueService();
+            var presenter = MakePresenter(service, new FakeRankedQueueView(), match, state);
+            Task start = presenter.StartAsync(0);
+            await presenter.RequestCancelAsync();
+            pending.SetResult(new LeaveMatchResult { outcome = LeaveOutcome.Cleared });
+            await start;
+            Assert.That(service.EnqueueCount, Is.Zero);
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public async Task Cancel_PendingRoster_DoesNotStartConnection(int slot)
+        {
+            var pending = new TaskCompletionSource<RendezvousResult>();
+            var match = new ScriptedRankedMatchService { Roster = () => pending.Task };
+            var service = new ScriptedRankedQueueService
+            {
+                Poll = _ => Task.FromResult(new RankedQueueResult { state = RankedQueueState.Found, matchId = "match" })
+            };
+            var connection = new FakeRankedConnection();
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view, match, connectionFactory: () => connection);
+            await presenter.StartAsync(0);
+            presenter.Tick(2);
+            await presenter.RequestCancelAsync();
+            pending.SetResult(new RendezvousResult
+            {
+                state = MatchRecordState.Open, slot = slot, playerIds = new[] { "a", "b" }, joinCode = "CODE"
+            });
+            await Task.Yield();
+            presenter.Tick(4);
+
+            Assert.That(connection.HostCalls + connection.JoinCalls, Is.Zero);
+            Assert.That(match.LeftMatches, Is.EqualTo(new[] { "match" }));
+            Assert.That(view.CancelledCount, Is.EqualTo(1));
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
+        public async Task Cancel_ForfeitPromptViaMethod_CompletesStartWithoutForfeiting()
+        {
+            var match = new ScriptedRankedMatchService
+            {
+                Leave = () => Task.FromResult(new LeaveMatchResult { outcome = LeaveOutcome.NeedsForfeit })
+            };
+            var state = new FakePlayerStateService();
+            state.Results.Add(FakePlayerStateService.WithActiveMatch("match"));
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(new ScriptedRankedQueueService(), view, match, state);
+            Task start = presenter.StartAsync(0);
+            await presenter.RequestCancelAsync();
+            await start;
+            view.RaiseForfeitConfirmed();
+            Assert.That(match.LeftMatches.Count, Is.EqualTo(1));
+            Assert.That(view.CancelledCount, Is.EqualTo(1));
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
+        public async Task Cancel_WaitingForResult_DoesNotRecheck()
+        {
+            var state = new FakePlayerStateService();
+            state.Results.Add(FakePlayerStateService.WithActiveMatch("match"));
+            var match = new LocalRankedMatchService
+            {
+                LeaveResult = new LeaveMatchResult { outcome = LeaveOutcome.Waiting, secondsLeft = 2 }
+            };
+            var presenter = MakePresenter(new ScriptedRankedQueueService(), new FakeRankedQueueView(), match, state);
+            await presenter.StartAsync(0);
+            await presenter.RequestCancelAsync();
+            presenter.Tick(3);
+            Assert.That(state.CallCount, Is.EqualTo(1));
+            Assert.That(presenter.IsActive, Is.False);
+        }
+
+        [Test]
+        public async Task Restart_OldPollCannotAffectNewAttemptOrReleaseItsPollGate()
+        {
+            var oldPoll = new TaskCompletionSource<RankedQueueResult>();
+            var newPoll = new TaskCompletionSource<RankedQueueResult>();
+            var service = new ScriptedRankedQueueService { Poll = _ => oldPoll.Task };
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            await presenter.StartAsync(0);
+            presenter.Tick(2);
+            service.Poll = _ => newPoll.Task;
+            await presenter.StartAsync(3);
+            presenter.Tick(5);
+            oldPoll.SetResult(new RankedQueueResult { state = RankedQueueState.Found, matchId = "old-match" });
+            await Task.Yield();
+            presenter.Tick(7);
+
+            Assert.That(service.PolledTickets.Count, Is.EqualTo(2));
+            Assert.That(view.ConnectingCount, Is.Zero);
+            newPoll.SetResult(new RankedQueueResult { state = RankedQueueState.Searching });
+            await Task.Yield();
+            presenter.Tick(9);
+            Assert.That(service.PolledTickets.Count, Is.EqualTo(3));
+        }
+
+        [TestCase("preflight")]
+        [TestCase("enqueue")]
+        [TestCase("poll")]
+        [TestCase("roster")]
+        [TestCase("cancel")]
+        [TestCase("forfeit")]
+        public async Task Dispose_PendingAwait_MakesNoFurtherViewCalls(string pendingPhase)
+        {
+            var stateResult = new TaskCompletionSource<PlayerState>();
+            var ticket = new TaskCompletionSource<string>();
+            var poll = new TaskCompletionSource<RankedQueueResult>();
+            var roster = new TaskCompletionSource<RendezvousResult>();
+            var cancel = new TaskCompletionSource<bool>();
+            var service = new ScriptedRankedQueueService();
+            var state = new FakePlayerStateService();
+            var match = new ScriptedRankedMatchService();
+            if (pendingPhase == "preflight") state.PendingGet = stateResult.Task;
+            if (pendingPhase == "enqueue") service.Enqueue = () => ticket.Task;
+            if (pendingPhase == "poll") service.Poll = _ => poll.Task;
+            if (pendingPhase == "cancel") service.Cancel = _ => cancel.Task;
+            if (pendingPhase == "roster")
+            {
+                service.Poll = _ => Task.FromResult(new RankedQueueResult { state = RankedQueueState.Found, matchId = "match" });
+                match.Roster = () => roster.Task;
+            }
+            if (pendingPhase == "forfeit")
+            {
+                state.Results.Add(FakePlayerStateService.WithActiveMatch("match"));
+                match.Leave = () => Task.FromResult(new LeaveMatchResult { outcome = LeaveOutcome.NeedsForfeit });
+            }
+            var view = new FakeRankedQueueView();
+            var connection = new FakeRankedConnection();
+            var presenter = MakePresenter(service, view, match, state, () => connection);
+            Task start = presenter.StartAsync(0);
+            if (pendingPhase == "poll" || pendingPhase == "roster") presenter.Tick(2);
+            Task cancellation = pendingPhase == "cancel" ? presenter.RequestCancelAsync() : Task.CompletedTask;
+            int calls = view.TotalCalls;
+            presenter.Dispose();
+
+            stateResult.SetResult(FakePlayerStateService.NoActiveMatch());
+            ticket.SetResult("late-ticket");
+            if (pendingPhase == "poll") poll.SetException(new InvalidOperationException("offline"));
+            roster.SetResult(new RendezvousResult { state = MatchRecordState.Open, slot = 0, playerIds = new[] { "a", "b" } });
+            cancel.SetResult(true);
+            await start;
+            await cancellation;
+            await Task.Yield();
+            view.RaiseForfeitConfirmed();
+            presenter.Tick(100);
+            await presenter.StartAsync(100);
+
+            Assert.That(view.TotalCalls, Is.EqualTo(calls));
+            Assert.That(connection.HostCalls + connection.JoinCalls, Is.Zero);
+            Assert.That(presenter.IsActive, Is.False);
+            if (pendingPhase == "enqueue") Assert.That(service.CancelledTickets, Does.Contain("late-ticket"));
         }
 
         [Test]
