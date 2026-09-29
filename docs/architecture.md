@@ -903,8 +903,7 @@ and must therefore arrive at identical results every tick.
   `MatchRecorder` for drafted matches; Testing mode is not recorded.
   The runners know nothing about logs. Finished logs are saved locally.
   A ranked match's header carries the server's match ID and the record's
-  player order, which the referee checks, and `GameManager` uploads its log
-  through `IMatchReportService` without awaiting it. Other matches use a
+  player order, which the referee checks. `GameManager` hands its log to `PendingRankedReports`, which keeps it per player and uploads it (after the match, at lobby load, before a ranked queue) until the server answers. Other matches use a
   local ID and are never reported.
 - **Desync detection** — every 50 ticks
   (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
@@ -1000,9 +999,8 @@ dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unl
   agreed winner or, for a forfeit, the opponent of `forfeitedBy`, which is
   committed under the record's write lock before any player write.
 - **Leaving a match.** `MatchRendezvous.Leave` voids a match that never
-  connected (`connectedUnixSeconds` 0), an expired one, or a pending one
-  past its 10-minute timeout, releasing both claims. A played match needs
-  an explicit forfeit; a caller who has already reported waits.
+  started (neither both players' `ConfirmConnected` nor an accepted report), an expired one, or a pending one
+  past its 10-minute timeout, releasing both claims. It settles a forfeit or an agreement already committed to the record. A played match needs an explicit forfeit; a caller who has already reported waits.
 - **Ranked matchmaking.** The `ranked` Matchmaker queue uses protected
   Cloud Save rating and arena data, with a widening rating window and an
   arena cap. Ticket build identities must match; the allocator also
