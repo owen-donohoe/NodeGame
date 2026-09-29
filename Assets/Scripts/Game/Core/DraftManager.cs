@@ -576,23 +576,16 @@ namespace NodeWar.Core
 
         private void HandleRemoteLoadout(byte[] data)
         {
-            // Validate both length-prefixed arrays before the existing reader.
-            if (data.Length < 7) return;
-            int offset = 5;
-            for (int array = 0; array < 2; array++)
+            // The serializer validates the whole layout, eras and skins included.
+            // This check used to stop after the two ID arrays, so once eras and
+            // skins were added to the packet every loadout was silently dropped
+            // and a networked draft never left WaitingForReady.
+            if (!DraftSerializer.TryDeserializeDraftLoadout(data, out int playerID,
+                    out NodeWar.Lobby.LoadoutData loadout))
             {
-                if (offset >= data.Length) return;
-                int count = data[offset++];
-                for (int i = 0; i < count; i++)
-                {
-                    if (offset >= data.Length) return;
-                    int length = data[offset++];
-                    if (length > data.Length - offset) return;
-                    offset += length;
-                }
+                Debug.LogWarning("[DraftManager] Dropped a malformed loadout packet (" + data.Length + " bytes).");
+                return;
             }
-            if (offset != data.Length) return;
-            DraftSerializer.DeserializeDraftLoadout(data, out int playerID, out NodeWar.Lobby.LoadoutData loadout);
             if (playerID != 1 - localPlayerID) return;
             if (!remoteLoadoutReceived)
             {

@@ -120,6 +120,52 @@ namespace NodeWar.Network
             loadout = NodeWar.Lobby.LoadoutData.Normalized(loadout);
         }
 
+        /// <summary>
+        /// Reads a loadout packet only if its whole layout is well formed:
+        /// suits and districts, then the optional era tables and skins, ending
+        /// exactly at the packet's end. A malformed packet returns false rather
+        /// than throwing into the draft loop. The layout check lives here, beside
+        /// the writer, so a new section cannot be added to one and not the other.
+        /// </summary>
+        public static bool TryDeserializeDraftLoadout(byte[] data,
+            out int playerID, out NodeWar.Lobby.LoadoutData loadout)
+        {
+            playerID = -1;
+            loadout = default;
+            if (data == null || data.Length < 7 || data[0] != (byte)PacketType.DraftLoadout) return false;
+
+            int offset = 5;
+            if (!SkipStringArray(data, ref offset)) return false;   // suits
+            if (!SkipStringArray(data, ref offset)) return false;   // districts
+            // Older builds end here; each later section is present or absent as a whole.
+            if (offset < data.Length && !SkipBytes(data, ref offset)) return false;         // suit eras
+            if (offset < data.Length && !SkipBytes(data, ref offset)) return false;         // district eras
+            if (offset < data.Length && !SkipStringArray(data, ref offset)) return false;   // skins
+            if (offset != data.Length) return false;
+
+            DeserializeDraftLoadout(data, out playerID, out loadout);
+            return true;
+        }
+
+        private static bool SkipStringArray(byte[] data, ref int offset)
+        {
+            if (offset >= data.Length) return false;
+            int count = data[offset++];
+            for (int i = 0; i < count; i++)
+                if (!SkipBytes(data, ref offset)) return false;
+            return true;
+        }
+
+        /// <summary>One count-prefixed run of bytes: a string's UTF-8, or an era table.</summary>
+        private static bool SkipBytes(byte[] data, ref int offset)
+        {
+            if (offset >= data.Length) return false;
+            int length = data[offset++];
+            if (length > data.Length - offset) return false;
+            offset += length;
+            return true;
+        }
+
         // ===== LENGTH-PREFIXED STRING ARRAYS =====
 
         private const int MaxStringBytes = 255;
