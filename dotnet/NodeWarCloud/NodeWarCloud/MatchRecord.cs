@@ -24,8 +24,11 @@ namespace NodeWar.Cloud
         // The host's (slot 0's) Relay join code, readable only by the two
         // players through Rendezvous. Null until published.
         public string joinCode;
-        // Server time either peer first confirmed the connection. 0 means the
-        // match never started, so leaving voids it rather than forfeiting it.
+        // Server time each slot first confirmed the connection; 0 means not
+        // confirmed. Older records may have null here, treated as all-zero.
+        public long[] confirmedUnixSeconds = new long[2];
+        // Later of both confirmations. 0 means connection is unconfirmed;
+        // an accepted report also proves the match started for leaving rules.
         public long connectedUnixSeconds;
         // The slot that forfeited, or -1. Committed under the record's write
         // lock before any player write, like agreement, so every settlement

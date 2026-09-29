@@ -106,14 +106,72 @@ namespace NodeWar.Cloud.Tests
 
         // -- ConfirmConnected --------------------------------------------------
 
-        [Test]
-        public async Task ConfirmConnectedSetsOnceAndIsIdempotent()
+        [TestCase(0)]
+        [TestCase(1)]
+        public async Task OneConfirmationStillAllowsOpponentToLeaveWithoutForfeit(int slot)
         {
-            await rendezvous.ConfirmConnected(MatchId, "p1", 500);
-            Assert.That((await Record()).connectedUnixSeconds, Is.EqualTo(500));
+            await rendezvous.ConfirmConnected(MatchId, "p" + slot, 50);
+            Assert.That((await Record()).confirmedUnixSeconds[slot], Is.EqualTo(50));
+            Assert.That((await Record()).confirmedUnixSeconds[1 - slot], Is.Zero);
+            Assert.That((await Record()).connectedUnixSeconds, Is.Zero);
+            var published = await rendezvous.Rendezvous(MatchId, "p0", "STILL-ALLOWED");
+            Assert.That(published.connected, Is.False);
+            Assert.That(published.joinCode, Is.EqualTo("STILL-ALLOWED"));
 
-            await rendezvous.ConfirmConnected(MatchId, "p0", 999);
-            Assert.That((await Record()).connectedUnixSeconds, Is.EqualTo(500));
+            var result = await rendezvous.Leave(MatchId, "p" + (1 - slot), false, 100);
+            Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Void));
+            Assert.That((await State(0)).ActiveMatch.matchId, Is.Null);
+            Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
+            AssertNoPlayerWrites();
+        }
+
+        [TestCase(500, 600)]
+        [TestCase(600, 500)]
+        public async Task ConfirmConnectedSetsBothOnceAndUsesLaterTimestamp(long first, long second)
+        {
+            await rendezvous.ConfirmConnected(MatchId, "p1", first);
+            var firstLock = (await matches.ReadAsync(MatchId)).WriteLock;
+            await rendezvous.ConfirmConnected(MatchId, "p1", 999);
+            Assert.That((await matches.ReadAsync(MatchId)).WriteLock, Is.EqualTo(firstLock));
+            Assert.That((await Record()).connectedUnixSeconds, Is.Zero);
+
+            await rendezvous.ConfirmConnected(MatchId, "p0", second);
+            var connectedLock = (await matches.ReadAsync(MatchId)).WriteLock;
+            await rendezvous.ConfirmConnected(MatchId, "p0", 1000);
+            await rendezvous.ConfirmConnected(MatchId, "p1", 1001);
+            Assert.That((await matches.ReadAsync(MatchId)).WriteLock, Is.EqualTo(connectedLock));
+            Assert.That((await Record()).confirmedUnixSeconds, Is.EqualTo(new[] { second, first }));
+            Assert.That((await Record()).connectedUnixSeconds, Is.EqualTo(Math.Max(first, second)));
+            Assert.That((await rendezvous.Rendezvous(MatchId, "p0", "TOO-LATE")).joinCode, Is.Null);
+            Assert.That((await rendezvous.Rendezvous(MatchId, "p1", null)).connected, Is.True);
+            Assert.That((await rendezvous.Leave(MatchId, "p0", false, 1100)).outcome,
+                Is.EqualTo(LeaveOutcome.NeedsForfeit));
+        }
+
+        [Test]
+        public async Task ConfirmConnectedTreatsLegacyNullConfirmationsAsUnconfirmed()
+        {
+            await Mutate(r => r.confirmedUnixSeconds = null);
+            await rendezvous.ConfirmConnected(MatchId, "p0", 50);
+            Assert.That((await Record()).confirmedUnixSeconds, Is.EqualTo(new long[] { 50, 0 }));
+            Assert.That((await Record()).connectedUnixSeconds, Is.Zero);
+            await rendezvous.ConfirmConnected(MatchId, "p1", 60);
+            Assert.That((await Record()).confirmedUnixSeconds, Is.EqualTo(new long[] { 50, 60 }));
+            Assert.That((await Record()).connectedUnixSeconds, Is.EqualTo(60));
+        }
+
+        [Test]
+        public async Task ConcurrentConfirmationsPreserveBothSlots()
+        {
+            matches.BeforeWrite = async (_, __) =>
+            {
+                matches.BeforeWrite = null;
+                await rendezvous.ConfirmConnected(MatchId, "p1", 60);
+            };
+            await rendezvous.ConfirmConnected(MatchId, "p0", 50);
+            Assert.That((await Record()).confirmedUnixSeconds, Is.EqualTo(new long[] { 50, 60 }));
+            Assert.That((await Record()).connectedUnixSeconds, Is.EqualTo(60));
         }
 
         // -- Leave -------------------------------------------------------------
@@ -187,12 +245,13 @@ namespace NodeWar.Cloud.Tests
             AssertNoPlayerWrites();
         }
 
-        [Test]
-        public async Task LeaveWithAnAcceptedReportWaitsOutThePendingTimeout()
+        [TestCase(0)]
+        [TestCase(50)]
+        public async Task LeaveWithAnAcceptedReportWaitsOutThePendingTimeout(long connected)
         {
             await Mutate(r =>
             {
-                r.connectedUnixSeconds = 50;
+                r.connectedUnixSeconds = connected;
                 r.state = MatchRecordState.Pending;
                 r.pendingUnixSeconds = 100;
                 r.reports.Add(new MatchReport { playerIndex = 0, accepted = true, winner = 0 });
@@ -200,19 +259,38 @@ namespace NodeWar.Cloud.Tests
             var result = await rendezvous.Leave(MatchId, "p0", false, 250);
             Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Waiting));
             Assert.That(result.secondsLeft, Is.EqualTo(ActiveMatchClaims.PendingTimeoutSeconds - 150));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Pending));
         }
 
-        [Test]
-        public async Task LeaveWithAnAcceptedReportOnAStillOpenRecordUsesTheFullTimeout()
+        [TestCase(0)]
+        [TestCase(50)]
+        public async Task LeaveWithAnAcceptedReportOnAStillOpenRecordUsesTheFullTimeout(long connected)
         {
             await Mutate(r =>
             {
-                r.connectedUnixSeconds = 50;
+                r.connectedUnixSeconds = connected;
                 r.reports.Add(new MatchReport { playerIndex = 0, accepted = true, winner = 0 });
             });
             var result = await rendezvous.Leave(MatchId, "p0", false, 999);
             Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Waiting));
             Assert.That(result.secondsLeft, Is.EqualTo(ActiveMatchClaims.PendingTimeoutSeconds));
+        }
+
+        [TestCase(false, LeaveOutcome.Cleared, MatchRecordState.Void)]
+        [TestCase(true, LeaveOutcome.NeedsForfeit, MatchRecordState.Pending)]
+        public async Task OnlyAnAcceptedOpponentReportProvesAnUnconfirmedMatchWasPlayed(
+            bool accepted, LeaveOutcome expectedOutcome, MatchRecordState expectedState)
+        {
+            await Mutate(r =>
+            {
+                r.state = MatchRecordState.Pending;
+                r.pendingUnixSeconds = 100;
+                r.reports.Add(new MatchReport { playerIndex = 1, accepted = accepted, winner = 1 });
+            });
+            var result = await rendezvous.Leave(MatchId, "p0", false, 250);
+            Assert.That(result.outcome, Is.EqualTo(expectedOutcome));
+            Assert.That((await Record()).state, Is.EqualTo(expectedState));
+            AssertNoPlayerWrites();
         }
 
         [Test]

@@ -7,8 +7,8 @@ namespace NodeWar.Cloud
 {
     /// <summary>
     /// Server side of ranked step 8.2b: publishing the host's Relay join code,
-    /// marking a match connected, and leaving one -- before a connection this
-    /// voids the match, after it this is a forfeit. No match rules live in the
+        /// marking a match connected, and leaving one -- before it starts this
+        /// voids the match, after it this is a forfeit. No match rules live in the
     /// network layer or the client; this is the one place that decides them.
     /// </summary>
     public sealed class MatchRendezvous
@@ -29,7 +29,7 @@ namespace NodeWar.Cloud
 
         /// <summary>
         /// Reads the caller's roster and slot. Slot 0 may publish its Relay join
-        /// code while the match is Open and nobody has connected yet; a code
+        /// code while the match is Open and not yet confirmed connected; a code
         /// from slot 1, or a slot-0 code once connected, is silently ignored
         /// rather than refused.
         /// </summary>
@@ -68,9 +68,9 @@ namespace NodeWar.Cloud
         }
 
         /// <summary>
-        /// Marks the match connected once, the first time either member calls
-        /// it. Idempotent: a member calling again, or calling once the match has
-        /// left Open/Pending, changes nothing.
+        /// Records each member's first confirmation and marks the match connected
+        /// once both confirm. Repeated confirmations, or calls once the match
+        /// has left Open/Pending, change nothing.
         /// </summary>
         public async Task ConfirmConnected(string matchId, string callerId, long now)
         {
@@ -80,12 +80,17 @@ namespace NodeWar.Cloud
                 var read = await matches.ReadAsync(matchId);
                 var record = read.Record;
                 if (record == null) return;
-                if (Array.IndexOf(record.playerIds, callerId) < 0) return;
+                int slot = Array.IndexOf(record.playerIds, callerId);
+                if (slot < 0) return;
                 if ((record.state != MatchRecordState.Open && record.state != MatchRecordState.Pending) ||
                     record.connectedUnixSeconds != 0)
                     return;
 
-                record.connectedUnixSeconds = now;
+                record.confirmedUnixSeconds ??= new long[2];
+                if (record.confirmedUnixSeconds[slot] != 0) return;
+                record.confirmedUnixSeconds[slot] = now;
+                if (record.confirmedUnixSeconds[0] != 0 && record.confirmedUnixSeconds[1] != 0)
+                    record.connectedUnixSeconds = Math.Max(record.confirmedUnixSeconds[0], record.confirmedUnixSeconds[1]);
                 try { await matches.WriteAsync(record, read.WriteLock); return; }
                 catch (RecordConflictException)
                 {
@@ -95,8 +100,8 @@ namespace NodeWar.Cloud
         }
 
         /// <summary>
-        /// Leaves the caller's match. A match that never connected, or whose
-        /// claims lapsed, is voided rather than forfeited. Once connected,
+        /// Leaves the caller's match. A match with neither both confirmations
+        /// nor an accepted report, or whose claims lapsed, is voided. Once played,
         /// leaving needs an explicit forfeit unless the caller already has an
         /// accepted report, in which case they are already waiting it out.
         /// </summary>
@@ -148,7 +153,7 @@ namespace NodeWar.Cloud
                     record.state = MatchRecordState.Void;
                     result = Cleared();
                 }
-                else if (record.connectedUnixSeconds == 0)
+                else if (record.connectedUnixSeconds == 0 && !record.reports.Any(r => r.accepted))
                 {
                     // Never started: leaving voids it rather than forfeiting it.
                     record.state = MatchRecordState.Void;
