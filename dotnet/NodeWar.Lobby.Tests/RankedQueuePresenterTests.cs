@@ -654,6 +654,116 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public async Task Poll_TwoExceptionsThenSearching_KeepsTicketAndResetsCounter()
+        {
+            int polls = 0;
+            var service = new ScriptedRankedQueueService
+            {
+                Poll = _ => ++polls % 3 == 0
+                    ? Task.FromResult(new RankedQueueResult { state = RankedQueueState.Searching })
+                    : Task.FromException<RankedQueueResult>(new InvalidOperationException("offline"))
+            };
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            await presenter.StartAsync(0);
+            for (int i = 1; i <= 6; i++)
+            {
+                presenter.Tick(i * 2 - 0.1);
+                Assert.That(polls, Is.EqualTo(i - 1), "retries retain the 2 second cadence");
+                presenter.Tick(i * 2);
+                Assert.That(presenter.IsActive, Is.True);
+            }
+
+            Assert.That(service.PolledTickets, Is.EqualTo(new[]
+                { "ticket-1", "ticket-1", "ticket-1", "ticket-1", "ticket-1", "ticket-1" }));
+            Assert.That(service.EnqueueCount, Is.EqualTo(1));
+            Assert.That(service.CancelledTickets, Is.Empty);
+            Assert.That(view.FailedCount, Is.Zero);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task Poll_ThreeExceptions_CancelsBeforeFailureWithoutAwaitingCleanup(bool cleanupThrows)
+        {
+            var cleanup = new TaskCompletionSource<bool>();
+            var view = new FakeRankedQueueView();
+            int failuresAtCancel = -1;
+            var service = new ScriptedRankedQueueService
+            {
+                Poll = _ => throw new InvalidOperationException("offline"),
+                Cancel = _ =>
+                {
+                    failuresAtCancel = view.FailedCount;
+                    if (cleanupThrows) throw new InvalidOperationException("delete failed");
+                    return cleanup.Task;
+                }
+            };
+            var presenter = MakePresenter(service, view);
+            await presenter.StartAsync(0);
+            presenter.Tick(2);
+            presenter.Tick(4);
+            Assert.That(view.FailedCount, Is.Zero);
+            presenter.Tick(6);
+
+            Assert.That(service.CancelledTickets, Is.EqualTo(new[] { "ticket-1" }));
+            Assert.That(failuresAtCancel, Is.Zero);
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+            Assert.That(view.LastFailureMessage, Is.EqualTo("offline"));
+            Assert.That(presenter.IsActive, Is.False);
+            if (!cleanupThrows) cleanup.SetException(new InvalidOperationException("late delete failure"));
+            await Task.Yield();
+            presenter.Tick(8);
+            Assert.That(service.PolledTickets.Count, Is.EqualTo(3));
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Poll_StaleException_DoesNotCountAgainstNewAttempt()
+        {
+            var oldPoll = new TaskCompletionSource<RankedQueueResult>();
+            var service = new ScriptedRankedQueueService { Poll = _ => oldPoll.Task };
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            await presenter.StartAsync(0);
+            presenter.Tick(2);
+            await presenter.RequestCancelAsync();
+            service.Enqueue = () => Task.FromResult("ticket-2");
+            service.Poll = _ => throw new InvalidOperationException("offline");
+            await presenter.StartAsync(3);
+            oldPoll.SetException(new InvalidOperationException("old failure"));
+            await Task.Yield();
+            presenter.Tick(5);
+            presenter.Tick(7);
+            Assert.That(presenter.IsActive, Is.True);
+            Assert.That(view.FailedCount, Is.Zero);
+            presenter.Tick(9);
+            Assert.That(service.CancelledTickets, Is.EqualTo(new[] { "ticket-1", "ticket-2" }));
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Poll_NewAttempt_ResetsExceptionCounter()
+        {
+            var service = new ScriptedRankedQueueService
+            {
+                Poll = _ => throw new InvalidOperationException("offline")
+            };
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view);
+            await presenter.StartAsync(0);
+            presenter.Tick(2);
+            presenter.Tick(4);
+            await presenter.RequestCancelAsync();
+            await presenter.StartAsync(5);
+            presenter.Tick(7);
+            presenter.Tick(9);
+            Assert.That(presenter.IsActive, Is.True);
+            Assert.That(view.FailedCount, Is.Zero);
+            presenter.Tick(11);
+            Assert.That(view.FailedCount, Is.EqualTo(1));
+        }
+
+        [Test]
         public async Task Poll_TimedOut_ShowsFailed()
         {
             var service = new LocalRankedQueueService();

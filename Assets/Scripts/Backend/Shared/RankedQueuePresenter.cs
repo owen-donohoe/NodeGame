@@ -59,6 +59,7 @@ namespace NodeWar.Backend
         private const double PollIntervalSeconds = 2.0;
         private const double BotOfferSeconds = 90.0;
         private const int MaxAutoRequeues = 3;
+        private const int MaxConsecutivePollExceptions = 3;
         private const string RequeueMessage = "Opponent's connection failed — finding a new match…";
 
         private enum Phase { Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, CancellingForBot, Connecting, Rendezvous }
@@ -79,6 +80,7 @@ namespace NodeWar.Backend
         // Queue state.
         private string ticketId;
         private bool pollInFlight;
+        private int consecutivePollExceptions;
         private bool botOfferShown;
         private double startedAtSeconds;
         private double lastPollAtSeconds;
@@ -281,6 +283,7 @@ namespace NodeWar.Backend
             now = Math.Max(now, lastTickNow);
             phase = Phase.Queue;
             pollInFlight = false;
+            consecutivePollExceptions = 0;
             botOfferShown = false;
             startedAtSeconds = now;
             lastPollAtSeconds = now;
@@ -325,11 +328,28 @@ namespace NodeWar.Backend
         private async Task PollOnceAsync(double now)
         {
             int attemptGeneration = generation;
+            string pollingTicket = ticketId;
             pollInFlight = true;
             try
             {
-                RankedQueueResult result = await service.PollAsync(ticketId);
+                RankedQueueResult result;
+                try
+                {
+                    result = await service.PollAsync(pollingTicket);
+                }
+                catch (Exception ex)
+                {
+                    if (!IsCurrent(attemptGeneration) || phase != Phase.Queue) return;
+                    consecutivePollExceptions++;
+                    if (consecutivePollExceptions >= MaxConsecutivePollExceptions)
+                    {
+                        _ = CancelTicketSwallowedAsync(pollingTicket);
+                        Fail(ShortMessage(ex));
+                    }
+                    return;
+                }
                 if (!IsCurrent(attemptGeneration) || phase != Phase.Queue) return;
+                consecutivePollExceptions = 0;
 
                 switch (result.state)
                 {
