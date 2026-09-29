@@ -7,8 +7,8 @@ namespace NodeWar.Cloud
 {
     /// <summary>
     /// Server side of ranked step 8.2b: publishing the host's Relay join code,
-        /// marking a match connected, and leaving one -- before it starts this
-        /// voids the match, after it this is a forfeit. No match rules live in the
+    /// marking a match connected, and leaving one -- before it starts this
+    /// voids the match, after it this is a forfeit. No match rules live in the
     /// network layer or the client; this is the one place that decides them.
     /// </summary>
     public sealed class MatchRendezvous
