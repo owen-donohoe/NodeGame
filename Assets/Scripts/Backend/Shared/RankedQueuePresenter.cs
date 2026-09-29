@@ -272,6 +272,10 @@ namespace NodeWar.Backend
 
         private async Task EnqueueAndPollAsync(double now)
         {
+            // The caller's time may be stale: a forfeit prompt or a server call
+            // can sit between it and here. Tick keeps lastTickNow current, and
+            // the search timer and bot offer must count from now.
+            now = Math.Max(now, lastTickNow);
             phase = Phase.Queue;
             botOfferShown = false;
             startedAtSeconds = now;
