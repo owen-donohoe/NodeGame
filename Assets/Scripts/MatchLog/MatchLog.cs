@@ -9,7 +9,7 @@ namespace NodeWar.MatchLog
         Win = 1,
         Disconnect = 2,
         Abandoned = 3,
-        Surrender = 4 // Reserved; no match driver produces this yet.
+        Surrender = 4 // A ranked surrender (D18); the server settles it, not the log.
     }
 
     public sealed class MatchLogHeader

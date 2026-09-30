@@ -105,6 +105,18 @@ namespace NodeWar.UI
         private Label endRankHeadline;
         private Label endRankDetail;
 
+        private VisualElement holdRoot;
+        private Label holdTitle;
+        private Label holdLine;
+        private Button holdAction;
+        private bool surrenderEnabled;
+
+        /// <summary>The hold overlay's one button: claim the win, or leave a private match.</summary>
+        public event System.Action HoldActionClicked;
+
+        /// <summary>The player confirmed a surrender in the settings card.</summary>
+        public event System.Action SurrenderConfirmed;
+
         /// <summary>The player pressed Return to Lobby on the end overlay.</summary>
         public event System.Action ReturnToLobby;
 
@@ -352,6 +364,13 @@ namespace NodeWar.UI
             if (endReturn != null)
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
+            holdRoot = root.Q<VisualElement>("hud-hold");
+            holdTitle = root.Q<Label>("hud-hold-title");
+            holdLine = root.Q<Label>("hud-hold-line");
+            holdAction = root.Q<Button>("hud-hold-action");
+            if (holdAction != null)
+                holdAction.clicked += () => { if (HoldActionClicked != null) HoldActionClicked(); };
+
             BuildNodeSheet(root);
             emotePanel.Attach(hudRoot);
             emotePanel.Opening -= CloseSettingsForEmotes;
@@ -435,8 +454,53 @@ namespace NodeWar.UI
 
             settingsPanel = new MatchSettingsPanel(hudRoot);
             settingsPanel.Changed += ApplyMatchSettings;
+            settingsPanel.SurrenderConfirmed += () => { if (SurrenderConfirmed != null) SurrenderConfirmed(); };
+            settingsPanel.EnableSurrender(surrenderEnabled);
 
             ApplyMatchSettings(settingsPanel.Settings);
+        }
+
+        /// <summary>Ranked matches only: there is a server to surrender to.</summary>
+        public void EnableSurrender(bool enabled)
+        {
+            surrenderEnabled = enabled;
+            if (settingsPanel != null) settingsPanel.EnableSurrender(enabled);
+        }
+
+        public void SurrenderFailed(string message)
+        {
+            if (settingsPanel != null) settingsPanel.SurrenderFailed(message);
+        }
+
+        // ===== DISCONNECT HOLD =====
+
+        /// <summary>
+        /// Shows or updates the hold overlay (8.2c). It covers the board, so
+        /// the node sheet and settings card are put away under it.
+        /// </summary>
+        public void ShowHold(NodeWar.Backend.HoldStatus status)
+        {
+            if (holdRoot == null || status == null) return;
+
+            holdTitle.text = status.Title;
+            holdLine.text = status.Line;
+            bool hasAction = !string.IsNullOrEmpty(status.Action);
+            holdAction.text = hasAction ? status.Action : "";
+            holdAction.style.display = hasAction ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (!holdRoot.ClassListContains("hud__end--on"))
+            {
+                if (settingsPanel != null) settingsPanel.ForceClose();
+                if (indicatorLayer != null) indicatorLayer.Suppress();
+                holdRoot.AddToClassList("hud__end--on");
+            }
+        }
+
+        public void HideHold()
+        {
+            if (holdRoot == null) return;
+            holdRoot.RemoveFromClassList("hud__end--on");
+            if (indicatorLayer != null) indicatorLayer.Resume();
         }
 
         /// <summary>
@@ -939,6 +1003,23 @@ namespace NodeWar.UI
             endTitle.text = won ? "Victory" : "Defeat";
             endTitle.EnableInClassList("hud__end-title--won", won);
             endSub.text = (won ? "You held the wall." : "Your wall fell.") + " " + MatchLength();
+
+            ShowEnd(viewerPID);
+        }
+
+        /// <summary>
+        /// An ending the tally alone does not explain: a hold resolved, a
+        /// surrender. The caller words it; the tally still stands.
+        /// </summary>
+        public void ShowMatchEndWith(int viewerPID, string title, bool won, string sub)
+        {
+            if (state == null || endRoot == null) return;
+
+            HideHold();
+            if (settingsPanel != null) settingsPanel.ForceClose();
+            endTitle.text = title;
+            endTitle.EnableInClassList("hud__end-title--won", won);
+            endSub.text = sub + " " + MatchLength();
 
             ShowEnd(viewerPID);
         }

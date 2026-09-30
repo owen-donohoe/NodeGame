@@ -450,6 +450,9 @@ namespace NodeWar.Core
             if (rankedResult != null && rankedResult.IsActive)
                 rankedResult.Tick(Time.realtimeSinceStartup);
 
+            if (disconnectHold != null && disconnectHold.IsHolding && !gameOverHandled)
+                disconnectHold.Tick(Time.realtimeSinceStartup);
+
             if (matchPhase != MatchPhase.Playing) return;
 
             // Spawn views for bonus villagers created mid-game
@@ -615,11 +618,149 @@ namespace NodeWar.Core
 
             lockstepRunner = gameObject.AddComponent<LockstepRunner>();
             lockstepRunner.Initialize(state, inputBuffer, netManager, localPlayerID);
-            lockstepRunner.OnDisconnect += OnNetworkDisconnect;
+            lockstepRunner.HoldStarted += OnHoldStarted;
+            lockstepRunner.HoldEnded += OnHoldEnded;
             lockstepRunner.OnDesync += OnDesyncDetected;
             tickProvider = lockstepRunner;
 
+            // A ranked match has a server record to ask; a private one runs the
+            // same stages on the clock alone.
+            bool ranked = match.isRanked && !string.IsNullOrEmpty(match.matchId);
+            disconnectHold = ranked
+                ? new NodeWar.Backend.DisconnectHold(NodeWar.Backend.BackendServices.RankedMatch, match.matchId)
+                : new NodeWar.Backend.DisconnectHold(null, null);
+            disconnectHold.Changed += OnHoldChanged;
+
             Debug.Log("[GameManager] Network match started. Local player: " + localPlayerID);
+        }
+
+        // ===== DISCONNECT HOLD (8.2c) =====
+
+        private NodeWar.Backend.DisconnectHold disconnectHold;
+
+        private void OnHoldStarted()
+        {
+            if (gameOverHandled) return;
+            Debug.LogWarning("[GameManager] Opponent silent; holding.");
+
+            // The uGUI HUD has no hold overlay: it keeps the old immediate end.
+            if (uiToolkitHud == null)
+            {
+                OnNetworkDisconnect();
+                return;
+            }
+            disconnectHold.Start(Time.realtimeSinceStartup);
+        }
+
+        private void OnHoldEnded()
+        {
+            Debug.Log("[GameManager] Connection back; resuming.");
+            disconnectHold.Resume();
+        }
+
+        private void OnHoldChanged(NodeWar.Backend.HoldStatus status)
+        {
+            if (uiToolkitHud == null || gameOverHandled) return;
+
+            switch (status.Stage)
+            {
+                case NodeWar.Backend.HoldStage.None:
+                    uiToolkitHud.HideHold();
+                    break;
+                case NodeWar.Backend.HoldStage.Resolved:
+                    EndByHold(status);
+                    break;
+                default:
+                    uiToolkitHud.ShowHold(status);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// A hold ended the match. The server decided a ranked one; this side
+        /// only stops its runner, records the ending and words it.
+        /// </summary>
+        private void EndByHold(NodeWar.Backend.HoldStatus status)
+        {
+            gameOverHandled = true;
+            lockstepRunner.EndMatch();
+
+            int viewer = ViewerPlayerID();
+            int opponent = 1 - viewer;
+            string title;
+            string sub;
+            bool won = false;
+            int winner = -1;
+            NodeWar.MatchLog.MatchEndReason reason = NodeWar.MatchLog.MatchEndReason.Disconnect;
+
+            switch (status.Ending)
+            {
+                case NodeWar.Backend.HoldEnding.Won:
+                    title = "Victory"; sub = "Your opponent left the match."; won = true; winner = viewer;
+                    break;
+                case NodeWar.Backend.HoldEnding.OpponentSurrendered:
+                    title = "Victory"; sub = "Your opponent surrendered."; won = true; winner = viewer;
+                    reason = NodeWar.MatchLog.MatchEndReason.Surrender;
+                    break;
+                case NodeWar.Backend.HoldEnding.Lost:
+                    title = "Defeat"; sub = "You were away too long."; winner = opponent;
+                    break;
+                case NodeWar.Backend.HoldEnding.Surrendered:
+                    title = "Defeat"; sub = "You surrendered."; winner = opponent;
+                    reason = NodeWar.MatchLog.MatchEndReason.Surrender;
+                    break;
+                case NodeWar.Backend.HoldEnding.Voided:
+                    title = "No result"; sub = "The connection between you broke. The match doesn't count.";
+                    break;
+                case NodeWar.Backend.HoldEnding.ConnectionLost:
+                    title = "Disconnected"; sub = "Your connection was lost.";
+                    break;
+                default:
+                    title = "Disconnected"; sub = "Your opponent didn't come back.";
+                    break;
+            }
+
+            FinishRecording(reason, winner);
+            if (transitionController != null)
+                transitionController.PlayNodeBreakdownWave(nodePresentations, state);
+            uiToolkitHud.ShowMatchEndWith(viewer, title, won, sub);
+        }
+
+        /// <summary>
+        /// A ranked surrender (D18): the server settles it as a forfeit, then
+        /// this side ends. The opponent's hold hears it from the server. If the
+        /// server cannot be reached the match simply goes on.
+        /// </summary>
+        private async void OnSurrenderConfirmed()
+        {
+            MatchConnection match = MatchConnection.Instance;
+            if (gameOverHandled || match == null || !match.isRanked || string.IsNullOrEmpty(match.matchId)) return;
+
+            NodeWar.Backend.LeaveMatchResult result;
+            try
+            {
+                result = await NodeWar.Backend.BackendServices.RankedMatch.LeaveAsync(match.matchId, true);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[GameManager] Surrender failed: " + e.Message);
+                if (this != null && uiToolkitHud != null) uiToolkitHud.SurrenderFailed("Couldn't reach the server. Try again.");
+                return;
+            }
+
+            if (this == null || gameOverHandled) return;
+            if (result?.outcome != NodeWar.Backend.LeaveOutcome.Cleared)
+            {
+                if (uiToolkitHud != null)
+                    uiToolkitHud.SurrenderFailed(string.IsNullOrEmpty(result?.message) ? "Couldn't surrender." : result.message);
+                return;
+            }
+
+            EndByHold(new NodeWar.Backend.HoldStatus
+            {
+                Stage = NodeWar.Backend.HoldStage.Resolved,
+                Ending = NodeWar.Backend.HoldEnding.Surrendered
+            });
         }
 
         private void OnNetworkDisconnect()
@@ -627,6 +768,7 @@ namespace NodeWar.Core
             Debug.LogError("[GameManager] Opponent disconnected.");
             if (gameOverHandled) return;
             gameOverHandled = true;
+            lockstepRunner.EndMatch();
             FinishRecording(NodeWar.MatchLog.MatchEndReason.Disconnect, -1);
             ShowDisconnect();
         }
@@ -970,6 +1112,15 @@ namespace NodeWar.Core
                 (strength, seconds) => { if (cameraController != null) cameraController.Shake(strength, seconds); });
 
             MatchConnection emoteMatch = MatchConnection.Instance;
+            // The hold overlay's button and the ranked surrender row. The hold
+            // exists by now: StartNetworkPlay runs before InitializeUI.
+            if (disconnectHold != null)
+            {
+                uiToolkitHud.HoldActionClicked += () => disconnectHold.Act(Time.realtimeSinceStartup);
+                uiToolkitHud.SurrenderConfirmed += OnSurrenderConfirmed;
+                uiToolkitHud.EnableSurrender(disconnectHold.IsRanked);
+            }
+
             if (emoteMatch != null && emoteMatch.isNetworked)
                 uiToolkitHud.BindEmotes(lockstepRunner, () => emoteMatch.localPlayerID);
             else

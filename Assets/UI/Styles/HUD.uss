@@ -968,6 +968,65 @@
     margin-top: 2px;
 }
 
+/*
+    Surrender (ranked only). Set apart by a rule and quiet until asked: the
+    ask is plain muted text, and only the confirm carries colour. Not red -
+    on this surface red is player 2 - but the orange the HUD uses for "short".
+*/
+.hud__settings-surrender {
+    display: none;
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top-width: 1px;
+    border-top-color: var(--rule);
+}
+
+.hud__settings-surrender--on {
+    display: flex;
+}
+
+.ui-root .hud__settings-surrender-ask {
+    height: var(--target-min);
+    font-size: 13px;
+    color: var(--ink-mute);
+    -unity-text-align: middle-left;
+}
+
+.hud__settings-surrender-confirm {
+    display: none;
+}
+
+.hud__settings-surrender--asking > .hud__settings-surrender-ask {
+    display: none;
+}
+
+.hud__settings-surrender--asking > .hud__settings-surrender-confirm {
+    display: flex;
+}
+
+.hud__settings-surrender-buttons {
+    flex-direction: row;
+}
+
+.ui-root .hud__settings-surrender-choice {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: var(--target-min);
+    font-size: 13px;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.ui-root .hud__settings-surrender-yes {
+    margin-left: var(--space-2);
+    background-color: var(--status-short);
+    border-left-color: var(--status-short-ink);
+    border-right-color: var(--status-short-ink);
+    border-top-color: var(--status-short-ink);
+    border-bottom-color: var(--status-short-ink);
+    color: var(--ink-white);
+}
+
 /* ===================================================================
    In-match indicators
 

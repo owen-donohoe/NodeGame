@@ -13,12 +13,12 @@ namespace NodeWar.UI
     /// rows. There is no dim: the scrim is invisible and exists only to catch
     /// the tap that closes it.
     ///
-    /// NOTHING HERE IS DESTRUCTIVE. Every row is a preference the player can
-    /// see the effect of and reverse with a second tap, so a mis-tap while
-    /// reaching for the zoom handle costs nothing. Surrender is not here on
-    /// purpose: it is a <c>GameCommand</c> rather than a setting, and putting
-    /// it one row from a volume slider is how a match gets thrown away by
-    /// accident.
+    /// NOTHING HERE IS DESTRUCTIVE WITHOUT A CONFIRM. Every row is a preference
+    /// the player can see the effect of and reverse with a second tap, so a
+    /// mis-tap while reaching for the zoom handle costs nothing. Surrender
+    /// (ranked only, D18) is the exception, so it sits apart at the foot of the
+    /// card and its first tap only asks. It is not a <c>GameCommand</c>: the
+    /// server settles it (LeaveMatch), and the opponent hears it from theirs.
     ///
     /// ONE THUMB. The gear is in the bottom-right corner and the card rises
     /// out of it, so opening, adjusting and dismissing all happen inside the
@@ -40,6 +40,11 @@ namespace NodeWar.UI
         private readonly LobbySwitch emotesSwitch;
         private readonly LobbyIcon emotesIcon;
 
+        private readonly VisualElement surrenderArea;
+        private readonly Label surrenderLine;
+        private const string SurrenderQuestion = "Surrender? It counts as a loss.";
+        private bool surrenderBusy;
+
         private GameSettingsData current;
 
         /// <summary>Suppresses writes while saved values are pushed into controls.</summary>
@@ -58,6 +63,9 @@ namespace NodeWar.UI
 
         /// <summary>The values as the panel currently shows them.</summary>
         public GameSettingsData Settings { get { return current; } }
+
+        /// <summary>The player confirmed a surrender. The panel waits for <see cref="SurrenderFailed"/> or the match ending.</summary>
+        public event Action SurrenderConfirmed;
 
         public MatchSettingsPanel(VisualElement hudRoot)
         {
@@ -98,7 +106,44 @@ namespace NodeWar.UI
                 emotesSwitch.Changed += _ => OnValueChanged(commitNow: true);
             }
 
+            surrenderArea = hudRoot.Q<VisualElement>("hud-settings-surrender-area");
+            surrenderLine = hudRoot.Q<Label>("hud-settings-surrender-line");
+            Button ask = hudRoot.Q<Button>("hud-settings-surrender");
+            Button no = hudRoot.Q<Button>("hud-settings-surrender-no");
+            Button yes = hudRoot.Q<Button>("hud-settings-surrender-yes");
+            if (ask != null) ask.clicked += () => SetAsking(true);
+            if (no != null) no.clicked += () => SetAsking(false);
+            if (yes != null) yes.clicked += ConfirmSurrender;
+
             Load();
+        }
+
+        /// <summary>Shows the surrender row. Only a ranked match has a server to surrender to.</summary>
+        public void EnableSurrender(bool enabled)
+        {
+            if (surrenderArea != null) surrenderArea.EnableInClassList("hud__settings-surrender--on", enabled);
+        }
+
+        /// <summary>The server could not take the surrender. The match goes on; say why.</summary>
+        public void SurrenderFailed(string message)
+        {
+            surrenderBusy = false;
+            if (surrenderLine != null) surrenderLine.text = message;
+        }
+
+        private void SetAsking(bool asking)
+        {
+            if (surrenderBusy || surrenderArea == null) return;
+            if (surrenderLine != null) surrenderLine.text = SurrenderQuestion;
+            surrenderArea.EnableInClassList("hud__settings-surrender--asking", asking);
+        }
+
+        private void ConfirmSurrender()
+        {
+            if (surrenderBusy) return;
+            surrenderBusy = true;
+            if (surrenderLine != null) surrenderLine.text = "Surrendering…";
+            SurrenderConfirmed?.Invoke();
         }
 
         public void Toggle()
@@ -137,6 +182,9 @@ namespace NodeWar.UI
             IsOpen = false;
 
             Commit();
+
+            // A question left open is not an answer: the next open starts at the ask.
+            SetAsking(false);
 
             if (scrim != null) scrim.RemoveFromClassList("hud__settings-scrim--on");
             if (panel == null) return;
