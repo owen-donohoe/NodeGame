@@ -34,7 +34,7 @@ namespace NodeWar.Backend
         Surrendered,
         /// <summary>Private match: the opponent never came back, or we chose to leave.</summary>
         OpponentLeft,
-        /// <summary>We could not reach the server for too long. The server decides later.</summary>
+        /// <summary>We could not reach the server for a long time and chose to leave. The server decides later.</summary>
         ConnectionLost
     }
 
@@ -72,8 +72,12 @@ namespace NodeWar.Backend
         public const double ResolveRetrySeconds = 2;
         /// <summary>Failed server calls in a row before we say the dropped connection is ours.</summary>
         public const int ReconnectingAfterFailures = 2;
-        /// <summary>Hold length after which an unreachable server makes us give up from our side.</summary>
-        public const double GiveUpOfflineSeconds = 90;
+        /// <summary>
+        /// Hold length after which an unreachable server lets the player leave.
+        /// The hold never ends a ranked match by itself without a server answer:
+        /// the server may settle something else, and the card would disagree.
+        /// </summary>
+        public const double LeaveOfflineAfterSeconds = 90;
         /// <summary>How long a "your opponent is still here" note stays on the overlay.</summary>
         public const double NoteSeconds = 4;
 
@@ -86,6 +90,9 @@ namespace NodeWar.Backend
         private int failures;
         private bool inFlight;
         private bool claiming;
+        // The claim's ResolveHold is actually with the server. A claim can be
+        // queued behind a Presence call; only a sent one outlives a Resume.
+        private bool claimSent;
         private bool resumeAfterClaim;
         private string note;
         private double noteUntil;
@@ -119,6 +126,7 @@ namespace NodeWar.Backend
             failures = 0;
             inFlight = false;
             claiming = false;
+            claimSent = false;
             resumeAfterClaim = false;
             note = null;
             Publish(StageFor(now));
@@ -134,17 +142,27 @@ namespace NodeWar.Backend
         public void Resume()
         {
             if (!IsHolding) return;
-            if (claiming)
+            if (claimSent)
             {
                 resumeAfterClaim = true;
                 return;
             }
+            // A claim still queued behind a Presence call was never sent: drop
+            // it, or it would go out later against a match that is live again.
             StandDown();
         }
 
-        /// <summary>The overlay's button: claim the win (ranked) or leave (private).</summary>
+        /// <summary>
+        /// The overlay's button: claim the win (ranked) or leave (private); or,
+        /// after a long spell offline, leave from our side.
+        /// </summary>
         public void Act(double now)
         {
+            if (Current.Stage == HoldStage.Reconnecting && Current.Action != null)
+            {
+                Resolve(HoldEnding.ConnectionLost, null);
+                return;
+            }
             if (Current.Stage != HoldStage.CanAct) return;
             if (!IsRanked)
             {
@@ -169,11 +187,9 @@ namespace NodeWar.Backend
                 return;
             }
 
-            if (failures >= ReconnectingAfterFailures && elapsed >= GiveUpOfflineSeconds)
-            {
-                Resolve(HoldEnding.ConnectionLost, null);
-                return;
-            }
+            if (Current.Stage == HoldStage.Reconnecting && elapsed >= LeaveOfflineAfterSeconds && Current.Action == null)
+                Publish(Status(HoldStage.Reconnecting, "Reconnecting…",
+                    "Still offline. You can leave; the server will decide the match.", "Leave match"));
 
             if (!inFlight)
             {
@@ -214,17 +230,26 @@ namespace NodeWar.Backend
         {
             inFlight = true;
             lastResolveAt = now;
+            if (claiming) claimSent = true;
             ResolveHoldResult answer;
             try { answer = await service.ResolveHoldAsync(matchId); }
             catch (Exception)
             {
                 if (attempt != generation) return;
                 inFlight = false;
+                claimSent = false;
+                if (resumeAfterClaim)
+                {
+                    // Never reached the server; the link is back, so stand down.
+                    StandDown();
+                    return;
+                }
                 OnServerUnreachable();
                 return;
             }
             if (attempt != generation) return;
             inFlight = false;
+            claimSent = false;
 
             switch (answer?.outcome)
             {
@@ -275,7 +300,8 @@ namespace NodeWar.Backend
 
         private void OnServerUnreachable()
         {
-            if (++failures >= ReconnectingAfterFailures && !claiming)
+            // Only on entering the stage: republishing would drop the Leave button it gains at 90 s.
+            if (++failures >= ReconnectingAfterFailures && !claiming && Current.Stage != HoldStage.Reconnecting)
                 Publish(Status(HoldStage.Reconnecting, "Reconnecting…", "Your connection dropped.", null));
         }
 
@@ -284,6 +310,7 @@ namespace NodeWar.Backend
             generation++;
             inFlight = false;
             claiming = false;
+            claimSent = false;
             resumeAfterClaim = false;
             if (IsRanked) _ = TellServerResumed();
             Publish(new HoldStatus { Stage = HoldStage.None });
@@ -295,30 +322,33 @@ namespace NodeWar.Backend
             catch (Exception) { /* A stale hold on the server only shortens the next claim's wait. */ }
         }
 
-        private static bool IsTerminal(MatchResultView result) =>
-            result?.state == MatchRecordState.Settled || result?.state == MatchRecordState.Void ||
-            result?.state == MatchRecordState.Disputed;
-
         /// <summary>A terminal record decides the ending, whoever resolved it.</summary>
-        private void ResolveFrom(MatchResultView result)
+        private void ResolveFrom(MatchResultView result) => Resolve(EndingFor(result), result);
+
+        /// <summary>
+        /// How a terminal server result ends the match for this player. Also
+        /// used when the app returns from the background to a match the server
+        /// already decided.
+        /// </summary>
+        public static HoldEnding EndingFor(MatchResultView result)
         {
-            if (result?.state != MatchRecordState.Settled)
-            {
-                Resolve(HoldEnding.Voided, result);
-                return;
-            }
+            if (result?.state != MatchRecordState.Settled) return HoldEnding.Voided;
             bool won = result.won == true;
-            HoldEnding ending = result.cause == MatchEndCause.Forfeit
+            return result.cause == MatchEndCause.Forfeit
                 ? (won ? HoldEnding.OpponentSurrendered : HoldEnding.Surrendered)
                 : (won ? HoldEnding.Won : HoldEnding.Lost);
-            Resolve(ending, result);
         }
+
+        public static bool IsTerminal(MatchResultView result) =>
+            result?.state == MatchRecordState.Settled || result?.state == MatchRecordState.Void ||
+            result?.state == MatchRecordState.Disputed;
 
         private void Resolve(HoldEnding ending, MatchResultView result)
         {
             generation++;
             inFlight = false;
             claiming = false;
+            claimSent = false;
             resumeAfterClaim = false;
             Publish(new HoldStatus { Stage = HoldStage.Resolved, Ending = ending, Result = result });
         }

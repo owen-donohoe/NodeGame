@@ -285,20 +285,53 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void UnreachableForTheWholeHold_GivesUpAtNinetySeconds()
+        public void UnreachableForNinetySeconds_OffersLeave_ButNeverEndsByItself()
         {
             var (hold, service) = Ranked();
-            for (int i = 0; i < 200; i++)
+            for (int i = 0; i < 400; i++)
             {
                 service.PresenceAnswers.Enqueue(Fail<PresenceResult>());
                 service.ResolveAnswers.Enqueue(Fail<ResolveHoldResult>());
             }
             hold.Start(0);
-            for (double t = 0; t < DisconnectHold.GiveUpOfflineSeconds; t += 0.5) hold.Tick(t);
-            Assert.IsTrue(hold.IsHolding);
+            for (double t = 0; t < DisconnectHold.LeaveOfflineAfterSeconds; t += 0.5) hold.Tick(t);
+            Assert.AreEqual(HoldStage.Reconnecting, hold.Current.Stage);
+            Assert.IsNull(hold.Current.Action);
 
-            hold.Tick(DisconnectHold.GiveUpOfflineSeconds);
+            for (double t = DisconnectHold.LeaveOfflineAfterSeconds; t < 150; t += 0.5) hold.Tick(t);
+            Assert.IsTrue(hold.IsHolding, "No server answer, so no ending: the server may decide something else.");
+            Assert.AreEqual("Leave match", hold.Current.Action, "Further failures must not drop the button.");
+
+            hold.Act(150);
             Assert.AreEqual(HoldEnding.ConnectionLost, hold.Current.Ending);
+        }
+
+        [Test]
+        public void AClaimQueuedBehindPresence_IsDropped_WhenTheConnectionReturns()
+        {
+            var (hold, service) = Ranked();
+            var slow = new TaskCompletionSource<PresenceResult>();
+            hold.Start(0);
+            hold.Tick(10);
+            service.PresenceAnswers.Enqueue(() => slow.Task);
+            hold.Tick(11);
+            hold.Act(11.2);
+            Assert.AreEqual(0, service.Count("resolve"), "The claim waits behind the presence call.");
+
+            hold.Resume();
+            Assert.AreEqual(HoldStage.None, hold.Current.Stage);
+            slow.SetResult(Seen());
+            hold.Tick(20);
+            Assert.AreEqual(0, service.Count("resolve"), "An unsent claim must never reach a live match.");
+        }
+
+        [TestCase(true, MatchEndCause.Abandoned, HoldEnding.Won)]
+        [TestCase(false, MatchEndCause.Forfeit, HoldEnding.Surrendered)]
+        public void EndingFor_MapsATerminalResult(bool won, MatchEndCause cause, HoldEnding ending)
+        {
+            Assert.AreEqual(ending, DisconnectHold.EndingFor(Settled(won, cause)));
+            Assert.AreEqual(HoldEnding.Voided, DisconnectHold.EndingFor(new MatchResultView { state = MatchRecordState.Disputed }));
+            Assert.IsFalse(DisconnectHold.IsTerminal(new MatchResultView { state = MatchRecordState.Pending }));
         }
 
         [Test]

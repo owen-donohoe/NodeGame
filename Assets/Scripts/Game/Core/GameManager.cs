@@ -748,7 +748,16 @@ namespace NodeWar.Core
                 return;
             }
 
-            if (this == null || gameOverHandled) return;
+            if (this == null) return;
+            if (gameOverHandled)
+            {
+                // The match ended while the call was out. If the server took the
+                // surrender, that is the result that counts, so the card says so
+                // rather than the tally's Victory. The rank block shows the rest.
+                if (result?.outcome == NodeWar.Backend.LeaveOutcome.Cleared && uiToolkitHud != null)
+                    uiToolkitHud.ShowMatchEndWith(ViewerPlayerID(), "Defeat", false, "You surrendered.");
+                return;
+            }
             if (result?.outcome != NodeWar.Backend.LeaveOutcome.Cleared)
             {
                 if (uiToolkitHud != null)
@@ -760,6 +769,36 @@ namespace NodeWar.Core
             {
                 Stage = NodeWar.Backend.HoldStage.Resolved,
                 Ending = NodeWar.Backend.HoldEnding.Surrendered
+            });
+        }
+
+        /// <summary>
+        /// Back from the background. A phone away long enough may return to a
+        /// match the server has already decided (the opponent claimed it). The
+        /// runner could run a buffered tick or two first, so ask the server once
+        /// rather than waiting for a hold to notice.
+        /// </summary>
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused || gameOverHandled || disconnectHold == null || !disconnectHold.IsRanked) return;
+            MatchConnection match = MatchConnection.Instance;
+            if (match == null || string.IsNullOrEmpty(match.matchId)) return;
+            _ = CheckDecidedAfterPauseAsync(match.matchId);
+        }
+
+        private async System.Threading.Tasks.Task CheckDecidedAfterPauseAsync(string matchId)
+        {
+            NodeWar.Backend.MatchResultView result;
+            try { result = await NodeWar.Backend.BackendServices.RankedMatch.GetResultAsync(matchId); }
+            catch (System.Exception) { return; } // Offline: the hold will say so.
+
+            if (this == null || gameOverHandled || !NodeWar.Backend.DisconnectHold.IsTerminal(result)) return;
+            if (uiToolkitHud == null) return;
+            EndByHold(new NodeWar.Backend.HoldStatus
+            {
+                Stage = NodeWar.Backend.HoldStage.Resolved,
+                Ending = NodeWar.Backend.DisconnectHold.EndingFor(result),
+                Result = result
             });
         }
 

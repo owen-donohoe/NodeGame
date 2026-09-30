@@ -188,6 +188,22 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void AHungCall_StillEndsAtTheDeadline_AndItsLateAnswerIsDropped()
+        {
+            var (tracker, service, _) = Make();
+            var hung = new TaskCompletionSource<MatchResultView>();
+            service.Answers.Enqueue(() => hung.Task);
+            tracker.Start("m1", 0);
+            tracker.Tick(0);
+
+            tracker.Tick(RankedResultTracker.TrackSeconds);
+            Assert.AreEqual(RankedResultPhase.StillWaiting, tracker.Current.Phase);
+
+            hung.SetResult(new MatchResultView { state = MatchRecordState.Settled, rrDelta = 9 });
+            Assert.AreEqual(RankedResultPhase.StillWaiting, tracker.Current.Phase);
+        }
+
+        [Test]
         public void Stop_IgnoresAnInFlightAnswer()
         {
             var (tracker, service, seen) = Make();

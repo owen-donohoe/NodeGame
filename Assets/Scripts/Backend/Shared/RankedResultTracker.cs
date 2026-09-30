@@ -139,13 +139,17 @@ namespace NodeWar.Backend
 
         public void Tick(double nowSeconds)
         {
-            if (!IsActive || inFlight) return;
+            if (!IsActive) return;
+            // The deadline holds even while a call hangs: a stalled request
+            // must not leave the card on "Confirming" for good.
             if (nowSeconds - startedAt >= TrackSeconds)
             {
+                generation++;
+                inFlight = false;
                 Finish(RankedResultStatus.For(RankedResultPhase.StillWaiting));
                 return;
             }
-            if (nowSeconds - lastPollAt < PollIntervalSeconds) return;
+            if (inFlight || nowSeconds - lastPollAt < PollIntervalSeconds) return;
 
             lastPollAt = nowSeconds;
             _ = PollAsync(generation);
