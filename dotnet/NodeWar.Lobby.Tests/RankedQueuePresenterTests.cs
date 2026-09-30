@@ -24,8 +24,11 @@ namespace NodeWar.Lobby.Tests
         public int WaitingForResultCount;
         public int LastWaitingSeconds = -1;
         public int BotOfferCount;
+        public int BlockedCount;
+        public int LastBlockedSeconds = -1;
         public int TotalCalls => IdleCount + SearchingCount + FoundCount + FailedCount + CancelledCount
-            + ConnectingCount + RequeueingCount + ForfeitPromptCount + WaitingForResultCount + BotOfferCount;
+            + ConnectingCount + RequeueingCount + ForfeitPromptCount + WaitingForResultCount + BotOfferCount
+            + BlockedCount;
 
         public event Action CancelRequested;
         public event Action ForfeitConfirmed;
@@ -70,6 +73,12 @@ namespace NodeWar.Lobby.Tests
         }
 
         public void ShowBotOffer() => BotOfferCount++;
+
+        public void ShowBlocked(int secondsLeft)
+        {
+            BlockedCount++;
+            LastBlockedSeconds = secondsLeft;
+        }
 
         public void RaiseCancel() => CancelRequested?.Invoke();
         public void RaiseForfeitConfirmed() => ForfeitConfirmed?.Invoke();
@@ -212,14 +221,95 @@ namespace NodeWar.Lobby.Tests
             FakeRankedQueueView view,
             IRankedMatchService rankedMatch = null,
             IPlayerStateService playerState = null,
-            Func<IRankedConnection> connectionFactory = null)
+            Func<IRankedConnection> connectionFactory = null,
+            Func<long> unixNow = null)
         {
             return new RankedQueuePresenter(
                 service,
                 view,
                 rankedMatch ?? new LocalRankedMatchService(),
                 playerState ?? new FakePlayerStateService(),
-                connectionFactory ?? (() => new FakeRankedConnection()));
+                connectionFactory ?? (() => new FakeRankedConnection()),
+                unixNow);
+        }
+
+        private static PlayerState BlockedUntil(long unixSeconds, string activeMatchId = null) => new PlayerState
+        {
+            Discipline = new DisciplineRecord { Level = 3, BlockedUntilUnixSeconds = unixSeconds },
+            ActiveMatch = activeMatchId == null ? null : new ActiveMatchRecord { matchId = activeMatchId }
+        };
+
+        [Test]
+        public async Task Blocked_ShowsTheCountdown_AndNeverQueuesOrLeaves()
+        {
+            long clock = 1000;
+            var service = new ScriptedRankedQueueService();
+            var match = new LocalRankedMatchService();
+            var states = new FakePlayerStateService();
+            states.Results.Add(BlockedUntil(1120, activeMatchId: "held"));
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view, match, states, unixNow: () => clock);
+
+            await presenter.StartAsync(0);
+
+            Assert.That(view.BlockedCount, Is.EqualTo(1));
+            Assert.That(view.LastBlockedSeconds, Is.EqualTo(120));
+            Assert.That(service.EnqueueCount, Is.Zero);
+            Assert.That(match.Calls, Is.Empty, "A held match is not resolved while blocked.");
+            Assert.That(presenter.IsActive, Is.True);
+
+            presenter.Tick(1);
+            Assert.That(view.BlockedCount, Is.EqualTo(1), "Same second, no redraw.");
+            clock = 1060;
+            presenter.Tick(2);
+            Assert.That(view.LastBlockedSeconds, Is.EqualTo(60));
+        }
+
+        [Test]
+        public async Task Blocked_EndsInIdle_WhenTheBlockRunsOut()
+        {
+            long clock = 1000;
+            var states = new FakePlayerStateService();
+            states.Results.Add(BlockedUntil(1010));
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(new ScriptedRankedQueueService(), view, playerState: states, unixNow: () => clock);
+
+            await presenter.StartAsync(0);
+            clock = 1010;
+            presenter.Tick(1);
+
+            Assert.That(presenter.IsActive, Is.False);
+            Assert.That(view.IdleCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task ABlockInThePast_QueuesAsNormal()
+        {
+            var service = new ScriptedRankedQueueService();
+            var states = new FakePlayerStateService();
+            states.Results.Add(BlockedUntil(999));
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(service, view, playerState: states, unixNow: () => 1000);
+
+            await presenter.StartAsync(0);
+
+            Assert.That(view.BlockedCount, Is.Zero);
+            Assert.That(service.EnqueueCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Blocked_CanBeCancelled()
+        {
+            var states = new FakePlayerStateService();
+            states.Results.Add(BlockedUntil(5000));
+            var view = new FakeRankedQueueView();
+            var presenter = MakePresenter(new ScriptedRankedQueueService(), view, playerState: states, unixNow: () => 1000);
+
+            await presenter.StartAsync(0);
+            await presenter.RequestCancelAsync();
+
+            Assert.That(presenter.IsActive, Is.False);
+            Assert.That(view.CancelledCount, Is.EqualTo(1));
         }
 
         [TestCase(false)]

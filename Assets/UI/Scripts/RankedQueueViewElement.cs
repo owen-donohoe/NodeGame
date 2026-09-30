@@ -105,6 +105,20 @@ namespace NodeWar.Lobby
             Show("Waiting for your last match's result.", FormatElapsed(seconds), null, null, null);
         }
 
+        public void ShowBlocked(int secondsLeft)
+        {
+            Show("Ranked is paused for you after leaving matches early.", FormatRemaining(secondsLeft), null, null, "Back");
+        }
+
+        // Blocks run from two minutes to two days; minutes:seconds only reads
+        // well at the short end.
+        private static string FormatRemaining(int seconds)
+        {
+            if (seconds >= 86400) return (seconds / 86400) + "d " + (seconds % 86400 / 3600) + "h";
+            if (seconds >= 3600) return (seconds / 3600) + "h " + (seconds % 3600 / 60) + "m";
+            return FormatElapsed(seconds);
+        }
+
         public void ShowFailed(string message)
         {
             Show("Couldn't find a match: " + message, null, null, null, "Back");

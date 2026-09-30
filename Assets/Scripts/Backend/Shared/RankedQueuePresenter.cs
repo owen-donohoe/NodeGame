@@ -32,6 +32,12 @@ namespace NodeWar.Backend
         /// <summary>Offered after a long search: play a bot instead of continuing to wait.</summary>
         void ShowBotOffer();
 
+        /// <summary>
+        /// The player is blocked from ranked for leaving matches (8.2d). Called
+        /// about once a second with the time left; the queue does not start.
+        /// </summary>
+        void ShowBlocked(int secondsLeft);
+
         /// <summary>Raised when the player asks to stop searching, or declines a forfeit prompt.</summary>
         event Action CancelRequested;
 
@@ -62,15 +68,21 @@ namespace NodeWar.Backend
         private const int MaxConsecutivePollExceptions = 3;
         private const string RequeueMessage = "Opponent's connection failed — finding a new match…";
 
-        private enum Phase { Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, CancellingForBot, Connecting, Rendezvous }
+        private enum Phase { Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, CancellingForBot, Connecting, Rendezvous, Blocked }
 
         private readonly IRankedQueueService service;
         private readonly IRankedQueueView view;
         private readonly IRankedMatchService rankedMatch;
         private readonly IPlayerStateService playerState;
         private readonly Func<IRankedConnection> connectionFactory;
+        private readonly Func<long> unixNow;
 
         private Phase phase = Phase.Idle;
+
+        // Blocked state. Judged on the device clock for display only: Allocate
+        // refuses a blocked player on the server's clock whatever this shows.
+        private long blockedUntil;
+        private long lastBlockedShown;
         private double lastTickNow;
         private int consecutiveAutoRequeues;
         private int generation;
@@ -104,8 +116,10 @@ namespace NodeWar.Backend
             IRankedQueueView view,
             IRankedMatchService rankedMatch,
             IPlayerStateService playerState,
-            Func<IRankedConnection> connectionFactory)
+            Func<IRankedConnection> connectionFactory,
+            Func<long> unixNowSeconds = null)
         {
+            this.unixNow = unixNowSeconds ?? (() => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
             this.service = service ?? throw new ArgumentNullException(nameof(service));
             this.view = view ?? throw new ArgumentNullException(nameof(view));
             this.rankedMatch = rankedMatch ?? throw new ArgumentNullException(nameof(rankedMatch));
@@ -144,7 +158,24 @@ namespace NodeWar.Backend
                 case Phase.Rendezvous:
                     rendezvous?.Tick(nowSeconds);
                     break;
+                case Phase.Blocked:
+                    TickBlocked();
+                    break;
             }
+        }
+
+        private void TickBlocked()
+        {
+            long left = blockedUntil - unixNow();
+            if (left <= 0)
+            {
+                GoIdle();
+                view.ShowIdle();
+                return;
+            }
+            if (left == lastBlockedShown) return;
+            lastBlockedShown = left;
+            view.ShowBlocked((int)Math.Min(int.MaxValue, left));
         }
 
         // ===== PREFLIGHT =====
@@ -166,6 +197,18 @@ namespace NodeWar.Backend
             }
 
             if (!IsCurrent(attemptGeneration)) return;
+
+            // Blocked for leaving matches (8.2d): say so and do not queue. A held
+            // match is not resolved from here either; the block outlasts it.
+            long until = state?.Discipline?.BlockedUntilUnixSeconds ?? 0;
+            if (until > unixNow())
+            {
+                phase = Phase.Blocked;
+                blockedUntil = until;
+                lastBlockedShown = 0;
+                TickBlocked();
+                return;
+            }
 
             string activeMatchId = state?.ActiveMatch?.matchId;
             if (string.IsNullOrWhiteSpace(activeMatchId))
