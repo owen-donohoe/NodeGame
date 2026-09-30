@@ -48,10 +48,10 @@ in `CLAUDE.md` holds harder over the next six months than it has so far.
 
 ## The problem
 
-There is no place for game feel to live. `CameraController.Shake()` is the
-canonical example — it is written, it is good, it is wired to nothing, and the
-reason is not that shake is unwanted but that **nothing tells the presentation
-layer that something happened.**
+There was no place for game feel to live. `CameraController.Shake()` was the
+canonical example — written, good, and wired to nothing, because **nothing told
+the presentation layer that something happened.** (Since fixed for shake:
+`ScreenShakeDirector` now drives it from the `TickEventLog` below.)
 
 Today a view finds out about the world by looking at `SimulationState` and
 noticing it is different from last frame. That works for continuous things (a
@@ -71,7 +71,8 @@ state it already produces. What it is and why it is safe now lives in
 
 Once that list exists, every one of these is "subscribe to one event type":
 
-- **Shake** finally has a caller. Breach lands, core hit, big combat.
+- **Shake** — landed: `ScreenShakeDirector` (core hit, capture, taking a node
+  from the opponent).
 - **Hit flash / damage tint** on a node or villager.
 - **Sound.** There is no audio in the project at all, and the tick event list
   is the correct and only place to hang it. A sound effect is the single
@@ -106,7 +107,8 @@ one. The board needs the prefab. A `DistrictVisual` asset is the single place
 both can ask, and it is also the thing you hand to an artist as a checklist.
 
 Do this before commissioning or drawing anything. It converts "we need art" into
-a list of named, empty slots.
+a list of named, empty slots. **Landed:** `DistrictVisual` / `DistrictVisualTable`
+(`View/`), with an editor setup command. No `FeelDirector` or audio exists yet.
 
 ## What to deliberately not build
 
@@ -335,7 +337,7 @@ a bad strategy, which is a *much* better problem than a bot that never learns.
 
 ## Opponents, in order
 
-1. **Against `BotPlayer`.** There are already 748 lines of scripted AI. A fixed,
+1. **Against `BotPlayer`.** There are already 781 lines of scripted AI. A fixed,
    competent opponent is a far gentler curriculum than self-play, and it gives
    you an unambiguous scoreboard: what fraction of matches does the agent win?
 2. **Against past versions of itself**, once it beats the bot.
@@ -381,9 +383,9 @@ expensive ones.
 
 | When | What | Why then |
 |---|---|---|
-| First | `DistrictVisual` assets | Turns "we need art" into a named list. Small. |
+| Done | `DistrictVisual` assets | Landed: `DistrictVisual` / `DistrictVisualTable`. |
 | Done | Tick event list | Landed: `TickEventLog`, see architecture.md. |
-| Then | Sound, shake, hit flash, hitstop | The actual feel phase. Shake gets its caller. |
+| Then | Sound, hit flash, hitstop | The actual feel phase. Shake has landed (`ScreenShakeDirector`). |
 | Alongside | Camera input fix (issue #41 B1) | Small, and it is the whole desktop input story. |
 | Alongside | Two layout classes, desktop build | A week of evenings, not a phase. |
 | Then | Environment over `MatchFactory` (factory and replay runner landed) | Useful immediately as a balance rig. |

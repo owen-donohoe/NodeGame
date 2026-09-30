@@ -54,7 +54,7 @@ document describes them, it does not replace them.
 |---|---|---|
 | How it runs | Spawns Unity in `-batchmode` | Drives the already-open Editor |
 | Editor must be | **Closed** | **Open**, compiled cleanly |
-| Use when | CI, or no Editor session open | Iterating with the project open |
+| Use when | No Editor session open (CI uses `dotnet test`, not this) | Iterating with the project open |
 | Timeout | None (Unity blocks) | 300s waiting for the Editor |
 
 Unity locks a project to one process, so batch mode cannot run while the Editor is open — that is

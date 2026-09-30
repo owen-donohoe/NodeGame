@@ -66,7 +66,7 @@ is done. A reconciliation against the code at commit `db19485` found:
 The list above is a record of that reconciliation and is kept as it was. Three
 of its points have moved since:
 
-- `BotPlayer` has grown to 780 lines.
+- `BotPlayer` has grown to 781 lines.
 - The suit roster is now eleven, including three auto-assigned workers
   (Merchant, Acolyte, Watcher). Suit and district numbers are per era.
 - The networking direction settled on peer-to-peer lockstep with a server-side

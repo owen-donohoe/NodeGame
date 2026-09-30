@@ -10,5 +10,6 @@ Restart/redeploy the module after adding a balance. Keep older files so logs
 from older builds with a supported simulation version remain verifiable.
 Exporting an existing hash overwrites only that file.
 
-This directory intentionally starts without a balance JSON. Until an export
-is included, VerifyMatch refuses all logs with `unknown balance`.
+VerifyMatch refuses any log whose balance hash has no file here, with
+`unknown balance`. A balance edit that is not exported and deployed makes
+every match played on it unverifiable.

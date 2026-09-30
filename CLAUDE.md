@@ -80,7 +80,7 @@ Read the file. Do not ask me to summarise it here.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 840 cases in six projects: `Simulation/`,
+- `dotnet test dotnet/NodeWar.sln` — 1118 cases in six projects: `Simulation/`,
   the lobby and wire formats, the UnityEngine-free view maths, the match log,
   the progression rules, and the Cloud Code module. Per-project counts are in
   the doc below. A lobby, view-maths, match-log or backend change has real tests; run them rather than settling

@@ -135,13 +135,15 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      check → apply).
    - Capture the input in `Input/` (`CommandSystem`, and `BotPlayer` if
      the bot should be able to do it too) and push it through
-     `InputBuffer`. Never mutate `SimulationState` directly from `Input/`,
-     `UI/`, or `View/`.
+     `InputBuffer`, with `issuedOnTick` set from `SimulationState.tickCount`
+     (as `CommandSystem` and `NodeSheetContent.Send` do). Never mutate
+     `SimulationState` directly from `Input/`, `UI/`, or `View/`.
    - If the command needs new data on the wire, extend `InputSerializer`
      (or `DraftSerializer` for draft-phase actions) — both peers must
      encode/decode it identically.
-   - Any wire layout change bumps `InputSerializer.ProtocolVersion` in the
-     same commit. A `GameCommand` change also needs a new TICKS tag in
+   - Any wire layout change bumps `ProtocolVersion.Current`
+     (`Assets/Scripts/Backend/Shared/ProtocolVersion.cs`; `InputSerializer.ProtocolVersion`
+     aliases it) in the same commit. A `GameCommand` change also needs a new TICKS tag in
      `MatchLogFormat` (`GameCommandLayout_RequiresCoordinatedSerializerChanges`
      detects changes to the command's field layout; it does not check
      that a new tag was added).

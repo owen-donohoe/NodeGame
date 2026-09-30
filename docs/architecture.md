@@ -865,8 +865,9 @@ the sprite, or it draws a line the simulation is not walking.
 
 ## Networking model
 
-Node War uses **lockstep**: peers never send simulation state, only
-`GameCommand`s. Both machines run the identical deterministic simulation
+Node War uses **lockstep**: peers never send simulation state. They exchange
+tick inputs (the tick's `GameCommand`s plus a checkpoint hash), and beside
+them handshake, draft, heartbeat and emote packets. Both machines run the identical deterministic simulation
 (`GameSimulation.SimulateTick`) from the identical sequence of commands
 and must therefore arrive at identical results every tick.
 
@@ -909,8 +910,10 @@ and must therefore arrive at identical results every tick.
 - **Desync detection** — every 50 ticks
   (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its
-  next outgoing packet; the receiving peer compares it against its own
-  hash for the same tick and fires `OnDesync` on mismatch.
+  next outgoing packet; the receiving peer compares a non-zero received
+  hash against its most recent stored local hash and fires `OnDesync` on
+  mismatch. The packet does not name the checkpoint tick; lockstep keeps
+  the two in step (see `docs/simulation-rules.md`, *Desync detection*).
 - **Disconnect detection** — both `DraftManager` (during the draft) and
   `LockstepRunner` (during the match) track time since the last received
   packet and fire a disconnect callback if it exceeds a timeout,
@@ -931,7 +934,9 @@ Assets/Scripts/Backend/          client services, NodeWar.Backend
   BackendServices                picks the UGS service or its local fake (Tools > Node War >
                                  Backend > Use Local Fakes); remembers state for the current account
   Ugs*Service / Local*Service    accounts (Unity Player Accounts), player state, inventory,
-                                 match reports, match history and ranked queue
+                                 match reports, match history, ranked queue (tickets) and
+                                 ranked match (rendezvous, confirm, leave)
+  PendingRankedReports           ranked logs kept per player and retried until the server answers
   Shared/                        DTOs and rules compiled by Unity AND linked into Cloud Code:
                                  player records, catalog/equip rules, protocol version and service contracts
   Shared/RankedQueuePresenter     UnityEngine-free ranked attempt controller and IRankedQueueView
@@ -941,7 +946,8 @@ Assets/Scripts/Backend/          client services, NodeWar.Backend
   LocalMatchLogStore             finished logs on disk, newest 20
 Assets/Scripts/MatchLog/         NodeWar.MatchLog: format, MatchRecorder, MatchReplay
 dotnet/NodeWarCloud/             the Cloud Code module (deploy: ugs deploy dotnet/NodeWarCloud -e development)
-dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unlocks, matchmaking rules
+dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unlocks, match settlement
+dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the matchmaking rules live here)
 ```
 
 - **Services are async and may refuse.** Every client call can fail, and

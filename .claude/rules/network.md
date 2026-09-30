@@ -4,7 +4,9 @@ glob: Assets/Scripts/Game/Network/**
 
 # Network Rules
 
-- The network layer transports commands between machines only
+- The network layer only transports data between machines: tick
+  inputs (commands and checkpoint hashes), handshake and draft
+  packets, heartbeats and emotes
 - It never contains game logic, rules, or state mutation
 - LockstepRunner drives the tick loop in networked play but
   never calls SimulateTick directly with invented inputs

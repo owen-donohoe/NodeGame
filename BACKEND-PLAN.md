@@ -6,7 +6,7 @@
 > code, `docs/` and Notion own everything (CLAUDE.md). If this file disagrees
 > with them, this file is wrong.
 >
-> Written 2026-09-25, second revision; state updated 2026-09-26. Read all of it before starting any stage.
+> Written 2026-09-25, second revision; state updated 2026-09-30. Read all of it before starting any stage.
 > Where a question is still open, §13 gives the default to build towards.
 
 ---
@@ -50,13 +50,15 @@
 
 ---
 
-## 3. Current state (2026-09-26)
+## 3. Current state (2026-09-30)
 
 ### Branch
 
 `feat/backend` is PR #72 against `main` at `b4cc316f` (it contains
 `feat/rating`); #73 (docs atlas) is stacked on it. Stages 7-8 are built on
-`feat/stage7`, branched from `feat/backend`. `feat/present-outline` (#71)
+`feat/stage7`, branched from `feat/backend` and open as PR #74 against it
+("Stages 7-8.2b ... ranked playable end to end"). None of the three is merged
+to `main`. `feat/present-outline` (#71)
 carries a balance change and so needs a balance re-export when it lands.
 Stages 0-6 are done on `feat/backend`, audited 2026-09-27: every sub-branch
 merge is intact, nothing was orphaned, and the deployed module (12:56Z on
@@ -65,8 +67,9 @@ merge is intact, nothing was orphaned, and the deployed module (12:56Z on
 `docs/simulation-rules.md` (era hashing, `MatchFactory`) and
 `docs/game-model.md` (*Eras*); this file only tracks the stages.
 
-- `dotnet test dotnet/NodeWar.sln`: **840 passing** in six projects
-  (per-project counts in `docs/skills/run-dotnet-tests.md`).
+- `dotnet test dotnet/NodeWar.sln`: **1118 passing** in six test projects on
+  `feat/stage7` (counted 2026-09-30; per-project counts in
+  `docs/skills/run-dotnet-tests.md`).
 - `compile-check.ps1` clean.
 
 ### UGS project
@@ -75,16 +78,20 @@ merge is intact, nothing was orphaned, and the deployed module (12:56Z on
 - Environments: `production` `57a165d3-0f39-40a3-9cc5-30aa0a010663`; `development` `43bfa2d2-5974-435a-b82d-b0af55911d8c`.
 - Unity Player Accounts is an identity provider for the **whole project** (no per-environment setting), client ID `b6e214b9-6b3b-43e8-8182-f273dc818064`, in `Assets/Resources/UnityPlayerAccountSettings.asset`.
 - UGS CLI logged in with service account `Account_1` (org level: Manage organization > Service accounts). Roles: Environments Viewer, Cloud Code, Cloud Save, Remote Config. No Player Authentication role, so `ugs player` commands are refused.
-- Module `NodeWarCloud` is deployed to `development` with GetPlayerState, Equip and VerifyMatch. Deploy from PowerShell with `C:\Program Files\dotnet` on PATH: `ugs deploy dotnet/NodeWarCloud -e development`. Production has never been deployed to.
+- Module `NodeWarCloud` is deployed to `development` with ten functions: GetPlayerState, Equip, VerifyMatch, ReportMatch, GetMatchHistory, Rendezvous, ConfirmConnected, LeaveMatch, Matchmaker_Allocate and Matchmaker_Poll. Deploy from PowerShell with `C:\Program Files\dotnet` on PATH: `ugs deploy dotnet/NodeWarCloud -e development`. **Production has never been deployed to**: no module, no queue, so a release build (which talks to `production`) cannot play ranked.
 - `ugs cloud-save data player get` reads only the default access class; the player records are protected, so check them in the dashboard or through GetPlayerState.
-- Remote Config has no settings. Matchmaker is **not enabled** (it may require a payment method on file).
+- Remote Config has no settings. Matchmaker is enabled in `development` with queue `ranked` and pool `ranked-pool` (8.0); enabling it asked for no payment method.
+- Dev junk from the 2026-09-28 forged-allocation reproduction is still in `development` Cloud Save: records `forged-test-1..3`, and possibly player records for `someoneElse123/456/789`.
 - **Never paste a service-account secret into a chat.** The user runs `ugs login` in their own terminal.
 
 ### Still to carry
 
-- The referee checks a log's consistency, not that its eras were owned: that needs both Player IDs in the log (Stage 7/8), or signed loadouts.
-- Every shipped balance must be exported (`Export Balance For Server`) and deployed, or the referee refuses matches played on it.
-- The Workshop era row needs its style pass (the chips wrap at phone width; the equipped chip is disabled, so it renders as faded as the locked ones).
+- Every shipped balance must be exported (`Export Balance For Server`) and deployed, or the referee refuses matches played on it. One is exported today (`Balances/1966419918.json`).
+- Closed since 2026-09-26: the era ownership check (7.2, `MatchEligibility` against the record's snapshot) and the Workshop era-chip pass (7.3, visuals still unseen).
+
+### What is left (2026-09-30)
+
+In order: 7.4 result screen · 8.2c in-match disconnects (D11-D12) · 8.2d strikes (D13) · 7.6 signatures · Stage 9 replay viewer · a first `production` deploy. Deferred: 7.5b retention. On hold: Stage 10. Before release: the "Accepted before release" items under §15's audit triage. Merge path: #72 → `main` (conflicts with #67 and `chore/docs-context-cost`), then #73, then #74.
 
 ---
 
@@ -110,7 +117,7 @@ Assets/UI/...                      UI Toolkit: account, rank, history, workshop
 
 - Where the match log library lives: follow the existing pattern in `dotnet/` that compiles Unity-free sources from `Assets/` (look at how the sim and lobby test projects include their sources) rather than inventing a second one.
 - **Cloud Code** runs .NET (up to .NET 9) and cannot use UnityEngine.
-- **Service interfaces**, all async and all able to fail: `IAccountService`, `IPlayerStateService`, `IInventoryService`, `IMatchReportService`, `IReplayService`, `IMatchmakingService`. Every call awaits `GameServices.EnsureReadyAsync()` first. The UI shows what the server returns, never an optimistic guess.
+- **Service interfaces**, all async and all able to fail. As built: `IAccountService`, `IPlayerStateService`, `IInventoryService`, `IMatchReportService`, `IMatchHistoryService`, `IRankedQueueService` (tickets) and `IRankedMatchService` (rendezvous, confirm, leave). `IReplayService` arrives with Stage 9. Every UGS data call awaits `GameServices.EnsureReadyAsync()` first; account sign-in calls `GameServices.InitializeAsync()`, since no player exists yet. The UI shows what the server returns, never an optimistic guess.
 - **Cloud Save**: player data in the **protected** access class (player reads, only the server writes):
   - `rating` (r, rd, sigma, lastMatchUtc)
   - `rank` (rr, arena, highestArena)
@@ -126,7 +133,7 @@ Assets/UI/...                      UI Toolkit: account, rank, history, workshop
 ## 5. Stages
 
 Order agreed with the user. "Session" means one focused working window.
-Matchmaking may move earlier once rating exists (after Stage 7); keep it after reporting.
+Stages 7 and 8 ended up interleaved around Matchmaker (see "Stages 7 and 8, as re-planned").
 
 ### Stage 0: environment. **DONE** (§3)
 
@@ -213,7 +220,7 @@ Decided with the user on 2026-09-27:
 |---|---|---|---|
 | 7.1 | `MatchSettlement.Settle`: pure rules plus tests (`NodeWar.Progression`) | nothing | **Done** |
 | R | Research: Matchmaker for P2P/Relay, Cloud Save and Cloud Code limits | nothing | **Done** |
-| 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R | **Done**, plus review fixes; not deployed |
+| 7.2 | Match record and `ReportMatch` in Cloud Code, against fakes | 7.1, R | **Done**, plus review fixes; deployed to `development` and verified live with 8.2b |
 | 7.3 | Rank page (reuse `TrophyBarLogic`); Workshop era-chip style pass | nothing (reads `PlayerState`) | **Done**; visuals unverified |
 | 8.1 | Matchmaker queue config; ticket creation that yields a match record | R, 7.2's record | **Done** (2026-09-28): allocator live in development; a queued pair produced record `match-<id>` with both Matchmaker-supplied player IDs |
 | 8.2 | Client: queue UI, match found → Relay → draft, log header from the record | 8.1 | 8.2a and 8.2b **done**; a full ranked match played end to end on 2026-09-29. Next 8.2c (disconnects) and 8.2d (strikes): decisions D7-D14 |
@@ -414,8 +421,8 @@ A local headless `dotnet` host that receives both players' inputs, orders them, 
 
 - **Required:** same `ProtocolVersion`, `SimVersion` and `ContentHash`.
 - **Hard cap:** the two players' arenas differ by at most 1. Arena here = `rank.arena`. If §13's smurf question is decided otherwise, use `max(arena, arena implied by MMR)`.
-- **MMR window**, widening with wait: ≤100 at 0s, ≤250 at 20s, ≤500 at 60s, then unbounded *within the arena cap*.
-- **Priority:** prefer same-arena opponents at equal wait. A cross-arena match is the fallback, not the norm.
+- **MMR window**, widening with wait: ≤100 at 0s, ≤250 at 20s, ≤500 at 60s, then unbounded from 120s *within the arena cap* (`ranked.mmq`, rule `rating-window`).
+- **Priority:** same-arena only for the first 30s (`arena-same-first`), then ±1. A cross-arena match is the fallback, not the norm.
 - **Nobody in range:** keep waiting. After X seconds (default 90), offer an unranked bot match. Never break the arena cap.
 - **Why a "bottom half of the arena above / top half below" band adds little:**
   - Power follows the era a player *fields*, and eras step at arena boundaries.
@@ -451,7 +458,7 @@ The live wire only needs "same version or refuse". A log outlives builds: it mus
 | `RESULT` | Winner, end tick, final hash, reason (win / surrender / disconnect) |
 | `SIGNATURES` | Per player: session-key signature over that player's commands |
 
-**As built (v1, 2026-09-26):** tags 1-7 are HEADER, BOARD, LOADOUTS, DRAFT, TICKS, HASHES, RESULT, then ERAS (8) and SKINS (9). BOARD is `BoardConfigData` rather than a free-form graph, the variants are per-type era tables in ERAS, and `SIGNATURES` is not written yet (it arrives with Stage 7's session keys). Match ID, start time and the opponent's Player ID are local placeholders until the server issues them.
+**As built (v1, 2026-09-26):** tags 1-7 are HEADER, BOARD, LOADOUTS, DRAFT, TICKS, HASHES, RESULT, then ERAS (8) and SKINS (9). BOARD is `BoardConfigData` rather than a free-form graph, the variants are per-type era tables in ERAS, and `SIGNATURES` is not written yet (it arrives with 7.6's session keys). A ranked match's header carries the record's match ID and both player IDs in slot order (8.2b); other matches use a local ID and are never reported. The start time is still the client's clock (`GameManager`), not server-issued; the record's `createdUnixSeconds` is the server's.
 
 - **Signing:** at match start the server issues each player a session key. Each player signs their own commands. Any single uploaded log is then verifiable: a cheater cannot forge the opponent's inputs.
 - **Size:** a few bytes per command, with most ticks empty. Compression is optional; measure first.
@@ -503,7 +510,7 @@ The live wire only needs "same version or refuse". A log outlives builds: it mus
 - **Skins must never reach `SimulationState`.** If a skin ever affects an outcome, the design is broken.
 - **Replay snapshots must cover every `SimulationState` field.** A missed field makes rewind silently wrong. The snapshot round-trip test guards this.
 - **Cloud Code limits** (execution time, memory, payload size) decide the referee design. The spike comes first.
-- **Matchmaker may need a payment method.** Ask before enabling it.
+- **Ask before enabling any paid UGS service.** Matchmaker asked for no payment method (2026-09-28); the next one may.
 - **No secrets in the repo or in chats.**
 - **Don't commit with `done:`** unless a Notion task is finished.
 - **Don't stamp `verified:` / `verified_at_commit`** on docs. That is the user's act.
