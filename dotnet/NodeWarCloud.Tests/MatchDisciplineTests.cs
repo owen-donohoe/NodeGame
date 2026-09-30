@@ -156,6 +156,8 @@ namespace NodeWar.Cloud.Tests
                 r.reports.Add(new MatchReport { playerIndex = 0, accepted = true });
             });
             await hold.Presence(MatchId, "p0", true, 100);
+            await hold.Presence(MatchId, "p1", true, 110);
+            await hold.Presence(MatchId, "p0", true, 160);
             await hold.Presence(MatchId, "p1", true, 160);
             Assert.That((await hold.ResolveHold(MatchId, "p0", 160)).outcome, Is.EqualTo(HoldOutcome.Voided));
             Assert.That((await Record()).pendingTimeoutVoid, Is.False);

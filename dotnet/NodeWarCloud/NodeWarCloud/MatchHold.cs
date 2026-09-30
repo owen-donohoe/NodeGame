@@ -8,13 +8,17 @@ namespace NodeWar.Cloud
     /// <summary>
     /// Server-measured presence and disconnect holds. Presence touches only
     /// the caller's key; a winning claim commits its decision before settlement.
+    /// Honest ranked clients heartbeat every four seconds throughout the match,
+    /// and every second while holding, so a self-declared hold cannot prove absence.
     /// </summary>
     public sealed class MatchHold
     {
         private const int RetryLimit = 3;
         private const int ClaimSeconds = 10;
         private const int SeenSeconds = 10;
+        private const int ConnectionGraceSeconds = 15;
         private const int VoidSeconds = 60;
+        private const int OpponentHoldSeconds = 50;
         private readonly IMatchRecordStore matches;
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly MatchSettler settler;
@@ -97,6 +101,9 @@ namespace NodeWar.Cloud
                 }
                 else
                 {
+                    if (now - record.connectedUnixSeconds < ConnectionGraceSeconds)
+                        return new ResolveHoldResult { outcome = HoldOutcome.TooEarly,
+                            message = "Waiting for the initial match heartbeats." };
                     var presence = await matches.ReadPresenceAsync(matchId);
                     long holdSince = presence[caller].holdSinceUnixSeconds;
                     if (holdSince == 0 || now - holdSince < ClaimSeconds)
@@ -104,7 +111,10 @@ namespace NodeWar.Cloud
                     long lastSeen = presence[1 - caller].lastSeenUnixSeconds;
                     if (lastSeen != 0 && now - lastSeen <= SeenSeconds)
                     {
-                        if (now - holdSince < VoidSeconds)
+                        long opponentHoldSince = presence[1 - caller].holdSinceUnixSeconds;
+                        if (now - holdSince < VoidSeconds || opponentHoldSince == 0 ||
+                            now - opponentHoldSince < OpponentHoldSeconds || presence[caller].lastSeenUnixSeconds == 0 ||
+                            now - presence[caller].lastSeenUnixSeconds > SeenSeconds)
                             return new ResolveHoldResult { outcome = HoldOutcome.OpponentPresent };
                         record.state = MatchRecordState.Void;
                     }

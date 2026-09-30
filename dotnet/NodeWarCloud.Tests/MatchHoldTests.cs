@@ -97,6 +97,8 @@ namespace NodeWar.Cloud.Tests
         public async Task SixtySecondHoldWithPresentOpponentVoidsWithoutSettlement(long now)
         {
             await hold.Presence(MatchId, "p0", true, 100);
+            await hold.Presence(MatchId, "p1", true, 110);
+            await hold.Presence(MatchId, "p0", true, now);
             await hold.Presence(MatchId, "p1", true, now - 10);
             var result = await hold.ResolveHold(MatchId, "p0", now);
             Assert.That(result.outcome, Is.EqualTo(HoldOutcome.Voided));
@@ -105,6 +107,48 @@ namespace NodeWar.Cloud.Tests
             Assert.That((await Record()).forfeitedBy, Is.EqualTo(-1));
             Assert.That((await Record()).abandonedBy, Is.EqualTo(-1));
             await AssertReleased();
+            AssertNoPlayerWrites();
+        }
+
+        [TestCase(14, HoldOutcome.TooEarly)]
+        [TestCase(15, HoldOutcome.Won)]
+        public async Task ClaimWaitsFifteenSecondsFromConnection(int elapsed, HoldOutcome expected)
+        {
+            await Mutate(r => r.connectedUnixSeconds = 100);
+            await hold.Presence(MatchId, "p0", true, 100);
+            var result = await hold.ResolveHold(MatchId, "p0", 100 + elapsed);
+            Assert.That(result.outcome, Is.EqualTo(expected));
+            if (expected == HoldOutcome.TooEarly)
+            {
+                Assert.That((await Record()).forfeitedBy, Is.EqualTo(-1));
+                AssertNoPlayerWrites();
+            }
+        }
+
+        [TestCase(110)]
+        [TestCase(160)]
+        [TestCase(220)]
+        public async Task HeartbeatingOpponentWithoutAHoldCannotLoseOrVoid(long now)
+        {
+            await hold.Presence(MatchId, "p0", true, 100);
+            for (long time = 100; time <= now; time += 4)
+                await hold.Presence(MatchId, "p1", false, time);
+            await hold.Presence(MatchId, "p0", true, now);
+            Assert.That((await hold.ResolveHold(MatchId, "p0", now)).outcome, Is.EqualTo(HoldOutcome.OpponentPresent));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Open));
+            AssertNoPlayerWrites();
+        }
+
+        [TestCase(111, 160)]
+        [TestCase(110, 149)]
+        public async Task VoidRequiresFiftySecondsOfOpponentHoldAndRecentCallerPresence(long opponentStart, long callerSeen)
+        {
+            await hold.Presence(MatchId, "p0", true, 100);
+            await hold.Presence(MatchId, "p1", true, opponentStart);
+            await hold.Presence(MatchId, "p0", true, callerSeen);
+            await hold.Presence(MatchId, "p1", true, 160);
+            Assert.That((await hold.ResolveHold(MatchId, "p0", 160)).outcome, Is.EqualTo(HoldOutcome.OpponentPresent));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Open));
             AssertNoPlayerWrites();
         }
 
