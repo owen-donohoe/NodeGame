@@ -100,6 +100,12 @@ namespace NodeWar.Cloud
                     record.state = MatchRecordState.Void;
                     record.pendingTimeoutVoid = true;
                 }
+                else if (record.reports.Any(r => r.playerIndex == 1 - caller && r.accepted))
+                {
+                    // A finished player's heartbeat may stop after reporting.
+                    // Only the pending timeout can resolve the missing peer report.
+                    return new ResolveHoldResult { outcome = HoldOutcome.OpponentPresent };
+                }
                 else
                 {
                     if (now - record.connectedUnixSeconds < ConnectionGraceSeconds)

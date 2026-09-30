@@ -46,6 +46,70 @@ namespace NodeWar.Cloud.Tests
             reporting = new MatchReporting(matches, stores, new Referee(BalanceCatalog.Embedded), rules, discipline);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task AcceptedOpponentReportPreventsHoldWinOrVoid(bool bothHolding)
+        {
+            await Mutate(r =>
+            {
+                r.state = MatchRecordState.Pending;
+                r.pendingUnixSeconds = 100;
+                r.reports.Add(new MatchReport { playerIndex = 1, accepted = true, winner = 1 });
+            });
+            await hold.Presence(MatchId, "p1", bothHolding, 100);
+            await hold.Presence(MatchId, "p0", true, 101);
+            long now = bothHolding ? 161 : 111;
+            if (bothHolding) await hold.Presence(MatchId, "p1", true, now);
+            await hold.Presence(MatchId, "p0", true, now);
+            string token = (await matches.ReadAsync(MatchId)).WriteLock;
+            var result = await hold.ResolveHold(MatchId, "p0", now);
+            Assert.That(result.outcome, Is.EqualTo(HoldOutcome.OpponentPresent));
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Pending));
+            Assert.That((await Record()).forfeitedBy, Is.EqualTo(-1));
+            Assert.That((await matches.ReadAsync(MatchId)).WriteLock, Is.EqualTo(token));
+            Assert.That(players.Select(p => p.Settlements), Is.EqualTo(new[] { 0, 0 }));
+            Assert.That(players.Select(p => p.DisciplineWrites), Is.EqualTo(new[] { 0, 0 }));
+            Assert.That(players.Select(p => p.State.ActiveMatch.matchId), Is.EqualTo(new[] { MatchId, MatchId }));
+        }
+
+        [Test]
+        public async Task RefusedOpponentReportDoesNotPreventHoldWin()
+        {
+            await Mutate(r => r.reports.Add(new MatchReport { playerIndex = 1, accepted = false, winner = 1 }));
+            await hold.Presence(MatchId, "p1", false, 100);
+            await hold.Presence(MatchId, "p0", true, 101);
+            var result = await hold.ResolveHold(MatchId, "p0", 111);
+            Assert.That(result.outcome, Is.EqualTo(HoldOutcome.Won));
+            Assert.That(result.result.won, Is.True);
+            Assert.That((await Record()).abandonedBy, Is.EqualTo(1));
+            Assert.That(players.Select(p => p.Settlements), Is.EqualTo(new[] { 1, 1 }));
+            Assert.That(players[1].State.Discipline.Level, Is.EqualTo(1));
+            await AssertReleased();
+        }
+
+        [Test]
+        public async Task AgreedReportsSettleBeforeAcceptedOpponentGuard()
+        {
+            await Mutate(r =>
+            {
+                r.state = MatchRecordState.Pending;
+                r.pendingUnixSeconds = 100;
+                r.settlementUnixSeconds = 105;
+                r.reports.Add(new MatchReport { playerIndex = 0, accepted = true, winner = 1 });
+                r.reports.Add(new MatchReport { playerIndex = 1, accepted = true, winner = 1 });
+            });
+            await hold.Presence(MatchId, "p1", false, 100);
+            await hold.Presence(MatchId, "p0", true, 101);
+            var result = await hold.ResolveHold(MatchId, "p0", 111);
+            Assert.That(result.outcome, Is.EqualTo(HoldOutcome.AlreadyResolved));
+            Assert.That(result.result.state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(result.result.won, Is.False);
+            Assert.That(result.result.cause, Is.EqualTo(MatchEndCause.Played));
+            Assert.That(players.Select(p => p.Settlements), Is.EqualTo(new[] { 1, 1 }));
+            Assert.That(players.Select(p => p.DisciplineWrites), Is.EqualTo(new[] { 0, 0 }));
+            await AssertReleased();
+        }
+
         [Test]
         public async Task AbandonedHoldStrikesAfterTerminalWriteAndReturnsDiscipline()
         {
