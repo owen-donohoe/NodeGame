@@ -282,6 +282,17 @@
                     </engine:VisualElement>
                 </engine:VisualElement>
 
+                <!--
+                    Ranked only: what the server made of the match. Hidden in any
+                    other match. The first report to arrive leaves the match
+                    pending, so this starts at "Confirming" and fills in when the
+                    server settles it (RankedResultTracker).
+                -->
+                <engine:VisualElement name="hud-end-rank" class="hud__end-rank" picking-mode="Ignore">
+                    <engine:Label name="hud-end-rank-headline" class="hud__end-rank-headline ui-w700" text="" picking-mode="Ignore" />
+                    <engine:Label name="hud-end-rank-detail" class="hud__end-rank-detail" text="" picking-mode="Ignore" />
+                </engine:VisualElement>
+
                 <engine:Button name="hud-end-return" class="ui-button ui-button--gold ui-w600 hud__end-button" text="Return to Lobby" />
             </engine:VisualElement>
         </engine:VisualElement>

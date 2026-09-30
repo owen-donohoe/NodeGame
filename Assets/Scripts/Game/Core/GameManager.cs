@@ -446,6 +446,10 @@ namespace NodeWar.Core
 
         private void Update()
         {
+            // Outlives the match: the end card keeps asking until the server decides.
+            if (rankedResult != null && rankedResult.IsActive)
+                rankedResult.Tick(Time.realtimeSinceStartup);
+
             if (matchPhase != MatchPhase.Playing) return;
 
             // Spawn views for bonus villagers created mid-game
@@ -585,6 +589,9 @@ namespace NodeWar.Core
             // match has ended some other way.
             FinishRecording(NodeWar.MatchLog.MatchEndReason.Abandoned, -1);
 
+            // An answer landing after the scene is gone must not reach its HUD.
+            if (rankedResult != null) rankedResult.Stop();
+
             if (cameraController != null)
                 cameraController.POVChanged -= OnPOVChanged;
 
@@ -710,15 +717,31 @@ namespace NodeWar.Core
             // have no record, so there is nothing to settle and nothing to send.
             // Kept until the server answers, then uploaded; a failed upload is
             // retried from the lobby and before the next ranked queue. Not
-            // awaited: the upload must outlive this scene. The result screen
-            // does not show the outcome yet (7.4).
+            // awaited: the upload must outlive this scene.
             MatchConnection match = MatchConnection.Instance;
             if (match != null && match.isRanked && !string.IsNullOrEmpty(match.matchId))
             {
                 NodeWar.Backend.PendingRankedReports.Add(
                     NodeWar.Backend.BackendServices.Account.Current?.PlayerId, match.matchId, log);
                 _ = NodeWar.Backend.PendingRankedReports.RetryAsync();
+                TrackRankedResult(match.matchId);
             }
+        }
+
+        private NodeWar.Backend.RankedResultTracker rankedResult;
+
+        /// <summary>
+        /// Follows the server's decision on this match onto the end card (7.4).
+        /// Starts with the log upload rather than after it: whichever player's
+        /// log lands second settles the match, and polling finds that either way.
+        /// </summary>
+        private void TrackRankedResult(string matchId)
+        {
+            if (uiToolkitHud == null || rankedResult != null) return;
+
+            rankedResult = new NodeWar.Backend.RankedResultTracker(NodeWar.Backend.BackendServices.RankedMatch);
+            rankedResult.Changed += uiToolkitHud.ShowRankedResult;
+            rankedResult.Start(matchId, Time.realtimeSinceStartup);
         }
 
         private void CreateSelectionLasso()

@@ -101,6 +101,9 @@ namespace NodeWar.UI
         private Label endTitle;
         private Label endSub;
         private readonly EndRow[] endRows = new EndRow[2];
+        private VisualElement endRank;
+        private Label endRankHeadline;
+        private Label endRankDetail;
 
         /// <summary>The player pressed Return to Lobby on the end overlay.</summary>
         public event System.Action ReturnToLobby;
@@ -341,6 +344,9 @@ namespace NodeWar.UI
             endSub = root.Q<Label>("hud-end-sub");
             endRows[0] = new EndRow(root, "a");
             endRows[1] = new EndRow(root, "b");
+            endRank = root.Q<VisualElement>("hud-end-rank");
+            endRankHeadline = root.Q<Label>("hud-end-rank-headline");
+            endRankDetail = root.Q<Label>("hud-end-rank-detail");
 
             Button endReturn = root.Q<Button>("hud-end-return");
             if (endReturn != null)
@@ -949,6 +955,25 @@ namespace NodeWar.UI
             endSub.text = "Your opponent has disconnected. " + MatchLength();
 
             ShowEnd(viewerPID);
+        }
+
+        /// <summary>
+        /// The ranked block under the tally. Called on every change of the
+        /// match's server result, so it starts at "Confirming" and fills in; a
+        /// match that is not ranked never calls it and the block stays hidden.
+        /// </summary>
+        public void ShowRankedResult(NodeWar.Backend.RankedResultStatus status)
+        {
+            if (endRank == null || status == null) return;
+
+            endRankHeadline.text = status.Headline;
+            endRankDetail.text = status.Detail;
+            endRankDetail.style.display = string.IsNullOrEmpty(status.Detail) ? DisplayStyle.None : DisplayStyle.Flex;
+
+            bool gain = status.Phase == NodeWar.Backend.RankedResultPhase.Settled &&
+                        (status.Result?.rrDelta ?? 0) > 0;
+            endRankHeadline.EnableInClassList("hud__end-rank-headline--gain", gain);
+            endRank.AddToClassList("hud__end-rank--on");
         }
 
         private void ShowEnd(int viewerPID)

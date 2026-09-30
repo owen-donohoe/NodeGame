@@ -731,6 +731,33 @@
     color: var(--ink);
 }
 
+.hud__end-rank {
+    display: none;
+    align-items: center;
+    margin-bottom: var(--space-5);
+}
+
+.hud__end-rank--on {
+    display: flex;
+}
+
+.ui-root .hud__end-rank-headline {
+    font-size: 22px;
+    color: var(--ink);
+}
+
+/* A gain reads like a win; a loss stays plain ink, as the title does. */
+.ui-root .hud__end-rank-headline--gain {
+    color: var(--confirm-edge);
+}
+
+.ui-root .hud__end-rank-detail {
+    font-size: 13px;
+    color: var(--ink-mute);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
 .ui-root .hud__end-button {
     width: 100%;
     height: 54px;
