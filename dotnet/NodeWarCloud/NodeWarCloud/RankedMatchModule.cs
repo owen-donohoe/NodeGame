@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using NodeWar.Backend;
+using Microsoft.Extensions.Logging;
 using Unity.Services.CloudCode.Apis;
 using Unity.Services.CloudCode.Core;
 
@@ -15,9 +16,11 @@ namespace NodeWar.Cloud
     public sealed class RankedMatchModule
     {
         private readonly IGameApiClient api;
+        private readonly ILogger<MatchDiscipline> logger;
         private static readonly InventoryRules Inventory = new InventoryRules(ServerCatalog.Items);
 
-        public RankedMatchModule(IGameApiClient api) { this.api = api; }
+        public RankedMatchModule(IGameApiClient api, ILogger<MatchDiscipline> logger = null)
+        { this.api = api; this.logger = logger; }
 
         public const string NoIdentityRefused = "A player identity is required.";
 
@@ -74,14 +77,16 @@ namespace NodeWar.Cloud
         {
             var settler = new MatchSettler(id => new CloudSavePlayerRecordStore(api, context, id), Inventory);
             return new MatchHold(new CloudSaveMatchRecordStore(api, context),
-                id => new CloudSavePlayerRecordStore(api, context, id), settler);
+                id => new CloudSavePlayerRecordStore(api, context, id), settler,
+                new MatchDiscipline(id => new CloudSavePlayerRecordStore(api, context, id), logger));
         }
 
         private MatchRendezvous Build(IExecutionContext context)
         {
             var settler = new MatchSettler(id => new CloudSavePlayerRecordStore(api, context, id), Inventory);
             return new MatchRendezvous(new CloudSaveMatchRecordStore(api, context),
-                id => new CloudSavePlayerRecordStore(api, context, id), settler);
+                id => new CloudSavePlayerRecordStore(api, context, id), settler,
+                new MatchDiscipline(id => new CloudSavePlayerRecordStore(api, context, id), logger));
         }
     }
 }

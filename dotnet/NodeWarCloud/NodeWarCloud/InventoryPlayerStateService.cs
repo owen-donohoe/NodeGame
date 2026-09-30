@@ -26,11 +26,13 @@ namespace NodeWar.Cloud
                 var (state, inventoryLock) = await store.ReadInventoryLockedAsync();
                 state ??= new PlayerState();
                 var changed = PlayerStateLogic.ApplyDefaults(state, rules.GrantDefaults);
-                if (changed.Rating == null && changed.Rank == null && changed.Inventory == null && changed.History == null)
+                if (changed.Rating == null && changed.Rank == null && changed.Inventory == null && changed.History == null &&
+                    changed.Discipline == null)
                     return state;
                 try
                 {
                     await store.WriteDefaultsLockedAsync(changed, inventoryLock);
+                    if (changed.Discipline != null) state.Discipline = changed.Discipline;
                     return state;
                 }
                 // Re-read and re-apply: a settlement may have granted items or

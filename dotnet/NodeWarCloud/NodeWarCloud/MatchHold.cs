@@ -18,13 +18,15 @@ namespace NodeWar.Cloud
         private readonly IMatchRecordStore matches;
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly MatchSettler settler;
+        private readonly MatchDiscipline discipline;
 
         public MatchHold(IMatchRecordStore matches, Func<string, ISettlementPlayerStore> players,
-            MatchSettler settler)
+            MatchSettler settler, MatchDiscipline discipline = null)
         {
             this.matches = matches ?? throw new ArgumentNullException(nameof(matches));
             this.players = players ?? throw new ArgumentNullException(nameof(players));
             this.settler = settler ?? throw new ArgumentNullException(nameof(settler));
+            this.discipline = discipline;
         }
 
         public async Task<PresenceResult> Presence(string matchId, string callerId, bool holding, long now)
@@ -66,6 +68,7 @@ namespace NodeWar.Cloud
                 if (caller < 0) return new ResolveHoldResult { message = "Caller is not in this match." };
                 if (Terminal(record))
                 {
+                    if (discipline != null) await discipline.Apply(record, now);
                     await ReleaseBoth(record);
                     return new ResolveHoldResult { outcome = HoldOutcome.AlreadyResolved, result = await View(record, caller) };
                 }
@@ -90,6 +93,7 @@ namespace NodeWar.Cloud
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
                 {
                     record.state = MatchRecordState.Void;
+                    record.pendingTimeoutVoid = true;
                 }
                 else
                 {
@@ -127,6 +131,7 @@ namespace NodeWar.Cloud
                     if (++conflicts >= RetryLimit) throw;
                     continue;
                 }
+                if (discipline != null) await discipline.Apply(record, now);
                 await ReleaseBoth(record);
                 return new ResolveHoldResult
                 {

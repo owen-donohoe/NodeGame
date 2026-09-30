@@ -15,15 +15,17 @@ namespace NodeWar.Cloud
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly Referee referee;
         private readonly MatchSettler settler;
+        private readonly MatchDiscipline discipline;
 
         public MatchReporting(IMatchRecordStore matches, Func<string, ISettlementPlayerStore> players,
-            Referee referee, InventoryRules inventory)
+            Referee referee, InventoryRules inventory, MatchDiscipline discipline = null)
         {
             this.matches = matches ?? throw new ArgumentNullException(nameof(matches));
             this.players = players ?? throw new ArgumentNullException(nameof(players));
             this.referee = referee ?? throw new ArgumentNullException(nameof(referee));
             if (inventory == null) throw new ArgumentNullException(nameof(inventory));
             this.settler = new MatchSettler(players, inventory);
+            this.discipline = discipline;
         }
 
         // Caps how many refused attempts we keep per player once they have an
@@ -51,6 +53,7 @@ namespace NodeWar.Cloud
                 if (record.state == MatchRecordState.Settled || record.state == MatchRecordState.Void ||
                     record.state == MatchRecordState.Disputed)
                 {
+                    if (discipline != null) await discipline.Apply(record, now);
                     foreach (string id in record.playerIds)
                         await ActiveMatchClaims.Release(players(id), matchId);
                 }
@@ -97,6 +100,7 @@ namespace NodeWar.Cloud
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
                 {
                     record.state = MatchRecordState.Void;
+                    record.pendingTimeoutVoid = true;
                 }
                 else
                 {
@@ -141,7 +145,11 @@ namespace NodeWar.Cloud
                     }
                 }
 
-                try { await matches.WriteAsync(record, read.WriteLock); }
+                try
+                {
+                    await matches.WriteAsync(record, read.WriteLock);
+                    if (discipline != null) await discipline.Apply(record, now);
+                }
                 catch (RecordConflictException)
                 {
                     if (++conflicts >= RetryLimit) throw;

@@ -37,6 +37,9 @@ namespace NodeWar.Cloud
         // The slot a hold resolved against, or -1. Committed with forfeitedBy
         // under the record's write lock before any player write.
         public int abandonedBy = -1;
+        // Set only by the pending timeout, so retries can distinguish D19
+        // non-reports from other voids without guessing from the report count.
+        public bool pendingTimeoutVoid;
     }
 
     // A settled player's result on this match. Never re-derived from current

@@ -18,13 +18,15 @@ namespace NodeWar.Cloud
         private readonly IMatchRecordStore matches;
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly MatchSettler settler;
+        private readonly MatchDiscipline discipline;
 
         public MatchRendezvous(IMatchRecordStore matches, Func<string, ISettlementPlayerStore> players,
-            MatchSettler settler)
+            MatchSettler settler, MatchDiscipline discipline = null)
         {
             this.matches = matches ?? throw new ArgumentNullException(nameof(matches));
             this.players = players ?? throw new ArgumentNullException(nameof(players));
             this.settler = settler ?? throw new ArgumentNullException(nameof(settler));
+            this.discipline = discipline;
         }
 
         /// <summary>
@@ -126,6 +128,7 @@ namespace NodeWar.Cloud
                 if (record.state == MatchRecordState.Settled || record.state == MatchRecordState.Void ||
                     record.state == MatchRecordState.Disputed)
                 {
+                    if (discipline != null) await discipline.Apply(record, now);
                     await ReleaseBoth(record);
                     return Cleared();
                 }
@@ -155,6 +158,7 @@ namespace NodeWar.Cloud
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
                 {
                     record.state = MatchRecordState.Void;
+                    record.pendingTimeoutVoid = true;
                     result = Cleared();
                 }
                 else if (record.connectedUnixSeconds == 0 && !record.reports.Any(r => r.accepted))
@@ -199,6 +203,7 @@ namespace NodeWar.Cloud
                     continue;
                 }
 
+                if (discipline != null) await discipline.Apply(record, now);
                 await ReleaseBoth(record);
                 if (settledOk && record.state == MatchRecordState.Settled)
                     result.playerState = (await players(callerId).ReadForSettlementAsync()).State;

@@ -35,7 +35,7 @@ namespace NodeWar.Backend
             PlayerState stored = await store.ReadAsync() ?? new PlayerState();
             var created = ApplyDefaults(stored, updateInventory);
             if (created.Rating != null || created.Rank != null
-                || created.Inventory != null || created.History != null)
+                || created.Inventory != null || created.History != null || created.Discipline != null)
                 await store.WriteAsync(created);
             return stored;
         }
@@ -49,6 +49,7 @@ namespace NodeWar.Backend
             if (stored.Rank == null) stored.Rank = created.Rank = PlayerStateDefaults.Rank();
             if (stored.Inventory == null) stored.Inventory = created.Inventory = PlayerStateDefaults.Inventory();
             if (stored.History == null) stored.History = created.History = PlayerStateDefaults.History();
+            if (stored.Discipline == null) stored.Discipline = created.Discipline = new DisciplineRecord();
 
             if (NormalizeInventory(stored.Inventory)) created.Inventory = stored.Inventory;
             if (updateInventory != null && updateInventory(stored)) created.Inventory = stored.Inventory;
