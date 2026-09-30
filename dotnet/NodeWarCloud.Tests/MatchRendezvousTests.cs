@@ -563,6 +563,33 @@ namespace NodeWar.Cloud.Tests
             Assert.That(RankedMatchModule.HasNoIdentity(null), Is.True);
         }
 
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase(" ")]
+        public async Task HoldFunctionsRefuseBlankIdentityBeforeAccessingStorage(string playerId)
+        {
+            var module = new RankedMatchModule(null);
+            var context = new FakeExecutionContext(playerId);
+            var result = await module.GetMatchResult(context, "match");
+            var presence = await module.Presence(context, "match", true);
+            var resolution = await module.ResolveHold(context, "match");
+            Assert.That(result.state, Is.Null);
+            Assert.That(presence.state, Is.Null);
+            Assert.That(resolution.outcome, Is.Null);
+            Assert.That(result.message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That(presence.message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That(resolution.message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+        }
+
+        [Test]
+        public async Task HoldFunctionsRefuseNullContextBeforeAccessingStorage()
+        {
+            var module = new RankedMatchModule(null);
+            Assert.That((await module.GetMatchResult(null, "match")).message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That((await module.Presence(null, "match", true)).message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That((await module.ResolveHold(null, "match")).message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+        }
+
         private sealed class FakeExecutionContext : IExecutionContext
         {
             public FakeExecutionContext(string playerId) { PlayerId = playerId; }
