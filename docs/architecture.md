@@ -1060,18 +1060,42 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   An in-match **surrender** (ranked only, behind a confirm in the settings
   card) is that same forfeit, sent mid-match; the match ends on this side
   once the server has it, and the opponent's hold learns it from the server.
-- **Holds and presence** (`MatchHold`). During a hold each client calls
-  `Presence` about once a second. It writes only the caller's own
-  `presence-0`/`presence-1` key in the match's custom item, with no lock,
-  and never the `record` key, so the two players' writes never conflict
-  with each other or with settlement. `ResolveHold` needs the caller's
-  server-measured hold to be at least 10 s. If the opponent has not been
-  seen for more than 10 s, it commits `forfeitedBy = abandonedBy =
-  opponent` under the record lock before settling. If both players are
-  present at 60 s, it voids the match. Every answer carries the terminal
-  result once there is one. That is how a returning player learns they
-  lost, and how an opponent learns of a surrender. `GetMatchResult` is
-  read-only; its `cause` is Played, Forfeit or Abandoned.
+- **Holds and presence** (`MatchHold`). Every ranked client calls
+  `Presence` for the whole match, from the draft on: every 4 s as a
+  heartbeat (`PresenceHeartbeat`) and every second while holding. A hold
+  is self-declared, so absence has to be something the server observed:
+  a player who is playing is always "seen". `Presence` writes only the
+  caller's own `presence-0`/`presence-1` key in the match's custom item,
+  with no lock, and never the `record` key, so the two players' writes
+  never conflict with each other or with settlement. `ResolveHold` needs
+  three things: the match started at least 15 s ago, so heartbeats have
+  landed; the caller's server-measured hold is at least 10 s; and the
+  opponent has not been seen for more than 10 s. It then commits
+  `forfeitedBy = abandonedBy = opponent` under the record lock before
+  settling. A void needs **both** players seen and holding (60 s / 50 s),
+  which is what an honest broken link produces in lockstep; a one-sided
+  hold never voids. A committed decision is finished before any claim
+  expiry could void it. Every answer carries the terminal result once
+  there is one. That is how a returning player learns they lost, and how
+  an opponent learns of a surrender. `GetMatchResult` is read-only; its
+  `cause` is Played, Forfeit or Abandoned.
+- **Strikes and non-reports** (`MatchDiscipline`, `DisconnectPenalty`,
+  8.2d). A hold settled against `abandonedBy` strikes that player. A
+  Pending match voided by its timeout with one accepted report adds a
+  non-report for the silent player, and the second within 7 days is a
+  strike. The ladder:
+  - Levels 1-2: no block.
+  - Levels 3-4: blocked for 2 min.
+  - Level 5: blocked for 1 h.
+  - Level 6: blocked for 1 day.
+  - Level 7 and above: blocked for 2 days.
+  - One level decays per 16 h without a strike.
+
+  The record lives in its own protected key, `discipline`, outside the
+  settlement batch. Each match records `disciplineApplied`, and claims are
+  released only after it is set, so a failed write is retried by the next
+  terminal call and never applied twice. `Allocate` refuses a blocked
+  player. The queue shows the countdown and does not search.
 - **The result on the end card** (7.4). The first report to arrive leaves
   a match Pending, so the uploader rarely learns the result from
   `ReportMatch`. `RankedResultTracker` asks `GetMatchResult` every 2 s for
