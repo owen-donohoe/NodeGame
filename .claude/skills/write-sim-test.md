@@ -8,7 +8,9 @@ verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-verified_at_commit: a43b5f9
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+verified_at_commit: 7584e33
 status: stable
 sources:
   - id: tests
