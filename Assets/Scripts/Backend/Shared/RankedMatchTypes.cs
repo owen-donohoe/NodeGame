@@ -56,11 +56,104 @@ namespace NodeWar.Backend
     }
 
     /// <summary>
+    /// How a settled match was decided. Returned by value, so never reorder
+    /// or remove a member.
+    /// </summary>
+    public enum MatchEndCause
+    {
+        Unknown,
+        /// <summary>Both logs arrived and agreed.</summary>
+        Played,
+        /// <summary>A player gave the match up (surrender, or forfeiting to queue again).</summary>
+        Forfeit,
+        /// <summary>A disconnect hold resolved against a player the server could not see.</summary>
+        Abandoned
+    }
+
+    /// <summary>
+    /// A ranked match's result as the caller sees it (GetMatchResult). A null
+    /// <see cref="state"/> means the call was refused; <see cref="message"/>
+    /// says why. The outcome fields are the caller's and are set only when
+    /// the match is Settled.
+    /// </summary>
+    public sealed class MatchResultView
+    {
+        public MatchRecordState? state;
+        public string message;
+        public MatchEndCause cause;
+        public bool? won;
+        public int? rrDelta;
+        public int? rrAfter;
+        public int? arenaAfter;
+        public bool promoted;
+        public bool demoted;
+
+        /// <summary>The caller's server state once Settled, otherwise null.</summary>
+        public PlayerState playerState;
+    }
+
+    /// <summary>
+    /// What Presence returns during a disconnect hold. The server only reports
+    /// what it saw; the hold's decisions are ResolveHold's.
+    /// </summary>
+    public sealed class PresenceResult
+    {
+        /// <summary>Null when the call was refused.</summary>
+        public MatchRecordState? state;
+        public string message;
+
+        /// <summary>Seconds since the opponent last called Presence; -1 if never.</summary>
+        public int opponentSeenSecondsAgo = -1;
+
+        /// <summary>How long the server has seen the caller holding; 0 when not holding.</summary>
+        public int holdSeconds;
+
+        /// <summary>The caller's result once the match is Settled, Void or Disputed.</summary>
+        public MatchResultView result;
+    }
+
+    /// <summary>What ResolveHold decided. Returned by value, so never reorder or remove a member.</summary>
+    public enum HoldOutcome
+    {
+        /// <summary>The opponent was not seen for 10 s: the caller wins, the opponent abandoned.</summary>
+        Won,
+        /// <summary>The opponent is still calling Presence; keep holding.</summary>
+        OpponentPresent,
+        /// <summary>The caller's hold is under 10 s on the server's clock.</summary>
+        TooEarly,
+        /// <summary>Both were seen for the whole 60 s: the peer link broke. Void, no strike.</summary>
+        Voided,
+        /// <summary>The match had already ended; see the result.</summary>
+        AlreadyResolved
+    }
+
+    public sealed class ResolveHoldResult
+    {
+        /// <summary>Null when the call was refused.</summary>
+        public HoldOutcome? outcome;
+        public string message;
+        public MatchResultView result;
+    }
+
+    /// <summary>
     /// The server calls that take a found ranked match into play. Calls may
     /// fail (offline, refused); the caller decides what a failure means.
     /// </summary>
     public interface IRankedMatchService
     {
+        /// <summary>The caller's view of the match's result. Read-only.</summary>
+        Task<MatchResultView> GetResultAsync(string matchId);
+
+        /// <summary>
+        /// Tells the server the caller is alive, and whether it is holding for a
+        /// silent opponent. Called about once a second during a hold, and once
+        /// with holding false when the connection comes back.
+        /// </summary>
+        Task<PresenceResult> PresenceAsync(string matchId, bool holding);
+
+        /// <summary>Asks the server to end a hold: a win if the opponent is gone, a void after 60 s if both are present.</summary>
+        Task<ResolveHoldResult> ResolveHoldAsync(string matchId);
+
         /// <summary>
         /// Reads the match's roster and join code. Slot 0 passes its Relay join
         /// code to publish it; everyone else passes null.
@@ -132,6 +225,7 @@ namespace NodeWar.Backend
             public string MatchId;
             public string JoinCode;
             public bool Forfeit;
+            public bool Holding;
         }
 
         private readonly List<Call> calls = new List<Call>();
@@ -146,6 +240,39 @@ namespace NodeWar.Backend
 
         /// <summary>Returned by LeaveAsync for every call. Defaults to Cleared.</summary>
         public LeaveMatchResult LeaveResult { get; set; } = new LeaveMatchResult { outcome = LeaveOutcome.Cleared };
+
+        /// <summary>Returned by GetResultAsync for every call. Defaults to a Pending match.</summary>
+        public MatchResultView Result { get; set; } = new MatchResultView { state = MatchRecordState.Pending };
+
+        /// <summary>Returned by PresenceAsync for every call. Defaults to an opponent seen just now.</summary>
+        public PresenceResult Presence { get; set; } = new PresenceResult
+        {
+            state = MatchRecordState.Open, opponentSeenSecondsAgo = 0
+        };
+
+        /// <summary>Returned by ResolveHoldAsync for every call. Defaults to OpponentPresent.</summary>
+        public ResolveHoldResult Resolution { get; set; } = new ResolveHoldResult { outcome = HoldOutcome.OpponentPresent };
+
+        public Task<MatchResultView> GetResultAsync(string matchId)
+        {
+            RequireMatchId(matchId);
+            calls.Add(new Call { Method = nameof(GetResultAsync), MatchId = matchId });
+            return Task.FromResult(Result);
+        }
+
+        public Task<PresenceResult> PresenceAsync(string matchId, bool holding)
+        {
+            RequireMatchId(matchId);
+            calls.Add(new Call { Method = nameof(PresenceAsync), MatchId = matchId, Holding = holding });
+            return Task.FromResult(Presence);
+        }
+
+        public Task<ResolveHoldResult> ResolveHoldAsync(string matchId)
+        {
+            RequireMatchId(matchId);
+            calls.Add(new Call { Method = nameof(ResolveHoldAsync), MatchId = matchId });
+            return Task.FromResult(Resolution);
+        }
 
         public Task<RendezvousResult> RendezvousAsync(string matchId, string joinCode)
         {

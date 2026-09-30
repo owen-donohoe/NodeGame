@@ -39,5 +39,45 @@ namespace NodeWar.Backend
             if (result?.playerState != null) BackendServices.Remember(result.playerState, requestedFor);
             return result;
         }
+
+        public async Task<MatchResultView> GetResultAsync(string matchId)
+        {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
+            await GameServices.EnsureReadyAsync();
+            MatchResultView result = await CloudCodeService.Instance.CallModuleEndpointAsync<MatchResultView>(
+                BackendServices.CloudModule, "GetMatchResult",
+                new Dictionary<string, object> { { "matchId", matchId } });
+            RememberSettled(result, requestedFor);
+            return result;
+        }
+
+        public async Task<PresenceResult> PresenceAsync(string matchId, bool holding)
+        {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
+            await GameServices.EnsureReadyAsync();
+            PresenceResult result = await CloudCodeService.Instance.CallModuleEndpointAsync<PresenceResult>(
+                BackendServices.CloudModule, "Presence",
+                new Dictionary<string, object> { { "matchId", matchId }, { "holding", holding } });
+            RememberSettled(result?.result, requestedFor);
+            return result;
+        }
+
+        public async Task<ResolveHoldResult> ResolveHoldAsync(string matchId)
+        {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
+            await GameServices.EnsureReadyAsync();
+            ResolveHoldResult result = await CloudCodeService.Instance.CallModuleEndpointAsync<ResolveHoldResult>(
+                BackendServices.CloudModule, "ResolveHold",
+                new Dictionary<string, object> { { "matchId", matchId } });
+            RememberSettled(result?.result, requestedFor);
+            return result;
+        }
+
+        // A settled result carries the caller's new rank, so the lobby strip is
+        // current on return without another GetPlayerState.
+        private static void RememberSettled(MatchResultView result, string requestedFor)
+        {
+            if (result?.playerState != null) BackendServices.Remember(result.playerState, requestedFor);
+        }
     }
 }

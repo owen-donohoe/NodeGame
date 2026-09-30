@@ -197,6 +197,12 @@ namespace NodeWar.Lobby.Tests
             LeftMatches.Add(matchId);
             return Leave();
         }
+        public Task<MatchResultView> GetResultAsync(string matchId) =>
+            Task.FromResult(new MatchResultView { state = MatchRecordState.Pending });
+        public Task<PresenceResult> PresenceAsync(string matchId, bool holding) =>
+            Task.FromResult(new PresenceResult { state = MatchRecordState.Open, opponentSeenSecondsAgo = 0 });
+        public Task<ResolveHoldResult> ResolveHoldAsync(string matchId) =>
+            Task.FromResult(new ResolveHoldResult { outcome = HoldOutcome.OpponentPresent });
     }
 
     public class RankedQueuePresenterTests

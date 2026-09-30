@@ -349,6 +349,48 @@ Matchmaker is enabled and the queue is deployed (8.0). Rules as §7: same `Proto
 
 **8.2b done: built 2026-09-28, played end to end 2026-09-29 (Editor + development build over Relay: queue, rendezvous, draft, match, settlement, history).** Server: `Rendezvous`, `ConfirmConnected`, `LeaveMatch` (`MatchRendezvous`, `RankedMatchModule`); `MatchSettler` extracted from `MatchReporting` and shared by forfeits. A forfeit commits `forfeitedBy` to the record under its lock *before* any player write, and `ReportMatch` finishes a committed forfeit, so two opposing forfeits cannot settle different winners in the record and the players. Client: `RankedRendezvous`; `RankedQueuePresenter` now runs preflight (leave or forfeit a held match), queue, rendezvous, automatic re-queue (3) and the bot offer at 90 s; `MatchLauncher.HostRanked/JoinRanked` with the D8 deadlines; the log header takes the record's ID and order; ranked logs upload at match end (the 7.4 call; its result UI is still to do). Verified live with `scripts/matchmaker-spike.ps1 -EnsureRecords -Rendezvous`: slots, publish and read, and leaving before connecting voids the record and frees both claims. The two-player run found three bugs, all fixed: every draft loadout packet was dropped since the eras-and-skins wire change (0652b06), so no networked draft could start; lockstep deadlocked for good on one lost input packet because only the newest input was resent; the search timer counted from before a forfeit prompt. Notes from the run: a release build talks to `production`, which has no module, so test with a Development Build; one forfeit between two new players opens a ~320 rating gap, which the queue bridges only after 60 s. **Sol review (2026-09-29): six findings, all fixed.** A match now counts as started only when both players confirm the connection (or an accepted report exists), so one player can no longer force the other into a forfeit by confirming alone. `Leave` settles a committed agreement instead of voiding it after the pending timeout. Ranked logs are kept per player (`PendingRankedReports`) and retried after the match, at lobby load and before queueing until the server answers. The presenter invalidates stale async work on cancel (no orphaned tickets or connections), launches the bot only after its ticket is really cancelled, and treats poll errors as transient (cancel after three). 1118 tests; redeployed and re-verified live.
 
+#### The ranked loop: 7.4, 8.2c, 8.2d (planned 2026-09-30, branch `feat/ranked-loop`)
+
+One PR, stacked on #74, in parts that each build and test on their own. Server parts go to a Codex engineer; the shared contract, all client parts and the network runner stay in the main session.
+
+| Part | What | Who |
+|---|---|---|
+| A | Shared contract: DTOs and `IRankedMatchService` additions, fakes | lead |
+| B | Server: `GetMatchResult`, `Presence`, `ResolveHold`, record fields | Codex |
+| C | 7.4 client: `RankedResultTracker` + end-card rank block | lead |
+| D | 8.2c client: runner hold, `DisconnectHold` presenter, hold overlay, surrender | lead |
+| E | 8.2d + D19: discipline ladder, non-reports, Allocate refusal, queue countdown | planned after D |
+| F | Deploy to `development`, two-player test with the user, docs | lead + user |
+
+**Part A: contract (Backend/Shared, C# 9).**
+- `MatchResultView` (what `GetMatchResult` returns): `state`, `message`, `cause` (`MatchEndCause`: `Unknown`, `Played`, `Forfeit`, `Abandoned`), and for the caller when Settled: `won`, `rrDelta`, `rrAfter`, `arenaAfter`, `promoted`, `demoted`, `playerState`.
+- `PresenceResult`: `state`, `message`, `opponentSeenSecondsAgo` (-1 = never), `holdSeconds` (server-measured, 0 when not holding), `result` (a `MatchResultView` once the record is terminal).
+- `ResolveHoldResult`: `outcome` (`HoldOutcome`: `Won`, `OpponentPresent`, `TooEarly`, `Voided`, `AlreadyResolved`), `message`, `result`.
+- `IRankedMatchService` gains `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)`. `LocalRankedMatchService` scripts them like its other calls.
+
+**Part B: server rules.**
+- **Record:** new `abandonedBy = -1` (the slot a hold resolved against; 8.2d strikes read it). `forfeitedBy` is set too, so every existing settlement path settles the same winner.
+- **Presence storage:** keys `presence-0` / `presence-1` in the match's custom item, each `{ lastSeenUnixSeconds, holdSinceUnixSeconds }`, written **without a lock** by its own slot only. Never on the `record` key, so the two players' once-a-second writes never conflict with each other or with settlement.
+- **`Presence(matchId, holding)`:** caller must be in the record. Writes its own key: `lastSeen = now`; `holdSince` kept if already set and `holding`, `now` if newly holding, 0 if not. Returns the opponent's seconds since seen, the caller's server-measured hold length, and the terminal result if any. Never writes `record`.
+- **`ResolveHold(matchId)`:** caller in record; record Open/Pending and started (`connectedUnixSeconds > 0`), else `AlreadyResolved` (terminal) or a message. Caller's `holdSince` must be ≥ 10 s ago, else `TooEarly`. Opponent seen within 10 s: `Voided` if the caller's hold is ≥ 60 s (void, release both claims, no strike), otherwise `OpponentPresent`. Opponent unseen (never, or > 10 s): commit `forfeitedBy = abandonedBy = opponent` and `settlementUnixSeconds` under the record lock **before** any player write (the D7 forfeit pattern), then `MatchSettler.Settle`, then `Won` with the caller's result. Same lifetime/claim voids as `Leave`.
+- **`GetMatchResult(matchId)`:** caller in record; read-only. `cause`: Settled with `forfeitedBy < 0` → Played; `abandonedBy >= 0` → Abandoned; otherwise Forfeit. Includes the caller's `playerState` when Settled.
+- All three refuse a call without a player identity, like `Rendezvous`.
+
+**Part C: 7.4 client.** `RankedResultTracker` (Backend/Shared, tested like `RankedQueuePresenter`): after a ranked match ends, polls `GetResultAsync` every 2 s for up to 40 s. Its view: *Confirming* → *Settled* (won, RR delta, arena change) / *Void* / *Disputed* / *Still waiting* ("it will appear in Match history") / *Offline* (three failed calls: "your result will be sent when you are back online"). The UI Toolkit end card gets a rank block under the tally. Settled state is remembered through `BackendServices.Remember`, so the lobby strip is current on return. The uGUI `GameOverPanel` is off and is not extended.
+
+**Part D: 8.2c client (network-adjacent, main session).**
+- **`LockstepRunner` stops ending matches.** A hold starts when **no tick has advanced for 2 s while unpaused**, not only when packets stop: with one-way loss one side keeps receiving heartbeats and today stalls forever without ever calling it a disconnect. It raises `HoldStarted` / `HoldEnded`, keeps pumping packets, resends and heartbeats during a hold, re-baselines its timers on resume, and stops only when `GameManager` calls `EndMatch()`.
+- **`DisconnectHold` presenter** (Backend/Shared, tested): D15's stages on a local clock for the countdown, the server's word for every decision. Ranked: `Presence(holding: true)` each second; own calls failing means *we* are the offline side ("Reconnecting…"); a terminal result in any answer resolves the hold. Stage 2 offers "Claim win" (`ResolveHold`; `TooEarly`/`OpponentPresent` keep holding); at 60 s it calls `ResolveHold` itself. On resume it sends one `Presence(holding: false)`. Unranked networked matches have no record: the same stages with "Leave match" in place of "Claim win", ending as Disconnected.
+- **Hold overlay** in the HUD (UXML/USS): title, line, countdown, one action button. It covers the board, so nobody acts (D15).
+- **Surrender (D18):** a footer row in `MatchSettingsPanel`, ranked only, behind a confirm sheet (its doc explains why surrender was kept out: it is no longer a `GameCommand`, but a mis-tap still costs a match, hence the confirm). Calls `LeaveAsync(forfeit: true)`; the opponent learns it through its hold's presence answer, about 2-3 s later ("Opponent surrendered").
+- **Ending:** hold resolved or surrendered → `FinishRecording` with the matching reason, `EndMatch()`, the end card worded for the cause, then Part C's tracker.
+
+**Risks, checked while planning:**
+- Draft-phase disconnects keep `DraftManager`'s own 2 s end, and a ranked record confirmed before the draft is then held until the preflight forfeit. Out of scope; noted as a follow-up.
+- A backgrounded phone sends nothing. Under 10 s it resumes on both sides; past that the opponent may claim (D15, deliberate).
+- After a claimed win, a log upload lands on a Settled record and is recorded as a refusal for audit. Harmless; logs stay replay data.
+- 8.2e (D16) will replace "stall 2 s → hold" with "speculate 20 ticks → hold"; D's hold events are the seam it plugs into.
+
 **Live two-player test:** Editor plus one standalone build (separate PlayerPrefs keys, so different players), then a second PC across a real network. Two builds on one machine share `HKCU\Software\<Company>\<Product>` and would sign in as the same player.
 
 #### 7.5 Replay storage
