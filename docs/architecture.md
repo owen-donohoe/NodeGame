@@ -214,6 +214,18 @@ sources:
     resource: dotnet/NodeWarCloud/NodeWarCloud/InventoryRules.cs
     title: Catalog grants and equipment eligibility
     last_modified: 2026-09-25T22:41:20-04:00
+  - id: disconnect-hold
+    resource: Assets/Scripts/Backend/Shared/DisconnectHold.cs
+    title: DisconnectHold, the three-stage hold
+    last_modified: 2026-09-30T02:00:00-04:00
+  - id: ranked-result-tracker
+    resource: Assets/Scripts/Backend/Shared/RankedResultTracker.cs
+    title: RankedResultTracker, the end card's server result
+    last_modified: 2026-09-30T01:30:00-04:00
+  - id: match-hold
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchHold.cs
+    title: Presence, ResolveHold and GetMatchResult rules
+    last_modified: 2026-09-30T01:40:00-04:00
   - id: emote-panel
     resource: Assets/UI/Scripts/Gameplay/EmotePanel.cs
     title: Emote controls on the resource sheet
@@ -562,7 +574,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
 
 **Network/**
 - `LockstepRunner` — networked tick driver; stalls a tick until both
-  local and remote inputs exist for it.
+  local and remote inputs exist for it, and raises `HoldStarted` /
+  `HoldEnded` when a stall lasts. It never ends a match itself;
+  `GameManager` calls `EndMatch`.
 - `NetworkManager` — transport abstraction (send/receive raw packets).
 - `InputSerializer` — wire format for tick inputs, heartbeats and the
   versioned handshake. `InputSerializer.ProtocolVersion` aliases
@@ -641,6 +655,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
   Equipping calls `IInventoryService` and shows what the server returns.
   The chip rules are the UnityEngine-free `EraChips`.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+  It also carries the disconnect-hold overlay, the end card's ranked result
+  block, and the ranked surrender row in `MatchSettingsPanel`.
 - `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
   layer is brought to the front so a closing emote shows over the end card, and
   its button sits on the resource sheet, covered by an open node sheet.
@@ -916,10 +932,24 @@ and must therefore arrive at identical results every tick.
   hash against its most recent stored local hash and fires `OnDesync` on
   mismatch. The packet does not name the checkpoint tick; lockstep keeps
   the two in step (see `docs/simulation-rules.md`, *Desync detection*).
-- **Disconnect detection** — both `DraftManager` (during the draft) and
-  `LockstepRunner` (during the match) track time since the last received
-  packet and fire a disconnect callback if it exceeds a timeout,
-  independent of heartbeat packets sent to keep the connection alive.
+- **Disconnects hold, they do not end the match** (8.2c). `LockstepRunner`
+  starts a hold when no tick has advanced for 2 s while unpaused. It
+  measures ticks rather than packets because with one-way loss a side keeps
+  receiving heartbeats while it waits on an input that never comes. During
+  a hold it keeps receiving, resending (every 250 ms) and sending
+  heartbeats, and resumes with a fresh clock when the missing input
+  arrives. `GameManager` runs a `DisconnectHold` (Backend/Shared) on those
+  events and shows it in the HUD's hold overlay. The stages are: 0-10 s
+  wait; 10-60 s the player may claim the win (ranked) or leave (private);
+  at 60 s the hold resolves itself. In a ranked match every decision is
+  the server's (see *Holds and presence* below); the local clock only
+  drives the countdown. A ranked hold never ends the match without a server
+  answer. After 90 s with the server unreachable, it offers "Leave match"
+  instead. A phone returning from the background asks for the match's
+  result once, in case it was decided while away. A resolved hold stops
+  the runner and words the end card for its cause. The uGUI HUD has no overlay and keeps the old
+  immediate end. The draft still has its own 2 s disconnect end in
+  `DraftManager`.
 
 ## Backend, match logs and the referee
 
@@ -943,6 +973,8 @@ Assets/Scripts/Backend/          client services, NodeWar.Backend
                                  player records, catalog/equip rules, protocol version and service contracts
   Shared/RankedQueuePresenter     UnityEngine-free ranked attempt controller and IRankedQueueView
   Shared/RankedRendezvous         UnityEngine-free join-code exchange around IRankedConnection
+  Shared/DisconnectHold           UnityEngine-free three-stage hold: presence, claim, resolution
+  Shared/RankedResultTracker      UnityEngine-free end-card follower of the server's result
   Catalog/                       CatalogDefinition asset + editor Generate / Export
   Editor/BalanceExport           writes the shared balance for the server, named by content hash
   LocalMatchLogStore             finished logs on disk, newest 20
@@ -962,10 +994,10 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   `StateChanged` when accepted state arrives.
 - **Cloud Code entry points** in `NodeWarCloud` are `GetPlayerState`,
   `Equip`, `VerifyMatch`, `ReportMatch`, `GetMatchHistory`, `Rendezvous`,
-  `ConfirmConnected`, `LeaveMatch`, `Matchmaker_Allocate` and
-  `Matchmaker_Poll`. The last two are allocator callbacks and refuse calls
-  carrying a player identity; the three ranked-match functions refuse
-  calls without one.
+  `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`,
+  `ResolveHold`, `Matchmaker_Allocate` and `Matchmaker_Poll`. The last two
+  are allocator callbacks and refuse calls carrying a player identity; the
+  six ranked-match functions refuse calls without one.
 - **Player data** has four protected Cloud Save state records (`rating`,
   `rank`, `inventory`, `history`) plus an `activeMatch` claim: the player
   reads them, only Cloud Code writes.
@@ -1010,6 +1042,28 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
 - **Leaving a match.** `MatchRendezvous.Leave` voids a match that never
   started (neither both players' `ConfirmConnected` nor an accepted report), an expired one, or a pending one
   past its 10-minute timeout, releasing both claims. It settles a forfeit or an agreement already committed to the record. A played match needs an explicit forfeit; a caller who has already reported waits.
+  An in-match **surrender** (ranked only, behind a confirm in the settings
+  card) is that same forfeit, sent mid-match; the match ends on this side
+  once the server has it, and the opponent's hold learns it from the server.
+- **Holds and presence** (`MatchHold`). During a hold each client calls
+  `Presence` about once a second. It writes only the caller's own
+  `presence-0`/`presence-1` key in the match's custom item, with no lock,
+  and never the `record` key, so the two players' writes never conflict
+  with each other or with settlement. `ResolveHold` needs the caller's
+  server-measured hold to be at least 10 s. If the opponent has not been
+  seen for more than 10 s, it commits `forfeitedBy = abandonedBy =
+  opponent` under the record lock before settling. If both players are
+  present at 60 s, it voids the match. Every answer carries the terminal
+  result once there is one. That is how a returning player learns they
+  lost, and how an opponent learns of a surrender. `GetMatchResult` is
+  read-only; its `cause` is Played, Forfeit or Abandoned.
+- **The result on the end card** (7.4). The first report to arrive leaves
+  a match Pending, so the uploader rarely learns the result from
+  `ReportMatch`. `RankedResultTracker` asks `GetMatchResult` every 2 s for
+  up to 40 s after a ranked match ends, and the end card's rank block shows
+  the RR change and any promotion, a void, a dispute, "still waiting" or
+  "offline". A settled answer is remembered through `BackendServices`, so
+  the lobby strip is current on return.
 - **Ranked matchmaking.** The `ranked` Matchmaker queue uses protected
   Cloud Save rating and arena data, with a widening rating window and an
   arena cap. Ticket build identities must match; the allocator also
