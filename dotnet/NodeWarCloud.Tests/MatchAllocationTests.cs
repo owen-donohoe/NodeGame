@@ -338,6 +338,40 @@ namespace NodeWar.Cloud.Tests
                     Is.EqualTo(record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds));
         }
 
+        [TestCase("p0")]
+        [TestCase("p1")]
+        public async Task AllocateModuleRefusesEitherBlockedPlayer(string id)
+        {
+            states[id].Discipline = new DisciplineRecord { BlockedUntilUnixSeconds = Now + 1 };
+            var result = await module.Allocate(null, Request(SdkPlayers()));
+            Assert.That(result.Status, Is.EqualTo(AllocateStatus.Error));
+            Assert.That(result.Message, Does.Contain("temporarily blocked"));
+            Assert.That(matches.Writes, Is.Zero);
+            foreach (var state in states.Values) Assert.That(state.ActiveMatch?.matchId, Is.Null);
+        }
+
+        [TestCase(-1)]
+        [TestCase(0)]
+        public async Task AllocateAcceptsOnceBlockHasPassed(long delta)
+        {
+            states["p0"].Discipline = new DisciplineRecord { Level = 7, BlockedUntilUnixSeconds = Now + delta };
+            var result = await module.Allocate(null, Request(SdkPlayers()));
+            Assert.That(result.Status, Is.EqualTo(AllocateStatus.Created));
+            Assert.That(matches.Writes, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task BlockArrivingDuringClaimAcquisitionRefusesAndReleasesClaims()
+        {
+            claims["p0"].BeforeClaimWrite = () =>
+            {
+                states["p0"].Discipline = new DisciplineRecord { BlockedUntilUnixSeconds = Now + 120 };
+                return Task.CompletedTask;
+            };
+            await AssertRefused(await allocation.Allocate("m", Roster(), Now), "temporarily blocked");
+            foreach (var state in states.Values) Assert.That(state.ActiveMatch?.matchId, Is.Null);
+        }
+
         private Task<PlayerState> ReadPlayer(string id)
         {
             reads.Add(id);

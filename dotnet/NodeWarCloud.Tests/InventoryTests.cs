@@ -59,6 +59,48 @@ namespace NodeWar.Cloud.Tests
             }
         }
 
+        [Test]
+        public async Task ServerGetCreatesMissingDisciplineWithoutResettingOtherRecords()
+        {
+            var store = new RecordingStore { DetachedReads = true };
+            await Server(store).GetAsync();
+            var stored = await store.ReadAsync();
+            stored.Rank.RR = 42;
+            // Simulate a legacy account by removing discipline from a detached read.
+            var legacy = new MissingDisciplineStore(store);
+            var result = await Server(legacy).GetAsync();
+            Assert.That(result.Discipline, Is.Not.Null);
+            Assert.That(result.Discipline.Level, Is.Zero);
+            Assert.That(result.Rank.RR, Is.EqualTo(42));
+            Assert.That(legacy.Written.Discipline, Is.Not.Null);
+            Assert.That(legacy.Written.Rating, Is.Null);
+            Assert.That(legacy.Written.Rank, Is.Null);
+            Assert.That(legacy.Written.Inventory, Is.Null);
+            Assert.That(legacy.Written.History, Is.Null);
+        }
+
+        private sealed class MissingDisciplineStore : ILockedPlayerRecordStore
+        {
+            private readonly RecordingStore inner;
+            public PlayerState Written;
+            public MissingDisciplineStore(RecordingStore inner) { this.inner = inner; }
+            public Task<PlayerState> ReadAsync() => inner.ReadAsync();
+            public Task WriteAsync(PlayerState records) => inner.WriteAsync(records);
+            public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
+            {
+                var read = await inner.ReadInventoryLockedAsync();
+                read.State.Discipline = null;
+                return read;
+            }
+            public Task WriteInventoryLockedAsync(InventoryRecord inventory, string token) =>
+                inner.WriteInventoryLockedAsync(inventory, token);
+            public Task WriteDefaultsLockedAsync(PlayerState records, string token)
+            {
+                Written = records;
+                return inner.WriteDefaultsLockedAsync(records, token);
+            }
+        }
+
         private static EquippedRecord Variant(string baseId, string id) => new EquippedRecord
         { Variants = new Dictionary<string, string> { { baseId, id } } };
 

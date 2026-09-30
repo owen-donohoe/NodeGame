@@ -97,6 +97,39 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
+        public async Task DisciplineDefaultsPersistAndStayOutsideSettlementKeys()
+        {
+            var store = new InMemoryPlayerRecordStore();
+            var state = await PlayerStateLogic.GetOrCreateAsync(store);
+            Assert.That(state.Discipline.Level, Is.Zero);
+            Assert.That(state.Discipline.NonReports, Is.Empty);
+            Assert.That(state.Discipline.StruckMatchIds, Is.Empty);
+            Assert.That((await store.ReadAsync()).Discipline, Is.SameAs(state.Discipline));
+            Assert.That(PlayerStateKeys.Discipline, Is.EqualTo("discipline"));
+            Assert.That(PlayerStateKeys.All, Does.Not.Contain(PlayerStateKeys.Discipline));
+        }
+
+        [Test]
+        public async Task ExistingDisciplineSurvivesDefaultsAndJsonRoundTrip()
+        {
+            var store = new InMemoryPlayerRecordStore();
+            await store.WriteAsync(new PlayerState { Discipline = new DisciplineRecord
+            {
+                Level = 4, LastStrikeUnixSeconds = 100, LastDecayUnixSeconds = 90,
+                BlockedUntilUnixSeconds = 220, NonReports = new List<long> { 80 },
+                StruckMatchIds = new List<string> { "m" }
+            } });
+            var state = await PlayerStateLogic.GetOrCreateAsync(store);
+            var back = JsonConvert.DeserializeObject<PlayerState>(JsonConvert.SerializeObject(state)).Discipline;
+            Assert.That(back.Level, Is.EqualTo(4));
+            Assert.That(back.LastStrikeUnixSeconds, Is.EqualTo(100));
+            Assert.That(back.LastDecayUnixSeconds, Is.EqualTo(90));
+            Assert.That(back.BlockedUntilUnixSeconds, Is.EqualTo(220));
+            Assert.That(back.NonReports, Is.EqualTo(new long[] { 80 }));
+            Assert.That(back.StruckMatchIds, Is.EqualTo(new[] { "m" }));
+        }
+
+        [Test]
         public void Keys_AreStable()
         {
             Assert.That(PlayerStateKeys.All, Is.EqualTo(new[] { "rating", "rank", "inventory", "history" }));
