@@ -30,6 +30,10 @@ namespace NodeWar.Network
         // ticks is 2 s: a dropped text message or a tunnel, not a crash.
         private const int SPECULATION_WINDOW = 20;
 
+        // How far behind our confirmed tick the peer can be: its speculation
+        // window plus the input delay it generates ahead with.
+        private const int PEER_LAG_TICKS = SPECULATION_WINDOW + INPUT_DELAY + 2;
+
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
 
@@ -213,6 +217,9 @@ namespace NodeWar.Network
                 // turning a peer leaving that card into a match disconnect.
                 ProcessIncomingPackets();
                 SendHeartbeatIfNeeded();
+                // Keep offering our last inputs: if the decisive one was lost on
+                // the way, the peer is stuck short of the game over without it.
+                ResendIfNeeded();
                 return;
             }
 
@@ -379,7 +386,10 @@ namespace NodeWar.Network
             speculating = false;
             RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
 
-            while (simulationTick < until)
+            // Stop at a confirmed game over, exactly where a peer that played
+            // these ticks live stopped. Ticks past it would change the state
+            // and the log on this side only.
+            while (simulationTick < until && !simState.gameOver)
             {
                 ExecuteTick(simulationTick, TickMode.Replay);
                 simulationTick++;
@@ -603,10 +613,12 @@ namespace NodeWar.Network
         /// the newest. Resending only the last packet deadlocks on one loss:
         /// if our input for tick N is dropped after N+1 has gone out, the peer
         /// stalls on N while we stall on its N and keep resending N+1 - both
-        /// clocks stop, heartbeats keep the link "alive". The peer can need any
-        /// input from INPUT_DELAY ticks behind our simulation tick up to the
-        /// newest we generated (at most 2 * INPUT_DELAY packets). Duplicates are
-        /// ignored on receipt. No layout change.
+        /// clocks stop, heartbeats keep the link "alive". With speculation
+        /// (8.2e) the peer can be up to PEER_LAG_TICKS behind our confirmed
+        /// tick, so the reach runs from there up to the newest input we
+        /// generated. Called only while stalled, speculating, holding or on the
+        /// end card, never per live tick. Duplicates are ignored on receipt. No
+        /// layout change.
         /// </summary>
         private void ResendIfNeeded()
         {
@@ -615,12 +627,15 @@ namespace NodeWar.Network
             // is traffic for a link that is not answering.
             // Speculation has up to SPECULATION_WINDOW inputs outstanding, so it
             // takes the slower cadence too.
-            float interval = holding || speculating ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
+            float interval = holding || speculating || simState.gameOver ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
             if (Time.time - lastSendTime < interval) return;
 
-            // From the last confirmed tick: the peer may lack anything since.
+            // The peer can be up to PEER_LAG_TICKS behind our confirmed tick: it
+            // may be speculating past an input of ours it never received while
+            // we confirmed ticks on the inputs it kept sending. There is no ack
+            // on the wire, so cover the whole reach.
             int confirmedTick = speculating ? speculateFrom : simulationTick;
-            int first = Mathf.Max(0, confirmedTick - INPUT_DELAY);
+            int first = Mathf.Max(0, confirmedTick - PEER_LAG_TICKS);
             for (int tick = first; tick < nextInputTick; tick++)
             {
                 // Ticks below INPUT_DELAY are pre-seeded on both sides, never sent.
@@ -651,7 +666,9 @@ namespace NodeWar.Network
         /// </summary>
         private void CleanupOldInputs(int completedTick)
         {
-            int cutoff = completedTick - 10;
+            // Keep what a lagging peer may still need resent, and checkpoint
+            // hashes that may arrive late after a replay, with some margin.
+            int cutoff = completedTick - PEER_LAG_TICKS - 10;
             if (cutoff < 0) return;
 
             // Collect keys to remove (cannot modify during enumeration)

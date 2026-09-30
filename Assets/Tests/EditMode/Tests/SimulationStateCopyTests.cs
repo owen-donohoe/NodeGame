@@ -156,7 +156,10 @@ namespace NodeWar.Tests
             }
             foreach (FieldInfo field in Fields(typeof(SimulationState)))
             {
-                if (field.FieldType.IsArray && !IsIntArray(field.FieldType)) continue; // the three arrays above
+                // The three arrays filled above, by name. Any other array on the
+                // state is new, and must fail here rather than slip past unfilled.
+                if (field.Name == nameof(SimulationState.nodes) || field.Name == nameof(SimulationState.villagers) ||
+                    field.Name == nameof(SimulationState.players)) continue;
                 field.SetValue(state, ValueFor(field));
             }
             return state;
