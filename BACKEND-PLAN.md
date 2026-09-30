@@ -385,6 +385,13 @@ One PR, stacked on #74, in parts that each build and test on their own. Server p
 - **Surrender (D18):** a footer row in `MatchSettingsPanel`, ranked only, behind a confirm sheet (its doc explains why surrender was kept out: it is no longer a `GameCommand`, but a mis-tap still costs a match, hence the confirm). Calls `LeaveAsync(forfeit: true)`; the opponent learns it through its hold's presence answer, about 2-3 s later ("Opponent surrendered").
 - **Ending:** hold resolved or surrendered → `FinishRecording` with the matching reason, `EndMatch()`, the end card worded for the cause, then Part C's tracker.
 
+**Part E: 8.2d strikes and D19 non-reports.** Server half (Codex) first, then the client half (lead).
+- **Record:** a fifth protected key `discipline` → `DisciplineRecord { Level, LastStrikeUnixSeconds, LastDecayUnixSeconds, BlockedUntilUnixSeconds, NonReports (Unix seconds, last 7 days), StruckMatchIds (last 20) }`, exposed as `PlayerState.Discipline`. Written on its own with its own lock, never inside the four-record settlement batch, so a strike can never block or undo a settlement.
+- **Rules, pure (`NodeWar.Progression/DisconnectPenalty`):** decay first: one level per full 16 h since the later of the last strike and the last decay. Then a strike adds a level, and the block is by the new level: 1-2 none, 3-4 2 min, 5 1 h, 6 1 day, 7+ 2 days. Non-reports: prune to 7 days, add one; the second or later within 7 days is a strike.
+- **Where strikes happen:** a hold settled against `abandonedBy` strikes that player. A Pending match voided by its timeout with exactly one accepted report adds a non-report for the silent slot. One helper applies both after the terminal record write, from every path that can make it (`MatchHold`, `MatchReporting`, `MatchRendezvous.Leave`), idempotent per match through `StruckMatchIds`. A surrender, a voided hold and a rendezvous failure never strike.
+- **Enforcement:** `Allocate` refuses a player whose `BlockedUntilUnixSeconds > now` (both tickets fail; D9 re-queues the innocent one). The client shows the countdown from the preflight and does not queue.
+- **Interpretation to confirm with the user:** D13 says decay counts "16 h since the player's last queue". Read literally, a player who queues often would never decay, which inverts the intent, so this build counts from the last strike. One constant changes it.
+
 **Risks, checked while planning:**
 - Draft-phase disconnects keep `DraftManager`'s own 2 s end, and a ranked record confirmed before the draft is then held until the preflight forfeit. Out of scope; noted as a follow-up.
 - A backgrounded phone sends nothing. Under 10 s it resumes on both sides; past that the opponent may claim (D15, deliberate).
