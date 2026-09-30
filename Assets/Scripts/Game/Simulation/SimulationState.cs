@@ -178,5 +178,53 @@ namespace NodeWar.Simulation
             winnerID = -1;
             defaultEdgeWeight = BoardConfigData.DefaultEdgeWeight;
         }
+
+        /// <summary>
+        /// Makes this state an independent copy of <paramref name="source"/>, in
+        /// place: views, selection and the HUD hold a reference to this object,
+        /// so a rollback (8.2e) must change what it contains, not which object
+        /// it is. Every mutable array is copied fresh so the two never share a
+        /// write. Node edges are shared: they are fixed once the board is built
+        /// and no tick writes them.
+        ///
+        /// Like SimulationStateHasher, this must name every field. A field added
+        /// to any of these types and not copied here is caught by
+        /// SimulationStateCopyTests, which sets every field by reflection.
+        /// </summary>
+        public void CopyFrom(SimulationState source)
+        {
+            if (source == null) throw new System.ArgumentNullException(nameof(source));
+            if (ReferenceEquals(source, this)) return;
+
+            nodes = source.nodes == null ? null : (NodeData[])source.nodes.Clone();
+
+            if (source.villagers == null) villagers = null;
+            else
+            {
+                villagers = (VillagerData[])source.villagers.Clone();
+                for (int i = 0; i < villagers.Length; i++)
+                    villagers[i].movePath = CopyInts(villagers[i].movePath);
+            }
+
+            if (source.players == null) players = null;
+            else
+            {
+                players = (PlayerData[])source.players.Clone();
+                for (int i = 0; i < players.Length; i++)
+                {
+                    players[i].draftedSuits = CopyInts(players[i].draftedSuits);
+                    players[i].draftedNodes = CopyInts(players[i].draftedNodes);
+                    players[i].suitEras = CopyInts(players[i].suitEras);
+                    players[i].districtEras = CopyInts(players[i].districtEras);
+                }
+            }
+
+            tickCount = source.tickCount;
+            gameOver = source.gameOver;
+            winnerID = source.winnerID;
+            defaultEdgeWeight = source.defaultEdgeWeight;
+        }
+
+        private static int[] CopyInts(int[] values) => values == null ? null : (int[])values.Clone();
     }
 }
