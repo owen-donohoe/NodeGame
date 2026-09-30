@@ -14,6 +14,7 @@ namespace NodeWar.Cloud.Tests
     {
         private const string MatchId = "discipline-test";
         private InMemoryMatchRecordStore matches;
+        private MarkStore disciplineMatches;
         private PlayerStore[] players;
         private MatchDiscipline discipline;
         private MatchHold hold;
@@ -34,8 +35,9 @@ namespace NodeWar.Cloud.Tests
             var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1, 1, 1, 1);
             record.connectedUnixSeconds = 50;
             matches = new InMemoryMatchRecordStore(record);
+            disciplineMatches = new MarkStore(matches);
             logger = new WarningLogger();
-            discipline = new MatchDiscipline(id => players[id == "p0" ? 0 : 1], logger);
+            discipline = new MatchDiscipline(disciplineMatches, id => players[id == "p0" ? 0 : 1], logger);
             var rules = new InventoryRules(ServerCatalog.Items);
             Func<string, ISettlementPlayerStore> stores = id => players[id == "p0" ? 0 : 1];
             var settler = new MatchSettler(stores, rules);
@@ -145,6 +147,7 @@ namespace NodeWar.Cloud.Tests
             record.state = MatchRecordState.Void;
             record.pendingTimeoutVoid = true;
             record.reports.Add(new MatchReport { playerIndex = 1, accepted = true });
+            await Save(record);
             await discipline.Apply(record, 100);
             await discipline.Apply(record, 101);
             Assert.That(players[0].State.Discipline.Level, Is.Zero);
@@ -168,6 +171,7 @@ namespace NodeWar.Cloud.Tests
             record.abandonedBy = abandoned;
             record.pendingTimeoutVoid = timeout;
             for (int i = 0; i < reports; i++) record.reports.Add(new MatchReport { playerIndex = i, accepted = true });
+            await Save(record);
             await discipline.Apply(record, 100);
             Assert.That(players.Select(p => p.DisciplineWrites), Is.EqualTo(new[] { 0, 0 }));
         }
@@ -231,6 +235,7 @@ namespace NodeWar.Cloud.Tests
             var record = await Abandoned();
             var other = Clone(record);
             other.matchId = "other";
+            await Save(other);
             players[1].BeforeDisciplineWrite = () => discipline.Apply(other, 100);
             await discipline.Apply(record, 101);
             Assert.That(players[1].State.Discipline.Level, Is.EqualTo(2));
@@ -253,17 +258,20 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task StorageFailureCannotPreventSettlementOrClaimRelease()
+        public async Task StorageFailurePreservesSettlementButDefersClaimRelease()
         {
             players[1].FailRead = true;
             await hold.Presence(MatchId, "p0", true, 100);
             Assert.That((await hold.ResolveHold(MatchId, "p0", 110)).outcome, Is.EqualTo(HoldOutcome.Won));
             Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Settled));
             Assert.That(logger.Warnings, Is.EqualTo(1));
-            await AssertReleased();
+            Assert.That((await Record()).disciplineApplied, Is.False);
+            Assert.That(players.Select(p => p.State.ActiveMatch.matchId), Is.EqualTo(new[] { MatchId, MatchId }));
             players[1].FailRead = false;
             await rendezvous.Leave(MatchId, "p1", false, 111);
             Assert.That(players[1].State.Discipline.Level, Is.EqualTo(1));
+            Assert.That((await Record()).disciplineApplied, Is.True);
+            await AssertReleased();
         }
 
         [Test]
@@ -278,6 +286,7 @@ namespace NodeWar.Cloud.Tests
             for (int i = 0; i < 21; i++)
             {
                 record.matchId = "match-" + i;
+                await Save(record);
                 await discipline.Apply(record, 101 + i);
             }
             Assert.That(players[1].State.Discipline.NonReports, Is.Empty);
@@ -286,9 +295,117 @@ namespace NodeWar.Cloud.Tests
             Assert.That(players[1].State.Discipline.StruckMatchIds.Last(), Is.EqualTo("match-1"));
         }
 
+        [TestCase("presence")]
+        [TestCase("hold")]
+        [TestCase("leave")]
+        [TestCase("report")]
+        public async Task EveryTerminalCallRetriesFailedDisciplineBeforeReleasingClaims(string path)
+        {
+            await Abandoned();
+            players[1].WriteFailures = 1;
+            players[1].BeforeDisciplineWrite = () =>
+            {
+                Assert.That(players.Select(p => p.State.ActiveMatch.matchId), Is.EqualTo(new[] { MatchId, MatchId }));
+                return Task.CompletedTask;
+            };
+            foreach (var player in players) player.BeforeClaimWrite = async () =>
+            {
+                Assert.That((await Record()).disciplineApplied, Is.True);
+                Assert.That(players[1].State.Discipline.Level, Is.EqualTo(1));
+            };
+            await Finish(path, 100);
+            Assert.That((await Record()).disciplineApplied, Is.False);
+            Assert.That(players[1].DisciplineWrites, Is.Zero);
+            Assert.That(players.Select(p => p.State.ActiveMatch.matchId), Is.EqualTo(new[] { MatchId, MatchId }));
+            await Finish(path, 101);
+            Assert.That((await Record()).disciplineApplied, Is.True);
+            Assert.That(players[1].DisciplineWrites, Is.EqualTo(1));
+            await AssertReleased();
+            // The durable match flag is authoritative even without the secondary key.
+            players[1].State.Discipline.StruckMatchIds.Clear();
+            await Finish(path, 102);
+            Assert.That(players[1].DisciplineWrites, Is.EqualTo(1));
+            Assert.That(players[1].State.Discipline.Level, Is.EqualTo(1));
+        }
+
+        [TestCase(MatchRecordState.Settled)]
+        [TestCase(MatchRecordState.Void)]
+        [TestCase(MatchRecordState.Disputed)]
+        public async Task TerminalMatchWithNoDisciplineDueIsMarkedBeforeRelease(MatchRecordState state)
+        {
+            await Mutate(r => r.state = state);
+            foreach (var player in players) player.BeforeClaimWrite = async () =>
+                Assert.That((await Record()).disciplineApplied, Is.True);
+            await hold.Presence(MatchId, "p0", false, 100);
+            Assert.That((await Record()).disciplineApplied, Is.True);
+            Assert.That(players.Select(p => p.DisciplineWrites), Is.EqualTo(new[] { 0, 0 }));
+            await AssertReleased();
+        }
+
+        [TestCase("presence")]
+        [TestCase("report")]
+        public async Task FailedMatchFlagWriteRetainsClaimsAndSecondaryKeyPreventsAnotherStrike(string path)
+        {
+            await Abandoned();
+            disciplineMatches.Failures = 1;
+            await Finish(path, 100);
+            Assert.That((await Record()).disciplineApplied, Is.False);
+            Assert.That(players[1].DisciplineWrites, Is.EqualTo(1));
+            Assert.That(players.Select(p => p.State.ActiveMatch.matchId), Is.EqualTo(new[] { MatchId, MatchId }));
+            await Finish(path, 101);
+            Assert.That((await Record()).disciplineApplied, Is.True);
+            Assert.That(players[1].DisciplineWrites, Is.EqualTo(1));
+            await AssertReleased();
+        }
+
+        [Test]
+        public async Task MatchFlagConflictReReadsAndPreservesConcurrentRecordChanges()
+        {
+            var record = await Abandoned();
+            disciplineMatches.BeforeWrite = () => Mutate(r => r.joinCode = "concurrent");
+            Assert.That(await discipline.Apply(record, 100), Is.True);
+            Assert.That((await Record()).disciplineApplied, Is.True);
+            Assert.That((await Record()).joinCode, Is.EqualTo("concurrent"));
+            Assert.That(disciplineMatches.Attempts, Is.EqualTo(2));
+            Assert.That(players[1].DisciplineWrites, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task OldMatchCannotStrikeAgainAfterSecondaryIdIsEvicted()
+        {
+            var original = await Abandoned();
+            Assert.That(await discipline.Apply(original, 100), Is.True);
+            for (int i = 0; i < 21; i++)
+            {
+                var next = Clone(original);
+                next.matchId = "later-" + i;
+                await Save(next);
+                Assert.That(await discipline.Apply(next, 101 + i), Is.True);
+            }
+            Assert.That(players[1].State.Discipline.StruckMatchIds, Does.Not.Contain(MatchId));
+            int writes = players[1].DisciplineWrites;
+            int level = players[1].State.Discipline.Level;
+            Assert.That(await discipline.Apply(original, 200), Is.True);
+            Assert.That(players[1].DisciplineWrites, Is.EqualTo(writes));
+            Assert.That(players[1].State.Discipline.Level, Is.EqualTo(level));
+        }
+
+        [Test]
+        public async Task GetResultDoesNotApplyDisciplineOrReleaseClaims()
+        {
+            await Abandoned();
+            string token = (await matches.ReadAsync(MatchId)).WriteLock;
+            await hold.GetResult(MatchId, "p1");
+            Assert.That((await Record()).disciplineApplied, Is.False);
+            Assert.That((await matches.ReadAsync(MatchId)).WriteLock, Is.EqualTo(token));
+            Assert.That(players[1].DisciplineWrites, Is.Zero);
+            Assert.That(players.Select(p => p.State.ActiveMatch.matchId), Is.EqualTo(new[] { MatchId, MatchId }));
+        }
+
         private async Task Finish(string path, long now)
         {
-            if (path == "hold") await hold.ResolveHold(MatchId, "p0", now);
+            if (path == "presence") await hold.Presence(MatchId, "p0", false, now);
+            else if (path == "hold") await hold.ResolveHold(MatchId, "p0", now);
             else if (path == "leave") await rendezvous.Leave(MatchId, "p0", false, now);
             else await reporting.Report(MatchId, "p0", null, now);
         }
@@ -298,7 +415,14 @@ namespace NodeWar.Cloud.Tests
             var record = await Record();
             record.state = MatchRecordState.Settled;
             record.forfeitedBy = record.abandonedBy = 1;
+            await Save(record);
             return record;
+        }
+
+        private async Task Save(MatchRecord record)
+        {
+            var read = await matches.ReadAsync(record.matchId);
+            await matches.WriteAsync(record, read.WriteLock);
         }
 
         private async Task Mutate(Action<MatchRecord> change)
@@ -317,6 +441,28 @@ namespace NodeWar.Cloud.Tests
 
         private static T Clone<T>(T value) => JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(value));
 
+        private sealed class MarkStore : IMatchRecordStore
+        {
+            private readonly InMemoryMatchRecordStore inner;
+            public Func<Task> BeforeWrite;
+            public int Failures;
+            public int Attempts;
+            public MarkStore(InMemoryMatchRecordStore inner) { this.inner = inner; }
+            public Task<LockedMatchRecord> ReadAsync(string id) => inner.ReadAsync(id);
+            public async Task WriteAsync(MatchRecord record, string token)
+            {
+                Attempts++;
+                var hook = BeforeWrite;
+                BeforeWrite = null;
+                if (hook != null) await hook();
+                if (Failures > 0) { Failures--; throw new InvalidOperationException("Record storage unavailable."); }
+                await inner.WriteAsync(record, token);
+            }
+            public Task SaveLog(string id, int slot, string log) => inner.SaveLog(id, slot, log);
+            public Task<MatchPresence[]> ReadPresenceAsync(string id) => inner.ReadPresenceAsync(id);
+            public Task WritePresenceAsync(string id, int slot, MatchPresence presence) => inner.WritePresenceAsync(id, slot, presence);
+        }
+
         private sealed class PlayerStore : ISettlementPlayerStore, IDisciplinePlayerStore
         {
             public PlayerState State;
@@ -325,21 +471,23 @@ namespace NodeWar.Cloud.Tests
             public int Settlements;
             public int DisciplineWrites;
             public int Attempts;
+            public int WriteFailures;
             public bool FailConflict;
             public bool FailRead;
             public Func<Task> BeforeDisciplineWrite;
             public Action BeforeSettlementWrite;
+            public Func<Task> BeforeClaimWrite;
             public PlayerStore(PlayerState state) { State = Clone(state); }
 
             public Task<LockedPlayerState> ReadForSettlementAsync() => Task.FromResult(new LockedPlayerState(Clone(State),
                 PlayerStateKeys.All.ToDictionary(k => k, _ => stateVersion.ToString())));
 
-            public Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read)
+            public async Task WriteActiveMatchAsync(ActiveMatchRecord claim, LockedPlayerState read)
             {
+                if (BeforeClaimWrite != null) await BeforeClaimWrite();
                 if (read.WriteLocks[PlayerStateKeys.Rating] != stateVersion.ToString()) throw new RecordConflictException("Claim changed.");
                 State.ActiveMatch = Clone(claim);
                 stateVersion++;
-                return Task.CompletedTask;
             }
 
             public Task WriteForSettlementAsync(PlayerState state, IReadOnlyDictionary<string, string> tokens)
@@ -368,6 +516,7 @@ namespace NodeWar.Cloud.Tests
                 var hook = BeforeDisciplineWrite;
                 BeforeDisciplineWrite = null;
                 if (hook != null) await hook();
+                if (WriteFailures > 0) { WriteFailures--; throw new InvalidOperationException("Discipline storage unavailable."); }
                 if (FailConflict || read.WriteLocks[PlayerStateKeys.Discipline] != disciplineVersion.ToString())
                     throw new RecordConflictException("Discipline changed.");
                 State.Discipline = Clone(value);

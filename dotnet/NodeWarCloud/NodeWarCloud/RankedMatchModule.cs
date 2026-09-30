@@ -78,7 +78,7 @@ namespace NodeWar.Cloud
             var settler = new MatchSettler(id => new CloudSavePlayerRecordStore(api, context, id), Inventory);
             return new MatchHold(new CloudSaveMatchRecordStore(api, context),
                 id => new CloudSavePlayerRecordStore(api, context, id), settler,
-                new MatchDiscipline(id => new CloudSavePlayerRecordStore(api, context, id), logger));
+                new MatchDiscipline(new CloudSaveMatchRecordStore(api, context), id => new CloudSavePlayerRecordStore(api, context, id), logger));
         }
 
         private MatchRendezvous Build(IExecutionContext context)
@@ -86,7 +86,7 @@ namespace NodeWar.Cloud
             var settler = new MatchSettler(id => new CloudSavePlayerRecordStore(api, context, id), Inventory);
             return new MatchRendezvous(new CloudSaveMatchRecordStore(api, context),
                 id => new CloudSavePlayerRecordStore(api, context, id), settler,
-                new MatchDiscipline(id => new CloudSavePlayerRecordStore(api, context, id), logger));
+                new MatchDiscipline(new CloudSaveMatchRecordStore(api, context), id => new CloudSavePlayerRecordStore(api, context, id), logger));
         }
     }
 }

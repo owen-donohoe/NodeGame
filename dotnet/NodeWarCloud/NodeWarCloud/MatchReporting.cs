@@ -53,9 +53,9 @@ namespace NodeWar.Cloud
                 if (record.state == MatchRecordState.Settled || record.state == MatchRecordState.Void ||
                     record.state == MatchRecordState.Disputed)
                 {
-                    if (discipline != null) await discipline.Apply(record, now);
-                    foreach (string id in record.playerIds)
-                        await ActiveMatchClaims.Release(players(id), matchId);
+                    if (discipline == null || await discipline.Apply(record, now))
+                        foreach (string id in record.playerIds)
+                            await ActiveMatchClaims.Release(players(id), matchId);
                 }
 
                 if (record.reports.Any(r => r.pendingLogBase64 != null))
@@ -145,11 +145,7 @@ namespace NodeWar.Cloud
                     }
                 }
 
-                try
-                {
-                    await matches.WriteAsync(record, read.WriteLock);
-                    if (discipline != null) await discipline.Apply(record, now);
-                }
+                try { await matches.WriteAsync(record, read.WriteLock); }
                 catch (RecordConflictException)
                 {
                     if (++conflicts >= RetryLimit) throw;

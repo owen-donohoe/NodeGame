@@ -24,7 +24,7 @@ namespace NodeWar.Cloud
             var reporting = new MatchReporting(new CloudSaveMatchRecordStore(api, context),
                 playerId => new CloudSavePlayerRecordStore(api, context, playerId),
                 new Referee(BalanceCatalog.Embedded), Inventory,
-                new MatchDiscipline(id => new CloudSavePlayerRecordStore(api, context, id), logger));
+                new MatchDiscipline(new CloudSaveMatchRecordStore(api, context), id => new CloudSavePlayerRecordStore(api, context, id), logger));
             return reporting.Report(matchId, context.PlayerId, bytes, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         }
     }

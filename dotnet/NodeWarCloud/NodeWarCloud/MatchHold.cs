@@ -6,8 +6,8 @@ using NodeWar.Backend;
 namespace NodeWar.Cloud
 {
     /// <summary>
-    /// Server-measured presence and disconnect holds. Presence touches only
-    /// the caller's key; a winning claim commits its decision before settlement.
+    /// Server-measured presence and disconnect holds. Active presence touches only
+    /// the caller's key; terminal presence also retries pending discipline cleanup.
     /// Honest ranked clients heartbeat every four seconds throughout the match,
     /// and every second while holding, so a self-declared hold cannot prove absence.
     /// </summary>
@@ -54,7 +54,8 @@ namespace NodeWar.Cloud
             };
             if (Terminal(record))
             {
-                await ReleaseBoth(record);
+                if (discipline == null || await discipline.Apply(record, now))
+                    await ReleaseBoth(record);
                 result.result = await View(record, caller);
             }
             return result;
@@ -72,8 +73,8 @@ namespace NodeWar.Cloud
                 if (caller < 0) return new ResolveHoldResult { message = "Caller is not in this match." };
                 if (Terminal(record))
                 {
-                    if (discipline != null) await discipline.Apply(record, now);
-                    await ReleaseBoth(record);
+                    if (discipline == null || await discipline.Apply(record, now))
+                        await ReleaseBoth(record);
                     return new ResolveHoldResult { outcome = HoldOutcome.AlreadyResolved, result = await View(record, caller) };
                 }
                 if (record.connectedUnixSeconds <= 0 && record.forfeitedBy != 0 && record.forfeitedBy != 1 && !MatchSettler.Agreed(record))
@@ -141,8 +142,8 @@ namespace NodeWar.Cloud
                     if (++conflicts >= RetryLimit) throw;
                     continue;
                 }
-                if (discipline != null) await discipline.Apply(record, now);
-                await ReleaseBoth(record);
+                if (discipline == null || await discipline.Apply(record, now))
+                    await ReleaseBoth(record);
                 return new ResolveHoldResult
                 {
                     outcome = record.state == MatchRecordState.Void ? HoldOutcome.Voided :

@@ -128,8 +128,8 @@ namespace NodeWar.Cloud
                 if (record.state == MatchRecordState.Settled || record.state == MatchRecordState.Void ||
                     record.state == MatchRecordState.Disputed)
                 {
-                    if (discipline != null) await discipline.Apply(record, now);
-                    await ReleaseBoth(record);
+                    if (discipline == null || await discipline.Apply(record, now))
+                        await ReleaseBoth(record);
                     return Cleared();
                 }
 
@@ -203,8 +203,8 @@ namespace NodeWar.Cloud
                     continue;
                 }
 
-                if (discipline != null) await discipline.Apply(record, now);
-                await ReleaseBoth(record);
+                if (discipline == null || await discipline.Apply(record, now))
+                    await ReleaseBoth(record);
                 if (settledOk && record.state == MatchRecordState.Settled)
                     result.playerState = (await players(callerId).ReadForSettlementAsync()).State;
                 return result;
