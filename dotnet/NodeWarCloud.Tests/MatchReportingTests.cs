@@ -399,7 +399,7 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public async Task ExpiredClaimsVoidEvenAnAgreedRecord(bool agreed)
+        public async Task ExpiredClaimsVoidOnlyAnUndecidedRecord(bool agreed)
         {
             if (agreed)
             {
@@ -409,8 +409,8 @@ namespace NodeWar.Cloud.Tests
                 players[0].BeforeWrite = null;
             }
             Assert.That((await Report(1, now: 1 + ActiveMatchClaims.LifetimeSeconds)).state,
-                Is.EqualTo(MatchRecordState.Void));
-            AssertNoPlayerWrites();
+                Is.EqualTo(agreed ? MatchRecordState.Settled : MatchRecordState.Void));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(agreed ? new[] { 1, 1 } : new[] { 0, 0 }));
             Assert.That((await State(0)).ActiveMatch.matchId, Is.Null);
         }
 
@@ -426,7 +426,7 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task NewClaimDuringSettlementConflictFencesOldSnapshot()
+        public async Task NewClaimDuringSettlementConflictDoesNotReverseCommittedAgreement()
         {
             await Report(0);
             players[0].BeforeWrite = () =>
@@ -435,10 +435,10 @@ namespace NodeWar.Cloud.Tests
                 players[0].Mutate(s => s.ActiveMatch = new ActiveMatchRecord
                     { matchId = "new", expiresUnixSeconds = 20000 });
             };
-            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Void));
-            AssertNoPlayerWrites();
+            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
             Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo("new"));
-            Assert.That((await Record()).outcomes, Is.Null);
+            Assert.That((await Record()).outcomes[0].won, Is.True);
         }
 
         private Task<MatchReportingResult> Report(int player, byte[] bytes = null, long now = 100) =>

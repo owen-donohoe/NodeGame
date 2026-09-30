@@ -264,7 +264,7 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task SettlementClaimLossClearsOutcomesAndPreservesNewClaim()
+        public async Task CommittedHoldFinishesSettlementAndPreservesNewClaim()
         {
             await hold.Presence(MatchId, "p0", true, 100);
             players[0].BeforeWrite = () =>
@@ -274,12 +274,11 @@ namespace NodeWar.Cloud.Tests
                     { matchId = "other", expiresUnixSeconds = 99999 });
             };
             var result = await hold.ResolveHold(MatchId, "p0", 110);
-            Assert.That(result.outcome, Is.EqualTo(HoldOutcome.Voided));
-            Assert.That(result.result.playerState, Is.Null);
-            Assert.That((await Record()).outcomes, Is.Null);
+            Assert.That(result.outcome, Is.EqualTo(HoldOutcome.Won));
+            Assert.That(result.result.playerState, Is.Not.Null);
+            await AssertWinner(0);
             Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo("other"));
             Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
-            AssertNoPlayerWrites();
         }
 
         [TestCase(false)]

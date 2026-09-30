@@ -79,22 +79,22 @@ namespace NodeWar.Cloud
                             ? (await players(callerId).ReadForSettlementAsync()).State : null
                     };
                 }
-                else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
-                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
-                {
-                    record.state = MatchRecordState.Void;
-                }
                 else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
                 {
                     // Agreement or a forfeit, and its server timestamp, were
-                    // committed before either player write. Recovery is allowed
-                    // only while claims are live. A forfeit outranks the logs.
+                    // committed before either player write. Finish that decision
+                    // even after claims expire. A forfeit outranks the logs.
                     int winner = record.forfeitedBy == 0 || record.forfeitedBy == 1
                         ? 1 - record.forfeitedBy
                         : record.reports.First(r => r.accepted).winner;
                     record.state = await settler.Settle(record, winner, now)
                         ? MatchRecordState.Settled : MatchRecordState.Void;
                     if (record.state == MatchRecordState.Void) record.outcomes = null;
+                }
+                else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
+                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
+                {
+                    record.state = MatchRecordState.Void;
                 }
                 else if (record.state == MatchRecordState.Pending && now > record.pendingUnixSeconds &&
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)

@@ -62,6 +62,40 @@ namespace NodeWar.Cloud.Tests
             await AssertReleased();
         }
 
+        [TestCase("hold", false)]
+        [TestCase("hold", true)]
+        [TestCase("leave", false)]
+        [TestCase("leave", true)]
+        [TestCase("report", false)]
+        [TestCase("report", true)]
+        public async Task PartialSettlementFinishesCommittedWinnerAfterClaimsExpire(string path, bool forfeit)
+        {
+            await Mutate(r =>
+            {
+                r.settlementUnixSeconds = 100;
+                if (forfeit) r.forfeitedBy = 1;
+                else
+                {
+                    r.connectedUnixSeconds = 0;
+                    r.reports.Add(new MatchReport { playerIndex = 0, accepted = true, winner = 0 });
+                    r.reports.Add(new MatchReport { playerIndex = 1, accepted = true, winner = 0 });
+                }
+            });
+            players[1].BeforeSettlementWrite = () => throw new InvalidOperationException("Interrupted settlement.");
+            Assert.ThrowsAsync<InvalidOperationException>(() => Finish(path, 110));
+            Assert.That(players.Select(p => p.Settlements), Is.EqualTo(new[] { 1, 0 }));
+            Assert.That((await Record()).state, Is.Not.EqualTo(MatchRecordState.Settled));
+            players[1].BeforeSettlementWrite = null;
+            await Finish(path, 8000);
+            var record = await Record();
+            Assert.That(record.state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That(record.outcomes[0].won, Is.True);
+            Assert.That(record.outcomes[1].won, Is.False);
+            Assert.That(players.Select(p => p.Settlements), Is.EqualTo(new[] { 1, 1 }));
+            Assert.That(players[1].State.Rating.LastMatchUnixSeconds, Is.EqualTo(100));
+            await AssertReleased();
+        }
+
         [TestCase("hold")]
         [TestCase("leave")]
         [TestCase("report")]
@@ -294,6 +328,7 @@ namespace NodeWar.Cloud.Tests
             public bool FailConflict;
             public bool FailRead;
             public Func<Task> BeforeDisciplineWrite;
+            public Action BeforeSettlementWrite;
             public PlayerStore(PlayerState state) { State = Clone(state); }
 
             public Task<LockedPlayerState> ReadForSettlementAsync() => Task.FromResult(new LockedPlayerState(Clone(State),
@@ -309,6 +344,7 @@ namespace NodeWar.Cloud.Tests
 
             public Task WriteForSettlementAsync(PlayerState state, IReadOnlyDictionary<string, string> tokens)
             {
+                BeforeSettlementWrite?.Invoke();
                 if (PlayerStateKeys.All.Any(k => tokens[k] != stateVersion.ToString())) throw new RecordConflictException("Player changed.");
                 State.Rating = Clone(state.Rating);
                 State.Rank = Clone(state.Rank);

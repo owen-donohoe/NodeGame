@@ -49,10 +49,12 @@ namespace NodeWar.Cloud
         /// 1) as the winning player index. Writes <see cref="MatchRecord.outcomes"/>
         /// and both players' server records. Returns false (writing nothing to
         /// either player) when a claim no longer matches this match -- the
-        /// caller must void the record rather than settle it.
+        /// caller must void the record rather than settle it. A committed forfeit
+        /// or agreement must finish even if claims have since expired or changed.
         /// </summary>
         public async Task<bool> Settle(MatchRecord record, int winner, long now)
         {
+            bool committed = record.forfeitedBy == 0 || record.forfeitedBy == 1 || Agreed(record);
             var inputs = record.players.Select(p => new SettlementPlayer
             {
                 Rating = new Rating(p.Rating.R, p.Rating.Rd, p.Rating.Sigma),
@@ -95,9 +97,9 @@ namespace NodeWar.Cloud
                     // be settled twice for it.
                     var settledIds = state.Rating.SettledMatchIds ?? new List<string>();
                     if (settledIds.Contains(record.matchId)) break;
-                    // The rating lock also fences a new claim acquired since HoldsClaims.
-                    // Re-check after a settlement write conflict before using old snapshots.
-                    if (state.ActiveMatch?.matchId != record.matchId || state.ActiveMatch.expiresUnixSeconds <= now)
+                    // A committed winner cannot be reversed after one player's
+                    // write. Preserve current claims while completing the decision.
+                    if (!committed && (state.ActiveMatch?.matchId != record.matchId || state.ActiveMatch.expiresUnixSeconds <= now))
                         return false;
                     var settled = outcome.Players[p];
                     settledIds.Insert(0, record.matchId);

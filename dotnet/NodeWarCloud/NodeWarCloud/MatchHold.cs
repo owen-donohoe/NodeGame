@@ -76,22 +76,22 @@ namespace NodeWar.Cloud
                     await ReleaseBoth(record);
                     return new ResolveHoldResult { outcome = HoldOutcome.AlreadyResolved, result = await View(record, caller) };
                 }
-                if (record.connectedUnixSeconds <= 0)
+                if (record.connectedUnixSeconds <= 0 && record.forfeitedBy != 0 && record.forfeitedBy != 1 && !MatchSettler.Agreed(record))
                     return new ResolveHoldResult { message = "Match has not started." };
 
-                if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
-                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
+                if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
                 {
-                    record.state = MatchRecordState.Void;
-                }
-                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
-                {
-                    // A committed decision outranks another hold or the pending
-                    // timeout, including retries after a partial settlement.
+                    // A committed decision outranks expired claims and timeouts,
+                    // including retries after a partial settlement.
                     int winner = record.forfeitedBy == 0 || record.forfeitedBy == 1
                         ? 1 - record.forfeitedBy : record.reports.First(r => r.accepted).winner;
                     bool settled = await settler.Settle(record, winner, now);
                     record.state = settled ? MatchRecordState.Settled : MatchRecordState.Void;
+                }
+                else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
+                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
+                {
+                    record.state = MatchRecordState.Void;
                 }
                 else if (record.state == MatchRecordState.Pending &&
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
