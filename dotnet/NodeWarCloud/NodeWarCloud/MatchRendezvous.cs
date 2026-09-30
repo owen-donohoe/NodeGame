@@ -128,30 +128,30 @@ namespace NodeWar.Cloud
                 if (record.state == MatchRecordState.Settled || record.state == MatchRecordState.Void ||
                     record.state == MatchRecordState.Disputed)
                 {
-                    if (discipline != null) await discipline.Apply(record, now);
-                    await ReleaseBoth(record);
+                    if (discipline == null || await discipline.Apply(record, now))
+                        await ReleaseBoth(record);
                     return Cleared();
                 }
 
                 LeaveMatchResult result;
                 bool settledOk = true;
 
-                if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
-                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
-                {
-                    record.state = MatchRecordState.Void;
-                    result = Cleared();
-                }
-                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
+                if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
                 {
                     // A forfeit or agreement is already decided; finish it before
-                    // considering the pending timeout. A forfeit outranks the logs.
+                    // considering expired claims or timeouts. A forfeit outranks the logs.
                     int winner = record.forfeitedBy == 0 || record.forfeitedBy == 1
                         ? 1 - record.forfeitedBy
                         : record.reports.First(r => r.accepted).winner;
                     settledOk = await settler.Settle(record, winner, now);
                     record.state = settledOk ? MatchRecordState.Settled : MatchRecordState.Void;
                     if (!settledOk) record.outcomes = null;
+                    result = Cleared();
+                }
+                else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
+                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
+                {
+                    record.state = MatchRecordState.Void;
                     result = Cleared();
                 }
                 else if (record.state == MatchRecordState.Pending &&
@@ -203,8 +203,8 @@ namespace NodeWar.Cloud
                     continue;
                 }
 
-                if (discipline != null) await discipline.Apply(record, now);
-                await ReleaseBoth(record);
+                if (discipline == null || await discipline.Apply(record, now))
+                    await ReleaseBoth(record);
                 if (settledOk && record.state == MatchRecordState.Settled)
                     result.playerState = (await players(callerId).ReadForSettlementAsync()).State;
                 return result;

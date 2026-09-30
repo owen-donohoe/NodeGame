@@ -40,6 +40,9 @@ namespace NodeWar.Cloud
         // Set only by the pending timeout, so retries can distinguish D19
         // non-reports from other voids without guessing from the report count.
         public bool pendingTimeoutVoid;
+        // Durable completion guard, set under the record lock only after
+        // discipline succeeds (or none is due), before releasing claims.
+        public bool disciplineApplied;
     }
 
     // A settled player's result on this match. Never re-derived from current

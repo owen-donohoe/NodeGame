@@ -427,7 +427,7 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public async Task LeaveVoidsAgreementWhenLeaseOrClaimsAreLost(bool lostClaim)
+        public async Task LeaveFinishesAgreementWhenLeaseOrClaimsAreLost(bool lostClaim)
         {
             await CommitAgreement(0);
             if (lostClaim)
@@ -436,15 +436,15 @@ namespace NodeWar.Cloud.Tests
             var result = await rendezvous.Leave(MatchId, "p0", false,
                 lostClaim ? 800 : 1 + ActiveMatchClaims.LifetimeSeconds);
             Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
-            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Void));
-            Assert.That((await Record()).outcomes, Is.Null);
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That((await Record()).outcomes[0].won, Is.True);
             Assert.That((await State(0)).ActiveMatch.matchId, Is.Null);
             Assert.That((await State(1)).ActiveMatch.matchId, Is.EqualTo(lostClaim ? "other" : null));
-            AssertNoPlayerWrites();
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
         }
 
         [Test]
-        public async Task LeaveClearsOutcomesWhenAgreementSettlementLosesAClaim()
+        public async Task LeaveFinishesAgreementWhenSettlementLosesAClaim()
         {
             await CommitAgreement(0);
             players[0].BeforeWrite = () =>
@@ -455,12 +455,12 @@ namespace NodeWar.Cloud.Tests
             };
             var result = await rendezvous.Leave(MatchId, "p0", false, 800);
             Assert.That(result.outcome, Is.EqualTo(LeaveOutcome.Cleared));
-            Assert.That(result.playerState, Is.Null);
-            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Void));
-            Assert.That((await Record()).outcomes, Is.Null);
+            Assert.That(result.playerState, Is.Not.Null);
+            Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Settled));
+            Assert.That((await Record()).outcomes[0].won, Is.True);
             Assert.That((await State(0)).ActiveMatch.matchId, Is.EqualTo("other"));
             Assert.That((await State(1)).ActiveMatch.matchId, Is.Null);
-            AssertNoPlayerWrites();
+            Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
         }
 
         private Task CommitAgreement(int winner) => Mutate(r =>

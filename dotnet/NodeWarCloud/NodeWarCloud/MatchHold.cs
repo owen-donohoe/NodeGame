@@ -6,15 +6,19 @@ using NodeWar.Backend;
 namespace NodeWar.Cloud
 {
     /// <summary>
-    /// Server-measured presence and disconnect holds. Presence touches only
-    /// the caller's key; a winning claim commits its decision before settlement.
+    /// Server-measured presence and disconnect holds. Active presence touches only
+    /// the caller's key; terminal presence also retries pending discipline cleanup.
+    /// Honest ranked clients heartbeat every four seconds throughout the match,
+    /// and every second while holding, so a self-declared hold cannot prove absence.
     /// </summary>
     public sealed class MatchHold
     {
         private const int RetryLimit = 3;
         private const int ClaimSeconds = 10;
         private const int SeenSeconds = 10;
+        private const int ConnectionGraceSeconds = 15;
         private const int VoidSeconds = 60;
+        private const int OpponentHoldSeconds = 50;
         private readonly IMatchRecordStore matches;
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly MatchSettler settler;
@@ -50,7 +54,8 @@ namespace NodeWar.Cloud
             };
             if (Terminal(record))
             {
-                await ReleaseBoth(record);
+                if (discipline == null || await discipline.Apply(record, now))
+                    await ReleaseBoth(record);
                 result.result = await View(record, caller);
             }
             return result;
@@ -68,26 +73,26 @@ namespace NodeWar.Cloud
                 if (caller < 0) return new ResolveHoldResult { message = "Caller is not in this match." };
                 if (Terminal(record))
                 {
-                    if (discipline != null) await discipline.Apply(record, now);
-                    await ReleaseBoth(record);
+                    if (discipline == null || await discipline.Apply(record, now))
+                        await ReleaseBoth(record);
                     return new ResolveHoldResult { outcome = HoldOutcome.AlreadyResolved, result = await View(record, caller) };
                 }
-                if (record.connectedUnixSeconds <= 0)
+                if (record.connectedUnixSeconds <= 0 && record.forfeitedBy != 0 && record.forfeitedBy != 1 && !MatchSettler.Agreed(record))
                     return new ResolveHoldResult { message = "Match has not started." };
 
-                if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
-                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
+                if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
                 {
-                    record.state = MatchRecordState.Void;
-                }
-                else if (record.forfeitedBy == 0 || record.forfeitedBy == 1 || MatchSettler.Agreed(record))
-                {
-                    // A committed decision outranks another hold or the pending
-                    // timeout, including retries after a partial settlement.
+                    // A committed decision outranks expired claims and timeouts,
+                    // including retries after a partial settlement.
                     int winner = record.forfeitedBy == 0 || record.forfeitedBy == 1
                         ? 1 - record.forfeitedBy : record.reports.First(r => r.accepted).winner;
                     bool settled = await settler.Settle(record, winner, now);
                     record.state = settled ? MatchRecordState.Settled : MatchRecordState.Void;
+                }
+                else if (now >= record.createdUnixSeconds + ActiveMatchClaims.LifetimeSeconds ||
+                    !await ActiveMatchClaims.HoldsClaims(players, record, now))
+                {
+                    record.state = MatchRecordState.Void;
                 }
                 else if (record.state == MatchRecordState.Pending &&
                     now - record.pendingUnixSeconds > ActiveMatchClaims.PendingTimeoutSeconds)
@@ -97,6 +102,9 @@ namespace NodeWar.Cloud
                 }
                 else
                 {
+                    if (now - record.connectedUnixSeconds < ConnectionGraceSeconds)
+                        return new ResolveHoldResult { outcome = HoldOutcome.TooEarly,
+                            message = "Waiting for the initial match heartbeats." };
                     var presence = await matches.ReadPresenceAsync(matchId);
                     long holdSince = presence[caller].holdSinceUnixSeconds;
                     if (holdSince == 0 || now - holdSince < ClaimSeconds)
@@ -104,7 +112,10 @@ namespace NodeWar.Cloud
                     long lastSeen = presence[1 - caller].lastSeenUnixSeconds;
                     if (lastSeen != 0 && now - lastSeen <= SeenSeconds)
                     {
-                        if (now - holdSince < VoidSeconds)
+                        long opponentHoldSince = presence[1 - caller].holdSinceUnixSeconds;
+                        if (now - holdSince < VoidSeconds || opponentHoldSince == 0 ||
+                            now - opponentHoldSince < OpponentHoldSeconds || presence[caller].lastSeenUnixSeconds == 0 ||
+                            now - presence[caller].lastSeenUnixSeconds > SeenSeconds)
                             return new ResolveHoldResult { outcome = HoldOutcome.OpponentPresent };
                         record.state = MatchRecordState.Void;
                     }
@@ -131,8 +142,8 @@ namespace NodeWar.Cloud
                     if (++conflicts >= RetryLimit) throw;
                     continue;
                 }
-                if (discipline != null) await discipline.Apply(record, now);
-                await ReleaseBoth(record);
+                if (discipline == null || await discipline.Apply(record, now))
+                    await ReleaseBoth(record);
                 return new ResolveHoldResult
                 {
                     outcome = record.state == MatchRecordState.Void ? HoldOutcome.Voided :
