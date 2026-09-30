@@ -16,10 +16,14 @@ namespace NodeWar.Network
     {
         private const int INPUT_DELAY = 2;
         private const int DESYNC_CHECK_INTERVAL = 50;
-        private const float DISCONNECT_TIMEOUT = 2.0f;
+        // No tick for this long while unpaused starts a hold (8.2c, D15). Measured
+        // on ticks, not packets: with one-way loss a side keeps receiving
+        // heartbeats while it waits forever on an input that never comes.
+        private const float HOLD_AFTER = 2.0f;
         private const float HEARTBEAT_INTERVAL = 0.5f;
         private const int MAX_ACCUMULATOR_TICKS = 3;
         private const float RESEND_INTERVAL = 0.05f;
+        private const float HOLD_RESEND_INTERVAL = 0.25f;
 
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
@@ -43,7 +47,8 @@ namespace NodeWar.Network
 
         // Timing
         private float lastSendTime;
-        private float lastReceiveTime;
+        private float lastAdvanceTime;
+        private bool holding;
         private float lastHeartbeatTime;
 
         // Resend
@@ -55,8 +60,19 @@ namespace NodeWar.Network
         private Dictionary<int, int> localHashes = new Dictionary<int, int>();
 
         // Public events for LobbyUI / GameManager to hook
-        public System.Action OnDisconnect;
         public System.Action<int> OnDesync; // tick number where desync detected
+
+        /// <summary>
+        /// No tick has advanced for HOLD_AFTER seconds. The runner keeps the link
+        /// alive (packets, resends, heartbeats) and never ends the match itself:
+        /// GameManager's hold decides that, and calls EndMatch.
+        /// </summary>
+        public event System.Action HoldStarted;
+
+        /// <summary>The missing input arrived and the match is advancing again.</summary>
+        public event System.Action HoldEnded;
+
+        public bool IsHolding => holding;
 
         private bool paused = true;
 
@@ -95,12 +111,12 @@ namespace NodeWar.Network
         public void Unpause()
         {
             // Re-stamp the timing baselines. Initialize() runs before the
-            // post-draft transition, which can take longer than
-            // DISCONNECT_TIMEOUT; without this the first unpaused frame would
-            // see a stale lastReceiveTime and immediately report a disconnect.
+            // post-draft transition, which can take longer than HOLD_AFTER;
+            // without this the first unpaused frame would see a stale
+            // lastAdvanceTime and immediately start a hold.
             float now = Time.time;
             lastSendTime = now;
-            lastReceiveTime = now;
+            lastAdvanceTime = now;
             lastHeartbeatTime = now;
 
             paused = false;
@@ -133,8 +149,9 @@ namespace NodeWar.Network
 
             float now = Time.time;
             lastSendTime = now;
-            lastReceiveTime = now;
+            lastAdvanceTime = now;
             lastHeartbeatTime = now;
+            holding = false;
 
             pendingHash = 0;
             pendingHashTick = 0;
@@ -167,23 +184,40 @@ namespace NodeWar.Network
                 return;
             }
 
-            // Pump the transport even while paused. Keeps lastReceiveTime fresh
-            // and preserves any TickInput a peer sends if its transition
-            // finishes before ours -- inputs are keyed by forTick, so receiving
-            // them early loses nothing.
+            // Pump the transport even while paused. Preserves any TickInput a
+            // peer sends if its transition finishes before ours -- inputs are
+            // keyed by forTick, so receiving them early loses nothing.
             ProcessIncomingPackets();
 
             if (paused)
             {
-                // Keep the link alive so the peer does not time out waiting on
-                // our transition. Deliberately no CheckDisconnect() while
+                // Keep the link alive so the peer does not start a hold while
+                // waiting on our transition. Deliberately no hold check while
                 // paused: a long transition is not a disconnect, and Unpause()
                 // re-baselines the timers anyway.
                 SendHeartbeatIfNeeded();
                 return;
             }
 
-            if (CheckDisconnect()) return;
+            if (holding)
+            {
+                if (!HasBothInputs(simulationTick))
+                {
+                    // Keep offering every input the peer may lack, so the
+                    // moment the link heals nothing is missing on either side.
+                    ResendIfNeeded();
+                    SendHeartbeatIfNeeded();
+                    return;
+                }
+
+                // Back. Start the clock fresh rather than replaying the held
+                // time as a burst of catch-up ticks.
+                holding = false;
+                accumulator = 0f;
+                lastAdvanceTime = Time.time;
+                Debug.Log("[LOCKSTEP] Resumed at tick " + simulationTick + ".");
+                HoldEnded?.Invoke();
+            }
 
             accumulator += Time.deltaTime;
 
@@ -196,6 +230,7 @@ namespace NodeWar.Network
                     ExecuteTick(simulationTick);
                     simulationTick++;
                     accumulator -= tickInterval;
+                    lastAdvanceTime = Time.time;
                 }
                 else
                 {
@@ -211,6 +246,24 @@ namespace NodeWar.Network
             }
 
             SendHeartbeatIfNeeded();
+
+            // A game-over tick ends the match normally; only a stall starts a hold.
+            if (!simState.gameOver && Time.time - lastAdvanceTime > HOLD_AFTER)
+            {
+                holding = true;
+                Debug.LogWarning("[LOCKSTEP] No tick for " + HOLD_AFTER + "s at tick " + simulationTick + "; holding.");
+                HoldStarted?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Stops the runner for good: a hold resolved, or the player surrendered.
+        /// The match is over on this side; the peer learns it from the server.
+        /// </summary>
+        public void EndMatch()
+        {
+            holding = false;
+            enabled = false;
         }
 
         // ===== INPUT GENERATION =====
@@ -318,7 +371,6 @@ namespace NodeWar.Network
             {
                 if (packets[i] == null || packets[i].Length == 0) continue;
 
-                lastReceiveTime = Time.time;
                 PacketType type = InputSerializer.ReadPacketType(packets[i]);
 
                 switch (type)
@@ -356,7 +408,8 @@ namespace NodeWar.Network
                         break;
 
                     case PacketType.Heartbeat:
-                        // lastReceiveTime already updated above
+                        // Keeps the Relay allocation alive. A hold is decided by
+                        // ticks, so a heartbeat alone never ends one.
                         break;
                 }
             }
@@ -386,7 +439,7 @@ namespace NodeWar.Network
             }
         }
 
-        // ===== RESEND / HEARTBEAT / DISCONNECT =====
+        // ===== RESEND / HEARTBEAT =====
 
         /// <summary>
         /// Re-sends every local input the peer may still be missing, not just
@@ -401,7 +454,10 @@ namespace NodeWar.Network
         private void ResendIfNeeded()
         {
             if (lastSentPacket == null) return;
-            if (Time.time - lastSendTime < RESEND_INTERVAL) return;
+            // A hold can last a minute; four packets every 50 ms for all of it
+            // is traffic for a link that is not answering.
+            float interval = holding ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
+            if (Time.time - lastSendTime < interval) return;
 
             int first = Mathf.Max(0, simulationTick - INPUT_DELAY);
             for (int tick = first; tick < nextInputTick; tick++)
@@ -420,22 +476,6 @@ namespace NodeWar.Network
 
             networkManager.Send(InputSerializer.SerializeHeartbeat());
             lastHeartbeatTime = Time.time;
-        }
-
-        /// <summary>
-        /// Returns true if disconnected (caller should abort frame).
-        /// </summary>
-        private bool CheckDisconnect()
-        {
-            if (Time.time - lastReceiveTime > DISCONNECT_TIMEOUT)
-            {
-                Debug.LogError("[LOCKSTEP] Opponent disconnected (no data for " +
-                    DISCONNECT_TIMEOUT + "s).");
-                OnDisconnect?.Invoke();
-                enabled = false; // stop processing
-                return true;
-            }
-            return false;
         }
 
         // ===== HELPERS =====
