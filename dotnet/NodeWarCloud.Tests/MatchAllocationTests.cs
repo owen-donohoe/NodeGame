@@ -397,6 +397,8 @@ namespace NodeWar.Cloud.Tests
             public int Writes;
             public string LastLock;
             public Task<LockedMatchRecord> ReadAsync(string id) => inner.ReadAsync(id);
+            public Task<MatchPresence[]> ReadPresenceAsync(string id) => inner.ReadPresenceAsync(id);
+            public Task WritePresenceAsync(string id, int slot, MatchPresence presence) => inner.WritePresenceAsync(id, slot, presence);
             public async Task WriteAsync(MatchRecord record, string expectedWriteLock)
             {
                 await inner.WriteAsync(record, expectedWriteLock);

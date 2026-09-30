@@ -494,6 +494,8 @@ namespace NodeWar.Cloud.Tests
             public Func<MatchRecord, string, Task> BeforeWrite;
             public HookMatchStore(InMemoryMatchRecordStore inner) { Inner = inner; }
             public Task<LockedMatchRecord> ReadAsync(string id) => Inner.ReadAsync(id);
+            public Task<MatchPresence[]> ReadPresenceAsync(string id) => Inner.ReadPresenceAsync(id);
+            public Task WritePresenceAsync(string id, int slot, MatchPresence presence) => Inner.WritePresenceAsync(id, slot, presence);
             public async Task WriteAsync(MatchRecord record, string token)
             {
                 if (BeforeWrite != null) await BeforeWrite(record, token);
@@ -559,6 +561,33 @@ namespace NodeWar.Cloud.Tests
         public void NullContextHasNoIdentity()
         {
             Assert.That(RankedMatchModule.HasNoIdentity(null), Is.True);
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase(" ")]
+        public async Task HoldFunctionsRefuseBlankIdentityBeforeAccessingStorage(string playerId)
+        {
+            var module = new RankedMatchModule(null);
+            var context = new FakeExecutionContext(playerId);
+            var result = await module.GetMatchResult(context, "match");
+            var presence = await module.Presence(context, "match", true);
+            var resolution = await module.ResolveHold(context, "match");
+            Assert.That(result.state, Is.Null);
+            Assert.That(presence.state, Is.Null);
+            Assert.That(resolution.outcome, Is.Null);
+            Assert.That(result.message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That(presence.message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That(resolution.message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+        }
+
+        [Test]
+        public async Task HoldFunctionsRefuseNullContextBeforeAccessingStorage()
+        {
+            var module = new RankedMatchModule(null);
+            Assert.That((await module.GetMatchResult(null, "match")).message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That((await module.Presence(null, "match", true)).message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
+            Assert.That((await module.ResolveHold(null, "match")).message, Is.EqualTo(RankedMatchModule.NoIdentityRefused));
         }
 
         private sealed class FakeExecutionContext : IExecutionContext

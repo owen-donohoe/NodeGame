@@ -19,12 +19,21 @@ namespace NodeWar.Cloud
         public LockedMatchRecord(MatchRecord record, string writeLock) { Record = record; WriteLock = writeLock; }
     }
 
+    public sealed class MatchPresence
+    {
+        public long lastSeenUnixSeconds;
+        public long holdSinceUnixSeconds;
+    }
+
     public interface IMatchRecordStore
     {
         Task<LockedMatchRecord> ReadAsync(string matchId);
         // Null lock creates a missing record for trusted matchmaking. Updates require a lock.
         Task WriteAsync(MatchRecord record, string expectedWriteLock);
         Task SaveLog(string matchId, int playerIndex, string base64);
+        Task<MatchPresence[]> ReadPresenceAsync(string matchId);
+        // Each slot writes its own key, without a record write lock.
+        Task WritePresenceAsync(string matchId, int slot, MatchPresence presence);
     }
 
     public sealed class LockedPlayerState
@@ -110,6 +119,7 @@ namespace NodeWar.Cloud
         private readonly Dictionary<string, string> records = new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly Dictionary<string, int> versions = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<(string, int), string> logs = new Dictionary<(string, int), string>();
+        private readonly Dictionary<(string, int), string> presence = new Dictionary<(string, int), string>();
 
         public InMemoryMatchRecordStore(params MatchRecord[] initialRecords)
         {
@@ -156,6 +166,25 @@ namespace NodeWar.Cloud
         {
             if (playerIndex != 0 && playerIndex != 1) throw new ArgumentOutOfRangeException(nameof(playerIndex));
             lock (gate) logs[(matchId, playerIndex)] = base64;
+            return Task.CompletedTask;
+        }
+
+        public Task<MatchPresence[]> ReadPresenceAsync(string matchId)
+        {
+            lock (gate)
+            {
+                var slots = new MatchPresence[2];
+                for (int slot = 0; slot < 2; slot++)
+                    slots[slot] = presence.TryGetValue((matchId, slot), out string json)
+                        ? JsonConvert.DeserializeObject<MatchPresence>(json) : new MatchPresence();
+                return Task.FromResult(slots);
+            }
+        }
+
+        public Task WritePresenceAsync(string matchId, int slot, MatchPresence value)
+        {
+            if (slot != 0 && slot != 1) throw new ArgumentOutOfRangeException(nameof(slot));
+            lock (gate) presence[(matchId, slot)] = JsonConvert.SerializeObject(value);
             return Task.CompletedTask;
         }
 
