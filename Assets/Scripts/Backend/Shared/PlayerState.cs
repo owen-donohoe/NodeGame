@@ -26,6 +26,7 @@ namespace NodeWar.Backend
         public InventoryRecord Inventory;
         public HistoryRecord History;
         public ActiveMatchRecord ActiveMatch;
+        public DisciplineRecord Discipline;
     }
 
     /// <summary>Hidden Glicko-2 rating. Never shown to the player.</summary>
@@ -87,6 +88,17 @@ namespace NodeWar.Backend
         public long expiresUnixSeconds;
     }
 
+    /// <summary>Disconnect strikes and recent non-reports, written separately from settlement.</summary>
+    public sealed class DisciplineRecord
+    {
+        public int Level;
+        public long LastStrikeUnixSeconds;
+        public long LastDecayUnixSeconds;
+        public long BlockedUntilUnixSeconds;
+        public List<long> NonReports = new List<long>();
+        public List<string> StruckMatchIds = new List<string>();
+    }
+
     /// <summary>The Cloud Save key each record is stored under. Never rename one.</summary>
     public static class PlayerStateKeys
     {
@@ -95,6 +107,7 @@ namespace NodeWar.Backend
         public const string Inventory = "inventory";
         public const string History = "history";
         public const string ActiveMatch = "activeMatch";
+        public const string Discipline = "discipline";
 
         // The four state records; claims are independent of settlement writes.
         public static readonly string[] All = { Rating, Rank, Inventory, History };

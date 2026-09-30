@@ -10,5 +10,6 @@
     <Compile Include="Catalog.cs" />
     <Compile Include="EraUnlocks.cs" />
     <Compile Include="MatchSettlement.cs" />
+    <Compile Include="DisconnectPenalty.cs" />
   </ItemGroup>
 </Project>
