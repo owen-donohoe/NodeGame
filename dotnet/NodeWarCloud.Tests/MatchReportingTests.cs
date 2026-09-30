@@ -472,6 +472,8 @@ namespace NodeWar.Cloud.Tests
             public bool FailLog;
             public HookMatchStore(InMemoryMatchRecordStore inner) { Inner = inner; }
             public Task<LockedMatchRecord> ReadAsync(string id) => Inner.ReadAsync(id);
+            public Task<MatchPresence[]> ReadPresenceAsync(string id) => Inner.ReadPresenceAsync(id);
+            public Task WritePresenceAsync(string id, int slot, MatchPresence presence) => Inner.WritePresenceAsync(id, slot, presence);
             public async Task WriteAsync(MatchRecord record, string token)
             {
                 if (BeforeWrite != null) await BeforeWrite(record, token);

@@ -34,6 +34,9 @@ namespace NodeWar.Cloud
         // lock before any player write, like agreement, so every settlement
         // pass (Leave or ReportMatch) settles the same winner.
         public int forfeitedBy = -1;
+        // The slot a hold resolved against, or -1. Committed with forfeitedBy
+        // under the record's write lock before any player write.
+        public int abandonedBy = -1;
     }
 
     // A settled player's result on this match. Never re-derived from current

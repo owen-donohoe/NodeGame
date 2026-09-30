@@ -49,6 +49,27 @@ namespace NodeWar.Cloud
             { throw new RecordConflictException("Match record changed.", ex); }
         }
 
+        public async Task<MatchPresence[]> ReadPresenceAsync(string matchId)
+        {
+            var response = await api.CloudSaveData.GetPrivateCustomItemsAsync(context, context.ServiceToken,
+                context.ProjectId, "match-" + matchId, new List<string> { "presence-0", "presence-1" });
+            var slots = new MatchPresence[2];
+            for (int slot = 0; slot < 2; slot++)
+            {
+                var item = response.Data.Results.SingleOrDefault(i => i.Key == "presence-" + slot);
+                slots[slot] = item == null ? new MatchPresence() :
+                    JsonConvert.DeserializeObject<MatchPresence>(JsonConvert.SerializeObject(item.Value));
+            }
+            return slots;
+        }
+
+        public async Task WritePresenceAsync(string matchId, int slot, MatchPresence presence)
+        {
+            if (slot != 0 && slot != 1) throw new ArgumentOutOfRangeException(nameof(slot));
+            await api.CloudSaveData.SetPrivateCustomItemAsync(context, context.ServiceToken, context.ProjectId,
+                "match-" + matchId, new SetItemBody("presence-" + slot, presence));
+        }
+
         public async Task SaveLog(string matchId, int playerIndex, string base64)
         {
             if (playerIndex != 0 && playerIndex != 1) throw new ArgumentOutOfRangeException(nameof(playerIndex));
