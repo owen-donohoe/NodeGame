@@ -227,6 +227,28 @@ while both halves are true. A step that **reads** the log, or a log that
 moves **onto** `SimulationState`, makes it state, and then it needs hashing
 like everything else. See `docs/architecture.md`, *What a tick did*.
 
+## `SimulationState.CopyFrom`: the rollback point
+
+`LockstepRunner` plays on past a missing opponent input for up to 20 ticks
+(8.2e). Then it rolls back to a copy of the last confirmed state and either
+replays the span with the real inputs or holds. `CopyFrom` makes that copy
+**into the same instance**, because views, selection and the HUD hold the
+reference. It copies every array fresh except node `edges`, which are
+fixed once the board is built.
+
+**Every field a state type gains must be copied too**, exactly as it must
+be hashed. `SimulationStateCopyTests` enforces this: it sets every field of
+`SimulationState`, `NodeData`, `VillagerData` and `PlayerData` by
+reflection and fails on any that does not come through, or on a field type
+it does not know how to fill. A field that survives a rollback it should
+not have is a desync, not a cosmetic bug.
+
+Restoring a copy is the one state write the runner makes outside
+`CommandProcessor` and `SimulateTick`. It is not game logic: it only puts
+back a state the simulation itself produced, at a tick both peers agree
+on. Speculative ticks are never recorded or hashed; the replay after them
+is the confirmed pass.
+
 ## `SimulationVersion` and the content hash
 
 Two builds that play the same inputs differently must refuse each other

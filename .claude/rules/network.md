@@ -7,7 +7,10 @@ glob: Assets/Scripts/Game/Network/**
 - The network layer only transports data between machines: tick
   inputs (commands and checkpoint hashes), handshake and draft
   packets, heartbeats and emotes
-- It never contains game logic, rules, or state mutation
+- It never contains game logic, rules, or state mutation. The one
+  exception is LockstepRunner restoring a confirmed state with
+  SimulationState.CopyFrom when a speculative span rolls back (8.2e);
+  that restores a state the simulation produced, it decides nothing
 - LockstepRunner drives the tick loop in networked play but
   never calls SimulateTick directly with invented inputs
 - InputSerializer and the GameCommand struct must always be

@@ -932,8 +932,23 @@ and must therefore arrive at identical results every tick.
   hash against its most recent stored local hash and fires `OnDesync` on
   mismatch. The packet does not name the checkpoint tick; lockstep keeps
   the two in step (see `docs/simulation-rules.md`, *Desync detection*).
+- **A short blip plays on** (8.2e). When the opponent's input for a tick is
+  missing, `LockstepRunner` copies the state (`SimulationState.CopyFrom`)
+  and keeps simulating for up to 20 ticks, predicting the opponent idle,
+  while the HUD shows "Opponent's connection is unstable". Speculative ticks
+  raise `TickSimulated` but are never recorded or hashed. Once the real
+  inputs for the whole span arrive, it rolls back and replays the span with
+  them. That replay is the only pass that records and hashes, and it plays
+  no cues. It always rolls back, even when the inputs were empty, so the
+  path runs on every blip. Past 20 ticks, or on a speculative game over, it
+  rolls back and holds. `RolledBack` lets `GameManager` despawn villager
+  views past the confirmed count (the state respawns them) and drop
+  selections of villagers that no longer exist. After an abandoned span,
+  local inputs already sent for future ticks are not generated again, so
+  input delay does not grow.
 - **Disconnects hold, they do not end the match** (8.2c). `LockstepRunner`
-  starts a hold when no tick has advanced for 2 s while unpaused. It
+  starts a hold when no tick has advanced for 2 s while unpaused, or when
+  a speculative span runs out. It
   measures ticks rather than packets because with one-way loss a side keeps
   receiving heartbeats while it waits on an input that never comes. During
   a hold it keeps receiving, resending (every 250 ms) and sending

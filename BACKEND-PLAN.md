@@ -361,7 +361,7 @@ One PR, stacked on #74, in parts that each build and test on their own. Server p
 | D | 8.2c client: runner hold, `DisconnectHold` presenter, hold overlay, surrender | lead |
 | E | 8.2d + D19: discipline ladder, non-reports, Allocate refusal, queue countdown | planned after D |
 | F | Deploy to `development`, two-player test with the user, docs | lead + user |
-| G | 8.2e speculative grace window (D16): `SimulationState.CopyFrom`, runner rollback, view despawn | lead, plan mode |
+| G | 8.2e speculative grace window (D16): `SimulationState.CopyFrom`, runner rollback, view despawn | lead, plan mode; **built 2026-09-30**, two-player feel test outstanding |
 
 **Part A: contract (Backend/Shared, C# 9).**
 - `MatchResultView` (what `GetMatchResult` returns): `state`, `message`, `cause` (`MatchEndCause`: `Unknown`, `Played`, `Forfeit`, `Abandoned`), and for the caller when Settled: `won`, `rrDelta`, `rrAfter`, `arenaAfter`, `promoted`, `demoted`, `playerState`.
