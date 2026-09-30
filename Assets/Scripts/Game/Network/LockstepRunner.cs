@@ -25,6 +25,11 @@ namespace NodeWar.Network
         private const float RESEND_INTERVAL = 0.05f;
         private const float HOLD_RESEND_INTERVAL = 0.25f;
 
+        // How far past a missing opponent input the match plays on, predicting
+        // the opponent idle, before rolling back and holding (8.2e, D16). 20
+        // ticks is 2 s: a dropped text message or a tunnel, not a crash.
+        private const int SPECULATION_WINDOW = 20;
+
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
 
@@ -49,6 +54,17 @@ namespace NodeWar.Network
         private float lastSendTime;
         private float lastAdvanceTime;
         private bool holding;
+
+        // Speculation (8.2e). The state as it stood before the first
+        // unconfirmed tick, copied once per blip, and the tick it stood at.
+        private readonly SimulationState confirmed = new SimulationState();
+        private bool speculating;
+        private int speculateFrom;
+        // A speculation that had to be abandoned (it reached game over) is not
+        // restarted until a confirmed tick runs, or it would loop.
+        private bool speculationBlocked;
+
+        private enum TickMode { Live, Speculative, Replay }
         private float lastHeartbeatTime;
 
         // Resend
@@ -73,6 +89,22 @@ namespace NodeWar.Network
         public event System.Action HoldEnded;
 
         public bool IsHolding => holding;
+
+        /// <summary>
+        /// The match is playing on past a missing opponent input (8.2e). True
+        /// while the ticks shown may still be rolled back.
+        /// </summary>
+        public bool IsSpeculating => speculating;
+
+        /// <summary>Raised when speculation starts or ends, for the HUD's banner.</summary>
+        public event System.Action<bool> SpeculationChanged;
+
+        /// <summary>
+        /// The state was put back to the last confirmed tick, with the villager
+        /// count it had then. Views past that count may point at villagers that
+        /// no longer exist.
+        /// </summary>
+        public event System.Action<int> RolledBack;
 
         private bool paused = true;
 
@@ -219,18 +251,45 @@ namespace NodeWar.Network
                 HoldEnded?.Invoke();
             }
 
+            // A blip whose missing inputs have all arrived is settled first:
+            // roll back and replay it with the real ones, before any new tick.
+            if (speculating)
+            {
+                if (SpanConfirmed()) ReplaySpan();
+                else ResendIfNeeded();
+            }
+
             accumulator += Time.deltaTime;
 
             // Advance simulation as many ticks as possible
             while (accumulator >= tickInterval)
             {
-                if (HasBothInputs(simulationTick))
+                if (!speculating && HasBothInputs(simulationTick))
                 {
-                    GenerateAndSendLocalInput();
-                    ExecuteTick(simulationTick);
+                    GenerateLocalInputIfDue();
+                    ExecuteTick(simulationTick, TickMode.Live);
                     simulationTick++;
                     accumulator -= tickInterval;
                     lastAdvanceTime = Time.time;
+                    speculationBlocked = false;
+                }
+                else if (CanSpeculate())
+                {
+                    if (!speculating) BeginSpeculation();
+                    GenerateLocalInputIfDue();
+                    ExecuteTick(simulationTick, TickMode.Speculative);
+                    simulationTick++;
+                    accumulator -= tickInterval;
+
+                    // A speculative game over is not a result: nobody has
+                    // confirmed the inputs that produced it. Put the board back
+                    // before anything outside the runner sees it.
+                    if (simState.gameOver)
+                    {
+                        AbandonSpeculation();
+                        speculationBlocked = true;
+                        break;
+                    }
                 }
                 else
                 {
@@ -247,8 +306,20 @@ namespace NodeWar.Network
 
             SendHeartbeatIfNeeded();
 
+            // The window ran out: the opponent is really gone. Rewind to what
+            // both sides agreed on and hold (D16).
+            if (speculating && simulationTick - speculateFrom >= SPECULATION_WINDOW)
+            {
+                AbandonSpeculation();
+                holding = true;
+                Debug.LogWarning("[LOCKSTEP] Played " + SPECULATION_WINDOW + " ticks without the opponent; " +
+                                 "rolled back to tick " + simulationTick + " and holding.");
+                HoldStarted?.Invoke();
+                return;
+            }
+
             // A game-over tick ends the match normally; only a stall starts a hold.
-            if (!simState.gameOver && Time.time - lastAdvanceTime > HOLD_AFTER)
+            if (!speculating && !simState.gameOver && Time.time - lastAdvanceTime > HOLD_AFTER)
             {
                 holding = true;
                 Debug.LogWarning("[LOCKSTEP] No tick for " + HOLD_AFTER + "s at tick " + simulationTick + "; holding.");
@@ -263,10 +334,88 @@ namespace NodeWar.Network
         public void EndMatch()
         {
             holding = false;
+            if (speculating) AbandonSpeculation();
             enabled = false;
         }
 
+        // ===== SPECULATION (8.2e) =====
+
+        private bool CanSpeculate()
+        {
+            if (speculationBlocked || holding) return false;
+            if (!localInputs.ContainsKey(simulationTick)) return false;
+            return !speculating || simulationTick - speculateFrom < SPECULATION_WINDOW;
+        }
+
+        private void BeginSpeculation()
+        {
+            confirmed.CopyFrom(simState);
+            speculateFrom = simulationTick;
+            speculating = true;
+            Debug.Log("[LOCKSTEP] Opponent input missing at tick " + simulationTick + "; playing on.");
+            SpeculationChanged?.Invoke(true);
+        }
+
+        private bool SpanConfirmed()
+        {
+            for (int t = speculateFrom; t < simulationTick; t++)
+                if (!remoteInputs.ContainsKey(t)) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// The opponent's inputs for the whole blip arrived. Always roll back
+        /// and replay, even when they turn out empty, so this path runs on every
+        /// blip instead of hiding until a rare one. The replay is the only pass
+        /// that records and hashes; it raises no TickSimulated, so no cue plays
+        /// twice.
+        /// </summary>
+        private void ReplaySpan()
+        {
+            int from = speculateFrom;
+            int until = simulationTick;
+            simState.CopyFrom(confirmed);
+            simulationTick = from;
+            speculating = false;
+            RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
+
+            while (simulationTick < until)
+            {
+                ExecuteTick(simulationTick, TickMode.Replay);
+                simulationTick++;
+            }
+            lastAdvanceTime = Time.time;
+            Debug.Log("[LOCKSTEP] Opponent back; replayed ticks " + from + " to " + (until - 1) + ".");
+            SpeculationChanged?.Invoke(false);
+        }
+
+        /// <summary>
+        /// Puts the board back to the last confirmed tick. The local inputs
+        /// generated meanwhile stay: they were sent, and the peer will apply
+        /// them on those ticks too.
+        /// </summary>
+        private void AbandonSpeculation()
+        {
+            simState.CopyFrom(confirmed);
+            simulationTick = speculateFrom;
+            speculating = false;
+            RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
+            SpeculationChanged?.Invoke(false);
+        }
+
         // ===== INPUT GENERATION =====
+
+        /// <summary>
+        /// Generates the input for tick simulationTick + INPUT_DELAY unless it
+        /// already exists. After an abandoned speculation, inputs for up to
+        /// SPECULATION_WINDOW ticks ahead were already generated and sent;
+        /// generating one per tick anyway would push every later command about
+        /// 2 s back for the rest of the match.
+        /// </summary>
+        private void GenerateLocalInputIfDue()
+        {
+            if (nextInputTick <= simulationTick + INPUT_DELAY) GenerateAndSendLocalInput();
+        }
 
         private void GenerateAndSendLocalInput()
         {
@@ -298,10 +447,13 @@ namespace NodeWar.Network
 
         // ===== TICK EXECUTION =====
 
-        private void ExecuteTick(int tick)
+        private void ExecuteTick(int tick, TickMode mode)
         {
             TickInput local = localInputs[tick];
-            TickInput remote = remoteInputs[tick];
+            // Speculating: the opponent is predicted idle where their input is missing.
+            if (!remoteInputs.TryGetValue(tick, out TickInput remote))
+                remote = new TickInput { forTick = tick, stateHash = 0, commands = new GameCommand[0] };
+            bool confirmedTick = mode != TickMode.Speculative;
 
             // Enforce command processing order contract:
             // ALL P0 commands (in issue order), then ALL P1 commands (in issue order)
@@ -321,7 +473,7 @@ namespace NodeWar.Network
 
             tickEvents.Clear();
 
-            if (CommandsApplied != null && p0Commands.Length + p1Commands.Length > 0)
+            if (confirmedTick && CommandsApplied != null && p0Commands.Length + p1Commands.Length > 0)
             {
                 GameCommand[] applied = new GameCommand[p0Commands.Length + p1Commands.Length];
                 System.Array.Copy(p0Commands, applied, p0Commands.Length);
@@ -338,8 +490,10 @@ namespace NodeWar.Network
             // Advance simulation
             GameSimulation.SimulateTick(simState, tickEvents);
 
-            // Desync hash: compute after tick completes, store for next outgoing packet
-            if (tick > 0 && tick % DESYNC_CHECK_INTERVAL == 0)
+            // Desync hash: compute after tick completes, store for next outgoing
+            // packet. Only on confirmed ticks: a speculative state is not one
+            // either peer has agreed to.
+            if (confirmedTick && tick > 0 && tick % DESYNC_CHECK_INTERVAL == 0)
             {
                 int computedHash = SimulationStateHasher.ComputeHash(simState);
                 localHashes[tick] = computedHash;
@@ -350,14 +504,17 @@ namespace NodeWar.Network
             }
 
             // Compare remote's hash if they sent one
-            if (remote.stateHash != 0)
+            if (confirmedTick && remote.stateHash != 0)
             {
                 CompareHash(remote.stateHash);
             }
 
-            // Memory cleanup
-            CleanupOldInputs(tick);
+            // Memory cleanup, keyed off confirmed ticks only.
+            if (confirmedTick) CleanupOldInputs(tick);
 
+            // A replayed tick already played its cues when it was speculated; a
+            // speculative game over is about to be rolled back. Neither is shown.
+            if (mode == TickMode.Replay || (mode == TickMode.Speculative && simState.gameOver)) return;
             TickSimulated?.Invoke(tickEvents);
         }
 
@@ -456,10 +613,14 @@ namespace NodeWar.Network
             if (lastSentPacket == null) return;
             // A hold can last a minute; four packets every 50 ms for all of it
             // is traffic for a link that is not answering.
-            float interval = holding ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
+            // Speculation has up to SPECULATION_WINDOW inputs outstanding, so it
+            // takes the slower cadence too.
+            float interval = holding || speculating ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
             if (Time.time - lastSendTime < interval) return;
 
-            int first = Mathf.Max(0, simulationTick - INPUT_DELAY);
+            // From the last confirmed tick: the peer may lack anything since.
+            int confirmedTick = speculating ? speculateFrom : simulationTick;
+            int first = Mathf.Max(0, confirmedTick - INPUT_DELAY);
             for (int tick = first; tick < nextInputTick; tick++)
             {
                 // Ticks below INPUT_DELAY are pre-seeded on both sides, never sent.
