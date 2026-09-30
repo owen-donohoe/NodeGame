@@ -32,7 +32,7 @@ namespace NodeWar.Cloud
     /// Player records in Cloud Save's protected access class: the player can
     /// read them, and only a service token (this module) can write them.
     /// </summary>
-    public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore, ILockedPlayerRecordStore
+    public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore, ILockedPlayerRecordStore, IDisciplinePlayerStore
     {
         private readonly IGameApiClient api;
         private readonly IExecutionContext context;
@@ -50,11 +50,17 @@ namespace NodeWar.Cloud
             return (await ReadForSettlementAsync()).State;
         }
 
-        public async Task<LockedPlayerState> ReadForSettlementAsync()
+        public Task<LockedPlayerState> ReadForSettlementAsync() => ReadLockedAsync(
+            PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline }).ToList());
+
+        public Task<LockedPlayerState> ReadDisciplineAsync() => ReadLockedAsync(
+            new List<string> { PlayerStateKeys.Discipline, PlayerStateKeys.Rating });
+
+        private async Task<LockedPlayerState> ReadLockedAsync(List<string> keys)
         {
             var response = await api.CloudSaveData.GetProtectedItemsAsync(
                 context, context.ServiceToken, context.ProjectId, playerId,
-                PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch }).ToList());
+                keys);
 
             var state = new PlayerState();
             var locks = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -68,6 +74,7 @@ namespace NodeWar.Cloud
                     case PlayerStateKeys.Inventory: state.Inventory = Convert<InventoryRecord>(item.Value); break;
                     case PlayerStateKeys.History: state.History = Convert<HistoryRecord>(item.Value); break;
                     case PlayerStateKeys.ActiveMatch: state.ActiveMatch = Convert<ActiveMatchRecord>(item.Value); break;
+                    case PlayerStateKeys.Discipline: state.Discipline = Convert<DisciplineRecord>(item.Value); break;
                 }
             }
             return new LockedPlayerState(state, locks);
@@ -94,7 +101,49 @@ namespace NodeWar.Cloud
             { throw new RecordConflictException("Active match changed.", ex); }
         }
 
-        public Task WriteAsync(PlayerState records) => WriteAsync(records, null);
+        public async Task WriteAsync(PlayerState records)
+        {
+            await WriteAsync(records, null);
+            await WriteDisciplineDefault(records);
+        }
+
+        public async Task WriteDisciplineAsync(DisciplineRecord discipline, LockedPlayerState read)
+        {
+            read.WriteLocks.TryGetValue(PlayerStateKeys.Discipline, out string token);
+            var items = new List<SetItemBody> { new SetItemBody(PlayerStateKeys.Discipline, discipline, token) };
+            if (string.IsNullOrEmpty(token))
+            {
+                // Cloud Save has no create-if-absent. Fence first creation with
+                // rating, as claims do; later discipline writes use only its key.
+                if (read.State.Discipline != null || read.State.Rating == null ||
+                    !read.WriteLocks.TryGetValue(PlayerStateKeys.Rating, out string ratingLock) || string.IsNullOrEmpty(ratingLock))
+                    throw new InvalidOperationException("Initialize player records before writing discipline.");
+                items.Add(new SetItemBody(PlayerStateKeys.Rating, read.State.Rating, ratingLock));
+            }
+            try
+            {
+                await api.CloudSaveData.SetProtectedItemBatchAsync(context, context.ServiceToken,
+                    context.ProjectId, playerId, new SetItemBatchBody(items));
+            }
+            catch (ApiException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
+            { throw new RecordConflictException("Discipline changed.", ex); }
+        }
+
+        private async Task WriteDisciplineDefault(PlayerState records)
+        {
+            if (records.Discipline == null) return;
+            for (int attempt = 0; ; attempt++)
+            {
+                var read = await ReadDisciplineAsync();
+                if (read.State.Discipline != null)
+                {
+                    records.Discipline = read.State.Discipline;
+                    return;
+                }
+                try { await WriteDisciplineAsync(records.Discipline, read); return; }
+                catch (RecordConflictException) when (attempt + 1 < 3) { }
+            }
+        }
 
         public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
         {
@@ -105,9 +154,12 @@ namespace NodeWar.Cloud
 
         // Other records here are missing defaults only. Existing inventory must
         // use the lock from the same read as the normalization/grant decision.
-        public Task WriteDefaultsLockedAsync(PlayerState records, string inventoryWriteLock) =>
-            WriteAsync(records, PlayerStateKeys.All.ToDictionary(key => key,
+        public async Task WriteDefaultsLockedAsync(PlayerState records, string inventoryWriteLock)
+        {
+            await WriteAsync(records, PlayerStateKeys.All.ToDictionary(key => key,
                 key => key == PlayerStateKeys.Inventory ? inventoryWriteLock : null));
+            await WriteDisciplineDefault(records);
+        }
 
         // Writes Inventory alone, using only the Inventory write lock: a stale
         // lock (a settlement clamped the same key meanwhile) conflicts here.

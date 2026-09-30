@@ -62,8 +62,12 @@ namespace NodeWar.Cloud
 
             var states = new[] { await readPlayer(first.PlayerId), await readPlayer(second.PlayerId) };
             foreach (var state in states)
+            {
                 if (state?.Rating == null || state.Rank == null || state.Inventory?.OwnedVariants == null)
                     return Error("Server player state is incomplete.");
+                if (state.Discipline?.BlockedUntilUnixSeconds > nowUnixSeconds)
+                    return Error("Player is temporarily blocked from ranked matchmaking for disconnects or missing reports.");
+            }
             if (Math.Abs((long)states[0].Rank.Arena - states[1].Rank.Arena) > 1)
                 return Error("Players must be within one arena.");
 
@@ -81,6 +85,9 @@ namespace NodeWar.Cloud
                 // acquiring the claims. Only snapshot state read under our claims.
                 states = new[] { (await firstStore.ReadForSettlementAsync()).State,
                     (await secondStore.ReadForSettlementAsync()).State };
+                foreach (var state in states)
+                    if (state.Discipline?.BlockedUntilUnixSeconds > nowUnixSeconds)
+                        return Error("Player is temporarily blocked from ranked matchmaking for disconnects or missing reports.");
                 if (Math.Abs((long)states[0].Rank.Arena - states[1].Rank.Arena) > 1)
                     return Error("Players must be within one arena.");
                 long createdAt = Math.Min(firstClaim.expiresUnixSeconds, secondClaim.expiresUnixSeconds)

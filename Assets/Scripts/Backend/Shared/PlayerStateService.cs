@@ -57,7 +57,8 @@ namespace NodeWar.Backend
                 Rating = records.Rating,
                 Rank = records.Rank,
                 Inventory = records.Inventory,
-                History = records.History
+                History = records.History,
+                Discipline = records.Discipline
             });
         }
 
@@ -68,6 +69,7 @@ namespace NodeWar.Backend
             if (written.Rank != null) records.Rank = written.Rank;
             if (written.Inventory != null) records.Inventory = written.Inventory;
             if (written.History != null) records.History = written.History;
+            if (written.Discipline != null) records.Discipline = written.Discipline;
             return Task.CompletedTask;
         }
     }

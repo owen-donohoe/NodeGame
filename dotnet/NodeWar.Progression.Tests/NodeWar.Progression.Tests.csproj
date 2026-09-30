@@ -21,6 +21,7 @@
     <Compile Include="CatalogTests.cs" />
     <Compile Include="EraUnlocksTests.cs" />
     <Compile Include="MatchSettlementTests.cs" />
+    <Compile Include="DisconnectPenaltyTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.14.0" />
