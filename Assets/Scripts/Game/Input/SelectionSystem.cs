@@ -270,6 +270,15 @@ namespace NodeWar.Input
             selectedVillagerIDs.Clear();
         }
 
+        /// <summary>
+        /// A rollback (8.2e) put the villager list back to <paramref name="count"/>
+        /// entries. Selected IDs past it name villagers that no longer exist.
+        /// </summary>
+        public void DropVillagersFrom(int count)
+        {
+            selectedVillagerIDs.RemoveAll(id => id >= count);
+        }
+
         public bool IsSelected(int villagerID)
         {
             for (int i = 0; i < selectedVillagerIDs.Count; i++)

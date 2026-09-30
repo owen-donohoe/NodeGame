@@ -255,6 +255,15 @@
         </engine:VisualElement>
 
         <!--
+            The match is playing on past a missing opponent input (8.2e). Never
+            picks and never covers the board: the player keeps playing, and the
+            moves may be rolled back if the opponent's inputs differ.
+        -->
+        <engine:VisualElement name="hud-connection" class="hud__connection" picking-mode="Ignore">
+            <engine:Label class="hud__connection-label ui-w600" text="Opponent's connection is unstable…" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
             A disconnect hold (8.2c, D15). Covers the board, so nobody acts
             while it is up, and sits under the end card, which replaces it when
             the hold ends the match. The same card as the end of the match, so

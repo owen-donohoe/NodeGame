@@ -109,6 +109,7 @@ namespace NodeWar.UI
         private Label holdTitle;
         private Label holdLine;
         private Button holdAction;
+        private VisualElement connectionBanner;
         private bool surrenderEnabled;
 
         /// <summary>The hold overlay's one button: claim the win, or leave a private match.</summary>
@@ -368,6 +369,7 @@ namespace NodeWar.UI
             holdTitle = root.Q<Label>("hud-hold-title");
             holdLine = root.Q<Label>("hud-hold-line");
             holdAction = root.Q<Button>("hud-hold-action");
+            connectionBanner = root.Q<VisualElement>("hud-connection");
             if (holdAction != null)
                 holdAction.clicked += () => { if (HoldActionClicked != null) HoldActionClicked(); };
 
@@ -494,6 +496,15 @@ namespace NodeWar.UI
                 if (indicatorLayer != null) indicatorLayer.Suppress();
                 holdRoot.AddToClassList("hud__end--on");
             }
+        }
+
+        /// <summary>
+        /// A light banner while the match plays on past a missing opponent input
+        /// (8.2e). It does not cover the board: the player keeps playing.
+        /// </summary>
+        public void ShowConnectionBanner(bool on)
+        {
+            if (connectionBanner != null) connectionBanner.EnableInClassList("hud__connection--on", on);
         }
 
         public void HideHold()

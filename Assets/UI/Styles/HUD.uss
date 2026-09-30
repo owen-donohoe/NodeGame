@@ -731,6 +731,34 @@
     color: var(--ink);
 }
 
+/* A pill across the top while the match plays on through a blip (8.2e). */
+.hud__connection {
+    position: absolute;
+    top: var(--space-6);
+    left: 0;
+    right: 0;
+    align-items: center;
+    display: none;
+}
+
+.hud__connection--on {
+    display: flex;
+}
+
+.ui-root .hud__connection-label {
+    font-size: 13px;
+    color: var(--hud-ink);
+    background-color: var(--hud-glass-strong);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
 .hud__end-rank {
     display: none;
     align-items: center;

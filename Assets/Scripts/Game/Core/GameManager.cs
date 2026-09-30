@@ -634,6 +634,8 @@ namespace NodeWar.Core
             lockstepRunner.HoldStarted += OnHoldStarted;
             lockstepRunner.HoldEnded += OnHoldEnded;
             lockstepRunner.OnDesync += OnDesyncDetected;
+            lockstepRunner.RolledBack += OnRolledBack;
+            lockstepRunner.SpeculationChanged += OnSpeculationChanged;
             tickProvider = lockstepRunner;
 
             // A ranked match has a server record to ask; a private one runs the
@@ -651,6 +653,51 @@ namespace NodeWar.Core
 
         private NodeWar.Backend.DisconnectHold disconnectHold;
         private NodeWar.Backend.PresenceHeartbeat presenceHeartbeat;
+
+        // ===== SPECULATION AND ROLLBACK (8.2e) =====
+
+        /// <summary>
+        /// The runner put the state back to its last confirmed tick. Every
+        /// villager view at or past the confirmed count goes: those villagers
+        /// were spawned in speculation and may not exist, or may be different
+        /// villagers, once the real inputs are replayed. Update respawns whatever
+        /// the state holds next frame, from the state, so no view keeps a stale
+        /// owner or suit.
+        /// </summary>
+        private void OnRolledBack(int villagerCount)
+        {
+            if (villagerTransforms == null || villagerCount >= villagerTransforms.Length)
+            {
+                trackedVillagerCount = Mathf.Min(trackedVillagerCount, villagerCount);
+                return;
+            }
+
+            for (int i = villagerCount; i < villagerTransforms.Length; i++)
+            {
+                if (villagerTransforms[i] == null) continue;
+                // Off now, not at the end of the frame: a view's Update later in
+                // this frame would read past the shortened villager array.
+                villagerTransforms[i].gameObject.SetActive(false);
+                Destroy(villagerTransforms[i].gameObject);
+            }
+
+            System.Array.Resize(ref villagerTransforms, villagerCount);
+            System.Array.Resize(ref villagerOutlines, villagerCount);
+            trackedVillagerCount = villagerCount;
+
+            selectionSystem.DropVillagersFrom(villagerCount);
+            selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (outlineDriver != null) outlineDriver.SetVillagerGroups(villagerOutlines);
+            if (hitFlashRouter != null) hitFlashRouter.SetVillagerTransforms(villagerTransforms);
+            if (indicatorDirector != null) indicatorDirector.SetVillagerTransforms(villagerTransforms);
+        }
+
+        private void OnSpeculationChanged(bool speculating)
+        {
+            // Off whatever else happened: EndMatch ends a speculation after the
+            // match is already over, and the banner must not outlive it.
+            if (uiToolkitHud != null) uiToolkitHud.ShowConnectionBanner(speculating && !gameOverHandled);
+        }
 
         private void OnHoldStarted()
         {
