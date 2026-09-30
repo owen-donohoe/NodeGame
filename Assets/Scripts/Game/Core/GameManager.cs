@@ -211,6 +211,17 @@ namespace NodeWar.Core
             draftManager.OnDraftComplete += OnDraftComplete;
             draftManager.OnDraftDisconnect += OnDraftDisconnect;
 
+            // The record counts the match as started once both confirmed the
+            // connection, which is before the draft, so the server must hear
+            // from this player from here on, or a hold claim could be made
+            // against them mid-draft.
+            if (match.isNetworked && match.isRanked && !string.IsNullOrEmpty(match.matchId))
+            {
+                presenceHeartbeat = new NodeWar.Backend.PresenceHeartbeat(
+                    NodeWar.Backend.BackendServices.RankedMatch, match.matchId);
+                presenceHeartbeat.Decided += OnDecidedByServer;
+            }
+
             draftPresenter = CreateDraftPresenter(match);
 
             if (draftPresenter != null)
@@ -452,6 +463,8 @@ namespace NodeWar.Core
 
             if (disconnectHold != null && disconnectHold.IsHolding && !gameOverHandled)
                 disconnectHold.Tick(Time.realtimeSinceStartup);
+            else if (presenceHeartbeat != null && !gameOverHandled)
+                presenceHeartbeat.Tick(Time.realtimeSinceStartup);
 
             if (matchPhase != MatchPhase.Playing) return;
 
@@ -637,6 +650,7 @@ namespace NodeWar.Core
         // ===== DISCONNECT HOLD (8.2c) =====
 
         private NodeWar.Backend.DisconnectHold disconnectHold;
+        private NodeWar.Backend.PresenceHeartbeat presenceHeartbeat;
 
         private void OnHoldStarted()
         {
@@ -684,6 +698,7 @@ namespace NodeWar.Core
         {
             gameOverHandled = true;
             lockstepRunner.EndMatch();
+            if (presenceHeartbeat != null) presenceHeartbeat.Stop();
 
             int viewer = ViewerPlayerID();
             int opponent = 1 - viewer;
@@ -792,8 +807,20 @@ namespace NodeWar.Core
             try { result = await NodeWar.Backend.BackendServices.RankedMatch.GetResultAsync(matchId); }
             catch (System.Exception) { return; } // Offline: the hold will say so.
 
-            if (this == null || gameOverHandled || !NodeWar.Backend.DisconnectHold.IsTerminal(result)) return;
-            if (uiToolkitHud == null) return;
+            if (this == null || !NodeWar.Backend.DisconnectHold.IsTerminal(result)) return;
+            OnDecidedByServer(result);
+        }
+
+        /// <summary>
+        /// The server has already ended this match (a surrender, the opponent's
+        /// granted claim) and this side learned it outside a hold: from the
+        /// heartbeat, or on returning from the background.
+        /// </summary>
+        private void OnDecidedByServer(NodeWar.Backend.MatchResultView result)
+        {
+            if (this == null || gameOverHandled || uiToolkitHud == null) return;
+            // Decided during the draft: there is no board or runner to end yet.
+            if (lockstepRunner == null) return;
             EndByHold(new NodeWar.Backend.HoldStatus
             {
                 Stage = NodeWar.Backend.HoldStage.Resolved,
