@@ -360,7 +360,7 @@ One PR, stacked on #74, in parts that each build and test on their own. Server p
 | C | 7.4 client: `RankedResultTracker` + end-card rank block | lead |
 | D | 8.2c client: runner hold, `DisconnectHold` presenter, hold overlay, surrender | lead |
 | E | 8.2d + D19: discipline ladder, non-reports, Allocate refusal, queue countdown | planned after D |
-| F | Deploy to `development`, two-player test with the user, docs | lead + user |
+| F | Deploy to `development`, two-player test with the user, docs | lead + user; **deployed and server-verified 2026-09-30** (spike `-Hold`: TooEarly, then Won after the 15 s grace, cause Abandoned, +40/−8, a level-1 strike on the absent player; `-Surrender`: the opponent's Presence carries the settled Forfeit). Two-player client test outstanding |
 | G | 8.2e speculative grace window (D16): `SimulationState.CopyFrom`, runner rollback, view despawn | lead, plan mode; **built 2026-09-30**, two-player feel test outstanding |
 
 **Part A: contract (Backend/Shared, C# 9).**

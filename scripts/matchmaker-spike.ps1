@@ -18,7 +18,7 @@ param(
     # leave before connecting, which must void the match and free both players.
     [switch]$Rendezvous,
     # After a match forms and both confirm: slot 0 holds while slot 1 stays
-    # silent. A claim at once must be TooEarly; after 11 s it must win, with
+    # silent. A claim at once must be TooEarly; after 16 s (past the 15 s heartbeat grace) it must win, with
     # the result read back by both players (8.2c).
     [switch]$Hold,
     # After a match forms and both confirm: slot 1 surrenders (LeaveMatch with
@@ -123,16 +123,18 @@ if ($Hold -or $Surrender) {
         Write-Host "Presence (host holding): $($p | ConvertTo-Json -Compress -Depth 6)"
         $early = Invoke-Module $players[$host0] "ResolveHold" @{ matchId = $matchId }
         Write-Host "Claim at once (expect TooEarly): $($early | ConvertTo-Json -Compress -Depth 6)"
-        Start-Sleep -Seconds 11
+        Start-Sleep -Seconds 16
         Invoke-Module $players[$host0] "Presence" @{ matchId = $matchId; holding = $true } | Out-Null
         $claim = Invoke-Module $players[$host0] "ResolveHold" @{ matchId = $matchId }
-        Write-Host "Claim after 11 s (expect Won): $($claim | ConvertTo-Json -Compress -Depth 6)"
+        Write-Host "Claim after 16 s (expect Won): outcome $($claim.outcome), cause $($claim.result.cause), won $($claim.result.won)"
+        $absent = Invoke-Module $players[$guest] "GetPlayerState" @{}
+        Write-Host "Absent player discipline: level $($absent.Discipline.Level), blocked until $($absent.Discipline.BlockedUntilUnixSeconds)"
     }
     else {
         $leave = Invoke-Module $players[$guest] "LeaveMatch" @{ matchId = $matchId; forfeit = $true }
         Write-Host "Guest surrenders: $($leave.outcome) $($leave.message)"
         $p = Invoke-Module $players[$host0] "Presence" @{ matchId = $matchId; holding = $true }
-        Write-Host "Host presence (expect a settled Forfeit result): $($p.result | ConvertTo-Json -Compress -Depth 3)"
+        Write-Host "Host presence (expect a settled Forfeit result): state $($p.result.state), cause $($p.result.cause), won $($p.result.won)"
     }
 
     for ($i = 0; $i -lt 2; $i++) {
