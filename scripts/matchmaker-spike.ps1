@@ -16,7 +16,14 @@ param(
     [switch]$EnsureRecords,
     # After a match forms: publish a code as slot 0, read it as slot 1, then
     # leave before connecting, which must void the match and free both players.
-    [switch]$Rendezvous
+    [switch]$Rendezvous,
+    # After a match forms and both confirm: slot 0 holds while slot 1 stays
+    # silent. A claim at once must be TooEarly; after 11 s it must win, with
+    # the result read back by both players (8.2c).
+    [switch]$Hold,
+    # After a match forms and both confirm: slot 1 surrenders (LeaveMatch with
+    # forfeit), and slot 0's Presence must carry the settled result (D18).
+    [switch]$Surrender
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,5 +106,37 @@ if ($Rendezvous) {
     foreach ($p in $players) {
         $s = Invoke-Module $p "GetPlayerState" @{}
         Write-Host "Active match for $($p.Id): '$($s.ActiveMatch.matchId)'"
+    }
+}
+
+if ($Hold -or $Surrender) {
+    $matchId = $foundMatchId
+    if (-not $matchId) { Write-Host "No match ID to play on."; exit 1 }
+    $views = @($players | ForEach-Object { Invoke-Module $_ "Rendezvous" @{ matchId = $matchId; joinCode = $null } })
+    $host0 = if ($views[0].slot -eq 0) { 0 } else { 1 }
+    $guest = 1 - $host0
+    $players | ForEach-Object { Invoke-Module $_ "ConfirmConnected" @{ matchId = $matchId } | Out-Null }
+    Write-Host "Both confirmed; the match counts as started."
+
+    if ($Hold) {
+        $p = Invoke-Module $players[$host0] "Presence" @{ matchId = $matchId; holding = $true }
+        Write-Host "Presence (host holding): $($p | ConvertTo-Json -Compress -Depth 6)"
+        $early = Invoke-Module $players[$host0] "ResolveHold" @{ matchId = $matchId }
+        Write-Host "Claim at once (expect TooEarly): $($early | ConvertTo-Json -Compress -Depth 6)"
+        Start-Sleep -Seconds 11
+        Invoke-Module $players[$host0] "Presence" @{ matchId = $matchId; holding = $true } | Out-Null
+        $claim = Invoke-Module $players[$host0] "ResolveHold" @{ matchId = $matchId }
+        Write-Host "Claim after 11 s (expect Won): $($claim | ConvertTo-Json -Compress -Depth 6)"
+    }
+    else {
+        $leave = Invoke-Module $players[$guest] "LeaveMatch" @{ matchId = $matchId; forfeit = $true }
+        Write-Host "Guest surrenders: $($leave.outcome) $($leave.message)"
+        $p = Invoke-Module $players[$host0] "Presence" @{ matchId = $matchId; holding = $true }
+        Write-Host "Host presence (expect a settled Forfeit result): $($p.result | ConvertTo-Json -Compress -Depth 3)"
+    }
+
+    for ($i = 0; $i -lt 2; $i++) {
+        $r = Invoke-Module $players[$i] "GetMatchResult" @{ matchId = $matchId }
+        Write-Host "Result for P$i : state $($r.state), cause $($r.cause), won $($r.won), rrDelta $($r.rrDelta)"
     }
 }
