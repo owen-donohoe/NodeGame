@@ -343,6 +343,9 @@ Matchmaker is enabled and the queue is deployed (8.0). Rules as §7: same `Proto
 | D19 | **7.6 signatures deferred past a soft launch.** Interim: a match that times out with only one accepted report records a **non-report** against the silent player; non-reports feed the D13 ladder like disconnects, but only from the second within 7 days, because an honest client whose retries never reached the server looks the same once. |
 | D20 | **Stage 9 seeks by re-simulating from tick 0**, not keyframe snapshots, and a headless bot-vs-bot **balance rig** (`MatchFactory` + `BotPlayer`, both UnityEngine-free) comes before Stage 9. |
 | D21 | **Live server-authoritative simulation is parked.** The referee stays; the Notion chapter "Server-authoritative migration" is rescoped to referee + signatures. |
+| D23 | **Both players leave (2026-09-30, built).** A match both players left is decided on Core health at the earlier of their two logs' end ticks: fewer breaches wins, a tie voids, nobody is struck. Before this, the first to come back and forfeit took the loss. |
+| D24 | **A position evaluation, later.** A chess-style "who is winning" score for any state, computed headlessly from `SimulationState`. Uses: RL training signal and opponent (direction.md §3), deciding abandoned matches more finely than breaches, and recognising a rage-quit from a lost position, where a strike may be unfair but the match must still end. Not built: it needs a balance rig to calibrate against. |
+| D25 | **A left match plays on, later.** When a player leaves, the remaining player keeps playing instead of waiting: the runner already plays on with the opponent predicted idle (8.2e), so "play on" is speculation that never rolls back, or `BotPlayer` taking the empty seat. The server would settle it as the abandonment it is (or by D24's evaluation). Not built: it changes what a ranked result means and needs its own decisions. |
 | D22 | **Order:** 7.4 → 8.2c (D15, D12, D18) → 8.2d (D13, D19) → 8.2e (D16) → first `production` deploy (with the user) → then the balance rig and feel work (`direction.md`). 7.6 and Stage 9 wait. |
 
 **8.2b shape.** One Cloud Code function `Rendezvous(matchId, joinCode?)`: the caller must be in the record; it returns both player IDs, the caller's slot and the code once published; slot 0 publishes its code under the record's write lock. The guest polls every 2 s. A UnityEngine-free rendezvous state machine (tested like `RankedQueuePresenter`) drives the existing `MatchLauncher`, which gains ranked deadlines. `IRankedQueueView` gains connecting, re-queueing and already-in-a-match states.
@@ -399,6 +402,21 @@ One PR, stacked on #74, in parts that each build and test on their own. Server p
 - **G3, views:** a rollback can shrink `villagers` (bonus villagers spawned during speculation). Same-frame re-simulation normally grows it back, but a rollback into a hold, or real inputs that spawn fewer, would leave views pointing past the end. The runner raises `RolledBack(int villagerCountBefore)`. `GameManager` despawns the views at and above the confirmed count and lets its per-frame check spawn them again from the state, so a respawned index never keeps a stale owner or suit.
 - **G4, feel:** events seen only in speculation (a claim the real inputs prevent) have already played; the state then snaps. Accepted, and why the window is short. Tune 20 ticks after the two-player test.
 - **Why not snapshots per tick or re-simulation from tick 0:** one copy per blip is enough, since the confirmed point only moves when inputs arrive. Re-simulating from tick 0 would be ~0.5 s on a phone late in a match, as a hitch on every blip.
+
+**Security review (2026-09-30, with the user's list), what was done:**
+
+| Finding | Outcome |
+|---|---|
+| Command impersonation: `playerID` came from the wire | **Fixed.** `LockstepRunner` stamps each command with its sender's slot (and ours with ours). An impersonating client now desyncs, the hash check catches it, and the two logs disagree (Disputed) instead of being accepted. No wire change. |
+| Both players leave | **Fixed** (D23). |
+| A client heartbeats but blocks peer traffic and never holds | **Fixed.** A seen opponent that has not held while the caller held 30 s is absent: the claim wins, with a strike. A client that also fakes a hold reaches a mutual-hold Void at 60 s (accepted: indistinguishable from a broken link, D12). |
+| Relay over plain UDP | **Fixed.** DTLS; `ProtocolVersion` 3. |
+| `forTick` flood grows the input dictionary | **Fixed.** Inputs outside what an honest peer could send are ignored; 64 commands a player a tick on both sides. |
+| `playerID = -1` crashes both peers | **Not a crash.** Every index-bearing field is range-checked in `CommandProcessor`; -1 could only set a neutral Forge's allocation. Unreachable now that commands are stamped. No `Simulation/` change. |
+| DirectUDP accepts packets from anyone | **Fixed.** Only the connected peer's endpoint is read. |
+| Logs are unsigned, so a single log can be fabricated | **Postponed to 7.6.** D23 trusts the shorter of two unfinished logs, as agreement trusts two matching ones. |
+
+**Testing aid:** in the Editor and Development Builds, F8/F9/F10 drop all packets for 1/5/20 s on that copy (Shift: outgoing only).
 
 **Risks, checked while planning:**
 - Draft-phase disconnects keep `DraftManager`'s own 2 s end, and a ranked record confirmed before the draft is then held until the preflight forfeit. Out of scope; noted as a follow-up.

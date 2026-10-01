@@ -932,6 +932,13 @@ and must therefore arrive at identical results every tick.
   hash against its most recent stored local hash and fires `OnDesync` on
   mismatch. The packet does not name the checkpoint tick; lockstep keeps
   the two in step (see `docs/simulation-rules.md`, *Desync detection*).
+- **A command's player comes from its sender.** `LockstepRunner` stamps the
+  peer's commands with the peer's slot and its own with its own, whatever
+  the wire said, and holds each player to 64 commands a tick. Tick inputs
+  outside what an honest peer could send are ignored. Relay runs over DTLS
+  (`ProtocolVersion` 3). DirectUDP reads only the connected peer's endpoint.
+  In the Editor and Development Builds, F8/F9/F10 simulate a 1/5/20 s drop
+  (Shift: outgoing only).
 - **A short blip plays on** (8.2e). When the opponent's input for a tick is
   missing, `LockstepRunner` copies the state (`SimulationState.CopyFrom`)
   and keeps simulating for up to 20 ticks, predicting the opponent idle,
@@ -1079,6 +1086,13 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   there is one. That is how a returning player learns they lost, and how
   an opponent learns of a surrender. `GetMatchResult` is read-only; its
   `cause` is Played, Forfeit or Abandoned.
+- **Present but not holding.** A seen opponent that has not held while the
+  caller held 30 s counts as absent. An honest client holds within seconds
+  of its peer, so this one is keeping the match from advancing.
+- **Both players left** (D23). A log that replays cleanly but stops short
+  is kept as unfinished, with each Core's breaches. Once both players have
+  one, the earlier end tick decides: fewer breaches wins, a tie voids, no
+  strikes (`MatchEndCause.BothLeft`).
 - **Strikes and non-reports** (`MatchDiscipline`, `DisconnectPenalty`,
   8.2d). A hold settled against `abandonedBy` strikes that player. A
   Pending match voided by its timeout with one accepted report adds a
