@@ -70,9 +70,11 @@ namespace NodeWar.Network
             JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
             // Alternative if .ToRelayServerData() isn't found:
-            //var relayServerData = AllocationUtils.ToRelayServerData(allocation, "udp");
+            //var relayServerData = AllocationUtils.ToRelayServerData(allocation, "dtls");
 
-            var relayServerData = allocation.ToRelayServerData("udp");
+            // DTLS, not plain UDP: packets are encrypted between each peer and
+            // the Relay server. Both sides must agree (ProtocolVersion 3).
+            var relayServerData = allocation.ToRelayServerData("dtls");
             var settings = new NetworkSettings();
             settings.WithRelayParameters(ref relayServerData);
 
@@ -96,7 +98,7 @@ namespace NodeWar.Network
 
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
-            var relayServerData = joinAllocation.ToRelayServerData("udp");
+            var relayServerData = joinAllocation.ToRelayServerData("dtls");
             var settings = new NetworkSettings();
             settings.WithRelayParameters(ref relayServerData);
 
@@ -140,6 +142,8 @@ namespace NodeWar.Network
         /// </summary>
         public void Send(byte[] data)
         {
+            if (DroppingOutgoing) return;
+
             if (!IsSendReady())
             {
                 EnqueueOutgoing(data);
@@ -246,6 +250,8 @@ namespace NodeWar.Network
         public byte[][] ReceiveAll(bool deferTickInputs = false)
         {
             byte[][] received = ReceiveTransportPackets();
+            // A simulated drop still drains the transport, so nothing arrives late.
+            if (DroppingIncoming) received = Array.Empty<byte[]>();
             // Common case, every frame: nothing arrived and nothing to flush. Skip the allocations.
             if (received.Length == 0 && (deferTickInputs || deferredTickInputs.Count == 0))
                 return received;
@@ -440,6 +446,11 @@ namespace NodeWar.Network
                         Debug.Log("[Net] Remote connected from " + sender.Address + ":" + sender.Port);
                     }
 
+                    // The socket listens on every address, so anyone who knows the
+                    // port can send to it. Only the peer this match is with counts.
+                    IPEndPoint peer = remoteEndPoint;
+                    if (peer == null || !peer.Equals(sender)) continue;
+
                     lock (queueLock)
                     {
                         incomingQueue.Enqueue(data);
@@ -456,6 +467,45 @@ namespace NodeWar.Network
                 }
             }
         }
+
+        // --- Simulated network drops (Editor and Development Builds only) ---
+        //
+        // F8 drops every packet both ways for 1 s, F9 for 5 s, F10 for 20 s, on
+        // this copy of the game. Hold Shift to drop only what this copy sends,
+        // which is one-way loss. For testing the speculative window (8.2e) and
+        // the disconnect hold (8.2c) without touching a real network. Both
+        // copies keep running, unlike a paused window. Unity Transport's own
+        // keep-alive is untouched, so a 20 s drop stays under its timeout.
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private float dropIncomingUntil;
+        private float dropOutgoingUntil;
+
+        private bool DroppingIncoming => Time.realtimeSinceStartup < dropIncomingUntil;
+        private bool DroppingOutgoing => Time.realtimeSinceStartup < dropOutgoingUntil;
+
+        private void Update()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard == null) return;
+
+            float seconds = keyboard.f8Key.wasPressedThisFrame ? 1f
+                : keyboard.f9Key.wasPressedThisFrame ? 5f
+                : keyboard.f10Key.wasPressedThisFrame ? 20f
+                : 0f;
+            if (seconds <= 0f) return;
+
+            bool oneWay = keyboard.shiftKey.isPressed;
+            float until = Time.realtimeSinceStartup + seconds;
+            dropOutgoingUntil = until;
+            if (!oneWay) dropIncomingUntil = until;
+            Debug.LogWarning("[Net] Simulated drop: " + (oneWay ? "outgoing only" : "both ways") +
+                             " for " + seconds + " s.");
+        }
+#else
+        private bool DroppingIncoming => false;
+        private bool DroppingOutgoing => false;
+#endif
 
         private void OnDestroy()
         {
