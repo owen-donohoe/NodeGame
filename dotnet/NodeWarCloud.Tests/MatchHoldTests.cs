@@ -84,8 +84,10 @@ namespace NodeWar.Cloud.Tests
         [TestCase(159, 149)]
         public async Task SeenWithinTenSecondsPreventsAWinBeforeSixtySeconds(long now, long seen)
         {
+            // The opponent holds too, as an honest client does: this is about the
+            // seen window, not the present-but-not-holding rule.
             await hold.Presence(MatchId, "p0", true, 100);
-            await hold.Presence(MatchId, "p1", false, seen);
+            await hold.Presence(MatchId, "p1", true, seen);
             var result = await hold.ResolveHold(MatchId, "p0", now);
             Assert.That(result.outcome, Is.EqualTo(HoldOutcome.OpponentPresent));
             Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Open));
@@ -126,9 +128,8 @@ namespace NodeWar.Cloud.Tests
         }
 
         [TestCase(110)]
-        [TestCase(160)]
-        [TestCase(220)]
-        public async Task HeartbeatingOpponentWithoutAHoldCannotLoseOrVoid(long now)
+        [TestCase(129)]
+        public async Task HeartbeatingOpponentWithoutAHold_IsPresentForThirtySeconds(long now)
         {
             await hold.Presence(MatchId, "p0", true, 100);
             for (long time = 100; time <= now; time += 4)
@@ -137,6 +138,24 @@ namespace NodeWar.Cloud.Tests
             Assert.That((await hold.ResolveHold(MatchId, "p0", now)).outcome, Is.EqualTo(HoldOutcome.OpponentPresent));
             Assert.That((await Record()).state, Is.EqualTo(MatchRecordState.Open));
             AssertNoPlayerWrites();
+        }
+
+        [TestCase(130)]
+        [TestCase(160)]
+        [TestCase(220)]
+        public async Task HeartbeatingOpponentWithoutAHold_HasLeftTheMatchAfterThirtySeconds(long now)
+        {
+            // Talks to the server but keeps the match from advancing (blocks peer
+            // traffic, never holds): an honest client would be holding by now.
+            await hold.Presence(MatchId, "p0", true, 100);
+            for (long time = 100; time <= now; time += 4)
+                await hold.Presence(MatchId, "p1", false, time);
+            await hold.Presence(MatchId, "p0", true, now);
+            var result = await hold.ResolveHold(MatchId, "p0", now);
+            Assert.That(result.outcome, Is.EqualTo(HoldOutcome.Won));
+            var record = await Record();
+            Assert.That(record.abandonedBy, Is.EqualTo(1));
+            Assert.That(record.state, Is.EqualTo(MatchRecordState.Settled));
         }
 
         [TestCase(111, 160)]

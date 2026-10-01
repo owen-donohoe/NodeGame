@@ -19,6 +19,7 @@ namespace NodeWar.Cloud
         private const int ConnectionGraceSeconds = 15;
         private const int VoidSeconds = 60;
         private const int OpponentHoldSeconds = 50;
+        private const int NotHoldingSeconds = 30;
         private readonly IMatchRecordStore matches;
         private readonly Func<string, ISettlementPlayerStore> players;
         private readonly MatchSettler settler;
@@ -116,9 +117,15 @@ namespace NodeWar.Cloud
                     if (holdSince == 0 || now - holdSince < ClaimSeconds)
                         return new ResolveHoldResult { outcome = HoldOutcome.TooEarly };
                     long lastSeen = presence[1 - caller].lastSeenUnixSeconds;
-                    if (lastSeen != 0 && now - lastSeen <= SeenSeconds)
+                    long opponentHoldSince = presence[1 - caller].holdSinceUnixSeconds;
+                    // Seen, but never holding while the caller has held for
+                    // NotHoldingSeconds: in lockstep an honest client stalls and
+                    // holds within seconds of its peer (2 s of speculation, then
+                    // the hold), so this one is talking to the server while
+                    // keeping the match from advancing. That is leaving the match.
+                    bool presentButNotHolding = opponentHoldSince == 0 && now - holdSince >= NotHoldingSeconds;
+                    if (lastSeen != 0 && now - lastSeen <= SeenSeconds && !presentButNotHolding)
                     {
-                        long opponentHoldSince = presence[1 - caller].holdSinceUnixSeconds;
                         if (now - holdSince < VoidSeconds || opponentHoldSince == 0 ||
                             now - opponentHoldSince < OpponentHoldSeconds || presence[caller].lastSeenUnixSeconds == 0 ||
                             now - presence[caller].lastSeenUnixSeconds > SeenSeconds)
@@ -173,6 +180,7 @@ namespace NodeWar.Cloud
             var result = new MatchResultView { state = record.state };
             if (record.state != MatchRecordState.Settled) return result;
             result.cause = record.forfeitedBy < 0 ? MatchEndCause.Played :
+                record.bothLeft ? MatchEndCause.BothLeft :
                 record.abandonedBy >= 0 ? MatchEndCause.Abandoned : MatchEndCause.Forfeit;
             if (record.outcomes != null)
             {
