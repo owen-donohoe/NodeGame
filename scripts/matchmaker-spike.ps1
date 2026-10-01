@@ -10,7 +10,7 @@
 param(
     [string]$Environment = "development",
     [int]$Seconds = 60,
-    [int]$Protocol = 2,
+    [int]$Protocol = 3,
     [int]$Sim = 1,
     [int]$Content = 1966419918,
     [switch]$EnsureRecords,

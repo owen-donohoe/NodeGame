@@ -5,6 +5,8 @@ namespace NodeWar.Backend
     {
         // Bump for packet layout changes, including GameCommand's wire layout.
         // 2: DraftLoadout carries era tables and skin IDs.
-        public const ushort Current = 2;
+        // 3: Relay connections use DTLS instead of plain UDP. No layout change,
+        //    but a DTLS peer cannot reach a UDP one, so builds must not mix.
+        public const ushort Current = 3;
     }
 }
