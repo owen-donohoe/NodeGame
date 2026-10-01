@@ -30,6 +30,17 @@ namespace NodeWar.Network
         // ticks is 2 s: a dropped text message or a tunnel, not a crash.
         private const int SPECULATION_WINDOW = 20;
 
+        // An input a little late is ordinary jitter: Relay latency against a
+        // 200 ms input buffer leaves one arriving tens of milliseconds after its
+        // tick is due several times a second. That waits a frame, as plain
+        // lockstep always did. Only an input this late starts a speculation, or
+        // every jitter becomes a rollback, a snap and a flash of the banner.
+        private const float SPECULATE_AFTER = 0.3f;
+
+        // The banner waits until a speculation has run this many ticks, so a
+        // blip that settles quickly is never shown at all.
+        private const int BANNER_AFTER_TICKS = 5;
+
         // How far behind our confirmed tick the peer can be: its speculation
         // window plus the input delay it generates ahead with.
         private const int PEER_LAG_TICKS = SPECULATION_WINDOW + INPUT_DELAY + 2;
@@ -75,6 +86,7 @@ namespace NodeWar.Network
         // A speculation that had to be abandoned (it reached game over) is not
         // restarted until a confirmed tick runs, or it would loop.
         private bool speculationBlocked;
+        private bool bannerShown;
 
         private enum TickMode { Live, Speculative, Replay }
         private float lastHeartbeatTime;
@@ -295,6 +307,7 @@ namespace NodeWar.Network
                     ExecuteTick(simulationTick, TickMode.Speculative);
                     simulationTick++;
                     accumulator -= tickInterval;
+                    ShowBannerIfLong();
 
                     // A speculative game over is not a result: nobody has
                     // confirmed the inputs that produced it. Put the board back
@@ -383,6 +396,7 @@ namespace NodeWar.Network
         private bool CanSpeculate()
         {
             if (speculationBlocked || holding) return false;
+            if (!speculating && Time.time - lastAdvanceTime < SPECULATE_AFTER) return false;
             if (!localInputs.ContainsKey(simulationTick)) return false;
             return !speculating || simulationTick - speculateFrom < SPECULATION_WINDOW;
         }
@@ -393,7 +407,20 @@ namespace NodeWar.Network
             speculateFrom = simulationTick;
             speculating = true;
             Debug.Log("[LOCKSTEP] Opponent input missing at tick " + simulationTick + "; playing on.");
+        }
+
+        private void ShowBannerIfLong()
+        {
+            if (bannerShown || simulationTick - speculateFrom < BANNER_AFTER_TICKS) return;
+            bannerShown = true;
             SpeculationChanged?.Invoke(true);
+        }
+
+        private void HideBanner()
+        {
+            if (!bannerShown) return;
+            bannerShown = false;
+            SpeculationChanged?.Invoke(false);
         }
 
         private bool SpanConfirmed()
@@ -429,7 +456,7 @@ namespace NodeWar.Network
             }
             lastAdvanceTime = Time.time;
             Debug.Log("[LOCKSTEP] Opponent back; replayed ticks " + from + " to " + (until - 1) + ".");
-            SpeculationChanged?.Invoke(false);
+            HideBanner();
         }
 
         /// <summary>
@@ -443,7 +470,7 @@ namespace NodeWar.Network
             simulationTick = speculateFrom;
             speculating = false;
             RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
-            SpeculationChanged?.Invoke(false);
+            HideBanner();
         }
 
         // ===== INPUT GENERATION =====

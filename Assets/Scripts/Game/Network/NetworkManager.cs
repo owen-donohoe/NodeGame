@@ -471,8 +471,9 @@ namespace NodeWar.Network
         // --- Simulated network drops (Editor and Development Builds only) ---
         //
         // F8 drops every packet both ways for 1 s, F9 for 5 s, F10 for 20 s, on
-        // this copy of the game. Hold Shift to drop only what this copy sends,
-        // which is one-way loss. For testing the speculative window (8.2e) and
+        // this copy of the game, and fails its ranked server calls for as long:
+        // this copy has lost its connection. Hold Shift to drop only what this
+        // copy sends to its peer, which is one-way loss on the peer link. For testing the speculative window (8.2e) and
         // the disconnect hold (8.2c) without touching a real network. Both
         // copies keep running, unlike a paused window. Unity Transport's own
         // keep-alive is untouched, so a 20 s drop stays under its timeout.
@@ -486,6 +487,10 @@ namespace NodeWar.Network
 
         private void Update()
         {
+            // A both-ways drop is this copy losing its connection: the server
+            // calls fail too, so the other copy sees this one go absent.
+            BackendServices.SimulatedOffline = DroppingIncoming;
+
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
@@ -499,7 +504,7 @@ namespace NodeWar.Network
             float until = Time.realtimeSinceStartup + seconds;
             dropOutgoingUntil = until;
             if (!oneWay) dropIncomingUntil = until;
-            Debug.LogWarning("[Net] Simulated drop: " + (oneWay ? "outgoing only" : "both ways") +
+            Debug.LogWarning("[Net] Simulated drop: " + (oneWay ? "outgoing only" : "both ways, server calls too") +
                              " for " + seconds + " s.");
         }
 #else

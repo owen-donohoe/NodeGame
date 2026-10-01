@@ -15,6 +15,7 @@ namespace NodeWar.Backend
     {
         public async Task<RendezvousResult> RendezvousAsync(string matchId, string joinCode)
         {
+            ThrowIfSimulatedOffline();
             await GameServices.EnsureReadyAsync();
             return await CloudCodeService.Instance.CallModuleEndpointAsync<RendezvousResult>(
                 BackendServices.CloudModule, "Rendezvous",
@@ -23,6 +24,7 @@ namespace NodeWar.Backend
 
         public async Task ConfirmConnectedAsync(string matchId)
         {
+            ThrowIfSimulatedOffline();
             await GameServices.EnsureReadyAsync();
             await CloudCodeService.Instance.CallModuleEndpointAsync<object>(
                 BackendServices.CloudModule, "ConfirmConnected",
@@ -32,6 +34,7 @@ namespace NodeWar.Backend
         public async Task<LeaveMatchResult> LeaveAsync(string matchId, bool forfeit)
         {
             string requestedFor = BackendServices.Account.Current?.PlayerId;
+            ThrowIfSimulatedOffline();
             await GameServices.EnsureReadyAsync();
             LeaveMatchResult result = await CloudCodeService.Instance.CallModuleEndpointAsync<LeaveMatchResult>(
                 BackendServices.CloudModule, "LeaveMatch",
@@ -43,6 +46,7 @@ namespace NodeWar.Backend
         public async Task<MatchResultView> GetResultAsync(string matchId)
         {
             string requestedFor = BackendServices.Account.Current?.PlayerId;
+            ThrowIfSimulatedOffline();
             await GameServices.EnsureReadyAsync();
             MatchResultView result = await CloudCodeService.Instance.CallModuleEndpointAsync<MatchResultView>(
                 BackendServices.CloudModule, "GetMatchResult",
@@ -54,6 +58,7 @@ namespace NodeWar.Backend
         public async Task<PresenceResult> PresenceAsync(string matchId, bool holding)
         {
             string requestedFor = BackendServices.Account.Current?.PlayerId;
+            ThrowIfSimulatedOffline();
             await GameServices.EnsureReadyAsync();
             PresenceResult result = await CloudCodeService.Instance.CallModuleEndpointAsync<PresenceResult>(
                 BackendServices.CloudModule, "Presence",
@@ -65,12 +70,19 @@ namespace NodeWar.Backend
         public async Task<ResolveHoldResult> ResolveHoldAsync(string matchId)
         {
             string requestedFor = BackendServices.Account.Current?.PlayerId;
+            ThrowIfSimulatedOffline();
             await GameServices.EnsureReadyAsync();
             ResolveHoldResult result = await CloudCodeService.Instance.CallModuleEndpointAsync<ResolveHoldResult>(
                 BackendServices.CloudModule, "ResolveHold",
                 new Dictionary<string, object> { { "matchId", matchId } });
             RememberSettled(result?.result, requestedFor);
             return result;
+        }
+
+        private static void ThrowIfSimulatedOffline()
+        {
+            if (BackendServices.SimulatedOffline)
+                throw new System.InvalidOperationException("Simulated offline (debug drop key).");
         }
 
         // A settled result carries the caller's new rank, so the lobby strip is

@@ -938,11 +938,16 @@ and must therefore arrive at identical results every tick.
   outside what an honest peer could send are ignored. Relay runs over DTLS
   (`ProtocolVersion` 3). DirectUDP reads only the connected peer's endpoint.
   In the Editor and Development Builds, F8/F9/F10 simulate a 1/5/20 s drop
-  (Shift: outgoing only).
-- **A short blip plays on** (8.2e). When the opponent's input for a tick is
-  missing, `LockstepRunner` copies the state (`SimulationState.CopyFrom`)
-  and keeps simulating for up to 20 ticks, predicting the opponent idle,
-  while the HUD shows "Opponent's connection is unstable". Speculative ticks
+  on that copy, and its ranked server calls fail for as long
+  (`BackendServices.SimulatedOffline`), as a real lost connection would.
+  Shift drops only outgoing peer packets.
+- **A short blip plays on** (8.2e). An input a little late is ordinary
+  jitter (Relay latency against a 200 ms buffer) and waits a frame, as
+  plain lockstep did. Once the opponent's input is 300 ms late,
+  `LockstepRunner` copies the state (`SimulationState.CopyFrom`) and keeps
+  simulating for up to 20 ticks, predicting the opponent idle. The HUD
+  shows "Opponent's connection is unstable" only once a speculation has
+  run 5 ticks. Speculative ticks
   raise `TickSimulated` but are never recorded or hashed. Once the real
   inputs for the whole span arrive, it rolls back and replays the span with
   them. That replay is the only pass that records and hashes, and it plays

@@ -16,6 +16,15 @@ namespace NodeWar.Backend
         /// <summary>The Cloud Code module name: dotnet/NodeWarCloud's solution name.</summary>
         public const string CloudModule = "NodeWarCloud";
 
+        /// <summary>
+        /// Editor and Development Builds only: set by NetworkManager's F8-F10
+        /// drop keys for the length of a both-ways drop, so the ranked match
+        /// calls fail as they would on a device that lost its connection. A drop
+        /// that cut only the peer link would leave both players visible to the
+        /// server, which is a different case (D12: a broken link voids).
+        /// </summary>
+        public static bool SimulatedOffline { get; set; }
+
         private static IPlayerStateService playerState;
         private static IAccountService account;
         private static IInventoryService inventory;
