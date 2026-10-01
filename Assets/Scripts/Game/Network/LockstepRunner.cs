@@ -34,6 +34,14 @@ namespace NodeWar.Network
         // window plus the input delay it generates ahead with.
         private const int PEER_LAG_TICKS = SPECULATION_WINDOW + INPUT_DELAY + 2;
 
+        // How far ahead of our tick a peer's input can honestly be: it may be
+        // PEER_LAG_TICKS ahead and have generated a speculation window beyond.
+        private const int MAX_INPUT_AHEAD = PEER_LAG_TICKS + SPECULATION_WINDOW + INPUT_DELAY + 16;
+
+        // Commands one player can issue in one tick. A full-army lasso move is
+        // one command per villager, and a player has at most 25.
+        private const int MAX_COMMANDS_PER_TICK = 64;
+
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
 
@@ -347,6 +355,31 @@ namespace NodeWar.Network
 
         // ===== SPECULATION (8.2e) =====
 
+        /// <summary>
+        /// A peer's input as this side will apply it. Every command is stamped
+        /// with the peer's own slot, whatever the wire said: the slot is decided
+        /// by who sent the packet, not by its contents. An honest peer's commands
+        /// already carry it, so both sides apply the same thing. A modified
+        /// client issuing commands for the other player's villagers now has them
+        /// applied on its side only, which desyncs, is caught by the hash check,
+        /// and leaves two disagreeing logs (Disputed) instead of an accepted
+        /// result. Also capped at MAX_COMMANDS_PER_TICK, as local input is.
+        /// </summary>
+        private TickInput FromPeer(TickInput input)
+        {
+            GameCommand[] commands = input.commands ?? new GameCommand[0];
+            int count = commands.Length < MAX_COMMANDS_PER_TICK ? commands.Length : MAX_COMMANDS_PER_TICK;
+            var stamped = new GameCommand[count];
+            int peerSlot = 1 - localPlayerID;
+            for (int i = 0; i < count; i++)
+            {
+                stamped[i] = commands[i];
+                stamped[i].playerID = peerSlot;
+            }
+            input.commands = stamped;
+            return input;
+        }
+
         private bool CanSpeculate()
         {
             if (speculationBlocked || holding) return false;
@@ -429,8 +462,18 @@ namespace NodeWar.Network
 
         private void GenerateAndSendLocalInput()
         {
-            // Flush all commands accumulated since last tick
+            // Flush all commands accumulated since last tick. Capped as the peer
+            // caps ours (FromPeer), so the two sides always apply the same list.
             GameCommand[] commands = inputBuffer.DrainCommands();
+            if (commands.Length > MAX_COMMANDS_PER_TICK)
+            {
+                Debug.LogWarning("[LOCKSTEP] " + commands.Length + " commands in one tick; keeping " +
+                                 MAX_COMMANDS_PER_TICK + ".");
+                System.Array.Resize(ref commands, MAX_COMMANDS_PER_TICK);
+            }
+            // Stamped with our slot as the peer stamps them, so even a local bug
+            // that put the wrong player on a command cannot make the sides differ.
+            for (int i = 0; i < commands.Length; i++) commands[i].playerID = localPlayerID;
 
             // Attach pending hash if one was computed after last tick
             int hash = pendingHash;
@@ -553,10 +596,15 @@ namespace NodeWar.Network
                                 packets[i].Length + " bytes).");
                             break;
                         }
+                        // Only ticks an honest peer could be sending: a flood of
+                        // distinct forTick values must not grow the dictionary.
+                        if (remote.forTick < simulationTick - PEER_LAG_TICKS - 10 ||
+                            remote.forTick > simulationTick + MAX_INPUT_AHEAD)
+                            break;
                         // Store if not already received (ignore duplicate resends)
                         if (!remoteInputs.ContainsKey(remote.forTick))
                         {
-                            remoteInputs[remote.forTick] = remote;
+                            remoteInputs[remote.forTick] = FromPeer(remote);
                         }
                         break;
 
