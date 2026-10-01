@@ -441,6 +441,87 @@ namespace NodeWar.Cloud.Tests
             Assert.That((await Record()).outcomes[0].won, Is.True);
         }
 
+        // ===== BOTH PLAYERS LEFT =====
+
+        // One raider against player 1's Core: one breach by tick 200 and never
+        // the game over a full rush brings (it lands all three in one tick).
+        // Player 0 is never breached. Asserted below rather than assumed.
+        private static GameCommand[] OneRaider(SimulationState state)
+        {
+            if (state.tickCount == 0) return RefereeTests.Rush(state);
+            if (state.tickCount != 20) return null;
+            for (int i = 0; i < state.villagers.Length; i++)
+                if (state.villagers[i].ownerID == 0 && state.villagers[i].state == VillagerState.Idle)
+                    return new[] { new GameCommand { type = CommandType.Move, playerID = 0, villagerID = i,
+                        targetNodeID = state.players[1].coreNodeID } };
+            return null;
+        }
+
+        private byte[] Unfinished(int maxTicks, int localPlayer)
+        {
+            var log = RefereeTests.Record(balance, maxTicks, OneRaider);
+            Assert.That(log.result.reason, Is.EqualTo(MatchEndReason.Abandoned), "must stop before the game ends");
+            log.header.localPlayer = (byte)localPlayer;
+            return MatchLogFormat.Write(log);
+        }
+
+        private int[] BreachesOf(byte[] bytes) => new Referee(RefereeTests.Catalog(balance)).Verify(bytes).breaches;
+
+        [Test]
+        public async Task BothLeft_IsDecidedOnCoreHealth_WithoutAStrike()
+        {
+            byte[] mine = Unfinished(300, 0);
+            byte[] theirs = Unfinished(300, 1);
+            int[] breaches = BreachesOf(mine);
+            Assert.That(breaches, Is.EqualTo(new[] { 0, 1 }), "the raid must have breached player 1 once by then");
+
+            var first = await Report(0, mine);
+            Assert.That(first.state, Is.EqualTo(MatchRecordState.Open), "one leaver decides nothing");
+            AssertNoPlayerWrites();
+
+            var second = await Report(1, theirs, 120);
+            Assert.That(second.state, Is.EqualTo(MatchRecordState.Settled));
+            var record = await Record();
+            Assert.That(record.bothLeft, Is.True);
+            Assert.That(record.forfeitedBy, Is.EqualTo(1), "more breaches loses");
+            Assert.That(record.abandonedBy, Is.EqualTo(-1), "both left: nobody is struck");
+            Assert.That(record.outcomes[0].won, Is.True);
+            Assert.That((await State(0)).Rank.RR, Is.GreaterThan(1000));
+        }
+
+        [Test]
+        public async Task BothLeft_WithEqualHealth_Voids()
+        {
+            await Report(0, Unfinished(40, 0));
+            var second = await Report(1, Unfinished(40, 1));
+            Assert.That(second.state, Is.EqualTo(MatchRecordState.Void));
+            Assert.That((await Record()).forfeitedBy, Is.EqualTo(-1));
+            AssertNoPlayerWrites();
+        }
+
+        [Test]
+        public async Task BothLeft_IsDecidedAtTheEarlierLog_WhereBothStillAgree()
+        {
+            // Player 1 left at tick 40, before any breach; player 0 later, after
+            // some. The earlier log is the last point both agree on: a tie.
+            byte[] later = Unfinished(300, 0);
+            byte[] earlier = Unfinished(40, 1);
+            Assert.That(BreachesOf(later)[1], Is.EqualTo(1));
+            await Report(0, later);
+            var second = await Report(1, earlier);
+            Assert.That(second.state, Is.EqualTo(MatchRecordState.Void));
+        }
+
+        [Test]
+        public async Task AFinishedLogAgainstAnUnfinishedOne_IsNotBothLeft()
+        {
+            await Report(0);
+            var second = await Report(1, Unfinished(40, 1));
+            Assert.That(second.state, Is.EqualTo(MatchRecordState.Pending), "the timeout and D19 handle a leaver");
+            Assert.That((await Record()).bothLeft, Is.False);
+            AssertNoPlayerWrites();
+        }
+
         private Task<MatchReportingResult> Report(int player, byte[] bytes = null, long now = 100) =>
             reporting.Report(MatchId, "p" + player, bytes ?? winningBytes, now);
         private static string SettlementState(PlayerState state)

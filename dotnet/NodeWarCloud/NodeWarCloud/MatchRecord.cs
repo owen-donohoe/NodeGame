@@ -43,6 +43,9 @@ namespace NodeWar.Cloud
         // Durable completion guard, set under the record lock only after
         // discipline succeeds (or none is due), before releasing claims.
         public bool disciplineApplied;
+        // Both players left before the match ended and it was decided on Core
+        // health (forfeitedBy holds the side with more breaches). Never a strike.
+        public bool bothLeft;
     }
 
     // A settled player's result on this match. Never re-derived from current
@@ -72,6 +75,12 @@ namespace NodeWar.Cloud
         public int finalHash;
         public bool accepted;
         public string error;
+        // A log that replayed cleanly but stopped before the match ended (the
+        // player left), with each player's Core breaches at its last tick.
+        // Refused for settlement on its own; two of them decide a match both
+        // players left.
+        public bool unfinished;
+        public int[] breaches;
         // Durable until copied to log-N. Retries save the winning record's log,
         // never a concurrent upload that lost the record write-lock race.
         public string pendingLogBase64;

@@ -129,6 +129,7 @@ namespace NodeWar.Cloud
                     if (!report.accepted)
                     {
                         TrimRefusals(record, caller);
+                        if (report.unfinished) DecideIfBothLeft(record, now);
                     }
                     else
                     {
@@ -173,8 +174,53 @@ namespace NodeWar.Cloud
             report.finalHash = verdict.finalHash;
             report.accepted = verdict.ok && verdict.gameOver && (verdict.winner == 0 || verdict.winner == 1);
             report.error = report.accepted ? null : verdict.error ?? "Replay did not end in a rated win.";
+            // Consistent, but stopped before the end: the player left. Kept with
+            // its Core breaches in case the opponent left too.
+            report.unfinished = verdict.ok && !verdict.gameOver && verdict.breaches != null &&
+                                verdict.breaches.Length == 2;
+            if (report.unfinished) report.breaches = verdict.breaches;
             return report;
         }
+
+        /// <summary>
+        /// Both players left a started match before it ended: each uploaded a
+        /// log that replays cleanly but stops short. Decided on Core health at
+        /// the earlier of the two end ticks, the last point two honest logs
+        /// still agree on (breaches only ever rise): fewer breaches wins. A tie
+        /// voids. Neither player is struck: both left. The winner is committed
+        /// as forfeitedBy, under the same lock as the report, so the settlement
+        /// that follows is the one every other path finishes.
+        ///
+        /// Before 7.6 the logs are unsigned, so this trusts the shorter one as
+        /// agreements trust two matching ones; it can only be reached when both
+        /// players really did upload unfinished logs.
+        /// </summary>
+        private static void DecideIfBothLeft(MatchRecord record, long now)
+        {
+            if (record.forfeitedBy == 0 || record.forfeitedBy == 1) return;
+            if (record.reports.Any(r => r.accepted)) return;
+
+            MatchReport first = LatestUnfinished(record, 0);
+            MatchReport second = LatestUnfinished(record, 1);
+            if (first == null || second == null) return;
+
+            MatchReport earlier = first.endTick <= second.endTick ? first : second;
+            int p0 = earlier.breaches[0];
+            int p1 = earlier.breaches[1];
+            if (p0 == p1)
+            {
+                record.state = MatchRecordState.Void;
+                record.outcomes = null;
+                return;
+            }
+            record.forfeitedBy = p0 > p1 ? 0 : 1;
+            record.bothLeft = true;
+            record.settlementUnixSeconds = now;
+        }
+
+        private static MatchReport LatestUnfinished(MatchRecord record, int player) =>
+            record.reports.LastOrDefault(r => r.playerIndex == player && r.unfinished && r.breaches != null &&
+                                              r.breaches.Length == 2);
 
         // Keeps only the last MaxRefusalsPerPlayer refused reports for the given
         // player. Accepted reports are never trimmed by this.

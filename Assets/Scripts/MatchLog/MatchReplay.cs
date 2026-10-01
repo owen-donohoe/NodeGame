@@ -15,6 +15,12 @@ namespace NodeWar.MatchLog
         public bool gameOver;
         public int winner = -1;
         public int finalHash;
+
+        /// <summary>
+        /// How many times each player's Core was breached when the replay
+        /// stopped, by player. A match both players left is decided on it.
+        /// </summary>
+        public int[] breaches;
     }
 
     /// <summary>
@@ -152,6 +158,11 @@ namespace NodeWar.MatchLog
             outcome.gameOver = state.gameOver;
             outcome.winner = state.gameOver ? state.winnerID : -1;
             outcome.finalHash = SimulationStateHasher.ComputeHash(state);
+            if (state.players != null)
+            {
+                outcome.breaches = new int[state.players.Length];
+                for (int p = 0; p < state.players.Length; p++) outcome.breaches[p] = state.players[p].breachCount;
+            }
         }
     }
 }

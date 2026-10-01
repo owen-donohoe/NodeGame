@@ -15,6 +15,7 @@ namespace NodeWar.Cloud
         public int firstMismatchTick = -1;
         public long elapsedMs;
         public int ticksReplayed;
+        public int[] breaches;
 
         public static RefereeVerdict Refused(string error) => new RefereeVerdict { error = error };
     }
@@ -66,6 +67,7 @@ namespace NodeWar.Cloud
                 verdict.finalHash = outcome.finalHash;
                 verdict.firstMismatchTick = outcome.firstMismatchTick;
                 verdict.ticksReplayed = outcome.endTick;
+                verdict.breaches = outcome.breaches;
                 return verdict;
             }
             catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException ||

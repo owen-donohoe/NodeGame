@@ -67,7 +67,9 @@ namespace NodeWar.Backend
         /// <summary>A player gave the match up (surrender, or forfeiting to queue again).</summary>
         Forfeit,
         /// <summary>A disconnect hold resolved against a player the server could not see.</summary>
-        Abandoned
+        Abandoned,
+        /// <summary>Both players left before the end; decided on Core health, no strikes.</summary>
+        BothLeft
     }
 
     /// <summary>
