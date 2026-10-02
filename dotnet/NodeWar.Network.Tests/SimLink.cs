@@ -66,6 +66,9 @@ namespace NodeWar.Network.Tests
         public long Sent;
         public long Lost;
         public long BytesSent;
+        /// <summary>By what the packet was: tick inputs and heartbeats, counted at send.</summary>
+        public long InputsSent;
+        public long HeartbeatsSent;
 
         public LinkDirection(LinkProfile profile, int seed)
         {
@@ -77,6 +80,12 @@ namespace NodeWar.Network.Tests
         {
             Sent++;
             BytesSent += data.Length;
+            if (data.Length > 0)
+            {
+                PacketType type = InputSerializer.ReadPacketType(data);
+                if (type == PacketType.TickInput) InputsSent++;
+                else if (type == PacketType.Heartbeat) HeartbeatsSent++;
+            }
 
             if (profile.DropInput != null && data.Length > 0 && InputSerializer.ReadPacketType(data) == PacketType.TickInput &&
                 InputSerializer.TryDeserialize(data, out TickInput carried) && profile.DropInput(now, carried.forTick))

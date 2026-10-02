@@ -45,6 +45,7 @@ namespace NodeWar.Network.Tests
             int tick = ended.State.tickCount;
             long sent = s.Links[0].Sent;
             int flushes = ended.FlushCalls;
+            int received = ended.InputDeliveries;
 
             // Long enough for a heartbeat (0.5 s) and several resends (0.1 s).
             Step(s, 5, s.Peers);
@@ -52,6 +53,8 @@ namespace NodeWar.Network.Tests
             Assert.AreEqual(tick, ended.State.tickCount, "an ended core ticked");
             Assert.AreEqual(sent, s.Links[0].Sent, "an ended core sent a packet");
             Assert.AreEqual(flushes, ended.FlushCalls, "an ended core reached the transport on Flush");
+            Assert.AreEqual(received, ended.InputDeliveries,
+                "an ended core still read its link (the peer is still sending, so reads would show here)");
         }
 
         [Test]
@@ -68,7 +71,8 @@ namespace NodeWar.Network.Tests
             Assert.AreEqual(0, paused.Holds, "a paused core started a hold");
             Assert.IsFalse(paused.Core.IsHolding);
             Assert.Greater(paused.InputDeliveries, 0, "a paused core did not read its link");
-            Assert.Greater(s.Links[0].Sent, 0, "a paused core sent no heartbeat");
+            Assert.Greater(s.Links[0].HeartbeatsSent, 0, "a paused core sent no heartbeat");
+            Assert.AreEqual(0, s.Links[0].InputsSent, "a paused core sent tick inputs");
         }
 
         [Test]
