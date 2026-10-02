@@ -38,10 +38,13 @@
     <Compile Include="LostTickTests.cs" />
     <Compile Include="SweepTests.cs" />
     <Compile Include="StartSkewTests.cs" />
+    <Compile Include="InputDelayControllerTests.cs" />
     <Compile Include="LifecycleTests.cs" />
 
     <Compile Include="../../Assets/Scripts/Game/Network/LockstepCore.cs"
              Link="Network/LockstepCore.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Network/InputDelayController.cs"
+             Link="Network/InputDelayController.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/InputSerializer.cs"
              Link="Network/InputSerializer.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/InputBuffer.cs"
