@@ -116,7 +116,7 @@ namespace NodeWar.Backend
         }
 
         /// <summary>The runner stopped advancing. Starts a hold unless one is running or the match already resolved.</summary>
-        public void Start(double now)
+        public void Start(double now, bool startOffline = false)
         {
             if (IsHolding || Current.Stage == HoldStage.Resolved) return;
             generation++;
@@ -129,6 +129,14 @@ namespace NodeWar.Backend
             claimSent = false;
             resumeAfterClaim = false;
             note = null;
+            // The caller already knows the server is out of reach (ranked
+            // only): say so from the first frame instead of blaming the opponent.
+            if (startOffline && IsRanked)
+            {
+                failures = ReconnectingAfterFailures;
+                Publish(Status(HoldStage.Reconnecting, "Reconnecting…", "Your connection dropped.", null));
+                return;
+            }
             Publish(StageFor(now));
         }
 
@@ -312,14 +320,19 @@ namespace NodeWar.Backend
             claiming = false;
             claimSent = false;
             resumeAfterClaim = false;
-            if (IsRanked) _ = TellServerResumed();
             Publish(new HoldStatus { Stage = HoldStage.None });
+            if (IsRanked) _ = TellServerResumed();
         }
 
         private async Task TellServerResumed()
         {
-            try { await service.PresenceAsync(matchId, false); }
-            catch (Exception) { /* A stale hold on the server only shortens the next claim's wait. */ }
+            PresenceResult answer;
+            try { answer = await service.PresenceAsync(matchId, false); }
+            catch (Exception) { return; /* A stale hold on the server only shortens the next claim's wait. */ }
+            // The link came back to a match the server already decided: the
+            // opponent claimed it while we were away. Say so now rather than at
+            // the next heartbeat. A hold started since will hear it itself.
+            if (Current.Stage == HoldStage.None && IsTerminal(answer?.result)) ResolveFrom(answer.result);
         }
 
         /// <summary>A terminal record decides the ending, whoever resolved it.</summary>

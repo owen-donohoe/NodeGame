@@ -220,6 +220,7 @@ namespace NodeWar.Core
                 presenceHeartbeat = new NodeWar.Backend.PresenceHeartbeat(
                     NodeWar.Backend.BackendServices.RankedMatch, match.matchId);
                 presenceHeartbeat.Decided += OnDecidedByServer;
+                presenceHeartbeat.ReachabilityChanged += OnReachabilityChanged;
             }
 
             draftPresenter = CreateDraftPresenter(match);
@@ -697,6 +698,17 @@ namespace NodeWar.Core
             // Off whatever else happened: EndMatch ends a speculation after the
             // match is already over, and the banner must not outlive it.
             if (uiToolkitHud != null) uiToolkitHud.ShowConnectionBanner(speculating && !gameOverHandled);
+
+            // Ranked only: ask the server now, once a second while the pill is
+            // up, so the side that dropped is told it was them.
+            if (presenceHeartbeat == null) return;
+            presenceHeartbeat.Urgent = speculating;
+            if (speculating) presenceHeartbeat.ProbeNow(Time.realtimeSinceStartup);
+        }
+
+        private void OnReachabilityChanged(bool unreachable)
+        {
+            if (uiToolkitHud != null) uiToolkitHud.SetConnectionBannerSelfOffline(unreachable);
         }
 
         private void OnHoldStarted()
@@ -710,7 +722,7 @@ namespace NodeWar.Core
                 OnNetworkDisconnect();
                 return;
             }
-            disconnectHold.Start(Time.realtimeSinceStartup);
+            disconnectHold.Start(Time.realtimeSinceStartup, presenceHeartbeat != null && presenceHeartbeat.Unreachable);
         }
 
         private void OnHoldEnded()
@@ -765,7 +777,12 @@ namespace NodeWar.Core
                     reason = NodeWar.MatchLog.MatchEndReason.Surrender;
                     break;
                 case NodeWar.Backend.HoldEnding.Lost:
-                    title = "Defeat"; sub = "You were away too long."; winner = opponent;
+                    title = "Defeat"; winner = opponent;
+                    sub = status.Result?.cause == NodeWar.Backend.MatchEndCause.BothLeft
+                        ? "You both disconnected. Your opponent's Core had more health."
+                        : status.Result?.cause == NodeWar.Backend.MatchEndCause.Abandoned
+                            ? "You disconnected, and your opponent claimed the win."
+                            : "You were away too long.";
                     break;
                 case NodeWar.Backend.HoldEnding.Surrendered:
                     title = "Defeat"; sub = "You surrendered."; winner = opponent;

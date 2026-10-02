@@ -507,6 +507,17 @@ namespace NodeWar.UI
             if (connectionBanner != null) connectionBanner.EnableInClassList("hud__connection--on", on);
         }
 
+        /// <summary>
+        /// Ranked only: the server could not be reached, so the dropped link is
+        /// ours and the pill must not blame the opponent. The uxml's text is the
+        /// opponent wording, which a private match keeps.
+        /// </summary>
+        public void SetConnectionBannerSelfOffline(bool selfOffline)
+        {
+            var label = connectionBanner?.Q<Label>(className: "hud__connection-label");
+            if (label != null) label.text = selfOffline ? "Reconnecting…" : "Opponent's connection is unstable…";
+        }
+
         public void HideHold()
         {
             if (holdRoot == null) return;

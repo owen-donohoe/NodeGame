@@ -15,11 +15,12 @@ namespace NodeWar.Lobby.Tests
             public readonly Queue<Func<Task<PresenceResult>>> PresenceAnswers = new Queue<Func<Task<PresenceResult>>>();
             public readonly Queue<Func<Task<ResolveHoldResult>>> ResolveAnswers = new Queue<Func<Task<ResolveHoldResult>>>();
             public readonly List<string> Calls = new List<string>();
+            public PresenceResult ResumedAnswer = Seen();
 
             public Task<PresenceResult> PresenceAsync(string matchId, bool holding)
             {
                 Calls.Add(holding ? "presence" : "resumed");
-                if (!holding) return Task.FromResult(Seen());
+                if (!holding) return Task.FromResult(ResumedAnswer);
                 return PresenceAnswers.Count > 0 ? PresenceAnswers.Dequeue()() : Task.FromResult(Seen());
             }
 
@@ -116,6 +117,37 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("Reconnecting…", hold.Current.Title);
 
             hold.Tick(2);
+            Assert.AreEqual(HoldStage.Waiting, hold.Current.Stage);
+        }
+
+        [Test]
+        public void StartOffline_ShowsReconnectingAtOnce_AndAnAnswerRevertsToTheCountdown()
+        {
+            var (hold, _) = Ranked();
+            hold.Start(0, startOffline: true);
+            Assert.AreEqual(HoldStage.Reconnecting, hold.Current.Stage);
+            Assert.AreEqual("Reconnecting…", hold.Current.Title);
+
+            hold.Tick(0);
+            Assert.AreEqual(HoldStage.Waiting, hold.Current.Stage);
+            Assert.AreEqual("Opponent disconnected", hold.Current.Title);
+        }
+
+        [Test]
+        public void StartOffline_FirstFailureKeepsReconnecting()
+        {
+            var (hold, service) = Ranked();
+            service.PresenceAnswers.Enqueue(Fail<PresenceResult>());
+            hold.Start(0, startOffline: true);
+            hold.Tick(0);
+            Assert.AreEqual(HoldStage.Reconnecting, hold.Current.Stage);
+        }
+
+        [Test]
+        public void StartOffline_IsIgnoredInAPrivateMatch()
+        {
+            var hold = new DisconnectHold(null, null);
+            hold.Start(0, startOffline: true);
             Assert.AreEqual(HoldStage.Waiting, hold.Current.Stage);
         }
 
@@ -249,6 +281,21 @@ namespace NodeWar.Lobby.Tests
 
             slow.SetResult(new PresenceResult { state = MatchRecordState.Settled, result = Settled(true, MatchEndCause.Abandoned) });
             Assert.AreEqual(HoldStage.None, hold.Current.Stage, "An answer from the finished hold must not resolve the match.");
+        }
+
+        [Test]
+        public void Resume_ToAMatchTheOpponentClaimed_EndsItAtOnce()
+        {
+            var (hold, service) = Ranked();
+            service.ResumedAnswer = new PresenceResult
+            {
+                state = MatchRecordState.Settled,
+                result = Settled(false, MatchEndCause.Abandoned)
+            };
+            hold.Start(0);
+            hold.Resume();
+            Assert.AreEqual(HoldStage.Resolved, hold.Current.Stage);
+            Assert.AreEqual(HoldEnding.Lost, hold.Current.Ending);
         }
 
         [Test]
