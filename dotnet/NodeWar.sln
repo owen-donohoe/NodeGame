@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWar.MatchLog", "NodeWar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWar.MatchLog.Tests", "NodeWar.MatchLog.Tests\NodeWar.MatchLog.Tests.csproj", "{2839DBF7-9F4F-4C15-A3C9-B113C746D048}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWar.Network.Tests", "NodeWar.Network.Tests\NodeWar.Network.Tests.csproj", "{0FD0F462-AB04-43AF-91AA-F513F25081CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -155,6 +157,18 @@ Global
 		{2839DBF7-9F4F-4C15-A3C9-B113C746D048}.Release|x64.Build.0 = Release|Any CPU
 		{2839DBF7-9F4F-4C15-A3C9-B113C746D048}.Release|x86.ActiveCfg = Release|Any CPU
 		{2839DBF7-9F4F-4C15-A3C9-B113C746D048}.Release|x86.Build.0 = Release|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Debug|x64.Build.0 = Debug|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Debug|x86.Build.0 = Debug|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Release|x64.ActiveCfg = Release|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Release|x64.Build.0 = Release|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Release|x86.ActiveCfg = Release|Any CPU
+		{0FD0F462-AB04-43AF-91AA-F513F25081CE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
