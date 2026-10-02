@@ -37,6 +37,7 @@
     <Compile Include="LatencyTests.cs" />
     <Compile Include="LostTickTests.cs" />
     <Compile Include="SweepTests.cs" />
+    <Compile Include="StartSkewTests.cs" />
     <Compile Include="LifecycleTests.cs" />
 
     <Compile Include="../../Assets/Scripts/Game/Network/LockstepCore.cs"

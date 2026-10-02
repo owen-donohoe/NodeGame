@@ -40,6 +40,8 @@ namespace NodeWar.Network.Tests
         public List<FrameSpike> Spikes = new List<FrameSpike>();
         /// <summary>Reference run applies no commands: used only to prove the oracle can tell the difference.</summary>
         public bool BlankReference;
+        /// <summary>When each peer initialises and unpauses, in seconds: the match start is not synchronised, one side can begin before the other.</summary>
+        public double[] StartAt = { 0, 0 };
 
         public HarnessPeer[] Peers;
         public LinkDirection[] Links;
@@ -112,12 +114,18 @@ namespace NodeWar.Network.Tests
 
             int[] spikeUsed = new int[Spikes.Count];
             Now = 0;
-            foreach (HarnessPeer peer in Peers) peer.Start(Now);
+            bool[] started = new bool[2];
 
             while (Now < Seconds)
             {
                 foreach (HarnessPeer peer in Peers)
                 {
+                    if (!started[peer.Player])
+                    {
+                        if (Now < StartAt[peer.Player]) continue;
+                        started[peer.Player] = true;
+                        peer.Start(Now);
+                    }
                     if (Now < peer.NextFrameAt) continue;
                     double interval = FrameInterval;
                     for (int i = 0; i < Spikes.Count; i++)
