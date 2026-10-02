@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using NodeWar.Simulation;
 using NUnit.Framework;
@@ -14,14 +14,15 @@ namespace NodeWar.Tests
         private const int HashIterations = 1000;
         private const int VillagersPerPlayer = 56;
 
-        // Local measured figures: unavailable; the audit sandbox blocks MSBuild's
-        // SDK lookup before compilation. Tests print elapsed ms and allocated bytes
-        // for the lead/CI to record. These are provisional regression ceilings,
-        // not a claimed frame-time SLA: 15 seconds allows slow shared CI hosts.
+        // Lead measurements, .NET 8 Debug, 2026-10-02:
+        // SimulateTick x200: 325,136 bytes / 98 ms;
+        // CopyFrom + 20 replay ticks: 48,216 bytes / 13.9 ms;
+        // ComputeHash x1000: 0 bytes / 21.7 ms.
+        // Allocation ceilings are roughly 4x measured; time ceilings roughly 20x
+        // allow slow shared CI hosts. These are regression budgets, not an SLA.
         // Current code intentionally allocates combat scratch arrays/lists each tick.
-        private const long TickAllocationBudget = 64L * 1024 * 1024;
-        private const long ReplayAllocationBudget = 8L * 1024 * 1024;
-
+        private const long TickAllocationBudget = 1280L * 1024;
+        private const long ReplayAllocationBudget = 192L * 1024;
         [SetUp]
         public void WarmHotPaths()
         {
@@ -38,7 +39,7 @@ namespace NodeWar.Tests
             SimulationState state = PopulatedBoard();
             int foodBefore = state.players[0].food;
             int combatHPBefore = state.villagers[0].hp;
-            Measure("SimulateTick x 200", () => Advance(state, Ticks), TickAllocationBudget);
+            Measure("SimulateTick x 200", () => Advance(state, Ticks), TickAllocationBudget, 2000);
 
             Assert.AreEqual(Ticks, state.tickCount);
             Assert.IsFalse(state.gameOver);
@@ -65,7 +66,7 @@ namespace NodeWar.Tests
             {
                 live.CopyFrom(snapshot);
                 Advance(live, ReplayTicks);
-            }, ReplayAllocationBudget);
+            }, ReplayAllocationBudget, 300);
 
             Assert.AreEqual(ReplayTicks, live.tickCount);
             Assert.IsFalse(live.gameOver);
@@ -83,11 +84,11 @@ namespace NodeWar.Tests
             {
                 for (int i = 0; i < HashIterations; i++)
                     actual = SimulationStateHasher.ComputeHash(state);
-            }, 0);
+            }, 0, 500);
             Assert.AreEqual(expected, actual);
         }
 
-        private static void Measure(string operation, Action action, long allocationBudget)
+        private static void Measure(string operation, Action action, long allocationBudget, int timeBudgetMilliseconds)
         {
             // Delegate, clock, diagnostics and assertions are outside allocation span.
             var watch = new Stopwatch();
@@ -99,7 +100,7 @@ namespace NodeWar.Tests
             watch.Stop();
             TestContext.WriteLine(operation + ": " + allocated + " bytes, " + watch.Elapsed.TotalMilliseconds + " ms");
             Assert.LessOrEqual(allocated, allocationBudget, operation + " managed allocation regression");
-            Assert.Less(watch.Elapsed.TotalSeconds, 15, operation + " coarse time regression");
+            Assert.Less(watch.Elapsed.TotalMilliseconds, timeBudgetMilliseconds, operation + " coarse time regression");
         }
 
         private static void Advance(SimulationState state, int ticks)
