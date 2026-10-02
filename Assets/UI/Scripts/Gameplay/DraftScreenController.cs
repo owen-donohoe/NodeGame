@@ -173,6 +173,7 @@ namespace NodeWar.UI
         private Label barLabel;
         private VisualElement cards;
         private Label barEmpty;
+        private VisualElement waiting;
 
         private VisualElement proxy;
         private VisualElement proxyTile;
@@ -310,6 +311,7 @@ namespace NodeWar.UI
             barLabel = root.Q<Label>("draft-bar-label");
             cards = root.Q<VisualElement>("draft-cards");
             barEmpty = root.Q<Label>("draft-bar-empty");
+            waiting = root.Q<VisualElement>("draft-waiting");
 
             proxy = root.Q<VisualElement>("draft-proxy");
             proxyTile = root.Q<VisualElement>("draft-proxy-tile");
@@ -351,6 +353,11 @@ namespace NodeWar.UI
             // Off screen until ActiveDraft. Nothing is decided during
             // WaitingForReady or the reveal, so there is nothing to show.
             if (root != null) root.RemoveFromClassList("draft--on");
+        }
+
+        public void ShowWaiting(bool isWaiting)
+        {
+            if (waiting != null) waiting.EnableInClassList("draft__waiting--on", isWaiting);
         }
 
         public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
