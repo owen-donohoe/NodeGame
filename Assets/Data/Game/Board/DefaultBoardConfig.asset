@@ -45,10 +45,10 @@ MonoBehaviour:
   maxConsecutiveTimeouts: 2
   baseDraftNodesP0:
   - districtType: 1
-  - districtType: 3
-  - districtType: 4
-  baseDraftNodesP1:
-  - districtType: 13
-  - districtType: 8
   - districtType: 2
+  - districtType: 3
+  baseDraftNodesP1:
+  - districtType: 1
+  - districtType: 2
+  - districtType: 3
   botLoadoutNodes: []

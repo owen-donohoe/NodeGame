@@ -213,9 +213,24 @@ namespace NodeWar.View.Outline
                 thicknessScale = 1f,
             };
 
+            // The always-on contact line. Near-white and thin, and it takes the
+            // owner's colour from the group tint OutlineDriver sets, so the
+            // palette entry is only the value the tint rides on -- keep it
+            // bright or the tinted line comes out muddy.
+            //
+            // Alpha well under 1 because this is on screen for the whole match
+            // on every villager at once. It has to read as contact against the
+            // ground, not as a highlight.
+            entries[(int)OutlineStyle.Present] = new StyleEntry
+            {
+                color = new Color(1f, 1f, 1f, 0.7f),
+                drawThrough = false,
+                thicknessScale = 0.4f,
+            };
+
             entries[(int)OutlineStyle.Hover] = new StyleEntry
             {
-                color = new Color(1f, 1f, 1f, 0.55f),
+                color = new Color(1f, 1f, 1f, 0.85f),
                 drawThrough = false,
                 thicknessScale = 1f,
             };
@@ -229,7 +244,11 @@ namespace NodeWar.View.Outline
 
             entries[(int)OutlineStyle.Selected] = new StyleEntry
             {
-                color = new Color(1f, 1f, 1f, 1f),
+                // Gold, and the only saturated colour a villager's own outline
+                // ever takes. It has to win against both player colours, which
+                // rules out anything on the blue-red axis, and against the thin
+                // Present line it is painted over.
+                color = new Color(1f, 0.78f, 0.25f, 1f),
 
                 // The one style that defaults to drawing through. A selected
                 // villager that walks behind a node has to stay findable, and
@@ -252,6 +271,14 @@ namespace NodeWar.View.Outline
         {
             // The composite indexes this array by style value with no bounds
             // check in the shader, so a short palette would sample garbage.
+            //
+            // The copy below keeps entries at the index they were saved at,
+            // which is right for a style *appended* to the enum and wrong for
+            // one inserted into the middle of it: every entry after the
+            // insertion point keeps its old colour under a new style's name.
+            // Present was inserted at 1, so Assets/Settings/OutlineSettings.asset
+            // was rewritten by hand in the same commit. Do the same for the next
+            // insertion -- this cannot detect one.
             if (palette == null || palette.Length != OutlineStyleMask.StyleCount)
             {
                 StyleEntry[] resized = DefaultPalette();
