@@ -54,6 +54,19 @@ namespace NodeWar.Network
     {
         public int forTick;
         public int stateHash; // non-zero every 50 ticks, 0 otherwise
+
+        /// <summary>
+        /// The input delay, in ticks, this sender is stamping its inputs with
+        /// right now. Lets the receiver judge how far ahead of the sender's clock
+        /// its inputs run.
+        /// </summary>
+        public byte senderDelay;
+
+        /// <summary>
+        /// The input delay this sender asks its peer to use, in ticks, or 0 for
+        /// no opinion. Set from how late the peer's inputs have been arriving.
+        /// </summary>
+        public byte requestedDelay;
         public GameCommand[] commands;
     }
 
@@ -64,6 +77,8 @@ namespace NodeWar.Network
     ///   [forTick: 4 bytes]
     ///   [stateHash: 4 bytes]
     ///   [commandCount: 4 bytes]
+    ///   [senderDelay: 1 byte]
+    ///   [requestedDelay: 1 byte]
     ///   [commands: commandCount * 24 bytes]
     ///     per command: type(4) + playerID(4) + villagerID(4) + targetNodeID(4) + issuedOnTick(4) + value(4)
     /// </summary>
@@ -76,17 +91,18 @@ namespace NodeWar.Network
         /// before the versioned handshake are protocol 0: their handshake is a
         /// single byte.
         /// 2: DraftLoadout carries era tables and skin IDs.
+        /// 4: TickInput carries senderDelay and requestedDelay (adaptive input delay).
         /// </summary>
         public const ushort ProtocolVersion = NodeWar.Backend.ProtocolVersion.Current;
 
         // Keep in step with GameCommand; a change here is a ProtocolVersion bump.
         private const int BYTES_PER_COMMAND = 24;
-        private const int HEADER_BYTES = 1 + 4 + 4 + 4; // type, forTick, stateHash, commandCount
+        private const int HEADER_BYTES = 1 + 4 + 4 + 4 + 1 + 1; // type, forTick, stateHash, commandCount, senderDelay, requestedDelay
 
         public static byte[] Serialize(TickInput input)
         {
             int commandCount = (input.commands != null) ? input.commands.Length : 0;
-            int size = 1 + 4 + 4 + 4 + (commandCount * BYTES_PER_COMMAND);
+            int size = HEADER_BYTES + (commandCount * BYTES_PER_COMMAND);
             byte[] data = new byte[size];
             int offset = 0;
 
@@ -94,6 +110,8 @@ namespace NodeWar.Network
             WriteInt(data, ref offset, input.forTick);
             WriteInt(data, ref offset, input.stateHash);
             WriteInt(data, ref offset, commandCount);
+            data[offset++] = input.senderDelay;
+            data[offset++] = input.requestedDelay;
 
             for (int i = 0; i < commandCount; i++)
             {
@@ -131,6 +149,8 @@ namespace NodeWar.Network
             int forTick = ReadInt(data, ref offset);
             int stateHash = ReadInt(data, ref offset);
             int commandCount = ReadInt(data, ref offset);
+            byte senderDelay = data[offset++];
+            byte requestedDelay = data[offset++];
 
             // Divide rather than multiply, so a hostile count cannot overflow
             // its way past the check.
@@ -140,6 +160,8 @@ namespace NodeWar.Network
 
             input.forTick = forTick;
             input.stateHash = stateHash;
+            input.senderDelay = senderDelay;
+            input.requestedDelay = requestedDelay;
             input.commands = new GameCommand[commandCount];
             for (int i = 0; i < commandCount; i++)
             {

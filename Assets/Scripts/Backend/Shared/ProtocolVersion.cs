@@ -7,6 +7,7 @@ namespace NodeWar.Backend
         // 2: DraftLoadout carries era tables and skin IDs.
         // 3: Relay connections use DTLS instead of plain UDP. No layout change,
         //    but a DTLS peer cannot reach a UDP one, so builds must not mix.
-        public const ushort Current = 3;
+        // 4: TickInput gains senderDelay and requestedDelay bytes (adaptive input delay).
+        public const ushort Current = 4;
     }
 }

@@ -19,7 +19,11 @@ namespace NodeWar.Lobby.Tests
                     villagerID = 17 + i, targetNodeID = 4 + i,
                     issuedOnTick = tick, value = i % 2 == 0 ? int.MinValue : int.MaxValue
                 };
-            return new TickInput { forTick = tick, stateHash = int.MinValue, commands = commands };
+            return new TickInput
+            {
+                forTick = tick, stateHash = int.MinValue, commands = commands,
+                senderDelay = 5, requestedDelay = 255
+            };
         }
 
         [TestCase(0)]
@@ -29,10 +33,12 @@ namespace NodeWar.Lobby.Tests
         {
             TickInput expected = Representative(tick);
             byte[] packet = InputSerializer.Serialize(expected);
-            Assert.AreEqual(13 + 24 * expected.commands.Length, packet.Length);
+            Assert.AreEqual(15 + 24 * expected.commands.Length, packet.Length);
             Assert.IsTrue(InputSerializer.TryDeserialize(packet, out TickInput actual));
             Assert.AreEqual(expected.forTick, actual.forTick);
             Assert.AreEqual(expected.stateHash, actual.stateHash);
+            Assert.AreEqual(expected.senderDelay, actual.senderDelay);
+            Assert.AreEqual(expected.requestedDelay, actual.requestedDelay);
             CollectionAssert.AreEqual(expected.commands, actual.commands);
         }
 
@@ -42,7 +48,7 @@ namespace NodeWar.Lobby.Tests
         {
             var input = new TickInput { commands = useNull ? null : Array.Empty<GameCommand>() };
             byte[] packet = InputSerializer.Serialize(input);
-            Assert.AreEqual(13, packet.Length);
+            Assert.AreEqual(15, packet.Length);
             Assert.IsTrue(InputSerializer.TryDeserialize(packet, out TickInput actual));
             Assert.IsEmpty(actual.commands);
         }

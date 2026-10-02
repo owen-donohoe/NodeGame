@@ -115,6 +115,12 @@ namespace NodeWar.Network.Tests
             int[] spikeUsed = new int[Spikes.Count];
             Now = 0;
             bool[] started = new bool[2];
+            foreach (HarnessPeer peer in Peers)
+            {
+                if (StartAt[peer.Player] > 0) continue;
+                started[peer.Player] = true;
+                peer.Start(Now);
+            }
 
             while (Now < Seconds)
             {
