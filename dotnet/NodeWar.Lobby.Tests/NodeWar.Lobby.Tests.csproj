@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     Round-trip tests for the loadout wire format.
@@ -50,6 +50,7 @@
     <Compile Include="GameSettingsTests.cs" />
     <Compile Include="EmotePacketTests.cs" />
     <Compile Include="HandshakePacketTests.cs" />
+    <Compile Include="PacketRobustnessTests.cs" />
     <Compile Include="MatchHistoryRowTests.cs" />
     <Compile Include="RankedQueuePresenterTests.cs" />
     <Compile Include="RankedRendezvousTests.cs" />
@@ -155,3 +156,4 @@
   </ItemGroup>
 
 </Project>
+
