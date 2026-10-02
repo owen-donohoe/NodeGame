@@ -23,8 +23,8 @@ namespace NodeWar.Network.Tests
         [Test]
         public void CleanLink_SendsOnlyTheRedundantCopiesItIntends()
         {
-            // Every input goes out three times (REDUNDANT_INPUTS = 2) and the
-            // link loses none, so each tick arrives once new and twice again.
+            // Every input goes out 1 + REDUNDANT_INPUTS times and the
+            // link loses none, so each tick arrives once new and REDUNDANT_INPUTS times again.
             // Anything above that is resends on a link that needs none: the
             // "over a thousand duplicates every five seconds" regression.
             LockstepScenario s = new LockstepScenario { Seconds = 60 }.Run();
@@ -34,7 +34,7 @@ namespace NodeWar.Network.Tests
                 int unique = p.InputDeliveries - p.DuplicateDeliveries;
                 Assert.Greater(unique, 500, s.Describe("too few inputs arrived"));
                 double perInput = (double)p.DuplicateDeliveries / unique;
-                Assert.LessOrEqual(perInput, 2.1,
+                Assert.LessOrEqual(perInput, LockstepCore.REDUNDANT_INPUTS + 0.1,
                     s.Describe("P" + p.Player + " received " + perInput.ToString("F2") + " duplicates per input"));
             }
         }

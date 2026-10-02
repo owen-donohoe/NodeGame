@@ -71,11 +71,17 @@ namespace NodeWar.Network
         // one command per villager, and a player has at most 25.
         private const int MAX_COMMANDS_PER_TICK = 64;
 
-        // Every input goes out again with the next two, so one lost packet
-        // costs nothing: its tick arrives 100 ms later inside the next one's
-        // send. Without this a lost input stalls us until the peer itself runs
-        // dry and starts resending, several hundred ms later.
-        private const int REDUNDANT_INPUTS = 2;
+        // Every input goes out again with the next REDUNDANT_INPUTS, so a lost
+        // packet costs nothing: its tick arrives 100 ms later inside the next
+        // one's send, and a burst up to that many ticks long is bridged. Without
+        // this a lost input stalls us until the peer itself runs dry and starts
+        // resending, several hundred ms later. 4, not 2, from the lossy-link
+        // sweep (SweepTests, 6 seeds): random 15% loss froze a peer 3.2 s of 60
+        // at 2 and 1.2 s at 4, and 5%/0.05 bursts held 19 times against 4, for
+        // about 0.35 KB/s more. 6 and 8 add almost nothing on frozen time. What
+        // is left is the fixed 200 ms input delay: a recovered input still
+        // arrives late. Internal so the tests can state their copy budget.
+        internal const int REDUNDANT_INPUTS = 4;
 
         // Peer inputs this many ticks past our own mean we are behind its
         // clock (after a hold, or a speculation that ran on the other side).
