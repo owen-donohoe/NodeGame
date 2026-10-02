@@ -3,9 +3,9 @@
   <!--
     LockstepCore under a simulated network.
 
-    LockstepRunner is a MonoBehaviour, so Unity's test runner cannot drive it
-    against a bad link and nothing could until its logic was lifted into
-    LockstepCore, which takes its clocks and transport from the caller. This
+    LockstepCore is plain C#, so it runs here against a bad link, which Unity's
+    test runner could never drive: it takes its clocks and transport from the
+    caller, and GameManager owns it in the game. This
     project links that core and runs two of them against an in-memory link that
     can lose, burst-lose, duplicate, reorder, delay and cut packets, then holds
     the result to a reference run on a perfect link.
@@ -36,6 +36,7 @@
     <Compile Include="OutageTests.cs" />
     <Compile Include="LatencyTests.cs" />
     <Compile Include="LostTickTests.cs" />
+    <Compile Include="LifecycleTests.cs" />
 
     <Compile Include="../../Assets/Scripts/Game/Network/LockstepCore.cs"
              Link="Network/LockstepCore.cs" />
@@ -45,6 +46,10 @@
              Link="Input/InputBuffer.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Core/ITickProvider.cs"
+             Link="Core/ITickProvider.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Core/IEmoteChannel.cs"
+             Link="Core/IEmoteChannel.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/ProtocolVersion.cs"
              Link="Backend/ProtocolVersion.cs" />
   </ItemGroup>
