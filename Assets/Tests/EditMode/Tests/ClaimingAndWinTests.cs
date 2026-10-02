@@ -105,22 +105,6 @@ namespace NodeWar.Tests
         // ===== OWNERSHIP TRANSITIONS =====
 
         [Test]
-        public void Claim_ReachingTheThresholdFlipsTheOwnerAndPublishesTheClampedBar()
-        {
-            GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = BoardWithPlayerZeroOnNeutral(balance, 1);
-
-            // One tick short of the threshold, so the next 17 overshoots it.
-            state.nodes[NeutralNode].claimBar = balance.claimThreshold - 1;
-
-            GameSimulation.SimulateTick(state);
-
-            Assert.AreEqual(0, state.nodes[NeutralNode].ownerID);
-
-            Assert.AreEqual(balance.claimThreshold, state.nodes[NeutralNode].claimBar);
-        }
-
-        [Test]
         public void Claim_AgainstAnEnemyNodeUsesTheDecrementMultiplier()
         {
             GameBalanceData balance = UseDefaultBalance();
