@@ -127,7 +127,12 @@ namespace NodeWar.Core
         private NodeWar.View.MovementPathRenderer pathRenderer;
 
         // Network
-        private LockstepRunner lockstepRunner;
+        private LockstepCore lockstep;
+        // Kept so Update and LateUpdate can check for a destroyed manager, as the old shell did each frame.
+        private NetworkManager lockstepNetwork;
+        // The 10 Hz the old shell defaulted to. TickRunner has its own field, and
+        // GameBalanceData.ticksPerSecond is separate and not used here.
+        private const int NetworkTicksPerSecond = 10;
         private NodeWar.Input.BotPlayer botPlayer;
 
         // Game over
@@ -407,8 +412,7 @@ namespace NodeWar.Core
             TickRunner tickRunner = GetComponent<TickRunner>();
             if (tickRunner != null) tickRunner.Unpause();
 
-            LockstepRunner lockstep = GetComponent<LockstepRunner>();
-            if (lockstep != null) lockstep.Unpause();
+            if (lockstep != null) lockstep.Unpause(Time.time, Time.realtimeSinceStartup);
         }
 
         // ===== TESTING MODE (skip draft, legacy board) =====
@@ -462,6 +466,13 @@ namespace NodeWar.Core
 
         private void Update()
         {
+            // Must run before the matchPhase early return below: it pumps packets
+            // and heartbeats while paused during draft transitions, and keeps the
+            // end card's heartbeat, resend and emote link alive after game over,
+            // exactly as the old separate component did every frame.
+            if (lockstep != null && lockstepNetwork != null)
+                lockstep.Update(Time.time, Time.realtimeSinceStartup, Time.deltaTime, Time.unscaledDeltaTime);
+
             // Outlives the match: the end card keeps asking until the server decides.
             if (rankedResult != null && rankedResult.IsActive)
                 rankedResult.Tick(Time.realtimeSinceStartup);
@@ -488,7 +499,13 @@ namespace NodeWar.Core
             }
         }
 
-        // ===== INPUT SYSTEMS =====
+        // After Update, so the inputs, resends, heartbeats and emotes it queued leave this frame.
+        private void LateUpdate()
+        {
+            if (lockstep != null && lockstepNetwork != null) lockstep.Flush();
+        }
+
+        // =====INPUT SYSTEMS =====
 
         private NodeWar.Input.PointerGestureSource gestureSource;
         private NodeWar.Input.TapRouter tapRouter;
@@ -618,6 +635,9 @@ namespace NodeWar.Core
 
             if (indicatorDirector != null) indicatorDirector.Dispose();
             if (screenShake != null) screenShake.Dispose();
+
+            lockstep = null;
+            lockstepNetwork = null;
         }
 
         private void StartLocalPlay()
@@ -634,14 +654,16 @@ namespace NodeWar.Core
 
             debugPlayerSwitch.LockToPlayer(localPlayerID);
 
-            lockstepRunner = gameObject.AddComponent<LockstepRunner>();
-            lockstepRunner.Initialize(state, inputBuffer, netManager, localPlayerID);
-            lockstepRunner.HoldStarted += OnHoldStarted;
-            lockstepRunner.HoldEnded += OnHoldEnded;
-            lockstepRunner.OnDesync += OnDesyncDetected;
-            lockstepRunner.RolledBack += OnRolledBack;
-            lockstepRunner.SpeculationChanged += OnSpeculationChanged;
-            tickProvider = lockstepRunner;
+            lockstepNetwork = netManager;
+            lockstep = new LockstepCore(UnityLockstepLog.Write);
+            lockstep.Initialize(state, inputBuffer, new NetworkManagerTransport(netManager),
+                localPlayerID, NetworkTicksPerSecond, Time.time, Time.realtimeSinceStartup);
+            lockstep.HoldStarted += OnHoldStarted;
+            lockstep.HoldEnded += OnHoldEnded;
+            lockstep.OnDesync += OnDesyncDetected;
+            lockstep.RolledBack += OnRolledBack;
+            lockstep.SpeculationChanged += OnSpeculationChanged;
+            tickProvider = lockstep;
 
             // A ranked match has a server record to ask; a private one runs the
             // same stages on the clock alone.
@@ -662,7 +684,7 @@ namespace NodeWar.Core
         // ===== SPECULATION AND ROLLBACK (8.2e) =====
 
         /// <summary>
-        /// The runner put the state back to its last confirmed tick. Every
+        /// The lockstep core put the state back to its last confirmed tick. Every
         /// villager view at or past the confirmed count goes: those villagers
         /// were spawned in speculation and may not exist, or may be different
         /// villagers, once the real inputs are replayed. Update respawns whatever
@@ -755,12 +777,12 @@ namespace NodeWar.Core
 
         /// <summary>
         /// A hold ended the match. The server decided a ranked one; this side
-        /// only stops its runner, records the ending and words it.
+        /// only stops its lockstep core, records the ending and words it.
         /// </summary>
         private void EndByHold(NodeWar.Backend.HoldStatus status)
         {
             gameOverHandled = true;
-            lockstepRunner.EndMatch();
+            lockstep.EndMatch();
             if (presenceHeartbeat != null) presenceHeartbeat.Stop();
 
             int viewer = ViewerPlayerID();
@@ -858,7 +880,7 @@ namespace NodeWar.Core
         /// <summary>
         /// Back from the background. A phone away long enough may return to a
         /// match the server has already decided (the opponent claimed it). The
-        /// runner could run a buffered tick or two first, so ask the server once
+        /// lockstep core could run a buffered tick or two first, so ask the server once
         /// rather than waiting for a hold to notice.
         /// </summary>
         private void OnApplicationPause(bool paused)
@@ -887,8 +909,8 @@ namespace NodeWar.Core
         private void OnDecidedByServer(NodeWar.Backend.MatchResultView result)
         {
             if (this == null || gameOverHandled || uiToolkitHud == null) return;
-            // Decided during the draft: there is no board or runner to end yet.
-            if (lockstepRunner == null) return;
+            // Decided during the draft: there is no board or lockstep core to end yet.
+            if (lockstep == null) return;
             EndByHold(new NodeWar.Backend.HoldStatus
             {
                 Stage = NodeWar.Backend.HoldStage.Resolved,
@@ -902,7 +924,7 @@ namespace NodeWar.Core
             Debug.LogError("[GameManager] Opponent disconnected.");
             if (gameOverHandled) return;
             gameOverHandled = true;
-            lockstepRunner.EndMatch();
+            lockstep.EndMatch();
             FinishRecording(NodeWar.MatchLog.MatchEndReason.Disconnect, -1);
             ShowDisconnect();
         }
@@ -911,7 +933,7 @@ namespace NodeWar.Core
         {
             Debug.LogError("[GameManager] DESYNC at tick " + tick + "! Determinism bug exists.");
 
-            // The runner reports its tick index; the log counts ticks completed.
+            // The lockstep core reports its tick index; the log counts ticks completed.
             if (recorder != null) recorder.RecordDesync(tick + 1);
         }
 
@@ -956,10 +978,10 @@ namespace NodeWar.Core
             recorder = new NodeWar.MatchLog.MatchRecorder(header, boardConfig.Data, loadouts,
                 result.placements ?? new DraftPlacement[0]);
 
-            if (lockstepRunner != null)
+            if (lockstep != null)
             {
-                lockstepRunner.CommandsApplied += recorder.RecordTick;
-                lockstepRunner.HashComputed += recorder.RecordHash;
+                lockstep.CommandsApplied += recorder.RecordTick;
+                lockstep.HashComputed += recorder.RecordHash;
             }
             else
             {
@@ -1256,7 +1278,7 @@ namespace NodeWar.Core
             }
 
             if (emoteMatch != null && emoteMatch.isNetworked)
-                uiToolkitHud.BindEmotes(lockstepRunner, () => emoteMatch.localPlayerID);
+                uiToolkitHud.BindEmotes(lockstep, () => emoteMatch.localPlayerID);
             else
                 uiToolkitHud.BindEmotes(new LocalEmoteChannel(),
                     () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);

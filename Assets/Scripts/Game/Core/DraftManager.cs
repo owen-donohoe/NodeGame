@@ -69,7 +69,7 @@ namespace NodeWar.Core
         private float lastReceiveTime;
         private bool peerHeardFrom;
 
-        // Retain and resend until acknowledged, as in LockstepRunner.
+        // Retain and resend until acknowledged, as in LockstepCore.
         private const float RESEND_INTERVAL = 0.1f;
         private byte[] pendingReady;
         private byte[] pendingLoadout;
@@ -534,10 +534,10 @@ namespace NodeWar.Core
 
             // Stop this component before handing off. ReceiveAll() drains the
             // shared inbound queue destructively, so if this Update() keeps
-            // running alongside LockstepRunner (created by the OnDraftComplete
-            // handler) whichever runs first that frame swallows the other's
+            // running alongside the lockstep core (created at OnDraftComplete)
+            // whichever runs first that frame swallows the other's
             // packets -- and TickInput/Heartbeat are not handled here, so they
-            // would be silently discarded until LockstepRunner times out.
+            // would be silently discarded until the lockstep core times out.
             enabled = false;
 
             OnDraftComplete?.Invoke(result);
