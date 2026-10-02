@@ -537,6 +537,7 @@ namespace NodeWar.UI
         /// </summary>
         private void ApplyMatchSettings(NodeWar.Lobby.GameSettingsData settings)
         {
+            NodeWar.Core.FrameRateCap.Apply(settings.frameCap);
             emotePanel.ApplySettings(settings);
             if (routeSettings != null)
                 routeSettings.show = settings.opponentRoutes;

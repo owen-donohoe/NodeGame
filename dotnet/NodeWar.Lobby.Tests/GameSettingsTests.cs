@@ -18,10 +18,10 @@ namespace NodeWar.Lobby.Tests
         // ===== MIGRATION =====
 
         [Test]
-        public void CreateDefault_EnablesOpponentEmotesAtVersion3()
+        public void CreateDefault_EnablesOpponentEmotesAndIsCurrentVersion()
         {
             GameSettingsData defaults = GameSettingsData.CreateDefault();
-            Assert.AreEqual(3, defaults.version);
+            Assert.AreEqual(GameSettingsData.CurrentVersion, defaults.version);
             Assert.IsTrue(defaults.opponentEmotes);
         }
 
@@ -37,7 +37,7 @@ namespace NodeWar.Lobby.Tests
             stored.reducedMotion = true;
 
             GameSettingsData result = GameSettingsData.Normalized(stored);
-            Assert.AreEqual(3, result.version);
+            Assert.AreEqual(GameSettingsData.CurrentVersion, result.version);
             Assert.IsTrue(result.opponentEmotes);
             Assert.AreEqual(version < 2, result.opponentRoutes);
             Assert.AreEqual(0.12f, result.musicVolume);
@@ -45,11 +45,170 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void Normalized_Version3_PreservesEmotesOff()
+        public void Normalized_CurrentVersion_PreservesEmotesOff()
         {
             GameSettingsData stored = GameSettingsData.CreateDefault();
             stored.opponentEmotes = false;
             Assert.IsFalse(GameSettingsData.Normalized(stored).opponentEmotes);
+        }
+
+        // ===== FRAME CAP =====
+
+        [Test]
+        public void CreateDefault_CapsAtSixty()
+        {
+            GameSettingsData defaults = GameSettingsData.CreateDefault();
+
+            Assert.AreEqual(GameSettingsData.DefaultFrameCap, defaults.frameCap);
+            Assert.AreEqual(60, GameSettingsData.TargetFrameRate(defaults.frameCap),
+                "the cap the build had before it was a setting");
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        public void Normalized_OlderSave_GetsTheFrameCapDefaultNotItsZero(int version)
+        {
+            // A save from before the field has 0 there, which as an index
+            // would silently become 30 fps. Every older version must get 60.
+            GameSettingsData stored = GameSettingsData.CreateDefault();
+            stored.version = version;
+            stored.frameCap = 0;
+            stored.musicVolume = 0.12f;
+            stored.reducedMotion = true;
+
+            GameSettingsData result = GameSettingsData.Normalized(stored);
+
+            Assert.AreEqual(GameSettingsData.DefaultFrameCap, result.frameCap);
+            Assert.AreEqual(0.12f, result.musicVolume, "the migration must not reset what the player set");
+            Assert.IsTrue(result.reducedMotion);
+        }
+
+        [Test]
+        public void Normalized_VersionZero_GetsTheFrameCapDefault()
+        {
+            Assert.AreEqual(GameSettingsData.DefaultFrameCap,
+                GameSettingsData.Normalized(new GameSettingsData()).frameCap);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        public void Normalized_CurrentVersion_KeepsEveryValidFrameCap(int stored)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.frameCap = stored;
+
+            Assert.AreEqual(stored, GameSettingsData.Normalized(settings).frameCap);
+        }
+
+        [TestCase(-1)]
+        [TestCase(4)]
+        [TestCase(99)]
+        [TestCase(int.MinValue)]
+        [TestCase(int.MaxValue)]
+        public void Normalized_OutOfRangeFrameCap_FallsBackToTheDefault(int stored)
+        {
+            // The default, not the nearest end: a corrupt value must not
+            // become "uncapped" or "30".
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.frameCap = stored;
+
+            Assert.AreEqual(GameSettingsData.DefaultFrameCap, GameSettingsData.Normalized(settings).frameCap);
+        }
+
+        [TestCase(0, 30)]
+        [TestCase(1, 60)]
+        [TestCase(2, 120)]
+        [TestCase(3, -1)]
+        public void TargetFrameRate_MapsEachIndex(int index, int rate)
+        {
+            Assert.AreEqual(rate, GameSettingsData.TargetFrameRate(index));
+        }
+
+        [TestCase(-5)]
+        [TestCase(4)]
+        public void TargetFrameRate_OutOfRange_IsTheDefaultRate(int index)
+        {
+            Assert.AreEqual(60, GameSettingsData.TargetFrameRate(index));
+        }
+
+        [Test]
+        public void FrameCapRates_AreAscendingAndUncappedIsLast()
+        {
+            // Cycling reads as "slower to faster to off"; -1 in the middle
+            // would make the row jump around.
+            Assert.AreEqual(GameSettingsData.FrameCapCount, GameSettingsData.FrameCapRates.Length);
+            int last = GameSettingsData.FrameCapCount - 1;
+            Assert.AreEqual(-1, GameSettingsData.FrameCapRates[last]);
+            for (int i = 1; i < last; i++)
+                Assert.Greater(GameSettingsData.FrameCapRates[i], GameSettingsData.FrameCapRates[i - 1]);
+        }
+
+        [Test]
+        public void FrameCapLabel_NamesEveryIndexAndTheFallback()
+        {
+            for (int i = 0; i < GameSettingsData.FrameCapCount; i++)
+                Assert.IsNotEmpty(GameSettingsData.FrameCapLabel(i));
+
+            Assert.AreEqual("Uncapped", GameSettingsData.FrameCapLabel(3));
+            Assert.AreEqual("60", GameSettingsData.FrameCapLabel(-1));
+        }
+
+        [Test]
+        public void NextFrameCap_CyclesEveryEntryAndReturns()
+        {
+            int index = 0;
+            for (int i = 0; i < GameSettingsData.FrameCapCount; i++)
+                index = GameSettingsData.NextFrameCap(index);
+
+            Assert.AreEqual(0, index);
+            Assert.AreEqual(1, GameSettingsData.NextFrameCap(0));
+            Assert.AreEqual(0, GameSettingsData.NextFrameCap(GameSettingsData.FrameCapCount - 1));
+        }
+
+        [TestCase(-3)]
+        [TestCase(77)]
+        public void NextFrameCap_ClampsBeforeStepping(int stored)
+        {
+            // A corrupt index becomes the default, then steps from it.
+            Assert.AreEqual(GameSettingsData.DefaultFrameCap + 1, GameSettingsData.NextFrameCap(stored));
+        }
+
+        [Test]
+        public void Differ_DetectsAFrameCapChange()
+        {
+            GameSettingsData a = GameSettingsData.CreateDefault();
+            GameSettingsData b = a;
+            b.frameCap = GameSettingsData.NextFrameCap(a.frameCap);
+
+            Assert.IsTrue(GameSettingsData.Differ(a, b));
+        }
+
+        [Test]
+        public void Normalized_Version3Save_KeepsEverythingElseAndTakesTheFrameCapDefault()
+        {
+            // The shape a real v3 save has on disk: every field but the new one.
+            GameSettingsData stored = new GameSettingsData
+            {
+                version = 3,
+                masterVolume = 0.2f,
+                interfaceSize = 2,
+                opponentRoutes = false,
+                opponentEmotes = false,
+                batterySaver = true
+            };
+
+            GameSettingsData result = GameSettingsData.Normalized(stored);
+
+            Assert.AreEqual(GameSettingsData.CurrentVersion, result.version);
+            Assert.AreEqual(GameSettingsData.DefaultFrameCap, result.frameCap);
+            Assert.AreEqual(0.2f, result.masterVolume);
+            Assert.AreEqual(2, result.interfaceSize);
+            Assert.IsFalse(result.opponentRoutes, "off is a choice at version 3");
+            Assert.IsFalse(result.opponentEmotes);
+            Assert.IsTrue(result.batterySaver);
         }
 
         [Test]
@@ -81,6 +240,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(0f, result.effectsVolume);
             Assert.IsFalse(result.colourblindMarks);
             Assert.IsFalse(result.haptics);
+            Assert.AreEqual(0, result.frameCap, "index 0 is 30 fps, a real choice at the current version");
             Assert.AreEqual(GameSettingsData.CurrentVersion, result.version);
         }
 

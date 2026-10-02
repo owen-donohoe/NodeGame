@@ -44,6 +44,7 @@ namespace NodeWar.Lobby
         private readonly LobbySwitch batterySwitch;
 
         private readonly Label sizeLabel;
+        private readonly Label frameCapLabel;
         private readonly AccountFlow accountFlow;
         private readonly Label accountStatus;
         private readonly Label accountMessage;
@@ -56,6 +57,7 @@ namespace NodeWar.Lobby
 
         private GameSettingsData current;
         private int sizeIndex;
+        private int frameCapIndex;
 
         /// <summary>
         /// True while saved values are being pushed into the controls. The
@@ -115,6 +117,7 @@ namespace NodeWar.Lobby
             batterySwitch = Root.Q<LobbySwitch>("settings-battery");
 
             sizeLabel = Root.Q<Label>("settings-size");
+            frameCapLabel = Root.Q<Label>("settings-framecap");
 
             BindSlider(masterSlider);
             BindSlider(musicSlider);
@@ -129,6 +132,9 @@ namespace NodeWar.Lobby
 
             Button sizeRow = Root.Q<Button>("settings-row-size");
             if (sizeRow != null) sizeRow.clicked += CycleInterfaceSize;
+
+            Button frameCapRow = Root.Q<Button>("settings-row-framecap");
+            if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
 
             Load();
         }
@@ -229,6 +235,7 @@ namespace NodeWar.Lobby
             // so the controls never show a zeroed struct as if it were chosen.
             current = GameSettingsData.Normalized(current);
             sizeIndex = current.interfaceSize;
+            frameCapIndex = current.frameCap;
 
             loading = true;
 
@@ -244,6 +251,7 @@ namespace NodeWar.Lobby
             SetSwitch(batterySwitch, current.batterySaver);
 
             UpdateSizeLabel();
+            UpdateFrameCapLabel();
 
             loading = false;
             dirty = false;
@@ -280,6 +288,18 @@ namespace NodeWar.Lobby
             sizeIndex = GameSettingsData.NextInterfaceSize(sizeIndex);
             UpdateSizeLabel();
             OnValueChanged(commitNow: true);
+        }
+
+        private void CycleFrameCap()
+        {
+            frameCapIndex = GameSettingsData.NextFrameCap(frameCapIndex);
+            UpdateFrameCapLabel();
+            OnValueChanged(commitNow: true);
+        }
+
+        private void UpdateFrameCapLabel()
+        {
+            if (frameCapLabel != null) frameCapLabel.text = GameSettingsData.FrameCapLabel(frameCapIndex);
         }
 
         private void UpdateSizeLabel()
@@ -319,9 +339,15 @@ namespace NodeWar.Lobby
                 colourblindMarks = ReadSwitch(colourblindSwitch, current.colourblindMarks),
                 reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion),
                 interfaceSize = sizeIndex,
+                frameCap = frameCapIndex,
 
                 cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed),
                 confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand),
+
+                // Edited in the match panel, not here: carried through, or the
+                // first lobby change would reset both to false.
+                opponentRoutes = current.opponentRoutes,
+                opponentEmotes = current.opponentEmotes,
 
                 haptics = ReadSwitch(hapticsSwitch, current.haptics),
                 batterySaver = ReadSwitch(batterySwitch, current.batterySaver)

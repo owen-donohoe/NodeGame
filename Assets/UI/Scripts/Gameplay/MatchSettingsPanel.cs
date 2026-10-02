@@ -39,6 +39,7 @@ namespace NodeWar.UI
         private readonly LobbySwitch routesSwitch;
         private readonly LobbySwitch emotesSwitch;
         private readonly LobbyIcon emotesIcon;
+        private readonly Label frameCapLabel;
 
         private readonly VisualElement surrenderArea;
         private readonly Label surrenderLine;
@@ -78,6 +79,7 @@ namespace NodeWar.UI
             routesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-routes");
             emotesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-emotes");
             emotesIcon = hudRoot.Q<LobbyIcon>("hud-settings-emotes-icon");
+            frameCapLabel = hudRoot.Q<Label>("hud-settings-framecap");
 
             if (gear != null) gear.clicked += Toggle;
 
@@ -105,6 +107,9 @@ namespace NodeWar.UI
                 emotesRow.clicked += emotesSwitch.Flip;
                 emotesSwitch.Changed += _ => OnValueChanged(commitNow: true);
             }
+
+            Button frameCapRow = hudRoot.Q<Button>("hud-settings-row-framecap");
+            if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
 
             surrenderArea = hudRoot.Q<VisualElement>("hud-settings-surrender-area");
             surrenderLine = hudRoot.Q<Label>("hud-settings-surrender-line");
@@ -249,11 +254,24 @@ namespace NodeWar.UI
             if (effectsSlider != null) effectsSlider.value = current.effectsVolume;
             if (routesSwitch != null) routesSwitch.Value = current.opponentRoutes;
             if (emotesSwitch != null) emotesSwitch.Value = current.opponentEmotes;
+            UpdateFrameCapLabel();
 
             loading = false;
             dirty = false;
 
             RaiseChanged();
+        }
+
+        private void CycleFrameCap()
+        {
+            current.frameCap = GameSettingsData.NextFrameCap(current.frameCap);
+            UpdateFrameCapLabel();
+            OnValueChanged(commitNow: true);
+        }
+
+        private void UpdateFrameCapLabel()
+        {
+            if (frameCapLabel != null) frameCapLabel.text = GameSettingsData.FrameCapLabel(current.frameCap);
         }
 
         private void OnValueChanged(bool commitNow)

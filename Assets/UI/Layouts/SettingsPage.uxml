@@ -112,6 +112,10 @@
                         <engine:Label class="lb-grow__label ui-w500" text="Haptics" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-haptics" value="true" />
                     </engine:Button>
+                    <engine:Button name="settings-row-framecap" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Frame rate cap" picking-mode="Ignore" />
+                        <engine:Label name="settings-framecap" class="lb-grow__value ui-w500" text="60" picking-mode="Ignore" />
+                    </engine:Button>
                     <engine:Button name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-battery" value="false" />
@@ -120,7 +124,7 @@
             </engine:VisualElement>
 
             <!-- TODO(settings): narrow as each system lands; delete the label when none are left. -->
-            <engine:Label class="lb-settings-footnote ui-w500" text="Saved, but only Reduced motion changes anything so far." />
+            <engine:Label class="lb-settings-footnote ui-w500" text="Saved, but only Reduced motion and Frame rate cap change anything so far." />
 
         </engine:ScrollView>
     </engine:VisualElement>

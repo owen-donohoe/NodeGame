@@ -379,6 +379,11 @@
                 <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
             </engine:Button>
 
+            <engine:Button name="hud-settings-row-framecap" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Frame rate cap" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-framecap" class="hud__settings-label ui-w500" text="60" picking-mode="Ignore" />
+            </engine:Button>
+
             <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
 
             <!-- Ranked only; hidden otherwise. The first tap only asks. -->

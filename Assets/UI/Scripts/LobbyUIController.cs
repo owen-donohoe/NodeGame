@@ -295,6 +295,8 @@ namespace NodeWar.Lobby
 
         private void ApplyLobbySettings(GameSettingsData settings)
         {
+            NodeWar.Core.FrameRateCap.Apply(settings.frameCap);
+
             if (lobbyRoot == null) return;
 
             lobbyRoot.EnableInClassList("lb-reduced-motion", settings.reducedMotion);
