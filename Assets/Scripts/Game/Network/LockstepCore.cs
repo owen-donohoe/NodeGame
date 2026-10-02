@@ -24,13 +24,13 @@ namespace NodeWar.Network
     /// Enforces command processing order: P0 first, P1 second, then simulate.
     /// Stamps local inputs for tick N+INPUT_DELAY to hide network latency.
     ///
-    /// All of LockstepRunner's logic, with no UnityEngine in it: time is
-    /// handed in by the caller on every entry (<see cref="Update"/>,
-    /// <see cref="Unpause"/>, <see cref="Initialize"/>) and logging goes to a
-    /// sink, so the whole loop runs under dotnet test against a simulated
-    /// link. LockstepRunner is the MonoBehaviour shell around it.
+    /// No UnityEngine in it: time is handed in by the caller on every entry
+    /// (<see cref="Update"/>, <see cref="Unpause"/>, <see cref="Initialize"/>)
+    /// and logging goes to a sink, so the whole loop runs under dotnet test
+    /// against a simulated link. GameManager owns it and drives Update and
+    /// Flush every frame.
     /// </summary>
-    public sealed class LockstepCore
+    public sealed class LockstepCore : NodeWar.Core.ITickProvider, NodeWar.Core.IEmoteChannel
     {
         private const int INPUT_DELAY = 2;
         private const int DESYNC_CHECK_INTERVAL = 50;
@@ -167,10 +167,10 @@ namespace NodeWar.Network
         private Dictionary<int, int> localHashes = new Dictionary<int, int>();
 
         // Public events for LobbyUI / GameManager to hook
-        public System.Action<int> OnDesync; // tick number where desync detected
+        public event System.Action<int> OnDesync; // tick number where desync detected
 
         /// <summary>
-        /// No tick has advanced for HOLD_AFTER seconds. The runner keeps the link
+        /// No tick has advanced for HOLD_AFTER seconds. The core keeps the link
         /// alive (packets, resends, heartbeats) and never ends the match itself:
         /// GameManager's hold decides that, and calls EndMatch.
         /// </summary>
@@ -198,8 +198,12 @@ namespace NodeWar.Network
         public event System.Action<int> RolledBack;
 
         private bool paused = true;
+        private bool ended;
 
-        // One log for the life of the runner, cleared before every tick.
+        /// <summary>EndMatch was called: the core no longer ticks, resends or pumps packets.</summary>
+        public bool IsEnded => ended;
+
+        // One log for the life of the core, cleared before every tick.
         private readonly TickEventLog tickEvents = new TickEventLog();
 
         public event System.Action<TickEventLog> TickSimulated;
@@ -320,6 +324,7 @@ namespace NodeWar.Network
             frameDt = deltaTime;
             frameUnscaledDt = unscaledDeltaTime;
 
+            if (ended) return;
             if (simState == null || transport == null) return;
             if (simState.gameOver)
             {
@@ -476,20 +481,22 @@ namespace NodeWar.Network
         }
 
         /// <summary>
-        /// After every Update this frame (the shell calls it from LateUpdate), so the inputs, resends and heartbeats
+        /// After every Update this frame (GameManager calls it from LateUpdate), so the inputs, resends and heartbeats
         /// above and any emote the HUD sent all leave now, not next frame.
         /// </summary>
         public void Flush()
         {
+            if (ended) return;
             if (transport != null) transport.Flush();
         }
 
         /// <summary>
-        /// Stops the runner for good: a hold resolved, or the player surrendered.
+        /// Stops the core for good: a hold resolved, or the player surrendered.
         /// The match is over on this side; the peer learns it from the server.
         /// </summary>
         public void EndMatch()
         {
+            ended = true;
             holding = false;
             if (speculating) AbandonSpeculation();
         }
