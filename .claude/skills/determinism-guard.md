@@ -5,9 +5,7 @@ description: Checklist for reviewing any change in Assets/Scripts/Game/Simulatio
 tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
@@ -18,47 +16,36 @@ sources:
   - id: contract
     resource: docs/simulation-rules.md
     title: Simulation Determinism Contract
-    last_modified: 2026-09-28T14:44:08-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-version
     resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
     title: SimulationVersion.Current and bump policy
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: baseline-tests
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Pinned version equality check
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: balance-hasher
     resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
     title: Balance fingerprint separate from state
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance-data
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: Per-era suit and district entries
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: match-factory
     resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
     title: Shared drafted board and static configuration
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: Wire layout and build identity comparison
-    last_modified: 2026-09-28T01:56:48-04:00
   - id: command-layout-test
     resource: dotnet/NodeWar.MatchLog.Tests/MatchLogFormatTests.cs
     title: Command field layout guard
-    last_modified: 2026-09-25T22:04:00-04:00
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: Timeout placement fallback
-    last_modified: 2026-09-26T08:36:52-04:00
 ---
 
 # determinism-guard

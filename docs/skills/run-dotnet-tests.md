@@ -5,7 +5,7 @@ description: How to run Assets/Tests/EditMode/ through the plain .NET projects i
 tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
@@ -36,19 +36,15 @@ sources:
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: tests-edge-weight
     resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
     title: Edge weight cases
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: tests-movement
     resource: Assets/Tests/EditMode/Tests/MovementCorrectnessTests.cs
     title: Movement correctness cases
-    last_modified: 2026-09-02T10:22:51-04:00
   - id: tests-smoke
     resource: Assets/Tests/EditMode/Tests/SimulationSmokeTest.cs
     title: Simulation smoke test
-    last_modified: 2026-08-29T10:56:17-04:00
 ---
 
 # Run the simulation suite without Unity

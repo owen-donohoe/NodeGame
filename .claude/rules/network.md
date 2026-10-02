@@ -1,5 +1,6 @@
 ---
-glob: Assets/Scripts/Game/Network/**
+paths:
+  - "Assets/Scripts/Game/Network/**"
 ---
 
 # Network Rules

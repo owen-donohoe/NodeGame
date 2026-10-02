@@ -5,7 +5,7 @@ description: The 11-step order of operations for any new feature, from simulatio
 tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
@@ -16,83 +16,63 @@ sources:
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: NodeData, VillagerData, PlayerData, SimulationState
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: commands
     resource: Assets/Scripts/Game/Simulation/Commands.cs
     title: CommandType and GameCommand
-    last_modified: 2026-08-14T00:06:30-04:00
   - id: command-processor
     resource: Assets/Scripts/Game/Simulation/CommandProcessor.cs
     title: CommandProcessor.ProcessCommand and ProcessEquipCommand
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: SpawnBonusVillagers, AssignAllCombatTargets, SimulateTick
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: GameBalanceData tuning fields
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: tests
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: EditMode determinism tests
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: test-runner
     resource: scripts/run-tests.ps1
     title: EditMode test runner
-    last_modified: 2026-09-18T08:08:19-04:00
   - id: match-factory
     resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
     title: MatchFactory, where a new field gets its starting value
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-version
     resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
     title: SimulationVersion.Current and bump policy
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: balance-hasher
     resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
     title: Balance fingerprint separate from state
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance-tests
     resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
     title: Coverage of balance fields
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: Timeout placement fallback
-    last_modified: 2026-09-26T08:36:52-04:00
   - id: game-manager
     resource: Assets/Scripts/Game/Core/GameManager.cs
     title: State allocation, drafted setup and new villager views
-    last_modified: 2026-09-26T08:52:10-04:00
   - id: lockstep
     resource: Assets/Scripts/Game/Network/LockstepRunner.cs
     title: Desync checkpoint timing
-    last_modified: 2026-09-25T22:11:57-04:00
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: Wire layout and build identity comparison
-    last_modified: 2026-09-28T01:56:48-04:00
   - id: match-log-format
     resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
     title: Recorded identity, board and commands
-    last_modified: 2026-09-26T08:52:10-04:00
   - id: command-layout-test
     resource: dotnet/NodeWar.MatchLog.Tests/MatchLogFormatTests.cs
     title: Command field layout guard
-    last_modified: 2026-09-25T22:04:00-04:00
   - id: dotnet-runner
     resource: docs/skills/run-dotnet-tests.md
     title: Editor-free suite and receipt commands
-    last_modified: 2026-09-26T10:16:37-04:00
   - id: project-rules
     resource: CLAUDE.md
     title: Scene, prefab and metadata editing boundary
-    last_modified: 2026-09-26T10:16:37-04:00
 ---
 
 # Adding a Feature — Checklist

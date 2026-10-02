@@ -5,8 +5,7 @@ description: The rules Assets/Scripts/Game/Simulation/ must uphold so both peers
 tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
@@ -17,79 +16,60 @@ sources:
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick and AssignAllCombatTargets
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: SimulationState, NodeData, VillagerData, PlayerData
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: pathfinding
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding integer cost multipliers
-    last_modified: 2026-08-31T20:06:57-04:00
   - id: lockstep
     resource: Assets/Scripts/Game/Network/LockstepRunner.cs
     title: LockstepRunner.DESYNC_CHECK_INTERVAL and CompareHash
-    last_modified: 2026-09-25T22:11:57-04:00
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager.HandleTimeout seed derivation
-    last_modified: 2026-09-26T08:36:52-04:00
   - id: match-factory
     resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
     title: MatchFactory, the one starting board and the statics it sets
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance-data
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: Per-era SuitStats and DistrictStats
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: match-replay
     resource: Assets/Scripts/MatchLog/MatchReplay.cs
     title: MatchReplay, refusing other simulation versions
-    last_modified: 2026-09-26T08:52:10-04:00
   - id: sim-version
     resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
     title: SimulationVersion.Current and bump policy
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: balance-hasher
     resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
     title: Balance fingerprint separate from state
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: Wire layout and build identity comparison
-    last_modified: 2026-09-28T01:56:48-04:00
   - id: build-identity
     resource: Assets/Scripts/Game/Network/LocalBuildIdentity.cs
     title: Shared balance content hash
-    last_modified: 2026-09-25T20:32:42-04:00
   - id: baseline-tests
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Pinned version equality check
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: balance-tests
     resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
     title: Coverage of balance fields
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: game-manager
     resource: Assets/Scripts/Game/Core/GameManager.cs
     title: State allocation, drafted setup and new villager views
-    last_modified: 2026-09-26T08:52:10-04:00
   - id: referee
     resource: dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
     title: Balance lookup and serialized replays
-    last_modified: 2026-09-25T22:46:13-04:00
   - id: match-log-format
     resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
     title: Recorded identity, board and commands
-    last_modified: 2026-09-26T08:52:10-04:00
   - id: match-launcher
     resource: Assets/UI/Scripts/MatchLauncher.cs
     title: Versioned lobby handshake
-    last_modified: 2026-09-26T08:52:10-04:00
 ---
 
 # Simulation Determinism Contract

@@ -5,7 +5,7 @@ description: Procedure for adding test coverage when simulation behaviour change
 tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
@@ -16,43 +16,33 @@ sources:
   - id: tests
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Existing EditMode test patterns
-    last_modified: 2026-09-25T20:27:51-04:00
   - id: fixture
     resource: Assets/Tests/EditMode/Tests/TestBoardFactory.cs
     title: TestBoardFactory shared fixtures
-    last_modified: 2026-09-02T10:22:51-04:00
   - id: runner
     resource: scripts/run-tests.ps1
     title: EditMode test runner
-    last_modified: 2026-09-18T08:08:19-04:00
   - id: match-factory
     resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
     title: Shared drafted board and static configuration
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance-data
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: Per-era suit and district entries
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: Player era table defaults
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: Conditional era hashing
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: balance-tests
     resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
     title: Coverage of balance fields
-    last_modified: 2026-09-25T22:52:42-04:00
   - id: baseline-contract
     resource: docs/computations/determinism-baseline.md
     title: Pinned fingerprint and version policy
-    last_modified: 2026-09-28T14:44:45-04:00
   - id: dotnet-runner
     resource: docs/skills/run-dotnet-tests.md
     title: Editor-free suite and receipt commands
-    last_modified: 2026-09-26T10:16:37-04:00
 ---
 
 # write-sim-test
