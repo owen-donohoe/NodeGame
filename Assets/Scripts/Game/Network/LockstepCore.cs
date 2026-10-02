@@ -128,7 +128,11 @@ namespace NodeWar.Network
         private Dictionary<int, TickInput> remoteInputs = new Dictionary<int, TickInput>();
 
         // Timing
-        private float lastSendTime;
+        // When the resend loop last ran, and nothing else. Generating a new
+        // input must not reset it: a speculating side generates one every tick,
+        // so a clock shared with generation never reaches the resend interval
+        // and the side resends nothing for the whole window.
+        private float lastResendTime;
         private float lastAdvanceTime;
         // When a peer input we did not already have last arrived, and the
         // furthest tick any has been for. Speculation is for a silent peer;
@@ -244,7 +248,7 @@ namespace NodeWar.Network
             clock = time;
             realClock = realTime;
             float now = clock;
-            lastSendTime = now;
+            lastResendTime = now;
             lastAdvanceTime = now;
             lastHeartbeatTime = now;
             lastRemoteInputTime = now;
@@ -282,7 +286,7 @@ namespace NodeWar.Network
             nextInputTick = INPUT_DELAY;
 
             float now = clock;
-            lastSendTime = now;
+            lastResendTime = now;
             lastAdvanceTime = now;
             lastHeartbeatTime = now;
             lastRemoteInputTime = now;
@@ -657,7 +661,6 @@ namespace NodeWar.Network
             byte[] packet = InputSerializer.Serialize(input);
             transport.Send(packet);
             lastSentPacket = packet;
-            lastSendTime = clock;
             StampGenerated(nextInputTick);
 
             // The previous inputs ride along (REDUNDANT_INPUTS). Ticks below
@@ -869,7 +872,7 @@ namespace NodeWar.Network
                 // so it takes the slower cadence too.
                 bool slow = holding || speculating || simState.gameOver;
                 float interval = slow ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
-                if (clock - lastSendTime < interval) return;
+                if (clock - lastResendTime < interval) return;
                 // A plain stall: the peer may be waiting on us only once it has
                 // stopped sending (PEER_QUIET).
                 if (!slow && clock - lastRemoteInputTime < PEER_QUIET) return;
@@ -889,7 +892,7 @@ namespace NodeWar.Network
                 if (localInputs.TryGetValue(tick, out TickInput input))
                     transport.Send(InputSerializer.Serialize(input));
             }
-            lastSendTime = clock;
+            lastResendTime = clock;
         }
 
         private void SendHeartbeatIfNeeded()

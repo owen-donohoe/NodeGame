@@ -99,6 +99,39 @@ namespace NodeWar.Network.Tests
         }
 
         /// <summary>
+        /// Regression: a lost tick used to end in a hold. A speculating side's
+        /// own input generation reset the resend clock every tick, so it
+        /// resent nothing while it speculated, and the peer sat frozen until
+        /// the window ran out and a hold started resends. Bursty loss found
+        /// it, because a burst can take all three copies of one tick.
+        /// </summary>
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        [TestCase(7)]
+        [TestCase(8)]
+        public void BurstyLoss_NeverHolds_ForAnySeed(int seed)
+        {
+            LockstepScenario s = new LockstepScenario
+            {
+                Seed = seed,
+                Seconds = 60,
+                ZeroToOne = new LinkProfile { BurstEnter = 0.02, BurstExit = 0.1 },
+                OneToZero = new LinkProfile { BurstEnter = 0.02, BurstExit = 0.1 }
+            }.Run();
+
+            s.AssertMatchesReference(minimum: 5);
+            foreach (HarnessPeer p in s.Peers)
+            {
+                Assert.AreEqual(0, p.Holds, s.Describe("P" + p.Player + " held under bursty loss"));
+                Assert.Less(p.WorstTickGap, 1.5, s.Describe("P" + p.Player + " froze for over 1.5 s under bursty loss"));
+            }
+        }
+
+        /// <summary>
         /// Bursty loss as a wireless link does it: mostly fine, then a run of
         /// consecutive packets gone. Gilbert-Elliott, stepped per packet.
         /// </summary>

@@ -32,6 +32,14 @@ namespace NodeWar.Network.Tests
         /// <summary>Windows in which every packet sent is lost, by send time.</summary>
         public readonly List<(double from, double to)> Outages = new List<(double, double)>();
 
+        /// <summary>
+        /// Drops a TickInput packet when this returns true for (send time, the
+        /// tick it carries). Lets a test lose exactly the copies of one tick
+        /// while everything around them arrives, which random loss only does
+        /// by luck.
+        /// </summary>
+        public System.Func<double, int, bool> DropInput;
+
         public LinkProfile Cut(double from, double to)
         {
             Outages.Add((from, to));
@@ -69,6 +77,13 @@ namespace NodeWar.Network.Tests
         {
             Sent++;
             BytesSent += data.Length;
+
+            if (profile.DropInput != null && data.Length > 0 && InputSerializer.ReadPacketType(data) == PacketType.TickInput &&
+                InputSerializer.TryDeserialize(data, out TickInput carried) && profile.DropInput(now, carried.forTick))
+            {
+                Lost++;
+                return;
+            }
 
             for (int i = 0; i < profile.Outages.Count; i++)
             {
