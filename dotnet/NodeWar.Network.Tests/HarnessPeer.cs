@@ -38,6 +38,8 @@ namespace NodeWar.Network.Tests
         public int SpeculatingFrames;
         public int Frames;
         public int FlushCalls;
+        /// <summary>The largest input delay the core used at any frame.</summary>
+        public int MaxInputDelay;
 
         /// <summary>Ticks shown to the player (live and speculative; a replay raises none).</summary>
         public int TicksShown;
@@ -108,6 +110,7 @@ namespace NodeWar.Network.Tests
             LastFrameAt = now;
             NextFrameAt = now + frameInterval;
             Frames++;
+            if (Core.InputDelay > MaxInputDelay) MaxInputDelay = Core.InputDelay;
 
             bool speculating = Core.IsSpeculating;
             if (speculating) SpeculatingFrames++;

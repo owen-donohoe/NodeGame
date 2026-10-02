@@ -11,6 +11,8 @@ namespace NodeWar.Network.Tests
     internal sealed class LinkProfile
     {
         public double Delay = 0.065;
+        /// <summary>When set, the one-way delay as a function of send time, in place of <see cref="Delay"/>: a link that gets worse or better mid-match.</summary>
+        public System.Func<double, double> DelayAt;
         /// <summary>Extra delay, uniform in [0, Jitter], added per packet. Packets overtake each other when it is large.</summary>
         public double Jitter;
         public double Loss;
@@ -111,7 +113,7 @@ namespace NodeWar.Network.Tests
 
         private void Enqueue(double now, byte[] data)
         {
-            double delay = profile.Delay;
+            double delay = profile.DelayAt != null ? profile.DelayAt(now) : profile.Delay;
             if (profile.Jitter > 0) delay += rng.NextDouble() * profile.Jitter;
             if (profile.Reorder > 0 && rng.NextDouble() < profile.Reorder) delay += profile.ReorderExtra;
             flight.Add(new InFlight { at = now + delay, seq = seq++, data = (byte[])data.Clone() });

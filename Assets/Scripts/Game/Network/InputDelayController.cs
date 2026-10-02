@@ -37,7 +37,7 @@ namespace NodeWar.Network
         // Ticks in a row with no late one before lowering is considered: 20 s.
         private const int CalmToLower = 200;
 
-        // The smallest slack, in seconds, seen across the calm stretch before
+        // The smallest slack, in seconds, over those last calm ticks before
         // lowering. One tick is 0.1 s, so lowering leaves at least 40 ms.
         private const float SlackToLower = 0.14f;
 
@@ -50,7 +50,11 @@ namespace NodeWar.Network
         private int lateCount;
 
         private int calmTicks;
-        private float calmMinSlack = float.MaxValue;
+        // The slack of the last CalmToLower calm ticks. A minimum over the whole
+        // calm stretch would remember a thin tick from minutes ago and never let
+        // the delay down after the link recovers.
+        private readonly float[] calmSlack = new float[CalmToLower];
+        private int calmNext;
         private float lastChange = float.MinValue;
 
         /// <summary>The delay to ask the peer for, or 0 while there is no opinion.</summary>
@@ -83,12 +87,12 @@ namespace NodeWar.Network
             if (late)
             {
                 calmTicks = 0;
-                calmMinSlack = float.MaxValue;
             }
             else
             {
-                calmTicks++;
-                if (slack < calmMinSlack) calmMinSlack = slack;
+                if (calmTicks < int.MaxValue) calmTicks++;
+                calmSlack[calmNext] = slack;
+                calmNext = (calmNext + 1) % CalmToLower;
             }
 
             if (peerDelay < BaseDelay) peerDelay = BaseDelay;
@@ -98,8 +102,8 @@ namespace NodeWar.Network
             {
                 Change(now, peerDelay + 1);
             }
-            else if (calmTicks >= CalmToLower && calmMinSlack >= SlackToLower &&
-                     peerDelay > BaseDelay && now - lastChange >= LowerCooldown)
+            else if (calmTicks >= CalmToLower && peerDelay > BaseDelay &&
+                     now - lastChange >= LowerCooldown && CalmSlackMin() >= SlackToLower)
             {
                 Change(now, peerDelay - 1);
             }
@@ -128,7 +132,16 @@ namespace NodeWar.Network
             filled = 0;
             lateCount = 0;
             calmTicks = 0;
-            calmMinSlack = float.MaxValue;
+            calmNext = 0;
+        }
+
+        // Only called with a full ring (calmTicks >= CalmToLower).
+        private float CalmSlackMin()
+        {
+            float min = float.MaxValue;
+            for (int i = 0; i < CalmToLower; i++)
+                if (calmSlack[i] < min) min = calmSlack[i];
+            return min;
         }
     }
 }

@@ -22,7 +22,9 @@ namespace NodeWar.Network
     /// Same accumulator loop, but stalls until both local and remote inputs
     /// are available for the current tick before calling SimulateTick.
     /// Enforces command processing order: P0 first, P1 second, then simulate.
-    /// Stamps local inputs for tick N+INPUT_DELAY to hide network latency.
+    /// Stamps local inputs for tick N+delay to hide network latency; the delay
+    /// starts at INITIAL_DELAY and follows what the peer asks for (see
+    /// <see cref="InputDelayController"/>).
     ///
     /// No UnityEngine in it: time is handed in by the caller on every entry
     /// (<see cref="Update"/>, <see cref="Unpause"/>, <see cref="Initialize"/>)
@@ -32,7 +34,13 @@ namespace NodeWar.Network
     /// </summary>
     public sealed class LockstepCore : NodeWar.Core.ITickProvider, NodeWar.Core.IEmoteChannel
     {
-        private const int INPUT_DELAY = 2;
+        // The delay a match starts at. Ticks below it are pre-seeded empty on both
+        // sides and never sent, so it must be the same on both: it is not adaptive.
+        private const int INITIAL_DELAY = InputDelayController.BaseDelay;
+        private const int MAX_DELAY = InputDelayController.MaxDelay;
+
+        // Nothing changes the delay more often than this, whatever is asked.
+        private const float DELAY_CHANGE_MIN_INTERVAL = 1.0f;
         private const int DESYNC_CHECK_INTERVAL = 50;
         // No tick for this long while unpaused starts a hold (8.2c, D15). Measured
         // on ticks, not packets: with one-way loss a side keeps receiving
@@ -61,11 +69,11 @@ namespace NodeWar.Network
 
         // How far behind our confirmed tick the peer can be: its speculation
         // window plus the input delay it generates ahead with.
-        private const int PEER_LAG_TICKS = SPECULATION_WINDOW + INPUT_DELAY + 2;
+        private const int PEER_LAG_TICKS = SPECULATION_WINDOW + MAX_DELAY + 2;
 
         // How far ahead of our tick a peer's input can honestly be: it may be
         // PEER_LAG_TICKS ahead and have generated a speculation window beyond.
-        private const int MAX_INPUT_AHEAD = PEER_LAG_TICKS + SPECULATION_WINDOW + INPUT_DELAY + 16;
+        private const int MAX_INPUT_AHEAD = PEER_LAG_TICKS + SPECULATION_WINDOW + MAX_DELAY + 16;
 
         // Commands one player can issue in one tick. A full-army lasso move is
         // one command per villager, and a player has at most 25.
@@ -85,8 +93,10 @@ namespace NodeWar.Network
 
         // Peer inputs this many ticks past our own mean we are behind its
         // clock (after a hold, or a speculation that ran on the other side).
-        // Ordinary latency and the input delay keep it at 4 or under.
-        private const int CATCHUP_AFTER_TICKS = INPUT_DELAY + 3;
+        // Ordinary latency and the peer's input delay keep it within that delay
+        // plus a few ticks of jitter, so the threshold is the peer's delay (it
+        // tells us, in every TickInput) plus this margin.
+        private const int CATCHUP_MARGIN_TICKS = 3;
         private const float CATCHUP_RATE = 1.5f;
 
         // A stalled side resends only once the peer has gone this quiet. A
@@ -132,6 +142,36 @@ namespace NodeWar.Network
         // Input storage (keyed by forTick)
         private Dictionary<int, TickInput> localInputs = new Dictionary<int, TickInput>();
         private Dictionary<int, TickInput> remoteInputs = new Dictionary<int, TickInput>();
+
+        // Adaptive input delay. inputDelay is what we stamp our own inputs with; it
+        // starts at INITIAL_DELAY and moves only when the peer asks. peerDelay is
+        // what the peer says it stamps with, from its TickInput headers. The
+        // controller watches the peer's inputs arrive and decides what to ask it for.
+        private int inputDelay = INITIAL_DELAY;
+        private int peerDelay = INITIAL_DELAY;
+        private int delayInfoTick = -1;
+        private float lastDelayChangeTime = float.MinValue;
+        private readonly InputDelayController delayController = new InputDelayController();
+        // A live tick had to wait for the peer, and the next one to run is the late one.
+        private bool stallPending;
+        private bool catchingUpThisFrame;
+        private float lastLiveSlack;
+        private bool lastLiveSlackValid;
+
+        /// <summary>Ticks ahead our own inputs are stamped. For tests and the stats line.</summary>
+        internal int InputDelay => inputDelay;
+
+        /// <summary>The delay the peer says it stamps with.</summary>
+        internal int PeerDelay => peerDelay;
+
+        /// <summary>The delay we are currently asking the peer for, or 0.</summary>
+        internal int RequestedPeerDelay => delayController.Request;
+
+        /// <summary>Whether the peer's input for a tick has been accepted. For tests.</summary>
+        internal bool HasRemoteInput(int tick) { return remoteInputs.ContainsKey(tick); }
+
+        /// <summary>The farthest tick past our own the core will accept a peer input for.</summary>
+        internal const int InputAheadLimit = MAX_INPUT_AHEAD;
 
         // Timing
         // When the resend loop last ran, and nothing else. Generating a new
@@ -293,24 +333,32 @@ namespace NodeWar.Network
             tickInterval = 1f / ticksPerSecond;
             accumulator = 0f;
             simulationTick = 0;
-            nextInputTick = INPUT_DELAY;
+            nextInputTick = INITIAL_DELAY;
+            inputDelay = INITIAL_DELAY;
+            peerDelay = INITIAL_DELAY;
+            delayInfoTick = -1;
+            lastDelayChangeTime = float.MinValue;
+            delayController.Reset();
+            stallPending = false;
+            catchingUpThisFrame = false;
+            lastLiveSlackValid = false;
 
             float now = clock;
             lastResendTime = now;
             lastAdvanceTime = now;
             lastHeartbeatTime = now;
             lastRemoteInputTime = now;
-            highestRemoteTick = INPUT_DELAY - 1;
+            highestRemoteTick = INITIAL_DELAY - 1;
             holding = false;
             for (int i = 0; i < STAMP_RING; i++) { genTick[i] = -1; arriveTick[i] = -1; }
 
             pendingHash = 0;
             pendingHashTick = 0;
 
-            // Pre-seed empty inputs for ticks 0 through INPUT_DELAY-1.
+            // Pre-seed empty inputs for ticks 0 through INITIAL_DELAY-1.
             // Both machines do this identically, so ticks 0 and 1 are
             // immediately simulatable without waiting for network.
-            for (int t = 0; t < INPUT_DELAY; t++)
+            for (int t = 0; t < INITIAL_DELAY; t++)
             {
                 TickInput empty = new TickInput
                 {
@@ -406,7 +454,8 @@ namespace NodeWar.Network
             // a speculation's worth of each other's inputs, arriving in one
             // burst, and that is no sign of either clock being ahead.
             bool catchingUp = !speculating && clock - lastRemoteInputTime < SPECULATE_AFTER &&
-                              highestRemoteTick - simulationTick > CATCHUP_AFTER_TICKS;
+                              highestRemoteTick - simulationTick > peerDelay + CATCHUP_MARGIN_TICKS;
+            catchingUpThisFrame = catchingUp;
             if (catchingUp) stats.catchupFrames++;
             accumulator += frameDt * (catchingUp ? CATCHUP_RATE : 1f);
 
@@ -417,6 +466,7 @@ namespace NodeWar.Network
                 {
                     GenerateLocalInputIfDue();
                     ExecuteTick(simulationTick, TickMode.Live);
+                    FeedDelayController();
                     simulationTick++;
                     accumulator -= tickInterval;
                     lastAdvanceTime = clock;
@@ -446,6 +496,7 @@ namespace NodeWar.Network
                     // Stall: remote input not yet received for this tick, or a
                     // speculation waiting for a peer that is talking again.
                     stats.stallSeconds += frameUnscaledDt;
+                    if (!speculating) stallPending = true;
                     ResendIfNeeded();
                     SendHeartbeatIfNeeded();
 
@@ -625,10 +676,70 @@ namespace NodeWar.Network
             HideBanner();
         }
 
+        // ===== ADAPTIVE INPUT DELAY =====
+
+        /// <summary>
+        /// Serialises an input with the delay fields as they stand now, not as
+        /// they stood when the input was made: the redundant copies and the
+        /// resends go out long after, and the peer should act on our current
+        /// delay and our current request, not a stale one.
+        /// </summary>
+        private byte[] Pack(TickInput input)
+        {
+            input.senderDelay = (byte)inputDelay;
+            input.requestedDelay = (byte)delayController.Request;
+            return InputSerializer.Serialize(input);
+        }
+
+        /// <summary>
+        /// A live tick has run. Tell the controller whether it had to wait for
+        /// the peer's input, and how early that input had been, unless the tick
+        /// says nothing about the delay: during a speculation, a hold, a catch-up
+        /// or a silent peer the lateness is an outage, not a slow link.
+        /// </summary>
+        private void FeedDelayController()
+        {
+            bool late = stallPending;
+            stallPending = false;
+
+            bool disturbed = holding || speculating || catchingUpThisFrame ||
+                             clock - lastRemoteInputTime >= SPECULATE_AFTER;
+            // A tick with no arrival stamp (an early one) is neutral: plenty of slack.
+            float slack = lastLiveSlackValid ? lastLiveSlack : 1f;
+            delayController.OnLiveTick(clock, late, slack, disturbed, peerDelay);
+        }
+
+        /// <summary>
+        /// Reads the delay fields of a peer input. Only from an input at least as
+        /// new as any already read: an old copy delayed on the wire carries old
+        /// values and must not undo a newer request. A request outside the
+        /// allowed range is ignored, not clamped, so a hostile or broken peer
+        /// cannot push our delay anywhere it could not have honestly asked for.
+        /// Changes are rate-limited; raising takes effect on the next generated
+        /// input, lowering as the inputs already sent run out.
+        /// </summary>
+        private void ReadPeerDelays(TickInput remote)
+        {
+            if (remote.forTick < delayInfoTick) return;
+            delayInfoTick = remote.forTick;
+
+            if (remote.senderDelay >= INITIAL_DELAY && remote.senderDelay <= MAX_DELAY)
+                peerDelay = remote.senderDelay;
+
+            int asked = remote.requestedDelay;
+            if (asked < INITIAL_DELAY || asked > MAX_DELAY || asked == inputDelay) return;
+            if (clock - lastDelayChangeTime < DELAY_CHANGE_MIN_INTERVAL) return;
+
+            Log("[LOCKSTEP] Input delay " + inputDelay + " -> " + asked + " ticks at tick " +
+                simulationTick + " (the peer asked).");
+            inputDelay = asked;
+            lastDelayChangeTime = clock;
+        }
+
         // ===== INPUT GENERATION =====
 
         /// <summary>
-        /// Generates the input for tick simulationTick + INPUT_DELAY unless it
+        /// Generates the input for tick simulationTick + inputDelay unless it
         /// already exists. After an abandoned speculation, inputs for up to
         /// SPECULATION_WINDOW ticks ahead were already generated and sent;
         /// generating one per tick anyway would push every later command about
@@ -636,7 +747,11 @@ namespace NodeWar.Network
         /// </summary>
         private void GenerateLocalInputIfDue()
         {
-            if (nextInputTick <= simulationTick + INPUT_DELAY) GenerateAndSendLocalInput();
+            // A loop, not an if: raising the delay by k leaves k more ticks due at
+            // once, and each must get an input (empty after the first) or the peer
+            // waits on a tick that never comes. Lowering it makes nothing due
+            // until the surplus runs out, which needs no code.
+            while (nextInputTick <= simulationTick + inputDelay) GenerateAndSendLocalInput();
         }
 
         private void GenerateAndSendLocalInput()
@@ -671,18 +786,18 @@ namespace NodeWar.Network
             localInputs[nextInputTick] = input;
 
             // Serialize and send
-            byte[] packet = InputSerializer.Serialize(input);
+            byte[] packet = Pack(input);
             transport.Send(packet);
             lastSentPacket = packet;
             StampGenerated(nextInputTick);
 
             // The previous inputs ride along (REDUNDANT_INPUTS). Ticks below
-            // INPUT_DELAY are pre-seeded on both sides and never sent.
+            // INITIAL_DELAY are pre-seeded on both sides and never sent.
             for (int back = 1; back <= REDUNDANT_INPUTS; back++)
             {
                 int tick = nextInputTick - back;
-                if (tick >= INPUT_DELAY && localInputs.TryGetValue(tick, out TickInput previous))
-                    transport.Send(InputSerializer.Serialize(previous));
+                if (tick >= INITIAL_DELAY && localInputs.TryGetValue(tick, out TickInput previous))
+                    transport.Send(Pack(previous));
             }
 
             nextInputTick++;
@@ -792,6 +907,7 @@ namespace NodeWar.Network
                         if (remote.forTick < simulationTick - PEER_LAG_TICKS - 10 ||
                             remote.forTick > simulationTick + MAX_INPUT_AHEAD)
                             break;
+                        ReadPeerDelays(remote);
                         // Store if not already received (ignore duplicate resends)
                         if (!remoteInputs.ContainsKey(remote.forTick))
                         {
@@ -900,10 +1016,10 @@ namespace NodeWar.Network
             int first = System.Math.Max(0, confirmedTick - PEER_LAG_TICKS);
             for (int tick = first; tick < nextInputTick; tick++)
             {
-                // Ticks below INPUT_DELAY are pre-seeded on both sides, never sent.
-                if (tick < INPUT_DELAY) continue;
+                // Ticks below INITIAL_DELAY are pre-seeded on both sides, never sent.
+                if (tick < INITIAL_DELAY) continue;
                 if (localInputs.TryGetValue(tick, out TickInput input))
-                    transport.Send(InputSerializer.Serialize(input));
+                    transport.Send(Pack(input));
             }
             lastResendTime = clock;
         }
@@ -920,7 +1036,7 @@ namespace NodeWar.Network
         //
         // lead: when the peer's input for tick T arrived, minus when we
         // generated ours for T. Both sides generate T's input at their own tick
-        // T - INPUT_DELAY, so lead = clock offset + one-way latency, and the two
+        // T - INITIAL_DELAY, so lead = clock offset + one-way latency, and the two
         // sides' leads sum to the round trip exactly: offsets cancel. Compare
         // both peers' logs: RTT = leadA + leadB, offset = (leadA - leadB) / 2.
         // slack: how long a peer input waited between arriving and its tick
@@ -1004,9 +1120,12 @@ namespace NodeWar.Network
             if (mode == TickMode.Speculative) { stats.specTicks++; return; }
             if (mode == TickMode.Replay) { stats.replayTicks++; return; }
             stats.liveTicks++;
+            lastLiveSlackValid = false;
             int slot = tick & (STAMP_RING - 1);
-            if (tick < INPUT_DELAY || arriveTick[slot] != tick) return;
+            if (tick < INITIAL_DELAY || arriveTick[slot] != tick) return;
             float slack = realClock - arriveAt[slot];
+            lastLiveSlack = slack;
+            lastLiveSlackValid = true;
             stats.slackCount++;
             stats.slackSum += slack;
             if (slack < stats.slackMin) stats.slackMin = slack;
@@ -1048,6 +1167,7 @@ namespace NodeWar.Network
                       " | spec begun " + stats.specBegun + " confirmed " + stats.specReplayed +
                       " abandoned " + stats.specAbandoned + ", holds " + stats.holds +
                       " | peer ahead " + stats.peerAheadMin + ".." + stats.peerAheadMax + " ticks" +
+                      " | delay own " + inputDelay + " peer " + peerDelay + " asked " + delayController.Request +
                       " | inputs new " + stats.newInputs + " dup " + stats.dupInputs +
                       " | resends " + stats.resends + ", reconnects " + stats.reconnects);
             ResetStats();

@@ -39,6 +39,7 @@
     <Compile Include="SweepTests.cs" />
     <Compile Include="StartSkewTests.cs" />
     <Compile Include="InputDelayControllerTests.cs" />
+    <Compile Include="AdaptiveDelayTests.cs" />
     <Compile Include="LifecycleTests.cs" />
 
     <Compile Include="../../Assets/Scripts/Game/Network/LockstepCore.cs"

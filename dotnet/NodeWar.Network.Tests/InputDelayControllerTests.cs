@@ -145,6 +145,21 @@ namespace NodeWar.Network.Tests
             Assert.AreEqual(0, controller.Request, "the minimum slack over the stretch is what counts");
         }
 
+
+        [Test]
+        public void AThinSlackTickIsForgottenOnceItLeavesTheWindow()
+        {
+            // A bad stretch long ago must not hold the delay up forever after the
+            // link recovers: only the last 200 calm ticks count.
+            Run(10, slack: 0.3f, peerDelay: 4);
+            Tick_(false, slack: 0.05f, peerDelay: 4);
+            Run(150, slack: 0.3f, peerDelay: 4);
+            Assert.AreEqual(0, controller.Request, "lowered with the thin tick still in the window");
+
+            Run(120, slack: 0.3f, peerDelay: 4);
+
+            Assert.AreEqual(3, controller.Request);
+        }
         [Test]
         public void ALateTickRestartsTheCalm()
         {
