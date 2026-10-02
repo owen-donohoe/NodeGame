@@ -505,7 +505,7 @@ namespace NodeWar.Core
             if (lockstep != null && lockstepNetwork != null) lockstep.Flush();
         }
 
-        // =====INPUT SYSTEMS =====
+        // ===== INPUT SYSTEMS =====
 
         private NodeWar.Input.PointerGestureSource gestureSource;
         private NodeWar.Input.TapRouter tapRouter;
