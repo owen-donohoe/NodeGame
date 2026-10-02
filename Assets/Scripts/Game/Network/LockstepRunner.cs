@@ -1,429 +1,163 @@
 using UnityEngine;
 using NodeWar.Simulation;
 using NodeWar.Core;
-using System.Collections.Generic;
 
 namespace NodeWar.Network
 {
     /// <summary>
-    /// Replaces TickRunner for networked play.
-    /// Same accumulator loop, but stalls until both local and remote inputs
-    /// are available for the current tick before calling SimulateTick.
-    /// Enforces command processing order: P0 first, P1 second, then simulate.
-    /// Stamps local inputs for tick N+INPUT_DELAY to hide network latency.
+    /// The MonoBehaviour around <see cref="LockstepCore"/>, which holds all of
+    /// the lockstep logic (see its summary). This class only hands the core
+    /// Unity's clocks and log, forwards its events, and ends it on EndMatch.
+    /// Nothing else lives here: logic added to this file is logic the
+    /// NodeWar.Network.Tests harness cannot reach.
     /// </summary>
     public class LockstepRunner : MonoBehaviour, NodeWar.Core.ITickProvider, IEmoteChannel
     {
-        private const int INPUT_DELAY = 2;
-        private const int DESYNC_CHECK_INTERVAL = 50;
-        // No tick for this long while unpaused starts a hold (8.2c, D15). Measured
-        // on ticks, not packets: with one-way loss a side keeps receiving
-        // heartbeats while it waits forever on an input that never comes.
-        private const float HOLD_AFTER = 2.0f;
-        private const float HEARTBEAT_INTERVAL = 0.5f;
-        private const int MAX_ACCUMULATOR_TICKS = 3;
-        private const float RESEND_INTERVAL = 0.1f;
-        private const float HOLD_RESEND_INTERVAL = 0.25f;
-
-        // How far past a missing opponent input the match plays on, predicting
-        // the opponent idle, before rolling back and holding (8.2e, D16). 20
-        // ticks is 2 s: a dropped text message or a tunnel, not a crash.
-        private const int SPECULATION_WINDOW = 20;
-
-        // An input a little late is ordinary jitter: Relay latency against a
-        // 200 ms input buffer leaves one arriving tens of milliseconds after its
-        // tick is due several times a second. That waits a frame, as plain
-        // lockstep always did. Only an input this late starts a speculation, or
-        // every jitter becomes a rollback, a snap and a flash of the banner.
-        private const float SPECULATE_AFTER = 0.3f;
-
-        // The banner waits until a speculation has run this many ticks, so a
-        // blip that settles quickly is never shown at all.
-        private const int BANNER_AFTER_TICKS = 5;
-
-        // How far behind our confirmed tick the peer can be: its speculation
-        // window plus the input delay it generates ahead with.
-        private const int PEER_LAG_TICKS = SPECULATION_WINDOW + INPUT_DELAY + 2;
-
-        // How far ahead of our tick a peer's input can honestly be: it may be
-        // PEER_LAG_TICKS ahead and have generated a speculation window beyond.
-        private const int MAX_INPUT_AHEAD = PEER_LAG_TICKS + SPECULATION_WINDOW + INPUT_DELAY + 16;
-
-        // Commands one player can issue in one tick. A full-army lasso move is
-        // one command per villager, and a player has at most 25.
-        private const int MAX_COMMANDS_PER_TICK = 64;
-
-        // Every input goes out again with the next two, so one lost packet
-        // costs nothing: its tick arrives 100 ms later inside the next one's
-        // send. Without this a lost input stalls us until the peer itself runs
-        // dry and starts resending, several hundred ms later.
-        private const int REDUNDANT_INPUTS = 2;
-
-        // Peer inputs this many ticks past our own mean we are behind its
-        // clock (after a hold, or a speculation that ran on the other side).
-        // Ordinary latency and the input delay keep it at 4 or under.
-        private const int CATCHUP_AFTER_TICKS = INPUT_DELAY + 3;
-        private const float CATCHUP_RATE = 1.5f;
-
-        // A stalled side resends only once the peer has gone this quiet. A
-        // peer still sending new inputs every tick is not waiting on ours, and
-        // an ordinary stall is latency, which a resend cannot fix: at 50 ms it
-        // was over a thousand duplicates every five seconds.
-        private const float PEER_QUIET = 0.15f;
-
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
 
-        private float tickInterval;
-        private float accumulator;
-
-        // Dependencies
-        private SimulationState simState;
-        private InputBuffer inputBuffer;
+        private readonly LockstepCore core = new LockstepCore(WriteLog);
         private NetworkManager networkManager;
-        private int localPlayerID; // 0 for host, 1 for joiner
 
-        // Tick tracking
-        private int simulationTick;  // next tick to simulate
-        private int nextInputTick;   // next forTick value for local input generation
+        private static void WriteLog(LockstepLogLevel level, string message)
+        {
+            switch (level)
+            {
+                case LockstepLogLevel.Warning: Debug.LogWarning(message); break;
+                case LockstepLogLevel.Error: Debug.LogError(message); break;
+                default: Debug.Log(message); break;
+            }
+        }
 
-        // Input storage (keyed by forTick)
-        private Dictionary<int, TickInput> localInputs = new Dictionary<int, TickInput>();
-        private Dictionary<int, TickInput> remoteInputs = new Dictionary<int, TickInput>();
+        /// <summary>NetworkManager as the core's transport.</summary>
+        private sealed class ManagerTransport : ILockstepTransport
+        {
+            private static readonly byte[][] None = new byte[0][];
+            private readonly NetworkManager manager;
 
-        // Timing
-        private float lastSendTime;
-        private float lastAdvanceTime;
-        // When a peer input we did not already have last arrived, and the
-        // furthest tick any has been for. Speculation is for a silent peer;
-        // a peer whose inputs are arriving, only late, is waited for.
-        private float lastRemoteInputTime;
-        private int highestRemoteTick;
-        // The peer has just come back from silence. Whatever we generated
-        // meanwhile went into the gap, and nothing else would resend it while
-        // both sides play on: send the whole reach on the next frame.
-        private bool resendNow;
-        private bool holding;
+            public ManagerTransport(NetworkManager manager) { this.manager = manager; }
 
-        // Speculation (8.2e). The state as it stood before the first
-        // unconfirmed tick, copied once per blip, and the tick it stood at.
-        private readonly SimulationState confirmed = new SimulationState();
-        private bool speculating;
-        private int speculateFrom;
-        // A speculation that had to be abandoned (it reached game over) is not
-        // restarted until a confirmed tick runs, or it would loop.
-        private bool speculationBlocked;
-        private bool bannerShown;
+            public void Send(byte[] data) { manager.Send(data); }
+            public byte[][] ReceiveAll() { return manager.ReceiveAll() ?? None; }
+            public void Flush() { manager.Flush(); }
+        }
 
-        private enum TickMode { Live, Speculative, Replay }
-        private float lastHeartbeatTime;
+        // ===== Events and state, forwarded from the core =====
 
-        // Resend
-        private byte[] lastSentPacket;
-
-        // Desync tracking
-        private int pendingHash;
-        private int pendingHashTick;
-        private Dictionary<int, int> localHashes = new Dictionary<int, int>();
-
-        // Public events for LobbyUI / GameManager to hook
-        public System.Action<int> OnDesync; // tick number where desync detected
+        /// <summary>Tick number where a desync was detected.</summary>
+        public event System.Action<int> OnDesync
+        {
+            add { core.OnDesync += value; }
+            remove { core.OnDesync -= value; }
+        }
 
         /// <summary>
-        /// No tick has advanced for HOLD_AFTER seconds. The runner keeps the link
-        /// alive (packets, resends, heartbeats) and never ends the match itself:
-        /// GameManager's hold decides that, and calls EndMatch.
+        /// No tick has advanced for a while. The runner keeps the link alive
+        /// and never ends the match itself: GameManager's hold decides that,
+        /// and calls EndMatch.
         /// </summary>
-        public event System.Action HoldStarted;
+        public event System.Action HoldStarted
+        {
+            add { core.HoldStarted += value; }
+            remove { core.HoldStarted -= value; }
+        }
 
         /// <summary>The missing input arrived and the match is advancing again.</summary>
-        public event System.Action HoldEnded;
+        public event System.Action HoldEnded
+        {
+            add { core.HoldEnded += value; }
+            remove { core.HoldEnded -= value; }
+        }
 
-        public bool IsHolding => holding;
+        public bool IsHolding => core.IsHolding;
 
         /// <summary>
         /// The match is playing on past a missing opponent input (8.2e). True
         /// while the ticks shown may still be rolled back.
         /// </summary>
-        public bool IsSpeculating => speculating;
+        public bool IsSpeculating => core.IsSpeculating;
 
         /// <summary>Raised when speculation starts or ends, for the HUD's banner.</summary>
-        public event System.Action<bool> SpeculationChanged;
+        public event System.Action<bool> SpeculationChanged
+        {
+            add { core.SpeculationChanged += value; }
+            remove { core.SpeculationChanged -= value; }
+        }
 
         /// <summary>
         /// The state was put back to the last confirmed tick, with the villager
         /// count it had then. Views past that count may point at villagers that
         /// no longer exist.
         /// </summary>
-        public event System.Action<int> RolledBack;
-
-        private bool paused = true;
-
-        // One log for the life of the runner, cleared before every tick.
-        private readonly TickEventLog tickEvents = new TickEventLog();
-
-        public event System.Action<TickEventLog> TickSimulated;
-
-        /// <summary>
-        /// Every tick's commands in the order they were applied (all of P0's,
-        /// then all of P1's), with the tick count before them. For recording
-        /// only. Not raised for a tick with no commands.
-        /// </summary>
-        public event System.Action<int, GameCommand[]> CommandsApplied;
-
-        /// <summary>
-        /// A desync-check hash, with the tick count it was taken after. That
-        /// count is one more than the tick index OnDesync reports.
-        /// </summary>
-        public event System.Action<int, int> HashComputed;
-
-        public event System.Action<int, EmoteType> EmoteReceived;
-        private ushort emoteSequence;
-        private readonly ushort[] lastEmoteSequence = new ushort[2];
-        private readonly bool[] hasEmoteSequence = new bool[2];
-
-        public void Send(EmoteType emote)
+        public event System.Action<int> RolledBack
         {
-            if (networkManager == null) return;
-            byte[] packet = InputSerializer.SerializeEmote(localPlayerID, emote, emoteSequence);
-            emoteSequence = unchecked((ushort)(emoteSequence + 1));
-            networkManager.Send(packet);
-            networkManager.Send(packet);
+            add { core.RolledBack += value; }
+            remove { core.RolledBack -= value; }
         }
 
-        public void Unpause()
+        public event System.Action<TickEventLog> TickSimulated
         {
-            // Re-stamp the timing baselines. Initialize() runs before the
-            // post-draft transition, which can take longer than HOLD_AFTER;
-            // without this the first unpaused frame would see a stale
-            // lastAdvanceTime and immediately start a hold.
-            float now = Time.time;
-            lastSendTime = now;
-            lastAdvanceTime = now;
-            lastHeartbeatTime = now;
-            lastRemoteInputTime = now;
-            ResetStats();
-
-            paused = false;
+            add { core.TickSimulated += value; }
+            remove { core.TickSimulated -= value; }
         }
 
+        /// <summary>
+        /// Every tick's commands in the order they were applied, with the tick
+        /// count before them. For recording only.
+        /// </summary>
+        public event System.Action<int, GameCommand[]> CommandsApplied
+        {
+            add { core.CommandsApplied += value; }
+            remove { core.CommandsApplied -= value; }
+        }
+
+        /// <summary>A desync-check hash, with the tick count it was taken after.</summary>
+        public event System.Action<int, int> HashComputed
+        {
+            add { core.HashComputed += value; }
+            remove { core.HashComputed -= value; }
+        }
+
+        public event System.Action<int, EmoteType> EmoteReceived
+        {
+            add { core.EmoteReceived += value; }
+            remove { core.EmoteReceived -= value; }
+        }
+
+        public void Send(EmoteType emote) { core.Send(emote); }
 
         /// <summary>
         /// Normalized progress (0-1) between last tick and next tick.
         /// Used by View layer for interpolation. Same contract as TickRunner.TickAlpha.
         /// </summary>
-        public float TickAlpha
-        {
-            get { return Mathf.Clamp01(accumulator / tickInterval); }
-        }
+        public float TickAlpha => core.TickAlpha;
 
         public void Initialize(SimulationState state, InputBuffer buffer,
             NetworkManager netManager, int playerID)
         {
-            simState = state;
-            inputBuffer = buffer;
             networkManager = netManager;
-            localPlayerID = playerID;
-            emoteSequence = 0;
-            System.Array.Clear(hasEmoteSequence, 0, hasEmoteSequence.Length);
+            core.Initialize(state, buffer, new ManagerTransport(netManager), playerID,
+                ticksPerSecond, Time.time, Time.realtimeSinceStartup);
+        }
 
-            tickInterval = 1f / ticksPerSecond;
-            accumulator = 0f;
-            simulationTick = 0;
-            nextInputTick = INPUT_DELAY;
-
-            float now = Time.time;
-            lastSendTime = now;
-            lastAdvanceTime = now;
-            lastHeartbeatTime = now;
-            lastRemoteInputTime = now;
-            highestRemoteTick = INPUT_DELAY - 1;
-            holding = false;
-            for (int i = 0; i < STAMP_RING; i++) { genTick[i] = -1; arriveTick[i] = -1; }
-
-            pendingHash = 0;
-            pendingHashTick = 0;
-
-            // Pre-seed empty inputs for ticks 0 through INPUT_DELAY-1.
-            // Both machines do this identically, so ticks 0 and 1 are
-            // immediately simulatable without waiting for network.
-            for (int t = 0; t < INPUT_DELAY; t++)
-            {
-                TickInput empty = new TickInput
-                {
-                    forTick = t,
-                    stateHash = 0,
-                    commands = new GameCommand[0]
-                };
-                localInputs[t] = empty;
-                remoteInputs[t] = empty;
-            }
+        public void Unpause()
+        {
+            core.Unpause(Time.time, Time.realtimeSinceStartup);
         }
 
         private void Update()
         {
-            if (simState == null || networkManager == null) return;
-            if (simState.gameOver)
-            {
-                // The end card still carries emotes. Keep the link alive without
-                // turning a peer leaving that card into a match disconnect.
-                ProcessIncomingPackets();
-                SendHeartbeatIfNeeded();
-                // Keep offering our last inputs: if the decisive one was lost on
-                // the way, the peer is stuck short of the game over without it.
-                ResendIfNeeded();
-                return;
-            }
-
-            // Pump the transport even while paused. Preserves any TickInput a
-            // peer sends if its transition finishes before ours -- inputs are
-            // keyed by forTick, so receiving them early loses nothing.
-            ProcessIncomingPackets();
-
-            if (paused)
-            {
-                // Keep the link alive so the peer does not start a hold while
-                // waiting on our transition. Deliberately no hold check while
-                // paused: a long transition is not a disconnect, and Unpause()
-                // re-baselines the timers anyway.
-                SendHeartbeatIfNeeded();
-                return;
-            }
-
-            SampleFrame();
-
-            if (resendNow)
-            {
-                resendNow = false;
-                ResendIfNeeded(force: true);
-            }
-
-            if (holding)
-            {
-                if (!HasBothInputs(simulationTick))
-                {
-                    // Keep offering every input the peer may lack, so the
-                    // moment the link heals nothing is missing on either side.
-                    ResendIfNeeded();
-                    SendHeartbeatIfNeeded();
-                    LogStatsIfDue();
-                    return;
-                }
-
-                // Back. Start the clock fresh rather than replaying the held
-                // time as a burst; if the peer got ahead meanwhile, catch-up
-                // closes the gap at CATCHUP_RATE.
-                holding = false;
-                accumulator = 0f;
-                Debug.Log("[LOCKSTEP] Resumed at tick " + simulationTick + " after " +
-                          (Time.time - lastAdvanceTime).ToString("F1") + " s; peer inputs reach tick " +
-                          highestRemoteTick + ".");
-                lastAdvanceTime = Time.time;
-                HoldEnded?.Invoke();
-            }
-
-            // A blip whose missing inputs have all arrived is settled first:
-            // roll back and replay it with the real ones, before any new tick.
-            if (speculating)
-            {
-                if (SpanConfirmed()) ReplaySpan();
-                else ResendIfNeeded();
-            }
-
-            // Behind the peer's clock: run faster until its inputs are no
-            // longer piling up ahead of us. Only ever runs ticks whose inputs
-            // both sides already have, so it cannot outrun anything. Only while
-            // the peer is still sending new ones: after a drop both sides hold
-            // a speculation's worth of each other's inputs, arriving in one
-            // burst, and that is no sign of either clock being ahead.
-            bool catchingUp = !speculating && Time.time - lastRemoteInputTime < SPECULATE_AFTER &&
-                              highestRemoteTick - simulationTick > CATCHUP_AFTER_TICKS;
-            if (catchingUp) stats.catchupFrames++;
-            accumulator += Time.deltaTime * (catchingUp ? CATCHUP_RATE : 1f);
-
-            // Advance simulation as many ticks as possible
-            while (accumulator >= tickInterval)
-            {
-                if (!speculating && HasBothInputs(simulationTick))
-                {
-                    GenerateLocalInputIfDue();
-                    ExecuteTick(simulationTick, TickMode.Live);
-                    simulationTick++;
-                    accumulator -= tickInterval;
-                    lastAdvanceTime = Time.time;
-                    speculationBlocked = false;
-                }
-                else if (CanSpeculate())
-                {
-                    if (!speculating) BeginSpeculation();
-                    GenerateLocalInputIfDue();
-                    ExecuteTick(simulationTick, TickMode.Speculative);
-                    simulationTick++;
-                    accumulator -= tickInterval;
-                    ShowBannerIfLong();
-
-                    // A speculative game over is not a result: nobody has
-                    // confirmed the inputs that produced it. Put the board back
-                    // before anything outside the runner sees it.
-                    if (simState.gameOver)
-                    {
-                        AbandonSpeculation();
-                        speculationBlocked = true;
-                        break;
-                    }
-                }
-                else
-                {
-                    // Stall: remote input not yet received for this tick, or a
-                    // speculation waiting for a peer that is talking again.
-                    stats.stallSeconds += Time.unscaledDeltaTime;
-                    ResendIfNeeded();
-                    SendHeartbeatIfNeeded();
-
-                    // Cap accumulator to prevent death spiral on resume
-                    if (accumulator > tickInterval * MAX_ACCUMULATOR_TICKS)
-                        accumulator = tickInterval * MAX_ACCUMULATOR_TICKS;
-                    break;
-                }
-            }
-
-            SendHeartbeatIfNeeded();
-
-            // The window ran out: the opponent is really gone. Rewind to what
-            // both sides agreed on and hold (D16).
-            if (speculating && simulationTick - speculateFrom >= SPECULATION_WINDOW)
-            {
-                AbandonSpeculation();
-                holding = true;
-                stats.holds++;
-                Debug.LogWarning("[LOCKSTEP] Played " + SPECULATION_WINDOW + " ticks without the opponent; " +
-                                 "rolled back to tick " + simulationTick + " and holding. Peer inputs reach tick " +
-                                 highestRemoteTick + ", last new one " +
-                                 (Time.time - lastRemoteInputTime).ToString("F2") + " s ago.");
-                HoldStarted?.Invoke();
-                return;
-            }
-
-            // A game-over tick ends the match normally; only a stall starts a hold.
-            if (!speculating && !simState.gameOver && Time.time - lastAdvanceTime > HOLD_AFTER)
-            {
-                holding = true;
-                stats.holds++;
-                Debug.LogWarning("[LOCKSTEP] No tick for " + HOLD_AFTER + "s at tick " + simulationTick +
-                                 "; holding. Peer inputs reach tick " + highestRemoteTick + ".");
-                HoldStarted?.Invoke();
-            }
-
-            LogStatsIfDue();
+            if (networkManager == null) return;
+            core.Update(Time.time, Time.realtimeSinceStartup, Time.deltaTime, Time.unscaledDeltaTime);
         }
 
         /// <summary>
         /// After every Update this frame, so the inputs, resends and heartbeats
-        /// above and any emote the HUD sent all leave now, not next frame.
+        /// and any emote the HUD sent all leave now, not next frame.
         /// </summary>
         private void LateUpdate()
         {
-            if (networkManager != null) networkManager.Flush();
+            if (networkManager != null) core.Flush();
         }
 
         /// <summary>
@@ -432,594 +166,8 @@ namespace NodeWar.Network
         /// </summary>
         public void EndMatch()
         {
-            holding = false;
-            if (speculating) AbandonSpeculation();
+            core.EndMatch();
             enabled = false;
-        }
-
-        // ===== SPECULATION (8.2e) =====
-
-        /// <summary>
-        /// A peer's input as this side will apply it. Every command is stamped
-        /// with the peer's own slot, whatever the wire said: the slot is decided
-        /// by who sent the packet, not by its contents. An honest peer's commands
-        /// already carry it, so both sides apply the same thing. A modified
-        /// client issuing commands for the other player's villagers now has them
-        /// applied on its side only, which desyncs, is caught by the hash check,
-        /// and leaves two disagreeing logs (Disputed) instead of an accepted
-        /// result. Also capped at MAX_COMMANDS_PER_TICK, as local input is.
-        /// </summary>
-        private TickInput FromPeer(TickInput input)
-        {
-            GameCommand[] commands = input.commands ?? new GameCommand[0];
-            int count = commands.Length < MAX_COMMANDS_PER_TICK ? commands.Length : MAX_COMMANDS_PER_TICK;
-            var stamped = new GameCommand[count];
-            int peerSlot = 1 - localPlayerID;
-            for (int i = 0; i < count; i++)
-            {
-                stamped[i] = commands[i];
-                stamped[i].playerID = peerSlot;
-            }
-            input.commands = stamped;
-            return input;
-        }
-
-        private bool CanSpeculate()
-        {
-            if (speculationBlocked || holding) return false;
-            // Only a silent peer is played past. A peer whose new inputs are
-            // arriving is behind our clock, not gone: playing on would run
-            // further ahead of inputs that can never catch up, and the span
-            // would only end at the window, in a rollback and a hold. Instead
-            // the frontier waits there until the peer's inputs reach it.
-            if (Time.time - lastRemoteInputTime < SPECULATE_AFTER) return false;
-            if (!speculating && Time.time - lastAdvanceTime < SPECULATE_AFTER) return false;
-            if (!localInputs.ContainsKey(simulationTick)) return false;
-            return !speculating || simulationTick - speculateFrom < SPECULATION_WINDOW;
-        }
-
-        private void BeginSpeculation()
-        {
-            confirmed.CopyFrom(simState);
-            speculateFrom = simulationTick;
-            speculating = true;
-            stats.specBegun++;
-            Debug.Log("[LOCKSTEP] Opponent input missing at tick " + simulationTick + "; playing on. Stalled " +
-                      (Time.time - lastAdvanceTime).ToString("F2") + " s, last new peer input " +
-                      (Time.time - lastRemoteInputTime).ToString("F2") + " s ago.");
-        }
-
-        private void ShowBannerIfLong()
-        {
-            if (bannerShown || simulationTick - speculateFrom < BANNER_AFTER_TICKS) return;
-            bannerShown = true;
-            SpeculationChanged?.Invoke(true);
-        }
-
-        private void HideBanner()
-        {
-            if (!bannerShown) return;
-            bannerShown = false;
-            SpeculationChanged?.Invoke(false);
-        }
-
-        private bool SpanConfirmed()
-        {
-            for (int t = speculateFrom; t < simulationTick; t++)
-                if (!remoteInputs.ContainsKey(t)) return false;
-            return true;
-        }
-
-        /// <summary>
-        /// The opponent's inputs for the whole blip arrived. Always roll back
-        /// and replay, even when they turn out empty, so this path runs on every
-        /// blip instead of hiding until a rare one. The replay is the only pass
-        /// that records and hashes; it raises no TickSimulated, so no cue plays
-        /// twice.
-        /// </summary>
-        private void ReplaySpan()
-        {
-            int from = speculateFrom;
-            int until = simulationTick;
-            simState.CopyFrom(confirmed);
-            simulationTick = from;
-            speculating = false;
-            RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
-
-            // Stop at a confirmed game over, exactly where a peer that played
-            // these ticks live stopped. Ticks past it would change the state
-            // and the log on this side only.
-            while (simulationTick < until && !simState.gameOver)
-            {
-                ExecuteTick(simulationTick, TickMode.Replay);
-                simulationTick++;
-            }
-            lastAdvanceTime = Time.time;
-            stats.specReplayed++;
-            Debug.Log("[LOCKSTEP] Opponent back; replayed ticks " + from + " to " + (until - 1) + ".");
-            HideBanner();
-        }
-
-        /// <summary>
-        /// Puts the board back to the last confirmed tick. The local inputs
-        /// generated meanwhile stay: they were sent, and the peer will apply
-        /// them on those ticks too.
-        /// </summary>
-        private void AbandonSpeculation()
-        {
-            simState.CopyFrom(confirmed);
-            simulationTick = speculateFrom;
-            speculating = false;
-            stats.specAbandoned++;
-            RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
-            HideBanner();
-        }
-
-        // ===== INPUT GENERATION =====
-
-        /// <summary>
-        /// Generates the input for tick simulationTick + INPUT_DELAY unless it
-        /// already exists. After an abandoned speculation, inputs for up to
-        /// SPECULATION_WINDOW ticks ahead were already generated and sent;
-        /// generating one per tick anyway would push every later command about
-        /// 2 s back for the rest of the match.
-        /// </summary>
-        private void GenerateLocalInputIfDue()
-        {
-            if (nextInputTick <= simulationTick + INPUT_DELAY) GenerateAndSendLocalInput();
-        }
-
-        private void GenerateAndSendLocalInput()
-        {
-            // Flush all commands accumulated since last tick. Capped as the peer
-            // caps ours (FromPeer), so the two sides always apply the same list.
-            GameCommand[] commands = inputBuffer.DrainCommands();
-            if (commands.Length > MAX_COMMANDS_PER_TICK)
-            {
-                Debug.LogWarning("[LOCKSTEP] " + commands.Length + " commands in one tick; keeping " +
-                                 MAX_COMMANDS_PER_TICK + ".");
-                System.Array.Resize(ref commands, MAX_COMMANDS_PER_TICK);
-            }
-            // Stamped with our slot as the peer stamps them, so even a local bug
-            // that put the wrong player on a command cannot make the sides differ.
-            for (int i = 0; i < commands.Length; i++) commands[i].playerID = localPlayerID;
-
-            // Attach pending hash if one was computed after last tick
-            int hash = pendingHash;
-            pendingHash = 0;
-
-            TickInput input = new TickInput
-            {
-                forTick = nextInputTick,
-                stateHash = hash,
-                commands = commands
-            };
-
-            // Store locally (we'll need it when simulationTick reaches nextInputTick)
-            localInputs[nextInputTick] = input;
-
-            // Serialize and send
-            byte[] packet = InputSerializer.Serialize(input);
-            networkManager.Send(packet);
-            lastSentPacket = packet;
-            lastSendTime = Time.time;
-            StampGenerated(nextInputTick);
-
-            // The previous inputs ride along (REDUNDANT_INPUTS). Ticks below
-            // INPUT_DELAY are pre-seeded on both sides and never sent.
-            for (int back = 1; back <= REDUNDANT_INPUTS; back++)
-            {
-                int tick = nextInputTick - back;
-                if (tick >= INPUT_DELAY && localInputs.TryGetValue(tick, out TickInput previous))
-                    networkManager.Send(InputSerializer.Serialize(previous));
-            }
-
-            nextInputTick++;
-        }
-
-        // ===== TICK EXECUTION =====
-
-        private void ExecuteTick(int tick, TickMode mode)
-        {
-            TickInput local = localInputs[tick];
-            // Speculating: the opponent is predicted idle where their input is missing.
-            if (!remoteInputs.TryGetValue(tick, out TickInput remote))
-                remote = new TickInput { forTick = tick, stateHash = 0, commands = new GameCommand[0] };
-            bool confirmedTick = mode != TickMode.Speculative;
-            CountTick(tick, mode);
-
-            // Enforce command processing order contract:
-            // ALL P0 commands (in issue order), then ALL P1 commands (in issue order)
-            GameCommand[] p0Commands;
-            GameCommand[] p1Commands;
-
-            if (localPlayerID == 0)
-            {
-                p0Commands = local.commands;
-                p1Commands = remote.commands;
-            }
-            else
-            {
-                p0Commands = remote.commands;
-                p1Commands = local.commands;
-            }
-
-            tickEvents.Clear();
-
-            if (confirmedTick && CommandsApplied != null && p0Commands.Length + p1Commands.Length > 0)
-            {
-                GameCommand[] applied = new GameCommand[p0Commands.Length + p1Commands.Length];
-                System.Array.Copy(p0Commands, applied, p0Commands.Length);
-                System.Array.Copy(p1Commands, 0, applied, p0Commands.Length, p1Commands.Length);
-                CommandsApplied(simState.tickCount, applied);
-            }
-
-            for (int i = 0; i < p0Commands.Length; i++)
-                CommandProcessor.ProcessCommand(simState, p0Commands[i], tickEvents);
-
-            for (int i = 0; i < p1Commands.Length; i++)
-                CommandProcessor.ProcessCommand(simState, p1Commands[i], tickEvents);
-
-            // Advance simulation
-            GameSimulation.SimulateTick(simState, tickEvents);
-
-            // Desync hash: compute after tick completes, store for next outgoing
-            // packet. Only on confirmed ticks: a speculative state is not one
-            // either peer has agreed to.
-            if (confirmedTick && tick > 0 && tick % DESYNC_CHECK_INTERVAL == 0)
-            {
-                int computedHash = SimulationStateHasher.ComputeHash(simState);
-                localHashes[tick] = computedHash;
-                pendingHash = computedHash;
-                pendingHashTick = tick;
-                Debug.Log("[LOCKSTEP] Tick " + tick + " Hash: " + computedHash);
-                HashComputed?.Invoke(simState.tickCount, computedHash);
-            }
-
-            // Compare remote's hash if they sent one
-            if (confirmedTick && remote.stateHash != 0)
-            {
-                CompareHash(remote.stateHash);
-            }
-
-            // Memory cleanup, keyed off confirmed ticks only.
-            if (confirmedTick) CleanupOldInputs(tick);
-
-            // A replayed tick already played its cues when it was speculated; a
-            // speculative game over is about to be rolled back. Neither is shown.
-            if (mode == TickMode.Replay || (mode == TickMode.Speculative && simState.gameOver)) return;
-            TickSimulated?.Invoke(tickEvents);
-        }
-
-        // ===== NETWORK RECEIVE =====
-
-        private void ProcessIncomingPackets()
-        {
-            byte[][] packets = networkManager.ReceiveAll();
-
-            for (int i = 0; i < packets.Length; i++)
-            {
-                if (packets[i] == null || packets[i].Length == 0) continue;
-
-                PacketType type = InputSerializer.ReadPacketType(packets[i]);
-
-                switch (type)
-                {
-                    case PacketType.TickInput:
-                        if (simState.gameOver) break;
-                        // A malformed packet is treated as a lost one, which the
-                        // transport already has to survive. Nothing half-read
-                        // reaches CommandProcessor.
-                        if (!InputSerializer.TryDeserialize(packets[i], out TickInput remote))
-                        {
-                            Debug.LogWarning("[LOCKSTEP] Dropped malformed TickInput packet (" +
-                                packets[i].Length + " bytes).");
-                            break;
-                        }
-                        // Only ticks an honest peer could be sending: a flood of
-                        // distinct forTick values must not grow the dictionary.
-                        if (remote.forTick < simulationTick - PEER_LAG_TICKS - 10 ||
-                            remote.forTick > simulationTick + MAX_INPUT_AHEAD)
-                            break;
-                        // Store if not already received (ignore duplicate resends)
-                        if (!remoteInputs.ContainsKey(remote.forTick))
-                        {
-                            remoteInputs[remote.forTick] = FromPeer(remote);
-                            StampArrived(remote.forTick);
-                            // Progress is a tick the peer never sent before. A
-                            // held peer still resends old inputs; that is not
-                            // talking, or our speculation would wait forever.
-                            if (remote.forTick > highestRemoteTick)
-                            {
-                                if (Time.time - lastRemoteInputTime >= SPECULATE_AFTER)
-                                {
-                                    resendNow = true;
-                                    stats.reconnects++;
-                                }
-                                highestRemoteTick = remote.forTick;
-                                lastRemoteInputTime = Time.time;
-                            }
-                        }
-                        else stats.dupInputs++;
-                        break;
-
-                    case PacketType.Emote:
-                        if (!InputSerializer.TryDeserializeEmote(packets[i],
-                            out int player, out EmoteType emote, out ushort sequence) ||
-                            player == localPlayerID) break;
-
-                        // Serial arithmetic survives ushort wrap. Late copies
-                        // cannot replace a newer bubble with an older emote.
-                        int advance = (sequence - lastEmoteSequence[player]) & 0xffff;
-                        if (hasEmoteSequence[player] && (advance == 0 || advance >= 0x8000)) break;
-                        hasEmoteSequence[player] = true;
-                        lastEmoteSequence[player] = sequence;
-                        EmoteReceived?.Invoke(player, emote);
-                        break;
-
-                    case PacketType.Heartbeat:
-                        // Keeps the Relay allocation alive. A hold is decided by
-                        // ticks, so a heartbeat alone never ends one.
-                        break;
-                }
-            }
-        }
-
-        // ===== DESYNC =====
-
-        /// <summary>
-        /// Compare a received hash against our most recent local hash.
-        /// Both machines compute hashes at the same simulation tick (lockstep guarantees this).
-        /// The remote's hash was computed after the same tick our most recent hash was.
-        /// </summary>
-        private void CompareHash(int remoteHash)
-        {
-            // Find the most recent local hash to compare against.
-            // In lockstep, both sides hash after the same tick, so pendingHashTick
-            // (or the last stored hash tick) should match.
-            if (pendingHashTick > 0 && localHashes.ContainsKey(pendingHashTick))
-            {
-                int localHash = localHashes[pendingHashTick];
-                if (localHash != remoteHash)
-                {
-                    Debug.LogError("[DESYNC] Tick " + pendingHashTick +
-                        " Local: " + localHash + " Remote: " + remoteHash);
-                    OnDesync?.Invoke(pendingHashTick);
-                }
-            }
-        }
-
-        // ===== RESEND / HEARTBEAT =====
-
-        /// <summary>
-        /// Re-sends every local input the peer may still be missing, not just
-        /// the newest. Resending only the last packet deadlocks on one loss:
-        /// if our input for tick N is dropped after N+1 has gone out, the peer
-        /// stalls on N while we stall on its N and keep resending N+1 - both
-        /// clocks stop, heartbeats keep the link "alive". With speculation
-        /// (8.2e) the peer can be up to PEER_LAG_TICKS behind our confirmed
-        /// tick, so the reach runs from there up to the newest input we
-        /// generated. Called only while stalled, speculating, holding or on the
-        /// end card, never per live tick. Duplicates are ignored on receipt. No
-        /// layout change.
-        /// </summary>
-        private void ResendIfNeeded(bool force = false)
-        {
-            if (lastSentPacket == null) return;
-            if (!force)
-            {
-                // A hold can last a minute; the whole reach every 100 ms for
-                // all of it is traffic for a link that is not answering.
-                // Speculation has up to SPECULATION_WINDOW inputs outstanding,
-                // so it takes the slower cadence too.
-                bool slow = holding || speculating || simState.gameOver;
-                float interval = slow ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
-                if (Time.time - lastSendTime < interval) return;
-                // A plain stall: the peer may be waiting on us only once it has
-                // stopped sending (PEER_QUIET).
-                if (!slow && Time.time - lastRemoteInputTime < PEER_QUIET) return;
-            }
-            stats.resends++;
-
-            // The peer can be up to PEER_LAG_TICKS behind our confirmed tick: it
-            // may be speculating past an input of ours it never received while
-            // we confirmed ticks on the inputs it kept sending. There is no ack
-            // on the wire, so cover the whole reach.
-            int confirmedTick = speculating ? speculateFrom : simulationTick;
-            int first = Mathf.Max(0, confirmedTick - PEER_LAG_TICKS);
-            for (int tick = first; tick < nextInputTick; tick++)
-            {
-                // Ticks below INPUT_DELAY are pre-seeded on both sides, never sent.
-                if (tick < INPUT_DELAY) continue;
-                if (localInputs.TryGetValue(tick, out TickInput input))
-                    networkManager.Send(InputSerializer.Serialize(input));
-            }
-            lastSendTime = Time.time;
-        }
-
-        private void SendHeartbeatIfNeeded()
-        {
-            if (Time.time - lastHeartbeatTime < HEARTBEAT_INTERVAL) return;
-
-            networkManager.Send(InputSerializer.SerializeHeartbeat());
-            lastHeartbeatTime = Time.time;
-        }
-
-        // ===== NET STATS (diagnostics, logged as [NETSTAT]) =====
-        //
-        // lead: when the peer's input for tick T arrived, minus when we
-        // generated ours for T. Both sides generate T's input at their own tick
-        // T - INPUT_DELAY, so lead = clock offset + one-way latency, and the two
-        // sides' leads sum to the round trip exactly: offsets cancel. Compare
-        // both peers' logs: RTT = leadA + leadB, offset = (leadA - leadB) / 2.
-        // slack: how long a peer input waited between arriving and its tick
-        // running live. Near zero means it arrived just in time (we stall).
-        // Wall clock, unscaled; nothing here reaches the simulation.
-
-        private const float STATS_INTERVAL = 5f;
-        private const int STAMP_RING = 256;
-        private readonly int[] genTick = new int[STAMP_RING];
-        private readonly float[] genAt = new float[STAMP_RING];
-        private readonly int[] arriveTick = new int[STAMP_RING];
-        private readonly float[] arriveAt = new float[STAMP_RING];
-
-        private struct NetStats
-        {
-            public float since;
-            public int leadCount; public float leadSum, leadMin, leadMax;
-            public int slackCount; public float slackSum, slackMin;
-            public float stallSeconds, worstFrame;
-            public int liveTicks, specTicks, replayTicks, catchupFrames;
-            public int specBegun, specReplayed, specAbandoned, holds;
-            public int newInputs, dupInputs, resends, reconnects;
-            public int peerAheadMin, peerAheadMax;
-        }
-
-        private NetStats stats;
-
-        // Lead over the whole match, from steady windows only: no speculation,
-        // hold, catch-up or reconnect in them. After a drop the pre-generated
-        // inputs land in a burst and skew a window's lead by seconds, so the
-        // session figure is the one to sum across the two logs for the RTT.
-        private int steadyWindows;
-        private int steadyLeadCount;
-        private float steadyLeadSum;
-
-        private void ResetStats()
-        {
-            stats = new NetStats
-            {
-                since = Time.realtimeSinceStartup,
-                leadMin = float.MaxValue, leadMax = float.MinValue, slackMin = float.MaxValue,
-                peerAheadMin = int.MaxValue, peerAheadMax = int.MinValue
-            };
-        }
-
-        private void SampleFrame()
-        {
-            if (Time.unscaledDeltaTime > stats.worstFrame) stats.worstFrame = Time.unscaledDeltaTime;
-            int ahead = highestRemoteTick - simulationTick;
-            if (ahead < stats.peerAheadMin) stats.peerAheadMin = ahead;
-            if (ahead > stats.peerAheadMax) stats.peerAheadMax = ahead;
-        }
-
-        private void StampGenerated(int tick)
-        {
-            int slot = tick & (STAMP_RING - 1);
-            genTick[slot] = tick;
-            genAt[slot] = Time.realtimeSinceStartup;
-            if (arriveTick[slot] == tick) AddLead(arriveAt[slot] - genAt[slot]);
-        }
-
-        private void StampArrived(int tick)
-        {
-            stats.newInputs++;
-            int slot = tick & (STAMP_RING - 1);
-            arriveTick[slot] = tick;
-            arriveAt[slot] = Time.realtimeSinceStartup;
-            if (genTick[slot] == tick) AddLead(arriveAt[slot] - genAt[slot]);
-        }
-
-        private void AddLead(float seconds)
-        {
-            stats.leadCount++;
-            stats.leadSum += seconds;
-            if (seconds < stats.leadMin) stats.leadMin = seconds;
-            if (seconds > stats.leadMax) stats.leadMax = seconds;
-        }
-
-        private void CountTick(int tick, TickMode mode)
-        {
-            if (mode == TickMode.Speculative) { stats.specTicks++; return; }
-            if (mode == TickMode.Replay) { stats.replayTicks++; return; }
-            stats.liveTicks++;
-            int slot = tick & (STAMP_RING - 1);
-            if (tick < INPUT_DELAY || arriveTick[slot] != tick) return;
-            float slack = Time.realtimeSinceStartup - arriveAt[slot];
-            stats.slackCount++;
-            stats.slackSum += slack;
-            if (slack < stats.slackMin) stats.slackMin = slack;
-        }
-
-        private void LogStatsIfDue()
-        {
-            float now = Time.realtimeSinceStartup;
-            float span = now - stats.since;
-            if (span < STATS_INTERVAL) return;
-
-            string lead = stats.leadCount == 0 ? "n/a"
-                : "avg " + Ms(stats.leadSum / stats.leadCount) + " min " + Ms(stats.leadMin) +
-                  " max " + Ms(stats.leadMax) + " ms (n=" + stats.leadCount + ")";
-            string slack = stats.slackCount == 0 ? "n/a"
-                : "avg " + Ms(stats.slackSum / stats.slackCount) + " min " + Ms(stats.slackMin) + " ms";
-
-            bool steady = !holding && !speculating && stats.specBegun == 0 && stats.specReplayed == 0 &&
-                          stats.specAbandoned == 0 && stats.holds == 0 && stats.catchupFrames == 0 &&
-                          stats.reconnects == 0 && stats.leadCount > 0;
-            if (steady)
-            {
-                steadyWindows++;
-                steadyLeadCount += stats.leadCount;
-                steadyLeadSum += stats.leadSum;
-            }
-            string session = steadyLeadCount == 0 ? "n/a"
-                : Ms(steadyLeadSum / steadyLeadCount) + " ms over " + steadyWindows + " windows";
-
-            Debug.Log("[NETSTAT] P" + localPlayerID + " " + span.ToString("F1") + "s to tick " + simulationTick +
-                      (holding ? " HOLDING" : speculating ? " SPECULATING" : "") +
-                      (steady ? " steady" : " disturbed") +
-                      " | match steady lead " + session +
-                      " | lead " + lead +
-                      " | slack " + slack +
-                      " | stalled " + Ms(stats.stallSeconds) + " ms, worst frame " + Ms(stats.worstFrame) + " ms" +
-                      " | ticks live " + stats.liveTicks + " spec " + stats.specTicks + " replay " + stats.replayTicks +
-                      ", catch-up frames " + stats.catchupFrames +
-                      " | spec begun " + stats.specBegun + " confirmed " + stats.specReplayed +
-                      " abandoned " + stats.specAbandoned + ", holds " + stats.holds +
-                      " | peer ahead " + stats.peerAheadMin + ".." + stats.peerAheadMax + " ticks" +
-                      " | inputs new " + stats.newInputs + " dup " + stats.dupInputs +
-                      " | resends " + stats.resends + ", reconnects " + stats.reconnects);
-            ResetStats();
-        }
-
-        private static string Ms(float seconds) => Mathf.RoundToInt(seconds * 1000f).ToString();
-
-        // ===== HELPERS =====
-
-        private bool HasBothInputs(int tick)
-        {
-            return localInputs.ContainsKey(tick) && remoteInputs.ContainsKey(tick);
-        }
-
-        /// <summary>
-        /// Remove stored inputs older than 10 ticks to prevent unbounded memory growth.
-        /// </summary>
-        private void CleanupOldInputs(int completedTick)
-        {
-            // Keep what a lagging peer may still need resent, and checkpoint
-            // hashes that may arrive late after a replay, with some margin.
-            int cutoff = completedTick - PEER_LAG_TICKS - 10;
-            if (cutoff < 0) return;
-
-            // Collect keys to remove (cannot modify during enumeration)
-            List<int> keysToRemove = new List<int>();
-
-            foreach (int key in localInputs.Keys)
-                if (key <= cutoff) keysToRemove.Add(key);
-            for (int i = 0; i < keysToRemove.Count; i++)
-                localInputs.Remove(keysToRemove[i]);
-
-            keysToRemove.Clear();
-            foreach (int key in remoteInputs.Keys)
-                if (key <= cutoff) keysToRemove.Add(key);
-            for (int i = 0; i < keysToRemove.Count; i++)
-                remoteInputs.Remove(keysToRemove[i]);
-
-            keysToRemove.Clear();
-            foreach (int key in localHashes.Keys)
-                if (key <= cutoff) keysToRemove.Add(key);
-            for (int i = 0; i < keysToRemove.Count; i++)
-                localHashes.Remove(keysToRemove[i]);
         }
     }
 }
