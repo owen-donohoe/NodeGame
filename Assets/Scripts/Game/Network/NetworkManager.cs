@@ -206,6 +206,19 @@ namespace NodeWar.Network
         }
 
         /// <summary>
+        /// Puts every packet sent this frame on the wire now. Unity Transport
+        /// only queues a send; left alone it goes out at the next frame's
+        /// ScheduleUpdate in ReceiveAll, adding up to a frame to every packet's
+        /// latency, and a slow frame (the Editor's run to 200 ms) is the whole
+        /// input delay. DirectUDP sends synchronously and has nothing to flush.
+        /// </summary>
+        public void Flush()
+        {
+            if (mode != TransportMode.UnityRelay || !relayDriver.IsCreated || !relayReady) return;
+            relayDriver.ScheduleFlushSend(default).Complete();
+        }
+
+        /// <summary>
         /// Buffers a packet sent before the connection was ready. On overflow, drops the
         /// incoming packet (queue is left untouched) and warns, rather than growing unbounded.
         /// </summary>
@@ -470,11 +483,13 @@ namespace NodeWar.Network
 
         // --- Simulated network drops (Editor and Development Builds only) ---
         //
-        // F8 drops every packet both ways for 1 s, F9 for 5 s, F10 for 20 s, on
+        // F8 drops every packet both ways for 1.5 s, F9 for 5 s, F10 for 20 s, on
         // this copy of the game, and fails its ranked server calls for as long:
         // this copy has lost its connection. Hold Shift to drop only what this
         // copy sends to its peer, which is one-way loss on the peer link. For testing the speculative window (8.2e) and
-        // the disconnect hold (8.2c) without touching a real network. Both
+        // the disconnect hold (8.2c) without touching a real network. One key
+        // per stage: F8 stays inside the speculation window (banner only), F9
+        // runs past it into a hold, F10 past the hold's 10 s into the claim. Both
         // copies keep running, unlike a paused window. Unity Transport's own
         // keep-alive is untouched, so a 20 s drop stays under its timeout.
 
@@ -494,7 +509,7 @@ namespace NodeWar.Network
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
-            float seconds = keyboard.f8Key.wasPressedThisFrame ? 1f
+            float seconds = keyboard.f8Key.wasPressedThisFrame ? 1.5f
                 : keyboard.f9Key.wasPressedThisFrame ? 5f
                 : keyboard.f10Key.wasPressedThisFrame ? 20f
                 : 0f;

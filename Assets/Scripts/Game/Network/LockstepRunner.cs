@@ -22,7 +22,7 @@ namespace NodeWar.Network
         private const float HOLD_AFTER = 2.0f;
         private const float HEARTBEAT_INTERVAL = 0.5f;
         private const int MAX_ACCUMULATOR_TICKS = 3;
-        private const float RESEND_INTERVAL = 0.05f;
+        private const float RESEND_INTERVAL = 0.1f;
         private const float HOLD_RESEND_INTERVAL = 0.25f;
 
         // How far past a missing opponent input the match plays on, predicting
@@ -53,6 +53,24 @@ namespace NodeWar.Network
         // one command per villager, and a player has at most 25.
         private const int MAX_COMMANDS_PER_TICK = 64;
 
+        // Every input goes out again with the next two, so one lost packet
+        // costs nothing: its tick arrives 100 ms later inside the next one's
+        // send. Without this a lost input stalls us until the peer itself runs
+        // dry and starts resending, several hundred ms later.
+        private const int REDUNDANT_INPUTS = 2;
+
+        // Peer inputs this many ticks past our own mean we are behind its
+        // clock (after a hold, or a speculation that ran on the other side).
+        // Ordinary latency and the input delay keep it at 4 or under.
+        private const int CATCHUP_AFTER_TICKS = INPUT_DELAY + 3;
+        private const float CATCHUP_RATE = 1.5f;
+
+        // A stalled side resends only once the peer has gone this quiet. A
+        // peer still sending new inputs every tick is not waiting on ours, and
+        // an ordinary stall is latency, which a resend cannot fix: at 50 ms it
+        // was over a thousand duplicates every five seconds.
+        private const float PEER_QUIET = 0.15f;
+
         [Header("Tick Settings")]
         public int ticksPerSecond = 10;
 
@@ -76,6 +94,15 @@ namespace NodeWar.Network
         // Timing
         private float lastSendTime;
         private float lastAdvanceTime;
+        // When a peer input we did not already have last arrived, and the
+        // furthest tick any has been for. Speculation is for a silent peer;
+        // a peer whose inputs are arriving, only late, is waited for.
+        private float lastRemoteInputTime;
+        private int highestRemoteTick;
+        // The peer has just come back from silence. Whatever we generated
+        // meanwhile went into the gap, and nothing else would resend it while
+        // both sides play on: send the whole reach on the next frame.
+        private bool resendNow;
         private bool holding;
 
         // Speculation (8.2e). The state as it stood before the first
@@ -174,6 +201,8 @@ namespace NodeWar.Network
             lastSendTime = now;
             lastAdvanceTime = now;
             lastHeartbeatTime = now;
+            lastRemoteInputTime = now;
+            ResetStats();
 
             paused = false;
         }
@@ -207,7 +236,10 @@ namespace NodeWar.Network
             lastSendTime = now;
             lastAdvanceTime = now;
             lastHeartbeatTime = now;
+            lastRemoteInputTime = now;
+            highestRemoteTick = INPUT_DELAY - 1;
             holding = false;
+            for (int i = 0; i < STAMP_RING; i++) { genTick[i] = -1; arriveTick[i] = -1; }
 
             pendingHash = 0;
             pendingHashTick = 0;
@@ -258,6 +290,14 @@ namespace NodeWar.Network
                 return;
             }
 
+            SampleFrame();
+
+            if (resendNow)
+            {
+                resendNow = false;
+                ResendIfNeeded(force: true);
+            }
+
             if (holding)
             {
                 if (!HasBothInputs(simulationTick))
@@ -266,15 +306,19 @@ namespace NodeWar.Network
                     // moment the link heals nothing is missing on either side.
                     ResendIfNeeded();
                     SendHeartbeatIfNeeded();
+                    LogStatsIfDue();
                     return;
                 }
 
                 // Back. Start the clock fresh rather than replaying the held
-                // time as a burst of catch-up ticks.
+                // time as a burst; if the peer got ahead meanwhile, catch-up
+                // closes the gap at CATCHUP_RATE.
                 holding = false;
                 accumulator = 0f;
+                Debug.Log("[LOCKSTEP] Resumed at tick " + simulationTick + " after " +
+                          (Time.time - lastAdvanceTime).ToString("F1") + " s; peer inputs reach tick " +
+                          highestRemoteTick + ".");
                 lastAdvanceTime = Time.time;
-                Debug.Log("[LOCKSTEP] Resumed at tick " + simulationTick + ".");
                 HoldEnded?.Invoke();
             }
 
@@ -286,7 +330,16 @@ namespace NodeWar.Network
                 else ResendIfNeeded();
             }
 
-            accumulator += Time.deltaTime;
+            // Behind the peer's clock: run faster until its inputs are no
+            // longer piling up ahead of us. Only ever runs ticks whose inputs
+            // both sides already have, so it cannot outrun anything. Only while
+            // the peer is still sending new ones: after a drop both sides hold
+            // a speculation's worth of each other's inputs, arriving in one
+            // burst, and that is no sign of either clock being ahead.
+            bool catchingUp = !speculating && Time.time - lastRemoteInputTime < SPECULATE_AFTER &&
+                              highestRemoteTick - simulationTick > CATCHUP_AFTER_TICKS;
+            if (catchingUp) stats.catchupFrames++;
+            accumulator += Time.deltaTime * (catchingUp ? CATCHUP_RATE : 1f);
 
             // Advance simulation as many ticks as possible
             while (accumulator >= tickInterval)
@@ -321,7 +374,9 @@ namespace NodeWar.Network
                 }
                 else
                 {
-                    // Stall: remote input not yet received for this tick
+                    // Stall: remote input not yet received for this tick, or a
+                    // speculation waiting for a peer that is talking again.
+                    stats.stallSeconds += Time.unscaledDeltaTime;
                     ResendIfNeeded();
                     SendHeartbeatIfNeeded();
 
@@ -340,8 +395,11 @@ namespace NodeWar.Network
             {
                 AbandonSpeculation();
                 holding = true;
+                stats.holds++;
                 Debug.LogWarning("[LOCKSTEP] Played " + SPECULATION_WINDOW + " ticks without the opponent; " +
-                                 "rolled back to tick " + simulationTick + " and holding.");
+                                 "rolled back to tick " + simulationTick + " and holding. Peer inputs reach tick " +
+                                 highestRemoteTick + ", last new one " +
+                                 (Time.time - lastRemoteInputTime).ToString("F2") + " s ago.");
                 HoldStarted?.Invoke();
                 return;
             }
@@ -350,9 +408,22 @@ namespace NodeWar.Network
             if (!speculating && !simState.gameOver && Time.time - lastAdvanceTime > HOLD_AFTER)
             {
                 holding = true;
-                Debug.LogWarning("[LOCKSTEP] No tick for " + HOLD_AFTER + "s at tick " + simulationTick + "; holding.");
+                stats.holds++;
+                Debug.LogWarning("[LOCKSTEP] No tick for " + HOLD_AFTER + "s at tick " + simulationTick +
+                                 "; holding. Peer inputs reach tick " + highestRemoteTick + ".");
                 HoldStarted?.Invoke();
             }
+
+            LogStatsIfDue();
+        }
+
+        /// <summary>
+        /// After every Update this frame, so the inputs, resends and heartbeats
+        /// above and any emote the HUD sent all leave now, not next frame.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (networkManager != null) networkManager.Flush();
         }
 
         /// <summary>
@@ -396,6 +467,12 @@ namespace NodeWar.Network
         private bool CanSpeculate()
         {
             if (speculationBlocked || holding) return false;
+            // Only a silent peer is played past. A peer whose new inputs are
+            // arriving is behind our clock, not gone: playing on would run
+            // further ahead of inputs that can never catch up, and the span
+            // would only end at the window, in a rollback and a hold. Instead
+            // the frontier waits there until the peer's inputs reach it.
+            if (Time.time - lastRemoteInputTime < SPECULATE_AFTER) return false;
             if (!speculating && Time.time - lastAdvanceTime < SPECULATE_AFTER) return false;
             if (!localInputs.ContainsKey(simulationTick)) return false;
             return !speculating || simulationTick - speculateFrom < SPECULATION_WINDOW;
@@ -406,7 +483,10 @@ namespace NodeWar.Network
             confirmed.CopyFrom(simState);
             speculateFrom = simulationTick;
             speculating = true;
-            Debug.Log("[LOCKSTEP] Opponent input missing at tick " + simulationTick + "; playing on.");
+            stats.specBegun++;
+            Debug.Log("[LOCKSTEP] Opponent input missing at tick " + simulationTick + "; playing on. Stalled " +
+                      (Time.time - lastAdvanceTime).ToString("F2") + " s, last new peer input " +
+                      (Time.time - lastRemoteInputTime).ToString("F2") + " s ago.");
         }
 
         private void ShowBannerIfLong()
@@ -455,6 +535,7 @@ namespace NodeWar.Network
                 simulationTick++;
             }
             lastAdvanceTime = Time.time;
+            stats.specReplayed++;
             Debug.Log("[LOCKSTEP] Opponent back; replayed ticks " + from + " to " + (until - 1) + ".");
             HideBanner();
         }
@@ -469,6 +550,7 @@ namespace NodeWar.Network
             simState.CopyFrom(confirmed);
             simulationTick = speculateFrom;
             speculating = false;
+            stats.specAbandoned++;
             RolledBack?.Invoke(simState.villagers != null ? simState.villagers.Length : 0);
             HideBanner();
         }
@@ -521,6 +603,16 @@ namespace NodeWar.Network
             networkManager.Send(packet);
             lastSentPacket = packet;
             lastSendTime = Time.time;
+            StampGenerated(nextInputTick);
+
+            // The previous inputs ride along (REDUNDANT_INPUTS). Ticks below
+            // INPUT_DELAY are pre-seeded on both sides and never sent.
+            for (int back = 1; back <= REDUNDANT_INPUTS; back++)
+            {
+                int tick = nextInputTick - back;
+                if (tick >= INPUT_DELAY && localInputs.TryGetValue(tick, out TickInput previous))
+                    networkManager.Send(InputSerializer.Serialize(previous));
+            }
 
             nextInputTick++;
         }
@@ -534,6 +626,7 @@ namespace NodeWar.Network
             if (!remoteInputs.TryGetValue(tick, out TickInput remote))
                 remote = new TickInput { forTick = tick, stateHash = 0, commands = new GameCommand[0] };
             bool confirmedTick = mode != TickMode.Speculative;
+            CountTick(tick, mode);
 
             // Enforce command processing order contract:
             // ALL P0 commands (in issue order), then ALL P1 commands (in issue order)
@@ -632,7 +725,22 @@ namespace NodeWar.Network
                         if (!remoteInputs.ContainsKey(remote.forTick))
                         {
                             remoteInputs[remote.forTick] = FromPeer(remote);
+                            StampArrived(remote.forTick);
+                            // Progress is a tick the peer never sent before. A
+                            // held peer still resends old inputs; that is not
+                            // talking, or our speculation would wait forever.
+                            if (remote.forTick > highestRemoteTick)
+                            {
+                                if (Time.time - lastRemoteInputTime >= SPECULATE_AFTER)
+                                {
+                                    resendNow = true;
+                                    stats.reconnects++;
+                                }
+                                highestRemoteTick = remote.forTick;
+                                lastRemoteInputTime = Time.time;
+                            }
                         }
+                        else stats.dupInputs++;
                         break;
 
                     case PacketType.Emote:
@@ -695,15 +803,23 @@ namespace NodeWar.Network
         /// end card, never per live tick. Duplicates are ignored on receipt. No
         /// layout change.
         /// </summary>
-        private void ResendIfNeeded()
+        private void ResendIfNeeded(bool force = false)
         {
             if (lastSentPacket == null) return;
-            // A hold can last a minute; four packets every 50 ms for all of it
-            // is traffic for a link that is not answering.
-            // Speculation has up to SPECULATION_WINDOW inputs outstanding, so it
-            // takes the slower cadence too.
-            float interval = holding || speculating || simState.gameOver ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
-            if (Time.time - lastSendTime < interval) return;
+            if (!force)
+            {
+                // A hold can last a minute; the whole reach every 100 ms for
+                // all of it is traffic for a link that is not answering.
+                // Speculation has up to SPECULATION_WINDOW inputs outstanding,
+                // so it takes the slower cadence too.
+                bool slow = holding || speculating || simState.gameOver;
+                float interval = slow ? HOLD_RESEND_INTERVAL : RESEND_INTERVAL;
+                if (Time.time - lastSendTime < interval) return;
+                // A plain stall: the peer may be waiting on us only once it has
+                // stopped sending (PEER_QUIET).
+                if (!slow && Time.time - lastRemoteInputTime < PEER_QUIET) return;
+            }
+            stats.resends++;
 
             // The peer can be up to PEER_LAG_TICKS behind our confirmed tick: it
             // may be speculating past an input of ours it never received while
@@ -728,6 +844,145 @@ namespace NodeWar.Network
             networkManager.Send(InputSerializer.SerializeHeartbeat());
             lastHeartbeatTime = Time.time;
         }
+
+        // ===== NET STATS (diagnostics, logged as [NETSTAT]) =====
+        //
+        // lead: when the peer's input for tick T arrived, minus when we
+        // generated ours for T. Both sides generate T's input at their own tick
+        // T - INPUT_DELAY, so lead = clock offset + one-way latency, and the two
+        // sides' leads sum to the round trip exactly: offsets cancel. Compare
+        // both peers' logs: RTT = leadA + leadB, offset = (leadA - leadB) / 2.
+        // slack: how long a peer input waited between arriving and its tick
+        // running live. Near zero means it arrived just in time (we stall).
+        // Wall clock, unscaled; nothing here reaches the simulation.
+
+        private const float STATS_INTERVAL = 5f;
+        private const int STAMP_RING = 256;
+        private readonly int[] genTick = new int[STAMP_RING];
+        private readonly float[] genAt = new float[STAMP_RING];
+        private readonly int[] arriveTick = new int[STAMP_RING];
+        private readonly float[] arriveAt = new float[STAMP_RING];
+
+        private struct NetStats
+        {
+            public float since;
+            public int leadCount; public float leadSum, leadMin, leadMax;
+            public int slackCount; public float slackSum, slackMin;
+            public float stallSeconds, worstFrame;
+            public int liveTicks, specTicks, replayTicks, catchupFrames;
+            public int specBegun, specReplayed, specAbandoned, holds;
+            public int newInputs, dupInputs, resends, reconnects;
+            public int peerAheadMin, peerAheadMax;
+        }
+
+        private NetStats stats;
+
+        // Lead over the whole match, from steady windows only: no speculation,
+        // hold, catch-up or reconnect in them. After a drop the pre-generated
+        // inputs land in a burst and skew a window's lead by seconds, so the
+        // session figure is the one to sum across the two logs for the RTT.
+        private int steadyWindows;
+        private int steadyLeadCount;
+        private float steadyLeadSum;
+
+        private void ResetStats()
+        {
+            stats = new NetStats
+            {
+                since = Time.realtimeSinceStartup,
+                leadMin = float.MaxValue, leadMax = float.MinValue, slackMin = float.MaxValue,
+                peerAheadMin = int.MaxValue, peerAheadMax = int.MinValue
+            };
+        }
+
+        private void SampleFrame()
+        {
+            if (Time.unscaledDeltaTime > stats.worstFrame) stats.worstFrame = Time.unscaledDeltaTime;
+            int ahead = highestRemoteTick - simulationTick;
+            if (ahead < stats.peerAheadMin) stats.peerAheadMin = ahead;
+            if (ahead > stats.peerAheadMax) stats.peerAheadMax = ahead;
+        }
+
+        private void StampGenerated(int tick)
+        {
+            int slot = tick & (STAMP_RING - 1);
+            genTick[slot] = tick;
+            genAt[slot] = Time.realtimeSinceStartup;
+            if (arriveTick[slot] == tick) AddLead(arriveAt[slot] - genAt[slot]);
+        }
+
+        private void StampArrived(int tick)
+        {
+            stats.newInputs++;
+            int slot = tick & (STAMP_RING - 1);
+            arriveTick[slot] = tick;
+            arriveAt[slot] = Time.realtimeSinceStartup;
+            if (genTick[slot] == tick) AddLead(arriveAt[slot] - genAt[slot]);
+        }
+
+        private void AddLead(float seconds)
+        {
+            stats.leadCount++;
+            stats.leadSum += seconds;
+            if (seconds < stats.leadMin) stats.leadMin = seconds;
+            if (seconds > stats.leadMax) stats.leadMax = seconds;
+        }
+
+        private void CountTick(int tick, TickMode mode)
+        {
+            if (mode == TickMode.Speculative) { stats.specTicks++; return; }
+            if (mode == TickMode.Replay) { stats.replayTicks++; return; }
+            stats.liveTicks++;
+            int slot = tick & (STAMP_RING - 1);
+            if (tick < INPUT_DELAY || arriveTick[slot] != tick) return;
+            float slack = Time.realtimeSinceStartup - arriveAt[slot];
+            stats.slackCount++;
+            stats.slackSum += slack;
+            if (slack < stats.slackMin) stats.slackMin = slack;
+        }
+
+        private void LogStatsIfDue()
+        {
+            float now = Time.realtimeSinceStartup;
+            float span = now - stats.since;
+            if (span < STATS_INTERVAL) return;
+
+            string lead = stats.leadCount == 0 ? "n/a"
+                : "avg " + Ms(stats.leadSum / stats.leadCount) + " min " + Ms(stats.leadMin) +
+                  " max " + Ms(stats.leadMax) + " ms (n=" + stats.leadCount + ")";
+            string slack = stats.slackCount == 0 ? "n/a"
+                : "avg " + Ms(stats.slackSum / stats.slackCount) + " min " + Ms(stats.slackMin) + " ms";
+
+            bool steady = !holding && !speculating && stats.specBegun == 0 && stats.specReplayed == 0 &&
+                          stats.specAbandoned == 0 && stats.holds == 0 && stats.catchupFrames == 0 &&
+                          stats.reconnects == 0 && stats.leadCount > 0;
+            if (steady)
+            {
+                steadyWindows++;
+                steadyLeadCount += stats.leadCount;
+                steadyLeadSum += stats.leadSum;
+            }
+            string session = steadyLeadCount == 0 ? "n/a"
+                : Ms(steadyLeadSum / steadyLeadCount) + " ms over " + steadyWindows + " windows";
+
+            Debug.Log("[NETSTAT] P" + localPlayerID + " " + span.ToString("F1") + "s to tick " + simulationTick +
+                      (holding ? " HOLDING" : speculating ? " SPECULATING" : "") +
+                      (steady ? " steady" : " disturbed") +
+                      " | match steady lead " + session +
+                      " | lead " + lead +
+                      " | slack " + slack +
+                      " | stalled " + Ms(stats.stallSeconds) + " ms, worst frame " + Ms(stats.worstFrame) + " ms" +
+                      " | ticks live " + stats.liveTicks + " spec " + stats.specTicks + " replay " + stats.replayTicks +
+                      ", catch-up frames " + stats.catchupFrames +
+                      " | spec begun " + stats.specBegun + " confirmed " + stats.specReplayed +
+                      " abandoned " + stats.specAbandoned + ", holds " + stats.holds +
+                      " | peer ahead " + stats.peerAheadMin + ".." + stats.peerAheadMax + " ticks" +
+                      " | inputs new " + stats.newInputs + " dup " + stats.dupInputs +
+                      " | resends " + stats.resends + ", reconnects " + stats.reconnects);
+            ResetStats();
+        }
+
+        private static string Ms(float seconds) => Mathf.RoundToInt(seconds * 1000f).ToString();
 
         // ===== HELPERS =====
 
