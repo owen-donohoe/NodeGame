@@ -223,7 +223,7 @@ reflection and fails on any that does not come through, or on a field type
 it does not know how to fill. A field that survives a rollback it should
 not have is a desync, not a cosmetic bug.
 
-Restoring a copy is the one state write the runner makes outside
+Restoring a copy is the one state write the core makes outside
 `CommandProcessor` and `SimulateTick`. It is not game logic: it only puts
 back a state the simulation itself produced, at a tick both peers agree
 on. Speculative ticks are never recorded or hashed; the replay after them

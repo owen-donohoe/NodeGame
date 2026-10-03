@@ -102,6 +102,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      or `SimulationState` must be included, in the same order/section as
      its siblings. Skipping this makes desync detection blind to bugs
      involving the field.
+   - **Add it to `SimulationState.CopyFrom` too** (the rollback copy
+     `LockstepCore` restores after a speculation; arrays are cloned, scalars
+     assigned). `SimulationStateCopyTests` fails on a field it does not copy.
    - If it changes what the same inputs produce, bump
      `SimulationVersion.Current` in the same commit (see
      `docs/simulation-rules.md`). A field that is 0 in every existing
@@ -160,6 +163,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      change (`state.villagers.Length > trackedVillagerCount`) and spawn
      matching view objects only for the new range
      (`GameManager.SpawnNewVillagerViews`) — don't respawn the whole set.
+     A rollback can also shrink the array; `GameManager.OnRolledBack`
+     drops the views past the restored count, so any other per-entity view
+     object must tolerate that.
 
 7. **Does it change the tick loop itself?**
    - Confirm where it fits in the canonical order: `movement → combat →

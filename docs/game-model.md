@@ -124,7 +124,8 @@ which was true before, when every order reset the crossing.
 ## Claiming
 
 Every non-Core node has a signed `claimBar`. Positive is player 0, negative is player 1, and
-`claimThreshold` (default 10000) in either direction transfers ownership.
+`claimThreshold` in either direction transfers ownership (10000 in `GameBalanceData.Default()`, 5000
+in the shipped `DefaultGameBalance` asset, which is what a match plays on).
 
 Claiming villagers push the bar by `baseClaimPerTick × claimers` per tick, capped at 4 claimers per
 node. Pushing *against* an opponent's existing lean is multiplied by `decrementMultiplier`
@@ -222,6 +223,11 @@ their districts sit on the grid. `MatchFactory` builds the starting board from t
 at their placers' eras. They begin unowned and `Fixed`; claiming one does not replace it with the
 claimer's loadout. The simulation still supports non-`Fixed` slots, whose claim upgrades use the
 claimer's drafted district for that slot type.
+
+Both players' base draft nodes in the shipped `DefaultBoardConfig` are the same three districts,
+Farm, Mine and Village. Production is slower than the code defaults: a worker yields food every 40
+ticks, material every 50 and metal every 60, and a Market's secondary material every 55
+(`DefaultGameBalance`, identical in every era).
 
 The draft is a **manual placement** system. The v2.1 design document describes a different
 auto-population scheme; the code is canon. See [design-history](design-history/README.md).

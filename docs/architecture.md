@@ -740,7 +740,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `SortHeight` / `SpriteDepthSorter` — height and depth order inside a node or
   draft piece.
 - `OutlineDriver` — the only thing that sets outline intents. Reads hover,
-  villager selection and the inspected node, even when no sheet opens,
+  villager presence and selection and the inspected node, even when no sheet opens,
   and is read-only against the simulation. `GameManager` builds it before
   the views that register with
   it, and hands it the same `SelectionSystem` the tap path uses, so hover
@@ -768,12 +768,15 @@ object with no GameObject, no scene and no render pipeline — the reason
 - `OutlineGroup` / `IOutlineGroup` — marks a node or villager root as one
   silhouette, so seams inside it grow no line. Added at runtime, like
   `NodeHighlight` and `VillagerTouchTarget`, so no prefab needs editing.
-- `OutlineStyle` — the transient states an outline expresses. **The numeric
+- `OutlineStyle` — the states an outline expresses: `Present`, the thin line
+  every living villager carries all match, then the transient ones (hover,
+  contested, selected, command ack). **The numeric
   order is the priority order**, so reordering the enum silently changes which
   state wins a conflict; `OutlineStyleTests` pins it so a reorder fails a test
   instead of changing the game. Player ownership is not a style:
   `OutlineDriver` tints the inspected node's outline from its claim bar
-  (or its owner for a Core), independently of the style priority.
+  (or its owner for a Core), and a villager's `Present` line with its owner's
+  colour, independently of the style priority.
 - `OutlineSettings` / `OutlineScreenBounds` — the palette and thickness asset
   (`Assets/Settings/OutlineSettings.asset`), and the screen-space scissor.
 
@@ -986,7 +989,8 @@ and must therefore arrive at identical results every tick.
   plain lockstep did. Once the opponent's input is 300 ms late,
   `LockstepCore` copies the state (`SimulationState.CopyFrom`) and keeps
   simulating for up to 20 ticks, predicting the opponent idle. The HUD
-  shows "Opponent's connection is unstable" only once a speculation has
+  shows "Opponent's connection is unstable" (in a ranked match, "Reconnecting…"
+  when the server cannot be reached either) only once a speculation has
   run 5 ticks. Speculative ticks
   raise `TickSimulated` but are never recorded or hashed. Once the real
   inputs for the whole span arrive, it rolls back and replays the span with
@@ -1015,8 +1019,10 @@ and must therefore arrive at identical results every tick.
   instead. A phone returning from the background asks for the match's
   result once, in case it was decided while away. A resolved hold stops
   the lockstep core and words the end card for its cause. The uGUI HUD has no overlay and keeps the old
-  immediate end. The draft still has its own 2 s disconnect end in
-  `DraftManager`.
+  immediate end. The draft still has its own disconnect end in
+  `DraftManager`: 5 s without a packet, or 60 s for a peer that has sent
+  nothing yet, such as one still loading the scene (the draft shows a
+  waiting cue until both are ready).
 
 ## Backend, match logs and the referee
 
@@ -1066,8 +1072,8 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   are allocator callbacks and refuse calls carrying a player identity; the
   six ranked-match functions refuse calls without one.
 - **Player data** has four protected Cloud Save state records (`rating`,
-  `rank`, `inventory`, `history`) plus an `activeMatch` claim: the player
-  reads them, only Cloud Code writes.
+  `rank`, `inventory`, `history`) plus an `activeMatch` claim and a `discipline`
+  record: the player reads them, only Cloud Code writes.
   `GetPlayerState` creates missing state records and grants catalog
   variants through the highest arena reached, plus default skins. It
   fills missing equipment with era-0 variants and default skins; match
@@ -1114,7 +1120,7 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   once the server has it, and the opponent's hold learns it from the server.
 - **Holds and presence** (`MatchHold`). Every ranked client calls
   `Presence` for the whole match, from the draft on: every 4 s as a
-  heartbeat (`PresenceHeartbeat`) and every second while holding. A hold
+  heartbeat (`PresenceHeartbeat`) and every second while holding or speculating. A hold
   is self-declared, so absence has to be something the server observed:
   a player who is playing is always "seen". `Presence` writes only the
   caller's own `presence-0`/`presence-1` key in the match's custom item,

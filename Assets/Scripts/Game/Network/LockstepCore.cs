@@ -56,8 +56,8 @@ namespace NodeWar.Network
         // ticks is 2 s: a dropped text message or a tunnel, not a crash.
         private const int SPECULATION_WINDOW = 20;
 
-        // An input a little late is ordinary jitter: Relay latency against a
-        // 200 ms input buffer leaves one arriving tens of milliseconds after its
+        // An input a little late is ordinary jitter: Relay latency against the
+        // input delay (200 ms at the start) leaves one arriving tens of milliseconds after its
         // tick is due several times a second. That waits a frame, as plain
         // lockstep always did. Only an input this late starts a speculation, or
         // every jitter becomes a rollback, a snap and a flash of the banner.
