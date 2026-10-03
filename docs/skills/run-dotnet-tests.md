@@ -85,7 +85,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 142 passed, and both pinned fingerprints from
+Expect 207 passed, and both pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 

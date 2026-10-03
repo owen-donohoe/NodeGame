@@ -102,6 +102,8 @@ Read the changed or proposed code, then check each item:
    - Does any new SimulationState field appear in 
      SimulationStateHasher?
    - Does any removed field get removed from the hasher too?
+   - Does it also appear in SimulationState.CopyFrom? SimulationStateCopyTests
+     sets every field by reflection and fails on one that is not copied.
    - A field hashed only when non-zero (the era fields) counts as
      registered, but only if it is 0 in every match that existed before
      it; otherwise it must be hashed unconditionally.
@@ -123,8 +125,10 @@ Read the changed or proposed code, then check each item:
 9. Command/serializer pairing
    - Does any new CommandType have a case in CommandProcessor?
    - Does any GameCommand struct change update InputSerializer?
-   - Does a wire layout change bump InputSerializer.ProtocolVersion, and
-     a GameCommand layout change also update MatchLogFormat with a new
+   - Does a wire layout change (a GameCommand field, or a TickInput header
+     byte such as senderDelay and requestedDelay) bump ProtocolVersion.Current
+     in Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion
+     aliases? Does a GameCommand layout change also update MatchLogFormat with a new
      TICKS tag? The layout test flags changed fields; it does not verify
      that a new tag was added.
 

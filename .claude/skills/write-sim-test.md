@@ -122,4 +122,5 @@ Produce two test methods:
 2. The determinism test asserting hash equality
 Both in the existing test assembly and namespace.
 Flag any SimulationState fields that appear to be missing 
-from SimulationStateHasher.
+from SimulationStateHasher or from SimulationState.CopyFrom (the latter is
+enforced by SimulationStateCopyTests, which sets every field by reflection).
