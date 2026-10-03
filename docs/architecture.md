@@ -26,8 +26,8 @@ sources:
     title: GameManager match lifecycle
     last_modified: 2026-09-28T15:12:16-04:00
   - id: lockstep
-    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
-    title: LockstepRunner
+    resource: Assets/Scripts/Game/Network/LockstepCore.cs
+    title: LockstepCore
     last_modified: 2026-09-29T12:12:27-04:00
   - id: tick-runner
     resource: Assets/Scripts/Game/Core/TickRunner.cs
@@ -400,7 +400,8 @@ Pointer (mouse / touch)        or  BotPlayer
      InputBuffer                        (Input/)
         │  queued until next tick
         ▼
- TickRunner (local) / LockstepRunner (networked)   (Core/ / Network/)
+ TickRunner (local) / LockstepCore (networked)   (Core/ / Network/)
+     (GameManager drives either every frame)
         │  drains buffer, in order
         ▼
  CommandProcessor.ProcessCommand        (Simulation/)
@@ -450,7 +451,7 @@ plus a node, villager, player and value, `-1` where unused. The types are
   `ProcessCommand(state, command, log)` record only when handed a log, so tests
   and any headless run are unchanged. `ProcessCommand` takes it because a paid
   respawn happens there, outside `SimulateTick`.
-- **The driver owns it.** `TickRunner` and `LockstepRunner` clear one log before
+- **The driver owns it.** `TickRunner` and `LockstepCore` clear one log before
   each tick, and after the tick raise `ITickProvider.TickSimulated` with it.
   They raise it inside their catch-up loop, so a frame that runs three ticks
   raises it three times. The log is reused, so subscribers copy what they need.
@@ -536,7 +537,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `MatchTransitionController` — scripted transition sequences (startup
   wave, post-draft reveal, breakdown-on-game-over).
 - `ITickProvider` — shared interface exposing tick-interpolation alpha so
-  View code doesn't need to know whether `TickRunner` or `LockstepRunner`
+  View code doesn't need to know whether `TickRunner` or `LockstepCore`
   is driving the match.
 
 **Simulation/**
@@ -568,10 +569,19 @@ Three objects are carried across the Lobby → Gameplay scene load via
   `SimulationState`, used for desync detection.
 
 **Network/**
-- `LockstepRunner` — networked tick driver; stalls a tick until both
-  local and remote inputs exist for it, and raises `HoldStarted` /
-  `HoldEnded` when a stall lasts. It never ends a match itself;
-  `GameManager` calls `EndMatch`.
+- `LockstepCore` — networked tick driver, plain C# with no UnityEngine in
+  it: the caller passes the clocks in and logging goes to a sink. Stalls a
+  tick until both local and remote inputs exist for it, and raises
+  `HoldStarted` / `HoldEnded` when a stall lasts. `GameManager` owns it and
+  calls `Update` (first thing in its own `Update`, before any early return) and
+  `Flush` (`LateUpdate`) every frame. It never ends a match itself;
+  `GameManager` calls `EndMatch`, after which the core neither ticks nor sends.
+  It is the match's `ITickProvider` and `IEmoteChannel`.
+- `InputDelayController` — decides what input delay to ask the peer for
+  (see *Input delay adapts* below). Plain C#.
+- `NetworkManagerTransport` — adapts `NetworkManager` to the core's
+  `ILockstepTransport`, and treats a destroyed manager as silence.
+  `UnityLockstepLog` sends the core's log lines to the console.
 - `NetworkManager` — transport abstraction (send/receive raw packets).
 - `InputSerializer` — wire format for tick inputs, heartbeats and the
   versioned handshake. `InputSerializer.ProtocolVersion` aliases
@@ -891,55 +901,90 @@ and must therefore arrive at identical results every tick.
   bot matches. Accumulates `Time.deltaTime`, drains `InputBuffer` each
   tick, calls `CommandProcessor` then `GameSimulation.SimulateTick`
   directly with no network wait.
-- **`LockstepRunner`** — used for networked matches. Same accumulator
+- **`LockstepCore`** — used for networked matches. Same accumulator
   loop as `TickRunner`, but a tick only executes once both the local and
   the remote `TickInput` for that tick number have arrived; it enforces a
   fixed command-processing order (all of P0's commands, then all of P1's)
   and applies an input delay so local input for tick *N* is generated and
   sent ahead of when tick *N* actually simulates, to hide network latency.
-  While stalled it re-sends every local input the peer may still lack
-  (from `INPUT_DELAY` ticks behind to the newest), not only the last one:
-  with inputs in flight ahead, one lost packet would otherwise stop both
-  clocks for good while heartbeats kept the link alive.
+  While stalled, speculating or holding it re-sends every local input the
+  peer may still lack (from `PEER_LAG_TICKS` behind to the newest), not only
+  the last one: with inputs in flight ahead, one lost packet would otherwise
+  stop both clocks for good while heartbeats kept the link alive. The resend
+  interval runs on its own clock; generating an input must not reset it, or a
+  speculating side (which generates one every tick) resends nothing.
+- **Every input goes out with the six before it** (`REDUNDANT_INPUTS`), one
+  datagram each, so a loss shorter than six ticks is bridged by a later copy
+  with no round trip. Six comes from the lossy-link sweep in
+  `NodeWar.Network.Tests` (`SweepTests`); the constant's comment has the
+  numbers. A side that has just fallen behind its peer's clock runs at 1.5x
+  until it catches up, and the threshold is the peer's own reported delay
+  plus 3 ticks.
+- **Input delay adapts.** A match starts at 2 ticks (200 ms) on both sides,
+  and the first 2 ticks are pre-seeded empty, so the start needs no
+  agreement. After that each side watches the *peer's* inputs arrive: three
+  late ticks in 30 and it asks the peer for one more tick; 20 s calm with 140
+  ms of slack spare and it asks for one fewer (`InputDelayController`). The
+  request travels in two header bytes of every `TickInput`
+  (`senderDelay`, `requestedDelay`, protocol 4) and is absolute, not
+  relative, so duplicate copies do nothing. The peer applies it to its own
+  stamping, between 2 and 6 ticks, at most once a second, ignoring anything
+  out of range and any copy older than a request it already read. Raising the
+  delay generates the extra due inputs at once (empty after the first), so
+  the peer never waits on a tick that does not exist; lowering needs no code.
+  Ticks that ran during a speculation, a hold, a catch-up or a silent peer
+  are ignored, because there lateness is an outage, not a slow link. The
+  delay is not part of the simulation and is not logged: commands are
+  applied on the tick they were stamped for.
+- **Tested against a simulated link.** `LockstepCore` takes its clocks and
+  transport from the caller, so `dotnet/NodeWar.Network.Tests` runs two of
+  them over an in-memory link with loss, burst loss, duplication,
+  reordering, delay, jitter, outages and frame spikes. Each run is judged
+  against the same match on a perfect link with no networking: commands are
+  scripted by the tick they apply on, and the confirmed state hashes must
+  equal that reference, which also catches both peers agreeing on a wrong
+  rollback. `SweepTests` (explicit) prints the numbers behind the tuning
+  constants.
 - **Emotes ride beside lockstep, not inside it.** They are cosmetic, so they
   are never a `GameCommand`: `PacketType.Emote` (8) is a 5-byte packet sent
   twice over UDP and de-duplicated on its sequence number. It never waits for a
-  tick and never reaches `CommandProcessor`. `LockstepRunner` is the networked
+  tick and never reaches `CommandProcessor`. `LockstepCore` is the networked
   `IEmoteChannel`, and a local or bot match gets a `LocalEmoteChannel`. After
-  game over the runner keeps pumping emotes and heartbeats, with no disconnect
+  game over the core keeps pumping emotes and heartbeats, with no disconnect
   check, so a closing emote still arrives. An older build ignores type 8,
   because the packet switch has no default. `EmotePanel` (HUD) applies the
   rate limit (under 5 per 1 s and under 10 per 5 s) on send and again on
   receive, and owns mute.
-- **Recording** — both runners raise `CommandsApplied` (the tick count
+- **Recording** — both tick drivers raise `CommandsApplied` (the tick count
   before, and the commands in the order they were applied — lockstep's P0
-  then P1, the local runner's buffer order) and `HashComputed` (the tick
+  then P1, the local driver's buffer order) and `HashComputed` (the tick
   count after, and the hash). `GameManager` feeds both to a
   `MatchRecorder` for drafted matches; Testing mode is not recorded.
-  The runners know nothing about logs. Finished logs are saved locally.
+  The drivers know nothing about logs. Finished logs are saved locally.
   A ranked match's header carries the server's match ID and the record's
   player order, which the referee checks. `GameManager` hands its log to `PendingRankedReports`, which keeps it per player and uploads it (after the match, at lobby load, before a ranked queue) until the server answers. Other matches use a
   local ID and are never reported.
 - **Desync detection** — every 50 ticks
-  (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
+  (`LockstepCore.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its
   next outgoing packet; the receiving peer compares a non-zero received
   hash against its most recent stored local hash and fires `OnDesync` on
   mismatch. The packet does not name the checkpoint tick; lockstep keeps
   the two in step (see `docs/simulation-rules.md`, *Desync detection*).
-- **A command's player comes from its sender.** `LockstepRunner` stamps the
+- **A command's player comes from its sender.** `LockstepCore` stamps the
   peer's commands with the peer's slot and its own with its own, whatever
   the wire said, and holds each player to 64 commands a tick. Tick inputs
   outside what an honest peer could send are ignored. Relay runs over DTLS
-  (`ProtocolVersion` 3). DirectUDP reads only the connected peer's endpoint.
+  (protocol 3). Protocol 4 added the two delay bytes to `TickInput`. DirectUDP
+  reads only the connected peer's endpoint.
   In the Editor and Development Builds, F8/F9/F10 simulate a 1/5/20 s drop
   on that copy, and its ranked server calls fail for as long
   (`BackendServices.SimulatedOffline`), as a real lost connection would.
   Shift drops only outgoing peer packets.
 - **A short blip plays on** (8.2e). An input a little late is ordinary
-  jitter (Relay latency against a 200 ms buffer) and waits a frame, as
+  jitter (Relay latency against the input delay) and waits a frame, as
   plain lockstep did. Once the opponent's input is 300 ms late,
-  `LockstepRunner` copies the state (`SimulationState.CopyFrom`) and keeps
+  `LockstepCore` copies the state (`SimulationState.CopyFrom`) and keeps
   simulating for up to 20 ticks, predicting the opponent idle. The HUD
   shows "Opponent's connection is unstable" only once a speculation has
   run 5 ticks. Speculative ticks
@@ -953,7 +998,7 @@ and must therefore arrive at identical results every tick.
   selections of villagers that no longer exist. After an abandoned span,
   local inputs already sent for future ticks are not generated again, so
   input delay does not grow.
-- **Disconnects hold, they do not end the match** (8.2c). `LockstepRunner`
+- **Disconnects hold, they do not end the match** (8.2c). `LockstepCore`
   starts a hold when no tick has advanced for 2 s while unpaused, or when
   a speculative span runs out. It
   measures ticks rather than packets because with one-way loss a side keeps
@@ -969,7 +1014,7 @@ and must therefore arrive at identical results every tick.
   answer. After 90 s with the server unreachable, it offers "Leave match"
   instead. A phone returning from the background asks for the match's
   result once, in case it was decided while away. A resolved hold stops
-  the runner and words the end card for its cause. The uGUI HUD has no overlay and keeps the old
+  the lockstep core and words the end card for its cause. The uGUI HUD has no overlay and keeps the old
   immediate end. The draft still has its own 2 s disconnect end in
   `DraftManager`.
 

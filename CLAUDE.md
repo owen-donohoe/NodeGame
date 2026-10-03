@@ -49,7 +49,7 @@ Full contract in `docs/simulation-rules.md`.
 - `CommandProcessor` — applies `GameCommand`s to `SimulationState`
 - `GameManager` — match lifecycle (PreDraft → Drafting → PostDraft → Countdown → Playing)
 - `MatchFactory` — the one tick-0 board: live matches, the referee and headless runs
-- `LockstepRunner` / `TickRunner` — tick timing, shared via `ITickProvider`
+- `LockstepCore` / `TickRunner` — tick timing, shared via `ITickProvider`
 - `SimulationStateHasher` — desync fingerprint, checked every 50 ticks
 
 ## Which doc to read for what
@@ -83,9 +83,10 @@ Read the file. Do not ask me to summarise it here.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 1118 cases in six projects: `Simulation/`,
+- `dotnet test dotnet/NodeWar.sln` — 1533 cases in seven projects: `Simulation/`,
   the lobby and wire formats, the UnityEngine-free view maths, the match log,
-  the progression rules, and the Cloud Code module. Per-project counts are in
+  the progression rules, the lockstep core under a simulated lossy link, and
+  the Cloud Code module. Per-project counts are in
   the doc below. A lobby, view-maths, match-log or backend change has real tests; run them rather than settling
   for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.
 - `scripts/compile-check.ps1` — type-checks everything else (HUD, network,

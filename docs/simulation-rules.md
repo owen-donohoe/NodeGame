@@ -26,8 +26,8 @@ sources:
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding integer cost multipliers
   - id: lockstep
-    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
-    title: LockstepRunner.DESYNC_CHECK_INTERVAL and CompareHash
+    resource: Assets/Scripts/Game/Network/LockstepCore.cs
+    title: LockstepCore.DESYNC_CHECK_INTERVAL and CompareHash
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager.HandleTimeout seed derivation
@@ -117,7 +117,7 @@ Why: hash-based collection enumeration order is not guaranteed to be
 identical across runs/machines/insertion histories, so iterating one to
 apply gameplay effects can process entities in a different order on each
 peer. `SimulationState`'s `nodes`, `villagers`, and `players` are all flat
-arrays indexed by ID for this reason. (`LockstepRunner` does use
+arrays indexed by ID for this reason. (`LockstepCore` does use
 `Dictionary` for its own local input bookkeeping, keyed by tick number —
 that data never enters `SimulationState` or the hash, so it's outside
 this rule.)
@@ -152,7 +152,7 @@ determinism requires. The only notion of time inside `Simulation/` is
 `SimulationState.tickCount` and per-entity tick counters
 (`moveProgress`, `productionTicksRemaining`, `respawnTicksRemaining`,
 etc.). Deciding *when* to call `SimulateTick` based on real time is a
-`Core/`/`Network/` concern (`TickRunner`/`LockstepRunner`); `Simulation/`
+`Core/`/`Network/` concern (`TickRunner`/`LockstepCore`); `Simulation/`
 itself only ever counts ticks.
 
 **Tick order is canonical and must not be reordered:**
@@ -209,7 +209,7 @@ like everything else. See `docs/architecture.md`, *What a tick did*.
 
 ## `SimulationState.CopyFrom`: the rollback point
 
-`LockstepRunner` plays on past a missing opponent input for up to 20 ticks
+`LockstepCore` plays on past a missing opponent input for up to 20 ticks
 (8.2e). Then it rolls back to a copy of the last confirmed state and either
 replays the span with the real inputs or holds. `CopyFrom` makes that copy
 **into the same instance**, because views, selection and the HUD hold the
@@ -285,10 +285,10 @@ The Cloud Code referee serializes replays behind one lock for this reason.
 ## Desync detection
 
 At positive tick indices divisible by 50
-(`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
+(`LockstepCore.DESYNC_CHECK_INTERVAL`), each peer computes
 `SimulationStateHasher.ComputeHash(simState)` after simulating and attaches
 it to its next outgoing tick-input packet. The first checkpoint is tick
-index 50, when `simState.tickCount` is 51. `LockstepRunner.CompareHash`
+index 50, when `simState.tickCount` is 51. `LockstepCore.CompareHash`
 compares a non-zero received hash with the most recent stored local hash;
 the packet carries no checkpoint tick to match explicitly. A mismatch logs
 `"[DESYNC] Tick N Local: X Remote: Y"` and fires `OnDesync` — proof the

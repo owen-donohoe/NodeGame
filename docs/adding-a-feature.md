@@ -56,7 +56,7 @@ sources:
     resource: Assets/Scripts/Game/Core/GameManager.cs
     title: State allocation, drafted setup and new villager views
   - id: lockstep
-    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
+    resource: Assets/Scripts/Game/Network/LockstepCore.cs
     title: Desync checkpoint timing
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
@@ -173,7 +173,7 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Wire any player interaction back through `InputBuffer` as a
      `GameCommand`, exactly like any other input.
    - Use `ITickProvider.TickAlpha` for interpolation so the feature works
-     identically under `TickRunner` (local) and `LockstepRunner`
+     identically under `TickRunner` (local) and `LockstepCore`
      (networked).
    - **Ask which UI it belongs in before writing any of it.** Three trees
      are live and which one draws is a scene value, not a code value —

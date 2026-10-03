@@ -9,11 +9,16 @@ paths:
   inputs (commands and checkpoint hashes), handshake and draft
   packets, heartbeats and emotes
 - It never contains game logic, rules, or state mutation. The one
-  exception is LockstepRunner restoring a confirmed state with
+  exception is LockstepCore restoring a confirmed state with
   SimulationState.CopyFrom when a speculative span rolls back (8.2e);
   that restores a state the simulation produced, it decides nothing
-- LockstepRunner drives the tick loop in networked play but
+- LockstepCore drives the tick loop in networked play (GameManager calls its
+  Update and Flush every frame) but
   never calls SimulateTick directly with invented inputs
+- LockstepCore has no UnityEngine in it: the caller passes the clocks in and
+  logging goes to a sink, so dotnet/NodeWar.Network.Tests can run it against a
+  simulated lossy link. Unity calls belong in NetworkManagerTransport,
+  UnityLockstepLog or GameManager, not in the core
 - InputSerializer and the GameCommand struct must always be
   updated together -- the serializer depends on exact struct layout
 - If a change requires modifying GameCommand, update
@@ -25,5 +30,5 @@ paths:
   the same commit. A GameCommand change also needs a new TICKS tag in
   MatchLogFormat: match logs outlive builds, so a known tag never
   changes meaning
-- The runners' CommandsApplied / HashComputed events exist for
+- The tick drivers' CommandsApplied / HashComputed events exist for
   recording only; nothing may act on the simulation through them

@@ -12,7 +12,7 @@ the second of three copies.
 What is only here:
 
 - **Holding a Dictionary is not the violation. Enumerating one is.** The ban is
-  on iteration order the two peers may not share. `LockstepRunner` keeps a
+  on iteration order the two peers may not share. `LockstepCore` keeps a
   Dictionary for local input bookkeeping; it never enters `SimulationState` or
   the hash, and it is fine.
 - **Seeds come from already-replicated state.** `DraftManager.HandleTimeout` is

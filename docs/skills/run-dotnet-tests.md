@@ -52,23 +52,24 @@ sources:
 The same simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
 `dotnet test` instead of Unity's Test Runner. No Editor, no licence, no Windows requirement.
 
-The solution holds six test projects. Run everything for pass/fail:
+The solution holds seven test projects. Run everything for pass/fail:
 
 ```
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **1118 passed** (counted 2026-09-29; the table says where each lives, so a changed total
+Expect **1533 passed** (counted 2026-10-02; the table says where each lives, so a changed total
 is easy to place).
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 142 | `Assets/Tests/EditMode/Tests/`: the determinism baseline, edge weights, movement, production, combat fixes, `MatchFactory`, eras, the balance hash |
-| `NodeWar.Lobby.Tests` | 300 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, item tints, families, the in-match command checks, handshake and emote packets, game settings, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets |
+| `NodeWar.Simulation.Tests` | 207 | `Assets/Tests/EditMode/Tests/`: the determinism baseline, edge weights, movement, production, combat fixes, `MatchFactory`, eras, the balance hash |
+| `NodeWar.Lobby.Tests` | 401 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, item tints, families, the in-match command checks, handshake and emote packets, game settings, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets |
 | `NodeWar.View.Tests` | 189 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings, production readout, draft handover |
 | `NodeWar.MatchLog.Tests` | 64 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS |
-| `NodeWar.Progression.Tests` | 129 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
-| `NodeWarCloud.Tests` | 294 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, era eligibility, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
+| `NodeWar.Network.Tests` | 115 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants |
+| `NodeWar.Progression.Tests` | 148 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
+| `NodeWarCloud.Tests` | 409 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, era eligibility, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## Producing the receipt
 
