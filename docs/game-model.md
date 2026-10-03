@@ -7,7 +7,8 @@ generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-verified_at_commit: 7584e33
+  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+verified_at_commit: 3336149
 status: draft
 sources:
   - id: sim-state
