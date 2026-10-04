@@ -225,7 +225,14 @@ namespace NodeWar.Input
                     }
                     else if (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness)
                     {
-                        BeginLasso(sample.Position, armed: true);
+                        if (ActionFor(InputSlot.HoldDrag) == InputAction.Pan)
+                        {
+                            State = GestureState.Panning;
+                            Emit(GestureEventKind.Cancelled);
+                            Emit(GestureEventKind.PanBegin, downPos);
+                            Emit(GestureEventKind.PanUpdate, sample.Position);
+                        }
+                        else BeginLasso(sample.Position, armed: true);
                     }
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanUpdate, sample.Position); break;

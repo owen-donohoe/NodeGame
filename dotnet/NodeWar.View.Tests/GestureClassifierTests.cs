@@ -37,6 +37,40 @@ namespace NodeWar.View.Tests
             CollectionAssert.AreEqual(expected, events.ConvertAll(e => e.Kind));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HoldDragBoundToPanBeginsAtTimer(bool dragEnabled)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Drag].enabled = dragEnabled;
+            settings.inputBindings[(int)InputSlot.HoldDrag].action = (int)InputAction.Pan;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.2f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Primary(0.3f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.Panning, core.State);
+            Assert.IsFalse(core.PanSuppressed);
+            Primary(0.4f, PointerPhase.Held, 6f);
+            Primary(0.5f, PointerPhase.Ended, 6f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.PanBegin,
+                GestureEventKind.PanUpdate, GestureEventKind.PanUpdate, GestureEventKind.PanEnd);
+        }
+
+        [Test]
+        public void OnlyHoldDragOnEarlyMovementDoesNothing()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Drag].enabled = false;
+            settings.inputBindings[(int)InputSlot.HoldDrag].action = (int)InputAction.Pan;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 5f);
+            Primary(0.3f, PointerPhase.Held);
+            Primary(0.4f, PointerPhase.Ended);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled);
+        }
+
         [TestCase(false, 0.1f)]
         [TestCase(false, 0.5f)]
         [TestCase(true, 0.1f)]
