@@ -330,6 +330,7 @@ namespace NodeWar.Lobby
         {
             // Carry settings edited elsewhere, including future fields.
             GameSettingsData captured = current;
+            // Clone inputBindings before editing entries: this copy aliases current, hiding changes from Differ.
             captured.version = GameSettingsData.CurrentVersion;
 
             captured.masterVolume = ReadSlider(masterSlider, current.masterVolume);

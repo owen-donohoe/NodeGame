@@ -24,6 +24,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Physical pointer classification and selection rules, with devices and raycasts left in Unity. -->
+    <Compile Include="GestureClassifierTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/GestureClassifier.cs" Link="Input/GestureClassifier.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/InputBindings.cs" Link="Lobby/InputBindings.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/GameSettingsData.cs" Link="Lobby/GameSettingsData.cs" />
     <Compile Include="ViewSideTests.cs" />
     <Compile Include="EmoteRateLimiterTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteRateLimiter.cs"
