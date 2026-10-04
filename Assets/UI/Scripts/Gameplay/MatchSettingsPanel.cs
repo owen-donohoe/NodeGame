@@ -40,6 +40,8 @@ namespace NodeWar.UI
         private readonly LobbySwitch emotesSwitch;
         private readonly LobbyIcon emotesIcon;
         private readonly Label frameCapLabel;
+        private readonly LobbySwitch cameraButtonSwitch;
+        private readonly Label sideLabel;
 
         private readonly VisualElement surrenderArea;
         private readonly Label surrenderLine;
@@ -110,6 +112,14 @@ namespace NodeWar.UI
 
             Button frameCapRow = hudRoot.Q<Button>("hud-settings-row-framecap");
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
+
+            // Only what undoes a bad control combination mid-match; the full
+            // list is on the lobby's Settings page.
+            cameraButtonSwitch = hudRoot.Q<LobbySwitch>("hud-settings-camerabutton");
+            sideLabel = hudRoot.Q<Label>("hud-settings-side");
+            BindControlsRow(hudRoot, "hud-settings-row-camerabutton", ControlsViewModel.ToggleCameraButton);
+            BindControlsRow(hudRoot, "hud-settings-row-side", ControlsViewModel.CycleControlsSide);
+            BindControlsRow(hudRoot, "hud-settings-row-controls-reset", ControlsViewModel.ResetControls);
 
             surrenderArea = hudRoot.Q<VisualElement>("hud-settings-surrender-area");
             surrenderLine = hudRoot.Q<Label>("hud-settings-surrender-line");
@@ -255,11 +265,34 @@ namespace NodeWar.UI
             if (routesSwitch != null) routesSwitch.Value = current.opponentRoutes;
             if (emotesSwitch != null) emotesSwitch.Value = current.opponentEmotes;
             UpdateFrameCapLabel();
+            UpdateControls();
 
             loading = false;
             dirty = false;
 
             RaiseChanged();
+        }
+
+        private void BindControlsRow(VisualElement hudRoot, string rowName,
+            Func<GameSettingsData, GameSettingsData> edit)
+        {
+            Button row = hudRoot.Q<Button>(rowName);
+            if (row == null) return;
+
+            // A controls edit is a decision, so it saves as it happens. The edit
+            // returns a value with its own inputBindings array.
+            row.clicked += () =>
+            {
+                current = edit(current);
+                UpdateControls();
+                OnValueChanged(commitNow: true);
+            };
+        }
+
+        private void UpdateControls()
+        {
+            if (cameraButtonSwitch != null) cameraButtonSwitch.Value = current.showCameraButton;
+            if (sideLabel != null) sideLabel.text = ControlsViewModel.SideLabel(current.controlsSide);
         }
 
         private void CycleFrameCap()
@@ -295,6 +328,9 @@ namespace NodeWar.UI
         private GameSettingsData Capture()
         {
             GameSettingsData captured = current;
+            // Own copy of the array: this struct copy aliases current, and an alias hides edits from Differ.
+            if (current.inputBindings != null)
+                captured.inputBindings = (InputBinding[])current.inputBindings.Clone();
             captured.version = GameSettingsData.CurrentVersion;
 
             if (musicSlider != null) captured.musicVolume = musicSlider.value;

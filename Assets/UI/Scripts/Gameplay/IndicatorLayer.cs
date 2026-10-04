@@ -55,6 +55,7 @@ namespace NodeWar.UI
         private readonly VisualElement boardSpace;
         private readonly List<VisualElement> rightDocks = new List<VisualElement>();
         private readonly List<VisualElement> leftDocks = new List<VisualElement>();
+        private readonly List<VisualElement> edgeDocks = new List<VisualElement>();
         private System.Func<VisualElement> openSheet;
 
         private IndicatorDirector director;
@@ -127,6 +128,17 @@ namespace NodeWar.UI
         public void AvoidLeft(VisualElement dock)
         {
             if (dock != null) leftDocks.Add(dock);
+        }
+
+        /// <summary>
+        /// A control that hugs whichever edge the Controls side setting picks.
+        /// Which side it is on is read each frame from where it sits, so the
+        /// mirrored layout needs no re-registration. A hidden control has no
+        /// bounds and is skipped.
+        /// </summary>
+        public void AvoidEdge(VisualElement dock)
+        {
+            if (dock != null) edgeDocks.Add(dock);
         }
 
         /// <summary>Answers with the node sheet's panel while it is open, or null.</summary>
@@ -361,6 +373,15 @@ namespace NodeWar.UI
             {
                 Rect dock = leftDocks[i].worldBound;
                 if (Valid(dock)) clampRect.xMin = Mathf.Max(clampRect.xMin, dock.xMax + DockGap);
+            }
+
+            float midX = (zoneRect.xMin + zoneRect.xMax) * 0.5f;
+            for (int i = 0; i < edgeDocks.Count; i++)
+            {
+                Rect dock = edgeDocks[i].worldBound;
+                if (!Valid(dock)) continue;
+                if (dock.center.x >= midX) clampRect.xMax = Mathf.Min(clampRect.xMax, dock.xMin - DockGap);
+                else clampRect.xMin = Mathf.Max(clampRect.xMin, dock.xMax + DockGap);
             }
 
             return zoneRect.Width > 1f && zoneRect.Height > 1f;
