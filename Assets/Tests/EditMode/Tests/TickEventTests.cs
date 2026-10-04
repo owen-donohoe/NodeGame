@@ -293,7 +293,7 @@ namespace NodeWar.Tests
 
             TickEventLog log = new TickEventLog();
             int breaches = 0;
-            for (int t = 0; t < 4; t++)
+            for (int t = 0; t < 43; t++)
             {
                 log.Clear();
                 GameSimulation.SimulateTick(state, log);

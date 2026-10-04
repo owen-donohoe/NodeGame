@@ -191,10 +191,10 @@ namespace NodeWar.Tests
             state.villagers[0].maxHP += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
             state.villagers[0].hp += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
             state.villagers[1].state = VillagerState.Dead;
-            state.villagers[1].isConsumed = true; // Empty enemy Core allows immediate breach.
+            state.villagers[1].isConsumed = true; // Empty enemy Core allows an uninterrupted channel.
             CommandProcessor.ProcessCommand(state, new GameCommand
             { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 2 });
-            for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(state);
+            for (int i = 0; i < balance.baseMoveSpeedTicks + 39; i++) GameSimulation.SimulateTick(state);
             return state;
         }
 

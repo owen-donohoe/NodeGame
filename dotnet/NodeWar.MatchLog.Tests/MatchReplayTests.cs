@@ -112,6 +112,14 @@ namespace NodeWar.MatchLog
 
         // --- Recording, the way GameManager and the runners do it ---
 
+        [Test]
+        public void VersionOneLogIsRefusedByVersionTwoReplay()
+        {
+            MatchLog log = RoundTrip(Record(120, Script));
+            log.header.sim = 1;
+            StringAssert.Contains("simulation version", MatchReplay.Run(log, Balance).error);
+        }
+
         private delegate GameCommand[] CommandScript(SimulationState state);
 
         private static MatchLog Record(int maxTicks, CommandScript script)

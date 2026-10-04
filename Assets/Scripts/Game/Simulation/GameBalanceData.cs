@@ -105,7 +105,7 @@ namespace NodeWar.Simulation
             return true;
         }
 
-        private bool TempoAxisValid(int[] pct)
+        internal bool TempoAxisValid(int[] pct)
         {
             if (tempoStageTicks == null || tempoStageTicks.Length == 0)
                 return pct == null || pct.Length == 0;

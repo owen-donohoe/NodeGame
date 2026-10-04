@@ -230,6 +230,8 @@ namespace NodeWar.Tests
         public void Win_BreachThresholdEndsTheMatchForTheOtherPlayer()
         {
             GameBalanceData balance = UseDefaultBalance();
+            balance.breachBarMax = 0; // Explicit v1 legacy win coverage.
+            GameSimulation.SetBalance(balance);
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
             state.players[1].breachCount = balance.breachThreshold;
@@ -257,6 +259,8 @@ namespace NodeWar.Tests
         public void Win_BothAtTheThresholdIsResolvedByPlayerOrderNotByChance()
         {
             GameBalanceData balance = UseDefaultBalance();
+            balance.breachBarMax = 0; // Explicit v1 legacy win coverage.
+            GameSimulation.SetBalance(balance);
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
             state.players[0].breachCount = balance.breachThreshold;

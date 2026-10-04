@@ -19,11 +19,11 @@ namespace NodeWar.Simulation
         /// 1. Commands (handled by TickRunner before this call)
         /// 2. Movement (with combat interruption and breach-on-arrival)
         /// 3. Combat (detect fights, process cooldowns, deal damage, handle deaths)
-        /// 4. Claim bars
+        /// 4. Breach channel, then claim bars
         /// 5. Production
         /// 6. Healing (normal or owned-Shrine interval)
         /// 7. Respawn timers
-        /// 8. Win condition (breachCount >= 3)
+        /// 8. Win condition (new breach at threshold; simultaneous losses cancel)
         /// 9. Post-combat resume (fight ended, determine next state)
         ///
         /// log, when given, receives what the tick did (see TickEventLog). It is
@@ -32,6 +32,7 @@ namespace NodeWar.Simulation
         public static void SimulateTick(SimulationState state, TickEventLog log = null)
         {
             state.tickCount++;
+            TickTempoEvents(state.tickCount, log);
 
             // Step 2: Movement
             TickAllMovement(state, log);
@@ -42,6 +43,7 @@ namespace NodeWar.Simulation
             TickCombat(state, log);
 
             // Step 4: Claiming
+            bool[] breachedThisTick = TickBreach(state, log);
             TickClaiming(state, log);
 
             // Step 5: Production
@@ -54,7 +56,7 @@ namespace NodeWar.Simulation
             TickRespawns(state, log);
 
             // Step 8: Win condition
-            TickWinCondition(state);
+            TickWinCondition(state, breachedThisTick);
 
             // Step 9: Post-combat resume
             // Separated from step 3 to avoid state thrashing within a single tick.
@@ -63,6 +65,12 @@ namespace NodeWar.Simulation
             // claim in the same tick, which could cause edge cases with the claim
             // evaluation also running in step 4.
             TickPostCombatResume(state, log);
+            // Derived cache, after every rule mutation (including respawns/resume).
+            for (int p = 0; p < state.players.Length; p++)
+            {
+                int candidate = bal.BreachBarEnabled() ? FindBreacher(state, p, out _) : -1;
+                state.players[p].nextBreacherID = candidate < 0 ? -1 : state.villagers[candidate].villagerID;
+            }
         }
 
         // ===== STEP 2: MOVEMENT =====
@@ -129,7 +137,7 @@ namespace NodeWar.Simulation
                     }
                     else
                     {
-                        ProcessBreach(state, villagerIndex, v, log);
+                        EnterBreachOrProcessLegacy(state, villagerIndex, v, log);
                         return;
                     }
                 }
@@ -543,6 +551,7 @@ namespace NodeWar.Simulation
                     }
 
                     rate = ApplyWatchtower(state, nodeIndex, 0, rate);
+                    rate = (int)((long)rate * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount) / 100);
 
                     node.claimBar += rate;
 
@@ -579,6 +588,7 @@ namespace NodeWar.Simulation
                     }
 
                     rate = ApplyWatchtower(state, nodeIndex, 1, rate);
+                    rate = (int)((long)rate * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount) / 100);
 
                     node.claimBar -= rate;
 
@@ -619,7 +629,9 @@ namespace NodeWar.Simulation
                 if (state.villagers[idx].isConsumed) continue;
                 if (state.villagers[idx].productionTicksMax <= 0) continue;
 
-                state.villagers[idx].productionTicksRemaining--;
+                int decrement = bal.ProductionTempoValid()
+                    ? bal.TimerDecrement(bal.tempoProductionPercent, state.tickCount) : 1;
+                state.villagers[idx].productionTicksRemaining -= decrement;
 
                 if (state.villagers[idx].productionTicksRemaining <= 0)
                 {
@@ -653,19 +665,17 @@ namespace NodeWar.Simulation
                             {
                                 state.players[ownerID].food++;
                                 state.villagers[idx].productionTicksMax = market.secondaryProductionTicks;
-                                state.villagers[idx].productionTicksRemaining = market.secondaryProductionTicks;
                             }
                             else
                             {
                                 state.players[ownerID].materials++;
                                 state.villagers[idx].productionTicksMax = market.productionTicks;
-                                state.villagers[idx].productionTicksRemaining = market.productionTicks;
                             }
                             break;
                     }
 
                     // Reset timer for next production cycle
-                    state.villagers[idx].productionTicksRemaining = state.villagers[idx].productionTicksMax;
+                    state.villagers[idx].productionTicksRemaining += state.villagers[idx].productionTicksMax;
                 }
             }
         }
@@ -899,7 +909,7 @@ namespace NodeWar.Simulation
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
-                int decrement = 1 + SanctuaryRespawnBoost(state, v.ownerID);
+                int decrement = bal.TimerDecrement(bal.tempoRespawnPercent, state.tickCount) + SanctuaryRespawnBoost(state, v.ownerID);
                 state.villagers[i].respawnTicksRemaining -= decrement;
 
                 if (state.villagers[i].respawnTicksRemaining <= 0)
@@ -944,8 +954,21 @@ namespace NodeWar.Simulation
 
         // ===== STEP 8: WIN CONDITION =====
 
-        private static void TickWinCondition(SimulationState state)
+        private static void TickWinCondition(SimulationState state, bool[] breachedThisTick)
         {
+            if (breachedThisTick != null)
+            {
+                int threshold = bal.BreachThresholdAt(state.tickCount);
+                bool p0Loses = breachedThisTick[0] && state.players[0].breachCount >= threshold;
+                bool p1Loses = breachedThisTick[1] && state.players[1].breachCount >= threshold;
+                // Simultaneous losses cancel; another breach must decide the game.
+                if (p0Loses != p1Loses)
+                {
+                    state.gameOver = true;
+                    state.winnerID = p0Loses ? 1 : 0;
+                }
+                return;
+            }
             for (int p = 0; p < state.players.Length; p++)
             {
                 if (state.players[p].breachCount >= bal.breachThreshold)
@@ -987,7 +1010,7 @@ namespace NodeWar.Simulation
                 int enemyCoreID = state.players[1 - v.ownerID].coreNodeID;
                 if (v.currentNodeID == enemyCoreID)
                 {
-                    ProcessBreach(state, i, v, log);
+                    EnterBreachOrProcessLegacy(state, i, v, log);
                     continue;
                 }
 
@@ -1048,6 +1071,85 @@ namespace NodeWar.Simulation
                     ApplyArrivalState(state, i);
                 }
             }
+        }
+
+        private static void TickTempoEvents(int tick, TickEventLog log)
+        {
+            if (log == null) return;
+            if (bal.tempoStageTicks != null &&
+                (bal.TempoAxisValid(bal.tempoClaimPercent) || bal.TempoAxisValid(bal.tempoRespawnPercent) || bal.ProductionTempoValid()))
+                for (int i = 0; i < bal.tempoStageTicks.Length; i++)
+                    if (tick == bal.tempoStageTicks[i])
+                        log.Add(TickEventType.TempoStage, -1, -1, -1, i);
+            if (bal.BreachBarEnabled() && bal.SuddenDeathValid() && bal.suddenDeathTicks != null)
+                for (int i = 0; i < bal.suddenDeathTicks.Length; i++)
+                    if (tick == bal.suddenDeathTicks[i])
+                        log.Add(TickEventType.SuddenDeath, -1, -1, -1, bal.suddenDeathThresholds[i]);
+        }
+
+        private static void EnterBreachOrProcessLegacy(SimulationState state, int index, VillagerData v, TickEventLog log)
+        {
+            if (!bal.BreachBarEnabled())
+            {
+                ProcessBreach(state, index, v, log);
+                return;
+            }
+            v.state = VillagerState.Breaching;
+            v.movePath = new int[0];
+            v.movePathIndex = 0;
+            v.moveProgress = 0;
+            v.targetNodeID = -1;
+            v.combatTargetID = -1;
+            state.villagers[index] = v;
+        }
+
+        // Returns an array index, ranked by non-combat suit, HP, then villager ID.
+        private static int FindBreacher(SimulationState state, int defender, out int count)
+        {
+            count = 0;
+            int best = -1;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.ownerID != 1 - defender || v.currentNodeID != state.players[defender].coreNodeID ||
+                    v.state != VillagerState.Breaching || v.isConsumed) continue;
+                count++;
+                if (best < 0) { best = i; continue; }
+                VillagerData previous = state.villagers[best];
+                int suit = GameBalanceData.IsCombatSuit(v.suit) ? 1 : 0;
+                int previousSuit = GameBalanceData.IsCombatSuit(previous.suit) ? 1 : 0;
+                if (suit < previousSuit || (suit == previousSuit &&
+                    (v.hp < previous.hp || (v.hp == previous.hp && v.villagerID < previous.villagerID))))
+                    best = i;
+            }
+            return best;
+        }
+
+        // Inside the claiming step, before claiming so consumption frees a population slot.
+        private static bool[] TickBreach(SimulationState state, TickEventLog log)
+        {
+            if (!bal.BreachBarEnabled()) return null;
+            bool[] breachedThisTick = new bool[state.players.Length];
+            for (int p = 0; p < state.players.Length; p++)
+            {
+                int candidate = FindBreacher(state, p, out int count);
+                if (count == 0)
+                {
+                    long decayed = (long)state.players[p].breachBar - bal.breachBarDecayPerTick;
+                    state.players[p].breachBar = decayed > 0 ? (int)decayed : 0;
+                    continue;
+                }
+                int rate = bal.breachSwarmRate[System.Math.Min(count, bal.breachSwarmRate.Length) - 1];
+                long progress = (long)state.players[p].breachBar + rate;
+                if (progress >= bal.breachBarMax)
+                {
+                    ProcessBreach(state, candidate, state.villagers[candidate], log);
+                    state.players[p].breachBar = 0;
+                    breachedThisTick[p] = true;
+                }
+                else state.players[p].breachBar = (int)progress;
+            }
+            return breachedThisTick;
         }
 
         // ===== BREACH PROCESSING =====
