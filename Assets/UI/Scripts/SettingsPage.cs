@@ -328,30 +328,24 @@ namespace NodeWar.Lobby
         /// <summary>Reads the controls back into a value, clamped on the way.</summary>
         private GameSettingsData Capture()
         {
-            GameSettingsData captured = new GameSettingsData
-            {
-                version = GameSettingsData.CurrentVersion,
+            // Carry settings edited elsewhere, including future fields.
+            GameSettingsData captured = current;
+            captured.version = GameSettingsData.CurrentVersion;
 
-                masterVolume = ReadSlider(masterSlider, current.masterVolume),
-                musicVolume = ReadSlider(musicSlider, current.musicVolume),
-                effectsVolume = ReadSlider(effectsSlider, current.effectsVolume),
+            captured.masterVolume = ReadSlider(masterSlider, current.masterVolume);
+            captured.musicVolume = ReadSlider(musicSlider, current.musicVolume);
+            captured.effectsVolume = ReadSlider(effectsSlider, current.effectsVolume);
 
-                colourblindMarks = ReadSwitch(colourblindSwitch, current.colourblindMarks),
-                reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion),
-                interfaceSize = sizeIndex,
-                frameCap = frameCapIndex,
+            captured.colourblindMarks = ReadSwitch(colourblindSwitch, current.colourblindMarks);
+            captured.reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion);
+            captured.interfaceSize = sizeIndex;
+            captured.frameCap = frameCapIndex;
 
-                cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed),
-                confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand),
+            captured.cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed);
+            captured.confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand);
 
-                // Edited in the match panel, not here: carried through, or the
-                // first lobby change would reset both to false.
-                opponentRoutes = current.opponentRoutes,
-                opponentEmotes = current.opponentEmotes,
-
-                haptics = ReadSwitch(hapticsSwitch, current.haptics),
-                batterySaver = ReadSwitch(batterySwitch, current.batterySaver)
-            };
+            captured.haptics = ReadSwitch(hapticsSwitch, current.haptics);
+            captured.batterySaver = ReadSwitch(batterySwitch, current.batterySaver);
 
             return GameSettingsData.Normalized(captured);
         }
