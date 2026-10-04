@@ -255,6 +255,25 @@
         </engine:VisualElement>
 
         <!--
+            Tempo and sudden death. Two cards in one column, a fifth of the way
+            down: clear of the clock and the burger under it, and clear of the
+            breach walls above. The banner is an event (a tempo stage began, the
+            threshold just dropped) and leaves by itself; the countdown is a
+            state, read off the tick count for the five seconds before each
+            sudden-death tick. Neither picks.
+        -->
+        <engine:VisualElement name="hud-tempo" class="hud__tempo" picking-mode="Ignore">
+            <engine:VisualElement name="hud-tempo-banner" class="hud__tempo-card" picking-mode="Ignore">
+                <engine:Label name="hud-tempo-title" class="hud__tempo-title ui-w700" text="" picking-mode="Ignore" />
+                <engine:Label name="hud-tempo-sub" class="hud__tempo-sub" text="" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:VisualElement name="hud-sd-countdown" class="hud__tempo-card hud__tempo-card--urgent" picking-mode="Ignore">
+                <engine:Label name="hud-sd-title" class="hud__tempo-title ui-w700" text="" picking-mode="Ignore" />
+                <engine:Label name="hud-sd-sub" class="hud__tempo-sub" text="" picking-mode="Ignore" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!--
             The match is playing on past a missing opponent input (8.2e). Never
             picks and never covers the board: the player keeps playing, and the
             moves may be rolled back if the opponent's inputs differ.

@@ -731,6 +731,76 @@
     color: var(--ink);
 }
 
+/* ===================================================================
+   Tempo and sudden death. Cards are display:none until code adds
+   --shown, then --in a frame later so the opacity/slide transition
+   runs. --calm (reduced motion) drops the transition and the slide:
+   the card just appears and goes.
+   =================================================================== */
+
+.hud__tempo {
+    position: absolute;
+    top: 22%;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.hud__tempo-card {
+    display: none;
+    align-items: center;
+    margin-bottom: var(--space-2);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    background-color: var(--hud-glass-strong);
+    border-left-width: 4px;
+    border-left-color: var(--action);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+    opacity: 0;
+    translate: 0 -10px;
+    transition-property: opacity, translate;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+}
+
+.hud__tempo-card--shown {
+    display: flex;
+}
+
+.hud__tempo-card--in {
+    opacity: 1;
+    translate: 0 0;
+}
+
+/* The colour is the breacher magenta (BreachCueSettings), the one hue that is
+   neither player's: sudden death is about the Cores, not about either side. */
+.hud__tempo-card--urgent {
+    border-left-color: rgb(255, 26, 217);
+}
+
+.hud__tempo--calm .hud__tempo-card {
+    translate: 0 0;
+    transition-duration: 0s;
+}
+
+.ui-root .hud__tempo-title {
+    font-size: 17px;
+    color: var(--hud-ink);
+    -unity-text-align: middle-center;
+}
+
+.ui-root .hud__tempo-sub {
+    font-size: 12px;
+    color: var(--hud-ink);
+    opacity: 0.8;
+    -unity-text-align: middle-center;
+}
+
 /* A pill across the top while the match plays on through a blip (8.2e). */
 .hud__connection {
     position: absolute;

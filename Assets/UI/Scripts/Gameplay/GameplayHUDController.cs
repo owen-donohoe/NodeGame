@@ -97,6 +97,24 @@ namespace NodeWar.UI
         private VisualElement countdownRoot;
         private Label countdownStep;
 
+        // Tempo and sudden-death cards: an event banner and a countdown.
+        private VisualElement tempoRoot;
+        private VisualElement tempoBanner;
+        private Label tempoTitle;
+        private Label tempoSub;
+        private VisualElement suddenCard;
+        private Label suddenTitle;
+        private Label suddenSub;
+        private IVisualElementScheduledItem bannerHideJob;
+        private int lastCountdown = -1;
+        private bool suddenDeathScheduled;
+
+        /// <summary>How long a tempo or sudden-death banner stays up.</summary>
+        private const long BannerMilliseconds = 3200;
+
+        /// <summary>Matches the card's opacity transition, so --shown outlives the fade.</summary>
+        private const long CardFadeMilliseconds = 220;
+
         private VisualElement endRoot;
         private Label endTitle;
         private Label endSub;
@@ -177,6 +195,16 @@ namespace NodeWar.UI
         private void OnDisable()
         {
             emotePanel.Detach();
+
+            // The banner writes into a tree OnEnable rebuilds; Initialize
+            // subscribes again if the match is still running.
+            if (ticks != null) ticks.TickSimulated -= OnTickSimulated;
+            if (bannerHideJob != null)
+            {
+                bannerHideJob.Pause();
+                bannerHideJob = null;
+            }
+
             if (panelSource != null)
             {
                 panelSource.NodeOpened -= OnNodeOpened;
@@ -255,6 +283,18 @@ namespace NodeWar.UI
             playerSwitch = debugSwitch;
             selection = selectionSystem;
             breachThreshold = breachThresholdValue > 0 ? breachThresholdValue : 1;
+
+            // The sudden-death steps exist only when the simulation will fire
+            // them, which is the same test it makes.
+            suddenDeathScheduled = balance.BreachBarEnabled() && balance.SuddenDeathValid() &&
+                                   balance.suddenDeathTicks != null &&
+                                   balance.suddenDeathTicks.Length > 0;
+
+            if (ticks != null)
+            {
+                ticks.TickSimulated -= OnTickSimulated;
+                ticks.TickSimulated += OnTickSimulated;
+            }
 
             if (nodeSheet != null)
             {
@@ -351,6 +391,15 @@ namespace NodeWar.UI
 
             countdownRoot = root.Q<VisualElement>("hud-countdown");
             countdownStep = root.Q<Label>("hud-countdown-step");
+
+            tempoRoot = root.Q<VisualElement>("hud-tempo");
+            tempoBanner = root.Q<VisualElement>("hud-tempo-banner");
+            tempoTitle = root.Q<Label>("hud-tempo-title");
+            tempoSub = root.Q<Label>("hud-tempo-sub");
+            suddenCard = root.Q<VisualElement>("hud-sd-countdown");
+            suddenTitle = root.Q<Label>("hud-sd-title");
+            suddenSub = root.Q<Label>("hud-sd-sub");
+            lastCountdown = -1;
 
             endRoot = root.Q<VisualElement>("hud-end");
             endTitle = root.Q<Label>("hud-end-title");
@@ -545,6 +594,9 @@ namespace NodeWar.UI
             if (indicatorLayer != null)
                 indicatorLayer.SetCalm(settings.reducedMotion);
 
+            if (tempoRoot != null)
+                tempoRoot.EnableInClassList("hud__tempo--calm", settings.reducedMotion);
+
             // Same flags for the breacher highlight and the core bar: view
             // configuration, shared by reference like routeSettings.
             if (breachCues != null)
@@ -622,6 +674,7 @@ namespace NodeWar.UI
 
             RefreshBreaches(pid, switched);
             RefreshClock();
+            RefreshSuddenDeathCountdown();
             RefreshResources(pid, switched);
             RefreshUnits(pid);
             RefreshSelection();
@@ -639,13 +692,129 @@ namespace NodeWar.UI
         {
             int other = pid == 0 ? 1 : 0;
 
-            bool hitYou = you.Set(pid, state.players[pid].breachCount, breachThreshold, switched);
-            bool hitThem = them.Set(other, state.players[other].breachCount, breachThreshold, switched);
+            int threshold = CurrentBreachThreshold();
+            bool hitYou = you.Set(pid, state.players[pid].breachCount, threshold, switched);
+            bool hitThem = them.Set(other, state.players[other].breachCount, threshold, switched);
 
             if ((hitYou || hitThem) && flash != null)
             {
                 flash.AddToClassList("hud__flash--on");
                 flash.schedule.Execute(() => flash.RemoveFromClassList("hud__flash--on")).StartingIn(40);
+            }
+        }
+
+        /// <summary>
+        /// Breaches needed to win right now. Sudden death lowers it mid-match,
+        /// so the walls and the tally read it from the tick count rather than
+        /// from the opening value Initialize was given.
+        /// </summary>
+        private int CurrentBreachThreshold()
+        {
+            int threshold = balance.BreachThresholdAt(state.tickCount);
+            return threshold > 0 ? threshold : 1;
+        }
+
+        // ===== TEMPO AND SUDDEN DEATH =====
+
+        /// <summary>
+        /// The moments come from the tick's event log, as they do for the
+        /// indicators and the screen shake; the countdown is read off the tick
+        /// count in Refresh. Wall-clock timing here is presentation only.
+        /// </summary>
+        private void OnTickSimulated(TickEventLog log)
+        {
+            if (log == null || tempoBanner == null) return;
+
+            for (int i = 0; i < log.Count; i++)
+            {
+                TickEvent e = log[i];
+
+                if (e.type == TickEventType.TempoStage)
+                    ShowBanner(NodeWar.View.BreachTempoMath.TempoStageTitle(e.value),
+                               NodeWar.View.BreachTempoMath.TempoStageSub(e.value));
+                else if (e.type == TickEventType.SuddenDeath)
+                    ShowBanner(NodeWar.View.BreachTempoMath.SuddenDeathTitle(),
+                               NodeWar.View.BreachTempoMath.ThresholdLine(e.value));
+            }
+        }
+
+        private void ShowBanner(string title, string sub)
+        {
+            tempoTitle.text = title;
+            tempoSub.text = sub;
+
+            // A new banner takes over from one still showing.
+            if (bannerHideJob != null) bannerHideJob.Pause();
+
+            SetCard(tempoBanner, true);
+
+            VisualElement card = tempoBanner;
+            bannerHideJob = card.schedule.Execute(() =>
+            {
+                bannerHideJob = null;
+                SetCard(card, false);
+            }).StartingIn(BannerMilliseconds);
+        }
+
+        /// <summary>
+        /// Shows a card by adding --shown, then --in a frame later so the
+        /// transition runs; hiding reverses it and drops --shown once the fade
+        /// is done. Reduced motion has no transition, so the same calls simply
+        /// appear and go.
+        /// </summary>
+        private static void SetCard(VisualElement card, bool on)
+        {
+            if (card == null) return;
+
+            if (on)
+            {
+                card.AddToClassList("hud__tempo-card--shown");
+                card.schedule.Execute(() => card.AddToClassList("hud__tempo-card--in")).StartingIn(16);
+            }
+            else
+            {
+                card.RemoveFromClassList("hud__tempo-card--in");
+                card.schedule.Execute(() =>
+                {
+                    if (!card.ClassListContains("hud__tempo-card--in"))
+                        card.RemoveFromClassList("hud__tempo-card--shown");
+                }).StartingIn(CardFadeMilliseconds);
+            }
+        }
+
+        /// <summary>
+        /// "Sudden death in 5…" for the five seconds before each sudden-death
+        /// tick. Computed from the tick count against the balance arrays, so a
+        /// rollback or a paused match shows the right number; only a change of
+        /// the whole second touches the labels.
+        /// </summary>
+        private void RefreshSuddenDeathCountdown()
+        {
+            if (suddenCard == null) return;
+
+            int seconds = 0;
+            int next = 0;
+            if (suddenDeathScheduled && !state.gameOver)
+            {
+                int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
+                seconds = NodeWar.View.BreachTempoMath.SuddenDeathCountdown(
+                    balance.suddenDeathTicks, balance.suddenDeathThresholds,
+                    state.tickCount, ticksPerSecond, out next);
+            }
+
+            if (seconds == lastCountdown) return;
+            bool wasShowing = lastCountdown > 0;
+            lastCountdown = seconds;
+
+            if (seconds > 0)
+            {
+                suddenTitle.text = NodeWar.View.BreachTempoMath.CountdownTitle(seconds);
+                suddenSub.text = NodeWar.View.BreachTempoMath.ThresholdLine(next);
+                if (!wasShowing) SetCard(suddenCard, true);
+            }
+            else if (wasShowing)
+            {
+                SetCard(suddenCard, false);
             }
         }
 
@@ -1107,8 +1276,9 @@ namespace NodeWar.UI
         {
             int other = viewerPID == 0 ? 1 : 0;
 
-            endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, breachThreshold);
-            endRows[1].Set(other, "Opponent", state.players[other].breachCount, breachThreshold);
+            int threshold = CurrentBreachThreshold();
+            endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, threshold);
+            endRows[1].Set(other, "Opponent", state.players[other].breachCount, threshold);
 
             if (indicatorLayer != null) indicatorLayer.Suppress();
 
@@ -1172,6 +1342,7 @@ namespace NodeWar.UI
 
             private int shownPlayer = -1;
             private int shownCount = -1;
+            private int shownThreshold = -1;
 
             public BreachSide(VisualElement root, string which)
             {
@@ -1186,12 +1357,13 @@ namespace NodeWar.UI
             /// <summary>Returns true when this call showed a new breach landing.</summary>
             public bool Set(int playerID, int breaches, int threshold, bool snap)
             {
-                if (playerID == shownPlayer && breaches == shownCount) return false;
+                if (playerID == shownPlayer && breaches == shownCount && threshold == shownThreshold) return false;
 
                 bool landed = !snap && playerID == shownPlayer && breaches > shownCount && shownCount >= 0;
 
                 shownPlayer = playerID;
                 shownCount = breaches;
+                shownThreshold = threshold;
 
                 if (mark != null)
                 {
