@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Smoke tests for the balance rig: matches complete, and the rig is
+    deterministic (one seed, one CSV row). IN NodeWar.sln but never in the
+    determinism receipt, like the other non-simulation test projects.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NodeWar.BalanceRig</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="RigSmokeTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NodeWar.BalanceRig/NodeWar.BalanceRig.csproj" />
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+  </ItemGroup>
+</Project>
