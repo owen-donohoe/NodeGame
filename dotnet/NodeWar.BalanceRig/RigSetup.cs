@@ -39,8 +39,8 @@ namespace NodeWar.BalanceRig
     /// </summary>
     public static class RigSetupLoader
     {
-        /// <summary>The post-#71 export, the newest in Balances/ by commit.</summary>
-        public const string DefaultBalanceFile = "1932662518.json";
+        /// <summary>The v2 export (breach bar, tempo, sudden death), the newest in Balances/ by commit.</summary>
+        public const string DefaultBalanceFile = "463780689.json";
 
         private const string BoardAssetPath = "Assets/Data/Game/Board/DefaultBoardConfig.asset";
         private const string BalancesDir = "dotnet/NodeWarCloud/NodeWarCloud/Balances";

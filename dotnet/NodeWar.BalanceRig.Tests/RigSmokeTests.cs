@@ -82,7 +82,7 @@ namespace NodeWar.BalanceRig
             Assert.AreEqual(7, setup.board.gridRows);
             Assert.AreEqual(2, setup.board.initialPlacements.Length);
             Assert.AreEqual(3, setup.baseDraft[0].Length);
-            Assert.AreEqual(1932662518, setup.balanceHash);
+            Assert.AreEqual(463780689, setup.balanceHash);
         }
 
         [Test]
