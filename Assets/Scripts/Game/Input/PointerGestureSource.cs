@@ -91,6 +91,7 @@ namespace NodeWar.Input
         private int villagerMask;
         private int nodeMask;
         private bool initialized;
+        private int primaryPointerId = -1;
 
         public GestureState State => classifier != null ? classifier.State : GestureState.Idle;
         public GestureThresholds Thresholds => thresholds;
@@ -152,8 +153,9 @@ namespace NodeWar.Input
                     : pointer.press.isPressed ? PointerPhase.Held
                     : pointer.press.wasReleasedThisFrame ? PointerPhase.Ended : PointerPhase.None;
                 Touchscreen touch = Touchscreen.current;
-                int id = touch != null && touch.primaryTouch.press.isPressed
-                    ? touch.primaryTouch.touchId.ReadValue() : -1;
+                int id = pointer is Touchscreen screen ? screen.primaryTouch.touchId.ReadValue() : -1;
+                if (phase == PointerPhase.Began) primaryPointerId = id;
+                if (phase == PointerPhase.Ended || phase == PointerPhase.None) id = primaryPointerId;
                 samples.Add(new PointerSample(now, ToMm(pointer.position.ReadValue()), id,
                     PointerButton.Primary, phase, phase == PointerPhase.Began && IsPointerOverUI()));
                 if (touch != null)
@@ -161,7 +163,8 @@ namespace NodeWar.Input
                     foreach (var finger in touch.touches)
                         if (finger.press.isPressed)
                             samples.Add(new PointerSample(now, ToMm(finger.position.ReadValue()),
-                                finger.touchId.ReadValue(), PointerButton.Touch, PointerPhase.Held));
+                                finger.touchId.ReadValue(), PointerButton.Touch, PointerPhase.Held,
+                                IsMouseOverUI(finger.position.ReadValue())));
                 }
             }
             classifier.ProcessFrame(samples);

@@ -39,6 +39,129 @@ namespace NodeWar.View.Tests
 
         [TestCase(false)]
         [TestCase(true)]
+        public void TwoFingerPanUsesMidpointAndCanRunWithPinch(bool pinch)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Pinch].enabled = pinch;
+            core.ApplySettings(settings);
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 1f, 11f);
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.PanBegin));
+            Pair(0.2f, 5f, 20f);
+            Primary(0.3f, PointerPhase.Held);
+            if (pinch)
+                Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomUpdate, GestureEventKind.PanBegin,
+                    GestureEventKind.PanUpdate, GestureEventKind.PanEnd, GestureEventKind.ZoomEnd);
+            else Kinds(GestureEventKind.PanBegin, GestureEventKind.PanUpdate, GestureEventKind.PanEnd);
+            GestureEvent begin = events.Find(e => e.Kind == GestureEventKind.PanBegin);
+            GestureEvent update = events.Find(e => e.Kind == GestureEventKind.PanUpdate);
+            Assert.AreEqual(new GesturePoint(5f, 0f), begin.Position);
+            Assert.AreEqual(new GesturePoint(12.5f, 0f), update.Position);
+            Assert.AreEqual(GestureState.Idle, core.State);
+            Primary(0.4f, PointerPhase.Held, 30f);
+            Assert.AreEqual(GestureState.Idle, core.State, "survivor cannot inherit pair stroke");
+        }
+
+        [Test]
+        public void DisabledTwoFingerDragStillAllowsPinch()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.TwoFingerDrag].enabled = false;
+            core.ApplySettings(settings);
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 10f, 25f);
+            Primary(0.2f, PointerPhase.Ended);
+            Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomUpdate, GestureEventKind.ZoomEnd);
+        }
+
+        [Test]
+        public void TwoFingerLassoUsesBoundActionAndEmptyCancelCompletesOnce()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Pinch].enabled = false;
+            settings.inputBindings[(int)InputSlot.TwoFingerDrag].action = (int)InputAction.LassoSelect;
+            core.ApplySettings(settings);
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 5f, 15f);
+            Assert.IsTrue(core.PanSuppressed);
+            core.Cancel();
+            Kinds(GestureEventKind.LassoBegin, GestureEventKind.LassoPoint,
+                GestureEventKind.LassoComplete, GestureEventKind.Cancelled);
+            Assert.IsEmpty(events[2].Points);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void FingerReplacementEndsPairInsteadOfJumpingCamera()
+        {
+            Pair(0f, 0f, 10f);
+            core.ProcessFrame(new[] {
+                new PointerSample(0.1f, new GesturePoint(0f, 0f), 10, PointerButton.Primary, PointerPhase.Held),
+                new PointerSample(0.1f, new GesturePoint(0f, 0f), 10, PointerButton.Touch, PointerPhase.Held),
+                new PointerSample(0.1f, new GesturePoint(30f, 0f), 12, PointerButton.Touch, PointerPhase.Held)
+            });
+            Primary(0.2f, PointerPhase.Ended);
+            Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomEnd);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void FreshPairOverUiIsBlocked()
+        {
+            core.ProcessFrame(new[] {
+                new PointerSample(0f, new GesturePoint(0f, 0f), 10, PointerButton.Primary, PointerPhase.Began, true),
+                new PointerSample(0f, new GesturePoint(0f, 0f), 10, PointerButton.Touch, PointerPhase.Held, true),
+                new PointerSample(0f, new GesturePoint(10f, 0f), 11, PointerButton.Touch, PointerPhase.Held)
+            });
+            Pair(0.1f, 10f, 30f);
+            Primary(0.2f, PointerPhase.Ended);
+            Kinds();
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        public static IEnumerable<int> ToggleMasks()
+        {
+            for (int mask = 0; mask < 1024; mask++) yield return mask;
+        }
+
+        [TestCaseSource(nameof(ToggleMasks))]
+        public void EveryTouchToggleCombinationReturnsIdleAndKeepsPlainTaps(int mask)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            // The ten toggleable touch slots are contiguous: HoldDrag through Hold.
+            for (int bit = 0; bit < 10; bit++) settings.inputBindings[bit + 1].enabled = (mask & (1 << bit)) != 0;
+            var random = new System.Random(2411);
+            for (int trace = 0; trace < 12; trace++)
+            {
+                // Exercise the two single-pointer action choices too.
+                settings.inputBindings[(int)InputSlot.Drag].action = (int)(trace % 2 == 0 ? InputAction.Pan : InputAction.LassoSelect);
+                settings.inputBindings[(int)InputSlot.HoldDrag].action = (int)(trace % 3 == 0 ? InputAction.Pan : InputAction.LassoSelect);
+                core.ApplySettings(settings);
+                Primary(0f, PointerPhase.Began, ui: trace == 1);
+                for (int sample = 1; sample <= 8; sample++)
+                {
+                    float x = (float)(random.NextDouble() * 12 - 6);
+                    float y = (float)(random.NextDouble() * 12 - 6);
+                    if (trace % 3 == 0 && sample >= 4) Pair(sample * 0.08f, x, x + 10f, y);
+                    else Primary(sample * 0.08f, PointerPhase.Held, x, y);
+                }
+                Primary(0.8f, trace % 4 == 0 ? PointerPhase.Cancelled : PointerPhase.Ended);
+                Primary(0.9f, PointerPhase.Ended);
+                Assert.AreEqual(GestureState.Idle, core.State, "trace " + trace);
+                Assert.IsFalse(core.PanSuppressed);
+                int beforeTap = events.Count;
+                Primary(1f, PointerPhase.Began);
+                Primary(1.1f, PointerPhase.Ended);
+                Assert.AreEqual(beforeTap + 2, events.Count, "locked tap grammar");
+                Assert.AreEqual(GestureEventKind.PointerDown, events[beforeTap].Kind);
+                Assert.AreEqual(GestureEventKind.Tap, events[beforeTap + 1].Kind);
+                Assert.AreEqual(GestureState.Idle, core.State);
+                events.Clear();
+            }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
         public void HoldDragBoundToPanBeginsAtTimer(bool dragEnabled)
         {
             GameSettingsData settings = GameSettingsData.CreateDefault();
@@ -122,6 +245,7 @@ namespace NodeWar.View.Tests
         {
             GameSettingsData settings = GameSettingsData.CreateDefault();
             settings.inputBindings[(int)InputSlot.Pinch].enabled = false;
+            settings.inputBindings[(int)InputSlot.TwoFingerDrag].enabled = false;
             core.ApplySettings(settings);
             Primary(0f, PointerPhase.Began);
             Pair(0.1f, 0f, 10f);
@@ -322,8 +446,8 @@ namespace NodeWar.View.Tests
         public void Golden_PinchUsesStartSpanAndDoesNotPan()
         {
             Pair(0f, 0f, 10f);
-            Pair(0.1f, 4f, 16f); // 2 mm span change is below dead zone.
-            Pair(0.2f, 5f, 20f);
+            Pair(0.1f, -1f, 11f); // 2 mm span change is below dead zone.
+            Pair(0.2f, -2.5f, 12.5f);
             Pair(0.3f, 0f, 10f);
             Primary(0.4f, PointerPhase.Held);
             Primary(0.5f, PointerPhase.Ended);
@@ -357,10 +481,12 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
-        public void Golden_ZeroSpanCannotBeginZoom()
+        public void ZeroSpanCannotBeginZoomButCanTrackTwoFingerDrag()
         {
             Pair(0f, 1f, 1f);
             Kinds();
+            Assert.AreEqual(GestureState.TwoFinger, core.State);
+            Primary(0.1f, PointerPhase.Ended);
             Assert.AreEqual(GestureState.Idle, core.State);
         }
     }

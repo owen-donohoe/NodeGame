@@ -4,7 +4,7 @@ using NodeWar.Lobby;
 
 namespace NodeWar.Input
 {
-    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled }
+    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger }
     public enum PointerButton { Primary, Touch, Secondary, Middle, Scroll }
     public enum PointerPhase { None, Began, Held, Ended, Cancelled }
     public enum GestureEventKind
@@ -76,10 +76,18 @@ namespace NodeWar.Input
         private float holdStillness;
         private bool tapExceededSlop;
         private float pinchStartSpan;
+        private GesturePoint pairDown;
+        private int pairIdA;
+        private int pairIdB;
+        private int primaryId;
+        private bool pairZoom;
+        private bool pairPan;
+        private bool pairLasso;
         private readonly List<GesturePoint> points = new List<GesturePoint>();
 
         public GestureState State { get; private set; }
-        public bool PanSuppressed => State == GestureState.LassoArmed || State == GestureState.Lassoing;
+        public bool PanSuppressed => State == GestureState.LassoArmed || State == GestureState.Lassoing || pairLasso;
+        private bool PairActive => State == GestureState.Pinching || State == GestureState.TwoFinger;
         public IReadOnlyList<GesturePoint> CurrentStroke => points;
         public event Action<GestureEvent> Published;
 
@@ -128,6 +136,8 @@ namespace NodeWar.Input
             PointerSample primary = default;
             int touches = 0;
             GesturePoint a = default, b = default;
+            int idA = 0, idB = 0;
+            bool pairOverUI = false;
             for (int i = 0; i < samples.Count; i++)
             {
                 PointerSample sample = samples[i];
@@ -136,8 +146,8 @@ namespace NodeWar.Input
                 if (sample.Button == PointerButton.Primary) { primary = sample; hasPrimary = true; }
                 if (sample.Button != PointerButton.Touch ||
                     (sample.Phase != PointerPhase.Began && sample.Phase != PointerPhase.Held)) continue;
-                if (touches == 0) a = sample.Position;
-                if (touches == 1) b = sample.Position;
+                if (touches == 0) { a = sample.Position; idA = sample.PointerId; pairOverUI = sample.OverUI; }
+                if (touches == 1) { b = sample.Position; idB = sample.PointerId; pairOverUI |= sample.OverUI; }
                 touches++;
             }
 
@@ -145,10 +155,40 @@ namespace NodeWar.Input
             if (touches >= 2)
             {
                 float span = GesturePoint.Distance(a, b);
-                if (State == GestureState.Pinching)
+                GesturePoint midpoint = new GesturePoint((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f);
+                if (PairActive)
                 {
-                    if (span > minPinchSpan && Math.Abs(span - pinchStartSpan) >= pinchDeadZone)
+                    // A replaced finger must not inherit the departing finger's anchors.
+                    if (!((idA == pairIdA && idB == pairIdB) || (idA == pairIdB && idB == pairIdA)))
+                    {
+                        EndPair();
+                        State = GestureState.Blocked;
+                        return;
+                    }
+                    if (pairZoom && span > minPinchSpan && Math.Abs(span - pinchStartSpan) >= pinchDeadZone)
                         Emit(GestureEventKind.ZoomUpdate, scale: span / pinchStartSpan);
+                    if (pairPan) Emit(GestureEventKind.PanUpdate, midpoint);
+                    else if (pairLasso)
+                    {
+                        if (Append(midpoint)) Emit(GestureEventKind.LassoPoint, midpoint);
+                    }
+                    else if (IsEnabled(InputSlot.TwoFingerDrag) && GesturePoint.Distance(midpoint, pairDown) > tapSlop)
+                    {
+                        if (ActionFor(InputSlot.TwoFingerDrag) == InputAction.Pan)
+                        {
+                            pairPan = true;
+                            Emit(GestureEventKind.PanBegin, pairDown);
+                            Emit(GestureEventKind.PanUpdate, midpoint);
+                        }
+                        else
+                        {
+                            pairLasso = true;
+                            points.Clear();
+                            Append(pairDown);
+                            Emit(GestureEventKind.LassoBegin, pairDown);
+                            if (Append(midpoint)) Emit(GestureEventKind.LassoPoint, midpoint);
+                        }
+                    }
                     return;
                 }
                 if (State == GestureState.Blocked) return;
@@ -158,33 +198,46 @@ namespace NodeWar.Input
                     State = GestureState.Blocked;
                     return;
                 }
-                if (!IsEnabled(InputSlot.Pinch))
+                if (pairOverUI || (!IsEnabled(InputSlot.Pinch) && !IsEnabled(InputSlot.TwoFingerDrag)))
                 {
                     Cancel();
                     State = GestureState.Blocked;
                     return;
                 }
-                if (span <= minPinchSpan) return;
+                if (span <= minPinchSpan && !IsEnabled(InputSlot.TwoFingerDrag)) return;
                 if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
                 if (State != GestureState.Idle) Emit(GestureEventKind.Cancelled);
-                State = GestureState.Pinching;
+                pairZoom = IsEnabled(InputSlot.Pinch) && span > minPinchSpan;
+                State = pairZoom ? GestureState.Pinching : GestureState.TwoFinger;
                 pinchStartSpan = span;
+                pairDown = midpoint;
+                pairIdA = idA;
+                pairIdB = idB;
+                pairPan = pairLasso = false;
                 points.Clear();
-                Emit(GestureEventKind.ZoomBegin);
+                if (pairZoom) Emit(GestureEventKind.ZoomBegin);
                 return;
             }
-            if (State == GestureState.Pinching)
+            if (PairActive)
             {
-                State = GestureState.Idle;
-                Emit(GestureEventKind.ZoomEnd);
+                EndPair();
+                return;
+            }
+
+            if (State != GestureState.Idle && State != GestureState.Blocked && primary.PointerId != primaryId)
+            {
+                Cancel();
+                State = primary.Phase == PointerPhase.Ended ? GestureState.Idle : GestureState.Blocked;
                 return;
             }
 
             switch (primary.Phase)
             {
                 case PointerPhase.Began:
+                    if (State != GestureState.Idle) Cancel();
                     downPos = primary.Position;
                     downTime = primary.Time;
+                    primaryId = primary.PointerId;
                     previousPos = downPos;
                     pathLength = 0f;
                     tapExceededSlop = false;
@@ -283,13 +336,26 @@ namespace NodeWar.Input
         public void Cancel()
         {
             if (State == GestureState.Idle) return;
-            bool drawing = PanSuppressed;
+            bool drawing = State == GestureState.LassoArmed || State == GestureState.Lassoing;
             if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
-            if (State == GestureState.Pinching) Emit(GestureEventKind.ZoomEnd);
+            if (PairActive) EndPair(cancelled: true);
             State = GestureState.Cancelled;
             points.Clear();
             Emit(GestureEventKind.Cancelled);
             if (drawing) Emit(GestureEventKind.LassoComplete);
+            State = GestureState.Idle;
+        }
+
+        private void EndPair(bool cancelled = false)
+        {
+            if (pairPan) Emit(GestureEventKind.PanEnd);
+            if (pairLasso)
+            {
+                if (cancelled) points.Clear();
+                Emit(GestureEventKind.LassoComplete);
+            }
+            if (pairZoom) Emit(GestureEventKind.ZoomEnd);
+            pairPan = pairLasso = pairZoom = false;
             State = GestureState.Idle;
         }
     }
