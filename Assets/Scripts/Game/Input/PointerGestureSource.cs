@@ -54,6 +54,12 @@ namespace NodeWar.Input
         /// <summary>Desktop right-click destination, resolved against nodes only after the UI guard.</summary>
         public event Action<GestureTarget> OnSecondaryClick;
 
+        /// <summary>Two taps on empty ground. The second tap's own OnTap is replaced by this.</summary>
+        public event Action OnDoubleTapGround;
+
+        /// <summary>Two taps on the same villager.</summary>
+        public event Action<GestureTarget> OnDoubleTapVillager;
+
         public event Action<Vector2> OnPanBegin;
         public event Action<Vector2> OnPanUpdate;
         public event Action OnPanEnd;
@@ -92,6 +98,8 @@ namespace NodeWar.Input
         private int villagerMask;
         private int nodeMask;
         private bool initialized;
+        private GestureTarget frameTarget;
+        private bool hasFrameTarget;
         private int primaryPointerId = -1;
 
         public GestureState State => classifier != null ? classifier.State : GestureState.Idle;
@@ -145,6 +153,8 @@ namespace NodeWar.Input
             classifier.UpdateThresholds(thresholds.tapSlopMm, thresholds.longPressTime,
                 thresholds.lassoDecimationMm, thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm,
                 1f / ScreenMetrics.PixelsPerMm, GestureThresholds.HoldStillnessMm);
+            classifier.DoubleTapTime = thresholds.doubleTapTime;
+            classifier.DoubleTapRadiusMm = thresholds.doubleTapRadiusMm;
             samples.Clear();
             float now = Time.unscaledTime;
             Mouse mouse = Mouse.current;
@@ -165,8 +175,22 @@ namespace NodeWar.Input
                 int id = pointer is Touchscreen screen ? screen.primaryTouch.touchId.ReadValue() : -1;
                 if (phase == PointerPhase.Began) primaryPointerId = id;
                 if (phase == PointerPhase.Ended || phase == PointerPhase.None) id = primaryPointerId;
+                bool overUI = phase == PointerPhase.Began && IsPointerOverUI();
+                GestureTargetClass targetClass = GestureTargetClass.None;
+                int targetId = -1;
+                hasFrameTarget = false;
+                if (phase == PointerPhase.Began && !overUI)
+                {
+                    // Resolved here so the classifier can tell ground from villager for
+                    // double-tap; PointerDown reuses it rather than raycasting again.
+                    frameTarget = ResolveTarget(pointer.position.ReadValue());
+                    hasFrameTarget = true;
+                    targetClass = frameTarget.kind == GestureTargetKind.Villager ? GestureTargetClass.Villager
+                        : frameTarget.kind == GestureTargetKind.Node ? GestureTargetClass.Node : GestureTargetClass.None;
+                    targetId = frameTarget.id;
+                }
                 samples.Add(new PointerSample(now, ToMm(pointer.position.ReadValue()), id,
-                    PointerButton.Primary, phase, phase == PointerPhase.Began && IsPointerOverUI()));
+                    PointerButton.Primary, phase, overUI, targetClass, targetId));
                 if (touch != null)
                 {
                     int activeTouches = 0;
@@ -181,6 +205,7 @@ namespace NodeWar.Input
                 }
             }
             classifier.ProcessFrame(samples);
+            hasFrameTarget = false;
             if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
         }
 
@@ -214,7 +239,7 @@ namespace NodeWar.Input
             {
                 case GestureEventKind.PointerDown:
                     strokePoints.Clear();
-                    downTarget = ResolveTarget(pos);
+                    downTarget = hasFrameTarget ? frameTarget : ResolveTarget(pos);
                     OnPointerDown?.Invoke(downTarget);
                     break;
                 case GestureEventKind.Cancelled:
@@ -222,6 +247,8 @@ namespace NodeWar.Input
                     OnGestureCancelled?.Invoke();
                     break;
                 case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
+                case GestureEventKind.DoubleTapGround: OnDoubleTapGround?.Invoke(); break;
+                case GestureEventKind.DoubleTapVillager: OnDoubleTapVillager?.Invoke(downTarget); break;
                 case GestureEventKind.SecondaryClick:
                     OnSecondaryClick?.Invoke(ResolveTarget(pos, nodesOnly: true));
                     break;

@@ -41,6 +41,15 @@ namespace NodeWar.Input
         // Fallback when no player settings are available; settings.holdTime wins otherwise.
         public float longPressTime = 0.3f;
 
+        [Tooltip("Longest gap between a tap and the second press for the pair to " +
+                 "count as a double-tap.")]
+        [Range(0.15f, 0.6f)]
+        public float doubleTapTime = 0.3f;
+
+        [Tooltip("How far the second press of a double-tap may land from the first, in millimetres.")]
+        [Range(2f, 20f)]
+        public float doubleTapRadiusMm = 8f;
+
         [Tooltip("How long the white touch-down flash lasts.")]
         [Range(0.03f, 0.5f)]
         public float flashDuration = 0.12f;

@@ -1308,6 +1308,7 @@ namespace NodeWar.Core
             if (gestureSource == null || tapRouter == null) return;
 
             tapRouter.Initialize(gestureSource, selectionSystem, commandSystem, nodePanelManager);
+            tapRouter.SetCameraController(cameraController);
 
             if (selectionSystem != null) selectionSystem.SetGestureRouted(true);
 

@@ -112,6 +112,27 @@ namespace NodeWar.Input
             return true;
         }
 
+        /// <summary>Selects every villager of ours that is standing idle.</summary>
+        public void SelectAllIdle()
+        {
+            if (simState == null) return;
+            selectedVillagerIDs.Clear();
+            for (int i = 0; i < simState.villagers.Length; i++)
+                if (IsSelectable(i) && simState.villagers[i].state == VillagerState.Idle)
+                    selectedVillagerIDs.Add(i);
+        }
+
+        /// <summary>Selects every villager of ours on the node this villager is standing on.</summary>
+        public void SelectAllOnNodeOf(int villagerID)
+        {
+            if (simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return;
+            int node = simState.villagers[villagerID].currentNodeID;
+            selectedVillagerIDs.Clear();
+            for (int i = 0; i < simState.villagers.Length; i++)
+                if (IsSelectable(i) && simState.villagers[i].currentNodeID == node)
+                    selectedVillagerIDs.Add(i);
+        }
+
         private void Update()
         {
             if (simState == null) return;

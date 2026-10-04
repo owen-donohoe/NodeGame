@@ -193,6 +193,115 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(GestureState.Idle, core.State);
         }
 
+
+        private void Press(float time, PointerPhase phase, GestureTargetClass target, int id = -1, float x = 0f, float y = 0f)
+        {
+            core.ProcessFrame(new[] { new PointerSample(time, new GesturePoint(x, y), 10, PointerButton.Primary, phase,
+                false, target, id) });
+        }
+
+        private void TapOn(float time, GestureTargetClass target, int id = -1, float x = 0f)
+        {
+            Press(time, PointerPhase.Began, target, id, x);
+            Press(time + 0.05f, PointerPhase.Ended, target, id, x);
+        }
+
+        private void Enable(params InputSlot[] slots)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            foreach (InputSlot slot in slots) settings.inputBindings[(int)slot].enabled = true;
+            core.ApplySettings(settings);
+        }
+
+        [Test]
+        public void Golden_DoubleTapIsOffByDefaultSoBothTapsFire()
+        {
+            TapOn(0f, GestureTargetClass.None);
+            TapOn(0.2f, GestureTargetClass.None);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown, GestureEventKind.Tap);
+        }
+
+        [Test]
+        public void DoubleTapGroundFiresFirstTapImmediatelyThenReplacesSecondTap()
+        {
+            Enable(InputSlot.DoubleTapGround);
+            Press(0f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.05f, PointerPhase.Ended, GestureTargetClass.None);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap);
+            TapOn(0.25f, GestureTargetClass.None, x: 2f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown,
+                GestureEventKind.DoubleTapGround);
+            Assert.AreEqual(new GesturePoint(2f, 0f), events[3].Position);
+        }
+
+        [Test]
+        public void ThirdTapStartsAFreshPairInsteadOfChaining()
+        {
+            Enable(InputSlot.DoubleTapGround);
+            TapOn(0f, GestureTargetClass.None);
+            TapOn(0.2f, GestureTargetClass.None);
+            TapOn(0.4f, GestureTargetClass.None);
+            Assert.AreEqual(GestureEventKind.Tap, events[events.Count - 1].Kind);
+            TapOn(0.6f, GestureTargetClass.None);
+            Assert.AreEqual(GestureEventKind.DoubleTapGround, events[events.Count - 1].Kind);
+        }
+
+        [TestCase(0.45f, 0f)]   // too late: 0.3 s window, measured from release
+        [TestCase(0.2f, 9f)]    // too far: 8 mm radius
+        [TestCase(-0.5f, 0f)]   // clock went backwards
+        public void DoubleTapOutsideWindowOrRadiusIsTwoTaps(float secondTime, float secondX)
+        {
+            Enable(InputSlot.DoubleTapGround);
+            TapOn(0f, GestureTargetClass.None);
+            TapOn(secondTime, GestureTargetClass.None, x: secondX);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown, GestureEventKind.Tap);
+        }
+
+        [Test]
+        public void DoubleTapOnNodesIsNeverOffered()
+        {
+            Enable(InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager);
+            TapOn(0f, GestureTargetClass.Node, 3);
+            TapOn(0.2f, GestureTargetClass.Node, 3);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown, GestureEventKind.Tap);
+        }
+
+        [Test]
+        public void DoubleTapMustStayOnTheSameKindOfTarget()
+        {
+            Enable(InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager);
+            TapOn(0f, GestureTargetClass.None);
+            TapOn(0.2f, GestureTargetClass.Villager, 4);
+            Assert.AreEqual(GestureEventKind.Tap, events[events.Count - 1].Kind);
+            events.Clear();
+            TapOn(5f, GestureTargetClass.Villager, 4);
+            TapOn(5.2f, GestureTargetClass.Villager, 5);
+            Assert.AreEqual(GestureEventKind.Tap, events[events.Count - 1].Kind, "different villager");
+        }
+
+        [Test]
+        public void DoubleTapVillagerRecognisesAVillagerThatTheFirstTapSelected()
+        {
+            Enable(InputSlot.DoubleTapVillager);
+            TapOn(0f, GestureTargetClass.Villager, 4);
+            TapOn(0.2f, GestureTargetClass.SelectedVillager, 4);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown,
+                GestureEventKind.DoubleTapVillager);
+        }
+
+        [Test]
+        public void DoubleTapSecondPressThatDragsOrHoldsStaysAnOrdinaryGesture()
+        {
+            Enable(InputSlot.DoubleTapGround);
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.None, x: 6f);
+            Press(0.4f, PointerPhase.Ended, GestureTargetClass.None, x: 6f);
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.DoubleTapGround));
+            Assert.IsTrue(events.Exists(e => e.Kind == GestureEventKind.PanBegin));
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
         public static IEnumerable<int> ToggleMasks()
         {
             for (int mask = 0; mask < 1024; mask++) yield return mask;

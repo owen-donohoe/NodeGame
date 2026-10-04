@@ -1211,6 +1211,20 @@ namespace NodeWar.Core
         }
 
         /// <summary>
+        /// Flips between the farthest zoom the match allows (the whole-board view)
+        /// and the side's default zoom. Zoom only; the camera does not move.
+        /// </summary>
+        public void ToggleFitDefaultZoom()
+        {
+            if (isDraftMode) return;
+            float defaultZoom = sideHomeStates[currentSide].initialized
+                ? sideHomeStates[currentSide].zoomDistance
+                : Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
+            bool atFit = targetZoomDistance >= zoomMaxDistance * 0.98f;
+            SetTargetZoom(atFit ? defaultZoom : zoomMaxDistance);
+        }
+
+        /// <summary>
         /// Frames the board for the draft. Locks pan; scroll and pinch still zoom.
         /// viewSide is where the board is framed from, so each player drafts
         /// looking at their own half; ResolveViewer picks it. Only read when enabling.

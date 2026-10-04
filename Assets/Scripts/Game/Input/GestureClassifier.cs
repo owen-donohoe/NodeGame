@@ -10,8 +10,12 @@ namespace NodeWar.Input
     public enum GestureEventKind
     {
         PointerDown, Cancelled, Tap, SecondaryClick, PanBegin, PanUpdate, PanEnd,
-        LassoBegin, LassoPoint, LassoComplete, ZoomBegin, ZoomUpdate, ZoomEnd
+        LassoBegin, LassoPoint, LassoComplete, ZoomBegin, ZoomUpdate, ZoomEnd,
+        DoubleTapGround, DoubleTapVillager
     }
+
+    /// <summary>What the adapter found under a press. Resolved once, on touch-down.</summary>
+    public enum GestureTargetClass { None, Villager, SelectedVillager, Node }
 
     public readonly struct GesturePoint
     {
@@ -34,11 +38,16 @@ namespace NodeWar.Input
         public readonly PointerButton Button;
         public readonly PointerPhase Phase;
         public readonly bool OverUI;
+        /// <summary>Read on a primary Began sample only.</summary>
+        public readonly GestureTargetClass Target;
+        public readonly int TargetId;
         public PointerSample(float time, GesturePoint position, int pointerId, PointerButton button,
-            PointerPhase phase, bool overUI = false)
+            PointerPhase phase, bool overUI = false, GestureTargetClass target = GestureTargetClass.None,
+            int targetId = -1)
         {
             Time = time; Position = position; PointerId = pointerId;
             Button = button; Phase = phase; OverUI = overUI;
+            Target = target; TargetId = targetId;
         }
     }
 
@@ -84,7 +93,20 @@ namespace NodeWar.Input
         private bool pairZoom;
         private bool pairPan;
         private bool pairLasso;
+        private GestureTargetClass downClass;
+        private int downId;
+        private bool doubleCandidate;
+        private bool lastTapValid;
+        private float lastTapTime;
+        private GesturePoint lastTapPos;
+        private GestureTargetClass lastTapClass;
+        private int lastTapId;
         private readonly List<GesturePoint> points = new List<GesturePoint>();
+
+        /// <summary>Longest gap between the first tap's release and the second press.</summary>
+        public float DoubleTapTime { get; set; } = 0.3f;
+        /// <summary>How far the second press may land from the first tap, in mm.</summary>
+        public float DoubleTapRadiusMm { get; set; } = 8f;
 
         public GestureState State { get; private set; }
         public bool PanSuppressed => State == GestureState.LassoArmed || State == GestureState.Lassoing || pairLasso;
@@ -258,6 +280,9 @@ namespace NodeWar.Input
                     pathLength = 0f;
                     tapExceededSlop = false;
                     points.Clear();
+                    downClass = primary.Target;
+                    downId = primary.TargetId;
+                    doubleCandidate = !primary.OverUI && MatchesLastTap(primary);
                     State = primary.OverUI ? GestureState.Blocked : GestureState.Pending;
                     if (!primary.OverUI) Emit(GestureEventKind.PointerDown, downPos);
                     break;
@@ -339,8 +364,9 @@ namespace NodeWar.Input
             switch (State)
             {
                 case GestureState.Pending:
-                    Emit(!tapExceededSlop && GesturePoint.Distance(sample.Position, downPos) <= tapSlop && sample.Time - downTime < holdTime
-                        ? GestureEventKind.Tap : GestureEventKind.Cancelled, downPos);
+                    if (!tapExceededSlop && GesturePoint.Distance(sample.Position, downPos) <= tapSlop && sample.Time - downTime < holdTime)
+                        EmitTap(sample.Time);
+                    else Emit(GestureEventKind.Cancelled, downPos);
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanEnd); break;
                 case GestureState.LassoArmed:
@@ -349,8 +375,47 @@ namespace NodeWar.Input
             State = GestureState.Idle;
         }
 
+        // The first tap of a pair is a normal tap and has already fired. The second
+        // release replaces its own Tap with the double-tap action, which is safe
+        // because only ground and villagers qualify: tap one cleared or selected,
+        // and the action overwrites whatever tap two would have done.
+        private void EmitTap(float time)
+        {
+            bool eligible = downClass == GestureTargetClass.None || IsVillager(downClass);
+            InputSlot slot = IsVillager(downClass) ? InputSlot.DoubleTapVillager : InputSlot.DoubleTapGround;
+            if (doubleCandidate && IsEnabled(slot))
+            {
+                lastTapValid = false;
+                Emit(slot == InputSlot.DoubleTapVillager
+                    ? GestureEventKind.DoubleTapVillager : GestureEventKind.DoubleTapGround, downPos);
+                return;
+            }
+            Emit(GestureEventKind.Tap, downPos);
+            lastTapValid = eligible;
+            lastTapTime = time;
+            lastTapPos = downPos;
+            lastTapClass = downClass;
+            lastTapId = downId;
+        }
+
+        private static bool IsVillager(GestureTargetClass target) =>
+            target == GestureTargetClass.Villager || target == GestureTargetClass.SelectedVillager;
+
+        // Consumes the remembered tap: a press either continues it or ends the chain.
+        private bool MatchesLastTap(PointerSample press)
+        {
+            if (!lastTapValid) return false;
+            lastTapValid = false;
+            float gap = press.Time - lastTapTime;
+            if (gap < 0f || gap > DoubleTapTime) return false;
+            if (GesturePoint.Distance(press.Position, lastTapPos) > DoubleTapRadiusMm) return false;
+            if (IsVillager(press.Target)) return IsVillager(lastTapClass) && press.TargetId == lastTapId;
+            return press.Target == GestureTargetClass.None && lastTapClass == GestureTargetClass.None;
+        }
+
         public void Cancel()
         {
+            lastTapValid = false;
             if (State == GestureState.Idle) return;
             bool drawing = State == GestureState.LassoArmed || State == GestureState.Lassoing;
             if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);

@@ -24,6 +24,12 @@ namespace NodeWar.Input
         private SelectionSystem selection;
         private CommandSystem commands;
         private NodePanelManager panel;
+        private NodeWar.Core.CameraController cameraController;
+
+        public void SetCameraController(NodeWar.Core.CameraController controller)
+        {
+            cameraController = controller;
+        }
 
         public void Initialize(PointerGestureSource gestureSource,
                                SelectionSystem selectionSystem,
@@ -50,6 +56,8 @@ namespace NodeWar.Input
         {
             if (source == null || subscribed) return;
             source.OnTap += HandleTap;
+            source.OnDoubleTapGround += HandleDoubleTapGround;
+            source.OnDoubleTapVillager += HandleDoubleTapVillager;
             subscribed = true;
         }
 
@@ -57,6 +65,8 @@ namespace NodeWar.Input
         {
             if (source == null || !subscribed) return;
             source.OnTap -= HandleTap;
+            source.OnDoubleTapGround -= HandleDoubleTapGround;
+            source.OnDoubleTapVillager -= HandleDoubleTapVillager;
             subscribed = false;
         }
 
@@ -121,6 +131,40 @@ namespace NodeWar.Input
                     ClearEverything();
                     return;
             }
+        }
+
+        private void HandleDoubleTapGround()
+        {
+            switch (source.ActionFor(NodeWar.Lobby.InputSlot.DoubleTapGround))
+            {
+                case NodeWar.Lobby.InputAction.ReturnToCore:
+                    if (cameraController != null) cameraController.RecentreOnHome();
+                    break;
+                case NodeWar.Lobby.InputAction.SelectAllIdle: SelectAllIdle(); break;
+                case NodeWar.Lobby.InputAction.ToggleFitDefaultZoom:
+                    if (cameraController != null) cameraController.ToggleFitDefaultZoom();
+                    break;
+            }
+            Log("double-tap ground");
+        }
+
+        private void HandleDoubleTapVillager(GestureTarget target)
+        {
+            switch (source.ActionFor(NodeWar.Lobby.InputSlot.DoubleTapVillager))
+            {
+                case NodeWar.Lobby.InputAction.SelectAllIdle: SelectAllIdle(); break;
+                case NodeWar.Lobby.InputAction.SelectAllOnNode:
+                    if (selection != null) selection.SelectAllOnNodeOf(target.id);
+                    if (panel != null) panel.ClosePanel();
+                    break;
+            }
+            Log("double-tap villager " + target.id);
+        }
+
+        private void SelectAllIdle()
+        {
+            if (selection != null) selection.SelectAllIdle();
+            if (panel != null) panel.ClosePanel();
         }
 
         private void ClearEverything()
