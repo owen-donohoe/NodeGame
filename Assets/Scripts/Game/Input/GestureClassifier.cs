@@ -213,18 +213,19 @@ namespace NodeWar.Input
                     if (IsEnabled(InputSlot.Drag) &&
                         (moved > tapSlop || (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength > holdStillness)))
                     {
-                        State = GestureState.Panning;
-                        Emit(GestureEventKind.Cancelled);
-                        Emit(GestureEventKind.PanBegin, downPos);
-                        Emit(GestureEventKind.PanUpdate, sample.Position);
+                        if (ActionFor(InputSlot.Drag) == InputAction.LassoSelect)
+                            BeginLasso(sample.Position, armed: false);
+                        else
+                        {
+                            State = GestureState.Panning;
+                            Emit(GestureEventKind.Cancelled);
+                            Emit(GestureEventKind.PanBegin, downPos);
+                            Emit(GestureEventKind.PanUpdate, sample.Position);
+                        }
                     }
                     else if (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness)
                     {
-                        State = GestureState.LassoArmed;
-                        points.Clear();
-                        Append(downPos);
-                        Emit(GestureEventKind.Cancelled);
-                        Emit(GestureEventKind.LassoBegin, downPos);
+                        BeginLasso(sample.Position, armed: true);
                     }
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanUpdate, sample.Position); break;
@@ -245,6 +246,16 @@ namespace NodeWar.Input
             if (points.Count > 0 && GesturePoint.Distance(points[points.Count - 1], point) < decimation) return false;
             points.Add(point);
             return true;
+        }
+
+        private void BeginLasso(GesturePoint current, bool armed)
+        {
+            State = armed ? GestureState.LassoArmed : GestureState.Lassoing;
+            points.Clear();
+            Append(downPos);
+            Emit(GestureEventKind.Cancelled);
+            Emit(GestureEventKind.LassoBegin, downPos);
+            if (!armed && Append(current)) Emit(GestureEventKind.LassoPoint, current);
         }
 
         private void End(PointerSample sample)

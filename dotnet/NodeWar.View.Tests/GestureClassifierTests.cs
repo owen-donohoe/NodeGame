@@ -37,6 +37,26 @@ namespace NodeWar.View.Tests
             CollectionAssert.AreEqual(expected, events.ConvertAll(e => e.Kind));
         }
 
+        [TestCase(false, 0.1f)]
+        [TestCase(false, 0.5f)]
+        [TestCase(true, 0.1f)]
+        [TestCase(true, 0.5f)]
+        public void DragBoundToLassoStartsAtSlopWithoutTimer(bool holdEnabled, float time)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.HoldDrag].enabled = holdEnabled;
+            settings.inputBindings[(int)InputSlot.Drag].action = (int)InputAction.LassoSelect;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Primary(time, PointerPhase.Held, 5f);
+            Assert.AreEqual(GestureState.Lassoing, core.State);
+            Assert.IsTrue(core.PanSuppressed);
+            Primary(time + 0.1f, PointerPhase.Ended, 5f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.LassoBegin,
+                GestureEventKind.LassoPoint, GestureEventKind.LassoComplete);
+            CollectionAssert.AreEqual(new[] { new GesturePoint(0f, 0f), new GesturePoint(5f, 0f) }, events[4].Points);
+        }
+
         [Test]
         public void DisabledDragDoesNotPanAndReturningWithinSlopDoesNotTap()
         {
