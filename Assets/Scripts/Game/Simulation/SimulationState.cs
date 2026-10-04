@@ -37,7 +37,8 @@ namespace NodeWar.Simulation
         Working,
         Claiming,
         Fighting,
-        Dead
+        Dead,
+        Breaching
     }
 
     public enum SuitType
@@ -134,6 +135,10 @@ namespace NodeWar.Simulation
         public int materials;
         public int metal;
         public int breachCount;
+        /// <summary>Progress against this player's core.</summary>
+        public int breachBar;
+        /// <summary>Derived candidate cache, refreshed after all tick mutations; -1 for none.</summary>
+        public int nextBreacherID;
         public int[] draftedSuits; // (int)SuitType values this player can equip
         public int[] draftedNodes; // (int)DistrictType values for draft upgrades
 

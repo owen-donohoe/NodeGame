@@ -33,6 +33,18 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.players[i].materials;
                     hash = hash * 31 + state.players[i].metal;
                     hash = hash * 31 + state.players[i].breachCount;
+                    // Omit neutral v2 fields so feature-off matches retain v1 hashes.
+                    // Tags distinguish bar progress from the derived candidate ID.
+                    if (state.players[i].breachBar != 0)
+                    {
+                        hash = hash * 31 + 2000;
+                        hash = hash * 31 + state.players[i].breachBar;
+                    }
+                    if (state.players[i].nextBreacherID != -1)
+                    {
+                        hash = hash * 31 + 2001;
+                        hash = hash * 31 + state.players[i].nextBreacherID;
+                    }
                     if (state.players[i].draftedSuits != null)
                     {
                         hash = hash * 31 + state.players[i].draftedSuits.Length;

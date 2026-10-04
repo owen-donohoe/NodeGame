@@ -182,6 +182,8 @@ namespace NodeWar.Simulation
                     materials = board.startingMaterials,
                     metal = board.startingMetal,
                     breachCount = 0,
+                    breachBar = 0,
+                    nextBreacherID = -1,
                     draftedSuits = setup.suits ?? new int[0],
                     draftedNodes = setup.nodes ?? new int[0],
                     suitEras = setup.suitEras,
