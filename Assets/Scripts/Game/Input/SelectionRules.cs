@@ -25,6 +25,13 @@ namespace NodeWar.Input
             selected.Add(villagerId);
         }
 
+        public static void ReplaceLassoIfAny(List<int> selected, IReadOnlyList<int> captured)
+        {
+            if (captured.Count == 0) return;
+            selected.Clear();
+            for (int i = 0; i < captured.Count; i++) selected.Add(captured[i]);
+        }
+
         public static int NearestVillager(IReadOnlyList<VillagerPickCandidate> candidates, GesturePoint pointer)
         {
             int nearest = -1;
