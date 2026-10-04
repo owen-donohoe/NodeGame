@@ -38,11 +38,7 @@ namespace NodeWar.Input
                  "press. Doubles as the tap's implicit maximum -- a press that " +
                  "survives it is no longer a tap candidate.")]
         [Range(0.15f, 1f)]
-        // TODO: expose in player settings when a settings system exists.
-        // Long-press duration is an accessibility control as much as a feel
-        // one -- it is the standard accommodation for reduced motor control,
-        // and players differ widely in what reads as "held" versus "tapped".
-        // Tuned to 0.3s by hand; that is the default, not a fixed value.
+        // Fallback when no player settings are available; settings.holdTime wins otherwise.
         public float longPressTime = 0.3f;
 
         [Tooltip("How long the white touch-down flash lasts.")]

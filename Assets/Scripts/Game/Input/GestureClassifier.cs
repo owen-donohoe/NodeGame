@@ -109,6 +109,16 @@ namespace NodeWar.Input
                 kind == GestureEventKind.LassoComplete ? points.ToArray() : null));
         }
 
+        public void ApplySettings(GameSettingsData settings)
+        {
+            settings = GameSettingsData.Normalized(settings);
+            bindings = settings.inputBindings;
+            holdTime = settings.holdTime;
+        }
+
+        public bool IsEnabled(InputSlot slot) => bindings[(int)slot].enabled;
+        public InputAction ActionFor(InputSlot slot) => (InputAction)bindings[(int)slot].action;
+
         public void ProcessFrame(IReadOnlyList<PointerSample> samples)
         {
             bool hasPrimary = false;

@@ -121,6 +121,8 @@ namespace NodeWar.Input
                     thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm, 1f / ScreenMetrics.PixelsPerMm,
                     GestureThresholds.HoldStillnessMm);
                 classifier.Published += Publish;
+                if (NodeWar.Lobby.PlayerProfile.Instance != null)
+                    classifier.ApplySettings(NodeWar.Lobby.PlayerProfile.Instance.Settings);
             }
             initialized = true;
         }
@@ -166,6 +168,17 @@ namespace NodeWar.Input
             strokePoints.Clear();
             foreach (GesturePoint point in classifier.CurrentStroke) strokePoints.Add(ToPixels(point));
         }
+
+        public void ApplySettings(NodeWar.Lobby.GameSettingsData settings)
+        {
+            classifier?.ApplySettings(settings);
+        }
+
+        public bool IsEnabled(NodeWar.Lobby.InputSlot slot) => classifier == null
+            ? NodeWar.Lobby.InputBindings.DefaultFor(slot).enabled : classifier.IsEnabled(slot);
+
+        public NodeWar.Lobby.InputAction ActionFor(NodeWar.Lobby.InputSlot slot) => classifier == null
+            ? (NodeWar.Lobby.InputAction)NodeWar.Lobby.InputBindings.DefaultFor(slot).action : classifier.ActionFor(slot);
 
         private static GesturePoint ToMm(Vector2 position)
         {

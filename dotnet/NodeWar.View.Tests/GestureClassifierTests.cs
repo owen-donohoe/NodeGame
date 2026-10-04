@@ -38,6 +38,41 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
+        public void SettingsHoldTimeOverridesSerializedFallback()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.holdTime = 0.6f;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.3f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Primary(0.6f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
+        }
+
+        [Test]
+        public void MissingSettingsUseProvidedFallbackHoldTime()
+        {
+            core = new GestureClassifier(InputBindings.CreateDefault(), 4f, 0.7f, 1.5f, 256, 2.5f, 0.1f);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.3f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Primary(0.7f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
+        }
+
+        [TestCase(0, 0.3f)]
+        [TestCase(4, 0.3f)]
+        [TestCase(5, 0.15f)]
+        public void SettingsHoldTimeUsesMigrationAndClamp(int version, float expected)
+        {
+            core.ApplySettings(new GameSettingsData { version = version });
+            Primary(0f, PointerPhase.Began);
+            Primary(expected, PointerPhase.Held);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
+        }
+
+        [Test]
         public void Golden_TapUsesDownPositionAndOnlyCommitsOnRelease()
         {
             Primary(0f, PointerPhase.Began, 2f);

@@ -549,6 +549,11 @@ namespace NodeWar.Core
             }
         }
 
+        public void ApplyInputSettings(NodeWar.Lobby.GameSettingsData settings)
+        {
+            if (gestureSource != null) gestureSource.ApplySettings(settings);
+        }
+
         // ===== GESTURE ZOOM =====
         //
         // Pinch and the HUD zoom handle arrive through the same three events

@@ -546,6 +546,7 @@ namespace NodeWar.UI
                 indicatorLayer.SetCalm(settings.reducedMotion);
 
             if (boardCamera != null) boardCamera.ShakeEnabled = !settings.reducedMotion;
+            if (boardCamera != null) boardCamera.ApplyInputSettings(settings);
         }
 
         /// <summary>
@@ -788,6 +789,7 @@ namespace NodeWar.UI
                 boardCamera.ZoomGestureActiveChanged += OnZoomGestureActiveChanged;
 
                 if (settingsPanel != null) boardCamera.ShakeEnabled = !settingsPanel.Settings.reducedMotion;
+                if (settingsPanel != null) boardCamera.ApplyInputSettings(settingsPanel.Settings);
             }
 
             // A tapped edge indicator moves this camera to its subject.
