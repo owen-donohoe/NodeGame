@@ -165,6 +165,15 @@ namespace NodeWar.UI
             for (int i = 0; i < gone.Count; i++) Retire(gone[i]);
         }
 
+        /// <summary>
+        /// A disconnect hold ended and play goes on. The director's list is
+        /// still current, so the next frame redraws whatever should be up.
+        /// </summary>
+        public void Resume()
+        {
+            suppressed = false;
+        }
+
         // ===== PER FRAME =====
 
         public void LateUpdate()

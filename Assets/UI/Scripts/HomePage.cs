@@ -23,6 +23,7 @@ namespace NodeWar.Lobby
         private readonly LobbyToast toast;
         private readonly LobbyContextMenu menu;
         private readonly LoadoutCatalog catalog;
+        private readonly AccountLinkPrompt accountLinkPrompt;
 
         private readonly Label victoryBadge;
         private readonly VisualElement boxMeterFill;
@@ -37,12 +38,15 @@ namespace NodeWar.Lobby
         /// <summary>Raised when the loadout preview is pressed.</summary>
         public event System.Action LoadoutRequested;
 
-        public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu, LoadoutCatalog catalog)
+        public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu, LoadoutCatalog catalog,
+            AccountFlow accountFlow, System.Func<bool> canPrompt)
             : base(LobbyPageID.Home, Build(layout))
         {
             this.toast = toast;
             this.menu = menu;
             this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
+            accountLinkPrompt = new AccountLinkPrompt(accountFlow, canPrompt, Say);
+            Root.RegisterCallback<DetachFromPanelEvent>(_ => accountLinkPrompt.Hide());
 
             victoryBadge = Root.Q<Label>("home-box-victory-badge");
             boxMeterFill = Root.Q<VisualElement>("home-boxmeter-fill");
@@ -115,6 +119,7 @@ namespace NodeWar.Lobby
         public override void OnShow()
         {
             Refresh();
+            accountLinkPrompt.Show();
 
             if (villager != null && bob == null)
             {
@@ -130,6 +135,7 @@ namespace NodeWar.Lobby
 
         public override void OnHide()
         {
+            accountLinkPrompt.Hide();
             if (bob != null) bob.Pause();
         }
 

@@ -36,14 +36,34 @@ namespace NodeWar.Lobby
         ///     resetting: resetting would throw away settings the player set.
         /// 3 - adds <see cref="opponentEmotes"/>, default true. Earlier saves
         ///     enable emotes while keeping all existing preferences.
+        /// 4 - adds <see cref="frameCap"/>, an index into <see cref="FrameCapRates"/>.
+        ///     Its zero is a real choice (30 fps), so an older save's stored 0
+        ///     is not read as that: <see cref="Normalized"/> gives it
+        ///     <see cref="DefaultFrameCap"/>.
         /// </remarks>
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         /// <summary>Small, Default, Large. The page owns what they are called.</summary>
         public const int InterfaceSizeCount = 3;
 
         /// <summary>The middle entry, and what an unset profile opens on.</summary>
         public const int DefaultInterfaceSize = 1;
+
+        /// <summary>
+        /// The frame caps a player can pick, as Application.targetFrameRate
+        /// values: 30, 60, 120, and -1 for uncapped. The setting stores an index
+        /// rather than the rate, so a hand-edited or corrupt save can only land
+        /// on one of these. A cap only applies while vSync is off; with vSync
+        /// on, as it usually is on a phone, the display rate takes over.
+        /// </summary>
+        public static readonly int[] FrameCapRates = { 30, 60, 120, -1 };
+
+        private static readonly string[] FrameCapNames = { "30", "60", "120", "Uncapped" };
+
+        public const int FrameCapCount = 4;
+
+        /// <summary>60, what the build capped to before this was a setting.</summary>
+        public const int DefaultFrameCap = 1;
 
         public int version;
 
@@ -59,6 +79,10 @@ namespace NodeWar.Lobby
         public bool colourblindMarks;
         public bool reducedMotion;
         public int interfaceSize;
+
+        // ---- Display.
+        /// <summary>Index into <see cref="FrameCapRates"/>. Presentation only; added in version 4.</summary>
+        public int frameCap;
 
         // ---- Gameplay.
         public float cameraSpeed;
@@ -97,6 +121,7 @@ namespace NodeWar.Lobby
                 colourblindMarks = true,
                 reducedMotion = false,
                 interfaceSize = DefaultInterfaceSize,
+                frameCap = DefaultFrameCap,
 
                 cameraSpeed = 0.52f,
                 confirmEachCommand = false,
@@ -134,6 +159,7 @@ namespace NodeWar.Lobby
             // "absent", not "off"; everything else the player set is kept.
             if (source.version < 2) source.opponentRoutes = true;
             if (source.version < 3) source.opponentEmotes = true;
+            if (source.version < 4) source.frameCap = DefaultFrameCap;
 
             return new GameSettingsData
             {
@@ -146,6 +172,7 @@ namespace NodeWar.Lobby
                 colourblindMarks = source.colourblindMarks,
                 reducedMotion = source.reducedMotion,
                 interfaceSize = ClampInterfaceSize(source.interfaceSize),
+                frameCap = ClampFrameCap(source.frameCap),
 
                 cameraSpeed = Clamp01(source.cameraSpeed),
                 confirmEachCommand = source.confirmEachCommand,
@@ -169,6 +196,7 @@ namespace NodeWar.Lobby
                 || a.colourblindMarks != b.colourblindMarks
                 || a.reducedMotion != b.reducedMotion
                 || a.interfaceSize != b.interfaceSize
+                || a.frameCap != b.frameCap
                 || a.cameraSpeed != b.cameraSpeed
                 || a.confirmEachCommand != b.confirmEachCommand
                 || a.opponentRoutes != b.opponentRoutes
@@ -185,6 +213,31 @@ namespace NodeWar.Lobby
         public static int NextInterfaceSize(int current)
         {
             return (ClampInterfaceSize(current) + 1) % InterfaceSizeCount;
+        }
+
+        /// <summary>Wraps forward through the caps, as the row does when tapped.</summary>
+        public static int NextFrameCap(int current)
+        {
+            return (ClampFrameCap(current) + 1) % FrameCapCount;
+        }
+
+        /// <summary>The Application.targetFrameRate for a stored index; -1 is uncapped.</summary>
+        public static int TargetFrameRate(int frameCap)
+        {
+            return FrameCapRates[ClampFrameCap(frameCap)];
+        }
+
+        public static string FrameCapLabel(int frameCap)
+        {
+            return FrameCapNames[ClampFrameCap(frameCap)];
+        }
+
+        // An out-of-range index falls back to the default rather than the
+        // nearest end: "uncapped" is not what a corrupt value should mean.
+        private static int ClampFrameCap(int value)
+        {
+            if (value < 0 || value >= FrameCapCount) return DefaultFrameCap;
+            return value;
         }
 
         private static int ClampInterfaceSize(int value)

@@ -214,16 +214,20 @@ namespace NodeWar.Simulation
 
                 if (shouldHaveBonus && !v.hasRampartBonus)
                 {
-                    state.villagers[i].maxHP += bal.rampartMaxHPBonus;
-                    state.villagers[i].hp += bal.rampartMaxHPBonus;
+                    int era = state.nodes[v.currentNodeID].districtEra;
+                    int bonus = bal.GetDistrictStats(DistrictType.Rampart, era).maxHPBonus;
+                    state.villagers[i].maxHP += bonus;
+                    state.villagers[i].hp += bonus;
                     state.villagers[i].hasRampartBonus = true;
+                    state.villagers[i].rampartBonusEra = era;
                 }
                 else if (!shouldHaveBonus && v.hasRampartBonus)
                 {
-                    state.villagers[i].maxHP -= bal.rampartMaxHPBonus;
+                    state.villagers[i].maxHP -= bal.RampartBonusHP(v);
                     if (state.villagers[i].hp > state.villagers[i].maxHP)
                         state.villagers[i].hp = state.villagers[i].maxHP;
                     state.villagers[i].hasRampartBonus = false;
+                    state.villagers[i].rampartBonusEra = 0;
                 }
             }
         }
@@ -273,7 +277,7 @@ namespace NodeWar.Simulation
                     int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
                     if (workers < bal.maxWorkersPerNode)
                     {
-                        int ticks = GetProductionTicks(node.districtType);
+                        int ticks = GetProductionTicks(node.districtType, node.districtEra);
                         state.villagers[villagerIndex].productionTicksMax = ticks;
                         state.villagers[villagerIndex].productionTicksRemaining = ticks;
                         state.villagers[villagerIndex].state = VillagerState.Working;
@@ -381,7 +385,8 @@ namespace NodeWar.Simulation
                                 int damage = state.villagers[v].attackDamage;
                                 if (state.villagers[targetID].hasRampartBonus)
                                 {
-                                    damage -= bal.rampartDamageReduction;
+                                    damage -= bal.GetDistrictStats(DistrictType.Rampart,
+                                        state.villagers[targetID].rampartBonusEra).damageReduction;
                                     if (damage < 1) damage = 1;
                                 }
                                 state.villagers[targetID].hp -= damage;
@@ -411,9 +416,9 @@ namespace NodeWar.Simulation
                     state.villagers[v].moveProgress = 0;
                     state.villagers[v].targetNodeID = -1;
                     state.villagers[v].combatTargetID = -1;
-                    if (state.villagers[v].hasRampartBonus)
-                        state.villagers[v].maxHP -= bal.rampartMaxHPBonus;
+                    state.villagers[v].maxHP -= bal.RampartBonusHP(state.villagers[v]);
                     state.villagers[v].hasRampartBonus = false;
+                    state.villagers[v].rampartBonusEra = 0;
                 }
             }
         }
@@ -525,7 +530,7 @@ namespace NodeWar.Simulation
                 {
                     int activeDecrement = bal.decrementMultiplier;
                     if (node.districtType == DistrictType.Rampart)
-                        activeDecrement = bal.rampartDecrementMultiplier;
+                        activeDecrement = bal.GetDistrictStats(DistrictType.Rampart, node.districtEra).claimDecrementMultiplier;
 
                     int rate;
                     if (node.claimBar < 0)
@@ -537,8 +542,7 @@ namespace NodeWar.Simulation
                         rate = bal.baseClaimPerTick * p0Claimers;
                     }
 
-                    if (HasAdjacentFriendlyWatchtowerWorkers(state, nodeIndex, 0)) 
-                        rate = rate * bal.watchtowerClaimNumerator / bal.watchtowerClaimDenominator;
+                    rate = ApplyWatchtower(state, nodeIndex, 0, rate);
 
                     node.claimBar += rate;
 
@@ -562,7 +566,7 @@ namespace NodeWar.Simulation
                 {
                     int activeDecrement = bal.decrementMultiplier;
                     if (node.districtType == DistrictType.Rampart)
-                        activeDecrement = bal.rampartDecrementMultiplier;
+                        activeDecrement = bal.GetDistrictStats(DistrictType.Rampart, node.districtEra).claimDecrementMultiplier;
 
                     int rate;
                     if (node.claimBar > 0)
@@ -574,8 +578,7 @@ namespace NodeWar.Simulation
                         rate = bal.baseClaimPerTick * p1Claimers;
                     }
 
-                    if (HasAdjacentFriendlyWatchtowerWorkers(state, nodeIndex, 1)) 
-                        rate = rate * bal.watchtowerClaimNumerator / bal.watchtowerClaimDenominator;
+                    rate = ApplyWatchtower(state, nodeIndex, 1, rate);
 
                     node.claimBar -= rate;
 
@@ -645,17 +648,18 @@ namespace NodeWar.Simulation
                             // If allocation is 0 or no materials: timer resets, nothing produced
                             break;
                         case DistrictType.Market:
-                            if (state.villagers[idx].productionTicksMax == bal.marketFoodProductionTicks)
+                            DistrictStats market = bal.GetDistrictStats(DistrictType.Market, state.nodes[nodeID].districtEra);
+                            if (state.villagers[idx].productionTicksMax == market.productionTicks)
                             {
                                 state.players[ownerID].food++;
-                                state.villagers[idx].productionTicksMax = bal.marketMaterialProductionTicks;
-                                state.villagers[idx].productionTicksRemaining = bal.marketMaterialProductionTicks;
+                                state.villagers[idx].productionTicksMax = market.secondaryProductionTicks;
+                                state.villagers[idx].productionTicksRemaining = market.secondaryProductionTicks;
                             }
                             else
                             {
                                 state.players[ownerID].materials++;
-                                state.villagers[idx].productionTicksMax = bal.marketFoodProductionTicks;
-                                state.villagers[idx].productionTicksRemaining = bal.marketFoodProductionTicks;
+                                state.villagers[idx].productionTicksMax = market.productionTicks;
+                                state.villagers[idx].productionTicksRemaining = market.productionTicks;
                             }
                             break;
                     }
@@ -713,8 +717,8 @@ namespace NodeWar.Simulation
                             if (workers < bal.maxWorkersPerNode)
                             {
                                 state.villagers[idx].state = VillagerState.Working;
-                                state.villagers[idx].productionTicksMax = GetProductionTicks(node.districtType);
-                                state.villagers[idx].productionTicksRemaining = GetProductionTicks(node.districtType);
+                                state.villagers[idx].productionTicksMax = GetProductionTicks(node.districtType, node.districtEra);
+                                state.villagers[idx].productionTicksRemaining = GetProductionTicks(node.districtType, node.districtEra);
                             }
                             else
                             {
@@ -757,6 +761,13 @@ namespace NodeWar.Simulation
                 state.nodes[nodeIndex].districtType = upgrade != DistrictType.None
                     ? upgrade
                     : state.nodes[nodeIndex].baseDistrictType;
+
+                // An upgrade plays the claimer's era of it. A slot reverting to
+                // its base district plays era 0: slots are the board's, not a
+                // player's, and no draft era is kept for them.
+                state.nodes[nodeIndex].districtEra = upgrade != DistrictType.None
+                    ? state.players[playerID].DistrictEra(upgrade)
+                    : 0;
 
                 // Reset non-combat workers — node type just changed
                 for (int i = 0; i < state.villagers.Length; i++)
@@ -856,8 +867,6 @@ namespace NodeWar.Simulation
         private static void TickHealing(SimulationState state)
         {
             bool normalDue = state.tickCount % bal.healIntervalTicks == 0;
-            bool shrineDue = state.tickCount % bal.shrineHealIntervalTicks == 0;
-            if (!normalDue && !shrineDue) return;
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -867,9 +876,15 @@ namespace NodeWar.Simulation
                 if (v.state == VillagerState.Fighting) continue;
                 if (v.hp >= v.maxHP) continue;
 
-                bool onOwnedShrine = state.nodes[v.currentNodeID].districtType == DistrictType.Shrine &&
-                                     state.nodes[v.currentNodeID].ownerID == v.ownerID;
-                if (onOwnedShrine ? shrineDue : normalDue)
+                NodeData node = state.nodes[v.currentNodeID];
+                bool due = normalDue;
+                if (node.districtType == DistrictType.Shrine && node.ownerID == v.ownerID)
+                {
+                    // Each Shrine heals on its own era's interval; one with none never does.
+                    int interval = bal.GetDistrictStats(DistrictType.Shrine, node.districtEra).healIntervalTicks;
+                    due = interval > 0 && state.tickCount % interval == 0;
+                }
+                if (due)
                     state.villagers[i].hp++;
             }
         }
@@ -884,8 +899,7 @@ namespace NodeWar.Simulation
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
-                int sanctuaryWorkers = CountSanctuaryWorkersForPlayer(state, v.ownerID);
-                int decrement = 1 + (sanctuaryWorkers * bal.sanctuaryRespawnBoostPerWorker);
+                int decrement = 1 + SanctuaryRespawnBoost(state, v.ownerID);
                 state.villagers[i].respawnTicksRemaining -= decrement;
 
                 if (state.villagers[i].respawnTicksRemaining <= 0)
@@ -925,6 +939,7 @@ namespace NodeWar.Simulation
             state.villagers[vid].productionTicksRemaining = 0;
             state.villagers[vid].productionTicksMax = 0;
             state.villagers[vid].hasRampartBonus = false;
+            state.villagers[vid].rampartBonusEra = 0;
         }
 
         // ===== STEP 8: WIN CONDITION =====
@@ -991,8 +1006,8 @@ namespace NodeWar.Simulation
                             {
                                 // Stop and work here
                                 state.villagers[i].state = VillagerState.Working;
-                                state.villagers[i].productionTicksMax = GetProductionTicks(currentNode.districtType);
-                                state.villagers[i].productionTicksRemaining = GetProductionTicks(currentNode.districtType);
+                                state.villagers[i].productionTicksMax = GetProductionTicks(currentNode.districtType, currentNode.districtEra);
+                                state.villagers[i].productionTicksRemaining = GetProductionTicks(currentNode.districtType, currentNode.districtEra);
                                 state.villagers[i].combatTargetID = -1;
                                 continue;
                             }
@@ -1053,9 +1068,9 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].moveProgress = 0;
             state.villagers[villagerIndex].targetNodeID = -1;
             state.villagers[villagerIndex].combatTargetID = -1;
-            if (state.villagers[villagerIndex].hasRampartBonus)
-                state.villagers[villagerIndex].maxHP -= bal.rampartMaxHPBonus;
+            state.villagers[villagerIndex].maxHP -= bal.RampartBonusHP(state.villagers[villagerIndex]);
             state.villagers[villagerIndex].hasRampartBonus = false;
+            state.villagers[villagerIndex].rampartBonusEra = 0;
         }
 
         // ===== HELPER FUNCTIONS =====
@@ -1100,17 +1115,17 @@ namespace NodeWar.Simulation
         /// Returns the production tick duration for a given district type.
         /// Returns 0 for non-production districts.
         /// </summary>
-        private static int GetProductionTicks(DistrictType district)
+        private static int GetProductionTicks(DistrictType district, int era)
         {
             switch (district)
             {
-                case DistrictType.Farm: return bal.foodProductionTicks;
-                case DistrictType.Mine: return bal.materialProductionTicks;
-                case DistrictType.Forge: return bal.metalProductionTicks;
-                case DistrictType.Market: return bal.marketFoodProductionTicks;
-                case DistrictType.Sanctuary: return 0;
-                case DistrictType.Watchtower: return 0;
-                default: return 0;
+                case DistrictType.Farm:
+                case DistrictType.Mine:
+                case DistrictType.Forge:
+                case DistrictType.Market: // food first; TickProduction alternates
+                    return bal.GetDistrictStats(district, era).productionTicks;
+                default:
+                    return 0;
             }
         }
 
@@ -1184,7 +1199,21 @@ namespace NodeWar.Simulation
             return bestTarget;
         }
 
-        private static bool HasAdjacentFriendlyWatchtowerWorkers(SimulationState state, int nodeIndex, int playerID)
+        /// <summary>
+        /// A claim rate with the watchtower bonus applied, when a friendly
+        /// working watchtower is adjacent. The first such tower in edge order
+        /// decides the era; one tower's bonus applies, never several.
+        /// </summary>
+        private static int ApplyWatchtower(SimulationState state, int nodeIndex, int playerID, int rate)
+        {
+            int tower = FindAdjacentFriendlyWorkingWatchtower(state, nodeIndex, playerID);
+            if (tower < 0) return rate;
+            DistrictStats stats = bal.GetDistrictStats(DistrictType.Watchtower, state.nodes[tower].districtEra);
+            if (stats.claimRateDenominator <= 0) return rate;
+            return rate * stats.claimRateNumerator / stats.claimRateDenominator;
+        }
+
+        private static int FindAdjacentFriendlyWorkingWatchtower(SimulationState state, int nodeIndex, int playerID)
         {
             Edge[] edges = state.nodes[nodeIndex].edges;
             for (int e = 0; e < edges.Length; e++)
@@ -1198,14 +1227,18 @@ namespace NodeWar.Simulation
                     if (vil.currentNodeID != adjNode) continue;
                     if (vil.ownerID != playerID) continue;
                     if (vil.state != VillagerState.Working || vil.isConsumed) continue;
-                    return true;
+                    return adjNode;
                 }
             }
-            return false;
+            return -1;
         }
-        private static int CountSanctuaryWorkersForPlayer(SimulationState state, int playerID)
+        /// <summary>
+        /// How many extra ticks a dead villager of this player respawns by each
+        /// tick: each working Sanctuary worker adds its Sanctuary era's boost.
+        /// </summary>
+        private static int SanctuaryRespawnBoost(SimulationState state, int playerID)
         {
-            int count = 0;
+            int boost = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
@@ -1213,9 +1246,9 @@ namespace NodeWar.Simulation
                 if (v.state != VillagerState.Working || v.isConsumed) continue;
                 if (state.nodes[v.currentNodeID].districtType != DistrictType.Sanctuary) continue;
                 if (state.nodes[v.currentNodeID].ownerID != playerID) continue;
-                count++;
+                boost += bal.GetDistrictStats(DistrictType.Sanctuary, state.nodes[v.currentNodeID].districtEra).respawnBoostPerWorker;
             }
-            return count;
+            return boost;
         }
     }
 }

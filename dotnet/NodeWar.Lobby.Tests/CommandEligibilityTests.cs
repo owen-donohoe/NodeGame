@@ -243,7 +243,8 @@ namespace NodeWar.Lobby.Tests
         {
             GameBalanceData balance = Balance();
             balance.respawnCostFood = 1;
-            balance.sanctuaryRespawnCostReductionPercent = 100;
+            balance.districtStats = GameBalanceData.UniformDistrictStats(
+                30, 40, 50, 45, 60, 2, 20, 2, 1, 1, 3, 2, 1, sanctuaryCostReductionPercent: 100);
 
             Assert.AreEqual(1, CommandEligibility.RespawnCost(Board(20, 0, null), balance, 0));
         }

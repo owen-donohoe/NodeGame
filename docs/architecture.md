@@ -1,48 +1,47 @@
 ---
 type: Architecture
 title: Architecture
-description: The seven layers of Assets/Scripts/, where the three UI trees live and which one runs, how information flows between them, and the lockstep networking model.
+description: The seven layers of Assets/Scripts/, where the three UI trees live and which one runs, how information flows between them, the lockstep networking model, and the backend, match logs and referee beside it.
 tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T02:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T04:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
-verified_at_commit: 2241e47
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+verified_at_commit: 3336149
 status: stable
 sources:
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: SimulationState
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: game-manager
     resource: Assets/Scripts/Game/Core/GameManager.cs
     title: GameManager match lifecycle
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-28T15:12:16-04:00
   - id: lockstep
-    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
-    title: LockstepRunner
-    last_modified: 2026-08-30T22:15:29-04:00
+    resource: Assets/Scripts/Game/Network/LockstepCore.cs
+    title: LockstepCore
+    last_modified: 2026-09-29T12:12:27-04:00
   - id: tick-runner
     resource: Assets/Scripts/Game/Core/TickRunner.cs
     title: TickRunner
-    last_modified: 2026-08-24T09:08:13-04:00
+    last_modified: 2026-09-25T22:11:57-04:00
   - id: match-connection
     resource: Assets/Scripts/Game/Core/MatchConnection.cs
     title: MatchConnection
-    last_modified: 2026-08-14T00:06:30-04:00
+    last_modified: 2026-09-28T15:12:16-04:00
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager
-    last_modified: 2026-08-30T22:15:29-04:00
+    last_modified: 2026-09-29T11:55:09-04:00
   - id: draft-presenter
     resource: Assets/Scripts/Game/Core/IDraftPresenter.cs
     title: IDraftPresenter, the seam between the draft and its two UI stacks
@@ -50,43 +49,183 @@ sources:
   - id: uitk-draft
     resource: Assets/UI/Scripts/Gameplay/DraftScreenController.cs
     title: UI Toolkit draft screen
-    last_modified: 2026-09-17T09:11:22-04:00
+    last_modified: 2026-09-23T16:02:16-04:00
   - id: lobby-manager
     resource: Assets/Scripts/Lobby/LobbyManager.cs
     title: LobbyManager and the useUIToolkitLobby toggle
-    last_modified: 2026-09-03T16:45:30-04:00
+    last_modified: 2026-09-26T08:52:10-04:00
   - id: node-panel-manager
     resource: Assets/Scripts/Game/UI/Panel/NodePanelManager.cs
     title: NodePanelManager and SetSuppressed
-    last_modified: 2026-09-03T16:54:53-04:00
+    last_modified: 2026-09-21T22:57:45-04:00
   - id: uitk-lobby
     resource: Assets/UI/Scripts/LobbyUIController.cs
     title: UI Toolkit lobby shell
-    last_modified: 2026-09-03T16:17:06-04:00
+    last_modified: 2026-09-26T08:52:10-04:00
   - id: uitk-hud
     resource: Assets/UI/Scripts/Gameplay/GameplayHUDController.cs
     title: UI Toolkit in-match HUD
-    last_modified: 2026-09-03T16:54:53-04:00
+    last_modified: 2026-09-23T10:16:28-04:00
   - id: uitk-sheet
     resource: Assets/UI/Scripts/Gameplay/NodeSheet.cs
     title: UI Toolkit node sheet
-    last_modified: 2026-09-03T16:54:53-04:00
+    last_modified: 2026-09-22T11:23:32-04:00
   - id: uitk-sheet-content
     resource: Assets/UI/Scripts/Gameplay/NodeSheetContent.cs
     title: NodeSheetContent.Send, the UI Toolkit command path
-    last_modified: 2026-09-03T16:54:53-04:00
+    last_modified: 2026-09-23T10:16:28-04:00
   - id: outline-driver
     resource: Assets/Scripts/Game/View/OutlineDriver.cs
     title: OutlineDriver, the only setter of outline intents
+    last_modified: 2026-09-21T22:57:46-04:00
   - id: outline-registry
     resource: Assets/Scripts/Game/View/Outline/OutlineRegistry.cs
     title: OutlineRegistry and the outlined-only ID lifecycle
+    last_modified: 2026-09-05T10:39:14-04:00
   - id: outline-style
     resource: Assets/Scripts/Game/View/Outline/OutlineStyle.cs
     title: OutlineStyle, whose numeric order is the priority order
+    last_modified: 2026-09-05T10:39:14-04:00
   - id: outline-feature
     resource: Assets/Scripts/Game/View/Outline/OutlineRendererFeature.cs
     title: OutlineRendererFeature, the URP entry point
+    last_modified: 2026-09-21T22:57:46-04:00
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: MatchFactory, how GameManager builds the starting state
+    last_modified: 2026-09-25T22:52:42-04:00
+  - id: backend-services
+    resource: Assets/Scripts/Backend/BackendServices.cs
+    title: BackendServices, UGS or local fakes, LastKnownState
+    last_modified: 2026-09-28T15:24:28-04:00
+  - id: match-log-format
+    resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
+    title: Match log chunks
+    last_modified: 2026-09-26T08:52:10-04:00
+  - id: referee
+    resource: dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
+    title: The Cloud Code referee
+    last_modified: 2026-09-25T22:46:13-04:00
+  - id: loadout-types
+    resource: Assets/Scripts/Lobby/Data/LoadoutTypes.cs
+    title: LoadoutTypes, lobby IDs to sim types and catalog bases
+    last_modified: 2026-09-27T17:00:22-04:00
+  - id: input-serializer
+    resource: Assets/Scripts/Game/Network/InputSerializer.cs
+    title: InputSerializer, ProtocolVersion and the handshake
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: protocol-version
+    resource: Assets/Scripts/Backend/Shared/ProtocolVersion.cs
+    title: ProtocolVersion, shared wire identity
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: ranked-presenter
+    resource: Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs
+    title: RankedQueuePresenter and IRankedQueueView
+    last_modified: 2026-09-29T12:12:27-04:00
+  - id: ranked-service
+    resource: Assets/Scripts/Backend/UgsRankedQueueService.cs
+    title: UGS ranked ticket lifecycle
+    last_modified: 2026-09-28T01:19:09-04:00
+  - id: ranked-popup
+    resource: Assets/UI/Scripts/PlayPopup.cs
+    title: PlayPopup ranked view, default mode and bot launch
+    last_modified: 2026-09-28T15:25:56-04:00
+  - id: ranked-queue
+    resource: dotnet/NodeWarCloud/Matchmaker/ranked.mmq
+    title: Ranked Matchmaker queue rules
+    last_modified: 2026-09-28T01:29:29-04:00
+  - id: match-launcher
+    resource: Assets/UI/Scripts/MatchLauncher.cs
+    title: MatchLauncher private and ranked host/join
+    last_modified: 2026-09-28T15:12:16-04:00
+  - id: draft-serializer
+    resource: Assets/Scripts/Game/Network/DraftSerializer.cs
+    title: Draft packet layout and its receive check
+    last_modified: 2026-09-29T11:55:09-04:00
+  - id: ranked-rendezvous
+    resource: Assets/Scripts/Backend/Shared/RankedRendezvous.cs
+    title: RankedRendezvous join-code exchange
+    last_modified: 2026-09-28T15:24:28-04:00
+  - id: match-rendezvous
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchRendezvous.cs
+    title: Rendezvous, ConfirmConnected and Leave rules
+    last_modified: 2026-09-28T15:23:50-04:00
+  - id: match-settler
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
+    title: MatchSettler, the one settlement path
+    last_modified: 2026-09-28T15:22:39-04:00
+  - id: player-state-module
+    resource: dotnet/NodeWarCloud/NodeWarCloud/PlayerStateModule.cs
+    title: GetPlayerState and Equip endpoints
+    last_modified: 2026-09-25T22:41:20-04:00
+  - id: referee-module
+    resource: dotnet/NodeWarCloud/NodeWarCloud/RefereeModule.cs
+    title: VerifyMatch endpoint
+    last_modified: 2026-09-27T17:07:18-04:00
+  - id: reporting-module
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchReportingModule.cs
+    title: ReportMatch endpoint
+    last_modified: 2026-09-27T18:23:22-04:00
+  - id: match-reporting
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchReporting.cs
+    title: Report agreement and progression settlement
+    last_modified: 2026-09-28T15:23:50-04:00
+  - id: match-eligibility
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchEligibility.cs
+    title: Log eligibility against match snapshots
+    last_modified: 2026-09-27T17:05:41-04:00
+  - id: matchmaker-module
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchmakerAllocatorModule.cs
+    title: Matchmaker allocation and polling callbacks
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: match-allocation
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchAllocation.cs
+    title: Version checks and claimed match creation
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: match-record
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchRecord.cs
+    title: Match roster, snapshots and outcomes
+    last_modified: 2026-09-28T15:23:50-04:00
+  - id: match-record-store
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchRecordStore.cs
+    title: Match record contracts and active-match claims
+    last_modified: 2026-09-28T15:22:39-04:00
+  - id: cloud-match-store
+    resource: dotnet/NodeWarCloud/NodeWarCloud/CloudSaveMatchRecordStore.cs
+    title: Private match records and submitted logs
+    last_modified: 2026-09-28T01:18:13-04:00
+  - id: cloud-player-store
+    resource: dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
+    title: Protected player records and conditional writes
+    last_modified: 2026-09-28T01:56:48-04:00
+  - id: history-module
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchHistoryModule.cs
+    title: GetMatchHistory endpoint
+    last_modified: 2026-09-27T18:26:46-04:00
+  - id: match-history
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchHistory.cs
+    title: Caller history and stored outcomes
+    last_modified: 2026-09-27T18:26:28-04:00
+  - id: inventory-rules
+    resource: dotnet/NodeWarCloud/NodeWarCloud/InventoryRules.cs
+    title: Catalog grants and equipment eligibility
+    last_modified: 2026-09-25T22:41:20-04:00
+  - id: disconnect-hold
+    resource: Assets/Scripts/Backend/Shared/DisconnectHold.cs
+    title: DisconnectHold, the three-stage hold
+    last_modified: 2026-09-30T02:00:00-04:00
+  - id: ranked-result-tracker
+    resource: Assets/Scripts/Backend/Shared/RankedResultTracker.cs
+    title: RankedResultTracker, the end card's server result
+    last_modified: 2026-09-30T01:30:00-04:00
+  - id: match-hold
+    resource: dotnet/NodeWarCloud/NodeWarCloud/MatchHold.cs
+    title: Presence, ResolveHold and GetMatchResult rules
+    last_modified: 2026-09-30T01:40:00-04:00
+  - id: emote-panel
+    resource: Assets/UI/Scripts/Gameplay/EmotePanel.cs
+    title: Emote controls on the resource sheet
+    last_modified: 2026-09-23T09:37:50-04:00
 ---
 
 # Architecture
@@ -114,16 +253,21 @@ Assets/Scripts/
       Outline/              own assembly, NodeWar.View.Outline
     Config/    not a layer   GameBalance / BoardConfig ScriptableObjects
     Debug/     not a layer   development aids
+  Backend/     beside        accounts, progression, inventory, match reports/history, ranked queue (UGS)
+  MatchLog/    beside        match log format, recorder, headless replay; own assembly
   Editor/      not a layer   TestBridge and other editor-only tooling
 
 Assets/UI/                  UI Toolkit — the replacement for layers 1 and 6
 Assets/Legacy/              retired uGUI lobby, still compiled
+dotnet/                     .NET projects over the same sources, plus the Cloud Code module
 ```
 
 The three marked *not a layer* carry no gameplay rules and sit outside the
 information flow below. `Config/` matters anyway: it is where a new tunable
 number goes, and the only place the `GameBalance` and `BoardConfig`
-`ScriptableObject`s exist.
+`ScriptableObject`s exist. The two marked *beside* sit outside the match's
+information flow too, but hold rules of their own: see
+[Backend, match logs and the referee](#backend-match-logs-and-the-referee).
 
 **1. Lobby/** — Pre-match menu flow: game mode selection, player profile,
 loadout/node/suit selection. Runs entirely in the Lobby scene, before a
@@ -135,7 +279,11 @@ is `Assets/UI/`.
 **2. Core/** — Match lifecycle orchestration. Owns the top-level state
 machine (`GameManager`), the pre-match draft (`DraftManager`), local tick
 timing (`TickRunner`), and camera/transition control. This is the layer
-that constructs `SimulationState` and wires every other layer together.
+that starts a match and wires every other layer together. It builds the
+starting `SimulationState` for drafted matches through
+`Simulation/MatchFactory`, the same builder the referee and headless
+replays use. Testing mode still builds its legacy board in `GameManager`,
+then uses the factory to initialize players and villagers.
 
 **3. Simulation/** — All gameplay rules and the entire mutable match
 state. Pure C#, no `UnityEngine` dependency (see `docs/simulation-rules.md`
@@ -253,7 +401,8 @@ Pointer (mouse / touch)        or  BotPlayer
      InputBuffer                        (Input/)
         │  queued until next tick
         ▼
- TickRunner (local) / LockstepRunner (networked)   (Core/ / Network/)
+ TickRunner (local) / LockstepCore (networked)   (Core/ / Network/)
+     (GameManager drives either every frame)
         │  drains buffer, in order
         ▼
  CommandProcessor.ProcessCommand        (Simulation/)
@@ -272,8 +421,10 @@ Pointer (mouse / touch)        or  BotPlayer
    UI/ and View/  read SimulationState and render
 ```
 
-`SimulationState` is the single source of truth. Nothing outside
-`Simulation/` writes to it directly — see `docs/simulation-rules.md`.
+`SimulationState` is the single source of truth. During play, commands and
+ticks mutate it inside `Simulation/`; presentation only reads it.
+`Core/` still initializes state before play, including Testing mode's
+legacy board. See `docs/simulation-rules.md` for the in-match boundary.
 
 ### What a tick did
 
@@ -301,7 +452,7 @@ plus a node, villager, player and value, `-1` where unused. The types are
   `ProcessCommand(state, command, log)` record only when handed a log, so tests
   and any headless run are unchanged. `ProcessCommand` takes it because a paid
   respawn happens there, outside `SimulateTick`.
-- **The driver owns it.** `TickRunner` and `LockstepRunner` clear one log before
+- **The driver owns it.** `TickRunner` and `LockstepCore` clear one log before
   each tick, and after the tick raise `ITickProvider.TickSimulated` with it.
   They raise it inside their catch-up loop, so a frame that runs three ticks
   raises it three times. The log is reused, so subscribers copy what they need.
@@ -324,8 +475,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
 
 - **`MatchConnection`** — created when a match is started from the lobby
   (local play, bot match, or a networked connection). Holds
-  `networkManager`, `localPlayerID`, `isNetworked`, `isBotMatch`, and the
-  chosen `LoadoutData`. Read once by `GameManager.Awake()` in the Gameplay
+  `networkManager`, `localPlayerID`, `isNetworked`, `isBotMatch`, the
+  chosen `LoadoutData`, and for a ranked match `isRanked`, the server's
+  `matchId` and the record's `playerIds` (slot 0 is simulation player 0).
+  Read once by `GameManager.Awake()` in the Gameplay
   scene, then shut down (`MatchConnection.Shutdown()`) when returning to
   the lobby.
 - **`PlayerProfile`** — the persistent player-identity singleton
@@ -354,8 +507,15 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `LobbyManager` — panel navigation and startup (Homepage, GameMode,
   Profile, Shop, GroupSelection).
 - `PlayerProfile` — persistent player identity/progression singleton.
+  Its JSON holds local profile, settings and loadout choices; backend
+  player state owns rated progression and inventory.
 - `LoadoutData`, `NodeDefinition`, `SuitDefinition` — data describing a
-  player's drafted nodes/suits.
+  player's drafted nodes/suits. `LoadoutData` also carries the player's
+  era per suit and district type and their equipped skin IDs; those are
+  stamped on at match launch from the server's equipped state
+  (`LoadoutTypes.WithEquipment`), not chosen in the lobby's local data.
+- `LoadoutTypes` — the one translation between lobby item IDs
+  (`suit_warrior`), simulation types and catalog base IDs (`suit.warrior`).
 
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
@@ -378,7 +538,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `MatchTransitionController` — scripted transition sequences (startup
   wave, post-draft reveal, breakdown-on-game-over).
 - `ITickProvider` — shared interface exposing tick-interpolation alpha so
-  View code doesn't need to know whether `TickRunner` or `LockstepRunner`
+  View code doesn't need to know whether `TickRunner` or `LockstepCore`
   is driving the match.
 
 **Simulation/**
@@ -392,20 +552,50 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `Commands.cs` — `GameCommand` struct and `CommandType` enum.
 - `Pathfinding` — Dijkstra over the node graph with ownership-based
   integer cost multipliers.
-- `GameBalance`, `BoardConfig` — `ScriptableObject` tuning data, read once
-  at match start.
+- `MatchFactory` — builds a match's tick-0 state from board, draft and
+  per-player setup; `Configure` sets the simulation's statics separately
+  from `Build`/`Fill`. Testing mode only shares its player and villager
+  initialization. See
+  `docs/simulation-rules.md`, *The starting board*.
+- `GameBalanceData` / `BoardConfigData` — the plain tuning structs behind
+  the `GameBalance` and `BoardConfig` assets in `Config/`, read at match
+  start. Suits and districts have one stats entry per era
+  (`SuitStats.era`, `DistrictStats`); a lookup for a missing era falls back
+  to era 0.
+- `BalanceHasher` / `SimulationVersion` — the content hash and version a
+  build is identified by in the handshake and the match log.
 - `DraftState` — grid occupancy and per-player slots during the draft
   phase.
 - `SimulationStateHasher` — deterministic integer fingerprint of
   `SimulationState`, used for desync detection.
 
 **Network/**
-- `LockstepRunner` — networked tick driver; stalls a tick until both
-  local and remote inputs exist for it.
+- `LockstepCore` — networked tick driver, plain C# with no UnityEngine in
+  it: the caller passes the clocks in and logging goes to a sink. Stalls a
+  tick until both local and remote inputs exist for it, and raises
+  `HoldStarted` / `HoldEnded` when a stall lasts. `GameManager` owns it and
+  calls `Update` (first thing in its own `Update`, before any early return) and
+  `Flush` (`LateUpdate`) every frame. It never ends a match itself;
+  `GameManager` calls `EndMatch`, after which the core neither ticks nor sends.
+  It is the match's `ITickProvider` and `IEmoteChannel`.
+- `InputDelayController` — decides what input delay to ask the peer for
+  (see *Input delay adapts* below). Plain C#.
+- `NetworkManagerTransport` — adapts `NetworkManager` to the core's
+  `ILockstepTransport`, and treats a destroyed manager as silence.
+  `UnityLockstepLog` sends the core's log lines to the console.
 - `NetworkManager` — transport abstraction (send/receive raw packets).
-- `InputSerializer` — wire format for tick inputs and heartbeats.
+- `InputSerializer` — wire format for tick inputs, heartbeats and the
+  versioned handshake. `InputSerializer.ProtocolVersion` aliases
+  `NodeWar.Backend.ProtocolVersion.Current`, declared in
+  `Assets/Scripts/Backend/Shared/ProtocolVersion.cs` and shared with Cloud
+  Code. It changes with any packet layout.
+- `LocalBuildIdentity` — this build's `BuildIdentity` (protocol, simulation
+  version, balance content hash). Peers compare it in the handshake and
+  refuse a mismatch rather than desync.
 - `DraftSerializer` — wire format for draft-phase packets (ready,
-  placement, loadout).
+  placement, loadout). The loadout carries eras and skins (protocol 2).
+  `TryDeserializeDraftLoadout` checks the whole layout beside the writer,
+  so the receive check cannot fall behind a new section again.
 
 **Input/**
 - `PointerGestureSource` — the shared pointer reader for selection and
@@ -426,8 +616,11 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `HUDManager` — top-level in-match HUD.
 - `NodePanelManager` — per-node detail/action panel. Can be told to stand
   down by `SetSuppressed` when the UI Toolkit sheet is serving instead.
+  `NodeInspected` tracks every inspected node, independently of whether
+  `NodeOpened`/`NodeClosed` show a panel.
 - `DistrictPanelPolicy` — decides which districts open a panel at all.
-  Both panel stacks defer to it, so neither has its own answer.
+  UI Toolkit uses `HasSheet`, including owned Farms, Mines and Markets;
+  the uGUI path still uses the older `IsFunctional` rule.
 - `DraftUI` — draft-phase interface, with `DraftPlacementController`
   (drag/park/confirm state machine), `DraftSlotUI` and
   `DraftConfirmPresenter`. Implements `IDraftPresenter`. Off by default
@@ -446,17 +639,34 @@ Three objects are carried across the Lobby → Gameplay scene load via
   tabs.
 - `LobbySheet`, `LobbyContextMenu`, `LobbyToast` — one of each for the
   whole lobby, handed to pages rather than built per page. `PlayPopup` is
-  content shown in the sheet.
+  content shown in the sheet. Its ranked view uses `RankedQueueViewElement`
+  through `IRankedQueueView`; `Backend/Shared/RankedQueuePresenter` owns
+  the whole ranked attempt (see [Backend](#backend-match-logs-and-the-referee)).
+  The sheet opens on Ranked; private modes stay one tap away.
 - `LoadoutCatalog` — what a loadout slot may hold and what the player owns
   (not globally granted, not Crossroads, unlocked). The Workshop, Home and
   the battle sheet all ask it; the slot rules themselves are in the
   UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
   covers.
-- `MatchLauncher` — the lobby's route into a match.
+- `MatchLauncher` — the lobby's route into a match. Private play hosts or
+  joins by code with an open-ended host wait; `HostRanked`/`JoinRanked`
+  add deadlines and carry the match ID and roster into `MatchConnection`.
+  `MatchLauncherConnection` adapts it to the UnityEngine-free
+  `IRankedConnection` that `RankedRendezvous` drives.
+- `SettingsPage` account section and `AccountFlow` — guest / link / sign
+  in / sign out, the conflict and warning sheets, and the one-time link
+  prompt (`LinkPromptPolicy`: starter items are not progress).
+- `WorkshopPage` era and skin chips — per item, one chip per era from the
+  server's `PlayerState` (owned, usable at the current arena, equipped).
+  Equipping calls `IInventoryService` and shows what the server returns.
+  The chip rules are the UnityEngine-free `EraChips`.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+  It also carries the disconnect-hold overlay, the end card's ranked result
+  block, and the ranked surrender row in `MatchSettingsPanel`.
 - `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
   layer is brought to the front so a closing emote shows over the end card, and
-  its dock stands aside while the node sheet is open. The popup mute is reversible
+  its button sits on the resource sheet, covered by an open node sheet.
+  Opening the node sheet closes the emote options. The popup mute is reversible
   and match-local; the Settings toggle is saved across matches and takes precedence.
   Either mute hides bubbles and disables/dims outgoing emotes. Speaker icons turn
   from white to red; the popup stays reachable during mute and cooldown.
@@ -465,17 +675,19 @@ Three objects are carried across the Lobby → Gameplay scene load via
   it. See [In-match indicators](#in-match-indicators).
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
   to open; `NodePanelManager` still owns that.
-- `NodeSheetContent` and its three subclasses — `ForgeContent`,
-  `CoreContent`, `EquipContent` cover all six actionable districts.
+- `NodeSheetContent` and its four subclasses — `ForgeContent`,
+  `CoreContent`, `EquipContent` cover all six actionable districts;
+  `ProductionContent` shows an owner's Farm, Mine or Market without actions.
   `Send` is the only path to the simulation.
 - `DraftScreenController` — the draft screen, and the one place in this
   tree that owns an interaction end to end. The chrome and the placement
-  cannot be separated here: the drag begins on a UI Toolkit card and ends
-  on the 3D board, so it reads `Pointer.current` (mouse *or* touch) for
+  cannot be separated here: a drag can begin on a UI Toolkit card or on
+  the 3D board, so it reads `Pointer.current` (mouse *or* touch) for
   everything past the card press, positions the Confirm pair from the
   parked cell's world position each frame, and instantiates the same
   world-space ghost prefab the uGUI draft used. It writes nothing to
-  `SimulationState` — during the draft there is not one yet.
+  `SimulationState` — `GameManager` has allocated the state, but the
+  match board and players are filled only after the draft.
 - `DraftPieceInfo` — a district's name, monogram and tint for the draft
   cards. Names come from the lobby's `NodeDefinition` assets rather than a
   switch statement, so the draft and the Workshop cannot disagree about
@@ -529,8 +741,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `SortHeight` / `SpriteDepthSorter` — height and depth order inside a node or
   draft piece.
 - `OutlineDriver` — the only thing that sets outline intents. Reads hover,
-  villager selection and the open node, and is read-only against the
-  simulation. `GameManager` builds it before the views that register with
+  villager presence and selection and the inspected node, even when no sheet opens,
+  and is read-only against the simulation. `GameManager` builds it before
+  the views that register with
   it, and hands it the same `SelectionSystem` the tap path uses, so hover
   and selection agree about ownership by construction rather than by two
   copies of the same rule.
@@ -556,10 +769,15 @@ object with no GameObject, no scene and no render pipeline — the reason
 - `OutlineGroup` / `IOutlineGroup` — marks a node or villager root as one
   silhouette, so seams inside it grow no line. Added at runtime, like
   `NodeHighlight` and `VillagerTouchTarget`, so no prefab needs editing.
-- `OutlineStyle` — the transient states an outline expresses. **The numeric
+- `OutlineStyle` — the states an outline expresses: `Present`, the thin line
+  every living villager carries all match, then the transient ones (hover,
+  contested, selected, command ack). **The numeric
   order is the priority order**, so reordering the enum silently changes which
   state wins a conflict; `OutlineStyleTests` pins it so a reorder fails a test
-  instead of changing the game. Player ownership is deliberately not a style.
+  instead of changing the game. Player ownership is not a style:
+  `OutlineDriver` tints the inspected node's outline from its claim bar
+  (or its owner for a Core), and a villager's `Present` line with its owner's
+  colour, independently of the style priority.
 - `OutlineSettings` / `OutlineScreenBounds` — the palette and thickness asset
   (`Assets/Settings/OutlineSettings.asset`), and the screen-space scissor.
 
@@ -674,8 +892,9 @@ the sprite, or it draws a line the simulation is not walking.
 
 ## Networking model
 
-Node War uses **lockstep**: peers never send simulation state, only
-`GameCommand`s. Both machines run the identical deterministic simulation
+Node War uses **lockstep**: peers never send simulation state. They exchange
+tick inputs (the tick's `GameCommand`s plus a checkpoint hash), and beside
+them handshake, draft, heartbeat and emote packets. Both machines run the identical deterministic simulation
 (`GameSimulation.SimulateTick`) from the identical sequence of commands
 and must therefore arrive at identical results every tick.
 
@@ -686,28 +905,280 @@ and must therefore arrive at identical results every tick.
   bot matches. Accumulates `Time.deltaTime`, drains `InputBuffer` each
   tick, calls `CommandProcessor` then `GameSimulation.SimulateTick`
   directly with no network wait.
-- **`LockstepRunner`** — used for networked matches. Same accumulator
+- **`LockstepCore`** — used for networked matches. Same accumulator
   loop as `TickRunner`, but a tick only executes once both the local and
   the remote `TickInput` for that tick number have arrived; it enforces a
   fixed command-processing order (all of P0's commands, then all of P1's)
   and applies an input delay so local input for tick *N* is generated and
   sent ahead of when tick *N* actually simulates, to hide network latency.
+  While stalled, speculating or holding it re-sends every local input the
+  peer may still lack (from `PEER_LAG_TICKS` behind to the newest), not only
+  the last one: with inputs in flight ahead, one lost packet would otherwise
+  stop both clocks for good while heartbeats kept the link alive. The resend
+  interval runs on its own clock; generating an input must not reset it, or a
+  speculating side (which generates one every tick) resends nothing.
+- **Every input goes out with the six before it** (`REDUNDANT_INPUTS`), one
+  datagram each, so a loss shorter than six ticks is bridged by a later copy
+  with no round trip. Six comes from the lossy-link sweep in
+  `NodeWar.Network.Tests` (`SweepTests`); the constant's comment has the
+  numbers. A side that has just fallen behind its peer's clock runs at 1.5x
+  until it catches up, and the threshold is the peer's own reported delay
+  plus 3 ticks.
+- **Input delay adapts.** A match starts at 2 ticks (200 ms) on both sides,
+  and the first 2 ticks are pre-seeded empty, so the start needs no
+  agreement. After that each side watches the *peer's* inputs arrive: three
+  late ticks in 30 and it asks the peer for one more tick; 20 s calm with 140
+  ms of slack spare and it asks for one fewer (`InputDelayController`). The
+  request travels in two header bytes of every `TickInput`
+  (`senderDelay`, `requestedDelay`, protocol 4) and is absolute, not
+  relative, so duplicate copies do nothing. The peer applies it to its own
+  stamping, between 2 and 6 ticks, at most once a second, ignoring anything
+  out of range and any copy older than a request it already read. Raising the
+  delay generates the extra due inputs at once (empty after the first), so
+  the peer never waits on a tick that does not exist; lowering needs no code.
+  Ticks that ran during a speculation, a hold, a catch-up or a silent peer
+  are ignored, because there lateness is an outage, not a slow link. The
+  delay is not part of the simulation and is not logged: commands are
+  applied on the tick they were stamped for.
+- **Tested against a simulated link.** `LockstepCore` takes its clocks and
+  transport from the caller, so `dotnet/NodeWar.Network.Tests` runs two of
+  them over an in-memory link with loss, burst loss, duplication,
+  reordering, delay, jitter, outages and frame spikes. Each run is judged
+  against the same match on a perfect link with no networking: commands are
+  scripted by the tick they apply on, and the confirmed state hashes must
+  equal that reference, which also catches both peers agreeing on a wrong
+  rollback. `SweepTests` (explicit) prints the numbers behind the tuning
+  constants.
 - **Emotes ride beside lockstep, not inside it.** They are cosmetic, so they
   are never a `GameCommand`: `PacketType.Emote` (8) is a 5-byte packet sent
   twice over UDP and de-duplicated on its sequence number. It never waits for a
-  tick and never reaches `CommandProcessor`. `LockstepRunner` is the networked
+  tick and never reaches `CommandProcessor`. `LockstepCore` is the networked
   `IEmoteChannel`, and a local or bot match gets a `LocalEmoteChannel`. After
-  game over the runner keeps pumping emotes and heartbeats, with no disconnect
+  game over the core keeps pumping emotes and heartbeats, with no disconnect
   check, so a closing emote still arrives. An older build ignores type 8,
   because the packet switch has no default. `EmotePanel` (HUD) applies the
   rate limit (under 5 per 1 s and under 10 per 5 s) on send and again on
   receive, and owns mute.
+- **Recording** — both tick drivers raise `CommandsApplied` (the tick count
+  before, and the commands in the order they were applied — lockstep's P0
+  then P1, the local driver's buffer order) and `HashComputed` (the tick
+  count after, and the hash). `GameManager` feeds both to a
+  `MatchRecorder` for drafted matches; Testing mode is not recorded.
+  The drivers know nothing about logs. Finished logs are saved locally.
+  A ranked match's header carries the server's match ID and the record's
+  player order, which the referee checks. `GameManager` hands its log to `PendingRankedReports`, which keeps it per player and uploads it (after the match, at lobby load, before a ranked queue) until the server answers. Other matches use a
+  local ID and are never reported.
 - **Desync detection** — every 50 ticks
-  (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer computes
+  (`LockstepCore.DESYNC_CHECK_INTERVAL`), each peer computes
   `SimulationStateHasher.ComputeHash(simState)` and includes it in its
-  next outgoing packet; the receiving peer compares it against its own
-  hash for the same tick and fires `OnDesync` on mismatch.
-- **Disconnect detection** — both `DraftManager` (during the draft) and
-  `LockstepRunner` (during the match) track time since the last received
-  packet and fire a disconnect callback if it exceeds a timeout,
-  independent of heartbeat packets sent to keep the connection alive.
+  next outgoing packet; the receiving peer compares a non-zero received
+  hash against its most recent stored local hash and fires `OnDesync` on
+  mismatch. The packet does not name the checkpoint tick; lockstep keeps
+  the two in step (see `docs/simulation-rules.md`, *Desync detection*).
+- **A command's player comes from its sender.** `LockstepCore` stamps the
+  peer's commands with the peer's slot and its own with its own, whatever
+  the wire said, and holds each player to 64 commands a tick. Tick inputs
+  outside what an honest peer could send are ignored. Relay runs over DTLS
+  (protocol 3). Protocol 4 added the two delay bytes to `TickInput`. DirectUDP
+  reads only the connected peer's endpoint.
+  In the Editor and Development Builds, F8/F9/F10 simulate a 1/5/20 s drop
+  on that copy, and its ranked server calls fail for as long
+  (`BackendServices.SimulatedOffline`), as a real lost connection would.
+  Shift drops only outgoing peer packets.
+- **A short blip plays on** (8.2e). An input a little late is ordinary
+  jitter (Relay latency against the input delay) and waits a frame, as
+  plain lockstep did. Once the opponent's input is 300 ms late,
+  `LockstepCore` copies the state (`SimulationState.CopyFrom`) and keeps
+  simulating for up to 20 ticks, predicting the opponent idle. The HUD
+  shows "Opponent's connection is unstable" (in a ranked match, "Reconnecting…"
+  when the server cannot be reached either) only once a speculation has
+  run 5 ticks. Speculative ticks
+  raise `TickSimulated` but are never recorded or hashed. Once the real
+  inputs for the whole span arrive, it rolls back and replays the span with
+  them. That replay is the only pass that records and hashes, and it plays
+  no cues. It always rolls back, even when the inputs were empty, so the
+  path runs on every blip. Past 20 ticks, or on a speculative game over, it
+  rolls back and holds. `RolledBack` lets `GameManager` despawn villager
+  views past the confirmed count (the state respawns them) and drop
+  selections of villagers that no longer exist. After an abandoned span,
+  local inputs already sent for future ticks are not generated again, so
+  input delay does not grow.
+- **Disconnects hold, they do not end the match** (8.2c). `LockstepCore`
+  starts a hold when no tick has advanced for 2 s while unpaused, or when
+  a speculative span runs out. It
+  measures ticks rather than packets because with one-way loss a side keeps
+  receiving heartbeats while it waits on an input that never comes. During
+  a hold it keeps receiving, resending (every 250 ms) and sending
+  heartbeats, and resumes with a fresh clock when the missing input
+  arrives. `GameManager` runs a `DisconnectHold` (Backend/Shared) on those
+  events and shows it in the HUD's hold overlay. The stages are: 0-10 s
+  wait; 10-60 s the player may claim the win (ranked) or leave (private);
+  at 60 s the hold resolves itself. In a ranked match every decision is
+  the server's (see *Holds and presence* below); the local clock only
+  drives the countdown. A ranked hold never ends the match without a server
+  answer. After 90 s with the server unreachable, it offers "Leave match"
+  instead. A phone returning from the background asks for the match's
+  result once, in case it was decided while away. A resolved hold stops
+  the lockstep core and words the end card for its cause. The uGUI HUD has no overlay and keeps the old
+  immediate end. The draft still has its own disconnect end in
+  `DraftManager`: 5 s without a packet, or 60 s for a peer that has sent
+  nothing yet, such as one still loading the scene (the draft shows a
+  waiting cue until both are ready).
+
+## Backend, match logs and the referee
+
+Accounts, progression, inventory and ranked match records use Unity
+Gaming Services: Authentication, Cloud Code (C#), Cloud Save and
+Matchmaker, with no custom game server. Matches stay peer-to-peer
+lockstep. Cloud Code verifies submitted logs and settles eligible,
+agreeing reports, and a ranked match uploads its log when it ends. The staged detail is in [BACKEND-PLAN.md](../BACKEND-PLAN.md)
+(temporary; Notion **Phases** own future work).
+
+```
+Assets/Scripts/Backend/          client services, NodeWar.Backend
+  GameServices                   UGS init + sign-in; the environment follows the build type
+  BackendServices                picks the UGS service or its local fake (Tools > Node War >
+                                 Backend > Use Local Fakes); remembers state for the current account
+  Ugs*Service / Local*Service    accounts (Unity Player Accounts), player state, inventory,
+                                 match reports, match history, ranked queue (tickets) and
+                                 ranked match (rendezvous, confirm, leave)
+  PendingRankedReports           ranked logs kept per player and retried until the server answers
+  Shared/                        DTOs and rules compiled by Unity AND linked into Cloud Code:
+                                 player records, catalog/equip rules, protocol version and service contracts
+  Shared/RankedQueuePresenter     UnityEngine-free ranked attempt controller and IRankedQueueView
+  Shared/RankedRendezvous         UnityEngine-free join-code exchange around IRankedConnection
+  Shared/DisconnectHold           UnityEngine-free three-stage hold: presence, claim, resolution
+  Shared/RankedResultTracker      UnityEngine-free end-card follower of the server's result
+  Catalog/                       CatalogDefinition asset + editor Generate / Export
+  Editor/BalanceExport           writes the shared balance for the server, named by content hash
+  LocalMatchLogStore             finished logs on disk, newest 20
+Assets/Scripts/MatchLog/         NodeWar.MatchLog: format, MatchRecorder, MatchReplay
+dotnet/NodeWarCloud/             the Cloud Code module (deploy: ugs deploy dotnet/NodeWarCloud -e development)
+dotnet/NodeWar.Progression/      rating, RR, arenas, catalog validation, era unlocks, match settlement
+dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the matchmaking rules live here)
+```
+
+- **Services are async and may refuse.** Every client call can fail, and
+  the UI shows what the server returned, never an optimistic guess. Each
+  service has a local fake for offline Editor work and tests. Player
+  state and inventory share rules with the server; report, history and
+  queue fakes provide configurable results rather than server settlement.
+  `BackendServices` keeps `LastKnownState` scoped to the current account,
+  ignores calls that finish after an account switch, and raises
+  `StateChanged` when accepted state arrives.
+- **Cloud Code entry points** in `NodeWarCloud` are `GetPlayerState`,
+  `Equip`, `VerifyMatch`, `ReportMatch`, `GetMatchHistory`, `Rendezvous`,
+  `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`,
+  `ResolveHold`, `Matchmaker_Allocate` and `Matchmaker_Poll`. The last two
+  are allocator callbacks and refuse calls carrying a player identity; the
+  six ranked-match functions refuse calls without one.
+- **Player data** has four protected Cloud Save state records (`rating`,
+  `rank`, `inventory`, `history`) plus an `activeMatch` claim and a `discipline`
+  record: the player reads them, only Cloud Code writes.
+  `GetPlayerState` creates missing state records and grants catalog
+  variants through the highest arena reached, plus default skins. It
+  fills missing equipment with era-0 variants and default skins; match
+  allocation creates the active-match claim.
+- **Catalog and eras.** Arena N permits variants up to era N; ownership
+  persists after demotion, while equipped variants are clamped to the
+  current arena. Every suit and district type
+  is a catalog base (`suit.warrior`, `district.rampart`) with one variant
+  per era (`suit.warrior.e3`) and skins (`skin.suit.warrior.default`).
+  Item IDs are never renamed or reused: the export refuses a catalog that
+  breaks `CatalogValidation.ValidateAgainstPrevious`. `Equip` checks
+  ownership, the base, and that the era is usable at the current arena.
+  A match launches with the equipped eras and skins (`LoadoutData`), the
+  simulation plays each district at its placer's era, and skins never
+  reach the simulation.
+- **Match log** (`.nwml`): magic, format version, then tagged,
+  length-prefixed chunks — HEADER, BOARD, LOADOUTS, DRAFT, TICKS, HASHES,
+  RESULT, ERAS, SKINS. A reader skips tags it does not know; a known tag
+  never changes meaning, so a changed payload gets a new tag. The header
+  carries protocol, simulation version and content hash.
+- **Referee.** `VerifyMatch` rebuilds the match with `MatchFactory`,
+  replays the logged commands with `MatchReplay`, and checks every logged
+  hash, the final hash and a declared winning result. It proves a log is
+  consistent, not that its commands are authentic; reporting does not add
+  command signatures. Replays share a process-wide lock because
+  `MatchFactory.Configure` sets simulation statics.
+- **Match records and settlement.** `MatchAllocation` stores a private
+  Cloud Save custom item `match-<id>` with the roster, build identity and
+  pre-match rating, rank and owned-variant snapshots. `ActiveMatchClaims`
+  allows one active match per player, with expiring claims and conditional
+  writes. `ReportMatch` checks membership and log eligibility against that
+  record, then runs the referee. Two accepted reports must agree on
+  winner, end tick and final hash before rating, RR, arena and inventory
+  updates settle. Retries are idempotent; disputed or expired matches do
+  not settle. `GetMatchHistory` reads the caller's history and stored match
+  outcomes. `MatchSettler` is the one settlement path, called with the
+  agreed winner or, for a forfeit, the opponent of `forfeitedBy`, which is
+  committed under the record's write lock before any player write.
+- **Leaving a match.** `MatchRendezvous.Leave` voids a match that never
+  started (neither both players' `ConfirmConnected` nor an accepted report), an expired one, or a pending one
+  past its 10-minute timeout, releasing both claims. It settles a forfeit or an agreement already committed to the record. A played match needs an explicit forfeit; a caller who has already reported waits.
+  An in-match **surrender** (ranked only, behind a confirm in the settings
+  card) is that same forfeit, sent mid-match; the match ends on this side
+  once the server has it, and the opponent's hold learns it from the server.
+- **Holds and presence** (`MatchHold`). Every ranked client calls
+  `Presence` for the whole match, from the draft on: every 4 s as a
+  heartbeat (`PresenceHeartbeat`) and every second while holding or speculating. A hold
+  is self-declared, so absence has to be something the server observed:
+  a player who is playing is always "seen". `Presence` writes only the
+  caller's own `presence-0`/`presence-1` key in the match's custom item,
+  with no lock, and never the `record` key, so the two players' writes
+  never conflict with each other or with settlement. `ResolveHold` needs
+  three things: the match started at least 15 s ago, so heartbeats have
+  landed; the caller's server-measured hold is at least 10 s; and the
+  opponent has not been seen for more than 10 s. It then commits
+  `forfeitedBy = abandonedBy = opponent` under the record lock before
+  settling. A void needs **both** players seen and holding (60 s / 50 s),
+  which is what an honest broken link produces in lockstep; a one-sided
+  hold never voids. A committed decision is finished before any claim
+  expiry could void it. Every answer carries the terminal result once
+  there is one. That is how a returning player learns they lost, and how
+  an opponent learns of a surrender. `GetMatchResult` is read-only; its
+  `cause` is Played, Forfeit or Abandoned.
+- **Present but not holding.** A seen opponent that has not held while the
+  caller held 30 s counts as absent. An honest client holds within seconds
+  of its peer, so this one is keeping the match from advancing.
+- **Both players left** (D23). A log that replays cleanly but stops short
+  is kept as unfinished, with each Core's breaches. Once both players have
+  one, the earlier end tick decides: fewer breaches wins, a tie voids, no
+  strikes (`MatchEndCause.BothLeft`).
+- **Strikes and non-reports** (`MatchDiscipline`, `DisconnectPenalty`,
+  8.2d). A hold settled against `abandonedBy` strikes that player. A
+  Pending match voided by its timeout with one accepted report adds a
+  non-report for the silent player, and the second within 7 days is a
+  strike. The ladder:
+  - Levels 1-2: no block.
+  - Levels 3-4: blocked for 2 min.
+  - Level 5: blocked for 1 h.
+  - Level 6: blocked for 1 day.
+  - Level 7 and above: blocked for 2 days.
+  - One level decays per 16 h without a strike.
+
+  The record lives in its own protected key, `discipline`, outside the
+  settlement batch. Each match records `disciplineApplied`, and claims are
+  released only after it is set, so a failed write is retried by the next
+  terminal call and never applied twice. `Allocate` refuses a blocked
+  player. The queue shows the countdown and does not search.
+- **The result on the end card** (7.4). The first report to arrive leaves
+  a match Pending, so the uploader rarely learns the result from
+  `ReportMatch`. `RankedResultTracker` asks `GetMatchResult` every 2 s for
+  up to 40 s after a ranked match ends, and the end card's rank block shows
+  the RR change and any promotion, a void, a dispute, "still waiting" or
+  "offline". A settled answer is remembered through `BackendServices`, so
+  the lobby strip is current on return.
+- **Ranked matchmaking.** The `ranked` Matchmaker queue uses protected
+  Cloud Save rating and arena data, with a widening rating window and an
+  arena cap. Ticket build identities must match; the allocator also
+  requires the server's protocol and simulation versions and a known
+  balance hash. `UgsRankedQueueService` initializes player records before
+  creating a ticket, polls for a match ID and deletes cancelled tickets.
+  `PlayPopup` drives it through `RankedQueuePresenter` and
+  `IRankedQueueView`: preflight (leave or forfeit a held match), queue,
+  then `RankedRendezvous`. Record slot 0 hosts a Relay room and publishes
+  its join code with `Rendezvous`; slot 1 polls for it and joins. Both
+  confirm the connection, then the draft starts as in private play. A
+  failed ticket or rendezvous voids the match and re-queues, up to three
+  times in a row; a bot match, unranked, is offered after 90 s of search.

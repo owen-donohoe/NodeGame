@@ -5,9 +5,13 @@ description: How to run Assets/Tests/EditMode/ through the plain .NET projects i
 tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
-verified_at_commit: 2241e47
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+verified_at_commit: 3336149
 status: draft
 sources:
   - id: solution
@@ -33,42 +37,44 @@ sources:
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-    last_modified: 2026-08-30T16:44:10-04:00
   - id: tests-edge-weight
     resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
     title: Edge weight cases
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: tests-movement
     resource: Assets/Tests/EditMode/Tests/MovementCorrectnessTests.cs
     title: Movement correctness cases
-    last_modified: 2026-09-02T10:22:51-04:00
   - id: tests-smoke
     resource: Assets/Tests/EditMode/Tests/SimulationSmokeTest.cs
     title: Simulation smoke test
-    last_modified: 2026-08-29T10:56:17-04:00
 ---
 
 # Run the simulation suite without Unity
 
-The same 43 simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
+The same simulation test cases as [run-editmode-tests](run-editmode-tests.md), executed by
 `dotnet test` instead of Unity's Test Runner. No Editor, no licence, no Windows requirement.
 
-The solution holds two test projects. Run everything for pass/fail:
+The solution holds seven test projects. Run everything for pass/fail:
 
 ```
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **115 passed** — 43 from `NodeWar.Simulation.Tests`, 72 from `NodeWar.Lobby.Tests`.
+Expect **1533 passed** (counted 2026-10-02; the table says where each lives, so a changed total
+is easy to place).
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 43 | the determinism baseline, edge weights, movement correctness, a smoke test |
-| `NodeWar.Lobby.Tests` | 72 | `LoadoutData`'s wire format, the loadout editor rules (including when a side is short), item tints, district families, and the in-match command checks held against `CommandProcessor` |
+| `NodeWar.Simulation.Tests` | 207 | `Assets/Tests/EditMode/Tests/`: the determinism baseline, edge weights, movement, production, combat fixes, `MatchFactory`, eras, the balance hash |
+| `NodeWar.Lobby.Tests` | 401 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, item tints, families, the in-match command checks, handshake and emote packets, game settings, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets |
+| `NodeWar.View.Tests` | 189 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings, production readout, draft handover |
+| `NodeWar.MatchLog.Tests` | 64 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS |
+| `NodeWar.Network.Tests` | 115 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants |
+| `NodeWar.Progression.Tests` | 148 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
+| `NodeWarCloud.Tests` | 409 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, era eligibility, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## Producing the receipt
 
-**Do not pass `--logger` to the solution.** Both projects would write the same absolute
+**Do not pass `--logger` to the solution.** Every project would write the same absolute
 `LogFilePath`, and the last to finish overwrites the other — leaving a receipt with no determinism
 cases in it, which the attester correctly rejects but which reads like a broken tool rather than a
 misuse.
@@ -80,7 +86,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 43 passed, and both pinned fingerprints from
+Expect 207 passed, and both pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 

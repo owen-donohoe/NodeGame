@@ -127,7 +127,12 @@ namespace NodeWar.Core
         private NodeWar.View.MovementPathRenderer pathRenderer;
 
         // Network
-        private LockstepRunner lockstepRunner;
+        private LockstepCore lockstep;
+        // Kept so Update and LateUpdate can check for a destroyed manager, as the old shell did each frame.
+        private NetworkManager lockstepNetwork;
+        // The 10 Hz the old shell defaulted to. TickRunner has its own field, and
+        // GameBalanceData.ticksPerSecond is separate and not used here.
+        private const int NetworkTicksPerSecond = 10;
         private NodeWar.Input.BotPlayer botPlayer;
 
         // Game over
@@ -151,15 +156,16 @@ namespace NodeWar.Core
             if (balance == null) { Debug.LogError("[GameManager] GameBalance not assigned!"); return; }
             if (boardConfig == null) { Debug.LogError("[GameManager] BoardConfig not assigned!"); return; }
 
-            GameSimulation.SetBalance(balance.Data);
-            CommandProcessor.SetBalance(balance.Data);
-            state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
+            MatchFactory.Configure(balance.Data, boardConfig.Data);
 
-            Pathfinding.OwnedMultiplier = boardConfig.Data.ownedMultiplier;
-            Pathfinding.PartiallyOwnedMultiplier = boardConfig.Data.partiallyOwnedMultiplier;
-            Pathfinding.UnownedMultiplier = boardConfig.Data.unownedMultiplier;
-            Pathfinding.EnemyPartiallyOwnedMultiplier = boardConfig.Data.enemyPartiallyOwnedMultiplier;
-            Pathfinding.EnemyOwnedMultiplier = boardConfig.Data.enemyOwnedMultiplier;
+            // The lobby's handshake advertised the shared asset's hash. Playing
+            // anything else would pass the handshake and desync mid-match.
+            if (NodeWar.Network.LocalBuildIdentity.ContentHashOf(balance)
+                != NodeWar.Network.LocalBuildIdentity.Current.content)
+                Debug.LogError("[GameManager] GameBalance '" + balance.name + "' is not the shared balance ("
+                    + NodeWar.Config.GameBalance.SharedResourceName + ") the handshake advertised. Peers will desync.");
+
+            state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
 
             inputBuffer = new InputBuffer();
 
@@ -196,6 +202,18 @@ namespace NodeWar.Core
 
             NodeWar.Lobby.LoadoutData loadout = (match != null) ? match.loadout : new NodeWar.Lobby.LoadoutData();
 
+            // The presenter is attached before Initialize: local and bot matches
+            // begin the initial reveal inside it, and a presenter attached later
+            // never sees ShowInitialReveal. Presenter.Initialize only stores the
+            // manager and builds its own UI; it reads no draft state.
+            draftPresenter = CreateDraftPresenter(match);
+
+            if (draftPresenter != null)
+            {
+                draftPresenter.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
+                draftManager.SetDraftUI(draftPresenter);
+            }
+
             draftManager.Initialize(
                 boardConfig,
                 match.isNetworked ? match.networkManager : null,
@@ -210,12 +228,16 @@ namespace NodeWar.Core
             draftManager.OnDraftComplete += OnDraftComplete;
             draftManager.OnDraftDisconnect += OnDraftDisconnect;
 
-            draftPresenter = CreateDraftPresenter(match);
-
-            if (draftPresenter != null)
+            // The record counts the match as started once both confirmed the
+            // connection, which is before the draft, so the server must hear
+            // from this player from here on, or a hold claim could be made
+            // against them mid-draft.
+            if (match.isNetworked && match.isRanked && !string.IsNullOrEmpty(match.matchId))
             {
-                draftPresenter.Initialize(draftManager, match.isNetworked ? match.localPlayerID : 0);
-                draftManager.SetDraftUI(draftPresenter);
+                presenceHeartbeat = new NodeWar.Backend.PresenceHeartbeat(
+                    NodeWar.Backend.BackendServices.RankedMatch, match.matchId);
+                presenceHeartbeat.Decided += OnDecidedByServer;
+                presenceHeartbeat.ReachabilityChanged += OnReachabilityChanged;
             }
         }
 
@@ -276,6 +298,10 @@ namespace NodeWar.Core
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
 
+        // The match log of a drafted match. Null on the testing path, whose
+        // hardcoded board a log's BOARD and DRAFT chunks cannot describe.
+        private NodeWar.MatchLog.MatchRecorder recorder;
+
         private void OnDraftComplete(DraftResult result)
         {
             pendingDraftResult = result;
@@ -312,9 +338,8 @@ namespace NodeWar.Core
 
         private void InitializeFromDraftResult(DraftResult result)
         {
-            InitializeNodesFromDraft(result);
-            InitializePlayers();
-            InitializeVillagers();
+            MatchFactory.Fill(state, balance.Data, boardConfig.Data, result.placements, BuildPlayerSetups());
+            SetCameraHomeAnchors();
             InitializeInputSystems();
 
             MatchConnection match = MatchConnection.Instance;
@@ -337,6 +362,8 @@ namespace NodeWar.Core
                         runner.SetBot(botPlayer);
                 }
             }
+
+            BeginRecording(match, result);
 
             SpawnNodeViews();
             SpawnVillagerViews();
@@ -385,8 +412,7 @@ namespace NodeWar.Core
             TickRunner tickRunner = GetComponent<TickRunner>();
             if (tickRunner != null) tickRunner.Unpause();
 
-            LockstepRunner lockstep = GetComponent<LockstepRunner>();
-            if (lockstep != null) lockstep.Unpause();
+            if (lockstep != null) lockstep.Unpause(Time.time, Time.realtimeSinceStartup);
         }
 
         // ===== TESTING MODE (skip draft, legacy board) =====
@@ -396,8 +422,9 @@ namespace NodeWar.Core
             matchPhase = MatchPhase.Playing;
 
             InitializeNodes();
-            InitializePlayers();
-            InitializeVillagers();
+            MatchFactory.InitializePlayers(state, balance.Data, boardConfig.Data, BuildPlayerSetups());
+            MatchFactory.InitializeVillagers(state, balance.Data, boardConfig.Data);
+            SetCameraHomeAnchors();
             InitializeInputSystems();
 
             MatchConnection match = MatchConnection.Instance;
@@ -439,6 +466,22 @@ namespace NodeWar.Core
 
         private void Update()
         {
+            // Must run before the matchPhase early return below: it pumps packets
+            // and heartbeats while paused during draft transitions, and keeps the
+            // end card's heartbeat, resend and emote link alive after game over,
+            // exactly as the old separate component did every frame.
+            if (lockstep != null && lockstepNetwork != null)
+                lockstep.Update(Time.time, Time.realtimeSinceStartup, Time.deltaTime, Time.unscaledDeltaTime);
+
+            // Outlives the match: the end card keeps asking until the server decides.
+            if (rankedResult != null && rankedResult.IsActive)
+                rankedResult.Tick(Time.realtimeSinceStartup);
+
+            if (disconnectHold != null && disconnectHold.IsHolding && !gameOverHandled)
+                disconnectHold.Tick(Time.realtimeSinceStartup);
+            else if (presenceHeartbeat != null && !gameOverHandled)
+                presenceHeartbeat.Tick(Time.realtimeSinceStartup);
+
             if (matchPhase != MatchPhase.Playing) return;
 
             // Spawn views for bonus villagers created mid-game
@@ -451,8 +494,15 @@ namespace NodeWar.Core
             if (state.gameOver && !gameOverHandled)
             {
                 gameOverHandled = true;
+                FinishRecording(NodeWar.MatchLog.MatchEndReason.Win, state.winnerID);
                 ShowGameOver();
             }
+        }
+
+        // After Update, so the inputs, resends, heartbeats and emotes it queued leave this frame.
+        private void LateUpdate()
+        {
+            if (lockstep != null && lockstepNetwork != null) lockstep.Flush();
         }
 
         // ===== INPUT SYSTEMS =====
@@ -573,11 +623,21 @@ namespace NodeWar.Core
 
         private void OnDestroy()
         {
+            // Quitting or any other scene change mid-match. A no-op once the
+            // match has ended some other way.
+            FinishRecording(NodeWar.MatchLog.MatchEndReason.Abandoned, -1);
+
+            // An answer landing after the scene is gone must not reach its HUD.
+            if (rankedResult != null) rankedResult.Stop();
+
             if (cameraController != null)
                 cameraController.POVChanged -= OnPOVChanged;
 
             if (indicatorDirector != null) indicatorDirector.Dispose();
             if (screenShake != null) screenShake.Dispose();
+
+            lockstep = null;
+            lockstepNetwork = null;
         }
 
         private void StartLocalPlay()
@@ -594,13 +654,269 @@ namespace NodeWar.Core
 
             debugPlayerSwitch.LockToPlayer(localPlayerID);
 
-            lockstepRunner = gameObject.AddComponent<LockstepRunner>();
-            lockstepRunner.Initialize(state, inputBuffer, netManager, localPlayerID);
-            lockstepRunner.OnDisconnect += OnNetworkDisconnect;
-            lockstepRunner.OnDesync += OnDesyncDetected;
-            tickProvider = lockstepRunner;
+            lockstepNetwork = netManager;
+            lockstep = new LockstepCore(UnityLockstepLog.Write);
+            lockstep.Initialize(state, inputBuffer, new NetworkManagerTransport(netManager),
+                localPlayerID, NetworkTicksPerSecond, Time.time, Time.realtimeSinceStartup);
+            lockstep.HoldStarted += OnHoldStarted;
+            lockstep.HoldEnded += OnHoldEnded;
+            lockstep.OnDesync += OnDesyncDetected;
+            lockstep.RolledBack += OnRolledBack;
+            lockstep.SpeculationChanged += OnSpeculationChanged;
+            tickProvider = lockstep;
+
+            // A ranked match has a server record to ask; a private one runs the
+            // same stages on the clock alone.
+            bool ranked = match.isRanked && !string.IsNullOrEmpty(match.matchId);
+            disconnectHold = ranked
+                ? new NodeWar.Backend.DisconnectHold(NodeWar.Backend.BackendServices.RankedMatch, match.matchId)
+                : new NodeWar.Backend.DisconnectHold(null, null);
+            disconnectHold.Changed += OnHoldChanged;
 
             Debug.Log("[GameManager] Network match started. Local player: " + localPlayerID);
+        }
+
+        // ===== DISCONNECT HOLD (8.2c) =====
+
+        private NodeWar.Backend.DisconnectHold disconnectHold;
+        private NodeWar.Backend.PresenceHeartbeat presenceHeartbeat;
+
+        // ===== SPECULATION AND ROLLBACK (8.2e) =====
+
+        /// <summary>
+        /// The lockstep core put the state back to its last confirmed tick. Every
+        /// villager view at or past the confirmed count goes: those villagers
+        /// were spawned in speculation and may not exist, or may be different
+        /// villagers, once the real inputs are replayed. Update respawns whatever
+        /// the state holds next frame, from the state, so no view keeps a stale
+        /// owner or suit.
+        /// </summary>
+        private void OnRolledBack(int villagerCount)
+        {
+            if (villagerTransforms == null || villagerCount >= villagerTransforms.Length)
+            {
+                trackedVillagerCount = Mathf.Min(trackedVillagerCount, villagerCount);
+                return;
+            }
+
+            for (int i = villagerCount; i < villagerTransforms.Length; i++)
+            {
+                if (villagerTransforms[i] == null) continue;
+                // Off now, not at the end of the frame: a view's Update later in
+                // this frame would read past the shortened villager array.
+                villagerTransforms[i].gameObject.SetActive(false);
+                Destroy(villagerTransforms[i].gameObject);
+            }
+
+            System.Array.Resize(ref villagerTransforms, villagerCount);
+            System.Array.Resize(ref villagerOutlines, villagerCount);
+            trackedVillagerCount = villagerCount;
+
+            selectionSystem.DropVillagersFrom(villagerCount);
+            selectionSystem.SetVillagerTransforms(villagerTransforms);
+            if (outlineDriver != null) outlineDriver.SetVillagerGroups(villagerOutlines);
+            if (hitFlashRouter != null) hitFlashRouter.SetVillagerTransforms(villagerTransforms);
+            if (indicatorDirector != null) indicatorDirector.SetVillagerTransforms(villagerTransforms);
+        }
+
+        private void OnSpeculationChanged(bool speculating)
+        {
+            // Off whatever else happened: EndMatch ends a speculation after the
+            // match is already over, and the banner must not outlive it.
+            if (uiToolkitHud != null) uiToolkitHud.ShowConnectionBanner(speculating && !gameOverHandled);
+
+            // Ranked only: ask the server now, once a second while the pill is
+            // up, so the side that dropped is told it was them.
+            if (presenceHeartbeat == null) return;
+            presenceHeartbeat.Urgent = speculating;
+            if (speculating) presenceHeartbeat.ProbeNow(Time.realtimeSinceStartup);
+        }
+
+        private void OnReachabilityChanged(bool unreachable)
+        {
+            if (uiToolkitHud != null) uiToolkitHud.SetConnectionBannerSelfOffline(unreachable);
+        }
+
+        private void OnHoldStarted()
+        {
+            if (gameOverHandled) return;
+            Debug.LogWarning("[GameManager] Opponent silent; holding.");
+
+            // The uGUI HUD has no hold overlay: it keeps the old immediate end.
+            if (uiToolkitHud == null)
+            {
+                OnNetworkDisconnect();
+                return;
+            }
+            disconnectHold.Start(Time.realtimeSinceStartup, presenceHeartbeat != null && presenceHeartbeat.Unreachable);
+        }
+
+        private void OnHoldEnded()
+        {
+            Debug.Log("[GameManager] Connection back; resuming.");
+            disconnectHold.Resume();
+        }
+
+        private void OnHoldChanged(NodeWar.Backend.HoldStatus status)
+        {
+            if (uiToolkitHud == null || gameOverHandled) return;
+
+            switch (status.Stage)
+            {
+                case NodeWar.Backend.HoldStage.None:
+                    uiToolkitHud.HideHold();
+                    break;
+                case NodeWar.Backend.HoldStage.Resolved:
+                    EndByHold(status);
+                    break;
+                default:
+                    uiToolkitHud.ShowHold(status);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// A hold ended the match. The server decided a ranked one; this side
+        /// only stops its lockstep core, records the ending and words it.
+        /// </summary>
+        private void EndByHold(NodeWar.Backend.HoldStatus status)
+        {
+            gameOverHandled = true;
+            lockstep.EndMatch();
+            if (presenceHeartbeat != null) presenceHeartbeat.Stop();
+
+            int viewer = ViewerPlayerID();
+            int opponent = 1 - viewer;
+            string title;
+            string sub;
+            bool won = false;
+            int winner = -1;
+            NodeWar.MatchLog.MatchEndReason reason = NodeWar.MatchLog.MatchEndReason.Disconnect;
+
+            switch (status.Ending)
+            {
+                case NodeWar.Backend.HoldEnding.Won:
+                    title = "Victory"; sub = "Your opponent left the match."; won = true; winner = viewer;
+                    break;
+                case NodeWar.Backend.HoldEnding.OpponentSurrendered:
+                    title = "Victory"; sub = "Your opponent surrendered."; won = true; winner = viewer;
+                    reason = NodeWar.MatchLog.MatchEndReason.Surrender;
+                    break;
+                case NodeWar.Backend.HoldEnding.Lost:
+                    title = "Defeat"; winner = opponent;
+                    sub = status.Result?.cause == NodeWar.Backend.MatchEndCause.BothLeft
+                        ? "You both disconnected. Your opponent's Core had more health."
+                        : status.Result?.cause == NodeWar.Backend.MatchEndCause.Abandoned
+                            ? "You disconnected, and your opponent claimed the win."
+                            : "You were away too long.";
+                    break;
+                case NodeWar.Backend.HoldEnding.Surrendered:
+                    title = "Defeat"; sub = "You surrendered."; winner = opponent;
+                    reason = NodeWar.MatchLog.MatchEndReason.Surrender;
+                    break;
+                case NodeWar.Backend.HoldEnding.Voided:
+                    title = "No result"; sub = "The connection between you broke. The match doesn't count.";
+                    break;
+                case NodeWar.Backend.HoldEnding.ConnectionLost:
+                    title = "Disconnected"; sub = "Your connection was lost.";
+                    break;
+                default:
+                    title = "Disconnected"; sub = "Your opponent didn't come back.";
+                    break;
+            }
+
+            FinishRecording(reason, winner);
+            if (transitionController != null)
+                transitionController.PlayNodeBreakdownWave(nodePresentations, state);
+            uiToolkitHud.ShowMatchEndWith(viewer, title, won, sub);
+        }
+
+        /// <summary>
+        /// A ranked surrender (D18): the server settles it as a forfeit, then
+        /// this side ends. The opponent's hold hears it from the server. If the
+        /// server cannot be reached the match simply goes on.
+        /// </summary>
+        private async void OnSurrenderConfirmed()
+        {
+            MatchConnection match = MatchConnection.Instance;
+            if (gameOverHandled || match == null || !match.isRanked || string.IsNullOrEmpty(match.matchId)) return;
+
+            NodeWar.Backend.LeaveMatchResult result;
+            try
+            {
+                result = await NodeWar.Backend.BackendServices.RankedMatch.LeaveAsync(match.matchId, true);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[GameManager] Surrender failed: " + e.Message);
+                if (this != null && uiToolkitHud != null) uiToolkitHud.SurrenderFailed("Couldn't reach the server. Try again.");
+                return;
+            }
+
+            if (this == null) return;
+            if (gameOverHandled)
+            {
+                // The match ended while the call was out. If the server took the
+                // surrender, that is the result that counts, so the card says so
+                // rather than the tally's Victory. The rank block shows the rest.
+                if (result?.outcome == NodeWar.Backend.LeaveOutcome.Cleared && uiToolkitHud != null)
+                    uiToolkitHud.ShowMatchEndWith(ViewerPlayerID(), "Defeat", false, "You surrendered.");
+                return;
+            }
+            if (result?.outcome != NodeWar.Backend.LeaveOutcome.Cleared)
+            {
+                if (uiToolkitHud != null)
+                    uiToolkitHud.SurrenderFailed(string.IsNullOrEmpty(result?.message) ? "Couldn't surrender." : result.message);
+                return;
+            }
+
+            EndByHold(new NodeWar.Backend.HoldStatus
+            {
+                Stage = NodeWar.Backend.HoldStage.Resolved,
+                Ending = NodeWar.Backend.HoldEnding.Surrendered
+            });
+        }
+
+        /// <summary>
+        /// Back from the background. A phone away long enough may return to a
+        /// match the server has already decided (the opponent claimed it). The
+        /// lockstep core could run a buffered tick or two first, so ask the server once
+        /// rather than waiting for a hold to notice.
+        /// </summary>
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused || gameOverHandled || disconnectHold == null || !disconnectHold.IsRanked) return;
+            MatchConnection match = MatchConnection.Instance;
+            if (match == null || string.IsNullOrEmpty(match.matchId)) return;
+            _ = CheckDecidedAfterPauseAsync(match.matchId);
+        }
+
+        private async System.Threading.Tasks.Task CheckDecidedAfterPauseAsync(string matchId)
+        {
+            NodeWar.Backend.MatchResultView result;
+            try { result = await NodeWar.Backend.BackendServices.RankedMatch.GetResultAsync(matchId); }
+            catch (System.Exception) { return; } // Offline: the hold will say so.
+
+            if (this == null || !NodeWar.Backend.DisconnectHold.IsTerminal(result)) return;
+            OnDecidedByServer(result);
+        }
+
+        /// <summary>
+        /// The server has already ended this match (a surrender, the opponent's
+        /// granted claim) and this side learned it outside a hold: from the
+        /// heartbeat, or on returning from the background.
+        /// </summary>
+        private void OnDecidedByServer(NodeWar.Backend.MatchResultView result)
+        {
+            if (this == null || gameOverHandled || uiToolkitHud == null) return;
+            // Decided during the draft: there is no board or lockstep core to end yet.
+            if (lockstep == null) return;
+            EndByHold(new NodeWar.Backend.HoldStatus
+            {
+                Stage = NodeWar.Backend.HoldStage.Resolved,
+                Ending = NodeWar.Backend.DisconnectHold.EndingFor(result),
+                Result = result
+            });
         }
 
         private void OnNetworkDisconnect()
@@ -608,12 +924,122 @@ namespace NodeWar.Core
             Debug.LogError("[GameManager] Opponent disconnected.");
             if (gameOverHandled) return;
             gameOverHandled = true;
+            lockstep.EndMatch();
+            FinishRecording(NodeWar.MatchLog.MatchEndReason.Disconnect, -1);
             ShowDisconnect();
         }
 
         private void OnDesyncDetected(int tick)
         {
             Debug.LogError("[GameManager] DESYNC at tick " + tick + "! Determinism bug exists.");
+
+            // The lockstep core reports its tick index; the log counts ticks completed.
+            if (recorder != null) recorder.RecordDesync(tick + 1);
+        }
+
+        // ===== MATCH LOG =====
+
+        private void BeginRecording(MatchConnection match, DraftResult result)
+        {
+            int localPlayer = match.isNetworked ? match.localPlayerID : 0;
+            string localId = NodeWar.Backend.BackendServices.Account.Current.PlayerId ?? "";
+            BuildIdentity build = LocalBuildIdentity.Current;
+
+            // A ranked match's ID and roster come from the server's match record,
+            // in its order, which the referee checks. Anything else is local: the
+            // opponent's Player ID never crosses the wire.
+            bool ranked = match.isRanked && match.playerIds != null && match.playerIds.Length == 2;
+
+            var header = new NodeWar.MatchLog.MatchLogHeader
+            {
+                protocol = build.protocol,
+                sim = build.sim,
+                content = build.content,
+                matchId = ranked ? match.matchId : System.Guid.NewGuid().ToString("N"),
+                playerIds = ranked
+                    ? (string[])match.playerIds.Clone()
+                    : new[] { localPlayer == 0 ? localId : "", localPlayer == 1 ? localId : "" },
+                localPlayer = (byte)localPlayer,
+                startUnixSeconds = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                kind = match.isNetworked ? NodeWar.MatchLog.MatchKind.Networked : NodeWar.MatchLog.MatchKind.Bot
+            };
+
+            var loadouts = new NodeWar.MatchLog.PlayerLoadout[2];
+            for (int p = 0; p < 2; p++)
+                loadouts[p] = new NodeWar.MatchLog.PlayerLoadout
+                {
+                    suits = (int[])state.players[p].draftedSuits.Clone(),
+                    nodes = (int[])state.players[p].draftedNodes.Clone(),
+                    suitEras = (int[])state.players[p].suitEras?.Clone(),
+                    districtEras = (int[])state.players[p].districtEras?.Clone(),
+                    skins = LoadoutForPlayer(p, match.loadout).skinIDs
+                };
+
+            recorder = new NodeWar.MatchLog.MatchRecorder(header, boardConfig.Data, loadouts,
+                result.placements ?? new DraftPlacement[0]);
+
+            if (lockstep != null)
+            {
+                lockstep.CommandsApplied += recorder.RecordTick;
+                lockstep.HashComputed += recorder.RecordHash;
+            }
+            else
+            {
+                TickRunner tickRunner = GetComponent<TickRunner>();
+                tickRunner.CommandsApplied += recorder.RecordTick;
+                tickRunner.HashComputed += recorder.RecordHash;
+            }
+        }
+
+        /// <summary>
+        /// Ends the log and saves it. Safe to call from every way a match ends:
+        /// only the first call counts, so a win followed by leaving the end card
+        /// stays a win.
+        /// </summary>
+        private void FinishRecording(NodeWar.MatchLog.MatchEndReason reason, int winner)
+        {
+            if (recorder == null || recorder.IsFinished) return;
+
+            recorder.Finish(new NodeWar.MatchLog.MatchResult
+            {
+                reason = reason,
+                winner = winner,
+                endTick = state.tickCount,
+                finalHash = SimulationStateHasher.ComputeHash(state),
+                firstDesyncTick = -1
+            });
+            byte[] log = recorder.ToBytes();
+            NodeWar.Backend.LocalMatchLogStore.Save(recorder.Log.header.matchId, log);
+
+            // Only a match the server created is reported. Bot and private matches
+            // have no record, so there is nothing to settle and nothing to send.
+            // Kept until the server answers, then uploaded; a failed upload is
+            // retried from the lobby and before the next ranked queue. Not
+            // awaited: the upload must outlive this scene.
+            MatchConnection match = MatchConnection.Instance;
+            if (match != null && match.isRanked && !string.IsNullOrEmpty(match.matchId))
+            {
+                NodeWar.Backend.PendingRankedReports.Add(
+                    NodeWar.Backend.BackendServices.Account.Current?.PlayerId, match.matchId, log);
+                _ = NodeWar.Backend.PendingRankedReports.RetryAsync();
+                TrackRankedResult(match.matchId);
+            }
+        }
+
+        private NodeWar.Backend.RankedResultTracker rankedResult;
+
+        /// <summary>
+        /// Follows the server's decision on this match onto the end card (7.4).
+        /// Starts with the log upload rather than after it: whichever player's
+        /// log lands second settles the match, and polling finds that either way.
+        /// </summary>
+        private void TrackRankedResult(string matchId)
+        {
+            if (uiToolkitHud == null || rankedResult != null) return;
+
+            rankedResult = new NodeWar.Backend.RankedResultTracker(NodeWar.Backend.BackendServices.RankedMatch);
+            rankedResult.Changed += uiToolkitHud.ShowRankedResult;
+            rankedResult.Start(matchId, Time.realtimeSinceStartup);
         }
 
         private void CreateSelectionLasso()
@@ -702,6 +1128,7 @@ namespace NodeWar.Core
 
         private void ReturnToLobby()
         {
+            FinishRecording(NodeWar.MatchLog.MatchEndReason.Abandoned, -1);
             if (MatchConnection.Instance != null)
                 MatchConnection.Instance.Shutdown();
             SceneTransition.Load("Lobby");
@@ -841,8 +1268,17 @@ namespace NodeWar.Core
                 (strength, seconds) => { if (cameraController != null) cameraController.Shake(strength, seconds); });
 
             MatchConnection emoteMatch = MatchConnection.Instance;
+            // The hold overlay's button and the ranked surrender row. The hold
+            // exists by now: StartNetworkPlay runs before InitializeUI.
+            if (disconnectHold != null)
+            {
+                uiToolkitHud.HoldActionClicked += () => disconnectHold.Act(Time.realtimeSinceStartup);
+                uiToolkitHud.SurrenderConfirmed += OnSurrenderConfirmed;
+                uiToolkitHud.EnableSurrender(disconnectHold.IsRanked);
+            }
+
             if (emoteMatch != null && emoteMatch.isNetworked)
-                uiToolkitHud.BindEmotes(lockstepRunner, () => emoteMatch.localPlayerID);
+                uiToolkitHud.BindEmotes(lockstep, () => emoteMatch.localPlayerID);
             else
                 uiToolkitHud.BindEmotes(new LocalEmoteChannel(),
                     () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
@@ -890,79 +1326,6 @@ namespace NodeWar.Core
             }
         }
 
-        // ===== NODE INITIALIZATION (from draft) =====
-
-        private void InitializeNodesFromDraft(DraftResult result)
-        {
-            int GRID_COLS = boardConfig.Data.gridCols;
-            int GRID_ROWS = boardConfig.Data.gridRows;
-            state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
-
-            // Step 1: Create all nodes with grid topology, no district types
-            for (int z = 0; z < GRID_ROWS; z++)
-            {
-                for (int x = 0; x < GRID_COLS; x++)
-                {
-                    int nodeID = z * GRID_COLS + x;
-                    List<int> neighborIDs = new List<int>();
-                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
-                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
-                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
-                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
-
-                    Edge[] edges = new Edge[neighborIDs.Count];
-                    for (int i = 0; i < neighborIDs.Count; i++)
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
-
-                    state.nodes[nodeID] = new NodeData
-                    {
-                        nodeID = nodeID,
-                        gridX = x,
-                        gridZ = z,
-                        edges = edges,
-                        districtType = DistrictType.None,
-                        baseDistrictType = DistrictType.None,
-                        slotType = NodeSlotType.Fixed,
-                        claimBar = 0,
-                        ownerID = -1,
-                        bonusVillagersOnClaim = 0,
-                        materialAllocation = 0
-                    };
-                }
-            }
-
-            // Step 2: Apply BoardConfig initial placements (cores, fixed nodes)
-            if (boardConfig.Data.initialPlacements != null)
-            {
-                for (int i = 0; i < boardConfig.Data.initialPlacements.Length; i++)
-                {
-                    var ip = boardConfig.Data.initialPlacements[i];
-                    int nodeID = ip.gridZ * GRID_COLS + ip.gridX;
-                    state.nodes[nodeID].districtType = ip.districtType;
-                    state.nodes[nodeID].baseDistrictType = ip.districtType;
-                    state.nodes[nodeID].ownerID = ip.ownerID;
-                    state.nodes[nodeID].claimBar = ip.claimBar;
-                }
-            }
-
-            // Step 3: Apply draft placements (unowned, player-chosen positions)
-            if (result.placements != null)
-            {
-                for (int i = 0; i < result.placements.Length; i++)
-                {
-                    var dp = result.placements[i];
-                    int nodeID = dp.gridZ * GRID_COLS + dp.gridX;
-                    state.nodes[nodeID].districtType = dp.districtType;
-                    state.nodes[nodeID].baseDistrictType = dp.districtType;
-                    state.nodes[nodeID].ownerID = -1;
-                    state.nodes[nodeID].slotType = NodeSlotType.Fixed;
-
-                    if (dp.districtType == DistrictType.Village)
-                        state.nodes[nodeID].bonusVillagersOnClaim = balance.Data.bonusVillagersOnVillageClaim;
-                }
-            }
-        }
-
         // ===== NODE INITIALIZATION (legacy testing mode) =====
 
         private void InitializeNodes()
@@ -995,7 +1358,8 @@ namespace NodeWar.Core
                     for (int i = 0; i < neighborIDs.Count; i++)
                         edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
 
-                    int bonus = layout[z, x] == DistrictType.Village ? balance.Data.bonusVillagersOnVillageClaim : 0;
+                    int bonus = layout[z, x] == DistrictType.Village
+                        ? balance.Data.GetDistrictStats(DistrictType.Village, 0).bonusVillagersOnClaim : 0;
                     int ownerID = -1;
                     int claimBar = 0;
                     if (z == 6 && x == 1) { ownerID = 0; claimBar = balance.Data.claimThreshold; }
@@ -1019,58 +1383,59 @@ namespace NodeWar.Core
             }
         }
 
-        private void InitializePlayers()
+        /// <summary>
+        /// Both players' drafted suits and districts, resolved from the lobby
+        /// loadouts. The simulation takes them as types; which loadout belongs
+        /// to which seat is only known here.
+        /// </summary>
+        private PlayerSetup[] BuildPlayerSetups()
         {
-            state.players = new PlayerData[2];
-
             MatchConnection match = MatchConnection.Instance;
             NodeWar.Lobby.LoadoutData loadout = (match != null)
                 ? match.loadout
                 : new NodeWar.Lobby.LoadoutData();
 
-            state.players[0] = new PlayerData
+            var setups = new PlayerSetup[2];
+            for (int p = 0; p < 2; p++)
             {
-                playerID = 0,
-                coreNodeID = FindCoreNodeID(0),
-                food = boardConfig.Data.startingFood,
-                materials = boardConfig.Data.startingMaterials,
-                metal = boardConfig.Data.startingMetal,
-                breachCount = 0,
-                draftedSuits = BuildDraftedSuits(0, loadout),
-                draftedNodes = BuildDraftedNodes(0, loadout)
-            };
-            state.players[1] = new PlayerData
-            {
-                playerID = 1,
-                coreNodeID = FindCoreNodeID(1),
-                food = boardConfig.Data.startingFood,
-                materials = boardConfig.Data.startingMaterials,
-                metal = boardConfig.Data.startingMetal,
-                breachCount = 0,
-                draftedSuits = BuildDraftedSuits(1, loadout),
-                draftedNodes = BuildDraftedNodes(1, loadout)
-            };
-
-            // Correct core node data to match resolved player assignments.
-            // Guards against misconfigured BoardConfig asset ownerID values.
-            int p0CoreID = state.players[0].coreNodeID;
-            int p1CoreID = state.players[1].coreNodeID;
-
-            state.nodes[p0CoreID].ownerID = 0;
-            state.nodes[p0CoreID].claimBar = balance.Data.claimThreshold;
-            state.nodes[p1CoreID].ownerID = 1;
-            state.nodes[p1CoreID].claimBar = -balance.Data.claimThreshold;
-
-            // Where "home" actually is. InitializeSides runs in Awake, before
-            // the board exists, so it can only guess from grid dimensions -- and
-            // its guess is the middle of your back row, which is the board's
-            // centre line, not your core. The cores sit wherever the layout puts
-            // them, so the real positions have to come back here once known.
-            if (cameraController != null)
-            {
-                cameraController.SetHomeAnchor(0, CoreWorldPosition(p0CoreID));
-                cameraController.SetHomeAnchor(1, CoreWorldPosition(p1CoreID));
+                NodeWar.Lobby.LoadoutData own = LoadoutForPlayer(p, loadout);
+                setups[p] = new PlayerSetup
+                {
+                    suits = BuildDraftedSuits(p, loadout),
+                    nodes = BuildDraftedNodes(p, loadout),
+                    suitEras = own.suitEras,
+                    districtEras = own.districtEras
+                };
             }
+            return setups;
+        }
+
+        /// <summary>
+        /// Which loadout a seat plays: the lobby's own outside a match
+        /// connection, otherwise the local or the remote one captured when the
+        /// draft ended. Normalized, so every array is present.
+        /// </summary>
+        private NodeWar.Lobby.LoadoutData LoadoutForPlayer(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
+        {
+            MatchConnection match = MatchConnection.Instance;
+            NodeWar.Lobby.LoadoutData chosen = match == null ? localLoadout
+                : playerID == match.localPlayerID ? cachedLocalLoadout
+                : cachedRemoteLoadout;
+            return NodeWar.Lobby.LoadoutData.Normalized(chosen);
+        }
+
+        /// <summary>
+        /// Where "home" actually is. InitializeSides runs in Awake, before the
+        /// board exists, so it can only guess from grid dimensions -- and its
+        /// guess is the middle of your back row, which is the board's centre
+        /// line, not your core. The cores sit wherever the layout puts them, so
+        /// the real positions have to come back here once known.
+        /// </summary>
+        private void SetCameraHomeAnchors()
+        {
+            if (cameraController == null) return;
+            cameraController.SetHomeAnchor(0, CoreWorldPosition(state.players[0].coreNodeID));
+            cameraController.SetHomeAnchor(1, CoreWorldPosition(state.players[1].coreNodeID));
         }
 
         /// <summary>
@@ -1084,30 +1449,6 @@ namespace NodeWar.Core
                 state.nodes[nodeID].gridX * boardConfig.nodeScale,
                 0f,
                 state.nodes[nodeID].gridZ * boardConfig.nodeScale);
-        }
-
-        private int FindCoreNodeID(int playerID)
-        {
-            // Position-based: P0 owns the highest-Z core, P1 owns the lowest-Z core.
-            // This is robust regardless of ownerID values in the asset.
-            int lowestZNode = -1;
-            int highestZNode = -1;
-            int lowestZ = int.MaxValue;
-            int highestZ = int.MinValue;
-
-            for (int i = 0; i < state.nodes.Length; i++)
-            {
-                if (state.nodes[i].districtType != DistrictType.Core) continue;
-
-                int z = state.nodes[i].gridZ;
-                if (z < lowestZ) { lowestZ = z; lowestZNode = i; }
-                if (z > highestZ) { highestZ = z; highestZNode = i; }
-            }
-
-            if (playerID == 0)
-                return highestZNode >= 0 ? highestZNode : 25;
-            else
-                return lowestZNode >= 0 ? lowestZNode : 2;
         }
 
         private int[] BuildDraftedSuits(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
@@ -1197,54 +1538,7 @@ namespace NodeWar.Core
 
         private SuitType MapSuitIDToType(string suitID)
         {
-            if (suitID == null) return SuitType.None;
-            string lower = suitID.ToLower();
-
-            if (lower.Contains("warrior")) return SuitType.Warrior;
-            if (lower.Contains("guardian")) return SuitType.Guardian;
-            if (lower.Contains("scout")) return SuitType.Scout;
-            if (lower.Contains("berserker")) return SuitType.Berserker;
-            if (lower.Contains("medic")) return SuitType.Medic;
-
-            return SuitType.None;
-        }
-
-        private void InitializeVillagers()
-        {
-            int totalVillagers = boardConfig.Data.startingVillagersPerPlayer * 2;
-            state.villagers = new VillagerData[totalVillagers];
-
-            for (int i = 0; i < totalVillagers; i++)
-            {
-                int owner = (i < boardConfig.Data.startingVillagersPerPlayer) ? 0 : 1;
-                int coreNode = state.players[owner].coreNodeID;
-
-                state.villagers[i] = new VillagerData
-                {
-                    villagerID = i,
-                    ownerID = owner,
-                    currentNodeID = coreNode,
-                    targetNodeID = -1,
-                    movePath = new int[0],
-                    movePathIndex = 0,
-                    moveProgress = 0,
-                    previousNodeID = coreNode,
-                    state = VillagerState.Idle,
-                    suit = SuitType.None,
-                    hp = balance.Data.baseHP,
-                    maxHP = balance.Data.baseHP,
-                    attackDamage = balance.Data.baseAttackDamage,
-                    moveSpeedTicks = balance.Data.baseMoveSpeedTicks,
-                    respawnTicksRemaining = 0,
-                    attackCooldownRemaining = balance.Data.baseAttackCooldownMax,
-                    attackCooldownMax = balance.Data.baseAttackCooldownMax,
-                    combatTargetID = -1,
-                    fightPriority = 0,
-                    isConsumed = false,
-                    productionTicksRemaining = 0,
-                    productionTicksMax = 0
-                };
-            }
+            return NodeWar.Lobby.LoadoutTypes.SuitForLobbyId(suitID);
         }
 
         // ===== VIEW SPAWNING =====

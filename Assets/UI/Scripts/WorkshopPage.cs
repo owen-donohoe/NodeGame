@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -6,8 +9,7 @@ namespace NodeWar.Lobby
 {
     /// <summary>
     /// The Workshop: pick the districts and suits you bring into the draft.
-    /// Laid out exactly as lobby-prototype.html, which is the layout wanted in
-    /// game.
+    /// The lobby-prototype.html layout, with inventory choices below the slots.
     ///
     /// One side at a time. A segmented pill at the top and a floating round
     /// button bottom-right choose Districts or Suits; both call
@@ -82,6 +84,19 @@ namespace NodeWar.Lobby
         private readonly Label pickLabel;
         private readonly Button pickDistricts;
         private readonly Button pickSuits;
+        private readonly Label details;
+        private readonly VisualElement eraRow;
+        private readonly VisualElement skinRow;
+        private readonly Label eraMessage;
+
+        private PlayerState playerState;
+        private Item inspectedItem;
+        private bool isOpen;
+        private int inventoryVisit;
+        private int selectionVisit;
+        private bool inventoryBusy;
+        private string inventoryMessage = "";
+        private Task inventoryIdle = Task.CompletedTask;
 
         private LoadoutEditor loadout = new LoadoutEditor(LoadoutData.CreateEmpty());
         private Tab activeTab = Tab.Districts;
@@ -105,6 +120,14 @@ namespace NodeWar.Lobby
             pickLabel = Root.Q<Label>("workshop-pick-label");
             pickDistricts = Root.Q<Button>("workshop-pick-districts");
             pickSuits = Root.Q<Button>("workshop-pick-suits");
+            details = Root.Q<Label>("workshop-details");
+            eraRow = Root.Q<VisualElement>("workshop-era-row");
+            skinRow = Root.Q<VisualElement>("workshop-skin-row");
+            eraMessage = Root.Q<Label>("workshop-era-message");
+            Root.RegisterCallback<DetachFromPanelEvent>(evt =>
+            {
+                if (evt.target == Root) CloseInventory();
+            });
 
             if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
@@ -150,8 +173,13 @@ namespace NodeWar.Lobby
 
         public override void OnShow()
         {
+            isOpen = true;
+            int visit = ++inventoryVisit;
+            playerState = null;
             LoadFromProfile();
+            Inspect(null);
             Render();
+            _ = LoadInventoryAsync(visit);
         }
 
         /// <summary>
@@ -160,6 +188,7 @@ namespace NodeWar.Lobby
         /// </summary>
         public override void OnHide()
         {
+            CloseInventory();
             SetPickerOpen(false);
             SaveToProfile();
         }
@@ -279,6 +308,7 @@ namespace NodeWar.Lobby
             if (tab != activeTab)
             {
                 activeTab = tab;
+                Inspect(null);
 
                 PlayerProfile profile = PlayerProfile.Instance;
                 if (profile != null) profile.WorkshopTabIndex = (int)tab;
@@ -449,7 +479,7 @@ namespace NodeWar.Lobby
                 {
                     menu.Attach(card, () => new List<LobbyMenuItem>
                     {
-                        new LobbyMenuItem("View details", () => Say(DetailsOf(item))),
+                        new LobbyMenuItem("View details", () => Inspect(item)),
                         new LobbyMenuItem("Add to loadout", () => OnCardClicked(item)),
                         new LobbyMenuItem("Compare", () => Say("Comparing arrives in a later update")),
                     });
@@ -477,6 +507,7 @@ namespace NodeWar.Lobby
         /// </summary>
         private void OnCardClicked(Item item)
         {
+            Inspect(item);
             bool suitsOn = activeTab == Tab.Suits;
 
             if (item.Granted)
@@ -520,8 +551,143 @@ namespace NodeWar.Lobby
                 return;
             }
 
+            Inspect(Find(activeTab == Tab.Suits ? suits : districts, removed));
             SaveToProfile();
             Render();
+        }
+
+        private void CloseInventory()
+        {
+            isOpen = false;
+            inventoryVisit++;
+        }
+
+        private bool IsInventoryActive(int visit) => isOpen && inventoryVisit == visit;
+
+        private void Inspect(Item item)
+        {
+            if (inspectedItem != item)
+            {
+                selectionVisit++;
+                inspectedItem = item;
+                if (!inventoryBusy && playerState != null) inventoryMessage = "";
+            }
+            RenderInventory();
+        }
+
+        private async Task LoadInventoryAsync(int visit)
+        {
+            inventoryBusy = true;
+            inventoryMessage = "Loading inventory...";
+            RenderInventory();
+            try
+            {
+                // A reopened page must not fetch a snapshot before an earlier save finishes.
+                await inventoryIdle;
+                if (!IsInventoryActive(visit)) return;
+                PlayerState result = await BackendServices.PlayerState.GetAsync();
+                if (!IsInventoryActive(visit)) return;
+                if (result == null) throw new InvalidOperationException("Missing player state");
+                playerState = result;
+                inventoryMessage = "";
+            }
+            catch (Exception)
+            {
+                if (IsInventoryActive(visit)) inventoryMessage = "Couldn't load inventory. Loadout editing is still available.";
+            }
+            finally
+            {
+                if (IsInventoryActive(visit))
+                {
+                    inventoryBusy = false;
+                    RenderInventory();
+                }
+            }
+        }
+
+        private async Task EquipInventoryAsync(string baseId, string id, bool skin)
+        {
+            if (!isOpen || inventoryBusy || inspectedItem == null ||
+                LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID) != baseId) return;
+            EraChips.Chip[] chips = skin ? EraChips.SkinsForItem(playerState, baseId) : EraChips.ForItem(playerState, baseId);
+            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return;
+
+            int visit = inventoryVisit;
+            int selection = selectionVisit;
+            var completion = new TaskCompletionSource<bool>();
+            inventoryIdle = completion.Task;
+            inventoryBusy = true;
+            inventoryMessage = "Saving...";
+            RenderInventory();
+            try
+            {
+                var changes = new EquippedRecord();
+                var map = new Dictionary<string, string> { [baseId] = id };
+                if (skin) changes.Skins = map;
+                else changes.Variants = map;
+                PlayerState result = await BackendServices.Inventory.EquipAsync(changes);
+                if (!IsInventoryActive(visit) || selectionVisit != selection) return;
+                if (result == null) throw new InvalidOperationException("Missing player state");
+                playerState = result;
+                inventoryMessage = "";
+            }
+            catch (Exception)
+            {
+                if (IsInventoryActive(visit) && selectionVisit == selection)
+                    inventoryMessage = "Couldn't equip. Please try again.";
+            }
+            finally
+            {
+                completion.TrySetResult(true);
+                if (IsInventoryActive(visit))
+                {
+                    inventoryBusy = false;
+                    if (selectionVisit != selection)
+                    {
+                        // Discard the old selection's response and get a fresh snapshot.
+                        playerState = null;
+                        _ = LoadInventoryAsync(visit);
+                    }
+                    else RenderInventory();
+                }
+            }
+        }
+
+        private void RenderInventory()
+        {
+            if (details != null) details.text = inspectedItem == null
+                ? "Select a card to inspect its eras" : DetailsOf(inspectedItem);
+            string baseId = inspectedItem == null ? null : LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID);
+            RenderChips(eraRow, EraChips.ForItem(playerState, baseId), baseId, false);
+            RenderChips(skinRow, EraChips.SkinsForItem(playerState, baseId), baseId, true);
+            if (eraMessage != null)
+            {
+                eraMessage.text = inventoryMessage;
+                eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+        }
+
+        private void RenderChips(VisualElement row, EraChips.Chip[] chips, string baseId, bool skin)
+        {
+            if (row == null) return;
+            row.Clear();
+            row.style.display = chips.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            row.SetEnabled(!inventoryBusy);
+            foreach (EraChips.Chip chip in chips)
+            {
+                string label = skin ? "Skin: " + chip.ID.Substring(chip.ID.LastIndexOf('.') + 1) : "Era " + chip.Era;
+                if (chip.Equipped) label += "\nEquipped";
+                if (!skin && !chip.Owned) label += "\nArena " + chip.Era;
+                else if (!skin && !chip.Usable) label += "\nNeeds arena " + chip.Era;
+                Button button = new Button { text = label };
+                button.AddToClassList("ui-reset-button");
+                button.AddToClassList("lb-era-chip");
+                button.EnableInClassList("lb-era-chip--locked", !chip.Owned || !chip.Usable);
+                button.EnableInClassList("lb-era-chip--equipped", chip.Equipped);
+                button.SetEnabled(chip.Selectable);
+                button.clicked += async () => await EquipInventoryAsync(baseId, chip.ID, skin);
+                row.Add(button);
+            }
         }
 
         private static string DetailsOf(Item item)

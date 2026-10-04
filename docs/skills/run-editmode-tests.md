@@ -6,39 +6,35 @@ tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-verified_at_commit: ea42e61
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+verified_at_commit: 7584e33
 status: stable
 sources:
   - id: batch-runner
     resource: scripts/run-tests.ps1
     title: Batch-mode EditMode runner
-    last_modified: 2026-08-30T16:44:10-04:00
   - id: live-runner
     resource: scripts/run-tests-live.ps1
     title: Live-Editor EditMode runner
-    last_modified: 2026-08-30T16:44:10-04:00
   - id: bridge
     resource: Assets/Scripts/Editor/TestBridge.cs
     title: TestBridge trigger/done handshake
-    last_modified: 2026-08-30T17:10:45-04:00
   # The suite this document runs. Declared so that adding or removing a case
   # marks the document suspect rather than letting its counts drift.
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-    last_modified: 2026-08-30T16:44:10-04:00
   - id: tests-edge-weight
     resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
     title: Edge weight cases
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: tests-movement
     resource: Assets/Tests/EditMode/Tests/MovementCorrectnessTests.cs
     title: Movement correctness cases
-    last_modified: 2026-09-02T10:22:51-04:00
   - id: tests-smoke
     resource: Assets/Tests/EditMode/Tests/SimulationSmokeTest.cs
     title: Simulation smoke test
-    last_modified: 2026-08-29T10:56:17-04:00
 ---
 
 # Run the EditMode test suite
@@ -53,7 +49,7 @@ document describes them, it does not replace them.
 |---|---|---|
 | How it runs | Spawns Unity in `-batchmode` | Drives the already-open Editor |
 | Editor must be | **Closed** | **Open**, compiled cleanly |
-| Use when | CI, or no Editor session open | Iterating with the project open |
+| Use when | No Editor session open (CI uses `dotnet test`, not this) | Iterating with the project open |
 | Timeout | None (Unity blocks) | 300s waiting for the Editor |
 
 Unity locks a project to one process, so batch mode cannot run while the Editor is open — that is

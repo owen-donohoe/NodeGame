@@ -211,7 +211,8 @@ namespace NodeWar.Simulation
             if (state.nodes[nodeID].ownerID != command.playerID) return;
             if (!bal.CanEquipSuitAtNode(requestedSuit, state.nodes[nodeID].districtType)) return;
             if (!PlayerHasSuitDrafted(state, command.playerID, requestedSuit)) return;
-            if (!bal.TryGetSuitStats(requestedSuit, out SuitStats stats)) return;
+            int suitEra = state.players[command.playerID].SuitEra(requestedSuit);
+            if (!bal.TryGetSuitStats(requestedSuit, suitEra, out SuitStats stats)) return;
             if (state.players[command.playerID].food < stats.foodCost) return;
             if (state.players[command.playerID].materials < stats.materialCost) return;
             // Apply costs
@@ -226,7 +227,7 @@ namespace NodeWar.Simulation
             state.villagers[vid].fightPriority = stats.fightPriority;
             // Apply HP (baseHP + bonusHP, accounting for Rampart if present)
             int newMaxHP = bal.baseHP + stats.bonusHP;
-            if (villager.hasRampartBonus) newMaxHP += bal.rampartMaxHPBonus;
+            newMaxHP += bal.RampartBonusHP(villager);
             state.villagers[vid].maxHP = newMaxHP;
             state.villagers[vid].hp = newMaxHP;
         }
@@ -234,8 +235,7 @@ namespace NodeWar.Simulation
         {
             // Sanctuary cost reduction
             int baseCost = bal.respawnCostFood;
-            int sanctuaryWorkers = CountSanctuaryWorkers(state, playerID);
-            int reductionPercent = bal.sanctuaryRespawnCostReductionPercent * sanctuaryWorkers;
+            int reductionPercent = SanctuaryCostReductionPercent(state, playerID);
             int reduction = (baseCost * reductionPercent) / 100;
             int finalCost = baseCost - reduction;
             if (finalCost < 1) finalCost = 1;
@@ -268,9 +268,13 @@ namespace NodeWar.Simulation
             return false;
         }
 
-        private static int CountSanctuaryWorkers(SimulationState state, int playerID)
+        /// <summary>
+        /// Each working Sanctuary worker takes its Sanctuary era's percentage off
+        /// the respawn cost; the percentages add.
+        /// </summary>
+        private static int SanctuaryCostReductionPercent(SimulationState state, int playerID)
         {
-            int count = 0;
+            int percent = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
@@ -279,9 +283,9 @@ namespace NodeWar.Simulation
                 if (v.isConsumed) continue;
                 if (state.nodes[v.currentNodeID].districtType != DistrictType.Sanctuary) continue;
                 if (state.nodes[v.currentNodeID].ownerID != playerID) continue;
-                count++;
+                percent += bal.GetDistrictStats(DistrictType.Sanctuary, state.nodes[v.currentNodeID].districtEra).respawnCostReductionPercent;
             }
-            return count;
+            return percent;
         }
     }
 }

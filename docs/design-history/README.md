@@ -6,7 +6,11 @@ tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: bc701d1
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+verified_at_commit: 3336149
 status: stable
 sources:
   - id: v21-pdf
@@ -16,7 +20,7 @@ sources:
   - id: districts
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: DistrictType and SuitType — the arena-tier content this doc reconciles
-    last_modified: 2026-08-30T17:51:21-04:00
+    last_modified: 2026-09-25T22:52:42-04:00
   - id: draft-state
     resource: Assets/Scripts/Game/Simulation/DraftState.cs
     title: DraftState — the placement draft the document does not describe
@@ -24,7 +28,7 @@ sources:
   - id: bot
     resource: Assets/Scripts/Game/Input/BotPlayer.cs
     title: BotPlayer — Phase B
-    last_modified: 2026-08-29T10:56:17-04:00
+    last_modified: 2026-09-19T10:33:02-04:00
 ---
 
 # Design history
@@ -62,5 +66,16 @@ is done. A reconciliation against the code at commit `db19485` found:
   authoritative server indefinitely; the current plan is a migration to a
   server-authoritative hybrid.
 
-Full reconciliation and all current planning live in Notion. See `CLAUDE.md`
-for identifiers.
+The list above is a record of that reconciliation and is kept as it was. Three
+of its points have moved since:
+
+- `BotPlayer` has grown to 781 lines.
+- The suit roster is now eleven, including three auto-assigned workers
+  (Merchant, Acolyte, Watcher). Suit and district numbers are per era.
+- The networking direction settled on peer-to-peer lockstep with a server-side
+  referee that replays uploaded match logs, not a server running the match.
+  Arena-tier *eras* are now unlocked by rank on the server; the lobby's
+  suit and district unlocks are still stubbed open (`AllContentUnlocked`).
+
+Full reconciliation and all current planning live in Notion. Identifiers are
+in `docs/notion-workspace.md`.

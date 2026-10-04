@@ -188,8 +188,8 @@ namespace NodeWar.Tests
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].hasRampartBonus = true;
-            state.villagers[0].maxHP += balance.rampartMaxHPBonus;
-            state.villagers[0].hp += balance.rampartMaxHPBonus;
+            state.villagers[0].maxHP += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
+            state.villagers[0].hp += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
             state.villagers[1].state = VillagerState.Dead;
             state.villagers[1].isConsumed = true; // Empty enemy Core allows immediate breach.
             CommandProcessor.ProcessCommand(state, new GameCommand

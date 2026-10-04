@@ -101,6 +101,22 @@ namespace NodeWar.UI
         private Label endTitle;
         private Label endSub;
         private readonly EndRow[] endRows = new EndRow[2];
+        private VisualElement endRank;
+        private Label endRankHeadline;
+        private Label endRankDetail;
+
+        private VisualElement holdRoot;
+        private Label holdTitle;
+        private Label holdLine;
+        private Button holdAction;
+        private VisualElement connectionBanner;
+        private bool surrenderEnabled;
+
+        /// <summary>The hold overlay's one button: claim the win, or leave a private match.</summary>
+        public event System.Action HoldActionClicked;
+
+        /// <summary>The player confirmed a surrender in the settings card.</summary>
+        public event System.Action SurrenderConfirmed;
 
         /// <summary>The player pressed Return to Lobby on the end overlay.</summary>
         public event System.Action ReturnToLobby;
@@ -341,10 +357,21 @@ namespace NodeWar.UI
             endSub = root.Q<Label>("hud-end-sub");
             endRows[0] = new EndRow(root, "a");
             endRows[1] = new EndRow(root, "b");
+            endRank = root.Q<VisualElement>("hud-end-rank");
+            endRankHeadline = root.Q<Label>("hud-end-rank-headline");
+            endRankDetail = root.Q<Label>("hud-end-rank-detail");
 
             Button endReturn = root.Q<Button>("hud-end-return");
             if (endReturn != null)
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
+
+            holdRoot = root.Q<VisualElement>("hud-hold");
+            holdTitle = root.Q<Label>("hud-hold-title");
+            holdLine = root.Q<Label>("hud-hold-line");
+            holdAction = root.Q<Button>("hud-hold-action");
+            connectionBanner = root.Q<VisualElement>("hud-connection");
+            if (holdAction != null)
+                holdAction.clicked += () => { if (HoldActionClicked != null) HoldActionClicked(); };
 
             BuildNodeSheet(root);
             emotePanel.Attach(hudRoot);
@@ -429,8 +456,73 @@ namespace NodeWar.UI
 
             settingsPanel = new MatchSettingsPanel(hudRoot);
             settingsPanel.Changed += ApplyMatchSettings;
+            settingsPanel.SurrenderConfirmed += () => { if (SurrenderConfirmed != null) SurrenderConfirmed(); };
+            settingsPanel.EnableSurrender(surrenderEnabled);
 
             ApplyMatchSettings(settingsPanel.Settings);
+        }
+
+        /// <summary>Ranked matches only: there is a server to surrender to.</summary>
+        public void EnableSurrender(bool enabled)
+        {
+            surrenderEnabled = enabled;
+            if (settingsPanel != null) settingsPanel.EnableSurrender(enabled);
+        }
+
+        public void SurrenderFailed(string message)
+        {
+            if (settingsPanel != null) settingsPanel.SurrenderFailed(message);
+        }
+
+        // ===== DISCONNECT HOLD =====
+
+        /// <summary>
+        /// Shows or updates the hold overlay (8.2c). It covers the board, so
+        /// the node sheet and settings card are put away under it.
+        /// </summary>
+        public void ShowHold(NodeWar.Backend.HoldStatus status)
+        {
+            if (holdRoot == null || status == null) return;
+
+            holdTitle.text = status.Title;
+            holdLine.text = status.Line;
+            bool hasAction = !string.IsNullOrEmpty(status.Action);
+            holdAction.text = hasAction ? status.Action : "";
+            holdAction.style.display = hasAction ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (!holdRoot.ClassListContains("hud__end--on"))
+            {
+                if (settingsPanel != null) settingsPanel.ForceClose();
+                if (indicatorLayer != null) indicatorLayer.Suppress();
+                holdRoot.AddToClassList("hud__end--on");
+            }
+        }
+
+        /// <summary>
+        /// A light banner while the match plays on past a missing opponent input
+        /// (8.2e). It does not cover the board: the player keeps playing.
+        /// </summary>
+        public void ShowConnectionBanner(bool on)
+        {
+            if (connectionBanner != null) connectionBanner.EnableInClassList("hud__connection--on", on);
+        }
+
+        /// <summary>
+        /// Ranked only: the server could not be reached, so the dropped link is
+        /// ours and the pill must not blame the opponent. The uxml's text is the
+        /// opponent wording, which a private match keeps.
+        /// </summary>
+        public void SetConnectionBannerSelfOffline(bool selfOffline)
+        {
+            var label = connectionBanner?.Q<Label>(className: "hud__connection-label");
+            if (label != null) label.text = selfOffline ? "Reconnecting…" : "Opponent's connection is unstable…";
+        }
+
+        public void HideHold()
+        {
+            if (holdRoot == null) return;
+            holdRoot.RemoveFromClassList("hud__end--on");
+            if (indicatorLayer != null) indicatorLayer.Resume();
         }
 
         /// <summary>
@@ -445,6 +537,7 @@ namespace NodeWar.UI
         /// </summary>
         private void ApplyMatchSettings(NodeWar.Lobby.GameSettingsData settings)
         {
+            NodeWar.Core.FrameRateCap.Apply(settings.frameCap);
             emotePanel.ApplySettings(settings);
             if (routeSettings != null)
                 routeSettings.show = settings.opponentRoutes;
@@ -938,6 +1031,23 @@ namespace NodeWar.UI
         }
 
         /// <summary>
+        /// An ending the tally alone does not explain: a hold resolved, a
+        /// surrender. The caller words it; the tally still stands.
+        /// </summary>
+        public void ShowMatchEndWith(int viewerPID, string title, bool won, string sub)
+        {
+            if (state == null || endRoot == null) return;
+
+            HideHold();
+            if (settingsPanel != null) settingsPanel.ForceClose();
+            endTitle.text = title;
+            endTitle.EnableInClassList("hud__end-title--won", won);
+            endSub.text = sub + " " + MatchLength();
+
+            ShowEnd(viewerPID);
+        }
+
+        /// <summary>
         /// The opponent left. Can happen mid-match, so the tally still stands.
         /// </summary>
         public void ShowDisconnected(int viewerPID)
@@ -949,6 +1059,25 @@ namespace NodeWar.UI
             endSub.text = "Your opponent has disconnected. " + MatchLength();
 
             ShowEnd(viewerPID);
+        }
+
+        /// <summary>
+        /// The ranked block under the tally. Called on every change of the
+        /// match's server result, so it starts at "Confirming" and fills in; a
+        /// match that is not ranked never calls it and the block stays hidden.
+        /// </summary>
+        public void ShowRankedResult(NodeWar.Backend.RankedResultStatus status)
+        {
+            if (endRank == null || status == null) return;
+
+            endRankHeadline.text = status.Headline;
+            endRankDetail.text = status.Detail;
+            endRankDetail.style.display = string.IsNullOrEmpty(status.Detail) ? DisplayStyle.None : DisplayStyle.Flex;
+
+            bool gain = status.Phase == NodeWar.Backend.RankedResultPhase.Settled &&
+                        (status.Result?.rrDelta ?? 0) > 0;
+            endRankHeadline.EnableInClassList("hud__end-rank-headline--gain", gain);
+            endRank.AddToClassList("hud__end-rank--on");
         }
 
         private void ShowEnd(int viewerPID)

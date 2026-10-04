@@ -1,47 +1,49 @@
 ---
 type: Domain Model
 title: Game Model
-description: What Node War is — the match model, board, villagers, districts, suits, resources, and win condition, as the simulation actually implements them.
+description: What Node War is — the match model, board, villagers, districts, suits, resources, win condition and eras, as the simulation actually implements them.
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: 67fea34
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+verified_at_commit: 3336149
 status: draft
 sources:
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: DistrictType, SuitType, VillagerState, NodeData, VillagerData, PlayerData
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick and all tick steps
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: balance
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
     title: GameBalanceData.Default, IsCombatSuit, CanEquipSuitAtNode, GetSlotTypeForDistrict
-    last_modified: 2026-08-29T10:56:17-04:00
   - id: board
     resource: Assets/Scripts/Game/Simulation/BoardConfigData.cs
     title: BoardConfigData.Default and InitialNodePlacement
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: pathfinding
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding.FindPath and ownership preference multipliers
-    last_modified: 2026-08-29T01:52:16-04:00
   - id: commands
     resource: Assets/Scripts/Game/Simulation/Commands.cs
     title: CommandType and GameCommand
-    last_modified: 2026-08-14T00:06:30-04:00
   - id: command-processor
     resource: Assets/Scripts/Game/Simulation/CommandProcessor.cs
     title: CommandProcessor.ProcessCommand
-    last_modified: 2026-08-29T10:56:17-04:00
   - id: draft-state
     resource: Assets/Scripts/Game/Simulation/DraftState.cs
     title: DraftState grid occupancy and per-player slots
-    last_modified: 2026-08-24T09:08:13-04:00
   - id: design-history
     resource: docs/design-history/README.md
     title: Design history and v2.1 reconciliation
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: Shared drafted board and static configuration
+  - id: balance-asset
+    resource: Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset
+    title: Currently identical values across eras
 ---
 
 # Game Model
@@ -123,7 +125,8 @@ which was true before, when every order reset the crossing.
 ## Claiming
 
 Every non-Core node has a signed `claimBar`. Positive is player 0, negative is player 1, and
-`claimThreshold` (default 10000) in either direction transfers ownership.
+`claimThreshold` in either direction transfers ownership (10000 in `GameBalanceData.Default()`, 5000
+in the shipped `DefaultGameBalance` asset, which is what a match plays on).
 
 Claiming villagers push the bar by `baseClaimPerTick × claimers` per tick, capped at 4 claimers per
 node. Pushing *against* an opponent's existing lean is multiplied by `decrementMultiplier`
@@ -139,12 +142,14 @@ on claim.
 
 ## Districts
 
-`slotType` determines which drafted upgrade a node can become when claimed.
+`slotType` determines which drafted upgrade a non-`Fixed` node can become when claimed.
+The table gives each district's slot category. The manual draft's `MatchFactory` board
+places every district as `Fixed`, so those districts keep their type and placer's era on capture.
 
 | District | Slot | Role |
 |---|---|---|
 | `None` | Fixed | Empty connector / crossroads |
-| `Core` | Fixed | Home node. Villagers here are always Idle. The breach target. |
+| `Core` | Fixed | Home node. Friendly arrivals idle unless contested. The breach target. |
 | `Farm` | Fixed | Farmer works it → +1 food |
 | `Mine` | Fixed | Miner works it → +1 material |
 | `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0` |
@@ -154,8 +159,8 @@ on claim.
 | `Arsenal` | Army | Equip Warrior, Guardian or Scout |
 | `Shrine` | Healing | Faster passive healing for its owner's villagers standing on it |
 | `Sanctuary` | Healing | Acolyte works it → faster respawns; also the only Medic equip point |
-| `Watchtower` | Affect | Watcher works it → boosts claim rate on **adjacent** friendly-claimed nodes |
-| `Rampart` | Affect | Occupants gain max HP and damage reduction; slows enemy claim decrement |
+| `Watchtower` | Affect | Watcher works it → boosts its owner's claiming on **adjacent** nodes, including neutral and enemy ground |
+| `Rampart` | Affect | Owner's occupants gain max HP and damage reduction; slows claim decrement against an existing lean |
 | `Market` | ResourceSpecial | Merchant works it → alternates +1 food and +1 material |
 
 ## Suits
@@ -168,7 +173,9 @@ Combat suits (`Warrior`, `Guardian`, `Scout`, `Berserker`, `Medic`) are **equipp
 via an `Equip` command and are **permanent until death**. Equipping requires all of: the villager
 is `Idle` and not already combat-suited, it is standing on a node its owner controls, that node's
 district permits the suit, the player **drafted** that suit before the match, and the player can
-pay its food and material cost. A combat-suited villager never works — it idles on owned nodes.
+pay its food and material cost. The balance must contain that suit's stats at the player's era
+or at era 0; an unlisted suit cannot be equipped. A combat-suited villager never works — it idles
+on owned nodes.
 
 `Medic` is the exception in combat: instead of attacking, it heals the most-damaged friendly
 villager on its node.
@@ -184,15 +191,17 @@ employed — capped at 2 workers per node.
 
 When both players have living villagers on the same node, everyone there is forced into `Fighting`.
 
-Targets are assigned **round-robin**, with each side's fighters sorted by `fightPriority`
-descending then `villagerID` ascending — a total order with no ties, which the determinism contract
-requires. Each fighter attacks when its cooldown expires. A defender standing on a Rampart takes
+Targets are assigned **round-robin**: attackers stay in `villagerID` order, while each side's
+target list is sorted by `fightPriority` descending then `villagerID` ascending — a total order
+with no ties, which the determinism contract requires. Each fighter attacks when its cooldown
+expires. A defender with the bonus from an owned Rampart takes
 reduced damage, to a floor of 1.
 
 At 0 HP a villager dies, drops its path, and respawns at its owner's Core after `respawnTicks`
 (default 50), reset to base stats with no suit. A player may also spend food on a `Respawn` command
 to bring a dead villager back immediately instead of waiting. Each Acolyte working a Sanctuary both
-speeds the passive countdown and reduces that food cost.
+speeds the passive countdown and reduces that food cost by its Sanctuary's era-specific values.
+Workers' boosts and cost-reduction percentages add; the paid cost is floored at 1 food.
 
 Combat is deliberately resolved across two separate tick steps. Damage and deaths happen in the
 combat step; survivors decide what to do next in a final post-combat resume step after the
@@ -211,11 +220,39 @@ player, the match ends and the *other* player wins.
 ## The pre-match draft
 
 Before play, players run a turn-based placement draft, tracked by `DraftState`, choosing where
-their district upgrades sit on the grid. What a player drafts determines what their claimed nodes
-become for each slot type.
+their districts sit on the grid. `MatchFactory` builds the starting board from those placements,
+at their placers' eras. They begin unowned and `Fixed`; claiming one does not replace it with the
+claimer's loadout. The simulation still supports non-`Fixed` slots, whose claim upgrades use the
+claimer's drafted district for that slot type.
+
+Both players' base draft nodes in the shipped `DefaultBoardConfig` are the same three districts,
+Farm, Mine and Village. Production is slower than the code defaults: a worker yields food every 40
+ticks, material every 50 and metal every 60, and a Market's secondary material every 55
+(`DefaultGameBalance`, identical in every era).
 
 The draft is a **manual placement** system. The v2.1 design document describes a different
 auto-population scheme; the code is canon. See [design-history](design-history/README.md).
+
+## Eras
+
+Progression is by **arena** (0–5, climbed with rank points), and arena N is **era N**. Every suit
+and every district has one variant per era, and a variant **changes gameplay**: its numbers are its
+own entry in the balance (`SuitStats.era`, `DistrictStats` per district and era). Power creep with
+arena is the progression, deliberately; matchmaking keeps opponents within one arena of each other
+because rating cannot see the era gap.
+
+- A player owns a variant once they have reached its arena, and may field it only while at or above
+  that arena. The server grants and checks this; the lobby only shows it.
+- In a match, a district plays **its placer's era**: the era of whoever drafted it there, or of the
+  claimer when a claim upgrades a non-`Fixed` slot. A slot falling back to its base district uses
+  era 0, as do the board's own fixed placements. A combat suit plays the era its owner fields;
+  a worker's production and district effects use the district's era.
+- Era tables on a player may be missing or short, which means era 0. A balance lookup first tries
+  the requested era, then era 0. Missing suit stats refuse equipping; missing district stats
+  supply zero-valued effects. These numbers live on `SuitStats` / `DistrictStats`, not new globals.
+- Today eras 1–5 are copies of era 0, so every match plays as before until someone tunes them.
+- **Skins** are cosmetic variants of the same items. They travel to the opponent and into the match
+  log, and never reach the simulation.
 
 ## Player commands
 

@@ -1,0 +1,820 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 512b7153e7599314da03e076d4e8fe62, type: 3}
+  m_Name: Catalog
+  m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Backend.CatalogDefinition
+  entries:
+  - id: suit.farmer.e0
+    kind: 0
+    baseId: suit.farmer
+    era: 0
+    retired: 0
+  - id: suit.farmer.e1
+    kind: 0
+    baseId: suit.farmer
+    era: 1
+    retired: 0
+  - id: suit.farmer.e2
+    kind: 0
+    baseId: suit.farmer
+    era: 2
+    retired: 0
+  - id: suit.farmer.e3
+    kind: 0
+    baseId: suit.farmer
+    era: 3
+    retired: 0
+  - id: suit.farmer.e4
+    kind: 0
+    baseId: suit.farmer
+    era: 4
+    retired: 0
+  - id: suit.farmer.e5
+    kind: 0
+    baseId: suit.farmer
+    era: 5
+    retired: 0
+  - id: skin.suit.farmer.default
+    kind: 1
+    baseId: suit.farmer
+    era: -1
+    retired: 0
+  - id: suit.miner.e0
+    kind: 0
+    baseId: suit.miner
+    era: 0
+    retired: 0
+  - id: suit.miner.e1
+    kind: 0
+    baseId: suit.miner
+    era: 1
+    retired: 0
+  - id: suit.miner.e2
+    kind: 0
+    baseId: suit.miner
+    era: 2
+    retired: 0
+  - id: suit.miner.e3
+    kind: 0
+    baseId: suit.miner
+    era: 3
+    retired: 0
+  - id: suit.miner.e4
+    kind: 0
+    baseId: suit.miner
+    era: 4
+    retired: 0
+  - id: suit.miner.e5
+    kind: 0
+    baseId: suit.miner
+    era: 5
+    retired: 0
+  - id: skin.suit.miner.default
+    kind: 1
+    baseId: suit.miner
+    era: -1
+    retired: 0
+  - id: suit.warrior.e0
+    kind: 0
+    baseId: suit.warrior
+    era: 0
+    retired: 0
+  - id: suit.warrior.e1
+    kind: 0
+    baseId: suit.warrior
+    era: 1
+    retired: 0
+  - id: suit.warrior.e2
+    kind: 0
+    baseId: suit.warrior
+    era: 2
+    retired: 0
+  - id: suit.warrior.e3
+    kind: 0
+    baseId: suit.warrior
+    era: 3
+    retired: 0
+  - id: suit.warrior.e4
+    kind: 0
+    baseId: suit.warrior
+    era: 4
+    retired: 0
+  - id: suit.warrior.e5
+    kind: 0
+    baseId: suit.warrior
+    era: 5
+    retired: 0
+  - id: skin.suit.warrior.default
+    kind: 1
+    baseId: suit.warrior
+    era: -1
+    retired: 0
+  - id: suit.smelter.e0
+    kind: 0
+    baseId: suit.smelter
+    era: 0
+    retired: 0
+  - id: suit.smelter.e1
+    kind: 0
+    baseId: suit.smelter
+    era: 1
+    retired: 0
+  - id: suit.smelter.e2
+    kind: 0
+    baseId: suit.smelter
+    era: 2
+    retired: 0
+  - id: suit.smelter.e3
+    kind: 0
+    baseId: suit.smelter
+    era: 3
+    retired: 0
+  - id: suit.smelter.e4
+    kind: 0
+    baseId: suit.smelter
+    era: 4
+    retired: 0
+  - id: suit.smelter.e5
+    kind: 0
+    baseId: suit.smelter
+    era: 5
+    retired: 0
+  - id: skin.suit.smelter.default
+    kind: 1
+    baseId: suit.smelter
+    era: -1
+    retired: 0
+  - id: suit.guardian.e0
+    kind: 0
+    baseId: suit.guardian
+    era: 0
+    retired: 0
+  - id: suit.guardian.e1
+    kind: 0
+    baseId: suit.guardian
+    era: 1
+    retired: 0
+  - id: suit.guardian.e2
+    kind: 0
+    baseId: suit.guardian
+    era: 2
+    retired: 0
+  - id: suit.guardian.e3
+    kind: 0
+    baseId: suit.guardian
+    era: 3
+    retired: 0
+  - id: suit.guardian.e4
+    kind: 0
+    baseId: suit.guardian
+    era: 4
+    retired: 0
+  - id: suit.guardian.e5
+    kind: 0
+    baseId: suit.guardian
+    era: 5
+    retired: 0
+  - id: skin.suit.guardian.default
+    kind: 1
+    baseId: suit.guardian
+    era: -1
+    retired: 0
+  - id: suit.scout.e0
+    kind: 0
+    baseId: suit.scout
+    era: 0
+    retired: 0
+  - id: suit.scout.e1
+    kind: 0
+    baseId: suit.scout
+    era: 1
+    retired: 0
+  - id: suit.scout.e2
+    kind: 0
+    baseId: suit.scout
+    era: 2
+    retired: 0
+  - id: suit.scout.e3
+    kind: 0
+    baseId: suit.scout
+    era: 3
+    retired: 0
+  - id: suit.scout.e4
+    kind: 0
+    baseId: suit.scout
+    era: 4
+    retired: 0
+  - id: suit.scout.e5
+    kind: 0
+    baseId: suit.scout
+    era: 5
+    retired: 0
+  - id: skin.suit.scout.default
+    kind: 1
+    baseId: suit.scout
+    era: -1
+    retired: 0
+  - id: suit.berserker.e0
+    kind: 0
+    baseId: suit.berserker
+    era: 0
+    retired: 0
+  - id: suit.berserker.e1
+    kind: 0
+    baseId: suit.berserker
+    era: 1
+    retired: 0
+  - id: suit.berserker.e2
+    kind: 0
+    baseId: suit.berserker
+    era: 2
+    retired: 0
+  - id: suit.berserker.e3
+    kind: 0
+    baseId: suit.berserker
+    era: 3
+    retired: 0
+  - id: suit.berserker.e4
+    kind: 0
+    baseId: suit.berserker
+    era: 4
+    retired: 0
+  - id: suit.berserker.e5
+    kind: 0
+    baseId: suit.berserker
+    era: 5
+    retired: 0
+  - id: skin.suit.berserker.default
+    kind: 1
+    baseId: suit.berserker
+    era: -1
+    retired: 0
+  - id: suit.medic.e0
+    kind: 0
+    baseId: suit.medic
+    era: 0
+    retired: 0
+  - id: suit.medic.e1
+    kind: 0
+    baseId: suit.medic
+    era: 1
+    retired: 0
+  - id: suit.medic.e2
+    kind: 0
+    baseId: suit.medic
+    era: 2
+    retired: 0
+  - id: suit.medic.e3
+    kind: 0
+    baseId: suit.medic
+    era: 3
+    retired: 0
+  - id: suit.medic.e4
+    kind: 0
+    baseId: suit.medic
+    era: 4
+    retired: 0
+  - id: suit.medic.e5
+    kind: 0
+    baseId: suit.medic
+    era: 5
+    retired: 0
+  - id: skin.suit.medic.default
+    kind: 1
+    baseId: suit.medic
+    era: -1
+    retired: 0
+  - id: suit.merchant.e0
+    kind: 0
+    baseId: suit.merchant
+    era: 0
+    retired: 0
+  - id: suit.merchant.e1
+    kind: 0
+    baseId: suit.merchant
+    era: 1
+    retired: 0
+  - id: suit.merchant.e2
+    kind: 0
+    baseId: suit.merchant
+    era: 2
+    retired: 0
+  - id: suit.merchant.e3
+    kind: 0
+    baseId: suit.merchant
+    era: 3
+    retired: 0
+  - id: suit.merchant.e4
+    kind: 0
+    baseId: suit.merchant
+    era: 4
+    retired: 0
+  - id: suit.merchant.e5
+    kind: 0
+    baseId: suit.merchant
+    era: 5
+    retired: 0
+  - id: skin.suit.merchant.default
+    kind: 1
+    baseId: suit.merchant
+    era: -1
+    retired: 0
+  - id: suit.acolyte.e0
+    kind: 0
+    baseId: suit.acolyte
+    era: 0
+    retired: 0
+  - id: suit.acolyte.e1
+    kind: 0
+    baseId: suit.acolyte
+    era: 1
+    retired: 0
+  - id: suit.acolyte.e2
+    kind: 0
+    baseId: suit.acolyte
+    era: 2
+    retired: 0
+  - id: suit.acolyte.e3
+    kind: 0
+    baseId: suit.acolyte
+    era: 3
+    retired: 0
+  - id: suit.acolyte.e4
+    kind: 0
+    baseId: suit.acolyte
+    era: 4
+    retired: 0
+  - id: suit.acolyte.e5
+    kind: 0
+    baseId: suit.acolyte
+    era: 5
+    retired: 0
+  - id: skin.suit.acolyte.default
+    kind: 1
+    baseId: suit.acolyte
+    era: -1
+    retired: 0
+  - id: suit.watcher.e0
+    kind: 0
+    baseId: suit.watcher
+    era: 0
+    retired: 0
+  - id: suit.watcher.e1
+    kind: 0
+    baseId: suit.watcher
+    era: 1
+    retired: 0
+  - id: suit.watcher.e2
+    kind: 0
+    baseId: suit.watcher
+    era: 2
+    retired: 0
+  - id: suit.watcher.e3
+    kind: 0
+    baseId: suit.watcher
+    era: 3
+    retired: 0
+  - id: suit.watcher.e4
+    kind: 0
+    baseId: suit.watcher
+    era: 4
+    retired: 0
+  - id: suit.watcher.e5
+    kind: 0
+    baseId: suit.watcher
+    era: 5
+    retired: 0
+  - id: skin.suit.watcher.default
+    kind: 1
+    baseId: suit.watcher
+    era: -1
+    retired: 0
+  - id: district.farm.e0
+    kind: 0
+    baseId: district.farm
+    era: 0
+    retired: 0
+  - id: district.farm.e1
+    kind: 0
+    baseId: district.farm
+    era: 1
+    retired: 0
+  - id: district.farm.e2
+    kind: 0
+    baseId: district.farm
+    era: 2
+    retired: 0
+  - id: district.farm.e3
+    kind: 0
+    baseId: district.farm
+    era: 3
+    retired: 0
+  - id: district.farm.e4
+    kind: 0
+    baseId: district.farm
+    era: 4
+    retired: 0
+  - id: district.farm.e5
+    kind: 0
+    baseId: district.farm
+    era: 5
+    retired: 0
+  - id: skin.district.farm.default
+    kind: 1
+    baseId: district.farm
+    era: -1
+    retired: 0
+  - id: district.mine.e0
+    kind: 0
+    baseId: district.mine
+    era: 0
+    retired: 0
+  - id: district.mine.e1
+    kind: 0
+    baseId: district.mine
+    era: 1
+    retired: 0
+  - id: district.mine.e2
+    kind: 0
+    baseId: district.mine
+    era: 2
+    retired: 0
+  - id: district.mine.e3
+    kind: 0
+    baseId: district.mine
+    era: 3
+    retired: 0
+  - id: district.mine.e4
+    kind: 0
+    baseId: district.mine
+    era: 4
+    retired: 0
+  - id: district.mine.e5
+    kind: 0
+    baseId: district.mine
+    era: 5
+    retired: 0
+  - id: skin.district.mine.default
+    kind: 1
+    baseId: district.mine
+    era: -1
+    retired: 0
+  - id: district.village.e0
+    kind: 0
+    baseId: district.village
+    era: 0
+    retired: 0
+  - id: district.village.e1
+    kind: 0
+    baseId: district.village
+    era: 1
+    retired: 0
+  - id: district.village.e2
+    kind: 0
+    baseId: district.village
+    era: 2
+    retired: 0
+  - id: district.village.e3
+    kind: 0
+    baseId: district.village
+    era: 3
+    retired: 0
+  - id: district.village.e4
+    kind: 0
+    baseId: district.village
+    era: 4
+    retired: 0
+  - id: district.village.e5
+    kind: 0
+    baseId: district.village
+    era: 5
+    retired: 0
+  - id: skin.district.village.default
+    kind: 1
+    baseId: district.village
+    era: -1
+    retired: 0
+  - id: district.barracks.e0
+    kind: 0
+    baseId: district.barracks
+    era: 0
+    retired: 0
+  - id: district.barracks.e1
+    kind: 0
+    baseId: district.barracks
+    era: 1
+    retired: 0
+  - id: district.barracks.e2
+    kind: 0
+    baseId: district.barracks
+    era: 2
+    retired: 0
+  - id: district.barracks.e3
+    kind: 0
+    baseId: district.barracks
+    era: 3
+    retired: 0
+  - id: district.barracks.e4
+    kind: 0
+    baseId: district.barracks
+    era: 4
+    retired: 0
+  - id: district.barracks.e5
+    kind: 0
+    baseId: district.barracks
+    era: 5
+    retired: 0
+  - id: skin.district.barracks.default
+    kind: 1
+    baseId: district.barracks
+    era: -1
+    retired: 0
+  - id: district.forge.e0
+    kind: 0
+    baseId: district.forge
+    era: 0
+    retired: 0
+  - id: district.forge.e1
+    kind: 0
+    baseId: district.forge
+    era: 1
+    retired: 0
+  - id: district.forge.e2
+    kind: 0
+    baseId: district.forge
+    era: 2
+    retired: 0
+  - id: district.forge.e3
+    kind: 0
+    baseId: district.forge
+    era: 3
+    retired: 0
+  - id: district.forge.e4
+    kind: 0
+    baseId: district.forge
+    era: 4
+    retired: 0
+  - id: district.forge.e5
+    kind: 0
+    baseId: district.forge
+    era: 5
+    retired: 0
+  - id: skin.district.forge.default
+    kind: 1
+    baseId: district.forge
+    era: -1
+    retired: 0
+  - id: district.camp.e0
+    kind: 0
+    baseId: district.camp
+    era: 0
+    retired: 0
+  - id: district.camp.e1
+    kind: 0
+    baseId: district.camp
+    era: 1
+    retired: 0
+  - id: district.camp.e2
+    kind: 0
+    baseId: district.camp
+    era: 2
+    retired: 0
+  - id: district.camp.e3
+    kind: 0
+    baseId: district.camp
+    era: 3
+    retired: 0
+  - id: district.camp.e4
+    kind: 0
+    baseId: district.camp
+    era: 4
+    retired: 0
+  - id: district.camp.e5
+    kind: 0
+    baseId: district.camp
+    era: 5
+    retired: 0
+  - id: skin.district.camp.default
+    kind: 1
+    baseId: district.camp
+    era: -1
+    retired: 0
+  - id: district.shrine.e0
+    kind: 0
+    baseId: district.shrine
+    era: 0
+    retired: 0
+  - id: district.shrine.e1
+    kind: 0
+    baseId: district.shrine
+    era: 1
+    retired: 0
+  - id: district.shrine.e2
+    kind: 0
+    baseId: district.shrine
+    era: 2
+    retired: 0
+  - id: district.shrine.e3
+    kind: 0
+    baseId: district.shrine
+    era: 3
+    retired: 0
+  - id: district.shrine.e4
+    kind: 0
+    baseId: district.shrine
+    era: 4
+    retired: 0
+  - id: district.shrine.e5
+    kind: 0
+    baseId: district.shrine
+    era: 5
+    retired: 0
+  - id: skin.district.shrine.default
+    kind: 1
+    baseId: district.shrine
+    era: -1
+    retired: 0
+  - id: district.arsenal.e0
+    kind: 0
+    baseId: district.arsenal
+    era: 0
+    retired: 0
+  - id: district.arsenal.e1
+    kind: 0
+    baseId: district.arsenal
+    era: 1
+    retired: 0
+  - id: district.arsenal.e2
+    kind: 0
+    baseId: district.arsenal
+    era: 2
+    retired: 0
+  - id: district.arsenal.e3
+    kind: 0
+    baseId: district.arsenal
+    era: 3
+    retired: 0
+  - id: district.arsenal.e4
+    kind: 0
+    baseId: district.arsenal
+    era: 4
+    retired: 0
+  - id: district.arsenal.e5
+    kind: 0
+    baseId: district.arsenal
+    era: 5
+    retired: 0
+  - id: skin.district.arsenal.default
+    kind: 1
+    baseId: district.arsenal
+    era: -1
+    retired: 0
+  - id: district.sanctuary.e0
+    kind: 0
+    baseId: district.sanctuary
+    era: 0
+    retired: 0
+  - id: district.sanctuary.e1
+    kind: 0
+    baseId: district.sanctuary
+    era: 1
+    retired: 0
+  - id: district.sanctuary.e2
+    kind: 0
+    baseId: district.sanctuary
+    era: 2
+    retired: 0
+  - id: district.sanctuary.e3
+    kind: 0
+    baseId: district.sanctuary
+    era: 3
+    retired: 0
+  - id: district.sanctuary.e4
+    kind: 0
+    baseId: district.sanctuary
+    era: 4
+    retired: 0
+  - id: district.sanctuary.e5
+    kind: 0
+    baseId: district.sanctuary
+    era: 5
+    retired: 0
+  - id: skin.district.sanctuary.default
+    kind: 1
+    baseId: district.sanctuary
+    era: -1
+    retired: 0
+  - id: district.watchtower.e0
+    kind: 0
+    baseId: district.watchtower
+    era: 0
+    retired: 0
+  - id: district.watchtower.e1
+    kind: 0
+    baseId: district.watchtower
+    era: 1
+    retired: 0
+  - id: district.watchtower.e2
+    kind: 0
+    baseId: district.watchtower
+    era: 2
+    retired: 0
+  - id: district.watchtower.e3
+    kind: 0
+    baseId: district.watchtower
+    era: 3
+    retired: 0
+  - id: district.watchtower.e4
+    kind: 0
+    baseId: district.watchtower
+    era: 4
+    retired: 0
+  - id: district.watchtower.e5
+    kind: 0
+    baseId: district.watchtower
+    era: 5
+    retired: 0
+  - id: skin.district.watchtower.default
+    kind: 1
+    baseId: district.watchtower
+    era: -1
+    retired: 0
+  - id: district.rampart.e0
+    kind: 0
+    baseId: district.rampart
+    era: 0
+    retired: 0
+  - id: district.rampart.e1
+    kind: 0
+    baseId: district.rampart
+    era: 1
+    retired: 0
+  - id: district.rampart.e2
+    kind: 0
+    baseId: district.rampart
+    era: 2
+    retired: 0
+  - id: district.rampart.e3
+    kind: 0
+    baseId: district.rampart
+    era: 3
+    retired: 0
+  - id: district.rampart.e4
+    kind: 0
+    baseId: district.rampart
+    era: 4
+    retired: 0
+  - id: district.rampart.e5
+    kind: 0
+    baseId: district.rampart
+    era: 5
+    retired: 0
+  - id: skin.district.rampart.default
+    kind: 1
+    baseId: district.rampart
+    era: -1
+    retired: 0
+  - id: district.market.e0
+    kind: 0
+    baseId: district.market
+    era: 0
+    retired: 0
+  - id: district.market.e1
+    kind: 0
+    baseId: district.market
+    era: 1
+    retired: 0
+  - id: district.market.e2
+    kind: 0
+    baseId: district.market
+    era: 2
+    retired: 0
+  - id: district.market.e3
+    kind: 0
+    baseId: district.market
+    era: 3
+    retired: 0
+  - id: district.market.e4
+    kind: 0
+    baseId: district.market
+    era: 4
+    retired: 0
+  - id: district.market.e5
+    kind: 0
+    baseId: district.market
+    era: 5
+    retired: 0
+  - id: skin.district.market.default
+    kind: 1
+    baseId: district.market
+    era: -1
+    retired: 0

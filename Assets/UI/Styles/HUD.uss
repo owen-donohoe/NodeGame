@@ -731,6 +731,61 @@
     color: var(--ink);
 }
 
+/* A pill across the top while the match plays on through a blip (8.2e). */
+.hud__connection {
+    position: absolute;
+    top: var(--space-6);
+    left: 0;
+    right: 0;
+    align-items: center;
+    display: none;
+}
+
+.hud__connection--on {
+    display: flex;
+}
+
+.ui-root .hud__connection-label {
+    font-size: 13px;
+    color: var(--hud-ink);
+    background-color: var(--hud-glass-strong);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
+.hud__end-rank {
+    display: none;
+    align-items: center;
+    margin-bottom: var(--space-5);
+}
+
+.hud__end-rank--on {
+    display: flex;
+}
+
+.ui-root .hud__end-rank-headline {
+    font-size: 22px;
+    color: var(--ink);
+}
+
+/* A gain reads like a win; a loss stays plain ink, as the title does. */
+.ui-root .hud__end-rank-headline--gain {
+    color: var(--confirm-edge);
+}
+
+.ui-root .hud__end-rank-detail {
+    font-size: 13px;
+    color: var(--ink-mute);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
 .ui-root .hud__end-button {
     width: 100%;
     height: 54px;
@@ -939,6 +994,65 @@
     color: var(--ink-mute);
     white-space: normal;
     margin-top: 2px;
+}
+
+/*
+    Surrender (ranked only). Set apart by a rule and quiet until asked: the
+    ask is plain muted text, and only the confirm carries colour. Not red -
+    on this surface red is player 2 - but the orange the HUD uses for "short".
+*/
+.hud__settings-surrender {
+    display: none;
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top-width: 1px;
+    border-top-color: var(--rule);
+}
+
+.hud__settings-surrender--on {
+    display: flex;
+}
+
+.ui-root .hud__settings-surrender-ask {
+    height: var(--target-min);
+    font-size: 13px;
+    color: var(--ink-mute);
+    -unity-text-align: middle-left;
+}
+
+.hud__settings-surrender-confirm {
+    display: none;
+}
+
+.hud__settings-surrender--asking > .hud__settings-surrender-ask {
+    display: none;
+}
+
+.hud__settings-surrender--asking > .hud__settings-surrender-confirm {
+    display: flex;
+}
+
+.hud__settings-surrender-buttons {
+    flex-direction: row;
+}
+
+.ui-root .hud__settings-surrender-choice {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: var(--target-min);
+    font-size: 13px;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.ui-root .hud__settings-surrender-yes {
+    margin-left: var(--space-2);
+    background-color: var(--status-short);
+    border-left-color: var(--status-short-ink);
+    border-right-color: var(--status-short-ink);
+    border-top-color: var(--status-short-ink);
+    border-bottom-color: var(--status-short-ink);
+    color: var(--ink-white);
 }
 
 /* ===================================================================

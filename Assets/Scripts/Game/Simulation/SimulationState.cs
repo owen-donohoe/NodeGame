@@ -72,6 +72,13 @@ namespace NodeWar.Simulation
 
         public NodeSlotType slotType;
         public DistrictType baseDistrictType;
+
+        /// <summary>
+        /// Which era of its district this node plays: the era of the player who
+        /// put the district here (by draft, or by upgrading it on claim). The
+        /// board's own fixed placements are era 0.
+        /// </summary>
+        public int districtEra;
     }
 
     [System.Serializable]
@@ -109,6 +116,13 @@ namespace NodeWar.Simulation
         public int productionTicksRemaining;
         public int productionTicksMax;
         public bool hasRampartBonus;
+
+        /// <summary>
+        /// The era of the Rampart whose bonus this villager holds, so leaving
+        /// takes back exactly what arriving gave. Meaningless without
+        /// hasRampartBonus.
+        /// </summary>
+        public int rampartBonusEra;
     }
 
     [System.Serializable]
@@ -122,6 +136,25 @@ namespace NodeWar.Simulation
         public int breachCount;
         public int[] draftedSuits; // (int)SuitType values this player can equip
         public int[] draftedNodes; // (int)DistrictType values for draft upgrades
+
+        /// <summary>
+        /// The era of each suit and district this player fields, indexed by
+        /// (int)SuitType and (int)DistrictType. Missing or short means era 0.
+        /// </summary>
+        public int[] suitEras;
+        public int[] districtEras;
+
+        public int SuitEra(SuitType suit)
+        {
+            int i = (int)suit;
+            return suitEras != null && i >= 0 && i < suitEras.Length ? suitEras[i] : 0;
+        }
+
+        public int DistrictEra(DistrictType district)
+        {
+            int i = (int)district;
+            return districtEras != null && i >= 0 && i < districtEras.Length ? districtEras[i] : 0;
+        }
     }
 
     // ===== SIMULATION STATE =====
@@ -145,5 +178,53 @@ namespace NodeWar.Simulation
             winnerID = -1;
             defaultEdgeWeight = BoardConfigData.DefaultEdgeWeight;
         }
+
+        /// <summary>
+        /// Makes this state an independent copy of <paramref name="source"/>, in
+        /// place: views, selection and the HUD hold a reference to this object,
+        /// so a rollback (8.2e) must change what it contains, not which object
+        /// it is. Every mutable array is copied fresh so the two never share a
+        /// write. Node edges are shared: they are fixed once the board is built
+        /// and no tick writes them.
+        ///
+        /// Like SimulationStateHasher, this must name every field. A field added
+        /// to any of these types and not copied here is caught by
+        /// SimulationStateCopyTests, which sets every field by reflection.
+        /// </summary>
+        public void CopyFrom(SimulationState source)
+        {
+            if (source == null) throw new System.ArgumentNullException(nameof(source));
+            if (ReferenceEquals(source, this)) return;
+
+            nodes = source.nodes == null ? null : (NodeData[])source.nodes.Clone();
+
+            if (source.villagers == null) villagers = null;
+            else
+            {
+                villagers = (VillagerData[])source.villagers.Clone();
+                for (int i = 0; i < villagers.Length; i++)
+                    villagers[i].movePath = CopyInts(villagers[i].movePath);
+            }
+
+            if (source.players == null) players = null;
+            else
+            {
+                players = (PlayerData[])source.players.Clone();
+                for (int i = 0; i < players.Length; i++)
+                {
+                    players[i].draftedSuits = CopyInts(players[i].draftedSuits);
+                    players[i].draftedNodes = CopyInts(players[i].draftedNodes);
+                    players[i].suitEras = CopyInts(players[i].suitEras);
+                    players[i].districtEras = CopyInts(players[i].districtEras);
+                }
+            }
+
+            tickCount = source.tickCount;
+            gameOver = source.gameOver;
+            winnerID = source.winnerID;
+            defaultEdgeWeight = source.defaultEdgeWeight;
+        }
+
+        private static int[] CopyInts(int[] values) => values == null ? null : (int[])values.Clone();
     }
 }

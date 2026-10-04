@@ -1,0 +1,245 @@
+using UnityEngine;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+namespace NodeWar.Backend
+{
+    /// <summary>
+    /// The one place a caller gets a backend service. Each service has a UGS
+    /// implementation and a local fake; builds always use UGS, and the Editor
+    /// can switch to the fakes (Tools > Node War > Backend) to work offline.
+    /// </summary>
+    public static class BackendServices
+    {
+        /// <summary>The Cloud Code module name: dotnet/NodeWarCloud's solution name.</summary>
+        public const string CloudModule = "NodeWarCloud";
+
+        /// <summary>
+        /// Editor and Development Builds only: set by NetworkManager's F8-F10
+        /// drop keys for the length of a both-ways drop, so the ranked match
+        /// calls fail as they would on a device that lost its connection. A drop
+        /// that cut only the peer link would leave both players visible to the
+        /// server, which is a different case (D12: a broken link voids).
+        /// </summary>
+        public static bool SimulatedOffline { get; set; }
+
+        private static IPlayerStateService playerState;
+        private static IAccountService account;
+        private static IInventoryService inventory;
+        private static IMatchReportService matchReports;
+        private static IMatchHistoryService matchHistory;
+        private static IRankedQueueService rankedQueue;
+        private static IRankedMatchService rankedMatch;
+
+        /// <summary>
+        /// The last player state any backend call returned this session, or null
+        /// before the first. For what must be read synchronously, such as the
+        /// equipped eras a match launches with; anything that can wait should
+        /// ask the service. Only returned while the player it was fetched for is
+        /// still the one signed in, so it never describes someone else.
+        /// </summary>
+        public static PlayerState LastKnownState
+        {
+            get
+            {
+                string current = account?.Current?.PlayerId;
+                return current != null && current == lastKnownFor ? lastKnown : null;
+            }
+        }
+
+        private static PlayerState lastKnown;
+        private static string lastKnownFor;
+
+        /// <summary>Raised after a returned player state becomes available to views.</summary>
+        public static event System.Action StateChanged;
+
+        /// <summary>
+        /// Called with every player state a service returns, along with the
+        /// player ID the call was started for. Discarded, without raising
+        /// <see cref="StateChanged"/>, if that player is no longer the one
+        /// signed in -- the account can change while the call is in flight.
+        /// </summary>
+        internal static void Remember(PlayerState state, string requestedFor)
+        {
+            if (state == null) return;
+            if (!RememberGuard.ShouldRemember(requestedFor, Account.Current?.PlayerId)) return;
+            lastKnown = state;
+            lastKnownFor = requestedFor;
+            StateChanged?.Invoke();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnEnterPlayMode()
+        {
+            playerState = null;
+            account = null;
+            inventory = null;
+            matchReports = null;
+            matchHistory = null;
+            rankedQueue = null;
+            rankedMatch = null;
+            lastKnown = null;
+            lastKnownFor = null;
+            StateChanged = null;
+        }
+
+        public static IPlayerStateService PlayerState
+        {
+            get
+            {
+                if (playerState == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else playerState = new RememberingPlayerStateService(new UgsPlayerStateService());
+                }
+                return playerState;
+            }
+        }
+
+        public static IInventoryService Inventory
+        {
+            get
+            {
+                if (inventory == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else inventory = new RememberingInventoryService(new UgsInventoryService());
+                }
+                return inventory;
+            }
+        }
+
+        private static void CreateLocalServices()
+        {
+            var store = new InMemoryPlayerRecordStore();
+            var localInventory = new LocalInventoryService(store, CatalogBases.All());
+            inventory = new RememberingInventoryService(localInventory);
+            playerState = new RememberingPlayerStateService(new LocalPlayerStateService(store, localInventory.GrantDefaults));
+            matchReports = new LocalMatchReportService();
+            matchHistory = new LocalMatchHistoryService();
+            rankedQueue = new LocalRankedQueueService();
+            rankedMatch = new LocalRankedMatchService();
+        }
+
+        public static IRankedQueueService RankedQueue
+        {
+            get
+            {
+                if (rankedQueue == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else rankedQueue = new UgsRankedQueueService();
+                }
+                return rankedQueue;
+            }
+        }
+
+        public static IRankedMatchService RankedMatch
+        {
+            get
+            {
+                if (rankedMatch == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else rankedMatch = new UgsRankedMatchService();
+                }
+                return rankedMatch;
+            }
+        }
+
+        public static IMatchReportService MatchReports
+        {
+            get
+            {
+                if (matchReports == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else matchReports = new UgsMatchReportService();
+                }
+                return matchReports;
+            }
+        }
+
+        public static IMatchHistoryService MatchHistory
+        {
+            get
+            {
+                if (matchHistory == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else matchHistory = new UgsMatchHistoryService();
+                }
+                return matchHistory;
+            }
+        }
+
+        public static IAccountService Account
+        {
+            get
+            {
+                if (account == null)
+                    account = UseLocalFakes
+                        ? (IAccountService)new LocalAccountService()
+                        : new UgsAccountService();
+                return account;
+            }
+        }
+
+#if UNITY_EDITOR
+        private const string LocalFakesPref = "NodeWar.Backend.UseLocalFakes";
+        private const string LocalFakesMenu = "Tools/Node War/Backend/Use Local Fakes";
+
+        /// <summary>Editor only. Takes effect from the next Play session.</summary>
+        public static bool UseLocalFakes => EditorPrefs.GetBool(LocalFakesPref, false);
+
+        [MenuItem(LocalFakesMenu)]
+        private static void ToggleLocalFakes()
+        {
+            EditorPrefs.SetBool(LocalFakesPref, !UseLocalFakes);
+        }
+
+        [MenuItem(LocalFakesMenu, true)]
+        private static bool ToggleLocalFakesValidate()
+        {
+            Menu.SetChecked(LocalFakesMenu, UseLocalFakes);
+            return true;
+        }
+#else
+        public static bool UseLocalFakes => false;
+#endif
+    }
+}
+
+namespace NodeWar.Backend
+{
+    /// <summary>Passes calls through and remembers what came back (BackendServices.LastKnownState).</summary>
+    internal sealed class RememberingPlayerStateService : IPlayerStateService
+    {
+        private readonly IPlayerStateService inner;
+        public RememberingPlayerStateService(IPlayerStateService inner) { this.inner = inner; }
+
+        public async System.Threading.Tasks.Task<PlayerState> GetAsync()
+        {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
+            PlayerState state = await inner.GetAsync();
+            BackendServices.Remember(state, requestedFor);
+            return state;
+        }
+    }
+
+    internal sealed class RememberingInventoryService : IInventoryService
+    {
+        private readonly IInventoryService inner;
+        public RememberingInventoryService(IInventoryService inner) { this.inner = inner; }
+
+        public async System.Threading.Tasks.Task<PlayerState> EquipAsync(EquippedRecord changes)
+        {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
+            PlayerState state = await inner.EquipAsync(changes);
+            BackendServices.Remember(state, requestedFor);
+            return state;
+        }
+    }
+}

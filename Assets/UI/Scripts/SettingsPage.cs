@@ -1,4 +1,5 @@
 using System;
+using NodeWar.Backend;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -6,7 +7,8 @@ namespace NodeWar.Lobby
     /// <summary>
     /// Settings: a push page opened from the gear.
     ///
-    /// Every row reads its value from <see cref="PlayerProfile"/> when the page
+    /// Account identity and actions come from BackendServices. Preference
+    /// rows read their values from <see cref="PlayerProfile"/> when the page
     /// opens and writes it back when it changes, through the profile's existing
     /// save path rather than a second one of its own.
     ///
@@ -42,9 +44,20 @@ namespace NodeWar.Lobby
         private readonly LobbySwitch batterySwitch;
 
         private readonly Label sizeLabel;
+        private readonly Label frameCapLabel;
+        private readonly AccountFlow accountFlow;
+        private readonly Label accountStatus;
+        private readonly Label accountMessage;
+        private readonly Button accountLink;
+        private readonly Button accountSignIn;
+        private readonly Button accountSignOut;
+        private readonly Button accountGuest;
+        private IAccountService account;
+        private int accountVisit;
 
         private GameSettingsData current;
         private int sizeIndex;
+        private int frameCapIndex;
 
         /// <summary>
         /// True while saved values are being pushed into the controls. The
@@ -69,9 +82,29 @@ namespace NodeWar.Lobby
         /// </summary>
         public GameSettingsData Settings => current;
 
-        public SettingsPage(VisualTreeAsset layout)
+        public SettingsPage(VisualTreeAsset layout, AccountFlow accountFlow)
             : base("settings-page", layout, "Settings layout missing - assign SettingsPage.uxml")
         {
+            this.accountFlow = accountFlow;
+            accountStatus = Root.Q<Label>("settings-account-status");
+            accountMessage = Root.Q<Label>("settings-account-message");
+            accountLink = Root.Q<Button>("settings-account-link");
+            accountSignIn = Root.Q<Button>("settings-account-sign-in");
+            accountSignOut = Root.Q<Button>("settings-account-sign-out");
+            accountGuest = Root.Q<Button>("settings-account-guest");
+            if (accountLink != null) accountLink.clicked += async () =>
+            {
+                int visit = accountVisit;
+                await accountFlow.LinkAsync(() => IsOpen && accountVisit == visit);
+            };
+            if (accountSignIn != null) accountSignIn.clicked += async () =>
+            {
+                int visit = accountVisit;
+                await accountFlow.SignInAsync(() => IsOpen && accountVisit == visit);
+            };
+            if (accountSignOut != null) accountSignOut.clicked += async () => await accountFlow.SignOutAsync();
+            if (accountGuest != null) accountGuest.clicked += async () => await accountFlow.EnsureAsync();
+
             masterSlider = Root.Q<Slider>("settings-master");
             musicSlider = Root.Q<Slider>("settings-music");
             effectsSlider = Root.Q<Slider>("settings-effects");
@@ -84,6 +117,7 @@ namespace NodeWar.Lobby
             batterySwitch = Root.Q<LobbySwitch>("settings-battery");
 
             sizeLabel = Root.Q<Label>("settings-size");
+            frameCapLabel = Root.Q<Label>("settings-framecap");
 
             BindSlider(masterSlider);
             BindSlider(musicSlider);
@@ -99,6 +133,9 @@ namespace NodeWar.Lobby
             Button sizeRow = Root.Q<Button>("settings-row-size");
             if (sizeRow != null) sizeRow.clicked += CycleInterfaceSize;
 
+            Button frameCapRow = Root.Q<Button>("settings-row-framecap");
+            if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
+
             Load();
         }
 
@@ -111,11 +148,18 @@ namespace NodeWar.Lobby
         protected override void OnOpen()
         {
             Load();
+            UnsubscribeAccount();
+            account = BackendServices.Account;
+            account.Changed += OnAccountChanged;
+            accountFlow.Changed += RenderAccount;
+            RenderAccount();
+            _ = accountFlow.EnsureAsync();
         }
 
         /// <summary>Flushes whatever the sliders left outstanding.</summary>
         protected override void OnClose()
         {
+            UnsubscribeAccount();
             Commit();
         }
 
@@ -132,7 +176,52 @@ namespace NodeWar.Lobby
         /// </summary>
         public void Flush()
         {
+            UnsubscribeAccount();
             Commit();
+        }
+
+        private void UnsubscribeAccount()
+        {
+            accountVisit++;
+            if (account != null) accountFlow.CloseDialog();
+            if (account != null) account.Changed -= OnAccountChanged;
+            accountFlow.Changed -= RenderAccount;
+            account = null;
+        }
+
+        private void OnAccountChanged(AccountInfo ignored)
+        {
+            RenderAccount();
+        }
+
+        private void RenderAccount()
+        {
+            AccountInfo info = BackendServices.Account.Current;
+            bool guest = info.Status == AccountStatus.Guest;
+            bool linked = info.Status == AccountStatus.Linked;
+            if (accountStatus != null)
+                accountStatus.text = guest ? "Guest — progress is saved on this device only"
+                    : linked ? (string.IsNullOrEmpty(info.DisplayName) ? "Signed in" : "Signed in as " + info.DisplayName)
+                    : "Signed out";
+            if (accountMessage != null)
+            {
+                accountMessage.text = accountFlow.Busy ? accountFlow.BusyText : accountFlow.Message;
+                accountMessage.style.display = string.IsNullOrEmpty(accountMessage.text)
+                    ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+            SetAccountButton(accountLink, guest);
+            SetAccountButton(accountSignIn, !linked);
+            SetAccountButton(accountSignOut, linked);
+            SetAccountButton(accountGuest, !guest && !linked);
+            if (accountSignIn != null)
+                accountSignIn.text = guest ? "Sign in to another account" : "Sign in";
+        }
+
+        private void SetAccountButton(Button button, bool visible)
+        {
+            if (button == null) return;
+            button.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            button.SetEnabled(!accountFlow.Busy);
         }
 
         private void Load()
@@ -146,6 +235,7 @@ namespace NodeWar.Lobby
             // so the controls never show a zeroed struct as if it were chosen.
             current = GameSettingsData.Normalized(current);
             sizeIndex = current.interfaceSize;
+            frameCapIndex = current.frameCap;
 
             loading = true;
 
@@ -161,6 +251,7 @@ namespace NodeWar.Lobby
             SetSwitch(batterySwitch, current.batterySaver);
 
             UpdateSizeLabel();
+            UpdateFrameCapLabel();
 
             loading = false;
             dirty = false;
@@ -197,6 +288,18 @@ namespace NodeWar.Lobby
             sizeIndex = GameSettingsData.NextInterfaceSize(sizeIndex);
             UpdateSizeLabel();
             OnValueChanged(commitNow: true);
+        }
+
+        private void CycleFrameCap()
+        {
+            frameCapIndex = GameSettingsData.NextFrameCap(frameCapIndex);
+            UpdateFrameCapLabel();
+            OnValueChanged(commitNow: true);
+        }
+
+        private void UpdateFrameCapLabel()
+        {
+            if (frameCapLabel != null) frameCapLabel.text = GameSettingsData.FrameCapLabel(frameCapIndex);
         }
 
         private void UpdateSizeLabel()
@@ -236,9 +339,15 @@ namespace NodeWar.Lobby
                 colourblindMarks = ReadSwitch(colourblindSwitch, current.colourblindMarks),
                 reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion),
                 interfaceSize = sizeIndex,
+                frameCap = frameCapIndex,
 
                 cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed),
                 confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand),
+
+                // Edited in the match panel, not here: carried through, or the
+                // first lobby change would reset both to false.
+                opponentRoutes = current.opponentRoutes,
+                opponentEmotes = current.opponentEmotes,
 
                 haptics = ReadSwitch(hapticsSwitch, current.haptics),
                 batterySaver = ReadSwitch(batterySwitch, current.batterySaver)

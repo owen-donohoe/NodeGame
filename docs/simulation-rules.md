@@ -5,42 +5,78 @@ description: The rules Assets/Scripts/Game/Simulation/ must uphold so both peers
 tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
+  # full history: docs/verification-log.md
   - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-verified_at_commit: ea42e61
+  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+verified_at_commit: 3336149
 status: stable
 sources:
   - id: sim-loop
     resource: Assets/Scripts/Game/Simulation/GameSimulation.cs
     title: GameSimulation.SimulateTick and AssignAllCombatTargets
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: SimulationState, NodeData, VillagerData, PlayerData
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: hasher
     resource: Assets/Scripts/Game/Simulation/SimulationStateHasher.cs
     title: SimulationStateHasher.ComputeHash
-    last_modified: 2026-08-30T17:51:21-04:00
   - id: pathfinding
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding integer cost multipliers
-    last_modified: 2026-08-29T01:52:16-04:00
   - id: lockstep
-    resource: Assets/Scripts/Game/Network/LockstepRunner.cs
-    title: LockstepRunner.DESYNC_CHECK_INTERVAL and CompareHash
-    last_modified: 2026-08-30T22:15:29-04:00
+    resource: Assets/Scripts/Game/Network/LockstepCore.cs
+    title: LockstepCore.DESYNC_CHECK_INTERVAL and CompareHash
   - id: draft-manager
     resource: Assets/Scripts/Game/Core/DraftManager.cs
     title: DraftManager.HandleTimeout seed derivation
-    last_modified: 2026-08-30T22:15:29-04:00
+  - id: match-factory
+    resource: Assets/Scripts/Game/Simulation/MatchFactory.cs
+    title: MatchFactory, the one starting board and the statics it sets
+  - id: balance-data
+    resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
+    title: Per-era SuitStats and DistrictStats
+  - id: match-replay
+    resource: Assets/Scripts/MatchLog/MatchReplay.cs
+    title: MatchReplay, refusing other simulation versions
+  - id: sim-version
+    resource: Assets/Scripts/Game/Simulation/SimulationVersion.cs
+    title: SimulationVersion.Current and bump policy
+  - id: balance-hasher
+    resource: Assets/Scripts/Game/Simulation/BalanceHasher.cs
+    title: Balance fingerprint separate from state
+  - id: input-serializer
+    resource: Assets/Scripts/Game/Network/InputSerializer.cs
+    title: Wire layout and build identity comparison
+  - id: build-identity
+    resource: Assets/Scripts/Game/Network/LocalBuildIdentity.cs
+    title: Shared balance content hash
+  - id: baseline-tests
+    resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
+    title: Pinned version equality check
+  - id: balance-tests
+    resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
+    title: Coverage of balance fields
+  - id: game-manager
+    resource: Assets/Scripts/Game/Core/GameManager.cs
+    title: State allocation, drafted setup and new villager views
+  - id: referee
+    resource: dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
+    title: Balance lookup and serialized replays
+  - id: match-log-format
+    resource: Assets/Scripts/MatchLog/MatchLogFormat.cs
+    title: Recorded identity, board and commands
+  - id: match-launcher
+    resource: Assets/UI/Scripts/MatchLauncher.cs
+    title: Versioned lobby handshake
 ---
 
 # Simulation Determinism Contract
 
 `Assets/Scripts/Game/Simulation/` is shared, lockstep-replicated logic.
-Peers exchange only `GameCommand`s (see `docs/architecture.md`'s
+Peers replicate gameplay inputs as `GameCommand`s (see `docs/architecture.md`'s
 networking model) and trust that identical commands produce identical
 `SimulationState` on both machines. Every rule below exists to protect
 that guarantee — a violation doesn't crash anything, it silently diverges
@@ -82,7 +118,7 @@ Why: hash-based collection enumeration order is not guaranteed to be
 identical across runs/machines/insertion histories, so iterating one to
 apply gameplay effects can process entities in a different order on each
 peer. `SimulationState`'s `nodes`, `villagers`, and `players` are all flat
-arrays indexed by ID for this reason. (`LockstepRunner` does use
+arrays indexed by ID for this reason. (`LockstepCore` does use
 `Dictionary` for its own local input bookkeeping, keyed by tick number —
 that data never enters `SimulationState` or the hash, so it's outside
 this rule.)
@@ -98,10 +134,12 @@ combat targets by `fightPriority` descending, then falls back to
 **Randomness must be seeded and derived from replicated state.**
 Why: `UnityEngine.Random` (or any source seeded from wall-clock time or
 per-machine state) produces different sequences on different peers. The
-existing precedent is `DraftManager.HandleTimeout`, which derives a
-deterministic seed from already-replicated values
-(`turnNumber * 7919 + activePlayer * 31`) rather than drawing from a
-stored generator — draft logic runs before `SimulationState` exists.
+existing precedent is `DraftManager.HandleTimeout`'s fallback: if there is
+no valid parked placement, it derives a deterministic seed from
+already-replicated values (`turnNumber * 7919 + activePlayer * 31`). A
+valid parked placement wins instead, and the active peer sends the chosen
+placement to the other peer. This runs before the match starts ticking,
+not before the live game's `SimulationState` object is allocated.
 `SimulationState` does not currently contain a stored RNG field; if a
 mid-match feature needs randomness, the contract is that any RNG state
 must live on `SimulationState` (so it round-trips through the hash) and
@@ -115,7 +153,7 @@ determinism requires. The only notion of time inside `Simulation/` is
 `SimulationState.tickCount` and per-entity tick counters
 (`moveProgress`, `productionTicksRemaining`, `respawnTicksRemaining`,
 etc.). Deciding *when* to call `SimulateTick` based on real time is a
-`Core/`/`Network/` concern (`TickRunner`/`LockstepRunner`); `Simulation/`
+`Core/`/`Network/` concern (`TickRunner`/`LockstepCore`); `Simulation/`
 itself only ever counts ticks.
 
 **Tick order is canonical and must not be reordered:**
@@ -154,6 +192,15 @@ Fields that are set once at construction and never mutated during play
 (on `NodeData`: `gridX`/`gridZ`, `edges`, `bonusVillagersOnClaim`) are
 intentionally excluded — keep it that way rather than hashing static data.
 
+**Era fields are hashed only where they are not 0**: `PlayerData.suitEras`
+/ `districtEras` (index and value, the two tables kept apart by an offset),
+`NodeData.districtEra` and `VillagerData.rampartBonusEra`. An all-era-0
+match therefore hashes exactly as matches did before eras existed, which
+is what keeps the pinned baselines and older match logs valid, while any
+era the peers disagree on still moves the hash. A new field that is 0 in
+every existing match may follow the same pattern for the same reason; any
+other field is hashed unconditionally.
+
 `TickEventLog` is outside this rule because it is outside `SimulationState`:
 the simulation only ever appends to it and never reads it back, so nothing in
 it can change a result, and it is deliberately not hashed. That holds only
@@ -161,14 +208,97 @@ while both halves are true. A step that **reads** the log, or a log that
 moves **onto** `SimulationState`, makes it state, and then it needs hashing
 like everything else. See `docs/architecture.md`, *What a tick did*.
 
+## `SimulationState.CopyFrom`: the rollback point
+
+`LockstepCore` plays on past a missing opponent input for up to 20 ticks
+(8.2e). Then it rolls back to a copy of the last confirmed state and either
+replays the span with the real inputs or holds. `CopyFrom` makes that copy
+**into the same instance**, because views, selection and the HUD hold the
+reference. It copies every array fresh except node `edges`, which are
+fixed once the board is built.
+
+**Every field a state type gains must be copied too**, exactly as it must
+be hashed. `SimulationStateCopyTests` enforces this: it sets every field of
+`SimulationState`, `NodeData`, `VillagerData` and `PlayerData` by
+reflection and fails on any that does not come through, or on a field type
+it does not know how to fill. A field that survives a rollback it should
+not have is a desync, not a cosmetic bug.
+
+Restoring a copy is the one state write the core makes outside
+`CommandProcessor` and `SimulateTick`. It is not game logic: it only puts
+back a state the simulation itself produced, at a tick both peers agree
+on. Speculative ticks are never recorded or hashed; the replay after them
+is the confirmed pass.
+
+## `SimulationVersion` and the content hash
+
+Two builds that play the same inputs differently must refuse each other
+instead of desyncing. The lobby handshake (`InputSerializer`'s
+`BuildIdentity`, sent from `MatchLauncher`) compares three numbers:
+`InputSerializer.ProtocolVersion` (wire layout),
+`SimulationVersion.Current`, and a content hash,
+`BalanceHasher.Hash` over the shared `GameBalance` asset.
+
+- **Bump `SimulationVersion.Current`** in the same commit as any change
+  that alters what the same inputs produce: tick rules, a state field
+  that feeds a result, a deliberate re-pin of the determinism baselines.
+  `DeterminismBaselineTests.SimVersion_MatchesPinnedBaselines` checks that
+  the current version equals the version pinned beside the baselines.
+  It does not detect someone changing only the hash constants; the
+  coordinated bump is a review requirement. Eras needed no bump because
+  existing era-0 inputs still produce the same results and hashes.
+- **Balance edits need no bump.** They move the content hash, which the
+  handshake already compares. `BalanceHasherTests` fails when a
+  `GameBalanceData` field is added without being hashed.
+- The match log (`Assets/Scripts/MatchLog/`) records all three, and
+  `MatchReplay` refuses a log from another `SimulationVersion`, so a
+  replay only runs on the simulation that produced it. The referee looks
+  the balance up by content hash, so every shipped balance must be
+  exported for the server (`Tools > Node War > Backend > Export Balance
+  For Server`).
+- Per-era numbers live in the balance (`GameBalanceData.districtStats`,
+  `SuitStats.era`), so tuning an era is a balance edit, not a bump.
+
+`BalanceHasher` hashes `GameBalanceData`, including each `SuitStats` and
+`DistrictStats` entry and their array order. It is separate from
+`SimulationStateHasher`: balance is still absent from the state hash.
+The handshake therefore mitigates issue #59; it does not fix that omission.
+
+## The starting board: `MatchFactory`
+
+`MatchFactory` (`Simulation/`) is the one place a drafted match's tick-0 state is
+built: `Configure` sets the statics the simulation reads (balance on
+`GameSimulation` and `CommandProcessor`, the `Pathfinding` multipliers),
+and `Build`/`Fill` lay out the grid, the board's fixed placements, the
+draft's placements at their placer's era, both players and their starting
+villagers. The live game (`GameManager`), the referee (`MatchReplay`) and
+any headless run all start here, so they cannot disagree about tick 0. A
+change to it changes every match: treat it like a tick-rule change.
+
+The skip-draft testing mode still builds its legacy nodes in
+`GameManager.InitializeNodes`, then uses `MatchFactory` for players and
+villagers. Small unit-test fixtures also construct their own minimal boards;
+neither is a second builder for a recorded drafted match.
+
+Those statics also mean **two matches cannot run at once in one process**.
+The Cloud Code referee serializes replays behind one lock for this reason.
+
 ## Desync detection
 
-Every 50 ticks (`LockstepRunner.DESYNC_CHECK_INTERVAL`), each peer
-computes `SimulationStateHasher.ComputeHash(simState)` and attaches it to
-its next outgoing tick-input packet. When a peer receives the other
-side's hash for a tick it also hashed, it compares the two
-(`LockstepRunner.CompareHash`). A mismatch logs
+At positive tick indices divisible by 50
+(`LockstepCore.DESYNC_CHECK_INTERVAL`), each peer computes
+`SimulationStateHasher.ComputeHash(simState)` after simulating and attaches
+it to its next outgoing tick-input packet. The first checkpoint is tick
+index 50, when `simState.tickCount` is 51. `LockstepCore.CompareHash`
+compares a non-zero received hash with the most recent stored local hash;
+the packet carries no checkpoint tick to match explicitly. A mismatch logs
 `"[DESYNC] Tick N Local: X Remote: Y"` and fires `OnDesync` — proof the
 two simulations have diverged as of that tick, not a description of why.
 This is the primary safety net for every rule above; treat a desync
 report as evidence one of them was broken somewhere before that tick.
+
+For match recording, `CommandsApplied` reports a non-empty command batch
+in P0-then-P1 order with the pre-tick count, before applying it.
+`HashComputed` reports the checkpoint with the post-tick count, one greater
+than the tick index used by `OnDesync`. These recording events observe the
+tick path; they do not add another way to change the simulation.

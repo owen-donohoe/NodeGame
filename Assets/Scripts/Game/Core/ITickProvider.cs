@@ -1,9 +1,9 @@
 namespace NodeWar.Core
 {
     /// <summary>
-    /// Shared interface for TickRunner (local) and LockstepRunner (networked).
+    /// Shared interface for TickRunner (local) and LockstepCore (networked).
     /// View layer code references this to get interpolation alpha without
-    /// knowing which runner is active.
+    /// knowing which one is active.
     /// </summary>
     public interface ITickProvider
     {

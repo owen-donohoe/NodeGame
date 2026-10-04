@@ -35,8 +35,11 @@
 //
 // *The styles are layers, not competitors.* Every style that reaches a pixel
 // keeps its own coverage there, and they are painted in OutlineStyle order --
-// Hover, then Contested, then Selected, then CommandAck -- so a higher style
-// lands in front of a lower one rather than in place of it. A Hover ring stays
+// Present, then Hover, then Contested, then Selected, then CommandAck -- so a
+// higher style lands in front of a lower one rather than in place of it. That
+// bottom layer is on screen constantly: every living villager carries Present,
+// so the thin contact line is what a hover or a selection is painted over.
+// A Hover ring stays
 // continuous underneath a Selected band; it is simply covered where the Selected
 // line is opaque, and shows through where it is not.
 //
@@ -101,14 +104,15 @@ Shader "NodeWar/Outline Composite"
             // appear, because the distance estimate can only take as many values
             // as there are taps.
             #define OUTLINE_TAP_COUNT 16
-            #define OUTLINE_STYLE_COUNT 5
+            #define OUTLINE_STYLE_COUNT 6
 
-            // The four drawable styles map one-to-one onto the lanes of a float4
-            // in the resolve below, which is what keeps every lane a constant
-            // index. Add a member to OutlineStyle and that mapping silently runs
-            // out of lanes, so fail the compile instead.
-            #if OUTLINE_STYLE_COUNT != 5
-                #error OutlineStyle changed size -- the float4 lanes in OutlineFragment no longer cover every drawable style.
+            // The five drawable styles map one-to-one onto lanes in the resolve
+            // below -- a float4 for styles 1..4 and a scalar for style 5 --
+            // which is what keeps every lane a constant index rather than an
+            // indexable temp. Add a member to OutlineStyle and that mapping
+            // silently runs out of lanes, so fail the compile instead.
+            #if OUTLINE_STYLE_COUNT != 6
+                #error OutlineStyle changed size -- the lanes in OutlineFragment no longer cover every drawable style.
             #endif
 
             float4 _OutlinePalette[OUTLINE_STYLE_COUNT];
@@ -274,7 +278,7 @@ Shader "NodeWar/Outline Composite"
                     // Group ID in red, style in green, both scaled to something
                     // the eye can actually distinguish.
                     return float4(saturate(centreId / 8.0),
-                                  saturate(DecodeId(centre.g) / 4.0),
+                                  saturate(DecodeId(centre.g) / float(OUTLINE_STYLE_COUNT - 1)),
                                   0.0, 1.0);
                 }
 
@@ -288,19 +292,22 @@ Shader "NodeWar/Outline Composite"
                 // edge".
                 //
                 // One lane each, rather than a single winner, because the styles
-                // are layers and not competitors: a pixel can carry a Hover line
-                // with a Selected one over it, and collapsing that to whichever
-                // ranked highest is what turned the faint outer edge of a
-                // Selected band into a bite taken out of the Hover ring.
+                // are layers and not competitors: a pixel can carry a Present
+                // line with a Selected one over it, and collapsing that to
+                // whichever ranked highest is what turned the faint outer edge
+                // of a Selected band into a bite taken out of the ring beneath.
                 //
-                // A float4 rather than an array so no lane is ever addressed
-                // dynamically -- an indexable temp is the one thing in this
-                // shader that would be genuinely slow on a tile-based GPU.
-                float4 styleDist = 1.0e6;
+                // A float4 plus a scalar rather than an array, so no lane is
+                // ever addressed dynamically -- an indexable temp is the one
+                // thing in this shader that would be genuinely slow on a
+                // tile-based GPU. Lo covers styles 1..4, hi covers style 5.
+                float4 styleDistLo = 1.0e6;
+                float styleDistHi = 1.0e6;
 
                 // The group each lane's nearest boundary belongs to, for its
                 // tint. Same lanes, same reason for not using an array.
-                uint4 styleId = 0u;
+                uint4 styleIdLo = 0u;
+                uint styleIdHi = 0u;
 
                 uint stylesPresent = (uint)_OutlineStylesPresent;
                 uint stylesFound = 0u;
@@ -378,16 +385,26 @@ Shader "NodeWar/Outline Composite"
                     // pixel still draws there.
                     if (tap.z <= _OutlineStyleRadius[tapStyle].x)
                     {
-                        if (tapStyle == 1u)      { styleDist.x = tap.z; styleId.x = tapId; }
-                        else if (tapStyle == 2u) { styleDist.y = tap.z; styleId.y = tapId; }
-                        else if (tapStyle == 3u) { styleDist.z = tap.z; styleId.z = tapId; }
-                        else                     { styleDist.w = tap.z; styleId.w = tapId; }
+                        if (tapStyle == 1u)      { styleDistLo.x = tap.z; styleIdLo.x = tapId; }
+                        else if (tapStyle == 2u) { styleDistLo.y = tap.z; styleIdLo.y = tapId; }
+                        else if (tapStyle == 3u) { styleDistLo.z = tap.z; styleIdLo.z = tapId; }
+                        else if (tapStyle == 4u) { styleDistLo.w = tap.z; styleIdLo.w = tapId; }
+                        else                     { styleDistHi   = tap.z; styleIdHi   = tapId; }
                     }
 
                     // Every style on screen has been accounted for, so no later
-                    // tap can add anything. With a single style showing -- the
-                    // common case -- this fires on the first boundary found and
-                    // the walk costs what it did before layering existed.
+                    // tap can add anything.
+                    //
+                    // Present changed the economics of this. Before it, normal
+                    // play usually had one style on screen and the walk stopped
+                    // at the first boundary found; now every living villager
+                    // carries Present, so a hover or a selection anywhere on
+                    // screen means a pixel next to some *other* villager can
+                    // never complete the set and pays for all sixteen taps. The
+                    // scissor is what keeps that affordable -- it is still only
+                    // the pixels near an outlined group -- and dropping
+                    // maskResolution to Half quarters the fetches if a device
+                    // needs it.
                     if (stylesFound == stylesPresent) break;
                 }
 
@@ -403,22 +420,27 @@ Shader "NodeWar/Outline Composite"
 
                 // Painted lowest style to highest, each one over what is already
                 // there, so Selected lands in front of Contested lands in front
-                // of Hover. "In front of", not "instead of": a lower style still
-                // shows wherever the one above it is absent or only partly
-                // covering, which is what keeps a Hover ring continuous where a
-                // Selected band's faded outer edge crosses it.
+                // of Hover lands in front of Present. "In front of", not
+                // "instead of": a lower style still shows wherever the one above
+                // it is absent or only partly covering, which is what keeps the
+                // thin Present line continuous where a Selected band's faded
+                // outer edge crosses it.
                 //
                 // Coverage is measured against each style's own radius, so a
                 // thinner style fades out over its own edge rather than over a
-                // boundary it never reaches.
-                OutlineLayerOver(TintedColour(_OutlinePalette[1], styleId.x), _OutlineStyleRadius[1].x,
-                                 styleDist.x, fadeFrac, accum);
-                OutlineLayerOver(TintedColour(_OutlinePalette[2], styleId.y), _OutlineStyleRadius[2].x,
-                                 styleDist.y, fadeFrac, accum);
-                OutlineLayerOver(TintedColour(_OutlinePalette[3], styleId.z), _OutlineStyleRadius[3].x,
-                                 styleDist.z, fadeFrac, accum);
-                OutlineLayerOver(TintedColour(_OutlinePalette[4], styleId.w), _OutlineStyleRadius[4].x,
-                                 styleDist.w, fadeFrac, accum);
+                // boundary it never reaches. Present is the thinnest entry in
+                // the palette, so it stops well short of the tap radius and the
+                // heavier styles above it have somewhere to land.
+                OutlineLayerOver(TintedColour(_OutlinePalette[1], styleIdLo.x), _OutlineStyleRadius[1].x,
+                                 styleDistLo.x, fadeFrac, accum);
+                OutlineLayerOver(TintedColour(_OutlinePalette[2], styleIdLo.y), _OutlineStyleRadius[2].x,
+                                 styleDistLo.y, fadeFrac, accum);
+                OutlineLayerOver(TintedColour(_OutlinePalette[3], styleIdLo.z), _OutlineStyleRadius[3].x,
+                                 styleDistLo.z, fadeFrac, accum);
+                OutlineLayerOver(TintedColour(_OutlinePalette[4], styleIdLo.w), _OutlineStyleRadius[4].x,
+                                 styleDistLo.w, fadeFrac, accum);
+                OutlineLayerOver(TintedColour(_OutlinePalette[5], styleIdHi), _OutlineStyleRadius[5].x,
+                                 styleDistHi, fadeFrac, accum);
 
                 // No layer covered this pixel. Discard rather than returning a
                 // transparent one, so the blend unit does no work for the vast

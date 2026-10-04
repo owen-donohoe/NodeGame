@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWarCloud", "NodeWarCloud\NodeWarCloud.csproj", "{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeWar.Progression", "..\NodeWar.Progression\NodeWar.Progression.csproj", "{10EA5D44-AC28-456F-9852-FF3554AC709D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Debug|x64.Build.0 = Debug|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Debug|x86.Build.0 = Debug|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Release|x64.ActiveCfg = Release|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Release|x64.Build.0 = Release|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Release|x86.ActiveCfg = Release|Any CPU
+		{F3ABBF3B-F40B-4B3E-8F80-FCE17AFF07FD}.Release|x86.Build.0 = Release|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Debug|x64.Build.0 = Debug|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Debug|x86.Build.0 = Debug|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Release|x64.ActiveCfg = Release|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Release|x64.Build.0 = Release|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Release|x86.ActiveCfg = Release|Any CPU
+		{10EA5D44-AC28-456F-9852-FF3554AC709D}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

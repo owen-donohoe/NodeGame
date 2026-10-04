@@ -36,6 +36,10 @@ namespace NodeWar.Lobby
             // requested default costs no migration.
             public int workshopTabIndex;
 
+            // Older saves omit this field and start false: the reminder has
+            // not been shown on this device yet.
+            public bool accountLinkPromptShown;
+
             // The Settings page's values. Unlike workshopTabIndex this one
             // cannot lean on zero being the wanted default - every slider at 0
             // and every switch off is a state a player can legitimately choose.
@@ -75,6 +79,15 @@ namespace NodeWar.Lobby
             set { data.selectedGameModeIndex = (int)value; Save(); }
         }
         public LoadoutData Loadout => data.loadout;
+
+        public bool AccountLinkPromptShown => data.accountLinkPromptShown;
+
+        public void MarkAccountLinkPromptShown()
+        {
+            if (data.accountLinkPromptShown) return;
+            data.accountLinkPromptShown = true;
+            Save();
+        }
 
         /// <summary>
         /// Which Workshop tab to open on. Saved so it survives a scene reload

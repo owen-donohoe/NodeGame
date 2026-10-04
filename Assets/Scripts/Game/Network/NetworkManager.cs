@@ -5,8 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
-using Unity.Services.Core;
-using Unity.Services.Authentication;
+using NodeWar.Backend;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using Unity.Networking.Transport;
@@ -65,18 +64,17 @@ namespace NodeWar.Network
             isRunning = true;
             relayReady = false;
 
-            await UnityServices.InitializeAsync();
-
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            await GameServices.EnsureReadyAsync();
 
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
             JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
             // Alternative if .ToRelayServerData() isn't found:
-            //var relayServerData = AllocationUtils.ToRelayServerData(allocation, "udp");
+            //var relayServerData = AllocationUtils.ToRelayServerData(allocation, "dtls");
 
-            var relayServerData = allocation.ToRelayServerData("udp");
+            // DTLS, not plain UDP: packets are encrypted between each peer and
+            // the Relay server. Both sides must agree (ProtocolVersion 3).
+            var relayServerData = allocation.ToRelayServerData("dtls");
             var settings = new NetworkSettings();
             settings.WithRelayParameters(ref relayServerData);
 
@@ -96,14 +94,11 @@ namespace NodeWar.Network
             relayReady = false;
             JoinCode = joinCode;
 
-            await UnityServices.InitializeAsync();
-
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            await GameServices.EnsureReadyAsync();
 
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
-            var relayServerData = joinAllocation.ToRelayServerData("udp");
+            var relayServerData = joinAllocation.ToRelayServerData("dtls");
             var settings = new NetworkSettings();
             settings.WithRelayParameters(ref relayServerData);
 
@@ -147,6 +142,8 @@ namespace NodeWar.Network
         /// </summary>
         public void Send(byte[] data)
         {
+            if (DroppingOutgoing) return;
+
             if (!IsSendReady())
             {
                 EnqueueOutgoing(data);
@@ -209,6 +206,19 @@ namespace NodeWar.Network
         }
 
         /// <summary>
+        /// Puts every packet sent this frame on the wire now. Unity Transport
+        /// only queues a send; left alone it goes out at the next frame's
+        /// ScheduleUpdate in ReceiveAll, adding up to a frame to every packet's
+        /// latency, and a slow frame (the Editor's run to 200 ms) is the whole
+        /// input delay. DirectUDP sends synchronously and has nothing to flush.
+        /// </summary>
+        public void Flush()
+        {
+            if (mode != TransportMode.UnityRelay || !relayDriver.IsCreated || !relayReady) return;
+            relayDriver.ScheduleFlushSend(default).Complete();
+        }
+
+        /// <summary>
         /// Buffers a packet sent before the connection was ready. On overflow, drops the
         /// incoming packet (queue is left untouched) and warns, rather than growing unbounded.
         /// </summary>
@@ -253,6 +263,8 @@ namespace NodeWar.Network
         public byte[][] ReceiveAll(bool deferTickInputs = false)
         {
             byte[][] received = ReceiveTransportPackets();
+            // A simulated drop still drains the transport, so nothing arrives late.
+            if (DroppingIncoming) received = Array.Empty<byte[]>();
             // Common case, every frame: nothing arrived and nothing to flush. Skip the allocations.
             if (received.Length == 0 && (deferTickInputs || deferredTickInputs.Count == 0))
                 return received;
@@ -447,6 +459,11 @@ namespace NodeWar.Network
                         Debug.Log("[Net] Remote connected from " + sender.Address + ":" + sender.Port);
                     }
 
+                    // The socket listens on every address, so anyone who knows the
+                    // port can send to it. Only the peer this match is with counts.
+                    IPEndPoint peer = remoteEndPoint;
+                    if (peer == null || !peer.Equals(sender)) continue;
+
                     lock (queueLock)
                     {
                         incomingQueue.Enqueue(data);
@@ -463,6 +480,52 @@ namespace NodeWar.Network
                 }
             }
         }
+
+        // --- Simulated network drops (Editor and Development Builds only) ---
+        //
+        // F8 drops every packet both ways for 1.5 s, F9 for 5 s, F10 for 20 s, on
+        // this copy of the game, and fails its ranked server calls for as long:
+        // this copy has lost its connection. Hold Shift to drop only what this
+        // copy sends to its peer, which is one-way loss on the peer link. For testing the speculative window (8.2e) and
+        // the disconnect hold (8.2c) without touching a real network. One key
+        // per stage: F8 stays inside the speculation window (banner only), F9
+        // runs past it into a hold, F10 past the hold's 10 s into the claim. Both
+        // copies keep running, unlike a paused window. Unity Transport's own
+        // keep-alive is untouched, so a 20 s drop stays under its timeout.
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private float dropIncomingUntil;
+        private float dropOutgoingUntil;
+
+        private bool DroppingIncoming => Time.realtimeSinceStartup < dropIncomingUntil;
+        private bool DroppingOutgoing => Time.realtimeSinceStartup < dropOutgoingUntil;
+
+        private void Update()
+        {
+            // A both-ways drop is this copy losing its connection: the server
+            // calls fail too, so the other copy sees this one go absent.
+            BackendServices.SimulatedOffline = DroppingIncoming;
+
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard == null) return;
+
+            float seconds = keyboard.f8Key.wasPressedThisFrame ? 1.5f
+                : keyboard.f9Key.wasPressedThisFrame ? 5f
+                : keyboard.f10Key.wasPressedThisFrame ? 20f
+                : 0f;
+            if (seconds <= 0f) return;
+
+            bool oneWay = keyboard.shiftKey.isPressed;
+            float until = Time.realtimeSinceStartup + seconds;
+            dropOutgoingUntil = until;
+            if (!oneWay) dropIncomingUntil = until;
+            Debug.LogWarning("[Net] Simulated drop: " + (oneWay ? "outgoing only" : "both ways, server calls too") +
+                             " for " + seconds + " s.");
+        }
+#else
+        private bool DroppingIncoming => false;
+        private bool DroppingOutgoing => false;
+#endif
 
         private void OnDestroy()
         {

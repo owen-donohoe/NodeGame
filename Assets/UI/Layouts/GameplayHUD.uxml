@@ -255,6 +255,29 @@
         </engine:VisualElement>
 
         <!--
+            The match is playing on past a missing opponent input (8.2e). Never
+            picks and never covers the board: the player keeps playing, and the
+            moves may be rolled back if the opponent's inputs differ.
+        -->
+        <engine:VisualElement name="hud-connection" class="hud__connection" picking-mode="Ignore">
+            <engine:Label class="hud__connection-label ui-w600" text="Opponent's connection is unstable…" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
+            A disconnect hold (8.2c, D15). Covers the board, so nobody acts
+            while it is up, and sits under the end card, which replaces it when
+            the hold ends the match. The same card as the end of the match, so
+            it reuses those classes rather than a second copy of them.
+        -->
+        <engine:VisualElement name="hud-hold" class="hud__end">
+            <engine:VisualElement class="hud__end-card">
+                <engine:Label name="hud-hold-title" class="hud__end-title ui-w700" text="" picking-mode="Ignore" />
+                <engine:Label name="hud-hold-line" class="hud__end-sub" text="" picking-mode="Ignore" />
+                <engine:Button name="hud-hold-action" class="ui-button ui-button--gold ui-w600 hud__end-button" text="" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!--
             The end of the match, from the viewer's side: Victory or Defeat,
             never "PLAYER 0 WINS". The tally is the whole scoreboard, so both
             players' breach counts are shown with their marks. Translucent, so
@@ -282,6 +305,17 @@
                     </engine:VisualElement>
                 </engine:VisualElement>
 
+                <!--
+                    Ranked only: what the server made of the match. Hidden in any
+                    other match. The first report to arrive leaves the match
+                    pending, so this starts at "Confirming" and fills in when the
+                    server settles it (RankedResultTracker).
+                -->
+                <engine:VisualElement name="hud-end-rank" class="hud__end-rank" picking-mode="Ignore">
+                    <engine:Label name="hud-end-rank-headline" class="hud__end-rank-headline ui-w700" text="" picking-mode="Ignore" />
+                    <engine:Label name="hud-end-rank-detail" class="hud__end-rank-detail" text="" picking-mode="Ignore" />
+                </engine:VisualElement>
+
                 <engine:Button name="hud-end-return" class="ui-button ui-button--gold ui-w600 hud__end-button" text="Return to Lobby" />
             </engine:VisualElement>
         </engine:VisualElement>
@@ -290,11 +324,11 @@
             In-match settings. Three rules shape this, and all three come from
             the match being live the whole time it is open.
 
-            NOTHING HERE IS DESTRUCTIVE. A mis-tap costs the player a toggle
-            they can see and undo, never a turn and never the match. Surrender
-            is the obvious thing to want here and is deliberately absent: it is
-            a GameCommand, not a setting, and it belongs behind its own confirm
-            rather than one row away from a volume slider.
+            NOTHING HERE IS DESTRUCTIVE WITHOUT A CONFIRM. A mis-tap costs the
+            player a toggle they can see and undo, never a turn and never the
+            match. Surrender (ranked only, D18) is the one destructive row: it
+            sits apart at the foot of the card and asks first, so a thumb
+            reaching for a slider cannot throw a match away.
 
             THE SCRIM PICKS ONLY WHILE OPEN. Everything else on this surface is
             picking-mode Ignore, because a panel that picks over the board
@@ -345,7 +379,24 @@
                 <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
             </engine:Button>
 
+            <engine:Button name="hud-settings-row-framecap" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Frame rate cap" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-framecap" class="hud__settings-label ui-w500" text="60" picking-mode="Ignore" />
+            </engine:Button>
+
             <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
+
+            <!-- Ranked only; hidden otherwise. The first tap only asks. -->
+            <engine:VisualElement name="hud-settings-surrender-area" class="hud__settings-surrender" picking-mode="Ignore">
+                <engine:Button name="hud-settings-surrender" class="ui-reset-button hud__settings-surrender-ask ui-w600" text="Surrender" />
+                <engine:VisualElement name="hud-settings-surrender-confirm" class="hud__settings-surrender-confirm" picking-mode="Ignore">
+                    <engine:Label name="hud-settings-surrender-line" class="hud__settings-label ui-w500" text="Surrender? It counts as a loss." picking-mode="Ignore" />
+                    <engine:VisualElement class="hud__settings-surrender-buttons" picking-mode="Ignore">
+                        <engine:Button name="hud-settings-surrender-no" class="ui-button ui-w600 hud__settings-surrender-choice" text="Keep playing" />
+                        <engine:Button name="hud-settings-surrender-yes" class="ui-button ui-w600 hud__settings-surrender-choice hud__settings-surrender-yes" text="Surrender" />
+                    </engine:VisualElement>
+                </engine:VisualElement>
+            </engine:VisualElement>
         </engine:VisualElement>
 
         <!-- Above the end card: a closing emote is still part of the match.

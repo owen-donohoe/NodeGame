@@ -136,7 +136,8 @@ namespace NodeWar.UI
                 }
 
                 if (!entry.Initialize(simState, inputBuffer, idleIDs[i], controlledPID,
-                                      districtSuit, balance.GetSuitStats(districtSuit)))
+                                      districtSuit, balance.GetSuitStats(districtSuit,
+                                          simState.players[controlledPID].SuitEra(districtSuit))))
                 {
                     Debug.LogError("[Barracks] EquipEntry Initialize failed for villager " + idleIDs[i]);
                     Destroy(entryGO);

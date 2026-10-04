@@ -48,7 +48,8 @@ Full contract in `docs/simulation-rules.md`.
 - `GameSimulation.SimulateTick()` — deterministic tick loop, 10Hz
 - `CommandProcessor` — applies `GameCommand`s to `SimulationState`
 - `GameManager` — match lifecycle (PreDraft → Drafting → PostDraft → Countdown → Playing)
-- `LockstepRunner` / `TickRunner` — tick timing, shared via `ITickProvider`
+- `MatchFactory` — the one tick-0 board: live matches, the referee and headless runs
+- `LockstepCore` / `TickRunner` — tick timing, shared via `ITickProvider`
 - `SimulationStateHasher` — desync fingerprint, checked every 50 ticks
 
 ## Which doc to read for what
@@ -56,7 +57,8 @@ Full contract in `docs/simulation-rules.md`.
 Read the file. Do not ask me to summarise it here.
 
 - `docs/architecture.md` — the seven layers, information flow, scene structure,
-  persistent objects, key classes per layer, networking model. **Start here.**
+  persistent objects, key classes per layer, networking model, and the backend,
+  match logs and referee beside them. **Start here.**
   Its *Where the UI lives* section is required reading before touching any UI:
   presentation spans three trees and which one runs is a scene value.
 - `docs/game-model.md` — what the game *is*: districts, suits, resources, the
@@ -74,15 +76,18 @@ Read the file. Do not ask me to summarise it here.
 - `docs/design-history/` — the v2.1 design document. Historical. Notion is
   authoritative for future work.
 - `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
-  Glob-scoped, so they load themselves when you touch those paths.
+  Path-scoped via `paths:`, so they load themselves when you touch those
+  paths. If all three ever appear in context at session start, the scoping
+  has stopped working and they are loading unconditionally — check with
+  `/context` after any change to their frontmatter.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 464 cases: 118 over `Simulation/`, 157
-  over the lobby (including the wire formats), and 189 over the UnityEngine-free
-  view maths (camera POV, indicator placement, route reveal, emote rate limit,
-  resource rings, production readout, draft handover).
-  A lobby or view-maths change has real tests; run them rather than settling
+- `dotnet test dotnet/NodeWar.sln` — 1533 cases in seven projects: `Simulation/`,
+  the lobby and wire formats, the UnityEngine-free view maths, the match log,
+  the progression rules, the lockstep core under a simulated lossy link, and
+  the Cloud Code module. Per-project counts are in
+  the doc below. A lobby, view-maths, match-log or backend change has real tests; run them rather than settling
   for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.
 - `scripts/compile-check.ps1` — type-checks everything else (HUD, network,
   view, `Assets/UI/`) against the real Unity assemblies. Catches syntax,

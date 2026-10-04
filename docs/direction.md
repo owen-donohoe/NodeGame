@@ -48,10 +48,10 @@ in `CLAUDE.md` holds harder over the next six months than it has so far.
 
 ## The problem
 
-There is no place for game feel to live. `CameraController.Shake()` is the
-canonical example — it is written, it is good, it is wired to nothing, and the
-reason is not that shake is unwanted but that **nothing tells the presentation
-layer that something happened.**
+There was no place for game feel to live. `CameraController.Shake()` was the
+canonical example — written, good, and wired to nothing, because **nothing told
+the presentation layer that something happened.** (Since fixed for shake:
+`ScreenShakeDirector` now drives it from the `TickEventLog` below.)
 
 Today a view finds out about the world by looking at `SimulationState` and
 noticing it is different from last frame. That works for continuous things (a
@@ -71,7 +71,8 @@ state it already produces. What it is and why it is safe now lives in
 
 Once that list exists, every one of these is "subscribe to one event type":
 
-- **Shake** finally has a caller. Breach lands, core hit, big combat.
+- **Shake** — landed: `ScreenShakeDirector` (core hit, capture, taking a node
+  from the opponent).
 - **Hit flash / damage tint** on a node or villager.
 - **Sound.** There is no audio in the project at all, and the tick event list
   is the correct and only place to hang it. A sound effect is the single
@@ -106,7 +107,8 @@ one. The board needs the prefab. A `DistrictVisual` asset is the single place
 both can ask, and it is also the thing you hand to an artist as a checklist.
 
 Do this before commissioning or drawing anything. It converts "we need art" into
-a list of named, empty slots.
+a list of named, empty slots. **Landed:** `DistrictVisual` / `DistrictVisualTable`
+(`View/`), with an editor setup command. No `FeelDirector` or audio exists yet.
 
 ## What to deliberately not build
 
@@ -261,17 +263,28 @@ designed for exactly this.
 
 Very little, which is the point.
 
-1. **Promote `TestBoardFactory` out of the test assembly.** It already builds a
-   complete `SimulationState` headlessly — `Assets/Tests/EditMode/Tests/TestBoardFactory.cs`.
-   That is precisely `reset()`. It should live beside `Simulation/` as a
-   `MatchFactory` so both the tests and the environment use one copy.
-2. **Extract initial board setup from `GameManager`.** `InitializeNodesFromDraft`
-   currently builds the starting board inside a MonoBehaviour. The environment
-   needs that logic without Unity. This is a move, not a rewrite — it is already
-   integer-only work on `BoardConfigData`, which is already in `Simulation/`.
+1. **Done: `MatchFactory`.** `Simulation/MatchFactory.cs` builds a match's
+   tick-0 state from a `BoardConfigData`, draft placements and per-player
+   setup, and sets the statics the simulation reads. It is a move of
+   `GameManager`'s setup, which now calls it, so a headless match starts
+   exactly as a live one does. That is `reset()`. (`TestBoardFactory` stays in
+   the test assembly for the small hand-built boards the unit tests use.)
+2. **Done: a headless runner.** `MatchReplay` (`Assets/Scripts/MatchLog/`)
+   drives `MatchFactory` and `SimulateTick` from a recorded match log, and the
+   Cloud Code referee runs it; it is the shape `step()` takes, minus the policy.
+   Every drafted match also leaves a `.nwml` log, which is imitation and
+   evaluation data.
 3. **Skip or randomise the draft.** Matches currently begin with a placement
    draft. For training, generate a random legal placement. Training the draft
    itself is a separate and much later problem.
+4. **Eras are part of the observation.** Each player fields an era per suit
+   and district type (`PlayerData.suitEras` / `districtEras`), and each
+   district plays its placer's era. A policy that ignores them sees a board
+   that behaves inconsistently once eras differ.
+
+One constraint the environment inherits: the simulation reads balance and
+path costs from statics, so **one process runs one match at a time**. Run
+parallel environments as separate processes.
 
 `BoardConfigData` and `GameBalanceData` are already inside `Simulation/`, so
 configuration crosses the boundary cleanly already. That was lucky and it saves
@@ -324,7 +337,7 @@ a bad strategy, which is a *much* better problem than a bot that never learns.
 
 ## Opponents, in order
 
-1. **Against `BotPlayer`.** There are already 748 lines of scripted AI. A fixed,
+1. **Against `BotPlayer`.** There are already 781 lines of scripted AI. A fixed,
    competent opponent is a far gentler curriculum than self-play, and it gives
    you an unambiguous scoreboard: what fraction of matches does the agent win?
 2. **Against past versions of itself**, once it beats the bot.
@@ -370,12 +383,12 @@ expensive ones.
 
 | When | What | Why then |
 |---|---|---|
-| First | `DistrictVisual` assets | Turns "we need art" into a named list. Small. |
+| Done | `DistrictVisual` assets | Landed: `DistrictVisual` / `DistrictVisualTable`. |
 | Done | Tick event list | Landed: `TickEventLog`, see architecture.md. |
-| Then | Sound, shake, hit flash, hitstop | The actual feel phase. Shake gets its caller. |
+| Then | Sound, hit flash, hitstop | The actual feel phase. Shake has landed (`ScreenShakeDirector`). |
 | Alongside | Camera input fix (issue #41 B1) | Small, and it is the whole desktop input story. |
 | Alongside | Two layout classes, desktop build | A week of evenings, not a phase. |
-| Then | Headless `MatchFactory` + environment | Useful immediately as a balance rig. |
+| Then | Environment over `MatchFactory` (factory and replay runner landed) | Useful immediately as a balance rig. |
 | Then | Balance passes using it | The "make it fun" phase, with data. |
 | Last | Actually train a bot | The environment has to be boring and trustworthy first. |
 

@@ -27,6 +27,70 @@
     --workshop-pick-lip: rgba(90, 70, 40, 0.4);
 }
 
+.lb-workshop-details {
+    flex-shrink: 0;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-2);
+}
+
+.lb-workshop-details__text, .lb-era-message {
+    white-space: normal;
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+}
+
+.lb-era-row {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 0;
+    height: 72px;
+    margin-top: var(--space-1);
+}
+
+.lb-era-row .unity-scroll-view__content-container {
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.lb-era-chip {
+    min-width: var(--target-min);
+    min-height: var(--target-min);
+    flex-shrink: 0;
+    margin-right: var(--space-1);
+    margin-bottom: var(--space-1);
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+    border-radius: var(--corner-sm);
+    background-color: var(--surface-raised);
+    color: var(--ink);
+    font-size: var(--type-caption);
+    white-space: nowrap;
+}
+
+/* Equipped stays non-interactive, but is selected rather than faded. */
+.lb-root .lb-era-chip--equipped,
+.lb-root .lb-era-chip--equipped:disabled {
+    opacity: 1;
+    background-color: var(--action);
+    color: var(--action-ink);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+}
+
+.lb-root .lb-era-chip--locked,
+.lb-root .lb-era-chip--locked:disabled {
+    opacity: 0.5;
+    background-color: var(--surface-sunk);
+    color: var(--ink-mute);
+}
+
 .lb-workshop {
     flex-grow: 1;
 }
@@ -220,11 +284,9 @@
 /* ---- card grid ---- */
 
 .lb-grid {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 184px;
-    bottom: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
 }
 
 .lb-grid .unity-scroll-view__content-container {

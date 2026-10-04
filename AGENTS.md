@@ -65,8 +65,9 @@ Say what you did **not** do, and why. Silence reads as coverage.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — Simulation, Lobby, and UnityEngine-free
-  view maths, including indicator placement and emote rate limiting
+- `dotnet test dotnet/NodeWar.sln` — Simulation, Lobby, UnityEngine-free
+  view maths, the match log, the progression rules and the Cloud Code module.
+  Per-project counts: `docs/skills/run-dotnet-tests.md`
 - `scripts/compile-check.ps1` — type-checks everything else against the real
   Unity assemblies (HUD, network, view, `Assets/UI/`). In a fresh worktree it
   needs the Unity assemblies first: `cmd /c mklink /J Library C:\Dev\NodeGame\Library`

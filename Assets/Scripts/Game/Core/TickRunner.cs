@@ -22,6 +22,17 @@ namespace NodeWar.Core
 
         public event System.Action<TickEventLog> TickSimulated;
 
+        /// <summary>
+        /// Every tick's commands in the order they were applied, with the tick
+        /// count before them. Buffer order mixes both players here, unlike
+        /// lockstep, which is why a match log records the order and not a list
+        /// per player. Not raised for a tick with no commands.
+        /// </summary>
+        public event System.Action<int, GameCommand[]> CommandsApplied;
+
+        /// <summary>A desync-check hash, with the tick count it was taken after.</summary>
+        public event System.Action<int, int> HashComputed;
+
         public void Unpause()
         {
             paused = false;
@@ -71,6 +82,7 @@ namespace NodeWar.Core
                 {
                     int hash = SimulationStateHasher.ComputeHash(simState);
                     UnityEngine.Debug.Log("[HASH] Tick " + simState.tickCount + " Hash: " + hash);
+                    HashComputed?.Invoke(simState.tickCount, hash);
                 }
 
                 accumulator -= tickInterval;
@@ -84,6 +96,9 @@ namespace NodeWar.Core
             if (inputBuffer == null) return;
 
             GameCommand[] commands = inputBuffer.DrainCommands();
+            if (commands.Length > 0)
+                CommandsApplied?.Invoke(simState.tickCount, commands);
+
             for (int i = 0; i < commands.Length; i++)
             {
                 CommandProcessor.ProcessCommand(simState, commands[i], tickEvents);

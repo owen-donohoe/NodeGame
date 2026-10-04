@@ -15,9 +15,11 @@ namespace NodeWar.Lobby
     /// safety story is that the old path is untouched until S5. The duplication
     /// is temporary and dies with NetworkingModal.
     ///
-    /// Flow, unchanged from the shipped one because both peers must agree:
-    ///   Host: create room, wait for a Handshake, reply HandshakeAck x3
+    /// Flow, shared with the shipped one because both peers must agree:
+    ///   Host: create room, wait for a Handshake, reply HandshakeAck x3, or
+    ///         HandshakeReject x3 if the peer's build cannot play this one
     ///   Join: wait for transport, send Handshake every 0.3s until HandshakeAck
+    ///         or HandshakeReject; both carry the host's BuildIdentity
     ///   Both: create MatchConnection, parent the NetworkManager under it, load Gameplay
     ///
     /// What is NOT the same is failure handling. NetworkManager.StartAsRelayHost
@@ -79,15 +81,60 @@ namespace NodeWar.Lobby
         private float phaseEnterTime;
         private float handshakeRetryTimer;
 
+        // Ranked matches have deadlines everywhere, because nobody is reading a
+        // code out to a friend: a silent peer is a failed rendezvous, and the
+        // ranked flow re-queues. Private play keeps the open-ended host wait.
+        private const float NoDeadline = -1f;
+        private float waitForOpponentTimeout = NoDeadline;
+        private float handshakeTimeout = HandshakeTimeout;
+
+        private string rankedMatchId;
+        private string[] rankedPlayerIds;
+
         // ===== ENTRY POINTS =====
 
         public void HostRelay()
         {
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginHost(false, null);
+        }
+
+        /// <summary>
+        /// Hosts a ranked match as simulation player 0: record slot 0 always
+        /// hosts, because the referee reads the log's player order as the
+        /// record's. Fails if the guest has not connected within the deadline.
+        /// </summary>
+        public void HostRanked(string matchId, string[] playerIds, float waitForOpponentSeconds,
+                               float handshakeSeconds)
+        {
+            SetRanked(matchId, playerIds, waitForOpponentSeconds, handshakeSeconds);
+            BeginHost(false, null);
+        }
+
+        /// <summary>Joins a ranked match's room as simulation player 1 (record slot 1).</summary>
+        public void JoinRanked(string matchId, string[] playerIds, string joinCode, float handshakeSeconds)
+        {
+            SetRanked(matchId, playerIds, NoDeadline, handshakeSeconds);
+            string code = (joinCode ?? "").Trim();
+            if (code.Length == 0)
+            {
+                Fail("The host published no room code.", "Finding a new match.");
+                return;
+            }
+            BeginJoin(false, code.ToUpperInvariant());
+        }
+
+        private void SetRanked(string matchId, string[] playerIds, float waitSeconds, float handshakeSeconds)
+        {
+            rankedMatchId = matchId;
+            rankedPlayerIds = playerIds != null ? (string[])playerIds.Clone() : null;
+            waitForOpponentTimeout = waitSeconds;
+            handshakeTimeout = handshakeSeconds;
         }
 
         public void HostLan()
         {
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginHost(true, null);
         }
 
@@ -105,11 +152,13 @@ namespace NodeWar.Lobby
                 return;
             }
 
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginJoin(false, code.ToUpperInvariant());
         }
 
         public void JoinLan(string address)
         {
+            SetRanked(null, null, NoDeadline, HandshakeTimeout);
             string ip = (address ?? "").Trim();
 
             if (ip.Length == 0)
@@ -269,15 +318,34 @@ namespace NodeWar.Lobby
             {
                 if (InputSerializer.ReadPacketType(packets[i]) != PacketType.Handshake) continue;
 
-                // Three acks, as the shipped flow does: the reply is unreliable
-                // and a dropped ack would strand the client.
-                networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                networkManager.Send(InputSerializer.SerializeHandshakeAck());
-                networkManager.Send(InputSerializer.SerializeHandshakeAck());
+                BuildIdentity self = LocalBuildIdentity.Current;
 
-                Succeed();
+                // A handshake this build cannot read comes from a build before
+                // versioning (a single byte), so it is older by definition.
+                HandshakeVerdict verdict = InputSerializer.TryDeserializeHandshake(packets[i], out BuildIdentity peer)
+                    ? InputSerializer.Compare(self, peer)
+                    : HandshakeVerdict.PeerOlder;
+
+                // Three of each, as the shipped flow does: the reply is
+                // unreliable and a dropped one would strand the client.
+                byte[] reply = verdict == HandshakeVerdict.Compatible
+                    ? InputSerializer.SerializeHandshakeAck(self)
+                    : InputSerializer.SerializeHandshakeReject(self);
+                networkManager.Send(reply);
+                networkManager.Send(reply);
+                networkManager.Send(reply);
+
+                if (verdict == HandshakeVerdict.Compatible)
+                    Succeed();
+                else
+                    FailIncompatible(verdict);
                 return;
             }
+
+            if (waitForOpponentTimeout < 0f || Time.time - phaseEnterTime <= waitForOpponentTimeout) return;
+
+            Cleanup();
+            Fail("Your opponent didn't connect.", "Finding a new match.");
         }
 
         private void UpdateConnecting()
@@ -294,7 +362,7 @@ namespace NodeWar.Lobby
 
                 if (handshakeRetryTimer >= HandshakeRetryInterval)
                 {
-                    networkManager.Send(InputSerializer.SerializeHandshake());
+                    networkManager.Send(InputSerializer.SerializeHandshake(LocalBuildIdentity.Current));
                     handshakeRetryTimer = 0f;
                 }
             }
@@ -303,13 +371,31 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < packets.Length; i++)
             {
-                if (InputSerializer.ReadPacketType(packets[i]) != PacketType.HandshakeAck) continue;
+                PacketType type = InputSerializer.ReadPacketType(packets[i]);
+                if (type != PacketType.HandshakeAck && type != PacketType.HandshakeReject) continue;
 
-                Succeed();
+                // Checked here as well as on the host: a host from before
+                // versioning acks anything, with a single byte this cannot read.
+                bool readable = type == PacketType.HandshakeAck
+                    ? InputSerializer.TryDeserializeHandshakeAck(packets[i], out BuildIdentity peer)
+                    : InputSerializer.TryDeserializeHandshakeReject(packets[i], out peer);
+                HandshakeVerdict verdict = readable
+                    ? InputSerializer.Compare(LocalBuildIdentity.Current, peer)
+                    : HandshakeVerdict.PeerOlder;
+
+                if (type == PacketType.HandshakeAck && verdict == HandshakeVerdict.Compatible)
+                {
+                    Succeed();
+                    return;
+                }
+
+                // A reject from a host whose identity matches ours cannot come
+                // from this build; call it a data mismatch rather than succeed.
+                FailIncompatible(verdict == HandshakeVerdict.Compatible ? HandshakeVerdict.ContentMismatch : verdict);
                 return;
             }
 
-            if (Time.time - phaseEnterTime <= HandshakeTimeout) return;
+            if (Time.time - phaseEnterTime <= handshakeTimeout) return;
 
             Cleanup();
             Fail("The host didn't answer.",
@@ -329,9 +415,13 @@ namespace NodeWar.Lobby
             match.isBotMatch = false;
             match.localPlayerID = localPlayerID;
             match.networkManager = networkManager;
+            match.isRanked = rankedMatchId != null;
+            match.matchId = rankedMatchId;
+            match.playerIds = rankedPlayerIds;
 
             if (PlayerProfile.Instance != null)
-                match.loadout = PlayerProfile.Instance.Loadout;
+                match.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
+                    NodeWar.Backend.BackendServices.LastKnownState);
 
             // MatchConnection owns the NetworkManager from here, and is
             // DontDestroyOnLoad, so parenting is what carries the socket across
@@ -365,6 +455,27 @@ namespace NodeWar.Lobby
             FailureMessage = message;
             FailureRecovery = recovery;
             Notify();
+        }
+
+        /// <summary>The peer's build cannot play this one. Says which side has to change.</summary>
+        private void FailIncompatible(HandshakeVerdict verdict)
+        {
+            Cleanup();
+            switch (verdict)
+            {
+                case HandshakeVerdict.PeerOlder:
+                    Fail("Your opponent is on an older version of Node War.",
+                         "They need to update before you can play.");
+                    break;
+                case HandshakeVerdict.PeerNewer:
+                    Fail("Your opponent is on a newer version of Node War.",
+                         "Update the game, then try again.");
+                    break;
+                default:
+                    Fail("Your opponent's game data doesn't match yours.",
+                         "Both players need the same build.");
+                    break;
+            }
         }
 
         private void ClearFailure()
