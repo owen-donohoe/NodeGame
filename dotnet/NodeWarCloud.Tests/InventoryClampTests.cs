@@ -7,19 +7,19 @@ namespace NodeWar.Cloud.Tests
     public class InventoryClampTests
     {
         [Test]
-        public void DemotionChoosesHighestOwnedEraNotHighestPossibleEraAndKeepsSkins()
+        public void DistrictDemotionChoosesHighestOwnedEraNotHighestPossibleEraAndKeepsSkins()
         {
             var inventory = PlayerStateDefaults.Inventory();
-            inventory.OwnedVariants.AddRange(new[] { "suit.warrior.e0", "suit.warrior.e1", "suit.warrior.e4", "suit.scout.e0" });
-            inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e4";
-            inventory.Equipped.Variants["suit.scout"] = "suit.scout.e0";
-            inventory.Equipped.Skins["suit.warrior"] = "skin.suit.warrior.default";
+            inventory.OwnedVariants.AddRange(new[] { "district.farm.e0", "district.farm.e1", "district.farm.e4", "district.mine.e0" });
+            inventory.Equipped.Variants["district.farm"] = "district.farm.e4";
+            inventory.Equipped.Variants["district.mine"] = "district.mine.e0";
+            inventory.Equipped.Skins["district.farm"] = "skin.district.farm.default";
             var owned = new List<string>(inventory.OwnedVariants);
 
             Assert.That(InventoryClamp.ClampToArena(inventory, 3), Is.True);
-            Assert.That(inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e1"));
-            Assert.That(inventory.Equipped.Variants["suit.scout"], Is.EqualTo("suit.scout.e0"));
-            Assert.That(inventory.Equipped.Skins["suit.warrior"], Is.EqualTo("skin.suit.warrior.default"));
+            Assert.That(inventory.Equipped.Variants["district.farm"], Is.EqualTo("district.farm.e1"));
+            Assert.That(inventory.Equipped.Variants["district.mine"], Is.EqualTo("district.mine.e0"));
+            Assert.That(inventory.Equipped.Skins["district.farm"], Is.EqualTo("skin.district.farm.default"));
             Assert.That(inventory.OwnedVariants, Is.EqualTo(owned));
             Assert.That(InventoryClamp.ClampToArena(inventory, 3), Is.False);
         }

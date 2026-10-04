@@ -89,6 +89,12 @@ namespace NodeWar.View
             if (opponentRouteSettings != null) opponentSettings = opponentRouteSettings;
         }
 
+        /// <summary>
+        /// The dash material, shared so a provisional route is drawn in exactly
+        /// the style of a real one.
+        /// </summary>
+        public Material DashMaterial => EnsureDashMaterial();
+
         public void SetPlayerID(int id)
         {
             localPlayerID = id;

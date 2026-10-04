@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NodeWar.Backend;
+using NodeWar.Simulation;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -88,6 +89,9 @@ namespace NodeWar.Lobby
         private readonly VisualElement eraRow;
         private readonly VisualElement skinRow;
         private readonly Label eraMessage;
+        private readonly Button treeOpen;
+        private readonly SuitTreeView treeView;
+        private readonly LobbySheet lobbySheet;
 
         private PlayerState playerState;
         private Item inspectedItem;
@@ -102,12 +106,14 @@ namespace NodeWar.Lobby
         private Tab activeTab = Tab.Districts;
         private bool pickerOpen;
 
-        public WorkshopPage(VisualTreeAsset layout, LoadoutCatalog catalog, LobbyToast toast, LobbyContextMenu menu)
+        public WorkshopPage(VisualTreeAsset layout, LoadoutCatalog catalog, LobbyToast toast, LobbyContextMenu menu,
+            LobbySheet sheet = null)
             : base(LobbyPageID.Workshop, Build(layout))
         {
             this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
             this.toast = toast;
             this.menu = menu;
+            lobbySheet = sheet;
 
             segDistricts = Root.Q<Button>("workshop-seg-districts");
             segSuits = Root.Q<Button>("workshop-seg-suits");
@@ -145,6 +151,12 @@ namespace NodeWar.Lobby
                     evt.StopPropagation();
                 });
             }
+
+            // The suit tree overlay. Without a sheet or without the overlay in the layout
+            // the Workshop simply has no tree button.
+            treeOpen = Root.Q<Button>("workshop-tree-open");
+            treeView = new SuitTreeView(Root, sheet, () => playerState, TreeBalance, DescribeSuit, EquipFromTreeAsync);
+            if (treeOpen != null) treeOpen.clicked += OpenTree;
 
             CollectItems();
             SetPickerOpen(false);
@@ -188,6 +200,7 @@ namespace NodeWar.Lobby
         /// </summary>
         public override void OnHide()
         {
+            treeView.Close();
             CloseInventory();
             SetPickerOpen(false);
             SaveToProfile();
@@ -364,6 +377,8 @@ namespace NodeWar.Lobby
             // The floating button's face always shows the current side.
             if (pickIcon != null) pickIcon.Kind = suitsOn ? LobbyIconKind.Suit : LobbyIconKind.District;
             if (pickLabel != null) pickLabel.text = suitsOn ? "SUITS" : "DIST";
+
+            if (treeOpen != null) treeOpen.EnableInClassList("st-open--on", suitsOn && treeView.IsWired && lobbySheet != null);
         }
 
         private void RenderSlots()
@@ -653,6 +668,83 @@ namespace NodeWar.Lobby
             }
         }
 
+        // ===== SUIT TREE =====
+
+        private void OpenTree()
+        {
+            if (playerState == null)
+            {
+                Say(inventoryBusy ? "Inventory is still loading" : "Inventory isn't available right now");
+                return;
+            }
+
+            string baseId = inspectedItem == null ? null : LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID);
+            treeView.Open(baseId);
+        }
+
+        /// <summary>The balance every match plays with, so the tree's numbers are the match's.</summary>
+        private static GameBalanceData TreeBalance()
+        {
+            NodeWar.Config.GameBalance shared = NodeWar.Config.GameBalance.LoadShared();
+            return shared != null ? shared.Data : GameBalanceData.Default();
+        }
+
+        private string DescribeSuit(string baseId)
+        {
+            SuitDefinition[] all = catalog.Suits;
+            for (int i = 0; i < all.Length; i++)
+                if (all[i] != null && LoadoutTypes.CatalogBaseForLobbyId(all[i].suitID) == baseId)
+                    return all[i].description;
+            return null;
+        }
+
+        /// <summary>
+        /// Equips a suit variant picked in the tree. The same server call and the same
+        /// busy, idle and visit bookkeeping as the era chips (EquipInventoryAsync), without
+        /// the inspected-item requirement: the tree is its own selection.
+        /// </summary>
+        private async Task<bool> EquipFromTreeAsync(string baseId, string id)
+        {
+            if (!isOpen || inventoryBusy || playerState == null) return false;
+            EraChips.Chip[] chips = EraChips.ForItem(playerState, baseId);
+            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return false;
+
+            int visit = inventoryVisit;
+            var completion = new TaskCompletionSource<bool>();
+            inventoryIdle = completion.Task;
+            inventoryBusy = true;
+            inventoryMessage = "Saving...";
+            RenderInventory();
+            try
+            {
+                var changes = new EquippedRecord { Variants = new Dictionary<string, string> { [baseId] = id } };
+                PlayerState result = await BackendServices.Inventory.EquipAsync(changes);
+                if (!IsInventoryActive(visit)) return false;
+                if (result == null) throw new InvalidOperationException("Missing player state");
+                playerState = result;
+                inventoryMessage = "";
+                return true;
+            }
+            catch (Exception)
+            {
+                if (IsInventoryActive(visit))
+                {
+                    inventoryMessage = "Couldn't equip. Please try again.";
+                    Say("Couldn't equip. Please try again.");
+                }
+                return false;
+            }
+            finally
+            {
+                completion.TrySetResult(true);
+                if (IsInventoryActive(visit))
+                {
+                    inventoryBusy = false;
+                    RenderInventory();
+                }
+            }
+        }
+
         private void RenderInventory()
         {
             if (details != null) details.text = inspectedItem == null
@@ -665,6 +757,7 @@ namespace NodeWar.Lobby
                 eraMessage.text = inventoryMessage;
                 eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex;
             }
+            if (treeView != null) treeView.Refresh();
         }
 
         private void RenderChips(VisualElement row, EraChips.Chip[] chips, string baseId, bool skin)

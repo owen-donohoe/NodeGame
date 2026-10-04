@@ -50,7 +50,10 @@ namespace NodeWar.Cloud
             // ERAS encodes a null table as an empty array when another table is present.
             if (eras != null && eras.Length > 0 && type >= eras.Length) return "Incomplete era table.";
             int era = eras == null || eras.Length == 0 ? 0 : eras[type];
-            if (era < 0 || era >= CatalogIds.EraCount || era > player.Rank.Arena)
+            if (era < 0 || era >= CatalogIds.EraCount ||
+                (SuitTree.IsTreeSuit(baseId)
+                    ? !SuitTree.IsAvailable(CatalogIds.Variant(baseId, era), player.Rank.Arena)
+                    : era > player.Rank.Arena))
                 return "Drafted era exceeds the snapshot arena.";
             if (!player.OwnedVariants.Contains(CatalogIds.Variant(baseId, era)))
                 return "Drafted variant was not owned in the snapshot.";

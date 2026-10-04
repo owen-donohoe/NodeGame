@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using NodeWar.Simulation;
@@ -71,6 +73,13 @@ namespace NodeWar.Input
         private NodeWar.View.NodeView[] nodeViews;
 
         /// <summary>
+        /// Raised the frame a move is issued, with the target node and the IDs
+        /// ordered. Lets the view acknowledge the order before lockstep has
+        /// delivered it; nothing here depends on anyone listening.
+        /// </summary>
+        public event Action<int, IReadOnlyList<int>> MoveIssued;
+
+        /// <summary>
         /// Orders every selected villager to a node, highlights the
         /// destination, and clears the selection.
         ///
@@ -106,6 +115,10 @@ namespace NodeWar.Input
                 Color highlightColor = (localPlayerID == 0) ? p0HighlightColor : p1HighlightColor;
                 nodeViews[targetNode].TriggerHighlight(highlightColor);
             }
+
+            // Copied before ClearSelection empties the list the IDs live in.
+            if (MoveIssued != null)
+                MoveIssued(targetNode, new List<int>(selectionSystem.SelectedVillagerIDs));
 
             selectionSystem.ClearSelection();
         }

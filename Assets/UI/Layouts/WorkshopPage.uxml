@@ -25,6 +25,7 @@
     -->
 
     <engine:Style src="project://database/Assets/UI/Styles/Workshop.uss" />
+    <engine:Style src="project://database/Assets/UI/Styles/SuitTree.uss" />
 
     <engine:VisualElement name="workshop-page" class="lb-workshop" picking-mode="Ignore">
 
@@ -39,6 +40,8 @@
                     <engine:Label class="lb-wsseg__text ui-w600" text="Suits" picking-mode="Ignore" />
                 </engine:Button>
             </engine:VisualElement>
+            <!-- Suits side only: opens the suit tree overlay below. WorkshopPage shows and hides it. -->
+            <engine:Button name="workshop-tree-open" class="ui-reset-button st-open ui-w600" text="Suit tree: variants and unlocks" />
         </engine:VisualElement>
 
         <engine:VisualElement name="workshop-slotwrap" class="lb-slotwrap" picking-mode="Ignore">
@@ -80,6 +83,39 @@
                         <engine:Label class="lb-pickopt__text ui-w600" text="Suits" picking-mode="Ignore" />
                     </engine:Button>
                 </engine:VisualElement>
+            </engine:VisualElement>
+        </engine:VisualElement>
+
+        <!--
+            The suit tree (docs/suit-tree-spec.md section 6): a full overlay on the
+            Workshop, opened from #workshop-tree-open. SuitTreeView builds the tabs,
+            strip and tree into the empty hosts. #suittree-info is the info panel's
+            content; WorkshopPage lifts it into the lobby's bottom sheet, the same
+            way ShopPage lifts #shop-item.
+        -->
+        <engine:VisualElement name="suittree-page" class="st-page" picking-mode="Position">
+            <engine:VisualElement class="st-header" picking-mode="Ignore">
+                <engine:Button name="suittree-back" class="ui-reset-button lb-back">
+                    <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+                </engine:Button>
+                <engine:Label class="st-title ui-w600" text="Suit tree" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:ScrollView name="suittree-tabs" class="st-row st-tabs" mode="Horizontal" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
+            <engine:ScrollView name="suittree-strip" class="st-row st-strip" mode="Horizontal" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
+            <engine:ScrollView name="suittree-scroll" class="st-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+                <engine:VisualElement name="suittree-canvas" class="st-canvas" picking-mode="Ignore" />
+            </engine:ScrollView>
+        </engine:VisualElement>
+
+        <engine:VisualElement name="suittree-info" picking-mode="Ignore">
+            <engine:Label name="suittree-info-title" class="ui-sheet__title st-info__title ui-w600" text="" />
+            <engine:Label name="suittree-info-role" class="ui-sheet__note st-info__role ui-w500" text="" />
+            <engine:VisualElement name="suittree-info-stats" class="st-stats" picking-mode="Ignore" />
+            <engine:Label name="suittree-info-fits" class="st-fact ui-w500" text="" />
+            <engine:Label name="suittree-info-how" class="st-fact ui-w500" text="" />
+            <engine:VisualElement class="ui-lip ui-button-wrap" picking-mode="Ignore">
+                <engine:VisualElement class="ui-lip__block ui-lip__block--green" picking-mode="Ignore" />
+                <engine:Button name="suittree-info-primary" class="ui-reset-button ui-button ui-button--green ui-w700" text="Equip" />
             </engine:VisualElement>
         </engine:VisualElement>
 
