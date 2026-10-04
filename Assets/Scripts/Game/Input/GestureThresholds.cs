@@ -50,6 +50,10 @@ namespace NodeWar.Input
         [Range(2f, 20f)]
         public float doubleTapRadiusMm = 8f;
 
+        [Tooltip("Longest a two-finger touch may last and still be a two-finger tap.")]
+        [Range(0.1f, 0.6f)]
+        public float twoFingerTapTime = 0.3f;
+
         [Tooltip("How long the white touch-down flash lasts.")]
         [Range(0.03f, 0.5f)]
         public float flashDuration = 0.12f;

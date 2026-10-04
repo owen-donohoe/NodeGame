@@ -56,6 +56,7 @@ namespace NodeWar.Input
         {
             if (source == null || subscribed) return;
             source.OnTap += HandleTap;
+            source.OnTwoFingerTap += HandleTwoFingerTap;
             source.OnDoubleTapGround += HandleDoubleTapGround;
             source.OnDoubleTapVillager += HandleDoubleTapVillager;
             subscribed = true;
@@ -65,6 +66,7 @@ namespace NodeWar.Input
         {
             if (source == null || !subscribed) return;
             source.OnTap -= HandleTap;
+            source.OnTwoFingerTap -= HandleTwoFingerTap;
             source.OnDoubleTapGround -= HandleDoubleTapGround;
             source.OnDoubleTapVillager -= HandleDoubleTapVillager;
             subscribed = false;
@@ -131,6 +133,20 @@ namespace NodeWar.Input
                     ClearEverything();
                     return;
             }
+        }
+
+        private void HandleTwoFingerTap()
+        {
+            switch (source.ActionFor(NodeWar.Lobby.InputSlot.TwoFingerTap))
+            {
+                case NodeWar.Lobby.InputAction.ClearSelection:
+                    if (selection != null) selection.ClearSelection();
+                    break;
+                case NodeWar.Lobby.InputAction.ReturnToCore:
+                    if (cameraController != null) cameraController.RecentreOnHome();
+                    break;
+            }
+            Log("two-finger tap");
         }
 
         private void HandleDoubleTapGround()

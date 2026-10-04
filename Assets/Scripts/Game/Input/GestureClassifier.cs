@@ -11,7 +11,7 @@ namespace NodeWar.Input
     {
         PointerDown, Cancelled, Tap, SecondaryClick, PanBegin, PanUpdate, PanEnd,
         LassoBegin, LassoPoint, LassoComplete, ZoomBegin, ZoomUpdate, ZoomEnd,
-        DoubleTapGround, DoubleTapVillager
+        DoubleTapGround, DoubleTapVillager, TwoFingerTap
     }
 
     /// <summary>What the adapter found under a press. Resolved once, on touch-down.</summary>
@@ -93,6 +93,10 @@ namespace NodeWar.Input
         private bool pairZoom;
         private bool pairPan;
         private bool pairLasso;
+        private float pairStartTime;
+        private float pairStartSpan;
+        private bool pairMoved;
+        private bool pairZoomed;
         private GestureTargetClass downClass;
         private int downId;
         private bool doubleCandidate;
@@ -107,6 +111,8 @@ namespace NodeWar.Input
         public float DoubleTapTime { get; set; } = 0.3f;
         /// <summary>How far the second press may land from the first tap, in mm.</summary>
         public float DoubleTapRadiusMm { get; set; } = 8f;
+        /// <summary>Longest a two-finger touch may last and still be a tap.</summary>
+        public float TwoFingerTapTime { get; set; } = 0.3f;
 
         public GestureState State { get; private set; }
         public bool PanSuppressed => State == GestureState.LassoArmed || State == GestureState.Lassoing || pairLasso;
@@ -204,7 +210,13 @@ namespace NodeWar.Input
                         Emit(GestureEventKind.ZoomBegin);
                     }
                     else if (pairZoom && span > minPinchSpan && Math.Abs(span - pinchStartSpan) >= pinchDeadZone)
+                    {
+                        pairZoomed = true;
                         Emit(GestureEventKind.ZoomUpdate, scale: span / pinchStartSpan);
+                    }
+                    // A tap is two fingers that neither travelled nor spread past the same limits drag and pinch use.
+                    if (GesturePoint.Distance(midpoint, pairDown) > tapSlop || Math.Abs(span - pairStartSpan) >= pinchDeadZone)
+                        pairMoved = true;
                     if (pairPan) Emit(GestureEventKind.PanUpdate, midpoint);
                     else if (pairLasso)
                     {
@@ -236,13 +248,14 @@ namespace NodeWar.Input
                     State = GestureState.Blocked;
                     return;
                 }
-                if (pairOverUI || (!IsEnabled(InputSlot.Pinch) && !IsEnabled(InputSlot.TwoFingerDrag)))
+                if (pairOverUI || (!IsEnabled(InputSlot.Pinch) && !IsEnabled(InputSlot.TwoFingerDrag)
+                    && !IsEnabled(InputSlot.TwoFingerTap)))
                 {
                     Cancel();
                     State = GestureState.Blocked;
                     return;
                 }
-                if (span <= minPinchSpan && !IsEnabled(InputSlot.TwoFingerDrag)) return;
+                if (span <= minPinchSpan && !IsEnabled(InputSlot.TwoFingerDrag) && !IsEnabled(InputSlot.TwoFingerTap)) return;
                 if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
                 if (State != GestureState.Idle) Emit(GestureEventKind.Cancelled);
                 pairZoom = IsEnabled(InputSlot.Pinch) && span > minPinchSpan;
@@ -251,6 +264,9 @@ namespace NodeWar.Input
                 pairDown = midpoint;
                 pairIdA = idA;
                 pairIdB = idB;
+                pairStartTime = primary.Time;
+                pairStartSpan = span;
+                pairMoved = pairZoomed = false;
                 pairPan = pairLasso = false;
                 points.Clear();
                 if (pairZoom) Emit(GestureEventKind.ZoomBegin);
@@ -258,7 +274,10 @@ namespace NodeWar.Input
             }
             if (PairActive)
             {
+                bool tap = IsEnabled(InputSlot.TwoFingerTap) && !pairMoved && !pairZoomed && !pairPan && !pairLasso
+                    && primary.Time - pairStartTime <= TwoFingerTapTime;
                 EndPair();
+                if (tap) Emit(GestureEventKind.TwoFingerTap, pairDown);
                 return;
             }
 

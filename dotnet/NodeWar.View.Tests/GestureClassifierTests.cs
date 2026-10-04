@@ -302,6 +302,97 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(GestureState.Idle, core.State);
         }
 
+
+        private void PairAt(float time, float ax, float bx, float y = 0f, int idB = 11)
+        {
+            core.ProcessFrame(new[] {
+                new PointerSample(time, new GesturePoint(ax, y), 10, PointerButton.Primary, PointerPhase.Held),
+                new PointerSample(time, new GesturePoint(ax, y), 10, PointerButton.Touch, PointerPhase.Held),
+                new PointerSample(time, new GesturePoint(bx, y), idB, PointerButton.Touch, PointerPhase.Held)
+            });
+        }
+
+        [Test]
+        public void TwoFingerTapIsOffByDefault()
+        {
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 0f, 10f);
+            Primary(0.15f, PointerPhase.Held);
+            Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomEnd);
+        }
+
+        [Test]
+        public void QuickStillTwoFingerTouchIsATapAndSurvivorIsInert()
+        {
+            Enable(InputSlot.TwoFingerTap);
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 1f, 11f);
+            Primary(0.2f, PointerPhase.Held);
+            Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomEnd, GestureEventKind.TwoFingerTap);
+            Primary(0.3f, PointerPhase.Held, 20f);
+            Primary(0.4f, PointerPhase.Ended, 20f);
+            Assert.AreEqual(3, events.Count);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void TwoFingerTapWorksWithPinchAndDragBothOff()
+        {
+            Enable(InputSlot.TwoFingerTap);
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.TwoFingerTap].enabled = true;
+            settings.inputBindings[(int)InputSlot.Pinch].enabled = false;
+            settings.inputBindings[(int)InputSlot.TwoFingerDrag].enabled = false;
+            core.ApplySettings(settings);
+            Pair(0f, 0f, 10f);
+            Primary(0.1f, PointerPhase.Held);
+            Kinds(GestureEventKind.TwoFingerTap);
+        }
+
+        [Test]
+        public void TwoFingerTouchHeldTooLongIsNotATap()
+        {
+            Enable(InputSlot.TwoFingerTap);
+            Pair(0f, 0f, 10f);
+            Pair(0.2f, 0f, 10f);
+            Primary(0.35f, PointerPhase.Held);
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.TwoFingerTap));
+        }
+
+        [TestCase(4.1f, 0f, true)]   // midpoint travels past the 4 mm tap slop
+        [TestCase(3.9f, 0f, false)]  // wobble inside it
+        [TestCase(0f, 6f, true)]     // span grows past the pinch dead zone
+        public void TwoFingerTapIsSplitFromDragAndPinchBySlop(float shift, float spread, bool notATap)
+        {
+            Enable(InputSlot.TwoFingerTap);
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, shift, 10f + shift + spread);
+            Primary(0.2f, PointerPhase.Held);
+            Assert.AreEqual(!notATap, events.Exists(e => e.Kind == GestureEventKind.TwoFingerTap));
+        }
+
+        [Test]
+        public void TwoFingerDragNeverAlsoTaps()
+        {
+            Enable(InputSlot.TwoFingerTap);
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 6f, 16f);
+            Pair(0.15f, 0f, 10f); // back where it started: still a drag
+            Primary(0.2f, PointerPhase.Held);
+            Assert.IsTrue(events.Exists(e => e.Kind == GestureEventKind.PanEnd));
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.TwoFingerTap));
+        }
+
+        [Test]
+        public void ReplacedFingerNeverTaps()
+        {
+            Enable(InputSlot.TwoFingerTap);
+            Pair(0f, 0f, 10f);
+            PairAt(0.1f, 0f, 10f, idB: 12);
+            Primary(0.2f, PointerPhase.Held);
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.TwoFingerTap));
+        }
+
         public static IEnumerable<int> ToggleMasks()
         {
             for (int mask = 0; mask < 1024; mask++) yield return mask;
