@@ -104,6 +104,44 @@
                 </engine:VisualElement>
             </engine:VisualElement>
 
+            <!--
+                Controls. The per-slot rows are built by SettingsPage from
+                ControlsViewModel into settings-controls-rows; the rows after
+                them are fixed. Layout: docs/touch-input-spec.md section 10.
+            -->
+            <engine:Label class="lb-group-label ui-w600" text="Controls" />
+            <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
+                <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
+                <engine:VisualElement class="lb-group">
+                    <engine:VisualElement name="settings-controls-rows" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-camerabutton" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Camera button" picking-mode="Ignore" />
+                        <lobby:LobbySwitch name="settings-camerabutton" value="true" />
+                    </engine:Button>
+                    <engine:Button name="settings-row-camerazoom" class="ui-reset-button lb-grow lb-grow--sub">
+                        <engine:Label class="lb-grow__label ui-w500" text="Drag to zoom" picking-mode="Ignore" />
+                        <lobby:LobbySwitch name="settings-camerazoom" value="true" />
+                    </engine:Button>
+                    <engine:Button name="settings-row-selbar" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Selection bar" picking-mode="Ignore" />
+                        <lobby:LobbySwitch name="settings-selbar" value="true" />
+                    </engine:Button>
+                    <engine:Button name="settings-row-side" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Controls side" picking-mode="Ignore" />
+                        <engine:Label name="settings-side" class="lb-grow__value ui-w500" text="Right" picking-mode="Ignore" />
+                    </engine:Button>
+                    <engine:VisualElement class="lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Hold time" />
+                        <engine:Slider name="settings-hold" class="lb-slider" low-value="0.15" high-value="1" value="0.3" />
+                        <engine:Label name="settings-hold-value" class="lb-grow__value lb-controls-hold-value ui-w500" text="0.30 s" picking-mode="Ignore" />
+                    </engine:VisualElement>
+                    <engine:Label name="settings-controls-warnings" class="lb-controls-warnings ui-w500" text="" picking-mode="Ignore" />
+                    <engine:Button name="settings-row-controls-reset" class="ui-reset-button lb-grow lb-grow--last">
+                        <engine:Label class="lb-grow__label ui-w500" text="Reset controls to default" picking-mode="Ignore" />
+                    </engine:Button>
+                </engine:VisualElement>
+            </engine:VisualElement>
+
             <engine:Label class="lb-group-label ui-w600" text="Mobile" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />

@@ -243,6 +243,19 @@
             <engine:Label name="hud-recentre-label" class="hud__recentre-label ui-w600" text="CORE" picking-mode="Ignore" />
         </engine:VisualElement>
 
+        <!--
+            Selection bar: on the controls side, in thumb reach, and present
+            only while something is selected (and Selection bar is on in
+            settings). The strip ignores picking; only the clear button takes
+            a touch. Suits have no per-suit glyph in LobbyIcon yet, so it
+            carries the count alone.
+        -->
+        <engine:VisualElement name="hud-selbar" class="hud__selbar" picking-mode="Ignore">
+            <engine:Label name="hud-selbar-count" class="hud__selbar-count ui-w700" text="0" picking-mode="Ignore" />
+            <engine:Label class="hud__selbar-label ui-w500" text="selected" picking-mode="Ignore" />
+            <engine:Button name="hud-selbar-clear" class="ui-reset-button hud__selbar-clear ui-w700" text="&#215;" />
+        </engine:VisualElement>
+
         <!-- A breach flashes the screen. Never picks. -->
         <engine:VisualElement name="hud-flash" class="hud__flash" picking-mode="Ignore" />
 
@@ -384,7 +397,25 @@
                 <engine:Label name="hud-settings-framecap" class="hud__settings-label ui-w500" text="60" picking-mode="Ignore" />
             </engine:Button>
 
-            <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
+            <!--
+                Controls: only what undoes a bad combination mid-match. The
+                full list lives on the lobby's Settings page.
+            -->
+            <engine:Button name="hud-settings-row-camerabutton" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Camera button" picking-mode="Ignore" />
+                <lobby:LobbySwitch name="hud-settings-camerabutton" value="true" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-side" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Controls side" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-side" class="hud__settings-label ui-w500" text="Right" picking-mode="Ignore" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-controls-reset" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Reset controls to default" picking-mode="Ignore" />
+            </engine:Button>
+
+            <engine:Label class="hud__settings-note" text="Audio has no system to drive yet. All controls are under Settings in the lobby." picking-mode="Ignore" />
 
             <!-- Ranked only; hidden otherwise. The first tap only asks. -->
             <engine:VisualElement name="hud-settings-surrender-area" class="hud__settings-surrender" picking-mode="Ignore">
