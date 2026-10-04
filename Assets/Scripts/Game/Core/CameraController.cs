@@ -253,6 +253,11 @@ namespace NodeWar.Core
         private void HandleDragInput()
         {
             if (isDraftMode) return;
+            if (gestureSource != null && !gestureSource.IsEnabled(NodeWar.Lobby.InputSlot.MiddleDrag))
+            {
+                isDragging = false;
+                return;
+            }
             if (gestureSource != null && gestureSource.PanSuppressed)
             {
                 isDragging = false;
@@ -316,6 +321,7 @@ namespace NodeWar.Core
         private void HandleDraftScroll()
         {
             if (!isDraftMode) return;
+            if (gestureSource != null && !gestureSource.IsEnabled(NodeWar.Lobby.InputSlot.ScrollWheel)) return;
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
@@ -359,6 +365,7 @@ namespace NodeWar.Core
             // The draft has its own clamp, so its scroll is handled by
             // HandleDraftScroll. Reading it here too would apply every notch twice.
             if (isDraftMode) return;
+            if (gestureSource != null && !gestureSource.IsEnabled(NodeWar.Lobby.InputSlot.ScrollWheel)) return;
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;

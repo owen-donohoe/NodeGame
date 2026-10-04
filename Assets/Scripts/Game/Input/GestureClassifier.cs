@@ -74,6 +74,7 @@ namespace NodeWar.Input
         private GesturePoint previousPos;
         private float pathLength;
         private float holdStillness;
+        private bool tapExceededSlop;
         private float pinchStartSpan;
         private readonly List<GesturePoint> points = new List<GesturePoint>();
 
@@ -112,6 +113,8 @@ namespace NodeWar.Input
         public void ApplySettings(GameSettingsData settings)
         {
             settings = GameSettingsData.Normalized(settings);
+            if (InputBindings.Differ(bindings, settings.inputBindings) || holdTime != settings.holdTime)
+                Cancel();
             bindings = settings.inputBindings;
             holdTime = settings.holdTime;
         }
@@ -155,6 +158,12 @@ namespace NodeWar.Input
                     State = GestureState.Blocked;
                     return;
                 }
+                if (!IsEnabled(InputSlot.Pinch))
+                {
+                    Cancel();
+                    State = GestureState.Blocked;
+                    return;
+                }
                 if (span <= minPinchSpan) return;
                 if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
                 if (State != GestureState.Idle) Emit(GestureEventKind.Cancelled);
@@ -178,6 +187,7 @@ namespace NodeWar.Input
                     downTime = primary.Time;
                     previousPos = downPos;
                     pathLength = 0f;
+                    tapExceededSlop = false;
                     points.Clear();
                     State = primary.OverUI ? GestureState.Blocked : GestureState.Pending;
                     if (!primary.OverUI) Emit(GestureEventKind.PointerDown, downPos);
@@ -196,17 +206,19 @@ namespace NodeWar.Input
                     pathLength += GesturePoint.Distance(sample.Position, previousPos);
                     previousPos = sample.Position;
                     float moved = GesturePoint.Distance(sample.Position, downPos);
+                    tapExceededSlop |= moved > tapSlop;
                     float held = sample.Time - downTime;
                     // A hitch cannot strand a drag between the slop and timer.
                     // Stillness counts the whole path, so drifting back does not re-arm a hold.
-                    if (moved > tapSlop || (held >= holdTime && pathLength > holdStillness))
+                    if (IsEnabled(InputSlot.Drag) &&
+                        (moved > tapSlop || (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength > holdStillness)))
                     {
                         State = GestureState.Panning;
                         Emit(GestureEventKind.Cancelled);
                         Emit(GestureEventKind.PanBegin, downPos);
                         Emit(GestureEventKind.PanUpdate, sample.Position);
                     }
-                    else if (held >= holdTime && pathLength <= holdStillness)
+                    else if (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness)
                     {
                         State = GestureState.LassoArmed;
                         points.Clear();
@@ -240,7 +252,7 @@ namespace NodeWar.Input
             switch (State)
             {
                 case GestureState.Pending:
-                    Emit(GesturePoint.Distance(sample.Position, downPos) <= tapSlop && sample.Time - downTime < holdTime
+                    Emit(!tapExceededSlop && GesturePoint.Distance(sample.Position, downPos) <= tapSlop && sample.Time - downTime < holdTime
                         ? GestureEventKind.Tap : GestureEventKind.Cancelled, downPos);
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanEnd); break;
@@ -254,6 +266,8 @@ namespace NodeWar.Input
         {
             if (State == GestureState.Idle) return;
             bool drawing = PanSuppressed;
+            if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
+            if (State == GestureState.Pinching) Emit(GestureEventKind.ZoomEnd);
             State = GestureState.Cancelled;
             points.Clear();
             Emit(GestureEventKind.Cancelled);

@@ -38,6 +38,70 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
+        public void DisabledDragDoesNotPanAndReturningWithinSlopDoesNotTap()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Drag].enabled = false;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 6f);
+            Primary(0.2f, PointerPhase.Ended);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void DisabledHoldDoesNotArmAndDragWorksAfterTimer()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.HoldDrag].enabled = false;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.4f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Primary(0.5f, PointerPhase.Held, 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void DisabledPinchConsumesPairWithoutZoomAndDoesNotResumeSurvivor()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Pinch].enabled = false;
+            core.ApplySettings(settings);
+            Primary(0f, PointerPhase.Began);
+            Pair(0.1f, 0f, 10f);
+            Pair(0.2f, 0f, 20f);
+            Primary(0.3f, PointerPhase.Held, 8f);
+            Primary(0.4f, PointerPhase.Ended, 8f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [TestCase(InputSlot.MiddleDrag)]
+        [TestCase(InputSlot.ScrollWheel)]
+        public void SettingsExposeDisabledMouseSlotToCamera(InputSlot slot)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)slot].enabled = false;
+            core.ApplySettings(settings);
+            Assert.IsFalse(core.IsEnabled(slot));
+        }
+
+        [Test]
+        public void SettingsChangeEndsActivePanBeforeCancelling()
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 6f);
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Drag].enabled = false;
+            core.ApplySettings(settings);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.PanBegin,
+                GestureEventKind.PanUpdate, GestureEventKind.PanEnd, GestureEventKind.Cancelled);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
         public void SettingsHoldTimeOverridesSerializedFallback()
         {
             GameSettingsData settings = GameSettingsData.CreateDefault();
