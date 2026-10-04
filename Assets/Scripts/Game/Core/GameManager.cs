@@ -552,6 +552,7 @@ namespace NodeWar.Core
             // Opponent villagers are not tap targets; presses fall through them
             // to the node beneath.
             gestureSource.SetVillagerFilter(selectionSystem.IsSelectable);
+            gestureSource.SetSelectedFilter(selectionSystem.IsSelected);
 
             // One-finger drag pans the board. Middle-mouse still works for
             // desktop habit, but this is the path that exists on a phone.
@@ -594,7 +595,12 @@ namespace NodeWar.Core
             pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
             pendingOrderView.SetVillagerTransforms(villagerTransforms);
             if (commandSystem != null)
+            {
                 commandSystem.MoveIssued += pendingOrderView.OnMoveIssued;
+                commandSystem.OrderDragBegan += pendingOrderView.BeginHover;
+                commandSystem.OrderDragHover += pendingOrderView.SetHoverNode;
+                commandSystem.OrderDragEnded += pendingOrderView.EndHover;
+            }
         }
 
         /// <summary>

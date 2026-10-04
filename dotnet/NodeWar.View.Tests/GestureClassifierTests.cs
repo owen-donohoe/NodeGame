@@ -604,6 +604,104 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(GestureState.Idle, core.State);
         }
 
+        [Test]
+        public void Golden_DragFromSelectedVillagerPansWhenOrderDragIsOff()
+        {
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void OrderDragFromSelectedVillagerBeginsAtSlopAndEndsWithPosition()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.05f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 3f);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            Assert.AreEqual(GestureState.Ordering, core.State);
+            Assert.IsFalse(core.PanSuppressed);
+            Press(0.2f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 20f);
+            Press(0.3f, PointerPhase.Ended, GestureTargetClass.SelectedVillager, 3, 25f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.OrderBegin,
+                GestureEventKind.OrderUpdate, GestureEventKind.OrderUpdate, GestureEventKind.OrderEnd);
+            Assert.AreEqual(new GesturePoint(0f, 0f), events[2].Position);
+            Assert.AreEqual(new GesturePoint(25f, 0f), events[5].Position);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void UnselectedVillagerDragNeverOrdersOrSelects()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.Villager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.Villager, 3, 6f);
+            Press(0.2f, PointerPhase.Ended, GestureTargetClass.Villager, 3, 12f);
+            Assert.AreEqual(0, Count(GestureEventKind.OrderBegin));
+            Assert.AreEqual(0, Count(GestureEventKind.Tap));
+            Assert.AreEqual(1, Count(GestureEventKind.PanBegin));
+        }
+
+        [TestCase(GestureTargetClass.None)]
+        [TestCase(GestureTargetClass.Node)]
+        public void OrderDragStartsOnlyFromVillagers(GestureTargetClass target)
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, target, 3);
+            Press(0.1f, PointerPhase.Held, target, 3, 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void OrderDragWithDragOffDoesNotNeedPanAndStillOrders()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.DragFromVillager].enabled = true;
+            settings.inputBindings[(int)InputSlot.Drag].enabled = false;
+            core.ApplySettings(settings);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            Assert.AreEqual(GestureState.Ordering, core.State);
+        }
+
+        [Test]
+        public void SelectedVillagerWithinSlopStaysATap()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 3f);
+            Press(0.15f, PointerPhase.Ended, GestureTargetClass.SelectedVillager, 3, 3f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap);
+        }
+
+        [Test]
+        public void OrderDragAbortedBySecondFingerOrSettingsEndsCancelled()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            Pair(0.2f, 0f, 10f);
+            Primary(0.3f, PointerPhase.Ended);
+            Assert.AreEqual(1, Count(GestureEventKind.OrderCancel));
+            Assert.AreEqual(0, Count(GestureEventKind.OrderEnd));
+            Assert.AreEqual(GestureState.Idle, core.State);
+            events.Clear();
+            Press(5f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(5.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            core.ApplySettings(GameSettingsData.CreateDefault());
+            Assert.AreEqual(1, Count(GestureEventKind.OrderCancel));
+        }
+
+        [Test]
+        public void HoldStillOnSelectedVillagerStillArmsTheLassoNotTheOrder()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
+        }
+
         public static IEnumerable<int> ToggleMasks()
         {
             for (int mask = 0; mask < 1024; mask++) yield return mask;

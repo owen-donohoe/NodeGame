@@ -36,12 +36,64 @@ namespace NodeWar.Input
         public void SetGestureSource(PointerGestureSource source)
         {
             if (gestureSource != null)
+            {
                 gestureSource.OnSecondaryClick -= HandleSecondaryClick;
+                gestureSource.OnOrderDragBegin -= HandleOrderDragBegin;
+                gestureSource.OnOrderDragUpdate -= HandleOrderDragUpdate;
+                gestureSource.OnOrderDragEnd -= HandleOrderDragEnd;
+                gestureSource.OnOrderDrop -= HandleOrderDrop;
+            }
 
             gestureSource = source;
 
             if (gestureSource != null)
+            {
                 gestureSource.OnSecondaryClick += HandleSecondaryClick;
+                gestureSource.OnOrderDragBegin += HandleOrderDragBegin;
+                gestureSource.OnOrderDragUpdate += HandleOrderDragUpdate;
+                gestureSource.OnOrderDragEnd += HandleOrderDragEnd;
+                gestureSource.OnOrderDrop += HandleOrderDrop;
+            }
+        }
+
+        /// <summary>
+        /// An order drag is in progress: the villagers it will move, then the node
+        /// under the finger (-1 for none) each time that changes, then the end. The
+        /// view draws the provisional route from these; nothing here depends on it.
+        /// </summary>
+        public event Action<IReadOnlyList<int>> OrderDragBegan;
+        public event Action<int> OrderDragHover;
+        public event Action OrderDragEnded;
+
+        private int hoverNode = -1;
+
+        private void HandleOrderDragBegin(Vector2 pos)
+        {
+            hoverNode = -1;
+            if (!gestureRouted || selectionSystem == null) return;
+            OrderDragBegan?.Invoke(new List<int>(selectionSystem.SelectedVillagerIDs));
+        }
+
+        private void HandleOrderDragUpdate(Vector2 pos)
+        {
+            if (!gestureRouted || gestureSource == null) return;
+            int node = gestureSource.NodeAt(pos);
+            if (node == hoverNode) return;
+            hoverNode = node;
+            OrderDragHover?.Invoke(node);
+        }
+
+        // Issuing happens before the drag ends, so the pending route created by
+        // MoveIssued is on the same frame as the hover route being dropped.
+        private void HandleOrderDrop(int node)
+        {
+            if (gestureRouted && isActiveAndEnabled) IssueMoveTo(node);
+        }
+
+        private void HandleOrderDragEnd()
+        {
+            hoverNode = -1;
+            OrderDragEnded?.Invoke();
         }
 
         private void HandleSecondaryClick(GestureTarget target)

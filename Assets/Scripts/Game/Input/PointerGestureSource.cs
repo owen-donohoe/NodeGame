@@ -60,6 +60,18 @@ namespace NodeWar.Input
         /// <summary>Two taps on the same villager.</summary>
         public event Action<GestureTarget> OnDoubleTapVillager;
 
+        /// <summary>
+        /// An order drag from an already-selected villager began, is moving, or ended.
+        /// End is raised last, after Drop or a tap, and also on cancel, so a preview
+        /// can always be closed by it.
+        /// </summary>
+        public event Action<Vector2> OnOrderDragBegin;
+        public event Action<Vector2> OnOrderDragUpdate;
+        public event Action OnOrderDragEnd;
+
+        /// <summary>The order drag was released on a node other than the one it started on.</summary>
+        public event Action<int> OnOrderDrop;
+
         /// <summary>A still hold on a node or villager, with no drag.</summary>
         public event Action<GestureTarget> OnHold;
 
@@ -106,6 +118,8 @@ namespace NodeWar.Input
         private bool initialized;
         private GestureTarget frameTarget;
         private bool hasFrameTarget;
+        private int orderStartNode = -1;
+        private Func<int, bool> selectedFilter;
         private int primaryPointerId = -1;
 
         public GestureState State => classifier != null ? classifier.State : GestureState.Idle;
@@ -123,6 +137,19 @@ namespace NodeWar.Input
         public void SetVillagerFilter(System.Func<int, bool> filter)
         {
             villagerFilter = filter;
+        }
+
+        /// <summary>Whether a villager is already selected; only those can start an order drag.</summary>
+        public void SetSelectedFilter(System.Func<int, bool> filter)
+        {
+            selectedFilter = filter;
+        }
+
+        /// <summary>The node under a screen point, or -1. Nodes only, like right-click.</summary>
+        public int NodeAt(Vector2 screenPos)
+        {
+            GestureTarget target = ResolveTarget(screenPos, nodesOnly: true);
+            return target.kind == GestureTargetKind.Node ? target.id : -1;
         }
 
         public void Initialize(Camera camera)
@@ -193,7 +220,9 @@ namespace NodeWar.Input
                     // double-tap; PointerDown reuses it rather than raycasting again.
                     frameTarget = ResolveTarget(pointer.position.ReadValue());
                     hasFrameTarget = true;
-                    targetClass = frameTarget.kind == GestureTargetKind.Villager ? GestureTargetClass.Villager
+                    targetClass = frameTarget.kind == GestureTargetKind.Villager
+                        ? (selectedFilter != null && selectedFilter(frameTarget.id)
+                            ? GestureTargetClass.SelectedVillager : GestureTargetClass.Villager)
                         : frameTarget.kind == GestureTargetKind.Node ? GestureTargetClass.Node : GestureTargetClass.None;
                     targetId = frameTarget.id;
                 }
@@ -255,6 +284,13 @@ namespace NodeWar.Input
                     OnGestureCancelled?.Invoke();
                     break;
                 case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
+                case GestureEventKind.OrderBegin:
+                    orderStartNode = NodeAt(pos);
+                    OnOrderDragBegin?.Invoke(pos);
+                    break;
+                case GestureEventKind.OrderUpdate: OnOrderDragUpdate?.Invoke(pos); break;
+                case GestureEventKind.OrderEnd: FinishOrderDrag(pos); break;
+                case GestureEventKind.OrderCancel: OnOrderDragEnd?.Invoke(); break;
                 case GestureEventKind.HoldInfo: OnHold?.Invoke(downTarget); break;
                 case GestureEventKind.TwoFingerTap: OnTwoFingerTap?.Invoke(); break;
                 case GestureEventKind.DoubleTapGround: OnDoubleTapGround?.Invoke(); break;
@@ -285,6 +321,16 @@ namespace NodeWar.Input
             }
             if (verboseLogging) Log(gesture.Kind.ToString());
         }
+        // Release on another node orders; on the node it started from it was a tap that
+        // rolled; on ground or UI it cancels and the selection stays.
+        private void FinishOrderDrag(Vector2 pos)
+        {
+            int node = IsMouseOverUI(pos) ? -1 : NodeAt(pos);
+            if (node >= 0 && node == orderStartNode) OnTap?.Invoke(downTarget);
+            else if (node >= 0) OnOrderDrop?.Invoke(node);
+            OnOrderDragEnd?.Invoke();
+        }
+
         // ===== RESOLUTION =====
 
         /// <summary>

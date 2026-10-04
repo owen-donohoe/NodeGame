@@ -4,14 +4,15 @@ using NodeWar.Lobby;
 
 namespace NodeWar.Input
 {
-    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger, OneHandZoom, HoldFired }
+    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger, OneHandZoom, HoldFired, Ordering }
     public enum PointerButton { Primary, Touch, Secondary, Middle, Scroll }
     public enum PointerPhase { None, Began, Held, Ended, Cancelled }
     public enum GestureEventKind
     {
         PointerDown, Cancelled, Tap, SecondaryClick, PanBegin, PanUpdate, PanEnd,
         LassoBegin, LassoPoint, LassoComplete, ZoomBegin, ZoomUpdate, ZoomEnd,
-        DoubleTapGround, DoubleTapVillager, TwoFingerTap, HoldInfo
+        DoubleTapGround, DoubleTapVillager, TwoFingerTap, HoldInfo,
+        OrderBegin, OrderUpdate, OrderEnd, OrderCancel
     }
 
     /// <summary>What the adapter found under a press. Resolved once, on touch-down.</summary>
@@ -246,7 +247,7 @@ namespace NodeWar.Input
                     return;
                 }
                 if (State == GestureState.Blocked) return;
-                if (PanSuppressed || State == GestureState.OneHandZoom)
+                if (PanSuppressed || State == GestureState.OneHandZoom || State == GestureState.Ordering)
                 {
                     Cancel();
                     State = GestureState.Blocked;
@@ -336,6 +337,17 @@ namespace NodeWar.Input
                         Emit(GestureEventKind.ZoomBegin);
                         break;
                     }
+                    // Only an already-selected villager starts an order drag; an unselected
+                    // one never does, so a drag that starts on it is a pan and never selects it.
+                    if (moved > tapSlop && downClass == GestureTargetClass.SelectedVillager &&
+                        IsEnabled(InputSlot.DragFromVillager))
+                    {
+                        State = GestureState.Ordering;
+                        Emit(GestureEventKind.Cancelled);
+                        Emit(GestureEventKind.OrderBegin, downPos);
+                        Emit(GestureEventKind.OrderUpdate, sample.Position);
+                        break;
+                    }
                     // A hitch cannot strand a drag between the slop and timer.
                     // Stillness counts the whole path, so drifting back does not re-arm a hold.
                     if (IsEnabled(InputSlot.Drag) &&
@@ -373,6 +385,7 @@ namespace NodeWar.Input
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanUpdate, sample.Position); break;
                 case GestureState.HoldFired: break;
+                case GestureState.Ordering: Emit(GestureEventKind.OrderUpdate, sample.Position); break;
                 case GestureState.OneHandZoom:
                     // Dragging down brings the camera closer, as one-finger zoom does on phone maps.
                     Emit(GestureEventKind.ZoomUpdate, scale: (float)Math.Pow(2.0,
@@ -418,6 +431,7 @@ namespace NodeWar.Input
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanEnd); break;
                 case GestureState.OneHandZoom: Emit(GestureEventKind.ZoomEnd); break;
+                case GestureState.Ordering: Emit(GestureEventKind.OrderEnd, sample.Position); break;
                 case GestureState.LassoArmed:
                 case GestureState.Lassoing: Emit(GestureEventKind.LassoComplete); break;
             }
@@ -477,6 +491,7 @@ namespace NodeWar.Input
             bool drawing = State == GestureState.LassoArmed || State == GestureState.Lassoing;
             if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
             if (State == GestureState.OneHandZoom) Emit(GestureEventKind.ZoomEnd);
+            if (State == GestureState.Ordering) Emit(GestureEventKind.OrderCancel);
             if (PairActive) EndPair(cancelled: true);
             State = GestureState.Cancelled;
             points.Clear();
