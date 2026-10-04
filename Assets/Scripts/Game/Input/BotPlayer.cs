@@ -99,7 +99,7 @@ namespace NodeWar.Input
 
             if (enemiesOnCore == 0) return;
 
-            // Emergency: override ALL cooldowns, send everyone to core
+            // Emergency: override cooldowns, but preserve attackers already breaching.
             List<int> candidates = GetAllLivingVillagers();
 
             for (int i = 0; i < candidates.Count; i++)
@@ -372,6 +372,12 @@ namespace NodeWar.Input
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
+                // A breacher is already an attacker on target, even without a combat suit.
+                if (v.state == VillagerState.Breaching && !v.isConsumed)
+                {
+                    readySoldiers.Add(i);
+                    continue;
+                }
                 if (!GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
@@ -483,6 +489,7 @@ namespace NodeWar.Input
             if (!IsOffCooldown(villagerID)) return;
 
             VillagerData v = state.villagers[villagerID];
+            if (v.state == VillagerState.Breaching) return;
             if (v.currentNodeID == targetNode && v.state != VillagerState.Moving) return;
             if (v.targetNodeID == targetNode) return;
 
@@ -510,6 +517,7 @@ namespace NodeWar.Input
             if (claimedThisTick[villagerID]) return;
 
             VillagerData v = state.villagers[villagerID];
+            if (v.state == VillagerState.Breaching) return;
             if (v.currentNodeID == targetNode && v.state != VillagerState.Moving) return;
             if (v.targetNodeID == targetNode) return;
 
@@ -565,6 +573,8 @@ namespace NodeWar.Input
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != playerID) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
+                // CoreEmergency must not pull attackers off the enemy core.
+                if (v.state == VillagerState.Breaching) continue;
                 result.Add(i);
             }
             return result;
@@ -580,6 +590,7 @@ namespace NodeWar.Input
                 if (!GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
+                if (v.state == VillagerState.Breaching) continue;
                 if (claimedThisTick[i]) continue;
                 result.Add(i);
             }
@@ -596,6 +607,7 @@ namespace NodeWar.Input
                 if (GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
+                if (v.state == VillagerState.Breaching) continue;
                 if (!includeWorking && v.state == VillagerState.Working) continue;
                 if (claimedThisTick[i]) continue;
                 if (!IsOffCooldown(i)) continue;
