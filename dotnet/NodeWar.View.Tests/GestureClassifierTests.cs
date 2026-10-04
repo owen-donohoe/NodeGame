@@ -39,6 +39,80 @@ namespace NodeWar.View.Tests
 
         [TestCase(false)]
         [TestCase(true)]
+        public void LiveThresholdUpdatesKeepSavedHoldTimeButUpdateFallback(bool savedSettings)
+        {
+            if (savedSettings)
+            {
+                GameSettingsData settings = GameSettingsData.CreateDefault();
+                settings.holdTime = 0.6f;
+                core.ApplySettings(settings);
+            }
+            core.UpdateThresholds(4f, 0.8f, 1.5f, 256, 2.5f, 0.1f);
+            Primary(0f, PointerPhase.Began);
+            Primary(0.6f, PointerPhase.Held);
+            Assert.AreEqual(savedSettings ? GestureState.LassoArmed : GestureState.Pending, core.State);
+            Primary(0.8f, PointerPhase.Held);
+            Assert.IsTrue(core.PanSuppressed);
+        }
+
+        [Test]
+        public void LiveSlopTuningIsReadOnNextSample()
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 3f);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            core.UpdateThresholds(2f, 0.3f, 1.5f, 256, 2.5f, 0.1f);
+            Primary(0.2f, PointerPhase.Held, 3f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void ZeroSpanBecomingValidCanBeginPinchLater()
+        {
+            Pair(0f, 0f, 0f);
+            Pair(0.1f, -5f, 5f);
+            Pair(0.2f, -10f, 10f);
+            Primary(0.3f, PointerPhase.Ended);
+            Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomUpdate, GestureEventKind.ZoomEnd);
+            Assert.AreEqual(2f, events[1].Scale);
+        }
+
+        [Test]
+        public void StackedPressEndsPreviousPanAndNewTapCanComplete()
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 5f);
+            Primary(0.2f, PointerPhase.Began);
+            Primary(0.25f, PointerPhase.Ended);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.PanBegin,
+                GestureEventKind.PanUpdate, GestureEventKind.PanEnd, GestureEventKind.Cancelled,
+                GestureEventKind.PointerDown, GestureEventKind.Tap);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void PrimaryPointerReplacementCannotCompleteAnotherPointersTap()
+        {
+            Primary(0f, PointerPhase.Began);
+            core.ProcessFrame(new[] { new PointerSample(0.1f, new GesturePoint(0f, 0f), 99,
+                PointerButton.Primary, PointerPhase.Ended) });
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void CancellationBalancesConcurrentCameraGestures()
+        {
+            Pair(0f, 0f, 10f);
+            Pair(0.1f, 5f, 20f);
+            core.Cancel();
+            Kinds(GestureEventKind.ZoomBegin, GestureEventKind.ZoomUpdate, GestureEventKind.PanBegin,
+                GestureEventKind.PanUpdate, GestureEventKind.PanEnd, GestureEventKind.ZoomEnd, GestureEventKind.Cancelled);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
         public void TwoFingerPanUsesMidpointAndCanRunWithPinch(bool pinch)
         {
             GameSettingsData settings = GameSettingsData.CreateDefault();
@@ -158,6 +232,13 @@ namespace NodeWar.View.Tests
                 Assert.AreEqual(GestureState.Idle, core.State);
                 events.Clear();
             }
+            Primary(0f, PointerPhase.Began);
+            Primary(0.3f, PointerPhase.Held);
+            Primary(0.4f, PointerPhase.Held, 6f);
+            Primary(0.5f, PointerPhase.Held, 6f, 6f);
+            Primary(0.6f, PointerPhase.Held, 0f, 6f);
+            Primary(0.7f, PointerPhase.Ended);
+            Assert.AreEqual(GestureState.Idle, core.State, "stationary hold then polygon");
         }
 
         [TestCase(false)]

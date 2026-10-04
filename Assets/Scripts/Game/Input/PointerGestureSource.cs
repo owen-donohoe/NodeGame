@@ -134,9 +134,17 @@ namespace NodeWar.Input
             if (!initialized) Initialize(Camera.main);
         }
 
+        private void OnDisable()
+        {
+            classifier?.Cancel();
+        }
+
         private void Update()
         {
             if (!initialized) return;
+            classifier.UpdateThresholds(thresholds.tapSlopMm, thresholds.longPressTime,
+                thresholds.lassoDecimationMm, thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm,
+                1f / ScreenMetrics.PixelsPerMm, GestureThresholds.HoldStillnessMm);
             samples.Clear();
             float now = Time.unscaledTime;
             Mouse mouse = Mouse.current;
@@ -161,16 +169,19 @@ namespace NodeWar.Input
                     PointerButton.Primary, phase, phase == PointerPhase.Began && IsPointerOverUI()));
                 if (touch != null)
                 {
+                    int activeTouches = 0;
+                    foreach (var finger in touch.touches)
+                        if (finger.press.isPressed) activeTouches++;
+                    bool checkTouchUI = activeTouches >= 2 && State != GestureState.Pinching && State != GestureState.TwoFinger;
                     foreach (var finger in touch.touches)
                         if (finger.press.isPressed)
                             samples.Add(new PointerSample(now, ToMm(finger.position.ReadValue()),
                                 finger.touchId.ReadValue(), PointerButton.Touch, PointerPhase.Held,
-                                IsMouseOverUI(finger.position.ReadValue())));
+                                checkTouchUI && IsMouseOverUI(finger.position.ReadValue())));
                 }
             }
             classifier.ProcessFrame(samples);
-            strokePoints.Clear();
-            foreach (GesturePoint point in classifier.CurrentStroke) strokePoints.Add(ToPixels(point));
+            if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
         }
 
         public void ApplySettings(NodeWar.Lobby.GameSettingsData settings)
@@ -206,7 +217,10 @@ namespace NodeWar.Input
                     downTarget = ResolveTarget(pos);
                     OnPointerDown?.Invoke(downTarget);
                     break;
-                case GestureEventKind.Cancelled: OnGestureCancelled?.Invoke(); break;
+                case GestureEventKind.Cancelled:
+                    if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
+                    OnGestureCancelled?.Invoke();
+                    break;
                 case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
                 case GestureEventKind.SecondaryClick:
                     OnSecondaryClick?.Invoke(ResolveTarget(pos, nodesOnly: true));
@@ -232,7 +246,7 @@ namespace NodeWar.Input
                 case GestureEventKind.ZoomUpdate: OnZoomUpdate?.Invoke(gesture.Scale); break;
                 case GestureEventKind.ZoomEnd: OnZoomEnd?.Invoke(); break;
             }
-            Log(gesture.Kind.ToString());
+            if (verboseLogging) Log(gesture.Kind.ToString());
         }
         // ===== RESOLUTION =====
 

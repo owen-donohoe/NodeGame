@@ -65,6 +65,7 @@ namespace NodeWar.Input
         private InputBinding[] bindings;
         private float tapSlop;
         private float holdTime;
+        private bool hasSettings;
         private float decimation;
         private int maxPoints;
         private float pinchDeadZone;
@@ -103,8 +104,15 @@ namespace NodeWar.Input
             float holdStillnessMm = DefaultHoldStillnessMm)
         {
             this.bindings = InputBindings.Normalized(bindings);
+            UpdateThresholds(tapSlopMm, holdTime, decimationMm, maxPoints, pinchDeadZoneMm, minPinchSpanMm, holdStillnessMm);
+        }
+
+        public void UpdateThresholds(float tapSlopMm, float fallbackHoldTime, float decimationMm,
+            int maxPoints, float pinchDeadZoneMm, float minPinchSpanMm,
+            float holdStillnessMm = DefaultHoldStillnessMm)
+        {
             tapSlop = tapSlopMm;
-            this.holdTime = holdTime;
+            if (!hasSettings) holdTime = fallbackHoldTime;
             decimation = decimationMm;
             this.maxPoints = maxPoints;
             pinchDeadZone = pinchDeadZoneMm;
@@ -125,6 +133,7 @@ namespace NodeWar.Input
                 Cancel();
             bindings = settings.inputBindings;
             holdTime = settings.holdTime;
+            hasSettings = true;
         }
 
         public bool IsEnabled(InputSlot slot) => bindings[(int)slot].enabled;
@@ -165,7 +174,14 @@ namespace NodeWar.Input
                         State = GestureState.Blocked;
                         return;
                     }
-                    if (pairZoom && span > minPinchSpan && Math.Abs(span - pinchStartSpan) >= pinchDeadZone)
+                    if (!pairZoom && IsEnabled(InputSlot.Pinch) && span > minPinchSpan)
+                    {
+                        pairZoom = true;
+                        State = GestureState.Pinching;
+                        pinchStartSpan = span;
+                        Emit(GestureEventKind.ZoomBegin);
+                    }
+                    else if (pairZoom && span > minPinchSpan && Math.Abs(span - pinchStartSpan) >= pinchDeadZone)
                         Emit(GestureEventKind.ZoomUpdate, scale: span / pinchStartSpan);
                     if (pairPan) Emit(GestureEventKind.PanUpdate, midpoint);
                     else if (pairLasso)
