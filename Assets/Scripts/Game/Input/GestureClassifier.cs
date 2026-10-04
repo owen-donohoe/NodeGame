@@ -61,6 +61,7 @@ namespace NodeWar.Input
     /// </summary>
     public sealed class GestureClassifier
     {
+        public const float DefaultHoldStillnessMm = 1.5f;
         private InputBinding[] bindings;
         private float tapSlop;
         private float holdTime;
@@ -70,6 +71,9 @@ namespace NodeWar.Input
         private float minPinchSpan;
         private GesturePoint downPos;
         private float downTime;
+        private GesturePoint previousPos;
+        private float pathLength;
+        private float holdStillness;
         private float pinchStartSpan;
         private readonly List<GesturePoint> points = new List<GesturePoint>();
 
@@ -79,13 +83,15 @@ namespace NodeWar.Input
         public event Action<GestureEvent> Published;
 
         public GestureClassifier(InputBinding[] bindings, float tapSlopMm, float holdTime,
-            float decimationMm, int maxPoints, float pinchDeadZoneMm, float minPinchSpanMm)
+            float decimationMm, int maxPoints, float pinchDeadZoneMm, float minPinchSpanMm,
+            float holdStillnessMm = DefaultHoldStillnessMm)
         {
-            Configure(bindings, tapSlopMm, holdTime, decimationMm, maxPoints, pinchDeadZoneMm, minPinchSpanMm);
+            Configure(bindings, tapSlopMm, holdTime, decimationMm, maxPoints, pinchDeadZoneMm, minPinchSpanMm, holdStillnessMm);
         }
 
         public void Configure(InputBinding[] bindings, float tapSlopMm, float holdTime,
-            float decimationMm, int maxPoints, float pinchDeadZoneMm, float minPinchSpanMm)
+            float decimationMm, int maxPoints, float pinchDeadZoneMm, float minPinchSpanMm,
+            float holdStillnessMm = DefaultHoldStillnessMm)
         {
             this.bindings = InputBindings.Normalized(bindings);
             tapSlop = tapSlopMm;
@@ -94,6 +100,7 @@ namespace NodeWar.Input
             this.maxPoints = maxPoints;
             pinchDeadZone = pinchDeadZoneMm;
             minPinchSpan = minPinchSpanMm;
+            holdStillness = holdStillnessMm;
         }
 
         private void Emit(GestureEventKind kind, GesturePoint position = default, float scale = 0f)
@@ -159,6 +166,8 @@ namespace NodeWar.Input
                 case PointerPhase.Began:
                     downPos = primary.Position;
                     downTime = primary.Time;
+                    previousPos = downPos;
+                    pathLength = 0f;
                     points.Clear();
                     State = primary.OverUI ? GestureState.Blocked : GestureState.Pending;
                     if (!primary.OverUI) Emit(GestureEventKind.PointerDown, downPos);
@@ -174,16 +183,20 @@ namespace NodeWar.Input
             switch (State)
             {
                 case GestureState.Pending:
+                    pathLength += GesturePoint.Distance(sample.Position, previousPos);
+                    previousPos = sample.Position;
                     float moved = GesturePoint.Distance(sample.Position, downPos);
                     float held = sample.Time - downTime;
-                    if (moved > tapSlop && held < holdTime)
+                    // A hitch cannot strand a drag between the slop and timer.
+                    // Stillness counts the whole path, so drifting back does not re-arm a hold.
+                    if (moved > tapSlop || (held >= holdTime && pathLength > holdStillness))
                     {
                         State = GestureState.Panning;
                         Emit(GestureEventKind.Cancelled);
                         Emit(GestureEventKind.PanBegin, downPos);
                         Emit(GestureEventKind.PanUpdate, sample.Position);
                     }
-                    else if (held >= holdTime && moved <= tapSlop)
+                    else if (held >= holdTime && pathLength <= holdStillness)
                     {
                         State = GestureState.LassoArmed;
                         points.Clear();

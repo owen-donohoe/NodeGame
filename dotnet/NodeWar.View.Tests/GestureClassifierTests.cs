@@ -78,13 +78,42 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
-        public void Golden_DeadZoneHitchPublishesNoGesture()
+        public void IntentionalChange_DeadZoneHitchNowPans()
         {
             Primary(0f, PointerPhase.Began);
             Primary(0.31f, PointerPhase.Held, 5f);
-            Assert.AreEqual(GestureState.Pending, core.State);
+            Assert.AreEqual(GestureState.Panning, core.State);
             Primary(0.4f, PointerPhase.Ended, 5f);
-            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.PanBegin,
+                GestureEventKind.PanUpdate, GestureEventKind.PanEnd);
+        }
+
+        [Test]
+        public void SlowDriftWithinTapSlopPansAtTimer()
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 0.8f);
+            Primary(0.2f, PointerPhase.Held, 1.6f);
+            Primary(0.3f, PointerPhase.Held, 3f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+            Assert.IsFalse(core.PanSuppressed);
+        }
+
+        [Test]
+        public void StillnessCountsPathEvenWhenPointerReturnsToStart()
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.1f, PointerPhase.Held, 1f);
+            Primary(0.3f, PointerPhase.Held);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void ExactlyAtStillnessLimitCanArmHold()
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.3f, PointerPhase.Held, 1.5f);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
         }
 
         [Test]

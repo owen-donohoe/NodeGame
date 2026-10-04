@@ -118,7 +118,8 @@ namespace NodeWar.Input
             {
                 classifier = new GestureClassifier(NodeWar.Lobby.InputBindings.CreateDefault(),
                     thresholds.tapSlopMm, thresholds.longPressTime, thresholds.lassoDecimationMm,
-                    thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm, 1f / ScreenMetrics.PixelsPerMm);
+                    thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm, 1f / ScreenMetrics.PixelsPerMm,
+                    GestureThresholds.HoldStillnessMm);
                 classifier.Published += Publish;
             }
             initialized = true;
@@ -162,6 +163,8 @@ namespace NodeWar.Input
                 }
             }
             classifier.ProcessFrame(samples);
+            strokePoints.Clear();
+            foreach (GesturePoint point in classifier.CurrentStroke) strokePoints.Add(ToPixels(point));
         }
 
         private static GesturePoint ToMm(Vector2 position)

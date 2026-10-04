@@ -25,6 +25,8 @@ namespace NodeWar.Input
         // pan needing a slightly more committed drag.
         public float tapSlopMm = 4.0f;
 
+        public const float HoldStillnessMm = GestureClassifier.DefaultHoldStillnessMm;
+
         [Tooltip("Minimum spacing between recorded lasso points. Kept below " +
                  "tapSlop so the polygon still tracks a tight curve, while " +
                  "keeping the vertex count bounded.")]
