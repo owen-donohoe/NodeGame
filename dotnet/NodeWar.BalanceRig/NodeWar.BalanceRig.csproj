@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The headless balance rig: BotPlayer against BotPlayer, many matches, one
+    CSV row each. Tooling only. Nothing here is compiled by Unity and nothing
+    in Simulation/ knows it exists.
+
+    BotPlayer and InputBuffer are linked from Assets/, not copied, so the rig
+    plays the bot the game ships. The simulation reads its balance and path
+    costs from statics, so matches run strictly one after another.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>NodeWar.BalanceRig</AssemblyName>
+    <RootNamespace>NodeWar.BalanceRig</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/BotPlayer.cs" Link="Input/BotPlayer.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/InputBuffer.cs" Link="Input/InputBuffer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../NodeWar.Simulation/NodeWar.Simulation.csproj" />
+  </ItemGroup>
+
+</Project>
