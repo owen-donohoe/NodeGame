@@ -37,6 +37,13 @@
     <Compile Include="../../Assets/Scripts/Game/View/IndicatorPlacement.cs"
              Link="View/IndicatorPlacement.cs" />
 
+    <!-- Breach bar fill, pip count, sudden-death countdown and banner wording.
+         The world-space bar, the villager ring and the HUD banner that draw
+         them stay in Unity. -->
+    <Compile Include="BreachTempoMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/BreachTempoMath.cs"
+             Link="View/BreachTempoMath.cs" />
+
     <Compile Include="RouteRevealTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
              Link="View/RouteReveal.cs" />
