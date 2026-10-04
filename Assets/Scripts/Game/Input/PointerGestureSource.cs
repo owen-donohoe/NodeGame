@@ -159,6 +159,7 @@ namespace NodeWar.Input
             classifier.DoubleTapTime = thresholds.doubleTapTime;
             classifier.DoubleTapRadiusMm = thresholds.doubleTapRadiusMm;
             classifier.TwoFingerTapTime = thresholds.twoFingerTapTime;
+            classifier.OneHandZoomMmPerDoubling = thresholds.oneHandZoomMmPerDoubling;
             samples.Clear();
             float now = Time.unscaledTime;
             Mouse mouse = Mouse.current;

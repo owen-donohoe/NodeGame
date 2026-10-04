@@ -54,6 +54,11 @@ namespace NodeWar.Input
         [Range(0.1f, 0.6f)]
         public float twoFingerTapTime = 0.3f;
 
+        [Tooltip("Vertical finger travel that doubles the zoom in one-handed zoom " +
+                 "(double-tap, then drag), in millimetres.")]
+        [Range(8f, 80f)]
+        public float oneHandZoomMmPerDoubling = 25f;
+
         [Tooltip("How long the white touch-down flash lasts.")]
         [Range(0.03f, 0.5f)]
         public float flashDuration = 0.12f;

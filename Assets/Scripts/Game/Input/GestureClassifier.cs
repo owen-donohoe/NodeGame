@@ -4,7 +4,7 @@ using NodeWar.Lobby;
 
 namespace NodeWar.Input
 {
-    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger }
+    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger, OneHandZoom }
     public enum PointerButton { Primary, Touch, Secondary, Middle, Scroll }
     public enum PointerPhase { None, Began, Held, Ended, Cancelled }
     public enum GestureEventKind
@@ -93,6 +93,7 @@ namespace NodeWar.Input
         private bool pairZoom;
         private bool pairPan;
         private bool pairLasso;
+        private float zoomAnchorY;
         private float pairStartTime;
         private float pairStartSpan;
         private bool pairMoved;
@@ -113,6 +114,8 @@ namespace NodeWar.Input
         public float DoubleTapRadiusMm { get; set; } = 8f;
         /// <summary>Longest a two-finger touch may last and still be a tap.</summary>
         public float TwoFingerTapTime { get; set; } = 0.3f;
+        /// <summary>Vertical travel that doubles (or halves) the one-handed zoom scale, in mm.</summary>
+        public float OneHandZoomMmPerDoubling { get; set; } = 25f;
 
         public GestureState State { get; private set; }
         public bool PanSuppressed => State == GestureState.LassoArmed || State == GestureState.Lassoing || pairLasso;
@@ -242,7 +245,7 @@ namespace NodeWar.Input
                     return;
                 }
                 if (State == GestureState.Blocked) return;
-                if (PanSuppressed)
+                if (PanSuppressed || State == GestureState.OneHandZoom)
                 {
                     Cancel();
                     State = GestureState.Blocked;
@@ -321,6 +324,16 @@ namespace NodeWar.Input
                     float moved = GesturePoint.Distance(sample.Position, downPos);
                     tapExceededSlop |= moved > tapSlop;
                     float held = sample.Time - downTime;
+                    // Tap then press-and-drag: the second press zooms instead of panning.
+                    // The anchor is the slop crossing so the scale starts at 1, not with a jump.
+                    if (doubleCandidate && moved > tapSlop && IsEnabled(InputSlot.DoubleTapDrag))
+                    {
+                        State = GestureState.OneHandZoom;
+                        zoomAnchorY = sample.Position.Y;
+                        Emit(GestureEventKind.Cancelled);
+                        Emit(GestureEventKind.ZoomBegin);
+                        break;
+                    }
                     // A hitch cannot strand a drag between the slop and timer.
                     // Stillness counts the whole path, so drifting back does not re-arm a hold.
                     if (IsEnabled(InputSlot.Drag) &&
@@ -349,6 +362,11 @@ namespace NodeWar.Input
                     }
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanUpdate, sample.Position); break;
+                case GestureState.OneHandZoom:
+                    // Dragging down brings the camera closer, as one-finger zoom does on phone maps.
+                    Emit(GestureEventKind.ZoomUpdate, scale: (float)Math.Pow(2.0,
+                        (zoomAnchorY - sample.Position.Y) / Math.Max(1f, OneHandZoomMmPerDoubling)));
+                    break;
                 case GestureState.LassoArmed:
                 case GestureState.Lassoing:
                     if (Append(sample.Position))
@@ -388,6 +406,7 @@ namespace NodeWar.Input
                     else Emit(GestureEventKind.Cancelled, downPos);
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanEnd); break;
+                case GestureState.OneHandZoom: Emit(GestureEventKind.ZoomEnd); break;
                 case GestureState.LassoArmed:
                 case GestureState.Lassoing: Emit(GestureEventKind.LassoComplete); break;
             }
@@ -438,6 +457,7 @@ namespace NodeWar.Input
             if (State == GestureState.Idle) return;
             bool drawing = State == GestureState.LassoArmed || State == GestureState.Lassoing;
             if (State == GestureState.Panning) Emit(GestureEventKind.PanEnd);
+            if (State == GestureState.OneHandZoom) Emit(GestureEventKind.ZoomEnd);
             if (PairActive) EndPair(cancelled: true);
             State = GestureState.Cancelled;
             points.Clear();

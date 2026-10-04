@@ -393,6 +393,108 @@ namespace NodeWar.View.Tests
             Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.TwoFingerTap));
         }
 
+
+        private void ZoomScales(out float[] scales)
+        {
+            scales = events.FindAll(e => e.Kind == GestureEventKind.ZoomUpdate).ConvertAll(e => e.Scale).ToArray();
+        }
+
+        [Test]
+        public void DoubleTapDragIsOffByDefaultAndSecondPressPans()
+        {
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.None, y: 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void DoubleTapDragZoomsFromTheSlopCrossingAndDownIsIn()
+        {
+            Enable(InputSlot.DoubleTapDrag);
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.25f, PointerPhase.Held, GestureTargetClass.None, y: -2f);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.None, y: -5f);
+            Assert.AreEqual(GestureState.OneHandZoom, core.State);
+            Assert.IsFalse(core.PanSuppressed);
+            Press(0.4f, PointerPhase.Held, GestureTargetClass.None, y: -30f);
+            Press(0.5f, PointerPhase.Held, GestureTargetClass.None, y: 20f);
+            Press(0.6f, PointerPhase.Ended, GestureTargetClass.None, y: 20f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown,
+                GestureEventKind.Cancelled, GestureEventKind.ZoomBegin, GestureEventKind.ZoomUpdate,
+                GestureEventKind.ZoomUpdate, GestureEventKind.ZoomEnd);
+            ZoomScales(out float[] scales);
+            Assert.AreEqual(2f, scales[0], 1e-5f, "25 mm below the slop crossing doubles");
+            Assert.AreEqual(0.5f, scales[1], 1e-5f, "25 mm above it halves");
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void DoubleTapDragNeverFiresTheDoubleTapActionOnRelease()
+        {
+            Enable(InputSlot.DoubleTapDrag, InputSlot.DoubleTapGround);
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.None, y: -6f);
+            Press(0.4f, PointerPhase.Ended, GestureTargetClass.None, y: -6f);
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.DoubleTapGround));
+        }
+
+        [Test]
+        public void DoubleTapWithoutMovementStillFiresOnReleaseWhenDragIsAlsoOn()
+        {
+            Enable(InputSlot.DoubleTapDrag, InputSlot.DoubleTapGround);
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.25f, PointerPhase.Held, GestureTargetClass.None, y: 1f);
+            Assert.IsFalse(events.Exists(e => e.Kind == GestureEventKind.DoubleTapGround), "not before release");
+            Press(0.3f, PointerPhase.Ended, GestureTargetClass.None, y: 1f);
+            Assert.AreEqual(GestureEventKind.DoubleTapGround, events[events.Count - 1].Kind);
+        }
+
+        [Test]
+        public void DoubleTapDragNeedsAPrecedingTapAndNodesDoNotCount()
+        {
+            Enable(InputSlot.DoubleTapDrag);
+            Press(0f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.None, y: 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+            Press(0.2f, PointerPhase.Ended, GestureTargetClass.None, y: 6f);
+            TapOn(1f, GestureTargetClass.Node, 3);
+            Press(1.2f, PointerPhase.Began, GestureTargetClass.Node, 3);
+            Press(1.3f, PointerPhase.Held, GestureTargetClass.Node, 3, y: 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+        }
+
+        [Test]
+        public void SecondFingerDuringOneHandedZoomEndsItBalanced()
+        {
+            Enable(InputSlot.DoubleTapDrag);
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.None, y: -6f);
+            Pair(0.4f, 0f, 10f);
+            Primary(0.5f, PointerPhase.Ended);
+            Assert.AreEqual(1, events.FindAll(e => e.Kind == GestureEventKind.ZoomBegin).Count);
+            Assert.AreEqual(1, events.FindAll(e => e.Kind == GestureEventKind.ZoomEnd).Count);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void SettingsChangeDuringOneHandedZoomEndsIt()
+        {
+            Enable(InputSlot.DoubleTapDrag);
+            TapOn(0f, GestureTargetClass.None);
+            Press(0.2f, PointerPhase.Began, GestureTargetClass.None);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.None, y: -6f);
+            core.ApplySettings(GameSettingsData.CreateDefault());
+            Assert.AreEqual(GestureEventKind.Cancelled, events[events.Count - 1].Kind);
+            Assert.AreEqual(1, events.FindAll(e => e.Kind == GestureEventKind.ZoomEnd).Count);
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
         public static IEnumerable<int> ToggleMasks()
         {
             for (int mask = 0; mask < 1024; mask++) yield return mask;
