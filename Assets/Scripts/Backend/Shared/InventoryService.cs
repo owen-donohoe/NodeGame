@@ -101,7 +101,8 @@ namespace NodeWar.Backend
                 if (parsedBase != baseId) throw new InventoryValidationException($"Item '{id}' is not for base '{baseId}'.");
                 var owned = skin ? state.Inventory.OwnedSkins : state.Inventory.OwnedVariants;
                 if (owned == null || !owned.Contains(id)) throw new InventoryValidationException($"Item '{id}' is not owned.");
-                if (!skin && era > state.Rank.Arena) throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
+                bool usable = SuitTree.IsTreeSuit(baseId) ? SuitTree.IsAvailable(id, state.Rank.Arena) : era <= state.Rank.Arena;
+                if (!skin && !usable) throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
             });
             if (changed) await store.WriteAsync(new PlayerState { Inventory = state.Inventory });
             return state;
