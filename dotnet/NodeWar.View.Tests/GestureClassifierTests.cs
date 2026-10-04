@@ -495,6 +495,115 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(GestureState.Idle, core.State);
         }
 
+        private void HoldOn(GestureTargetClass target, int id, float releaseAt, params (float t, float x)[] moves)
+        {
+            Press(0f, PointerPhase.Began, target, id);
+            foreach (var move in moves) Press(move.t, PointerPhase.Held, target, id, move.x);
+            Press(releaseAt, PointerPhase.Ended, target, id);
+        }
+
+        private int Count(GestureEventKind kind) => events.FindAll(e => e.Kind == kind).Count;
+
+        private void HoldOnlyInfo()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Hold].enabled = true;
+            settings.inputBindings[(int)InputSlot.HoldDrag].enabled = false;
+            core.ApplySettings(settings);
+        }
+
+        [Test]
+        public void Golden_HoldInfoIsOffByDefault()
+        {
+            HoldOn(GestureTargetClass.Node, 3, 0.6f, (0.3f, 0f));
+            Assert.AreEqual(0, Count(GestureEventKind.HoldInfo));
+        }
+
+        [TestCase(GestureTargetClass.Node)]
+        [TestCase(GestureTargetClass.Villager)]
+        [TestCase(GestureTargetClass.SelectedVillager)]
+        public void HoldInfoFiresAtTheTimerWhenNothingElseClaimsTheHold(GestureTargetClass target)
+        {
+            HoldOnlyInfo();
+            Press(0f, PointerPhase.Began, target, 3);
+            Press(0.29f, PointerPhase.Held, target, 3);
+            Assert.AreEqual(0, Count(GestureEventKind.HoldInfo));
+            Press(0.3f, PointerPhase.Held, target, 3);
+            Assert.AreEqual(GestureState.HoldFired, core.State);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.HoldInfo);
+            Press(0.5f, PointerPhase.Held, target, 3, 30f);
+            Press(0.6f, PointerPhase.Ended, target, 3, 30f);
+            Assert.AreEqual(3, events.Count, "drag after the hold is inert");
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void HoldInfoIgnoresGround()
+        {
+            HoldOnlyInfo();
+            HoldOn(GestureTargetClass.None, -1, 0.6f, (0.3f, 0f));
+            Assert.AreEqual(0, Count(GestureEventKind.HoldInfo));
+        }
+
+        [Test]
+        public void HoldInfoNeedsStillness()
+        {
+            HoldOnlyInfo();
+            HoldOn(GestureTargetClass.Node, 3, 0.5f, (0.1f, 1f), (0.3f, 0f));
+            Assert.AreEqual(0, Count(GestureEventKind.HoldInfo));
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
+        [Test]
+        public void HoldInfoOnReleaseWhenHoldDragArmedALassoThatNeverMoved()
+        {
+            Enable(InputSlot.Hold);
+            HoldOn(GestureTargetClass.Villager, 3, 0.6f, (0.3f, 0f));
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled, GestureEventKind.LassoBegin,
+                GestureEventKind.LassoComplete, GestureEventKind.HoldInfo);
+        }
+
+        [Test]
+        public void HoldInfoOnReleaseWhenHoldDragIsPanAndNeverMoved()
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.Hold].enabled = true;
+            settings.inputBindings[(int)InputSlot.HoldDrag].action = (int)InputAction.Pan;
+            core.ApplySettings(settings);
+            HoldOn(GestureTargetClass.Node, 3, 0.6f, (0.3f, 0f));
+            Assert.AreEqual(GestureEventKind.HoldInfo, events[events.Count - 1].Kind);
+            Assert.AreEqual(GestureEventKind.PanEnd, events[events.Count - 2].Kind);
+        }
+
+        [Test]
+        public void HoldThenDragIsALassoNotInfo()
+        {
+            Enable(InputSlot.Hold);
+            HoldOn(GestureTargetClass.Villager, 3, 0.8f, (0.3f, 0f), (0.4f, 5f), (0.5f, 10f));
+            Assert.AreEqual(0, Count(GestureEventKind.HoldInfo));
+            Assert.AreEqual(1, Count(GestureEventKind.LassoComplete));
+        }
+
+        [Test]
+        public void ReleaseBeforeHoldTimeIsATapNotAHold()
+        {
+            Enable(InputSlot.Hold);
+            HoldOn(GestureTargetClass.Node, 3, 0.2f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap);
+        }
+
+        [Test]
+        public void SecondFingerAfterHoldFiredIsBlockedCleanly()
+        {
+            HoldOnlyInfo();
+            Press(0f, PointerPhase.Began, GestureTargetClass.Node, 3);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.Node, 3);
+            Pair(0.4f, 0f, 10f);
+            Primary(0.5f, PointerPhase.Ended);
+            Assert.AreEqual(1, Count(GestureEventKind.HoldInfo));
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
         public static IEnumerable<int> ToggleMasks()
         {
             for (int mask = 0; mask < 1024; mask++) yield return mask;

@@ -112,6 +112,13 @@ namespace NodeWar.Input
             return true;
         }
 
+        /// <summary>The node a villager is standing on, or -1 if it does not exist.</summary>
+        public int NodeOfVillager(int villagerID)
+        {
+            if (simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return -1;
+            return simState.villagers[villagerID].currentNodeID;
+        }
+
         /// <summary>Selects every villager of ours that is standing idle.</summary>
         public void SelectAllIdle()
         {

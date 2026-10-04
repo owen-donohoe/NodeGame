@@ -56,6 +56,7 @@ namespace NodeWar.Input
         {
             if (source == null || subscribed) return;
             source.OnTap += HandleTap;
+            source.OnHold += HandleHold;
             source.OnTwoFingerTap += HandleTwoFingerTap;
             source.OnDoubleTapGround += HandleDoubleTapGround;
             source.OnDoubleTapVillager += HandleDoubleTapVillager;
@@ -66,6 +67,7 @@ namespace NodeWar.Input
         {
             if (source == null || !subscribed) return;
             source.OnTap -= HandleTap;
+            source.OnHold -= HandleHold;
             source.OnTwoFingerTap -= HandleTwoFingerTap;
             source.OnDoubleTapGround -= HandleDoubleTapGround;
             source.OnDoubleTapVillager -= HandleDoubleTapVillager;
@@ -133,6 +135,20 @@ namespace NodeWar.Input
                     ClearEverything();
                     return;
             }
+        }
+
+        /// <summary>
+        /// Open info. No villager info view exists, so a villager opens the panel of the
+        /// node it stands on. The selection is left alone: inspecting is not ordering.
+        /// </summary>
+        private void HandleHold(GestureTarget target)
+        {
+            if (panel == null || target.kind == GestureTargetKind.None) return;
+            int node = target.kind == GestureTargetKind.Villager && selection != null
+                ? selection.NodeOfVillager(target.id) : target.id;
+            if (node < 0) return;
+            panel.OpenForNode(node);
+            Log("hold info node " + node);
         }
 
         private void HandleTwoFingerTap()

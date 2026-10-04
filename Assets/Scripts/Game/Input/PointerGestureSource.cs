@@ -60,6 +60,9 @@ namespace NodeWar.Input
         /// <summary>Two taps on the same villager.</summary>
         public event Action<GestureTarget> OnDoubleTapVillager;
 
+        /// <summary>A still hold on a node or villager, with no drag.</summary>
+        public event Action<GestureTarget> OnHold;
+
         /// <summary>A quick two-finger touch that neither travelled nor spread.</summary>
         public event Action OnTwoFingerTap;
 
@@ -252,6 +255,7 @@ namespace NodeWar.Input
                     OnGestureCancelled?.Invoke();
                     break;
                 case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
+                case GestureEventKind.HoldInfo: OnHold?.Invoke(downTarget); break;
                 case GestureEventKind.TwoFingerTap: OnTwoFingerTap?.Invoke(); break;
                 case GestureEventKind.DoubleTapGround: OnDoubleTapGround?.Invoke(); break;
                 case GestureEventKind.DoubleTapVillager: OnDoubleTapVillager?.Invoke(downTarget); break;

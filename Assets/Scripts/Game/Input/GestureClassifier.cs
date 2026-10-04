@@ -4,14 +4,14 @@ using NodeWar.Lobby;
 
 namespace NodeWar.Input
 {
-    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger, OneHandZoom }
+    public enum GestureState { Idle, Pending, Panning, LassoArmed, Lassoing, Blocked, Pinching, Cancelled, TwoFinger, OneHandZoom, HoldFired }
     public enum PointerButton { Primary, Touch, Secondary, Middle, Scroll }
     public enum PointerPhase { None, Began, Held, Ended, Cancelled }
     public enum GestureEventKind
     {
         PointerDown, Cancelled, Tap, SecondaryClick, PanBegin, PanUpdate, PanEnd,
         LassoBegin, LassoPoint, LassoComplete, ZoomBegin, ZoomUpdate, ZoomEnd,
-        DoubleTapGround, DoubleTapVillager, TwoFingerTap
+        DoubleTapGround, DoubleTapVillager, TwoFingerTap, HoldInfo
     }
 
     /// <summary>What the adapter found under a press. Resolved once, on touch-down.</summary>
@@ -94,6 +94,7 @@ namespace NodeWar.Input
         private bool pairPan;
         private bool pairLasso;
         private float zoomAnchorY;
+        private bool holdArmedStill;
         private float pairStartTime;
         private float pairStartSpan;
         private bool pairMoved;
@@ -300,6 +301,7 @@ namespace NodeWar.Input
                     primaryId = primary.PointerId;
                     previousPos = downPos;
                     pathLength = 0f;
+                    holdArmedStill = false;
                     tapExceededSlop = false;
                     points.Clear();
                     downClass = primary.Target;
@@ -316,11 +318,11 @@ namespace NodeWar.Input
 
         private void Continue(PointerSample sample)
         {
+            pathLength += GesturePoint.Distance(sample.Position, previousPos);
+            previousPos = sample.Position;
             switch (State)
             {
                 case GestureState.Pending:
-                    pathLength += GesturePoint.Distance(sample.Position, previousPos);
-                    previousPos = sample.Position;
                     float moved = GesturePoint.Distance(sample.Position, downPos);
                     tapExceededSlop |= moved > tapSlop;
                     float held = sample.Time - downTime;
@@ -351,6 +353,7 @@ namespace NodeWar.Input
                     }
                     else if (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness)
                     {
+                        holdArmedStill = true;
                         if (ActionFor(InputSlot.HoldDrag) == InputAction.Pan)
                         {
                             State = GestureState.Panning;
@@ -360,8 +363,16 @@ namespace NodeWar.Input
                         }
                         else BeginLasso(sample.Position, armed: true);
                     }
+                    else if (!IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness && HoldInfoApplies())
+                    {
+                        // Nothing else wants the hold, so it fires at the timer rather than on release.
+                        State = GestureState.HoldFired;
+                        Emit(GestureEventKind.Cancelled);
+                        Emit(GestureEventKind.HoldInfo, downPos);
+                    }
                     break;
                 case GestureState.Panning: Emit(GestureEventKind.PanUpdate, sample.Position); break;
+                case GestureState.HoldFired: break;
                 case GestureState.OneHandZoom:
                     // Dragging down brings the camera closer, as one-finger zoom does on phone maps.
                     Emit(GestureEventKind.ZoomUpdate, scale: (float)Math.Pow(2.0,
@@ -410,6 +421,11 @@ namespace NodeWar.Input
                 case GestureState.LassoArmed:
                 case GestureState.Lassoing: Emit(GestureEventKind.LassoComplete); break;
             }
+            // A still hold that Hold + drag already claimed (armed a lasso or pan that never
+            // went anywhere) is still a hold: it opens info once the stroke closes.
+            if (holdArmedStill && pathLength <= holdStillness && HoldInfoApplies() &&
+                (State == GestureState.Panning || State == GestureState.LassoArmed))
+                Emit(GestureEventKind.HoldInfo, downPos);
             State = GestureState.Idle;
         }
 
@@ -435,6 +451,9 @@ namespace NodeWar.Input
             lastTapClass = downClass;
             lastTapId = downId;
         }
+
+        private bool HoldInfoApplies() => IsEnabled(InputSlot.Hold) &&
+            (downClass == GestureTargetClass.Node || IsVillager(downClass));
 
         private static bool IsVillager(GestureTargetClass target) =>
             target == GestureTargetClass.Villager || target == GestureTargetClass.SelectedVillager;
