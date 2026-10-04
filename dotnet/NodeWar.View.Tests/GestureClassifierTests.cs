@@ -707,47 +707,125 @@ namespace NodeWar.View.Tests
             for (int mask = 0; mask < 1024; mask++) yield return mask;
         }
 
+        private void PrimaryOn(float time, PointerPhase phase, GestureTargetClass target, int id,
+            float x = 0f, float y = 0f, bool ui = false)
+        {
+            core.ProcessFrame(new[] { new PointerSample(time, new GesturePoint(x, y), 10, PointerButton.Primary, phase,
+                ui, target, id) });
+        }
+
+        private static readonly GestureTargetClass[] SweepTargets =
+            { GestureTargetClass.None, GestureTargetClass.Villager, GestureTargetClass.SelectedVillager, GestureTargetClass.Node };
+
+        // Every Begin has exactly one End or Cancel, whatever interrupted it.
+        private void AssertBalanced(string label)
+        {
+            Assert.AreEqual(Count(GestureEventKind.PanBegin), Count(GestureEventKind.PanEnd), label + " pan");
+            Assert.AreEqual(Count(GestureEventKind.ZoomBegin), Count(GestureEventKind.ZoomEnd), label + " zoom");
+            Assert.AreEqual(Count(GestureEventKind.LassoBegin), Count(GestureEventKind.LassoComplete), label + " lasso");
+            Assert.AreEqual(Count(GestureEventKind.OrderBegin),
+                Count(GestureEventKind.OrderEnd) + Count(GestureEventKind.OrderCancel), label + " order");
+        }
+
+        [Test]
+        public void NewSlotsAllDefaultOff()
+        {
+            foreach (InputSlot slot in new[] { InputSlot.DragFromVillager, InputSlot.DoubleTapGround,
+                InputSlot.DoubleTapVillager, InputSlot.TwoFingerTap, InputSlot.DoubleTapDrag, InputSlot.Hold })
+                Assert.IsFalse(InputBindings.DefaultFor(slot).enabled, slot.ToString());
+        }
+
+        [Test]
+        public void Golden_DefaultsPublishNoNewGestureOnAnyTarget()
+        {
+            foreach (GestureTargetClass target in SweepTargets)
+            {
+                float t = events.Count * 10f + 100f;
+                PrimaryOn(t, PointerPhase.Began, target, 3);
+                PrimaryOn(t + 0.05f, PointerPhase.Ended, target, 3);
+                PrimaryOn(t + 0.2f, PointerPhase.Began, target, 3);
+                PrimaryOn(t + 0.25f, PointerPhase.Ended, target, 3);
+                PrimaryOn(t + 1f, PointerPhase.Began, target, 3);
+                PrimaryOn(t + 1.4f, PointerPhase.Held, target, 3);
+                PrimaryOn(t + 1.8f, PointerPhase.Ended, target, 3);
+                PrimaryOn(t + 3f, PointerPhase.Began, target, 3);
+                PrimaryOn(t + 3.1f, PointerPhase.Held, target, 3, 8f);
+                PrimaryOn(t + 3.2f, PointerPhase.Ended, target, 3, 8f);
+                Pair(t + 5f, 0f, 10f);
+                Primary(t + 5.1f, PointerPhase.Ended);
+            }
+            GestureEventKind[] added = { GestureEventKind.DoubleTapGround, GestureEventKind.DoubleTapVillager,
+                GestureEventKind.TwoFingerTap, GestureEventKind.HoldInfo, GestureEventKind.OrderBegin,
+                GestureEventKind.OrderUpdate, GestureEventKind.OrderEnd, GestureEventKind.OrderCancel };
+            foreach (GestureEventKind kind in added) Assert.AreEqual(0, Count(kind), kind.ToString());
+            Assert.AreEqual(8, Count(GestureEventKind.Tap), "every tap fires, two per target");
+            AssertBalanced("defaults");
+        }
+
         [TestCaseSource(nameof(ToggleMasks))]
         public void EveryTouchToggleCombinationReturnsIdleAndKeepsPlainTaps(int mask)
         {
             GameSettingsData settings = GameSettingsData.CreateDefault();
-            // The ten toggleable touch slots are contiguous: HoldDrag through Hold.
+            // The ten toggleable touch slots are contiguous: HoldDrag through Hold, which
+            // takes in every new slot (order drag, both double-taps, two-finger tap,
+            // double-tap + drag, hold).
             for (int bit = 0; bit < 10; bit++) settings.inputBindings[bit + 1].enabled = (mask & (1 << bit)) != 0;
             var random = new System.Random(2411);
             for (int trace = 0; trace < 12; trace++)
             {
-                // Exercise the two single-pointer action choices too.
+                // Exercise the single-pointer action choices and every target class.
                 settings.inputBindings[(int)InputSlot.Drag].action = (int)(trace % 2 == 0 ? InputAction.Pan : InputAction.LassoSelect);
                 settings.inputBindings[(int)InputSlot.HoldDrag].action = (int)(trace % 3 == 0 ? InputAction.Pan : InputAction.LassoSelect);
                 core.ApplySettings(settings);
-                Primary(0f, PointerPhase.Began, ui: trace == 1);
+                GestureTargetClass target = SweepTargets[trace % 4];
+                float t0 = trace * 10f;
+                if (trace % 3 == 1)
+                {
+                    // A tap followed by a second press that taps, wobbles or drags.
+                    TapOn(t0, target, 3);
+                    PrimaryOn(t0 + 0.15f, PointerPhase.Began, target, 3);
+                    if (trace % 2 == 0) PrimaryOn(t0 + 0.2f, PointerPhase.Held, target, 3, 0f, -(float)(random.NextDouble() * 20));
+                    PrimaryOn(t0 + 0.25f, PointerPhase.Ended, target, 3);
+                }
+                if (trace % 4 == 2)
+                {
+                    // A quick two-finger touch.
+                    Pair(t0 + 0.5f, 0f, 10f);
+                    Pair(t0 + 0.55f, 0f, 10f);
+                    Primary(t0 + 0.6f, PointerPhase.Held);
+                    Primary(t0 + 0.65f, PointerPhase.Ended);
+                }
+                float b = t0 + 1f;
+                PrimaryOn(b, PointerPhase.Began, target, 3, ui: trace == 1);
                 for (int sample = 1; sample <= 8; sample++)
                 {
                     float x = (float)(random.NextDouble() * 12 - 6);
                     float y = (float)(random.NextDouble() * 12 - 6);
-                    if (trace % 3 == 0 && sample >= 4) Pair(sample * 0.08f, x, x + 10f, y);
-                    else Primary(sample * 0.08f, PointerPhase.Held, x, y);
+                    if (trace % 3 == 0 && sample >= 4) Pair(b + sample * 0.08f, x, x + 10f, y);
+                    else PrimaryOn(b + sample * 0.08f, PointerPhase.Held, target, 3, x, y);
                 }
-                Primary(0.8f, trace % 4 == 0 ? PointerPhase.Cancelled : PointerPhase.Ended);
-                Primary(0.9f, PointerPhase.Ended);
+                PrimaryOn(b + 0.8f, trace % 4 == 0 ? PointerPhase.Cancelled : PointerPhase.Ended, target, 3);
+                PrimaryOn(b + 0.9f, PointerPhase.Ended, target, 3);
                 Assert.AreEqual(GestureState.Idle, core.State, "trace " + trace);
                 Assert.IsFalse(core.PanSuppressed);
+                AssertBalanced("trace " + trace);
+                events.Clear();
                 int beforeTap = events.Count;
-                Primary(1f, PointerPhase.Began);
-                Primary(1.1f, PointerPhase.Ended);
+                TapOn(t0 + 5f, GestureTargetClass.None);
                 Assert.AreEqual(beforeTap + 2, events.Count, "locked tap grammar");
                 Assert.AreEqual(GestureEventKind.PointerDown, events[beforeTap].Kind);
                 Assert.AreEqual(GestureEventKind.Tap, events[beforeTap + 1].Kind);
                 Assert.AreEqual(GestureState.Idle, core.State);
                 events.Clear();
             }
-            Primary(0f, PointerPhase.Began);
-            Primary(0.3f, PointerPhase.Held);
-            Primary(0.4f, PointerPhase.Held, 6f);
-            Primary(0.5f, PointerPhase.Held, 6f, 6f);
-            Primary(0.6f, PointerPhase.Held, 0f, 6f);
-            Primary(0.7f, PointerPhase.Ended);
+            PrimaryOn(200f, PointerPhase.Began, GestureTargetClass.Node, 3);
+            PrimaryOn(200.3f, PointerPhase.Held, GestureTargetClass.Node, 3);
+            PrimaryOn(200.4f, PointerPhase.Held, GestureTargetClass.Node, 3, 6f);
+            PrimaryOn(200.5f, PointerPhase.Held, GestureTargetClass.Node, 3, 6f, 6f);
+            PrimaryOn(200.6f, PointerPhase.Held, GestureTargetClass.Node, 3, 0f, 6f);
+            PrimaryOn(200.7f, PointerPhase.Ended, GestureTargetClass.Node, 3);
             Assert.AreEqual(GestureState.Idle, core.State, "stationary hold then polygon");
+            AssertBalanced("polygon");
         }
 
         [TestCase(false)]
