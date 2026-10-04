@@ -105,6 +105,13 @@ namespace NodeWar.Input
             return true;
         }
 
+        public bool TapVillager(int villagerID, NodeWar.Lobby.InputAction action)
+        {
+            if (!IsSelectable(villagerID)) return false;
+            SelectionRules.TapVillager(selectedVillagerIDs, villagerID, action);
+            return true;
+        }
+
         private void Update()
         {
             if (simState == null) return;

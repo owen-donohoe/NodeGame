@@ -61,9 +61,8 @@ namespace NodeWar.Input
         }
 
         /// <summary>
-        /// The ladder. A tap always replaces the current selection -- there is
-        /// no path here that adds to it, which is what keeps tapping a second
-        /// villager from silently growing a group.
+        /// Villager taps add/remove by default; Replace only changes the
+        /// unselected-villager case. Nodes and empty ground keep their grammar.
         /// </summary>
         private void HandleTap(GestureTarget target)
         {
@@ -74,11 +73,13 @@ namespace NodeWar.Input
                 //    is no re-deciding it here.
                 case GestureTargetKind.Villager:
                 {
-                    // SelectSingle owns validity: not ours, dead or consumed all
+                    // Selection owns validity: not ours, dead or consumed all
                     // return false. An unselectable villager is treated as empty
                     // ground rather than swallowing the tap, so tapping an enemy
                     // still clears the way it would anywhere else.
-                    if (selection != null && selection.SelectSingle(target.id))
+                    NodeWar.Lobby.InputAction action = source != null
+                        ? source.ActionFor(NodeWar.Lobby.InputSlot.TapVillager) : NodeWar.Lobby.InputAction.AddRemove;
+                    if (selection != null && selection.TapVillager(target.id, action))
                     {
                         if (panel != null) panel.ClosePanel();
                         Log("villager " + target.id + " selected");
