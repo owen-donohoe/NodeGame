@@ -118,6 +118,67 @@
     color: var(--ink-mute);
 }
 
+/* ---- Controls section ---- */
+
+/* An option that only means something under the row above it. */
+.lb-grow--sub {
+    padding-left: 40px;
+}
+
+.lb-grow:disabled {
+    opacity: 0.45;
+}
+
+/* The action half of a binding row. Only a cycling action takes a tap. */
+.lb-controls-toggle {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-direction: row;
+    align-items: center;
+    height: 100%;
+}
+
+.lb-controls-action {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 120px;
+    margin-left: var(--space-2);
+}
+
+.lb-root .lb-controls-action__text {
+    font-size: 16px;
+    color: var(--ink-mute);
+}
+
+.lb-controls-action--cycles:active {
+    background-color: var(--press-tint);
+}
+
+.lb-root .lb-controls-state {
+    font-size: 16px;
+    color: var(--ink-mute);
+}
+
+.lb-root .lb-controls-hold-value {
+    width: 64px;
+    margin-left: var(--space-2);
+    -unity-text-align: middle-right;
+}
+
+.lb-root .lb-controls-warnings {
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+    white-space: normal;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom-width: var(--stroke-thin);
+    border-bottom-color: var(--rule);
+}
+
 .lb-root .lb-settings-footnote {
     font-size: 15px;
     color: var(--ink-mute);
