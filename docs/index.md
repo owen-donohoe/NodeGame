@@ -23,6 +23,15 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [direction](direction.md) — where the architecture goes next: a feel layer, one input vocabulary
   across desktop and mobile, and a headless match environment for bot training and balance
   testing. Direction rather than plan; declares no sources because it describes work not yet done.
+* [touch-input-spec](touch-input-spec.md) — draft: a player-configurable input table (toggle plus
+  action per input), a Controls section in Settings, a toggleable camera button, and tap-to-add
+  selection. Declares no sources: it describes work not yet done.
+* [tempo-and-breach-proposal](tempo-and-breach-proposal.md) — draft: tempo phases, sudden death
+  and a sequential breach bar with swarm scaling. Declares no sources: it describes work not yet
+  done.
+* [suit-tree-spec](suit-tree-spec.md) — draft: per-arena suit unlocks and branching variants
+  mapped onto the existing era and catalog system, a content budget, and the lobby tree and
+  info panel. Declares no sources: it describes work not yet done.
 * [notion-workspace](notion-workspace.md) — identifiers and property schemas for the Notion
   workspace that owns future and current work. Declares no sources: its subject is not code in
   this repo, so no commit here can make it stale.
