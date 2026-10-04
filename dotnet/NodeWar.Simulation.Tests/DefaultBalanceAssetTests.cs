@@ -6,7 +6,6 @@ namespace NodeWar.Tests
     public class DefaultBalanceAssetTests
     {
         [Test]
-        [Ignore("needs DefaultGameBalance.asset re-saved through the editor with the v2 fields")]
         public void ShippedBalanceContainsEveryTempoAndBreachKey()
         {
             const string relative = "Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset";

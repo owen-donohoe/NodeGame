@@ -21,6 +21,15 @@ MonoBehaviour:
     respawnTicks: 50
     healIntervalTicks: 30
     breachThreshold: 3
+    tempoStageTicks: b004000008070000i
+    tempoClaimPercent: 96000000c8000000i
+    tempoRespawnPercent: 7d00000096000000i
+    tempoProductionPercent: 6e0000007d000000i
+    suddenDeathTicks: 60090000b80b0000i
+    suddenDeathThresholds: 0200000001000000i
+    breachBarMax: 4000
+    breachSwarmRate: 64000000a5000000d7000000fa000000i
+    breachBarDecayPerTick: 200
     maxWorkersPerNode: 2
     maxVillagersPerPlayer: 25
     respawnCostFood: 1
