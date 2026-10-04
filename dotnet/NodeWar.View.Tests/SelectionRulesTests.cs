@@ -7,6 +7,49 @@ namespace NodeWar.View.Tests
 {
     public class SelectionRulesTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NearestPickIgnoresRaycastOrderAndUnselectableOrBehindCandidates(bool reverse)
+        {
+            var candidates = new List<VillagerPickCandidate> {
+                new VillagerPickCandidate(1, new GesturePoint(6f, 0f), true, true),
+                new VillagerPickCandidate(2, new GesturePoint(2f, 0f), true, true),
+                new VillagerPickCandidate(3, new GesturePoint(0f, 0f), false, true),
+                new VillagerPickCandidate(4, new GesturePoint(0f, 0f), true, false)
+            };
+            if (reverse) candidates.Reverse();
+            Assert.AreEqual(2, SelectionRules.NearestVillager(candidates, new GesturePoint(0f, 0f)));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NearestPickTiesUseVillagerId(bool reverse)
+        {
+            var candidates = new List<VillagerPickCandidate> {
+                new VillagerPickCandidate(7, new GesturePoint(2f, 0f), true, true),
+                new VillagerPickCandidate(3, new GesturePoint(-2f, 0f), true, true)
+            };
+            if (reverse) candidates.Reverse();
+            Assert.AreEqual(3, SelectionRules.NearestVillager(candidates, new GesturePoint(0f, 0f)));
+        }
+
+        [Test]
+        public void NoSelectableVillagerFallsThroughToNode()
+        {
+            var candidates = new[] { new VillagerPickCandidate(1, new GesturePoint(0f, 0f), false, true) };
+            Assert.AreEqual(-1, SelectionRules.NearestVillager(candidates, new GesturePoint(0f, 0f)));
+        }
+
+        [Test]
+        public void NearestPickUsesTouchPositionInsteadOfScreenOrigin()
+        {
+            var candidates = new[] {
+                new VillagerPickCandidate(1, new GesturePoint(0f, 0f), true, true),
+                new VillagerPickCandidate(2, new GesturePoint(4f, 5f), true, true)
+            };
+            Assert.AreEqual(2, SelectionRules.NearestVillager(candidates, new GesturePoint(5f, 5f)));
+        }
+
         [TestCase(InputAction.AddRemove)]
         [TestCase(InputAction.Replace)]
         public void TapWithNoSelectionSelectsVillager(InputAction action)

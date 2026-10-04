@@ -87,6 +87,7 @@ namespace NodeWar.Input
         private readonly List<Vector2> strokePoints = new List<Vector2>();
         private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
         private readonly List<PointerSample> samples = new List<PointerSample>();
+        private readonly List<VillagerPickCandidate> pickCandidates = new List<VillagerPickCandidate>();
         private Camera cam;
         private int villagerMask;
         private int nodeMask;
@@ -246,21 +247,21 @@ namespace NodeWar.Input
             Ray ray = cam.ScreenPointToRay(screenPos);
             RaycastHit hit;
 
-            if (!nodesOnly && Physics.Raycast(ray, out hit, raycastDistance, villagerMask))
+            if (!nodesOnly)
             {
-                var villager = hit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
-                if (villager != null)
+                pickCandidates.Clear();
+                foreach (RaycastHit villagerHit in Physics.RaycastAll(ray, raycastDistance, villagerMask))
                 {
+                    var villager = villagerHit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
+                    if (villager == null) continue;
                     int id = villager.GetVillagerID();
-
-                    // An opponent's villager is not a tap target, so the press
-                    // falls through to the node beneath rather than being
-                    // swallowed. Otherwise an enemy standing on your node would
-                    // block you from opening it -- and their touch targets are
-                    // finger-sized, so they cover a lot of board.
-                    if (villagerFilter == null || villagerFilter(id))
-                        return new GestureTarget(GestureTargetKind.Villager, id);
+                    Vector3 centre = cam.WorldToScreenPoint(villager.transform.position);
+                    pickCandidates.Add(new VillagerPickCandidate(id, new GesturePoint(centre.x, centre.y),
+                        villagerFilter == null || villagerFilter(id), centre.z > 0f));
                 }
+                // Raycast order is undefined; screen-centre distance wins, with ID breaking ties.
+                int nearest = SelectionRules.NearestVillager(pickCandidates, new GesturePoint(screenPos.x, screenPos.y));
+                if (nearest >= 0) return new GestureTarget(GestureTargetKind.Villager, nearest);
             }
 
             if (Physics.Raycast(ray, out hit, raycastDistance, nodeMask))
