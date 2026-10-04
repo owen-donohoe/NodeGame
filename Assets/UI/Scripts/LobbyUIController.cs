@@ -365,7 +365,7 @@ namespace NodeWar.Lobby
                 navigation.Register(new PlaceholderPage(LobbyPageID.Home, "HomePage.uxml not assigned"));
             }
 
-            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu));
+            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
             navigation.Register(new SocialPage(socialPageLayout));
         }
 

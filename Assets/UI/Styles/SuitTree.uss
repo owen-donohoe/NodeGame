@@ -1,0 +1,425 @@
+/*
+    The suit tree, drawn over the Workshop (docs/suit-tree-spec.md section 6).
+
+    Portrait phone first: a header, a row of arena tabs, a strip of the suits,
+    then the selected suit's tree on a scrolling canvas, drawn like the board -
+    nodes joined by edges, one labelled band per arena gate. The info panel is
+    the lobby's own bottom sheet, so its rules live in Components.uss.
+
+    A node's state is never colour alone. Each state has its own shape AND glyph:
+      locked     circle,         padlock
+      available  rounded square, spark
+      owned      circle,         pip
+      equipped   circle, ringed, diamond
+    The ring on the equipped node is the one in a sibling set.
+
+    Layout sizes here belong to this page, not to the tokens. SuitTreeView holds
+    the matching constants (band height, node size) for the edge geometry, so the
+    two are changed together.
+*/
+
+:root {
+    --st-band-tint: rgba(150, 128, 95, 0.1);
+    --st-better: rgb(46, 120, 56);
+    --st-worse: rgb(160, 70, 50);
+}
+
+/* ---- the overlay ---- */
+
+.st-page {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    background-color: var(--surface);
+}
+
+.st-page--open {
+    display: flex;
+}
+
+.st-header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: var(--space-4);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+}
+
+.lb-root .st-title {
+    margin-left: var(--space-3);
+    font-size: var(--type-heading);
+    color: var(--ink);
+}
+
+/* ---- the open button on the Workshop's suits side ---- */
+
+.st-open {
+    display: none;
+    min-height: var(--target-min);
+    margin-top: var(--space-2);
+    background-color: var(--surface-raised);
+    color: var(--ink);
+    font-size: var(--type-caption);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
+.st-open--on {
+    display: flex;
+}
+
+/* ---- arena tabs and the suit strip ---- */
+
+.st-row {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 0;
+    margin-top: var(--space-3);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+}
+
+.st-tabs {
+    height: var(--target-min);
+}
+
+.st-strip {
+    height: 76px;
+}
+
+.st-tab {
+    min-width: 72px;
+    min-height: var(--target-min);
+    flex-shrink: 0;
+    margin-right: var(--space-2);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    background-color: var(--surface-sunk);
+    color: var(--ink-mute);
+    font-size: var(--type-caption);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+}
+
+.st-tab--on {
+    background-color: var(--action);
+    color: var(--action-ink);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+}
+
+.st-suit {
+    width: 76px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--space-2);
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
+.st-suit--on {
+    background-color: var(--action);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+}
+
+.st-suit__letter {
+    font-size: var(--type-heading);
+    color: var(--ink);
+}
+
+.st-suit__name {
+    font-size: var(--type-min);
+    color: var(--ink);
+    white-space: nowrap;
+}
+
+/* ---- the tree canvas ---- */
+
+.st-scroll {
+    flex-grow: 1;
+    min-height: 0;
+    margin-top: var(--space-3);
+}
+
+/* A phone-width column even on a wide screen: the tree is drawn for portrait. */
+.st-canvas {
+    position: relative;
+    align-self: center;
+    width: 100%;
+    max-width: 520px;
+}
+
+.st-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 148px;
+    border-top-width: var(--stroke-thin);
+    border-top-color: var(--rule);
+}
+
+.st-band--odd {
+    background-color: var(--st-band-tint);
+}
+
+.lb-root .st-band__label {
+    position: absolute;
+    left: var(--space-4);
+    top: var(--space-2);
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+}
+
+.st-edges {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/* ---- nodes ---- */
+
+.st-node {
+    position: absolute;
+    width: 112px;
+    height: 120px;
+    align-items: center;
+    translate: -50% 0;
+    background-color: var(--clear);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.st-node__disc {
+    width: 72px;
+    height: 72px;
+    align-items: center;
+    justify-content: center;
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-top-left-radius: 36px;
+    border-top-right-radius: 36px;
+    border-bottom-left-radius: 36px;
+    border-bottom-right-radius: 36px;
+    transition-property: scale;
+    transition-duration: var(--motion-press);
+}
+
+.st-node__glyph {
+    width: 28px;
+    height: 28px;
+}
+
+.lb-root .st-node__name {
+    margin-top: var(--space-1);
+    font-size: var(--type-caption);
+    color: var(--ink);
+    white-space: nowrap;
+}
+
+.lb-root .st-node__state {
+    font-size: var(--type-min);
+    color: var(--ink-mute);
+    white-space: nowrap;
+}
+
+/* The ring is a child element, not a box-shadow, as on the Workshop's full slots. */
+.st-node__ring {
+    position: absolute;
+    left: 10px;
+    top: -10px;
+    width: 92px;
+    height: 92px;
+    display: none;
+    border-left-width: 4px;
+    border-right-width: 4px;
+    border-top-width: 4px;
+    border-bottom-width: 4px;
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+    border-top-left-radius: 46px;
+    border-top-right-radius: 46px;
+    border-bottom-left-radius: 46px;
+    border-bottom-right-radius: 46px;
+}
+
+.st-node--equipped > .st-node__ring {
+    display: flex;
+}
+
+.st-node--selected > .st-node__disc {
+    scale: 1.1 1.1;
+}
+
+.lb-root .st-node--selected .st-node__name {
+    -unity-font-style: bold;
+}
+
+/* locked: circle, padlock */
+.st-node--locked > .st-node__disc {
+    background-color: var(--surface-sunk);
+    border-left-color: var(--off-edge);
+    border-right-color: var(--off-edge);
+    border-top-color: var(--off-edge);
+    border-bottom-color: var(--off-edge);
+}
+
+.st-node--locked .st-node__glyph {
+    -unity-background-image-tint-color: var(--ink-mute);
+}
+
+/* available: rounded square, spark */
+.st-node--available > .st-node__disc {
+    background-color: var(--surface-raised);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+}
+
+.st-node--available .st-node__glyph {
+    -unity-background-image-tint-color: var(--action-edge);
+}
+
+/* owned: circle, pip */
+.st-node--owned > .st-node__disc {
+    background-color: var(--confirm);
+    border-left-color: var(--confirm-edge);
+    border-right-color: var(--confirm-edge);
+    border-top-color: var(--confirm-edge);
+    border-bottom-color: var(--confirm-edge);
+}
+
+.st-node--owned .st-node__glyph {
+    -unity-background-image-tint-color: var(--confirm-ink);
+}
+
+/* equipped: gold circle inside an outer ring, diamond */
+.st-node--equipped > .st-node__disc {
+    background-color: var(--action);
+    border-left-color: var(--action-edge);
+    border-right-color: var(--action-edge);
+    border-top-color: var(--action-edge);
+    border-bottom-color: var(--action-edge);
+}
+
+.st-node--equipped .st-node__glyph {
+    -unity-background-image-tint-color: var(--action-ink);
+}
+
+/* ---- info panel (content of the lobby bottom sheet) ---- */
+
+.lb-root .st-info__title {
+    margin-bottom: var(--space-1);
+}
+
+.lb-root .st-info__role {
+    margin-bottom: var(--space-3);
+}
+
+.st-stats {
+    margin-bottom: var(--space-3);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    background-color: var(--surface-sunk);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+}
+
+.st-stat {
+    flex-direction: row;
+    align-items: center;
+    min-height: 26px;
+}
+
+.lb-root .st-stat__label {
+    flex-grow: 1;
+    font-size: var(--type-caption);
+    color: var(--ink);
+}
+
+.lb-root .st-stat__value {
+    width: 36px;
+    font-size: var(--type-caption);
+    color: var(--ink);
+    -unity-text-align: middle-right;
+}
+
+.lb-root .st-stat__delta {
+    width: 100px;
+    margin-left: var(--space-2);
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+    -unity-text-align: middle-right;
+}
+
+.lb-root .st-stat__delta--better {
+    color: var(--st-better);
+}
+
+.lb-root .st-stat__delta--worse {
+    color: var(--st-worse);
+}
+
+.lb-root .st-fact {
+    margin-bottom: var(--space-2);
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+    white-space: normal;
+}
