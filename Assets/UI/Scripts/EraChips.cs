@@ -35,7 +35,7 @@ namespace NodeWar.Lobby
             {
                 string id = CatalogIds.Variant(baseId, era);
                 result[era] = new Chip(id, era, inventory?.OwnedVariants?.Contains(id) == true,
-                    state?.Rank != null && era <= state.Rank.Arena,
+                    state?.Rank != null && IsUsable(baseId, id, era, state.Rank.Arena),
                     IsEquipped(inventory?.Equipped?.Variants, baseId, id));
             }
             return result;
@@ -58,6 +58,10 @@ namespace NodeWar.Lobby
                     IsEquipped(state.Inventory.Equipped?.Skins, baseId, ids[i]));
             return result;
         }
+
+        /// <summary>Suits follow SuitTree, as the server does; districts keep the era rule.</summary>
+        private static bool IsUsable(string baseId, string id, int era, int arena) =>
+            SuitTree.IsTreeSuit(baseId) ? SuitTree.IsAvailable(id, arena) : era <= arena;
 
         private static bool IsEquipped(Dictionary<string, string> equipped, string baseId, string id)
         {
