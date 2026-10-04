@@ -15,6 +15,17 @@ namespace NodeWar.Simulation
     /// </summary>
     public static class BalanceHasher
     {
+        private static int HashInts(int hash, int[] values)
+        {
+            unchecked
+            {
+                hash = hash * 31 + (values == null ? -1 : values.Length);
+                if (values != null)
+                    for (int i = 0; i < values.Length; i++) hash = hash * 31 + values[i];
+                return hash;
+            }
+        }
+
         public static int Hash(GameBalanceData b)
         {
             unchecked
@@ -36,6 +47,16 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + b.baseAttackDamage;
                 hash = hash * 31 + b.baseMoveSpeedTicks;
                 hash = hash * 31 + b.baseAttackCooldownMax;
+
+                hash = HashInts(hash, b.tempoStageTicks);
+                hash = HashInts(hash, b.tempoClaimPercent);
+                hash = HashInts(hash, b.tempoRespawnPercent);
+                hash = HashInts(hash, b.tempoProductionPercent);
+                hash = HashInts(hash, b.suddenDeathTicks);
+                hash = HashInts(hash, b.suddenDeathThresholds);
+                hash = hash * 31 + b.breachBarMax;
+                hash = HashInts(hash, b.breachSwarmRate);
+                hash = hash * 31 + b.breachBarDecayPerTick;
 
                 // Array order matters: TryGetSuitStats takes the first match.
                 if (b.suitStats == null)
