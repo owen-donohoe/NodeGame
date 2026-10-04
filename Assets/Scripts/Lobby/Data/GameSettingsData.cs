@@ -40,8 +40,13 @@ namespace NodeWar.Lobby
         ///     Its zero is a real choice (30 fps), so an older save's stored 0
         ///     is not read as that: <see cref="Normalized"/> gives it
         ///     <see cref="DefaultFrameCap"/>.
+        /// 5 - adds input bindings and the controls preferences.
         /// </remarks>
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
+
+        public const float DefaultHoldTime = 0.3f;
+        public const float MinHoldTime = 0.15f;
+        public const float MaxHoldTime = 1f;
 
         /// <summary>Small, Default, Large. The page owns what they are called.</summary>
         public const int InterfaceSizeCount = 3;
@@ -103,6 +108,15 @@ namespace NodeWar.Lobby
         public bool haptics;
         public bool batterySaver;
 
+        // ---- Controls. PlayerProfile is a local JSON file under
+        // persistentDataPath, not synced across devices; no per-device key needed.
+        public InputBinding[] inputBindings;
+        public float holdTime;
+        public bool showCameraButton;
+        public bool cameraButtonZoom;
+        public int controlsSide; // 0 Right, 1 Left.
+        public bool showSelectionBar;
+
         /// <summary>
         /// The values the Settings page is authored with in SettingsPage.uxml.
         /// They are duplicated there as the controls' initial state so the page
@@ -129,7 +143,14 @@ namespace NodeWar.Lobby
                 opponentEmotes = true,
 
                 haptics = true,
-                batterySaver = false
+                batterySaver = false,
+
+                inputBindings = InputBindings.CreateDefault(),
+                holdTime = DefaultHoldTime,
+                showCameraButton = true,
+                cameraButtonZoom = true,
+                controlsSide = 0,
+                showSelectionBar = true
             };
         }
 
@@ -160,6 +181,15 @@ namespace NodeWar.Lobby
             if (source.version < 2) source.opponentRoutes = true;
             if (source.version < 3) source.opponentEmotes = true;
             if (source.version < 4) source.frameCap = DefaultFrameCap;
+            if (source.version < 5)
+            {
+                source.inputBindings = null;
+                source.holdTime = DefaultHoldTime;
+                source.showCameraButton = true;
+                source.cameraButtonZoom = true;
+                source.controlsSide = 0;
+                source.showSelectionBar = true;
+            }
 
             return new GameSettingsData
             {
@@ -180,7 +210,14 @@ namespace NodeWar.Lobby
                 opponentEmotes = source.opponentEmotes,
 
                 haptics = source.haptics,
-                batterySaver = source.batterySaver
+                batterySaver = source.batterySaver,
+
+                inputBindings = InputBindings.Normalized(source.inputBindings),
+                holdTime = ClampHoldTime(source.holdTime),
+                showCameraButton = source.showCameraButton,
+                cameraButtonZoom = source.cameraButtonZoom,
+                controlsSide = source.controlsSide == 1 ? 1 : 0,
+                showSelectionBar = source.showSelectionBar
             };
         }
 
@@ -202,7 +239,13 @@ namespace NodeWar.Lobby
                 || a.opponentRoutes != b.opponentRoutes
                 || a.opponentEmotes != b.opponentEmotes
                 || a.haptics != b.haptics
-                || a.batterySaver != b.batterySaver;
+                || a.batterySaver != b.batterySaver
+                || InputBindings.Differ(a.inputBindings, b.inputBindings)
+                || a.holdTime != b.holdTime
+                || a.showCameraButton != b.showCameraButton
+                || a.cameraButtonZoom != b.cameraButtonZoom
+                || a.controlsSide != b.controlsSide
+                || a.showSelectionBar != b.showSelectionBar;
         }
 
         /// <summary>
@@ -249,6 +292,14 @@ namespace NodeWar.Lobby
 
         // No Mathf here: this file must stay free of UnityEngine so the test
         // project can compile it.
+        private static float ClampHoldTime(float value)
+        {
+            if (float.IsNaN(value)) return DefaultHoldTime;
+            if (value < MinHoldTime) return MinHoldTime;
+            if (value > MaxHoldTime) return MaxHoldTime;
+            return value;
+        }
+
         private static float Clamp01(float value)
         {
             if (value < 0f) return 0f;
