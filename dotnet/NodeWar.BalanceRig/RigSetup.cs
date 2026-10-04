@@ -15,6 +15,9 @@ namespace NodeWar.BalanceRig
         public int balanceHash;
         public string balanceSource;
 
+        /// <summary>Balance fields copied from GameBalanceData.Default() by --v2-overlay.</summary>
+        public string[] overlaidFields = new string[0];
+
         public BoardConfigData board;
         public string boardSource;
 
@@ -56,13 +59,14 @@ namespace NodeWar.BalanceRig
             throw new FileNotFoundException("Could not find the repository root (looked for " + BoardAssetPath + ").");
         }
 
-        public static RigSetup Load(string balancePath, string boardPath, string loadout)
+        public static RigSetup Load(string balancePath, string boardPath, string loadout, bool v2Overlay = false)
         {
             string root = FindRepoRoot();
             var setup = new RigSetup();
 
             setup.balanceSource = Path.GetFullPath(balancePath ?? Path.Combine(root, BalancesDir, DefaultBalanceFile));
-            setup.balance = LoadBalance(setup.balanceSource, out setup.balanceHash);
+            setup.balance = LoadBalance(setup.balanceSource, out setup.balanceHash, !v2Overlay);
+            if (v2Overlay) setup.balance = ApplyV2Overlay(setup.balance, out setup.overlaidFields);
 
             setup.boardSource = Path.GetFullPath(boardPath ?? Path.Combine(root, BoardAssetPath));
             LoadBoard(setup.boardSource, setup);
@@ -71,7 +75,7 @@ namespace NodeWar.BalanceRig
             return setup;
         }
 
-        public static GameBalanceData LoadBalance(string path, out int hash)
+        public static GameBalanceData LoadBalance(string path, out int hash, bool checkFilenameHash = true)
         {
             var serializer = JsonSerializer.Create(new JsonSerializerSettings
             {
@@ -87,10 +91,43 @@ namespace NodeWar.BalanceRig
 
                 string name = Path.GetFileNameWithoutExtension(path);
                 if (int.TryParse(name, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int named)
-                    && named != hash)
+                    && checkFilenameHash && named != hash)
                     throw new FormatException("Balance hash " + hash + " does not match filename " + name + ".");
                 return balance;
             }
+        }
+
+        private static readonly string[] V2Fields =
+        {
+            "tempoStageTicks", "tempoClaimPercent", "tempoRespawnPercent", "tempoProductionPercent",
+            "suddenDeathTicks", "suddenDeathThresholds", "breachBarMax", "breachSwarmRate", "breachBarDecayPerTick"
+        };
+
+        /// <summary>
+        /// Copies the v2 breach/tempo/sudden-death fields from
+        /// GameBalanceData.Default() onto an exported balance that lacks them.
+        /// By reflection, so the rig still compiles on a tree where those
+        /// fields do not exist yet (then nothing is overlaid). The exported
+        /// JSON predates v2, so an absent field deserialises to null/0, which
+        /// the simulation reads as "feature off".
+        /// </summary>
+        public static GameBalanceData ApplyV2Overlay(GameBalanceData balance, out string[] applied)
+        {
+            object target = balance;
+            object defaults = GameBalanceData.Default();
+            var names = new List<string>();
+            foreach (string name in V2Fields)
+            {
+                var field = typeof(GameBalanceData).GetField(name);
+                if (field == null) continue;
+                object have = field.GetValue(target);
+                bool missing = have == null || (have is int i && i == 0);
+                if (!missing) continue;
+                field.SetValue(target, field.GetValue(defaults));
+                names.Add(name);
+            }
+            applied = names.ToArray();
+            return (GameBalanceData)target;
         }
 
         /// <summary>"Barracks,Forge", "none", or "" for no loadout districts.</summary>

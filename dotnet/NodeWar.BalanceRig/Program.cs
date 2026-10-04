@@ -24,6 +24,15 @@ namespace NodeWar.BalanceRig
         /// <summary>Ticks between a bot issuing a command and it applying. 0 is the live bot path.</summary>
         public int delay = 0;
 
+        /// <summary>Alternate which bot evaluates first by tick parity, so P0 is not always first in the buffer.</summary>
+        public bool swapSeats = true;
+
+        /// <summary>Copy the v2 balance fields from GameBalanceData.Default() onto the loaded export.</summary>
+        public bool v2Overlay;
+
+        /// <summary>Seed to replay with a state line every 200 ticks and the draft, or -1.</summary>
+        public int trace = -1;
+
         public static RigOptions Parse(string[] args)
         {
             var o = new RigOptions();
@@ -47,6 +56,9 @@ namespace NodeWar.BalanceRig
                     case "--board": o.boardPath = Next(); break;
                     case "--loadout": o.loadout = Next(); break;
                     case "--delay": o.delay = Int(); break;
+                    case "--swap-seats": o.swapSeats = !Next().Equals("off", StringComparison.OrdinalIgnoreCase); break;
+                    case "--v2-overlay": o.v2Overlay = true; break;
+                    case "--trace": o.trace = Int(); break;
                     default: throw new ArgumentException("Unknown argument '" + key + "'.");
                 }
             }
@@ -59,7 +71,7 @@ namespace NodeWar.BalanceRig
     {
         public const string Usage =
             "NodeWar.BalanceRig --matches N --seed S --cap TICKS --out path.csv\n"
-            + "                   [--loadout Barracks,...|none] [--delay TICKS] [--balance file.json] [--board file.asset]";
+            + "                   [--loadout Barracks,...|none] [--delay TICKS] [--swap-seats on|off] [--v2-overlay] [--balance file.json] [--board file.asset]";
 
         public static int Main(string[] args)
         {
@@ -72,17 +84,30 @@ namespace NodeWar.BalanceRig
                 return 2;
             }
 
-            RigSetup setup = RigSetupLoader.Load(options.balancePath, options.boardPath, options.loadout);
+            RigSetup setup = RigSetupLoader.Load(options.balancePath, options.boardPath, options.loadout, options.v2Overlay);
             Console.WriteLine("balance: " + setup.balanceSource + " (hash " + setup.balanceHash + ")");
+            if (options.v2Overlay) Console.WriteLine("v2 overlay: " + (setup.overlaidFields.Length == 0 ? "nothing to overlay" : string.Join(",", setup.overlaidFields)));
             Console.WriteLine("board:   " + setup.boardSource + " (" + setup.board.gridCols + "x" + setup.board.gridRows + ")");
             Console.WriteLine("loadout: " + (setup.loadoutNodes.Length == 0 ? "none" : string.Join(",", setup.loadoutNodes))
-                + "; eras 0; input delay " + options.delay + "; cap " + options.cap + " ticks");
+                + "; eras 0; input delay " + options.delay + "; swap seats " + (options.swapSeats ? "on" : "off") + "; cap " + options.cap + " ticks");
+
+            if (options.trace >= 0)
+            {
+                var draft = MatchRunner.RandomDraft(setup, new Random(options.trace));
+                foreach (var dp in draft)
+                    Console.WriteLine("draft P" + dp.playerID + " " + dp.districtType + " at (" + dp.gridX + "," + dp.gridZ
+                        + ") node " + (dp.gridZ * setup.board.gridCols + dp.gridX));
+                MatchResult traced = MatchRunner.Run(setup, options.trace, options.cap, options.delay, options.swapSeats, Console.Out);
+                Console.WriteLine(Report.Header);
+                Console.WriteLine(Report.Row(traced));
+                return 0;
+            }
 
             var results = new List<MatchResult>(options.matches);
             var clock = Stopwatch.StartNew();
             for (int i = 0; i < options.matches; i++)
             {
-                results.Add(MatchRunner.Run(setup, options.seed + i, options.cap, options.delay));
+                results.Add(MatchRunner.Run(setup, options.seed + i, options.cap, options.delay, options.swapSeats));
                 if ((i + 1) % 100 == 0) Console.Error.WriteLine("  " + (i + 1) + "/" + options.matches);
             }
             clock.Stop();
