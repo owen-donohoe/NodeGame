@@ -58,12 +58,12 @@ namespace NodeWar.Backend
         private static SuitTreeNode[] Build()
         {
             var list = new List<SuitTreeNode>();
-            // Combat suits, by debut arena. Variants arrive one arena later.
+            // Combat suits, by debut arena (all at 0, so nobody loses a suit they can equip). Variants arrive one arena later.
             AddSuit(list, "Warrior", 0);
             AddSuit(list, "Guardian", 0);
             AddSuit(list, "Scout", 0);
-            AddSuit(list, "Berserker", 1);
-            AddSuit(list, "Medic", 1);
+            AddSuit(list, "Berserker", 0);
+            AddSuit(list, "Medic", 0);
             return list.ToArray();
         }
 

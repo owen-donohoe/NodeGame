@@ -33,7 +33,7 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public void DebutArenasAreAsSpecifiedAndEveryNodeIdParses()
         {
-            int[] debut = { 0, 0, 0, 1, 1 };
+            int[] debut = { 0, 0, 0, 0, 0 };
             for (int i = 0; i < CombatSuits.Length; i++)
                 Assert.That(SuitTree.Root(CatalogIds.SuitBase(CombatSuits[i])).Arena, Is.EqualTo(debut[i]), CombatSuits[i]);
             foreach (var node in SuitTree.Nodes)
@@ -50,10 +50,10 @@ namespace NodeWar.Cloud.Tests
             Assert.That(SuitTree.IsAvailable("suit.warrior.e0", 0), Is.True);
             Assert.That(SuitTree.IsAvailable("suit.warrior.e1", 0), Is.False);
             Assert.That(SuitTree.IsAvailable("suit.warrior.e1", 1), Is.True);
-            Assert.That(SuitTree.IsAvailable("suit.berserker.e0", 0), Is.False);
+            Assert.That(SuitTree.IsAvailable("suit.berserker.e0", 0), Is.True);
             Assert.That(SuitTree.IsAvailable("suit.berserker.e0", 1), Is.True);
-            Assert.That(SuitTree.IsAvailable("suit.berserker.e2", 1), Is.False);
-            Assert.That(SuitTree.IsAvailable("suit.berserker.e2", 2), Is.True);
+            Assert.That(SuitTree.IsAvailable("suit.berserker.e2", 0), Is.False);
+            Assert.That(SuitTree.IsAvailable("suit.berserker.e2", 1), Is.True);
             Assert.That(SuitTree.IsAvailable("suit.warrior.e3", 5), Is.False, "outside the table");
             Assert.That(SuitTree.IsAvailable("suit.farmer.e0", 5), Is.False, "not a tree suit");
             Assert.That(SuitTree.IsAvailable("garbage", 5), Is.False);
@@ -102,9 +102,7 @@ namespace NodeWar.Cloud.Tests
             var before = new Dictionary<string, string>(inventory.Equipped.Variants);
             Assert.That(InventoryClamp.ClampToArena(inventory, 0), Is.False);
             Assert.That(inventory.Equipped.Variants, Is.EqualTo(before));
-            Assert.That(SuitTree.OwnershipProblems(inventory.OwnedVariants, 1), Is.Empty);
-            Assert.That(SuitTree.OwnershipProblems(inventory.OwnedVariants, 0),
-                Is.EqualTo(new[] { "suit.berserker.e0", "suit.medic.e0" }), "roots owned before their debut arena");
+            Assert.That(SuitTree.OwnershipProblems(inventory.OwnedVariants, 0), Is.Empty);
         }
 
         [Test]
@@ -123,16 +121,6 @@ namespace NodeWar.Cloud.Tests
             Assert.That(inventory.Equipped.Skins["suit.warrior"], Is.EqualTo("skin.suit.warrior.default"));
             Assert.That(inventory.OwnedVariants, Is.EqualTo(owned));
             Assert.That(InventoryClamp.ClampToArena(inventory, 0), Is.False);
-        }
-
-        [Test]
-        public void RootBeforeItsDebutArenaIsTheFloorAndIsNotRewritten()
-        {
-            var inventory = PlayerStateDefaults.Inventory();
-            inventory.OwnedVariants.Add("suit.medic.e0");
-            inventory.Equipped.Variants["suit.medic"] = "suit.medic.e0";
-            Assert.That(InventoryClamp.ClampToArena(inventory, 0), Is.False);
-            Assert.That(inventory.Equipped.Variants["suit.medic"], Is.EqualTo("suit.medic.e0"));
         }
 
         [Test]
@@ -191,8 +179,8 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase("suit.warrior.e1", 0, false)]
         [TestCase("suit.warrior.e1", 1, true)]
-        [TestCase("suit.berserker.e0", 0, false)]
-        [TestCase("suit.berserker.e0", 1, true)]
+        [TestCase("suit.berserker.e2", 0, false)]
+        [TestCase("suit.berserker.e2", 1, true)]
         [TestCase("suit.warrior.e3", 5, false)]
         [TestCase("suit.miner.e1", 1, true)]
         [TestCase("suit.miner.e2", 1, false)]
