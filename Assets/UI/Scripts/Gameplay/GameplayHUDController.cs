@@ -545,6 +545,14 @@ namespace NodeWar.UI
             if (indicatorLayer != null)
                 indicatorLayer.SetCalm(settings.reducedMotion);
 
+            // Same flags for the breacher highlight and the core bar: view
+            // configuration, shared by reference like routeSettings.
+            if (breachCues != null)
+            {
+                breachCues.colourblindMarks = settings.colourblindMarks;
+                breachCues.reducedMotion = settings.reducedMotion;
+            }
+
             if (boardCamera != null) boardCamera.ShakeEnabled = !settings.reducedMotion;
         }
 
@@ -560,6 +568,21 @@ namespace NodeWar.UI
             if (settingsPanel != null)
                 ApplyMatchSettings(settingsPanel.Settings);
         }
+
+        /// <summary>
+        /// Handed the BreachCueSettings GameManager gave the villager views and
+        /// the core bars, so the accessibility flags in the settings card reach
+        /// them. Applied at once: the card's saved values are already loaded.
+        /// </summary>
+        public void BindBreachCues(NodeWar.View.BreachCueSettings cues)
+        {
+            breachCues = cues;
+
+            if (settingsPanel != null)
+                ApplyMatchSettings(settingsPanel.Settings);
+        }
+
+        private NodeWar.View.BreachCueSettings breachCues;
 
         /// <summary>
         /// The player closed the sheet from its own button or handle. The old

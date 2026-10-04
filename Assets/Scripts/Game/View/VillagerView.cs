@@ -80,6 +80,118 @@ namespace NodeWar.View
         }
 
         /// <summary>
+        /// Shared with the core breach bar and the HUD, which writes the player's
+        /// accessibility flags into it. Without one, no breacher highlight draws.
+        /// </summary>
+        public void SetBreachCueSettings(BreachCueSettings settings)
+        {
+            breachCues = settings;
+        }
+
+        private BreachCueSettings breachCues;
+
+        // The breacher ring is built the first time this villager is the one
+        // about to be spent, not for all fifty up front: at most one villager per
+        // defender wears it at a time.
+        private LineRenderer breachRingTrack;
+        private LineRenderer breachRingFill;
+        private const int BreachRingSegments = 32;
+        private static Material sharedBreachRingMaterial;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetBreachRingMaterialOnEnterPlayMode()
+        {
+            sharedBreachRingMaterial = null;
+        }
+
+        /// <summary>
+        /// True when this villager is the next breacher of the Core it is
+        /// attacking. Reads PlayerData.nextBreacherID, the defender's cache, and
+        /// nothing else: the ranking itself belongs to the simulation.
+        /// </summary>
+        private bool IsNextBreacher(VillagerData villager)
+        {
+            if (villager.state != VillagerState.Breaching) return false;
+
+            int defender = 1 - villager.ownerID;
+            if (defender < 0 || defender >= simState.players.Length) return false;
+
+            return simState.players[defender].nextBreacherID == villagerID;
+        }
+
+        private void UpdateBreachRing(VillagerData villager, bool isNext)
+        {
+            bool show = isNext && breachCues != null && breachCues.colourblindMarks && breachCues.breachBarMax > 0;
+
+            if (!show)
+            {
+                if (breachRingTrack != null && breachRingTrack.enabled)
+                {
+                    breachRingTrack.enabled = false;
+                    breachRingFill.enabled = false;
+                }
+                return;
+            }
+
+            if (breachRingTrack == null) BuildBreachRing();
+
+            // Same number as the core bar, so the eye can match the two.
+            float fraction = BreachTempoMath.BarFill(
+                simState.players[1 - villager.ownerID].breachBar, breachCues.breachBarMax);
+
+            int points = Mathf.Max(0, Mathf.CeilToInt(fraction * BreachRingSegments));
+            breachRingFill.positionCount = points + 1;
+
+            // Clockwise from twelve o'clock; the last point lands on the exact fraction.
+            for (int i = 0; i <= points; i++)
+            {
+                float t = points == 0 ? 0f : Mathf.Min(fraction, (float)i / BreachRingSegments);
+                if (i == points) t = fraction;
+                float angle = Mathf.PI * 0.5f - t * Mathf.PI * 2f;
+                breachRingFill.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * breachCues.ringRadius);
+            }
+
+            breachRingTrack.enabled = true;
+            breachRingFill.enabled = fraction > 0f;
+        }
+
+        private void BuildBreachRing()
+        {
+            if (sharedBreachRingMaterial == null)
+                sharedBreachRingMaterial = new Material(Shader.Find("Sprites/Default"));
+
+            breachRingTrack = MakeRingLine("BreachRingTrack", BreachRingSegments, true,
+                new Color(breachCues.breacherColor.r, breachCues.breacherColor.g, breachCues.breacherColor.b, 0.35f));
+            breachRingFill = MakeRingLine("BreachRingFill", 2, false, breachCues.breacherColor);
+
+            for (int i = 0; i < BreachRingSegments; i++)
+            {
+                float angle = (float)i / BreachRingSegments * Mathf.PI * 2f;
+                breachRingTrack.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * breachCues.ringRadius);
+            }
+        }
+
+        private LineRenderer MakeRingLine(string name, int count, bool loop, Color color)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+
+            LineRenderer line = go.AddComponent<LineRenderer>();
+            line.useWorldSpace = false;
+            line.loop = loop;
+            line.positionCount = count;
+            line.startWidth = breachCues.ringWidth;
+            line.endWidth = breachCues.ringWidth;
+            line.numCapVertices = 2;
+            line.sharedMaterial = sharedBreachRingMaterial;
+            line.startColor = color;
+            line.endColor = color;
+            line.enabled = false;
+            return line;
+        }
+
+        /// <summary>
         /// Curve shape shared with MovementPathRenderer, so the route the sprite
         /// walks and the route drawn on the board are the same curve. Falls back
         /// to defaults if nothing supplies one, the way SelectionSystem falls
@@ -277,11 +389,25 @@ namespace NodeWar.View
             if (villager.state == VillagerState.Dead || villager.isConsumed)
             {
                 SetRenderersEnabled(false);
+                UpdateBreachRing(villager, false);
                 return;
             }
 
             SetRenderersEnabled(true);
             Color stateColor = GetStateColor(villager);
+
+            // The one about to be spent wears a colour that is neither player's,
+            // the selection gold nor the fighting violet, pulsing toward white
+            // unless the player asked for reduced motion.
+            bool isNextBreacher = breachCues != null && breachCues.breachBarMax > 0 && IsNextBreacher(villager);
+            if (isNextBreacher)
+            {
+                float pulse = breachCues.reducedMotion
+                    ? 0f
+                    : 0.5f + 0.5f * Mathf.Sin(Time.time * breachCues.barPulseHz * Mathf.PI * 2f);
+                stateColor = Color.Lerp(breachCues.breacherColor, Color.white, pulse * 0.35f);
+            }
+            UpdateBreachRing(villager, isNextBreacher);
 
             // Flash composes over the state tint rather than replacing it, so a
             // fighting villager still reads as fighting mid-flash.

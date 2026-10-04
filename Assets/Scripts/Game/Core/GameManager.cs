@@ -64,6 +64,11 @@ namespace NodeWar.Core
             new NodeWar.View.ScreenShakeSettings();
         private NodeWar.View.ScreenShakeDirector screenShake;
 
+        // Look and player flags for the core breach bar and the breacher
+        // highlight. Not serialized: the HUD writes the flags from the settings
+        // card, and breachBarMax comes from the balance data.
+        private readonly NodeWar.View.BreachCueSettings breachCues = new NodeWar.View.BreachCueSettings();
+
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
         private NodePanelManager nodePanelManager;
@@ -1240,6 +1245,7 @@ namespace NodeWar.Core
             // because InitializeInputSystems runs before InitializeUI and
             // uiToolkitHud is still null at that point.
             uiToolkitHud.BindRouteSettings(opponentRouteSettings);
+            uiToolkitHud.BindBreachCues(breachCues);
 
             uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
                                     inputBuffer, tickProvider, balance.Data, nodePanelManager,
@@ -1619,6 +1625,8 @@ namespace NodeWar.Core
                     claimBar.Initialize(state, i, balance.Data.claimThreshold);
             }
 
+            SpawnBreachBars();
+
             if (outlineDriver != null) outlineDriver.SetNodeGroups(nodeOutlines);
 
             // Pre-hide all nodes. Transition controller reveals them during startup wave.
@@ -1636,6 +1644,25 @@ namespace NodeWar.Core
             // highlight, which the raycast path got from the hit directly.
             if (commandSystem != null)
                 commandSystem.SetNodeViews(nodeViews);
+        }
+
+        /// <summary>
+        /// One breach bar over each Core, added at runtime so the node prefabs
+        /// need no edit. Skipped when the balance has no breach bar (v1 rules).
+        /// </summary>
+        private void SpawnBreachBars()
+        {
+            breachCues.breachBarMax = balance.Data.breachBarMax;
+            if (breachCues.breachBarMax <= 0) return;
+
+            for (int p = 0; p < state.players.Length; p++)
+            {
+                int core = state.players[p].coreNodeID;
+                if (core < 0 || core >= nodeSlotManagers.Length || nodeSlotManagers[core] == null) continue;
+
+                CoreBreachBar bar = nodeSlotManagers[core].gameObject.AddComponent<CoreBreachBar>();
+                bar.Initialize(state, p, breachCues, boardConfig.nodeScale);
+            }
         }
 
         private void SpawnVillagerViews()
@@ -1699,6 +1726,7 @@ namespace NodeWar.Core
                 view.SetTickProvider(tickProvider);
                 view.SetNodeSlotManagers(nodeSlotManagers);
                 view.SetPathCurveSettings(pathCurveSettings);
+                view.SetBreachCueSettings(breachCues);
 
                 NodeWar.View.VillagerFlash flash = villagerGO.AddComponent<NodeWar.View.VillagerFlash>();
                 flash.Initialize(view, gestureSource != null
