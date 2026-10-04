@@ -125,6 +125,7 @@ namespace NodeWar.Core
         private NodeWar.View.NodePresentation[] nodePresentations;
         private NodeWar.View.NodeView[] nodeViews;
         private NodeWar.View.MovementPathRenderer pathRenderer;
+        private NodeWar.View.PendingOrderView pendingOrderView;
 
         // Network
         private LockstepCore lockstep;
@@ -584,6 +585,16 @@ namespace NodeWar.Core
             pathRenderer.Initialize(state, localPID, pathCurveSettings,
                                     opponentRouteSettings, tickProvider, Camera.main);
             pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+
+            // The provisional route between issuing a move and lockstep
+            // applying it. A child of the routes object so it shares its
+            // lifetime and the material it borrows.
+            pendingOrderView = routesGO.AddComponent<NodeWar.View.PendingOrderView>();
+            pendingOrderView.Initialize(state, localPID, pathCurveSettings, pathRenderer);
+            pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
+            pendingOrderView.SetVillagerTransforms(villagerTransforms);
+            if (commandSystem != null)
+                commandSystem.MoveIssued += pendingOrderView.OnMoveIssued;
         }
 
         /// <summary>
@@ -603,6 +614,9 @@ namespace NodeWar.Core
 
             if (pathRenderer != null)
                 pathRenderer.SetPlayerID(playerID);
+
+            if (pendingOrderView != null)
+                pendingOrderView.SetPlayerID(playerID);
         }
 
         /// <summary>
@@ -1632,6 +1646,8 @@ namespace NodeWar.Core
             selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
             if (pathRenderer != null)
                 pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+            if (pendingOrderView != null)
+                pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
 
             // Lets a move issued by node ID still fire the destination
             // highlight, which the raycast path got from the hit directly.
@@ -1652,6 +1668,8 @@ namespace NodeWar.Core
             if (outlineDriver != null) outlineDriver.SetVillagerGroups(villagerOutlines);
             if (pathRenderer != null)
                 pathRenderer.SetTickProvider(tickProvider);
+            if (pendingOrderView != null)
+                pendingOrderView.SetVillagerTransforms(villagerTransforms);
             if (hitFlashRouter != null)
                 hitFlashRouter.SetVillagerTransforms(villagerTransforms);
         }
@@ -1678,6 +1696,8 @@ namespace NodeWar.Core
             if (outlineDriver != null) outlineDriver.SetVillagerGroups(villagerOutlines);
             if (pathRenderer != null)
                 pathRenderer.SetTickProvider(tickProvider);
+            if (pendingOrderView != null)
+                pendingOrderView.SetVillagerTransforms(villagerTransforms);
             if (hitFlashRouter != null)
                 hitFlashRouter.SetVillagerTransforms(villagerTransforms);
             if (indicatorDirector != null)

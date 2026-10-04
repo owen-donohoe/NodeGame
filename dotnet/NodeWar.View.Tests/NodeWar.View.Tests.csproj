@@ -48,6 +48,12 @@
     <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
              Link="View/RouteReveal.cs" />
 
+    <!-- Lifecycle of the provisional route shown between issuing a move and
+         lockstep applying it; the drawing stays in Unity. -->
+    <Compile Include="PendingOrderTrackerTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/PendingOrderTracker.cs"
+             Link="View/PendingOrderTracker.cs" />
+
     <!-- The resource ring's value -> segments/colour maths; the UI Toolkit
          drawing that reads it stays in Unity. -->
     <Compile Include="ResourceRingMathTests.cs" />

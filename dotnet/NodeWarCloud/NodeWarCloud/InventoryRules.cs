@@ -56,7 +56,11 @@ namespace NodeWar.Cloud
                 if (item.Retired) throw new InventoryValidationException($"Item '{id}' is retired.");
                 var owned = skin ? state.Inventory.OwnedSkins : state.Inventory.OwnedVariants;
                 if (owned == null || !owned.Contains(id)) throw new InventoryValidationException($"Item '{id}' is not owned.");
-                if (!skin && !EraUnlocks.IsUsable(item, state.Rank.Arena))
+                // Suits follow the tree; everything else keeps the era rule.
+                bool usable = SuitTree.IsTreeSuit(baseId)
+                    ? SuitTree.IsAvailable(id, state.Rank.Arena)
+                    : EraUnlocks.IsUsable(item, state.Rank.Arena);
+                if (!skin && !usable)
                     throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
             });
         }
