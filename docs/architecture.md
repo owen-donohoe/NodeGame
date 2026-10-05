@@ -328,8 +328,26 @@ writes nothing to it.
 Create an Inspector-authored **NodeWar > UI Art Theme** asset named `UIArtTheme`
 at `Assets/UI/Resources/UIArtTheme.asset`. The UI loads it once per play session
 through `Resources.Load("UIArtTheme")`; restart Play Mode after changing its
-reference or entries. Add icon entries by `LobbyIconKind` and optional
-`LobbyIconContext`, with a Sprite and `keepOriginalColours`. Resolution tries
+reference or entries. Each icon entry has two choices: **Icon**, a grouped
+menu such as `Indicators/Threat to core` or `Resources/Food`, then **Where**,
+which lists `Anywhere` first and only that icon's actual locations with
+human-readable names. An icon used in one location offers only `Anywhere`.
+Assign **Sprite** and **Keep original colours** below those choices.
+Changing Icon resets an incompatible Where to Anywhere. Opening the Inspector
+does not rewrite saved values; a valid specific override for a single-location
+icon displays Anywhere with a tooltip explaining the preserved location.
+
+Retired generic kinds are hidden from the Icon menu unless the current row
+already uses one, in which case its `Retired/…` choice remains visible. Saved
+pairs with no active use show an error explaining that they will never match;
+choose an active icon and a supported Where to repair them. The shared
+UnityEngine-free `LobbyIconUsage` table supplies groups, labels and locations.
+Editor/development builds warn once per unlisted runtime pair after initial
+UXML attributes have been applied and the icon attaches, skipping intentional
+unset None icons. Dotnet tests guard coverage, valid locations and labels.
+
+Underneath the picker, entries still store `LobbyIconKind` and
+`LobbyIconContext`. Resolution tries
 the exact kind/context pair, then that kind with `Anywhere`, then its generated
 glyph. The first duplicate **pair** wins; validation warns. An empty exact
 sprite falls back to Anywhere, without taking a later exact duplicate. An
