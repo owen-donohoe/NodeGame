@@ -69,6 +69,8 @@
     <Compile Include="ResourceHudMathTests.cs" />
     <Compile Include="SheetResourceMathTests.cs" />
     <Compile Include="UiArtMathTests.cs" />
+    <Compile Include="UIArtLookupTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/UIArtLookup.cs" Link="UI/UIArtLookup.cs" />
     <Compile Include="UiRequiredNamesTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/UiRequiredNames.cs" Link="UI/UiRequiredNames.cs" />
     <None Include="../../Assets/UI/Layouts/GameplayHUD.uxml" Link="Layouts/GameplayHUD.uxml" CopyToOutputDirectory="PreserveNewest" />

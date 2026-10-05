@@ -73,7 +73,7 @@ namespace NodeWar.UI
         private void Repaint()
         {
             Color tint = ResourceRingColors.BaseColorFor(kind, value, cap, critical, low, warn, ok, good, rich);
-            icon.style.unityBackgroundImageTintColor = tint;
+            icon.SetResourceTint(tint);
             count.style.color = tint;
             tintBackground.style.backgroundColor = new Color(tint.r, tint.g, tint.b, 1f);
             Root.style.borderLeftColor = Root.style.borderRightColor = tint;

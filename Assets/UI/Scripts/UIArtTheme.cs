@@ -21,9 +21,8 @@ namespace NodeWar.Lobby
         // Array order is authoritative, including an empty first entry.
         public bool TryIcon(LobbyIconKind kind, out IconEntry entry)
         {
-            if (icons != null)
-                for (int i = 0; i < icons.Length; i++)
-                    if (icons[i].kind == kind) { entry = icons[i]; return true; }
+            int index = UIArtLookup.SpriteIndex(icons, (int)kind, e => (int)e.kind, e => e.sprite != null);
+            if (index >= 0) { entry = icons[index]; return true; }
             entry = default;
             return false;
         }
