@@ -93,6 +93,9 @@ namespace NodeWar.Lobby
             new ControlsGroup("Mouse", InputSlot.MiddleDrag, InputSlot.ScrollWheel)
         };
 
+        /// <summary>Shown on a child row while its parent (the camera button) is off.</summary>
+        public const string CameraChildNote = "Needs Camera button";
+
         public const string CameraAndLayoutTitle = "Camera, layout & hints";
 
         private static readonly InputSlot[] RowOrder = FlattenGroups();
@@ -241,10 +244,18 @@ namespace NodeWar.Lobby
             return settings;
         }
 
-        /// <summary>Drag to zoom belongs to the camera button; with the button off it is dimmed and inert.</summary>
-        public static bool CameraZoomDimmed(GameSettingsData settings)
+        /// <summary>
+        /// Rows that belong to the camera button (Drag to zoom) are faded and inert while it is
+        /// off: a third state, distinct from their own off (empty outline) and on (filled).
+        /// </summary>
+        public static bool CameraChildFaded(GameSettingsData settings)
         {
             return !GameSettingsData.Normalized(settings).showCameraButton;
+        }
+
+        public static bool CameraZoomDimmed(GameSettingsData settings)
+        {
+            return CameraChildFaded(settings);
         }
 
         /// <summary>Picks an action from a slot's list. A value the slot does not allow changes nothing.</summary>

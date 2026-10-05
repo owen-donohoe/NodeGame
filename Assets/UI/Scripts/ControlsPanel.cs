@@ -48,6 +48,7 @@ namespace NodeWar.Lobby
         private readonly List<SlotRowView> slotRows = new List<SlotRowView>();
         private VisualElement cameraRow, cameraCheck, zoomRow, zoomCheck, selbarCheck, tooltipsCheck, sideRow;
         private Button zoomHit;
+        private Label zoomNote;
         private Button sideButton;
         private Label sideValue, holdValue, warnings;
         private Slider holdSlider;
@@ -115,9 +116,8 @@ namespace NodeWar.Lobby
                 () => edit(ControlsViewModel.ToggleCameraButton));
             layout.Add(cameraRow);
 
-            zoomRow = SwitchRow("Drag to zoom", out zoomCheck, out zoomHit,
-                () => edit(ControlsViewModel.ToggleCameraButtonZoom));
-            zoomRow.AddToClassList("cp-row--sub");
+            zoomRow = SubSwitchRow("Drag to zoom", out zoomCheck, out zoomHit, out zoomNote,
+                () => edit(ControlsViewModel.ToggleCameraButtonZoom), first: true, last: true);
             layout.Add(zoomRow);
 
             layout.Add(SwitchRow("Selection counter", out selbarCheck, out _,
@@ -232,8 +232,68 @@ namespace NodeWar.Lobby
             square = new VisualElement();
             square.AddToClassList("cp-check");
             square.pickingMode = PickingMode.Ignore;
+            // A bar inside the square, shown only in the faded (parent off) state.
+            VisualElement dash = new VisualElement();
+            dash.AddToClassList("cp-check__dash");
+            dash.pickingMode = PickingMode.Ignore;
+            square.Add(dash);
             hit.Add(square);
             return hit;
+        }
+
+        /// <summary>
+        /// A row that belongs to the row above: indented, joined to the parent's square by a
+        /// thin line (down from it, then across to this square), with a note that shows while
+        /// the parent is off. The line's numbers match the row height and square size in USS.
+        /// </summary>
+        private VisualElement SubSwitchRow(string label, out VisualElement square, out Button hit,
+            out Label note, Action toggle, bool first, bool last)
+        {
+            VisualElement row = NewRow();
+            row.AddToClassList("cp-row--sub");
+            AddConnector(row, first, last);
+            hit = NewCheck(out square);
+            hit.clicked += toggle;
+            row.Add(hit);
+            row.Add(NameWithNote(label, out note));
+            return row;
+        }
+
+        private static VisualElement NameWithNote(string label, out Label note)
+        {
+            VisualElement column = new VisualElement();
+            column.AddToClassList("cp-namecol");
+            column.pickingMode = PickingMode.Ignore;
+            column.Add(NameLabel(label));
+            note = new Label(ControlsViewModel.CameraChildNote);
+            note.AddToClassList("cp-note");
+            note.AddToClassList("ui-w500");
+            note.pickingMode = PickingMode.Ignore;
+            note.style.display = DisplayStyle.None;
+            column.Add(note);
+            return column;
+        }
+
+        private static void AddConnector(VisualElement row, bool first, bool last)
+        {
+            const float RowHeight = 68f;
+            const float ReachIntoParent = 19f; // from the parent square's bottom to the parent row's bottom
+            float top = first ? -ReachIntoParent : 0f;
+            float bottom = last ? RowHeight * 0.5f : RowHeight;
+
+            VisualElement vertical = new VisualElement();
+            vertical.AddToClassList("cp-conn");
+            vertical.AddToClassList("cp-conn--v");
+            vertical.pickingMode = PickingMode.Ignore;
+            vertical.style.top = top;
+            vertical.style.height = bottom - top;
+            row.Add(vertical);
+
+            VisualElement across = new VisualElement();
+            across.AddToClassList("cp-conn");
+            across.AddToClassList("cp-conn--h");
+            across.pickingMode = PickingMode.Ignore;
+            row.Add(across);
         }
 
         private VisualElement SwitchRow(string label, out VisualElement square, out Button hit,
@@ -308,12 +368,14 @@ namespace NodeWar.Lobby
             }
 
             cameraCheck.EnableInClassList("cp-check--on", current.showCameraButton);
-            zoomCheck.EnableInClassList("cp-check--on", current.cameraButtonZoom);
+            bool zoomDimmed = ControlsViewModel.CameraChildFaded(current);
+            zoomCheck.EnableInClassList("cp-check--on", current.cameraButtonZoom && !zoomDimmed);
+            zoomCheck.EnableInClassList("cp-check--faded", zoomDimmed);
+            zoomNote.style.display = zoomDimmed ? DisplayStyle.Flex : DisplayStyle.None;
             selbarCheck.EnableInClassList("cp-check--on", current.showSelectionBar);
             tooltipsCheck.EnableInClassList("cp-check--on", current.tooltips);
 
-            bool zoomDimmed = ControlsViewModel.CameraZoomDimmed(current);
-            zoomRow.EnableInClassList("cp-row--dim", zoomDimmed);
+            zoomRow.EnableInClassList("cp-row--faded", zoomDimmed);
             zoomHit.pickingMode = zoomDimmed ? PickingMode.Ignore : PickingMode.Position;
 
             sideValue.text = ControlsViewModel.SideLabel(current.controlsSide);

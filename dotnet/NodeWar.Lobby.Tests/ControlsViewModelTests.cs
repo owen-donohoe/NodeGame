@@ -125,6 +125,18 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void CameraChildren_AreFadedOnlyWhileTheParentIsOff_WithANote()
+        {
+            Assert.IsFalse(ControlsViewModel.CameraChildFaded(Defaults()));
+            GameSettingsData noButton = ControlsViewModel.ToggleCameraButton(Defaults());
+            Assert.IsTrue(ControlsViewModel.CameraChildFaded(noButton));
+            Assert.AreEqual("Needs Camera button", ControlsViewModel.CameraChildNote);
+            // Faded is its own state: the child value is kept, so it comes back when the parent does.
+            Assert.IsTrue(noButton.cameraButtonZoom);
+            Assert.IsFalse(ControlsViewModel.CameraChildFaded(ControlsViewModel.ToggleCameraButton(noButton)));
+        }
+
+        [Test]
         public void DragToZoom_IsDimmedAndInertWhileTheCameraButtonIsOff()
         {
             Assert.IsFalse(ControlsViewModel.CameraZoomDimmed(Defaults()));

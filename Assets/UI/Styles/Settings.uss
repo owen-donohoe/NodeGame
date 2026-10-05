@@ -241,6 +241,69 @@
     opacity: 1;
 }
 
+/* Faded: the parent is off. Fainter than an off outline and carrying a bar, so it
+   reads as unavailable and never as off or on. */
+.cp-check--faded {
+    opacity: 0.22;
+}
+
+.cp-check__dash {
+    display: none;
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    top: 10px;
+    height: 3px;
+    border-radius: 2px;
+    background-color: var(--ink);
+}
+
+.cp-check--faded .cp-check__dash {
+    display: flex;
+}
+
+/* The parent-child line: down from the parent square, then across to the child square. */
+.cp-conn {
+    position: absolute;
+    background-color: var(--edge);
+}
+
+.cp-conn--v {
+    left: 29px;
+    width: 2px;
+}
+
+.cp-conn--h {
+    left: 30px;
+    top: 33px;
+    width: 9px;
+    height: 2px;
+}
+
+.cp-namecol {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-shrink: 1;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.lb-root .cp-namecol .cp-name {
+    flex-grow: 0;
+    flex-basis: auto;
+}
+
+.lb-root .cp-note {
+    font-size: var(--type-caption);
+    color: var(--ink-mute);
+    -unity-text-align: middle-left;
+}
+
+.cp-row--faded .cp-name,
+.cp-row--faded .cp-action {
+    opacity: 0.4;
+}
+
 .lb-root .cp-name {
     flex-grow: 1;
     flex-basis: 0;
