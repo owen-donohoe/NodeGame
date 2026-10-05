@@ -1249,9 +1249,21 @@ namespace NodeWar.Core
         /// </summary>
         private void ApplyHUDStackChoice(GameObject uiGO)
         {
+            // Begin with a working legacy band; every validation failure keeps it.
+            if (hudManager != null) hudManager.enabled = true;
+            if (uiToolkitHudRoot != null) uiToolkitHudRoot.SetActive(false);
+            Canvas legacyCanvas = null;
+            Canvas[] canvases = uiGO.GetComponentsInChildren<Canvas>(true);
+            for (int i = 0; i < canvases.Length; i++)
+            {
+                if (canvases[i].gameObject.name != "HUD_Canvas") continue;
+                legacyCanvas = canvases[i];
+                legacyCanvas.gameObject.SetActive(true);
+                break;
+            }
+
             if (!useUIToolkitHUD)
             {
-                if (uiToolkitHudRoot != null) uiToolkitHudRoot.SetActive(false);
                 return;
             }
 
@@ -1263,27 +1275,13 @@ namespace NodeWar.Core
                 return;
             }
 
-            Canvas[] canvases = uiGO.GetComponentsInChildren<Canvas>(true);
-            bool hidden = false;
-
-            for (int i = 0; i < canvases.Length; i++)
-            {
-                if (canvases[i].gameObject.name != "HUD_Canvas") continue;
-
-                canvases[i].gameObject.SetActive(false);
-                hidden = true;
-                break;
-            }
-
-            if (!hidden)
+            if (legacyCanvas == null)
             {
                 Debug.LogError("[GameManager] Could not find HUD_Canvas in the UI prefab, so the " +
                                "uGUI HUD cannot be hidden. Leaving the UI Toolkit HUD off rather " +
                                "than drawing both.");
                 return;
             }
-
-            uiToolkitHudRoot.SetActive(true);
 
             uiToolkitHud = uiToolkitHudRoot.GetComponent<GameplayHUDController>();
 
@@ -1292,6 +1290,8 @@ namespace NodeWar.Core
                 Debug.LogWarning("[GameManager] uiToolkitHudRoot has no GameplayHUDController.");
                 return;
             }
+
+            uiToolkitHudRoot.SetActive(true);
 
             // The settings card's routes toggle writes the same
             // OpponentRouteSettings instance the path renderer reads every
@@ -1353,6 +1353,9 @@ namespace NodeWar.Core
             // better than a tap that opens nothing at all.
             if (nodePanelManager != null)
                 nodePanelManager.SetSuppressed(uiToolkitHud.HasNodeSheet);
+
+            legacyCanvas.gameObject.SetActive(false);
+            if (hudManager != null) hudManager.enabled = false;
         }
 
         /// <summary>
