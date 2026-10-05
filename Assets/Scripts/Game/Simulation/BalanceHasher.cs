@@ -10,7 +10,7 @@ namespace NodeWar.Simulation
     /// does.
     ///
     /// Every field of <see cref="GameBalanceData"/>, <see cref="SuitStats"/> and
-    /// <see cref="DistrictStats"/> goes in, in declared order. A test sets each field in turn and requires
+    /// <see cref="DistrictStats"/> goes in, in a fixed order (zero cap extensions are omitted for legacy balances). A test sets each field in turn and requires
     /// the hash to move, so a new field left out of here fails it.
     /// </summary>
     public static class BalanceHasher
@@ -108,6 +108,11 @@ namespace NodeWar.Simulation
                     }
                 }
 
+                // Missing cap fields deserialize to zero. Preserve those exported
+                // balances' fingerprints, while tagging each nonzero cap distinctly.
+                if (b.foodCap != 0) { hash = hash * 31 + 3000; hash = hash * 31 + b.foodCap; }
+                if (b.materialsCap != 0) { hash = hash * 31 + 3001; hash = hash * 31 + b.materialsCap; }
+                if (b.metalCap != 0) { hash = hash * 31 + 3002; hash = hash * 31 + b.metalCap; }
                 return hash;
             }
         }
