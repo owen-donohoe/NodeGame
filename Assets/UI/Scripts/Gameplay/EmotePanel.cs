@@ -218,7 +218,7 @@ namespace NodeWar.UI
             var bubble = new Bubble { element = new VisualElement { pickingMode = PickingMode.Ignore } };
             bubbles[player] = bubble;
             bubble.element.AddToClassList("hud__emote-bubble");
-            var icon = new LobbyIcon(IconFor(emote));
+            var icon = new LobbyIcon(IconFor(emote), LobbyIconContext.EmoteBubble);
             icon.AddToClassList("hud__emote-icon");
             icon.EnableInClassList("hud__emote-icon--flag", emote == EmoteType.WhiteFlag);
             bubble.element.Add(icon);

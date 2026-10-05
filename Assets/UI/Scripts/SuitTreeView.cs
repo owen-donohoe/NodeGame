@@ -243,7 +243,7 @@ namespace NodeWar.Lobby
             VisualElement disc = new VisualElement();
             disc.AddToClassList("st-node__disc");
             disc.pickingMode = PickingMode.Ignore;
-            LobbyIcon glyph = new LobbyIcon(GlyphFor(node.State));
+            LobbyIcon glyph = new LobbyIcon(GlyphFor(node.State), LobbyIconContext.SuitTree);
             glyph.AddToClassList("lb-icon");
             glyph.AddToClassList("st-node__glyph");
             glyph.pickingMode = PickingMode.Ignore;

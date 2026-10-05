@@ -26,7 +26,7 @@
             <engine:VisualElement class="ui-sticker lb-box-wrap lb-box-wrap--big" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:Button name="home-box-victory" class="ui-reset-button lb-box">
-                    <lobby:LobbyIcon kind="VictoryBox" class="lb-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="Home" kind="VictoryBox" class="lb-icon" picking-mode="Ignore" />
                     <engine:Label class="lb-box__label ui-w600" text="Victory box" picking-mode="Ignore" />
                     <engine:Label name="home-box-victory-badge" class="lb-badge ui-w700" text="0" picking-mode="Ignore" />
                 </engine:Button>
@@ -34,7 +34,7 @@
             <engine:VisualElement class="ui-sticker lb-box-wrap lb-box-wrap--small" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:Button name="home-box-daily" class="ui-reset-button lb-box">
-                    <lobby:LobbyIcon kind="DailyBox" class="lb-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="Home" kind="DailyBox" class="lb-icon" picking-mode="Ignore" />
                     <engine:Label class="lb-box__label ui-w600" text="Daily" picking-mode="Ignore" />
                     <engine:Label name="home-box-daily-badge" class="lb-badge lb-badge--zero ui-w700" text="—" picking-mode="Ignore" />
                 </engine:Button>
@@ -56,7 +56,7 @@
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-villager__body" picking-mode="Ignore">
                     <engine:VisualElement class="lb-villager__hat" picking-mode="Ignore" />
-                    <lobby:LobbyIcon kind="Mouth" class="lb-villager__face" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="Home" kind="Mouth" class="lb-villager__face" picking-mode="Ignore" />
                 </engine:VisualElement>
             </engine:Button>
         </engine:VisualElement>

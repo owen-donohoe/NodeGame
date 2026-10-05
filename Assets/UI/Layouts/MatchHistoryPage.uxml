@@ -22,7 +22,7 @@
     <engine:VisualElement name="push-safe-area" class="lb-push__safe" picking-mode="Ignore">
         <engine:VisualElement class="lb-push__header" picking-mode="Ignore">
             <engine:Button name="push-back" class="ui-reset-button lb-back">
-                <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+                <lobby:LobbyIcon context="PageHeader" kind="Back" class="lb-icon" picking-mode="Ignore" />
             </engine:Button>
             <engine:Label class="lb-push__title ui-w600" text="Match history" />
         </engine:VisualElement>
@@ -31,7 +31,7 @@
 
         <engine:VisualElement name="history-empty" class="lb-stub" picking-mode="Ignore">
             <engine:VisualElement class="lb-stub__icon" picking-mode="Ignore">
-                <lobby:LobbyIcon kind="Tv" class="lb-icon" picking-mode="Ignore" />
+                <lobby:LobbyIcon context="PageHeader" kind="Tv" class="lb-icon" picking-mode="Ignore" />
             </engine:VisualElement>
             <engine:Label class="lb-stub__title ui-w600" text="No matches yet" />
             <engine:Label class="lb-stub__body ui-w500" text="Finished matches will be listed here, with the result and the loadout you took." />

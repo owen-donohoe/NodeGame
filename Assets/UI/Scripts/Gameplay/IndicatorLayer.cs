@@ -473,7 +473,7 @@ namespace NodeWar.UI
             pointer.AddToClassList("ind__pointer");
             pointer.pickingMode = PickingMode.Ignore;
 
-            LobbyIcon pointerIcon = new LobbyIcon(LobbyIconKind.Pointer);
+            LobbyIcon pointerIcon = new LobbyIcon(LobbyIconKind.Pointer, LobbyIconContext.OffScreenIndicator);
             pointerIcon.AddToClassList("ind__pointer-icon");
             pointer.Add(pointerIcon);
 
@@ -481,7 +481,7 @@ namespace NodeWar.UI
             bubble.AddToClassList("ind__bubble");
             bubble.pickingMode = PickingMode.Ignore;
 
-            LobbyIcon icon = new LobbyIcon();
+            LobbyIcon icon = new LobbyIcon { Context = LobbyIconContext.OffScreenIndicator };
             icon.AddToClassList("ind__icon");
             bubble.Add(icon);
 

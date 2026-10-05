@@ -37,6 +37,7 @@ namespace NodeWar.Lobby
         }
 
         private LobbyIconKind kind;
+        private LobbyIconContext context;
         private bool keepOriginalColours;
 
         /// <summary>Live resource tint, respecting the theme's original-colour art.</summary>
@@ -52,20 +53,32 @@ namespace NodeWar.Lobby
             set
             {
                 kind = value;
-                keepOriginalColours = false;
-                UIArtTheme theme = UIArt.Theme;
-                if (theme != null && theme.TryIcon(kind, out UIArtTheme.IconEntry entry) && entry.sprite != null)
-                {
-                    keepOriginalColours = entry.keepOriginalColours;
-                    style.backgroundImage = new StyleBackground(entry.sprite);
-                    style.unityBackgroundImageTintColor = entry.keepOriginalColours
-                        ? new StyleColor(Color.white) : new StyleColor(StyleKeyword.Null);
-                }
-                else
-                {
-                    style.backgroundImage = new StyleBackground(ImageFor(kind));
-                    style.unityBackgroundImageTintColor = new StyleColor(StyleKeyword.Null);
-                }
+                RefreshArt();
+            }
+        }
+
+        [UxmlAttribute]
+        public LobbyIconContext Context
+        {
+            get { return context; }
+            set { context = value; RefreshArt(); }
+        }
+
+        private void RefreshArt()
+        {
+            keepOriginalColours = false;
+            UIArtTheme theme = UIArt.Theme;
+            if (theme != null && theme.TryIcon(kind, out UIArtTheme.IconEntry entry) && entry.sprite != null)
+            {
+                keepOriginalColours = entry.keepOriginalColours;
+                style.backgroundImage = new StyleBackground(entry.sprite);
+                style.unityBackgroundImageTintColor = entry.keepOriginalColours
+                    ? new StyleColor(Color.white) : new StyleColor(StyleKeyword.Null);
+            }
+            else
+            {
+                style.backgroundImage = new StyleBackground(ImageFor(kind));
+                style.unityBackgroundImageTintColor = new StyleColor(StyleKeyword.Null);
             }
         }
 
@@ -76,8 +89,9 @@ namespace NodeWar.Lobby
             style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
         }
 
-        public LobbyIcon(LobbyIconKind kind) : this()
+        public LobbyIcon(LobbyIconKind kind, LobbyIconContext context = LobbyIconContext.Anywhere) : this()
         {
+            this.context = context;
             Kind = kind;
         }
 

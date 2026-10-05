@@ -37,7 +37,7 @@
 
             <engine:VisualElement class="lb-arena__head">
                 <engine:Button name="profile-back" class="ui-reset-button lb-back">
-                    <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="PageHeader" kind="Back" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:VisualElement class="lb-arena__name" picking-mode="Ignore">
                     <engine:Label name="profile-username" class="lb-arena__name-text ui-w600" text="player" />

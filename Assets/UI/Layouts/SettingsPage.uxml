@@ -33,7 +33,7 @@
 
             <engine:VisualElement class="lb-push__header" picking-mode="Ignore">
                 <engine:Button name="push-back" class="ui-reset-button lb-back">
-                    <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="PageHeader" kind="Back" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Label class="lb-push__title ui-w600" text="Settings" />
             </engine:VisualElement>
@@ -151,7 +151,7 @@
         <engine:VisualElement name="controls-panel" class="cp-page" picking-mode="Position">
             <engine:VisualElement class="cp-header-bar" picking-mode="Ignore">
                 <engine:Button name="controls-back" class="ui-reset-button lb-back">
-                    <lobby:LobbyIcon kind="Back" class="lb-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="InlineText" kind="Back" class="lb-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Label class="cp-title ui-w600" text="Configure controls" picking-mode="Ignore" />
             </engine:VisualElement>

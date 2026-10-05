@@ -142,7 +142,7 @@ namespace NodeWar.UI
                 VisualElement ring = new VisualElement();
                 ring.AddToClassList("sheet__close-ring");
                 ring.pickingMode = PickingMode.Ignore;
-                ring.Add(new LobbyIcon(LobbyIconKind.Close));
+                ring.Add(new LobbyIcon(LobbyIconKind.Close, LobbyIconContext.NodeSheet));
                 close.Add(ring);
                 close.clicked += CloseByPlayer;
             }

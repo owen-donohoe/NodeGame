@@ -137,7 +137,7 @@ namespace NodeWar.Lobby
                 Button button = new Button();
                 button.AddToClassList("ui-reset-button");
                 button.AddToClassList("lb-ware");
-                button.Add(new LobbyIcon(ware.Icon));
+                button.Add(new LobbyIcon(ware.Icon, LobbyIconContext.ShopCard));
 
                 VisualElement text = new VisualElement();
                 text.pickingMode = PickingMode.Ignore;
@@ -178,7 +178,7 @@ namespace NodeWar.Lobby
                 VisualElement thumb = new VisualElement();
                 thumb.AddToClassList("lb-rowthumb");
                 thumb.pickingMode = PickingMode.Ignore;
-                thumb.Add(new LobbyIcon(offer.Icon));
+                thumb.Add(new LobbyIcon(offer.Icon, LobbyIconContext.ShopCard));
                 row.Add(thumb);
 
                 VisualElement text = new VisualElement();
