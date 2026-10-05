@@ -84,6 +84,9 @@ namespace NodeWar.UI
         private VisualElement flash;
 
         private readonly ResourceReadout[] resources = new ResourceReadout[3];
+        private VisualElement metalRoot;
+        private bool capsApplied;
+        private bool reducedMotion;
 
         private Button villagerToggle;
         private VisualElement villagerCard;
@@ -382,7 +385,8 @@ namespace NodeWar.UI
 
             resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"));
             resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"));
+            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"), asBar: true);
+            metalRoot = root.Q<VisualElement>("hud-res-metal");
 
             villagerToggle = root.Q<Button>("hud-villager-toggle");
             villagerCard = root.Q<VisualElement>("hud-villagers");
@@ -652,6 +656,11 @@ namespace NodeWar.UI
             handleZoomEnabled = settings.cameraButtonZoom;
             showSelectionBar = settings.showSelectionBar;
             showTooltips = settings.tooltips;
+
+            // Reduced motion: a full resource is a steady brighter tint, with no pulse or wave.
+            reducedMotion = settings.reducedMotion;
+            for (int i = 0; i < resources.Length; i++)
+                if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
             cameraButtonTarget = settings.cameraButtonTarget;
 
             // Redraw the bar now rather than on the next selection change.
@@ -929,6 +938,13 @@ namespace NodeWar.UI
         {
             PlayerData player = state.players[pid];
 
+            if (!capsApplied) ApplyResourceCaps();
+
+            // Metal is hidden until the player's arena reaches ResourceHudMath.MetalArena or
+            // they hold some; the node sheet's chip reads the same rule.
+            if (metalRoot != null)
+                metalRoot.EnableInClassList("hud__res-metal--on", ResourceVisibility.MetalVisible(player.metal));
+
             resourceValues[0] = player.food;
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
@@ -949,6 +965,20 @@ namespace NodeWar.UI
                     alpha, productionBuffer);
                 resources[i].SetProduction(productionBuffer, jobs);
             }
+        }
+
+        /// <summary>
+        /// The caps the rings and the bar are full at, read off the balance data by name with
+        /// 30/30/10 as the fallback, so this is right before and after the cap fields exist.
+        /// </summary>
+        private void ApplyResourceCaps()
+        {
+            capsApplied = true;
+            if (resources[0] != null) resources[0].SetCap(ResourceCaps.Food(balance));
+            if (resources[1] != null) resources[1].SetCap(ResourceCaps.Materials(balance));
+            if (resources[2] != null) resources[2].SetCap(ResourceCaps.Metal(balance));
+            for (int i = 0; i < resources.Length; i++)
+                if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
         }
 
         /// <summary>
@@ -1578,21 +1608,55 @@ namespace NodeWar.UI
             private readonly Label value;
             private readonly VisualElement ringHost;
             private readonly ResourceRing ring;
+            private readonly ResourceBar bar;
 
             private int shownValue = int.MinValue;
+            private int cap;
             private IVisualElementScheduledItem popJob;
 
-            public ResourceReadout(Label valueLabel, VisualElement host)
+            /// <param name="asBar">Metal: a segmented bar read as "x/cap" instead of a semicircle.</param>
+            public ResourceReadout(Label valueLabel, VisualElement host, bool asBar = false)
             {
                 value = valueLabel;
                 ringHost = host;
                 if (host == null) return;
+
+                if (asBar)
+                {
+                    bar = new ResourceBar();
+                    host.Insert(0, bar);
+                    return;
+                }
 
                 ring = new ResourceRing();
 
                 // Inserted first so the value label - already in the UXML
                 // host - draws on top of it.
                 host.Insert(0, ring);
+
+                // A semicircle is half as tall as it is wide, plus half a stroke, so its
+                // host takes its height from whatever width the layout gave it.
+                host.RegisterCallback<GeometryChangedEvent>(evt =>
+                {
+                    float height = ResourceHudMath.HostHeight(evt.newRect.width);
+                    if (evt.newRect.width > 0f && !Mathf.Approximately(host.resolvedStyle.height, height))
+                        host.style.height = height;
+                });
+            }
+
+            public void SetCap(int amount)
+            {
+                cap = amount;
+                if (ring != null) ring.SetCap(amount);
+                if (bar != null) bar.SetCap(amount);
+                if (bar != null && value != null && shownValue != int.MinValue)
+                    value.text = shownValue + "/" + cap;
+            }
+
+            public void SetReducedMotion(bool reduced)
+            {
+                if (ring != null) ring.SetReducedMotion(reduced);
+                if (bar != null) bar.SetReducedMotion(reduced);
             }
 
             /// <summary>
@@ -1616,8 +1680,9 @@ namespace NodeWar.UI
 
                 shownValue = current;
 
-                if (value != null) value.text = current.ToString();
+                if (value != null) value.text = bar != null ? current + "/" + cap : current.ToString();
                 if (ring != null) ring.SetValue(current, isFirst);
+                if (bar != null) bar.SetValue(current);
 
                 if (increased) Pop("hud__res-ring-host--up");
                 else if (decreased) Pop("hud__res-ring-host--down");
@@ -1627,6 +1692,7 @@ namespace NodeWar.UI
             public void SetProduction(float[] fractions, int count)
             {
                 if (ring != null) ring.SetProduction(fractions, count);
+                if (bar != null) bar.SetProduction(fractions, count);
             }
 
             private void Pop(string ringHostClass)
