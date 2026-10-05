@@ -17,6 +17,31 @@ namespace NodeWar.View
         /// <summary>The most pips a core bar draws; a bigger swarm still reads as full.</summary>
         public const int MaxPips = 8;
 
+        /// <summary>
+        /// Breaches until this defender loses. R1 leaves an active core at one
+        /// even after a threshold drop or simultaneous loss cancellation.
+        /// Only a defeated defender has an empty wall.
+        /// </summary>
+        public static int WallRemaining(int breaches, int threshold, bool defeated)
+        {
+            if (defeated) return 0;
+            if (threshold < 1) threshold = 1;
+            if (breaches < 0) breaches = 0;
+            return breaches >= threshold ? 1 : threshold - breaches;
+        }
+
+        public static float WallFill(int breaches, int threshold, bool defeated)
+        {
+            return (float)WallRemaining(breaches, threshold, defeated) / (threshold > 0 ? threshold : 1);
+        }
+
+        public static string WallLabel(int breaches, int threshold, bool defeated)
+        {
+            int remaining = WallRemaining(breaches, threshold, defeated);
+            if (remaining == 0) return "Core breached";
+            return remaining == 1 ? "Next breach loses" : remaining + " breaches left";
+        }
+
         /// <summary>Progress against a core, 0..1. A bad max reads as empty, not as a divide by zero.</summary>
         public static float BarFill(int bar, int barMax)
         {

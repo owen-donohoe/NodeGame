@@ -8,6 +8,30 @@ namespace NodeWar.View.Tests
         private static readonly int[] SdTicks = { 2400 };
         private static readonly int[] SdThresholds = { 1 };
 
+        [TestCase(0, 3, false, 3, 1f)]
+        [TestCase(1, 3, false, 2, 2f / 3f)]
+        [TestCase(2, 3, false, 1, 1f / 3f)]
+        [TestCase(3, 3, false, 1, 1f / 3f)] // Simultaneous losses cancelled.
+        [TestCase(0, 1, false, 1, 1f)]
+        [TestCase(1, 1, false, 1, 1f)] // Drop alone does not defeat the core.
+        [TestCase(2, 1, false, 1, 1f)]
+        [TestCase(2, 1, true, 0, 0f)]
+        [TestCase(-1, 0, false, 1, 1f)]
+        public void WallShowsActualBreachesRemainingUnderR1(int breaches, int threshold, bool defeated, int remaining, float fill)
+        {
+            Assert.AreEqual(remaining, BreachTempoMath.WallRemaining(breaches, threshold, defeated));
+            Assert.AreEqual(fill, BreachTempoMath.WallFill(breaches, threshold, defeated), 1e-6f);
+        }
+
+        [Test]
+        public void SuddenDeathWallLabelsNextBreachLosesUntilDefeat()
+        {
+            Assert.AreEqual("2 breaches left", BreachTempoMath.WallLabel(1, 3, false));
+            Assert.AreEqual("Next breach loses", BreachTempoMath.WallLabel(1, 1, false));
+            Assert.AreEqual("Next breach loses", BreachTempoMath.WallLabel(3, 3, false));
+            Assert.AreEqual("Core breached", BreachTempoMath.WallLabel(2, 1, true));
+        }
+
         [TestCase(0, 4000, 0f)]
         [TestCase(1000, 4000, 0.25f)]
         [TestCase(4000, 4000, 1f)]
