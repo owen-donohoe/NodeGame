@@ -70,6 +70,9 @@ namespace NodeWar.Tests
         public void InvalidSuddenDeathFallsBackToBaseThreshold(int defect)
         {
             var b = GameBalanceData.Default();
+            // Multi-stage configs remain supported even though Default uses one drop.
+            b.suddenDeathTicks = new[] { 2400, 3000 };
+            b.suddenDeathThresholds = new[] { 2, 1 };
             switch (defect)
             {
                 case 0: b.suddenDeathTicks = new[] { 5, 4 }; break;
@@ -115,7 +118,7 @@ namespace NodeWar.Tests
         {
             var b = GameBalanceData.Default();
             Assert.AreEqual(3, b.BreachThresholdAt(2399));
-            Assert.AreEqual(2, b.BreachThresholdAt(2400));
+            Assert.AreEqual(1, b.BreachThresholdAt(2400));
             Assert.AreEqual(1, b.BreachThresholdAt(3000));
             b.breachBarMax = 0;
             Assert.AreEqual(3, b.BreachThresholdAt(3000));

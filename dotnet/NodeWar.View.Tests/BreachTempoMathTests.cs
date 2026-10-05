@@ -5,8 +5,8 @@ namespace NodeWar.View.Tests
 {
     public class BreachTempoMathTests
     {
-        private static readonly int[] SdTicks = { 2400, 3000 };
-        private static readonly int[] SdThresholds = { 2, 1 };
+        private static readonly int[] SdTicks = { 2400 };
+        private static readonly int[] SdThresholds = { 1 };
 
         [TestCase(0, 4000, 0f)]
         [TestCase(1000, 4000, 0.25f)]
@@ -56,15 +56,15 @@ namespace NodeWar.View.Tests
         public void Countdown_rounds_up_so_five_shows_first_and_one_last(int tick, int seconds)
         {
             Assert.AreEqual(seconds, BreachTempoMath.SuddenDeathCountdown(SdTicks, SdThresholds, tick, 10, out int t));
-            Assert.AreEqual(2, t);
+            Assert.AreEqual(1, t);
         }
 
         [Test]
-        public void Countdown_is_gone_on_the_tick_it_fires_and_resumes_for_the_next_step()
+        public void Countdown_is_gone_on_the_tick_it_fires_and_never_resumes()
         {
             Assert.AreEqual(0, BreachTempoMath.SuddenDeathCountdown(SdTicks, SdThresholds, 2400, 10, out _));
-            Assert.AreEqual(5, BreachTempoMath.SuddenDeathCountdown(SdTicks, SdThresholds, 2950, 10, out int t));
-            Assert.AreEqual(1, t);
+            Assert.AreEqual(0, BreachTempoMath.SuddenDeathCountdown(SdTicks, SdThresholds, 2950, 10, out int t));
+            Assert.AreEqual(0, t);
         }
 
         [Test]

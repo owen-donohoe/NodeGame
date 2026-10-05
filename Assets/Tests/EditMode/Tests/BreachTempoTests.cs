@@ -220,12 +220,14 @@ namespace NodeWar.Tests
             Assert.AreEqual(-1, state.players[1].nextBreacherID);
         }
 
-        [TestCase(0)] [TestCase(1)]
-        public void DropAloneCannotWinNextBreachDoes(int defender)
+        [TestCase(0, 0)] [TestCase(1, 0)]
+        [TestCase(0, 1)] [TestCase(1, 1)]
+        [TestCase(0, 2)] [TestCase(1, 2)]
+        public void DropAloneCannotWinNextBreachDoes(int defender, int breaches)
         {
             var state = Attackers(1, defender);
             state.tickCount = 2399;
-            state.players[0].breachCount = state.players[1].breachCount = 2;
+            state.players[0].breachCount = state.players[1].breachCount = breaches;
             GameSimulation.SimulateTick(state);
             Assert.IsFalse(state.gameOver);
             state.players[defender].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
@@ -377,7 +379,11 @@ namespace NodeWar.Tests
             state.tickCount = 2399;
             GameSimulation.SimulateTick(state, log);
             Assert.AreEqual(TickEventType.SuddenDeath, log[0].type);
-            Assert.AreEqual(2, log[0].value);
+            Assert.AreEqual(1, log[0].value);
+            log.Clear();
+            state.tickCount = 2999;
+            GameSimulation.SimulateTick(state, log);
+            Assert.AreEqual(0, log.Count, "Default has no second threshold drop.");
         }
 
         [TestCase(false)] [TestCase(true)]
