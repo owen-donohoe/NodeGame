@@ -18,6 +18,7 @@ namespace NodeWar.Lobby.Tests
         {
             ControlsRow[] rows = ControlsViewModel.Rows(Defaults());
             Assert.AreEqual(InputBindings.SlotCount, rows.Length);
+            Assert.AreEqual(InputBindings.SlotCount, ControlsViewModel.Slots.Count);
             var seen = new bool[InputBindings.SlotCount];
             foreach (ControlsRow row in rows)
             {
@@ -29,15 +30,97 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void Rows_FollowSpecOrderAtTheTop()
+        public void Groups_AreInTheRequestedOrderWithTheRequestedSlots()
+        {
+            var titles = new List<string>();
+            foreach (ControlsViewModel.ControlsGroup group in ControlsViewModel.Groups) titles.Add(group.Title);
+            CollectionAssert.AreEqual(new[] { "Tap", "Drag", "Hold", "Two fingers", "Mouse" }, titles);
+
+            CollectionAssert.AreEqual(new[] { InputSlot.TapVillager, InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager },
+                ControlsViewModel.Groups[0].Slots);
+            CollectionAssert.AreEqual(new[] { InputSlot.Drag, InputSlot.HoldDrag, InputSlot.DragFromVillager,
+                InputSlot.DoubleTapDrag }, ControlsViewModel.Groups[1].Slots);
+            CollectionAssert.AreEqual(new[] { InputSlot.Hold }, ControlsViewModel.Groups[2].Slots);
+            CollectionAssert.AreEqual(new[] { InputSlot.TwoFingerDrag, InputSlot.Pinch, InputSlot.TwoFingerTap },
+                ControlsViewModel.Groups[3].Slots);
+            CollectionAssert.AreEqual(new[] { InputSlot.MiddleDrag, InputSlot.ScrollWheel },
+                ControlsViewModel.Groups[4].Slots);
+            Assert.AreEqual("Camera & layout", ControlsViewModel.CameraAndLayoutTitle);
+        }
+
+        [Test]
+        public void Rows_FollowGroupOrder()
         {
             ControlsRow[] rows = ControlsViewModel.Rows(Defaults());
-            Assert.AreEqual(InputSlot.HoldDrag, rows[0].Slot);
-            Assert.AreEqual("Hold + drag", rows[0].Label);
-            Assert.AreEqual("Lasso select", rows[0].ActionLabel);
-            Assert.IsTrue(rows[0].Enabled);
-            Assert.AreEqual("Drag from villager", rows[4].Label);
-            Assert.IsFalse(rows[4].Enabled);
+            Assert.AreEqual(InputSlot.TapVillager, rows[0].Slot);
+            Assert.AreEqual("Tap a villager", rows[0].Label);
+            Assert.AreEqual(InputSlot.Drag, rows[3].Slot);
+            Assert.AreEqual("Hold + drag", rows[4].Label);
+            Assert.AreEqual("Lasso select", rows[4].ActionLabel);
+            Assert.AreEqual("Drag from a villager", rows[5].Label);
+            Assert.IsFalse(rows[5].Enabled);
+            Assert.AreEqual("Double-tap a villager", rows[2].Label);
+        }
+
+        [Test]
+        public void SingleActionRows_ReportNoDropdown_AndMultiActionRowsListOnlyTheirOwnActions()
+        {
+            foreach (InputSlot slot in new[] { InputSlot.Pinch, InputSlot.Hold, InputSlot.DoubleTapDrag,
+                         InputSlot.DragFromVillager, InputSlot.MiddleDrag, InputSlot.ScrollWheel })
+            {
+                ControlsRow single = ControlsViewModel.RowFor(Defaults(), slot);
+                Assert.IsFalse(single.HasDropdown, slot.ToString());
+                Assert.AreEqual(1, single.Options.Count, slot.ToString());
+                Assert.IsNotEmpty(single.ActionLabel);
+            }
+
+            ControlsRow ground = ControlsViewModel.RowFor(Defaults(), InputSlot.DoubleTapGround);
+            Assert.IsTrue(ground.HasDropdown);
+            CollectionAssert.AreEqual(new[] { InputAction.ReturnToCore, InputAction.SelectAllIdle,
+                InputAction.ToggleFitDefaultZoom }, ground.Options);
+            Assert.AreEqual(3, ground.OptionLabels.Count);
+            Assert.AreEqual(0, ground.SelectedIndex);
+            Assert.AreEqual("Return to core", ground.OptionLabels[ground.SelectedIndex]);
+        }
+
+        [Test]
+        public void SelectedIndex_FollowsTheChosenAction_AndSetActionOnlyAcceptsAllowedOnes()
+        {
+            GameSettingsData settings = ControlsViewModel.SetAction(Defaults(), InputSlot.DoubleTapGround,
+                InputAction.ToggleFitDefaultZoom);
+            ControlsRow row = ControlsViewModel.RowFor(settings, InputSlot.DoubleTapGround);
+            Assert.AreEqual(2, row.SelectedIndex);
+            Assert.AreEqual(InputAction.ToggleFitDefaultZoom, row.Action);
+
+            GameSettingsData refused = ControlsViewModel.SetAction(settings, InputSlot.DoubleTapGround, InputAction.Order);
+            Assert.IsFalse(GameSettingsData.Differ(settings, refused));
+            Assert.IsTrue(GameSettingsData.Differ(Defaults(), settings));
+            Assert.AreEqual(0, ControlsViewModel.RowFor(Defaults(), InputSlot.DoubleTapGround).SelectedIndex,
+                "editing did not touch the original");
+        }
+
+        [Test]
+        public void Dimmed_FollowsEnabled_AndALockedRowIsNeverDimmed()
+        {
+            Assert.IsTrue(ControlsViewModel.RowFor(Defaults(), InputSlot.Hold).Dimmed);
+            Assert.IsFalse(ControlsViewModel.RowFor(Defaults(), InputSlot.Drag).Dimmed);
+            Assert.IsFalse(ControlsViewModel.RowFor(Defaults(), InputSlot.TapVillager).Dimmed);
+
+            GameSettingsData on = ControlsViewModel.ToggleSlot(Defaults(), InputSlot.Hold);
+            Assert.IsFalse(ControlsViewModel.RowFor(on, InputSlot.Hold).Dimmed);
+            GameSettingsData off = ControlsViewModel.ToggleSlot(Defaults(), InputSlot.Drag);
+            Assert.IsTrue(ControlsViewModel.RowFor(off, InputSlot.Drag).Dimmed);
+            Assert.IsFalse(ControlsViewModel.RowFor(off, InputSlot.Drag).Locked);
+        }
+
+        [Test]
+        public void DragToZoom_IsDimmedAndInertWhileTheCameraButtonIsOff()
+        {
+            Assert.IsFalse(ControlsViewModel.CameraZoomDimmed(Defaults()));
+            GameSettingsData noButton = ControlsViewModel.ToggleCameraButton(Defaults());
+            Assert.IsTrue(ControlsViewModel.CameraZoomDimmed(noButton));
+            Assert.IsFalse(GameSettingsData.Differ(noButton, ControlsViewModel.ToggleCameraButtonZoom(noButton)));
+            Assert.IsTrue(ControlsViewModel.CameraZoomDimmed(noButton));
         }
 
         [Test]

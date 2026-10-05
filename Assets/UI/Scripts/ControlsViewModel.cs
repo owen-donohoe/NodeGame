@@ -17,11 +17,24 @@ namespace NodeWar.Lobby
 
         public readonly string ActionLabel;
 
-        /// <summary>More than one action is allowed, so tapping the action label cycles it.</summary>
+        /// <summary>More than one action is allowed, so the action is a choice (a dropdown) and not plain text.</summary>
         public readonly bool ActionCycles;
 
+        /// <summary>The action as a value, for picking it in a list.</summary>
+        public readonly InputAction Action;
+
+        /// <summary>Only this slot's allowed actions, in the order the list shows them.</summary>
+        public readonly IReadOnlyList<InputAction> Options;
+
+        /// <summary>The option labels, same order as <see cref="Options"/>.</summary>
+        public readonly IReadOnlyList<string> OptionLabels;
+
+        /// <summary>Index of the current action in <see cref="Options"/>, for the open list's darker item.</summary>
+        public readonly int SelectedIndex;
+
         public ControlsRow(InputSlot slot, string label, bool enabled, bool locked,
-            string stateText, string actionLabel, bool actionCycles)
+            string stateText, string actionLabel, bool actionCycles, InputAction action,
+            IReadOnlyList<InputAction> options, IReadOnlyList<string> optionLabels, int selectedIndex)
         {
             Slot = slot;
             Label = label;
@@ -30,7 +43,17 @@ namespace NodeWar.Lobby
             StateText = stateText;
             ActionLabel = actionLabel;
             ActionCycles = actionCycles;
+            Action = action;
+            Options = options;
+            OptionLabels = optionLabels;
+            SelectedIndex = selectedIndex;
         }
+
+        /// <summary>A dropdown only when there is something to choose between.</summary>
+        public bool HasDropdown { get { return ActionCycles; } }
+
+        /// <summary>A switched-off slot is drawn dimmed as a whole; its checkbox stays live.</summary>
+        public bool Dimmed { get { return !Enabled; } }
     }
 
     /// <summary>
@@ -47,25 +70,41 @@ namespace NodeWar.Lobby
     /// </summary>
     public static class ControlsViewModel
     {
-        // Spec section 10 order. The two mouse slots follow it: the spec
-        // table has them, the sketch does not.
-        private static readonly InputSlot[] RowOrder =
+        /// <summary>A header and the slots under it.</summary>
+        public readonly struct ControlsGroup
         {
-            InputSlot.HoldDrag,
-            InputSlot.Drag,
-            InputSlot.TwoFingerDrag,
-            InputSlot.Pinch,
-            InputSlot.DragFromVillager,
-            InputSlot.DoubleTapGround,
-            InputSlot.DoubleTapVillager,
-            InputSlot.TwoFingerTap,
-            InputSlot.DoubleTapDrag,
-            InputSlot.Hold,
-            InputSlot.TapVillager,
-            InputSlot.MiddleDrag,
-            InputSlot.ScrollWheel
+            public readonly string Title;
+            public readonly IReadOnlyList<InputSlot> Slots;
+            public ControlsGroup(string title, params InputSlot[] slots)
+            {
+                Title = title;
+                Slots = slots;
+            }
+        }
+
+        /// <summary>Slots grouped by the kind of gesture, in the order the panel lists them.</summary>
+        public static readonly IReadOnlyList<ControlsGroup> Groups = new[]
+        {
+            new ControlsGroup("Tap", InputSlot.TapVillager, InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager),
+            new ControlsGroup("Drag", InputSlot.Drag, InputSlot.HoldDrag, InputSlot.DragFromVillager,
+                InputSlot.DoubleTapDrag),
+            new ControlsGroup("Hold", InputSlot.Hold),
+            new ControlsGroup("Two fingers", InputSlot.TwoFingerDrag, InputSlot.Pinch, InputSlot.TwoFingerTap),
+            new ControlsGroup("Mouse", InputSlot.MiddleDrag, InputSlot.ScrollWheel)
         };
 
+        public const string CameraAndLayoutTitle = "Camera & layout";
+
+        private static readonly InputSlot[] RowOrder = FlattenGroups();
+
+        private static InputSlot[] FlattenGroups()
+        {
+            var order = new List<InputSlot>();
+            foreach (ControlsGroup group in Groups) order.AddRange(group.Slots);
+            return order.ToArray();
+        }
+
+        /// <summary>Every slot once, in group order.</summary>
         public static IReadOnlyList<InputSlot> Slots { get { return RowOrder; } }
 
         public static string SlotLabel(InputSlot slot)
@@ -75,11 +114,11 @@ namespace NodeWar.Lobby
                 case InputSlot.TapVillager: return "Tap a villager";
                 case InputSlot.HoldDrag: return "Hold + drag";
                 case InputSlot.Drag: return "Drag";
-                case InputSlot.DragFromVillager: return "Drag from villager";
+                case InputSlot.DragFromVillager: return "Drag from a villager";
                 case InputSlot.TwoFingerDrag: return "Two-finger drag";
                 case InputSlot.Pinch: return "Pinch";
                 case InputSlot.DoubleTapGround: return "Double-tap ground";
-                case InputSlot.DoubleTapVillager: return "Double-tap villager";
+                case InputSlot.DoubleTapVillager: return "Double-tap a villager";
                 case InputSlot.TwoFingerTap: return "Two-finger tap";
                 case InputSlot.DoubleTapDrag: return "Double-tap + drag";
                 case InputSlot.Hold: return "Hold (no drag)";
@@ -143,10 +182,18 @@ namespace NodeWar.Lobby
             InputBinding binding = bindings[(int)slot];
             InputSlotDefinition definition = InputBindings.DefinitionFor(slot);
             bool enabled = definition.Locked || binding.enabled;
+            var labels = new string[definition.AllowedActions.Count];
+            int selected = -1;
+            for (int i = 0; i < labels.Length; i++)
+            {
+                labels[i] = ActionLabel(definition.AllowedActions[i]);
+                if ((int)definition.AllowedActions[i] == binding.action) selected = i;
+            }
             return new ControlsRow(slot, SlotLabel(slot), enabled, definition.Locked,
                 definition.Locked ? "always" : (enabled ? "On" : "Off"),
                 ActionLabel((InputAction)binding.action),
-                definition.AllowedActions.Count > 1);
+                definition.AllowedActions.Count > 1, (InputAction)binding.action,
+                definition.AllowedActions, labels, selected);
         }
 
         public static ControlsRow[] Rows(GameSettingsData settings)
@@ -194,9 +241,27 @@ namespace NodeWar.Lobby
             return settings;
         }
 
+        /// <summary>Drag to zoom belongs to the camera button; with the button off it is dimmed and inert.</summary>
+        public static bool CameraZoomDimmed(GameSettingsData settings)
+        {
+            return !GameSettingsData.Normalized(settings).showCameraButton;
+        }
+
+        /// <summary>Picks an action from a slot's list. A value the slot does not allow changes nothing.</summary>
+        public static GameSettingsData SetAction(GameSettingsData settings, InputSlot slot, InputAction action)
+        {
+            settings = Editable(settings);
+            if (!InputBindings.IsAllowed(slot, action)) return settings;
+            InputBinding binding = settings.inputBindings[(int)slot];
+            binding.action = (int)action;
+            settings.inputBindings[(int)slot] = binding;
+            return settings;
+        }
+
         public static GameSettingsData ToggleCameraButtonZoom(GameSettingsData settings)
         {
             settings = Editable(settings);
+            if (!settings.showCameraButton) return settings;
             settings.cameraButtonZoom = !settings.cameraButtonZoom;
             return settings;
         }
