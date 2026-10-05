@@ -777,9 +777,9 @@ namespace NodeWar.UI
             int other = pid == 0 ? 1 : 0;
 
             int threshold = CurrentBreachThreshold();
-            bool hitYou = you.Set(pid, state.players[pid].breachCount, threshold, switched,
+            bool hitYou = you.Set(pid, state.players[pid].breachCount, threshold, breachThreshold, switched,
                 state.gameOver && state.winnerID != pid);
-            bool hitThem = them.Set(other, state.players[other].breachCount, threshold, switched,
+            bool hitThem = them.Set(other, state.players[other].breachCount, threshold, breachThreshold, switched,
                 state.gameOver && state.winnerID != other);
 
             if ((hitYou || hitThem) && flash != null)
@@ -1507,7 +1507,7 @@ namespace NodeWar.UI
             }
 
             /// <summary>Returns true when this call showed a new breach landing.</summary>
-            public bool Set(int playerID, int breaches, int threshold, bool snap, bool defeated)
+            public bool Set(int playerID, int breaches, int threshold, int originalMax, bool snap, bool defeated)
             {
                 if (playerID == shownPlayer && breaches == shownCount && threshold == shownThreshold && defeated == shownDefeated) return false;
 
@@ -1529,7 +1529,7 @@ namespace NodeWar.UI
                 if (count != null) count.text = NodeWar.View.BreachTempoMath.WallLabel(breaches, threshold, defeated);
 
                 // R1 needs a new breach to defeat an active core, even over threshold.
-                Length width = Length.Percent(NodeWar.View.BreachTempoMath.WallFill(breaches, threshold, defeated) * 100f);
+                Length width = Length.Percent(NodeWar.View.BreachTempoMath.WallFill(breaches, threshold, defeated, originalMax) * 100f);
 
                 if (fill != null)
                 {

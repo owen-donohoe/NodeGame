@@ -30,9 +30,17 @@ namespace NodeWar.View
             return breaches >= threshold ? 1 : threshold - breaches;
         }
 
-        public static float WallFill(int breaches, int threshold, bool defeated)
+        /// <summary>
+        /// How much of the wall is left, measured against the ORIGINAL threshold the match
+        /// opened with, never the current one. Sudden death lowers the threshold, and a wall
+        /// drawn against the lowered value would read as full (1/1); against the original it
+        /// reads as the one segment of three that is actually left.
+        /// </summary>
+        public static float WallFill(int breaches, int threshold, bool defeated, int originalMax)
         {
-            return (float)WallRemaining(breaches, threshold, defeated) / (threshold > 0 ? threshold : 1);
+            if (threshold < 1) threshold = 1;
+            int max = originalMax > threshold ? originalMax : threshold;
+            return (float)WallRemaining(breaches, threshold, defeated) / max;
         }
 
         public static string WallLabel(int breaches, int threshold, bool defeated)
