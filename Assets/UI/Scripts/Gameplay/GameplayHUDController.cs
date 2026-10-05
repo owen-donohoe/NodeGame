@@ -356,9 +356,7 @@ namespace NodeWar.UI
 
             selectionBar = root.Q<VisualElement>("hud-selbar");
             selectionBarCount = root.Q<Label>("hud-selbar-count");
-            Button selectionBarClear = root.Q<Button>("hud-selbar-clear");
-            if (selectionBarClear != null)
-                selectionBarClear.clicked += () => { if (selection != null) selection.ClearSelection(); };
+            BindSelectionCounter();
             recentreDock = root.Q<VisualElement>("hud-recentre-dock");
 
             zoomRoot = root.Q<VisualElement>("hud-zoom");
@@ -796,6 +794,59 @@ namespace NodeWar.UI
             }
         }
 
+        // ===== SELECTION COUNTER =====
+        //
+        // A press captures its pointer, so the whole press-drag-release belongs to
+        // this element: the board never sees it. (PointerGestureSource also reads a
+        // press over UI as Blocked and latches it to release.) Only a release over
+        // the circle clears; leaving it un-presses the visual and releasing
+        // elsewhere does nothing. Hover is for pointer devices; a touch has none,
+        // so its press goes straight to the inverted state.
+
+        private int counterPointer = -1;
+
+        private void BindSelectionCounter()
+        {
+            if (selectionBar == null) return;
+
+            selectionBar.RegisterCallback<PointerEnterEvent>(e =>
+            {
+                if (e.pointerType != UnityEngine.UIElements.PointerType.touch)
+                    selectionBar.AddToClassList("hud__selbar--hover");
+            });
+            selectionBar.RegisterCallback<PointerLeaveEvent>(e => selectionBar.RemoveFromClassList("hud__selbar--hover"));
+            selectionBar.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if (counterPointer != -1) return;
+                counterPointer = e.pointerId;
+                selectionBar.CapturePointer(e.pointerId);
+                selectionBar.AddToClassList("hud__selbar--pressed");
+                e.StopPropagation();
+            });
+            selectionBar.RegisterCallback<PointerMoveEvent>(e =>
+            {
+                if (e.pointerId != counterPointer) return;
+                selectionBar.EnableInClassList("hud__selbar--pressed", selectionBar.ContainsPoint(e.localPosition));
+            });
+            selectionBar.RegisterCallback<PointerUpEvent>(e =>
+            {
+                if (e.pointerId != counterPointer) return;
+                bool inside = selectionBar.ContainsPoint(e.localPosition);
+                EndCounterPress();
+                selectionBar.ReleasePointer(e.pointerId);
+                e.StopPropagation();
+                if (inside && selection != null) selection.ClearSelection();
+            });
+            selectionBar.RegisterCallback<PointerCancelEvent>(e => EndCounterPress());
+            selectionBar.RegisterCallback<PointerCaptureOutEvent>(e => EndCounterPress());
+        }
+
+        private void EndCounterPress()
+        {
+            counterPointer = -1;
+            selectionBar.RemoveFromClassList("hud__selbar--pressed");
+        }
+
         private void RefreshSelection()
         {
             int count = selection != null ? selection.SelectedVillagerIDs.Count : 0;
@@ -806,7 +857,12 @@ namespace NodeWar.UI
                 selectionDock.EnableInClassList("hud__selection-dock--on", showTooltips && count > 0);
 
             if (selectionBar != null)
-                selectionBar.EnableInClassList("hud__selbar--on", showSelectionBar && count > 0);
+            {
+                bool shown = showSelectionBar && count > 0;
+                selectionBar.EnableInClassList("hud__selbar--on", shown);
+                // A hidden element gets no leave event; do not leave it looking hovered.
+                if (!shown) { selectionBar.RemoveFromClassList("hud__selbar--hover"); selectionBar.RemoveFromClassList("hud__selbar--pressed"); }
+            }
 
             if (selectionBarCount != null && count > 0)
                 selectionBarCount.text = count.ToString();

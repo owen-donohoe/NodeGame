@@ -244,16 +244,21 @@
         </engine:VisualElement>
 
         <!--
-            Selection bar: on the controls side, in thumb reach, and present
-            only while something is selected (and Selection bar is on in
-            settings). The strip ignores picking; only the clear button takes
-            a touch. Suits have no per-suit glyph in LobbyIcon yet, so it
-            carries the count alone.
+            Selection counter: a circle on the controls side, in thumb reach,
+            shown only while something is selected (and Selection counter is on
+            in settings). It shows the selected count. On a pointer the number
+            gives way to a red X on hover; while pressed it inverts (black circle,
+            white X). Releasing on the circle deselects everything; pressing and
+            releasing elsewhere does nothing. GameplayHUDController captures the
+            pointer on press, so the board never sees the touch. Touch has no
+            hover, so a press shows the inverted X at once.
         -->
-        <engine:VisualElement name="hud-selbar" class="hud__selbar" picking-mode="Ignore">
+        <engine:VisualElement name="hud-selbar" class="hud__selbar" picking-mode="Position">
             <engine:Label name="hud-selbar-count" class="hud__selbar-count ui-w700" text="0" picking-mode="Ignore" />
-            <engine:Label class="hud__selbar-label ui-w500" text="selected" picking-mode="Ignore" />
-            <engine:Button name="hud-selbar-clear" class="ui-reset-button hud__selbar-clear ui-w700" text="&#215;" />
+            <engine:VisualElement class="hud__selbar-x" picking-mode="Ignore">
+                <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--a" picking-mode="Ignore" />
+                <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--b" picking-mode="Ignore" />
+            </engine:VisualElement>
         </engine:VisualElement>
 
         <!-- A breach flashes the screen. Never picks. -->

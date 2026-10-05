@@ -576,9 +576,9 @@
 }
 
 /* ===================================================================
-   Selection bar and the controls side
+   Selection counter and the controls side
 
-   The selection bar sits under the zoom handle on the same edge. It is
+   The counter sits under the zoom handle on the same edge. It is
    display:none until something is selected, so it has no hit area and no
    bounds (the indicator layer skips an element with none) while empty.
    =================================================================== */
@@ -588,11 +588,11 @@
     position: absolute;
     right: 12px;
     bottom: 28%;
-    flex-direction: row;
+    width: 56px;
+    height: 56px;
     align-items: center;
-    height: 40px;
-    padding-left: 12px;
-    border-radius: 20px;
+    justify-content: center;
+    border-radius: 28px;
     background-color: var(--hud-glass-strong);
     border-left-width: 1px;
     border-right-width: 1px;
@@ -609,28 +609,67 @@
 }
 
 .ui-root .hud__selbar-count {
-    font-size: 16px;
-    color: var(--hud-ink);
-}
-
-.ui-root .hud__selbar-label {
-    font-size: 11px;
-    color: var(--hud-ink-mute);
-    margin-left: 4px;
-    margin-right: 4px;
-}
-
-.ui-root .hud__selbar-clear {
-    width: 40px;
-    height: 40px;
-    border-radius: 20px;
-    font-size: 20px;
+    font-size: 22px;
     color: var(--hud-ink);
     -unity-text-align: middle-center;
 }
 
-.hud__selbar-clear:active {
-    scale: 0.92 0.92;
+/* The X is two bars, so it needs no glyph. Hidden until hover or press. */
+.hud__selbar-x {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.hud__selbar-bar {
+    position: absolute;
+    width: 26px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: rgb(225, 64, 54);
+}
+
+.hud__selbar-bar--a {
+    rotate: 45deg;
+}
+
+.hud__selbar-bar--b {
+    rotate: -45deg;
+}
+
+/* Hover (pointer devices only): the number gives way to a red X. */
+.hud__selbar--hover .hud__selbar-count {
+    display: none;
+}
+
+.hud__selbar--hover .hud__selbar-x {
+    display: flex;
+}
+
+/* Pressed: inverted, a black circle and a white X. Wins over hover. */
+.hud__selbar--pressed {
+    background-color: rgb(0, 0, 0);
+    border-left-color: rgb(255, 255, 255);
+    border-right-color: rgb(255, 255, 255);
+    border-top-color: rgb(255, 255, 255);
+    border-bottom-color: rgb(255, 255, 255);
+}
+
+.hud__selbar--pressed .hud__selbar-count {
+    display: none;
+}
+
+.hud__selbar--pressed .hud__selbar-x {
+    display: flex;
+}
+
+.hud__selbar--pressed .hud__selbar-bar {
+    background-color: rgb(255, 255, 255);
 }
 
 /* Controls side: Left. One class on the HUD root mirrors the thumb-placed
@@ -639,12 +678,6 @@
 .hud--left .hud__selbar {
     right: auto;
     left: 12px;
-}
-
-.hud--left .hud__selbar {
-    flex-direction: row-reverse;
-    padding-left: 0;
-    padding-right: 12px;
 }
 
 /* ===================================================================
