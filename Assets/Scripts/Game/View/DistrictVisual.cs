@@ -40,6 +40,18 @@ namespace NodeWar.View
                  "Watchtower.")]
         public GameObject boardPrefab;
 
+        [Tooltip("Quick tuning for how this district's art sits on the board, applied ON TOP of the " +
+                 "prefab's own layout (the prefab stays the main place for layout). Moves the art, not " +
+                 "the node: the node's ground, collider and position stay put. Offset is in the node's " +
+                 "local space, so Y raises or sinks the art. Leave at zero / 1 to change nothing.")]
+        public Vector3 boardOffset = Vector3.zero;
+
+        [Tooltip("Extra rotation of the art in degrees, on top of the prefab's. Zero changes nothing.")]
+        public Vector3 boardEuler = Vector3.zero;
+
+        [Tooltip("Uniform scale of the art about the node's centre, on top of the prefab's. 1 changes nothing.")]
+        public float boardScale = 1f;
+
         [Header("Flat art")]
         [Tooltip("The small UI icon: Workshop grid, node sheet, anywhere the " +
                  "district is named rather than stood on.")]
@@ -63,6 +75,10 @@ namespace NodeWar.View
         /// fallback lives in one place.
         /// </summary>
         public Sprite StickerOrIcon => sticker != null ? sticker : icon;
+
+        /// <summary>True when any board tuning is set. With none, spawned nodes are left exactly as the prefab made them.</summary>
+        public bool HasBoardTuning => !BoardArtRules.IsIdentity(boardOffset.x, boardOffset.y, boardOffset.z,
+            boardEuler.x, boardEuler.y, boardEuler.z, BoardArtRules.SafeScale(boardScale));
 
         /// <summary>
         /// True when this district has nothing drawn for it yet. What the art
