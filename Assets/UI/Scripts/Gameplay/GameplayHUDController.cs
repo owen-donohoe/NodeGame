@@ -514,6 +514,7 @@ namespace NodeWar.UI
             }
 
             nodeSheet = new NodeSheet(nodeSheetLayout);
+            nodeSheet.SetReducedMotion(reducedMotion);
             nodeSheet.Closed += OnSheetClosedByPlayer;
 
             VisualElement host = hudRoot != null ? hudRoot : root;
@@ -662,6 +663,7 @@ namespace NodeWar.UI
 
             // Reduced motion: a full resource is a steady brighter tint, with no pulse or wave.
             reducedMotion = settings.reducedMotion;
+            if (nodeSheet != null) nodeSheet.SetReducedMotion(reducedMotion);
             for (int i = 0; i < resources.Length; i++)
                 if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
             cameraButtonTarget = settings.cameraButtonTarget;

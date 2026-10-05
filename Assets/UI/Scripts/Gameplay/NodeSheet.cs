@@ -58,9 +58,16 @@ namespace NodeWar.UI
         // One chip per resource, pinned above the sheet's own top edge (see
         // NodeSheet.uss) so they ride its slide and resize for free rather
         // than being repositioned here every frame.
-        private readonly ResourceChip foodChip = new ResourceChip(LobbyIconKind.Food);
-        private readonly ResourceChip materialsChip = new ResourceChip(LobbyIconKind.Materials);
-        private readonly ResourceChip metalChip = new ResourceChip(LobbyIconKind.Metal);
+        private readonly SheetResourceReadout foodChip = new SheetResourceReadout(ResourceKind.Food, LobbyIconKind.Food);
+        private readonly SheetResourceReadout materialsChip = new SheetResourceReadout(ResourceKind.Materials, LobbyIconKind.Materials);
+        private readonly SheetResourceReadout metalChip = new SheetResourceReadout(ResourceKind.Metal, LobbyIconKind.Metal);
+        private readonly SheetResourceReadout magicChip = new SheetResourceReadout(ResourceKind.Magic, LobbyIconKind.Spark);
+        private readonly VisualElement resourcePills = new VisualElement { pickingMode = PickingMode.Ignore };
+        private readonly VisualElement resourceBars = new VisualElement { pickingMode = PickingMode.Ignore };
+        private bool reducedMotion;
+        private int resourceViewer = -1;
+
+        public void SetReducedMotion(bool reduced) { reducedMotion = reduced; }
 
         private SimulationState state;
         private InputBuffer input;
@@ -156,9 +163,10 @@ namespace NodeWar.UI
                 chips.name = "sheet-res-chips";
                 chips.AddToClassList("sheet__res-chips");
                 chips.pickingMode = PickingMode.Ignore;
-                chips.Add(foodChip.Root);
-                chips.Add(materialsChip.Root);
-                chips.Add(metalChip.Root);
+                resourcePills.AddToClassList("sheet__res-pills");
+                resourceBars.AddToClassList("sheet__res-bars");
+                chips.Add(resourcePills);
+                chips.Add(resourceBars);
                 sheet.Add(chips);
             }
 
@@ -278,14 +286,22 @@ namespace NodeWar.UI
             PlayerData player = state.players[controlledPID];
             ResourceKind involved = current.InvolvedResources;
 
-            foodChip.Refresh(player.food, (involved & ResourceKind.Food) != 0);
-            materialsChip.Refresh(player.materials, (involved & ResourceKind.Materials) != 0);
-            metalChip.Refresh(player.metal, (involved & ResourceKind.Metal) != 0);
+            bool viewerChanged = resourceViewer != controlledPID;
+            resourceViewer = controlledPID;
+            RefreshResource(foodChip, ResourceKind.Food, player.food, ResourceCaps.Food(balance), true, involved, viewerChanged);
+            RefreshResource(materialsChip, ResourceKind.Materials, player.materials, ResourceCaps.Materials(balance), true, involved, viewerChanged);
+            RefreshResource(metalChip, ResourceKind.Metal, player.metal, ResourceCaps.Metal(balance), ResourceVisibility.MetalVisible(player.metal), involved, viewerChanged);
+            RefreshResource(magicChip, ResourceKind.Magic, ResourceHudMath.DisplayOnlyMagicAmount(), ResourceHudMath.DefaultMagicCap, ResourceVisibility.MagicVisible(), involved, viewerChanged);
+        }
 
-            // Metal follows the HUD bar's rule: hidden until the player's arena reaches it
-            // or they hold some.
-            metalChip.Root.style.display = ResourceVisibility.MetalVisible(player.metal)
-                ? DisplayStyle.Flex : DisplayStyle.None;
+        private void RefreshResource(SheetResourceReadout readout, ResourceKind kind, int value, int cap,
+            bool visible, ResourceKind involved, bool viewerChanged)
+        {
+            bool expanded = SheetResourceMath.Expanded(kind, involved, visible);
+            VisualElement host = expanded ? resourceBars : resourcePills;
+            if (readout.Root.parent != host) host.Add(readout.Root);
+            readout.Root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            readout.Refresh(value, cap, expanded, reducedMotion, viewerChanged);
         }
 
         private static bool HasVisibleChild(VisualElement host)
@@ -471,123 +487,5 @@ namespace NodeWar.UI
             if (grab != null && grab.HasPointerCapture(pointerId)) grab.ReleasePointer(pointerId);
         }
 
-        /// <summary>
-        /// One resource's chip: icon, the player's live amount, and a colour
-        /// read through ResourceRingColors - the same --ring-critical..
-        /// --ring-rich custom properties HUD.uss declares on the
-        /// "hud__res-ring" class, and the same blend ResourceRing itself
-        /// uses - so this never invents a colour of its own. When the open
-        /// content says this resource is involved it grows, bolds and
-        /// bounces once; the colour stop decides the shade either way.
-        /// </summary>
-        private class ResourceChip
-        {
-            private const long BounceMilliseconds = 220;
-
-            public VisualElement Root { get; private set; }
-
-            private readonly LobbyIcon icon;
-            private readonly Label valueLabel;
-
-            private Color colorCritical = Color.gray;
-            private Color colorLow = Color.gray;
-            private Color colorWarn = Color.gray;
-            private Color colorOk = Color.gray;
-            private Color colorGood = Color.gray;
-            private Color colorRich = Color.gray;
-
-            private int shownValue = int.MinValue;
-            private bool shownEmphasis;
-            private IVisualElementScheduledItem bounceJob;
-
-            public ResourceChip(LobbyIconKind kind)
-            {
-                Root = new VisualElement();
-                Root.pickingMode = PickingMode.Ignore;
-                Root.AddToClassList("sheet__res-chip");
-
-                // The class the ring itself carries: custom properties only
-                // resolve reliably where a selector matches the element or an
-                // ancestor, so this chip has to wear it too, not just inherit
-                // the tokens from a distant :root.
-                Root.AddToClassList("hud__res-ring");
-                Root.RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
-
-                icon = new LobbyIcon(kind);
-                icon.AddToClassList("sheet__res-chip-icon");
-
-                valueLabel = new Label("0");
-                valueLabel.pickingMode = PickingMode.Ignore;
-                valueLabel.AddToClassList("sheet__res-chip-value");
-                valueLabel.AddToClassList("ui-w600");
-
-                Root.Add(icon);
-                Root.Add(valueLabel);
-            }
-
-            private void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
-            {
-                ICustomStyle style = evt.customStyle;
-
-                ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
-                    ref colorOk, ref colorGood, ref colorRich);
-
-                Repaint();
-            }
-
-            public void Refresh(int value, bool emphasis)
-            {
-                if (value != shownValue)
-                {
-                    shownValue = value;
-                    valueLabel.text = value.ToString();
-                    Repaint();
-                }
-
-                if (emphasis == shownEmphasis) return;
-                shownEmphasis = emphasis;
-
-                Root.EnableInClassList("sheet__res-chip--on", emphasis);
-                valueLabel.EnableInClassList("ui-w700", emphasis);
-                if (emphasis) Bounce();
-            }
-
-            private void Repaint()
-            {
-                Color tint = BaseColorFor(shownValue);
-                icon.style.unityBackgroundImageTintColor = tint;
-                valueLabel.style.color = tint;
-                Root.style.backgroundColor = new Color(tint.r, tint.g, tint.b, 0.22f);
-                Root.style.borderLeftColor = tint;
-                Root.style.borderRightColor = tint;
-                Root.style.borderTopColor = tint;
-                Root.style.borderBottomColor = tint;
-            }
-
-            private Color BaseColorFor(int value)
-            {
-                return ResourceRingColors.BaseColorFor(value, colorCritical, colorLow, colorWarn,
-                    colorOk, colorGood, colorRich);
-            }
-
-            /// <summary>One short overshoot-and-settle on the beat the chip becomes relevant. Same idiom as GameplayHUDController.ResourceReadout.Pop.</summary>
-            private void Bounce()
-            {
-                if (bounceJob != null)
-                {
-                    bounceJob.Pause();
-                    bounceJob = null;
-                }
-
-                Root.RemoveFromClassList("sheet__res-chip--bounce");
-                Root.AddToClassList("sheet__res-chip--bounce");
-
-                bounceJob = Root.schedule.Execute(() =>
-                {
-                    Root.RemoveFromClassList("sheet__res-chip--bounce");
-                    bounceJob = null;
-                }).StartingIn(BounceMilliseconds);
-            }
-        }
     }
 }
