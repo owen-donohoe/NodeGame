@@ -323,6 +323,43 @@ input layer never learns game ownership.
 (sprites/animation/interpolation). Reads `SimulationState` to render;
 writes nothing to it.
 
+## Replacing UI art
+
+Create an Inspector-authored **NodeWar > UI Art Theme** asset named `UIArtTheme`
+at `Assets/UI/Resources/UIArtTheme.asset`. The UI loads it once per play session
+through `Resources.Load("UIArtTheme")`; restart Play Mode after changing its
+reference or entries. Add icon entries by `LobbyIconKind`, with a Sprite and
+`keepOriginalColours`. The first duplicate kind wins (even if its sprite is
+empty); validation warns. Original-colour sprites use white tint; other sprites
+use the existing glyph tint. Images scale to fit, centred, with letterboxing.
+Missing entries keep the generated vectors; unknown kinds get a placeholder.
+
+Assign the theme's `districtVisuals` reference to the existing
+`DistrictVisualTable` (no move into Resources). Populate each `DistrictVisual`'s
+`icon` for Workshop cards and node-sheet thumbnails, and `sticker` for draft
+pieces. Draft uses sticker, then icon, then its existing mapping. Missing flat
+art keeps each screen's own fallback; Workshop locks remain visible. The UI
+does not consume the district accent colour.
+
+Gauge skins remain procedural. Set USS custom properties on matching elements
+or their ancestors: `--tree-edge-color`, `--tree-edge-owned-color`,
+`--tree-line-width`, `--tree-disc-size` on `.st-canvas`; `--res-thickness` and
+`--res-stop-0` through `--res-stop-5` on `.hud__res-ring` (including sheet
+readouts); `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` on
+the progress dial. Geometry properties are unitless pixel numbers, bounded
+by the painter and its host; omitted properties retain today's defaults.
+Resource stops override the compatible `--ring-critical` through
+`--ring-rich` palette. Target metal/magic classes separately when changing
+those gradients. Sheet background alpha is USS opacity on
+`.sheet__res-readout-tint`, with the expanded override under
+`.sheet__res-readout--bar`. This fades only the background.
+
+Keep behaviour-bearing UXML element names and types when replacing art.
+`UiRequired` reports missing/wrong types in Editor/development builds without
+stopping binding, and dotnet tests check the shared required-name lists against
+the HUD and Settings layouts. No theme switcher, addressables, or gauge sprite
+skins are introduced.
+
 ## Where the UI lives
 
 Three trees, deliberately. The phone-UI rebuild runs the UI Toolkit stack
