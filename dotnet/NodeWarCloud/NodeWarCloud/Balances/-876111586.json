@@ -5,7 +5,7 @@
   "claimThreshold": 5000,
   "maxClaimersPerNode": 4,
   "respawnTicks": 50,
-  "healIntervalTicks": 30,
+  "healIntervalTicks": 20,
   "breachThreshold": 3,
   "tempoStageTicks": [
     1200,
@@ -31,10 +31,10 @@
   ],
   "breachBarMax": 4000,
   "breachSwarmRate": [
-    50,
-    83,
-    108,
-    125
+    67,
+    111,
+    144,
+    167
   ],
   "breachBarDecayPerTick": 200,
   "maxWorkersPerNode": 2,
