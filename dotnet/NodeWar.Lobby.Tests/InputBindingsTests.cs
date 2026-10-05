@@ -74,6 +74,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(0, result.controlsSide);
             Assert.IsTrue(result.showSelectionBar);
             Assert.IsTrue(result.tooltips);
+            Assert.AreEqual(0, result.cameraButtonTarget);
             if (version > 0) Assert.AreEqual(0.17f, result.masterVolume);
         }
 
@@ -162,6 +163,28 @@ namespace NodeWar.Lobby.Tests
             GameSettingsData settings = GameSettingsData.CreateDefault();
             settings.controlsSide = stored;
             Assert.AreEqual(expected, GameSettingsData.Normalized(settings).controlsSide);
+        }
+
+        [TestCase(0, 0)]
+        [TestCase(1, 1)]
+        [TestCase(2, 0)]
+        [TestCase(-1, 0)]
+        public void CameraButtonTarget_NormalizesToCoreOrBoard(int stored, int expected)
+        {
+            GameSettingsData settings = GameSettingsData.CreateDefault();
+            settings.cameraButtonTarget = stored;
+            Assert.AreEqual(expected, GameSettingsData.Normalized(settings).cameraButtonTarget);
+        }
+
+        [Test]
+        public void CameraButtonTarget_DefaultsToCore_AndDifferSeesIt()
+        {
+            GameSettingsData defaults = GameSettingsData.CreateDefault();
+            Assert.AreEqual(0, defaults.cameraButtonTarget);
+            GameSettingsData board = defaults;
+            board.cameraButtonTarget = 1;
+            Assert.IsTrue(GameSettingsData.Differ(defaults, board));
+            Assert.AreEqual(1, GameSettingsData.Normalized(board).cameraButtonTarget);
         }
 
         [Test]

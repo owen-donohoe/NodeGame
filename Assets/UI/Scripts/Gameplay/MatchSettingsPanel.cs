@@ -43,6 +43,7 @@ namespace NodeWar.UI
         private readonly LobbySwitch cameraButtonSwitch;
         private readonly LobbySwitch tooltipsSwitch;
         private readonly Label sideLabel;
+        private readonly Label targetLabel;
 
         private readonly VisualElement surrenderArea;
         private readonly Label surrenderLine;
@@ -119,6 +120,8 @@ namespace NodeWar.UI
             cameraButtonSwitch = hudRoot.Q<LobbySwitch>("hud-settings-camerabutton");
             sideLabel = hudRoot.Q<Label>("hud-settings-side");
             tooltipsSwitch = hudRoot.Q<LobbySwitch>("hud-settings-tooltips");
+            targetLabel = hudRoot.Q<Label>("hud-settings-target");
+            BindControlsRow(hudRoot, "hud-settings-row-target", ControlsViewModel.CycleCameraButtonTarget);
             BindControlsRow(hudRoot, "hud-settings-row-camerabutton", ControlsViewModel.ToggleCameraButton);
             BindControlsRow(hudRoot, "hud-settings-row-tooltips", ControlsViewModel.ToggleTooltips);
             BindControlsRow(hudRoot, "hud-settings-row-side", ControlsViewModel.CycleControlsSide);
@@ -297,6 +300,7 @@ namespace NodeWar.UI
             if (cameraButtonSwitch != null) cameraButtonSwitch.Value = current.showCameraButton;
             if (tooltipsSwitch != null) tooltipsSwitch.Value = current.tooltips;
             if (sideLabel != null) sideLabel.text = ControlsViewModel.SideLabel(current.controlsSide);
+            if (targetLabel != null) targetLabel.text = ControlsViewModel.CameraTargetLabel(current.cameraButtonTarget);
         }
 
         private void CycleFrameCap()

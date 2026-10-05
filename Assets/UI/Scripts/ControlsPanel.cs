@@ -49,6 +49,9 @@ namespace NodeWar.Lobby
         private VisualElement cameraRow, cameraCheck, zoomRow, zoomCheck, selbarCheck, tooltipsCheck, sideRow;
         private Button zoomHit;
         private Label zoomNote;
+        private VisualElement targetRow;
+        private Button targetButton;
+        private Label targetValue, targetNote;
         private Button sideButton;
         private Label sideValue, holdValue, warnings;
         private Slider holdSlider;
@@ -117,8 +120,28 @@ namespace NodeWar.Lobby
             layout.Add(cameraRow);
 
             zoomRow = SubSwitchRow("Drag to zoom", out zoomCheck, out zoomHit, out zoomNote,
-                () => edit(ControlsViewModel.ToggleCameraButtonZoom), first: true, last: true);
+                () => edit(ControlsViewModel.ToggleCameraButtonZoom), first: true, last: false);
             layout.Add(zoomRow);
+
+            targetRow = NewRow();
+            targetRow.AddToClassList("cp-row--sub");
+            AddConnector(targetRow, first: false, last: true, acrossWidth: 40f);
+            targetRow.Add(Spacer());
+            targetRow.Add(NameWithNote("Camera button target", out targetNote));
+            targetButton = new Button(OpenTargetPopup);
+            targetButton.AddToClassList("ui-reset-button");
+            targetButton.AddToClassList("cp-action");
+            targetValue = new Label();
+            targetValue.AddToClassList("cp-action__text");
+            targetValue.AddToClassList("ui-w500");
+            targetValue.pickingMode = PickingMode.Ignore;
+            targetButton.Add(targetValue);
+            VisualElement targetChevron = new VisualElement();
+            targetChevron.AddToClassList("cp-chevron");
+            targetChevron.pickingMode = PickingMode.Ignore;
+            targetButton.Add(targetChevron);
+            targetRow.Add(targetButton);
+            layout.Add(targetRow);
 
             layout.Add(SwitchRow("Selection counter", out selbarCheck, out _,
                 () => edit(ControlsViewModel.ToggleSelectionBar)));
@@ -274,7 +297,7 @@ namespace NodeWar.Lobby
             return column;
         }
 
-        private static void AddConnector(VisualElement row, bool first, bool last)
+        private static void AddConnector(VisualElement row, bool first, bool last, float acrossWidth = 9f)
         {
             const float RowHeight = 68f;
             const float ReachIntoParent = 19f; // from the parent square's bottom to the parent row's bottom
@@ -293,6 +316,7 @@ namespace NodeWar.Lobby
             across.AddToClassList("cp-conn");
             across.AddToClassList("cp-conn--h");
             across.pickingMode = PickingMode.Ignore;
+            across.style.width = acrossWidth;
             row.Add(across);
         }
 
@@ -376,6 +400,10 @@ namespace NodeWar.Lobby
             tooltipsCheck.EnableInClassList("cp-check--on", current.tooltips);
 
             zoomRow.EnableInClassList("cp-row--faded", zoomDimmed);
+            targetRow.EnableInClassList("cp-row--faded", zoomDimmed);
+            targetNote.style.display = zoomDimmed ? DisplayStyle.Flex : DisplayStyle.None;
+            targetButton.pickingMode = zoomDimmed ? PickingMode.Ignore : PickingMode.Position;
+            targetValue.text = ControlsViewModel.CameraTargetLabel(current.cameraButtonTarget);
             zoomHit.pickingMode = zoomDimmed ? PickingMode.Ignore : PickingMode.Position;
 
             sideValue.text = ControlsViewModel.SideLabel(current.controlsSide);
@@ -403,19 +431,34 @@ namespace NodeWar.Lobby
             ControlsRow row = ControlsViewModel.RowFor(getCurrent(), slot);
             if (!row.HasDropdown) return;
 
+            ShowPopup(row.OptionLabels, row.SelectedIndex, anchor,
+                index => edit(s => ControlsViewModel.SetAction(s, slot, row.Options[index])));
+        }
+
+        private void OpenTargetPopup()
+        {
+            GameSettingsData current = getCurrent();
+            if (ControlsViewModel.CameraChildFaded(current)) return;
+            ShowPopup(ControlsViewModel.CameraTargetLabels, current.cameraButtonTarget, targetButton,
+                index => edit(s => ControlsViewModel.SetCameraButtonTarget(s, index)));
+        }
+
+        private void ShowPopup(IReadOnlyList<string> labels, int selectedIndex, VisualElement anchor,
+            Action<int> pick)
+        {
             popup.Clear();
-            for (int i = 0; i < row.Options.Count; i++)
+            for (int i = 0; i < labels.Count; i++)
             {
-                InputAction option = row.Options[i];
+                int index = i;
                 Button item = new Button(() =>
                 {
                     ClosePopup();
-                    edit(s => ControlsViewModel.SetAction(s, slot, option));
+                    pick(index);
                 });
                 item.AddToClassList("ui-reset-button");
                 item.AddToClassList("cp-item");
-                item.EnableInClassList("cp-item--selected", i == row.SelectedIndex);
-                Label text = new Label(row.OptionLabels[i]);
+                item.EnableInClassList("cp-item--selected", i == selectedIndex);
+                Label text = new Label(labels[i]);
                 text.AddToClassList("cp-item__text");
                 text.AddToClassList("ui-w500");
                 text.pickingMode = PickingMode.Ignore;
@@ -430,7 +473,7 @@ namespace NodeWar.Lobby
             Rect bound = anchor.worldBound;
             Vector2 topLeft = scrim.WorldToLocal(bound.position);
             float width = Mathf.Max(bound.width, PopupMinWidth);
-            float height = row.Options.Count * ItemHeight + 4f;
+            float height = labels.Count * ItemHeight + 4f;
             float available = scrim.resolvedStyle.width;
             float left = Mathf.Clamp(topLeft.x + bound.width - width, 8f, Mathf.Max(8f, available - width - 8f));
             float top = topLeft.y + bound.height + 4f;

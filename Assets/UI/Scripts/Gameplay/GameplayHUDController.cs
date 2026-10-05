@@ -100,6 +100,7 @@ namespace NodeWar.UI
         private Label selectionBarCount;
         private bool showSelectionBar = true;
         private bool showTooltips = true;
+        private int cameraButtonTarget;
         private bool handleZoomEnabled = true;
         private float insetLeft = -1f;
         private float insetRight = -1f;
@@ -591,6 +592,7 @@ namespace NodeWar.UI
             handleZoomEnabled = settings.cameraButtonZoom;
             showSelectionBar = settings.showSelectionBar;
             showTooltips = settings.tooltips;
+            cameraButtonTarget = settings.cameraButtonTarget;
 
             // Redraw the bar now rather than on the next selection change.
             lastSelected = -1;
@@ -1104,6 +1106,7 @@ namespace NodeWar.UI
             // zoomed must NOT also recentre, or it would throw away the zoom the
             // player just set on the way to lifting their finger.
             if (handleZoomed) boardCamera.EndZoomGesture();
+            else if (cameraButtonTarget == 1) boardCamera.RecentreOnBoard();
             else boardCamera.RecentreOnHome();
 
             handleZoomed = false;

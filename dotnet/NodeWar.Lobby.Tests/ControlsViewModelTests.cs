@@ -137,6 +137,46 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void CameraChildRows_AreDragToZoomThenTheTarget_BothFadedWithTheNoteWhileTheButtonIsOff()
+        {
+            ControlsChildRow[] rows = ControlsViewModel.CameraChildRows(Defaults());
+            Assert.AreEqual(2, rows.Length);
+            Assert.AreEqual("Drag to zoom", rows[0].Label);
+            Assert.IsTrue(rows[0].IsToggle);
+            Assert.IsTrue(rows[0].Checked);
+            Assert.IsFalse(rows[0].HasDropdown);
+            Assert.AreEqual("Camera button target", rows[1].Label);
+            Assert.IsTrue(rows[1].HasDropdown);
+            CollectionAssert.AreEqual(new[] { "Core", "Board" }, rows[1].Options);
+            Assert.AreEqual(0, rows[1].SelectedIndex);
+            foreach (ControlsChildRow row in rows)
+            {
+                Assert.IsFalse(row.Faded);
+                Assert.AreEqual(string.Empty, row.Note);
+            }
+
+            foreach (ControlsChildRow row in ControlsViewModel.CameraChildRows(ControlsViewModel.ToggleCameraButton(Defaults())))
+            {
+                Assert.IsTrue(row.Faded, row.Label);
+                Assert.AreEqual("Needs Camera button", row.Note);
+            }
+        }
+
+        [Test]
+        public void CameraButtonTarget_SetAndCycleCloneAndClamp_AndResetRestoresCore()
+        {
+            GameSettingsData board = ControlsViewModel.SetCameraButtonTarget(Defaults(), 1);
+            Assert.AreEqual(1, board.cameraButtonTarget);
+            Assert.AreEqual(0, Defaults().cameraButtonTarget);
+            Assert.AreEqual(1, ControlsViewModel.CameraChildRows(board)[1].SelectedIndex);
+            Assert.AreEqual("Board", ControlsViewModel.CameraTargetLabel(board.cameraButtonTarget));
+            Assert.AreEqual(0, ControlsViewModel.SetCameraButtonTarget(Defaults(), 7).cameraButtonTarget);
+            Assert.AreEqual(0, ControlsViewModel.CycleCameraButtonTarget(board).cameraButtonTarget);
+            Assert.IsTrue(GameSettingsData.Differ(Defaults(), ControlsViewModel.CycleCameraButtonTarget(Defaults())));
+            Assert.AreEqual(0, ControlsViewModel.ResetControls(board).cameraButtonTarget);
+        }
+
+        [Test]
         public void DragToZoom_IsDimmedAndInertWhileTheCameraButtonIsOff()
         {
             Assert.IsFalse(ControlsViewModel.CameraZoomDimmed(Defaults()));

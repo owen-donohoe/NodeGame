@@ -411,6 +411,11 @@
                 <lobby:LobbySwitch name="hud-settings-camerabutton" value="true" />
             </engine:Button>
 
+            <engine:Button name="hud-settings-row-target" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Camera button target" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-target" class="hud__settings-label ui-w500" text="Core" picking-mode="Ignore" />
+            </engine:Button>
+
             <engine:Button name="hud-settings-row-tooltips" class="ui-reset-button hud__settings-row hud__settings-row--switch">
                 <engine:Label class="hud__settings-label ui-w500" text="Tooltips" picking-mode="Ignore" />
                 <lobby:LobbySwitch name="hud-settings-tooltips" value="true" />

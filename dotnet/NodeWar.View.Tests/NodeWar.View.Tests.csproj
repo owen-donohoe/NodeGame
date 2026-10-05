@@ -32,6 +32,8 @@
     <Compile Include="../../Assets/Scripts/Lobby/Data/InputBindings.cs" Link="Lobby/InputBindings.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Data/GameSettingsData.cs" Link="Lobby/GameSettingsData.cs" />
     <Compile Include="ViewSideTests.cs" />
+    <Compile Include="BoardFramingTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Core/BoardFraming.cs" Link="Core/BoardFraming.cs" />
     <Compile Include="EmoteRateLimiterTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteRateLimiter.cs"
              Link="Core/EmoteRateLimiter.cs" />

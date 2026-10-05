@@ -56,6 +56,34 @@ namespace NodeWar.Lobby
         public bool Dimmed { get { return !Enabled; } }
     }
 
+    /// <summary>A row that belongs to the camera button: a checkbox row or a dropdown row.</summary>
+    public readonly struct ControlsChildRow
+    {
+        public readonly string Label;
+        public readonly bool IsToggle;
+        public readonly bool Checked;
+        public readonly IReadOnlyList<string> Options;
+        public readonly int SelectedIndex;
+
+        /// <summary>The parent is off: drawn in the faded state, with <see cref="Note"/>, and inert.</summary>
+        public readonly bool Faded;
+        public readonly string Note;
+
+        public ControlsChildRow(string label, bool isToggle, bool isChecked, IReadOnlyList<string> options,
+            int selectedIndex, bool faded, string note)
+        {
+            Label = label;
+            IsToggle = isToggle;
+            Checked = isChecked;
+            Options = options;
+            SelectedIndex = selectedIndex;
+            Faded = faded;
+            Note = note;
+        }
+
+        public bool HasDropdown { get { return Options != null && Options.Count > 1; } }
+    }
+
     /// <summary>
     /// What the Controls section shows and what each tap does to the settings,
     /// kept free of UnityEngine so the rules (a locked row cannot be switched
@@ -253,6 +281,41 @@ namespace NodeWar.Lobby
             return !GameSettingsData.Normalized(settings).showCameraButton;
         }
 
+        public static readonly IReadOnlyList<string> CameraTargetLabels = new[] { "Core", "Board" };
+
+        public static string CameraTargetLabel(int target)
+        {
+            return CameraTargetLabels[target == 1 ? 1 : 0];
+        }
+
+        public static GameSettingsData SetCameraButtonTarget(GameSettingsData settings, int target)
+        {
+            settings = Editable(settings);
+            settings.cameraButtonTarget = target == 1 ? 1 : 0;
+            return settings;
+        }
+
+        public static GameSettingsData CycleCameraButtonTarget(GameSettingsData settings)
+        {
+            settings = Editable(settings);
+            settings.cameraButtonTarget = settings.cameraButtonTarget == 1 ? 0 : 1;
+            return settings;
+        }
+
+        /// <summary>The camera button's children, in the order they are drawn under it.</summary>
+        public static ControlsChildRow[] CameraChildRows(GameSettingsData settings)
+        {
+            settings = GameSettingsData.Normalized(settings);
+            bool faded = CameraChildFaded(settings);
+            string note = faded ? CameraChildNote : string.Empty;
+            return new[]
+            {
+                new ControlsChildRow("Drag to zoom", true, settings.cameraButtonZoom, null, -1, faded, note),
+                new ControlsChildRow("Camera button target", false, false, CameraTargetLabels,
+                    settings.cameraButtonTarget, faded, note)
+            };
+        }
+
         public static bool CameraZoomDimmed(GameSettingsData settings)
         {
             return CameraChildFaded(settings);
@@ -320,6 +383,7 @@ namespace NodeWar.Lobby
             settings.controlsSide = defaults.controlsSide;
             settings.showSelectionBar = defaults.showSelectionBar;
             settings.tooltips = defaults.tooltips;
+            settings.cameraButtonTarget = defaults.cameraButtonTarget;
             return settings;
         }
 

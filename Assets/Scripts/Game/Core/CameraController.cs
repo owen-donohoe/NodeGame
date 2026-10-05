@@ -1220,8 +1220,24 @@ namespace NodeWar.Core
             float defaultZoom = sideHomeStates[currentSide].initialized
                 ? sideHomeStates[currentSide].zoomDistance
                 : Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
-            bool atFit = targetZoomDistance >= zoomMaxDistance * 0.98f;
-            SetTargetZoom(atFit ? defaultZoom : zoomMaxDistance);
+            SetTargetZoom(BoardFraming.ToggleZoom(targetZoomDistance, defaultZoom, zoomMaxDistance));
+        }
+
+        /// <summary>
+        /// The camera button's Board target: pans to the middle of the board and zooms out
+        /// to fit it (the farthest zoom a match allows, as the fit/default toggle uses).
+        /// Same focus tween as RecentreOnHome, so the easing and duration match; like it,
+        /// this does not look at reduced motion, which here governs only the shake.
+        /// </summary>
+        public void RecentreOnBoard()
+        {
+            if (isDraftMode || boardConfig == null) return;
+
+            NotifyManualPan();
+            SetTargetZoom(zoomMaxDistance);
+            BoardFraming.Centre(boardConfig.Data.gridCols, boardConfig.Data.gridRows, boardConfig.nodeScale,
+                out float x, out float z);
+            StartFocusTween(new Vector3(x, transform.position.y, z));
         }
 
         /// <summary>

@@ -120,6 +120,9 @@ namespace NodeWar.Lobby
         /// <summary>Hints such as "Tap a node to move". Added to version 5 before it shipped.</summary>
         public bool tooltips;
 
+        /// <summary>What the camera button's click recentres on: 0 Core, 1 Board. Added to version 5 before it shipped.</summary>
+        public int cameraButtonTarget;
+
         /// <summary>
         /// The values the Settings page is authored with in SettingsPage.uxml.
         /// They are duplicated there as the controls' initial state so the page
@@ -154,7 +157,8 @@ namespace NodeWar.Lobby
                 cameraButtonZoom = true,
                 controlsSide = 0,
                 showSelectionBar = true,
-                tooltips = true
+                tooltips = true,
+                cameraButtonTarget = 0
             };
         }
 
@@ -194,6 +198,7 @@ namespace NodeWar.Lobby
                 source.controlsSide = 0;
                 source.showSelectionBar = true;
                 source.tooltips = true;
+                source.cameraButtonTarget = 0;
             }
 
             return new GameSettingsData
@@ -223,7 +228,8 @@ namespace NodeWar.Lobby
                 cameraButtonZoom = source.cameraButtonZoom,
                 controlsSide = source.controlsSide == 1 ? 1 : 0,
                 showSelectionBar = source.showSelectionBar,
-                tooltips = source.tooltips
+                tooltips = source.tooltips,
+                cameraButtonTarget = source.cameraButtonTarget == 1 ? 1 : 0
             };
         }
 
@@ -252,7 +258,8 @@ namespace NodeWar.Lobby
                 || a.cameraButtonZoom != b.cameraButtonZoom
                 || a.controlsSide != b.controlsSide
                 || a.showSelectionBar != b.showSelectionBar
-                || a.tooltips != b.tooltips;
+                || a.tooltips != b.tooltips
+                || a.cameraButtonTarget != b.cameraButtonTarget;
         }
 
         /// <summary>
