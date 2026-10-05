@@ -47,27 +47,9 @@ namespace NodeWar.Lobby
         private readonly Label sizeLabel;
         private readonly Label frameCapLabel;
 
-        // Controls section. The per-slot rows are built from ControlsViewModel;
-        // the rest are authored in SettingsPage.uxml.
-        private readonly VisualElement controlsRows;
-        private readonly List<ControlsRowView> controlsRowViews = new List<ControlsRowView>();
-        private readonly LobbySwitch cameraButtonSwitch;
-        private readonly LobbySwitch cameraZoomSwitch;
-        private readonly LobbySwitch selectionBarSwitch;
-        private readonly VisualElement cameraZoomRow;
-        private readonly Label sideLabel;
-        private readonly Slider holdSlider;
-        private readonly Label holdValueLabel;
-        private readonly Label controlsWarnings;
-
-        private sealed class ControlsRowView
-        {
-            public InputSlot slot;
-            public LobbySwitch toggle;
-            public Label state;
-            public Label action;
-            public VisualElement actionArea;
-        }
+        // Controls live in their own overlay, opened by one button. The panel owns
+        // its rows; this page owns the value and the save.
+        private readonly ControlsPanel controlsPanel;
 
         private readonly AccountFlow accountFlow;
         private readonly Label accountStatus;
@@ -160,16 +142,14 @@ namespace NodeWar.Lobby
             Button frameCapRow = Root.Q<Button>("settings-row-framecap");
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
 
-            controlsRows = Root.Q<VisualElement>("settings-controls-rows");
-            cameraButtonSwitch = Root.Q<LobbySwitch>("settings-camerabutton");
-            cameraZoomSwitch = Root.Q<LobbySwitch>("settings-camerazoom");
-            selectionBarSwitch = Root.Q<LobbySwitch>("settings-selbar");
-            cameraZoomRow = Root.Q<VisualElement>("settings-row-camerazoom");
-            sideLabel = Root.Q<Label>("settings-side");
-            holdSlider = Root.Q<Slider>("settings-hold");
-            holdValueLabel = Root.Q<Label>("settings-hold-value");
-            controlsWarnings = Root.Q<Label>("settings-controls-warnings");
-            BuildControls();
+            controlsPanel = new ControlsPanel(Root, () => current, EditControls, EditHoldTime);
+            Button controlsOpen = Root.Q<Button>("settings-row-controls");
+            if (controlsOpen != null)
+            {
+                if (controlsPanel.IsWired) controlsOpen.clicked += controlsPanel.Open;
+                else controlsOpen.style.display = DisplayStyle.None;
+            }
+
 
             Load();
         }
@@ -287,7 +267,8 @@ namespace NodeWar.Lobby
 
             UpdateSizeLabel();
             UpdateFrameCapLabel();
-            RenderControls();
+            controlsPanel.Close();
+            controlsPanel.Render();
 
             loading = false;
             dirty = false;
@@ -319,89 +300,6 @@ namespace NodeWar.Lobby
             slider.RegisterValueChangedCallback(_ => OnValueChanged(commitNow: false));
         }
 
-        private void BuildControls()
-        {
-            BindControlsRow("settings-row-camerabutton", ControlsViewModel.ToggleCameraButton);
-            BindControlsRow("settings-row-camerazoom", ControlsViewModel.ToggleCameraButtonZoom);
-            BindControlsRow("settings-row-selbar", ControlsViewModel.ToggleSelectionBar);
-            BindControlsRow("settings-row-side", ControlsViewModel.CycleControlsSide);
-            BindControlsRow("settings-row-controls-reset", ControlsViewModel.ResetControls);
-
-            if (holdSlider != null)
-            {
-                // Per frame, so like the other sliders it marks dirty and the
-                // write waits for the page to close.
-                holdSlider.RegisterValueChangedCallback(_ =>
-                {
-                    if (loading) return;
-                    OnValueChanged(commitNow: false);
-                    RenderControls();
-                });
-            }
-
-            if (controlsRows == null) return;
-
-            foreach (InputSlot slot in ControlsViewModel.Slots)
-            {
-                InputSlot captured = slot;
-                var view = new ControlsRowView { slot = slot };
-
-                var row = new VisualElement();
-                row.AddToClassList("lb-grow");
-
-                var toggleArea = new Button();
-                toggleArea.AddToClassList("ui-reset-button");
-                toggleArea.AddToClassList("lb-controls-toggle");
-                var name = new Label(ControlsViewModel.SlotLabel(slot));
-                name.AddToClassList("lb-grow__label");
-                name.AddToClassList("ui-w500");
-                name.pickingMode = PickingMode.Ignore;
-                toggleArea.Add(name);
-
-                if (InputBindings.DefinitionFor(slot).Locked)
-                {
-                    // Always on: nothing to flip, so nothing to tap.
-                    view.state = new Label();
-                    view.state.AddToClassList("lb-controls-state");
-                    view.state.AddToClassList("ui-w500");
-                    view.state.pickingMode = PickingMode.Ignore;
-                    toggleArea.Add(view.state);
-                    toggleArea.pickingMode = PickingMode.Ignore;
-                }
-                else
-                {
-                    view.toggle = new LobbySwitch();
-                    toggleArea.Add(view.toggle);
-                    toggleArea.clicked += () => EditControls(s => ControlsViewModel.ToggleSlot(s, captured));
-                }
-                row.Add(toggleArea);
-
-                // Always a Button, so the label cycles on tap like the
-                // frame-cap row; RenderControls turns picking off when the
-                // slot has a single action.
-                var actionArea = new Button();
-                actionArea.AddToClassList("ui-reset-button");
-                actionArea.AddToClassList("lb-controls-action");
-                view.action = new Label();
-                view.action.AddToClassList("lb-controls-action__text");
-                view.action.AddToClassList("ui-w500");
-                view.action.pickingMode = PickingMode.Ignore;
-                actionArea.Add(view.action);
-                actionArea.clicked += () => EditControls(s => ControlsViewModel.CycleAction(s, captured));
-                view.actionArea = actionArea;
-                row.Add(actionArea);
-
-                controlsRows.Add(row);
-                controlsRowViews.Add(view);
-            }
-        }
-
-        private void BindControlsRow(string rowName, Func<GameSettingsData, GameSettingsData> edit)
-        {
-            Button row = Root.Q<Button>(rowName);
-            if (row != null) row.clicked += () => EditControls(edit);
-        }
-
         /// <summary>
         /// A controls edit is a decision, so it commits now. The edit returns a
         /// new value with its own copy of inputBindings; see ControlsViewModel.
@@ -411,42 +309,20 @@ namespace NodeWar.Lobby
             if (loading) return;
 
             current = edit(current);
-            RenderControls();
+            controlsPanel.Render();
             OnValueChanged(commitNow: true);
         }
 
-        /// <summary>Pushes <see cref="current"/> into the Controls elements. Raises nothing.</summary>
-        private void RenderControls()
+        /// <summary>
+        /// The hold-time slider raises a change per drag frame, so like the other
+        /// sliders it marks dirty and the write waits for the page to close.
+        /// </summary>
+        private void EditHoldTime(float seconds)
         {
-            foreach (ControlsRowView view in controlsRowViews)
-            {
-                ControlsRow row = ControlsViewModel.RowFor(current, view.slot);
-                if (view.toggle != null) view.toggle.Value = row.Enabled;
-                if (view.state != null) view.state.text = row.StateText;
-                view.action.text = row.ActionLabel;
-                view.actionArea.EnableInClassList("lb-controls-action--cycles", row.ActionCycles);
-                view.actionArea.pickingMode = row.ActionCycles ? PickingMode.Position : PickingMode.Ignore;
-            }
+            if (loading) return;
 
-            SetSwitch(cameraButtonSwitch, current.showCameraButton);
-            SetSwitch(cameraZoomSwitch, current.cameraButtonZoom);
-            SetSwitch(selectionBarSwitch, current.showSelectionBar);
-
-            // Drag to zoom belongs to the camera button; with the button off
-            // there is nothing for it to configure.
-            if (cameraZoomRow != null) cameraZoomRow.SetEnabled(current.showCameraButton);
-
-            if (sideLabel != null) sideLabel.text = ControlsViewModel.SideLabel(current.controlsSide);
-
-            if (holdSlider != null) holdSlider.SetValueWithoutNotify(current.holdTime);
-            if (holdValueLabel != null) holdValueLabel.text = ControlsViewModel.HoldTimeLabel(current.holdTime);
-
-            if (controlsWarnings != null)
-            {
-                string warnings = ControlsViewModel.WarningsText(current);
-                controlsWarnings.text = warnings;
-                controlsWarnings.style.display = warnings.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            }
+            current = ControlsViewModel.SetHoldTime(current, seconds);
+            OnValueChanged(commitNow: false);
         }
 
         private void CycleInterfaceSize()
@@ -517,8 +393,6 @@ namespace NodeWar.Lobby
             captured.haptics = ReadSwitch(hapticsSwitch, current.haptics);
             captured.batterySaver = ReadSwitch(batterySwitch, current.batterySaver);
 
-            // The other Controls values are edited on `current` by EditControls.
-            captured.holdTime = ReadSlider(holdSlider, current.holdTime);
 
             return GameSettingsData.Normalized(captured);
         }

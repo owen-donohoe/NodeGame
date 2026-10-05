@@ -118,65 +118,306 @@
     color: var(--ink-mute);
 }
 
-/* ---- Controls section ---- */
+/* ---- Configure controls: the overlay over this page ---- */
 
-/* An option that only means something under the row above it. */
-.lb-grow--sub {
-    padding-left: 40px;
+.cp-page {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    background-color: var(--surface);
 }
 
-.lb-grow:disabled {
-    opacity: 0.45;
+.cp-page--open {
+    display: flex;
 }
 
-/* The action half of a binding row. Only a cycling action takes a tap. */
-.lb-controls-toggle {
+.cp-header-bar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: var(--space-4);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-bottom: var(--space-2);
+}
+
+.lb-root .cp-title {
+    margin-left: var(--space-3);
+    font-size: 26px;
+    color: var(--ink);
+}
+
+.cp-scroll {
     flex-grow: 1;
-    flex-basis: 0;
-    flex-direction: row;
-    align-items: center;
-    height: 100%;
 }
 
-.lb-controls-action {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    height: 100%;
-    min-width: 120px;
-    margin-left: var(--space-2);
+/* One comfortable column: full width on a phone, centred and capped on a desktop window. */
+.cp-scroll .unity-scroll-view__content-container {
+    width: 100%;
+    max-width: 760px;
+    align-self: center;
+    padding-bottom: 48px;
 }
 
-.lb-root .lb-controls-action__text {
-    font-size: 16px;
+.lb-root .cp-header {
+    font-size: 17px;
     color: var(--ink-mute);
+    margin-top: var(--space-4);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-bottom: var(--space-2);
 }
 
-.lb-controls-action--cycles:active {
+.cp-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 68px;
+    padding-right: var(--space-3);
+    border-bottom-width: var(--stroke-thin);
+    border-bottom-color: var(--rule);
+}
+
+.cp-row--last {
+    border-bottom-width: 0;
+}
+
+/* Drag to zoom sits under the camera button it configures. */
+.cp-row--sub {
+    padding-left: var(--space-5);
+}
+
+/* A switched-off row dims as a whole; its checkbox is outside the dimmed parts. */
+.cp-row--dim > .cp-name,
+.cp-row--dim > .cp-action {
+    opacity: 0.4;
+}
+
+/* The tap target is wider than the square drawn inside it. */
+.cp-checkhit {
+    width: 60px;
+    height: 68px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--clear);
+}
+
+.cp-checkhit:active {
     background-color: var(--press-tint);
 }
 
-.lb-root .lb-controls-state {
-    font-size: 16px;
+.cp-checkhit--locked:active {
+    background-color: var(--clear);
+}
+
+.cp-check {
+    width: 30px;
+    height: 30px;
+    background-color: var(--clear);
+    border-left-width: var(--stroke-mid);
+    border-right-width: var(--stroke-mid);
+    border-top-width: var(--stroke-mid);
+    border-bottom-width: var(--stroke-mid);
+    border-left-color: var(--ink);
+    border-right-color: var(--ink);
+    border-top-color: var(--ink);
+    border-bottom-color: var(--ink);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Off is an empty outline, and the outline itself is dimmed. */
+.cp-check {
+    opacity: 0.4;
+}
+
+.cp-check--on {
+    background-color: var(--ink);
+    opacity: 1;
+}
+
+.lb-root .cp-name {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-shrink: 1;
+    font-size: 19px;
+    color: var(--ink);
+    white-space: normal;
+    -unity-text-align: middle-left;
+}
+
+.cp-action {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    min-width: 170px;
+    max-width: 240px;
+    height: 48px;
+    margin-left: var(--space-2);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    background-color: var(--surface-sunk);
+    border-left-width: var(--stroke-thin);
+    border-right-width: var(--stroke-thin);
+    border-top-width: var(--stroke-thin);
+    border-bottom-width: var(--stroke-thin);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-sm);
+    border-top-right-radius: var(--corner-sm);
+    border-bottom-left-radius: var(--corner-sm);
+    border-bottom-right-radius: var(--corner-sm);
+}
+
+.cp-action:active {
+    background-color: var(--surface-track);
+}
+
+/* A single allowed action is just the word, with no box around it. */
+.cp-action--plain {
+    background-color: var(--clear);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.lb-root .cp-action__text {
+    flex-grow: 1;
+    font-size: 17px;
+    color: var(--ink);
+    -unity-text-align: middle-right;
+    white-space: normal;
+}
+
+.cp-action--plain .cp-action__text {
     color: var(--ink-mute);
 }
 
-.lb-root .lb-controls-hold-value {
-    width: 64px;
+/* A down chevron from two borders, so it needs no glyph from the font. */
+.cp-chevron {
+    width: 9px;
+    height: 9px;
+    margin-left: var(--space-3);
+    margin-bottom: 4px;
+    flex-shrink: 0;
+    border-right-width: var(--stroke-mid);
+    border-bottom-width: var(--stroke-mid);
+    border-right-color: var(--ink);
+    border-bottom-color: var(--ink);
+    rotate: 45deg;
+}
+
+.cp-slider {
+    margin-left: var(--space-3);
+}
+
+.lb-root .cp-hold-value {
+    width: 70px;
     margin-left: var(--space-2);
+    font-size: 17px;
+    color: var(--ink-mute);
     -unity-text-align: middle-right;
 }
 
-.lb-root .lb-controls-warnings {
+.lb-root .cp-warnings {
     font-size: var(--type-caption);
     color: var(--ink-mute);
     white-space: normal;
     padding-left: var(--space-4);
     padding-right: var(--space-4);
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-2);
-    border-bottom-width: var(--stroke-thin);
-    border-bottom-color: var(--rule);
+    padding-bottom: var(--space-3);
+}
+
+.cp-reset {
+    height: 56px;
+    margin-left: var(--space-4);
+    margin-right: var(--space-4);
+    justify-content: center;
+    align-items: center;
+    background-color: var(--surface-raised);
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+    font-size: 18px;
+    color: var(--ink);
+}
+
+.cp-reset:active {
+    background-color: var(--press-tint);
+}
+
+/* ---- the action list: a scrim to dismiss it, and the list ---- */
+
+.cp-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+}
+
+.cp-scrim--open {
+    display: flex;
+}
+
+.cp-popup {
+    position: absolute;
+    background-color: var(--surface-raised);
+    overflow: hidden;
+    border-left-width: var(--stroke);
+    border-right-width: var(--stroke);
+    border-top-width: var(--stroke);
+    border-bottom-width: var(--stroke);
+    border-left-color: var(--edge);
+    border-right-color: var(--edge);
+    border-top-color: var(--edge);
+    border-bottom-color: var(--edge);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+}
+
+.cp-item {
+    height: 56px;
+    justify-content: center;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    background-color: var(--clear);
+}
+
+.cp-item:active {
+    background-color: var(--press-tint);
+}
+
+/* The current action reads darker than its neighbours. */
+.cp-item--selected {
+    background-color: var(--surface-track);
+}
+
+.lb-root .cp-item__text {
+    font-size: 18px;
+    color: var(--ink);
+    -unity-text-align: middle-left;
 }
 
 .lb-root .lb-settings-footnote {
