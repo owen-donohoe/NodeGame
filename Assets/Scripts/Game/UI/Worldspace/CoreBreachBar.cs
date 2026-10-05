@@ -91,6 +91,9 @@ namespace NodeWar.UI
 
             SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = GetSprite(leftPivot);
+            // Core GFX uses the Villagers layer at group order 0. The bar is
+            // outside that group: orders 400/401 put it above the art, below UI.
+            sr.sortingLayerID = SortingLayer.NameToID("Villagers");
             sr.sortingOrder = order;
             return sr;
         }
