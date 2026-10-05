@@ -7,6 +7,23 @@ namespace NodeWar.Network.Tests
 {
     public class BotBreachingTests
     {
+        [TestCase(2, 1)] [TestCase(3, 2)]
+        public void BotReservesEscalatingPricesForSameTickBatch(int food, int expectedRespawns)
+        {
+            var balance = GameBalanceData.Default();
+            var board = BoardConfigData.Default();
+            MatchFactory.Configure(balance, board);
+            var state = MatchFactory.Build(balance, board, new DraftPlacement[0], new PlayerSetup[0]);
+            state.players[0].food = food;
+            for (int i = 0; i < state.villagers.Length; i++)
+                state.villagers[i].state = VillagerState.Dead;
+            var buffer = new InputBuffer();
+            new BotPlayer(state, buffer, 0, board.defaultEdgeWeight).Evaluate();
+            var commands = buffer.DrainCommands();
+            Assert.AreEqual(expectedRespawns, Array.FindAll(commands, c => c.type == CommandType.Respawn).Length);
+            foreach (var command in commands) CommandProcessor.ProcessCommand(state, command);
+            Assert.AreEqual(expectedRespawns, state.players[0].paidRespawns);
+        }
         [TestCase(SuitType.None)] [TestCase(SuitType.Warrior)]
         public void CoreEmergencyPreservesBreacherAndSendsAvailableDefender(SuitType suit)
         {

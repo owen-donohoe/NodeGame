@@ -183,7 +183,7 @@ namespace NodeWar.Input
         private void RespawnDead()
         {
             int food = state.players[playerID].food;
-            int cost = CommandProcessor.GetRespawnCost(state, playerID);
+            int plannedRespawns = 0;
 
             for (int i = 0; i < state.villagers.Length; i++)
             {
@@ -192,8 +192,10 @@ namespace NodeWar.Input
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
+                int cost = CommandProcessor.GetRespawnCost(state, playerID, plannedRespawns);
                 if (food < cost) return;
                 food -= cost;
+                plannedRespawns++;
 
                 GameCommand cmd = new GameCommand
                 {

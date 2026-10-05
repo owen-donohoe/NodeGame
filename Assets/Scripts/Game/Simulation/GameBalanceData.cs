@@ -218,6 +218,21 @@ namespace NodeWar.Simulation
             return breachThreshold;
         }
 
+        /// <summary>
+        /// Escalate first, then subtract the integer-floor Sanctuary discount.
+        /// Preserve the one-food minimum; saturate unrepresentable prices.
+        /// Shared arithmetic for command validation and read-only UI pricing.
+        /// </summary>
+        public int PaidRespawnCost(int paidRespawns, int reductionPercent)
+        {
+            long cost = (long)respawnCostFood * (System.Math.Max(0, paidRespawns) + 1L);
+            int percent = System.Math.Max(0, System.Math.Min(100, reductionPercent));
+            // Split the multiplication to keep even the largest base/counter safe.
+            cost -= cost / 100 * percent + cost % 100 * percent / 100;
+            if (cost < 1) return 1;
+            return cost > int.MaxValue ? int.MaxValue : (int)cost;
+        }
+
         public static GameBalanceData Default()
         {
             return new GameBalanceData

@@ -135,6 +135,8 @@ namespace NodeWar.Simulation
         public int materials;
         public int metal;
         public int breachCount;
+        /// <summary>Successful paid respawns by this player during this match.</summary>
+        public int paidRespawns;
         /// <summary>Progress against this player's core.</summary>
         public int breachBar;
         /// <summary>Derived candidate cache, refreshed after all tick mutations; -1 for none.</summary>

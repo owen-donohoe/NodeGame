@@ -239,6 +239,23 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void EscalatedShownCostMatchesCommandAndAffordability()
+        {
+            GameBalanceData balance = Balance();
+            CommandProcessor.SetBalance(balance);
+            SimulationState state = Board(23, 0, null);
+            state.players[0].paidRespawns = 3;
+            Assert.AreEqual(24, CommandEligibility.RespawnCost(state, balance, 0)); // 8*4 less 25%.
+            Assert.AreEqual(RespawnRefusal.CannotAfford, CommandEligibility.Respawn(state, balance, 0, 9));
+            state.players[0].food = 24;
+            Assert.AreEqual(RespawnRefusal.None, CommandEligibility.Respawn(state, balance, 0, 9));
+            CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Respawn, playerID = 0, villagerID = 9 });
+            Assert.AreEqual(0, state.players[0].food);
+            Assert.AreEqual(4, state.players[0].paidRespawns);
+            Assert.AreEqual(30, CommandEligibility.RespawnCost(state, balance, 0));
+        }
+
+        [Test]
         public void RespawnCost_NeverFallsBelowOne()
         {
             GameBalanceData balance = Balance();

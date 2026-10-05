@@ -29,7 +29,7 @@ namespace NodeWar.Tests
             "VillagerData.productionTicksRemaining", "VillagerData.productionTicksMax",
             "VillagerData.hasRampartBonus", "VillagerData.rampartBonusEra",
             "PlayerData.playerID", "PlayerData.coreNodeID", "PlayerData.food", "PlayerData.materials",
-            "PlayerData.metal", "PlayerData.breachCount", "PlayerData.breachBar", "PlayerData.nextBreacherID", "PlayerData.draftedSuits",
+            "PlayerData.metal", "PlayerData.breachCount", "PlayerData.paidRespawns", "PlayerData.breachBar", "PlayerData.nextBreacherID", "PlayerData.draftedSuits",
             "PlayerData.draftedNodes", "PlayerData.suitEras", "PlayerData.districtEras"
         };
 

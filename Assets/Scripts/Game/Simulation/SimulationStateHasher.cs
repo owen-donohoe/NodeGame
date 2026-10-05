@@ -33,6 +33,12 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.players[i].materials;
                     hash = hash * 31 + state.players[i].metal;
                     hash = hash * 31 + state.players[i].breachCount;
+                    // The new counter starts at zero; retain existing neutral hash paths.
+                    if (state.players[i].paidRespawns != 0)
+                    {
+                        hash = hash * 31 + 2002;
+                        hash = hash * 31 + state.players[i].paidRespawns;
+                    }
                     // Omit neutral v2 fields so feature-off matches retain v1 hashes.
                     // Tags distinguish bar progress from the derived candidate ID.
                     if (state.players[i].breachBar != 0)

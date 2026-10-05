@@ -21,6 +21,7 @@ namespace NodeWar.UI
         private SimulationState simState;
         private NodeWar.Core.ITickProvider tickProvider;
         private InputBuffer inputBuffer;
+        private GameBalanceData balance;
         private int nodeID;
         private int controlledPID;
 
@@ -31,11 +32,12 @@ namespace NodeWar.UI
         private bool isOwned;
 
         public void Initialize(SimulationState state, NodeWar.Core.ITickProvider provider,
-                                InputBuffer buffer, int node, int pid, bool owned)
+                                InputBuffer buffer, GameBalanceData balanceData, int node, int pid, bool owned)
         {
             simState = state;
             tickProvider = provider;
             inputBuffer = buffer;
+            balance = balanceData;
             nodeID = node;
             controlledPID = pid;
             isOwned = owned;
@@ -124,7 +126,7 @@ namespace NodeWar.UI
                 {
                     GameObject entryGO = Instantiate(respawnEntryPrefab, respawnListContent);
                     RespawnEntryDisplay entry = entryGO.GetComponent<RespawnEntryDisplay>();
-                    entry.Initialize(simState, inputBuffer, deadIDs[i], controlledPID);
+                    entry.Initialize(simState, inputBuffer, balance, deadIDs[i], controlledPID);
                     activeEntries.Add(entry);
                     trackedVillagerIDs.Add(deadIDs[i]);
                 }

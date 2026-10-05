@@ -231,15 +231,12 @@ namespace NodeWar.Simulation
             state.villagers[vid].maxHP = newMaxHP;
             state.villagers[vid].hp = newMaxHP;
         }
-        public static int GetRespawnCost(SimulationState state, int playerID)
+        public static int GetRespawnCost(SimulationState state, int playerID, int additionalPaidRespawns = 0)
         {
-            // Sanctuary cost reduction
-            int baseCost = bal.respawnCostFood;
+            int paidRespawns = (int)System.Math.Min(int.MaxValue,
+                (long)state.players[playerID].paidRespawns + additionalPaidRespawns);
             int reductionPercent = SanctuaryCostReductionPercent(state, playerID);
-            int reduction = (baseCost * reductionPercent) / 100;
-            int finalCost = baseCost - reduction;
-            if (finalCost < 1) finalCost = 1;
-            return finalCost;
+            return bal.PaidRespawnCost(paidRespawns, reductionPercent);
         }
 
         private static void ProcessRespawnCommand(SimulationState state, GameCommand command, TickEventLog log)
@@ -254,6 +251,8 @@ namespace NodeWar.Simulation
             if (state.players[command.playerID].food < finalCost) return;
             // Apply
             state.players[command.playerID].food -= finalCost;
+            if (state.players[command.playerID].paidRespawns < int.MaxValue)
+                state.players[command.playerID].paidRespawns++;
             GameSimulation.ResetToCore(state, vid, bal, log, paid: true);
         }
 
