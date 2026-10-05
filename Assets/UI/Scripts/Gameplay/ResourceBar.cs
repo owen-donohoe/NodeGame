@@ -36,14 +36,11 @@ namespace NodeWar.UI
         private ResourceKind resourceKind;
         private int cap = ResourceHudMath.DefaultMetalCap;
         private bool reducedMotion;
-        private bool wasFull;
-        private float fullElapsed;
 
         private readonly float[] production = new float[ResourceProduction.MaxInFlight];
         private int productionCount;
 
         private IVisualElementScheduledItem tick;
-        private double lastTickTime;
 
         public ResourceBar()
         {
@@ -116,12 +113,9 @@ namespace NodeWar.UI
         private void UpdateFullState()
         {
             bool full = ResourceHudMath.IsFull(value, cap);
-            if (!full || !wasFull) fullElapsed = 0f;
-            wasFull = full;
 
             if (full && !reducedMotion)
             {
-                lastTickTime = Time.unscaledTimeAsDouble;
                 if (tick == null) tick = schedule.Execute(Tick).Every(TickMilliseconds);
                 else tick.Resume();
             }
@@ -132,12 +126,6 @@ namespace NodeWar.UI
 
         private void Tick()
         {
-            double now = Time.unscaledTimeAsDouble;
-            float delta = (float)(now - lastTickTime);
-            lastTickTime = now;
-            if (delta <= 0f) return;
-
-            fullElapsed += delta;
             MarkDirtyRepaint();
         }
 
@@ -152,8 +140,10 @@ namespace NodeWar.UI
 
             bool full = ResourceHudMath.IsFull(value, cap);
             Color lit = BaseColor();
-            if (full) lit = Color.Lerp(lit, Color.white, ResourceHudMath.FullWhiteMix(fullElapsed, reducedMotion));
-            float waveProgress = full ? ResourceHudMath.EffectiveWaveProgress(fullElapsed, reducedMotion) : -1f;
+            float whiteMix = 0f;
+            float waveProgress = -1f;
+            if (full) ResourceHudMath.FullEffectAt(Time.unscaledTimeAsDouble, reducedMotion, out whiteMix, out waveProgress);
+            if (full) lit = Color.Lerp(lit, Color.white, whiteMix);
 
             for (int i = 0; i < segments; i++)
             {

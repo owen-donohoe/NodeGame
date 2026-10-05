@@ -108,8 +108,6 @@ namespace NodeWar.UI
         // The cap this resource is full at, and what the full state is doing.
         private int cap = ResourceHudMath.DefaultFoodCap;
         private bool reducedMotion;
-        private bool wasFull;
-        private float fullElapsed;
 
         private IVisualElementScheduledItem tick;
         private double lastTickTime;
@@ -174,9 +172,6 @@ namespace NodeWar.UI
         private void UpdateFullState()
         {
             bool full = IsFullNow;
-            if (full && !wasFull) fullElapsed = 0f;
-            if (!full) fullElapsed = 0f;
-            wasFull = full;
 
             if (full && !reducedMotion) StartTicking();
             MarkDirtyRepaint();
@@ -330,7 +325,6 @@ namespace NodeWar.UI
             // A full resource keeps the tick running for its pulse and wave.
             if (IsFullNow && !reducedMotion)
             {
-                fullElapsed += delta;
                 moving = true;
             }
 
@@ -369,8 +363,9 @@ namespace NodeWar.UI
             // Full: every ring is mixed toward white, pulsing (steady under reduced motion),
             // and the wave crosses them together. waveProgress is -1 whenever it is resting.
             bool full = IsFullNow;
-            float whiteMix = full ? ResourceHudMath.FullWhiteMix(fullElapsed, reducedMotion) : 0f;
-            float waveProgress = full ? ResourceHudMath.EffectiveWaveProgress(fullElapsed, reducedMotion) : -1f;
+            float whiteMix = 0f;
+            float waveProgress = -1f;
+            if (full) ResourceHudMath.FullEffectAt(Time.unscaledTimeAsDouble, reducedMotion, out whiteMix, out waveProgress);
 
             for (int ring = 0; ring < ResourceRingMath.RingCount; ring++)
             {
