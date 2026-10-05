@@ -178,9 +178,9 @@ namespace NodeWar.Simulation
                 {
                     playerID = p,
                     coreNodeID = FindCoreNodeID(state, p),
-                    food = board.startingFood,
-                    materials = board.startingMaterials,
-                    metal = board.startingMetal,
+                    food = GameBalanceData.ClampResource(board.startingFood, balance.foodCap),
+                    materials = GameBalanceData.ClampResource(board.startingMaterials, balance.materialsCap),
+                    metal = GameBalanceData.ClampResource(board.startingMetal, balance.metalCap),
                     breachCount = 0,
                     paidRespawns = 0,
                     breachBar = 0,

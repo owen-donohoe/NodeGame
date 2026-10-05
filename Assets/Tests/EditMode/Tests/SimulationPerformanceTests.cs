@@ -111,6 +111,9 @@ namespace NodeWar.Tests
         private static SimulationState PopulatedBoard()
         {
             GameBalanceData balance = GameBalanceData.Default();
+            // Keep the established stress workload producing from its large stocks.
+            // Cap behavior is covered separately by ResourceCapTests.
+            balance.foodCap = balance.materialsCap = balance.metalCap = 0;
             BoardConfigData board = BoardConfigData.Default();
             board.startingVillagersPerPlayer = VillagersPerPlayer;
             board.startingFood = board.startingMaterials = board.startingMetal = 100000;

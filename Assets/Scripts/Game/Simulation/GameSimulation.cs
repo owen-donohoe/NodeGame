@@ -642,33 +642,35 @@ namespace NodeWar.Simulation
                     switch (district)
                     {
                         case DistrictType.Farm:
-                            state.players[ownerID].food++;
+                            state.players[ownerID].food = GameBalanceData.AddResource(state.players[ownerID].food, bal.foodCap);
                             break;
 
                         case DistrictType.Mine:
-                            state.players[ownerID].materials++;
+                            state.players[ownerID].materials = GameBalanceData.AddResource(state.players[ownerID].materials, bal.materialsCap);
                             break;
 
                         case DistrictType.Forge:
-                            // Only produce if allocation is enabled AND player has materials
+                            // Convert only with allocation, materials, and room for the metal.
                             if (state.nodes[nodeID].materialAllocation > 0 &&
-                                state.players[ownerID].materials >= 1)
+                                state.players[ownerID].materials >= 1 &&
+                                GameBalanceData.HasResourceRoom(state.players[ownerID].metal, bal.metalCap))
                             {
                                 state.players[ownerID].materials--;
-                                state.players[ownerID].metal++;
+                                state.players[ownerID].metal = GameBalanceData.AddResource(state.players[ownerID].metal, bal.metalCap);
                             }
-                            // If allocation is 0 or no materials: timer resets, nothing produced
+                            // A blocked conversion still cycles without consuming materials.
                             break;
                         case DistrictType.Market:
+                            // Alternate even when a full stock wastes this payout.
                             DistrictStats market = bal.GetDistrictStats(DistrictType.Market, state.nodes[nodeID].districtEra);
                             if (state.villagers[idx].productionTicksMax == market.productionTicks)
                             {
-                                state.players[ownerID].food++;
+                                state.players[ownerID].food = GameBalanceData.AddResource(state.players[ownerID].food, bal.foodCap);
                                 state.villagers[idx].productionTicksMax = market.secondaryProductionTicks;
                             }
                             else
                             {
-                                state.players[ownerID].materials++;
+                                state.players[ownerID].materials = GameBalanceData.AddResource(state.players[ownerID].materials, bal.materialsCap);
                                 state.villagers[idx].productionTicksMax = market.productionTicks;
                             }
                             break;
