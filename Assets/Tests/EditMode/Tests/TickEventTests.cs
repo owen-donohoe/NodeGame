@@ -282,10 +282,10 @@ namespace NodeWar.Tests
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
             // Player 1's only villager is dead and far from coming back, so its
-            // Core is undefended when player 0 walks in on tick 4.
+            // Core stays undefended through the channel after arrival on tick 4.
             state.villagers[1].state = VillagerState.Dead;
             state.villagers[1].hp = 0;
-            state.villagers[1].respawnTicksRemaining = balance.respawnTicks;
+            state.villagers[1].respawnTicksRemaining = 200;
             state.villagers[0].currentNodeID = NeutralNode;
             state.villagers[0].previousNodeID = NeutralNode;
 
@@ -293,7 +293,7 @@ namespace NodeWar.Tests
 
             TickEventLog log = new TickEventLog();
             int breaches = 0;
-            for (int t = 0; t < 43; t++)
+            for (int t = 0; t < 83; t++)
             {
                 log.Clear();
                 GameSimulation.SimulateTick(state, log);

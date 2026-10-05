@@ -237,7 +237,7 @@ namespace NodeWar.Simulation
                 suddenDeathTicks = new[] { 2400, 3000 },
                 suddenDeathThresholds = new[] { 2, 1 },
                 breachBarMax = 4000,
-                breachSwarmRate = new[] { 100, 165, 215, 250 },
+                breachSwarmRate = new[] { 50, 83, 108, 125 },
                 breachBarDecayPerTick = 200,
                 maxWorkersPerNode = 2,
                 maxVillagersPerPlayer = 25,

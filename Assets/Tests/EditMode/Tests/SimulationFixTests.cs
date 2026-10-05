@@ -194,7 +194,7 @@ namespace NodeWar.Tests
             state.villagers[1].isConsumed = true; // Empty enemy Core allows an uninterrupted channel.
             CommandProcessor.ProcessCommand(state, new GameCommand
             { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 2 });
-            for (int i = 0; i < balance.baseMoveSpeedTicks + 39; i++) GameSimulation.SimulateTick(state);
+            for (int i = 0; i < balance.baseMoveSpeedTicks + 79; i++) GameSimulation.SimulateTick(state);
             return state;
         }
 

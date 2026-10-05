@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NUnit.Framework;
 using NodeWar.Simulation;
 
@@ -52,7 +52,7 @@ namespace NodeWar.Tests
             state.villagers[old] = villager;
         }
 
-        [TestCase(1, 40)] [TestCase(2, 25)] [TestCase(3, 19)] [TestCase(4, 16)] [TestCase(6, 16)]
+        [TestCase(1, 80)] [TestCase(2, 49)] [TestCase(3, 38)] [TestCase(4, 32)] [TestCase(6, 32)]
         public void SwarmCompletesOnExpectedTick(int count, int ticks)
         {
             var state = Attackers(count);
@@ -66,10 +66,10 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void ThreeAttackersFinishAllBreachesIn84Ticks()
+        public void ThreeAttackersFinishAllBreachesIn167Ticks()
         {
             var state = Attackers(3);
-            Ticks(state, 83);
+            Ticks(state, 166);
             Assert.AreEqual(2, state.players[1].breachCount);
             Assert.IsFalse(state.gameOver);
             GameSimulation.SimulateTick(state);
@@ -124,7 +124,7 @@ namespace NodeWar.Tests
             Assert.IsTrue(state.villagers[expected].isConsumed);
             state.CopyFrom(snapshot);
             Assert.AreEqual(hash, SimulationStateHasher.ComputeHash(state));
-            Assert.AreEqual(215, state.players[1].breachBar);
+            Assert.AreEqual(108, state.players[1].breachBar);
             Assert.AreEqual(expected, state.players[1].nextBreacherID);
         }
 
@@ -188,7 +188,7 @@ namespace NodeWar.Tests
             GameSimulation.SimulateTick(state);
             if (respawn)
             {
-                Assert.AreEqual(600, state.players[1].breachBar);
+                Assert.AreEqual(300, state.players[1].breachBar);
                 Assert.AreEqual(VillagerState.Idle, state.villagers[1].state);
                 GameSimulation.SimulateTick(state);
             }
@@ -206,7 +206,7 @@ namespace NodeWar.Tests
         public void CompletionPrecedesSameTickDefenderRespawn()
         {
             var state = Attackers(1);
-            state.players[1].breachBar = 3900;
+            state.players[1].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             var defender = TestBoardFactory.BuildThreeNodeBoard(balance).villagers[1];
             defender.state = VillagerState.Dead;
             defender.respawnTicksRemaining = 1;
@@ -228,7 +228,7 @@ namespace NodeWar.Tests
             state.players[0].breachCount = state.players[1].breachCount = 2;
             GameSimulation.SimulateTick(state);
             Assert.IsFalse(state.gameOver);
-            state.players[defender].breachBar = 3900;
+            state.players[defender].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             GameSimulation.SimulateTick(state);
             Assert.IsTrue(state.gameOver);
             Assert.AreEqual(1 - defender, state.winnerID);
@@ -242,7 +242,7 @@ namespace NodeWar.Tests
             opposite.ownerID = 1;
             opposite.currentNodeID = 0;
             Add(state, opposite);
-            state.players[0].breachBar = state.players[1].breachBar = 3900;
+            state.players[0].breachBar = state.players[1].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             state.players[0].breachCount = state.players[1].breachCount = 2;
             GameSimulation.SimulateTick(state);
             Assert.IsFalse(state.gameOver);
@@ -256,7 +256,7 @@ namespace NodeWar.Tests
             next.isConsumed = false;
             next.state = VillagerState.Breaching;
             Add(state, next);
-            state.players[nextDefender].breachBar = 3900;
+            state.players[nextDefender].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             GameSimulation.SimulateTick(state);
             Assert.AreEqual(1 - nextDefender, state.winnerID);
         }
@@ -274,7 +274,7 @@ namespace NodeWar.Tests
             state.nodes[1].districtType = state.nodes[1].baseDistrictType = DistrictType.Village;
             state.nodes[1].bonusVillagersOnClaim = 1;
             state.nodes[1].claimBar = balance.claimThreshold - 1;
-            state.players[1].breachBar = 3900;
+            state.players[1].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             GameSimulation.SimulateTick(state);
             Assert.AreEqual(3, state.villagers.Length);
             Assert.IsTrue(state.villagers[0].isConsumed);
@@ -424,7 +424,7 @@ namespace NodeWar.Tests
         {
             var state = Attackers(1);
             state.tickCount = 1799;
-            Ticks(state, 39);
+            Ticks(state, 79);
             Assert.AreEqual(0, state.players[1].breachCount);
             GameSimulation.SimulateTick(state);
             Assert.AreEqual(1, state.players[1].breachCount);
