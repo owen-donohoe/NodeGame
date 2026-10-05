@@ -39,10 +39,12 @@ namespace NodeWar.Lobby
         private LobbyIconKind kind;
         private LobbyIconContext context;
         private bool keepOriginalColours;
+        private Color? resourceTint;
 
         /// <summary>Live resource tint, respecting the theme's original-colour art.</summary>
         public void SetResourceTint(Color tint)
         {
+            resourceTint = tint;
             style.unityBackgroundImageTintColor = keepOriginalColours ? Color.white : tint;
         }
 
@@ -68,18 +70,17 @@ namespace NodeWar.Lobby
         {
             keepOriginalColours = false;
             UIArtTheme theme = UIArt.Theme;
-            if (theme != null && theme.TryIcon(kind, out UIArtTheme.IconEntry entry) && entry.sprite != null)
+            if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
             {
                 keepOriginalColours = entry.keepOriginalColours;
                 style.backgroundImage = new StyleBackground(entry.sprite);
-                style.unityBackgroundImageTintColor = entry.keepOriginalColours
-                    ? new StyleColor(Color.white) : new StyleColor(StyleKeyword.Null);
             }
             else
             {
                 style.backgroundImage = new StyleBackground(ImageFor(kind));
-                style.unityBackgroundImageTintColor = new StyleColor(StyleKeyword.Null);
             }
+            style.unityBackgroundImageTintColor = keepOriginalColours ? new StyleColor(Color.white)
+                : resourceTint.HasValue ? new StyleColor(resourceTint.Value) : new StyleColor(StyleKeyword.Null);
         }
 
         public LobbyIcon()

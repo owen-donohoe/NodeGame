@@ -7,11 +7,13 @@ public class UIArtLookupTests
     {
         public int Kind;
         public bool HasSprite;
-        public Entry(int kind, bool hasSprite) { Kind = kind; HasSprite = hasSprite; }
+        public LobbyIconContext Context;
+        public Entry(int kind, bool hasSprite, LobbyIconContext context = LobbyIconContext.Anywhere)
+        { Kind = kind; HasSprite = hasSprite; Context = context; }
     }
 
-    private static int Resolve(Entry[] entries, int kind) =>
-        UIArtLookup.SpriteIndex(entries, kind, e => e.Kind, e => e.HasSprite);
+    private static int Resolve(Entry[] entries, int kind, LobbyIconContext context = LobbyIconContext.Anywhere) =>
+        UIArtLookup.SpriteIndex(entries, kind, context, e => e.Kind, e => e.Context, e => e.HasSprite);
 
     [Test]
     public void AuthoredSpriteWinsOverGeneratedFallback()

@@ -11,6 +11,8 @@ namespace NodeWar.Lobby
         public struct IconEntry
         {
             public LobbyIconKind kind;
+            [Tooltip("Anywhere is the default for existing entries; specific contexts override it.")]
+            public LobbyIconContext context;
             public Sprite sprite;
             public bool keepOriginalColours;
         }
@@ -19,9 +21,10 @@ namespace NodeWar.Lobby
         public DistrictVisualTable districtVisuals;
 
         // Array order is authoritative, including an empty first entry.
-        public bool TryIcon(LobbyIconKind kind, out IconEntry entry)
+        public bool TryIcon(LobbyIconKind kind, LobbyIconContext context, out IconEntry entry)
         {
-            int index = UIArtLookup.SpriteIndex(icons, (int)kind, e => (int)e.kind, e => e.sprite != null);
+            int index = UIArtLookup.SpriteIndex(icons, (int)kind, context,
+                e => (int)e.kind, e => e.context, e => e.sprite != null);
             if (index >= 0) { entry = icons[index]; return true; }
             entry = default;
             return false;
@@ -33,8 +36,9 @@ namespace NodeWar.Lobby
             if (icons == null) return;
             for (int i = 0; i < icons.Length; i++)
                 for (int j = i + 1; j < icons.Length; j++)
-                    if (icons[i].kind == icons[j].kind)
+                    if (icons[i].kind == icons[j].kind && icons[i].context == icons[j].context)
                         Debug.LogWarning("[UIArtTheme] Duplicate " + icons[i].kind +
+                            " / " + icons[i].context +
                             " in " + name + "; the first entry wins.", this);
         }
 #endif
