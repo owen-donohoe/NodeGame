@@ -14,6 +14,22 @@ namespace NodeWar.Debugging
         private GUIStyle labelStyle;
         private bool styleInitialized = false;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private System.Func<bool> playtestAllowed;
+        private System.Action suddenDeathNow;
+        private bool showMetal, showMagic;
+#endif
+
+        public void ConfigurePlaytestDebug(System.Func<bool> allowed, System.Action suddenDeath)
+        {
+            NodeWar.UI.ResourceVisibility.SetDebugOverrides(false, false, false);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            playtestAllowed = allowed;
+            suddenDeathNow = suddenDeath;
+            showMetal = showMagic = false;
+#endif
+        }
+
         public System.Action<int> OnPlayerSwitched;
 
         public void Initialize(SelectionSystem selection, CommandSystem command)
@@ -41,10 +57,21 @@ namespace NodeWar.Debugging
 
         private void Update()
         {
-            if (isLocked) return;
-
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            bool allowed = playtestAllowed != null && playtestAllowed();
+            if (allowed)
+            {
+                if (keyboard.f6Key.wasPressedThisFrame) suddenDeathNow?.Invoke();
+                if (keyboard.f7Key.wasPressedThisFrame) showMetal = !showMetal;
+                if (keyboard.f11Key.wasPressedThisFrame) showMagic = !showMagic;
+            }
+            NodeWar.UI.ResourceVisibility.SetDebugOverrides(allowed, showMetal, showMagic);
+#endif
+
+            if (isLocked) return;
 
             if (keyboard.tabKey.wasPressedThisFrame)
             {
@@ -71,6 +98,11 @@ namespace NodeWar.Debugging
 
         private void OnGUI()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (playtestAllowed != null && playtestAllowed())
+                GUI.Label(new Rect(10, Screen.height - 24, 570, 22),
+                    "[F6] Sudden death in 5s   [F7] Metal override   [F11] Magic override");
+#endif
             // Locked matches already identify both players in the HUD. This
             // debug label has no switch to offer and covers the breach bar.
             if (isLocked) return;
@@ -100,6 +132,11 @@ namespace NodeWar.Debugging
 
             if (!isLocked)
                 GUI.Label(new Rect(Screen.width - 210, 30, 200, 20), "[Tab] switch", labelStyle);
+        }
+
+        private void OnDisable()
+        {
+            NodeWar.UI.ResourceVisibility.SetDebugOverrides(false, false, false);
         }
     }
 }

@@ -68,6 +68,8 @@
     <Compile Include="ResourceRingMathTests.cs" />
     <Compile Include="ResourceHudMathTests.cs" />
     <Compile Include="SheetResourceMathTests.cs" />
+    <Compile Include="PlaytestDebugMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Debug/PlaytestDebugMath.cs" Link="Debug/PlaytestDebugMath.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/SheetResourceMath.cs" Link="UI/SheetResourceMath.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceHudMath.cs"
              Link="Gameplay/ResourceHudMath.cs" />

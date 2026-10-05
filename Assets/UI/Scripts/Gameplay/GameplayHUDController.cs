@@ -335,6 +335,18 @@ namespace NodeWar.UI
             Refresh();
         }
 
+        /// <summary>Local playtest schedule supplied by GameManager; no state write here.</summary>
+        public void SetDebugBalance(GameBalanceData debugBalance)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            balance = debugBalance;
+            suddenDeathScheduled = balance.BreachBarEnabled() && balance.SuddenDeathValid() &&
+                balance.suddenDeathTicks != null && balance.suddenDeathTicks.Length > 0;
+            lastCountdown = -1;
+            RefreshSuddenDeathCountdown();
+#endif
+        }
+
         private void Update()
         {
             if (safeArea != null) safeArea.Update();
