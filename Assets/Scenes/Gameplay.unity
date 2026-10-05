@@ -153,8 +153,9 @@ MonoBehaviour:
   ghostPreviewPrefab: {fileID: 1879787182496836857, guid: 98b61a6da97a6d148acb674bbbad90ad, type: 3}
   confirmedPlacementPrefab: {fileID: 1879787182496836857, guid: cb78baab2f6893549a2fbced9bbdf914, type: 3}
   pieceYOffset: 0.1
-  validCellTint: {r: 0.3, g: 1, b: 0.3, a: 0.7}
-  invalidCellTint: {r: 1, g: 0.3, b: 0.3, a: 0.5}
+  ghostAlpha: 0.75
+  blockedCellTint: {r: 0.55, g: 0.55, b: 0.58, a: 0.45}
+  placedAlpha: 0.9
   placementDropHeight: 6
   placementDropDuration: 0.4
   placementDropEase: 5
@@ -639,6 +640,7 @@ MonoBehaviour:
   nodePrefabWatchtower: {fileID: 3054436516923914996, guid: 47ba9deb0f688894dba8355c64db7e8c, type: 3}
   nodePrefabRampart: {fileID: 6457397819837387546, guid: b12c9e939dc3ef24c9e43b5c79f6ed6e, type: 3}
   nodePrefabMarket: {fileID: 3130650414941034616, guid: 1d035d50e9d75bf4493e6a721d8fd1e1, type: 3}
+  districtVisuals: {fileID: 11400000, guid: d98dc8e3b3b5dfc4d9024fd198a39929, type: 2}
   villagerPrefab: {fileID: 7037243673507716427, guid: 4b6014b072d214546a7d15f00c45b8c2, type: 3}
   pathCurveSettings:
     cornerRadius: 1
@@ -661,6 +663,87 @@ MonoBehaviour:
     farAlpha: 0
     offScreenFade: 0.35
     widthScale: 1
+  indicatorSettings:
+    innerEnter: 0.6
+    innerExit: 0.66
+    mergeRadius: 48
+    maxAtEdge: 6
+    nodeHeight: 2.5
+    battleHeight: 0.75
+    villagerHeight: 1.6
+    battle:
+      enabled: 1
+      tier: 2
+      inView: 0
+      showAtEdge: 1
+      minSeconds: 0.5
+      graceSeconds: 1
+      holdSeconds: 0
+    nodeUnderAttack:
+      enabled: 1
+      tier: 2
+      inView: 1
+      showAtEdge: 1
+      minSeconds: 0.5
+      graceSeconds: 1
+      holdSeconds: 1.5
+    nodeContested:
+      enabled: 1
+      tier: 0
+      inView: 1
+      showAtEdge: 1
+      minSeconds: 0.5
+      graceSeconds: 1
+      holdSeconds: 0
+    threatToCore:
+      enabled: 1
+      tier: 2
+      inView: 2
+      showAtEdge: 1
+      minSeconds: 0
+      graceSeconds: 0.5
+      holdSeconds: 0
+    threatToTerritory:
+      enabled: 1
+      tier: 0
+      inView: 1
+      showAtEdge: 1
+      minSeconds: 0
+      graceSeconds: 0.5
+      holdSeconds: 0
+    idle:
+      enabled: 1
+      tier: 0
+      inView: 1
+      showAtEdge: 1
+      minSeconds: 3
+      graceSeconds: 0
+      holdSeconds: 0
+    respawn:
+      enabled: 1
+      tier: 1
+      inView: 1
+      showAtEdge: 1
+      minSeconds: 0
+      graceSeconds: 0
+      holdSeconds: 2
+    effect:
+      enabled: 1
+      tier: 0
+      inView: 1
+      showAtEdge: 1
+      minSeconds: 0
+      graceSeconds: 0
+      holdSeconds: 2
+  screenShakeSettings:
+    coreHitStrength: 0.6
+    coreHitSeconds: 0.25
+    captureStrength: 0.2
+    captureSeconds: 0.15
+    takeFromOpponentStrength: 0.5
+    takeFromOpponentSeconds: 0.22
+    gameOverStrength: 1
+    gameOverSeconds: 0.5
   uiManagerPrefab: {fileID: 1179502340871732392, guid: f084a61f391446a42a1522f75a3b1087, type: 3}
   useUIToolkitHUD: 1
   uiToolkitHudRoot: {fileID: 1710263983}
@@ -742,6 +825,8 @@ MonoBehaviour:
   zoomSmoothingSpeed: 8
   useBounds: 1
   boundsPushbackForce: 10
+  shakeAmplitude: 0.012
+  shakeFrequency: 25
   draftPitch: 60
   draftZoomDistance: 50
   draftRigOffset: {x: 0, y: 0, z: -6}
