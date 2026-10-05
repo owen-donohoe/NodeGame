@@ -34,6 +34,12 @@ namespace NodeWar.Core
         [SerializeField] private GameObject nodePrefabRampart;
         [SerializeField] private GameObject nodePrefabMarket;
 
+        [Tooltip("One place per district for its art. A district's DistrictVisual.boardPrefab, when " +
+                 "set, is the node prefab used for it; otherwise the nodePrefab* slot above, then the " +
+                 "default. Its boardOffset / boardEuler / boardScale tune the art on the board. Empty " +
+                 "entries change nothing.")]
+        [SerializeField] private NodeWar.View.DistrictVisualTable districtVisuals;
+
         [Header("Villager Prefab")]
         [SerializeField] private GameObject villagerPrefab;
 
@@ -1607,6 +1613,26 @@ namespace NodeWar.Core
 
         // ===== VIEW SPAWNING =====
 
+        /// <summary>The DistrictVisual for a district, or null when there is no table or no entry.</summary>
+        private NodeWar.View.DistrictVisual BoardVisualFor(DistrictType type)
+        {
+            return districtVisuals != null ? districtVisuals.For(type) : null;
+        }
+
+        /// <summary>
+        /// THE ONE PLACE a node's board art is built. Chooses the prefab (table entry, then the
+        /// per-district slot, then the default), instantiates it, and applies the district's board
+        /// tuning to its art. Every node on the board comes through here; a district's node is
+        /// never swapped for another prefab afterwards (a capture changes ownership, not the
+        /// district), so there is no second call site to keep in step.
+        /// </summary>
+        private GameObject SpawnBoardNode(DistrictType type, Transform parent)
+        {
+            GameObject nodeGO = Instantiate(GetPrefabForDistrict(type), parent);
+            NodeWar.View.BoardArtPlacer.Apply(nodeGO, BoardVisualFor(type));
+            return nodeGO;
+        }
+
         private GameObject GetPrefabForDistrict(DistrictType type)
         {
             GameObject prefab = null;
@@ -1627,8 +1653,9 @@ namespace NodeWar.Core
                 case DistrictType.Market: prefab = nodePrefabMarket; break;
                 default: prefab = nodePrefabDefault; break;
             }
-            if (prefab == null) prefab = nodePrefabDefault;
-            return prefab;
+            NodeWar.View.DistrictVisual visual = BoardVisualFor(type);
+            GameObject fromTable = visual != null ? visual.boardPrefab : null;
+            return NodeWar.View.BoardArtRules.ChoosePrefab(fromTable, prefab, nodePrefabDefault, p => p != null);
         }
 
         private void SpawnNodeViews()
@@ -1641,8 +1668,7 @@ namespace NodeWar.Core
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                GameObject prefab = GetPrefabForDistrict(state.nodes[i].districtType);
-                GameObject nodeGO = Instantiate(prefab, nodeParent);
+                GameObject nodeGO = SpawnBoardNode(state.nodes[i].districtType, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
                 nodeGO.transform.position = new Vector3(
                     state.nodes[i].gridX * boardConfig.nodeScale,
