@@ -309,6 +309,14 @@
 }
 
 .sheet__res-readout--bar { margin-right: 0; width: 100%; }
+.sheet__res-readout-tint {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    border-top-left-radius: 14px; border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px; border-bottom-right-radius: 14px;
+    opacity: 0.22;
+}
+.sheet__res-readout--bar > .sheet__res-readout-tint { opacity: 0.12; }
 .sheet__res-readout--changing { opacity: 0.55; }
 .sheet__res-readout--reduced { transition-duration: 0s; }
 .sheet__res-chip-icon { width: 14px; height: 14px; margin-right: 6px; }

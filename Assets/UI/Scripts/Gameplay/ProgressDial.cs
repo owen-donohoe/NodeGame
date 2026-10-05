@@ -15,6 +15,8 @@ namespace NodeWar.UI
     public class ProgressDial : VisualElement
     {
         private const float Thickness = 7f;
+        private float thickness = Thickness;
+        private Color? trackColor, fillColor;
 
         private float progress;
 
@@ -35,30 +37,39 @@ namespace NodeWar.UI
         {
             pickingMode = PickingMode.Ignore;
             generateVisualContent += Draw;
-            RegisterCallback<CustomStyleResolvedEvent>(_ => MarkDirtyRepaint());
+            RegisterCallback<CustomStyleResolvedEvent>(evt =>
+            {
+                var style = evt.customStyle;
+                thickness = style.TryGetValue(new CustomStyleProperty<float>("--dial-thickness"), out float size)
+                    ? UiArtMath.Geometry(size, Thickness, 1f, 40f) : Thickness;
+                trackColor = style.TryGetValue(new CustomStyleProperty<Color>("--dial-track-color"), out Color track) ? track : (Color?)null;
+                fillColor = style.TryGetValue(new CustomStyleProperty<Color>("--dial-fill-color"), out Color fill) ? fill : (Color?)null;
+                MarkDirtyRepaint();
+            });
         }
 
         private void Draw(MeshGenerationContext context)
         {
             Rect rect = contentRect;
             float size = Mathf.Min(rect.width, rect.height);
-            if (size <= Thickness * 2f) return;
+            if (size <= 2f) return;
+            float stroke = Mathf.Min(thickness, size * 0.25f);
 
             Vector2 centre = rect.center;
-            float radius = size * 0.5f - Thickness * 0.5f;
+            float radius = size * 0.5f - stroke * 0.5f;
 
             Painter2D painter = context.painter2D;
-            painter.lineWidth = Thickness;
+            painter.lineWidth = stroke;
             painter.lineCap = LineCap.Butt;
 
-            painter.strokeColor = resolvedStyle.unityBackgroundImageTintColor;
+            painter.strokeColor = trackColor ?? resolvedStyle.unityBackgroundImageTintColor;
             painter.BeginPath();
             painter.Arc(centre, radius, 0f, 360f);
             painter.Stroke();
 
             if (progress <= 0f) return;
 
-            painter.strokeColor = resolvedStyle.color;
+            painter.strokeColor = fillColor ?? resolvedStyle.color;
             painter.BeginPath();
             painter.Arc(centre, radius, -90f, -90f + 360f * progress);
             painter.Stroke();
