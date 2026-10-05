@@ -16,27 +16,25 @@
     200
   ],
   "tempoRespawnPercent": [
-    125,
-    150
+    80,
+    67
   ],
   "tempoProductionPercent": [
     110,
     125
   ],
   "suddenDeathTicks": [
-    2400,
-    3000
+    2400
   ],
   "suddenDeathThresholds": [
-    2,
     1
   ],
   "breachBarMax": 4000,
   "breachSwarmRate": [
-    100,
-    165,
-    215,
-    250
+    50,
+    83,
+    108,
+    125
   ],
   "breachBarDecayPerTick": 200,
   "maxWorkersPerNode": 2,
