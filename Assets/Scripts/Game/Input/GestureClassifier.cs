@@ -339,8 +339,12 @@ namespace NodeWar.Input
                     }
                     // Only an already-selected villager starts an order drag; an unselected
                     // one never does, so a drag that starts on it is a pan and never selects it.
-                    if (moved > tapSlop && downClass == GestureTargetClass.SelectedVillager &&
-                        IsEnabled(InputSlot.DragFromVillager))
+                    // While it is on and the press is on a selected villager, the order drag owns
+                    // this press: it starts at the slop ahead of Drag and the Hold + drag timer, and
+                    // a still hold on it arms no lasso (the drag after it is still an order).
+                    bool orderOwnsPress = downClass == GestureTargetClass.SelectedVillager &&
+                        IsEnabled(InputSlot.DragFromVillager);
+                    if (moved > tapSlop && orderOwnsPress)
                     {
                         State = GestureState.Ordering;
                         Emit(GestureEventKind.Cancelled);
@@ -350,7 +354,7 @@ namespace NodeWar.Input
                     }
                     // A hitch cannot strand a drag between the slop and timer.
                     // Stillness counts the whole path, so drifting back does not re-arm a hold.
-                    if (IsEnabled(InputSlot.Drag) &&
+                    if (!orderOwnsPress && IsEnabled(InputSlot.Drag) &&
                         (moved > tapSlop || (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength > holdStillness)))
                     {
                         if (ActionFor(InputSlot.Drag) == InputAction.LassoSelect)
@@ -363,7 +367,7 @@ namespace NodeWar.Input
                             Emit(GestureEventKind.PanUpdate, sample.Position);
                         }
                     }
-                    else if (IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness)
+                    else if (!orderOwnsPress && IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness)
                     {
                         holdArmedStill = true;
                         if (ActionFor(InputSlot.HoldDrag) == InputAction.Pan)
@@ -375,7 +379,7 @@ namespace NodeWar.Input
                         }
                         else BeginLasso(sample.Position, armed: true);
                     }
-                    else if (!IsEnabled(InputSlot.HoldDrag) && held >= holdTime && pathLength <= holdStillness && HoldInfoApplies())
+                    else if ((orderOwnsPress || !IsEnabled(InputSlot.HoldDrag)) && held >= holdTime && pathLength <= holdStillness && HoldInfoApplies())
                     {
                         // Nothing else wants the hold, so it fires at the timer rather than on release.
                         State = GestureState.HoldFired;

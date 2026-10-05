@@ -694,12 +694,81 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
-        public void HoldStillOnSelectedVillagerStillArmsTheLassoNotTheOrder()
+        public void StillHoldOnSelectedVillagerWithOrderDragOnArmsNoLasso()
         {
             Enable(InputSlot.DragFromVillager);
             Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
             Press(0.3f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Press(0.4f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Assert.AreEqual(GestureState.Pending, core.State);
+            Assert.IsFalse(core.PanSuppressed);
+            Press(0.5f, PointerPhase.Ended, GestureTargetClass.SelectedVillager, 3);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled);
+        }
+
+        [Test]
+        public void SelectedVillagerStillHoldThenDragIsAnOrderNotALasso()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.2f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Press(0.4f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Press(0.5f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            Assert.AreEqual(GestureState.Ordering, core.State);
+            Press(0.6f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 20f);
+            Press(0.7f, PointerPhase.Ended, GestureTargetClass.SelectedVillager, 3, 20f);
+            Assert.AreEqual(0, Count(GestureEventKind.LassoBegin));
+            Assert.AreEqual(0, Count(GestureEventKind.PanBegin));
+            Assert.AreEqual(1, Count(GestureEventKind.OrderBegin));
+            Assert.AreEqual(1, Count(GestureEventKind.OrderEnd));
+        }
+
+        [Test]
+        public void SelectedVillagerImmediateDragIsAnOrderEvenWithHoldAndDragOn()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.016f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 5f);
+            Assert.AreEqual(GestureState.Ordering, core.State);
+            Assert.AreEqual(0, Count(GestureEventKind.PanBegin));
+        }
+
+        [Test]
+        public void UnselectedVillagerDragAndHoldKeepTodaysBehaviourWithOrderDragOn()
+        {
+            Enable(InputSlot.DragFromVillager);
+            Press(0f, PointerPhase.Began, GestureTargetClass.Villager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.Villager, 3, 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+            Press(0.2f, PointerPhase.Ended, GestureTargetClass.Villager, 3, 6f);
+
+            Press(5f, PointerPhase.Began, GestureTargetClass.Villager, 3);
+            Press(5.3f, PointerPhase.Held, GestureTargetClass.Villager, 3);
             Assert.AreEqual(GestureState.LassoArmed, core.State);
+            Press(5.4f, PointerPhase.Ended, GestureTargetClass.Villager, 3);
+        }
+
+        [Test]
+        public void OrderDragOffLeavesSelectedVillagerPresses()
+        {
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.1f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3, 6f);
+            Assert.AreEqual(GestureState.Panning, core.State);
+            Press(0.2f, PointerPhase.Ended, GestureTargetClass.SelectedVillager, 3, 6f);
+
+            Press(5f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(5.3f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
+        }
+
+        [Test]
+        public void StillHoldOnSelectedVillagerStillOpensInfoWhenHoldIsOn()
+        {
+            Enable(InputSlot.DragFromVillager, InputSlot.Hold);
+            Press(0f, PointerPhase.Began, GestureTargetClass.SelectedVillager, 3);
+            Press(0.3f, PointerPhase.Held, GestureTargetClass.SelectedVillager, 3);
+            Assert.AreEqual(GestureEventKind.HoldInfo, events[events.Count - 1].Kind);
+            Assert.AreEqual(0, Count(GestureEventKind.LassoBegin));
         }
 
         public static IEnumerable<int> ToggleMasks()
