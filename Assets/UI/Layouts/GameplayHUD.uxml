@@ -196,12 +196,12 @@
 
         <!--
             With villagers selected, the next node tap is a move order. The
-            chip says that mode is armed. Not a control: the order is given on
+            tooltip says that mode is armed (Settings: Tooltips turns it off). Not a control: the order is given on
             the board, never from a panel.
         -->
         <engine:VisualElement name="hud-selection" class="hud__selection-dock" picking-mode="Ignore">
             <engine:VisualElement class="ui-chip ui-chip--action hud__selection" picking-mode="Ignore">
-                <engine:Label name="hud-selection-text" class="ui-chip__text ui-w600" text="Tap a node to move · 0" picking-mode="Ignore" />
+                <engine:Label name="hud-selection-text" class="ui-chip__text ui-w600" text="Tap a node to move" picking-mode="Ignore" />
             </engine:VisualElement>
         </engine:VisualElement>
 
@@ -404,6 +404,11 @@
             <engine:Button name="hud-settings-row-camerabutton" class="ui-reset-button hud__settings-row hud__settings-row--switch">
                 <engine:Label class="hud__settings-label ui-w500" text="Camera button" picking-mode="Ignore" />
                 <lobby:LobbySwitch name="hud-settings-camerabutton" value="true" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-tooltips" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Tooltips" picking-mode="Ignore" />
+                <lobby:LobbySwitch name="hud-settings-tooltips" value="true" />
             </engine:Button>
 
             <engine:Button name="hud-settings-row-side" class="ui-reset-button hud__settings-row hud__settings-row--switch">

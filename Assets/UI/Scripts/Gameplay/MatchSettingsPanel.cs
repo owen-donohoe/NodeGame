@@ -41,6 +41,7 @@ namespace NodeWar.UI
         private readonly LobbyIcon emotesIcon;
         private readonly Label frameCapLabel;
         private readonly LobbySwitch cameraButtonSwitch;
+        private readonly LobbySwitch tooltipsSwitch;
         private readonly Label sideLabel;
 
         private readonly VisualElement surrenderArea;
@@ -117,7 +118,9 @@ namespace NodeWar.UI
             // list is on the lobby's Settings page.
             cameraButtonSwitch = hudRoot.Q<LobbySwitch>("hud-settings-camerabutton");
             sideLabel = hudRoot.Q<Label>("hud-settings-side");
+            tooltipsSwitch = hudRoot.Q<LobbySwitch>("hud-settings-tooltips");
             BindControlsRow(hudRoot, "hud-settings-row-camerabutton", ControlsViewModel.ToggleCameraButton);
+            BindControlsRow(hudRoot, "hud-settings-row-tooltips", ControlsViewModel.ToggleTooltips);
             BindControlsRow(hudRoot, "hud-settings-row-side", ControlsViewModel.CycleControlsSide);
             BindControlsRow(hudRoot, "hud-settings-row-controls-reset", ControlsViewModel.ResetControls);
 
@@ -292,6 +295,7 @@ namespace NodeWar.UI
         private void UpdateControls()
         {
             if (cameraButtonSwitch != null) cameraButtonSwitch.Value = current.showCameraButton;
+            if (tooltipsSwitch != null) tooltipsSwitch.Value = current.tooltips;
             if (sideLabel != null) sideLabel.text = ControlsViewModel.SideLabel(current.controlsSide);
         }
 

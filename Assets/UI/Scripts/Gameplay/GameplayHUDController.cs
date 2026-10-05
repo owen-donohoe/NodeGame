@@ -99,6 +99,7 @@ namespace NodeWar.UI
         private VisualElement selectionBar;
         private Label selectionBarCount;
         private bool showSelectionBar = true;
+        private bool showTooltips = true;
         private bool handleZoomEnabled = true;
         private float insetLeft = -1f;
         private float insetRight = -1f;
@@ -591,6 +592,7 @@ namespace NodeWar.UI
 
             handleZoomEnabled = settings.cameraButtonZoom;
             showSelectionBar = settings.showSelectionBar;
+            showTooltips = settings.tooltips;
 
             // Redraw the bar now rather than on the next selection change.
             lastSelected = -1;
@@ -801,7 +803,7 @@ namespace NodeWar.UI
             lastSelected = count;
 
             if (selectionDock != null)
-                selectionDock.EnableInClassList("hud__selection-dock--on", count > 0);
+                selectionDock.EnableInClassList("hud__selection-dock--on", showTooltips && count > 0);
 
             if (selectionBar != null)
                 selectionBar.EnableInClassList("hud__selbar--on", showSelectionBar && count > 0);
@@ -809,8 +811,6 @@ namespace NodeWar.UI
             if (selectionBarCount != null && count > 0)
                 selectionBarCount.text = count.ToString();
 
-            if (selectionText != null && count > 0)
-                selectionText.text = "Tap a node to move · " + count;
         }
 
         // ===== CAMERA AFFORDANCES =====

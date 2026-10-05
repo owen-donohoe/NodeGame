@@ -115,7 +115,10 @@ namespace NodeWar.Lobby
         public bool showCameraButton;
         public bool cameraButtonZoom;
         public int controlsSide; // 0 Right, 1 Left.
-        public bool showSelectionBar;
+        public bool showSelectionBar; // The selection counter button; the field kept its first name.
+
+        /// <summary>Hints such as "Tap a node to move". Added to version 5 before it shipped.</summary>
+        public bool tooltips;
 
         /// <summary>
         /// The values the Settings page is authored with in SettingsPage.uxml.
@@ -150,7 +153,8 @@ namespace NodeWar.Lobby
                 showCameraButton = true,
                 cameraButtonZoom = true,
                 controlsSide = 0,
-                showSelectionBar = true
+                showSelectionBar = true,
+                tooltips = true
             };
         }
 
@@ -189,6 +193,7 @@ namespace NodeWar.Lobby
                 source.cameraButtonZoom = true;
                 source.controlsSide = 0;
                 source.showSelectionBar = true;
+                source.tooltips = true;
             }
 
             return new GameSettingsData
@@ -217,7 +222,8 @@ namespace NodeWar.Lobby
                 showCameraButton = source.showCameraButton,
                 cameraButtonZoom = source.cameraButtonZoom,
                 controlsSide = source.controlsSide == 1 ? 1 : 0,
-                showSelectionBar = source.showSelectionBar
+                showSelectionBar = source.showSelectionBar,
+                tooltips = source.tooltips
             };
         }
 
@@ -245,7 +251,8 @@ namespace NodeWar.Lobby
                 || a.showCameraButton != b.showCameraButton
                 || a.cameraButtonZoom != b.cameraButtonZoom
                 || a.controlsSide != b.controlsSide
-                || a.showSelectionBar != b.showSelectionBar;
+                || a.showSelectionBar != b.showSelectionBar
+                || a.tooltips != b.tooltips;
         }
 
         /// <summary>

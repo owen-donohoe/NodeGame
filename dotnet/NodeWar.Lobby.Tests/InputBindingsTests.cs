@@ -73,6 +73,7 @@ namespace NodeWar.Lobby.Tests
             Assert.IsTrue(result.cameraButtonZoom);
             Assert.AreEqual(0, result.controlsSide);
             Assert.IsTrue(result.showSelectionBar);
+            Assert.IsTrue(result.tooltips);
             if (version > 0) Assert.AreEqual(0.17f, result.masterVolume);
         }
 
@@ -168,10 +169,12 @@ namespace NodeWar.Lobby.Tests
         {
             GameSettingsData settings = AllOptionalInputsOff();
             settings.showSelectionBar = false;
+            settings.tooltips = false;
             GameSettingsData result = GameSettingsData.Normalized(settings);
             Assert.IsFalse(result.showCameraButton);
             Assert.IsFalse(result.cameraButtonZoom);
             Assert.IsFalse(result.showSelectionBar);
+            Assert.IsFalse(result.tooltips);
             for (int i = 1; i < result.inputBindings.Length; i++) Assert.IsFalse(result.inputBindings[i].enabled);
         }
 

@@ -46,7 +46,7 @@ namespace NodeWar.Lobby
         private readonly Action<float> holdChanged;
 
         private readonly List<SlotRowView> slotRows = new List<SlotRowView>();
-        private VisualElement cameraRow, cameraCheck, zoomRow, zoomCheck, selbarCheck, sideRow;
+        private VisualElement cameraRow, cameraCheck, zoomRow, zoomCheck, selbarCheck, tooltipsCheck, sideRow;
         private Button zoomHit;
         private Button sideButton;
         private Label sideValue, holdValue, warnings;
@@ -120,8 +120,11 @@ namespace NodeWar.Lobby
             zoomRow.AddToClassList("cp-row--sub");
             layout.Add(zoomRow);
 
-            layout.Add(SwitchRow("Selection bar", out selbarCheck, out _,
+            layout.Add(SwitchRow("Selection counter", out selbarCheck, out _,
                 () => edit(ControlsViewModel.ToggleSelectionBar)));
+
+            layout.Add(SwitchRow("Tooltips", out tooltipsCheck, out _,
+                () => edit(ControlsViewModel.ToggleTooltips)));
 
             sideRow = NewRow();
             sideRow.Add(Spacer());
@@ -307,6 +310,7 @@ namespace NodeWar.Lobby
             cameraCheck.EnableInClassList("cp-check--on", current.showCameraButton);
             zoomCheck.EnableInClassList("cp-check--on", current.cameraButtonZoom);
             selbarCheck.EnableInClassList("cp-check--on", current.showSelectionBar);
+            tooltipsCheck.EnableInClassList("cp-check--on", current.tooltips);
 
             bool zoomDimmed = ControlsViewModel.CameraZoomDimmed(current);
             zoomRow.EnableInClassList("cp-row--dim", zoomDimmed);

@@ -45,7 +45,7 @@ namespace NodeWar.Lobby.Tests
                 ControlsViewModel.Groups[3].Slots);
             CollectionAssert.AreEqual(new[] { InputSlot.MiddleDrag, InputSlot.ScrollWheel },
                 ControlsViewModel.Groups[4].Slots);
-            Assert.AreEqual("Camera & layout", ControlsViewModel.CameraAndLayoutTitle);
+            Assert.AreEqual("Camera, layout & hints", ControlsViewModel.CameraAndLayoutTitle);
         }
 
         [Test]
@@ -111,6 +111,17 @@ namespace NodeWar.Lobby.Tests
             GameSettingsData off = ControlsViewModel.ToggleSlot(Defaults(), InputSlot.Drag);
             Assert.IsTrue(ControlsViewModel.RowFor(off, InputSlot.Drag).Dimmed);
             Assert.IsFalse(ControlsViewModel.RowFor(off, InputSlot.Drag).Locked);
+        }
+
+        [Test]
+        public void Tooltips_DefaultOn_ToggleClonesAndSurvivesNormalizeAndReset()
+        {
+            Assert.IsTrue(Defaults().tooltips);
+            GameSettingsData off = ControlsViewModel.ToggleTooltips(Defaults());
+            Assert.IsFalse(off.tooltips);
+            Assert.IsTrue(Defaults().tooltips, "the original is untouched");
+            Assert.IsFalse(GameSettingsData.Normalized(off).tooltips);
+            Assert.IsTrue(ControlsViewModel.ResetControls(off).tooltips);
         }
 
         [Test]
@@ -229,6 +240,7 @@ namespace NodeWar.Lobby.Tests
             Assert.IsTrue(GameSettingsData.Differ(original, ControlsViewModel.ToggleCameraButton(original)));
             Assert.IsTrue(GameSettingsData.Differ(original, ControlsViewModel.ToggleCameraButtonZoom(original)));
             Assert.IsTrue(GameSettingsData.Differ(original, ControlsViewModel.ToggleSelectionBar(original)));
+            Assert.IsTrue(GameSettingsData.Differ(original, ControlsViewModel.ToggleTooltips(original)));
             Assert.IsTrue(GameSettingsData.Differ(original, ControlsViewModel.CycleControlsSide(original)));
             Assert.IsTrue(GameSettingsData.Differ(original, ControlsViewModel.SetHoldTime(original, 0.5f)));
         }
@@ -254,6 +266,7 @@ namespace NodeWar.Lobby.Tests
             edited = ControlsViewModel.ToggleCameraButton(edited);
             edited = ControlsViewModel.ToggleCameraButtonZoom(edited);
             edited = ControlsViewModel.ToggleSelectionBar(edited);
+            edited = ControlsViewModel.ToggleTooltips(edited);
             edited = ControlsViewModel.CycleControlsSide(edited);
             edited = ControlsViewModel.SetHoldTime(edited, 0.9f);
             Assert.IsTrue(GameSettingsData.Differ(GameSettingsData.CreateDefault(), edited));

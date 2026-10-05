@@ -93,7 +93,7 @@ namespace NodeWar.Lobby
             new ControlsGroup("Mouse", InputSlot.MiddleDrag, InputSlot.ScrollWheel)
         };
 
-        public const string CameraAndLayoutTitle = "Camera & layout";
+        public const string CameraAndLayoutTitle = "Camera, layout & hints";
 
         private static readonly InputSlot[] RowOrder = FlattenGroups();
 
@@ -273,6 +273,13 @@ namespace NodeWar.Lobby
             return settings;
         }
 
+        public static GameSettingsData ToggleTooltips(GameSettingsData settings)
+        {
+            settings = Editable(settings);
+            settings.tooltips = !settings.tooltips;
+            return settings;
+        }
+
         public static GameSettingsData CycleControlsSide(GameSettingsData settings)
         {
             settings = Editable(settings);
@@ -301,6 +308,7 @@ namespace NodeWar.Lobby
             settings.cameraButtonZoom = defaults.cameraButtonZoom;
             settings.controlsSide = defaults.controlsSide;
             settings.showSelectionBar = defaults.showSelectionBar;
+            settings.tooltips = defaults.tooltips;
             return settings;
         }
 
