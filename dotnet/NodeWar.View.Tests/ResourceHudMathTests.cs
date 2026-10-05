@@ -1,13 +1,11 @@
 using NodeWar.UI;
+using NodeWar.Simulation;
 using NUnit.Framework;
 
 namespace NodeWar.View.Tests
 {
     public class ResourceHudMathTests
     {
-        private sealed class CappedBalance { public int foodCap = 40; public int materialsCap; public int metalCap = 12; }
-        private sealed class OldBalance { public int somethingElse = 3; }
-
         [TestCase(30, 30, true)]
         [TestCase(31, 30, true)]
         [TestCase(29, 30, false)]
@@ -20,19 +18,27 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(full, ResourceHudMath.IsFull(value, cap));
         }
 
-        [Test]
-        public void CapsFallBackToThirtyThirtyTenWhenTheFieldIsMissingOrUnset()
+        [TestCase(0)]
+        [TestCase(-1)]
+        [TestCase(int.MinValue)]
+        public void NonpositiveCapsUseFiniteDisplayDefaults(int cap)
         {
-            var old = new OldBalance();
-            Assert.AreEqual(30, ResourceCaps.Food(old));
-            Assert.AreEqual(30, ResourceCaps.Materials(old));
-            Assert.AreEqual(10, ResourceCaps.Metal(old));
-            Assert.AreEqual(30, ResourceCaps.Food(null));
+            var balance = new GameBalanceData { foodCap = cap, materialsCap = cap, metalCap = cap };
+            Assert.AreEqual(30, ResourceCaps.Food(balance));
+            Assert.AreEqual(30, ResourceCaps.Materials(balance));
+            Assert.AreEqual(10, ResourceCaps.Metal(balance));
+        }
 
-            var capped = new CappedBalance();
-            Assert.AreEqual(40, ResourceCaps.Food(capped));
-            Assert.AreEqual(30, ResourceCaps.Materials(capped), "zero means unset");
-            Assert.AreEqual(12, ResourceCaps.Metal(capped));
+        [Test]
+        public void PositiveCapsReadEachTypedFieldDirectlyWithoutCaching()
+        {
+            var balance = new GameBalanceData { foodCap = 40, materialsCap = 50, metalCap = 12 };
+            Assert.AreEqual(40, ResourceCaps.Food(balance));
+            Assert.AreEqual(50, ResourceCaps.Materials(balance));
+            Assert.AreEqual(12, ResourceCaps.Metal(balance));
+            balance.foodCap = 20;
+            Assert.AreEqual(20, ResourceCaps.Food(balance));
+            Assert.AreEqual(50, ResourceCaps.Materials(balance));
         }
 
         [TestCase(0, 0, false)]

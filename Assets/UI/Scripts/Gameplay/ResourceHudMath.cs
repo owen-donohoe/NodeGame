@@ -1,5 +1,5 @@
 using System;
-using System.Reflection;
+using NodeWar.Simulation;
 
 namespace NodeWar.UI
 {
@@ -224,35 +224,24 @@ namespace NodeWar.UI
     }
 
     /// <summary>
-    /// The resource caps, read off the balance data by name. The cap fields (foodCap,
-    /// materialsCap, metalCap) are added on another branch, so until they exist, and
-    /// whenever one is zero or unset, the documented defaults apply. Reading by name rather
-    /// than by member keeps this compiling on both sides of that merge.
+    /// Typed balance caps. Nonpositive simulation caps are uncapped, but presentation
+    /// retains finite display defaults (30/30/10) for its rings and bars.
     /// </summary>
     public static class ResourceCaps
     {
-        public static int Food(object balance)
+        public static int Food(GameBalanceData balance)
         {
-            return Read(balance, "foodCap", ResourceHudMath.DefaultFoodCap);
+            return balance.foodCap > 0 ? balance.foodCap : ResourceHudMath.DefaultFoodCap;
         }
 
-        public static int Materials(object balance)
+        public static int Materials(GameBalanceData balance)
         {
-            return Read(balance, "materialsCap", ResourceHudMath.DefaultMaterialsCap);
+            return balance.materialsCap > 0 ? balance.materialsCap : ResourceHudMath.DefaultMaterialsCap;
         }
 
-        public static int Metal(object balance)
+        public static int Metal(GameBalanceData balance)
         {
-            return Read(balance, "metalCap", ResourceHudMath.DefaultMetalCap);
-        }
-
-        public static int Read(object balance, string field, int fallback)
-        {
-            if (balance == null) return fallback;
-            FieldInfo info = balance.GetType().GetField(field, BindingFlags.Public | BindingFlags.Instance);
-            if (info == null || info.FieldType != typeof(int)) return fallback;
-            int value = (int)info.GetValue(balance);
-            return value > 0 ? value : fallback;
+            return balance.metalCap > 0 ? balance.metalCap : ResourceHudMath.DefaultMetalCap;
         }
     }
 }
