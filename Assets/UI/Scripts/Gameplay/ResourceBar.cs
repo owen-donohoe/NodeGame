@@ -20,6 +20,7 @@ namespace NodeWar.UI
     public class ResourceBar : VisualElement
     {
         private const float SegmentGap = 3f;
+        private float skinThickness;
         private const long TickMilliseconds = 16;
         private const int WaveSlices = 3;
 
@@ -59,6 +60,8 @@ namespace NodeWar.UI
         private void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
         {
             ICustomStyle style = customStyle;
+            skinThickness = style.TryGetValue(new CustomStyleProperty<float>("--res-thickness"), out float thickness)
+                ? UiArtMath.Geometry(thickness, 6f, 1f, 40f) : 0f;
             ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
                 ref colorOk, ref colorGood, ref colorRich);
             ResourceRingColors.TryRead(style, "--ring-track", ref colorTrack);
@@ -132,6 +135,12 @@ namespace NodeWar.UI
         private void Draw(MeshGenerationContext context)
         {
             Rect rect = contentRect;
+            if (skinThickness > 0f)
+            {
+                float height = Mathf.Min(skinThickness, rect.height);
+                rect.y += (rect.height - height) * 0.5f;
+                rect.height = height;
+            }
             int segments = cap;
             if (segments <= 0 || rect.width <= SegmentGap * segments || rect.height <= 0f) return;
 

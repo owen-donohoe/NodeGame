@@ -92,12 +92,12 @@ namespace NodeWar.Lobby
             : base("settings-page", layout, "Settings layout missing - assign SettingsPage.uxml")
         {
             this.accountFlow = accountFlow;
-            accountStatus = Root.Q<Label>("settings-account-status");
-            accountMessage = Root.Q<Label>("settings-account-message");
-            accountLink = Root.Q<Button>("settings-account-link");
-            accountSignIn = Root.Q<Button>("settings-account-sign-in");
-            accountSignOut = Root.Q<Button>("settings-account-sign-out");
-            accountGuest = Root.Q<Button>("settings-account-guest");
+            accountStatus = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsAccountStatus, nameof(SettingsPage));
+            accountMessage = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsAccountMessage, nameof(SettingsPage));
+            accountLink = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsAccountLink, nameof(SettingsPage));
+            accountSignIn = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsAccountSignIn, nameof(SettingsPage));
+            accountSignOut = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsAccountSignOut, nameof(SettingsPage));
+            accountGuest = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsAccountGuest, nameof(SettingsPage));
             if (accountLink != null) accountLink.clicked += async () =>
             {
                 int visit = accountVisit;
@@ -111,39 +111,39 @@ namespace NodeWar.Lobby
             if (accountSignOut != null) accountSignOut.clicked += async () => await accountFlow.SignOutAsync();
             if (accountGuest != null) accountGuest.clicked += async () => await accountFlow.EnsureAsync();
 
-            masterSlider = Root.Q<Slider>("settings-master");
-            musicSlider = Root.Q<Slider>("settings-music");
-            effectsSlider = Root.Q<Slider>("settings-effects");
-            cameraSlider = Root.Q<Slider>("settings-camera");
+            masterSlider = NodeWar.UI.UiRequired.Q<Slider>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsMaster, nameof(SettingsPage));
+            musicSlider = NodeWar.UI.UiRequired.Q<Slider>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsMusic, nameof(SettingsPage));
+            effectsSlider = NodeWar.UI.UiRequired.Q<Slider>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsEffects, nameof(SettingsPage));
+            cameraSlider = NodeWar.UI.UiRequired.Q<Slider>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsCamera, nameof(SettingsPage));
 
-            colourblindSwitch = Root.Q<LobbySwitch>("settings-colourblind");
-            motionSwitch = Root.Q<LobbySwitch>("settings-motion");
-            confirmSwitch = Root.Q<LobbySwitch>("settings-confirm");
-            hapticsSwitch = Root.Q<LobbySwitch>("settings-haptics");
-            batterySwitch = Root.Q<LobbySwitch>("settings-battery");
+            colourblindSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsColourblind, nameof(SettingsPage));
+            motionSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsMotion, nameof(SettingsPage));
+            confirmSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsConfirm, nameof(SettingsPage));
+            hapticsSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsHaptics, nameof(SettingsPage));
+            batterySwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsBattery, nameof(SettingsPage));
 
-            sizeLabel = Root.Q<Label>("settings-size");
-            frameCapLabel = Root.Q<Label>("settings-framecap");
+            sizeLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsSize, nameof(SettingsPage));
+            frameCapLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsFramecap, nameof(SettingsPage));
 
             BindSlider(masterSlider);
             BindSlider(musicSlider);
             BindSlider(effectsSlider);
             BindSlider(cameraSlider);
 
-            BindSwitchRow("settings-row-colourblind", colourblindSwitch);
-            BindSwitchRow("settings-row-motion", motionSwitch);
-            BindSwitchRow("settings-row-confirm", confirmSwitch);
-            BindSwitchRow("settings-row-haptics", hapticsSwitch);
-            BindSwitchRow("settings-row-battery", batterySwitch);
+            BindSwitchRow(NodeWar.UI.UiRequiredNames.Settings.SettingsRowColourblind, colourblindSwitch);
+            BindSwitchRow(NodeWar.UI.UiRequiredNames.Settings.SettingsRowMotion, motionSwitch);
+            BindSwitchRow(NodeWar.UI.UiRequiredNames.Settings.SettingsRowConfirm, confirmSwitch);
+            BindSwitchRow(NodeWar.UI.UiRequiredNames.Settings.SettingsRowHaptics, hapticsSwitch);
+            BindSwitchRow(NodeWar.UI.UiRequiredNames.Settings.SettingsRowBattery, batterySwitch);
 
-            Button sizeRow = Root.Q<Button>("settings-row-size");
+            Button sizeRow = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowSize, nameof(SettingsPage));
             if (sizeRow != null) sizeRow.clicked += CycleInterfaceSize;
 
-            Button frameCapRow = Root.Q<Button>("settings-row-framecap");
+            Button frameCapRow = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowFramecap, nameof(SettingsPage));
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
 
             controlsPanel = new ControlsPanel(Root, () => current, EditControls, EditHoldTime);
-            Button controlsOpen = Root.Q<Button>("settings-row-controls");
+            Button controlsOpen = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowControls, nameof(SettingsPage));
             if (controlsOpen != null)
             {
                 if (controlsPanel.IsWired) controlsOpen.clicked += controlsPanel.Open;
@@ -282,7 +282,7 @@ namespace NodeWar.Lobby
         /// </summary>
         private void BindSwitchRow(string rowName, LobbySwitch toggle)
         {
-            Button row = Root.Q<Button>(rowName);
+            Button row = NodeWar.UI.UiRequired.Q<Button>(Root, rowName, nameof(SettingsPage));
             if (row == null || toggle == null) return;
 
             row.clicked += toggle.Flip;

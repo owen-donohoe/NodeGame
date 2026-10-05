@@ -1317,6 +1317,9 @@ namespace NodeWar.UI
 
         private Sprite GetStickerSprite(DistrictType type)
         {
+            var theme = NodeWar.Lobby.UIArt.Theme;
+            var visual = theme != null && theme.districtVisuals != null ? theme.districtVisuals.For(type) : null;
+            if (visual != null && visual.StickerOrIcon != null) return visual.StickerOrIcon;
             if (stickerMappings == null) return null;
 
             for (int i = 0; i < stickerMappings.Length; i++)

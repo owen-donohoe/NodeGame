@@ -13,6 +13,7 @@ namespace NodeWar.UI
         private readonly Label count;
         private readonly VisualElement barHost;
         private readonly ResourceBar bar;
+        private readonly VisualElement tintBackground;
         private Color critical = Color.gray, low = Color.gray, warn = Color.gray;
         private Color ok = Color.gray, good = Color.gray, rich = Color.gray;
         private int value, cap;
@@ -26,6 +27,9 @@ namespace NodeWar.UI
             Root.AddToClassList("sheet__res-readout");
             Root.AddToClassList("hud__res-ring");
             ResourceRingColors.ApplyResourceClass(Root, kind);
+            tintBackground = new VisualElement { pickingMode = PickingMode.Ignore };
+            tintBackground.AddToClassList("sheet__res-readout-tint");
+            Root.Add(tintBackground);
             Root.RegisterCallback<CustomStyleResolvedEvent>(evt =>
             {
                 ResourceRingColors.Read(evt.customStyle, ref critical, ref low, ref warn, ref ok, ref good, ref rich);
@@ -69,9 +73,9 @@ namespace NodeWar.UI
         private void Repaint()
         {
             Color tint = ResourceRingColors.BaseColorFor(kind, value, cap, critical, low, warn, ok, good, rich);
-            icon.style.unityBackgroundImageTintColor = tint;
+            icon.SetResourceTint(tint);
             count.style.color = tint;
-            Root.style.backgroundColor = new Color(tint.r, tint.g, tint.b, expanded ? 0.12f : 0.22f);
+            tintBackground.style.backgroundColor = new Color(tint.r, tint.g, tint.b, 1f);
             Root.style.borderLeftColor = Root.style.borderRightColor = tint;
             Root.style.borderTopColor = Root.style.borderBottomColor = tint;
         }

@@ -33,12 +33,20 @@ namespace NodeWar.UI
         public static void Read(ICustomStyle style, ref Color critical, ref Color low, ref Color warn,
             ref Color ok, ref Color good, ref Color rich)
         {
+            critical = low = warn = ok = good = rich = Color.gray;
             TryRead(style, "--ring-critical", ref critical);
             TryRead(style, "--ring-low", ref low);
             TryRead(style, "--ring-warn", ref warn);
             TryRead(style, "--ring-ok", ref ok);
             TryRead(style, "--ring-good", ref good);
             TryRead(style, "--ring-rich", ref rich);
+            // New skin properties win; the old names remain compatibility defaults.
+            TryRead(style, "--res-stop-0", ref critical);
+            TryRead(style, "--res-stop-1", ref low);
+            TryRead(style, "--res-stop-2", ref warn);
+            TryRead(style, "--res-stop-3", ref ok);
+            TryRead(style, "--res-stop-4", ref good);
+            TryRead(style, "--res-stop-5", ref rich);
         }
 
         public static void TryRead(ICustomStyle style, string name, ref Color target)

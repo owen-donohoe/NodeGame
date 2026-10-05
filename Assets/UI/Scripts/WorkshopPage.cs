@@ -479,10 +479,23 @@ namespace NodeWar.Lobby
                 art.AddToClassList("lb-gcard__art");
                 art.AddToClassList(ItemFamily.ClassFor(item.Family));
                 art.pickingMode = PickingMode.Ignore;
-                if (locked)
-                    art.Add(new LobbyIcon(LobbyIconKind.Lock));
-                else
+                Sprite districtIcon = null;
+                var theme = UIArt.Theme;
+                if (activeTab == Tab.Districts && item.ID.StartsWith("node_", StringComparison.Ordinal) &&
+                    Enum.TryParse(item.ID.Substring(5), true, out DistrictType district) &&
+                    theme != null && theme.districtVisuals != null)
+                {
+                    var visual = theme.districtVisuals.For(district);
+                    if (visual != null) districtIcon = visual.icon;
+                }
+                if (districtIcon != null)
+                {
+                    art.style.backgroundImage = new StyleBackground(districtIcon);
+                    art.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                }
+                else if (!locked)
                     art.Add(MakeLabel(ItemTint.MonogramFor(item.Name, item.ID), "lb-gcard__letter", "ui-w600"));
+                if (locked) art.Add(new LobbyIcon(LobbyIconKind.Lock));
                 card.Add(art);
 
                 card.Add(MakeLabel(item.Name, "lb-gcard__name", "ui-w600"));

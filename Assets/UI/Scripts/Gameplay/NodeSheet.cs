@@ -403,6 +403,16 @@ namespace NodeWar.UI
             }
 
             if (thumbLetter != null) thumbLetter.text = name.Substring(0, 1);
+            var theme = UIArt.Theme;
+            var visual = theme != null && theme.districtVisuals != null
+                ? theme.districtVisuals.For(node.districtType) : null;
+            Sprite icon = visual != null ? visual.icon : null;
+            if (thumb != null)
+            {
+                thumb.style.backgroundImage = icon != null ? new StyleBackground(icon) : new StyleBackground(StyleKeyword.Null);
+                thumb.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            }
+            if (thumbLetter != null) thumbLetter.style.display = icon != null ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void RefreshOwner(NodeData node, int controlledPID)

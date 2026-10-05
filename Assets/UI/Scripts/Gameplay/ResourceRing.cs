@@ -61,6 +61,7 @@ namespace NodeWar.UI
     public class ResourceRing : VisualElement
     {
         private const float SegmentGapDegrees = 5f;
+        private float skinThickness;
 
         /// <summary>Slices a segment is cut into for the wave, so a line narrower than a segment shows.</summary>
         private const int WaveSlices = 3;
@@ -135,6 +136,8 @@ namespace NodeWar.UI
         private void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
         {
             ICustomStyle style = customStyle;
+            skinThickness = style.TryGetValue(new CustomStyleProperty<float>("--res-thickness"), out float thickness)
+                ? UiArtMath.Geometry(thickness, 8f, 1f, 40f) : 0f;
 
             ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
                 ref colorOk, ref colorGood, ref colorRich);
@@ -339,7 +342,8 @@ namespace NodeWar.UI
 
             // Thickness grows with the width, so a larger semicircle has proportionally
             // larger rings rather than hairlines around a big hole.
-            float thickness = ResourceHudMath.RingThickness(rect.width);
+            float thickness = skinThickness > 0f
+                ? Mathf.Min(skinThickness, rect.width / 8f) : ResourceHudMath.RingThickness(rect.width);
             float ringGap = ResourceHudMath.RingGap(thickness);
             float step = thickness + ringGap;
             float minWidth = 2f * (ResourceRingMath.RingCount * thickness + (ResourceRingMath.RingCount - 1) * ringGap);
