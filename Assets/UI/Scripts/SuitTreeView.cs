@@ -264,10 +264,10 @@ namespace NodeWar.Lobby
         {
             switch (state)
             {
-                case SuitNodeState.Equipped: return LobbyIconKind.Diamond;
-                case SuitNodeState.Owned: return LobbyIconKind.Pip;
-                case SuitNodeState.Available: return LobbyIconKind.Spark;
-                default: return LobbyIconKind.Lock;
+                case SuitNodeState.Equipped: return LobbyIconKind.SuitTreeEquipped;
+                case SuitNodeState.Owned: return LobbyIconKind.SuitTreeOwned;
+                case SuitNodeState.Available: return LobbyIconKind.SuitTreeAvailable;
+                default: return LobbyIconKind.SuitTreeLocked;
             }
         }
 

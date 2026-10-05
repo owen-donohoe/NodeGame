@@ -574,13 +574,13 @@ namespace NodeWar.UI
             switch (kind)
             {
                 case IndicatorKind.Battle: return LobbyIconKind.Swords;
-                case IndicatorKind.NodeUnderAttack: return LobbyIconKind.Capture;
-                case IndicatorKind.NodeContested: return LobbyIconKind.Capture;
-                case IndicatorKind.ThreatToCore: return LobbyIconKind.Alert;
-                case IndicatorKind.ThreatToTerritory: return LobbyIconKind.Alert;
+                case IndicatorKind.NodeUnderAttack: return LobbyIconKind.IndicatorNodeUnderAttack;
+                case IndicatorKind.NodeContested: return LobbyIconKind.IndicatorNodeContested;
+                case IndicatorKind.ThreatToCore: return LobbyIconKind.IndicatorThreatToCore;
+                case IndicatorKind.ThreatToTerritory: return LobbyIconKind.IndicatorThreatToTerritory;
                 case IndicatorKind.Idle: return LobbyIconKind.Sleep;
                 case IndicatorKind.Respawn: return LobbyIconKind.Respawn;
-                default: return LobbyIconKind.Spark;
+                default: return LobbyIconKind.IndicatorEffect;
             }
         }
     }

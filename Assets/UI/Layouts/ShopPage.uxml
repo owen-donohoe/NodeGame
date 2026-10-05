@@ -56,7 +56,7 @@
         <engine:Label name="shop-item-title" class="ui-sheet__title ui-w600" text="" />
         <engine:VisualElement class="lb-shop-item__row" picking-mode="Ignore">
             <engine:VisualElement class="lb-rowthumb lb-rowthumb--large" picking-mode="Ignore">
-                <lobby:LobbyIcon name="shop-item-icon" kind="Flag" class="lb-icon" picking-mode="Ignore" />
+                <lobby:LobbyIcon name="shop-item-icon" kind="CosmeticPaperBanner" class="lb-icon" picking-mode="Ignore" />
             </engine:VisualElement>
             <engine:Label class="ui-sheet__note lb-shop-item__note ui-w500" text="Appearance only. No effect on a match." />
         </engine:VisualElement>

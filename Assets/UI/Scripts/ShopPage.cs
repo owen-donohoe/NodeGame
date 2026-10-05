@@ -54,16 +54,16 @@ namespace NodeWar.Lobby
         // the shop system's stock; keep it cosmetic.
         private static readonly Ware[] Wares =
         {
-            new Ware("Paper Banner", "200 coins", LobbyIconKind.Flag),
-            new Ware("Tin Roof", "350 coins", LobbyIconKind.Shop),
-            new Ware("Straw Hat", "150 coins", LobbyIconKind.Hat),
+            new Ware("Paper Banner", "200 coins", LobbyIconKind.CosmeticPaperBanner),
+            new Ware("Tin Roof", "350 coins", LobbyIconKind.CosmeticTinRoof),
+            new Ware("Straw Hat", "150 coins", LobbyIconKind.CosmeticStrawHat),
         };
 
         private static readonly Offer[] Offers =
         {
-            new Offer("Bundles", "Three boxes", "Ancient pool only", "30 leaf", LobbyIconKind.Envelope),
-            new Offer("Bundles", "Ten boxes", "Ancient pool only", "90 leaf", LobbyIconKind.Envelope),
-            new Offer("Gold leaf", "Dissolve duplicates", "4 spare cosmetics → 20 leaf", "Dissolve", LobbyIconKind.Diamond),
+            new Offer("Bundles", "Three boxes", "Ancient pool only", "30 leaf", LobbyIconKind.ShopBundle),
+            new Offer("Bundles", "Ten boxes", "Ancient pool only", "90 leaf", LobbyIconKind.ShopBundle),
+            new Offer("Gold leaf", "Dissolve duplicates", "4 spare cosmetics → 20 leaf", "Dissolve", LobbyIconKind.GoldLeaf),
         };
 
         private const string NotYet = "Purchasing arrives in a later update";

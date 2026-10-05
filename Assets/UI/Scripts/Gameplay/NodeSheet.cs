@@ -61,7 +61,7 @@ namespace NodeWar.UI
         private readonly SheetResourceReadout foodChip = new SheetResourceReadout(ResourceKind.Food, LobbyIconKind.Food);
         private readonly SheetResourceReadout materialsChip = new SheetResourceReadout(ResourceKind.Materials, LobbyIconKind.Materials);
         private readonly SheetResourceReadout metalChip = new SheetResourceReadout(ResourceKind.Metal, LobbyIconKind.Metal);
-        private readonly SheetResourceReadout magicChip = new SheetResourceReadout(ResourceKind.Magic, LobbyIconKind.Spark);
+        private readonly SheetResourceReadout magicChip = new SheetResourceReadout(ResourceKind.Magic, LobbyIconKind.MagicResource);
         private readonly VisualElement resourcePills = new VisualElement { pickingMode = PickingMode.Ignore };
         private readonly VisualElement resourceBars = new VisualElement { pickingMode = PickingMode.Ignore };
         private bool reducedMotion;

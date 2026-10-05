@@ -302,8 +302,8 @@ namespace NodeWar.UI
             {
                 case EmoteType.Sad: return LobbyIconKind.Frown;
                 case EmoteType.Angry: return LobbyIconKind.Angry;
-                case EmoteType.WhiteFlag: return LobbyIconKind.Flag;
-                default: return LobbyIconKind.Smile;
+                case EmoteType.WhiteFlag: return LobbyIconKind.EmoteWhiteFlag;
+                default: return LobbyIconKind.EmoteHappy;
             }
         }
     }

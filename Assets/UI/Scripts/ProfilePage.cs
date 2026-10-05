@@ -329,7 +329,7 @@ namespace NodeWar.Lobby
                 youMarker = new VisualElement();
                 youMarker.AddToClassList("lb-road__you");
                 youMarker.pickingMode = PickingMode.Ignore;
-                youMarker.Add(new LobbyIcon(LobbyIconKind.Pip));
+                youMarker.Add(new LobbyIcon(LobbyIconKind.ProfileYouAreHere));
                 roadInner.Add(youMarker);
             }
 
