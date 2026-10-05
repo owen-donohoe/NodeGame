@@ -436,6 +436,22 @@ namespace NodeWar.Tests
             Assert.AreEqual(1, state.players[1].breachCount);
         }
 
+        [TestCase(1199, 63)]
+        [TestCase(1799, 75)]
+        public void DefaultLateTempoSlowsFreeRespawns(int tickBeforeDeath, int wait)
+        {
+            Assert.IsTrue(balance.TempoAndBreachValid(out string reason), reason);
+            var state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            state.tickCount = tickBeforeDeath;
+            state.villagers[0].state = VillagerState.Dead;
+            state.villagers[0].respawnTicksRemaining = balance.respawnTicks;
+            Ticks(state, wait - 1);
+            Assert.AreEqual(VillagerState.Dead, state.villagers[0].state);
+            GameSimulation.SimulateTick(state);
+            Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
+            Assert.AreEqual(0, state.players[0].paidRespawns);
+        }
+
         [Test]
         public void WatchtowerAppliesBeforeClaimTempo()
         {

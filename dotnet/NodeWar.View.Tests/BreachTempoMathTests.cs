@@ -121,6 +121,8 @@ namespace NodeWar.View.Tests
         public void Wording_is_distinct_per_stage_and_names_the_threshold()
         {
             Assert.AreEqual("Tempo rising", BreachTempoMath.TempoStageTitle(0));
+            Assert.AreEqual("Claims speed up; respawns slow down", BreachTempoMath.TempoStageSub(0));
+            Assert.AreEqual("Claims speed up again; respawns slow further", BreachTempoMath.TempoStageSub(1));
             Assert.AreNotEqual(BreachTempoMath.TempoStageTitle(0), BreachTempoMath.TempoStageTitle(1));
             Assert.AreEqual(BreachTempoMath.TempoStageTitle(1), BreachTempoMath.TempoStageTitle(5));
             Assert.AreEqual("Sudden death in 5…", BreachTempoMath.CountdownTitle(5));

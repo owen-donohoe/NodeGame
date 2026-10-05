@@ -39,7 +39,7 @@ namespace NodeWar.Tests
             Assert.AreEqual(151, b.TempoPercent(pct, 8));
         }
 
-        [TestCase(110)] [TestCase(125)] [TestCase(150)] [TestCase(200)]
+        [TestCase(67)] [TestCase(80)] [TestCase(110)] [TestCase(125)] [TestCase(150)] [TestCase(200)]
         public void TimerAveragesExactlyOver600Ticks(int percent)
         {
             var b = GameBalanceData.Default();

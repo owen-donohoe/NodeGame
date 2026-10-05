@@ -106,7 +106,7 @@ namespace NodeWar.View
 
         public static string TempoStageSub(int stageIndex)
         {
-            return stageIndex <= 0 ? "Claims and respawns speed up" : "The match is speeding up further";
+            return stageIndex <= 0 ? "Claims speed up; respawns slow down" : "Claims speed up again; respawns slow further";
         }
 
         public static string CountdownTitle(int seconds)

@@ -247,7 +247,7 @@ namespace NodeWar.Simulation
                 breachThreshold = 3,
                 tempoStageTicks = new[] { 1200, 1800 },
                 tempoClaimPercent = new[] { 150, 200 },
-                tempoRespawnPercent = new[] { 125, 150 },
+                tempoRespawnPercent = new[] { 80, 67 },
                 tempoProductionPercent = new[] { 110, 125 },
                 suddenDeathTicks = new[] { 2400 },
                 suddenDeathThresholds = new[] { 1 },
