@@ -49,6 +49,8 @@
     <Compile Include="TrophyBarLogicTests.cs" />
     <Compile Include="RankDisplayTests.cs" />
     <Compile Include="GameSettingsTests.cs" />
+    <Compile Include="InputBindingsTests.cs" />
+    <Compile Include="ControlsViewModelTests.cs" />
     <Compile Include="EmotePacketTests.cs" />
     <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="PacketRobustnessTests.cs" />
@@ -85,6 +87,10 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/GameSettingsData.cs"
              Link="Lobby/GameSettingsData.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/InputBindings.cs"
+             Link="Lobby/InputBindings.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ControlsViewModel.cs"
+             Link="Lobby/ControlsViewModel.cs" />
 
     <!--
       The Workshop's UnityEngine-free pieces. Everything else under

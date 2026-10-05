@@ -220,7 +220,8 @@ namespace NodeWar.Lobby.Tests
 
             GameSettingsData result = GameSettingsData.Normalized(absent);
 
-            Assert.AreEqual(GameSettingsData.CreateDefault(), result);
+            Assert.IsFalse(GameSettingsData.Differ(GameSettingsData.CreateDefault(), result));
+            Assert.AreEqual(GameSettingsData.CurrentVersion, result.version);
         }
 
         [Test]
@@ -325,7 +326,7 @@ namespace NodeWar.Lobby.Tests
             // If this fails, a default sits outside its own clamp.
             GameSettingsData defaults = GameSettingsData.CreateDefault();
 
-            Assert.AreEqual(defaults, GameSettingsData.Normalized(defaults));
+            Assert.IsFalse(GameSettingsData.Differ(defaults, GameSettingsData.Normalized(defaults)));
         }
 
         // ===== CLAMPING =====
@@ -469,6 +470,11 @@ namespace NodeWar.Lobby.Tests
                     field.SetValue(mutated, (int)field.GetValue(mutated) + 1);
                 else if (field.FieldType == typeof(bool))
                     field.SetValue(mutated, !(bool)field.GetValue(mutated));
+                else if (field.FieldType == typeof(InputBinding[]))
+                {
+                    var bindings = (InputBinding[])field.GetValue(mutated);
+                    bindings[(int)InputSlot.Drag].enabled = false;
+                }
                 else
                     Assert.Fail("Differ_DetectsEveryPlayerSettableField cannot mutate " +
                                 field.Name + " of type " + field.FieldType.Name +

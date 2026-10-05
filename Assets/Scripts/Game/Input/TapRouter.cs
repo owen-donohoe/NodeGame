@@ -24,6 +24,12 @@ namespace NodeWar.Input
         private SelectionSystem selection;
         private CommandSystem commands;
         private NodePanelManager panel;
+        private NodeWar.Core.CameraController cameraController;
+
+        public void SetCameraController(NodeWar.Core.CameraController controller)
+        {
+            cameraController = controller;
+        }
 
         public void Initialize(PointerGestureSource gestureSource,
                                SelectionSystem selectionSystem,
@@ -50,6 +56,10 @@ namespace NodeWar.Input
         {
             if (source == null || subscribed) return;
             source.OnTap += HandleTap;
+            source.OnHold += HandleHold;
+            source.OnTwoFingerTap += HandleTwoFingerTap;
+            source.OnDoubleTapGround += HandleDoubleTapGround;
+            source.OnDoubleTapVillager += HandleDoubleTapVillager;
             subscribed = true;
         }
 
@@ -57,13 +67,16 @@ namespace NodeWar.Input
         {
             if (source == null || !subscribed) return;
             source.OnTap -= HandleTap;
+            source.OnHold -= HandleHold;
+            source.OnTwoFingerTap -= HandleTwoFingerTap;
+            source.OnDoubleTapGround -= HandleDoubleTapGround;
+            source.OnDoubleTapVillager -= HandleDoubleTapVillager;
             subscribed = false;
         }
 
         /// <summary>
-        /// The ladder. A tap always replaces the current selection -- there is
-        /// no path here that adds to it, which is what keeps tapping a second
-        /// villager from silently growing a group.
+        /// Villager taps add/remove by default; Replace only changes the
+        /// unselected-villager case. Nodes and empty ground keep their grammar.
         /// </summary>
         private void HandleTap(GestureTarget target)
         {
@@ -74,11 +87,13 @@ namespace NodeWar.Input
                 //    is no re-deciding it here.
                 case GestureTargetKind.Villager:
                 {
-                    // SelectSingle owns validity: not ours, dead or consumed all
+                    // Selection owns validity: not ours, dead or consumed all
                     // return false. An unselectable villager is treated as empty
                     // ground rather than swallowing the tap, so tapping an enemy
                     // still clears the way it would anywhere else.
-                    if (selection != null && selection.SelectSingle(target.id))
+                    NodeWar.Lobby.InputAction action = source != null
+                        ? source.ActionFor(NodeWar.Lobby.InputSlot.TapVillager) : NodeWar.Lobby.InputAction.AddRemove;
+                    if (selection != null && selection.TapVillager(target.id, action))
                     {
                         if (panel != null) panel.ClosePanel();
                         Log("villager " + target.id + " selected");
@@ -120,6 +135,68 @@ namespace NodeWar.Input
                     ClearEverything();
                     return;
             }
+        }
+
+        /// <summary>
+        /// Open info. No villager info view exists, so a villager opens the panel of the
+        /// node it stands on. The selection is left alone: inspecting is not ordering.
+        /// </summary>
+        private void HandleHold(GestureTarget target)
+        {
+            if (panel == null || target.kind == GestureTargetKind.None) return;
+            int node = target.kind == GestureTargetKind.Villager && selection != null
+                ? selection.NodeOfVillager(target.id) : target.id;
+            if (node < 0) return;
+            panel.OpenForNode(node);
+            Log("hold info node " + node);
+        }
+
+        private void HandleTwoFingerTap()
+        {
+            switch (source.ActionFor(NodeWar.Lobby.InputSlot.TwoFingerTap))
+            {
+                case NodeWar.Lobby.InputAction.ClearSelection:
+                    if (selection != null) selection.ClearSelection();
+                    break;
+                case NodeWar.Lobby.InputAction.ReturnToCore:
+                    if (cameraController != null) cameraController.RecentreOnHome();
+                    break;
+            }
+            Log("two-finger tap");
+        }
+
+        private void HandleDoubleTapGround()
+        {
+            switch (source.ActionFor(NodeWar.Lobby.InputSlot.DoubleTapGround))
+            {
+                case NodeWar.Lobby.InputAction.ReturnToCore:
+                    if (cameraController != null) cameraController.RecentreOnHome();
+                    break;
+                case NodeWar.Lobby.InputAction.SelectAllIdle: SelectAllIdle(); break;
+                case NodeWar.Lobby.InputAction.ToggleFitDefaultZoom:
+                    if (cameraController != null) cameraController.ToggleFitDefaultZoom();
+                    break;
+            }
+            Log("double-tap ground");
+        }
+
+        private void HandleDoubleTapVillager(GestureTarget target)
+        {
+            switch (source.ActionFor(NodeWar.Lobby.InputSlot.DoubleTapVillager))
+            {
+                case NodeWar.Lobby.InputAction.SelectAllIdle: SelectAllIdle(); break;
+                case NodeWar.Lobby.InputAction.SelectAllOnNode:
+                    if (selection != null) selection.SelectAllOnNodeOf(target.id);
+                    if (panel != null) panel.ClosePanel();
+                    break;
+            }
+            Log("double-tap villager " + target.id);
+        }
+
+        private void SelectAllIdle()
+        {
+            if (selection != null) selection.SelectAllIdle();
+            if (panel != null) panel.ClosePanel();
         }
 
         private void ClearEverything()

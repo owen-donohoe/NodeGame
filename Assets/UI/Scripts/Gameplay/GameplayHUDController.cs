@@ -94,6 +94,18 @@ namespace NodeWar.UI
         private VisualElement selectionDock;
         private Label selectionText;
 
+        // Controls settings: the thumb-placed controls and what shows on them.
+        private VisualElement recentreDock;
+        private VisualElement selectionBar;
+        private Label selectionBarCount;
+        private bool showSelectionBar = true;
+        private bool showTooltips = true;
+        private int cameraButtonTarget;
+        private bool handleZoomEnabled = true;
+        private float insetLeft = -1f;
+        private float insetRight = -1f;
+        private float insetPanelWidth = -1f;
+
         private VisualElement countdownRoot;
         private Label countdownStep;
 
@@ -323,6 +335,7 @@ namespace NodeWar.UI
         {
             if (safeArea != null) safeArea.Update();
             if (resSheetInset != null) resSheetInset.Update();
+            UpdateThumbInsets();
             if (nodeSheet != null) nodeSheet.UpdateSafeArea();
 
             emotePanel.SetNodeSheetOpen(nodeSheet != null && nodeSheet.IsOpen);
@@ -382,6 +395,11 @@ namespace NodeWar.UI
             selectionDock = root.Q<VisualElement>("hud-selection");
             selectionText = root.Q<Label>("hud-selection-text");
 
+            selectionBar = root.Q<VisualElement>("hud-selbar");
+            selectionBarCount = root.Q<Label>("hud-selbar-count");
+            BindSelectionCounter();
+            recentreDock = root.Q<VisualElement>("hud-recentre-dock");
+
             zoomRoot = root.Q<VisualElement>("hud-zoom");
             zoomValue = root.Q<Label>("hud-zoom-value");
             zoomFill = root.Q<VisualElement>("hud-zoom-fill");
@@ -440,7 +458,9 @@ namespace NodeWar.UI
             if (hudRoot == null) return;
 
             indicatorLayer = new IndicatorLayer(hudRoot);
-            indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-recentre-dock"));
+            // Either edge, depending on the Controls side setting.
+            indicatorLayer.AvoidEdge(root.Q<VisualElement>("hud-recentre-dock"));
+            indicatorLayer.AvoidEdge(root.Q<VisualElement>("hud-selbar"));
             indicatorLayer.AvoidLeft(root.Q<VisualElement>("hud-emote-dock"));
 
             VisualElement sheetPanel = nodeSheet != null ? nodeSheet.Root.Q<VisualElement>("node-sheet") : null;
@@ -606,6 +626,70 @@ namespace NodeWar.UI
             }
 
             if (boardCamera != null) boardCamera.ShakeEnabled = !settings.reducedMotion;
+            if (boardCamera != null) boardCamera.ApplyInputSettings(settings);
+
+            ApplyControls(settings);
+        }
+
+        /// <summary>
+        /// The Controls settings that live on the HUD. View only: nothing here
+        /// reaches the simulation.
+        ///
+        /// Camera button off hides the handle with display:none, which removes
+        /// its hit area as well as its pixels, so it stops swallowing presses.
+        /// Drag to zoom off leaves the same element as a plain return-to-core
+        /// click (see OnHandleMove). The side is one class on the root; the
+        /// rest is USS.
+        /// </summary>
+        private void ApplyControls(NodeWar.Lobby.GameSettingsData settings)
+        {
+            if (hudRoot != null)
+                hudRoot.EnableInClassList("hud--left", settings.controlsSide == 1);
+
+            if (recentreDock != null)
+                recentreDock.style.display = settings.showCameraButton ? DisplayStyle.Flex : DisplayStyle.None;
+
+            handleZoomEnabled = settings.cameraButtonZoom;
+            showSelectionBar = settings.showSelectionBar;
+            showTooltips = settings.tooltips;
+            cameraButtonTarget = settings.cameraButtonTarget;
+
+            // Redraw the bar now rather than on the next selection change.
+            lastSelected = -1;
+            RefreshSelection();
+        }
+
+        /// <summary>
+        /// Keeps the thumb-placed controls clear of a notch or rounded corner
+        /// on either edge. Margins rather than SafeAreaBinder's padding: these
+        /// are absolutely positioned, and padding on them would not move them.
+        /// </summary>
+        private void UpdateThumbInsets()
+        {
+            if (hudRoot == null || Screen.width <= 0) return;
+
+            float panelWidth = hudRoot.resolvedStyle.width;
+            if (float.IsNaN(panelWidth) || panelWidth <= 0f) return;
+
+            Rect safe = Screen.safeArea;
+            float left = Mathf.Max(0f, safe.xMin) / Screen.width * panelWidth;
+            float right = Mathf.Max(0f, Screen.width - safe.xMax) / Screen.width * panelWidth;
+            if (Mathf.Approximately(left, insetLeft) && Mathf.Approximately(right, insetRight) &&
+                Mathf.Approximately(panelWidth, insetPanelWidth)) return;
+
+            insetLeft = left;
+            insetRight = right;
+            insetPanelWidth = panelWidth;
+
+            ApplyInset(recentreDock, left, right);
+            ApplyInset(selectionBar, left, right);
+        }
+
+        private static void ApplyInset(VisualElement element, float left, float right)
+        {
+            if (element == null) return;
+            element.style.marginLeft = left;
+            element.style.marginRight = right;
         }
 
         /// <summary>
@@ -906,6 +990,59 @@ namespace NodeWar.UI
             }
         }
 
+        // ===== SELECTION COUNTER =====
+        //
+        // A press captures its pointer, so the whole press-drag-release belongs to
+        // this element: the board never sees it. (PointerGestureSource also reads a
+        // press over UI as Blocked and latches it to release.) Only a release over
+        // the circle clears; leaving it un-presses the visual and releasing
+        // elsewhere does nothing. Hover is for pointer devices; a touch has none,
+        // so its press goes straight to the inverted state.
+
+        private int counterPointer = -1;
+
+        private void BindSelectionCounter()
+        {
+            if (selectionBar == null) return;
+
+            selectionBar.RegisterCallback<PointerEnterEvent>(e =>
+            {
+                if (e.pointerType != UnityEngine.UIElements.PointerType.touch)
+                    selectionBar.AddToClassList("hud__selbar--hover");
+            });
+            selectionBar.RegisterCallback<PointerLeaveEvent>(e => selectionBar.RemoveFromClassList("hud__selbar--hover"));
+            selectionBar.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if (counterPointer != -1) return;
+                counterPointer = e.pointerId;
+                selectionBar.CapturePointer(e.pointerId);
+                selectionBar.AddToClassList("hud__selbar--pressed");
+                e.StopPropagation();
+            });
+            selectionBar.RegisterCallback<PointerMoveEvent>(e =>
+            {
+                if (e.pointerId != counterPointer) return;
+                selectionBar.EnableInClassList("hud__selbar--pressed", selectionBar.ContainsPoint(e.localPosition));
+            });
+            selectionBar.RegisterCallback<PointerUpEvent>(e =>
+            {
+                if (e.pointerId != counterPointer) return;
+                bool inside = selectionBar.ContainsPoint(e.localPosition);
+                EndCounterPress();
+                selectionBar.ReleasePointer(e.pointerId);
+                e.StopPropagation();
+                if (inside && selection != null) selection.ClearSelection();
+            });
+            selectionBar.RegisterCallback<PointerCancelEvent>(e => EndCounterPress());
+            selectionBar.RegisterCallback<PointerCaptureOutEvent>(e => EndCounterPress());
+        }
+
+        private void EndCounterPress()
+        {
+            counterPointer = -1;
+            selectionBar.RemoveFromClassList("hud__selbar--pressed");
+        }
+
         private void RefreshSelection()
         {
             int count = selection != null ? selection.SelectedVillagerIDs.Count : 0;
@@ -913,10 +1050,19 @@ namespace NodeWar.UI
             lastSelected = count;
 
             if (selectionDock != null)
-                selectionDock.EnableInClassList("hud__selection-dock--on", count > 0);
+                selectionDock.EnableInClassList("hud__selection-dock--on", showTooltips && count > 0);
 
-            if (selectionText != null && count > 0)
-                selectionText.text = "Tap a node to move · " + count;
+            if (selectionBar != null)
+            {
+                bool shown = showSelectionBar && count > 0;
+                selectionBar.EnableInClassList("hud__selbar--on", shown);
+                // A hidden element gets no leave event; do not leave it looking hovered.
+                if (!shown) { selectionBar.RemoveFromClassList("hud__selbar--hover"); selectionBar.RemoveFromClassList("hud__selbar--pressed"); }
+            }
+
+            if (selectionBarCount != null && count > 0)
+                selectionBarCount.text = count.ToString();
+
         }
 
         // ===== CAMERA AFFORDANCES =====
@@ -982,6 +1128,7 @@ namespace NodeWar.UI
                 boardCamera.ZoomGestureActiveChanged += OnZoomGestureActiveChanged;
 
                 if (settingsPanel != null) boardCamera.ShakeEnabled = !settingsPanel.Settings.reducedMotion;
+                if (settingsPanel != null) boardCamera.ApplyInputSettings(settingsPanel.Settings);
             }
 
             // A tapped edge indicator moves this camera to its subject.
@@ -1094,7 +1241,8 @@ namespace NodeWar.UI
 
         private void OnHandleMove(PointerMoveEvent evt)
         {
-            if (!handleDragging || boardCamera == null) return;
+            // Drag to zoom off: the handle is a plain return-to-core click.
+            if (!handleDragging || boardCamera == null || !handleZoomEnabled) return;
 
             // Panel Y grows downward, so a finger moving up is a NEGATIVE delta.
             // Flipped here once, so everything below reads in player terms.
@@ -1152,6 +1300,7 @@ namespace NodeWar.UI
             // zoomed must NOT also recentre, or it would throw away the zoom the
             // player just set on the way to lifting their finger.
             if (handleZoomed) boardCamera.EndZoomGesture();
+            else if (cameraButtonTarget == 1) boardCamera.RecentreOnBoard();
             else boardCamera.RecentreOnHome();
 
             handleZoomed = false;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NodeWar.Backend;
 using UnityEngine.UIElements;
 
@@ -45,6 +46,11 @@ namespace NodeWar.Lobby
 
         private readonly Label sizeLabel;
         private readonly Label frameCapLabel;
+
+        // Controls live in their own overlay, opened by one button. The panel owns
+        // its rows; this page owns the value and the save.
+        private readonly ControlsPanel controlsPanel;
+
         private readonly AccountFlow accountFlow;
         private readonly Label accountStatus;
         private readonly Label accountMessage;
@@ -135,6 +141,15 @@ namespace NodeWar.Lobby
 
             Button frameCapRow = Root.Q<Button>("settings-row-framecap");
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
+
+            controlsPanel = new ControlsPanel(Root, () => current, EditControls, EditHoldTime);
+            Button controlsOpen = Root.Q<Button>("settings-row-controls");
+            if (controlsOpen != null)
+            {
+                if (controlsPanel.IsWired) controlsOpen.clicked += controlsPanel.Open;
+                else controlsOpen.style.display = DisplayStyle.None;
+            }
+
 
             Load();
         }
@@ -252,6 +267,8 @@ namespace NodeWar.Lobby
 
             UpdateSizeLabel();
             UpdateFrameCapLabel();
+            controlsPanel.Close();
+            controlsPanel.Render();
 
             loading = false;
             dirty = false;
@@ -281,6 +298,31 @@ namespace NodeWar.Lobby
             // Sliders raise this per drag frame, so they only mark dirty; the
             // write happens when the page closes.
             slider.RegisterValueChangedCallback(_ => OnValueChanged(commitNow: false));
+        }
+
+        /// <summary>
+        /// A controls edit is a decision, so it commits now. The edit returns a
+        /// new value with its own copy of inputBindings; see ControlsViewModel.
+        /// </summary>
+        private void EditControls(Func<GameSettingsData, GameSettingsData> edit)
+        {
+            if (loading) return;
+
+            current = edit(current);
+            controlsPanel.Render();
+            OnValueChanged(commitNow: true);
+        }
+
+        /// <summary>
+        /// The hold-time slider raises a change per drag frame, so like the other
+        /// sliders it marks dirty and the write waits for the page to close.
+        /// </summary>
+        private void EditHoldTime(float seconds)
+        {
+            if (loading) return;
+
+            current = ControlsViewModel.SetHoldTime(current, seconds);
+            OnValueChanged(commitNow: false);
         }
 
         private void CycleInterfaceSize()
@@ -328,30 +370,29 @@ namespace NodeWar.Lobby
         /// <summary>Reads the controls back into a value, clamped on the way.</summary>
         private GameSettingsData Capture()
         {
-            GameSettingsData captured = new GameSettingsData
-            {
-                version = GameSettingsData.CurrentVersion,
+            // Carry settings edited elsewhere, including future fields.
+            GameSettingsData captured = current;
+            // Clone inputBindings before editing entries: this copy aliases current, hiding changes from Differ.
+            captured.inputBindings = current.inputBindings != null
+                ? (InputBinding[])current.inputBindings.Clone()
+                : InputBindings.CreateDefault();
+            captured.version = GameSettingsData.CurrentVersion;
 
-                masterVolume = ReadSlider(masterSlider, current.masterVolume),
-                musicVolume = ReadSlider(musicSlider, current.musicVolume),
-                effectsVolume = ReadSlider(effectsSlider, current.effectsVolume),
+            captured.masterVolume = ReadSlider(masterSlider, current.masterVolume);
+            captured.musicVolume = ReadSlider(musicSlider, current.musicVolume);
+            captured.effectsVolume = ReadSlider(effectsSlider, current.effectsVolume);
 
-                colourblindMarks = ReadSwitch(colourblindSwitch, current.colourblindMarks),
-                reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion),
-                interfaceSize = sizeIndex,
-                frameCap = frameCapIndex,
+            captured.colourblindMarks = ReadSwitch(colourblindSwitch, current.colourblindMarks);
+            captured.reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion);
+            captured.interfaceSize = sizeIndex;
+            captured.frameCap = frameCapIndex;
 
-                cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed),
-                confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand),
+            captured.cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed);
+            captured.confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand);
 
-                // Edited in the match panel, not here: carried through, or the
-                // first lobby change would reset both to false.
-                opponentRoutes = current.opponentRoutes,
-                opponentEmotes = current.opponentEmotes,
+            captured.haptics = ReadSwitch(hapticsSwitch, current.haptics);
+            captured.batterySaver = ReadSwitch(batterySwitch, current.batterySaver);
 
-                haptics = ReadSwitch(hapticsSwitch, current.haptics),
-                batterySaver = ReadSwitch(batterySwitch, current.batterySaver)
-            };
 
             return GameSettingsData.Normalized(captured);
         }

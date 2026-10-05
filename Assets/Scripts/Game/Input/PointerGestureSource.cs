@@ -6,26 +6,6 @@ using UnityEngine.InputSystem;
 
 namespace NodeWar.Input
 {
-    public enum GestureState
-    {
-        /// <summary>Nothing pressed.</summary>
-        Idle,
-        /// <summary>Pressed, but not yet resolved into tap, pan or long press.</summary>
-        Pending,
-        /// <summary>Moved past the slop before the long-press timer elapsed.</summary>
-        Panning,
-        /// <summary>Held past the long-press timer without moving. Lasso is armed.</summary>
-        LassoArmed,
-        /// <summary>Armed and now drawing.</summary>
-        Lassoing,
-        /// <summary>Press began over UI. Consumes the stroke and publishes nothing.</summary>
-        Blocked,
-        /// <summary>Two fingers down and spreading. Drives zoom, never pan.</summary>
-        Pinching,
-        /// <summary>A second finger arrived. The stroke is abandoned.</summary>
-        Cancelled
-    }
-
     /// <summary>
     /// The single pointer reader for gameplay selection and move orders.
     /// CameraController separately handles desktop middle-drag and scroll.
@@ -74,6 +54,30 @@ namespace NodeWar.Input
         /// <summary>Desktop right-click destination, resolved against nodes only after the UI guard.</summary>
         public event Action<GestureTarget> OnSecondaryClick;
 
+        /// <summary>Two taps on empty ground. The second tap's own OnTap is replaced by this.</summary>
+        public event Action OnDoubleTapGround;
+
+        /// <summary>Two taps on the same villager.</summary>
+        public event Action<GestureTarget> OnDoubleTapVillager;
+
+        /// <summary>
+        /// An order drag from an already-selected villager began, is moving, or ended.
+        /// End is raised last, after Drop or a tap, and also on cancel, so a preview
+        /// can always be closed by it.
+        /// </summary>
+        public event Action<Vector2> OnOrderDragBegin;
+        public event Action<Vector2> OnOrderDragUpdate;
+        public event Action OnOrderDragEnd;
+
+        /// <summary>The order drag was released on a node other than the one it started on.</summary>
+        public event Action<int> OnOrderDrop;
+
+        /// <summary>A still hold on a node or villager, with no drag.</summary>
+        public event Action<GestureTarget> OnHold;
+
+        /// <summary>A quick two-finger touch that neither travelled nor spread.</summary>
+        public event Action OnTwoFingerTap;
+
         public event Action<Vector2> OnPanBegin;
         public event Action<Vector2> OnPanUpdate;
         public event Action OnPanEnd;
@@ -102,32 +106,26 @@ namespace NodeWar.Input
 
         // ===== STATE =====
 
-        private GestureState state = GestureState.Idle;
-        private Vector2 downPos;
-        private float downTime;
+        private GestureClassifier classifier;
         private GestureTarget downTarget;
-
         private readonly List<Vector2> strokePoints = new List<Vector2>();
         private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
-
-        private float pinchStartSpan;
-
+        private readonly List<PointerSample> samples = new List<PointerSample>();
+        private readonly List<VillagerPickCandidate> pickCandidates = new List<VillagerPickCandidate>();
         private Camera cam;
         private int villagerMask;
         private int nodeMask;
         private bool initialized;
+        private GestureTarget frameTarget;
+        private bool hasFrameTarget;
+        private int orderStartNode = -1;
+        private Func<int, bool> selectedFilter;
+        private int primaryPointerId = -1;
 
-        public GestureState State => state;
+        public GestureState State => classifier != null ? classifier.State : GestureState.Idle;
         public GestureThresholds Thresholds => thresholds;
         public IReadOnlyList<Vector2> CurrentStroke => strokePoints;
-
-        /// <summary>
-        /// True while a lasso is armed or drawing. The camera must not pan for
-        /// the rest of the stroke once this latches -- long press is reserved
-        /// permanently for multi-select and nothing may steal it.
-        /// </summary>
-        public bool PanSuppressed => state == GestureState.LassoArmed || state == GestureState.Lassoing;
-
+        public bool PanSuppressed => classifier != null && classifier.PanSuppressed;
         private System.Func<int, bool> villagerFilter;
 
         /// <summary>
@@ -141,11 +139,34 @@ namespace NodeWar.Input
             villagerFilter = filter;
         }
 
+        /// <summary>Whether a villager is already selected; only those can start an order drag.</summary>
+        public void SetSelectedFilter(System.Func<int, bool> filter)
+        {
+            selectedFilter = filter;
+        }
+
+        /// <summary>The node under a screen point, or -1. Nodes only, like right-click.</summary>
+        public int NodeAt(Vector2 screenPos)
+        {
+            GestureTarget target = ResolveTarget(screenPos, nodesOnly: true);
+            return target.kind == GestureTargetKind.Node ? target.id : -1;
+        }
+
         public void Initialize(Camera camera)
         {
             cam = camera != null ? camera : Camera.main;
             villagerMask = LayerMask.GetMask(villagerLayerName);
             nodeMask = LayerMask.GetMask(nodeLayerName);
+            if (classifier == null)
+            {
+                classifier = new GestureClassifier(NodeWar.Lobby.InputBindings.CreateDefault(),
+                    thresholds.tapSlopMm, thresholds.longPressTime, thresholds.lassoDecimationMm,
+                    thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm, 1f / ScreenMetrics.PixelsPerMm,
+                    GestureThresholds.HoldStillnessMm);
+                classifier.Published += Publish;
+                if (NodeWar.Lobby.PlayerProfile.Instance != null)
+                    classifier.ApplySettings(NodeWar.Lobby.PlayerProfile.Instance.Settings);
+            }
             initialized = true;
         }
 
@@ -154,300 +175,160 @@ namespace NodeWar.Input
             if (!initialized) Initialize(Camera.main);
         }
 
+        private void OnDisable()
+        {
+            classifier?.Cancel();
+        }
+
         private void Update()
         {
             if (!initialized) return;
-
-            // Right-click is an immediate move intent, independent of the
-            // primary pointer's tap/pan/lasso state. Villagers do not occlude
-            // its destination node.
+            classifier.UpdateThresholds(thresholds.tapSlopMm, thresholds.longPressTime,
+                thresholds.lassoDecimationMm, thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm,
+                1f / ScreenMetrics.PixelsPerMm, GestureThresholds.HoldStillnessMm);
+            classifier.DoubleTapTime = thresholds.doubleTapTime;
+            classifier.DoubleTapRadiusMm = thresholds.doubleTapRadiusMm;
+            classifier.TwoFingerTapTime = thresholds.twoFingerTapTime;
+            classifier.OneHandZoomMmPerDoubling = thresholds.oneHandZoomMmPerDoubling;
+            samples.Clear();
+            float now = Time.unscaledTime;
             Mouse mouse = Mouse.current;
             if (mouse != null && mouse.rightButton.wasPressedThisFrame)
             {
-                Vector2 mousePos = mouse.position.ReadValue();
-                if (!IsMouseOverUI(mousePos))
-                    OnSecondaryClick?.Invoke(ResolveTarget(mousePos, nodesOnly: true));
+                Vector2 pos = mouse.position.ReadValue();
+                samples.Add(new PointerSample(now, ToMm(pos), -1, PointerButton.Secondary,
+                    PointerPhase.Began, IsMouseOverUI(pos)));
             }
 
             Pointer pointer = Pointer.current;
-            if (pointer == null) return;
-
-            // Two fingers are a pinch, and the check runs before anything else
-            // so a pan never half-resolves into one. A lasso is the exception:
-            // PanSuppressed latches long press for multi-select and zoom loses
-            // that contest exactly as pan does, so the stroke is abandoned
-            // rather than turned into a camera move.
-            if (ActiveTouchCount() >= 2)
+            if (pointer != null)
             {
-                if (state == GestureState.Pinching)
+                PointerPhase phase = pointer.press.wasPressedThisFrame ? PointerPhase.Began
+                    : pointer.press.isPressed ? PointerPhase.Held
+                    : pointer.press.wasReleasedThisFrame ? PointerPhase.Ended : PointerPhase.None;
+                Touchscreen touch = Touchscreen.current;
+                int id = pointer is Touchscreen screen ? screen.primaryTouch.touchId.ReadValue() : -1;
+                if (phase == PointerPhase.Began) primaryPointerId = id;
+                if (phase == PointerPhase.Ended || phase == PointerPhase.None) id = primaryPointerId;
+                bool overUI = phase == PointerPhase.Began && IsPointerOverUI();
+                GestureTargetClass targetClass = GestureTargetClass.None;
+                int targetId = -1;
+                hasFrameTarget = false;
+                if (phase == PointerPhase.Began && !overUI)
                 {
-                    UpdatePinch();
-                    return;
+                    // Resolved here so the classifier can tell ground from villager for
+                    // double-tap; PointerDown reuses it rather than raycasting again.
+                    frameTarget = ResolveTarget(pointer.position.ReadValue());
+                    hasFrameTarget = true;
+                    targetClass = frameTarget.kind == GestureTargetKind.Villager
+                        ? (selectedFilter != null && selectedFilter(frameTarget.id)
+                            ? GestureTargetClass.SelectedVillager : GestureTargetClass.Villager)
+                        : frameTarget.kind == GestureTargetKind.Node ? GestureTargetClass.Node : GestureTargetClass.None;
+                    targetId = frameTarget.id;
                 }
-
-                if (state == GestureState.Blocked) return;
-
-                if (PanSuppressed)
+                samples.Add(new PointerSample(now, ToMm(pointer.position.ReadValue()), id,
+                    PointerButton.Primary, phase, overUI, targetClass, targetId));
+                if (touch != null)
                 {
-                    Cancel();
-
-                    // Consume the rest of the stroke. Cancel leaves the state
-                    // Idle, and Idle plus two fingers still down would begin a
-                    // pinch on the very next frame -- so the lasso the player
-                    // abandoned would silently become a zoom without them ever
-                    // lifting a finger. Blocked already means "publish nothing
-                    // until this stroke ends", and EndPress clears it.
-                    state = GestureState.Blocked;
-                    return;
+                    int activeTouches = 0;
+                    foreach (var finger in touch.touches)
+                        if (finger.press.isPressed) activeTouches++;
+                    bool checkTouchUI = activeTouches >= 2 && State != GestureState.Pinching && State != GestureState.TwoFinger;
+                    foreach (var finger in touch.touches)
+                        if (finger.press.isPressed)
+                            samples.Add(new PointerSample(now, ToMm(finger.position.ReadValue()),
+                                finger.touchId.ReadValue(), PointerButton.Touch, PointerPhase.Held,
+                                checkTouchUI && IsMouseOverUI(finger.position.ReadValue())));
                 }
-
-                BeginPinch();
-                return;
             }
-
-            // Fewer than two fingers left. The survivor does not inherit the
-            // stroke -- resuming a pan from whichever finger happened to lift
-            // last makes the board lurch at the end of every pinch.
-            if (state == GestureState.Pinching)
-            {
-                EndZoom();
-                return;
-            }
-
-            Vector2 pos = pointer.position.ReadValue();
-
-            if (pointer.press.wasPressedThisFrame)
-            {
-                BeginPress(pos);
-                return;
-            }
-
-            if (pointer.press.isPressed)
-            {
-                ContinuePress(pos);
-                return;
-            }
-
-            if (pointer.press.wasReleasedThisFrame)
-            {
-                EndPress(pos);
-            }
+            classifier.ProcessFrame(samples);
+            hasFrameTarget = false;
+            if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
         }
 
-        // ===== TRANSITIONS =====
-
-        private void BeginPress(Vector2 pos)
+        public void ApplySettings(NodeWar.Lobby.GameSettingsData settings)
         {
-            downPos = pos;
-            downTime = Time.unscaledTime;
-            strokePoints.Clear();
-
-            // Latched at press time, not polled per frame: once a stroke starts
-            // on UI it stays a UI stroke even if the finger slides off the
-            // button, which is what every other touch surface does.
-            if (IsPointerOverUI())
-            {
-                state = GestureState.Blocked;
-                downTarget = GestureTarget.None();
-                Log("down over UI -> Blocked");
-                return;
-            }
-
-            downTarget = ResolveTarget(pos);
-            state = GestureState.Pending;
-
-            // Before the gesture resolves. This is the flash.
-            OnPointerDown?.Invoke(downTarget);
-            Log("down -> Pending on " + downTarget);
+            classifier?.ApplySettings(settings);
         }
 
-        private void ContinuePress(Vector2 pos)
+        public bool IsEnabled(NodeWar.Lobby.InputSlot slot) => classifier == null
+            ? NodeWar.Lobby.InputBindings.DefaultFor(slot).enabled : classifier.IsEnabled(slot);
+
+        public NodeWar.Lobby.InputAction ActionFor(NodeWar.Lobby.InputSlot slot) => classifier == null
+            ? (NodeWar.Lobby.InputAction)NodeWar.Lobby.InputBindings.DefaultFor(slot).action : classifier.ActionFor(slot);
+
+        private static GesturePoint ToMm(Vector2 position)
         {
-            switch (state)
-            {
-                case GestureState.Pending:
-                {
-                    float moved = Vector2.Distance(pos, downPos);
-                    float held = Time.unscaledTime - downTime;
-
-                    if (moved > thresholds.TapSlopPx && held < thresholds.longPressTime)
-                    {
-                        // Movement first: this is a pan, and any pending
-                        // selection intent is dropped.
-                        state = GestureState.Panning;
-                        OnGestureCancelled?.Invoke();
-                        OnPanBegin?.Invoke(downPos);
-                        OnPanUpdate?.Invoke(pos);
-                        Log("slop exceeded -> Panning");
-                    }
-                    else if (held >= thresholds.longPressTime && moved <= thresholds.TapSlopPx)
-                    {
-                        // Held still: arm the lasso. PanSuppressed is now true
-                        // for the remainder of the stroke.
-                        state = GestureState.LassoArmed;
-                        strokePoints.Clear();
-                        LassoGeometry.TryAppend(strokePoints, downPos,
-                            thresholds.LassoDecimationPx, thresholds.maxLassoPoints);
-                        OnGestureCancelled?.Invoke();
-                        OnLassoBegin?.Invoke(downPos);
-                        Log("long press -> LassoArmed");
-                    }
-                    break;
-                }
-
-                case GestureState.Panning:
-                    OnPanUpdate?.Invoke(pos);
-                    break;
-
-                case GestureState.LassoArmed:
-                case GestureState.Lassoing:
-                {
-                    if (LassoGeometry.TryAppend(strokePoints, pos,
-                            thresholds.LassoDecimationPx, thresholds.maxLassoPoints))
-                    {
-                        state = GestureState.Lassoing;
-                        OnLassoPoint?.Invoke(pos);
-                    }
-                    break;
-                }
-            }
+            float scale = ScreenMetrics.PixelsPerMm;
+            return new GesturePoint(position.x / scale, position.y / scale);
         }
 
-        private void EndPress(Vector2 pos)
+        private static Vector2 ToPixels(GesturePoint position)
         {
-            switch (state)
+            float scale = ScreenMetrics.PixelsPerMm;
+            return new Vector2(position.X * scale, position.Y * scale);
+        }
+
+        private void Publish(GestureEvent gesture)
+        {
+            Vector2 pos = ToPixels(gesture.Position);
+            switch (gesture.Kind)
             {
-                case GestureState.Pending:
-                {
-                    float moved = Vector2.Distance(pos, downPos);
-                    float held = Time.unscaledTime - downTime;
-
-                    if (moved <= thresholds.TapSlopPx && held < thresholds.longPressTime)
-                    {
-                        OnTap?.Invoke(downTarget);
-                        Log("release -> Tap on " + downTarget);
-                    }
-                    else
-                    {
-                        // Released past the long-press time without moving and
-                        // without the timer having fired mid-frame. Nothing to do.
-                        OnGestureCancelled?.Invoke();
-                        Log("release -> no gesture");
-                    }
+                case GestureEventKind.PointerDown:
+                    strokePoints.Clear();
+                    downTarget = hasFrameTarget ? frameTarget : ResolveTarget(pos);
+                    OnPointerDown?.Invoke(downTarget);
                     break;
-                }
-
-                case GestureState.Panning:
-                    OnPanEnd?.Invoke();
-                    Log("release -> pan end");
+                case GestureEventKind.Cancelled:
+                    if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
+                    OnGestureCancelled?.Invoke();
                     break;
-
-                case GestureState.LassoArmed:
-                case GestureState.Lassoing:
-                    // A stroke too small to be a shape is published anyway;
-                    // consumers gate on LassoGeometry.IsValid and leave the
-                    // selection untouched when it fails. A long press on
-                    // nothing is a no-op, never a deselect.
+                case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
+                case GestureEventKind.OrderBegin:
+                    orderStartNode = NodeAt(pos);
+                    OnOrderDragBegin?.Invoke(pos);
+                    break;
+                case GestureEventKind.OrderUpdate: OnOrderDragUpdate?.Invoke(pos); break;
+                case GestureEventKind.OrderEnd: FinishOrderDrag(pos); break;
+                case GestureEventKind.OrderCancel: OnOrderDragEnd?.Invoke(); break;
+                case GestureEventKind.HoldInfo: OnHold?.Invoke(downTarget); break;
+                case GestureEventKind.TwoFingerTap: OnTwoFingerTap?.Invoke(); break;
+                case GestureEventKind.DoubleTapGround: OnDoubleTapGround?.Invoke(); break;
+                case GestureEventKind.DoubleTapVillager: OnDoubleTapVillager?.Invoke(downTarget); break;
+                case GestureEventKind.SecondaryClick:
+                    OnSecondaryClick?.Invoke(ResolveTarget(pos, nodesOnly: true));
+                    break;
+                case GestureEventKind.PanBegin: OnPanBegin?.Invoke(pos); break;
+                case GestureEventKind.PanUpdate: OnPanUpdate?.Invoke(pos); break;
+                case GestureEventKind.PanEnd: OnPanEnd?.Invoke(); break;
+                case GestureEventKind.LassoBegin:
+                    strokePoints.Clear();
+                    strokePoints.Add(pos);
+                    OnLassoBegin?.Invoke(pos);
+                    break;
+                case GestureEventKind.LassoPoint:
+                    strokePoints.Add(pos);
+                    OnLassoPoint?.Invoke(pos);
+                    break;
+                case GestureEventKind.LassoComplete:
+                    strokePoints.Clear();
+                    foreach (GesturePoint point in gesture.Points) strokePoints.Add(ToPixels(point));
                     OnLassoComplete?.Invoke(strokePoints);
-                    Log("release -> lasso complete, " + strokePoints.Count + " pts, area " +
-                        LassoGeometry.Area(strokePoints).ToString("0"));
                     break;
+                case GestureEventKind.ZoomBegin: strokePoints.Clear(); OnZoomBegin?.Invoke(); break;
+                case GestureEventKind.ZoomUpdate: OnZoomUpdate?.Invoke(gesture.Scale); break;
+                case GestureEventKind.ZoomEnd: OnZoomEnd?.Invoke(); break;
             }
-
-            state = GestureState.Idle;
+            if (verboseLogging) Log(gesture.Kind.ToString());
         }
-
-        private void Cancel()
+        // Release on another node orders; on the node it started from it was a tap that
+        // rolled; on ground or UI it cancels and the selection stays.
+        private void FinishOrderDrag(Vector2 pos)
         {
-            if (state == GestureState.Idle) return;
-
-            bool wasDrawing = state == GestureState.LassoArmed || state == GestureState.Lassoing;
-
-            state = GestureState.Cancelled;
-            strokePoints.Clear();
-            OnGestureCancelled?.Invoke();
-
-            if (wasDrawing) OnLassoComplete?.Invoke(strokePoints);
-
-            state = GestureState.Idle;
-            Log("cancelled (second finger)");
-        }
-
-        // ===== ZOOM =====
-
-        private void BeginPinch()
-        {
-            float span;
-            if (!TryReadPinchSpan(out span)) return;
-
-            // A pan interrupted by a second finger has, in fact, ended -- fire
-            // the real end event so every existing OnPanEnd subscriber gets
-            // the same cleanup a normal release would have given it.
-            // CameraController.gesturePanActive in particular is only ever
-            // cleared by OnPanEnd; without this it stayed true through the
-            // pinch and for the rest of the match.
-            if (state == GestureState.Panning) OnPanEnd?.Invoke();
-
-            // Whatever the first finger was doing is abandoned before the
-            // pinch starts, so a half-formed pan does not leave a consumer
-            // believing a drag is still live.
-            if (state != GestureState.Idle) OnGestureCancelled?.Invoke();
-
-            state = GestureState.Pinching;
-            pinchStartSpan = span;
-            strokePoints.Clear();
-
-            OnZoomBegin?.Invoke();
-            Log("two fingers -> Pinching, span " + span.ToString("0"));
-        }
-
-        private void UpdatePinch()
-        {
-            float span;
-            if (!TryReadPinchSpan(out span)) return;
-
-            // Below the dead zone the fingers are resting rather than pinching,
-            // and publishing that noise would make the board creep.
-            if (Mathf.Abs(span - pinchStartSpan) < thresholds.PinchDeadZonePx) return;
-
-            OnZoomUpdate?.Invoke(span / pinchStartSpan);
-        }
-
-        private void EndZoom()
-        {
-            state = GestureState.Idle;
-            OnZoomEnd?.Invoke();
-            Log("zoom end");
-        }
-
-        /// <summary>
-        /// Distance between the first two pressed touches. Guarded against a
-        /// zero span: two fingers reported at the same point would make the
-        /// ratio infinite and throw the camera to a clamp instantly.
-        /// </summary>
-        private bool TryReadPinchSpan(out float span)
-        {
-            span = 0f;
-
-            Touchscreen touch = Touchscreen.current;
-            if (touch == null) return false;
-
-            Vector2 a = Vector2.zero;
-            int found = 0;
-
-            var touches = touch.touches;
-            for (int i = 0; i < touches.Count && found < 2; i++)
-            {
-                if (!touches[i].press.isPressed) continue;
-
-                Vector2 p = touches[i].position.ReadValue();
-                if (found == 0) a = p;
-                else span = Vector2.Distance(a, p);
-                found++;
-            }
-
-            if (found < 2) return false;
-            return span > 1f;
+            int node = IsMouseOverUI(pos) ? -1 : NodeAt(pos);
+            if (node >= 0 && node == orderStartNode) OnTap?.Invoke(downTarget);
+            else if (node >= 0) OnOrderDrop?.Invoke(node);
+            OnOrderDragEnd?.Invoke();
         }
 
         // ===== RESOLUTION =====
@@ -463,21 +344,21 @@ namespace NodeWar.Input
             Ray ray = cam.ScreenPointToRay(screenPos);
             RaycastHit hit;
 
-            if (!nodesOnly && Physics.Raycast(ray, out hit, raycastDistance, villagerMask))
+            if (!nodesOnly)
             {
-                var villager = hit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
-                if (villager != null)
+                pickCandidates.Clear();
+                foreach (RaycastHit villagerHit in Physics.RaycastAll(ray, raycastDistance, villagerMask))
                 {
+                    var villager = villagerHit.collider.GetComponentInParent<NodeWar.View.VillagerView>();
+                    if (villager == null) continue;
                     int id = villager.GetVillagerID();
-
-                    // An opponent's villager is not a tap target, so the press
-                    // falls through to the node beneath rather than being
-                    // swallowed. Otherwise an enemy standing on your node would
-                    // block you from opening it -- and their touch targets are
-                    // finger-sized, so they cover a lot of board.
-                    if (villagerFilter == null || villagerFilter(id))
-                        return new GestureTarget(GestureTargetKind.Villager, id);
+                    Vector3 centre = cam.WorldToScreenPoint(villager.transform.position);
+                    pickCandidates.Add(new VillagerPickCandidate(id, new GesturePoint(centre.x, centre.y),
+                        villagerFilter == null || villagerFilter(id), centre.z > 0f));
                 }
+                // Raycast order is undefined; screen-centre distance wins, with ID breaking ties.
+                int nearest = SelectionRules.NearestVillager(pickCandidates, new GesturePoint(screenPos.x, screenPos.y));
+                if (nearest >= 0) return new GestureTarget(GestureTargetKind.Villager, nearest);
             }
 
             if (Physics.Raycast(ray, out hit, raycastDistance, nodeMask))
@@ -529,20 +410,6 @@ namespace NodeWar.Input
                 return EventSystem.current.IsPointerOverGameObject(touch.primaryTouch.touchId.ReadValue());
 
             return EventSystem.current.IsPointerOverGameObject();
-        }
-
-        private int ActiveTouchCount()
-        {
-            Touchscreen touch = Touchscreen.current;
-            if (touch == null) return 0;
-
-            int count = 0;
-            var touches = touch.touches;
-            for (int i = 0; i < touches.Count; i++)
-            {
-                if (touches[i].press.isPressed) count++;
-            }
-            return count;
         }
 
         private void Log(string message)

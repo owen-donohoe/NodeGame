@@ -25,6 +25,8 @@ namespace NodeWar.Input
         // pan needing a slightly more committed drag.
         public float tapSlopMm = 4.0f;
 
+        public const float HoldStillnessMm = GestureClassifier.DefaultHoldStillnessMm;
+
         [Tooltip("Minimum spacing between recorded lasso points. Kept below " +
                  "tapSlop so the polygon still tracks a tight curve, while " +
                  "keeping the vertex count bounded.")]
@@ -36,12 +38,26 @@ namespace NodeWar.Input
                  "press. Doubles as the tap's implicit maximum -- a press that " +
                  "survives it is no longer a tap candidate.")]
         [Range(0.15f, 1f)]
-        // TODO: expose in player settings when a settings system exists.
-        // Long-press duration is an accessibility control as much as a feel
-        // one -- it is the standard accommodation for reduced motor control,
-        // and players differ widely in what reads as "held" versus "tapped".
-        // Tuned to 0.3s by hand; that is the default, not a fixed value.
+        // Fallback when no player settings are available; settings.holdTime wins otherwise.
         public float longPressTime = 0.3f;
+
+        [Tooltip("Longest gap between a tap and the second press for the pair to " +
+                 "count as a double-tap.")]
+        [Range(0.15f, 0.6f)]
+        public float doubleTapTime = 0.3f;
+
+        [Tooltip("How far the second press of a double-tap may land from the first, in millimetres.")]
+        [Range(2f, 20f)]
+        public float doubleTapRadiusMm = 8f;
+
+        [Tooltip("Longest a two-finger touch may last and still be a two-finger tap.")]
+        [Range(0.1f, 0.6f)]
+        public float twoFingerTapTime = 0.3f;
+
+        [Tooltip("Vertical finger travel that doubles the zoom in one-handed zoom " +
+                 "(double-tap, then drag), in millimetres.")]
+        [Range(8f, 80f)]
+        public float oneHandZoomMmPerDoubling = 25f;
 
         [Tooltip("How long the white touch-down flash lasts.")]
         [Range(0.03f, 0.5f)]
