@@ -33,6 +33,9 @@ MonoBehaviour:
     maxWorkersPerNode: 2
     maxVillagersPerPlayer: 25
     respawnCostFood: 1
+    foodCap: 30
+    materialsCap: 30
+    metalCap: 10
     baseHP: 5
     baseAttackDamage: 1
     baseMoveSpeedTicks: 4
