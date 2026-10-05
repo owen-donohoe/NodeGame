@@ -14,6 +14,18 @@ namespace NodeWar.UI
     /// </summary>
     public static class ResourceVisibility
     {
+        private static bool debugMetal;
+        private static bool debugMagic;
+
+        public static void SetDebugOverrides(bool localOrBot, bool metal, bool magic)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            debugMetal = localOrBot && metal;
+            debugMagic = localOrBot && magic;
+#else
+            debugMetal = debugMagic = false;
+#endif
+        }
         public static int LocalArena()
         {
             PlayerState state = BackendServices.LastKnownState;
@@ -22,7 +34,12 @@ namespace NodeWar.UI
 
         public static bool MetalVisible(int metal)
         {
-            return ResourceHudMath.MetalVisible(LocalArena(), metal);
+            return ResourceHudMath.MetalVisible(LocalArena(), metal, debugMetal);
+        }
+
+        public static bool MagicVisible()
+        {
+            return ResourceHudMath.MagicVisible(LocalArena(), debugMagic);
         }
     }
 }

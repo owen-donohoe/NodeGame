@@ -321,10 +321,21 @@
 
 .hud__res-bar-host {
     flex-grow: 1;
-    height: 14px;
+    height: 6px;
     transition-property: scale;
     transition-duration: 150ms;
     transition-timing-function: ease-out-back;
+}
+
+/* Metal and display-only magic blend continuously over their capacities. */
+.hud__res-ring.hud__resource--metal {
+    --ring-critical: rgb(132, 139, 145);
+    --ring-rich: rgb(83, 150, 191);
+}
+
+.hud__res-ring.hud__resource--magic {
+    --ring-critical: rgb(157, 79, 203);
+    --ring-rich: rgb(103, 107, 224);
 }
 
 .ui-root .hud__res-metal-value {

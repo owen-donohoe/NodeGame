@@ -19,6 +19,7 @@ namespace NodeWar.UI
         public const int DefaultFoodCap = 30;
         public const int DefaultMaterialsCap = 30;
         public const int DefaultMetalCap = 10;
+        public const int DefaultMagicCap = 10;
 
         /// <summary>A cap of zero or less is "no cap known"; nothing is ever full against it.</summary>
         public static bool IsFull(int value, int cap)
@@ -33,15 +34,24 @@ namespace NodeWar.UI
         /// game for the player. A placeholder: it is one number so it can be tuned in one place.
         /// </summary>
         public const int MetalArena = 2;
+        public const int MagicArena = 3;
 
         /// <summary>
         /// Metal is hidden at first and shows once the player's arena reaches
         /// <see cref="MetalArena"/>, or whenever they actually hold some.
         /// </summary>
-        public static bool MetalVisible(int arena, int metal)
+        public static bool MetalVisible(int arena, int metal, bool debugOverride = false)
         {
-            return arena >= MetalArena || metal > 0;
+            return debugOverride || arena >= MetalArena || metal > 0;
         }
+
+        public static bool MagicVisible(int arena, bool debugOverride = false)
+        {
+            return debugOverride || arena >= MagicArena;
+        }
+
+        /// <summary>Single future-source hook. Magic is currently display-only.</summary>
+        public static int DisplayOnlyMagicAmount() { return 0; }
 
         // ---- the metal bar
 
