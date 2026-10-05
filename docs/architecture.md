@@ -328,11 +328,85 @@ writes nothing to it.
 Create an Inspector-authored **NodeWar > UI Art Theme** asset named `UIArtTheme`
 at `Assets/UI/Resources/UIArtTheme.asset`. The UI loads it once per play session
 through `Resources.Load("UIArtTheme")`; restart Play Mode after changing its
-reference or entries. Add icon entries by `LobbyIconKind`, with a Sprite and
-`keepOriginalColours`. The first duplicate kind wins (even if its sprite is
-empty); validation warns. Original-colour sprites use white tint; other sprites
+reference or entries. Add icon entries by `LobbyIconKind` and optional
+`LobbyIconContext`, with a Sprite and `keepOriginalColours`. Resolution tries
+the exact kind/context pair, then that kind with `Anywhere`, then its generated
+glyph. The first duplicate **pair** wins; validation warns. An empty exact
+sprite falls back to Anywhere, without taking a later exact duplicate. An
+empty first Anywhere entry falls back to the glyph. Original-colour sprites
+use white tint; other sprites
 use the existing glyph tint. Images scale to fit, centred, with letterboxing.
 Missing entries keep the generated vectors; unknown kinds get a placeholder.
+
+Existing enum names and values are unchanged; semantic kinds are appended.
+Every new kind shares its predecessor's drawing until its own art is assigned.
+Existing theme entries without a context deserialize to `Anywhere` (explicit
+enum value zero; the serialized field has no nonzero initializer). No asset
+re-save is needed to preserve their fallback behaviour. In UXML use, for
+example, `kind="Tv" context="PageHeader"`; in C# the constructor accepts an
+optional context, and either property can change independently.
+
+Contexts are `Anywhere` (default fallback), `TopBar`, `PageHeader`, `NavBar`,
+`HeadsUpDisplay`, `NodeSheet`, `InlineText`, `EmotePicker`, `EmoteBubble`,
+`OffScreenIndicator`, `ShopCard`, `SuitTree`, `Workshop`, `Profile`, and `Home`.
+The indicator layer tags both its pointer and event glyph `OffScreenIndicator`,
+including when that same indicator is projected over the board.
+
+| Kind | Current use | Context(s) |
+|---|---|---|
+| None | Intentional absence of a glyph | Anywhere |
+| Shop | Legacy generic fallback drawer; no active use | — |
+| Spark | Legacy generic fallback drawer; no active use | — |
+| Tools | Workshop navigation | NavBar |
+| Smile | Legacy generic fallback drawer; no active use | — |
+| Gear | Lobby settings button | TopBar |
+| Envelope | Legacy generic fallback drawer; no active use | — |
+| Mouth | Home villager face | Home |
+| Tv | History button and history page header | TopBar, PageHeader |
+| Back | Page back buttons, controls row, suit-tree back | PageHeader, InlineText, SuitTree |
+| Flag | Legacy generic fallback drawer; no active use | — |
+| Hat | Legacy generic fallback drawer; no active use | — |
+| Diamond | Legacy generic fallback drawer; no active use | — |
+| District | Workshop district tabs and picker | Workshop |
+| Suit | Workshop suit tabs and picker | Workshop |
+| Lock | Workshop locked cards | Workshop |
+| Pip | Legacy generic fallback drawer; no active use | — |
+| Close | Node-sheet close button | NodeSheet |
+| Alert | Legacy generic fallback drawer; no active use | — |
+| Swords | Battle indicator | OffScreenIndicator |
+| Capture | Legacy generic fallback drawer; no active use | — |
+| Sleep | Idle indicator | OffScreenIndicator |
+| Respawn | Respawn indicator | OffScreenIndicator |
+| Pointer | Indicator direction arrow | OffScreenIndicator |
+| Frown | Sad emote | EmotePicker, EmoteBubble |
+| Angry | Angry emote | EmotePicker, EmoteBubble |
+| Speaker | HUD/settings mute status and emote-picker mute | HeadsUpDisplay, EmotePicker |
+| Food | HUD, sheet readout, inline costs/rewards | HeadsUpDisplay, NodeSheet, InlineText |
+| Materials | HUD, sheet readout, inline costs/rewards | HeadsUpDisplay, NodeSheet, InlineText |
+| Metal | HUD, sheet readout, inline costs/rewards | HeadsUpDisplay, NodeSheet, InlineText |
+| NavBarHome | Home navigation | NavBar |
+| NavBarSocial | Social navigation | NavBar |
+| NavBarShop | Shop navigation | NavBar |
+| DailyBox | Home daily box | Home |
+| VictoryBox | Home victory box | Home |
+| ShopBundle | Shop bundle offers | ShopCard |
+| GoldLeaf | Shop gold-leaf offer | ShopCard |
+| MagicResource | HUD magic bar and sheet readout | HeadsUpDisplay, NodeSheet |
+| SuitTreeAvailable | Available suit-tree node | SuitTree |
+| SuitTreeOwned | Owned suit-tree node | SuitTree |
+| SuitTreeEquipped | Equipped suit-tree node | SuitTree |
+| SuitTreeLocked | Locked suit-tree node | SuitTree |
+| ProfileYouAreHere | Profile arena-track marker | Profile |
+| IndicatorEffect | Generic effect indicator | OffScreenIndicator |
+| IndicatorThreatToCore | Threat-to-core indicator | OffScreenIndicator |
+| IndicatorThreatToTerritory | Threat-to-territory indicator | OffScreenIndicator |
+| IndicatorNodeUnderAttack | Node-under-attack indicator | OffScreenIndicator |
+| IndicatorNodeContested | Contested-node indicator | OffScreenIndicator |
+| EmoteHappy | Happy emote | EmotePicker, EmoteBubble |
+| EmoteWhiteFlag | White-flag emote | EmotePicker, EmoteBubble |
+| CosmeticTinRoof | Shop Tin Roof card and item detail | ShopCard |
+| CosmeticPaperBanner | Shop Paper Banner card and item detail/default | ShopCard |
+| CosmeticStrawHat | Shop Straw Hat card and item detail | ShopCard |
 
 Assign the theme's `districtVisuals` reference to the existing
 `DistrictVisualTable` (no move into Resources). Populate each `DistrictVisual`'s
