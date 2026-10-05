@@ -35,7 +35,7 @@ namespace NodeWar.UI
                 ResourceRingColors.Read(evt.customStyle, ref critical, ref low, ref warn, ref ok, ref good, ref rich);
                 Repaint();
             });
-            icon = new LobbyIcon(glyph);
+            icon = new LobbyIcon(glyph, LobbyIconContext.NodeSheet);
             icon.AddToClassList("sheet__res-chip-icon");
             count = new Label("0") { pickingMode = PickingMode.Ignore };
             count.AddToClassList("sheet__res-chip-value");

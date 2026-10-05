@@ -495,7 +495,7 @@ namespace NodeWar.Lobby
                 }
                 else if (!locked)
                     art.Add(MakeLabel(ItemTint.MonogramFor(item.Name, item.ID), "lb-gcard__letter", "ui-w600"));
-                if (locked) art.Add(new LobbyIcon(LobbyIconKind.Lock));
+                if (locked) art.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
                 card.Add(art);
 
                 card.Add(MakeLabel(item.Name, "lb-gcard__name", "ui-w600"));

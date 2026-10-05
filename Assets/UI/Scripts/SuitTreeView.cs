@@ -243,7 +243,7 @@ namespace NodeWar.Lobby
             VisualElement disc = new VisualElement();
             disc.AddToClassList("st-node__disc");
             disc.pickingMode = PickingMode.Ignore;
-            LobbyIcon glyph = new LobbyIcon(GlyphFor(node.State));
+            LobbyIcon glyph = new LobbyIcon(GlyphFor(node.State), LobbyIconContext.SuitTree);
             glyph.AddToClassList("lb-icon");
             glyph.AddToClassList("st-node__glyph");
             glyph.pickingMode = PickingMode.Ignore;
@@ -264,10 +264,10 @@ namespace NodeWar.Lobby
         {
             switch (state)
             {
-                case SuitNodeState.Equipped: return LobbyIconKind.Diamond;
-                case SuitNodeState.Owned: return LobbyIconKind.Pip;
-                case SuitNodeState.Available: return LobbyIconKind.Spark;
-                default: return LobbyIconKind.Lock;
+                case SuitNodeState.Equipped: return LobbyIconKind.SuitTreeEquipped;
+                case SuitNodeState.Owned: return LobbyIconKind.SuitTreeOwned;
+                case SuitNodeState.Available: return LobbyIconKind.SuitTreeAvailable;
+                default: return LobbyIconKind.SuitTreeLocked;
             }
         }
 

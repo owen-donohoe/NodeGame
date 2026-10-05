@@ -159,19 +159,19 @@
 
                 <engine:VisualElement name="hud-emote-dock" class="hud__emote-tab" picking-mode="Ignore">
                     <engine:Button name="hud-emote-button" class="ui-reset-button hud__emote-tab-button">
-                        <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                        <lobby:LobbyIcon context="HeadsUpDisplay" kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
                     </engine:Button>
                 </engine:VisualElement>
 
                 <engine:VisualElement class="hud__res-row" picking-mode="Ignore">
                     <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
-                        <lobby:LobbyIcon kind="Food" class="hud__res-icon" picking-mode="Ignore" />
+                        <lobby:LobbyIcon context="HeadsUpDisplay" kind="Food" class="hud__res-icon" picking-mode="Ignore" />
                         <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
                             <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                         </engine:VisualElement>
                     </engine:VisualElement>
                     <engine:VisualElement name="hud-res-materials" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
-                        <lobby:LobbyIcon kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
+                        <lobby:LobbyIcon context="HeadsUpDisplay" kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
                         <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
                             <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                         </engine:VisualElement>
@@ -185,14 +185,14 @@
                     toggles the visible modifier). The bar is built in code (ResourceBar).
                 -->
                 <engine:VisualElement name="hud-res-metal" class="hud__res-metal" picking-mode="Ignore">
-                    <lobby:LobbyIcon kind="Metal" class="hud__res-metal-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="HeadsUpDisplay" kind="Metal" class="hud__res-metal-icon" picking-mode="Ignore" />
                     <engine:VisualElement name="hud-ring-metal" class="hud__res-bar-host" picking-mode="Ignore" />
                     <engine:Label name="hud-metal" class="hud__res-metal-value ui-w700" text="0/10" picking-mode="Ignore" />
                 </engine:VisualElement>
 
                 <!-- Magic has no simulation source: ResourceHudMath.DisplayOnlyMagicAmount reads 0. -->
                 <engine:VisualElement name="hud-res-magic" class="hud__res-metal" picking-mode="Ignore">
-                    <lobby:LobbyIcon kind="Spark" class="hud__res-metal-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="HeadsUpDisplay" kind="MagicResource" class="hud__res-metal-icon" picking-mode="Ignore" />
                     <engine:VisualElement name="hud-ring-magic" class="hud__res-bar-host" picking-mode="Ignore" />
                     <engine:Label name="hud-magic" class="hud__res-metal-value ui-w700" text="0/10" picking-mode="Ignore" />
                 </engine:VisualElement>
@@ -424,7 +424,7 @@
             </engine:Button>
 
             <engine:Button name="hud-settings-row-emotes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
-                <lobby:LobbyIcon name="hud-settings-emotes-icon" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
+                <lobby:LobbyIcon name="hud-settings-emotes-icon" context="HeadsUpDisplay" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
                 <engine:Label class="hud__settings-label ui-w500" text="Emotes (saved)" picking-mode="Ignore" />
                 <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
             </engine:Button>
@@ -488,20 +488,20 @@
             <engine:VisualElement name="hud-emote-sheet" class="hud__settings hud__emote-sheet" picking-mode="Ignore">
               <engine:VisualElement class="hud__emote-options" picking-mode="Ignore">
                 <engine:Button name="hud-emote-happy" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Smile" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="EmoteHappy" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Button name="hud-emote-sad" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Frown" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="Frown" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Button name="hud-emote-angry" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Angry" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="Angry" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Button name="hud-emote-flag" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Flag" class="hud__emote-icon hud__emote-icon--flag" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="EmoteWhiteFlag" class="hud__emote-icon hud__emote-icon--flag" picking-mode="Ignore" />
                 </engine:Button>
               </engine:VisualElement>
               <engine:Button name="hud-emote-mute" class="ui-reset-button hud__emote-mute" picking-mode="Ignore">
-                  <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                  <lobby:LobbyIcon context="EmotePicker" kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
                   <engine:Label name="hud-emote-mute-label" class="hud__emote-mute-label ui-w500" text="Mute this match" picking-mode="Ignore" />
               </engine:Button>
             </engine:VisualElement>

@@ -244,7 +244,7 @@ namespace NodeWar.UI
                 LobbyIconKind icon = IconFor(template.Substring(open + 1, close - open - 1));
                 if (icon != LobbyIconKind.None)
                 {
-                    LobbyIcon glyph = new LobbyIcon(icon);
+                    LobbyIcon glyph = new LobbyIcon(icon, LobbyIconContext.InlineText);
                     glyph.AddToClassList("sheet__resource-icon");
                     row.Add(glyph);
                 }
