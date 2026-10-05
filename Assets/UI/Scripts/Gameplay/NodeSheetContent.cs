@@ -39,6 +39,7 @@ namespace NodeWar.UI
         private readonly List<VisualElement> actionElements = new List<VisualElement>();
         private SimulationState builtState;
         private int builtLayoutKey;
+        private DistrictType boundDistrictType;
 
         // Core and Forge share a layout across nodes; Equip depends on the district.
         protected virtual int LayoutKey { get { return 0; } }
@@ -90,6 +91,7 @@ namespace NodeWar.UI
             NodeID = nodeID;
             ControlledPID = controlledPID;
             Actions = actions;
+            boundDistrictType = state.nodes[nodeID].districtType;
 
             OnRebind();
 
@@ -122,6 +124,12 @@ namespace NodeWar.UI
             ControlledPID = controlledPID;
         }
 
+        /// <summary>Detached or closed content must not submit commands from stale controls.</summary>
+        public void Unbind()
+        {
+            Input = null;
+        }
+
         /// <summary>Called when the content layout changes. Build here.</summary>
         protected virtual void OnBind() { }
 
@@ -138,7 +146,9 @@ namespace NodeWar.UI
         /// </summary>
         protected void Send(GameCommand command)
         {
-            if (Input == null) return;
+            if (Input == null || State == null || NodeID < 0 || NodeID >= State.nodes.Length) return;
+            // A district can change between the tick and the next sheet refresh.
+            if (State.nodes[NodeID].districtType != boundDistrictType) return;
 
             command.issuedOnTick = State.tickCount;
             Input.EnqueueCommand(command);
