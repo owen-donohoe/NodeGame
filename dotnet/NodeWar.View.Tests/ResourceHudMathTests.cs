@@ -172,12 +172,12 @@ namespace NodeWar.View.Tests
         [Test]
         public void PulseGoesToAndFro_AndReducedMotionIsAStaticBrighterTint()
         {
-            Assert.AreEqual(0f, ResourceHudMath.PulseAmount(0f), 1e-6f);
-            Assert.AreEqual(1f, ResourceHudMath.PulseAmount(ResourceHudMath.PulsePeriodSeconds * 0.5f), 1e-5f);
-            Assert.AreEqual(0f, ResourceHudMath.PulseAmount(ResourceHudMath.PulsePeriodSeconds), 1e-5f);
+            Assert.AreEqual(1f, ResourceHudMath.PulseAmount(0f), 1e-6f);
+            Assert.AreEqual(0f, ResourceHudMath.PulseAmount(ResourceHudMath.PulsePeriodSeconds * 0.5f), 1e-5f);
+            Assert.AreEqual(1f, ResourceHudMath.PulseAmount(ResourceHudMath.PulsePeriodSeconds), 1e-5f);
 
-            float low = ResourceHudMath.FullWhiteMix(0f, false);
-            float high = ResourceHudMath.FullWhiteMix(ResourceHudMath.PulsePeriodSeconds * 0.5f, false);
+            float low = ResourceHudMath.FullWhiteMix(ResourceHudMath.PulsePeriodSeconds * 0.5f, false);
+            float high = ResourceHudMath.FullWhiteMix(0f, false);
             Assert.Greater(high, low);
             Assert.Greater(low, 0f, "even at its dimmest a full resource is a little whiter");
 
@@ -186,6 +186,45 @@ namespace NodeWar.View.Tests
             Assert.Greater(ResourceHudMath.StaticWhiteMix, 0f);
             Assert.AreEqual(-1f, ResourceHudMath.EffectiveWaveProgress(0.2f, true), "no wave");
             Assert.AreEqual(ResourceHudMath.WaveProgress(0.2f), ResourceHudMath.EffectiveWaveProgress(0.2f, false));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(10)]
+        [TestCase(100000)]
+        public void EveryCyclePeaksWhenWaveEnters(int cycle)
+        {
+            Assert.AreEqual(ResourceHudMath.WavePeriodSeconds, ResourceHudMath.PulsePeriodSeconds);
+            double time = (double)ResourceHudMath.FullPeriodSeconds * cycle;
+            ResourceHudMath.FullEffectAt(time, false, out float white, out float wave);
+            Assert.AreEqual(0f, wave, 1e-5f);
+            Assert.AreEqual(0.28f, white, 1e-5f);
+            ResourceHudMath.FullEffectAt(time + ResourceHudMath.FullPeriodSeconds * 0.5, false, out white, out wave);
+            Assert.AreEqual(0.08f, white, 1e-5f, "pulse trough halfway through the same cycle");
+            Assert.AreEqual(ResourceHudMath.FullPeriodSeconds * 0.5f / ResourceHudMath.WaveTravelSeconds, wave, 1e-5f);
+        }
+
+        [TestCase(0f)]
+        [TestCase(0.25f)]
+        [TestCase(0.5f)]
+        [TestCase(0.75f)]
+        public void GlobalPhaseDrivesBothEffectsAndRepeatsAcrossFrames(float fraction)
+        {
+            double time = ResourceHudMath.FullPeriodSeconds * (1000.0 + fraction);
+            Assert.AreEqual(fraction, ResourceHudMath.FullPhase(time), 1e-5f);
+            ResourceHudMath.FullEffectAt(time, false, out float white, out float wave);
+            Assert.AreEqual(0.18f + 0.1f * System.Math.Cos(fraction * 2 * System.Math.PI), white, 1e-5);
+            float expectedWave = fraction * ResourceHudMath.FullPeriodSeconds < ResourceHudMath.WaveTravelSeconds
+                ? fraction * ResourceHudMath.FullPeriodSeconds / ResourceHudMath.WaveTravelSeconds : -1f;
+            Assert.AreEqual(expectedWave, wave, 1e-5f);
+            // Full resources can join at any time; phase depends only on global time.
+            ResourceHudMath.FullEffectAt(time + 19 * (double)ResourceHudMath.FullPeriodSeconds, false,
+                out float repeatedWhite, out float repeatedWave);
+            Assert.AreEqual(white, repeatedWhite, 1e-5f);
+            Assert.AreEqual(wave, repeatedWave, 1e-5f);
+            ResourceHudMath.FullEffectAt(time, true, out white, out wave);
+            Assert.AreEqual(ResourceHudMath.StaticWhiteMix, white);
+            Assert.AreEqual(-1f, wave);
         }
     }
 }

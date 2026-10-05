@@ -100,8 +100,9 @@ namespace NodeWar.UI
 
         // ---- the full state: pulse and wave
 
-        /// <summary>Seconds between the starts of two waves while full.</summary>
-        public const float WavePeriodSeconds = 1.8f;
+        /// <summary>One shared cycle for the full-state pulse and wave.</summary>
+        public const float FullPeriodSeconds = 1.8f;
+        public const float WavePeriodSeconds = FullPeriodSeconds;
 
         /// <summary>Seconds a wave takes to cross, right end to left end. The rest of the period is rest.</summary>
         public const float WaveTravelSeconds = 0.95f;
@@ -115,18 +116,45 @@ namespace NodeWar.UI
         public const float WaveEndStrength = 0.15f;
 
         /// <summary>Seconds for the full-state pulse to go there and back.</summary>
-        public const float PulsePeriodSeconds = 1.2f;
+        public const float PulsePeriodSeconds = FullPeriodSeconds;
+
+        /// <summary>Global unscaled time -> cycle phase. Joining full never resets it.</summary>
+        public static float FullPhase(double globalSeconds)
+        {
+            return globalSeconds < 0 ? -1f : (float)((globalSeconds % FullPeriodSeconds) / FullPeriodSeconds);
+        }
+
+        private static float WaveAtPhase(float phase)
+        {
+            if (phase < 0f) return -1f;
+            float seconds = phase * FullPeriodSeconds;
+            return seconds >= WaveTravelSeconds ? -1f : seconds / WaveTravelSeconds;
+        }
+
+        private static float PulseAtPhase(float phase)
+        {
+            if (phase < 0f) return 0f;
+            return (float)(0.5 + 0.5 * Math.Cos(phase * 2.0 * Math.PI));
+        }
+
+        /// <summary>
+        /// Both effects from exactly one phase: pulse peaks as the wave enters on the right.
+        /// Every renderer samples Unity's same frame-stable unscaled time, not time spent full.
+        /// </summary>
+        public static void FullEffectAt(double globalSeconds, bool reducedMotion, out float whiteMix, out float waveProgress)
+        {
+            float phase = FullPhase(globalSeconds);
+            whiteMix = reducedMotion ? StaticWhiteMix : 0.08f + 0.2f * PulseAtPhase(phase);
+            waveProgress = reducedMotion ? -1f : WaveAtPhase(phase);
+        }
 
         /// <summary>
         /// How far through its crossing the wave is: 0 at the right end, 1 at the left, and -1
-        /// while resting between waves. <paramref name="elapsed"/> is time spent full.
+        /// while resting between waves. <paramref name="elapsed"/> is global unscaled time.
         /// </summary>
         public static float WaveProgress(float elapsed)
         {
-            if (elapsed < 0f) return -1f;
-            float t = elapsed % WavePeriodSeconds;
-            if (t >= WaveTravelSeconds) return -1f;
-            return t / WaveTravelSeconds;
+            return WaveAtPhase(FullPhase(elapsed));
         }
 
         /// <summary>
@@ -169,12 +197,10 @@ namespace NodeWar.UI
             return best;
         }
 
-        /// <summary>0..1 and back, once per <see cref="PulsePeriodSeconds"/>, starting at 0.</summary>
+        /// <summary>One pulse per shared cycle, peaking at wave entry (phase zero).</summary>
         public static float PulseAmount(float elapsed)
         {
-            if (elapsed < 0f) return 0f;
-            double phase = (elapsed % PulsePeriodSeconds) / PulsePeriodSeconds;
-            return (float)(0.5 - 0.5 * Math.Cos(phase * 2.0 * Math.PI));
+            return PulseAtPhase(FullPhase(elapsed));
         }
 
         /// <summary>The steady brighter tint used instead of the pulse under reduced motion.</summary>
