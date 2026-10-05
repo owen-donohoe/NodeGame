@@ -83,6 +83,11 @@ namespace NodeWar.Simulation
 
         public int respawnCostFood;
 
+        /// <summary>Resource ceilings; zero or negative means uncapped.</summary>
+        public int foodCap;
+        public int materialsCap;
+        public int metalCap;
+
         public int baseHP;
         public int baseAttackDamage;
         public int baseMoveSpeedTicks;
@@ -233,6 +238,22 @@ namespace NodeWar.Simulation
             return cost > int.MaxValue ? int.MaxValue : (int)cost;
         }
 
+        public static int ClampResource(int value, int cap)
+        {
+            return cap > 0 && value > cap ? cap : value;
+        }
+
+        public static bool HasResourceRoom(int value, int cap)
+        {
+            return cap <= 0 || value < cap;
+        }
+
+        /// <summary>A full stock wastes the payout; nonpositive caps keep legacy arithmetic.</summary>
+        public static int AddResource(int value, int cap)
+        {
+            return cap > 0 && value >= cap ? cap : unchecked(value + 1);
+        }
+
         public static GameBalanceData Default()
         {
             return new GameBalanceData
@@ -257,6 +278,9 @@ namespace NodeWar.Simulation
                 maxWorkersPerNode = 2,
                 maxVillagersPerPlayer = 25,
                 respawnCostFood = 1,
+                foodCap = 30,
+                materialsCap = 30,
+                metalCap = 10,
                 baseHP = 5,
                 baseAttackDamage = 1,
                 baseMoveSpeedTicks = 4,
