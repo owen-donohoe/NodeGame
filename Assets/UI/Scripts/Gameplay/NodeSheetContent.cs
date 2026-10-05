@@ -91,6 +91,8 @@ namespace NodeWar.UI
             ControlledPID = controlledPID;
             Actions = actions;
 
+            OnRebind();
+
             int layoutKey = LayoutKey;
             if (builtState != state || builtLayoutKey != layoutKey)
             {
@@ -122,6 +124,9 @@ namespace NodeWar.UI
 
         /// <summary>Called when the content layout changes. Build here.</summary>
         protected virtual void OnBind() { }
+
+        /// <summary>Called for every binding, including reuse of the same layout.</summary>
+        protected virtual void OnRebind() { }
 
         /// <summary>Called every frame while the sheet is open. Read state here.</summary>
         public abstract void Refresh();
