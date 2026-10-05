@@ -260,12 +260,14 @@
     -unity-background-image-tint-color: var(--hud-ink-mute);
 }
 
-/* Height is roughly half of width, not a square: the ring itself is only
-   the upper semicircle, flat side down, so it needs the diameter's width
-   but just the radius's height. See ResourceRing.Draw. */
+/* Each semicircle takes its card's width - half the sheet - up to a cap so a
+   desktop window does not draw a giant one. The height is half the width plus half a
+   stroke, set in code from ResourceHudMath.HostHeight when the width is known; the
+   value here only holds the place until then. See ResourceRing.Draw. */
 .hud__res-ring-host {
-    width: 84px;
-    height: 50px;
+    width: 100%;
+    max-width: 260px;
+    height: 100px;
     align-items: center;
     justify-content: center;
     transition-property: scale;
@@ -298,15 +300,51 @@
     scale: 0.9 0.9;
 }
 
+/* Metal: a plain bar under the two semicircles. Hidden until it applies. */
+.hud__res-metal {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--space-3);
+}
+
+.hud__res-metal--on {
+    display: flex;
+}
+
+.hud__res-metal-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: var(--space-2);
+    -unity-background-image-tint-color: var(--hud-ink-mute);
+}
+
+.hud__res-bar-host {
+    flex-grow: 1;
+    height: 14px;
+    transition-property: scale;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out-back;
+}
+
+.ui-root .hud__res-metal-value {
+    min-width: 56px;
+    margin-left: var(--space-3);
+    font-size: var(--type-body);
+    color: var(--hud-ink);
+    -unity-text-align: middle-right;
+}
+
 .ui-root .hud__res-value {
     position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
     left: 0;
-    font-size: var(--type-heading);
+    padding-bottom: 2px;
+    font-size: 28px;
     color: var(--hud-ink);
-    -unity-text-align: middle-center;
+    -unity-text-align: lower-center;
 }
 
 /* ===================================================================

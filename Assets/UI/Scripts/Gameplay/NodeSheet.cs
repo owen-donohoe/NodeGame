@@ -281,6 +281,11 @@ namespace NodeWar.UI
             foodChip.Refresh(player.food, (involved & ResourceKind.Food) != 0);
             materialsChip.Refresh(player.materials, (involved & ResourceKind.Materials) != 0);
             metalChip.Refresh(player.metal, (involved & ResourceKind.Metal) != 0);
+
+            // Metal follows the HUD bar's rule: hidden until the player's arena reaches it
+            // or they hold some.
+            metalChip.Root.style.display = ResourceVisibility.MetalVisible(player.metal)
+                ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private static bool HasVisibleChild(VisualElement host)

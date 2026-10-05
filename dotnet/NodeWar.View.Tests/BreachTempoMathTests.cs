@@ -8,19 +8,31 @@ namespace NodeWar.View.Tests
         private static readonly int[] SdTicks = { 2400 };
         private static readonly int[] SdThresholds = { 1 };
 
+        // Fill is against the original max (3), so after sudden death a live wall is one third.
         [TestCase(0, 3, false, 3, 1f)]
         [TestCase(1, 3, false, 2, 2f / 3f)]
         [TestCase(2, 3, false, 1, 1f / 3f)]
         [TestCase(3, 3, false, 1, 1f / 3f)] // Simultaneous losses cancelled.
-        [TestCase(0, 1, false, 1, 1f)]
-        [TestCase(1, 1, false, 1, 1f)] // Drop alone does not defeat the core.
-        [TestCase(2, 1, false, 1, 1f)]
+        [TestCase(0, 1, false, 1, 1f / 3f)] // Sudden death before any breach: one segment of three.
+        [TestCase(1, 1, false, 1, 1f / 3f)] // Drop alone does not defeat the core.
+        [TestCase(2, 1, false, 1, 1f / 3f)]
         [TestCase(2, 1, true, 0, 0f)]
-        [TestCase(-1, 0, false, 1, 1f)]
+        [TestCase(-1, 0, false, 1, 1f / 3f)]
         public void WallShowsActualBreachesRemainingUnderR1(int breaches, int threshold, bool defeated, int remaining, float fill)
         {
             Assert.AreEqual(remaining, BreachTempoMath.WallRemaining(breaches, threshold, defeated));
-            Assert.AreEqual(fill, BreachTempoMath.WallFill(breaches, threshold, defeated), 1e-6f);
+            Assert.AreEqual(fill, BreachTempoMath.WallFill(breaches, threshold, defeated, 3), 1e-6f);
+        }
+
+        [Test]
+        public void WallFillUsesTheOriginalMaxNotTheDroppedThreshold()
+        {
+            // The same wall, before and after the threshold drops to 1.
+            Assert.AreEqual(2f / 3f, BreachTempoMath.WallFill(1, 3, false, 3), 1e-6f);
+            Assert.AreEqual(1f / 3f, BreachTempoMath.WallFill(1, 1, false, 3), 1e-6f);
+            Assert.AreEqual("Next breach loses", BreachTempoMath.WallLabel(1, 1, false));
+            // A max below the live threshold cannot push the fill over 1.
+            Assert.AreEqual(1f, BreachTempoMath.WallFill(0, 3, false, 1), 1e-6f);
         }
 
         [Test]
