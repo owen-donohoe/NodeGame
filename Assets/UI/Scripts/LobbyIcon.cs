@@ -68,11 +68,13 @@ namespace NodeWar.Lobby
 
         private static readonly Dictionary<LobbyIconKind, VectorImage> cache =
             new Dictionary<LobbyIconKind, VectorImage>();
+        private static readonly HashSet<LobbyIconKind> warnedKinds = new HashSet<LobbyIconKind>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
             cache.Clear();
+            warnedKinds.Clear();
         }
 
         private LobbyIconKind kind;
@@ -84,7 +86,18 @@ namespace NodeWar.Lobby
             set
             {
                 kind = value;
-                style.backgroundImage = new StyleBackground(ImageFor(kind));
+                UIArtTheme theme = UIArt.Theme;
+                if (theme != null && theme.TryIcon(kind, out UIArtTheme.IconEntry entry) && entry.sprite != null)
+                {
+                    style.backgroundImage = new StyleBackground(entry.sprite);
+                    style.unityBackgroundImageTintColor = entry.keepOriginalColours
+                        ? new StyleColor(Color.white) : new StyleColor(StyleKeyword.Null);
+                }
+                else
+                {
+                    style.backgroundImage = new StyleBackground(ImageFor(kind));
+                    style.unityBackgroundImageTintColor = new StyleColor(StyleKeyword.Null);
+                }
             }
         }
 
@@ -92,6 +105,7 @@ namespace NodeWar.Lobby
         {
             AddToClassList("lb-icon");
             pickingMode = PickingMode.Ignore;
+            style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
         }
 
         public LobbyIcon(LobbyIconKind kind) : this()
@@ -150,6 +164,13 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Food: DrawFood(p); break;
                 case LobbyIconKind.Materials: DrawMaterials(p); break;
                 case LobbyIconKind.Metal: DrawMetal(p); break;
+                default:
+                    RoundedRect(p, 3f, 3f, 18f, 18f, 4f);
+                    p.Stroke();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (warnedKinds.Add(kind)) Debug.LogWarning("[LobbyIcon] No drawer for " + kind + "; using placeholder.");
+#endif
+                    break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();
