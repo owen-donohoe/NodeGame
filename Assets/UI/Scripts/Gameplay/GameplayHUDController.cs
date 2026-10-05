@@ -376,9 +376,9 @@ namespace NodeWar.UI
 
         private void Bind(VisualElement root)
         {
-            hudRoot = root.Q<VisualElement>("hud-root");
+            hudRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRoot, nameof(GameplayHUDController));
 
-            VisualElement safeAreaElement = root.Q<VisualElement>("hud-safe-area");
+            VisualElement safeAreaElement = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSafeArea, nameof(GameplayHUDController));
             // Not Edges.All. The resource sheet is the last thing in this
             // column and has to reach the true bottom edge, the way the node
             // sheet does; it takes the bottom inset itself, on a spacer of its
@@ -387,75 +387,75 @@ namespace NodeWar.UI
                 safeArea = new SafeAreaBinder(safeAreaElement,
                     SafeAreaBinder.Edges.Left | SafeAreaBinder.Edges.Right | SafeAreaBinder.Edges.Top);
 
-            VisualElement resSafeBottom = root.Q<VisualElement>("hud-res-safe-bottom");
+            VisualElement resSafeBottom = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudResSafeBottom, nameof(GameplayHUDController));
             if (resSafeBottom != null)
                 resSheetInset = new SafeAreaBinder(resSafeBottom, SafeAreaBinder.Edges.Bottom);
 
             you = new BreachSide(root, "you");
             them = new BreachSide(root, "them");
-            clockLabel = root.Q<Label>("hud-clock");
+            clockLabel = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudClock, nameof(GameplayHUDController));
             flash = root.Q<VisualElement>("hud-flash");
 
-            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"));
-            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"), asBar: true, kind: ResourceKind.Metal);
-            resources[3] = new ResourceReadout(root.Q<Label>("hud-magic"), root.Q<VisualElement>("hud-ring-magic"), asBar: true, kind: ResourceKind.Magic);
-            metalRoot = root.Q<VisualElement>("hud-res-metal");
-            magicRoot = root.Q<VisualElement>("hud-res-magic");
+            resources[0] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudFood, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingFood, nameof(GameplayHUDController)));
+            resources[1] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudMaterials, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingMaterials, nameof(GameplayHUDController)));
+            resources[2] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudMetal, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingMetal, nameof(GameplayHUDController)), asBar: true, kind: ResourceKind.Metal);
+            resources[3] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudMagic, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingMagic, nameof(GameplayHUDController)), asBar: true, kind: ResourceKind.Magic);
+            metalRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudResMetal, nameof(GameplayHUDController));
+            magicRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudResMagic, nameof(GameplayHUDController));
 
-            villagerToggle = root.Q<Button>("hud-villager-toggle");
-            villagerCard = root.Q<VisualElement>("hud-villagers");
-            villagersP0 = root.Q<Label>("hud-villagers-p0");
-            villagersP1 = root.Q<Label>("hud-villagers-p1");
+            villagerToggle = NodeWar.UI.UiRequired.Q<Button>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagerToggle, nameof(GameplayHUDController));
+            villagerCard = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagers, nameof(GameplayHUDController));
+            villagersP0 = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagersP0, nameof(GameplayHUDController));
+            villagersP1 = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagersP1, nameof(GameplayHUDController));
 
             if (villagerToggle != null)
                 villagerToggle.clicked += ToggleVillagers;
 
-            selectionDock = root.Q<VisualElement>("hud-selection");
-            selectionText = root.Q<Label>("hud-selection-text");
+            selectionDock = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelection, nameof(GameplayHUDController));
+            selectionText = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelectionText, nameof(GameplayHUDController));
 
-            selectionBar = root.Q<VisualElement>("hud-selbar");
-            selectionBarCount = root.Q<Label>("hud-selbar-count");
+            selectionBar = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelbar, nameof(GameplayHUDController));
+            selectionBarCount = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelbarCount, nameof(GameplayHUDController));
             BindSelectionCounter();
-            recentreDock = root.Q<VisualElement>("hud-recentre-dock");
+            recentreDock = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRecentreDock, nameof(GameplayHUDController));
 
-            zoomRoot = root.Q<VisualElement>("hud-zoom");
-            zoomValue = root.Q<Label>("hud-zoom-value");
-            zoomFill = root.Q<VisualElement>("hud-zoom-fill");
+            zoomRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudZoom, nameof(GameplayHUDController));
+            zoomValue = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudZoomValue, nameof(GameplayHUDController));
+            zoomFill = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudZoomFill, nameof(GameplayHUDController));
 
-            recentreButton = root.Q<VisualElement>("hud-recentre");
+            recentreButton = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRecentre, nameof(GameplayHUDController));
             RegisterZoomHandle();
 
-            countdownRoot = root.Q<VisualElement>("hud-countdown");
-            countdownStep = root.Q<Label>("hud-countdown-step");
+            countdownRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudCountdown, nameof(GameplayHUDController));
+            countdownStep = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudCountdownStep, nameof(GameplayHUDController));
 
-            tempoRoot = root.Q<VisualElement>("hud-tempo");
-            tempoBanner = root.Q<VisualElement>("hud-tempo-banner");
-            tempoTitle = root.Q<Label>("hud-tempo-title");
-            tempoSub = root.Q<Label>("hud-tempo-sub");
-            suddenCard = root.Q<VisualElement>("hud-sd-countdown");
-            suddenTitle = root.Q<Label>("hud-sd-title");
-            suddenSub = root.Q<Label>("hud-sd-sub");
+            tempoRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempo, nameof(GameplayHUDController));
+            tempoBanner = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempoBanner, nameof(GameplayHUDController));
+            tempoTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempoTitle, nameof(GameplayHUDController));
+            tempoSub = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempoSub, nameof(GameplayHUDController));
+            suddenCard = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSdCountdown, nameof(GameplayHUDController));
+            suddenTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSdTitle, nameof(GameplayHUDController));
+            suddenSub = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSdSub, nameof(GameplayHUDController));
             lastCountdown = -1;
 
-            endRoot = root.Q<VisualElement>("hud-end");
-            endTitle = root.Q<Label>("hud-end-title");
-            endSub = root.Q<Label>("hud-end-sub");
+            endRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEnd, nameof(GameplayHUDController));
+            endTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndTitle, nameof(GameplayHUDController));
+            endSub = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndSub, nameof(GameplayHUDController));
             endRows[0] = new EndRow(root, "a");
             endRows[1] = new EndRow(root, "b");
-            endRank = root.Q<VisualElement>("hud-end-rank");
-            endRankHeadline = root.Q<Label>("hud-end-rank-headline");
-            endRankDetail = root.Q<Label>("hud-end-rank-detail");
+            endRank = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndRank, nameof(GameplayHUDController));
+            endRankHeadline = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndRankHeadline, nameof(GameplayHUDController));
+            endRankDetail = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndRankDetail, nameof(GameplayHUDController));
 
-            Button endReturn = root.Q<Button>("hud-end-return");
+            Button endReturn = NodeWar.UI.UiRequired.Q<Button>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndReturn, nameof(GameplayHUDController));
             if (endReturn != null)
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
-            holdRoot = root.Q<VisualElement>("hud-hold");
-            holdTitle = root.Q<Label>("hud-hold-title");
-            holdLine = root.Q<Label>("hud-hold-line");
-            holdAction = root.Q<Button>("hud-hold-action");
-            connectionBanner = root.Q<VisualElement>("hud-connection");
+            holdRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHold, nameof(GameplayHUDController));
+            holdTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHoldTitle, nameof(GameplayHUDController));
+            holdLine = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHoldLine, nameof(GameplayHUDController));
+            holdAction = NodeWar.UI.UiRequired.Q<Button>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHoldAction, nameof(GameplayHUDController));
+            connectionBanner = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudConnection, nameof(GameplayHUDController));
             if (holdAction != null)
                 holdAction.clicked += () => { if (HoldActionClicked != null) HoldActionClicked(); };
 

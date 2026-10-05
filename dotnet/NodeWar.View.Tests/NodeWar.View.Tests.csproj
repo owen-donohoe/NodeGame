@@ -69,6 +69,10 @@
     <Compile Include="ResourceHudMathTests.cs" />
     <Compile Include="SheetResourceMathTests.cs" />
     <Compile Include="UiArtMathTests.cs" />
+    <Compile Include="UiRequiredNamesTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/UiRequiredNames.cs" Link="UI/UiRequiredNames.cs" />
+    <None Include="../../Assets/UI/Layouts/GameplayHUD.uxml" Link="Layouts/GameplayHUD.uxml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Assets/UI/Layouts/SettingsPage.uxml" Link="Layouts/SettingsPage.uxml" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../../Assets/UI/Scripts/UiArtMath.cs" Link="UI/UiArtMath.cs" />
     <Compile Include="PlaytestDebugMathTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Debug/PlaytestDebugMath.cs" Link="Debug/PlaytestDebugMath.cs" />
