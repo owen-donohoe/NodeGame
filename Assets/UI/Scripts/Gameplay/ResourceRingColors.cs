@@ -16,6 +16,19 @@ namespace NodeWar.UI
     /// </summary>
     public static class ResourceRingColors
     {
+        public static void ApplyResourceClass(VisualElement element, ResourceKind kind)
+        {
+            element.EnableInClassList("hud__resource--metal", kind == ResourceKind.Metal);
+            element.EnableInClassList("hud__resource--magic", kind == ResourceKind.Magic);
+        }
+
+        public static Color BaseColorFor(ResourceKind kind, int value, int cap, Color critical, Color low,
+            Color warn, Color ok, Color good, Color rich)
+        {
+            if (kind == ResourceKind.Metal || kind == ResourceKind.Magic)
+                return Color.Lerp(critical, rich, ResourceHudMath.BarFill(value, cap));
+            return BaseColorFor(value, critical, low, warn, ok, good, rich);
+        }
         /// <summary>Reads all six colour stops from a CustomStyleResolvedEvent's style, in place.</summary>
         public static void Read(ICustomStyle style, ref Color critical, ref Color low, ref Color warn,
             ref Color ok, ref Color good, ref Color rich)

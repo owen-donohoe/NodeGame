@@ -83,8 +83,9 @@ namespace NodeWar.UI
         private Label clockLabel;
         private VisualElement flash;
 
-        private readonly ResourceReadout[] resources = new ResourceReadout[3];
+        private readonly ResourceReadout[] resources = new ResourceReadout[4];
         private VisualElement metalRoot;
+        private VisualElement magicRoot;
         private bool capsApplied;
         private bool reducedMotion;
 
@@ -162,13 +163,13 @@ namespace NodeWar.UI
 
         // Reused rather than rebuilt: Refresh runs every frame, and two fresh
         // arrays a frame is litter a phone has to collect.
-        private readonly int[] resourceValues = new int[3];
+        private readonly int[] resourceValues = new int[4];
 
         // The three, in the order the readouts sit in. Spelled out rather than
         // cast from the loop index: the enum and the array agreeing is a fact
         // about this list, not something to leave to their declaration order.
         private static readonly ResourceKind[] ResourceOrder =
-            { ResourceKind.Food, ResourceKind.Materials, ResourceKind.Metal };
+            { ResourceKind.Food, ResourceKind.Materials, ResourceKind.Metal, ResourceKind.Magic };
 
         // Refilled per resource per frame. One buffer, because the three are
         // read one after another and nothing holds on to it.
@@ -334,6 +335,18 @@ namespace NodeWar.UI
             Refresh();
         }
 
+        /// <summary>Local playtest schedule supplied by GameManager; no state write here.</summary>
+        public void SetDebugBalance(GameBalanceData debugBalance)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            balance = debugBalance;
+            suddenDeathScheduled = balance.BreachBarEnabled() && balance.SuddenDeathValid() &&
+                balance.suddenDeathTicks != null && balance.suddenDeathTicks.Length > 0;
+            lastCountdown = -1;
+            RefreshSuddenDeathCountdown();
+#endif
+        }
+
         private void Update()
         {
             if (safeArea != null) safeArea.Update();
@@ -385,8 +398,10 @@ namespace NodeWar.UI
 
             resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"));
             resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"), asBar: true);
+            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"), asBar: true, kind: ResourceKind.Metal);
+            resources[3] = new ResourceReadout(root.Q<Label>("hud-magic"), root.Q<VisualElement>("hud-ring-magic"), asBar: true, kind: ResourceKind.Magic);
             metalRoot = root.Q<VisualElement>("hud-res-metal");
+            magicRoot = root.Q<VisualElement>("hud-res-magic");
 
             villagerToggle = root.Q<Button>("hud-villager-toggle");
             villagerCard = root.Q<VisualElement>("hud-villagers");
@@ -511,6 +526,7 @@ namespace NodeWar.UI
             }
 
             nodeSheet = new NodeSheet(nodeSheetLayout);
+            nodeSheet.SetReducedMotion(reducedMotion);
             nodeSheet.Closed += OnSheetClosedByPlayer;
 
             VisualElement host = hudRoot != null ? hudRoot : root;
@@ -659,6 +675,7 @@ namespace NodeWar.UI
 
             // Reduced motion: a full resource is a steady brighter tint, with no pulse or wave.
             reducedMotion = settings.reducedMotion;
+            if (nodeSheet != null) nodeSheet.SetReducedMotion(reducedMotion);
             for (int i = 0; i < resources.Length; i++)
                 if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
             cameraButtonTarget = settings.cameraButtonTarget;
@@ -944,10 +961,13 @@ namespace NodeWar.UI
             // they hold some; the node sheet's chip reads the same rule.
             if (metalRoot != null)
                 metalRoot.EnableInClassList("hud__res-metal--on", ResourceVisibility.MetalVisible(player.metal));
+            if (magicRoot != null)
+                magicRoot.EnableInClassList("hud__res-metal--on", ResourceVisibility.MagicVisible());
 
             resourceValues[0] = player.food;
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
+            resourceValues[3] = ResourceHudMath.DisplayOnlyMagicAmount();
 
             // Sub-tick, so the production fill moves at render rate rather than
             // stepping ten times a second. Same alpha ProductionContent reads.
@@ -977,6 +997,7 @@ namespace NodeWar.UI
             if (resources[0] != null) resources[0].SetCap(ResourceCaps.Food(balance));
             if (resources[1] != null) resources[1].SetCap(ResourceCaps.Materials(balance));
             if (resources[2] != null) resources[2].SetCap(ResourceCaps.Metal(balance));
+            if (resources[3] != null) resources[3].SetCap(ResourceHudMath.DefaultMagicCap);
             for (int i = 0; i < resources.Length; i++)
                 if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
         }
@@ -1615,7 +1636,7 @@ namespace NodeWar.UI
             private IVisualElementScheduledItem popJob;
 
             /// <param name="asBar">Metal: a segmented bar read as "x/cap" instead of a semicircle.</param>
-            public ResourceReadout(Label valueLabel, VisualElement host, bool asBar = false)
+            public ResourceReadout(Label valueLabel, VisualElement host, bool asBar = false, ResourceKind kind = ResourceKind.Food)
             {
                 value = valueLabel;
                 ringHost = host;
@@ -1624,6 +1645,7 @@ namespace NodeWar.UI
                 if (asBar)
                 {
                     bar = new ResourceBar();
+                    bar.SetResourceKind(kind);
                     host.Insert(0, bar);
                     return;
                 }

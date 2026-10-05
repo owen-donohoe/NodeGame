@@ -33,6 +33,7 @@ namespace NodeWar.UI
         private Color colorPending = new Color(1f, 1f, 1f, 0.3f);
 
         private int value;
+        private ResourceKind resourceKind;
         private int cap = ResourceHudMath.DefaultMetalCap;
         private bool reducedMotion;
         private bool wasFull;
@@ -73,6 +74,13 @@ namespace NodeWar.UI
             if (amount == value) return;
             value = amount;
             UpdateFullState();
+        }
+
+        public void SetResourceKind(ResourceKind kind)
+        {
+            resourceKind = kind;
+            ResourceRingColors.ApplyResourceClass(this, kind);
+            MarkDirtyRepaint();
         }
 
         public void SetCap(int amount)
@@ -190,7 +198,7 @@ namespace NodeWar.UI
 
         private Color BaseColor()
         {
-            return ResourceRingColors.BaseColorFor(value, colorCritical, colorLow, colorWarn,
+            return ResourceRingColors.BaseColorFor(resourceKind, value, cap, colorCritical, colorLow, colorWarn,
                 colorOk, colorGood, colorRich);
         }
     }

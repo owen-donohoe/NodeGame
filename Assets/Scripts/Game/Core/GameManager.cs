@@ -670,10 +670,44 @@ namespace NodeWar.Core
             TickRunner tickRunner = gameObject.AddComponent<TickRunner>();
             tickRunner.Initialize(state, inputBuffer);
             tickProvider = tickRunner;
+            if (debugPlayerSwitch != null)
+                debugPlayerSwitch.ConfigurePlaytestDebug(PlaytestDebugAllowed, DebugSuddenDeathNow);
+        }
+
+        private bool PlaytestDebugAllowed()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            MatchConnection match = MatchConnection.Instance;
+            return PlaytestDebugMath.Allowed(true, match != null && match.isNetworked,
+                tickProvider is TickRunner && lockstep == null, matchPhase == MatchPhase.Playing,
+                state == null || state.gameOver);
+#else
+            return false;
+#endif
+        }
+
+        private void DebugSuddenDeathNow()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!PlaytestDebugAllowed() || balance == null) return;
+            if (!PlaytestDebugMath.TrySuddenDeathInFiveSeconds(balance.Data, state.tickCount, out GameBalanceData debugBalance))
+            {
+                Debug.LogWarning("[Playtest] Sudden death unavailable: balance has no valid breach/sudden-death schedule.");
+                return;
+            }
+            // Explicit local-debug exception: install a copy through the existing path,
+            // never mutate SimulationState or the serialized balance asset.
+            GameSimulation.SetBalance(debugBalance);
+            if (uiToolkitHud != null) uiToolkitHud.SetDebugBalance(debugBalance);
+            Debug.LogWarning("[Playtest] Sudden death in 5s. Balance hash no longer matches the asset/handshake/export: " +
+                BalanceHasher.Hash(balance.Data) + " -> " + BalanceHasher.Hash(debugBalance) +
+                ". Local debug only; recorded replays are not valid for this override.");
+#endif
         }
 
         private void StartNetworkPlay(MatchConnection match)
         {
+            if (debugPlayerSwitch != null) debugPlayerSwitch.ConfigurePlaytestDebug(null, null);
             int localPlayerID = match.localPlayerID;
             NetworkManager netManager = match.networkManager;
 

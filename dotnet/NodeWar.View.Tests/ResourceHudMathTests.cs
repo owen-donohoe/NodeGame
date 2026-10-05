@@ -54,6 +54,27 @@ namespace NodeWar.View.Tests
             Assert.IsFalse(ResourceHudMath.MetalVisible(ResourceHudMath.MetalArena - 1, 0));
         }
 
+        [TestCase(0, false, false)]
+        [TestCase(2, false, false)]
+        [TestCase(3, false, true)]
+        [TestCase(5, false, true)]
+        [TestCase(0, true, true)]
+        public void MagicVisibilityUsesArenaOrDebug(int arena, bool debug, bool visible)
+        {
+            Assert.AreEqual(3, ResourceHudMath.MagicArena);
+            Assert.AreEqual(visible, ResourceHudMath.MagicVisible(arena, debug));
+        }
+
+        [Test]
+        public void DisplayOnlyMagicHasOneZeroSourceAndTenCapacity()
+        {
+            Assert.AreEqual(0, ResourceHudMath.DisplayOnlyMagicAmount());
+            Assert.AreEqual(10, ResourceHudMath.DefaultMagicCap);
+            Assert.IsFalse(ResourceHudMath.IsFull(ResourceHudMath.DisplayOnlyMagicAmount(), 10));
+            Assert.IsTrue(ResourceHudMath.MetalVisible(0, 0, true));
+            Assert.IsTrue(ResourceHudMath.MetalVisible(0, 1, false));
+        }
+
         [TestCase(0, 10, 0f)]
         [TestCase(5, 10, 0.5f)]
         [TestCase(10, 10, 1f)]

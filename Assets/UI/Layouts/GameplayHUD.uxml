@@ -182,12 +182,19 @@
                     Metal is not a semicircle: a plain segmented bar under the two,
                     x/10, with its glyph. Hidden until the player's arena reaches
                     ResourceHudMath.MetalArena or they hold any (GameplayHUDController
-                    toggles hud__res-metal--on). The bar is built in code (ResourceBar).
+                    toggles the visible modifier). The bar is built in code (ResourceBar).
                 -->
                 <engine:VisualElement name="hud-res-metal" class="hud__res-metal" picking-mode="Ignore">
                     <lobby:LobbyIcon kind="Metal" class="hud__res-metal-icon" picking-mode="Ignore" />
                     <engine:VisualElement name="hud-ring-metal" class="hud__res-bar-host" picking-mode="Ignore" />
                     <engine:Label name="hud-metal" class="hud__res-metal-value ui-w700" text="0/10" picking-mode="Ignore" />
+                </engine:VisualElement>
+
+                <!-- Magic has no simulation source: ResourceHudMath.DisplayOnlyMagicAmount reads 0. -->
+                <engine:VisualElement name="hud-res-magic" class="hud__res-metal" picking-mode="Ignore">
+                    <lobby:LobbyIcon kind="Spark" class="hud__res-metal-icon" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-ring-magic" class="hud__res-bar-host" picking-mode="Ignore" />
+                    <engine:Label name="hud-magic" class="hud__res-metal-value ui-w700" text="0/10" picking-mode="Ignore" />
                 </engine:VisualElement>
 
                 <!-- SafeAreaBinder writes the bottom inset here, the way the
