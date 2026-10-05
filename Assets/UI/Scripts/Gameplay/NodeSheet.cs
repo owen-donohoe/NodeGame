@@ -76,6 +76,7 @@ namespace NodeWar.UI
 
         private NodeSheetContent current;
         private int nodeID = -1;
+        private DistrictType shownDistrictType;
         private string thumbTint;
 
         // What the header is currently showing. RefreshHeader runs every frame
@@ -203,14 +204,14 @@ namespace NodeWar.UI
 
             if (next == null)
             {
-                // DistrictPanelPolicy should have stopped this, so reaching here
-                // means the two disagree. Closing is the safe answer; an empty
-                // sheet would say a district has actions when it has none.
-                Close();
+                // A capture or rollback can replace an open district with one
+                // that has no sheet. Use the normal close notification path.
+                CloseByPlayer();
                 return;
             }
 
             nodeID = node;
+            shownDistrictType = state.nodes[node].districtType;
             shownNode = -1;
             shownOwner = -2;
             shownViewer = -2;
@@ -218,6 +219,7 @@ namespace NodeWar.UI
 
             if (current != next)
             {
+                if (current != null) current.Unbind();
                 actionHost.Clear();
                 contentHost.Clear();
                 contentHost.Add(next.Root);
@@ -241,6 +243,7 @@ namespace NodeWar.UI
 
         public void Close()
         {
+            if (current != null) current.Unbind();
             nodeID = -1;
             if (sheet != null) sheet.RemoveFromClassList("ui-sheet--open");
         }
@@ -259,6 +262,20 @@ namespace NodeWar.UI
         public void Update(int controlledPID)
         {
             if (!IsOpen || state == null) return;
+
+            if (nodeID >= state.nodes.Length)
+            {
+                CloseByPlayer();
+                return;
+            }
+
+            if (state.nodes[nodeID].districtType != shownDistrictType)
+            {
+                // Open always binds, even when both types share one content instance.
+                // An existing open class stays in place, so this does not replay the slide.
+                Open(nodeID, controlledPID);
+                return;
+            }
 
             // The node can change hands while the sheet is open, and a captured
             // district is a different panel - not a redecorated one.

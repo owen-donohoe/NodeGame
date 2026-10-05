@@ -988,8 +988,7 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// The caps the rings and the bar are full at, read off the balance data by name with
-        /// 30/30/10 as the fallback, so this is right before and after the cap fields exist.
+        /// The typed balance caps, with finite 30/30/10 display defaults for uncapped resources.
         /// </summary>
         private void ApplyResourceCaps()
         {
