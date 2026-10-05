@@ -28,12 +28,19 @@ namespace NodeWar.Lobby
         private static readonly Dictionary<LobbyIconKind, VectorImage> cache =
             new Dictionary<LobbyIconKind, VectorImage>();
         private static readonly HashSet<LobbyIconKind> warnedKinds = new HashSet<LobbyIconKind>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private static readonly HashSet<(LobbyIconKind, LobbyIconContext)> warnedUsages =
+            new HashSet<(LobbyIconKind, LobbyIconContext)>();
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
             cache.Clear();
             warnedKinds.Clear();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            warnedUsages.Clear();
+#endif
         }
 
         private LobbyIconKind kind;
@@ -68,6 +75,9 @@ namespace NodeWar.Lobby
 
         private void RefreshArt()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (panel != null) ValidateUsage();
+#endif
             keepOriginalColours = false;
             UIArtTheme theme = UIArt.Theme;
             if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
@@ -88,7 +98,23 @@ namespace NodeWar.Lobby
             AddToClassList("lb-icon");
             pickingMode = PickingMode.Ignore;
             style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // UXML sets Kind and Context separately. Check only after both initial
+            // attributes have been applied, avoiding warnings about temporary pairs.
+            RegisterCallback<AttachToPanelEvent>(_ => ValidateUsage());
+#endif
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private void ValidateUsage()
+        {
+            // None is the intentional unset value of pooled/default-constructed icons.
+            if (kind == LobbyIconKind.None || LobbyIconUsage.IsUsed(kind, context)) return;
+            if (warnedUsages.Add((kind, context)))
+                Debug.LogWarning("[LobbyIcon] Unlisted usage " + kind + " / " + context +
+                    ". Update LobbyIconUsage or correct this icon's context.");
+        }
+#endif
 
         public LobbyIcon(LobbyIconKind kind, LobbyIconContext context = LobbyIconContext.Anywhere) : this()
         {
