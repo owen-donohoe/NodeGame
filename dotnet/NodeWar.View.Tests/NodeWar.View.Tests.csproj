@@ -73,6 +73,8 @@
     <Compile Include="UiArtMathTests.cs" />
     <Compile Include="UIArtLookupTests.cs" />
     <Compile Include="LobbyIconDrawerTests.cs" />
+    <Compile Include="LobbyIconUsageTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyIconUsage.cs" Link="UI/LobbyIconUsage.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyIconKind.cs" Link="UI/LobbyIconKind.cs" />
     <None Include="../../Assets/UI/Scripts/LobbyIcon.cs" Link="Sources/LobbyIcon.cs.txt" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../../Assets/UI/Scripts/LobbyIconContext.cs" Link="UI/LobbyIconContext.cs" />
