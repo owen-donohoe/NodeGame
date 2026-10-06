@@ -20,7 +20,8 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
+verified_at_commit: 7d0ae0cd
 status: stable
 sources:
   - id: tests
@@ -94,14 +95,17 @@ villager crosses one edge at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ti
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 1`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 2`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
 
-Era fields enter `SimulationStateHasher` only when non-zero. Both fixtures remain era 0, so their
-hashes are unchanged, older era-0 logs still verify, and adding eras required no simulation-version
-bump. The separate `BalanceHasher` covers balance data; these are state fingerprints, not balance
-fingerprints.
+Era fields enter `SimulationStateHasher` only when non-zero. Both fixtures remain era 0 and
+never breach, so the v2 re-pin in `d84cb1d` kept both numeric hashes unchanged while updating
+their pinned version from 1 to 2 in the rule-change commit. Neutral breach extension fields
+do not move these fingerprints. Adding eras had needed no bump; the breach/tempo rule change
+did. Version-1 logs are refused by version-2 replay even when their era-0 hashes would match.
+The separate `BalanceHasher` covers balance data, including the new schedules, breach tuning
+and caps; these are state fingerprints, not balance fingerprints.
 
 ## Where it runs
 
