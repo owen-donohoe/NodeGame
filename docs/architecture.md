@@ -12,7 +12,8 @@ verified:
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
   - { by: gpt-6-sol, at: 2026-10-06T01:06:24Z }
-verified_at_commit: a778526b
+  - { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
+verified_at_commit: 5fa33d94
 status: stable
 sources:
   - id: sim-state
@@ -523,7 +524,8 @@ The in-match HUD keeps both breach walls at the top, with player marks and
 breach counts below the bars. The match timer is a rounded rectangle between
 them; a three-bar settings button sits directly below it in the same column.
 The settings card drops down from beneath that button. The recentre/zoom
-handle sits at the bottom right, with the emote dock at the bottom left.
+handle defaults to the bottom right, with the emote dock at the bottom left;
+Controls settings can change the handle's side, visibility and zoom behaviour.
 
 Resources sit near the bottom of the safe area, above the control docks
 and emote stack. Food and materials use concentric segmented semicircles,

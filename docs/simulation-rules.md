@@ -12,7 +12,8 @@ verified:
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
   - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
-verified_at_commit: b229a89e
+  - { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
+verified_at_commit: 5fa33d94
 status: stable
 sources:
   - id: sim-loop
@@ -208,9 +209,8 @@ intentionally excluded — keep it that way rather than hashing static data.
 
 **Era fields are hashed only where they are not 0**: `PlayerData.suitEras`
 / `districtEras` (index and value, the two tables kept apart by an offset),
-`NodeData.districtEra` and `VillagerData.rampartBonusEra`. An all-era-0
-match therefore hashes exactly as matches did before eras existed, which
-keeps the era-0 fingerprints unchanged, while any era the peers disagree
+`NodeData.districtEra` and `VillagerData.rampartBonusEra`. Omitting zero
+era fields preserves their pre-era hash contribution, while any era the peers disagree
 on still moves the hash. Version-1 logs are nevertheless refused by a
 version-2 replay. Neutral extension fields may use conditional hashing
 with explicit defaults, not just zero. The v2 player fields `breachBar`,
