@@ -11,7 +11,9 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:24Z }
+  - { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
+verified_at_commit: 5fa33d94
 status: stable
 sources:
   - id: sim-state
@@ -475,7 +477,10 @@ on screen:
   unassigned.
 - `GameManager.useUIToolkitHUD` — activates the UI Toolkit HUD and, when
   that HUD carries a node sheet, calls `NodePanelManager.SetSuppressed`
-  so the two panels never race one tap.
+  so the two panels never race one tap. Only after the controller resolves
+  and initialization succeeds does it hide `HUD_Canvas` and disable the
+  `HUDManager` component. Failure keeps the legacy canvas and manager on;
+  the UI_Manager root stays enabled for tap arbitration.
 - `GameManager.useUIToolkitDraft` — activates the UI Toolkit draft screen.
   Deliberately **separate from the HUD toggle**: the draft and the match
   never overlap, so there is no reason a half-finished migration has to
@@ -503,33 +508,46 @@ the draft's" is a second thing to keep in step.
 
 `Assets/UI/` is not a fourth layer. It sits exactly where layers 1 and 6
 sit in the information flow, under the same rule as every other consumer:
-it reads `SimulationState` and reaches the simulation only by enqueuing a
-`GameCommand` on `InputBuffer`. `NodeSheetContent.Send` is the single
-choke point for that, and nothing under `Assets/UI/` calls
-`GameSimulation` or `CommandProcessor`.
+it reads `SimulationState` and sends gameplay changes by enqueuing a
+`GameCommand` on `InputBuffer`. `NodeSheetContent.Send` is the sheet's
+choke point; it rejects detached controls and district bindings made stale
+by a capture or rollback. UI command eligibility can read
+`CommandProcessor` helpers, including the escalated paid-respawn price.
+The local playtest debug exception is orchestrated by `GameManager`:
+in Editor/development local or bot play only, it installs a balance copy
+through `GameSimulation.SetBalance` to move sudden death to tick + 50.
+It never writes state from the view, is blocked in networked play, and
+warns that the asset/handshake/export hash and recorded replay no longer
+match. `GameplayHUDController.SetDebugBalance` receives the same copy.
 
 The in-match HUD keeps both breach walls at the top, with player marks and
 breach counts below the bars. The match timer is a rounded rectangle between
 them; a three-bar settings button sits directly below it in the same column.
 The settings card drops down from beneath that button. The recentre/zoom
-handle sits at the bottom right, with the emote dock at the bottom left.
+handle defaults to the bottom right, with the emote dock at the bottom left;
+Controls settings can change the handle's side, visibility and zoom behaviour.
 
-Resources sit in three cards near the bottom of the safe area, above the
-control docks and emote stack. Each card has a `LobbyIcon` resource glyph,
-a live count and three concentric segmented semicircles, flat side down:
-outer 1–10, middle 11–20, inner 21–30, ten segments each. `ResourceRing`
-draws them; `ResourceRingMath` owns the segment and colour-stop maths.
-`ResourceRingColors` reads and blends the six shared colour stops, so the
-rings and the node sheet's resource chips agree on what a count means.
+Resources sit near the bottom of the safe area, above the control docks
+and emote stack. Food and materials use concentric segmented semicircles,
+flat side down, with a glyph and live count. Metal and display-only magic
+use thin bars below them with amount/cap labels; magic's source currently
+returns zero. Visibility follows the arena/debug rules, with held metal
+always visible. `ResourceCaps` reads typed balance fields directly and
+uses finite display defaults for nonpositive caps. `ResourceRingMath`
+owns fill maths; `ResourceRingColors` blends the shared colour stops.
+Full resources use a shared global phase for pulse and sweep, including
+sheet bars; reduced motion keeps a steady brighter tint instead.
 
 The open node sheet can cover those cards, so it carries its own food,
-materials and metal chips just above its top edge. They show the controlled
-player's live totals and move with the sheet. Each `NodeSheetContent`
-declares `InvolvedResources`; the sheet reads that declaration rather than
-keeping a second district lookup. An involved chip grows 10%, bolds its
-count and bounces once when it becomes involved. `LobbyIcon` supplies the
-same Food (ham), Materials (stone) and Metal (ingot) glyphs for cards, chips
-and sheet text. `NodeSheetContent.SetResourceText` turns `{food}`,
+materials, metal and optional magic readouts just above its top edge.
+They show the controlled player's live totals and move with the sheet.
+Each `NodeSheetContent` declares consumed and produced `InvolvedResources`;
+involved resources expand into stacked thin bars, while unused resources
+remain pills in a row above them. Amount increases and decreases bounce,
+unless reduced motion is on. A district-type change reselects and rebinds
+content even when both types share `EquipContent`; unsupported types use
+the normal close path. `LobbyIcon` supplies shared resource glyphs for
+the HUD, sheet and text. `NodeSheetContent.SetResourceText` turns `{food}`,
 `{materials}` and `{metal}` templates into inline icons beside text spans.
 
 Legacy code is kept compiling rather than commented out or deleted, so
@@ -565,7 +583,7 @@ Pointer (mouse / touch)        or  BotPlayer
         │
         ▼
  GameSimulation.SimulateTick            (Simulation/)
-        │  advances the tick: movement → combat → claiming →
+        │  advances the tick: movement → combat → claiming (breach → claim) →
         │  production → healing → respawns → win-check
         ▼
      SimulationState  (updated)
@@ -578,6 +596,12 @@ Pointer (mouse / touch)        or  BotPlayer
 ticks mutate it inside `Simulation/`; presentation only reads it.
 `Core/` still initializes state before play, including Testing mode's
 legacy board. See `docs/simulation-rules.md` for the in-match boundary.
+Rampart bonuses follow movement; post-combat resume follows win-check;
+the derived `nextBreacherID` refresh is last. Simulation version 2 adds
+`Breaching` after `Dead` and player breach progress, next candidate and
+paid-respawn count, all covered by hashing and rollback copy. Breach wins
+require a new breach at the current threshold; a sudden-death drop alone
+does not lose a match, and simultaneous losses cancel.
 
 ### What a tick did
 
@@ -592,7 +616,10 @@ TickEventLog      what just HAPPENED.       Not hashed. Output only.
 A `TickEvent` is flat and integer-only, in the style of `GameCommand`: a type
 plus a node, villager, player and value, `-1` where unused. The types are
 `CombatStarted`, `VillagerDied`, `VillagerRespawned` (value 1 if paid),
-`NodeNeutralised`, `NodeClaimed` and `Breach`.
+`NodeNeutralised`, `NodeClaimed`, `Breach`, `TempoStage` and `SuddenDeath`.
+The HUD reads the last two for banners and uses tick count for its
+sudden-death countdown. Breach walls show an active Core at/over threshold
+as needing one more breach, rather than drawing it empty on the drop.
 
 - **Moments only.** A fight still going, or a node still being pushed, is read
   off `SimulationState` the way the claim bar always was. A log that had to say
@@ -867,8 +894,16 @@ Three objects are carried across the Lobby → Gameplay scene load via
 **View/**
 - `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
   villager slotting on a node.
+- `DistrictVisualTable` — per-district art shared with UI through the theme.
+  `GameManager` selects board prefabs from the table, then its per-district
+  slot, then the default; `BoardArtPlacer` applies offset, rotation and scale.
+  Missing entries preserve existing board art. Board and flat UI art fall
+  back independently.
 - `VillagerView` — villager visuals and movement interpolation.
 - `NodeClaimBar`, `VillagerHealthRing` — world-space status indicators.
+- `CoreBreachBar` — runtime-added Core progress bar when the channel is
+  enabled; `BreachCueSettings` is shared with villager highlighting and
+  the HUD's accessibility flags.
 - `NodeHighlight` — the expanding ring used for move-order destinations
   and, configured smaller, for the lasso-armed cue.
 - `VillagerTouchTarget` — constant-screen-size tap collider, built at
@@ -1019,7 +1054,8 @@ the layer line.
   timer on a pooled element fires into its next life. That detached a freshly
   reused indicator in play; the layer's scheduler plus a generation stamp is
   the fix.
-- **Icons are `LobbyIcon` glyphs drawn with Painter2D.** Fredoka carries no
+- **Icons are themed `LobbyIcon` sprites with Painter2D glyph fallbacks.**
+  Indicator icons use the `OffScreenIndicator` context. Fredoka carries no
   symbol glyphs, and a fallback font would differ by platform.
 
 ### Where a villager is, mid-edge

@@ -11,7 +11,9 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
+  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+verified_at_commit: 673cc4b9
 status: stable
 sources:
   - id: sim-state
@@ -108,8 +110,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      assigned). `SimulationStateCopyTests` fails on a field it does not copy.
    - If it changes what the same inputs produce, bump
      `SimulationVersion.Current` in the same commit (see
-     `docs/simulation-rules.md`). A field that is 0 in every existing
-     match can be hashed only when non-zero, as the era fields are.
+     `docs/simulation-rules.md`). Neutral extension fields can use
+     conditional hashing, as the era and v2 breach fields do; specify
+     the neutral value explicitly (`nextBreacherID` is -1, while
+     `breachBar` and `paidRespawns` start at 0).
      That preserves old hashes; avoiding a version bump also requires
      unchanged results for those existing inputs, as with eras.
 
@@ -174,6 +178,11 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      documented on `GameSimulation.SimulateTick`).
    - Insert at the correct, justified step — do not append a new step at
      the end by default, and do not reorder existing steps.
+   - Claiming begins with `TickBreach` before `TickClaiming`; Rampart
+     bonuses follow movement, and post-combat resume follows win-check.
+     Refresh derived `nextBreacherID` last, after all mutations this tick.
+     Version 2 checks only new breaches against the current threshold;
+     simultaneous losses cancel and a sudden-death drop alone is not a loss.
 
 8. **Is it purely visual (no simulation involvement)?**
    - Confirm it only reads `SimulationState` — no writes.
@@ -207,6 +216,12 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    played on it. `BalanceHasher` does not hash `BoardConfigData`; the
    board is recorded separately in the match log. The balance content
    hash is compared in the handshake, not folded into `SimulationStateHasher`.
+   Preserve absent-field behaviour: nonpositive resource caps are uncapped,
+   absent tempo axes use 100%, and a disabled breach channel keeps the legacy
+   fixed-threshold path. Validate schedule lengths/order, positive percentages
+   (including below 100) and safe production durations. Timer scaling includes
+   the current tick and carries production remainders; cap every resource gain
+   and starting value, not just the most visible production path.
 
 10. **C# conventions.**
     - Keep `[SerializeField]` fields in the same file as their

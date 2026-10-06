@@ -4,11 +4,13 @@ title: Game Model
 description: What Node War is — the match model, board, villagers, districts, suits, resources, win condition and eras, as the simulation actually implements them.
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+verified:
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
+verified_at_commit: b229a89e
 status: draft
 sources:
   - id: sim-state
@@ -50,7 +52,8 @@ sources:
 
 Node War is a **1v1 real-time strategy game played on a graph of nodes**, simulated
 deterministically at 10 ticks per second. Two players start from opposing Core nodes and compete to
-claim territory, produce resources, equip combat units, and breach the enemy Core three times.
+claim territory, produce resources, equip combat units, and breach the enemy Core. The opening
+loss threshold is three breaches; sudden death lowers it to one.
 
 This document describes *what the game is*. [architecture](architecture.md) describes how the code
 is layered; [simulation-rules](simulation-rules.md) describes the determinism contract the
@@ -84,6 +87,7 @@ Each player starts with 3 villagers. A villager is always in exactly one `Villag
 | `Claiming` | Pushing the claim bar on a node the player does not own |
 | `Fighting` | On a node where both players have living villagers |
 | `Dead` | Awaiting respawn at the owner's Core |
+| `Breaching` | Filling the breach bar on an undefended enemy Core |
 
 Villagers carry HP (default 5), attack damage, move speed, an attack cooldown, and a
 `fightPriority` used as the combat targeting sort key. A player is capped at 25 villagers.
@@ -107,7 +111,7 @@ through friendly territory and route around enemy ground unless the detour is lo
 
 Movement is checked on **every node arrival**, not just at the destination: arriving on a node with
 living enemies interrupts the path and starts a fight, and arriving on the enemy Core triggers a
-breach or a fight.
+breach channel or a fight (an instant breach only when the channel is disabled).
 
 A villager in transit has no position of its own. `currentNodeID` is the node it last stood on, and
 how far it has come is a tick count along the edge it is crossing.
@@ -134,7 +138,8 @@ node. Pushing *against* an opponent's existing lean is multiplied by `decrementM
 bar is a tug-of-war, not a per-player progress meter. Crossing zero drops the node to neutral
 (`ownerID = -1`) before it can be claimed the other way.
 
-A node with **both** players' claimers present is frozen; combat resolves it instead.
+The current tempo percentage scales the claim rate after Watchtower bonuses, using integer
+division. A node with **both** players' claimers present is frozen; combat resolves it instead.
 
 When a claim completes, a non-`Fixed` node becomes whichever district the claiming player drafted
 for that slot type, falling back to the node's `baseDistrictType`. Some nodes grant bonus villagers
@@ -187,6 +192,19 @@ consumes them to make metal. Resources pay for suits and for respawns. All produ
 per-villager tick timers, so output is a function of how many workers a player keeps alive and
 employed — capped at 2 workers per node.
 
+The default storage caps are 30 food, 30 materials and 10 metal. A cap of 0 or less is uncapped;
+missing cap fields therefore retain the old behaviour. Starting resources and every gain are
+clamped. A production completion at capacity is wasted but its timer still cycles. A Forge at
+the metal cap does not consume a material; a Market still alternates food/materials after a
+wasted completion. Spending is unchanged. Magic in the HUD is display-only, not a fourth
+simulation resource.
+
+Tempo stages begin at ticks 1200 and 1800 (two and three minutes). Claim rates become 150% then
+200%, production timer decrements 110% then 125%, and passive respawn timer decrements 80% then
+67%. Timer scaling integrates integer percentages over ticks 1 through the current tick;
+each decrement is the difference between consecutive cumulative totals. Production carries
+any remainder into the next cycle rather than losing it on completion.
+
 ## Combat
 
 When both players have living villagers on the same node, everyone there is forced into `Fighting`.
@@ -201,7 +219,11 @@ At 0 HP a villager dies, drops its path, and respawns at its owner's Core after 
 (default 50), reset to base stats with no suit. A player may also spend food on a `Respawn` command
 to bring a dead villager back immediately instead of waiting. Each Acolyte working a Sanctuary both
 speeds the passive countdown and reduces that food cost by its Sanctuary's era-specific values.
-Workers' boosts and cost-reduction percentages add; the paid cost is floored at 1 food.
+Workers' boosts and cost-reduction percentages add. Tempo scales the passive countdown first,
+then Sanctuary adds its boost. Each successful paid respawn increments the player's match-long
+`paidRespawns`: the next cost is `respawnCostFood × (paidRespawns + 1)`. Sanctuary reductions
+apply to that escalated cost, subtracting the integer-rounded-down discount, with a minimum
+payment of 1 food. Failed commands do not advance the counter.
 
 Combat is deliberately resolved across two separate tick steps. Damage and deaths happen in the
 combat step; survivors decide what to do next in a final post-combat resume step after the
@@ -209,13 +231,28 @@ win-check. See the reasoning on `TickPostCombatResume`.
 
 ## Breach and the win condition
 
-A villager that reaches the **enemy Core with no living defenders on it** breaches:
+A villager that reaches the **enemy Core with no living defenders on it** enters `Breaching`.
+Each defender has a `breachBar`; attackers fill it together during the breach pass before
+claiming. The code default maximum is 4000, with rates 50/83/108/125 per tick for one/two/three/
+four-or-more attackers: a lone attacker takes 80 ticks. With no attackers, the bar decays by
+200 per tick. Combat interrupts the channel. A survivor resuming after combat starts filling
+on the following tick. The Editor asset currently uses 67/111/144/167 instead, and healing
+every 20 ticks rather than the code default 30.
+
+On completion, at most once per defender per tick:
 
 1. The defending player's `breachCount` increments.
 2. The breaching villager is **permanently consumed** — flagged `isConsumed`, never respawns.
+3. The bar resets to zero, discarding excess progress. The consumed attacker is chosen by
+   non-combat suit first, then lowest HP, then lowest villager ID. `nextBreacherID` is refreshed
+   after all tick steps to describe the next candidate, or -1 when none exists.
 
-A breach is a trade: a unit for a point. At `breachThreshold` (default 3) breaches against a
-player, the match ends and the *other* player wins.
+A breach is a trade: a unit for a point. A player loses only when a **new breach this tick**
+leaves their count at or above the current threshold. At tick 2400 (four minutes), sudden death
+drops that threshold straight from 3 to 1; the drop alone never ends the match, even if a Core
+already took a breach. Simultaneous losses cancel and play continues. With the breach channel
+disabled (`breachBarMax = 0`), arrival breaches remain instant, the threshold stays fixed and
+the legacy win check applies.
 
 ## The pre-match draft
 

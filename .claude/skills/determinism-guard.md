@@ -11,7 +11,9 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
+  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+verified_at_commit: 673cc4b9
 status: stable
 sources:
   - id: contract
@@ -65,6 +67,12 @@ Read the changed or proposed code, then check each item:
 2. Numeric types
    - Any float, double, or decimal in simulation logic?
    - Any division that could produce fractional results?
+   - Does tempo use inclusive cumulative integer integration and consecutive
+     differences, with production remainder carry? Are positive percentages
+     below 100 accepted and production durations safe for the largest decrement?
+   - Do nonpositive resource caps retain uncapped behaviour, with every gain
+     and starting value clamped for positive caps? At metal capacity a Forge
+     must not spend materials; a wasted Market completion still alternates.
 
 3. Time and frame APIs
    - Any Time.deltaTime, Time.time, Time.fixedDeltaTime?
@@ -97,7 +105,11 @@ Read the changed or proposed code, then check each item:
    - Canonical order: movement -> combat -> claiming -> 
      production -> healing -> respawns -> win-check
    - Preserve the Rampart-bonus pass after movement and the post-combat
-     resume pass after win-check too.
+     resume pass after win-check too. TickBreach precedes TickClaiming inside
+     claiming; the derived nextBreacherID refresh is last, after resume.
+   - With the breach channel enabled, does a loss require a breach this tick
+     at the current threshold, with simultaneous losses cancelled? A drop
+     alone must not lose; disabling the channel keeps the legacy win path.
 
 8. Hasher registration
    - Does any new SimulationState field appear in 
@@ -105,14 +117,17 @@ Read the changed or proposed code, then check each item:
    - Does any removed field get removed from the hasher too?
    - Does it also appear in SimulationState.CopyFrom? SimulationStateCopyTests
      sets every field by reflection and fails on one that is not copied.
-   - A field hashed only when non-zero (the era fields) counts as
-     registered, but only if it is 0 in every match that existed before
-     it; otherwise it must be hashed unconditionally.
+   - Neutral extension fields can be conditionally hashed with explicit
+     defaults: era fields, breachBar and paidRespawns are zero-neutral;
+     nextBreacherID is -1-neutral. Check initialization as well as hashing.
+     Breaching must stay appended after Dead to preserve enum values.
    - Conditional hashing alone does not waive a SimulationVersion bump:
      do existing inputs still produce the same results and hashes, as
      they did when eras were added? If not, bump SimulationVersion.Current
      and review the pinned baseline version with the change. The version
      test checks equality with that pin, not whether hash constants were edited.
+     Current and BaselinesPinnedAtSimVersion are both 2; the v2 re-pin retained
+     the two numeric baseline hashes for the short, non-breaching fixtures.
    - Balance is not in SimulationStateHasher. Does a new GameBalanceData,
      SuitStats or DistrictStats field reach BalanceHasher? Per-suit and
      per-district numbers belong on their era entries, not new globals.

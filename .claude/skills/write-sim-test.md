@@ -11,7 +11,8 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:07:09Z }
+verified_at_commit: 7f0e83da
 status: stable
 sources:
   - id: tests
@@ -73,6 +74,9 @@ Step 2: Set up initial state
   SuitStats / DistrictStats entries. Missing player entries mean era 0;
   balance lookups fall back to era 0. Keep arrays independent between runs
 - Use explicit integer values -- no magic numbers without comments
+- Initialize v2 player fields deliberately: breachBar and paidRespawns at 0,
+  nextBreacherID at -1. Default balance enables the channel, tempo and caps;
+  disable those explicitly when testing legacy behaviour
 - Document what the starting state represents
 
 Step 3: Define the command sequence
@@ -84,6 +88,10 @@ Step 4: Advance ticks
 - Run SimulateTick the exact number of ticks needed
 - Document what should happen each tick
 - Do not over-tick -- test the minimum needed to verify behavior
+- For tempo, include the stage boundary tick and a below-100 timer axis;
+  assert inclusive integer integration and production remainder carry
+- For breaches, distinguish arrival, channel completion and post-combat resume;
+  test no loss on a threshold drop alone and simultaneous-loss cancellation
 
 Step 5: Assert expected state
 - Assert specific integer field values on SimulationState
@@ -91,6 +99,10 @@ Step 5: Assert expected state
   as relevant
 - One assertion per logical outcome -- do not bundle unrelated 
   assertions
+- For caps, assert wasted completions still cycle, Forge spends no material
+  at the metal cap, Market still alternates, and cap 0 remains uncapped
+- For paid respawns, assert only successful commands increment paidRespawns
+  and Sanctuary discounts the escalated cost with integer rounding/minimum 1
 
 Step 6: Add determinism variant (always, for simulation tests)
 - Run the identical scenario a second time from scratch
@@ -104,6 +116,9 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
+- The current baseline pin is version 2. Its short, non-breaching fixtures
+  retain their numeric hashes through neutral-field conditional hashing;
+  this does not make version-1 match logs replayable on version 2
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests

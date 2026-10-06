@@ -9,7 +9,8 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-verified_at_commit: 7584e33
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:25Z }
+verified_at_commit: c0c3b0cc
 status: stable
 sources:
   - id: batch-runner
@@ -94,7 +95,7 @@ the background, a `.cs` change on disk has not been compiled yet — and `TestBr
 cannot tell "finished compiling" apart from "has not started". The suite then runs the previous
 assemblies and reports a perfectly clean green.
 
-This is observed, not theoretical. Changing `baseHP` and immediately re-running produced 8/8 passed
+This is observed, not theoretical. In the eight-case suite at the time, changing `baseHP` and immediately re-running produced 8/8 passed
 against code whose real fingerprint had moved to a completely different value; reverting the change
 produced the mirror image — 2 failures against source that was already correct.
 
@@ -123,6 +124,11 @@ That file is the **receipt** for
 Note that a runner's own exit code answers "did the run complete and did every test pass", which is
 not the same question as "is the determinism gate satisfied at this commit". The attester answers
 the second.
+
+The current baseline pin is simulation version **2**, with numeric fingerprints unchanged
+by the v2 re-pin. Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
+they include a balance-asset text guard outside the shared EditMode suite and are not a claim
+about how many cases a Unity run executes.
 
 ## Exit codes
 
