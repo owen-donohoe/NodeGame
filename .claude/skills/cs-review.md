@@ -11,7 +11,8 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
+verified_at_commit: 4f361e41
 status: stable
 sources:
   - id: architecture
@@ -39,7 +40,10 @@ Read all files modified in this session, then check:
    - Does any presentation code write to SimulationState, or call
      GameSimulation or CommandProcessor? Check all three trees, not
      just the layer named UI: Assets/Scripts/Game/{View,UI}/,
-     Assets/UI/ (UI Toolkit), and Assets/Legacy/.
+     Assets/UI/ (UI Toolkit), and Assets/Legacy/. Read-only command/cost
+     helpers are allowed. The documented local playtest SetBalance exception
+     must stay Editor/development-only, non-networked and state-write-free,
+     installing a copy and warning about the changed hash/replay eligibility.
    - Does every gameplay GameCommand sent from presentation code go through
      InputBuffer with issuedOnTick stamped?
    - Does anything in Network/ contain game logic?
@@ -79,13 +83,16 @@ Read all files modified in this session, then check:
      clear benefit?
 
 6. Conventions
-   - New SimulationState fields added to SimulationStateHasher?
+   - New SimulationState fields added to SimulationStateHasher and CopyFrom,
+     with their explicit neutral defaults initialized by MatchFactory?
    - New CommandType has a CommandProcessor case?
    - GameCommand struct and InputSerializer updated together?
    - Wire layout changes bump ProtocolVersion.Current in
      Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion aliases?
    - Simulation behavior changes bump SimulationVersion.Current, with
      balance-only edits tracked by the content hash?
+     Current and the sanctioned baseline pin are 2; numeric fingerprints
+     remained unchanged in the coordinated v2 re-pin.
 
 ## Output format
 Report each category as PASS, FAIL, or N/A.
