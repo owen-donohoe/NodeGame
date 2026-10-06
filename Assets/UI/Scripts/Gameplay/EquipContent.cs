@@ -34,8 +34,7 @@ namespace NodeWar.UI
         private Label emptyLabel;
         private Button equipButton;
         private VisualElement equipRow;
-        private (SuitType picked, EquipRefusal refusal, VillagerState state,
-                 SuitType worn, int food, int materials)? shownEquip;
+        private string shownButtonTemplate;
 
         private SuitType pickedSuit = SuitType.None;
         private int pickedUnit = -1;
@@ -48,9 +47,13 @@ namespace NodeWar.UI
         // district this bench happens to be serving.
         public override ResourceKind InvolvedResources { get { return ResourceKind.Food | ResourceKind.Materials; } }
 
+        protected override void OnRebind()
+        {
+            shownButtonTemplate = null;
+        }
+
         protected override void OnBind()
         {
-            shownEquip = null;
             cards.Clear();
             chips.Clear();
             pickedSuit = SuitType.None;
@@ -202,33 +205,30 @@ namespace NodeWar.UI
         {
             if (pickedSuit == SuitType.None)
             {
-                shownEquip = null;
-                SetResourceText(equipRow, "Pick a suit");
-                equipButton.SetEnabled(false);
+                SetButtonTemplate("Pick a suit", false);
                 return;
             }
 
             if (pickedUnit < 0)
             {
-                shownEquip = null;
-                SetResourceText(equipRow, "Pick a unit");
-                equipButton.SetEnabled(false);
+                SetButtonTemplate("Pick a unit", false);
                 return;
             }
 
             EquipRefusal refusal = CommandEligibility.Equip(State, Balance, ControlledPID, pickedUnit, pickedSuit);
-            equipButton.SetEnabled(refusal == EquipRefusal.None);
             VillagerData villager = State.villagers[pickedUnit];
             SuitStats stats = Balance.GetSuitStats(pickedSuit, State.players[ControlledPID].SuitEra(pickedSuit));
-            var equipValue = (pickedSuit, refusal, villager.state, villager.suit,
-                              stats.foodCost, stats.materialCost);
-            if (shownEquip != equipValue)
-            {
-                shownEquip = equipValue;
-                SetResourceText(equipRow, refusal == EquipRefusal.None
-                    ? "Equip " + pickedSuit
-                    : RefusalText(refusal, villager, stats));
-            }
+            SetButtonTemplate(refusal == EquipRefusal.None
+                ? "Equip " + pickedSuit
+                : RefusalText(refusal, villager, stats), refusal == EquipRefusal.None);
+        }
+
+        private void SetButtonTemplate(string template, bool enabled)
+        {
+            equipButton.SetEnabled(enabled);
+            if (template == shownButtonTemplate) return;
+            SetResourceText(equipRow, template);
+            shownButtonTemplate = template;
         }
 
         private void OnCardPressed(SuitType suit)

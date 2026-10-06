@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NodeWar.Backend;
 using NodeWar.Simulation;
+using NodeWar.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -28,6 +29,9 @@ namespace NodeWar.Lobby
         private const float BandHeight = 148f;
         private const float NodeTop = 20f;
         private const float DiscRadius = 36f;
+        private float discSize = DiscRadius * 2f;
+        private float lineWidth = 4f;
+        private Color edgeIdle = EdgeIdle, edgeOwned = EdgeOwned;
         private const float EdgeGap = 5f;
         private const float SheetClearance = 260f;
 
@@ -74,6 +78,7 @@ namespace NodeWar.Lobby
             strip = pageRoot.Q<VisualElement>("suittree-strip");
             scroll = pageRoot.Q<ScrollView>("suittree-scroll");
             canvas = pageRoot.Q<VisualElement>("suittree-canvas");
+            if (canvas != null) canvas.RegisterCallback<CustomStyleResolvedEvent>(OnTreeStyle);
             info = LobbySheet.Lift(pageRoot, "suittree-info");
             if (info != null)
             {
@@ -238,7 +243,7 @@ namespace NodeWar.Lobby
             VisualElement disc = new VisualElement();
             disc.AddToClassList("st-node__disc");
             disc.pickingMode = PickingMode.Ignore;
-            LobbyIcon glyph = new LobbyIcon(GlyphFor(node.State));
+            LobbyIcon glyph = new LobbyIcon(GlyphFor(node.State), LobbyIconContext.SuitTree);
             glyph.AddToClassList("lb-icon");
             glyph.AddToClassList("st-node__glyph");
             glyph.pickingMode = PickingMode.Ignore;
@@ -250,6 +255,7 @@ namespace NodeWar.Lobby
 
             int variant = node.Variant;
             button.clicked += () => SelectNode(variant);
+            ApplyNodeSize(button);
             return button;
         }
 
@@ -258,10 +264,10 @@ namespace NodeWar.Lobby
         {
             switch (state)
             {
-                case SuitNodeState.Equipped: return LobbyIconKind.Diamond;
-                case SuitNodeState.Owned: return LobbyIconKind.Pip;
-                case SuitNodeState.Available: return LobbyIconKind.Spark;
-                default: return LobbyIconKind.Lock;
+                case SuitNodeState.Equipped: return LobbyIconKind.SuitTreeEquipped;
+                case SuitNodeState.Owned: return LobbyIconKind.SuitTreeOwned;
+                case SuitNodeState.Available: return LobbyIconKind.SuitTreeAvailable;
+                default: return LobbyIconKind.SuitTreeLocked;
             }
         }
 
@@ -276,13 +282,13 @@ namespace NodeWar.Lobby
             }
         }
 
-        private static void DrawEdges(MeshGenerationContext ctx, VisualElement host, SuitNodeView[] nodes,
+        private void DrawEdges(MeshGenerationContext ctx, VisualElement host, SuitNodeView[] nodes,
             SuitNodeLayout[] layout)
         {
             float width = host.contentRect.width;
             if (width <= 0f) return;
             Painter2D painter = ctx.painter2D;
-            painter.lineWidth = 4f;
+            painter.lineWidth = lineWidth;
             painter.lineCap = LineCap.Round;
 
             for (int i = 0; i < layout.Length; i++)
@@ -294,16 +300,51 @@ namespace NodeWar.Lobby
                 Vector2 from = Center(layout[parent], width);
                 Vector2 to = Center(layout[i], width);
                 Vector2 direction = (to - from).normalized;
-                painter.strokeColor = nodes[i].Owned ? EdgeOwned : EdgeIdle;
+                painter.strokeColor = nodes[i].Owned ? edgeOwned : edgeIdle;
                 painter.BeginPath();
-                painter.MoveTo(from + direction * (DiscRadius + EdgeGap));
-                painter.LineTo(to - direction * (DiscRadius + EdgeGap));
+                float inset = Mathf.Min(discSize * 0.5f + EdgeGap, Vector2.Distance(from, to) * 0.5f);
+                painter.MoveTo(from + direction * inset);
+                painter.LineTo(to - direction * inset);
                 painter.Stroke();
             }
         }
 
-        private static Vector2 Center(SuitNodeLayout place, float width) =>
-            new Vector2(place.X * width, place.Band * BandHeight + NodeTop + DiscRadius);
+        private Vector2 Center(SuitNodeLayout place, float width) =>
+            new Vector2(place.X * width, place.Band * BandHeight + NodeTop + discSize * 0.5f);
+
+        private void OnTreeStyle(CustomStyleResolvedEvent evt)
+        {
+            var style = evt.customStyle;
+            edgeIdle = EdgeIdle; edgeOwned = EdgeOwned;
+            ResourceRingColors.TryRead(style, "--tree-edge-color", ref edgeIdle);
+            ResourceRingColors.TryRead(style, "--tree-edge-owned-color", ref edgeOwned);
+            lineWidth = style.TryGetValue(new CustomStyleProperty<float>("--tree-line-width"), out float width)
+                ? UiArtMath.Geometry(width, 4f, 1f, 16f) : 4f;
+            discSize = style.TryGetValue(new CustomStyleProperty<float>("--tree-disc-size"), out float size)
+                ? UiArtMath.Geometry(size, 72f, 24f, 92f) : 72f;
+            canvas.Query<Button>(className: "st-node").ForEach(ApplyNodeSize);
+            canvas.Query<VisualElement>(className: "st-edges").ForEach(e => e.MarkDirtyRepaint());
+        }
+
+        private void ApplyNodeSize(Button button)
+        {
+            var disc = button.Q<VisualElement>(className: "st-node__disc");
+            if (disc != null)
+            {
+                disc.style.width = disc.style.height = discSize;
+                float radius = discSize * (button.ClassListContains("st-node--available") ? 0.25f : 0.5f);
+                disc.style.borderTopLeftRadius = disc.style.borderTopRightRadius = radius;
+                disc.style.borderBottomLeftRadius = disc.style.borderBottomRightRadius = radius;
+            }
+            var ring = button.Q<VisualElement>(className: "st-node__ring");
+            if (ring != null)
+            {
+                ring.style.width = ring.style.height = discSize + 20f;
+                ring.style.left = (112f - discSize - 20f) * 0.5f;
+                ring.style.borderTopLeftRadius = ring.style.borderTopRightRadius = (discSize + 20f) * 0.5f;
+                ring.style.borderBottomLeftRadius = ring.style.borderBottomRightRadius = (discSize + 20f) * 0.5f;
+            }
+        }
 
         private static Label MakeLabel(string text, string styleClass, string weightClass)
         {

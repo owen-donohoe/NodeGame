@@ -260,12 +260,14 @@
     -unity-background-image-tint-color: var(--hud-ink-mute);
 }
 
-/* Height is roughly half of width, not a square: the ring itself is only
-   the upper semicircle, flat side down, so it needs the diameter's width
-   but just the radius's height. See ResourceRing.Draw. */
+/* Each semicircle takes its card's width - half the sheet - up to a cap so a
+   desktop window does not draw a giant one. The height is half the width plus half a
+   stroke, set in code from ResourceHudMath.HostHeight when the width is known; the
+   value here only holds the place until then. See ResourceRing.Draw. */
 .hud__res-ring-host {
-    width: 84px;
-    height: 50px;
+    width: 100%;
+    max-width: 260px;
+    height: 100px;
     align-items: center;
     justify-content: center;
     transition-property: scale;
@@ -298,15 +300,62 @@
     scale: 0.9 0.9;
 }
 
+/* Metal: a plain bar under the two semicircles. Hidden until it applies. */
+.hud__res-metal {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--space-3);
+}
+
+.hud__res-metal--on {
+    display: flex;
+}
+
+.hud__res-metal-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: var(--space-2);
+    -unity-background-image-tint-color: var(--hud-ink-mute);
+}
+
+.hud__res-bar-host {
+    flex-grow: 1;
+    height: 6px;
+    transition-property: scale;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out-back;
+}
+
+/* Metal and display-only magic blend continuously over their capacities. */
+.hud__res-ring.hud__resource--metal {
+    --ring-critical: rgb(132, 139, 145);
+    --ring-rich: rgb(83, 150, 191);
+}
+
+.hud__res-ring.hud__resource--magic {
+    --ring-critical: rgb(157, 79, 203);
+    --ring-rich: rgb(103, 107, 224);
+}
+
+.ui-root .hud__res-metal-value {
+    min-width: 56px;
+    margin-left: var(--space-3);
+    font-size: var(--type-body);
+    color: var(--hud-ink);
+    -unity-text-align: middle-right;
+}
+
 .ui-root .hud__res-value {
     position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
     left: 0;
-    font-size: var(--type-heading);
+    padding-bottom: 2px;
+    font-size: 28px;
     color: var(--hud-ink);
-    -unity-text-align: middle-center;
+    -unity-text-align: lower-center;
 }
 
 /* ===================================================================
@@ -576,6 +625,111 @@
 }
 
 /* ===================================================================
+   Selection counter and the controls side
+
+   The counter sits under the zoom handle on the same edge. It is
+   display:none until something is selected, so it has no hit area and no
+   bounds (the indicator layer skips an element with none) while empty.
+   =================================================================== */
+
+.hud__selbar {
+    display: none;
+    position: absolute;
+    right: 12px;
+    bottom: 28%;
+    width: 56px;
+    height: 56px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 28px;
+    background-color: var(--hud-glass-strong);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--hud-edge);
+    border-right-color: var(--hud-edge);
+    border-top-color: var(--hud-edge);
+    border-bottom-color: var(--hud-edge);
+}
+
+.hud__selbar--on {
+    display: flex;
+}
+
+.ui-root .hud__selbar-count {
+    font-size: 22px;
+    color: var(--hud-ink);
+    -unity-text-align: middle-center;
+}
+
+/* The X is two bars, so it needs no glyph. Hidden until hover or press. */
+.hud__selbar-x {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.hud__selbar-bar {
+    position: absolute;
+    width: 26px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: rgb(225, 64, 54);
+}
+
+.hud__selbar-bar--a {
+    rotate: 45deg;
+}
+
+.hud__selbar-bar--b {
+    rotate: -45deg;
+}
+
+/* Hover (pointer devices only): the number gives way to a red X. */
+.hud__selbar--hover .hud__selbar-count {
+    display: none;
+}
+
+.hud__selbar--hover .hud__selbar-x {
+    display: flex;
+}
+
+/* Pressed: inverted, a black circle and a white X. Wins over hover. */
+.hud__selbar--pressed {
+    background-color: rgb(0, 0, 0);
+    border-left-color: rgb(255, 255, 255);
+    border-right-color: rgb(255, 255, 255);
+    border-top-color: rgb(255, 255, 255);
+    border-bottom-color: rgb(255, 255, 255);
+}
+
+.hud__selbar--pressed .hud__selbar-count {
+    display: none;
+}
+
+.hud__selbar--pressed .hud__selbar-x {
+    display: flex;
+}
+
+.hud__selbar--pressed .hud__selbar-bar {
+    background-color: rgb(255, 255, 255);
+}
+
+/* Controls side: Left. One class on the HUD root mirrors the thumb-placed
+   controls; nothing here is per element in code. */
+.hud--left .hud__recentre-dock,
+.hud--left .hud__selbar {
+    right: auto;
+    left: 12px;
+}
+
+/* ===================================================================
    Breach flash
    =================================================================== */
 
@@ -729,6 +883,76 @@
 .ui-root .hud__end-count {
     font-size: 15px;
     color: var(--ink);
+}
+
+/* ===================================================================
+   Tempo and sudden death. Cards are display:none until code adds
+   --shown, then --in a frame later so the opacity/slide transition
+   runs. --calm (reduced motion) drops the transition and the slide:
+   the card just appears and goes.
+   =================================================================== */
+
+.hud__tempo {
+    position: absolute;
+    top: 22%;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.hud__tempo-card {
+    display: none;
+    align-items: center;
+    margin-bottom: var(--space-2);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    background-color: var(--hud-glass-strong);
+    border-left-width: 4px;
+    border-left-color: var(--action);
+    border-top-left-radius: var(--corner-md);
+    border-top-right-radius: var(--corner-md);
+    border-bottom-left-radius: var(--corner-md);
+    border-bottom-right-radius: var(--corner-md);
+    opacity: 0;
+    translate: 0 -10px;
+    transition-property: opacity, translate;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+}
+
+.hud__tempo-card--shown {
+    display: flex;
+}
+
+.hud__tempo-card--in {
+    opacity: 1;
+    translate: 0 0;
+}
+
+/* The colour is the breacher magenta (BreachCueSettings), the one hue that is
+   neither player's: sudden death is about the Cores, not about either side. */
+.hud__tempo-card--urgent {
+    border-left-color: rgb(255, 26, 217);
+}
+
+.hud__tempo--calm .hud__tempo-card {
+    translate: 0 0;
+    transition-duration: 0s;
+}
+
+.ui-root .hud__tempo-title {
+    font-size: 17px;
+    color: var(--hud-ink);
+    -unity-text-align: middle-center;
+}
+
+.ui-root .hud__tempo-sub {
+    font-size: 12px;
+    color: var(--hud-ink);
+    opacity: 0.8;
+    -unity-text-align: middle-center;
 }
 
 /* A pill across the top while the match plays on through a blip (8.2e). */

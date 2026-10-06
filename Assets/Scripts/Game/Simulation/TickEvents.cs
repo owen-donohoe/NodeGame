@@ -27,7 +27,13 @@ namespace NodeWar.Simulation
         NodeClaimed,
 
         /// <summary>A villager reached an undefended enemy Core and was spent. playerID is the defender.</summary>
-        Breach
+        Breach,
+
+        /// <summary>A tempo stage starts. value is its zero-based index.</summary>
+        TempoStage,
+
+        /// <summary>The breach threshold drops. value is the new threshold.</summary>
+        SuddenDeath
     }
 
     /// <summary>

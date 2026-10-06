@@ -65,7 +65,7 @@ namespace NodeWar.Cloud.Tests
                 Assert.That(record.matchId, Is.EqualTo("m"));
                 Assert.That(record.playerIds, Is.EqualTo(new[] { "p0", "p1" }));
                 Assert.That(record.protocol, Is.EqualTo(ProtocolVersion.Current));
-                Assert.That(record.sim, Is.EqualTo(1));
+                Assert.That(record.sim, Is.EqualTo(SimulationVersion.Current));
                 Assert.That(record.content, Is.EqualTo(content));
                 Assert.That(record.createdUnixSeconds, Is.EqualTo(Now));
                 Assert.That(record.state, Is.EqualTo(MatchRecordState.Open));
@@ -215,7 +215,7 @@ namespace NodeWar.Cloud.Tests
             var players = SdkPlayers();
             players[1] = new Player("p1", new Dictionary<string, object>
             {
-                ["protocol"] = ProtocolVersion.Current.ToString(), ["sim"] = 1.0,
+                ["protocol"] = ProtocolVersion.Current.ToString(), ["sim"] = (double)SimulationVersion.Current,
                 ["content"] = content.ToString(CultureInfo.InvariantCulture),
                 ["arena"] = 1000, ["rating"] = -1000
             });
@@ -229,7 +229,7 @@ namespace NodeWar.Cloud.Tests
             Assert.That(response.AllocationData["matchId"], Is.EqualTo("m"));
             var record = (await matches.ReadAsync("m")).Record;
             Assert.That(record.protocol, Is.EqualTo(ProtocolVersion.Current));
-            Assert.That(record.sim, Is.EqualTo(1));
+            Assert.That(record.sim, Is.EqualTo(SimulationVersion.Current));
             Assert.That(record.content, Is.EqualTo(content));
             Assert.That(record.players[1].Rank.Arena, Is.Zero);
             Assert.That(record.players[1].Rating.R, Is.EqualTo(1500));
@@ -380,14 +380,14 @@ namespace NodeWar.Cloud.Tests
 
         private AllocationPlayer[] Roster() => new[]
         {
-            new AllocationPlayer { PlayerId = "p0", Protocol = ProtocolVersion.Current, Sim = 1, Content = content },
-            new AllocationPlayer { PlayerId = "p1", Protocol = ProtocolVersion.Current, Sim = 1, Content = content }
+            new AllocationPlayer { PlayerId = "p0", Protocol = ProtocolVersion.Current, Sim = SimulationVersion.Current, Content = content },
+            new AllocationPlayer { PlayerId = "p1", Protocol = ProtocolVersion.Current, Sim = SimulationVersion.Current, Content = content }
         };
 
         private List<Player> SdkPlayers() => new List<Player>
         {
-            new Player("p0", new JObject { ["protocol"] = ProtocolVersion.Current, ["sim"] = 1, ["content"] = content }),
-            new Player("p1", new JObject { ["protocol"] = ProtocolVersion.Current, ["sim"] = 1, ["content"] = content })
+            new Player("p0", new JObject { ["protocol"] = ProtocolVersion.Current, ["sim"] = SimulationVersion.Current, ["content"] = content }),
+            new Player("p1", new JObject { ["protocol"] = ProtocolVersion.Current, ["sim"] = SimulationVersion.Current, ["content"] = content })
         };
 
         private static AllocateRequest Request(object players) => new AllocateRequest("m",

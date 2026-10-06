@@ -159,29 +159,42 @@
 
                 <engine:VisualElement name="hud-emote-dock" class="hud__emote-tab" picking-mode="Ignore">
                     <engine:Button name="hud-emote-button" class="ui-reset-button hud__emote-tab-button">
-                        <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                        <lobby:LobbyIcon context="HeadsUpDisplay" kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
                     </engine:Button>
                 </engine:VisualElement>
 
                 <engine:VisualElement class="hud__res-row" picking-mode="Ignore">
                     <engine:VisualElement name="hud-res-food" class="hud__res-card" picking-mode="Ignore">
-                        <lobby:LobbyIcon kind="Food" class="hud__res-icon" picking-mode="Ignore" />
+                        <lobby:LobbyIcon context="HeadsUpDisplay" kind="Food" class="hud__res-icon" picking-mode="Ignore" />
                         <engine:VisualElement name="hud-ring-food" class="hud__res-ring-host" picking-mode="Ignore">
                             <engine:Label name="hud-food" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                         </engine:VisualElement>
                     </engine:VisualElement>
-                    <engine:VisualElement name="hud-res-materials" class="hud__res-card" picking-mode="Ignore">
-                        <lobby:LobbyIcon kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-res-materials" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
+                        <lobby:LobbyIcon context="HeadsUpDisplay" kind="Materials" class="hud__res-icon" picking-mode="Ignore" />
                         <engine:VisualElement name="hud-ring-materials" class="hud__res-ring-host" picking-mode="Ignore">
                             <engine:Label name="hud-materials" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
                         </engine:VisualElement>
                     </engine:VisualElement>
-                    <engine:VisualElement name="hud-res-metal" class="hud__res-card hud__res-card--last" picking-mode="Ignore">
-                        <lobby:LobbyIcon kind="Metal" class="hud__res-icon" picking-mode="Ignore" />
-                        <engine:VisualElement name="hud-ring-metal" class="hud__res-ring-host" picking-mode="Ignore">
-                            <engine:Label name="hud-metal" class="hud__res-value ui-w700" text="0" picking-mode="Ignore" />
-                        </engine:VisualElement>
-                    </engine:VisualElement>
+                </engine:VisualElement>
+
+                <!--
+                    Metal is not a semicircle: a plain segmented bar under the two,
+                    x/10, with its glyph. Hidden until the player's arena reaches
+                    ResourceHudMath.MetalArena or they hold any (GameplayHUDController
+                    toggles the visible modifier). The bar is built in code (ResourceBar).
+                -->
+                <engine:VisualElement name="hud-res-metal" class="hud__res-metal" picking-mode="Ignore">
+                    <lobby:LobbyIcon context="HeadsUpDisplay" kind="Metal" class="hud__res-metal-icon" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-ring-metal" class="hud__res-bar-host" picking-mode="Ignore" />
+                    <engine:Label name="hud-metal" class="hud__res-metal-value ui-w700" text="0/10" picking-mode="Ignore" />
+                </engine:VisualElement>
+
+                <!-- Magic has no simulation source: ResourceHudMath.DisplayOnlyMagicAmount reads 0. -->
+                <engine:VisualElement name="hud-res-magic" class="hud__res-metal" picking-mode="Ignore">
+                    <lobby:LobbyIcon context="HeadsUpDisplay" kind="MagicResource" class="hud__res-metal-icon" picking-mode="Ignore" />
+                    <engine:VisualElement name="hud-ring-magic" class="hud__res-bar-host" picking-mode="Ignore" />
+                    <engine:Label name="hud-magic" class="hud__res-metal-value ui-w700" text="0/10" picking-mode="Ignore" />
                 </engine:VisualElement>
 
                 <!-- SafeAreaBinder writes the bottom inset here, the way the
@@ -196,12 +209,12 @@
 
         <!--
             With villagers selected, the next node tap is a move order. The
-            chip says that mode is armed. Not a control: the order is given on
+            tooltip says that mode is armed (Settings: Tooltips turns it off). Not a control: the order is given on
             the board, never from a panel.
         -->
         <engine:VisualElement name="hud-selection" class="hud__selection-dock" picking-mode="Ignore">
             <engine:VisualElement class="ui-chip ui-chip--action hud__selection" picking-mode="Ignore">
-                <engine:Label name="hud-selection-text" class="ui-chip__text ui-w600" text="Tap a node to move · 0" picking-mode="Ignore" />
+                <engine:Label name="hud-selection-text" class="ui-chip__text ui-w600" text="Tap a node to move" picking-mode="Ignore" />
             </engine:VisualElement>
         </engine:VisualElement>
 
@@ -243,6 +256,24 @@
             <engine:Label name="hud-recentre-label" class="hud__recentre-label ui-w600" text="CORE" picking-mode="Ignore" />
         </engine:VisualElement>
 
+        <!--
+            Selection counter: a circle on the controls side, in thumb reach,
+            shown only while something is selected (and Selection counter is on
+            in settings). It shows the selected count. On a pointer the number
+            gives way to a red X on hover; while pressed it inverts (black circle,
+            white X). Releasing on the circle deselects everything; pressing and
+            releasing elsewhere does nothing. GameplayHUDController captures the
+            pointer on press, so the board never sees the touch. Touch has no
+            hover, so a press shows the inverted X at once.
+        -->
+        <engine:VisualElement name="hud-selbar" class="hud__selbar" picking-mode="Position">
+            <engine:Label name="hud-selbar-count" class="hud__selbar-count ui-w700" text="0" picking-mode="Ignore" />
+            <engine:VisualElement class="hud__selbar-x" picking-mode="Ignore">
+                <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--a" picking-mode="Ignore" />
+                <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--b" picking-mode="Ignore" />
+            </engine:VisualElement>
+        </engine:VisualElement>
+
         <!-- A breach flashes the screen. Never picks. -->
         <engine:VisualElement name="hud-flash" class="hud__flash" picking-mode="Ignore" />
 
@@ -252,6 +283,25 @@
         -->
         <engine:VisualElement name="hud-countdown" class="hud__countdown">
             <engine:Label name="hud-countdown-step" class="hud__countdown-step ui-w700" text="3" picking-mode="Ignore" />
+        </engine:VisualElement>
+
+        <!--
+            Tempo and sudden death. Two cards in one column, a fifth of the way
+            down: clear of the clock and the burger under it, and clear of the
+            breach walls above. The banner is an event (a tempo stage began, the
+            threshold just dropped) and leaves by itself; the countdown is a
+            state, read off the tick count for the five seconds before each
+            sudden-death tick. Neither picks.
+        -->
+        <engine:VisualElement name="hud-tempo" class="hud__tempo" picking-mode="Ignore">
+            <engine:VisualElement name="hud-tempo-banner" class="hud__tempo-card" picking-mode="Ignore">
+                <engine:Label name="hud-tempo-title" class="hud__tempo-title ui-w700" text="" picking-mode="Ignore" />
+                <engine:Label name="hud-tempo-sub" class="hud__tempo-sub" text="" picking-mode="Ignore" />
+            </engine:VisualElement>
+            <engine:VisualElement name="hud-sd-countdown" class="hud__tempo-card hud__tempo-card--urgent" picking-mode="Ignore">
+                <engine:Label name="hud-sd-title" class="hud__tempo-title ui-w700" text="" picking-mode="Ignore" />
+                <engine:Label name="hud-sd-sub" class="hud__tempo-sub" text="" picking-mode="Ignore" />
+            </engine:VisualElement>
         </engine:VisualElement>
 
         <!--
@@ -374,7 +424,7 @@
             </engine:Button>
 
             <engine:Button name="hud-settings-row-emotes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
-                <lobby:LobbyIcon name="hud-settings-emotes-icon" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
+                <lobby:LobbyIcon name="hud-settings-emotes-icon" context="HeadsUpDisplay" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
                 <engine:Label class="hud__settings-label ui-w500" text="Emotes (saved)" picking-mode="Ignore" />
                 <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
             </engine:Button>
@@ -384,7 +434,35 @@
                 <engine:Label name="hud-settings-framecap" class="hud__settings-label ui-w500" text="60" picking-mode="Ignore" />
             </engine:Button>
 
-            <engine:Label class="hud__settings-note" text="Audio has no system to drive yet." picking-mode="Ignore" />
+            <!--
+                Controls: only what undoes a bad combination mid-match. The
+                full list lives on the lobby's Settings page.
+            -->
+            <engine:Button name="hud-settings-row-camerabutton" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Camera button" picking-mode="Ignore" />
+                <lobby:LobbySwitch name="hud-settings-camerabutton" value="true" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-target" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Camera button target" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-target" class="hud__settings-label ui-w500" text="Core" picking-mode="Ignore" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-tooltips" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Tooltips" picking-mode="Ignore" />
+                <lobby:LobbySwitch name="hud-settings-tooltips" value="true" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-side" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Controls side" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-side" class="hud__settings-label ui-w500" text="Right" picking-mode="Ignore" />
+            </engine:Button>
+
+            <engine:Button name="hud-settings-row-controls-reset" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Reset controls to default" picking-mode="Ignore" />
+            </engine:Button>
+
+            <engine:Label class="hud__settings-note" text="Audio has no system to drive yet. All controls are under Settings in the lobby." picking-mode="Ignore" />
 
             <!-- Ranked only; hidden otherwise. The first tap only asks. -->
             <engine:VisualElement name="hud-settings-surrender-area" class="hud__settings-surrender" picking-mode="Ignore">
@@ -410,20 +488,20 @@
             <engine:VisualElement name="hud-emote-sheet" class="hud__settings hud__emote-sheet" picking-mode="Ignore">
               <engine:VisualElement class="hud__emote-options" picking-mode="Ignore">
                 <engine:Button name="hud-emote-happy" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Smile" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="EmoteHappy" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Button name="hud-emote-sad" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Frown" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="Frown" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Button name="hud-emote-angry" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Angry" class="hud__emote-icon" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="Angry" class="hud__emote-icon" picking-mode="Ignore" />
                 </engine:Button>
                 <engine:Button name="hud-emote-flag" class="ui-reset-button hud__gear hud__emote-option">
-                    <lobby:LobbyIcon kind="Flag" class="hud__emote-icon hud__emote-icon--flag" picking-mode="Ignore" />
+                    <lobby:LobbyIcon context="EmotePicker" kind="EmoteWhiteFlag" class="hud__emote-icon hud__emote-icon--flag" picking-mode="Ignore" />
                 </engine:Button>
               </engine:VisualElement>
               <engine:Button name="hud-emote-mute" class="ui-reset-button hud__emote-mute" picking-mode="Ignore">
-                  <lobby:LobbyIcon kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
+                  <lobby:LobbyIcon context="EmotePicker" kind="Speaker" class="hud__speaker" picking-mode="Ignore" />
                   <engine:Label name="hud-emote-mute-label" class="hud__emote-mute-label ui-w500" text="Mute this match" picking-mode="Ignore" />
               </engine:Button>
             </engine:VisualElement>

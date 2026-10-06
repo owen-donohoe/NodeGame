@@ -1,0 +1,71 @@
+using System;
+using NodeWar.View;
+using UnityEngine;
+
+namespace NodeWar.Lobby
+{
+    [CreateAssetMenu(fileName = "UIArtTheme", menuName = "NodeWar/UI Art Theme")]
+    public sealed class UIArtTheme : ScriptableObject
+    {
+        [Serializable]
+        public struct IconEntry
+        {
+            public LobbyIconKind kind;
+            [Tooltip("Anywhere is the default for existing entries; specific contexts override it.")]
+            public LobbyIconContext context;
+            public Sprite sprite;
+            public bool keepOriginalColours;
+        }
+
+        public IconEntry[] icons;
+        public DistrictVisualTable districtVisuals;
+
+        // Array order is authoritative, including an empty first entry.
+        public bool TryIcon(LobbyIconKind kind, LobbyIconContext context, out IconEntry entry)
+        {
+            int index = UIArtLookup.SpriteIndex(icons, (int)kind, context,
+                e => (int)e.kind, e => e.context, e => e.sprite != null);
+            if (index >= 0) { entry = icons[index]; return true; }
+            entry = default;
+            return false;
+        }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (icons == null) return;
+            for (int i = 0; i < icons.Length; i++)
+                for (int j = i + 1; j < icons.Length; j++)
+                    if (icons[i].kind == icons[j].kind && icons[i].context == icons[j].context)
+                        Debug.LogWarning("[UIArtTheme] Duplicate " + icons[i].kind +
+                            " / " + icons[i].context +
+                            " in " + name + "; the first entry wins.", this);
+        }
+#endif
+    }
+
+    public static class UIArt
+    {
+        private static bool loaded;
+        private static UIArtTheme theme;
+
+        public static UIArtTheme Theme
+        {
+            get
+            {
+                if (!loaded)
+                {
+                    loaded = true;
+                    theme = Resources.Load<UIArtTheme>("UIArtTheme");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (theme == null) Debug.LogWarning("[UIArt] Resources/UIArtTheme is missing; using default UI art.");
+#endif
+                }
+                return theme;
+            }
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Reset() { loaded = false; theme = null; }
+    }
+}

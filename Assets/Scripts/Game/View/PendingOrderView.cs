@@ -45,7 +45,14 @@ namespace NodeWar.View
 
         private readonly PendingOrderTracker tracker = new PendingOrderTracker(TimeoutSeconds);
         private readonly List<LineRenderer> pool = new List<LineRenderer>();
-        private readonly List<int> drawn = new List<int>();
+        private readonly List<PendingOrderTracker.Order> drawn = new List<PendingOrderTracker.Order>();
+
+        // Order drag preview: the same route and look as a pending order, drawn
+        // while the finger is still down. Release hands over to OnMoveIssued, which
+        // builds the identical route for the same frame.
+        private readonly List<PendingOrderTracker.Order> hover = new List<PendingOrderTracker.Order>();
+        private readonly List<int> hoverVillagers = new List<int>();
+        private int hoverNode = -1;
         private readonly Gradient gradient = new Gradient();
         private readonly GradientColorKey[] colorKeys = new GradientColorKey[2];
         private readonly GradientAlphaKey[] alphaKeys = new GradientAlphaKey[2];
@@ -117,6 +124,45 @@ namespace NodeWar.View
             }
         }
 
+        /// <summary>Subscribed to CommandSystem.OrderDragBegan.</summary>
+        public void BeginHover(IReadOnlyList<int> villagerIDs)
+        {
+            hoverVillagers.Clear();
+            for (int i = 0; i < villagerIDs.Count; i++) hoverVillagers.Add(villagerIDs[i]);
+            SetHoverNode(-1);
+        }
+
+        /// <summary>Subscribed to CommandSystem.OrderDragHover; -1 when no node is under the finger.</summary>
+        public void SetHoverNode(int node)
+        {
+            hover.Clear();
+            hoverNode = node;
+            if (node < 0 || simState == null || nodeSlotManagers == null) return;
+
+            for (int i = 0; i < hoverVillagers.Count; i++)
+            {
+                int id = hoverVillagers[i];
+                if (id < 0 || id >= simState.villagers.Length) continue;
+
+                VillagerData villager = simState.villagers[id];
+                if (villager.ownerID != localPlayerID) continue;
+                if (villager.state == VillagerState.Moving && villager.targetNodeID == node) continue;
+
+                int[] route = BuildRoute(villager, node);
+                if (route == null) continue;
+
+                hover.Add(new PendingOrderTracker.Order { villagerID = id, targetNode = node, routeNodes = route });
+            }
+        }
+
+        /// <summary>Subscribed to CommandSystem.OrderDragEnded.</summary>
+        public void EndHover()
+        {
+            hoverVillagers.Clear();
+            hover.Clear();
+            hoverNode = -1;
+        }
+
         /// <summary>
         /// The nodes the provisional line passes through after the villager's own
         /// position, or null if the simulation would refuse the order.
@@ -186,26 +232,34 @@ namespace NodeWar.View
             IReadOnlyList<PendingOrderTracker.Order> orders = tracker.Orders;
 
             for (int i = 0; i < orders.Count; i++)
+                used = TryDraw(orders[i], used);
+            for (int i = 0; i < hover.Count; i++)
             {
-                if (AlreadyDrawn(orders, i)) continue;
-                if (!DrawOrder(used, orders[i])) continue;
-
-                drawn.Add(i);
-                used++;
+                VillagerData villager = simState.villagers[hover[i].villagerID];
+                if (villager.isConsumed || villager.state == VillagerState.Dead) continue;
+                used = TryDraw(hover[i], used);
             }
 
             for (int i = used; i < pool.Count; i++)
                 pool[i].enabled = false;
         }
 
-        private bool AlreadyDrawn(IReadOnlyList<PendingOrderTracker.Order> orders, int index)
+        private int TryDraw(PendingOrderTracker.Order order, int used)
         {
-            PendingOrderTracker.Order order = orders[index];
+            if (AlreadyDrawn(order)) return used;
+            if (!DrawOrder(used, order)) return used;
+
+            drawn.Add(order);
+            return used + 1;
+        }
+
+        private bool AlreadyDrawn(PendingOrderTracker.Order order)
+        {
             bool midEdge = IsMidEdge(simState.villagers[order.villagerID]);
 
             for (int j = 0; j < drawn.Count; j++)
             {
-                PendingOrderTracker.Order other = orders[drawn[j]];
+                PendingOrderTracker.Order other = drawn[j];
                 if (!SameNodes(order.routeNodes, other.routeNodes)) continue;
 
                 bool otherMidEdge = IsMidEdge(simState.villagers[other.villagerID]);

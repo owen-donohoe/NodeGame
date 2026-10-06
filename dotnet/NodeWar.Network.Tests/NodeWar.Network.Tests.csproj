@@ -41,6 +41,9 @@
     <Compile Include="InputDelayControllerTests.cs" />
     <Compile Include="AdaptiveDelayTests.cs" />
     <Compile Include="LifecycleTests.cs" />
+    <Compile Include="BotBreachingTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/BotPlayer.cs"
+             Link="Input/BotPlayer.cs" />
 
     <Compile Include="../../Assets/Scripts/Game/Network/LockstepCore.cs"
              Link="Network/LockstepCore.cs" />

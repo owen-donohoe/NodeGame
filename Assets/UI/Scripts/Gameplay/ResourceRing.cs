@@ -42,6 +42,11 @@ namespace NodeWar.UI
     ///   wall's ghost, in a curve rather than a USS transition because
     ///   Painter2D cannot be transitioned.
     ///
+    ///   FULL. At or over its cap the whole semicircle pulses a little whiter, and a white
+    ///   wave crosses all three rings together, right end to left, fading as it goes, again
+    ///   every ~1.8 s. Under reduced motion it is a steady brighter tint and nothing moves.
+    ///   The maths is ResourceHudMath; this only draws it.
+    ///
     /// The two animated ones run off one scheduled tick that pauses the moment
     /// nothing is moving, so a ring at rest costs a repaint only when its value
     /// changes - production, which changes every frame it exists, repaints
@@ -55,9 +60,11 @@ namespace NodeWar.UI
     /// </summary>
     public class ResourceRing : VisualElement
     {
-        private const float Thickness = 8f;
-        private const float RingGap = 3f;
         private const float SegmentGapDegrees = 5f;
+        private float skinThickness;
+
+        /// <summary>Slices a segment is cut into for the wave, so a line narrower than a segment shows.</summary>
+        private const int WaveSlices = 3;
 
         /// <summary>Tick period while something is moving. Paused otherwise.</summary>
         private const long TickMilliseconds = 16;
@@ -99,6 +106,10 @@ namespace NodeWar.UI
         private readonly float[] production = new float[ResourceProduction.MaxInFlight];
         private int productionCount;
 
+        // The cap this resource is full at, and what the full state is doing.
+        private int cap = ResourceHudMath.DefaultFoodCap;
+        private bool reducedMotion;
+
         private IVisualElementScheduledItem tick;
         private double lastTickTime;
 
@@ -125,6 +136,8 @@ namespace NodeWar.UI
         private void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
         {
             ICustomStyle style = customStyle;
+            skinThickness = style.TryGetValue(new CustomStyleProperty<float>("--res-thickness"), out float thickness)
+                ? UiArtMath.Geometry(thickness, 8f, 1f, 40f) : 0f;
 
             ResourceRingColors.Read(style, ref colorCritical, ref colorLow, ref colorWarn,
                 ref colorOk, ref colorGood, ref colorRich);
@@ -141,6 +154,32 @@ namespace NodeWar.UI
         /// viewer switch, where the number changed but nothing happened in the
         /// match, the same cases GameplayHUDController holds its pop for.
         /// </summary>
+        /// <summary>The count at which this resource is full. Set from the balance data.</summary>
+        public void SetCap(int value)
+        {
+            if (value == cap) return;
+            cap = value;
+            UpdateFullState();
+        }
+
+        /// <summary>Reduced motion: a steady brighter tint when full, no pulse and no wave.</summary>
+        public void SetReducedMotion(bool value)
+        {
+            if (value == reducedMotion) return;
+            reducedMotion = value;
+            UpdateFullState();
+        }
+
+        private bool IsFullNow { get { return hasValue && ResourceHudMath.IsFull(currentValue, cap); } }
+
+        private void UpdateFullState()
+        {
+            bool full = IsFullNow;
+
+            if (full && !reducedMotion) StartTicking();
+            MarkDirtyRepaint();
+        }
+
         public void SetValue(int value, bool snap = false)
         {
             if (hasValue && value == currentValue) return;
@@ -159,6 +198,7 @@ namespace NodeWar.UI
                 ghostFrom = value;
                 fillSeconds = 0f;
                 MarkDirtyRepaint();
+                UpdateFullState();
                 return;
             }
 
@@ -188,6 +228,7 @@ namespace NodeWar.UI
             }
 
             StartTicking();
+            UpdateFullState();
         }
 
         /// <summary>
@@ -284,6 +325,12 @@ namespace NodeWar.UI
                 ghostValue = currentValue;
             }
 
+            // A full resource keeps the tick running for its pulse and wave.
+            if (IsFullNow && !reducedMotion)
+            {
+                moving = true;
+            }
+
             MarkDirtyRepaint();
 
             if (!moving) StopTicking();
@@ -293,18 +340,23 @@ namespace NodeWar.UI
         {
             Rect rect = contentRect;
 
-            float step = Thickness + RingGap;
-            float minWidth = 2f * (ResourceRingMath.RingCount * Thickness + (ResourceRingMath.RingCount - 1) * RingGap);
+            // Thickness grows with the width, so a larger semicircle has proportionally
+            // larger rings rather than hairlines around a big hole.
+            float thickness = skinThickness > 0f
+                ? Mathf.Min(skinThickness, rect.width / 8f) : ResourceHudMath.RingThickness(rect.width);
+            float ringGap = ResourceHudMath.RingGap(thickness);
+            float step = thickness + ringGap;
+            float minWidth = 2f * (ResourceRingMath.RingCount * thickness + (ResourceRingMath.RingCount - 1) * ringGap);
             if (rect.width <= minWidth) return;
 
             // Flat side down: the diameter runs along the host's bottom edge,
             // so the centre sits there too and every ring bulges upward from
             // it rather than surrounding a mid-box centre.
-            Vector2 centre = new Vector2(rect.center.x, rect.yMax - Thickness * 0.5f);
-            float outerRadius = rect.width * 0.5f - Thickness * 0.5f;
+            Vector2 centre = new Vector2(rect.center.x, rect.yMax - thickness * 0.5f);
+            float outerRadius = rect.width * 0.5f - thickness * 0.5f;
 
             Painter2D painter = context.painter2D;
-            painter.lineWidth = Thickness;
+            painter.lineWidth = thickness;
             painter.lineCap = LineCap.Butt;
 
             // The colour follows the real value, not the sweeping one, so a
@@ -312,10 +364,19 @@ namespace NodeWar.UI
             // rather than part-way through its own animation.
             Color baseColor = BaseColorFor(currentValue);
 
+            // Full: every ring is mixed toward white, pulsing (steady under reduced motion),
+            // and the wave crosses them together. waveProgress is -1 whenever it is resting.
+            bool full = IsFullNow;
+            float whiteMix = 0f;
+            float waveProgress = -1f;
+            if (full) ResourceHudMath.FullEffectAt(Time.unscaledTimeAsDouble, reducedMotion, out whiteMix, out waveProgress);
+
             for (int ring = 0; ring < ResourceRingMath.RingCount; ring++)
             {
                 float radius = outerRadius - ring * step;
-                DrawRing(painter, centre, radius, ring, ShadeForRing(baseColor, ring));
+                Color lit = ShadeForRing(baseColor, ring);
+                if (whiteMix > 0f) lit = Color.Lerp(lit, Color.white, whiteMix);
+                DrawRing(painter, centre, radius, ring, lit, waveProgress);
             }
         }
 
@@ -335,7 +396,8 @@ namespace NodeWar.UI
         /// whole beat. Leaving is louder than arriving, which is the right way
         /// round.
         /// </summary>
-        private void DrawRing(Painter2D painter, Vector2 centre, float radius, int ring, Color litColor)
+        private void DrawRing(Painter2D painter, Vector2 centre, float radius, int ring, Color litColor,
+            float waveProgress)
         {
             float sweepPerSegment = ResourceRingMath.SweepDegrees / ResourceRingMath.SegmentsPerRing;
             float drawSweep = sweepPerSegment - SegmentGapDegrees;
@@ -353,6 +415,20 @@ namespace NodeWar.UI
                 if (lit > 0f) StrokeArc(painter, centre, radius, start, drawSweep, 0f, lit, litColor);
                 if (pending > lit) StrokeArc(painter, centre, radius, start, drawSweep, lit, pending, colorPending);
                 if (ghost > lit) StrokeArc(painter, centre, radius, start, drawSweep, lit, ghost, colorGhost);
+
+                // The wave, over the lit part of a whole segment. Same alpha for the same
+                // segment on every ring, so it crosses all three at once.
+                if (waveProgress >= 0f && lit >= 1f)
+                {
+                    for (int slice = 0; slice < WaveSlices; slice++)
+                    {
+                        float alpha = ResourceHudMath.SliceWaveAlpha(i, ResourceRingMath.SegmentsPerRing,
+                            slice, WaveSlices, waveProgress);
+                        if (alpha <= 0f) continue;
+                        StrokeArc(painter, centre, radius, start, drawSweep,
+                            (float)slice / WaveSlices, (slice + 1f) / WaveSlices, new Color(1f, 1f, 1f, alpha));
+                    }
+                }
             }
         }
 

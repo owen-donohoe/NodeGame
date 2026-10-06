@@ -120,7 +120,9 @@ namespace NodeWar.Tests
         // The baselines above belong to one SimulationVersion. A deliberate
         // re-pin means the same inputs now produce a different game, which is
         // exactly what SimulationVersion exists to announce.
-        private const int BaselinesPinnedAtSimVersion = 1;
+        // v2 re-pin: these short, non-breaching paths stay numerically identical.
+        // Neutral breach fields are omitted from the hash to preserve the v1 legacy path.
+        private const int BaselinesPinnedAtSimVersion = 2;
 
         [Test]
         public void SimVersion_MatchesPinnedBaselines()

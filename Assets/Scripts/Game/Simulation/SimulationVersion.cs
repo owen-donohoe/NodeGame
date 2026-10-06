@@ -15,6 +15,6 @@ namespace NodeWar.Simulation
     /// </summary>
     public static class SimulationVersion
     {
-        public const int Current = 1;
+        public const int Current = 2;
     }
 }

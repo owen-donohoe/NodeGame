@@ -21,6 +21,7 @@ namespace NodeWar.UI
         None = 0,
         Food = 1,
         Materials = 2,
-        Metal = 4
+        Metal = 4,
+        Magic = 8 // Display only; not a simulation resource.
     }
 }

@@ -323,6 +323,135 @@ input layer never learns game ownership.
 (sprites/animation/interpolation). Reads `SimulationState` to render;
 writes nothing to it.
 
+## Replacing UI art
+
+Create an Inspector-authored **NodeWar > UI Art Theme** asset named `UIArtTheme`
+at `Assets/UI/Resources/UIArtTheme.asset`. The UI loads it once per play session
+through `Resources.Load("UIArtTheme")`; restart Play Mode after changing its
+reference or entries. Each icon entry has two choices: **Icon**, a grouped
+menu such as `Indicators/Threat to core` or `Resources/Food`, then **Where**,
+which lists `Anywhere` first and only that icon's actual locations with
+human-readable names. An icon used in one location offers only `Anywhere`.
+Assign **Sprite** and **Keep original colours** below those choices.
+Changing Icon resets an incompatible Where to Anywhere. Opening the Inspector
+does not rewrite saved values; a valid specific override for a single-location
+icon displays Anywhere with a tooltip explaining the preserved location.
+
+Retired generic kinds are hidden from the Icon menu unless the current row
+already uses one, in which case its `Retired/…` choice remains visible. Saved
+pairs with no active use show an error explaining that they will never match;
+choose an active icon and a supported Where to repair them. The shared
+UnityEngine-free `LobbyIconUsage` table supplies groups, labels and locations.
+Editor/development builds warn once per unlisted runtime pair after initial
+UXML attributes have been applied and the icon attaches, skipping intentional
+unset None icons. Dotnet tests guard coverage, valid locations and labels.
+
+Underneath the picker, entries still store `LobbyIconKind` and
+`LobbyIconContext`. Resolution tries
+the exact kind/context pair, then that kind with `Anywhere`, then its generated
+glyph. The first duplicate **pair** wins; validation warns. An empty exact
+sprite falls back to Anywhere, without taking a later exact duplicate. An
+empty first Anywhere entry falls back to the glyph. Original-colour sprites
+use white tint; other sprites
+use the existing glyph tint. Images scale to fit, centred, with letterboxing.
+Missing entries keep the generated vectors; unknown kinds get a placeholder.
+
+Existing enum names and values are unchanged; semantic kinds are appended.
+Every new kind shares its predecessor's drawing until its own art is assigned.
+Existing theme entries without a context deserialize to `Anywhere` (explicit
+enum value zero; the serialized field has no nonzero initializer). No asset
+re-save is needed to preserve their fallback behaviour. In UXML use, for
+example, `kind="Tv" context="PageHeader"`; in C# the constructor accepts an
+optional context, and either property can change independently.
+
+Contexts are `Anywhere` (default fallback), `TopBar`, `PageHeader`, `NavBar`,
+`HeadsUpDisplay`, `NodeSheet`, `InlineText`, `EmotePicker`, `EmoteBubble`,
+`OffScreenIndicator`, `ShopCard`, `SuitTree`, `Workshop`, `Profile`, and `Home`.
+The indicator layer tags both its pointer and event glyph `OffScreenIndicator`,
+including when that same indicator is projected over the board.
+
+| Kind | Current use | Context(s) |
+|---|---|---|
+| None | Intentional absence of a glyph | Anywhere |
+| Shop | Legacy generic fallback drawer; no active use | — |
+| Spark | Legacy generic fallback drawer; no active use | — |
+| Tools | Workshop navigation | NavBar |
+| Smile | Legacy generic fallback drawer; no active use | — |
+| Gear | Lobby settings button | TopBar |
+| Envelope | Legacy generic fallback drawer; no active use | — |
+| Mouth | Home villager face | Home |
+| Tv | History button and history page header | TopBar, PageHeader |
+| Back | Page back buttons, controls row, suit-tree back | PageHeader, InlineText, SuitTree |
+| Flag | Legacy generic fallback drawer; no active use | — |
+| Hat | Legacy generic fallback drawer; no active use | — |
+| Diamond | Legacy generic fallback drawer; no active use | — |
+| District | Workshop district tabs and picker | Workshop |
+| Suit | Workshop suit tabs and picker | Workshop |
+| Lock | Workshop locked cards | Workshop |
+| Pip | Legacy generic fallback drawer; no active use | — |
+| Close | Node-sheet close button | NodeSheet |
+| Alert | Legacy generic fallback drawer; no active use | — |
+| Swords | Battle indicator | OffScreenIndicator |
+| Capture | Legacy generic fallback drawer; no active use | — |
+| Sleep | Idle indicator | OffScreenIndicator |
+| Respawn | Respawn indicator | OffScreenIndicator |
+| Pointer | Indicator direction arrow | OffScreenIndicator |
+| Frown | Sad emote | EmotePicker, EmoteBubble |
+| Angry | Angry emote | EmotePicker, EmoteBubble |
+| Speaker | HUD/settings mute status and emote-picker mute | HeadsUpDisplay, EmotePicker |
+| Food | HUD, sheet readout, inline costs/rewards | HeadsUpDisplay, NodeSheet, InlineText |
+| Materials | HUD, sheet readout, inline costs/rewards | HeadsUpDisplay, NodeSheet, InlineText |
+| Metal | HUD, sheet readout, inline costs/rewards | HeadsUpDisplay, NodeSheet, InlineText |
+| NavBarHome | Home navigation | NavBar |
+| NavBarSocial | Social navigation | NavBar |
+| NavBarShop | Shop navigation | NavBar |
+| DailyBox | Home daily box | Home |
+| VictoryBox | Home victory box | Home |
+| ShopBundle | Shop bundle offers | ShopCard |
+| GoldLeaf | Shop gold-leaf offer | ShopCard |
+| MagicResource | HUD magic bar and sheet readout | HeadsUpDisplay, NodeSheet |
+| SuitTreeAvailable | Available suit-tree node | SuitTree |
+| SuitTreeOwned | Owned suit-tree node | SuitTree |
+| SuitTreeEquipped | Equipped suit-tree node | SuitTree |
+| SuitTreeLocked | Locked suit-tree node | SuitTree |
+| ProfileYouAreHere | Profile arena-track marker | Profile |
+| IndicatorEffect | Generic effect indicator | OffScreenIndicator |
+| IndicatorThreatToCore | Threat-to-core indicator | OffScreenIndicator |
+| IndicatorThreatToTerritory | Threat-to-territory indicator | OffScreenIndicator |
+| IndicatorNodeUnderAttack | Node-under-attack indicator | OffScreenIndicator |
+| IndicatorNodeContested | Contested-node indicator | OffScreenIndicator |
+| EmoteHappy | Happy emote | EmotePicker, EmoteBubble |
+| EmoteWhiteFlag | White-flag emote | EmotePicker, EmoteBubble |
+| CosmeticTinRoof | Shop Tin Roof card and item detail | ShopCard |
+| CosmeticPaperBanner | Shop Paper Banner card and item detail/default | ShopCard |
+| CosmeticStrawHat | Shop Straw Hat card and item detail | ShopCard |
+
+Assign the theme's `districtVisuals` reference to the existing
+`DistrictVisualTable` (no move into Resources). Populate each `DistrictVisual`'s
+`icon` for Workshop cards and node-sheet thumbnails, and `sticker` for draft
+pieces. Draft uses sticker, then icon, then its existing mapping. Missing flat
+art keeps each screen's own fallback; Workshop locks remain visible. The UI
+does not consume the district accent colour.
+
+Gauge skins remain procedural. Set USS custom properties on matching elements
+or their ancestors: `--tree-edge-color`, `--tree-edge-owned-color`,
+`--tree-line-width`, `--tree-disc-size` on `.st-canvas`; `--res-thickness` and
+`--res-stop-0` through `--res-stop-5` on `.hud__res-ring` (including sheet
+readouts); `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` on
+the progress dial. Geometry properties are unitless pixel numbers, bounded
+by the painter and its host; omitted properties retain today's defaults.
+Resource stops override the compatible `--ring-critical` through
+`--ring-rich` palette. Target metal/magic classes separately when changing
+those gradients. Sheet background alpha is USS opacity on
+`.sheet__res-readout-tint`, with the expanded override under
+`.sheet__res-readout--bar`. This fades only the background.
+
+Keep behaviour-bearing UXML element names and types when replacing art.
+`UiRequired` reports missing/wrong types in Editor/development builds without
+stopping binding, and dotnet tests check the shared required-name lists against
+the HUD and Settings layouts. No theme switcher, addressables, or gauge sprite
+skins are introduced.
+
 ## Where the UI lives
 
 Three trees, deliberately. The phone-UI rebuild runs the UI Toolkit stack

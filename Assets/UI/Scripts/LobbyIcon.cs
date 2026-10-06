@@ -4,47 +4,6 @@ using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>Which glyph a <see cref="LobbyIcon"/> draws.</summary>
-    public enum LobbyIconKind
-    {
-        None,
-        Shop,     // prototype: ⌂
-        Spark,    // prototype: ✦
-        Tools,    // prototype: ⚒
-        Smile,    // prototype: ☺
-        Gear,     // prototype: ⚙
-        Envelope, // prototype: ✉
-        Mouth,    // the villager's smile: a CSS bottom border with radii, which USS draws flat
-        Tv,       // match history
-        Back,     // prototype: ←
-        Flag,     // prototype: ⚑
-        Hat,      // prototype: ◠
-        Diamond,  // prototype: ❖
-        District, // prototype: 🏛
-        Suit,     // prototype: 🥋
-        Lock,     // prototype: 🔒
-        Pip,      // prototype: ◆
-        Close,    // the match sheet's close button: ✕
-
-        // In-match indicators and emotes. Same reason as the rest: Fredoka
-        // carries none of these, and a fallback font would differ by platform.
-        Alert,    // !  - an enemy headed for something of yours
-        Swords,   // ⚔  - a fight
-        Capture,  // ↓  - a node being pushed toward the enemy
-        Sleep,    // zz - an idle villager
-        Respawn,  // ↻  - a villager back at the Core
-        Pointer,  // ▶  - the edge arrow, drawn pointing right and rotated
-        Frown,    // ☹  - the sad emote
-        Angry,    // the angry emote
-        Speaker,  // emote mute state
-
-        // In-match resources. The HUD's readouts and the sheet's costs both
-        // need these inline, and Fredoka carries no emoji for them either.
-        Food,      // 🍖 - a ham on the bone
-        Materials, // 🪨 - a stone
-        Metal      // an ingot
-    }
-
     /// <summary>
     /// A small vector glyph for the lobby, and for the in-match HUD's
     /// indicators and emotes, which have the same font problem.
@@ -68,14 +27,33 @@ namespace NodeWar.Lobby
 
         private static readonly Dictionary<LobbyIconKind, VectorImage> cache =
             new Dictionary<LobbyIconKind, VectorImage>();
+        private static readonly HashSet<LobbyIconKind> warnedKinds = new HashSet<LobbyIconKind>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private static readonly HashSet<(LobbyIconKind, LobbyIconContext)> warnedUsages =
+            new HashSet<(LobbyIconKind, LobbyIconContext)>();
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
             cache.Clear();
+            warnedKinds.Clear();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            warnedUsages.Clear();
+#endif
         }
 
         private LobbyIconKind kind;
+        private LobbyIconContext context;
+        private bool keepOriginalColours;
+        private Color? resourceTint;
+
+        /// <summary>Live resource tint, respecting the theme's original-colour art.</summary>
+        public void SetResourceTint(Color tint)
+        {
+            resourceTint = tint;
+            style.unityBackgroundImageTintColor = keepOriginalColours ? Color.white : tint;
+        }
 
         [UxmlAttribute]
         public LobbyIconKind Kind
@@ -84,18 +62,63 @@ namespace NodeWar.Lobby
             set
             {
                 kind = value;
+                RefreshArt();
+            }
+        }
+
+        [UxmlAttribute]
+        public LobbyIconContext Context
+        {
+            get { return context; }
+            set { context = value; RefreshArt(); }
+        }
+
+        private void RefreshArt()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (panel != null) ValidateUsage();
+#endif
+            keepOriginalColours = false;
+            UIArtTheme theme = UIArt.Theme;
+            if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
+            {
+                keepOriginalColours = entry.keepOriginalColours;
+                style.backgroundImage = new StyleBackground(entry.sprite);
+            }
+            else
+            {
                 style.backgroundImage = new StyleBackground(ImageFor(kind));
             }
+            style.unityBackgroundImageTintColor = keepOriginalColours ? new StyleColor(Color.white)
+                : resourceTint.HasValue ? new StyleColor(resourceTint.Value) : new StyleColor(StyleKeyword.Null);
         }
 
         public LobbyIcon()
         {
             AddToClassList("lb-icon");
             pickingMode = PickingMode.Ignore;
+            style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // UXML sets Kind and Context separately. Check only after both initial
+            // attributes have been applied, avoiding warnings about temporary pairs.
+            RegisterCallback<AttachToPanelEvent>(_ => ValidateUsage());
+#endif
         }
 
-        public LobbyIcon(LobbyIconKind kind) : this()
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private void ValidateUsage()
         {
+            // None is the intentional unset value of pooled/default-constructed icons.
+            if (kind == LobbyIconKind.None || LobbyIconUsage.IsUsed(kind, context)) return;
+            if (warnedUsages.Add((kind, context)))
+                Debug.LogWarning("[LobbyIcon] Unlisted usage " + kind + " / " + context +
+                    ". Update LobbyIconUsage or correct this icon's context.");
+        }
+#endif
+
+        public LobbyIcon(LobbyIconKind kind, LobbyIconContext context = LobbyIconContext.Anywhere) : this()
+        {
+            this.context = context;
             Kind = kind;
         }
 
@@ -121,25 +144,48 @@ namespace NodeWar.Lobby
 
             switch (kind)
             {
+                case LobbyIconKind.NavBarShop:
+                case LobbyIconKind.CosmeticTinRoof:
                 case LobbyIconKind.Shop: DrawShop(p); break;
+                case LobbyIconKind.NavBarHome:
+                case LobbyIconKind.DailyBox:
+                case LobbyIconKind.MagicResource:
+                case LobbyIconKind.SuitTreeAvailable:
+                case LobbyIconKind.IndicatorEffect:
                 case LobbyIconKind.Spark: DrawSpark(p); break;
                 case LobbyIconKind.Tools: DrawTools(p); break;
+                case LobbyIconKind.NavBarSocial:
+                case LobbyIconKind.EmoteHappy:
                 case LobbyIconKind.Smile: DrawSmile(p); break;
                 case LobbyIconKind.Gear: DrawGear(p); break;
+                case LobbyIconKind.VictoryBox:
+                case LobbyIconKind.ShopBundle:
                 case LobbyIconKind.Envelope: DrawEnvelope(p); break;
                 case LobbyIconKind.Mouth: DrawMouth(p); break;
                 case LobbyIconKind.Tv: DrawTv(p); break;
                 case LobbyIconKind.Back: DrawBack(p); break;
+                case LobbyIconKind.EmoteWhiteFlag:
+                case LobbyIconKind.CosmeticPaperBanner:
                 case LobbyIconKind.Flag: DrawFlag(p); break;
+                case LobbyIconKind.CosmeticStrawHat:
                 case LobbyIconKind.Hat: DrawHat(p); break;
+                case LobbyIconKind.GoldLeaf:
+                case LobbyIconKind.SuitTreeEquipped:
                 case LobbyIconKind.Diamond: DrawDiamond(p); break;
                 case LobbyIconKind.District: DrawDistrict(p); break;
                 case LobbyIconKind.Suit: DrawSuit(p); break;
+                case LobbyIconKind.SuitTreeLocked:
                 case LobbyIconKind.Lock: DrawLock(p); break;
+                case LobbyIconKind.SuitTreeOwned:
+                case LobbyIconKind.ProfileYouAreHere:
                 case LobbyIconKind.Pip: Diamond(p, 12f, 12f, 10f); break;
                 case LobbyIconKind.Close: DrawClose(p); break;
+                case LobbyIconKind.IndicatorThreatToCore:
+                case LobbyIconKind.IndicatorThreatToTerritory:
                 case LobbyIconKind.Alert: DrawAlert(p); break;
                 case LobbyIconKind.Swords: DrawSwords(p); break;
+                case LobbyIconKind.IndicatorNodeUnderAttack:
+                case LobbyIconKind.IndicatorNodeContested:
                 case LobbyIconKind.Capture: DrawCapture(p); break;
                 case LobbyIconKind.Sleep: DrawSleep(p); break;
                 case LobbyIconKind.Respawn: DrawRespawn(p); break;
@@ -150,6 +196,13 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Food: DrawFood(p); break;
                 case LobbyIconKind.Materials: DrawMaterials(p); break;
                 case LobbyIconKind.Metal: DrawMetal(p); break;
+                default:
+                    RoundedRect(p, 3f, 3f, 18f, 18f, 4f);
+                    p.Stroke();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (warnedKinds.Add(kind)) Debug.LogWarning("[LobbyIcon] No drawer for " + kind + "; using placeholder.");
+#endif
+                    break;
             }
 
             image = ScriptableObject.CreateInstance<VectorImage>();

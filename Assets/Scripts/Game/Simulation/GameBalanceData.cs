@@ -67,10 +67,26 @@ namespace NodeWar.Simulation
         public int healIntervalTicks;
         public int breachThreshold;
 
+        // Missing serialized fields disable their feature; Default() opts in.
+        public int[] tempoStageTicks;
+        public int[] tempoClaimPercent;
+        public int[] tempoRespawnPercent;
+        public int[] tempoProductionPercent;
+        public int[] suddenDeathTicks;
+        public int[] suddenDeathThresholds;
+        public int breachBarMax;
+        public int[] breachSwarmRate;
+        public int breachBarDecayPerTick;
+
         public int maxWorkersPerNode;
         public int maxVillagersPerPlayer;
 
         public int respawnCostFood;
+
+        /// <summary>Resource ceilings; zero or negative means uncapped.</summary>
+        public int foodCap;
+        public int materialsCap;
+        public int metalCap;
 
         public int baseHP;
         public int baseAttackDamage;
@@ -81,6 +97,162 @@ namespace NodeWar.Simulation
 
         /// <summary>Per (district, era). See <see cref="DistrictStats"/>.</summary>
         public DistrictStats[] districtStats;
+
+        private static bool IncreasingTicks(int[] ticks)
+        {
+            if (ticks == null) return true;
+            int previous = 0;
+            for (int i = 0; i < ticks.Length; i++)
+            {
+                if (ticks[i] <= previous) return false;
+                previous = ticks[i];
+            }
+            return true;
+        }
+
+        internal bool TempoAxisValid(int[] pct)
+        {
+            if (tempoStageTicks == null || tempoStageTicks.Length == 0)
+                return pct == null || pct.Length == 0;
+            if (!IncreasingTicks(tempoStageTicks) || pct == null || pct.Length != tempoStageTicks.Length)
+                return false;
+            for (int i = 0; i < pct.Length; i++)
+                if (pct[i] <= 0) return false;
+            return true;
+        }
+
+        // A single completion per tick requires each duration to cover the largest
+        // possible decrement. Zero durations denote districts that produce nothing.
+        public bool ProductionTempoValid()
+        {
+            if (!TempoAxisValid(tempoProductionPercent)) return false;
+            if (tempoProductionPercent == null || tempoProductionPercent.Length == 0) return true;
+            long largest = 1;
+            for (int i = 0; i < tempoProductionPercent.Length; i++)
+            {
+                long decrement = ((long)tempoProductionPercent[i] + 99) / 100;
+                if (decrement > largest) largest = decrement;
+            }
+            if (districtStats != null)
+                for (int i = 0; i < districtStats.Length; i++)
+                {
+                    DistrictStats d = districtStats[i];
+                    if (d.productionTicks != 0 && (d.productionTicks < 2 || d.productionTicks < largest)) return false;
+                    if (d.secondaryProductionTicks != 0 && (d.secondaryProductionTicks < 2 || d.secondaryProductionTicks < largest)) return false;
+                }
+            return true;
+        }
+
+        public bool BreachBarEnabled()
+        {
+            if (breachBarMax <= 0 || breachBarDecayPerTick < 0 || breachSwarmRate == null || breachSwarmRate.Length == 0)
+                return false;
+            for (int i = 0; i < breachSwarmRate.Length; i++)
+                if (breachSwarmRate[i] <= 0) return false;
+            return true;
+        }
+
+        public bool SuddenDeathValid()
+        {
+            if (suddenDeathTicks == null || suddenDeathTicks.Length == 0)
+                return suddenDeathThresholds == null || suddenDeathThresholds.Length == 0;
+            if (!IncreasingTicks(suddenDeathTicks) || suddenDeathThresholds == null ||
+                suddenDeathTicks.Length != suddenDeathThresholds.Length) return false;
+            int previous = breachThreshold;
+            for (int i = 0; i < suddenDeathThresholds.Length; i++)
+            {
+                int threshold = suddenDeathThresholds[i];
+                if (threshold <= 0 || threshold >= previous) return false;
+                previous = threshold;
+            }
+            return true;
+        }
+
+        public bool TempoAndBreachValid(out string reason)
+        {
+            if (!TempoAxisValid(tempoClaimPercent) || !TempoAxisValid(tempoRespawnPercent) || !ProductionTempoValid())
+            { reason = "Invalid tempo schedule, percentages or production durations."; return false; }
+            if (!SuddenDeathValid())
+            { reason = "Invalid sudden-death schedule or thresholds."; return false; }
+            if (breachBarMax < 0 || breachBarDecayPerTick < 0 || (breachBarMax > 0 && !BreachBarEnabled()))
+            { reason = "Invalid breach bar, swarm rates or decay."; return false; }
+            reason = null;
+            return true;
+        }
+
+        public int TempoPercent(int[] pct, int tick)
+        {
+            if (!TempoAxisValid(pct) || pct == null) return 100;
+            for (int i = pct.Length - 1; i >= 0; i--)
+                if (tick >= tempoStageTicks[i]) return pct[i];
+            return 100;
+        }
+
+        // C(t) integrates ticks 1..t inclusively, with one division after summing.
+        public long ScaledTicks(int[] pct, int tick)
+        {
+            if (tick <= 0) return 0;
+            if (!TempoAxisValid(pct) || pct == null || pct.Length == 0) return tick;
+            long sum = 0;
+            long start = 1;
+            int percent = 100;
+            for (int i = 0; i < pct.Length; i++)
+            {
+                long end = (long)tempoStageTicks[i] - 1;
+                if (end > tick) end = tick;
+                if (end >= start) sum += (end - start + 1) * percent;
+                if (tempoStageTicks[i] > tick) return sum / 100;
+                start = tempoStageTicks[i];
+                percent = pct[i];
+            }
+            sum += ((long)tick - start + 1) * percent;
+            return sum / 100;
+        }
+
+        public int TimerDecrement(int[] pct, int tick)
+        {
+            if (tick <= 0) return 0;
+            return (int)(ScaledTicks(pct, tick) - ScaledTicks(pct, tick - 1));
+        }
+
+        public int BreachThresholdAt(int tick)
+        {
+            if (!BreachBarEnabled() || !SuddenDeathValid() || suddenDeathTicks == null) return breachThreshold;
+            for (int i = suddenDeathTicks.Length - 1; i >= 0; i--)
+                if (tick >= suddenDeathTicks[i]) return suddenDeathThresholds[i];
+            return breachThreshold;
+        }
+
+        /// <summary>
+        /// Escalate first, then subtract the integer-floor Sanctuary discount.
+        /// Preserve the one-food minimum; saturate unrepresentable prices.
+        /// Shared arithmetic for command validation and read-only UI pricing.
+        /// </summary>
+        public int PaidRespawnCost(int paidRespawns, int reductionPercent)
+        {
+            long cost = (long)respawnCostFood * (System.Math.Max(0, paidRespawns) + 1L);
+            int percent = System.Math.Max(0, System.Math.Min(100, reductionPercent));
+            // Split the multiplication to keep even the largest base/counter safe.
+            cost -= cost / 100 * percent + cost % 100 * percent / 100;
+            if (cost < 1) return 1;
+            return cost > int.MaxValue ? int.MaxValue : (int)cost;
+        }
+
+        public static int ClampResource(int value, int cap)
+        {
+            return cap > 0 && value > cap ? cap : value;
+        }
+
+        public static bool HasResourceRoom(int value, int cap)
+        {
+            return cap <= 0 || value < cap;
+        }
+
+        /// <summary>A full stock wastes the payout; nonpositive caps keep legacy arithmetic.</summary>
+        public static int AddResource(int value, int cap)
+        {
+            return cap > 0 && value >= cap ? cap : unchecked(value + 1);
+        }
 
         public static GameBalanceData Default()
         {
@@ -94,9 +266,21 @@ namespace NodeWar.Simulation
                 respawnTicks = 50,
                 healIntervalTicks = 30,
                 breachThreshold = 3,
+                tempoStageTicks = new[] { 1200, 1800 },
+                tempoClaimPercent = new[] { 150, 200 },
+                tempoRespawnPercent = new[] { 80, 67 },
+                tempoProductionPercent = new[] { 110, 125 },
+                suddenDeathTicks = new[] { 2400 },
+                suddenDeathThresholds = new[] { 1 },
+                breachBarMax = 4000,
+                breachSwarmRate = new[] { 50, 83, 108, 125 },
+                breachBarDecayPerTick = 200,
                 maxWorkersPerNode = 2,
                 maxVillagersPerPlayer = 25,
                 respawnCostFood = 1,
+                foodCap = 30,
+                materialsCap = 30,
+                metalCap = 10,
                 baseHP = 5,
                 baseAttackDamage = 1,
                 baseMoveSpeedTicks = 4,

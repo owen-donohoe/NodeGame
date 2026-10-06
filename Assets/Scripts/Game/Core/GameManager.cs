@@ -34,6 +34,12 @@ namespace NodeWar.Core
         [SerializeField] private GameObject nodePrefabRampart;
         [SerializeField] private GameObject nodePrefabMarket;
 
+        [Tooltip("One place per district for its art. A district's DistrictVisual.boardPrefab, when " +
+                 "set, is the node prefab used for it; otherwise the nodePrefab* slot above, then the " +
+                 "default. Its boardOffset / boardEuler / boardScale tune the art on the board. Empty " +
+                 "entries change nothing.")]
+        [SerializeField] private NodeWar.View.DistrictVisualTable districtVisuals;
+
         [Header("Villager Prefab")]
         [SerializeField] private GameObject villagerPrefab;
 
@@ -63,6 +69,11 @@ namespace NodeWar.Core
         [SerializeField] private NodeWar.View.ScreenShakeSettings screenShakeSettings =
             new NodeWar.View.ScreenShakeSettings();
         private NodeWar.View.ScreenShakeDirector screenShake;
+
+        // Look and player flags for the core breach bar and the breacher
+        // highlight. Not serialized: the HUD writes the flags from the settings
+        // card, and breachBarMax comes from the balance data.
+        private readonly NodeWar.View.BreachCueSettings breachCues = new NodeWar.View.BreachCueSettings();
 
         [Header("UI")]
         [SerializeField] private GameObject uiManagerPrefab;
@@ -552,6 +563,7 @@ namespace NodeWar.Core
             // Opponent villagers are not tap targets; presses fall through them
             // to the node beneath.
             gestureSource.SetVillagerFilter(selectionSystem.IsSelectable);
+            gestureSource.SetSelectedFilter(selectionSystem.IsSelected);
 
             // One-finger drag pans the board. Middle-mouse still works for
             // desktop habit, but this is the path that exists on a phone.
@@ -594,7 +606,12 @@ namespace NodeWar.Core
             pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
             pendingOrderView.SetVillagerTransforms(villagerTransforms);
             if (commandSystem != null)
+            {
                 commandSystem.MoveIssued += pendingOrderView.OnMoveIssued;
+                commandSystem.OrderDragBegan += pendingOrderView.BeginHover;
+                commandSystem.OrderDragHover += pendingOrderView.SetHoverNode;
+                commandSystem.OrderDragEnded += pendingOrderView.EndHover;
+            }
         }
 
         /// <summary>
@@ -659,10 +676,44 @@ namespace NodeWar.Core
             TickRunner tickRunner = gameObject.AddComponent<TickRunner>();
             tickRunner.Initialize(state, inputBuffer);
             tickProvider = tickRunner;
+            if (debugPlayerSwitch != null)
+                debugPlayerSwitch.ConfigurePlaytestDebug(PlaytestDebugAllowed, DebugSuddenDeathNow);
+        }
+
+        private bool PlaytestDebugAllowed()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            MatchConnection match = MatchConnection.Instance;
+            return PlaytestDebugMath.Allowed(true, match != null && match.isNetworked,
+                tickProvider is TickRunner && lockstep == null, matchPhase == MatchPhase.Playing,
+                state == null || state.gameOver);
+#else
+            return false;
+#endif
+        }
+
+        private void DebugSuddenDeathNow()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!PlaytestDebugAllowed() || balance == null) return;
+            if (!PlaytestDebugMath.TrySuddenDeathInFiveSeconds(balance.Data, state.tickCount, out GameBalanceData debugBalance))
+            {
+                Debug.LogWarning("[Playtest] Sudden death unavailable: balance has no valid breach/sudden-death schedule.");
+                return;
+            }
+            // Explicit local-debug exception: install a copy through the existing path,
+            // never mutate SimulationState or the serialized balance asset.
+            GameSimulation.SetBalance(debugBalance);
+            if (uiToolkitHud != null) uiToolkitHud.SetDebugBalance(debugBalance);
+            Debug.LogWarning("[Playtest] Sudden death in 5s. Balance hash no longer matches the asset/handshake/export: " +
+                BalanceHasher.Hash(balance.Data) + " -> " + BalanceHasher.Hash(debugBalance) +
+                ". Local debug only; recorded replays are not valid for this override.");
+#endif
         }
 
         private void StartNetworkPlay(MatchConnection match)
         {
+            if (debugPlayerSwitch != null) debugPlayerSwitch.ConfigurePlaytestDebug(null, null);
             int localPlayerID = match.localPlayerID;
             NetworkManager netManager = match.networkManager;
 
@@ -1204,9 +1255,21 @@ namespace NodeWar.Core
         /// </summary>
         private void ApplyHUDStackChoice(GameObject uiGO)
         {
+            // Begin with a working legacy band; every validation failure keeps it.
+            if (hudManager != null) hudManager.enabled = true;
+            if (uiToolkitHudRoot != null) uiToolkitHudRoot.SetActive(false);
+            Canvas legacyCanvas = null;
+            Canvas[] canvases = uiGO.GetComponentsInChildren<Canvas>(true);
+            for (int i = 0; i < canvases.Length; i++)
+            {
+                if (canvases[i].gameObject.name != "HUD_Canvas") continue;
+                legacyCanvas = canvases[i];
+                legacyCanvas.gameObject.SetActive(true);
+                break;
+            }
+
             if (!useUIToolkitHUD)
             {
-                if (uiToolkitHudRoot != null) uiToolkitHudRoot.SetActive(false);
                 return;
             }
 
@@ -1218,27 +1281,13 @@ namespace NodeWar.Core
                 return;
             }
 
-            Canvas[] canvases = uiGO.GetComponentsInChildren<Canvas>(true);
-            bool hidden = false;
-
-            for (int i = 0; i < canvases.Length; i++)
-            {
-                if (canvases[i].gameObject.name != "HUD_Canvas") continue;
-
-                canvases[i].gameObject.SetActive(false);
-                hidden = true;
-                break;
-            }
-
-            if (!hidden)
+            if (legacyCanvas == null)
             {
                 Debug.LogError("[GameManager] Could not find HUD_Canvas in the UI prefab, so the " +
                                "uGUI HUD cannot be hidden. Leaving the UI Toolkit HUD off rather " +
                                "than drawing both.");
                 return;
             }
-
-            uiToolkitHudRoot.SetActive(true);
 
             uiToolkitHud = uiToolkitHudRoot.GetComponent<GameplayHUDController>();
 
@@ -1248,12 +1297,15 @@ namespace NodeWar.Core
                 return;
             }
 
+            uiToolkitHudRoot.SetActive(true);
+
             // The settings card's routes toggle writes the same
             // OpponentRouteSettings instance the path renderer reads every
             // frame. Bound here rather than where the renderer is created,
             // because InitializeInputSystems runs before InitializeUI and
             // uiToolkitHud is still null at that point.
             uiToolkitHud.BindRouteSettings(opponentRouteSettings);
+            uiToolkitHud.BindBreachCues(breachCues);
 
             uiToolkitHud.Initialize(state, debugPlayerSwitch, balance.Data.breachThreshold,
                                     inputBuffer, tickProvider, balance.Data, nodePanelManager,
@@ -1307,6 +1359,9 @@ namespace NodeWar.Core
             // better than a tap that opens nothing at all.
             if (nodePanelManager != null)
                 nodePanelManager.SetSuppressed(uiToolkitHud.HasNodeSheet);
+
+            legacyCanvas.gameObject.SetActive(false);
+            if (hudManager != null) hudManager.enabled = false;
         }
 
         /// <summary>
@@ -1322,6 +1377,7 @@ namespace NodeWar.Core
             if (gestureSource == null || tapRouter == null) return;
 
             tapRouter.Initialize(gestureSource, selectionSystem, commandSystem, nodePanelManager);
+            tapRouter.SetCameraController(cameraController);
 
             if (selectionSystem != null) selectionSystem.SetGestureRouted(true);
 
@@ -1557,6 +1613,26 @@ namespace NodeWar.Core
 
         // ===== VIEW SPAWNING =====
 
+        /// <summary>The DistrictVisual for a district, or null when there is no table or no entry.</summary>
+        private NodeWar.View.DistrictVisual BoardVisualFor(DistrictType type)
+        {
+            return districtVisuals != null ? districtVisuals.For(type) : null;
+        }
+
+        /// <summary>
+        /// THE ONE PLACE a node's board art is built. Chooses the prefab (table entry, then the
+        /// per-district slot, then the default), instantiates it, and applies the district's board
+        /// tuning to its art. Every node on the board comes through here; a district's node is
+        /// never swapped for another prefab afterwards (a capture changes ownership, not the
+        /// district), so there is no second call site to keep in step.
+        /// </summary>
+        private GameObject SpawnBoardNode(DistrictType type, Transform parent)
+        {
+            GameObject nodeGO = Instantiate(GetPrefabForDistrict(type), parent);
+            NodeWar.View.BoardArtPlacer.Apply(nodeGO, BoardVisualFor(type));
+            return nodeGO;
+        }
+
         private GameObject GetPrefabForDistrict(DistrictType type)
         {
             GameObject prefab = null;
@@ -1577,8 +1653,9 @@ namespace NodeWar.Core
                 case DistrictType.Market: prefab = nodePrefabMarket; break;
                 default: prefab = nodePrefabDefault; break;
             }
-            if (prefab == null) prefab = nodePrefabDefault;
-            return prefab;
+            NodeWar.View.DistrictVisual visual = BoardVisualFor(type);
+            GameObject fromTable = visual != null ? visual.boardPrefab : null;
+            return NodeWar.View.BoardArtRules.ChoosePrefab(fromTable, prefab, nodePrefabDefault, p => p != null);
         }
 
         private void SpawnNodeViews()
@@ -1591,8 +1668,7 @@ namespace NodeWar.Core
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                GameObject prefab = GetPrefabForDistrict(state.nodes[i].districtType);
-                GameObject nodeGO = Instantiate(prefab, nodeParent);
+                GameObject nodeGO = SpawnBoardNode(state.nodes[i].districtType, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
                 nodeGO.transform.position = new Vector3(
                     state.nodes[i].gridX * boardConfig.nodeScale,
@@ -1633,6 +1709,8 @@ namespace NodeWar.Core
                     claimBar.Initialize(state, i, balance.Data.claimThreshold);
             }
 
+            SpawnBreachBars();
+
             if (outlineDriver != null) outlineDriver.SetNodeGroups(nodeOutlines);
 
             // Pre-hide all nodes. Transition controller reveals them during startup wave.
@@ -1652,6 +1730,25 @@ namespace NodeWar.Core
             // highlight, which the raycast path got from the hit directly.
             if (commandSystem != null)
                 commandSystem.SetNodeViews(nodeViews);
+        }
+
+        /// <summary>
+        /// One breach bar over each Core, added at runtime so the node prefabs
+        /// need no edit. Skipped when the balance has no breach bar (v1 rules).
+        /// </summary>
+        private void SpawnBreachBars()
+        {
+            breachCues.breachBarMax = balance.Data.breachBarMax;
+            if (breachCues.breachBarMax <= 0) return;
+
+            for (int p = 0; p < state.players.Length; p++)
+            {
+                int core = state.players[p].coreNodeID;
+                if (core < 0 || core >= nodeSlotManagers.Length || nodeSlotManagers[core] == null) continue;
+
+                CoreBreachBar bar = nodeSlotManagers[core].gameObject.AddComponent<CoreBreachBar>();
+                bar.Initialize(state, p, breachCues, boardConfig.nodeScale);
+            }
         }
 
         private void SpawnVillagerViews()
@@ -1719,6 +1816,7 @@ namespace NodeWar.Core
                 view.SetTickProvider(tickProvider);
                 view.SetNodeSlotManagers(nodeSlotManagers);
                 view.SetPathCurveSettings(pathCurveSettings);
+                view.SetBreachCueSettings(breachCues);
 
                 NodeWar.View.VillagerFlash flash = villagerGO.AddComponent<NodeWar.View.VillagerFlash>();
                 flash.Initialize(view, gestureSource != null

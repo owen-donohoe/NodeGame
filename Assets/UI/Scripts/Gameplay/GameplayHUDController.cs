@@ -83,7 +83,11 @@ namespace NodeWar.UI
         private Label clockLabel;
         private VisualElement flash;
 
-        private readonly ResourceReadout[] resources = new ResourceReadout[3];
+        private readonly ResourceReadout[] resources = new ResourceReadout[4];
+        private VisualElement metalRoot;
+        private VisualElement magicRoot;
+        private bool capsApplied;
+        private bool reducedMotion;
 
         private Button villagerToggle;
         private VisualElement villagerCard;
@@ -94,8 +98,38 @@ namespace NodeWar.UI
         private VisualElement selectionDock;
         private Label selectionText;
 
+        // Controls settings: the thumb-placed controls and what shows on them.
+        private VisualElement recentreDock;
+        private VisualElement selectionBar;
+        private Label selectionBarCount;
+        private bool showSelectionBar = true;
+        private bool showTooltips = true;
+        private int cameraButtonTarget;
+        private bool handleZoomEnabled = true;
+        private float insetLeft = -1f;
+        private float insetRight = -1f;
+        private float insetPanelWidth = -1f;
+
         private VisualElement countdownRoot;
         private Label countdownStep;
+
+        // Tempo and sudden-death cards: an event banner and a countdown.
+        private VisualElement tempoRoot;
+        private VisualElement tempoBanner;
+        private Label tempoTitle;
+        private Label tempoSub;
+        private VisualElement suddenCard;
+        private Label suddenTitle;
+        private Label suddenSub;
+        private IVisualElementScheduledItem bannerHideJob;
+        private int lastCountdown = -1;
+        private bool suddenDeathScheduled;
+
+        /// <summary>How long a tempo or sudden-death banner stays up.</summary>
+        private const long BannerMilliseconds = 3200;
+
+        /// <summary>Matches the card's opacity transition, so --shown outlives the fade.</summary>
+        private const long CardFadeMilliseconds = 220;
 
         private VisualElement endRoot;
         private Label endTitle;
@@ -129,13 +163,13 @@ namespace NodeWar.UI
 
         // Reused rather than rebuilt: Refresh runs every frame, and two fresh
         // arrays a frame is litter a phone has to collect.
-        private readonly int[] resourceValues = new int[3];
+        private readonly int[] resourceValues = new int[4];
 
         // The three, in the order the readouts sit in. Spelled out rather than
         // cast from the loop index: the enum and the array agreeing is a fact
         // about this list, not something to leave to their declaration order.
         private static readonly ResourceKind[] ResourceOrder =
-            { ResourceKind.Food, ResourceKind.Materials, ResourceKind.Metal };
+            { ResourceKind.Food, ResourceKind.Materials, ResourceKind.Metal, ResourceKind.Magic };
 
         // Refilled per resource per frame. One buffer, because the three are
         // read one after another and nothing holds on to it.
@@ -177,6 +211,16 @@ namespace NodeWar.UI
         private void OnDisable()
         {
             emotePanel.Detach();
+
+            // The banner writes into a tree OnEnable rebuilds; Initialize
+            // subscribes again if the match is still running.
+            if (ticks != null) ticks.TickSimulated -= OnTickSimulated;
+            if (bannerHideJob != null)
+            {
+                bannerHideJob.Pause();
+                bannerHideJob = null;
+            }
+
             if (panelSource != null)
             {
                 panelSource.NodeOpened -= OnNodeOpened;
@@ -256,6 +300,18 @@ namespace NodeWar.UI
             selection = selectionSystem;
             breachThreshold = breachThresholdValue > 0 ? breachThresholdValue : 1;
 
+            // The sudden-death steps exist only when the simulation will fire
+            // them, which is the same test it makes.
+            suddenDeathScheduled = balance.BreachBarEnabled() && balance.SuddenDeathValid() &&
+                                   balance.suddenDeathTicks != null &&
+                                   balance.suddenDeathTicks.Length > 0;
+
+            if (ticks != null)
+            {
+                ticks.TickSimulated -= OnTickSimulated;
+                ticks.TickSimulated += OnTickSimulated;
+            }
+
             if (nodeSheet != null)
             {
                 nodeSheet.Bind(state, inputBuffer, tickProvider, balance);
@@ -279,10 +335,23 @@ namespace NodeWar.UI
             Refresh();
         }
 
+        /// <summary>Local playtest schedule supplied by GameManager; no state write here.</summary>
+        public void SetDebugBalance(GameBalanceData debugBalance)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            balance = debugBalance;
+            suddenDeathScheduled = balance.BreachBarEnabled() && balance.SuddenDeathValid() &&
+                balance.suddenDeathTicks != null && balance.suddenDeathTicks.Length > 0;
+            lastCountdown = -1;
+            RefreshSuddenDeathCountdown();
+#endif
+        }
+
         private void Update()
         {
             if (safeArea != null) safeArea.Update();
             if (resSheetInset != null) resSheetInset.Update();
+            UpdateThumbInsets();
             if (nodeSheet != null) nodeSheet.UpdateSafeArea();
 
             emotePanel.SetNodeSheetOpen(nodeSheet != null && nodeSheet.IsOpen);
@@ -307,9 +376,9 @@ namespace NodeWar.UI
 
         private void Bind(VisualElement root)
         {
-            hudRoot = root.Q<VisualElement>("hud-root");
+            hudRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRoot, nameof(GameplayHUDController));
 
-            VisualElement safeAreaElement = root.Q<VisualElement>("hud-safe-area");
+            VisualElement safeAreaElement = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSafeArea, nameof(GameplayHUDController));
             // Not Edges.All. The resource sheet is the last thing in this
             // column and has to reach the true bottom edge, the way the node
             // sheet does; it takes the bottom inset itself, on a spacer of its
@@ -318,58 +387,75 @@ namespace NodeWar.UI
                 safeArea = new SafeAreaBinder(safeAreaElement,
                     SafeAreaBinder.Edges.Left | SafeAreaBinder.Edges.Right | SafeAreaBinder.Edges.Top);
 
-            VisualElement resSafeBottom = root.Q<VisualElement>("hud-res-safe-bottom");
+            VisualElement resSafeBottom = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudResSafeBottom, nameof(GameplayHUDController));
             if (resSafeBottom != null)
                 resSheetInset = new SafeAreaBinder(resSafeBottom, SafeAreaBinder.Edges.Bottom);
 
             you = new BreachSide(root, "you");
             them = new BreachSide(root, "them");
-            clockLabel = root.Q<Label>("hud-clock");
+            clockLabel = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudClock, nameof(GameplayHUDController));
             flash = root.Q<VisualElement>("hud-flash");
 
-            resources[0] = new ResourceReadout(root.Q<Label>("hud-food"), root.Q<VisualElement>("hud-ring-food"));
-            resources[1] = new ResourceReadout(root.Q<Label>("hud-materials"), root.Q<VisualElement>("hud-ring-materials"));
-            resources[2] = new ResourceReadout(root.Q<Label>("hud-metal"), root.Q<VisualElement>("hud-ring-metal"));
+            resources[0] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudFood, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingFood, nameof(GameplayHUDController)));
+            resources[1] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudMaterials, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingMaterials, nameof(GameplayHUDController)));
+            resources[2] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudMetal, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingMetal, nameof(GameplayHUDController)), asBar: true, kind: ResourceKind.Metal);
+            resources[3] = new ResourceReadout(NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudMagic, nameof(GameplayHUDController)), NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRingMagic, nameof(GameplayHUDController)), asBar: true, kind: ResourceKind.Magic);
+            metalRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudResMetal, nameof(GameplayHUDController));
+            magicRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudResMagic, nameof(GameplayHUDController));
 
-            villagerToggle = root.Q<Button>("hud-villager-toggle");
-            villagerCard = root.Q<VisualElement>("hud-villagers");
-            villagersP0 = root.Q<Label>("hud-villagers-p0");
-            villagersP1 = root.Q<Label>("hud-villagers-p1");
+            villagerToggle = NodeWar.UI.UiRequired.Q<Button>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagerToggle, nameof(GameplayHUDController));
+            villagerCard = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagers, nameof(GameplayHUDController));
+            villagersP0 = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagersP0, nameof(GameplayHUDController));
+            villagersP1 = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudVillagersP1, nameof(GameplayHUDController));
 
             if (villagerToggle != null)
                 villagerToggle.clicked += ToggleVillagers;
 
-            selectionDock = root.Q<VisualElement>("hud-selection");
-            selectionText = root.Q<Label>("hud-selection-text");
+            selectionDock = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelection, nameof(GameplayHUDController));
+            selectionText = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelectionText, nameof(GameplayHUDController));
 
-            zoomRoot = root.Q<VisualElement>("hud-zoom");
-            zoomValue = root.Q<Label>("hud-zoom-value");
-            zoomFill = root.Q<VisualElement>("hud-zoom-fill");
+            selectionBar = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelbar, nameof(GameplayHUDController));
+            selectionBarCount = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelbarCount, nameof(GameplayHUDController));
+            BindSelectionCounter();
+            recentreDock = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRecentreDock, nameof(GameplayHUDController));
 
-            recentreButton = root.Q<VisualElement>("hud-recentre");
+            zoomRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudZoom, nameof(GameplayHUDController));
+            zoomValue = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudZoomValue, nameof(GameplayHUDController));
+            zoomFill = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudZoomFill, nameof(GameplayHUDController));
+
+            recentreButton = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudRecentre, nameof(GameplayHUDController));
             RegisterZoomHandle();
 
-            countdownRoot = root.Q<VisualElement>("hud-countdown");
-            countdownStep = root.Q<Label>("hud-countdown-step");
+            countdownRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudCountdown, nameof(GameplayHUDController));
+            countdownStep = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudCountdownStep, nameof(GameplayHUDController));
 
-            endRoot = root.Q<VisualElement>("hud-end");
-            endTitle = root.Q<Label>("hud-end-title");
-            endSub = root.Q<Label>("hud-end-sub");
+            tempoRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempo, nameof(GameplayHUDController));
+            tempoBanner = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempoBanner, nameof(GameplayHUDController));
+            tempoTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempoTitle, nameof(GameplayHUDController));
+            tempoSub = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudTempoSub, nameof(GameplayHUDController));
+            suddenCard = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSdCountdown, nameof(GameplayHUDController));
+            suddenTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSdTitle, nameof(GameplayHUDController));
+            suddenSub = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSdSub, nameof(GameplayHUDController));
+            lastCountdown = -1;
+
+            endRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEnd, nameof(GameplayHUDController));
+            endTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndTitle, nameof(GameplayHUDController));
+            endSub = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndSub, nameof(GameplayHUDController));
             endRows[0] = new EndRow(root, "a");
             endRows[1] = new EndRow(root, "b");
-            endRank = root.Q<VisualElement>("hud-end-rank");
-            endRankHeadline = root.Q<Label>("hud-end-rank-headline");
-            endRankDetail = root.Q<Label>("hud-end-rank-detail");
+            endRank = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndRank, nameof(GameplayHUDController));
+            endRankHeadline = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndRankHeadline, nameof(GameplayHUDController));
+            endRankDetail = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndRankDetail, nameof(GameplayHUDController));
 
-            Button endReturn = root.Q<Button>("hud-end-return");
+            Button endReturn = NodeWar.UI.UiRequired.Q<Button>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudEndReturn, nameof(GameplayHUDController));
             if (endReturn != null)
                 endReturn.clicked += () => { if (ReturnToLobby != null) ReturnToLobby(); };
 
-            holdRoot = root.Q<VisualElement>("hud-hold");
-            holdTitle = root.Q<Label>("hud-hold-title");
-            holdLine = root.Q<Label>("hud-hold-line");
-            holdAction = root.Q<Button>("hud-hold-action");
-            connectionBanner = root.Q<VisualElement>("hud-connection");
+            holdRoot = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHold, nameof(GameplayHUDController));
+            holdTitle = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHoldTitle, nameof(GameplayHUDController));
+            holdLine = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHoldLine, nameof(GameplayHUDController));
+            holdAction = NodeWar.UI.UiRequired.Q<Button>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudHoldAction, nameof(GameplayHUDController));
+            connectionBanner = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudConnection, nameof(GameplayHUDController));
             if (holdAction != null)
                 holdAction.clicked += () => { if (HoldActionClicked != null) HoldActionClicked(); };
 
@@ -391,7 +477,9 @@ namespace NodeWar.UI
             if (hudRoot == null) return;
 
             indicatorLayer = new IndicatorLayer(hudRoot);
-            indicatorLayer.AvoidRight(root.Q<VisualElement>("hud-recentre-dock"));
+            // Either edge, depending on the Controls side setting.
+            indicatorLayer.AvoidEdge(root.Q<VisualElement>("hud-recentre-dock"));
+            indicatorLayer.AvoidEdge(root.Q<VisualElement>("hud-selbar"));
             indicatorLayer.AvoidLeft(root.Q<VisualElement>("hud-emote-dock"));
 
             VisualElement sheetPanel = nodeSheet != null ? nodeSheet.Root.Q<VisualElement>("node-sheet") : null;
@@ -438,6 +526,7 @@ namespace NodeWar.UI
             }
 
             nodeSheet = new NodeSheet(nodeSheetLayout);
+            nodeSheet.SetReducedMotion(reducedMotion);
             nodeSheet.Closed += OnSheetClosedByPlayer;
 
             VisualElement host = hudRoot != null ? hudRoot : root;
@@ -545,7 +634,88 @@ namespace NodeWar.UI
             if (indicatorLayer != null)
                 indicatorLayer.SetCalm(settings.reducedMotion);
 
+            if (tempoRoot != null)
+                tempoRoot.EnableInClassList("hud__tempo--calm", settings.reducedMotion);
+
+            // Same flags for the breacher highlight and the core bar: view
+            // configuration, shared by reference like routeSettings.
+            if (breachCues != null)
+            {
+                breachCues.colourblindMarks = settings.colourblindMarks;
+                breachCues.reducedMotion = settings.reducedMotion;
+            }
+
             if (boardCamera != null) boardCamera.ShakeEnabled = !settings.reducedMotion;
+            if (boardCamera != null) boardCamera.ApplyInputSettings(settings);
+
+            ApplyControls(settings);
+        }
+
+        /// <summary>
+        /// The Controls settings that live on the HUD. View only: nothing here
+        /// reaches the simulation.
+        ///
+        /// Camera button off hides the handle with display:none, which removes
+        /// its hit area as well as its pixels, so it stops swallowing presses.
+        /// Drag to zoom off leaves the same element as a plain return-to-core
+        /// click (see OnHandleMove). The side is one class on the root; the
+        /// rest is USS.
+        /// </summary>
+        private void ApplyControls(NodeWar.Lobby.GameSettingsData settings)
+        {
+            if (hudRoot != null)
+                hudRoot.EnableInClassList("hud--left", settings.controlsSide == 1);
+
+            if (recentreDock != null)
+                recentreDock.style.display = settings.showCameraButton ? DisplayStyle.Flex : DisplayStyle.None;
+
+            handleZoomEnabled = settings.cameraButtonZoom;
+            showSelectionBar = settings.showSelectionBar;
+            showTooltips = settings.tooltips;
+
+            // Reduced motion: a full resource is a steady brighter tint, with no pulse or wave.
+            reducedMotion = settings.reducedMotion;
+            if (nodeSheet != null) nodeSheet.SetReducedMotion(reducedMotion);
+            for (int i = 0; i < resources.Length; i++)
+                if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
+            cameraButtonTarget = settings.cameraButtonTarget;
+
+            // Redraw the bar now rather than on the next selection change.
+            lastSelected = -1;
+            RefreshSelection();
+        }
+
+        /// <summary>
+        /// Keeps the thumb-placed controls clear of a notch or rounded corner
+        /// on either edge. Margins rather than SafeAreaBinder's padding: these
+        /// are absolutely positioned, and padding on them would not move them.
+        /// </summary>
+        private void UpdateThumbInsets()
+        {
+            if (hudRoot == null || Screen.width <= 0) return;
+
+            float panelWidth = hudRoot.resolvedStyle.width;
+            if (float.IsNaN(panelWidth) || panelWidth <= 0f) return;
+
+            Rect safe = Screen.safeArea;
+            float left = Mathf.Max(0f, safe.xMin) / Screen.width * panelWidth;
+            float right = Mathf.Max(0f, Screen.width - safe.xMax) / Screen.width * panelWidth;
+            if (Mathf.Approximately(left, insetLeft) && Mathf.Approximately(right, insetRight) &&
+                Mathf.Approximately(panelWidth, insetPanelWidth)) return;
+
+            insetLeft = left;
+            insetRight = right;
+            insetPanelWidth = panelWidth;
+
+            ApplyInset(recentreDock, left, right);
+            ApplyInset(selectionBar, left, right);
+        }
+
+        private static void ApplyInset(VisualElement element, float left, float right)
+        {
+            if (element == null) return;
+            element.style.marginLeft = left;
+            element.style.marginRight = right;
         }
 
         /// <summary>
@@ -560,6 +730,21 @@ namespace NodeWar.UI
             if (settingsPanel != null)
                 ApplyMatchSettings(settingsPanel.Settings);
         }
+
+        /// <summary>
+        /// Handed the BreachCueSettings GameManager gave the villager views and
+        /// the core bars, so the accessibility flags in the settings card reach
+        /// them. Applied at once: the card's saved values are already loaded.
+        /// </summary>
+        public void BindBreachCues(NodeWar.View.BreachCueSettings cues)
+        {
+            breachCues = cues;
+
+            if (settingsPanel != null)
+                ApplyMatchSettings(settingsPanel.Settings);
+        }
+
+        private NodeWar.View.BreachCueSettings breachCues;
 
         /// <summary>
         /// The player closed the sheet from its own button or handle. The old
@@ -599,6 +784,7 @@ namespace NodeWar.UI
 
             RefreshBreaches(pid, switched);
             RefreshClock();
+            RefreshSuddenDeathCountdown();
             RefreshResources(pid, switched);
             RefreshUnits(pid);
             RefreshSelection();
@@ -616,13 +802,131 @@ namespace NodeWar.UI
         {
             int other = pid == 0 ? 1 : 0;
 
-            bool hitYou = you.Set(pid, state.players[pid].breachCount, breachThreshold, switched);
-            bool hitThem = them.Set(other, state.players[other].breachCount, breachThreshold, switched);
+            int threshold = CurrentBreachThreshold();
+            bool hitYou = you.Set(pid, state.players[pid].breachCount, threshold, breachThreshold, switched,
+                state.gameOver && state.winnerID != pid);
+            bool hitThem = them.Set(other, state.players[other].breachCount, threshold, breachThreshold, switched,
+                state.gameOver && state.winnerID != other);
 
             if ((hitYou || hitThem) && flash != null)
             {
                 flash.AddToClassList("hud__flash--on");
                 flash.schedule.Execute(() => flash.RemoveFromClassList("hud__flash--on")).StartingIn(40);
+            }
+        }
+
+        /// <summary>
+        /// Breaches needed to win right now. Sudden death lowers it mid-match,
+        /// so the walls and the tally read it from the tick count rather than
+        /// from the opening value Initialize was given.
+        /// </summary>
+        private int CurrentBreachThreshold()
+        {
+            int threshold = balance.BreachThresholdAt(state.tickCount);
+            return threshold > 0 ? threshold : 1;
+        }
+
+        // ===== TEMPO AND SUDDEN DEATH =====
+
+        /// <summary>
+        /// The moments come from the tick's event log, as they do for the
+        /// indicators and the screen shake; the countdown is read off the tick
+        /// count in Refresh. Wall-clock timing here is presentation only.
+        /// </summary>
+        private void OnTickSimulated(TickEventLog log)
+        {
+            if (log == null || tempoBanner == null) return;
+
+            for (int i = 0; i < log.Count; i++)
+            {
+                TickEvent e = log[i];
+
+                if (e.type == TickEventType.TempoStage)
+                    ShowBanner(NodeWar.View.BreachTempoMath.TempoStageTitle(e.value),
+                               NodeWar.View.BreachTempoMath.TempoStageSub(e.value));
+                else if (e.type == TickEventType.SuddenDeath)
+                    ShowBanner(NodeWar.View.BreachTempoMath.SuddenDeathTitle(),
+                               NodeWar.View.BreachTempoMath.ThresholdLine(e.value));
+            }
+        }
+
+        private void ShowBanner(string title, string sub)
+        {
+            tempoTitle.text = title;
+            tempoSub.text = sub;
+
+            // A new banner takes over from one still showing.
+            if (bannerHideJob != null) bannerHideJob.Pause();
+
+            SetCard(tempoBanner, true);
+
+            VisualElement card = tempoBanner;
+            bannerHideJob = card.schedule.Execute(() =>
+            {
+                bannerHideJob = null;
+                SetCard(card, false);
+            }).StartingIn(BannerMilliseconds);
+        }
+
+        /// <summary>
+        /// Shows a card by adding --shown, then --in a frame later so the
+        /// transition runs; hiding reverses it and drops --shown once the fade
+        /// is done. Reduced motion has no transition, so the same calls simply
+        /// appear and go.
+        /// </summary>
+        private static void SetCard(VisualElement card, bool on)
+        {
+            if (card == null) return;
+
+            if (on)
+            {
+                card.AddToClassList("hud__tempo-card--shown");
+                card.schedule.Execute(() => card.AddToClassList("hud__tempo-card--in")).StartingIn(16);
+            }
+            else
+            {
+                card.RemoveFromClassList("hud__tempo-card--in");
+                card.schedule.Execute(() =>
+                {
+                    if (!card.ClassListContains("hud__tempo-card--in"))
+                        card.RemoveFromClassList("hud__tempo-card--shown");
+                }).StartingIn(CardFadeMilliseconds);
+            }
+        }
+
+        /// <summary>
+        /// "Sudden death in 5…" for the five seconds before each sudden-death
+        /// tick. Computed from the tick count against the balance arrays, so a
+        /// rollback or a paused match shows the right number; only a change of
+        /// the whole second touches the labels.
+        /// </summary>
+        private void RefreshSuddenDeathCountdown()
+        {
+            if (suddenCard == null) return;
+
+            int seconds = 0;
+            int next = 0;
+            if (suddenDeathScheduled && !state.gameOver)
+            {
+                int ticksPerSecond = balance.ticksPerSecond > 0 ? balance.ticksPerSecond : 10;
+                seconds = NodeWar.View.BreachTempoMath.SuddenDeathCountdown(
+                    balance.suddenDeathTicks, balance.suddenDeathThresholds,
+                    state.tickCount, ticksPerSecond, out next);
+            }
+
+            if (seconds == lastCountdown) return;
+            bool wasShowing = lastCountdown > 0;
+            lastCountdown = seconds;
+
+            if (seconds > 0)
+            {
+                suddenTitle.text = NodeWar.View.BreachTempoMath.CountdownTitle(seconds);
+                suddenSub.text = NodeWar.View.BreachTempoMath.ThresholdLine(next);
+                if (!wasShowing) SetCard(suddenCard, true);
+            }
+            else if (wasShowing)
+            {
+                SetCard(suddenCard, false);
             }
         }
 
@@ -651,9 +955,19 @@ namespace NodeWar.UI
         {
             PlayerData player = state.players[pid];
 
+            if (!capsApplied) ApplyResourceCaps();
+
+            // Metal is hidden until the player's arena reaches ResourceHudMath.MetalArena or
+            // they hold some; the node sheet's chip reads the same rule.
+            if (metalRoot != null)
+                metalRoot.EnableInClassList("hud__res-metal--on", ResourceVisibility.MetalVisible(player.metal));
+            if (magicRoot != null)
+                magicRoot.EnableInClassList("hud__res-metal--on", ResourceVisibility.MagicVisible());
+
             resourceValues[0] = player.food;
             resourceValues[1] = player.materials;
             resourceValues[2] = player.metal;
+            resourceValues[3] = ResourceHudMath.DisplayOnlyMagicAmount();
 
             // Sub-tick, so the production fill moves at render rate rather than
             // stepping ten times a second. Same alpha ProductionContent reads.
@@ -671,6 +985,20 @@ namespace NodeWar.UI
                     alpha, productionBuffer);
                 resources[i].SetProduction(productionBuffer, jobs);
             }
+        }
+
+        /// <summary>
+        /// The typed balance caps, with finite 30/30/10 display defaults for uncapped resources.
+        /// </summary>
+        private void ApplyResourceCaps()
+        {
+            capsApplied = true;
+            if (resources[0] != null) resources[0].SetCap(ResourceCaps.Food(balance));
+            if (resources[1] != null) resources[1].SetCap(ResourceCaps.Materials(balance));
+            if (resources[2] != null) resources[2].SetCap(ResourceCaps.Metal(balance));
+            if (resources[3] != null) resources[3].SetCap(ResourceHudMath.DefaultMagicCap);
+            for (int i = 0; i < resources.Length; i++)
+                if (resources[i] != null) resources[i].SetReducedMotion(reducedMotion);
         }
 
         /// <summary>
@@ -712,6 +1040,59 @@ namespace NodeWar.UI
             }
         }
 
+        // ===== SELECTION COUNTER =====
+        //
+        // A press captures its pointer, so the whole press-drag-release belongs to
+        // this element: the board never sees it. (PointerGestureSource also reads a
+        // press over UI as Blocked and latches it to release.) Only a release over
+        // the circle clears; leaving it un-presses the visual and releasing
+        // elsewhere does nothing. Hover is for pointer devices; a touch has none,
+        // so its press goes straight to the inverted state.
+
+        private int counterPointer = -1;
+
+        private void BindSelectionCounter()
+        {
+            if (selectionBar == null) return;
+
+            selectionBar.RegisterCallback<PointerEnterEvent>(e =>
+            {
+                if (e.pointerType != UnityEngine.UIElements.PointerType.touch)
+                    selectionBar.AddToClassList("hud__selbar--hover");
+            });
+            selectionBar.RegisterCallback<PointerLeaveEvent>(e => selectionBar.RemoveFromClassList("hud__selbar--hover"));
+            selectionBar.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if (counterPointer != -1) return;
+                counterPointer = e.pointerId;
+                selectionBar.CapturePointer(e.pointerId);
+                selectionBar.AddToClassList("hud__selbar--pressed");
+                e.StopPropagation();
+            });
+            selectionBar.RegisterCallback<PointerMoveEvent>(e =>
+            {
+                if (e.pointerId != counterPointer) return;
+                selectionBar.EnableInClassList("hud__selbar--pressed", selectionBar.ContainsPoint(e.localPosition));
+            });
+            selectionBar.RegisterCallback<PointerUpEvent>(e =>
+            {
+                if (e.pointerId != counterPointer) return;
+                bool inside = selectionBar.ContainsPoint(e.localPosition);
+                EndCounterPress();
+                selectionBar.ReleasePointer(e.pointerId);
+                e.StopPropagation();
+                if (inside && selection != null) selection.ClearSelection();
+            });
+            selectionBar.RegisterCallback<PointerCancelEvent>(e => EndCounterPress());
+            selectionBar.RegisterCallback<PointerCaptureOutEvent>(e => EndCounterPress());
+        }
+
+        private void EndCounterPress()
+        {
+            counterPointer = -1;
+            selectionBar.RemoveFromClassList("hud__selbar--pressed");
+        }
+
         private void RefreshSelection()
         {
             int count = selection != null ? selection.SelectedVillagerIDs.Count : 0;
@@ -719,10 +1100,19 @@ namespace NodeWar.UI
             lastSelected = count;
 
             if (selectionDock != null)
-                selectionDock.EnableInClassList("hud__selection-dock--on", count > 0);
+                selectionDock.EnableInClassList("hud__selection-dock--on", showTooltips && count > 0);
 
-            if (selectionText != null && count > 0)
-                selectionText.text = "Tap a node to move · " + count;
+            if (selectionBar != null)
+            {
+                bool shown = showSelectionBar && count > 0;
+                selectionBar.EnableInClassList("hud__selbar--on", shown);
+                // A hidden element gets no leave event; do not leave it looking hovered.
+                if (!shown) { selectionBar.RemoveFromClassList("hud__selbar--hover"); selectionBar.RemoveFromClassList("hud__selbar--pressed"); }
+            }
+
+            if (selectionBarCount != null && count > 0)
+                selectionBarCount.text = count.ToString();
+
         }
 
         // ===== CAMERA AFFORDANCES =====
@@ -788,6 +1178,7 @@ namespace NodeWar.UI
                 boardCamera.ZoomGestureActiveChanged += OnZoomGestureActiveChanged;
 
                 if (settingsPanel != null) boardCamera.ShakeEnabled = !settingsPanel.Settings.reducedMotion;
+                if (settingsPanel != null) boardCamera.ApplyInputSettings(settingsPanel.Settings);
             }
 
             // A tapped edge indicator moves this camera to its subject.
@@ -900,7 +1291,8 @@ namespace NodeWar.UI
 
         private void OnHandleMove(PointerMoveEvent evt)
         {
-            if (!handleDragging || boardCamera == null) return;
+            // Drag to zoom off: the handle is a plain return-to-core click.
+            if (!handleDragging || boardCamera == null || !handleZoomEnabled) return;
 
             // Panel Y grows downward, so a finger moving up is a NEGATIVE delta.
             // Flipped here once, so everything below reads in player terms.
@@ -958,6 +1350,7 @@ namespace NodeWar.UI
             // zoomed must NOT also recentre, or it would throw away the zoom the
             // player just set on the way to lifting their finger.
             if (handleZoomed) boardCamera.EndZoomGesture();
+            else if (cameraButtonTarget == 1) boardCamera.RecentreOnBoard();
             else boardCamera.RecentreOnHome();
 
             handleZoomed = false;
@@ -1084,8 +1477,9 @@ namespace NodeWar.UI
         {
             int other = viewerPID == 0 ? 1 : 0;
 
-            endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, breachThreshold);
-            endRows[1].Set(other, "Opponent", state.players[other].breachCount, breachThreshold);
+            int threshold = CurrentBreachThreshold();
+            endRows[0].Set(viewerPID, "You", state.players[viewerPID].breachCount, threshold);
+            endRows[1].Set(other, "Opponent", state.players[other].breachCount, threshold);
 
             if (indicatorLayer != null) indicatorLayer.Suppress();
 
@@ -1149,6 +1543,8 @@ namespace NodeWar.UI
 
             private int shownPlayer = -1;
             private int shownCount = -1;
+            private int shownThreshold = -1;
+            private bool shownDefeated;
 
             public BreachSide(VisualElement root, string which)
             {
@@ -1161,14 +1557,16 @@ namespace NodeWar.UI
             }
 
             /// <summary>Returns true when this call showed a new breach landing.</summary>
-            public bool Set(int playerID, int breaches, int threshold, bool snap)
+            public bool Set(int playerID, int breaches, int threshold, int originalMax, bool snap, bool defeated)
             {
-                if (playerID == shownPlayer && breaches == shownCount) return false;
+                if (playerID == shownPlayer && breaches == shownCount && threshold == shownThreshold && defeated == shownDefeated) return false;
 
                 bool landed = !snap && playerID == shownPlayer && breaches > shownCount && shownCount >= 0;
 
                 shownPlayer = playerID;
                 shownCount = breaches;
+                shownThreshold = threshold;
+                shownDefeated = defeated;
 
                 if (mark != null)
                 {
@@ -1178,13 +1576,10 @@ namespace NodeWar.UI
 
                 if (markLabel != null) markLabel.text = (playerID + 1).ToString();
 
-                if (count != null) count.text = breaches + "/" + threshold;
+                if (count != null) count.text = NodeWar.View.BreachTempoMath.WallLabel(breaches, threshold, defeated);
 
-                // Remaining wall, not damage taken. Clamped because a count past
-                // the threshold is a won match still being drawn for a frame.
-                int remaining = threshold - breaches;
-                if (remaining < 0) remaining = 0;
-                Length width = Length.Percent(remaining * 100f / threshold);
+                // R1 needs a new breach to defeat an active core, even over threshold.
+                Length width = Length.Percent(NodeWar.View.BreachTempoMath.WallFill(breaches, threshold, defeated, originalMax) * 100f);
 
                 if (fill != null)
                 {
@@ -1233,21 +1628,56 @@ namespace NodeWar.UI
             private readonly Label value;
             private readonly VisualElement ringHost;
             private readonly ResourceRing ring;
+            private readonly ResourceBar bar;
 
             private int shownValue = int.MinValue;
+            private int cap;
             private IVisualElementScheduledItem popJob;
 
-            public ResourceReadout(Label valueLabel, VisualElement host)
+            /// <param name="asBar">Metal: a segmented bar read as "x/cap" instead of a semicircle.</param>
+            public ResourceReadout(Label valueLabel, VisualElement host, bool asBar = false, ResourceKind kind = ResourceKind.Food)
             {
                 value = valueLabel;
                 ringHost = host;
                 if (host == null) return;
+
+                if (asBar)
+                {
+                    bar = new ResourceBar();
+                    bar.SetResourceKind(kind);
+                    host.Insert(0, bar);
+                    return;
+                }
 
                 ring = new ResourceRing();
 
                 // Inserted first so the value label - already in the UXML
                 // host - draws on top of it.
                 host.Insert(0, ring);
+
+                // A semicircle is half as tall as it is wide, plus half a stroke, so its
+                // host takes its height from whatever width the layout gave it.
+                host.RegisterCallback<GeometryChangedEvent>(evt =>
+                {
+                    float height = ResourceHudMath.HostHeight(evt.newRect.width);
+                    if (evt.newRect.width > 0f && !Mathf.Approximately(host.resolvedStyle.height, height))
+                        host.style.height = height;
+                });
+            }
+
+            public void SetCap(int amount)
+            {
+                cap = amount;
+                if (ring != null) ring.SetCap(amount);
+                if (bar != null) bar.SetCap(amount);
+                if (bar != null && value != null && shownValue != int.MinValue)
+                    value.text = shownValue + "/" + cap;
+            }
+
+            public void SetReducedMotion(bool reduced)
+            {
+                if (ring != null) ring.SetReducedMotion(reduced);
+                if (bar != null) bar.SetReducedMotion(reduced);
             }
 
             /// <summary>
@@ -1271,8 +1701,9 @@ namespace NodeWar.UI
 
                 shownValue = current;
 
-                if (value != null) value.text = current.ToString();
+                if (value != null) value.text = bar != null ? current + "/" + cap : current.ToString();
                 if (ring != null) ring.SetValue(current, isFirst);
+                if (bar != null) bar.SetValue(current);
 
                 if (increased) Pop("hud__res-ring-host--up");
                 else if (decreased) Pop("hud__res-ring-host--down");
@@ -1282,6 +1713,7 @@ namespace NodeWar.UI
             public void SetProduction(float[] fractions, int count)
             {
                 if (ring != null) ring.SetProduction(fractions, count);
+                if (bar != null) bar.SetProduction(fractions, count);
             }
 
             private void Pop(string ringHostClass)

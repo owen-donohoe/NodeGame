@@ -17,6 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="DefaultBalanceAssetTests.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/**/*.cs"
              Link="Tests/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>

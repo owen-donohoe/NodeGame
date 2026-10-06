@@ -133,18 +133,16 @@ namespace NodeWar.UI
 
         /// <summary>
         /// What a respawn costs this player right now. The same integer
-        /// arithmetic as ProcessRespawnCommand: each Sanctuary worker takes its
+        /// arithmetic as ProcessRespawnCommand: base times (paidRespawns + 1),
+        /// then each Sanctuary worker takes its
         /// Sanctuary era's percentage off, where the worker is the player's,
         /// working, not consumed, and standing on a Sanctuary the player owns -
         /// floor 1.
         /// </summary>
         public static int RespawnCost(SimulationState state, GameBalanceData balance, int playerID)
         {
-            int baseCost = balance.respawnCostFood;
             int reductionPercent = SanctuaryReductionPercent(state, balance, playerID);
-            int cost = baseCost - (baseCost * reductionPercent) / 100;
-
-            return cost < 1 ? 1 : cost;
+            return balance.PaidRespawnCost(state.players[playerID].paidRespawns, reductionPercent);
         }
 
         public static RespawnRefusal Respawn(SimulationState state, GameBalanceData balance,

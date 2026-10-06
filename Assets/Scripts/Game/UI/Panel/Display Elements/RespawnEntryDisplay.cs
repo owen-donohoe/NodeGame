@@ -18,6 +18,8 @@ namespace NodeWar.UI
 
         private SimulationState simState;
         private InputBuffer inputBuffer;
+        private GameBalanceData balance;
+        private TextMeshProUGUI skipCostLabel;
         private int villagerID;
         private int controlledPID;
 
@@ -26,10 +28,12 @@ namespace NodeWar.UI
 
         private const int RESPAWN_TICKS = 50;
 
-        public void Initialize(SimulationState state, InputBuffer buffer, int vid, int pid)
+        public void Initialize(SimulationState state, InputBuffer buffer, GameBalanceData balanceData, int vid, int pid)
         {
             simState = state;
             inputBuffer = buffer;
+            balance = balanceData;
+            skipCostLabel = skipButton.GetComponentInChildren<TextMeshProUGUI>(true);
             villagerID = vid;
             controlledPID = pid;
 
@@ -60,15 +64,16 @@ namespace NodeWar.UI
             float subTick = (1f / RESPAWN_TICKS) * provider.TickAlpha;
             barFill.fillAmount = Mathf.Clamp01(rawFill + subTick);
 
-            // Skip button: grey out if no food
-            bool canAfford = state.players[controlledPID].food >= 1;
+            int cost = CommandEligibility.RespawnCost(state, balance, controlledPID);
+            if (skipCostLabel != null) skipCostLabel.text = cost + "F";
+            bool canAfford = CommandEligibility.Respawn(state, balance, controlledPID, villagerID) == RespawnRefusal.None;
             skipButton.interactable = canAfford;
             skipButtonImage.color = canAfford ? activeColor : disabledColor;
         }
 
         private void OnSkipClicked()
         {
-            if (simState.players[controlledPID].food < 1) return;
+            if (CommandEligibility.Respawn(simState, balance, controlledPID, villagerID) != RespawnRefusal.None) return;
 
             GameCommand cmd = new GameCommand
             {

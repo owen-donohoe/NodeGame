@@ -24,7 +24,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Physical pointer classification and selection rules, with devices and raycasts left in Unity. -->
+    <Compile Include="GestureClassifierTests.cs" />
+    <Compile Include="SelectionRulesTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/GestureClassifier.cs" Link="Input/GestureClassifier.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/SelectionRules.cs" Link="Input/SelectionRules.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/InputBindings.cs" Link="Lobby/InputBindings.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/GameSettingsData.cs" Link="Lobby/GameSettingsData.cs" />
     <Compile Include="ViewSideTests.cs" />
+    <Compile Include="BoardFramingTests.cs" />
+    <Compile Include="BoardArtRulesTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/BoardArtRules.cs" Link="View/BoardArtRules.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Core/BoardFraming.cs" Link="Core/BoardFraming.cs" />
     <Compile Include="EmoteRateLimiterTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteRateLimiter.cs"
              Link="Core/EmoteRateLimiter.cs" />
@@ -36,6 +47,13 @@
     <Compile Include="IndicatorPlacementTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/IndicatorPlacement.cs"
              Link="View/IndicatorPlacement.cs" />
+
+    <!-- Breach bar fill, pip count, sudden-death countdown and banner wording.
+         The world-space bar, the villager ring and the HUD banner that draw
+         them stay in Unity. -->
+    <Compile Include="BreachTempoMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/BreachTempoMath.cs"
+             Link="View/BreachTempoMath.cs" />
 
     <Compile Include="RouteRevealTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
@@ -50,6 +68,27 @@
     <!-- The resource ring's value -> segments/colour maths; the UI Toolkit
          drawing that reads it stays in Unity. -->
     <Compile Include="ResourceRingMathTests.cs" />
+    <Compile Include="ResourceHudMathTests.cs" />
+    <Compile Include="SheetResourceMathTests.cs" />
+    <Compile Include="UiArtMathTests.cs" />
+    <Compile Include="UIArtLookupTests.cs" />
+    <Compile Include="LobbyIconDrawerTests.cs" />
+    <Compile Include="LobbyIconUsageTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyIconUsage.cs" Link="UI/LobbyIconUsage.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyIconKind.cs" Link="UI/LobbyIconKind.cs" />
+    <None Include="../../Assets/UI/Scripts/LobbyIcon.cs" Link="Sources/LobbyIcon.cs.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyIconContext.cs" Link="UI/LobbyIconContext.cs" />
+    <Compile Include="../../Assets/UI/Scripts/UIArtLookup.cs" Link="UI/UIArtLookup.cs" />
+    <Compile Include="UiRequiredNamesTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/UiRequiredNames.cs" Link="UI/UiRequiredNames.cs" />
+    <None Include="../../Assets/UI/Layouts/GameplayHUD.uxml" Link="Layouts/GameplayHUD.uxml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Assets/UI/Layouts/SettingsPage.uxml" Link="Layouts/SettingsPage.uxml" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="../../Assets/UI/Scripts/UiArtMath.cs" Link="UI/UiArtMath.cs" />
+    <Compile Include="PlaytestDebugMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Debug/PlaytestDebugMath.cs" Link="Debug/PlaytestDebugMath.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/SheetResourceMath.cs" Link="UI/SheetResourceMath.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceHudMath.cs"
+             Link="Gameplay/ResourceHudMath.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/ResourceRingMath.cs"
              Link="Gameplay/ResourceRingMath.cs" />
 

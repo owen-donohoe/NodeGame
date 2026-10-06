@@ -55,6 +55,7 @@ namespace NodeWar.UI
         private readonly VisualElement boardSpace;
         private readonly List<VisualElement> rightDocks = new List<VisualElement>();
         private readonly List<VisualElement> leftDocks = new List<VisualElement>();
+        private readonly List<VisualElement> edgeDocks = new List<VisualElement>();
         private System.Func<VisualElement> openSheet;
 
         private IndicatorDirector director;
@@ -127,6 +128,17 @@ namespace NodeWar.UI
         public void AvoidLeft(VisualElement dock)
         {
             if (dock != null) leftDocks.Add(dock);
+        }
+
+        /// <summary>
+        /// A control that hugs whichever edge the Controls side setting picks.
+        /// Which side it is on is read each frame from where it sits, so the
+        /// mirrored layout needs no re-registration. A hidden control has no
+        /// bounds and is skipped.
+        /// </summary>
+        public void AvoidEdge(VisualElement dock)
+        {
+            if (dock != null) edgeDocks.Add(dock);
         }
 
         /// <summary>Answers with the node sheet's panel while it is open, or null.</summary>
@@ -363,6 +375,15 @@ namespace NodeWar.UI
                 if (Valid(dock)) clampRect.xMin = Mathf.Max(clampRect.xMin, dock.xMax + DockGap);
             }
 
+            float midX = (zoneRect.xMin + zoneRect.xMax) * 0.5f;
+            for (int i = 0; i < edgeDocks.Count; i++)
+            {
+                Rect dock = edgeDocks[i].worldBound;
+                if (!Valid(dock)) continue;
+                if (dock.center.x >= midX) clampRect.xMax = Mathf.Min(clampRect.xMax, dock.xMin - DockGap);
+                else clampRect.xMin = Mathf.Max(clampRect.xMin, dock.xMax + DockGap);
+            }
+
             return zoneRect.Width > 1f && zoneRect.Height > 1f;
         }
 
@@ -452,7 +473,7 @@ namespace NodeWar.UI
             pointer.AddToClassList("ind__pointer");
             pointer.pickingMode = PickingMode.Ignore;
 
-            LobbyIcon pointerIcon = new LobbyIcon(LobbyIconKind.Pointer);
+            LobbyIcon pointerIcon = new LobbyIcon(LobbyIconKind.Pointer, LobbyIconContext.OffScreenIndicator);
             pointerIcon.AddToClassList("ind__pointer-icon");
             pointer.Add(pointerIcon);
 
@@ -460,7 +481,7 @@ namespace NodeWar.UI
             bubble.AddToClassList("ind__bubble");
             bubble.pickingMode = PickingMode.Ignore;
 
-            LobbyIcon icon = new LobbyIcon();
+            LobbyIcon icon = new LobbyIcon { Context = LobbyIconContext.OffScreenIndicator };
             icon.AddToClassList("ind__icon");
             bubble.Add(icon);
 
@@ -553,13 +574,13 @@ namespace NodeWar.UI
             switch (kind)
             {
                 case IndicatorKind.Battle: return LobbyIconKind.Swords;
-                case IndicatorKind.NodeUnderAttack: return LobbyIconKind.Capture;
-                case IndicatorKind.NodeContested: return LobbyIconKind.Capture;
-                case IndicatorKind.ThreatToCore: return LobbyIconKind.Alert;
-                case IndicatorKind.ThreatToTerritory: return LobbyIconKind.Alert;
+                case IndicatorKind.NodeUnderAttack: return LobbyIconKind.IndicatorNodeUnderAttack;
+                case IndicatorKind.NodeContested: return LobbyIconKind.IndicatorNodeContested;
+                case IndicatorKind.ThreatToCore: return LobbyIconKind.IndicatorThreatToCore;
+                case IndicatorKind.ThreatToTerritory: return LobbyIconKind.IndicatorThreatToTerritory;
                 case IndicatorKind.Idle: return LobbyIconKind.Sleep;
                 case IndicatorKind.Respawn: return LobbyIconKind.Respawn;
-                default: return LobbyIconKind.Spark;
+                default: return LobbyIconKind.IndicatorEffect;
             }
         }
     }

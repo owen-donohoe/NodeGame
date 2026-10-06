@@ -36,6 +36,17 @@ namespace NodeWar.Tests
             foreach (FieldInfo field in typeof(GameBalanceData).GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
                 if (field.FieldType == typeof(SuitStats[]) || field.FieldType == typeof(DistrictStats[])) continue;
+                if (field.FieldType == typeof(int[]))
+                {
+                    GameBalanceData b = WithOneSuit();
+                    object arrayBox = b;
+                    int[] original = (int[])field.GetValue(arrayBox);
+                    int[] changed = original == null || original.Length == 0 ? new[] { 1 } : (int[])original.Clone();
+                    if (original != null && original.Length > 0) changed[0]++;
+                    field.SetValue(arrayBox, changed);
+                    Assert.AreNotEqual(baseline, BalanceHasher.Hash((GameBalanceData)arrayBox), field.Name);
+                    continue;
+                }
                 Assert.AreEqual(typeof(int), field.FieldType,
                     field.Name + " is not an int: BalanceHasher and this test need to learn its type.");
 

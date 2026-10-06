@@ -105,6 +105,41 @@ namespace NodeWar.Input
             return true;
         }
 
+        public bool TapVillager(int villagerID, NodeWar.Lobby.InputAction action)
+        {
+            if (!IsSelectable(villagerID)) return false;
+            SelectionRules.TapVillager(selectedVillagerIDs, villagerID, action);
+            return true;
+        }
+
+        /// <summary>The node a villager is standing on, or -1 if it does not exist.</summary>
+        public int NodeOfVillager(int villagerID)
+        {
+            if (simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return -1;
+            return simState.villagers[villagerID].currentNodeID;
+        }
+
+        /// <summary>Selects every villager of ours that is standing idle.</summary>
+        public void SelectAllIdle()
+        {
+            if (simState == null) return;
+            selectedVillagerIDs.Clear();
+            for (int i = 0; i < simState.villagers.Length; i++)
+                if (IsSelectable(i) && simState.villagers[i].state == VillagerState.Idle)
+                    selectedVillagerIDs.Add(i);
+        }
+
+        /// <summary>Selects every villager of ours on the node this villager is standing on.</summary>
+        public void SelectAllOnNodeOf(int villagerID)
+        {
+            if (simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return;
+            int node = simState.villagers[villagerID].currentNodeID;
+            selectedVillagerIDs.Clear();
+            for (int i = 0; i < simState.villagers.Length; i++)
+                if (IsSelectable(i) && simState.villagers[i].currentNodeID == node)
+                    selectedVillagerIDs.Add(i);
+        }
+
         private void Update()
         {
             if (simState == null) return;
@@ -201,8 +236,8 @@ namespace NodeWar.Input
         /// LassoGeometry's nonzero winding rule load-bearing: a stroke that
         /// loops back inside itself must add, never subtract.
         ///
-        /// A stroke too small to be a shape leaves the selection untouched
-        /// rather than clearing it. A long press that goes nowhere is a no-op.
+        /// A stroke too small to be a shape, or capturing nobody, leaves the
+        /// selection untouched. A long press that goes nowhere is a no-op.
         /// </summary>
         public void ApplyLasso(IReadOnlyList<Vector2> rawPoints)
         {
@@ -223,7 +258,7 @@ namespace NodeWar.Input
             // Cheap screen-space reject before the per-edge containment test.
             Rect bounds = LassoGeometry.Bounds(points);
 
-            selectedVillagerIDs.Clear();
+            lassoSelection.Clear();
 
             for (int i = 0; i < simState.villagers.Length; i++)
             {
@@ -258,8 +293,10 @@ namespace NodeWar.Input
                 if (!bounds.Contains(flat)) continue;
                 if (!LassoGeometry.Contains(points, flat)) continue;
 
-                selectedVillagerIDs.Add(i);
+                lassoSelection.Add(i);
             }
+
+            SelectionRules.ReplaceLassoIfAny(selectedVillagerIDs, lassoSelection);
 
             if (verboseSelectionLogging)
                 Debug.Log("[SEL] Lasso selected " + selectedVillagerIDs.Count + " villagers");
@@ -313,6 +350,7 @@ namespace NodeWar.Input
 
         private readonly GestureThresholds fallbackThresholds = new GestureThresholds();
         private readonly List<Vector2> smoothedLasso = new List<Vector2>();
+        private readonly List<int> lassoSelection = new List<int>();
 
         private void OnDestroy()
         {

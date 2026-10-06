@@ -40,6 +40,10 @@ namespace NodeWar.UI
         private readonly LobbySwitch emotesSwitch;
         private readonly LobbyIcon emotesIcon;
         private readonly Label frameCapLabel;
+        private readonly LobbySwitch cameraButtonSwitch;
+        private readonly LobbySwitch tooltipsSwitch;
+        private readonly Label sideLabel;
+        private readonly Label targetLabel;
 
         private readonly VisualElement surrenderArea;
         private readonly Label surrenderLine;
@@ -70,16 +74,16 @@ namespace NodeWar.UI
 
         public MatchSettingsPanel(VisualElement hudRoot)
         {
-            scrim = hudRoot.Q<VisualElement>("hud-settings-scrim");
-            panel = hudRoot.Q<VisualElement>("hud-settings");
-            gear = hudRoot.Q<Button>("hud-settings-gear");
+            scrim = NodeWar.UI.UiRequired.Q<VisualElement>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsScrim, nameof(MatchSettingsPanel));
+            panel = NodeWar.UI.UiRequired.Q<VisualElement>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettings, nameof(MatchSettingsPanel));
+            gear = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsGear, nameof(MatchSettingsPanel));
 
-            musicSlider = hudRoot.Q<Slider>("hud-settings-music");
-            effectsSlider = hudRoot.Q<Slider>("hud-settings-effects");
-            routesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-routes");
-            emotesSwitch = hudRoot.Q<LobbySwitch>("hud-settings-emotes");
+            musicSlider = NodeWar.UI.UiRequired.Q<Slider>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsMusic, nameof(MatchSettingsPanel));
+            effectsSlider = NodeWar.UI.UiRequired.Q<Slider>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsEffects, nameof(MatchSettingsPanel));
+            routesSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRoutes, nameof(MatchSettingsPanel));
+            emotesSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsEmotes, nameof(MatchSettingsPanel));
             emotesIcon = hudRoot.Q<LobbyIcon>("hud-settings-emotes-icon");
-            frameCapLabel = hudRoot.Q<Label>("hud-settings-framecap");
+            frameCapLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsFramecap, nameof(MatchSettingsPanel));
 
             if (gear != null) gear.clicked += Toggle;
 
@@ -91,7 +95,7 @@ namespace NodeWar.UI
             BindSlider(musicSlider);
             BindSlider(effectsSlider);
 
-            Button routesRow = hudRoot.Q<Button>("hud-settings-row-routes");
+            Button routesRow = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRowRoutes, nameof(MatchSettingsPanel));
             if (routesRow != null && routesSwitch != null)
             {
                 routesRow.clicked += routesSwitch.Flip;
@@ -101,21 +105,33 @@ namespace NodeWar.UI
                 routesSwitch.Changed += _ => OnValueChanged(commitNow: true);
             }
 
-            Button emotesRow = hudRoot.Q<Button>("hud-settings-row-emotes");
+            Button emotesRow = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRowEmotes, nameof(MatchSettingsPanel));
             if (emotesRow != null && emotesSwitch != null)
             {
                 emotesRow.clicked += emotesSwitch.Flip;
                 emotesSwitch.Changed += _ => OnValueChanged(commitNow: true);
             }
 
-            Button frameCapRow = hudRoot.Q<Button>("hud-settings-row-framecap");
+            Button frameCapRow = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRowFramecap, nameof(MatchSettingsPanel));
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
 
-            surrenderArea = hudRoot.Q<VisualElement>("hud-settings-surrender-area");
-            surrenderLine = hudRoot.Q<Label>("hud-settings-surrender-line");
-            Button ask = hudRoot.Q<Button>("hud-settings-surrender");
-            Button no = hudRoot.Q<Button>("hud-settings-surrender-no");
-            Button yes = hudRoot.Q<Button>("hud-settings-surrender-yes");
+            // Only what undoes a bad control combination mid-match; the full
+            // list is on the lobby's Settings page.
+            cameraButtonSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsCamerabutton, nameof(MatchSettingsPanel));
+            sideLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSide, nameof(MatchSettingsPanel));
+            tooltipsSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsTooltips, nameof(MatchSettingsPanel));
+            targetLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsTarget, nameof(MatchSettingsPanel));
+            BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowTarget, ControlsViewModel.CycleCameraButtonTarget);
+            BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowCamerabutton, ControlsViewModel.ToggleCameraButton);
+            BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowTooltips, ControlsViewModel.ToggleTooltips);
+            BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowSide, ControlsViewModel.CycleControlsSide);
+            BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowControlsReset, ControlsViewModel.ResetControls);
+
+            surrenderArea = NodeWar.UI.UiRequired.Q<VisualElement>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSurrenderArea, nameof(MatchSettingsPanel));
+            surrenderLine = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSurrenderLine, nameof(MatchSettingsPanel));
+            Button ask = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSurrender, nameof(MatchSettingsPanel));
+            Button no = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSurrenderNo, nameof(MatchSettingsPanel));
+            Button yes = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSurrenderYes, nameof(MatchSettingsPanel));
             if (ask != null) ask.clicked += () => SetAsking(true);
             if (no != null) no.clicked += () => SetAsking(false);
             if (yes != null) yes.clicked += ConfirmSurrender;
@@ -255,11 +271,36 @@ namespace NodeWar.UI
             if (routesSwitch != null) routesSwitch.Value = current.opponentRoutes;
             if (emotesSwitch != null) emotesSwitch.Value = current.opponentEmotes;
             UpdateFrameCapLabel();
+            UpdateControls();
 
             loading = false;
             dirty = false;
 
             RaiseChanged();
+        }
+
+        private void BindControlsRow(VisualElement hudRoot, string rowName,
+            Func<GameSettingsData, GameSettingsData> edit)
+        {
+            Button row = UiRequired.Q<Button>(hudRoot, rowName, nameof(MatchSettingsPanel));
+            if (row == null) return;
+
+            // A controls edit is a decision, so it saves as it happens. The edit
+            // returns a value with its own inputBindings array.
+            row.clicked += () =>
+            {
+                current = edit(current);
+                UpdateControls();
+                OnValueChanged(commitNow: true);
+            };
+        }
+
+        private void UpdateControls()
+        {
+            if (cameraButtonSwitch != null) cameraButtonSwitch.Value = current.showCameraButton;
+            if (tooltipsSwitch != null) tooltipsSwitch.Value = current.tooltips;
+            if (sideLabel != null) sideLabel.text = ControlsViewModel.SideLabel(current.controlsSide);
+            if (targetLabel != null) targetLabel.text = ControlsViewModel.CameraTargetLabel(current.cameraButtonTarget);
         }
 
         private void CycleFrameCap()
@@ -295,6 +336,9 @@ namespace NodeWar.UI
         private GameSettingsData Capture()
         {
             GameSettingsData captured = current;
+            // Own copy of the array: this struct copy aliases current, and an alias hides edits from Differ.
+            if (current.inputBindings != null)
+                captured.inputBindings = (InputBinding[])current.inputBindings.Clone();
             captured.version = GameSettingsData.CurrentVersion;
 
             if (musicSlider != null) captured.musicVolume = musicSlider.value;

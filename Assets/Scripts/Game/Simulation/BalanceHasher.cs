@@ -10,11 +10,22 @@ namespace NodeWar.Simulation
     /// does.
     ///
     /// Every field of <see cref="GameBalanceData"/>, <see cref="SuitStats"/> and
-    /// <see cref="DistrictStats"/> goes in, in declared order. A test sets each field in turn and requires
+    /// <see cref="DistrictStats"/> goes in, in a fixed order (zero cap extensions are omitted for legacy balances). A test sets each field in turn and requires
     /// the hash to move, so a new field left out of here fails it.
     /// </summary>
     public static class BalanceHasher
     {
+        private static int HashInts(int hash, int[] values)
+        {
+            unchecked
+            {
+                hash = hash * 31 + (values == null ? -1 : values.Length);
+                if (values != null)
+                    for (int i = 0; i < values.Length; i++) hash = hash * 31 + values[i];
+                return hash;
+            }
+        }
+
         public static int Hash(GameBalanceData b)
         {
             unchecked
@@ -36,6 +47,16 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + b.baseAttackDamage;
                 hash = hash * 31 + b.baseMoveSpeedTicks;
                 hash = hash * 31 + b.baseAttackCooldownMax;
+
+                hash = HashInts(hash, b.tempoStageTicks);
+                hash = HashInts(hash, b.tempoClaimPercent);
+                hash = HashInts(hash, b.tempoRespawnPercent);
+                hash = HashInts(hash, b.tempoProductionPercent);
+                hash = HashInts(hash, b.suddenDeathTicks);
+                hash = HashInts(hash, b.suddenDeathThresholds);
+                hash = hash * 31 + b.breachBarMax;
+                hash = HashInts(hash, b.breachSwarmRate);
+                hash = hash * 31 + b.breachBarDecayPerTick;
 
                 // Array order matters: TryGetSuitStats takes the first match.
                 if (b.suitStats == null)
@@ -87,6 +108,11 @@ namespace NodeWar.Simulation
                     }
                 }
 
+                // Missing cap fields deserialize to zero. Preserve those exported
+                // balances' fingerprints, while tagging each nonzero cap distinctly.
+                if (b.foodCap != 0) { hash = hash * 31 + 3000; hash = hash * 31 + b.foodCap; }
+                if (b.materialsCap != 0) { hash = hash * 31 + 3001; hash = hash * 31 + b.materialsCap; }
+                if (b.metalCap != 0) { hash = hash * 31 + 3002; hash = hash * 31 + b.metalCap; }
                 return hash;
             }
         }

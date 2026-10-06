@@ -253,6 +253,11 @@ namespace NodeWar.Core
         private void HandleDragInput()
         {
             if (isDraftMode) return;
+            if (gestureSource != null && !gestureSource.IsEnabled(NodeWar.Lobby.InputSlot.MiddleDrag))
+            {
+                isDragging = false;
+                return;
+            }
             if (gestureSource != null && gestureSource.PanSuppressed)
             {
                 isDragging = false;
@@ -316,6 +321,7 @@ namespace NodeWar.Core
         private void HandleDraftScroll()
         {
             if (!isDraftMode) return;
+            if (gestureSource != null && !gestureSource.IsEnabled(NodeWar.Lobby.InputSlot.ScrollWheel)) return;
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
@@ -359,6 +365,7 @@ namespace NodeWar.Core
             // The draft has its own clamp, so its scroll is handled by
             // HandleDraftScroll. Reading it here too would apply every notch twice.
             if (isDraftMode) return;
+            if (gestureSource != null && !gestureSource.IsEnabled(NodeWar.Lobby.InputSlot.ScrollWheel)) return;
 
             Mouse mouse = Mouse.current;
             if (mouse == null) return;
@@ -547,6 +554,11 @@ namespace NodeWar.Core
                 gestureSource.OnZoomUpdate += HandleZoomUpdate;
                 gestureSource.OnZoomEnd += HandleZoomEnd;
             }
+        }
+
+        public void ApplyInputSettings(NodeWar.Lobby.GameSettingsData settings)
+        {
+            if (gestureSource != null) gestureSource.ApplySettings(settings);
         }
 
         // ===== GESTURE ZOOM =====
@@ -1196,6 +1208,36 @@ namespace NodeWar.Core
             NotifyManualPan();
             SetTargetZoom(sideHomeStates[currentSide].zoomDistance);
             StartFocusTween(sideHomeStates[currentSide].position);
+        }
+
+        /// <summary>
+        /// Flips between the farthest zoom the match allows (the whole-board view)
+        /// and the side's default zoom. Zoom only; the camera does not move.
+        /// </summary>
+        public void ToggleFitDefaultZoom()
+        {
+            if (isDraftMode) return;
+            float defaultZoom = sideHomeStates[currentSide].initialized
+                ? sideHomeStates[currentSide].zoomDistance
+                : Mathf.Lerp(zoomMinDistance, zoomMaxDistance, sideDefaultZoomNormalized);
+            SetTargetZoom(BoardFraming.ToggleZoom(targetZoomDistance, defaultZoom, zoomMaxDistance));
+        }
+
+        /// <summary>
+        /// The camera button's Board target: pans to the middle of the board and zooms out
+        /// to fit it (the farthest zoom a match allows, as the fit/default toggle uses).
+        /// Same focus tween as RecentreOnHome, so the easing and duration match; like it,
+        /// this does not look at reduced motion, which here governs only the shake.
+        /// </summary>
+        public void RecentreOnBoard()
+        {
+            if (isDraftMode || boardConfig == null) return;
+
+            NotifyManualPan();
+            SetTargetZoom(zoomMaxDistance);
+            BoardFraming.Centre(boardConfig.Data.gridCols, boardConfig.Data.gridRows, boardConfig.nodeScale,
+                out float x, out float z);
+            StartFocusTween(new Vector3(x, transform.position.y, z));
         }
 
         /// <summary>
