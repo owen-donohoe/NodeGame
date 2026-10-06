@@ -12,7 +12,8 @@ verified:
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
   - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
-verified_at_commit: 7d0ae0cd
+  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+verified_at_commit: 673cc4b9
 status: stable
 sources:
   - id: sim-state
