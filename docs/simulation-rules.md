@@ -11,7 +11,8 @@ verified:
   - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
   - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
   - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-verified_at_commit: 3336149
+  - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
+verified_at_commit: b229a89e
 status: stable
 sources:
   - id: sim-loop
@@ -93,6 +94,15 @@ weights, and stats in `Simulation/` are `int`. Fractional tuning is
 expressed as a scaled integer instead — see `Pathfinding`'s cost
 multipliers (`50` = 0.5x, `100` = 1.0x, `200` = 2.0x).
 
+Tempo timer integration uses `long` intermediates: cumulative scaled ticks
+include ticks 1 through t, and each decrement is `C(t) - C(t-1)`.
+Percentages below 100 are valid (slower respawns); production carries
+overshoot into the next cycle. Schedule ticks must be positive and
+strictly increasing, axis arrays must match and percentages must be
+positive. Production durations must be safe for the largest decrement.
+Sudden-death thresholds must be positive and strictly decreasing from
+the opening threshold.
+
 **No `UnityEngine` references in `Simulation/`.**
 Why: keeps the simulation platform-independent and free of any Unity
 subsystem (physics, time, math) that isn't guaranteed to behave
@@ -105,9 +115,11 @@ and never cross into `Simulation/`. What crosses is their *contents*, as
 plain structs: `GameSimulation.SetBalance` and
 `CommandProcessor.SetBalance` both take a `GameBalanceData`, which is an
 ordinary `struct` declared inside `Simulation/` with no `UnityEngine`
-reference. It is read-only tuning loaded once before a match starts and
-never mutated by the tick loop, so it carries no non-deterministic state
-in with it.
+reference. It is read-only tuning installed before a match starts and
+never mutated by the tick loop. The Editor/development local-playtest
+exception installs a modified copy through `SetBalance`, never changes
+`SimulationState`, and is blocked in networked matches; its warning makes
+clear that the balance hash and recorded replay no longer match the asset.
 
 Do not put a `ScriptableObject` in `Simulation/` on the strength of this
 paragraph — `scripts/sim-guard.ps1` blocks it, correctly.
@@ -158,16 +170,18 @@ itself only ever counts ticks.
 
 **Tick order is canonical and must not be reordered:**
 ```
-movement → combat → claiming → production → healing → respawns → win-check
+movement → combat → claiming (breach → claim) → production → healing → respawns → win-check
 ```
 Why: each step reads state the previous step produced (e.g. claiming
 depends on where combat left villagers standing this tick); reordering
 changes game behavior in a way that's easy to miss testing against
 yourself but will desync against any peer/build still running the old
 order. (`GameSimulation.SimulateTick` also runs a rampart-bonus pass
-right after movement, and a post-combat-resume pass at the very end,
-after win-check — the method's own doc comment explains why that final
-pass is a separate step rather than folded into combat.) A new step must
+right after movement, `TickBreach` immediately before `TickClaiming`, and
+post-combat resume after win-check. The final derived refresh of every
+player's `nextBreacherID` follows resume, so it reflects all mutations
+this tick. Tempo events are emitted after incrementing the tick count,
+before movement.) A new step must
 be inserted at a specific, justified point in this sequence, not appended
 by default.
 
@@ -196,10 +210,13 @@ intentionally excluded — keep it that way rather than hashing static data.
 / `districtEras` (index and value, the two tables kept apart by an offset),
 `NodeData.districtEra` and `VillagerData.rampartBonusEra`. An all-era-0
 match therefore hashes exactly as matches did before eras existed, which
-is what keeps the pinned baselines and older match logs valid, while any
-era the peers disagree on still moves the hash. A new field that is 0 in
-every existing match may follow the same pattern for the same reason; any
-other field is hashed unconditionally.
+keeps the era-0 fingerprints unchanged, while any era the peers disagree
+on still moves the hash. Version-1 logs are nevertheless refused by a
+version-2 replay. Neutral extension fields may use conditional hashing
+with explicit defaults, not just zero. The v2 player fields `breachBar`,
+`paidRespawns` and derived `nextBreacherID` are covered; the last starts
+at -1, not the struct's implicit zero. `VillagerState.Breaching` is
+appended after `Dead`, preserving existing enum values.
 
 `TickEventLog` is outside this rule because it is outside `SimulationState`:
 the simulation only ever appends to it and never reads it back, so nothing in
@@ -230,6 +247,10 @@ back a state the simulation itself produced, at a tick both peers agree
 on. Speculative ticks are never recorded or hashed; the replay after them
 is the confirmed pass.
 
+The v2 player scalars also round-trip through the full `PlayerData` copy:
+breach progress, the next candidate and the paid-respawn counter cannot
+survive a rollback independently of the rest of the player.
+
 ## `SimulationVersion` and the content hash
 
 Two builds that play the same inputs differently must refuse each other
@@ -238,6 +259,12 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `InputSerializer.ProtocolVersion` (wire layout),
 `SimulationVersion.Current`, and a content hash,
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
+
+The current simulation version and baseline pin are **2**. With a valid
+breach channel enabled, a loss requires a breach this tick at or above
+`BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
+threshold alone never loses a match. Disabling the channel retains
+instant arrival breaches and the fixed-threshold legacy win path.
 
 - **Bump `SimulationVersion.Current`** in the same commit as any change
   that alters what the same inputs produce: tick rules, a state field
@@ -262,7 +289,14 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `BalanceHasher` hashes `GameBalanceData`, including each `SuitStats` and
 `DistrictStats` entry and their array order. It is separate from
 `SimulationStateHasher`: balance is still absent from the state hash.
-The handshake therefore mitigates issue #59; it does not fix that omission.
+It covers tempo/sudden-death schedules and breach tuning as well as
+resource caps. Zero caps are omitted as a legacy hash extension; nonzero
+caps are tagged separately. Nonpositive caps are uncapped in gameplay,
+including negative values, whose raw values still affect the balance hash.
+All resource gains and starting values clamp to a positive cap. Wasted
+completions still cycle; a metal-capped Forge consumes no material and
+a Market still alternates. The handshake therefore mitigates issue #59;
+it does not fix that omission.
 
 ## The starting board: `MatchFactory`
 
