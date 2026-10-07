@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using NodeWar.Simulation;
 
 namespace NodeWar.BalanceRig
 {
@@ -9,7 +10,24 @@ namespace NodeWar.BalanceRig
         // Short cap: these prove the plumbing, not the balance.
         private const int Cap = 1500;
 
-        private static RigSetup Setup() => RigSetupLoader.Load(null, null, "Barracks");
+        internal static RigSetup Setup()
+        {
+            var board = BoardConfigData.Default();
+            board.gridCols = board.gridRows = 3;
+            board.startingVillagersPerPlayer = 1;
+            board.initialPlacements = new[]
+            {
+                new BoardConfigData.InitialNodePlacement { gridX = 1, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
+                new BoardConfigData.InitialNodePlacement { gridX = 1, gridZ = 2, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
+            };
+            return new RigSetup
+            {
+                balance = GameBalanceData.Default(), board = board,
+                baseDraft = new[] { new[] { DistrictType.Farm }, new[] { DistrictType.Mine } },
+                loadoutNodes = new[] { DistrictType.Barracks },
+                mirror = (x, z) => (x, 2 - z)
+            };
+        }
 
         private static List<string> Rows(RigSetup setup, int baseSeed, int count, int delay = 0)
         {
@@ -77,7 +95,7 @@ namespace NodeWar.BalanceRig
         [Test]
         public void ShippedBoardAndBalanceLoad()
         {
-            RigSetup setup = Setup();
+            RigSetup setup = RigSetupLoader.Load(null, null, "Barracks");
             Assert.AreEqual(4, setup.board.gridCols);
             Assert.AreEqual(7, setup.board.gridRows);
             Assert.AreEqual(2, setup.board.initialPlacements.Length);

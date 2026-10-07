@@ -9,7 +9,7 @@ namespace NodeWar.BalanceRig
     public static class Report
     {
         public const string Header =
-            "seed,ticks,winner,capped,"
+            "seed,pair_id,seat,ticks,winner,capped,"
             + "p0_breaches,p1_breaches,p0_breach_ticks,p1_breach_ticks,first_breach_tick,"
             + "p0_nodes,p1_nodes,p0_villagers,p1_villagers,"
             + "p0_food,p1_food,p0_materials,p1_materials,p0_metal,p1_metal,"
@@ -25,7 +25,7 @@ namespace NodeWar.BalanceRig
             var sb = new StringBuilder();
             void Add(object v) { if (sb.Length > 0) sb.Append(','); sb.Append(Convert.ToString(v, inv)); }
 
-            Add(r.seed); Add(r.ticks); Add(r.winner); Add(r.capped ? 1 : 0);
+            Add(r.seed); Add(r.pairID); Add(r.seat); Add(r.ticks); Add(r.winner); Add(r.capped ? 1 : 0);
             Add(r.breaches[0]); Add(r.breaches[1]);
             Add(string.Join(";", r.breachTicks[0])); Add(string.Join(";", r.breachTicks[1]));
             Add(r.FirstBreachTick);
@@ -105,8 +105,42 @@ namespace NodeWar.BalanceRig
                 + " (a breach is against that side's core)");
             sb.AppendLine("speed:          " + (seconds > 0 ? (n / seconds).ToString("0.0", inv) : "n/a")
                 + " matches/s (" + seconds.ToString("0.0", inv) + " s)");
+            AppendPairs(sb, results);
             AppendDiagnostics(sb, results, inv);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Seat-swapped pairs, judged by who held the seed's original seat 0.
+        /// A pair whose winner follows the seat rather than the setup says the
+        /// tie-break or the board, not the draft, decided it; nothing here
+        /// assumes the two matches come out equal.
+        /// </summary>
+        private static void AppendPairs(StringBuilder sb, IList<MatchResult> results)
+        {
+            var bySeat0 = new Dictionary<int, MatchResult>();
+            var bySeat1 = new Dictionary<int, MatchResult>();
+            foreach (MatchResult r in results)
+                (r.seat == 0 ? bySeat0 : bySeat1)[r.pairID] = r;
+            if (bySeat1.Count == 0) return;
+
+            int pairs = 0, setupWinsBoth = 0, setupLosesBoth = 0, split = 0, seatDecided = 0, undecided = 0;
+            foreach (var kv in bySeat0)
+            {
+                if (!bySeat1.TryGetValue(kv.Key, out MatchResult swapped)) continue;
+                pairs++;
+                MatchResult a = kv.Value;
+                if (a.winner < 0 || swapped.winner < 0) { undecided++; continue; }
+                bool firstSetupWonA = a.winner == 0;
+                bool firstSetupWonB = swapped.winner == 1;
+                if (firstSetupWonA && firstSetupWonB) setupWinsBoth++;
+                else if (!firstSetupWonA && !firstSetupWonB) setupLosesBoth++;
+                else split++;
+                if (a.winner == swapped.winner) seatDecided++;
+            }
+            sb.AppendLine("seat-swapped pairs: " + pairs + " (first setup won both: " + setupWinsBoth
+                + ", lost both: " + setupLosesBoth + ", split: " + split
+                + "; winner followed the seat in " + seatDecided + "; a capped side in " + undecided + ")");
         }
 
         private static void AppendDiagnostics(StringBuilder sb, IList<MatchResult> results, CultureInfo inv)
