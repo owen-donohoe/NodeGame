@@ -61,6 +61,7 @@
     <Compile Include="DisconnectHoldTests.cs" />
     <Compile Include="PresenceHeartbeatTests.cs" />
     <Compile Include="LoadoutCompatibilityTests.cs" />
+    <Compile Include="MatchSetupPacketTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 
@@ -158,6 +159,8 @@
              Link="Network/DraftSerializer.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/InputSerializer.cs"
              Link="Network/InputSerializer.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Network/SetupAgreement.cs"
+             Link="Network/SetupAgreement.cs" />
   </ItemGroup>
 
   <ItemGroup>

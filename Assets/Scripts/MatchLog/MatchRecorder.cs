@@ -13,12 +13,13 @@ namespace NodeWar.MatchLog
         private int firstDesyncTick = -1;
         private bool hasDesync;
 
-        public MatchRecorder(MatchLogHeader header, BoardConfigData board,
+        public MatchRecorder(MatchLogHeader header, MatchSetup setup, BoardConfigData board,
             PlayerLoadout[] loadouts, DraftPlacement[] draft)
         {
             Log = new MatchLog
             {
                 header = header,
+                setup = setup,
                 board = board,
                 loadouts = loadouts,
                 draft = draft,

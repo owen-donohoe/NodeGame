@@ -32,6 +32,7 @@ namespace NodeWar.MatchLog
         {
             MatchLog log = Build();
             log.header.sim = 2;
+            log.setup = null;
             return log;
         }
 
@@ -46,6 +47,7 @@ namespace NodeWar.MatchLog
                     localPlayer = 1, tier = 7, seed = -987654321,
                     startUnixSeconds = 0x0102030405060708L, kind = MatchKind.Networked
                 },
+                setup = new MatchSetup("test-map", -1234, 0x5678, -123456789),
                 board = new BoardConfigData
                 {
                     gridCols = 5, gridRows = 9, defaultLinkWeight = 3,

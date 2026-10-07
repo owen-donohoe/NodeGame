@@ -68,6 +68,14 @@ namespace NodeWar.MatchLog
                 !MapAuthoringRules.ValidateDraft(log.board, log.draft, out boardError))
                 return Refuse(outcome, "Log board cannot be built: " + boardError);
 
+            // The setup is the log's claim about which map and rules this was. Here it must at
+            // least be about this very board; whether the map is a shipped one is the
+            // server's question (Referee), because tests and tools replay boards of their own.
+            if (log.setup == null) return Refuse(outcome, "Log has no match setup.");
+            if (log.setup.SimulationVersion != log.header.sim || log.setup.BalanceHash != log.header.content ||
+                log.setup.BoardHash != BoardHasher.Hash(log.board))
+                return Refuse(outcome, "Log setup does not describe the log's board and rules.");
+
             MatchFactory.Configure(balance, log.board);
             SimulationState state = MatchFactory.Build(balance, log.board, log.draft, new[]
             {

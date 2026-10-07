@@ -74,7 +74,7 @@ namespace NodeWar.MatchLog
         }
 
         [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(4)]
-        [TestCase(5)] [TestCase(6)] [TestCase(7)]
+        [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(11)]
         public void DuplicateKnownChunk_IsRefused(int tag)
         {
             byte[] bytes = MatchLogFormat.Write(TestLogs.Full());
@@ -83,14 +83,14 @@ namespace NodeWar.MatchLog
                 TestLogs.Segment(bytes, start, 6 + TestLogs.IntAt(bytes, start + 2))));
         }
 
-        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(5)]
+        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(5)] [TestCase(11)]
         public void MissingRequiredChunk_IsRefused(int tag)
         {
             TestLogs.Refused(TestLogs.Remove(MatchLogFormat.Write(TestLogs.Full()), tag));
         }
 
         [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(4)]
-        [TestCase(5)] [TestCase(6)] [TestCase(7)]
+        [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(11)]
         public void KnownChunkTrailingByte_IsRefused(int tag)
         {
             byte[] bytes = MatchLogFormat.Write(TestLogs.Full());

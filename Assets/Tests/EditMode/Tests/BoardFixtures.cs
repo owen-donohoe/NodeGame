@@ -70,6 +70,53 @@ namespace NodeWar.Tests
         public const int P0Core3x3 = 7;
         public const int P1Core3x3 = 1;
 
+        /// <summary>
+        /// The map ID a fixture board is logged under: derived from its own
+        /// fingerprint, so two different test boards never share one and none
+        /// can be mistaken for a shipped map.
+        /// </summary>
+        public static string FixtureMapId(BoardConfigData board)
+        {
+            return "test-" + BoardHasher.Hash(board).ToString("x8");
+        }
+
+        /// <summary>
+        /// The setup a recorder or log needs for a fixture board: its own hash,
+        /// the current simulation version, and the given balance identity.
+        /// </summary>
+        public static MatchSetup SetupFor(BoardConfigData board, int balanceHash = 0)
+        {
+            return new MatchSetup(FixtureMapId(board), BoardHasher.Hash(board),
+                (ushort)SimulationVersion.Current, balanceHash);
+        }
+
+        /// <summary>
+        /// A catalog of test boards, for a referee that should vouch for fixtures.
+        /// Register a board with <see cref="Add"/>; it is then found under
+        /// <see cref="FixtureMapId"/>. Not the shipped catalog.
+        /// </summary>
+        public sealed class FixtureCatalog : IBoardCatalog
+        {
+            private readonly System.Collections.Generic.List<string> ids = new System.Collections.Generic.List<string>();
+            private readonly System.Collections.Generic.List<BoardConfigData> boards =
+                new System.Collections.Generic.List<BoardConfigData>();
+
+            public void Add(BoardConfigData board)
+            {
+                string id = FixtureMapId(board);
+                if (ids.Contains(id)) return;
+                ids.Add(id);
+                boards.Add(board);
+            }
+
+            public bool TryGet(string mapId, out BoardConfigData board)
+            {
+                int i = ids.IndexOf(mapId);
+                board = i < 0 ? default : boards[i];
+                return i >= 0;
+            }
+        }
+
         public static int Cell(int cols, int x, int z)
         {
             return z * cols + x;

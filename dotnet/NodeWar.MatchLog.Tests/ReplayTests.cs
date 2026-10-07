@@ -16,7 +16,7 @@ namespace NodeWar.MatchLog
             MatchLog setup = TestLogs.Full();
             setup.board = ReplayConfig();
             setup.draft = Array.Empty<DraftPlacement>();
-            MatchRecorder recorder = new MatchRecorder(setup.header, setup.board, setup.loadouts, setup.draft);
+            MatchRecorder recorder = new MatchRecorder(setup.header, BoardFixtures.SetupFor(setup.board), setup.board, setup.loadouts, setup.draft);
             SimulationState original = BuildBoard(balance, setup.board);
             for (int i = 0; i < 120; i++)
             {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using NodeWar.Simulation;
 
 namespace NodeWar.BalanceRig
 {
@@ -121,9 +122,10 @@ namespace NodeWar.BalanceRig
             if (options.trace >= 0)
             {
                 var draft = MatchRunner.RandomDraft(setup, new Random(options.trace));
+                int[] nodeOf = MatchFactory.CellToNode(setup.board, draft);
                 foreach (var dp in draft)
                     Console.WriteLine("draft P" + dp.playerID + " " + dp.districtType + " at (" + dp.gridX + "," + dp.gridZ
-                        + ") node " + (dp.gridZ * setup.board.gridCols + dp.gridX));
+                        + ") node " + nodeOf[dp.gridZ * setup.board.gridCols + dp.gridX]);
                 MatchResult traced = MatchRunner.Run(setup, options.trace, options.cap, options.delay, Console.Out);
                 Console.WriteLine(Report.Header);
                 Console.WriteLine(Report.Row(traced));

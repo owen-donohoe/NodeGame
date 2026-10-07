@@ -26,7 +26,7 @@ namespace NodeWar.Cloud.Tests
             GameBalanceData balance = GameBalanceData.Default();
             Log log = Record(balance, 3000, Rush);
             Assert.That(log.result.reason, Is.EqualTo(MatchEndReason.Win));
-            RefereeVerdict verdict = new Referee(Catalog(balance)).Verify(MatchLogFormat.Write(log));
+            RefereeVerdict verdict = RefereeTests.NewReferee(Catalog(balance)).Verify(MatchLogFormat.Write(log));
             Assert.Multiple(() =>
             {
                 Assert.That(verdict.ok, Is.True, verdict.error);
@@ -47,7 +47,7 @@ namespace NodeWar.Cloud.Tests
             Log log = Record(balance, 300, state => state.tickCount == 3
                 ? new[] { Move(0, 0, 3), Move(3, 1, 5) } : null);
             log.ticks[0].commands[0].targetNodeID = 4;
-            RefereeVerdict verdict = new Referee(Catalog(balance)).Verify(MatchLogFormat.Write(log));
+            RefereeVerdict verdict = RefereeTests.NewReferee(Catalog(balance)).Verify(MatchLogFormat.Write(log));
             Assert.That(verdict.ok, Is.False);
             Assert.That(verdict.firstMismatchTick, Is.EqualTo(50));
             Assert.That(verdict.endTick, Is.EqualTo(50));
@@ -60,13 +60,13 @@ namespace NodeWar.Cloud.Tests
             GameBalanceData balance = GameBalanceData.Default();
             Log log = Record(balance, 100, Patrol);
             log.header.content = unchecked(log.header.content + 1);
-            AssertRefused(new Referee(Catalog(balance)).Verify(MatchLogFormat.Write(log)), "unknown balance");
+            AssertRefused(RefereeTests.NewReferee(Catalog(balance)).Verify(MatchLogFormat.Write(log)), "unknown balance");
         }
 
         [Test]
         public void OversizeLog_IsRefusedBeforeParsing()
         {
-            AssertRefused(new Referee(Catalog()).Verify(new byte[Referee.MaxLogBytes + 1]), "512 KB");
+            AssertRefused(RefereeTests.NewReferee(Catalog()).Verify(new byte[Referee.MaxLogBytes + 1]), "512 KB");
         }
 
         [TestCase(null)]
@@ -74,7 +74,7 @@ namespace NodeWar.Cloud.Tests
         [TestCase(new byte[] { 1, 2, 3, 4, 5, 6, 7 })]
         public void GarbageLog_IsRefusedWithoutThrowing(byte[] bytes)
         {
-            AssertRefused(new Referee(Catalog()).Verify(bytes));
+            AssertRefused(RefereeTests.NewReferee(Catalog()).Verify(bytes));
         }
 
         [TestCase(null)]
@@ -110,7 +110,7 @@ namespace NodeWar.Cloud.Tests
             }, warnings.Add);
             Assert.That(warnings, Has.Count.EqualTo(1));
             StringAssert.Contains("hash does not match", warnings[0]);
-            AssertRefused(new Referee(catalog).Verify(MatchLogFormat.Write(Record(balance, 100, Patrol))),
+            AssertRefused(RefereeTests.NewReferee(catalog).Verify(MatchLogFormat.Write(Record(balance, 100, Patrol))),
                 "unknown balance");
         }
 
@@ -126,7 +126,7 @@ namespace NodeWar.Cloud.Tests
                 BalanceFile(balance)
             }, warnings.Add);
             Assert.That(warnings, Has.Count.EqualTo(2));
-            RefereeVerdict verdict = new Referee(catalog).Verify(MatchLogFormat.Write(Record(balance, 100, Patrol)));
+            RefereeVerdict verdict = RefereeTests.NewReferee(catalog).Verify(MatchLogFormat.Write(Record(balance, 100, Patrol)));
             Assert.That(verdict.ok, Is.True, verdict.error);
         }
 
@@ -141,7 +141,7 @@ namespace NodeWar.Cloud.Tests
             };
             var file = BalanceFile(balance);
             Assert.That(JObject.Parse(file.Value)["suitStats"][0]["suitType"].Type, Is.EqualTo(JTokenType.Integer));
-            RefereeVerdict verdict = new Referee(Catalog(balance)).Verify(MatchLogFormat.Write(Record(balance, 100, Patrol)));
+            RefereeVerdict verdict = RefereeTests.NewReferee(Catalog(balance)).Verify(MatchLogFormat.Write(Record(balance, 100, Patrol)));
             Assert.That(verdict.ok, Is.True, verdict.error);
         }
 
@@ -158,7 +158,7 @@ namespace NodeWar.Cloud.Tests
                 GameBalanceData balance = JsonConvert.DeserializeObject<GameBalanceData>(reader.ReadToEnd());
                 string expectedName = "NodeWar.Cloud.Balances." + BalanceHasher.Hash(balance).ToString(CultureInfo.InvariantCulture) + ".json";
                 if (name != expectedName) continue; // Catalog intentionally skips mismatched filenames.
-                RefereeVerdict verdict = new Referee(BalanceCatalog.Embedded)
+                RefereeVerdict verdict = RefereeTests.NewReferee(BalanceCatalog.Embedded)
                     .Verify(MatchLogFormat.Write(Record(balance, 100, Patrol)));
                 Assert.That(verdict.ok, Is.True, verdict.error);
             }
@@ -180,7 +180,7 @@ namespace NodeWar.Cloud.Tests
                 bytes[i] = MatchLogFormat.Write(Record(balances[i], 2000 + i * 50, Patrol, board));
             }
             BalanceCatalog catalog = Catalog(balances);
-            var referees = Enumerable.Range(0, 8).Select(_ => new Referee(catalog)).ToArray();
+            var referees = Enumerable.Range(0, 8).Select(_ => RefereeTests.NewReferee(catalog)).ToArray();
             var sequential = Enumerable.Range(0, 8).Select(i => referees[i].Verify(bytes[i])).ToArray();
             foreach (var verdict in sequential) Assert.That(verdict.ok, Is.True, verdict.error);
 
@@ -220,7 +220,7 @@ namespace NodeWar.Cloud.Tests
                 Assert.That(log.ticks.SelectMany(t => t.commands).Count(c => c.type == CommandType.Move && c.playerID == player),
                     Is.EqualTo(600));
             byte[] bytes = MatchLogFormat.Write(log);
-            RefereeVerdict verdict = new Referee(Catalog(balance)).Verify(bytes);
+            RefereeVerdict verdict = RefereeTests.NewReferee(Catalog(balance)).Verify(bytes);
             Assert.That(verdict.ok, Is.True, verdict.error);
             Assert.That(verdict.ticksReplayed, Is.EqualTo(12000));
             string directory = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "../.."));
@@ -244,6 +244,12 @@ namespace NodeWar.Cloud.Tests
             Assert.That(verdict.firstMismatchTick, Is.EqualTo(-1));
         }
 
+        /// <summary>The test boards a fixture referee vouches for, beside none of the shipped ones.</summary>
+        internal static readonly BoardFixtures.FixtureCatalog FixtureBoards = new BoardFixtures.FixtureCatalog();
+
+        /// <summary>A referee whose map catalog is the fixture boards, not the shipped map.</summary>
+        internal static Referee NewReferee(BalanceCatalog balances) => new Referee(balances, FixtureBoards);
+
         internal static BalanceCatalog Catalog(params GameBalanceData[] balances) =>
             new BalanceCatalog(balances.Select(BalanceFile), message => Assert.Fail(message));
 
@@ -252,10 +258,11 @@ namespace NodeWar.Cloud.Tests
                 JsonConvert.SerializeObject(balance, Formatting.Indented));
 
         internal static Log Record(GameBalanceData balance, int maxTicks, Func<SimulationState, GameCommand[]> script,
-            BoardConfigData? boardOverride = null)
+            BoardConfigData? boardOverride = null, MatchSetup setupOverride = null,
+            DraftPlacement[] draftOverride = null)
         {
             BoardConfigData board = boardOverride ?? BoardFixtures.LandGrid3x3();
-            DraftPlacement[] draft =
+            DraftPlacement[] draft = draftOverride ?? new[]
             {
                 new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
                 new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
@@ -270,7 +277,9 @@ namespace NodeWar.Cloud.Tests
                 protocol = 1, sim = (ushort)SimulationVersion.Current, content = BalanceHasher.Hash(balance),
                 matchId = "referee-test", playerIds = new[] { "p0", "p1" }, kind = MatchKind.Bot
             };
-            var recorder = new MatchRecorder(header, board, loadouts, draft);
+            FixtureBoards.Add(board);
+            var recorder = new MatchRecorder(header,
+                setupOverride ?? BoardFixtures.SetupFor(board, header.content), board, loadouts, draft);
             MatchFactory.Configure(balance, board);
             SimulationState state = MatchFactory.Build(balance, board, draft, new[]
             {

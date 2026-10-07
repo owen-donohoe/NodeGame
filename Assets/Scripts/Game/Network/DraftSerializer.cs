@@ -7,6 +7,78 @@ namespace NodeWar.Network
     public static class DraftSerializer
     {
         /// <summary>
+        /// MatchSetup: [type:1][idLen:1][mapId:utf8 x idLen][boardHash:4][sim:2][balance:4]
+        /// MatchSetupAck: the same body, then [accepted:1] (0 or 1).
+        ///
+        /// Sent by the host before the draft and answered by the guest; see
+        /// <see cref="SetupAgreement"/>. Added in protocol 5. Both are exact
+        /// length: anything shorter or longer than the layout says is refused.
+        /// </summary>
+        public static byte[] SerializeMatchSetup(NodeWar.Simulation.MatchSetup setup)
+        {
+            return WriteSetup(PacketType.MatchSetup, setup, 0);
+        }
+
+        public static bool TryDeserializeMatchSetup(byte[] data, out NodeWar.Simulation.MatchSetup setup)
+        {
+            return TryReadSetup(data, PacketType.MatchSetup, 0, out setup);
+        }
+
+        public static byte[] SerializeMatchSetupAck(NodeWar.Simulation.MatchSetup setup, bool accepted)
+        {
+            byte[] data = WriteSetup(PacketType.MatchSetupAck, setup, 1);
+            data[data.Length - 1] = (byte)(accepted ? 1 : 0);
+            return data;
+        }
+
+        public static bool TryDeserializeMatchSetupAck(byte[] data, out NodeWar.Simulation.MatchSetup setup, out bool accepted)
+        {
+            accepted = false;
+            if (!TryReadSetup(data, PacketType.MatchSetupAck, 1, out setup)) return false;
+            byte flag = data[data.Length - 1];
+            if (flag > 1) { setup = null; return false; }
+            accepted = flag == 1;
+            return true;
+        }
+
+        private static byte[] WriteSetup(PacketType type, NodeWar.Simulation.MatchSetup setup, int extra)
+        {
+            if (setup == null) throw new System.ArgumentNullException(nameof(setup));
+            byte[] id = System.Text.Encoding.UTF8.GetBytes(setup.MapId);
+            if (id.Length > MaxStringBytes) throw new System.ArgumentException("Map ID is too long.", nameof(setup));
+
+            byte[] data = new byte[1 + 1 + id.Length + 4 + 2 + 4 + extra];
+            int offset = 0;
+            data[offset++] = (byte)type;
+            data[offset++] = (byte)id.Length;
+            System.Array.Copy(id, 0, data, offset, id.Length);
+            offset += id.Length;
+            WriteInt(data, ref offset, setup.BoardHash);
+            data[offset++] = (byte)setup.SimulationVersion;
+            data[offset++] = (byte)(setup.SimulationVersion >> 8);
+            WriteInt(data, ref offset, setup.BalanceHash);
+            return data;
+        }
+
+        private static bool TryReadSetup(byte[] data, PacketType type, int extra, out NodeWar.Simulation.MatchSetup setup)
+        {
+            setup = null;
+            if (data == null || data.Length < 2 || data[0] != (byte)type) return false;
+            int idLength = data[1];
+            if (data.Length != 1 + 1 + idLength + 4 + 2 + 4 + extra) return false;
+
+            int offset = 2;
+            string id = System.Text.Encoding.UTF8.GetString(data, offset, idLength);
+            offset += idLength;
+            int boardHash = ReadInt(data, ref offset);
+            ushort sim = (ushort)(data[offset] | (data[offset + 1] << 8));
+            offset += 2;
+            int balance = ReadInt(data, ref offset);
+            setup = new NodeWar.Simulation.MatchSetup(id, boardHash, sim, balance);
+            return true;
+        }
+
+        /// <summary>
         /// DraftReady: [type:1][playerID:4] = 5 bytes
         /// </summary>
         public static byte[] SerializeDraftReady(int playerID)

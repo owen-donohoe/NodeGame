@@ -20,6 +20,16 @@ namespace NodeWar.Cloud
         public string error;
     }
 
+    /// <summary>
+    /// The one map every ranked match is allocated to. The server assigns it from its own
+    /// catalog; neither player proposes or votes. Map rotation is a later decision.
+    /// </summary>
+    public static class RankedMap
+    {
+        public static string MapId => PremadeMaps.Hourglass01Id;
+        public static int BoardHash => BoardHasher.Hash(PremadeMaps.Hourglass01());
+    }
+
     /// <summary>Match creation rules, with server storage and time supplied by the caller.</summary>
     public sealed class MatchAllocation
     {
@@ -93,7 +103,8 @@ namespace NodeWar.Cloud
                 long createdAt = Math.Min(firstClaim.expiresUnixSeconds, secondClaim.expiresUnixSeconds)
                     - ActiveMatchClaims.LifetimeSeconds;
                 var record = MatchRecords.Create(matchId, new[] { first.PlayerId, second.PlayerId }, states,
-                    createdAt, first.Protocol.Value, first.Sim.Value, first.Content.Value);
+                    createdAt, first.Protocol.Value, first.Sim.Value, first.Content.Value,
+                    RankedMap.MapId, RankedMap.BoardHash);
                 try { await matches.WriteAsync(record, null); }
                 catch (RecordConflictException)
                 {

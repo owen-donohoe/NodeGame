@@ -69,6 +69,7 @@ namespace NodeWar.MatchLog
     public sealed class MatchLog
     {
         public MatchLogHeader header;
+        public MatchSetup setup; // SETUP (tag 11): the map and rules this match claims. Null in logs from before maps.
         public BoardConfigData board;
         public PlayerLoadout[] loadouts; // Exactly two, in player order.
         public DraftPlacement[] draft;

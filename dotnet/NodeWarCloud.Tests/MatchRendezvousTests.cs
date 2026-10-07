@@ -47,6 +47,29 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
+        public async Task RendezvousCarriesTheMapIdAndBoardHashToBothPlayers()
+        {
+            var states = new[] { MatchRecordTests.Player(), MatchRecordTests.Player() };
+            var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1, 1, 1, 1,
+                NodeWar.Simulation.PremadeMaps.Hourglass01Id,
+                NodeWar.Simulation.BoardHasher.Hash(NodeWar.Simulation.PremadeMaps.Hourglass01()));
+            var withMap = new MatchRendezvous(new HookMatchStore(new InMemoryMatchRecordStore(record)),
+                id => players[id == "p0" ? 0 : 1],
+                new MatchSettler(id => players[id == "p0" ? 0 : 1], new InventoryRules(ServerCatalog.Items)));
+
+            foreach (string caller in new[] { "p0", "p1" })
+            {
+                var result = await withMap.Rendezvous(MatchId, caller, null);
+                Assert.That(result.mapId, Is.EqualTo("hourglass-01"));
+                Assert.That(result.boardHash, Is.EqualTo(NodeWar.Simulation.BoardHasher.Hash(NodeWar.Simulation.PremadeMaps.Hourglass01())));
+            }
+
+            // A record from before maps hands the client nothing to trust.
+            var old = await rendezvous.Rendezvous(MatchId, "p0", null);
+            Assert.That(old.mapId, Is.Null);
+            Assert.That(old.boardHash, Is.Zero);
+        }
+        [Test]
         public async Task SlotZeroPublishesJoinCodeAndSlotOnePicksItUp()
         {
             var host = await rendezvous.Rendezvous(MatchId, "p0", "ABC123");

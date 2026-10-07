@@ -94,7 +94,7 @@ namespace NodeWar.MatchLog
                 sim = (ushort)SimulationVersion.Current, matchId = "eras", playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
-            var recorder = new MatchRecorder(header, board, loadouts, draft);
+            var recorder = new MatchRecorder(header, BoardFixtures.SetupFor(board, header.content), board, loadouts, draft);
             MatchFactory.Configure(balance, board);
             SimulationState state = MatchFactory.Build(balance, board, draft, new[]
             {

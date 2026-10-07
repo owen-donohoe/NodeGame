@@ -1168,7 +1168,12 @@ and must therefore arrive at identical results every tick.
   peer's commands with the peer's slot and its own with its own, whatever
   the wire said, and holds each player to 64 commands a tick. Tick inputs
   outside what an honest peer could send are ignored. Relay runs over DTLS
-  (protocol 3). Protocol 4 added the two delay bytes to `TickInput`. DirectUDP
+  (protocol 3). Protocol 4 added the two delay bytes to `TickInput`. Protocol 5 added the
+  pre-draft setup exchange: the host sends `MatchSetup` (map ID, board hash, simulation
+  version, balance hash), the guest checks it against the shipped catalog
+  (`PremadeMaps.Catalog`) and answers `MatchSetupAck`, and `SetupAgreement` ignores every
+  draft packet until that agreement holds. Match logs carry it as the SETUP chunk (tag 11)
+  beside BOARD_V2 (tag 10); the referee checks the board against its own catalog. DirectUDP
   reads only the connected peer's endpoint.
   In the Editor and Development Builds, F8/F9/F10 simulate a 1/5/20 s drop
   on that copy, and its ranked server calls fail for as long

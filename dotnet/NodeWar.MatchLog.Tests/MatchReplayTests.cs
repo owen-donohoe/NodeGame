@@ -142,7 +142,7 @@ namespace NodeWar.MatchLog
                 playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
-            var recorder = new MatchRecorder(header, board, loadouts, draft);
+            var recorder = new MatchRecorder(header, BoardFixtures.SetupFor(board, header.content), board, loadouts, draft);
             MatchFactory.Configure(Balance, board);
             SimulationState state = MatchFactory.Build(Balance, board, draft, new[]
             {

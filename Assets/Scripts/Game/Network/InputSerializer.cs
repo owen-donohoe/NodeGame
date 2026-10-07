@@ -14,7 +14,9 @@ namespace NodeWar.Network
         DraftLoadout = 6,
         DraftAck = 7,
         Emote = 8,
-        HandshakeReject = 9
+        HandshakeReject = 9,
+        MatchSetup = 10,
+        MatchSetupAck = 11
     }
 
     /// <summary>

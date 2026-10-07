@@ -13,6 +13,11 @@ namespace NodeWar.Cloud
         public ushort protocol;
         public ushort sim;
         public int content;
+        // The map this match is on, assigned by the server's allocator from its own
+        // catalog, and the fingerprint of that map's board. Null / 0 in records stored
+        // before maps existed; those stay readable but are never admitted as v3 matches.
+        public string mapId;
+        public int boardHash;
         public MatchPlayerSnapshot[] players;
         public MatchRecordState state;
         public List<MatchReport> reports = new List<MatchReport>();
@@ -89,7 +94,7 @@ namespace NodeWar.Cloud
     public static class MatchRecords
     {
         public static MatchRecord Create(string matchId, string[] playerIds, PlayerState[] players,
-            long nowUnixSeconds, ushort protocol, ushort sim, int content)
+            long nowUnixSeconds, ushort protocol, ushort sim, int content, string mapId = null, int boardHash = 0)
         {
             if (string.IsNullOrWhiteSpace(matchId)) throw new ArgumentException("Match ID is required.", nameof(matchId));
             if (playerIds == null || playerIds.Length != 2 || string.IsNullOrWhiteSpace(playerIds[0]) ||
@@ -116,7 +121,7 @@ namespace NodeWar.Cloud
             return new MatchRecord
             {
                 matchId = matchId, playerIds = (string[])playerIds.Clone(), players = snapshots,
-                createdUnixSeconds = nowUnixSeconds, protocol = protocol, sim = sim, content = content,
+                createdUnixSeconds = nowUnixSeconds, protocol = protocol, sim = sim, content = content, mapId = mapId, boardHash = boardHash,
                 state = MatchRecordState.Open
             };
         }

@@ -41,7 +41,7 @@ namespace NodeWar.MatchLog
                 sim = (ushort)SimulationVersion.Current, matchId = "terrain", playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
-            var recorder = new MatchRecorder(header, board, loadouts, draft);
+            var recorder = new MatchRecorder(header, MatchSetup.ForShippedMap(PremadeMaps.Hourglass01Id, header.content), board, loadouts, draft);
             MatchFactory.Configure(Balance, board);
             SimulationState original = MatchFactory.Build(Balance, board, draft, Setups(loadouts));
             int startHash = SimulationStateHasher.ComputeHash(original);
@@ -61,6 +61,7 @@ namespace NodeWar.MatchLog
             byte[] bytes = recorder.ToBytes();
             Assert.GreaterOrEqual(TestLogs.Find(bytes, 10), 6, "BOARD_V2 is written for a version 3 log.");
             Assert.Throws<InvalidOperationException>(() => TestLogs.Find(bytes, 2), "The old BOARD chunk is not.");
+            Assert.GreaterOrEqual(TestLogs.Find(bytes, 11), 6, "SETUP rides with it.");
 
             MatchLog read = TestLogs.Read(bytes);
             TestLogs.Equal(board, read.board, "board");
@@ -77,6 +78,88 @@ namespace NodeWar.MatchLog
 
             ReplayOutcome replay = MatchReplay.Run(read, Balance);
             Assert.IsTrue(replay.ok, replay.error);
+        }
+
+        [Test]
+        public void BoardV2AndSetup_RoundTrip()
+        {
+            MatchLog expected = TestLogs.Full();
+            byte[] bytes = MatchLogFormat.Write(expected);
+
+            Assert.GreaterOrEqual(TestLogs.Find(bytes, 10), 6);
+            Assert.GreaterOrEqual(TestLogs.Find(bytes, 11), 6);
+            Assert.Throws<InvalidOperationException>(() => TestLogs.Find(bytes, 2), "A current log has no tag 2.");
+
+            MatchLog read = TestLogs.Read(bytes);
+            TestLogs.Equal(expected, read);
+            Assert.IsTrue(expected.setup.Equals(read.setup));
+            CollectionAssert.AreEqual(expected.board.terrain, read.board.terrain);
+            CollectionAssert.AreEqual(expected.board.districtSlots, read.board.districtSlots);
+
+            // A log from before terrain still parses, with no setup and no terrain.
+            byte[] oldBytes = MatchLogFormat.Write(TestLogs.FullV2History());
+            MatchLog history = TestLogs.Read(oldBytes);
+            Assert.IsNull(history.setup);
+            Assert.IsNull(history.board.terrain);
+            Assert.GreaterOrEqual(TestLogs.Find(oldBytes, 2), 6);
+
+            // Missing, duplicate and conflicting chunks are refused.
+            TestLogs.Refused(TestLogs.Remove(bytes, 11), "BOARD_V2 without SETUP");
+            int setupAt = TestLogs.Find(bytes, 11);
+            byte[] setupChunk = TestLogs.Segment(bytes, setupAt, 6 + TestLogs.IntAt(bytes, setupAt + 2));
+            TestLogs.Refused(TestLogs.Insert(bytes, bytes.Length, setupChunk), "duplicate SETUP");
+            TestLogs.Refused(TestLogs.Insert(oldBytes, oldBytes.Length, setupChunk), "SETUP beside an old BOARD");
+        }
+
+        [Test]
+        public void OldSimulationLog_IsReadableButReplayRefused()
+        {
+            byte[] bytes = new byte[MatchLogFormatTests.MinimalV2.Length / 2];
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = Convert.ToByte(MatchLogFormatTests.MinimalV2.Substring(i * 2, 2), 16);
+
+            MatchLog log = TestLogs.Read(bytes);
+            Assert.AreEqual(2, log.header.sim, "The header of an old log is still readable.");
+            Assert.AreEqual("match-42", log.header.matchId);
+            Assert.IsNull(log.setup);
+
+            ReplayOutcome outcome = MatchReplay.Run(log, Balance);
+            Assert.IsFalse(outcome.ok);
+            StringAssert.Contains("simulation version", outcome.error);
+            Assert.AreEqual(0, outcome.endTick, "Refused before the factory built or ran anything.");
+        }
+
+        [Test]
+        public void ASetupThatDoesNotDescribeItsBoardOrRules_IsNotReplayed()
+        {
+            BoardConfigData board = BoardFixtures.LandGrid3x3();
+            MatchLog Build()
+            {
+                MatchLog log = TestLogs.Full();
+                log.header.sim = (ushort)SimulationVersion.Current;
+                log.header.content = 0;
+                log.board = board;
+                log.draft = Array.Empty<DraftPlacement>();
+                log.setup = BoardFixtures.SetupFor(board, 0);
+                log.ticks.Clear();
+                log.hashes.Clear();
+                log.result = new MatchResult { reason = MatchEndReason.Abandoned, endTick = 0, finalHash = 0 };
+                return log;
+            }
+
+            MatchLog missing = Build();
+            missing.setup = null;
+            StringAssert.Contains("setup", MatchReplay.Run(missing, Balance).error);
+
+            MatchLog wrongBoard = Build();
+            wrongBoard.setup = new MatchSetup(wrongBoard.setup.MapId, wrongBoard.setup.BoardHash + 1,
+                wrongBoard.setup.SimulationVersion, wrongBoard.setup.BalanceHash);
+            StringAssert.Contains("setup", MatchReplay.Run(wrongBoard, Balance).error);
+
+            MatchLog wrongRules = Build();
+            wrongRules.setup = new MatchSetup(wrongRules.setup.MapId, wrongRules.setup.BoardHash,
+                wrongRules.setup.SimulationVersion, 99);
+            StringAssert.Contains("setup", MatchReplay.Run(wrongRules, Balance).error);
         }
 
         [Test]

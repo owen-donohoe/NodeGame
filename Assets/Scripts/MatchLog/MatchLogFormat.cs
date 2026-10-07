@@ -23,6 +23,7 @@ namespace NodeWar.MatchLog
         internal const ushort ErasTag = 8;
         internal const ushort SkinsTag = 9;
         internal const ushort BoardV2Tag = 10;
+        internal const ushort SetupTag = 11;
 
         /// <summary>First simulation version whose boards carry terrain and so use BOARD_V2.</summary>
         private const ushort BoardV2FromSim = 3;
@@ -84,6 +85,18 @@ namespace NodeWar.MatchLog
                 file.Chunk(BoardV2Tag, payload);
             }
             else file.Chunk(BoardTag, payload);
+
+            if (h.sim >= BoardV2FromSim)
+            {
+                // SETUP names the map and rules the board claims to be, for a server to
+                // check against its own catalog. It travels with BOARD_V2, never alone.
+                if (log.setup == null)
+                    throw new ArgumentException("A current log needs its match setup.", nameof(log));
+                payload = new Writer();
+                payload.String(log.setup.MapId); payload.I32(log.setup.BoardHash);
+                payload.U16(log.setup.SimulationVersion); payload.I32(log.setup.BalanceHash);
+                file.Chunk(SetupTag, payload);
+            }
 
             payload = new Writer();
             for (int i = 0; i < 2; i++)
@@ -194,7 +207,7 @@ namespace NodeWar.MatchLog
                     uint length = unchecked((uint)file.I32());
                     if (length > (uint)file.Remaining) throw new FormatException("Chunk payload is truncated.");
                     Reader payload = file.Slice((int)length);
-                    if (tag < HeaderTag || tag > BoardV2Tag) continue;
+                    if (tag < HeaderTag || tag > SetupTag) continue;
                     int bit = 1 << tag;
                     if ((seen & bit) != 0) throw new FormatException("Duplicate known chunk.");
                     seen |= bit;
@@ -206,6 +219,11 @@ namespace NodeWar.MatchLog
                 const int boards = (1 << BoardTag) | (1 << BoardV2Tag);
                 if ((seen & boards) == 0) throw new FormatException("Missing required chunk.");
                 if ((seen & boards) == boards) throw new FormatException("Conflicting BOARD chunks.");
+                // SETUP belongs to a terrain board: required beside BOARD_V2, meaningless beside BOARD.
+                bool hasSetup = (seen & (1 << SetupTag)) != 0;
+                bool v2Board = (seen & (1 << BoardV2Tag)) != 0;
+                if (v2Board && !hasSetup) throw new FormatException("Missing required chunk.");
+                if (!v2Board && hasSetup) throw new FormatException("Conflicting BOARD and SETUP chunks.");
                 log = parsed;
                 return true;
             }
@@ -326,6 +344,9 @@ namespace NodeWar.MatchLog
                         endTick = r.I32(), finalHash = r.I32(), firstDesyncTick = r.I32()
                     };
                     if (!ValidReason(log.result.reason)) throw new FormatException("Invalid match end reason.");
+                    break;
+                case SetupTag:
+                    log.setup = new MatchSetup(r.String(), r.I32(), r.U16(), r.I32());
                     break;
                 case ErasTag:
                     for (int i = 0; i < 2; i++)

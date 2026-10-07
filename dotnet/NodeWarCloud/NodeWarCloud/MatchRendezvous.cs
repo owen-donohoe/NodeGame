@@ -64,7 +64,8 @@ namespace NodeWar.Cloud
                 return new RendezvousResult
                 {
                     state = record.state, playerIds = record.playerIds, slot = slot,
-                    joinCode = record.joinCode, connected = record.connectedUnixSeconds > 0
+                    joinCode = record.joinCode, connected = record.connectedUnixSeconds > 0,
+                    mapId = record.mapId, boardHash = record.boardHash
                 };
             }
         }

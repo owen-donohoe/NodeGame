@@ -60,6 +60,12 @@ namespace NodeWar.Core
         private NodeWar.Lobby.LoadoutData remoteLoadout;
         private bool remoteLoadoutReceived;
 
+        // Map and rules agreement. A networked draft does nothing until it holds: the host
+        // proposes, the guest verifies against the shipped catalog, and every draft packet
+        // that arrives before then is ignored (its sender keeps resending it).
+        private SetupAgreement setupAgreement;
+        private bool draftHandshakeSent;
+
         // State
         private DraftState draftState;
         private float turnTimer;
@@ -157,9 +163,12 @@ namespace NodeWar.Core
                 localReady = false;
                 remoteReady = false;
                 remoteLoadoutReceived = false;
-                SendDraftReady();
-                SendDraftLoadout();
-                localReady = true;
+                draftHandshakeSent = false;
+                setupAgreement = localPlayerID == 0
+                    ? SetupAgreement.Host(LocalBuildIdentity.SetupFor(config.MapId))
+                    : SetupAgreement.Guest(PremadeMaps.Catalog, LocalBuildIdentity.Current.sim,
+                        LocalBuildIdentity.Current.content);
+                SendSetupIfPending();
             }
 
             SpawnPlacementGrid();
@@ -563,6 +572,17 @@ namespace NodeWar.Core
                     PacketType type = InputSerializer.ReadPacketType(packets[i]);
                     typeLabel = type.ToString();
 
+                    if (type == PacketType.MatchSetup || type == PacketType.MatchSetupAck)
+                    {
+                        HandleSetupPacket(packets[i]);
+                        if (!enabled) return;
+                        continue;
+                    }
+                    // Nothing about the draft is honoured before the map and rules are agreed.
+                    bool draftPacket = type == PacketType.DraftReady || type == PacketType.DraftPlacement
+                        || type == PacketType.DraftLoadout || type == PacketType.DraftAck;
+                    if (draftPacket && (setupAgreement == null || !setupAgreement.AcceptsDraftPackets)) continue;
+
                     switch (type)
                     {
                         case PacketType.DraftReady:
@@ -591,6 +611,36 @@ namespace NodeWar.Core
                 }
                 if (!enabled) return;
             }
+        }
+
+        private void HandleSetupPacket(byte[] data)
+        {
+            if (setupAgreement == null) return;
+            byte[] reply = setupAgreement.Receive(data);
+            if (reply != null) networkManager.Send(reply);
+
+            if (setupAgreement.Refused)
+            {
+                Debug.LogError("[DraftManager] Match setup refused: " + setupAgreement.Error);
+                OnDraftDisconnect?.Invoke();
+                enabled = false;
+                return;
+            }
+            if (setupAgreement.Agreed && !draftHandshakeSent)
+            {
+                // Agreed: only now does this side announce itself and its loadout.
+                draftHandshakeSent = true;
+                SendDraftReady();
+                SendDraftLoadout();
+                localReady = true;
+            }
+        }
+
+        private void SendSetupIfPending()
+        {
+            if (setupAgreement == null || networkManager == null) return;
+            byte[] pending = setupAgreement.NextToSend();
+            if (pending != null) networkManager.Send(pending);
         }
 
         private void HandleRemoteLoadout(byte[] data)
@@ -712,6 +762,7 @@ namespace NodeWar.Core
         private void ResendIfNeeded()
         {
             if (Time.time - lastResendTime < RESEND_INTERVAL) return;
+            SendSetupIfPending();
             if (pendingReady != null) networkManager.Send(pendingReady);
             if (pendingLoadout != null) networkManager.Send(pendingLoadout);
             if (pendingPlacement != null) networkManager.Send(pendingPlacement);

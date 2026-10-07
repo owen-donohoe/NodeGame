@@ -164,6 +164,14 @@ namespace NodeWar.BalanceRig
             }
             board.initialPlacements = placements;
 
+            // Terrain, slots and pools move with the board: cell (x,z) becomes its mirror, and
+            // the two players' base pools trade places. On a map that is its own mirror image
+            // (hourglass-01) the terrain comes out identical, which the tests assert.
+            board.terrain = MirrorCells(source.board.terrain, board.gridCols, board.gridRows, source.mirror);
+            board.districtSlots = MirrorCells(source.board.districtSlots, board.gridCols, board.gridRows, source.mirror);
+            board.baseDraftDistrictsP0 = source.board.baseDraftDistrictsP1;
+            board.baseDraftDistrictsP1 = source.board.baseDraftDistrictsP0;
+
             var draft = new DraftPlacement[original.draft.Length];
             for (int i = 0; i < draft.Length; i++)
             {
@@ -184,6 +192,7 @@ namespace NodeWar.BalanceRig
                 overlaidFields = source.overlaidFields,
                 board = board,
                 boardSource = source.boardSource,
+                mapId = source.mapId,
                 baseDraft = new[] { source.baseDraft[1], source.baseDraft[0] },
                 loadoutNodes = source.loadoutNodes,
                 playerSetups = source.playerSetups == null ? null : new[] { source.playerSetups[1], source.playerSetups[0] },
@@ -199,6 +208,19 @@ namespace NodeWar.BalanceRig
                 pairID = original.pairID,
                 seat = 1 - original.seat
             };
+        }
+
+        private static T[] MirrorCells<T>(T[] cells, int cols, int rows, Func<int, int, (int x, int z)> mirror)
+        {
+            if (cells == null) return null;
+            var result = new T[cells.Length];
+            for (int z = 0; z < rows; z++)
+                for (int x = 0; x < cols; x++)
+                {
+                    var m = mirror(x, z);
+                    result[m.z * cols + m.x] = cells[z * cols + x];
+                }
+            return result;
         }
 
         /// <summary>
@@ -440,12 +462,20 @@ namespace NodeWar.BalanceRig
             {
                 if (remaining[turn].Count > 0)
                 {
+                    int slot = rng.Next(remaining[turn].Count);
+
+                    // Only cells the pick may legally stand on (PlacementLegality, the same
+                    // rule the live draft uses). A pick with no legal cell is skipped, not
+                    // forced onto water; the other pick types stay playable.
                     free.Clear();
                     for (int c = 0; c < occupied.Length; c++)
-                        if (!occupied[c]) free.Add(c);
-                    if (free.Count == 0) break;
-
-                    int slot = rng.Next(remaining[turn].Count);
+                        if (PlacementLegality.CanPlace(setup.board, occupied, remaining[turn][slot], c % cols, c / cols))
+                            free.Add(c);
+                    if (free.Count == 0)
+                    {
+                        remaining[turn].RemoveAt(slot);
+                        continue;
+                    }
                     int cell = free[rng.Next(free.Count)];
                     placements.Add(new DraftPlacement
                     {

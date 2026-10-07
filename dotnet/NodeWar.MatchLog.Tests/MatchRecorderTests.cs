@@ -9,7 +9,7 @@ namespace NodeWar.MatchLog
         private static MatchRecorder Create()
         {
             MatchLog log = TestLogs.Full();
-            return new MatchRecorder(log.header, log.board, log.loadouts, log.draft);
+            return new MatchRecorder(log.header, log.setup, log.board, log.loadouts, log.draft);
         }
 
         [Test]

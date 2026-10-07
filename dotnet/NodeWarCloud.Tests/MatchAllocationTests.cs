@@ -43,6 +43,16 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
+        public async Task NewAllocationAlwaysStoresTheHourglassIdAndHash()
+        {
+            var result = await allocation.Allocate("m-map", Roster(), Now);
+            Assert.That(result.ok, Is.True, result.error);
+            var record = (await matches.ReadAsync("m-map")).Record;
+
+            Assert.That(record.mapId, Is.EqualTo("hourglass-01"));
+            Assert.That(record.boardHash, Is.EqualTo(NodeWar.Simulation.BoardHasher.Hash(NodeWar.Simulation.PremadeMaps.Hourglass01())));
+        }
+        [Test]
         public async Task AllocationStoresBothServerSnapshotsVersionsAndServerTime()
         {
             states["p0"].Rating.R = 1600;

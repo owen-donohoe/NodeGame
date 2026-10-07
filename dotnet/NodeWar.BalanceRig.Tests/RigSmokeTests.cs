@@ -91,10 +91,11 @@ namespace NodeWar.BalanceRig
         public void ShippedBoardAndBalanceLoad()
         {
             RigSetup setup = RigSetupLoader.Load(null, null, "Barracks");
-            Assert.AreEqual(4, setup.board.gridCols);
+            Assert.AreEqual(7, setup.board.gridCols);
             Assert.AreEqual(7, setup.board.gridRows);
             Assert.AreEqual(2, setup.board.initialPlacements.Length);
             Assert.AreEqual(3, setup.baseDraft[0].Length);
+            Assert.AreEqual(PremadeMaps.Hourglass01Id, setup.mapId);
             Assert.AreEqual(1832066265, setup.balanceHash);
         }
 

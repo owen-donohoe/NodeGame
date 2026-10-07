@@ -1,5 +1,13 @@
 namespace NodeWar.Simulation
 {
+    /// <summary>How a map maps onto itself when the two players trade places.</summary>
+    public enum MapSymmetry
+    {
+        /// <summary>(x, z) trades with (x, rows-1-z): the players face each other across the middle row.</summary>
+        FlipZ = 0,
+        /// <summary>(x, z) trades with (cols-1-x, rows-1-z).</summary>
+        HalfTurn = 1
+    }
     /// <summary>
     /// The shipped map definitions, as plain data. The one map today is
     /// <see cref="Hourglass01Id"/>; the live game, the rig and the Cloud Code
@@ -35,6 +43,33 @@ namespace NodeWar.Simulation
             "OOOOOOO"
         };
 
+        /// <summary>The shipped maps as a catalog: the one authority a peer, a log or the server checks against.</summary>
+        public static readonly IBoardCatalog Catalog = new ShippedCatalog();
+
+        private sealed class ShippedCatalog : IBoardCatalog
+        {
+            public bool TryGet(string mapId, out BoardConfigData board)
+            {
+                return PremadeMaps.TryGet(mapId, out board);
+            }
+        }
+
+        /// <summary>
+        /// How a map maps onto itself when the two players trade places. Declared
+        /// per map: hourglass-01 is mirrored top to bottom, not rotated a half turn.
+        /// </summary>
+        public static MapSymmetry SymmetryOf(string mapId)
+        {
+            if (mapId == Hourglass01Id) return MapSymmetry.FlipZ;
+            throw new System.ArgumentException("Unknown map \"" + mapId + "\".", nameof(mapId));
+        }
+
+        /// <summary>The cell a cell trades places with under a symmetry, on a cols x rows grid.</summary>
+        public static void Mirror(MapSymmetry symmetry, int cols, int rows, int x, int z, out int mirroredX, out int mirroredZ)
+        {
+            mirroredX = symmetry == MapSymmetry.HalfTurn ? cols - 1 - x : x;
+            mirroredZ = rows - 1 - z;
+        }
         public static bool TryGet(string mapId, out BoardConfigData board)
         {
             if (mapId == Hourglass01Id)

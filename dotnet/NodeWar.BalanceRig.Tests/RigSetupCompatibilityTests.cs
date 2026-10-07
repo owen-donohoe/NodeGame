@@ -1,3 +1,5 @@
+using System;
+using System;
 using System.IO;
 using NUnit.Framework;
 using NodeWar.Simulation;
@@ -64,8 +66,99 @@ namespace NodeWar.BalanceRig
         public void ShippedBoardAsset_KeepsItsLegacyKey()
         {
             // The asset is Unity's to rewrite; until it does, its key is the legacy one.
-            var setup = RigSetupLoader.Load(null, null, "none");
+            // The rig no longer plays it (it has no terrain); it can still be read.
+            var setup = new RigSetup();
+            RigSetupLoader.LoadBoard(Path.Combine(RigSetupLoader.FindRepoRoot(), "Assets/Data/Game/Board/DefaultBoardConfig.asset"), setup);
             Assert.AreEqual(4, LinkWeight(setup.board));
+            Assert.IsNull(setup.board.terrain, "A legacy asset has no terrain to read.");
+        }
+
+        [Test]
+        public void DefaultUsesSameCatalogAsFactory()
+        {
+            RigSetup setup = RigSetupLoader.Load(null, null, "none");
+            BoardConfigData shipped = PremadeMaps.Hourglass01();
+
+            Assert.AreEqual(PremadeMaps.Hourglass01Id, setup.mapId);
+            Assert.AreEqual("catalog:hourglass-01", setup.boardSource, "The default board is the catalog's, not a parsed file.");
+            Assert.AreEqual(BoardHasher.Hash(shipped), BoardHasher.Hash(setup.board));
+            CollectionAssert.AreEqual(shipped.terrain, setup.board.terrain);
+            CollectionAssert.AreEqual(shipped.districtSlots, setup.board.districtSlots);
+            CollectionAssert.AreEqual(shipped.baseDraftDistrictsP0, setup.baseDraft[0]);
+            CollectionAssert.AreEqual(shipped.baseDraftDistrictsP1, setup.baseDraft[1]);
+
+            // The rig builds the very board the live game and the referee build.
+            var matchSetup = MatchSetup.ForShippedMap(setup.mapId, setup.balanceHash);
+            MatchFactory.Configure(setup.balance, setup.board);
+            SimulationState state = MatchFactory.Build(setup.balance, setup.board, new DraftPlacement[0],
+                new[] { new PlayerSetup(), new PlayerSetup() });
+            Assert.AreEqual(matchSetup.BoardHash, state.boardHash);
+            Assert.AreEqual(18, state.nodes.Length);
+
+            // Its symmetry is the map's own: top to bottom, not a half turn.
+            Assert.AreEqual((2, 5), setup.mirror(2, 1));
+            Assert.AreEqual((0, 6), setup.mirror(0, 0));
+            Assert.AreEqual((6, 3), setup.mirror(6, 3));
+        }
+
+        [Test]
+        public void ALegacyAssetBoard_IsRefusedForAMatch()
+        {
+            string asset = Path.Combine(RigSetupLoader.FindRepoRoot(), "Assets/Data/Game/Board/DefaultBoardConfig.asset");
+            var ex = Assert.Throws<FormatException>(() => RigSetupLoader.Load(null, asset, "none"));
+            StringAssert.Contains("terrain", ex.Message);
+        }
+
+        [Test]
+        public void SwapSeats_OnTheHourglass_MirrorsTerrainConsistently()
+        {
+            RigSetup setup = RigSetupLoader.Load(null, null, "none");
+            PreparedMatch first = MatchRunner.Prepare(setup, 5);
+            PreparedMatch paired = MatchRunner.SwapSeats(first);
+
+            // The map is its own mirror image, so mirroring terrain is an identity.
+            BoardConfigData a = first.setup.board;
+            BoardConfigData b = paired.setup.board;
+            CollectionAssert.AreEqual(a.terrain, b.terrain);
+            CollectionAssert.AreEqual(a.districtSlots, b.districtSlots);
+            CollectionAssert.AreEqual(a.baseDraftDistrictsP0, b.baseDraftDistrictsP1);
+            CollectionAssert.AreEqual(a.baseDraftDistrictsP1, b.baseDraftDistrictsP0);
+            Assert.IsTrue(MapAuthoringRules.ValidateAuthoredMap(b, out string error), error);
+
+            // The same two Cores, with the players traded.
+            foreach (var ip in a.initialPlacements)
+            {
+                var mirrored = Array.Find(b.initialPlacements, q => q.gridX == ip.gridX && q.gridZ == 6 - ip.gridZ);
+                Assert.AreEqual(ip.districtType, mirrored.districtType);
+                Assert.AreEqual(1 - ip.ownerID, mirrored.ownerID);
+                Assert.AreEqual(-ip.claimBar, mirrored.claimBar);
+            }
+
+            // The original is untouched, and both seats' drafts are legal on the shared map.
+            Assert.AreEqual(BoardHasher.Hash(PremadeMaps.Hourglass01()), BoardHasher.Hash(setup.board));
+            foreach (PreparedMatch match in new[] { first, paired })
+            {
+                var occupied = new bool[49];
+                foreach (DraftPlacement dp in match.draft)
+                {
+                    Assert.IsTrue(PlacementLegality.CanPlace(match.setup.board, occupied, dp.districtType, dp.gridX, dp.gridZ),
+                        match.seat + ": " + dp.districtType + "@" + dp.gridX + "," + dp.gridZ);
+                    occupied[dp.gridZ * 7 + dp.gridX] = true;
+                }
+            }
+        }
+
+        [Test]
+        public void TheDefaultHourglassPlaysAShortMatchFromALegalDraft()
+        {
+            RigSetup setup = RigSetupLoader.Load(null, null, "Barracks");
+            for (int seed = 1; seed <= 3; seed++)
+            {
+                MatchResult result = null;
+                int s = seed;
+                Assert.DoesNotThrow(() => result = MatchRunner.Run(setup, s, 400, 0), "seed " + seed);
+                Assert.Greater(result.ticks, 0);
+            }
         }
 
         private static int LinkWeight(BoardConfigData board) => board.defaultLinkWeight;

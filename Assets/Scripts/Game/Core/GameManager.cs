@@ -1040,7 +1040,8 @@ namespace NodeWar.Core
                     skins = LoadoutForPlayer(p, match.loadout).skinIDs
                 };
 
-            recorder = new NodeWar.MatchLog.MatchRecorder(header, boardConfig.Data, loadouts,
+            recorder = new NodeWar.MatchLog.MatchRecorder(header, LocalBuildIdentity.SetupFor(boardConfig.MapId),
+                boardConfig.Data, loadouts,
                 result.placements ?? new DraftPlacement[0]);
 
             if (lockstep != null)
