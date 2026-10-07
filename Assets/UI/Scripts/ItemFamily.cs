@@ -24,19 +24,19 @@ namespace NodeWar.Lobby
             Combat
         }
 
-        private static readonly string[] RoundNodes = { "node_market", "node_shrine", "node_sanctuary" };
-        private static readonly string[] SquareNodes = { "node_rampart" };
-        private static readonly string[] TriangleNodes = { "node_camp", "node_barracks", "node_arsenal", "node_watchtower" };
+        private static readonly string[] RoundDistricts = { "node_market", "node_shrine", "node_sanctuary" };
+        private static readonly string[] SquareDistricts = { "node_rampart" };
+        private static readonly string[] TriangleDistricts = { "node_camp", "node_barracks", "node_arsenal", "node_watchtower" };
 
         /// <summary>
         /// A district's family. An ID the table does not know is Square, the
         /// neutral middle, rather than an exception on a new asset.
         /// </summary>
-        public static Family ForNode(string nodeID)
+        public static Family ForDistrict(string districtID)
         {
-            if (Contains(RoundNodes, nodeID)) return Family.Round;
-            if (Contains(TriangleNodes, nodeID)) return Family.Triangle;
-            if (Contains(SquareNodes, nodeID)) return Family.Square;
+            if (Contains(RoundDistricts, districtID)) return Family.Round;
+            if (Contains(TriangleDistricts, districtID)) return Family.Triangle;
+            if (Contains(SquareDistricts, districtID)) return Family.Square;
             return Family.Square;
         }
 

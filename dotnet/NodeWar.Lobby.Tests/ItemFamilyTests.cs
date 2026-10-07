@@ -19,18 +19,18 @@ namespace NodeWar.Lobby.Tests
         [TestCase("node_barracks", ItemFamily.Family.Triangle)]
         [TestCase("node_arsenal", ItemFamily.Family.Triangle)]
         [TestCase("node_watchtower", ItemFamily.Family.Triangle)]
-        public void ForNode_PlacesEveryOfferedDistrict(string nodeID, ItemFamily.Family expected)
+        public void ForDistrict_PlacesEveryOfferedDistrict(string districtID, ItemFamily.Family expected)
         {
-            Assert.AreEqual(expected, ItemFamily.ForNode(nodeID));
+            Assert.AreEqual(expected, ItemFamily.ForDistrict(districtID));
         }
 
         /// <summary>A district added later must not throw or vanish from the grid.</summary>
         [TestCase("node_not_yet_designed")]
         [TestCase("")]
         [TestCase(null)]
-        public void ForNode_UnknownIDIsSquare(string nodeID)
+        public void ForDistrict_UnknownIDIsSquare(string districtID)
         {
-            Assert.AreEqual(ItemFamily.Family.Square, ItemFamily.ForNode(nodeID));
+            Assert.AreEqual(ItemFamily.Family.Square, ItemFamily.ForDistrict(districtID));
         }
 
         [Test]

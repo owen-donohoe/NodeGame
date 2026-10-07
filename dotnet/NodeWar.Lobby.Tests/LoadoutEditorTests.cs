@@ -136,7 +136,7 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void EquipNode_ObeysTheSameRules()
+        public void EquipDistrict_ObeysTheSameRules()
         {
             LoadoutEditor editor = Empty();
 

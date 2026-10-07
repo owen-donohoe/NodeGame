@@ -224,7 +224,7 @@ namespace NodeWar.Lobby
                 if (node == null || string.IsNullOrEmpty(node.districtID)) continue;
                 if (!catalog.IsDistrictOffered(node.districtID)) continue;
 
-                ItemFamily.Family family = ItemFamily.ForNode(node.districtID);
+                ItemFamily.Family family = ItemFamily.ForDistrict(node.districtID);
                 districts.Add(new Item
                 {
                     ID = node.districtID,
