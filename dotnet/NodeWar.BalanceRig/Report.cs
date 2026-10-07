@@ -17,7 +17,8 @@ namespace NodeWar.BalanceRig
             + "p0_soldiers_end,p1_soldiers_end,p0_soldiers_peak,p1_soldiers_peak,"
             + "p0_ticks_3_idle_soldiers,p1_ticks_3_idle_soldiers,final_tick_breaches,won_below_base_threshold,"
             + "p0_ticks_idle_on_barracks,p1_ticks_idle_on_barracks,"
-            + "p0_villages_end,p1_villages_end,p0_farms_end,p1_farms_end,p0_mines_end,p1_mines_end";
+            + "p0_villages_end,p1_villages_end,p0_farms_end,p1_farms_end,p0_mines_end,p1_mines_end,"
+            + TimelineReport.SummaryHeader;
 
         public static string Row(MatchResult r)
         {
@@ -43,9 +44,11 @@ namespace NodeWar.BalanceRig
             Add(r.ticksIdleOnBarracks[0]); Add(r.ticksIdleOnBarracks[1]);
             Add(r.villagesEnd[0]); Add(r.villagesEnd[1]); Add(r.farmsEnd[0]); Add(r.farmsEnd[1]);
             Add(r.minesEnd[0]); Add(r.minesEnd[1]);
+            foreach (string column in TimelineReport.SummaryColumns(r)) Add(column);
             return sb.ToString();
         }
 
+        /// <summary>Writes the per-match CSV, and beside it <c>name.windows.csv</c> and <c>name.flips.csv</c> for observed matches.</summary>
         public static void WriteCsv(string path, IList<MatchResult> results)
         {
             string dir = Path.GetDirectoryName(Path.GetFullPath(path));
@@ -53,6 +56,10 @@ namespace NodeWar.BalanceRig
             var lines = new List<string>(results.Count + 1) { Header };
             foreach (MatchResult r in results) lines.Add(Row(r));
             File.WriteAllLines(path, lines);
+
+            string stem = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFileNameWithoutExtension(path));
+            File.WriteAllText(stem + ".windows.csv", TimelineReport.WindowsCsv(results));
+            File.WriteAllText(stem + ".flips.csv", TimelineReport.FlipsCsv(results));
         }
 
         /// <summary>Nearest-rank percentile of a sorted list, p in 0..100.</summary>
@@ -106,6 +113,7 @@ namespace NodeWar.BalanceRig
             sb.AppendLine("speed:          " + (seconds > 0 ? (n / seconds).ToString("0.0", inv) : "n/a")
                 + " matches/s (" + seconds.ToString("0.0", inv) + " s)");
             AppendPairs(sb, results);
+            sb.AppendLine(Snowball.Format(Snowball.Evaluate(results)));
             AppendDiagnostics(sb, results, inv);
             return sb.ToString();
         }

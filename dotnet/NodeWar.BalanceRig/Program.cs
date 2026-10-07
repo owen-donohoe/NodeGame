@@ -80,15 +80,17 @@ namespace NodeWar.BalanceRig
         /// One match per seed, or two with seat swap on: the seed as supplied,
         /// then its mirrored pair. Rows come out seed by seed, seat 0 first.
         /// </summary>
+        private static RunHooks Observed => new RunHooks { timeline = true };
+
         public static List<MatchResult> RunMatches(RigSetup setup, RigOptions options, Action<int> progress = null)
         {
             var results = new List<MatchResult>(options.matches * (options.swapSeats ? 2 : 1));
             for (int i = 0; i < options.matches; i++)
             {
                 PreparedMatch first = MatchRunner.Prepare(setup, options.seed + i);
-                results.Add(MatchRunner.Run(first, options.cap, options.delay));
+                results.Add(MatchRunner.Run(first, options.cap, options.delay, null, Observed));
                 if (options.swapSeats)
-                    results.Add(MatchRunner.Run(MatchRunner.SwapSeats(first), options.cap, options.delay));
+                    results.Add(MatchRunner.Run(MatchRunner.SwapSeats(first), options.cap, options.delay, null, Observed));
                 progress?.Invoke(i + 1);
             }
             return results;

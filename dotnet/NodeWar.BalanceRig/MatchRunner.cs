@@ -13,6 +13,13 @@ namespace NodeWar.BalanceRig
         public int seat;
         public int ticks;
         public int winner = -1;
+
+        /// <summary>The match's timeline when it was observed, else null.</summary>
+        public TimelineMetrics timeline;
+
+        /// <summary>Whether the post-tick-1200 lead was taken (the match lasted that long), and P0 minus P1 non-core districts then.</summary>
+        public bool hasLead;
+        public int twoMinuteLead;
         public bool capped;
 
         public int[] breaches = new int[2];
@@ -65,6 +72,19 @@ namespace NodeWar.BalanceRig
         public DraftPlacement[] draft;
         public PlayerSetup[] players;
         public int seed, pairID, seat;
+    }
+
+    /// <summary>What a run reports to, none of it able to change the match.</summary>
+    public sealed class RunHooks
+    {
+        /// <summary>Record the timeline (and hand the simulation a TickEventLog to fill).</summary>
+        public bool timeline;
+
+        /// <summary>The batch applied on each tick that applies any, before it is applied.</summary>
+        public Action<GameCommand[]> onCommands;
+
+        /// <summary>The state after each tick.</summary>
+        public Action<SimulationState> afterTick;
     }
 
     public static class MatchRunner
@@ -189,7 +209,7 @@ namespace NodeWar.BalanceRig
         /// batch, before it is applied.
         /// </summary>
         public static void ApplyCommands(SimulationState state, GameCommand[] fresh, int inputDelay,
-            List<KeyValuePair<int, GameCommand>> delayed, Action<GameCommand[]> observer = null)
+            List<KeyValuePair<int, GameCommand>> delayed, Action<GameCommand[]> observer = null, TickEventLog log = null)
         {
             for (int i = 0; i < fresh.Length; i++)
                 delayed.Add(new KeyValuePair<int, GameCommand>(state.tickCount + inputDelay, fresh[i]));
@@ -213,14 +233,14 @@ namespace NodeWar.BalanceRig
                 if (due[i].playerID != 0 && due[i].playerID != 1) ordered[at++] = due[i];
 
             observer?.Invoke(ordered);
-            for (int i = 0; i < ordered.Length; i++) CommandProcessor.ProcessCommand(state, ordered[i]);
+            for (int i = 0; i < ordered.Length; i++) CommandProcessor.ProcessCommand(state, ordered[i], log);
         }
 
         /// <summary>One match from the setup as supplied (seat 0); see <see cref="SwapSeats"/> for its pair.</summary>
         public static MatchResult Run(RigSetup setup, int seed, int capTicks, int inputDelay, System.IO.TextWriter trace = null)
-            => Run(Prepare(setup, seed), capTicks, inputDelay, trace);
+            => Run(Prepare(setup, seed), capTicks, inputDelay, trace, null);
 
-        public static MatchResult Run(PreparedMatch match, int capTicks, int inputDelay, System.IO.TextWriter trace = null)
+        public static MatchResult Run(PreparedMatch match, int capTicks, int inputDelay, System.IO.TextWriter trace, RunHooks hooks)
         {
             RigSetup setup = match.setup;
             MatchFactory.Configure(setup.balance, setup.board);
@@ -238,6 +258,14 @@ namespace NodeWar.BalanceRig
             var delayed = new List<KeyValuePair<int, GameCommand>>();
             int[] seenBreaches = new int[2];
 
+            TimelineMetrics timeline = hooks != null && hooks.timeline ? new TimelineMetrics(state, setup.balance.ticksPerSecond) : null;
+            TickEventLog log = timeline != null ? new TickEventLog() : null;
+            Action<GameCommand[]> observer = commands =>
+            {
+                timeline?.ObserveCommands(state.tickCount, commands);
+                hooks?.onCommands?.Invoke(commands);
+            };
+
             while (!state.gameOver && state.tickCount < capTicks)
             {
                 // The live bot path (TickRunner.Update): evaluate, drain the
@@ -245,9 +273,12 @@ namespace NodeWar.BalanceRig
                 // every tick whatever order the bots evaluated in.
                 bots[0].Evaluate();
                 bots[1].Evaluate();
-                ApplyCommands(state, buffer.DrainCommands(), inputDelay, delayed);
+                log?.Clear();
+                ApplyCommands(state, buffer.DrainCommands(), inputDelay, delayed, observer, log);
 
-                GameSimulation.SimulateTick(state);
+                GameSimulation.SimulateTick(state, log);
+                timeline?.ObserveTick(state, log);
+                hooks?.afterTick?.Invoke(state);
 
                 TrackFleet(state, result);
                 if (trace != null && state.tickCount % 200 == 0) Trace(trace, state);
@@ -263,6 +294,7 @@ namespace NodeWar.BalanceRig
             }
 
             Finish(state, result, setup.balance);
+            timeline?.Complete(result);
             return result;
         }
 
