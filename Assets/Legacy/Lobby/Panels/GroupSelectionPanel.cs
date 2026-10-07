@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
@@ -35,7 +36,7 @@ namespace NodeWar.Lobby
 
         [Header("Data")]
         [SerializeField] private SuitDefinition[] allSuits;
-        [SerializeField] private DistrictDefinition[] allNodes;
+        [FormerlySerializedAs("allNodes")] [SerializeField] private DistrictDefinition[] allDistricts;
 
         [Header("Navigation")]
         [SerializeField] private Button backButton;
@@ -146,10 +147,10 @@ namespace NodeWar.Lobby
             }
 
             // Build node items
-            for (int i = 0; i < allNodes.Length; i++)
+            for (int i = 0; i < allDistricts.Length; i++)
             {
-                DistrictDefinition def = allNodes[i]; 
-                bool locked = (profile != null) ? !profile.IsNodeUnlocked(def.districtID) : true;
+                DistrictDefinition def = allDistricts[i]; 
+                bool locked = (profile != null) ? !profile.IsDistrictUnlocked(def.districtID) : true;
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
                 SelectableItemDisplay display = go.GetComponent<SelectableItemDisplay>();
@@ -189,9 +190,9 @@ namespace NodeWar.Lobby
         private void OnNodeUseClicked(string districtID)
         {
             if (nodeSlot0.IsEmpty)
-                EquipNode(nodeSlot0, districtID);
+                EquipDistrict(nodeSlot0, districtID);
             else if (nodeSlot1.IsEmpty)
-                EquipNode(nodeSlot1, districtID);
+                EquipDistrict(nodeSlot1, districtID);
 
             RefreshListVisibility();
             DeselectAll(nodeItems);
@@ -214,9 +215,9 @@ namespace NodeWar.Lobby
             slot.SetItem(def.suitID, def.displayName, def.icon);
         }
 
-        private void EquipNode(GroupSlotDisplay slot, string districtID)
+        private void EquipDistrict(GroupSlotDisplay slot, string districtID)
         {
-            DistrictDefinition def = FindNode(districtID);
+            DistrictDefinition def = FindDistrict(districtID);
             if (def == null) return;
             slot.SetItem(def.districtID, def.displayName, def.icon);
         }
@@ -281,7 +282,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < nodeCount; i++)
             {
                 if (!string.IsNullOrEmpty(loadout.districtIDs[i]))
-                    EquipNode(nodeSlots[i], loadout.districtIDs[i]);
+                    EquipDistrict(nodeSlots[i], loadout.districtIDs[i]);
             }
         }
 
@@ -336,11 +337,11 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        private DistrictDefinition FindNode(string districtID)
+        private DistrictDefinition FindDistrict(string districtID)
         {
-            for (int i = 0; i < allNodes.Length; i++)
+            for (int i = 0; i < allDistricts.Length; i++)
             {
-                if (allNodes[i].districtID == districtID) return allNodes[i];
+                if (allDistricts[i].districtID == districtID) return allDistricts[i];
             }
             return null;
         }

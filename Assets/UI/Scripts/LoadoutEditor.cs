@@ -36,13 +36,13 @@ namespace NodeWar.Lobby
         }
 
         public int SuitSlotCount { get { return suitIDs.Length; } }
-        public int NodeSlotCount { get { return districtIDs.Length; } }
+        public int DistrictSlotCount { get { return districtIDs.Length; } }
 
         public bool SuitSlotsFull { get { return FirstEmptySuitSlot() == NoSlot; } }
-        public bool NodeSlotsFull { get { return FirstEmptyNodeSlot() == NoSlot; } }
+        public bool DistrictSlotsFull { get { return FirstEmptyDistrictSlot() == NoSlot; } }
 
         public int FilledSuitCount { get { return CountFilled(suitIDs); } }
-        public int FilledNodeCount { get { return CountFilled(districtIDs); } }
+        public int FilledDistrictCount { get { return CountFilled(districtIDs); } }
 
         /// <summary>
         /// Whether the suit side is short: a slot is empty although the player
@@ -57,10 +57,10 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>The district side's counterpart to <see cref="IsSuitSideShort"/>.</summary>
-        /// <param name="ownedNodes">Districts the player could put in a slot: unlocked, and ones the draft can use.</param>
-        public bool IsNodeSideShort(int ownedNodes)
+        /// <param name="ownedDistricts">Districts the player could put in a slot: unlocked, and ones the draft can use.</param>
+        public bool IsDistrictSideShort(int ownedDistricts)
         {
-            return IsShort(districtIDs, ownedNodes);
+            return IsShort(districtIDs, ownedDistricts);
         }
 
         /// <summary>The ID in a suit slot, or "" when empty. Out of range gives "".</summary>
@@ -69,7 +69,7 @@ namespace NodeWar.Lobby
             return InRange(suitIDs, slot) ? suitIDs[slot] : "";
         }
 
-        public string NodeAt(int slot)
+        public string DistrictAt(int slot)
         {
             return InRange(districtIDs, slot) ? districtIDs[slot] : "";
         }
@@ -79,7 +79,7 @@ namespace NodeWar.Lobby
             return IndexOf(suitIDs, suitID) != NoSlot;
         }
 
-        public bool IsNodeEquipped(string districtID)
+        public bool IsDistrictEquipped(string districtID)
         {
             return IndexOf(districtIDs, districtID) != NoSlot;
         }
@@ -89,7 +89,7 @@ namespace NodeWar.Lobby
             return FirstEmpty(suitIDs);
         }
 
-        public int FirstEmptyNodeSlot()
+        public int FirstEmptyDistrictSlot()
         {
             return FirstEmpty(districtIDs);
         }
@@ -110,7 +110,7 @@ namespace NodeWar.Lobby
             return Equip(suitIDs, suitID);
         }
 
-        public int EquipNode(string districtID)
+        public int EquipDistrict(string districtID)
         {
             return Equip(districtIDs, districtID);
         }
@@ -121,7 +121,7 @@ namespace NodeWar.Lobby
             return Clear(suitIDs, slot);
         }
 
-        public string ClearNodeSlot(int slot)
+        public string ClearDistrictSlot(int slot)
         {
             return Clear(districtIDs, slot);
         }
@@ -140,12 +140,12 @@ namespace NodeWar.Lobby
         /// a slot already producing nothing; clearing it hands the slot back.
         /// </summary>
         public int DropUnavailable(System.Func<string, bool> suitOffered,
-                                   System.Func<string, bool> nodeOffered)
+                                   System.Func<string, bool> districtOffered)
         {
             int cleared = 0;
 
             cleared += DropFrom(suitIDs, suitOffered);
-            cleared += DropFrom(districtIDs, nodeOffered);
+            cleared += DropFrom(districtIDs, districtOffered);
 
             return cleared;
         }

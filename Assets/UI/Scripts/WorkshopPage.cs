@@ -29,7 +29,7 @@ namespace NodeWar.Lobby
     ///     phone can be killed at any moment, and there is no back to rely on;
     ///   - the chosen side is remembered on PlayerProfile.WorkshopTabIndex,
     ///     because the Lobby scene is rebuilt after every match;
-    ///   - locked cards ask PlayerProfile.IsSuitUnlocked / IsNodeUnlocked, even
+    ///   - locked cards ask PlayerProfile.IsSuitUnlocked / IsDistrictUnlocked, even
     ///     though both return true today, so this is right when they are real.
     ///
     /// Two facts about the game shape the grid (docs/ui-migration-inventory.md):
@@ -217,18 +217,18 @@ namespace NodeWar.Lobby
         private void CollectItems()
         {
             // The catalog never hands back a null array.
-            DistrictDefinition[] allNodes = catalog.Nodes;
-            for (int i = 0; i < allNodes.Length; i++)
+            DistrictDefinition[] allDistricts = catalog.Districts;
+            for (int i = 0; i < allDistricts.Length; i++)
             {
-                DistrictDefinition node = allNodes[i];
+                DistrictDefinition node = allDistricts[i];
                 if (node == null || string.IsNullOrEmpty(node.districtID)) continue;
-                if (!catalog.IsNodeOffered(node.districtID)) continue;
+                if (!catalog.IsDistrictOffered(node.districtID)) continue;
 
                 ItemFamily.Family family = ItemFamily.ForNode(node.districtID);
                 districts.Add(new Item
                 {
                     ID = node.districtID,
-                    Name = catalog.NodeName(node.districtID),
+                    Name = catalog.DistrictName(node.districtID),
                     Description = node.description,
                     Note = ItemFamily.NoteFor(family),
                     Family = family
@@ -294,7 +294,7 @@ namespace NodeWar.Lobby
             // A saved loadout can hold a suit that has since become globally
             // granted, or Crossroads. Both are slots producing nothing; clearing
             // them hands the slots back.
-            int cleared = loadout.DropUnavailable(catalog.IsSuitOffered, catalog.IsNodeOffered);
+            int cleared = loadout.DropUnavailable(catalog.IsSuitOffered, catalog.IsDistrictOffered);
 
             if (cleared > 0)
             {
@@ -386,7 +386,7 @@ namespace NodeWar.Lobby
             if (slotHost == null) return;
 
             bool suitsOn = activeTab == Tab.Suits;
-            int count = suitsOn ? loadout.SuitSlotCount : loadout.NodeSlotCount;
+            int count = suitsOn ? loadout.SuitSlotCount : loadout.DistrictSlotCount;
 
             slotHost.Clear();
 
@@ -394,7 +394,7 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < count; i++)
             {
-                string id = suitsOn ? loadout.SuitAt(i) : loadout.NodeAt(i);
+                string id = suitsOn ? loadout.SuitAt(i) : loadout.DistrictAt(i);
                 Item item = Find(suitsOn ? suits : districts, id);
                 bool filled = !string.IsNullOrEmpty(id);
                 if (!filled) allFull = false;
@@ -456,7 +456,7 @@ namespace NodeWar.Lobby
                 Item item = items[i];
 
                 bool locked = IsLocked(profile, item);
-                bool used = activeTab == Tab.Suits ? loadout.IsSuitEquipped(item.ID) : loadout.IsNodeEquipped(item.ID);
+                bool used = activeTab == Tab.Suits ? loadout.IsSuitEquipped(item.ID) : loadout.IsDistrictEquipped(item.ID);
 
                 VisualElement wrap = new VisualElement();
                 wrap.AddToClassList("ui-sticker");
@@ -524,7 +524,7 @@ namespace NodeWar.Lobby
 
             return activeTab == Tab.Suits
                 ? !profile.IsSuitUnlocked(item.ID)
-                : !profile.IsNodeUnlocked(item.ID);
+                : !profile.IsDistrictUnlocked(item.ID);
         }
 
         // ===== INTERACTION =====
@@ -550,14 +550,14 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            bool equipped = suitsOn ? loadout.IsSuitEquipped(item.ID) : loadout.IsNodeEquipped(item.ID);
+            bool equipped = suitsOn ? loadout.IsSuitEquipped(item.ID) : loadout.IsDistrictEquipped(item.ID);
             if (equipped)
             {
                 Say("Already in your loadout");
                 return;
             }
 
-            int slot = suitsOn ? loadout.EquipSuit(item.ID) : loadout.EquipNode(item.ID);
+            int slot = suitsOn ? loadout.EquipSuit(item.ID) : loadout.EquipDistrict(item.ID);
             if (slot == LoadoutEditor.NoSlot)
             {
                 Say("Loadout full. Tap a slot to clear it");
@@ -571,7 +571,7 @@ namespace NodeWar.Lobby
         /// <summary>A filled slot gives its item back; an empty one says how to fill it.</summary>
         private void OnSlotClicked(int slot)
         {
-            string removed = activeTab == Tab.Suits ? loadout.ClearSuitSlot(slot) : loadout.ClearNodeSlot(slot);
+            string removed = activeTab == Tab.Suits ? loadout.ClearSuitSlot(slot) : loadout.ClearDistrictSlot(slot);
 
             if (string.IsNullOrEmpty(removed))
             {

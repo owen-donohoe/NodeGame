@@ -18,37 +18,6 @@ namespace NodeWar.Lobby
             instance = null;
         }
 
-        [System.Serializable]
-        public struct PlayerProfileData
-        {
-            public string username;
-            public string uuid;
-            public int trophies;
-            public LoadoutRecord loadout;
-            public string[] unlockedSuitIDs;
-            public string[] unlockedNodeIDs;
-            public int selectedGameModeIndex; // cast to GameMode
-            public int boxesAvailable;
-            public float boxProgress;
-
-            // Which Workshop tab was open last. 0 is Districts, which is also
-            // what an older save without this field deserialises to - so the
-            // requested default costs no migration.
-            public int workshopTabIndex;
-
-            // Older saves omit this field and start false: the reminder has
-            // not been shown on this device yet.
-            public bool accountLinkPromptShown;
-
-            // The Settings page's values. Unlike workshopTabIndex this one
-            // cannot lean on zero being the wanted default - every slider at 0
-            // and every switch off is a state a player can legitimately choose.
-            // GameSettingsData.version carries that distinction; Load() runs
-            // the block through Normalized, which turns an absent one into the
-            // defaults and rewrites the file.
-            public GameSettingsData settings;
-        }
-
         public PlayerProfileData data;
 
         private string SavePath => Path.Combine(Application.persistentDataPath, "player_profile.json");
@@ -159,7 +128,7 @@ namespace NodeWar.Lobby
 
         // Unlock gating has not shipped: every caller is deliberately told "yes".
         // Before setting this to false, ensure profile creation seeds the starter
-        // set in unlockedSuitIDs/unlockedNodeIDs (CreateDefaults already seeds a
+        // set in unlockedSuitIDs/UnlockedDistrictIDs (CreateDefaults already seeds a
         // small set), and migrate existing saves to preserve intended access.
         // static readonly rather than const on purpose: a const true folds the
         // lookup away at compile time, and every call site then compiles with an
@@ -170,8 +139,8 @@ namespace NodeWar.Lobby
         public bool IsSuitUnlocked(string suitID) =>
             AllContentUnlocked || ContainsUnlockedID(data.unlockedSuitIDs, suitID);
 
-        public bool IsNodeUnlocked(string districtID) =>
-            AllContentUnlocked || ContainsUnlockedID(data.unlockedNodeIDs, districtID);
+        public bool IsDistrictUnlocked(string districtID) =>
+            AllContentUnlocked || ContainsUnlockedID(data.UnlockedDistrictIDs, districtID);
 
         private static bool ContainsUnlockedID(string[] unlockedIDs, string contentID)
         {
@@ -312,7 +281,7 @@ namespace NodeWar.Lobby
                 trophies = 0,
                 loadout = LoadoutRecord.From(LoadoutData.CreateEmpty()),
                 unlockedSuitIDs = new string[] { "suit_warrior", "suit_guardian" },
-                unlockedNodeIDs = new string[] { "node_watchtower", "node_market" },
+                UnlockedDistrictIDs = new string[] { "node_watchtower", "node_market" },
                 selectedGameModeIndex = (int)GameMode.Bot,
                 boxesAvailable = 0,
                 boxProgress = 0f,

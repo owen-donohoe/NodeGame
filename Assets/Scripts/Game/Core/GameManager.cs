@@ -125,7 +125,7 @@ namespace NodeWar.Core
         private CommandSystem commandSystem;
 
         // View references
-        private NodeWar.View.VillagerPositioner[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] villagerPositioners;
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
 
@@ -596,14 +596,14 @@ namespace NodeWar.Core
             int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
             pathRenderer.Initialize(state, localPID, pathCurveSettings,
                                     opponentRouteSettings, tickProvider, Camera.main);
-            pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+            pathRenderer.SetVillagerPositioners(villagerPositioners);
 
             // The provisional route between issuing a move and lockstep
             // applying it. A child of the routes object so it shares its
             // lifetime and the material it borrows.
             pendingOrderView = routesGO.AddComponent<NodeWar.View.PendingOrderView>();
             pendingOrderView.Initialize(state, localPID, pathCurveSettings, pathRenderer);
-            pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
+            pendingOrderView.SetVillagerPositioners(villagerPositioners);
             pendingOrderView.SetVillagerTransforms(villagerTransforms);
             if (commandSystem != null)
             {
@@ -1324,7 +1324,7 @@ namespace NodeWar.Core
             indicatorDirector = new NodeWar.View.IndicatorDirector(state, tickProvider, indicatorSettings,
                 opponentRouteSettings,
                 () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
-            indicatorDirector.SetNodeSlotManagers(nodeSlotManagers);
+            indicatorDirector.SetVillagerPositioners(villagerPositioners);
             indicatorDirector.SetVillagerTransforms(villagerTransforms);
             uiToolkitHud.BindIndicators(indicatorDirector);
 
@@ -1661,7 +1661,7 @@ namespace NodeWar.Core
         private void SpawnNodeViews()
         {
             nodeParent = new GameObject("NodeViews").transform;
-            nodeSlotManagers = new NodeWar.View.VillagerPositioner[state.nodes.Length];
+            villagerPositioners = new NodeWar.View.VillagerPositioner[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
             nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
             nodeOutlines = new OutlineGroup[state.nodes.Length];
@@ -1684,7 +1684,7 @@ namespace NodeWar.Core
                 if (slotManager == null)
                     slotManager = nodeGO.AddComponent<NodeWar.View.VillagerPositioner>();
                 slotManager.Initialize(i, boardConfig.nodeScale);
-                nodeSlotManagers[i] = slotManager;
+                villagerPositioners[i] = slotManager;
 
                 NodeWar.View.NodePresentation presentation = nodeGO.GetComponent<NodeWar.View.NodePresentation>();
                 if (presentation == null)
@@ -1720,11 +1720,11 @@ namespace NodeWar.Core
                     nodePresentations[i].SetHidden();
             }
 
-            selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
+            selectionSystem.SetVillagerPositioners(villagerPositioners);
             if (pathRenderer != null)
-                pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+                pathRenderer.SetVillagerPositioners(villagerPositioners);
             if (pendingOrderView != null)
-                pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
+                pendingOrderView.SetVillagerPositioners(villagerPositioners);
 
             // Lets a move issued by node ID still fire the destination
             // highlight, which the raycast path got from the hit directly.
@@ -1744,9 +1744,9 @@ namespace NodeWar.Core
             for (int p = 0; p < state.players.Length; p++)
             {
                 int core = state.players[p].coreNodeID;
-                if (core < 0 || core >= nodeSlotManagers.Length || nodeSlotManagers[core] == null) continue;
+                if (core < 0 || core >= villagerPositioners.Length || villagerPositioners[core] == null) continue;
 
-                CoreBreachBar bar = nodeSlotManagers[core].gameObject.AddComponent<CoreBreachBar>();
+                CoreBreachBar bar = villagerPositioners[core].gameObject.AddComponent<CoreBreachBar>();
                 bar.Initialize(state, p, breachCues, boardConfig.nodeScale);
             }
         }
@@ -1814,7 +1814,7 @@ namespace NodeWar.Core
             {
                 view.Initialize(state, index);
                 view.SetTickProvider(tickProvider);
-                view.SetNodeSlotManagers(nodeSlotManagers);
+                view.SetVillagerPositioners(villagerPositioners);
                 view.SetPathCurveSettings(pathCurveSettings);
                 view.SetBreachCueSettings(breachCues);
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     Round-trip tests for the loadout wire format.
@@ -73,6 +73,8 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/PlayerProfileData.cs"
+             Link="Lobby/PlayerProfileData.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutRecord.cs"
              Link="Lobby/LoadoutRecord.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutTypes.cs"

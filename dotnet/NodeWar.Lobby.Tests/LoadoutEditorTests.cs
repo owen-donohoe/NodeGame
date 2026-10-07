@@ -30,7 +30,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutEditor editor = Empty();
 
             Assert.AreEqual(LoadoutData.SuitSlots, editor.SuitSlotCount);
-            Assert.AreEqual(LoadoutData.DistrictSlots, editor.NodeSlotCount);
+            Assert.AreEqual(LoadoutData.DistrictSlots, editor.DistrictSlotCount);
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace NodeWar.Lobby.Tests
 
             Assert.AreEqual("suit_scout", editor.SuitAt(0));
             Assert.AreEqual("", editor.SuitAt(LoadoutData.SuitSlots - 1));
-            Assert.AreEqual(LoadoutData.DistrictSlots, editor.NodeSlotCount);
+            Assert.AreEqual(LoadoutData.DistrictSlots, editor.DistrictSlotCount);
         }
 
         [Test]
@@ -69,7 +69,7 @@ namespace NodeWar.Lobby.Tests
 
             Assert.AreEqual("", editor.SuitAt(-1));
             Assert.AreEqual("", editor.SuitAt(99));
-            Assert.AreEqual("", editor.NodeAt(99));
+            Assert.AreEqual("", editor.DistrictAt(99));
         }
 
         // ===== EQUIP =====
@@ -140,14 +140,14 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
 
-            Assert.AreEqual(0, editor.EquipNode("node_market"));
-            Assert.AreEqual(LoadoutEditor.NoSlot, editor.EquipNode("node_market"));
+            Assert.AreEqual(0, editor.EquipDistrict("node_market"));
+            Assert.AreEqual(LoadoutEditor.NoSlot, editor.EquipDistrict("node_market"));
 
             for (int i = 1; i < LoadoutData.DistrictSlots; i++)
-                editor.EquipNode("node_" + i);
+                editor.EquipDistrict("node_" + i);
 
-            Assert.IsTrue(editor.NodeSlotsFull);
-            Assert.AreEqual(LoadoutEditor.NoSlot, editor.EquipNode("node_shrine"));
+            Assert.IsTrue(editor.DistrictSlotsFull);
+            Assert.AreEqual(LoadoutEditor.NoSlot, editor.EquipDistrict("node_shrine"));
         }
 
         // ===== UNEQUIP =====
@@ -196,8 +196,8 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(2, cleared);
             Assert.AreEqual("", editor.SuitAt(0));
             Assert.AreEqual("suit_scout", editor.SuitAt(1));
-            Assert.AreEqual("", editor.NodeAt(0));
-            Assert.AreEqual("node_market", editor.NodeAt(1));
+            Assert.AreEqual("", editor.DistrictAt(0));
+            Assert.AreEqual("node_market", editor.DistrictAt(1));
         }
 
         [Test]
@@ -227,12 +227,12 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
             editor.EquipSuit("suit_scout");
-            editor.EquipNode("node_market");
+            editor.EquipDistrict("node_market");
 
             LoadoutEditor reloaded = new LoadoutEditor(editor.ToLoadout());
 
             Assert.AreEqual("suit_scout", reloaded.SuitAt(0));
-            Assert.AreEqual("node_market", reloaded.NodeAt(0));
+            Assert.AreEqual("node_market", reloaded.DistrictAt(0));
         }
 
         [Test]
@@ -280,17 +280,17 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
             for (int i = 0; i < LoadoutData.DistrictSlots; i++)
-                editor.EquipNode("node_" + i);
+                editor.EquipDistrict("node_" + i);
 
-            Assert.IsFalse(editor.IsNodeSideShort(99));
-            Assert.AreEqual(LoadoutData.DistrictSlots, editor.FilledNodeCount);
+            Assert.IsFalse(editor.IsDistrictSideShort(99));
+            Assert.AreEqual(LoadoutData.DistrictSlots, editor.FilledDistrictCount);
         }
 
         [Test]
         public void EmptyNodeSide_WithEnoughOwned_IsShort()
         {
-            Assert.IsTrue(Empty().IsNodeSideShort(LoadoutData.DistrictSlots));
-            Assert.AreEqual(0, Empty().FilledNodeCount);
+            Assert.IsTrue(Empty().IsDistrictSideShort(LoadoutData.DistrictSlots));
+            Assert.AreEqual(0, Empty().FilledDistrictCount);
         }
     }
 }

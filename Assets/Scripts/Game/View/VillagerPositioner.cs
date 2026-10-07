@@ -161,7 +161,7 @@ namespace NodeWar.View
             );
         }
 
-        public int WorkSlotCount => workPositions != null ? workPositions.Length : 0;
+        public int WorkPositionCount => workPositions != null ? workPositions.Length : 0;
         public int NodeID => nodeID;
     }
 }

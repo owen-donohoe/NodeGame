@@ -115,7 +115,7 @@ namespace NodeWar.Input
         /// <summary>
         /// Node views indexed by node ID, so a move issued by ID can still
         /// trigger the destination highlight. Matches the existing
-        /// SetNodeSlotManagers pattern on SelectionSystem.
+        /// SetVillagerPositioners pattern on SelectionSystem.
         /// </summary>
         public void SetNodeViews(NodeWar.View.NodeView[] views)
         {

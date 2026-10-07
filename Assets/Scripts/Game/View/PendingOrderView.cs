@@ -38,7 +38,7 @@ namespace NodeWar.View
 
         private SimulationState simState;
         private int localPlayerID;
-        private VillagerPositioner[] nodeSlotManagers;
+        private VillagerPositioner[] villagerPositioners;
         private Transform[] villagerTransforms;
         private PathCurveSettings settings = new PathCurveSettings();
         private MovementPathRenderer pathRenderer;
@@ -75,9 +75,9 @@ namespace NodeWar.View
             tracker.Clear();
         }
 
-        public void SetNodeSlotManagers(VillagerPositioner[] managers)
+        public void SetVillagerPositioners(VillagerPositioner[] managers)
         {
-            nodeSlotManagers = managers;
+            villagerPositioners = managers;
         }
 
         public void SetVillagerTransforms(Transform[] transforms)
@@ -90,7 +90,7 @@ namespace NodeWar.View
         /// </summary>
         public void OnMoveIssued(int targetNode, IReadOnlyList<int> villagerIDs)
         {
-            if (simState == null || nodeSlotManagers == null) return;
+            if (simState == null || villagerPositioners == null) return;
 
             float now = Time.unscaledTime;
 
@@ -137,7 +137,7 @@ namespace NodeWar.View
         {
             hover.Clear();
             hoverNode = node;
-            if (node < 0 || simState == null || nodeSlotManagers == null) return;
+            if (node < 0 || simState == null || villagerPositioners == null) return;
 
             for (int i = 0; i < hoverVillagers.Count; i++)
             {
@@ -223,7 +223,7 @@ namespace NodeWar.View
         /// </summary>
         private void LateUpdate()
         {
-            if (simState == null || nodeSlotManagers == null) return;
+            if (simState == null || villagerPositioners == null) return;
 
             tracker.Sweep(Time.unscaledTime, simState.villagers);
 
@@ -292,8 +292,8 @@ namespace NodeWar.View
 
             // No sprite to start from: begin at the node it stands on.
             int node = simState.villagers[villagerID].currentNodeID;
-            return node >= 0 && node < nodeSlotManagers.Length && nodeSlotManagers[node] != null
-                ? nodeSlotManagers[node].transform.position
+            return node >= 0 && node < villagerPositioners.Length && villagerPositioners[node] != null
+                ? villagerPositioners[node].transform.position
                 : Vector3.zero;
         }
 
@@ -303,8 +303,8 @@ namespace NodeWar.View
 
             for (int i = 0; i < nodes.Length; i++)
             {
-                if (nodes[i] < 0 || nodes[i] >= nodeSlotManagers.Length) return false;
-                if (nodeSlotManagers[nodes[i]] == null) return false;
+                if (nodes[i] < 0 || nodes[i] >= villagerPositioners.Length) return false;
+                if (villagerPositioners[nodes[i]] == null) return false;
             }
 
             LineRenderer line = GetLine(slot);
@@ -330,7 +330,7 @@ namespace NodeWar.View
             line.positionCount = nodes.Length + 1;
             line.SetPosition(0, AtLineHeight(VillagerPosition(order.villagerID)));
             for (int i = 0; i < nodes.Length; i++)
-                line.SetPosition(i + 1, AtLineHeight(nodeSlotManagers[nodes[i]].transform.position));
+                line.SetPosition(i + 1, AtLineHeight(villagerPositioners[nodes[i]].transform.position));
 
             return true;
         }

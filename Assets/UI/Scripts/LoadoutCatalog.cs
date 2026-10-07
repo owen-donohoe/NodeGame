@@ -23,15 +23,15 @@ namespace NodeWar.Lobby
         /// Districts no slot may hold. Only Crossroads (inventory finding 4).
         /// When DistrictType gains a Crossroads member, this array empties.
         /// </summary>
-        private static readonly string[] UnmappedNodeIDs = { "node_crossroads" };
+        private static readonly string[] UnmappedDistrictIDs = { "node_crossroads" };
 
         public SuitDefinition[] Suits { get; private set; }
-        public DistrictDefinition[] Nodes { get; private set; }
+        public DistrictDefinition[] Districts { get; private set; }
 
-        public LoadoutCatalog(SuitDefinition[] suits, DistrictDefinition[] nodes)
+        public LoadoutCatalog(SuitDefinition[] suits, DistrictDefinition[] districts)
         {
             Suits = suits != null ? suits : new SuitDefinition[0];
-            Nodes = nodes != null ? nodes : new DistrictDefinition[0];
+            Districts = districts != null ? districts : new DistrictDefinition[0];
         }
 
         public SuitDefinition FindSuit(string suitID)
@@ -42,11 +42,11 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        public DistrictDefinition FindNode(string districtID)
+        public DistrictDefinition FindDistrict(string districtID)
         {
             if (string.IsNullOrEmpty(districtID)) return null;
-            for (int i = 0; i < Nodes.Length; i++)
-                if (Nodes[i] != null && Nodes[i].districtID == districtID) return Nodes[i];
+            for (int i = 0; i < Districts.Length; i++)
+                if (Districts[i] != null && Districts[i].districtID == districtID) return Districts[i];
             return null;
         }
 
@@ -58,15 +58,15 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>Whether a slot may hold this district: it exists and the draft can use it.</summary>
-        public bool IsNodeOffered(string districtID)
+        public bool IsDistrictOffered(string districtID)
         {
-            return FindNode(districtID) != null && !IsUnmapped(districtID);
+            return FindDistrict(districtID) != null && !IsUnmapped(districtID);
         }
 
         public static bool IsUnmapped(string districtID)
         {
-            for (int i = 0; i < UnmappedNodeIDs.Length; i++)
-                if (UnmappedNodeIDs[i] == districtID) return true;
+            for (int i = 0; i < UnmappedDistrictIDs.Length; i++)
+                if (UnmappedDistrictIDs[i] == districtID) return true;
             return false;
         }
 
@@ -87,16 +87,16 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>Districts the player could put in a slot: offered and unlocked.</summary>
-        public int OwnedNodeCount()
+        public int OwnedDistrictCount()
         {
             PlayerProfile profile = PlayerProfile.Instance;
             int owned = 0;
 
-            for (int i = 0; i < Nodes.Length; i++)
+            for (int i = 0; i < Districts.Length; i++)
             {
-                DistrictDefinition node = Nodes[i];
-                if (node == null || !IsNodeOffered(node.districtID)) continue;
-                if (profile == null || profile.IsNodeUnlocked(node.districtID)) owned++;
+                DistrictDefinition node = Districts[i];
+                if (node == null || !IsDistrictOffered(node.districtID)) continue;
+                if (profile == null || profile.IsDistrictUnlocked(node.districtID)) owned++;
             }
 
             return owned;
@@ -109,9 +109,9 @@ namespace NodeWar.Lobby
             return suit != null && !string.IsNullOrEmpty(suit.displayName) ? suit.displayName : suitID;
         }
 
-        public string NodeName(string districtID)
+        public string DistrictName(string districtID)
         {
-            DistrictDefinition node = FindNode(districtID);
+            DistrictDefinition node = FindDistrict(districtID);
             return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName : districtID;
         }
 
@@ -126,7 +126,7 @@ namespace NodeWar.Lobby
         {
             PlayerProfile profile = PlayerProfile.Instance;
             LoadoutEditor loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
-            loadout.DropUnavailable(IsSuitOffered, IsNodeOffered);
+            loadout.DropUnavailable(IsSuitOffered, IsDistrictOffered);
             return loadout;
         }
     }

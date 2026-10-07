@@ -294,7 +294,7 @@ namespace NodeWar.EditorTools
         /// </summary>
         private static void AssignNodeDefinitions(SerializedObject so)
         {
-            SerializedProperty property = so.FindProperty("nodeDefinitions");
+            SerializedProperty property = so.FindProperty("districtDefinitions");
             if (property == null) return;
 
             string[] guids = AssetDatabase.FindAssets("t:DistrictDefinition",

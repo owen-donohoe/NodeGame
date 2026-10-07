@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.UIElements;
@@ -122,7 +123,7 @@ namespace NodeWar.UI
 
         [Tooltip("The lobby's NodeDefinitions, for display names. A district with " +
                  "no definition falls back to its enum name.")]
-        [SerializeField] private DistrictDefinition[] nodeDefinitions;
+        [FormerlySerializedAs("nodeDefinitions")] [SerializeField] private DistrictDefinition[] districtDefinitions;
 
         [System.Serializable]
         public struct StickerEntry
@@ -552,7 +553,7 @@ namespace NodeWar.UI
         /// </summary>
         private VisualElement BuildCard(int slotIndex, DistrictType district)
         {
-            string name = DraftPieceInfo.DisplayName(district, nodeDefinitions);
+            string name = DraftPieceInfo.DisplayName(district, districtDefinitions);
 
             VisualElement card = new VisualElement();
             card.AddToClassList("draft__card");
@@ -1160,7 +1161,7 @@ namespace NodeWar.UI
         {
             if (proxy == null) return;
 
-            string name = DraftPieceInfo.DisplayName(district, nodeDefinitions);
+            string name = DraftPieceInfo.DisplayName(district, districtDefinitions);
 
             if (proxyName != null) proxyName.text = name;
             if (proxyMonogram != null) proxyMonogram.text = DraftPieceInfo.Monogram(name);

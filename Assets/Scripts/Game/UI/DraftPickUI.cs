@@ -6,7 +6,7 @@ using NodeWar.Simulation;
 
 namespace NodeWar.UI
 {
-    public class DraftSlotUI : MonoBehaviour, IPointerDownHandler
+    public class DraftPickUI : MonoBehaviour, IPointerDownHandler
     {
         [SerializeField] private Image backgroundImage;
         [SerializeField] private Image iconImage;

@@ -77,6 +77,25 @@ namespace NodeWar.Lobby.Tests
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, BasePicks(lines, "baseDraftNodesP1", "baseDraftDistrictsP1"));
         }
 
+        // The profile file's top-level keys, frozen by every save on disk.
+        // unlockedNodeIDs holds the district unlocks; code reaches it through
+        // UnlockedDistrictIDs.
+        [Test]
+        public void ProfileFileKeys_AreFrozen()
+        {
+            string[] keys =
+            {
+                "username", "uuid", "trophies", "loadout", "unlockedSuitIDs", "unlockedNodeIDs",
+                "selectedGameModeIndex", "boxesAvailable", "boxProgress", "workshopTabIndex",
+                "accountLinkPromptShown", "settings"
+            };
+            CollectionAssert.AreEquivalent(keys, typeof(PlayerProfileData).GetFields().Select(f => f.Name));
+
+            var data = new PlayerProfileData { UnlockedDistrictIDs = new[] { "node_watchtower", "node_market" } };
+            CollectionAssert.AreEqual(new[] { "node_watchtower", "node_market" }, data.unlockedNodeIDs);
+            data.unlockedNodeIDs = new[] { "node_farm" };
+            CollectionAssert.AreEqual(new[] { "node_farm" }, data.UnlockedDistrictIDs);
+        }
         private static List<int> BasePicks(string[] lines, params string[] keys)
         {
             var picks = new List<int>();

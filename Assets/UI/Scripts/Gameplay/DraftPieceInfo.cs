@@ -7,7 +7,7 @@ namespace NodeWar.UI
     /// What a draft card says about a district: its name, its monogram, and the
     /// tint that stands in for the icon it has not got.
     ///
-    /// WHY THE NAME IS NOT A SWITCH STATEMENT HERE. DraftSlotUI hard-codes the
+    /// WHY THE NAME IS NOT A SWITCH STATEMENT HERE. DraftPickUI hard-codes the
     /// twelve names, and the brief calls that out: Camp.asset once carried the
     /// display name "Watchtower", so the lobby and the draft disagreed about
     /// what the player had picked. The DistrictDefinition assets are the lobby's

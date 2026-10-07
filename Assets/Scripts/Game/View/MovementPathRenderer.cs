@@ -37,7 +37,7 @@ namespace NodeWar.View
     {
         private SimulationState simState;
         private int localPlayerID;
-        private VillagerPositioner[] nodeSlotManagers;
+        private VillagerPositioner[] villagerPositioners;
         private NodeWar.Core.ITickProvider tickProvider;
         private Camera cam;
 
@@ -100,9 +100,9 @@ namespace NodeWar.View
             localPlayerID = id;
         }
 
-        public void SetNodeSlotManagers(VillagerPositioner[] managers)
+        public void SetVillagerPositioners(VillagerPositioner[] managers)
         {
-            nodeSlotManagers = managers;
+            villagerPositioners = managers;
         }
 
         public void SetTickProvider(NodeWar.Core.ITickProvider provider)
@@ -117,7 +117,7 @@ namespace NodeWar.View
         /// </summary>
         private void LateUpdate()
         {
-            if (simState == null || nodeSlotManagers == null) return;
+            if (simState == null || villagerPositioners == null) return;
 
             EnsureTracking();
 
@@ -189,10 +189,10 @@ namespace NodeWar.View
             if (!opponentGate.WithinHops(node, opponentSettings.withinHopsOfYou)) return false;
 
             if (cam == null) return false;
-            if (node < 0 || node >= nodeSlotManagers.Length) return false;
-            if (nodeSlotManagers[node] == null) return false;
+            if (node < 0 || node >= villagerPositioners.Length) return false;
+            if (villagerPositioners[node] == null) return false;
 
-            Vector3 viewport = cam.WorldToViewportPoint(nodeSlotManagers[node].transform.position);
+            Vector3 viewport = cam.WorldToViewportPoint(villagerPositioners[node].transform.position);
             if (viewport.z <= 0f) return false;   // behind the camera
 
             // How far outside the unit viewport box, in screen widths.
@@ -254,9 +254,9 @@ namespace NodeWar.View
             int fromNode = villager.movePath[villager.movePathIndex];
             int toNode = villager.movePath[villager.movePathIndex + 1];
 
-            if (fromNode < 0 || fromNode >= nodeSlotManagers.Length) return false;
-            if (toNode < 0 || toNode >= nodeSlotManagers.Length) return false;
-            if (nodeSlotManagers[fromNode] == null || nodeSlotManagers[toNode] == null) return false;
+            if (fromNode < 0 || fromNode >= villagerPositioners.Length) return false;
+            if (toNode < 0 || toNode >= villagerPositioners.Length) return false;
+            if (villagerPositioners[fromNode] == null || villagerPositioners[toNode] == null) return false;
 
             // Measured once here so DrawRoute can express the fade in nodes
             // rather than in the 0..1 line parameter, which would stretch and
@@ -264,8 +264,8 @@ namespace NodeWar.View
             // node spacing, not the rounded curve length -- this is only a
             // yardstick for that fade and has always meant the Euclidean
             // distance between the two centres.
-            lastNodeSpacing = (nodeSlotManagers[toNode].transform.position -
-                               nodeSlotManagers[fromNode].transform.position).magnitude;
+            lastNodeSpacing = (villagerPositioners[toNode].transform.position -
+                               villagerPositioners[fromNode].transform.position).magnitude;
 
             PathCurve.AppendRemainder(curvePoints, curveLegStarts, villager.movePathIndex, LegFraction(villager), legs, remainder);
             if (remainder.Count == 0) return false;

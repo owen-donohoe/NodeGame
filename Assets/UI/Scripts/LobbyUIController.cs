@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -68,7 +69,7 @@ namespace NodeWar.Lobby
         [SerializeField] private SuitDefinition[] allSuits;
 
         [Tooltip("All NodeDefinitions. Filled by Tools > Node War > Set Up UI Toolkit Lobby.")]
-        [SerializeField] private DistrictDefinition[] allNodes;
+        [FormerlySerializedAs("allNodes")] [SerializeField] private DistrictDefinition[] allDistricts;
 
         [Header("Links")]
         [Tooltip("Used to start Bot and Testing matches. Found automatically if left empty.")]
@@ -226,7 +227,7 @@ namespace NodeWar.Lobby
             // Shared machinery, built before any page so every page gets the same.
             // The catalog is the one answer to what the loadout may hold and what
             // the player owns - Workshop, Home and the battle sheet all ask it.
-            catalog = new LoadoutCatalog(allSuits, allNodes);
+            catalog = new LoadoutCatalog(allSuits, allDistricts);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
             accountFlow = new AccountFlow(sheet);

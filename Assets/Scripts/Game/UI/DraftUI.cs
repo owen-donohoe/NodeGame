@@ -87,8 +87,8 @@ namespace NodeWar.UI
         private DraftState draftState;
         private int localPlayerID;
 
-        private List<DraftSlotUI> slotDisplays = new List<DraftSlotUI>();
-        private DraftSlotUI activeSlotUI;
+        private List<DraftPickUI> slotDisplays = new List<DraftPickUI>();
+        private DraftPickUI activeSlotUI;
         private List<GameObject> persistentPlacements = new List<GameObject>();
         private Tween sweepTween;
         private Tween playerPanelSweepTween;
@@ -212,10 +212,10 @@ namespace NodeWar.UI
                    placementController.TryGetPendingPlacement(out slotIndex, out gridX, out gridZ);
         }
 
-        // ===== SLOT INTERACTION (called by DraftSlotUI) =====
+        // ===== SLOT INTERACTION (called by DraftPickUI) =====
 
         /// <summary>
-        /// Routes slot click to placement controller. Called by DraftSlotUI.OnPointerDown.
+        /// Routes slot click to placement controller. Called by DraftPickUI.OnPointerDown.
         /// </summary>
         public void BeginDrag(int slotIndex)
         {
@@ -258,7 +258,7 @@ namespace NodeWar.UI
                 if (slots[i].isConsumed) continue;
 
                 GameObject go = Instantiate(draftSlotPrefab, barContainer);
-                DraftSlotUI slotUI = go.GetComponent<DraftSlotUI>();
+                DraftPickUI slotUI = go.GetComponent<DraftPickUI>();
                 if (slotUI != null)
                 {
                     slotUI.Initialize(slots[i], i, this);
@@ -278,7 +278,7 @@ namespace NodeWar.UI
             slotDisplays.Clear();
         }
 
-        private DraftSlotUI FindSlotUI(int slotIndex)
+        private DraftPickUI FindSlotUI(int slotIndex)
         {
             for (int i = 0; i < slotDisplays.Count; i++)
             {
