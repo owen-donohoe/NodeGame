@@ -222,7 +222,7 @@ namespace NodeWar.UI
             if (draftState == null) return;
             if (placementController == null) return;
 
-            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 
@@ -250,7 +250,7 @@ namespace NodeWar.UI
             ClearBar();
             if (draftState == null) return;
 
-            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             bool isMyTurn = draftManager.IsLocalPlayerTurn();
 
             for (int i = 0; i < slots.Length; i++)

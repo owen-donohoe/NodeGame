@@ -55,7 +55,7 @@ namespace NodeWar.View
         private readonly System.Func<int> localPlayer;
         private readonly NodeWar.Core.ITickProvider tickProvider;
 
-        private NodeSlotManager[] nodeSlotManagers;
+        private VillagerPositioner[] nodeSlotManagers;
         private Transform[] villagerTransforms;
 
         private readonly List<ActiveIndicator> active = new List<ActiveIndicator>();
@@ -96,7 +96,7 @@ namespace NodeWar.View
             active.Clear();
         }
 
-        public void SetNodeSlotManagers(NodeSlotManager[] managers)
+        public void SetNodeSlotManagers(VillagerPositioner[] managers)
         {
             nodeSlotManagers = managers;
         }
@@ -132,7 +132,7 @@ namespace NodeWar.View
             {
                 if (nodeSlotManagers == null || indicator.nodeID >= nodeSlotManagers.Length) return false;
 
-                NodeSlotManager node = nodeSlotManagers[indicator.nodeID];
+                VillagerPositioner node = nodeSlotManagers[indicator.nodeID];
                 if (node == null) return false;
 
                 ground = node.transform.position;

@@ -122,7 +122,7 @@ namespace NodeWar.UI
 
         [Tooltip("The lobby's NodeDefinitions, for display names. A district with " +
                  "no definition falls back to its enum name.")]
-        [SerializeField] private NodeDefinition[] nodeDefinitions;
+        [SerializeField] private DistrictDefinition[] nodeDefinitions;
 
         [System.Serializable]
         public struct StickerEntry
@@ -511,7 +511,7 @@ namespace NodeWar.UI
 
             if (draftState == null) return;
 
-            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             int remaining = 0;
 
             for (int i = 0; i < slots.Length; i++)
@@ -625,7 +625,7 @@ namespace NodeWar.UI
             int slotIndex = (int)card.userData;
             if (draftState == null) return;
 
-            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 

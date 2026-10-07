@@ -35,7 +35,7 @@ namespace NodeWar.Lobby
 
         [Header("Data")]
         [SerializeField] private SuitDefinition[] allSuits;
-        [SerializeField] private NodeDefinition[] allNodes;
+        [SerializeField] private DistrictDefinition[] allNodes;
 
         [Header("Navigation")]
         [SerializeField] private Button backButton;
@@ -148,13 +148,13 @@ namespace NodeWar.Lobby
             // Build node items
             for (int i = 0; i < allNodes.Length; i++)
             {
-                NodeDefinition def = allNodes[i]; 
-                bool locked = (profile != null) ? !profile.IsNodeUnlocked(def.nodeID) : true;
+                DistrictDefinition def = allNodes[i]; 
+                bool locked = (profile != null) ? !profile.IsNodeUnlocked(def.districtID) : true;
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
                 SelectableItemDisplay display = go.GetComponent<SelectableItemDisplay>();
 
-                display.Initialize(def.nodeID, def.displayName, def.icon, locked,
+                display.Initialize(def.districtID, def.displayName, def.icon, locked,
                                     OnNodeUseClicked,
                                     (selected) => DeselectAllExcept(nodeItems, selected));
 
@@ -186,12 +186,12 @@ namespace NodeWar.Lobby
             DeselectAll(suitItems);
         }
 
-        private void OnNodeUseClicked(string nodeID)
+        private void OnNodeUseClicked(string districtID)
         {
             if (nodeSlot0.IsEmpty)
-                EquipNode(nodeSlot0, nodeID);
+                EquipNode(nodeSlot0, districtID);
             else if (nodeSlot1.IsEmpty)
-                EquipNode(nodeSlot1, nodeID);
+                EquipNode(nodeSlot1, districtID);
 
             RefreshListVisibility();
             DeselectAll(nodeItems);
@@ -202,7 +202,7 @@ namespace NodeWar.Lobby
             RefreshListVisibility();
         }
 
-        private void OnNodeUnequipped(string nodeID)
+        private void OnNodeUnequipped(string districtID)
         {
             RefreshListVisibility();
         }
@@ -214,11 +214,11 @@ namespace NodeWar.Lobby
             slot.SetItem(def.suitID, def.displayName, def.icon);
         }
 
-        private void EquipNode(GroupSlotDisplay slot, string nodeID)
+        private void EquipNode(GroupSlotDisplay slot, string districtID)
         {
-            NodeDefinition def = FindNode(nodeID);
+            DistrictDefinition def = FindNode(districtID);
             if (def == null) return;
-            slot.SetItem(def.nodeID, def.displayName, def.icon);
+            slot.SetItem(def.districtID, def.displayName, def.icon);
         }
 
         // ===== VISIBILITY =====
@@ -277,11 +277,11 @@ namespace NodeWar.Lobby
                     EquipSuit(suitSlots[i], loadout.suitIDs[i]);
             }
 
-            int nodeCount = Mathf.Min(nodeSlots.Length, loadout.nodeIDs.Length);
+            int nodeCount = Mathf.Min(nodeSlots.Length, loadout.districtIDs.Length);
             for (int i = 0; i < nodeCount; i++)
             {
-                if (!string.IsNullOrEmpty(loadout.nodeIDs[i]))
-                    EquipNode(nodeSlots[i], loadout.nodeIDs[i]);
+                if (!string.IsNullOrEmpty(loadout.districtIDs[i]))
+                    EquipNode(nodeSlots[i], loadout.districtIDs[i]);
             }
         }
 
@@ -296,13 +296,13 @@ namespace NodeWar.Lobby
             LoadoutData loadout = new LoadoutData
             {
                 suitIDs = new string[suitSlots.Length],
-                nodeIDs = new string[nodeSlots.Length]
+                districtIDs = new string[nodeSlots.Length]
             };
 
             for (int i = 0; i < suitSlots.Length; i++)
                 loadout.suitIDs[i] = suitSlots[i].EquippedID ?? "";
             for (int i = 0; i < nodeSlots.Length; i++)
-                loadout.nodeIDs[i] = nodeSlots[i].EquippedID ?? "";
+                loadout.districtIDs[i] = nodeSlots[i].EquippedID ?? "";
 
             // SetLoadout normalizes, so a mismatch between the number of slot
             // displays wired in the scene and LoadoutData's slot counts is
@@ -336,11 +336,11 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        private NodeDefinition FindNode(string nodeID)
+        private DistrictDefinition FindNode(string districtID)
         {
             for (int i = 0; i < allNodes.Length; i++)
             {
-                if (allNodes[i].nodeID == nodeID) return allNodes[i];
+                if (allNodes[i].districtID == districtID) return allNodes[i];
             }
             return null;
         }

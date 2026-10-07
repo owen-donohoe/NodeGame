@@ -31,10 +31,10 @@ namespace NodeWar.Lobby
             return SuitType.None;
         }
 
-        public static DistrictType DistrictForLobbyId(string nodeID)
+        public static DistrictType DistrictForLobbyId(string districtID)
         {
-            if (nodeID == null) return DistrictType.None;
-            string lower = nodeID.ToLowerInvariant();
+            if (districtID == null) return DistrictType.None;
+            string lower = districtID.ToLowerInvariant();
 
             if (lower.Contains("farm")) return DistrictType.Farm;
             if (lower.Contains("mine")) return DistrictType.Mine;

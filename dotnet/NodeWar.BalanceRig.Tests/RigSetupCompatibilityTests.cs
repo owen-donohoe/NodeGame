@@ -27,13 +27,20 @@ namespace NodeWar.BalanceRig
             + "  nodeScale: 6\n"
             + "  baseDraftNodesP0:\n  - districtType: 1\n  baseDraftNodesP1:\n  - districtType: 2\n";
 
-        [Test]
-        public void LegacyBoardKeys_ReadIdentically()
+        // The same board once Unity has re-saved it with the renamed keys.
+        private static readonly string RenamedBoard = LegacyBoard
+            .Replace("defaultEdgeWeight", "defaultLinkWeight")
+            .Replace("baseDraftNodesP0", "baseDraftDistrictsP0")
+            .Replace("baseDraftNodesP1", "baseDraftDistrictsP1");
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LegacyBoardKeys_ReadIdentically(bool renamedKeys)
         {
             string path = Path.Combine(Path.GetTempPath(), "rig-legacy-board-" + System.Guid.NewGuid() + ".asset");
             try
             {
-                File.WriteAllText(path, LegacyBoard);
+                File.WriteAllText(path, renamedKeys ? RenamedBoard : LegacyBoard);
                 var setup = new RigSetup();
                 RigSetupLoader.LoadBoard(path, setup);
 

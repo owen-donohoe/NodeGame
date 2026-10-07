@@ -24,12 +24,12 @@ namespace NodeWar.Config
         [Header("Draft Configuration")]
         public float draftTurnDuration = 15f;
         public int maxConsecutiveTimeouts = 2;
-        public DraftNodeEntry[] baseDraftNodesP0;
-        public DraftNodeEntry[] baseDraftNodesP1;
+        [FormerlySerializedAs("baseDraftNodesP0")] public DraftDistrictEntry[] baseDraftDistrictsP0;
+        [FormerlySerializedAs("baseDraftNodesP1")] public DraftDistrictEntry[] baseDraftDistrictsP1;
 
         [Header("Bot Draft Loadout")]
         [Tooltip("Additional nodes added to the bot player's draft pool beyond the base draft nodes.")]
-        public DraftNodeEntry[] botLoadoutNodes;
+        [FormerlySerializedAs("botLoadoutNodes")] public DraftDistrictEntry[] botLoadoutDistricts;
 
         /// <summary>
         /// What Unity stores under <c>data:</c> in the asset. Simulation owns
@@ -97,7 +97,7 @@ namespace NodeWar.Config
         }
 
         [System.Serializable]
-        public struct DraftNodeEntry
+        public struct DraftDistrictEntry
         {
             public DistrictType districtType;
         }

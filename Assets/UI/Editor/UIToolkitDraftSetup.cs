@@ -287,7 +287,7 @@ namespace NodeWar.EditorTools
         }
 
         /// <summary>
-        /// Every NodeDefinition in the lobby's data folder, so a card's name is
+        /// Every DistrictDefinition in the lobby's data folder, so a card's name is
         /// the name the lobby showed. Four districts have no definition - Farm,
         /// Mine, Village and Forge are base draft nodes no loadout slot can hold
         /// - and DraftPieceInfo falls back to the enum name for those.
@@ -297,15 +297,15 @@ namespace NodeWar.EditorTools
             SerializedProperty property = so.FindProperty("nodeDefinitions");
             if (property == null) return;
 
-            string[] guids = AssetDatabase.FindAssets("t:NodeDefinition",
+            string[] guids = AssetDatabase.FindAssets("t:DistrictDefinition",
                 new[] { NodeDefinitionFolder });
 
-            List<NodeDefinition> found = new List<NodeDefinition>();
+            List<DistrictDefinition> found = new List<DistrictDefinition>();
 
             for (int i = 0; i < guids.Length; i++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                NodeDefinition definition = AssetDatabase.LoadAssetAtPath<NodeDefinition>(path);
+                DistrictDefinition definition = AssetDatabase.LoadAssetAtPath<DistrictDefinition>(path);
                 if (definition != null) found.Add(definition);
             }
 

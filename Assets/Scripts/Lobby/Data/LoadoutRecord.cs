@@ -23,7 +23,7 @@ namespace NodeWar.Lobby
             return new LoadoutRecord
             {
                 suitIDs = loadout.suitIDs,
-                nodeIDs = loadout.nodeIDs,
+                nodeIDs = loadout.districtIDs,
                 suitEras = loadout.suitEras,
                 districtEras = loadout.districtEras,
                 skinIDs = loadout.skinIDs
@@ -35,7 +35,7 @@ namespace NodeWar.Lobby
             return new LoadoutData
             {
                 suitIDs = suitIDs,
-                nodeIDs = nodeIDs,
+                districtIDs = nodeIDs,
                 suitEras = suitEras,
                 districtEras = districtEras,
                 skinIDs = skinIDs

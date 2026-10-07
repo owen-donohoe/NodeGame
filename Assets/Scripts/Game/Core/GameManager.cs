@@ -125,7 +125,7 @@ namespace NodeWar.Core
         private CommandSystem commandSystem;
 
         // View references
-        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] nodeSlotManagers;
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
 
@@ -1472,7 +1472,7 @@ namespace NodeWar.Core
                 setups[p] = new PlayerSetup
                 {
                     suits = BuildDraftedSuits(p, loadout),
-                    districts = BuildDraftedNodes(p, loadout),
+                    districts = BuildDraftedDistricts(p, loadout),
                     suitEras = own.suitEras,
                     districtEras = own.districtEras
                 };
@@ -1552,7 +1552,7 @@ namespace NodeWar.Core
             return suits.ToArray();
         }
 
-        private int[] BuildDraftedNodes(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
+        private int[] BuildDraftedDistricts(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
         {
             List<int> nodes = new List<int>();
 
@@ -1573,8 +1573,8 @@ namespace NodeWar.Core
             }
 
             playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
-            for (int i = 0; i < playerLoadout.nodeIDs.Length; i++)
-                AddNodeFromID(nodes, playerLoadout.nodeIDs[i]);
+            for (int i = 0; i < playerLoadout.districtIDs.Length; i++)
+                AddNodeFromID(nodes, playerLoadout.districtIDs[i]);
 
             return nodes.ToArray();
         }
@@ -1593,10 +1593,10 @@ namespace NodeWar.Core
             suits.Add(intType);
         }
 
-        private void AddNodeFromID(List<int> nodes, string nodeID)
+        private void AddNodeFromID(List<int> nodes, string districtID)
         {
-            if (string.IsNullOrEmpty(nodeID)) return;
-            DistrictType type = DraftManager.MapNodeIDToDistrict(nodeID);
+            if (string.IsNullOrEmpty(districtID)) return;
+            DistrictType type = DraftManager.MapDistrictID(districtID);
             if (type == DistrictType.None) return;
             int intType = (int)type;
             for (int i = 0; i < nodes.Count; i++)
@@ -1661,7 +1661,7 @@ namespace NodeWar.Core
         private void SpawnNodeViews()
         {
             nodeParent = new GameObject("NodeViews").transform;
-            nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
+            nodeSlotManagers = new NodeWar.View.VillagerPositioner[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
             nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
             nodeOutlines = new OutlineGroup[state.nodes.Length];
@@ -1680,9 +1680,9 @@ namespace NodeWar.Core
                     view.Initialize(state, i, balance.Data.claimThreshold);
                 nodeViews[i] = view;
 
-                NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
+                NodeWar.View.VillagerPositioner slotManager = nodeGO.GetComponent<NodeWar.View.VillagerPositioner>();
                 if (slotManager == null)
-                    slotManager = nodeGO.AddComponent<NodeWar.View.NodeSlotManager>();
+                    slotManager = nodeGO.AddComponent<NodeWar.View.VillagerPositioner>();
                 slotManager.Initialize(i, boardConfig.nodeScale);
                 nodeSlotManagers[i] = slotManager;
 

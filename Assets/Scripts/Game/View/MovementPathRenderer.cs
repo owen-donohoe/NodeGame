@@ -37,7 +37,7 @@ namespace NodeWar.View
     {
         private SimulationState simState;
         private int localPlayerID;
-        private NodeSlotManager[] nodeSlotManagers;
+        private VillagerPositioner[] nodeSlotManagers;
         private NodeWar.Core.ITickProvider tickProvider;
         private Camera cam;
 
@@ -100,7 +100,7 @@ namespace NodeWar.View
             localPlayerID = id;
         }
 
-        public void SetNodeSlotManagers(NodeSlotManager[] managers)
+        public void SetNodeSlotManagers(VillagerPositioner[] managers)
         {
             nodeSlotManagers = managers;
         }

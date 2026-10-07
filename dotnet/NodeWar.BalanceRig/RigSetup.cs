@@ -48,6 +48,8 @@ namespace NodeWar.BalanceRig
         /// <summary>The v2 export (breach bar, tempo, sudden death), the newest in Balances/ by commit.</summary>
         public const string DefaultBalanceFile = "1832066265.json";
 
+        // Unity rewrites these keys only on the asset's next save, so both spellings are read:
+        // defaultEdgeWeight and baseDraftNodesP0/P1 are the legacy ones.
         private const string LegacyLinkWeightKey = "defaultEdgeWeight";
         private const string BoardAssetPath = "Assets/Data/Game/Board/DefaultBoardConfig.asset";
         private const string BalancesDir = "dotnet/NodeWarCloud/NodeWarCloud/Balances";
@@ -190,7 +192,8 @@ namespace NodeWar.BalanceRig
                     if (haveCurrent) { placements.Add(current); haveCurrent = false; }
                     inData = line == "data:";
                     inPlacements = false;
-                    list = line.StartsWith("baseDraftNodesP0:") ? 0 : line.StartsWith("baseDraftNodesP1:") ? 1 : -1;
+                    list = line.StartsWith("baseDraftNodesP0:") || line.StartsWith("baseDraftDistrictsP0:") ? 0
+                        : line.StartsWith("baseDraftNodesP1:") || line.StartsWith("baseDraftDistrictsP1:") ? 1 : -1;
                     continue;
                 }
 

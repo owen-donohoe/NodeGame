@@ -212,8 +212,8 @@ namespace NodeWar.Core
             if (draftUI != null) draftUI.ShowWaiting(false);
 
             // Both loadouts are now known - rebuild slots with full information
-            draftState.player0Slots = BuildPlayerSlots(0);
-            draftState.player1Slots = BuildPlayerSlots(1);
+            draftState.player0Picks = BuildPlayerPicks(0);
+            draftState.player1Picks = BuildPlayerPicks(1);
 
             if (draftUI != null)
                 draftUI.ShowInitialReveal(boardConfig.Data.initialPlacements);
@@ -293,7 +293,7 @@ namespace NodeWar.Core
             if (!IsLocalPlayerTurn()) return;
             if (!draftState.IsCellAvailable(gridX, gridZ)) return;
 
-            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 
@@ -313,7 +313,7 @@ namespace NodeWar.Core
                 return;
             }
 
-            DraftPick[] slots = draftState.GetPlayerSlots(activePlayer);
+            DraftPick[] slots = draftState.GetPlayerPicks(activePlayer);
             DistrictType district = slots[slotIndex].districtType;
 
             int gridX, gridZ;
@@ -381,7 +381,7 @@ namespace NodeWar.Core
             int slotIndex = draftState.GetFirstUnconsumedSlotIndex(botPlayer);
             if (slotIndex < 0) { AdvanceTurn(); return; }
 
-            DraftPick[] slots = draftState.GetPlayerSlots(botPlayer);
+            DraftPick[] slots = draftState.GetPlayerPicks(botPlayer);
 
             // Find bot's core position for proximity heuristic
             int coreX = -1, coreZ = -1;
@@ -447,9 +447,9 @@ namespace NodeWar.Core
 
             // Consume the used slot
             if (playerID == 0)
-                draftState.player0Slots[slotIndex].isConsumed = true;
+                draftState.player0Picks[slotIndex].isConsumed = true;
             else
-                draftState.player1Slots[slotIndex].isConsumed = true;
+                draftState.player1Picks[slotIndex].isConsumed = true;
 
             if (wasTimeout)
             {
@@ -644,7 +644,7 @@ namespace NodeWar.Core
             if (playerID != draftState.currentTurnPlayerID) return;
 
             // Find first unconsumed slot matching the district type
-            DraftPick[] slots = draftState.GetPlayerSlots(playerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(playerID);
             int slotIndex = -1;
             for (int i = 0; i < slots.Length; i++)
             {
@@ -785,13 +785,13 @@ namespace NodeWar.Core
 
         // ===== SLOT BUILDING =====
 
-        private DraftPick[] BuildPlayerSlots(int playerID)
+        private DraftPick[] BuildPlayerPicks(int playerID)
         {
             List<DraftPick> slots = new List<DraftPick>();
 
-            DraftNodeEntry[] baseNodes = (playerID == 0)
-                ? boardConfig.baseDraftNodesP0
-                : boardConfig.baseDraftNodesP1;
+            DraftDistrictEntry[] baseNodes = (playerID == 0)
+                ? boardConfig.baseDraftDistrictsP0
+                : boardConfig.baseDraftDistrictsP1;
 
             if (baseNodes != null)
             {
@@ -815,14 +815,14 @@ namespace NodeWar.Core
             if (isBotMatch && playerID != localPlayerID)
             {
                 // Bot player: use nodes configured directly in BoardConfig
-                if (boardConfig.botLoadoutNodes != null)
+                if (boardConfig.botLoadoutDistricts != null)
                 {
-                    for (int i = 0; i < boardConfig.botLoadoutNodes.Length; i++)
+                    for (int i = 0; i < boardConfig.botLoadoutDistricts.Length; i++)
                     {
-                        if (boardConfig.botLoadoutNodes[i].districtType == DistrictType.None) continue;
+                        if (boardConfig.botLoadoutDistricts[i].districtType == DistrictType.None) continue;
                         slots.Add(new DraftPick
                         {
-                            districtType = boardConfig.botLoadoutNodes[i].districtType,
+                            districtType = boardConfig.botLoadoutDistricts[i].districtType,
                             isConsumed = false,
                             isFromLoadout = true
                         });
@@ -835,8 +835,8 @@ namespace NodeWar.Core
                 NodeWar.Lobby.LoadoutData loadout =
                     NodeWar.Lobby.LoadoutData.Normalized(GetLoadoutForPlayer(playerID));
 
-                for (int i = 0; i < loadout.nodeIDs.Length; i++)
-                    AddLoadoutNode(slots, loadout.nodeIDs[i]);
+                for (int i = 0; i < loadout.districtIDs.Length; i++)
+                    AddLoadoutNode(slots, loadout.districtIDs[i]);
             }
 
             return slots.ToArray();
@@ -850,11 +850,11 @@ namespace NodeWar.Core
                 return remoteLoadout;
         }
 
-        private void AddLoadoutNode(List<DraftPick> slots, string nodeID)
+        private void AddLoadoutNode(List<DraftPick> slots, string districtID)
         {
-            if (string.IsNullOrEmpty(nodeID)) return;
+            if (string.IsNullOrEmpty(districtID)) return;
 
-            DistrictType type = MapNodeIDToDistrict(nodeID);
+            DistrictType type = MapDistrictID(districtID);
             if (type == DistrictType.None) return;
 
             slots.Add(new DraftPick
@@ -866,12 +866,12 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Convention: nodeID format is "node_[lowercase district name]".
+        /// Convention: districtID format is "node_[lowercase district name]".
         /// Informal string matching — a registry would be more robust long-term.
         /// </summary>
-        internal static DistrictType MapNodeIDToDistrict(string nodeID)
+        internal static DistrictType MapDistrictID(string districtID)
         {
-            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(nodeID);
+            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(districtID);
         }
 
         // ===== PUBLIC API FOR UI =====

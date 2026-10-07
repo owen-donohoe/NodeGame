@@ -47,7 +47,7 @@ namespace NodeWar.View
         private Transform gfxTransform;
 
         private NodeWar.Core.ITickProvider tickProvider;
-        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] nodeSlotManagers;
 
         public void Initialize(SimulationState state, int id)
         {
@@ -74,7 +74,7 @@ namespace NodeWar.View
             tickProvider = provider;
         }
 
-        public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
+        public void SetNodeSlotManagers(NodeWar.View.VillagerPositioner[] managers)
         {
             nodeSlotManagers = managers;
         }
@@ -324,7 +324,7 @@ namespace NodeWar.View
             }
             else if (nodeSlotManagers != null && villager.currentNodeID < nodeSlotManagers.Length)
             {
-                NodeSlotManager slotManager = nodeSlotManagers[villager.currentNodeID];
+                VillagerPositioner slotManager = nodeSlotManagers[villager.currentNodeID];
 
                 switch (villager.state)
                 {

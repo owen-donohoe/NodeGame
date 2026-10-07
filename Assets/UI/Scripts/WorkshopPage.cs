@@ -22,7 +22,7 @@ namespace NodeWar.Lobby
     ///
     /// The rules are unchanged from the previous Workshop, and still not
     /// decided here:
-    ///   - slot counts come from LoadoutData.NodeSlots and SuitSlots, and what
+    ///   - slot counts come from LoadoutData.DistrictSlots and SuitSlots, and what
     ///     may occupy a slot lives in LoadoutEditor, which has no UnityEngine
     ///     reference and is covered by dotnet/NodeWar.Lobby.Tests;
     ///   - every change is saved at once through PlayerProfile.SetLoadout - a
@@ -217,18 +217,18 @@ namespace NodeWar.Lobby
         private void CollectItems()
         {
             // The catalog never hands back a null array.
-            NodeDefinition[] allNodes = catalog.Nodes;
+            DistrictDefinition[] allNodes = catalog.Nodes;
             for (int i = 0; i < allNodes.Length; i++)
             {
-                NodeDefinition node = allNodes[i];
-                if (node == null || string.IsNullOrEmpty(node.nodeID)) continue;
-                if (!catalog.IsNodeOffered(node.nodeID)) continue;
+                DistrictDefinition node = allNodes[i];
+                if (node == null || string.IsNullOrEmpty(node.districtID)) continue;
+                if (!catalog.IsNodeOffered(node.districtID)) continue;
 
-                ItemFamily.Family family = ItemFamily.ForNode(node.nodeID);
+                ItemFamily.Family family = ItemFamily.ForNode(node.districtID);
                 districts.Add(new Item
                 {
-                    ID = node.nodeID,
-                    Name = catalog.NodeName(node.nodeID),
+                    ID = node.districtID,
+                    Name = catalog.NodeName(node.districtID),
                     Description = node.description,
                     Note = ItemFamily.NoteFor(family),
                     Family = family

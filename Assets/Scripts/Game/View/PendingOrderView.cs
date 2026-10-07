@@ -38,7 +38,7 @@ namespace NodeWar.View
 
         private SimulationState simState;
         private int localPlayerID;
-        private NodeSlotManager[] nodeSlotManagers;
+        private VillagerPositioner[] nodeSlotManagers;
         private Transform[] villagerTransforms;
         private PathCurveSettings settings = new PathCurveSettings();
         private MovementPathRenderer pathRenderer;
@@ -75,7 +75,7 @@ namespace NodeWar.View
             tracker.Clear();
         }
 
-        public void SetNodeSlotManagers(NodeSlotManager[] managers)
+        public void SetNodeSlotManagers(VillagerPositioner[] managers)
         {
             nodeSlotManagers = managers;
         }

@@ -12,7 +12,7 @@ namespace NodeWar.Lobby
     /// expresses the same rules across five [SerializeField] slot displays and a
     /// visibility pass, where they cannot be tested at all.
     ///
-    /// Slot counts come from LoadoutData.SuitSlots / NodeSlots, so answering the
+    /// Slot counts come from LoadoutData.SuitSlots / DistrictSlots, so answering the
     /// open 2-vs-3 balance question stays an edit to those constants.
     /// </summary>
     public class LoadoutEditor
@@ -21,7 +21,7 @@ namespace NodeWar.Lobby
         public const int NoSlot = -1;
 
         private readonly string[] suitIDs;
-        private readonly string[] nodeIDs;
+        private readonly string[] districtIDs;
 
         /// <summary>
         /// Starts from an existing loadout, normalised - so a `default` struct,
@@ -32,17 +32,17 @@ namespace NodeWar.Lobby
         {
             LoadoutData normalized = LoadoutData.Normalized(source);
             suitIDs = normalized.suitIDs;
-            nodeIDs = normalized.nodeIDs;
+            districtIDs = normalized.districtIDs;
         }
 
         public int SuitSlotCount { get { return suitIDs.Length; } }
-        public int NodeSlotCount { get { return nodeIDs.Length; } }
+        public int NodeSlotCount { get { return districtIDs.Length; } }
 
         public bool SuitSlotsFull { get { return FirstEmptySuitSlot() == NoSlot; } }
         public bool NodeSlotsFull { get { return FirstEmptyNodeSlot() == NoSlot; } }
 
         public int FilledSuitCount { get { return CountFilled(suitIDs); } }
-        public int FilledNodeCount { get { return CountFilled(nodeIDs); } }
+        public int FilledNodeCount { get { return CountFilled(districtIDs); } }
 
         /// <summary>
         /// Whether the suit side is short: a slot is empty although the player
@@ -60,7 +60,7 @@ namespace NodeWar.Lobby
         /// <param name="ownedNodes">Districts the player could put in a slot: unlocked, and ones the draft can use.</param>
         public bool IsNodeSideShort(int ownedNodes)
         {
-            return IsShort(nodeIDs, ownedNodes);
+            return IsShort(districtIDs, ownedNodes);
         }
 
         /// <summary>The ID in a suit slot, or "" when empty. Out of range gives "".</summary>
@@ -71,7 +71,7 @@ namespace NodeWar.Lobby
 
         public string NodeAt(int slot)
         {
-            return InRange(nodeIDs, slot) ? nodeIDs[slot] : "";
+            return InRange(districtIDs, slot) ? districtIDs[slot] : "";
         }
 
         public bool IsSuitEquipped(string suitID)
@@ -79,9 +79,9 @@ namespace NodeWar.Lobby
             return IndexOf(suitIDs, suitID) != NoSlot;
         }
 
-        public bool IsNodeEquipped(string nodeID)
+        public bool IsNodeEquipped(string districtID)
         {
-            return IndexOf(nodeIDs, nodeID) != NoSlot;
+            return IndexOf(districtIDs, districtID) != NoSlot;
         }
 
         public int FirstEmptySuitSlot()
@@ -91,7 +91,7 @@ namespace NodeWar.Lobby
 
         public int FirstEmptyNodeSlot()
         {
-            return FirstEmpty(nodeIDs);
+            return FirstEmpty(districtIDs);
         }
 
         /// <summary>
@@ -110,9 +110,9 @@ namespace NodeWar.Lobby
             return Equip(suitIDs, suitID);
         }
 
-        public int EquipNode(string nodeID)
+        public int EquipNode(string districtID)
         {
-            return Equip(nodeIDs, nodeID);
+            return Equip(districtIDs, districtID);
         }
 
         /// <summary>Empties a suit slot. Returns what was in it, or "".</summary>
@@ -123,7 +123,7 @@ namespace NodeWar.Lobby
 
         public string ClearNodeSlot(int slot)
         {
-            return Clear(nodeIDs, slot);
+            return Clear(districtIDs, slot);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace NodeWar.Lobby
         /// that the list has no row for. Both cases exist today: a profile can
         /// hold suit_warrior, which every player is granted regardless
         /// (GameManager.BuildDraftedSuits), and node_crossroads, which
-        /// MapNodeIDToDistrict discards (inventory findings 8 and 4). Either is
+        /// MapDistrictID discards (inventory findings 8 and 4). Either is
         /// a slot already producing nothing; clearing it hands the slot back.
         /// </summary>
         public int DropUnavailable(System.Func<string, bool> suitOffered,
@@ -145,7 +145,7 @@ namespace NodeWar.Lobby
             int cleared = 0;
 
             cleared += DropFrom(suitIDs, suitOffered);
-            cleared += DropFrom(nodeIDs, nodeOffered);
+            cleared += DropFrom(districtIDs, nodeOffered);
 
             return cleared;
         }
@@ -159,7 +159,7 @@ namespace NodeWar.Lobby
             return LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = (string[])suitIDs.Clone(),
-                nodeIDs = (string[])nodeIDs.Clone()
+                districtIDs = (string[])districtIDs.Clone()
             });
         }
 

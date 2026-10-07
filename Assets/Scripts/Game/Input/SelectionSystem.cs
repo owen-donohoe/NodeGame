@@ -26,7 +26,7 @@ namespace NodeWar.Input
 
         private LayerMask villagerLayer;
         private Transform[] villagerTransforms;
-        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] nodeSlotManagers;
 
         public void Initialize(SimulationState state, int playerID)
         {
@@ -47,7 +47,7 @@ namespace NodeWar.Input
             villagerTransforms = transforms;
         }
 
-        public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
+        public void SetNodeSlotManagers(NodeWar.View.VillagerPositioner[] managers)
         {
             nodeSlotManagers = managers;
         }

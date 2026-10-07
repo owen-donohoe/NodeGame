@@ -170,8 +170,8 @@ namespace NodeWar.Lobby
         public bool IsSuitUnlocked(string suitID) =>
             AllContentUnlocked || ContainsUnlockedID(data.unlockedSuitIDs, suitID);
 
-        public bool IsNodeUnlocked(string nodeID) =>
-            AllContentUnlocked || ContainsUnlockedID(data.unlockedNodeIDs, nodeID);
+        public bool IsNodeUnlocked(string districtID) =>
+            AllContentUnlocked || ContainsUnlockedID(data.unlockedNodeIDs, districtID);
 
         private static bool ContainsUnlockedID(string[] unlockedIDs, string contentID)
         {

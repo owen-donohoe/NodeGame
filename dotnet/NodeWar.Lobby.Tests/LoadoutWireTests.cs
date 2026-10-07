@@ -8,7 +8,7 @@ namespace NodeWar.Lobby.Tests
     /// <summary>
     /// The loadout wire format: LoadoutData through DraftSerializer and back.
     ///
-    /// Every expectation derives from LoadoutData.SuitSlots and NodeSlots rather
+    /// Every expectation derives from LoadoutData.SuitSlots and DistrictSlots rather
     /// than hardcoding 3 and 2. That is the whole point of the array-backed
     /// shape - how many suits and districts a player brings is an open balance
     /// question, and moving it must not require editing a serializer, a save
@@ -19,7 +19,7 @@ namespace NodeWar.Lobby.Tests
     public class LoadoutWireTests
     {
         private static int S => LoadoutData.SuitSlots;
-        private static int N => LoadoutData.NodeSlots;
+        private static int N => LoadoutData.DistrictSlots;
 
         /// <summary>An array of `length` slots: `head` entries first, then empty strings.</summary>
         private static string[] Slots(int length, params string[] head)
@@ -45,7 +45,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData result = LoadoutData.Normalized(new LoadoutData());
 
             Assert.AreEqual(Slots(S), result.suitIDs);
-            Assert.AreEqual(Slots(N), result.nodeIDs);
+            Assert.AreEqual(Slots(N), result.districtIDs);
         }
 
         [Test]
@@ -54,9 +54,9 @@ namespace NodeWar.Lobby.Tests
             LoadoutData result = LoadoutData.CreateEmpty();
 
             Assert.AreEqual(S, result.suitIDs.Length);
-            Assert.AreEqual(N, result.nodeIDs.Length);
+            Assert.AreEqual(N, result.districtIDs.Length);
             Assert.IsTrue(result.suitIDs.All(s => s == ""));
-            Assert.IsTrue(result.nodeIDs.All(s => s == ""));
+            Assert.IsTrue(result.districtIDs.All(s => s == ""));
         }
 
         [Test]
@@ -65,11 +65,11 @@ namespace NodeWar.Lobby.Tests
             LoadoutData result = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = new[] { "suit_scout" },
-                nodeIDs = new string[0]
+                districtIDs = new string[0]
             });
 
             Assert.AreEqual(Slots(S, "suit_scout"), result.suitIDs);
-            Assert.AreEqual(Slots(N), result.nodeIDs);
+            Assert.AreEqual(Slots(N), result.districtIDs);
         }
 
         [Test]
@@ -81,11 +81,11 @@ namespace NodeWar.Lobby.Tests
             LoadoutData result = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = tooManySuits,
-                nodeIDs = tooManyNodes
+                districtIDs = tooManyNodes
             });
 
             Assert.AreEqual(tooManySuits.Take(S).ToArray(), result.suitIDs);
-            Assert.AreEqual(tooManyNodes.Take(N).ToArray(), result.nodeIDs);
+            Assert.AreEqual(tooManyNodes.Take(N).ToArray(), result.districtIDs);
         }
 
         [Test]
@@ -94,11 +94,11 @@ namespace NodeWar.Lobby.Tests
             LoadoutData result = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = new string[S],
-                nodeIDs = new string[N]
+                districtIDs = new string[N]
             });
 
             Assert.IsTrue(result.suitIDs.All(s => s == ""));
-            Assert.IsTrue(result.nodeIDs.All(s => s == ""));
+            Assert.IsTrue(result.districtIDs.All(s => s == ""));
         }
 
         [Test]
@@ -107,7 +107,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData source = new LoadoutData
             {
                 suitIDs = Slots(S, "a"),
-                nodeIDs = Slots(N, "x")
+                districtIDs = Slots(N, "x")
             };
 
             LoadoutData copy = LoadoutData.Normalized(source);
@@ -128,13 +128,13 @@ namespace NodeWar.Lobby.Tests
             LoadoutData original = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Enumerable.Range(0, S).Select(i => suitPool[i % suitPool.Length]).ToArray(),
-                nodeIDs = Enumerable.Range(0, N).Select(i => nodePool[i % nodePool.Length]).ToArray()
+                districtIDs = Enumerable.Range(0, N).Select(i => nodePool[i % nodePool.Length]).ToArray()
             });
 
             LoadoutData decoded = RoundTrip(original, 1);
 
             Assert.AreEqual(original.suitIDs, decoded.suitIDs);
-            Assert.AreEqual(original.nodeIDs, decoded.nodeIDs);
+            Assert.AreEqual(original.districtIDs, decoded.districtIDs);
         }
 
         [TestCase(0)]
@@ -156,7 +156,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData decoded = RoundTrip(LoadoutData.CreateEmpty(), 0);
 
             Assert.AreEqual(Slots(S), decoded.suitIDs);
-            Assert.AreEqual(Slots(N), decoded.nodeIDs);
+            Assert.AreEqual(Slots(N), decoded.districtIDs);
         }
 
         /// <summary>
@@ -170,7 +170,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData decoded = RoundTrip(new LoadoutData(), 0);
 
             Assert.AreEqual(Slots(S), decoded.suitIDs);
-            Assert.AreEqual(Slots(N), decoded.nodeIDs);
+            Assert.AreEqual(Slots(N), decoded.districtIDs);
         }
 
         [Test]
@@ -179,14 +179,14 @@ namespace NodeWar.Lobby.Tests
             LoadoutData partial = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Slots(S, "suit_medic"),
-                nodeIDs = Slots(N)
+                districtIDs = Slots(N)
             });
-            partial.nodeIDs[N - 1] = "node_shrine";
+            partial.districtIDs[N - 1] = "node_shrine";
 
             LoadoutData decoded = RoundTrip(partial, 1);
 
             Assert.AreEqual(partial.suitIDs, decoded.suitIDs);
-            Assert.AreEqual(partial.nodeIDs, decoded.nodeIDs);
+            Assert.AreEqual(partial.districtIDs, decoded.districtIDs);
         }
 
         // ===== Byte layout =====
@@ -202,7 +202,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData loadout = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Slots(S, "ab"),
-                nodeIDs = Slots(N, "de")
+                districtIDs = Slots(N, "de")
             });
 
             byte[] packet = DraftSerializer.SerializeDraftLoadout(7, loadout);
@@ -240,7 +240,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData loadout = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Slots(S, "ab"),
-                nodeIDs = Slots(N, "de")
+                districtIDs = Slots(N, "de")
             });
 
             byte[] packet = DraftSerializer.SerializeDraftLoadout(0, loadout);
@@ -265,14 +265,14 @@ namespace NodeWar.Lobby.Tests
             LoadoutData big = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Slots(S, new string('x', 400), "suit_scout"),
-                nodeIDs = Slots(N, "node_camp")
+                districtIDs = Slots(N, "node_camp")
             });
 
             LoadoutData decoded = RoundTrip(big, 0);
 
             Assert.AreEqual(255, decoded.suitIDs[0].Length);
             if (S > 1) Assert.AreEqual("suit_scout", decoded.suitIDs[1]);
-            Assert.AreEqual("node_camp", decoded.nodeIDs[0]);
+            Assert.AreEqual("node_camp", decoded.districtIDs[0]);
         }
 
         [Test]
@@ -281,13 +281,13 @@ namespace NodeWar.Lobby.Tests
             LoadoutData utf8 = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Slots(S, "suit_éè", "日本語"),
-                nodeIDs = Slots(N, "node_ü")
+                districtIDs = Slots(N, "node_ü")
             });
 
             LoadoutData decoded = RoundTrip(utf8, 0);
 
             Assert.AreEqual(utf8.suitIDs, decoded.suitIDs);
-            Assert.AreEqual(utf8.nodeIDs, decoded.nodeIDs);
+            Assert.AreEqual(utf8.districtIDs, decoded.districtIDs);
         }
     }
 }

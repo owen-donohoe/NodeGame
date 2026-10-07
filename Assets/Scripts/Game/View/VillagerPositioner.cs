@@ -5,11 +5,12 @@ using System.Collections.Generic;
 namespace NodeWar.View
 {
     /// <summary>
-    /// Manages positional slots for villagers on a node.
-    /// Finds child transforms named "WorkSlot_X", "IdleCenter", "ClaimCenter".
+    /// Manages the positions villagers take on a district: work, idle, claim and fight.
+    /// Finds child transforms named "WorkSlot_X" (the prefabs' own spelling, see
+    /// <see cref="WorkPositionNames"/>), "IdleCenter", "ClaimCenter".
     /// If children aren't found, generates fallback positions based on node scale.
     /// </summary>
-    public class NodeSlotManager : MonoBehaviour
+    public class VillagerPositioner : MonoBehaviour
     {
         [Header("Spacing")]
         [SerializeField] private float idleRadius = 1.5f;
@@ -18,7 +19,7 @@ namespace NodeWar.View
         //[SerializeField] private float villagerY = 0.1f;
         private float villagerY = 0.0f;//this is set in the villager node 3 times. 
 
-        private Transform[] workSlots;
+        private Transform[] workPositions;
         private Transform idleCenter;
         private Transform claimCenter;
 
@@ -50,7 +51,7 @@ namespace NodeWar.View
                 else if (allChildren[i].name == WorkPositionNames.ClaimCenter)
                     claimCenter = allChildren[i];
             }
-            workSlots = slots.ToArray();
+            workPositions = slots.ToArray();
 
             // Fallback: create default positions if not found in prefab
             if (idleCenter == null)
@@ -72,7 +73,7 @@ namespace NodeWar.View
                 claimCenter = go.transform;
             }
 
-            if (workSlots.Length == 0)
+            if (workPositions.Length == 0)
             {
                 Debug.LogWarning("No Work Slots, creating...");
 
@@ -89,7 +90,7 @@ namespace NodeWar.View
                     );
                     defaultSlots.Add(go.transform);
                 }
-                workSlots = defaultSlots.ToArray();
+                workPositions = defaultSlots.ToArray();
             }
         }
 
@@ -99,8 +100,8 @@ namespace NodeWar.View
         /// </summary>
         public Vector3 GetWorkPosition(int slotIndex)
         {
-            if (workSlots != null && slotIndex < workSlots.Length)
-                return workSlots[slotIndex].position + new Vector3(0f, villagerY, 0f);
+            if (workPositions != null && slotIndex < workPositions.Length)
+                return workPositions[slotIndex].position + new Vector3(0f, villagerY, 0f);
             return transform.position + new Vector3(0f, villagerY, 0f);
         }
 
@@ -160,7 +161,7 @@ namespace NodeWar.View
             );
         }
 
-        public int WorkSlotCount => workSlots != null ? workSlots.Length : 0;
+        public int WorkSlotCount => workPositions != null ? workPositions.Length : 0;
         public int NodeID => nodeID;
     }
 }

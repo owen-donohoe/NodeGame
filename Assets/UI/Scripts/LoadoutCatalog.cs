@@ -26,12 +26,12 @@ namespace NodeWar.Lobby
         private static readonly string[] UnmappedNodeIDs = { "node_crossroads" };
 
         public SuitDefinition[] Suits { get; private set; }
-        public NodeDefinition[] Nodes { get; private set; }
+        public DistrictDefinition[] Nodes { get; private set; }
 
-        public LoadoutCatalog(SuitDefinition[] suits, NodeDefinition[] nodes)
+        public LoadoutCatalog(SuitDefinition[] suits, DistrictDefinition[] nodes)
         {
             Suits = suits != null ? suits : new SuitDefinition[0];
-            Nodes = nodes != null ? nodes : new NodeDefinition[0];
+            Nodes = nodes != null ? nodes : new DistrictDefinition[0];
         }
 
         public SuitDefinition FindSuit(string suitID)
@@ -42,11 +42,11 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        public NodeDefinition FindNode(string nodeID)
+        public DistrictDefinition FindNode(string districtID)
         {
-            if (string.IsNullOrEmpty(nodeID)) return null;
+            if (string.IsNullOrEmpty(districtID)) return null;
             for (int i = 0; i < Nodes.Length; i++)
-                if (Nodes[i] != null && Nodes[i].nodeID == nodeID) return Nodes[i];
+                if (Nodes[i] != null && Nodes[i].districtID == districtID) return Nodes[i];
             return null;
         }
 
@@ -58,15 +58,15 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>Whether a slot may hold this district: it exists and the draft can use it.</summary>
-        public bool IsNodeOffered(string nodeID)
+        public bool IsNodeOffered(string districtID)
         {
-            return FindNode(nodeID) != null && !IsUnmapped(nodeID);
+            return FindNode(districtID) != null && !IsUnmapped(districtID);
         }
 
-        public static bool IsUnmapped(string nodeID)
+        public static bool IsUnmapped(string districtID)
         {
             for (int i = 0; i < UnmappedNodeIDs.Length; i++)
-                if (UnmappedNodeIDs[i] == nodeID) return true;
+                if (UnmappedNodeIDs[i] == districtID) return true;
             return false;
         }
 
@@ -94,9 +94,9 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < Nodes.Length; i++)
             {
-                NodeDefinition node = Nodes[i];
-                if (node == null || !IsNodeOffered(node.nodeID)) continue;
-                if (profile == null || profile.IsNodeUnlocked(node.nodeID)) owned++;
+                DistrictDefinition node = Nodes[i];
+                if (node == null || !IsNodeOffered(node.districtID)) continue;
+                if (profile == null || profile.IsNodeUnlocked(node.districtID)) owned++;
             }
 
             return owned;
@@ -109,10 +109,10 @@ namespace NodeWar.Lobby
             return suit != null && !string.IsNullOrEmpty(suit.displayName) ? suit.displayName : suitID;
         }
 
-        public string NodeName(string nodeID)
+        public string NodeName(string districtID)
         {
-            NodeDefinition node = FindNode(nodeID);
-            return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName : nodeID;
+            DistrictDefinition node = FindNode(districtID);
+            return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName : districtID;
         }
 
         /// <summary>

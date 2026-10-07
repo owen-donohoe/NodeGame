@@ -38,8 +38,8 @@ namespace NodeWar.Simulation
         public int currentTurnPlayerID;
         public int turnNumber;
 
-        public DraftPick[] player0Slots;
-        public DraftPick[] player1Slots;
+        public DraftPick[] player0Picks;
+        public DraftPick[] player1Picks;
 
         public List<DraftPlacement> confirmedPlacements;
 
@@ -95,9 +95,9 @@ namespace NodeWar.Simulation
         /// <summary>
         /// Returns the slots array for the specified player.
         /// </summary>
-        public DraftPick[] GetPlayerSlots(int playerID)
+        public DraftPick[] GetPlayerPicks(int playerID)
         {
-            return playerID == 0 ? player0Slots : player1Slots;
+            return playerID == 0 ? player0Picks : player1Picks;
         }
 
         /// <summary>
@@ -105,7 +105,7 @@ namespace NodeWar.Simulation
         /// </summary>
         public bool PlayerHasRemainingNodes(int playerID)
         {
-            DraftPick[] slots = GetPlayerSlots(playerID);
+            DraftPick[] slots = GetPlayerPicks(playerID);
             for (int i = 0; i < slots.Length; i++)
                 if (!slots[i].isConsumed) return true;
             return false;
@@ -163,7 +163,7 @@ namespace NodeWar.Simulation
         /// </summary>
         public int GetFirstUnconsumedSlotIndex(int playerID)
         {
-            DraftPick[] slots = GetPlayerSlots(playerID);
+            DraftPick[] slots = GetPlayerPicks(playerID);
             for (int i = 0; i < slots.Length; i++)
                 if (!slots[i].isConsumed) return i;
             return -1;

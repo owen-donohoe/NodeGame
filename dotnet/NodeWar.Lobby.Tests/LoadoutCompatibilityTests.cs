@@ -22,7 +22,7 @@ namespace NodeWar.Lobby.Tests
             return new LoadoutData
             {
                 suitIDs = new[] { "suit_warrior", "suit_guardian", "suit_scout" },
-                nodeIDs = new[] { "node_crossroads", "node_market" },
+                districtIDs = new[] { "node_crossroads", "node_market" },
                 suitEras = new[] { 0, 1, 0, 2, 0, 0, 0, 0 },
                 districtEras = new[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1 },
                 skinIDs = new[] { "skin.suit.warrior.default", "skin.district.farm.gilded" }
@@ -36,7 +36,7 @@ namespace NodeWar.Lobby.Tests
 
             LoadoutData normalized = LoadoutData.Normalized(legacy);
             CollectionAssert.AreEqual(legacy.suitIDs, normalized.suitIDs);
-            CollectionAssert.AreEqual(legacy.nodeIDs, normalized.nodeIDs, "No truncated or reordered district choice.");
+            CollectionAssert.AreEqual(legacy.districtIDs, normalized.districtIDs, "No truncated or reordered district choice.");
             CollectionAssert.AreEqual(legacy.districtEras, normalized.districtEras);
             CollectionAssert.AreEqual(legacy.skinIDs, normalized.skinIDs);
 
@@ -45,7 +45,7 @@ namespace NodeWar.Lobby.Tests
             DraftSerializer.DeserializeDraftLoadout(packet, out int player, out LoadoutData decoded);
             Assert.AreEqual(1, player);
             CollectionAssert.AreEqual(normalized.suitIDs, decoded.suitIDs);
-            CollectionAssert.AreEqual(normalized.nodeIDs, decoded.nodeIDs);
+            CollectionAssert.AreEqual(normalized.districtIDs, decoded.districtIDs);
             CollectionAssert.AreEqual(normalized.suitEras, decoded.suitEras);
             CollectionAssert.AreEqual(normalized.districtEras, decoded.districtEras);
             CollectionAssert.AreEqual(normalized.skinIDs, decoded.skinIDs);
@@ -55,7 +55,7 @@ namespace NodeWar.Lobby.Tests
             CollectionAssert.AreEquivalent(PersistedKeys, typeof(LoadoutRecord).GetFields().Select(f => f.Name));
             LoadoutData back = record.ToLoadout();
             CollectionAssert.AreEqual(normalized.suitIDs, back.suitIDs);
-            CollectionAssert.AreEqual(normalized.nodeIDs, back.nodeIDs);
+            CollectionAssert.AreEqual(normalized.districtIDs, back.districtIDs);
             CollectionAssert.AreEqual(normalized.suitEras, back.suitEras);
             CollectionAssert.AreEqual(normalized.districtEras, back.districtEras);
             CollectionAssert.AreEqual(normalized.skinIDs, back.skinIDs);
@@ -64,10 +64,10 @@ namespace NodeWar.Lobby.Tests
         [Test]
         public void DeckCounts_Unchanged()
         {
-            Assert.AreEqual(2, LoadoutData.NodeSlots);
+            Assert.AreEqual(2, LoadoutData.DistrictSlots);
             Assert.AreEqual(3, LoadoutData.SuitSlots);
             LoadoutData empty = LoadoutData.CreateEmpty();
-            Assert.AreEqual(2, empty.nodeIDs.Length);
+            Assert.AreEqual(2, empty.districtIDs.Length);
             Assert.AreEqual(3, empty.suitIDs.Length);
 
             // The board's base picks, read from the asset as Unity wrote it

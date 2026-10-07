@@ -68,7 +68,7 @@ namespace NodeWar.Lobby
         [SerializeField] private SuitDefinition[] allSuits;
 
         [Tooltip("All NodeDefinitions. Filled by Tools > Node War > Set Up UI Toolkit Lobby.")]
-        [SerializeField] private NodeDefinition[] allNodes;
+        [SerializeField] private DistrictDefinition[] allNodes;
 
         [Header("Links")]
         [Tooltip("Used to start Bot and Testing matches. Found automatically if left empty.")]

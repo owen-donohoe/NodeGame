@@ -30,7 +30,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutEditor editor = Empty();
 
             Assert.AreEqual(LoadoutData.SuitSlots, editor.SuitSlotCount);
-            Assert.AreEqual(LoadoutData.NodeSlots, editor.NodeSlotCount);
+            Assert.AreEqual(LoadoutData.DistrictSlots, editor.NodeSlotCount);
         }
 
         [Test]
@@ -52,14 +52,14 @@ namespace NodeWar.Lobby.Tests
             LoadoutData legacy = new LoadoutData
             {
                 suitIDs = new[] { "suit_scout" },
-                nodeIDs = new string[0]
+                districtIDs = new string[0]
             };
 
             LoadoutEditor editor = new LoadoutEditor(legacy);
 
             Assert.AreEqual("suit_scout", editor.SuitAt(0));
             Assert.AreEqual("", editor.SuitAt(LoadoutData.SuitSlots - 1));
-            Assert.AreEqual(LoadoutData.NodeSlots, editor.NodeSlotCount);
+            Assert.AreEqual(LoadoutData.DistrictSlots, editor.NodeSlotCount);
         }
 
         [Test]
@@ -143,7 +143,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(0, editor.EquipNode("node_market"));
             Assert.AreEqual(LoadoutEditor.NoSlot, editor.EquipNode("node_market"));
 
-            for (int i = 1; i < LoadoutData.NodeSlots; i++)
+            for (int i = 1; i < LoadoutData.DistrictSlots; i++)
                 editor.EquipNode("node_" + i);
 
             Assert.IsTrue(editor.NodeSlotsFull);
@@ -182,7 +182,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData saved = new LoadoutData
             {
                 suitIDs = new[] { "suit_warrior", "suit_scout", "" },
-                nodeIDs = new[] { "node_crossroads", "node_market" }
+                districtIDs = new[] { "node_crossroads", "node_market" }
             };
 
             LoadoutEditor editor = new LoadoutEditor(saved);
@@ -279,17 +279,17 @@ namespace NodeWar.Lobby.Tests
         public void FullSide_IsNeverShort()
         {
             LoadoutEditor editor = Empty();
-            for (int i = 0; i < LoadoutData.NodeSlots; i++)
+            for (int i = 0; i < LoadoutData.DistrictSlots; i++)
                 editor.EquipNode("node_" + i);
 
             Assert.IsFalse(editor.IsNodeSideShort(99));
-            Assert.AreEqual(LoadoutData.NodeSlots, editor.FilledNodeCount);
+            Assert.AreEqual(LoadoutData.DistrictSlots, editor.FilledNodeCount);
         }
 
         [Test]
         public void EmptyNodeSide_WithEnoughOwned_IsShort()
         {
-            Assert.IsTrue(Empty().IsNodeSideShort(LoadoutData.NodeSlots));
+            Assert.IsTrue(Empty().IsNodeSideShort(LoadoutData.DistrictSlots));
             Assert.AreEqual(0, Empty().FilledNodeCount);
         }
     }

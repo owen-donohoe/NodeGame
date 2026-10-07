@@ -62,7 +62,7 @@ namespace NodeWar.Network
         /// each (there are six); skins are catalog IDs, cosmetic only.
         ///
         /// Variable length. String IDs are length-prefixed UTF8, and each array
-        /// is count-prefixed, so changing LoadoutData.SuitSlots or NodeSlots
+        /// is count-prefixed, so changing LoadoutData.SuitSlots or DistrictSlots
         /// does not change this format. Both peers still have to be on the same
         /// build — a count mismatch is a build mismatch, which desyncs anyway.
         ///
@@ -77,7 +77,7 @@ namespace NodeWar.Network
             loadout = NodeWar.Lobby.LoadoutData.Normalized(loadout);
 
             byte[][] suitBytes = EncodeAll(loadout.suitIDs);
-            byte[][] nodeBytes = EncodeAll(loadout.nodeIDs);
+            byte[][] nodeBytes = EncodeAll(loadout.districtIDs);
             byte[][] skinBytes = EncodeAll(Capped(loadout.skinIDs));
 
             int size = 1 + 4                        // type, playerID
@@ -110,7 +110,7 @@ namespace NodeWar.Network
             loadout = new NodeWar.Lobby.LoadoutData
             {
                 suitIDs = ReadStringArray(data, ref offset),
-                nodeIDs = ReadStringArray(data, ref offset),
+                districtIDs = ReadStringArray(data, ref offset),
                 suitEras = ReadEras(data, ref offset),
                 districtEras = ReadEras(data, ref offset),
                 skinIDs = offset < data.Length ? ReadStringArray(data, ref offset) : null

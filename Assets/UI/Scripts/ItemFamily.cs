@@ -8,7 +8,7 @@ namespace NodeWar.Lobby
     ///
     /// No definition asset carries a family yet, so this is a table keyed by
     /// item ID, following the prototype's assignments where the names match.
-    /// TODO(data): move the family onto NodeDefinition when the district data is
+    /// TODO(data): move the family onto DistrictDefinition when the district data is
     /// next revised; this class then reads the field and the table goes.
     ///
     /// No UnityEngine reference, like LoadoutEditor and ItemTint, so the test

@@ -27,7 +27,7 @@ namespace NodeWar.Lobby
 
         private readonly Label victoryBadge;
         private readonly VisualElement boxMeterFill;
-        private readonly VisualElement[] nodeChips = new VisualElement[LoadoutData.NodeSlots];
+        private readonly VisualElement[] nodeChips = new VisualElement[LoadoutData.DistrictSlots];
         private readonly VisualElement[] suitChips = new VisualElement[LoadoutData.SuitSlots];
         private readonly VisualElement villager;
         private IVisualElementScheduledItem bob;
