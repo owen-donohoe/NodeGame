@@ -417,12 +417,12 @@ namespace NodeWar.Tests
             Install();
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             Ticks(state, 100);
-            Assert.AreEqual(17457352, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(411123996, SimulationStateHasher.ComputeHash(state));
             state = TestBoardFactory.BuildThreeNodeBoard(balance);
             for (int p = 0; p < 2; p++) CommandProcessor.ProcessCommand(state,
                 new GameCommand { type = CommandType.Move, playerID = p, villagerID = p, targetNodeID = 1 });
             Ticks(state, 4);
-            Assert.AreEqual(626950565, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(2101726457, SimulationStateHasher.ComputeHash(state));
         }
 
         [Test]

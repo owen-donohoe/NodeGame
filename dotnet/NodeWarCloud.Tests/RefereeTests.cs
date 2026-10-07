@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NodeWar.MatchLog;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 using NUnit.Framework;
 using Log = NodeWar.MatchLog.MatchLog;
 
@@ -44,8 +45,8 @@ namespace NodeWar.Cloud.Tests
         {
             GameBalanceData balance = GameBalanceData.Default();
             Log log = Record(balance, 300, state => state.tickCount == 3
-                ? new[] { Move(0, 0, 21), Move(3, 1, 6) } : null);
-            log.ticks[0].commands[0].targetNodeID = 17;
+                ? new[] { Move(0, 0, 3), Move(3, 1, 5) } : null);
+            log.ticks[0].commands[0].targetNodeID = 4;
             RefereeVerdict verdict = new Referee(Catalog(balance)).Verify(MatchLogFormat.Write(log));
             Assert.That(verdict.ok, Is.False);
             Assert.That(verdict.firstMismatchTick, Is.EqualTo(50));
@@ -253,10 +254,10 @@ namespace NodeWar.Cloud.Tests
         internal static Log Record(GameBalanceData balance, int maxTicks, Func<SimulationState, GameCommand[]> script,
             BoardConfigData? boardOverride = null)
         {
-            BoardConfigData board = boardOverride ?? BoardConfigData.Default();
+            BoardConfigData board = boardOverride ?? BoardFixtures.LandGrid3x3();
             DraftPlacement[] draft =
             {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 5 },
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
                 new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
             };
             PlayerLoadout[] loadouts =
@@ -297,12 +298,12 @@ namespace NodeWar.Cloud.Tests
 
         private static BoardConfigData PatrolBoard()
         {
-            BoardConfigData board = BoardConfigData.Default();
+            BoardConfigData board = BoardFixtures.LandGrid3x3();
             board.initialPlacements = board.initialPlacements.Concat(new[]
             {
-                new BoardConfigData.InitialDistrictPlacement { gridX = 0, gridZ = 5, districtType = DistrictType.Forge,
+                new BoardConfigData.InitialDistrictPlacement { gridX = 0, gridZ = 2, districtType = DistrictType.Forge,
                     ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialDistrictPlacement { gridX = 3, gridZ = 1, districtType = DistrictType.Forge,
+                new BoardConfigData.InitialDistrictPlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Forge,
                     ownerID = 1, claimBar = -10000 }
             }).ToArray();
             return board;
@@ -312,19 +313,19 @@ namespace NodeWar.Cloud.Tests
         {
             if (state.tickCount % 20 != 0) return null;
             bool outward = state.tickCount % 40 == 0;
-            var commands = new List<GameCommand> { Move(0, 0, outward ? 20 : 23), Move(3, 1, outward ? 7 : 4) };
+            var commands = new List<GameCommand> { Move(0, 0, outward ? 6 : 8), Move(3, 1, outward ? 2 : 0) };
             if (state.tickCount % 100 == 0)
             {
                 int allocation = state.tickCount / 100 % 3;
-                commands.Add(new GameCommand { type = CommandType.SetAllocation, playerID = 0, targetNodeID = 20, value = allocation });
-                commands.Add(new GameCommand { type = CommandType.SetAllocation, playerID = 1, targetNodeID = 7, value = allocation });
+                commands.Add(new GameCommand { type = CommandType.SetAllocation, playerID = 0, targetNodeID = 6, value = allocation });
+                commands.Add(new GameCommand { type = CommandType.SetAllocation, playerID = 1, targetNodeID = 2, value = allocation });
             }
             return commands.ToArray();
         }
 
         internal static GameCommand[] Rush(SimulationState state)
         {
-            if (state.tickCount == 0) return new[] { Move(3, 1, 3), Move(4, 1, 3), Move(5, 1, 3) };
+            if (state.tickCount == 0) return new[] { Move(3, 1, 0), Move(4, 1, 0), Move(5, 1, 0) };
             if (state.tickCount % 20 != 0) return null;
             var commands = new List<GameCommand>();
             for (int i = 0; i < state.villagers.Length; i++)

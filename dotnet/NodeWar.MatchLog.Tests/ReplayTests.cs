@@ -66,7 +66,7 @@ namespace NodeWar.MatchLog
 
         private static BoardConfigData ReplayConfig()
         {
-            BoardConfigData config = BoardConfigData.Default();
+            BoardConfigData config = BoardFixtures.LandGrid(2, 2);
             config.gridCols = 2; config.gridRows = 2; config.defaultLinkWeight = 1;
             config.startingVillagersPerPlayer = 1;
             config.initialPlacements = new[]

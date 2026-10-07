@@ -22,6 +22,7 @@ namespace NodeWar.Tests
         public static SimulationState BuildThreeNodeBoard(GameBalanceData balance)
         {
             SimulationState state = new SimulationState();
+            state.boardHash = 0; // a tiny hand-built fixture has no board identity
 
             state.nodes = new NodeData[]
             {
@@ -37,6 +38,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 10000, // fully owned by player 0 (GameManager's +/-10000 core convention)
                     ownerID = 0,
                     bonusVillagersOnClaim = 0,
@@ -55,6 +57,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.None, // neutral connector node
                     baseDistrictType = DistrictType.None,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
                     bonusVillagersOnClaim = 0,
@@ -72,6 +75,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = -10000, // fully owned by player 1
                     ownerID = 1,
                     bonusVillagersOnClaim = 0,
@@ -81,7 +85,7 @@ namespace NodeWar.Tests
 
             state.players = new PlayerData[]
             {
-                // Starting resources match BoardConfigData.Default() (0/0/0) --
+                // Starting resources are the shipped board's (0/0/0) --
                 // GameBalanceData itself defines no starting-resource fields.
                 new PlayerData { playerID = 0, coreNodeID = 0, food = 0, materials = 0, metal = 0, breachCount = 0 },
                 new PlayerData { playerID = 1, coreNodeID = 2, food = 0, materials = 0, metal = 0, breachCount = 0 }
@@ -116,6 +120,7 @@ namespace NodeWar.Tests
         public static SimulationState BuildSquareBoard(GameBalanceData balance)
         {
             SimulationState state = new SimulationState();
+            state.boardHash = 0; // a tiny hand-built fixture has no board identity
 
             state.nodes = new NodeData[]
             {
@@ -132,6 +137,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 10000, // fully owned by player 0
                     ownerID = 0,
                     bonusVillagersOnClaim = 0,
@@ -150,6 +156,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
                     bonusVillagersOnClaim = 0,
@@ -168,6 +175,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
                     bonusVillagersOnClaim = 0,
@@ -186,6 +194,7 @@ namespace NodeWar.Tests
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = -10000, // fully owned by player 1
                     ownerID = 1,
                     bonusVillagersOnClaim = 0,

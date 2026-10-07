@@ -20,7 +20,8 @@ namespace NodeWar.Cloud.Tests
             Enum.GetValues(typeof(SuitType)).Cast<SuitType>().Where(s => s != SuitType.None)
                 .Select(s => CatalogIds.SuitBase(s.ToString()))
                 .Concat(Enum.GetValues(typeof(DistrictType)).Cast<DistrictType>()
-                    .Where(d => d != DistrictType.None && d != DistrictType.Core)
+                    // Pier (14) has no catalog base or lobby key yet: it joins them with the C5 roster.
+                    .Where(d => d != DistrictType.None && d != DistrictType.Core && d != DistrictType.Pier)
                     .Select(d => CatalogIds.DistrictBase(d.ToString())));
 
         [Test]

@@ -21,6 +21,9 @@
     <Compile Include="ReplayTests.cs" />
     <Compile Include="MatchReplayTests.cs" />
     <Compile Include="MatchLogErasTests.cs" />
+    <Compile Include="TerrainLogTests.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/Tests/BoardFixtures.cs"
+             Link="Tests/BoardFixtures.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/TestBoardFactory.cs"
              Link="Tests/TestBoardFactory.cs" />
   </ItemGroup>

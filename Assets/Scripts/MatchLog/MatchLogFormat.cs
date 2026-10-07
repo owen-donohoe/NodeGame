@@ -22,6 +22,10 @@ namespace NodeWar.MatchLog
         internal const ushort ResultTag = 7;
         internal const ushort ErasTag = 8;
         internal const ushort SkinsTag = 9;
+        internal const ushort BoardV2Tag = 10;
+
+        /// <summary>First simulation version whose boards carry terrain and so use BOARD_V2.</summary>
+        private const ushort BoardV2FromSim = 3;
         private const int BytesPerCommand = 24;
 
         public static byte[] Write(MatchLog log)
@@ -63,7 +67,23 @@ namespace NodeWar.MatchLog
                     payload.I32(p.gridX); payload.I32(p.gridZ); payload.I32((int)p.districtType);
                     payload.I32(p.ownerID); payload.I32(p.claimBar);
                 }
-            file.Chunk(BoardTag, payload);
+            if (h.sim >= BoardV2FromSim)
+            {
+                // BOARD_V2 appends what a terrain board is: the cell grid, the slot
+                // mask and both base draft pools. Tag 2 keeps its layout for history.
+                long cells = (long)b.gridCols * b.gridRows;
+                if (b.terrain == null || b.terrain.Length != cells ||
+                    b.districtSlots == null || b.districtSlots.Length != cells)
+                    throw new ArgumentException("BOARD_V2 needs terrain and a slot flag for every cell.", nameof(log));
+                payload.I32(b.terrain.Length);
+                foreach (TerrainType t in b.terrain) payload.U8((byte)t);
+                payload.I32(b.districtSlots.Length);
+                foreach (bool slot in b.districtSlots) payload.U8(slot ? (byte)1 : (byte)0);
+                WritePool(payload, b.baseDraftDistrictsP0);
+                WritePool(payload, b.baseDraftDistrictsP1);
+                file.Chunk(BoardV2Tag, payload);
+            }
+            else file.Chunk(BoardTag, payload);
 
             payload = new Writer();
             for (int i = 0; i < 2; i++)
@@ -174,15 +194,18 @@ namespace NodeWar.MatchLog
                     uint length = unchecked((uint)file.I32());
                     if (length > (uint)file.Remaining) throw new FormatException("Chunk payload is truncated.");
                     Reader payload = file.Slice((int)length);
-                    if (tag < HeaderTag || tag > SkinsTag) continue;
+                    if (tag < HeaderTag || tag > BoardV2Tag) continue;
                     int bit = 1 << tag;
                     if ((seen & bit) != 0) throw new FormatException("Duplicate known chunk.");
                     seen |= bit;
                     ReadChunk(tag, payload, parsed);
                     if (payload.Remaining != 0) throw new FormatException("Trailing bytes in known chunk.");
                 }
-                const int required = (1 << HeaderTag) | (1 << BoardTag) | (1 << LoadoutsTag) | (1 << TicksTag);
+                const int required = (1 << HeaderTag) | (1 << LoadoutsTag) | (1 << TicksTag);
                 if ((seen & required) != required) throw new FormatException("Missing required chunk.");
+                const int boards = (1 << BoardTag) | (1 << BoardV2Tag);
+                if ((seen & boards) == 0) throw new FormatException("Missing required chunk.");
+                if ((seen & boards) == boards) throw new FormatException("Conflicting BOARD chunks.");
                 log = parsed;
                 return true;
             }
@@ -214,6 +237,7 @@ namespace NodeWar.MatchLog
                     if (!ValidKind(log.header.kind)) throw new FormatException("Invalid match kind.");
                     break;
                 case BoardTag:
+                case BoardV2Tag:
                     BoardConfigData b = new BoardConfigData
                     {
                         gridCols = r.I32(), gridRows = r.I32(), defaultLinkWeight = r.I32(),
@@ -230,6 +254,28 @@ namespace NodeWar.MatchLog
                             gridX = r.I32(), gridZ = r.I32(), districtType = (DistrictType)r.I32(),
                             ownerID = r.I32(), claimBar = r.I32()
                         };
+                    if (tag == BoardV2Tag)
+                    {
+                        long cells = (long)b.gridCols * b.gridRows;
+                        b.terrain = new TerrainType[r.Count(1)];
+                        if (b.terrain.Length != cells) throw new FormatException("Terrain does not cover the grid.");
+                        for (int i = 0; i < b.terrain.Length; i++)
+                        {
+                            byte t = r.U8();
+                            if (t > (byte)TerrainType.Ocean) throw new FormatException("Invalid terrain.");
+                            b.terrain[i] = (TerrainType)t;
+                        }
+                        b.districtSlots = new bool[r.Count(1)];
+                        if (b.districtSlots.Length != cells) throw new FormatException("Slots do not cover the grid.");
+                        for (int i = 0; i < b.districtSlots.Length; i++)
+                        {
+                            byte s = r.U8();
+                            if (s > 1) throw new FormatException("Invalid slot flag.");
+                            b.districtSlots[i] = s == 1;
+                        }
+                        b.baseDraftDistrictsP0 = ReadPool(r);
+                        b.baseDraftDistrictsP1 = ReadPool(r);
+                    }
                     log.board = b;
                     break;
                 case LoadoutsTag:
@@ -309,6 +355,20 @@ namespace NodeWar.MatchLog
             if (log.loadouts == null) log.loadouts = new PlayerLoadout[2];
             if (log.loadouts[player] == null) log.loadouts[player] = new PlayerLoadout();
             return log.loadouts[player];
+        }
+
+        private static void WritePool(Writer payload, DistrictType[] pool)
+        {
+            payload.I32(pool?.Length ?? 0);
+            if (pool != null)
+                foreach (DistrictType d in pool) payload.I32((int)d);
+        }
+
+        private static DistrictType[] ReadPool(Reader r)
+        {
+            DistrictType[] pool = new DistrictType[r.Count(4)];
+            for (int i = 0; i < pool.Length; i++) pool[i] = (DistrictType)r.I32();
+            return pool;
         }
 
         private static bool Any(PlayerLoadout[] loadouts, Func<PlayerLoadout, bool> test)

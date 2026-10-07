@@ -260,7 +260,8 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `SimulationVersion.Current`, and a content hash,
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
 
-The current simulation version and baseline pin are **2**. With a valid
+The current simulation version and baseline pin are **3** (v3 added terrain and a
+board fingerprint to the hashed state and re-pinned both baselines). With a valid
 breach channel enabled, a loss requires a breach this tick at or above
 `BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
 threshold alone never loses a match. Disabling the channel retains

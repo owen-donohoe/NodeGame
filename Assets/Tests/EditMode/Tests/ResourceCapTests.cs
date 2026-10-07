@@ -7,7 +7,7 @@ namespace NodeWar.Tests
     {
         private static SimulationState Worker(GameBalanceData balance, DistrictType district)
         {
-            MatchFactory.Configure(balance, BoardConfigData.Default());
+            MatchFactory.Configure(balance, BoardFixtures.LandGrid3x3());
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             state.nodes[1].districtType = state.nodes[1].baseDistrictType = district;
             state.nodes[1].ownerID = 0;
@@ -121,7 +121,7 @@ namespace NodeWar.Tests
         {
             var b = GameBalanceData.Default();
             b.foodCap = foodCap; b.materialsCap = materialsCap; b.metalCap = metalCap;
-            var board = BoardConfigData.Default();
+            var board = BoardFixtures.LandGrid3x3();
             board.startingFood = board.startingMaterials = board.startingMetal = 100;
             var state = MatchFactory.Build(b, board, null, null);
             for (int p = 0; p < 2; p++)

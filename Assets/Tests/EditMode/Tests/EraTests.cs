@@ -202,16 +202,16 @@ namespace NodeWar.Tests
             };
             DraftPlacement[] draft =
             {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Village, gridX = 0, gridZ = 3 },
-                new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 3, gridZ = 3 }
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Village, gridX = 0, gridZ = 1 },
+                new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
             };
 
-            SimulationState state = MatchFactory.Build(balance, BoardConfigData.Default(), draft, players);
+            SimulationState state = MatchFactory.Build(balance, BoardFixtures.LandGrid3x3(), draft, players);
 
-            Assert.AreEqual(1, state.nodes[12].districtEra);
-            Assert.AreEqual(5, state.nodes[12].bonusVillagersOnClaim);
-            Assert.AreEqual(0, state.nodes[15].districtEra);
-            Assert.AreEqual(2, state.nodes[15].bonusVillagersOnClaim);
+            Assert.AreEqual(1, state.nodes[3].districtEra);
+            Assert.AreEqual(5, state.nodes[3].bonusVillagersOnClaim);
+            Assert.AreEqual(0, state.nodes[5].districtEra);
+            Assert.AreEqual(2, state.nodes[5].bonusVillagersOnClaim);
             Assert.AreEqual(eras, state.players[0].districtEras);
         }
 

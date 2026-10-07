@@ -83,8 +83,8 @@ each, edge weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `17457352` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `626950565` |
+| `EmptyTick` | 100 | none | `411123996` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `2101726457` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -96,7 +96,7 @@ villager crosses one edge at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ti
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 2`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 3`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
 
@@ -107,6 +107,15 @@ do not move these fingerprints. Adding eras had needed no bump; the breach/tempo
 did. Version-1 logs are refused by version-2 replay even when their era-0 hashes would match.
 The separate `BalanceHasher` covers balance data, including the new schedules, breach tuning
 and caps; these are state fingerprints, not balance fingerprints.
+
+**v3 re-pin (terrain board, B4).** `SimulationState.boardHash` (after `defaultLinkWeight`) and
+`NodeData.terrain` (after `baseDistrictType`) are hashed unconditionally, and the version went 2 → 3.
+The three-node fixtures hold `boardHash = 0` and `Land` on every node, so no board or rule difference
+moved the numbers: the hash simply folds in four more terms (one for the state, one per node), which
+changes the polynomial. `17457352 → 411123996` (`EmptyTick`) and `626950565 → 2101726457`
+(`MoveAndCombat`). Both were computed twice in separate processes. `BreachTempoTests.
+LegacyNoTempoRetainsVersionOneBaselineHashPaths` runs the same two fixtures and carries the same two
+constants.
 
 ## Where it runs
 

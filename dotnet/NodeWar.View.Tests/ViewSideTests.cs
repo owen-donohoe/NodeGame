@@ -103,7 +103,7 @@ namespace NodeWar.View.Tests
         [Test]
         public void ResolveViewer_two_players_keeps_the_existing_yaws()
         {
-            // The default 4x7 board at nodeScale 6: cores at (1,6) and (2,0), centre (9,18).
+            // An arbitrary 4x7 framing at nodeScale 6 (no longer the shipped board): cores at (1,6) and (2,0), centre (9,18).
             float[] cx = { 6f, 12f };
             float[] cz = { 36f, 0f };
 

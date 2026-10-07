@@ -126,8 +126,9 @@ Read the changed or proposed code, then check each item:
      they did when eras were added? If not, bump SimulationVersion.Current
      and review the pinned baseline version with the change. The version
      test checks equality with that pin, not whether hash constants were edited.
-     Current and BaselinesPinnedAtSimVersion are both 2; the v2 re-pin retained
-     the two numeric baseline hashes for the short, non-breaching fixtures.
+     Current and BaselinesPinnedAtSimVersion are both 3; the v2 re-pin retained
+     the two numeric baseline hashes for the short, non-breaching fixtures; the v3
+     re-pin (terrain board) moved both, because boardHash and terrain are always hashed.
    - Balance is not in SimulationStateHasher. Does a new GameBalanceData,
      SuitStats or DistrictStats field reach BalanceHasher? Per-suit and
      per-district numbers belong on their era entries, not new globals.

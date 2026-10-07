@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 using NUnit.Framework;
 
 namespace NodeWar.Network.Tests
@@ -55,15 +56,15 @@ namespace NodeWar.Network.Tests
         public static void Configure()
         {
             Balance = GameBalanceData.Default();
-            MatchFactory.Configure(Balance, BoardConfigData.Default());
+            MatchFactory.Configure(Balance, BoardFixtures.LandGrid3x3());
         }
 
         private static SimulationState NewState()
         {
-            BoardConfigData board = BoardConfigData.Default();
+            BoardConfigData board = BoardFixtures.LandGrid3x3();
             DraftPlacement[] draft =
             {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 5 },
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
                 new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
             };
             return MatchFactory.Build(Balance, board, draft, new[]

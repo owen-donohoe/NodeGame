@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using NodeWar.Input;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.Network.Tests
 {
@@ -11,7 +12,7 @@ namespace NodeWar.Network.Tests
         public void BotReservesEscalatingPricesForSameTickBatch(int food, int expectedRespawns)
         {
             var balance = GameBalanceData.Default();
-            var board = BoardConfigData.Default();
+            var board = BoardFixtures.LandGrid3x3();
             MatchFactory.Configure(balance, board);
             var state = MatchFactory.Build(balance, board, new DraftPlacement[0], new PlayerSetup[0]);
             state.players[0].food = food;
@@ -28,7 +29,7 @@ namespace NodeWar.Network.Tests
         public void CoreEmergencyPreservesBreacherAndSendsAvailableDefender(SuitType suit)
         {
             var b = GameBalanceData.Default();
-            MatchFactory.Configure(b, BoardConfigData.Default());
+            MatchFactory.Configure(b, BoardFixtures.LandGrid3x3());
             var state = new SimulationState
             {
                 players = new[] { new PlayerData { playerID = 0, coreNodeID = 0 }, new PlayerData { playerID = 1, coreNodeID = 2 } },

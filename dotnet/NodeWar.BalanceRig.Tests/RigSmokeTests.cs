@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.BalanceRig
 {
@@ -12,14 +13,8 @@ namespace NodeWar.BalanceRig
 
         internal static RigSetup Setup()
         {
-            var board = BoardConfigData.Default();
-            board.gridCols = board.gridRows = 3;
+            var board = BoardFixtures.LandGrid3x3();
             board.startingVillagersPerPlayer = 1;
-            board.initialPlacements = new[]
-            {
-                new BoardConfigData.InitialDistrictPlacement { gridX = 1, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialDistrictPlacement { gridX = 1, gridZ = 2, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
-            };
             return new RigSetup
             {
                 balance = GameBalanceData.Default(), board = board,

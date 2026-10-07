@@ -9,7 +9,33 @@ namespace NodeWar.MatchLog
 {
     internal static class TestLogs
     {
+        /// <summary>A current (BOARD_V2) log: every field set, terrain on a 5x9 board.</summary>
         public static MatchLog Full()
+        {
+            MatchLog log = Build();
+            BoardConfigData b = log.board;
+            b.terrain = new TerrainType[45];
+            b.districtSlots = new bool[45];
+            for (int i = 0; i < 45; i++)
+            {
+                b.terrain[i] = (TerrainType)(i % 3);
+                b.districtSlots[i] = i % 4 == 1;
+            }
+            b.baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Pier };
+            b.baseDraftDistrictsP1 = new[] { DistrictType.Mine };
+            log.board = b;
+            return log;
+        }
+
+        /// <summary>The same log as a simulation version 2 left it: BOARD (tag 2), no terrain.</summary>
+        public static MatchLog FullV2History()
+        {
+            MatchLog log = Build();
+            log.header.sim = 2;
+            return log;
+        }
+
+        private static MatchLog Build()
         {
             return new MatchLog
             {

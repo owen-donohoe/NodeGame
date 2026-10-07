@@ -12,6 +12,8 @@ namespace NodeWar.Tests
     /// </summary>
     public class TerrainMapTests
     {
+        private delegate void MutateBoard(ref BoardConfigData board);
+
         private static GameBalanceData Balance()
         {
             return GameBalanceData.Default();
@@ -446,10 +448,10 @@ namespace NodeWar.Tests
             Assert.AreEqual(expected, BoardHasher.Hash(PremadeMaps.Hourglass01()), "Equal boards hash equally.");
             Assert.AreEqual(expected, BoardHasher.Hash(CopyOf(baseline)), "A copy hashes like its source.");
 
-            void Changes(string what, Action<BoardConfigData> mutate)
+            void Changes(string what, MutateBoard mutate)
             {
                 BoardConfigData board = CopyOf(baseline);
-                mutate(board);
+                mutate(ref board);
                 Assert.AreNotEqual(expected, BoardHasher.Hash(board), what);
                 Assert.AreEqual(expected, BoardHasher.Hash(baseline), what + ": the source is untouched.");
             }
@@ -459,34 +461,34 @@ namespace NodeWar.Tests
                 int cell = i;
                 foreach (TerrainType other in new[] { TerrainType.Land, TerrainType.Lake, TerrainType.Ocean })
                     if (other != baseline.terrain[cell])
-                        Changes("terrain " + cell + "->" + other, b => b.terrain[cell] = other);
-                Changes("slot " + cell, b => b.districtSlots[cell] = !b.districtSlots[cell]);
+                        Changes("terrain " + cell + "->" + other, (ref BoardConfigData b) => b.terrain[cell] = other);
+                Changes("slot " + cell, (ref BoardConfigData b) => b.districtSlots[cell] = !b.districtSlots[cell]);
             }
 
-            Changes("gridCols", b => b.gridCols++);
-            Changes("gridRows", b => b.gridRows++);
-            Changes("defaultLinkWeight", b => b.defaultLinkWeight++);
-            Changes("startingVillagersPerPlayer", b => b.startingVillagersPerPlayer++);
-            Changes("startingFood", b => b.startingFood++);
-            Changes("startingMaterials", b => b.startingMaterials++);
-            Changes("startingMetal", b => b.startingMetal++);
-            Changes("ownedMultiplier", b => b.ownedMultiplier++);
-            Changes("partiallyOwnedMultiplier", b => b.partiallyOwnedMultiplier++);
-            Changes("unownedMultiplier", b => b.unownedMultiplier++);
-            Changes("enemyPartiallyOwnedMultiplier", b => b.enemyPartiallyOwnedMultiplier++);
-            Changes("enemyOwnedMultiplier", b => b.enemyOwnedMultiplier++);
+            Changes("gridCols", (ref BoardConfigData b) => b.gridCols++);
+            Changes("gridRows", (ref BoardConfigData b) => b.gridRows++);
+            Changes("defaultLinkWeight", (ref BoardConfigData b) => b.defaultLinkWeight++);
+            Changes("startingVillagersPerPlayer", (ref BoardConfigData b) => b.startingVillagersPerPlayer++);
+            Changes("startingFood", (ref BoardConfigData b) => b.startingFood++);
+            Changes("startingMaterials", (ref BoardConfigData b) => b.startingMaterials++);
+            Changes("startingMetal", (ref BoardConfigData b) => b.startingMetal++);
+            Changes("ownedMultiplier", (ref BoardConfigData b) => b.ownedMultiplier++);
+            Changes("partiallyOwnedMultiplier", (ref BoardConfigData b) => b.partiallyOwnedMultiplier++);
+            Changes("unownedMultiplier", (ref BoardConfigData b) => b.unownedMultiplier++);
+            Changes("enemyPartiallyOwnedMultiplier", (ref BoardConfigData b) => b.enemyPartiallyOwnedMultiplier++);
+            Changes("enemyOwnedMultiplier", (ref BoardConfigData b) => b.enemyOwnedMultiplier++);
 
             for (int p = 0; p < baseline.initialPlacements.Length; p++)
             {
                 int index = p;
-                Changes("placement " + index + " x", b => b.initialPlacements[index].gridX++);
-                Changes("placement " + index + " z", b => b.initialPlacements[index].gridZ++);
-                Changes("placement " + index + " district", b => b.initialPlacements[index].districtType = DistrictType.Forge);
-                Changes("placement " + index + " owner", b => b.initialPlacements[index].ownerID = 1 - b.initialPlacements[index].ownerID);
-                Changes("placement " + index + " claimBar", b => b.initialPlacements[index].claimBar++);
+                Changes("placement " + index + " x", (ref BoardConfigData b) => b.initialPlacements[index].gridX++);
+                Changes("placement " + index + " z", (ref BoardConfigData b) => b.initialPlacements[index].gridZ++);
+                Changes("placement " + index + " district", (ref BoardConfigData b) => b.initialPlacements[index].districtType = DistrictType.Forge);
+                Changes("placement " + index + " owner", (ref BoardConfigData b) => b.initialPlacements[index].ownerID = 1 - b.initialPlacements[index].ownerID);
+                Changes("placement " + index + " claimBar", (ref BoardConfigData b) => b.initialPlacements[index].claimBar++);
             }
-            Changes("placement count", b => b.initialPlacements = new[] { b.initialPlacements[0] });
-            Changes("placement order", b =>
+            Changes("placement count", (ref BoardConfigData b) => b.initialPlacements = new[] { b.initialPlacements[0] });
+            Changes("placement order", (ref BoardConfigData b) =>
             {
                 var swapped = new[] { b.initialPlacements[1], b.initialPlacements[0] };
                 b.initialPlacements = swapped;
@@ -495,19 +497,19 @@ namespace NodeWar.Tests
             for (int i = 0; i < baseline.baseDraftDistrictsP0.Length; i++)
             {
                 int index = i;
-                Changes("P0 pool " + index, b => b.baseDraftDistrictsP0[index] = DistrictType.Barracks);
-                Changes("P1 pool " + index, b => b.baseDraftDistrictsP1[index] = DistrictType.Barracks);
+                Changes("P0 pool " + index, (ref BoardConfigData b) => b.baseDraftDistrictsP0[index] = DistrictType.Barracks);
+                Changes("P1 pool " + index, (ref BoardConfigData b) => b.baseDraftDistrictsP1[index] = DistrictType.Barracks);
             }
-            Changes("P0 pool length", b => b.baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Mine });
-            Changes("P1 pool length", b => b.baseDraftDistrictsP1 = new[] { DistrictType.Farm, DistrictType.Mine });
-            Changes("P0 pool order", b => b.baseDraftDistrictsP0 = new[] { DistrictType.Village, DistrictType.Mine, DistrictType.Farm });
-            Changes("pool swap between players", b =>
+            Changes("P0 pool length", (ref BoardConfigData b) => b.baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Mine });
+            Changes("P1 pool length", (ref BoardConfigData b) => b.baseDraftDistrictsP1 = new[] { DistrictType.Farm, DistrictType.Mine });
+            Changes("P0 pool order", (ref BoardConfigData b) => b.baseDraftDistrictsP0 = new[] { DistrictType.Village, DistrictType.Mine, DistrictType.Farm });
+            Changes("pool swap between players", (ref BoardConfigData b) =>
             {
                 b.baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Mine };
                 b.baseDraftDistrictsP1 = new[] { DistrictType.Village };
             });
-            Changes("terrain missing", b => b.terrain = null);
-            Changes("slots missing", b => b.districtSlots = null);
+            Changes("terrain missing", (ref BoardConfigData b) => b.terrain = null);
+            Changes("slots missing", (ref BoardConfigData b) => b.districtSlots = null);
         }
 
         [Test]

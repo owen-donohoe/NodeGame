@@ -63,6 +63,11 @@ namespace NodeWar.MatchLog
             string orderError = CheckOrder(log, endTick);
             if (orderError != null) return Refuse(outcome, orderError);
 
+            // A board from an old BOARD chunk has no terrain: history, not a map.
+            if (!MapAuthoringRules.ValidateBoard(log.board, out string boardError) ||
+                !MapAuthoringRules.ValidateDraft(log.board, log.draft, out boardError))
+                return Refuse(outcome, "Log board cannot be built: " + boardError);
+
             MatchFactory.Configure(balance, log.board);
             SimulationState state = MatchFactory.Build(balance, log.board, log.draft, new[]
             {

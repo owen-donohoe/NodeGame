@@ -26,7 +26,8 @@ namespace NodeWar.Lobby.Tests
         public void EraSlots_CoverEveryEnumValue()
         {
             Assert.AreEqual(Enum.GetValues(typeof(SuitType)).Length, LoadoutData.SuitEraSlots);
-            Assert.AreEqual(Enum.GetValues(typeof(DistrictType)).Length, LoadoutData.DistrictEraSlots);
+            // Pier (14) is a board district with no loadout, catalog or era entry until the C5 roster.
+            Assert.AreEqual((int)DistrictType.Pier, LoadoutData.DistrictEraSlots);
             Assert.AreEqual(LoadoutData.SuitEraSlots, LoadoutTypes.SuitTypeCount);
             Assert.AreEqual(LoadoutData.DistrictEraSlots, LoadoutTypes.DistrictTypeCount);
         }

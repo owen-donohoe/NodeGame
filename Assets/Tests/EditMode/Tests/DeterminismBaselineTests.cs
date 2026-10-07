@@ -21,8 +21,8 @@ namespace NodeWar.Tests
         //
         // Declared in docs/computations/determinism-baseline.md as an Attested
         // Computation; docs/attesters/hash_baseline.ps1 verifies a run's receipt.
-        private const int EmptyTick100Hash = 17457352;
-        private const int MoveAndCombat4Hash = 626950565;
+        private const int EmptyTick100Hash = 411123996;
+        private const int MoveAndCombat4Hash = 2101726457;
 
         [Test]
         public void EmptyTick_100Iterations_ProducesDeterministicHash()
@@ -120,9 +120,11 @@ namespace NodeWar.Tests
         // The baselines above belong to one SimulationVersion. A deliberate
         // re-pin means the same inputs now produce a different game, which is
         // exactly what SimulationVersion exists to announce.
-        // v2 re-pin: these short, non-breaching paths stay numerically identical.
+        // v2 re-pin: these short, non-breaching paths stayed numerically identical.
         // Neutral breach fields are omitted from the hash to preserve the v1 legacy path.
-        private const int BaselinesPinnedAtSimVersion = 2;
+        // v3 re-pin: SimulationState.boardHash and NodeData.terrain are hashed unconditionally
+        // (terrain board, B4), so both baselines moved. See docs/computations/determinism-baseline.md.
+        private const int BaselinesPinnedAtSimVersion = 3;
 
         [Test]
         public void SimVersion_MatchesPinnedBaselines()

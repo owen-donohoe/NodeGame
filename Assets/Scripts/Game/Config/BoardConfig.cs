@@ -7,9 +7,27 @@ namespace NodeWar.Config
     [CreateAssetMenu(fileName = "BoardConfig", menuName = "NodeWar/Board Config")]
     public class BoardConfig : ScriptableObject
     {
-        [SerializeField] private SerializedBoard data = SerializedBoard.From(BoardConfigData.Default());
+        [SerializeField] private string mapId = PremadeMaps.Hourglass01Id;
 
-        public BoardConfigData Data => data.ToData();
+        /// <summary>
+        /// The pre-terrain board the asset was saved with. Kept so the asset still loads and
+        /// the Editor migration can read it; the running game builds the map named by
+        /// <see cref="mapId"/>, never this.
+        /// </summary>
+        [SerializeField] private SerializedBoard data;
+
+        public string MapId => mapId;
+
+        /// <summary>The shipped map this config names. An unknown ID is an error, not a default board.</summary>
+        public BoardConfigData Data
+        {
+            get
+            {
+                if (!PremadeMaps.TryGet(mapId, out BoardConfigData board))
+                    throw new System.InvalidOperationException("Unknown map ID \"" + mapId + "\" in BoardConfig.");
+                return board;
+            }
+        }
 
         [Header("Spacing")]
         [Tooltip("World-space distance between adjacent nodes")]
