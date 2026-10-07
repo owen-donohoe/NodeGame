@@ -182,7 +182,7 @@ namespace NodeWar.MatchLog
             Assert.IsEmpty(read.board.initialPlacements); Assert.IsEmpty(read.draft);
             Assert.IsEmpty(read.ticks); Assert.IsEmpty(read.hashes);
             foreach (PlayerLoadout loadout in read.loadouts)
-            { Assert.IsEmpty(loadout.suits); Assert.IsEmpty(loadout.nodes); }
+            { Assert.IsEmpty(loadout.suits); Assert.IsEmpty(loadout.districts); }
         }
 
         [Test]

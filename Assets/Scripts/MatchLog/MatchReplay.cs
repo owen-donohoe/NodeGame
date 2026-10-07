@@ -66,9 +66,9 @@ namespace NodeWar.MatchLog
             MatchFactory.Configure(balance, log.board);
             SimulationState state = MatchFactory.Build(balance, log.board, log.draft, new[]
             {
-                new PlayerSetup { suits = log.loadouts[0].suits, nodes = log.loadouts[0].nodes,
+                new PlayerSetup { suits = log.loadouts[0].suits, districts = log.loadouts[0].districts,
                     suitEras = log.loadouts[0].suitEras, districtEras = log.loadouts[0].districtEras },
-                new PlayerSetup { suits = log.loadouts[1].suits, nodes = log.loadouts[1].nodes,
+                new PlayerSetup { suits = log.loadouts[1].suits, districts = log.loadouts[1].districts,
                     suitEras = log.loadouts[1].suitEras, districtEras = log.loadouts[1].districtEras }
             });
 

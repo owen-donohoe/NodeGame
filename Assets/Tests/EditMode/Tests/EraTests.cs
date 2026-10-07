@@ -197,8 +197,8 @@ namespace NodeWar.Tests
             eras[(int)DistrictType.Village] = 1;
             PlayerSetup[] players =
             {
-                new PlayerSetup { suits = new int[0], nodes = new int[0], districtEras = eras },
-                new PlayerSetup { suits = new int[0], nodes = new int[0] }
+                new PlayerSetup { suits = new int[0], districts = new int[0], districtEras = eras },
+                new PlayerSetup { suits = new int[0], districts = new int[0] }
             };
             DraftPlacement[] draft =
             {

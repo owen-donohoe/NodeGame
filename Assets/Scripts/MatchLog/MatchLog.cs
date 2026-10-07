@@ -29,7 +29,7 @@ namespace NodeWar.MatchLog
     public sealed class PlayerLoadout
     {
         public int[] suits;
-        public int[] nodes;
+        public int[] districts;
 
         /// <summary>
         /// Era per suit and district type, indexed by enum value (chunk ERAS,

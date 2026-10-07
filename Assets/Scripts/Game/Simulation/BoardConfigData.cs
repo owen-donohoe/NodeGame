@@ -3,12 +3,12 @@ namespace NodeWar.Simulation
     [System.Serializable]
     public struct BoardConfigData
     {
-        public const int DefaultEdgeWeight = 4;
+        public const int DefaultLinkWeight = 4;
 
         public int gridCols;
         public int gridRows;
 
-        public int defaultEdgeWeight;
+        public int defaultLinkWeight;
 
         public int startingVillagersPerPlayer;
         public int startingFood;
@@ -21,10 +21,10 @@ namespace NodeWar.Simulation
         public int enemyPartiallyOwnedMultiplier;
         public int enemyOwnedMultiplier;
 
-        public InitialNodePlacement[] initialPlacements;
+        public InitialDistrictPlacement[] initialPlacements;
 
         [System.Serializable]
-        public struct InitialNodePlacement
+        public struct InitialDistrictPlacement
         {
             public int gridX;
             public int gridZ;
@@ -39,7 +39,7 @@ namespace NodeWar.Simulation
             {
                 gridCols = 4,
                 gridRows = 7,
-                defaultEdgeWeight = DefaultEdgeWeight,
+                defaultLinkWeight = DefaultLinkWeight,
                 startingVillagersPerPlayer = 3,
                 startingFood = 0,
                 startingMaterials = 0,
@@ -49,10 +49,10 @@ namespace NodeWar.Simulation
                 unownedMultiplier = 100,
                 enemyPartiallyOwnedMultiplier = 150,
                 enemyOwnedMultiplier = 200,
-                initialPlacements = new InitialNodePlacement[]
+                initialPlacements = new InitialDistrictPlacement[]
                 {
-                    new InitialNodePlacement { gridX = 1, gridZ = 6, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                    new InitialNodePlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
+                    new InitialDistrictPlacement { gridX = 1, gridZ = 6, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
+                    new InitialDistrictPlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
                 }
             };
         }

@@ -50,7 +50,7 @@ namespace NodeWar.MatchLog
 
             payload = new Writer();
             BoardConfigData b = log.board;
-            payload.I32(b.gridCols); payload.I32(b.gridRows); payload.I32(b.defaultEdgeWeight);
+            payload.I32(b.gridCols); payload.I32(b.gridRows); payload.I32(b.defaultLinkWeight);
             payload.I32(b.startingVillagersPerPlayer); payload.I32(b.startingFood);
             payload.I32(b.startingMaterials); payload.I32(b.startingMetal);
             payload.I32(b.ownedMultiplier); payload.I32(b.partiallyOwnedMultiplier);
@@ -58,7 +58,7 @@ namespace NodeWar.MatchLog
             payload.I32(b.enemyOwnedMultiplier);
             payload.I32(b.initialPlacements?.Length ?? 0);
             if (b.initialPlacements != null)
-                foreach (BoardConfigData.InitialNodePlacement p in b.initialPlacements)
+                foreach (BoardConfigData.InitialDistrictPlacement p in b.initialPlacements)
                 {
                     payload.I32(p.gridX); payload.I32(p.gridZ); payload.I32((int)p.districtType);
                     payload.I32(p.ownerID); payload.I32(p.claimBar);
@@ -69,7 +69,7 @@ namespace NodeWar.MatchLog
             for (int i = 0; i < 2; i++)
             {
                 payload.Ints(log.loadouts[i].suits);
-                payload.Ints(log.loadouts[i].nodes);
+                payload.Ints(log.loadouts[i].districts);
             }
             file.Chunk(LoadoutsTag, payload);
 
@@ -216,16 +216,16 @@ namespace NodeWar.MatchLog
                 case BoardTag:
                     BoardConfigData b = new BoardConfigData
                     {
-                        gridCols = r.I32(), gridRows = r.I32(), defaultEdgeWeight = r.I32(),
+                        gridCols = r.I32(), gridRows = r.I32(), defaultLinkWeight = r.I32(),
                         startingVillagersPerPlayer = r.I32(), startingFood = r.I32(),
                         startingMaterials = r.I32(), startingMetal = r.I32(),
                         ownedMultiplier = r.I32(), partiallyOwnedMultiplier = r.I32(),
                         unownedMultiplier = r.I32(), enemyPartiallyOwnedMultiplier = r.I32(),
                         enemyOwnedMultiplier = r.I32()
                     };
-                    b.initialPlacements = new BoardConfigData.InitialNodePlacement[r.Count(20)];
+                    b.initialPlacements = new BoardConfigData.InitialDistrictPlacement[r.Count(20)];
                     for (int i = 0; i < b.initialPlacements.Length; i++)
-                        b.initialPlacements[i] = new BoardConfigData.InitialNodePlacement
+                        b.initialPlacements[i] = new BoardConfigData.InitialDistrictPlacement
                         {
                             gridX = r.I32(), gridZ = r.I32(), districtType = (DistrictType)r.I32(),
                             ownerID = r.I32(), claimBar = r.I32()
@@ -237,7 +237,7 @@ namespace NodeWar.MatchLog
                     {
                         PlayerLoadout loadout = LoadoutOf(log, i);
                         loadout.suits = r.Ints();
-                        loadout.nodes = r.Ints();
+                        loadout.districts = r.Ints();
                     }
                     break;
                 case DraftTag:

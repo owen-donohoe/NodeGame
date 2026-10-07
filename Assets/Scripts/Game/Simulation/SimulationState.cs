@@ -21,7 +21,7 @@ namespace NodeWar.Simulation
 
     }
 
-    public enum NodeSlotType
+    public enum DistrictUpgradeCategory
     {
         Fixed,
         Army,
@@ -64,14 +64,14 @@ namespace NodeWar.Simulation
         public int nodeID;
         public int gridX;
         public int gridZ;
-        public Edge[] edges;
+        public Link[] links;
         public DistrictType districtType;
         public int claimBar;
         public int ownerID;
         public int bonusVillagersOnClaim;
         public int materialAllocation;
 
-        public NodeSlotType slotType;
+        public DistrictUpgradeCategory upgradeCategory;
         public DistrictType baseDistrictType;
 
         /// <summary>
@@ -84,9 +84,9 @@ namespace NodeWar.Simulation
 
     [System.Serializable]
 
-    public struct Edge
+    public struct Link
     {
-        public int toNode;
+        public int toNodeID;
         public int travelWeight;
     }
 
@@ -142,7 +142,7 @@ namespace NodeWar.Simulation
         /// <summary>Derived candidate cache, refreshed after all tick mutations; -1 for none.</summary>
         public int nextBreacherID;
         public int[] draftedSuits; // (int)SuitType values this player can equip
-        public int[] draftedNodes; // (int)DistrictType values for draft upgrades
+        public int[] draftedDistricts; // (int)DistrictType values for draft upgrades
 
         /// <summary>
         /// The era of each suit and district this player fields, indexed by
@@ -176,14 +176,14 @@ namespace NodeWar.Simulation
         public int tickCount;
         public bool gameOver;
         public int winnerID;
-        public int defaultEdgeWeight;
+        public int defaultLinkWeight;
 
         public SimulationState()
         {
             tickCount = 0;
             gameOver = false;
             winnerID = -1;
-            defaultEdgeWeight = BoardConfigData.DefaultEdgeWeight;
+            defaultLinkWeight = BoardConfigData.DefaultLinkWeight;
         }
 
         /// <summary>
@@ -191,7 +191,7 @@ namespace NodeWar.Simulation
         /// place: views, selection and the HUD hold a reference to this object,
         /// so a rollback (8.2e) must change what it contains, not which object
         /// it is. Every mutable array is copied fresh so the two never share a
-        /// write. Node edges are shared: they are fixed once the board is built
+        /// write. Node links are shared: they are fixed once the board is built
         /// and no tick writes them.
         ///
         /// Like SimulationStateHasher, this must name every field. A field added
@@ -220,7 +220,7 @@ namespace NodeWar.Simulation
                 for (int i = 0; i < players.Length; i++)
                 {
                     players[i].draftedSuits = CopyInts(players[i].draftedSuits);
-                    players[i].draftedNodes = CopyInts(players[i].draftedNodes);
+                    players[i].draftedDistricts = CopyInts(players[i].draftedDistricts);
                     players[i].suitEras = CopyInts(players[i].suitEras);
                     players[i].districtEras = CopyInts(players[i].districtEras);
                 }
@@ -229,7 +229,7 @@ namespace NodeWar.Simulation
             tickCount = source.tickCount;
             gameOver = source.gameOver;
             winnerID = source.winnerID;
-            defaultEdgeWeight = source.defaultEdgeWeight;
+            defaultLinkWeight = source.defaultLinkWeight;
         }
 
         private static int[] CopyInts(int[] values) => values == null ? null : (int[])values.Clone();

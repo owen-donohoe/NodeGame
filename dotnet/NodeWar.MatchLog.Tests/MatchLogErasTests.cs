@@ -85,8 +85,8 @@ namespace NodeWar.MatchLog
             DraftPlacement[] draft = { new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 5 } };
             PlayerLoadout[] loadouts =
             {
-                new PlayerLoadout { suits = new int[0], nodes = new int[0], suitEras = new int[12], districtEras = eras },
-                new PlayerLoadout { suits = new int[0], nodes = new int[0] }
+                new PlayerLoadout { suits = new int[0], districts = new int[0], suitEras = new int[12], districtEras = eras },
+                new PlayerLoadout { suits = new int[0], districts = new int[0] }
             };
             var header = new MatchLogHeader
             {
@@ -97,8 +97,8 @@ namespace NodeWar.MatchLog
             MatchFactory.Configure(balance, board);
             SimulationState state = MatchFactory.Build(balance, board, draft, new[]
             {
-                new PlayerSetup { suits = loadouts[0].suits, nodes = loadouts[0].nodes, suitEras = loadouts[0].suitEras, districtEras = eras },
-                new PlayerSetup { suits = loadouts[1].suits, nodes = loadouts[1].nodes }
+                new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts, suitEras = loadouts[0].suitEras, districtEras = eras },
+                new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
             Assert.AreEqual(1, state.nodes[21].districtEra);
 

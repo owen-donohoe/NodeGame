@@ -107,7 +107,7 @@ namespace NodeWar.Simulation
             v.moveProgress++;
 
             // Calculate ticks needed for current edge
-            int edgeWeight = GetEdgeWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
+            int edgeWeight = GetLinkWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
             int ticksForEdge = edgeWeight * v.moveSpeedTicks;
 
             if (v.moveProgress >= ticksForEdge)
@@ -767,9 +767,9 @@ namespace NodeWar.Simulation
 
             state.nodes[nodeIndex].ownerID = playerID;
 
-            if (state.nodes[nodeIndex].slotType != NodeSlotType.Fixed)
+            if (state.nodes[nodeIndex].upgradeCategory != DistrictUpgradeCategory.Fixed)
             {
-                DistrictType upgrade = GetPlayerUpgradeForSlot(state, playerID, state.nodes[nodeIndex].slotType);
+                DistrictType upgrade = GetPlayerUpgradeForSlot(state, playerID, state.nodes[nodeIndex].upgradeCategory);
                 state.nodes[nodeIndex].districtType = upgrade != DistrictType.None
                     ? upgrade
                     : state.nodes[nodeIndex].baseDistrictType;
@@ -799,14 +799,14 @@ namespace NodeWar.Simulation
                 SpawnBonusVillagers(state, nodeIndex, playerID, bonus);
         }
 
-        private static DistrictType GetPlayerUpgradeForSlot(SimulationState state, int playerID, NodeSlotType slotType)
+        private static DistrictType GetPlayerUpgradeForSlot(SimulationState state, int playerID, DistrictUpgradeCategory upgradeCategory)
         {
-            int[] draftedNodes = state.players[playerID].draftedNodes;
-            if (draftedNodes == null) return DistrictType.None;
-            for (int i = 0; i < draftedNodes.Length; i++)
+            int[] draftedDistricts = state.players[playerID].draftedDistricts;
+            if (draftedDistricts == null) return DistrictType.None;
+            for (int i = 0; i < draftedDistricts.Length; i++)
             {
-                DistrictType drafted = (DistrictType)draftedNodes[i];
-                if (GameBalanceData.GetSlotTypeForDistrict(drafted) == slotType)
+                DistrictType drafted = (DistrictType)draftedDistricts[i];
+                if (GameBalanceData.GetUpgradeCategoryForDistrict(drafted) == upgradeCategory)
                     return drafted;
             }
             return DistrictType.None;
@@ -1271,18 +1271,18 @@ namespace NodeWar.Simulation
 
         /// <summary>
         /// Gets the edge weight between two connected nodes.
-        /// Returns state.defaultEdgeWeight if no direct edge is found.
+        /// Returns state.defaultLinkWeight if no direct edge is found.
         /// Public for View layer access (interpolation).
         /// </summary>
-        public static int GetEdgeWeight(SimulationState state, int fromNode, int toNode)
+        public static int GetLinkWeight(SimulationState state, int fromNode, int toNode)
         {
-            Edge[] edges = state.nodes[fromNode].edges;
-            for (int i = 0; i < edges.Length; i++)
+            Link[] links = state.nodes[fromNode].links;
+            for (int i = 0; i < links.Length; i++)
             {
-                if (edges[i].toNode == toNode)
-                    return edges[i].travelWeight;
+                if (links[i].toNodeID == toNode)
+                    return links[i].travelWeight;
             }
-            return state.defaultEdgeWeight; // fallback, no direct edge found
+            return state.defaultLinkWeight; // fallback, no direct edge found
         }
 
         private static int FindMostDamagedFriendly(SimulationState state, int nodeID, int ownerID, int excludeID)
@@ -1319,10 +1319,10 @@ namespace NodeWar.Simulation
 
         private static int FindAdjacentFriendlyWorkingWatchtower(SimulationState state, int nodeIndex, int playerID)
         {
-            Edge[] edges = state.nodes[nodeIndex].edges;
-            for (int e = 0; e < edges.Length; e++)
+            Link[] links = state.nodes[nodeIndex].links;
+            for (int e = 0; e < links.Length; e++)
             {
-                int adjNode = edges[e].toNode;
+                int adjNode = links[e].toNodeID;
                 if (state.nodes[adjNode].districtType != DistrictType.Watchtower) continue;
                 if (state.nodes[adjNode].ownerID != playerID) continue;
                 for (int v = 0; v < state.villagers.Length; v++)

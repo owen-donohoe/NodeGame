@@ -132,8 +132,8 @@ namespace NodeWar.MatchLog
             };
             PlayerLoadout[] loadouts =
             {
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] },
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] }
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] },
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] }
             };
             var header = new MatchLogHeader
             {
@@ -145,8 +145,8 @@ namespace NodeWar.MatchLog
             MatchFactory.Configure(Balance, board);
             SimulationState state = MatchFactory.Build(Balance, board, draft, new[]
             {
-                new PlayerSetup { suits = loadouts[0].suits, nodes = loadouts[0].nodes },
-                new PlayerSetup { suits = loadouts[1].suits, nodes = loadouts[1].nodes }
+                new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts },
+                new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
 
             while (state.tickCount < maxTicks && !state.gameOver)

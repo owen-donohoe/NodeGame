@@ -61,6 +61,6 @@ namespace NodeWar.BalanceRig
             Assert.AreEqual(4, LinkWeight(setup.board));
         }
 
-        private static int LinkWeight(BoardConfigData board) => board.defaultEdgeWeight;
+        private static int LinkWeight(BoardConfigData board) => board.defaultLinkWeight;
     }
 }

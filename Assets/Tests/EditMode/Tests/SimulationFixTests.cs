@@ -43,10 +43,10 @@ namespace NodeWar.Tests
             state.villagers[playerID].currentNodeID = 1;
             if (upgrade)
             {
-                state.nodes[1].slotType = NodeSlotType.Army;
+                state.nodes[1].upgradeCategory = DistrictUpgradeCategory.Army;
                 state.nodes[1].baseDistrictType = DistrictType.Camp;
                 state.nodes[1].districtType = DistrictType.Camp;
-                state.players[playerID].draftedNodes = new[] { (int)DistrictType.Barracks };
+                state.players[playerID].draftedDistricts = new[] { (int)DistrictType.Barracks };
             }
             // No commands: the villager is already on the neutral node; one tick completes it.
             GameSimulation.SimulateTick(state);

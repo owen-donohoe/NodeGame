@@ -261,8 +261,8 @@ namespace NodeWar.Cloud.Tests
             };
             PlayerLoadout[] loadouts =
             {
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = Array.Empty<int>() },
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = Array.Empty<int>() }
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = Array.Empty<int>() },
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = Array.Empty<int>() }
             };
             var header = new MatchLogHeader
             {
@@ -273,8 +273,8 @@ namespace NodeWar.Cloud.Tests
             MatchFactory.Configure(balance, board);
             SimulationState state = MatchFactory.Build(balance, board, draft, new[]
             {
-                new PlayerSetup { suits = loadouts[0].suits, nodes = loadouts[0].nodes },
-                new PlayerSetup { suits = loadouts[1].suits, nodes = loadouts[1].nodes }
+                new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts },
+                new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
             while (state.tickCount < maxTicks && !state.gameOver)
             {
@@ -300,9 +300,9 @@ namespace NodeWar.Cloud.Tests
             BoardConfigData board = BoardConfigData.Default();
             board.initialPlacements = board.initialPlacements.Concat(new[]
             {
-                new BoardConfigData.InitialNodePlacement { gridX = 0, gridZ = 5, districtType = DistrictType.Forge,
+                new BoardConfigData.InitialDistrictPlacement { gridX = 0, gridZ = 5, districtType = DistrictType.Forge,
                     ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement { gridX = 3, gridZ = 1, districtType = DistrictType.Forge,
+                new BoardConfigData.InitialDistrictPlacement { gridX = 3, gridZ = 1, districtType = DistrictType.Forge,
                     ownerID = 1, claimBar = -10000 }
             }).ToArray();
             return board;

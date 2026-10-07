@@ -18,13 +18,13 @@ namespace NodeWar.Cloud
             for (int p = 0; p < 2; p++)
             {
                 var loadout = log.loadouts[p];
-                if (loadout?.suits == null || loadout.nodes == null) return "Log needs complete loadouts.";
+                if (loadout?.suits == null || loadout.districts == null) return "Log needs complete loadouts.";
                 foreach (int type in loadout.suits)
                 {
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForSuit(type), type, loadout.suitEras);
                     if (error != null) return error;
                 }
-                foreach (int type in loadout.nodes)
+                foreach (int type in loadout.districts)
                 {
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras);
                     if (error != null) return error;

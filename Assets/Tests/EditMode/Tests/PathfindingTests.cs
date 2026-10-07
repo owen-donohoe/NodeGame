@@ -52,7 +52,7 @@ namespace NodeWar.Tests
             // Cut node 2 off: it keeps its edge to node 1, but node 1 no longer
             // offers one back, so the search can never reach it. A one-way edge
             // is exactly what a hand-authored board gets wrong.
-            state.nodes[1].edges = new Edge[] { new Edge { toNode = 0, travelWeight = 1 } };
+            state.nodes[1].links = new Link[] { new Link { toNodeID = 0, travelWeight = 1 } };
 
             int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 2);
 
@@ -66,7 +66,7 @@ namespace NodeWar.Tests
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
-            state.nodes[1].edges = new Edge[] { new Edge { toNode = 0, travelWeight = 1 } };
+            state.nodes[1].links = new Link[] { new Link { toNodeID = 0, travelWeight = 1 } };
 
             int before = SimulationStateHasher.ComputeHash(state);
 
@@ -131,8 +131,8 @@ namespace NodeWar.Tests
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                Edge[] edges = state.nodes[i].edges;
-                for (int e = 0; e < edges.Length; e++) edges[e].travelWeight = 4;
+                Link[] links = state.nodes[i].links;
+                for (int e = 0; e < links.Length; e++) links[e].travelWeight = 4;
             }
 
             return state;

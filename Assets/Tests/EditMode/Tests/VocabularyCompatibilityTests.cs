@@ -27,11 +27,11 @@ namespace NodeWar.Tests
             }
 
             string[] categories = { "Fixed", "Army", "Healing", "Affect", "ResourceSpecial" };
-            Assert.AreEqual(5, Enum.GetValues(typeof(NodeSlotType)).Length);
+            Assert.AreEqual(5, Enum.GetValues(typeof(DistrictUpgradeCategory)).Length);
             for (int i = 0; i < categories.Length; i++)
             {
-                Assert.AreEqual(categories[i], ((NodeSlotType)i).ToString(), "upgrade category " + i);
-                Assert.AreEqual(i, (int)Enum.Parse(typeof(NodeSlotType), categories[i]), categories[i]);
+                Assert.AreEqual(categories[i], ((DistrictUpgradeCategory)i).ToString(), "upgrade category " + i);
+                Assert.AreEqual(i, (int)Enum.Parse(typeof(DistrictUpgradeCategory), categories[i]), categories[i]);
             }
         }
     }

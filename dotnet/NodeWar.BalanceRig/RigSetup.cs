@@ -48,6 +48,7 @@ namespace NodeWar.BalanceRig
         /// <summary>The v2 export (breach bar, tempo, sudden death), the newest in Balances/ by commit.</summary>
         public const string DefaultBalanceFile = "1832066265.json";
 
+        private const string LegacyLinkWeightKey = "defaultEdgeWeight";
         private const string BoardAssetPath = "Assets/Data/Game/Board/DefaultBoardConfig.asset";
         private const string BalancesDir = "dotnet/NodeWarCloud/NodeWarCloud/Balances";
 
@@ -158,7 +159,7 @@ namespace NodeWar.BalanceRig
         {
             string[] lines = File.ReadAllLines(path);
             var board = new BoardConfigData();
-            var placements = new List<BoardConfigData.InitialNodePlacement>();
+            var placements = new List<BoardConfigData.InitialDistrictPlacement>();
             var draft = new[] { new List<DistrictType>(), new List<DistrictType>() };
 
             object boxed = board;
@@ -167,7 +168,7 @@ namespace NodeWar.BalanceRig
             bool inData = false;
             int list = -1; // -1 none, 0/1 = base draft list for that player
             bool inPlacements = false;
-            BoardConfigData.InitialNodePlacement current = default;
+            BoardConfigData.InitialDistrictPlacement current = default;
             bool haveCurrent = false;
 
             foreach (string raw in lines)
@@ -223,6 +224,8 @@ namespace NodeWar.BalanceRig
                 int c = line.IndexOf(':');
                 if (c < 0) continue;
                 string name = line.Substring(0, c).Trim();
+                // The asset is Unity's text and keeps the key it was saved with.
+                if (name == LegacyLinkWeightKey) name = nameof(BoardConfigData.defaultLinkWeight);
                 foreach (var f in fields)
                 {
                     if (f.Name == name && f.FieldType == typeof(int))

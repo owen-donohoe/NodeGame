@@ -969,7 +969,7 @@ namespace NodeWar.Core
             // The draft runs before any node exists, so a player's side has to
             // be resolvable from the layout alone. The same placements the
             // board is built from say where each core will be.
-            BoardConfigData.InitialNodePlacement[] placements = config.Data.initialPlacements;
+            BoardConfigData.InitialDistrictPlacement[] placements = config.Data.initialPlacements;
             if (placements == null) return;
 
             for (int i = 0; i < placements.Length; i++)

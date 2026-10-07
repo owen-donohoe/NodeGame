@@ -34,7 +34,7 @@ namespace NodeWar.Core
         void ShowWaiting(bool waiting);
 
         /// <summary>The fixed placements (cores) drop in before turns begin.</summary>
-        void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements);
+        void ShowInitialReveal(BoardConfigData.InitialDistrictPlacement[] placements);
 
         /// <summary>Active drafting has begun: bring the surface on screen.</summary>
         void SweepIn(DraftState state, int localPlayerID);

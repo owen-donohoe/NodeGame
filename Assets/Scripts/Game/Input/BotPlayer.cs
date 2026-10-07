@@ -32,15 +32,15 @@ namespace NodeWar.Input
         private int[] pathCostStamp;  // target that cost was computed for (-1 = none)
 
         // Balance references (read once, used for cooldown calculation)
-        private int defaultEdgeWeight;
+        private int defaultLinkWeight;
 
-        public BotPlayer(SimulationState state, InputBuffer buffer, int playerID, int defaultEdgeWeight)
+        public BotPlayer(SimulationState state, InputBuffer buffer, int playerID, int defaultLinkWeight)
         {
             this.state = state;
             this.inputBuffer = buffer;
             this.playerID = playerID;
             this.enemyID = 1 - playerID;
-            this.defaultEdgeWeight = defaultEdgeWeight;
+            this.defaultLinkWeight = defaultLinkWeight;
         }
 
         public void Evaluate()
@@ -507,7 +507,7 @@ namespace NodeWar.Input
             claimedThisTick[villagerID] = true;
 
             // Set cooldown: 1 tick more than crossing one edge
-            int cooldownTicks = defaultEdgeWeight * v.moveSpeedTicks + 1;
+            int cooldownTicks = defaultLinkWeight * v.moveSpeedTicks + 1;
             commandCooldownUntil[villagerID] = state.tickCount + cooldownTicks;
         }
 
@@ -534,7 +534,7 @@ namespace NodeWar.Input
             inputBuffer.EnqueueCommand(cmd);
             claimedThisTick[villagerID] = true;
 
-            int cooldownTicks = defaultEdgeWeight * v.moveSpeedTicks + 1;
+            int cooldownTicks = defaultLinkWeight * v.moveSpeedTicks + 1;
             commandCooldownUntil[villagerID] = state.tickCount + cooldownTicks;
         }
 
@@ -758,7 +758,7 @@ namespace NodeWar.Input
 
             int cost = 0;
             for (int i = 0; i < path.Length - 1; i++)
-                cost += GameSimulation.GetEdgeWeight(state, path[i], path[i + 1]);
+                cost += GameSimulation.GetLinkWeight(state, path[i], path[i + 1]);
             return cost;
         }
 

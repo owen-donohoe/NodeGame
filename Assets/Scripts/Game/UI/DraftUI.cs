@@ -118,7 +118,7 @@ namespace NodeWar.UI
         // The uGUI draft has no waiting surface.
         public void ShowWaiting(bool waiting) { }
 
-        public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
+        public void ShowInitialReveal(BoardConfigData.InitialDistrictPlacement[] placements)
         {
             if (placements == null) return;
             for (int i = 0; i < placements.Length; i++)
@@ -222,7 +222,7 @@ namespace NodeWar.UI
             if (draftState == null) return;
             if (placementController == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 
@@ -250,7 +250,7 @@ namespace NodeWar.UI
             ClearBar();
             if (draftState == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
             bool isMyTurn = draftManager.IsLocalPlayerTurn();
 
             for (int i = 0; i < slots.Length; i++)

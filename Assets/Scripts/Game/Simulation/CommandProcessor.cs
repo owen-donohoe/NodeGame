@@ -161,7 +161,7 @@ namespace NodeWar.Simulation
         /// </summary>
         private static int GetLegTicks(SimulationState state, int fromNode, int toNode, int moveSpeedTicks)
         {
-            int ticks = GameSimulation.GetEdgeWeight(state, fromNode, toNode) * moveSpeedTicks;
+            int ticks = GameSimulation.GetLinkWeight(state, fromNode, toNode) * moveSpeedTicks;
             return ticks < 1 ? 1 : ticks;
         }
 

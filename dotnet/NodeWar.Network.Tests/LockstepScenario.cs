@@ -68,8 +68,8 @@ namespace NodeWar.Network.Tests
             };
             return MatchFactory.Build(Balance, board, draft, new[]
             {
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] },
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] }
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] },
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] }
             });
         }
 

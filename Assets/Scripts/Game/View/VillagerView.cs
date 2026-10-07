@@ -287,7 +287,7 @@ namespace NodeWar.View
                     ? villager.movePath[legIndex + 1]
                     : legFrom;
 
-                int edgeWeight = GameSimulation.GetEdgeWeight(simState, legFrom, legTo);
+                int edgeWeight = GameSimulation.GetLinkWeight(simState, legFrom, legTo);
                 int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
                 if (totalTicksForEdge < 1) totalTicksForEdge = 1;
 

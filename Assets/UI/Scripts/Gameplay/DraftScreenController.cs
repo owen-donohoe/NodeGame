@@ -360,7 +360,7 @@ namespace NodeWar.UI
             if (waiting != null) waiting.EnableInClassList("draft__waiting--on", isWaiting);
         }
 
-        public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
+        public void ShowInitialReveal(BoardConfigData.InitialDistrictPlacement[] placements)
         {
             if (placements == null || draftManager == null) return;
 
@@ -511,7 +511,7 @@ namespace NodeWar.UI
 
             if (draftState == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
             int remaining = 0;
 
             for (int i = 0; i < slots.Length; i++)
@@ -625,7 +625,7 @@ namespace NodeWar.UI
             int slotIndex = (int)card.userData;
             if (draftState == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 

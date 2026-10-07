@@ -38,7 +38,7 @@ namespace NodeWar.Lobby.Tests
 
         private static NodeData Node(int id, DistrictType district, int owner)
         {
-            return new NodeData { nodeID = id, districtType = district, ownerID = owner, edges = new Edge[0] };
+            return new NodeData { nodeID = id, districtType = district, ownerID = owner, links = new Link[0] };
         }
 
         private static VillagerData Villager(int id, int owner, int node, VillagerState state,

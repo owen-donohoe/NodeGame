@@ -22,22 +22,22 @@ namespace NodeWar.MatchLog
                 },
                 board = new BoardConfigData
                 {
-                    gridCols = 5, gridRows = 9, defaultEdgeWeight = 3,
+                    gridCols = 5, gridRows = 9, defaultLinkWeight = 3,
                     startingVillagersPerPlayer = 4, startingFood = 17, startingMaterials = 29,
                     startingMetal = 31, ownedMultiplier = 51, partiallyOwnedMultiplier = 76,
                     unownedMultiplier = 101, enemyPartiallyOwnedMultiplier = 151, enemyOwnedMultiplier = 201,
                     initialPlacements = new[]
                     {
-                        new BoardConfigData.InitialNodePlacement
+                        new BoardConfigData.InitialDistrictPlacement
                         { gridX = 1, gridZ = 8, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                        new BoardConfigData.InitialNodePlacement
+                        new BoardConfigData.InitialDistrictPlacement
                         { gridX = 3, gridZ = 0, districtType = DistrictType.Forge, ownerID = 1, claimBar = -8765 }
                     }
                 },
                 loadouts = new[]
                 {
-                    new PlayerLoadout { suits = new[] { 2, 4, 6 }, nodes = new[] { 3, 5 } },
-                    new PlayerLoadout { suits = new[] { 7, 8 }, nodes = new[] { 9, 10, 11 } }
+                    new PlayerLoadout { suits = new[] { 2, 4, 6 }, districts = new[] { 3, 5 } },
+                    new PlayerLoadout { suits = new[] { 7, 8 }, districts = new[] { 9, 10, 11 } }
                 },
                 draft = new[]
                 {

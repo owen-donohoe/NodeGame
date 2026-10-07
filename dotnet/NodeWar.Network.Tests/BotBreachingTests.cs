@@ -18,7 +18,7 @@ namespace NodeWar.Network.Tests
             for (int i = 0; i < state.villagers.Length; i++)
                 state.villagers[i].state = VillagerState.Dead;
             var buffer = new InputBuffer();
-            new BotPlayer(state, buffer, 0, board.defaultEdgeWeight).Evaluate();
+            new BotPlayer(state, buffer, 0, board.defaultLinkWeight).Evaluate();
             var commands = buffer.DrainCommands();
             Assert.AreEqual(expectedRespawns, Array.FindAll(commands, c => c.type == CommandType.Respawn).Length);
             foreach (var command in commands) CommandProcessor.ProcessCommand(state, command);
@@ -34,9 +34,9 @@ namespace NodeWar.Network.Tests
                 players = new[] { new PlayerData { playerID = 0, coreNodeID = 0 }, new PlayerData { playerID = 1, coreNodeID = 2 } },
                 nodes = new[]
                 {
-                    new NodeData { nodeID = 0, ownerID = 0, districtType = DistrictType.Core, edges = new[] { new Edge { toNode = 1, travelWeight = 1 } } },
-                    new NodeData { nodeID = 1, ownerID = -1, edges = new[] { new Edge { toNode = 0, travelWeight = 1 }, new Edge { toNode = 2, travelWeight = 1 } } },
-                    new NodeData { nodeID = 2, ownerID = 1, districtType = DistrictType.Core, edges = new[] { new Edge { toNode = 1, travelWeight = 1 } } }
+                    new NodeData { nodeID = 0, ownerID = 0, districtType = DistrictType.Core, links = new[] { new Link { toNodeID = 1, travelWeight = 1 } } },
+                    new NodeData { nodeID = 1, ownerID = -1, links = new[] { new Link { toNodeID = 0, travelWeight = 1 }, new Link { toNodeID = 2, travelWeight = 1 } } },
+                    new NodeData { nodeID = 2, ownerID = 1, districtType = DistrictType.Core, links = new[] { new Link { toNodeID = 1, travelWeight = 1 } } }
                 },
                 villagers = new[]
                 {

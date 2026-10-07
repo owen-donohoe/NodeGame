@@ -22,7 +22,7 @@ namespace NodeWar.UI
 
         public int SlotIndex => slotIndex;
 
-        public void Initialize(DraftSlot slot, int index, DraftUI ui)
+        public void Initialize(DraftPick slot, int index, DraftUI ui)
         {
             slotIndex = index;
             parentUI = ui;

@@ -293,7 +293,7 @@ namespace NodeWar.Core
             if (!IsLocalPlayerTurn()) return;
             if (!draftState.IsCellAvailable(gridX, gridZ)) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerSlots(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
             if (slots[slotIndex].isConsumed) return;
 
@@ -313,7 +313,7 @@ namespace NodeWar.Core
                 return;
             }
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(activePlayer);
+            DraftPick[] slots = draftState.GetPlayerSlots(activePlayer);
             DistrictType district = slots[slotIndex].districtType;
 
             int gridX, gridZ;
@@ -351,7 +351,7 @@ namespace NodeWar.Core
         /// consumed or the cell has been taken since - the opponent may have
         /// landed on that cell while the Confirm button was sitting there.
         /// </summary>
-        private bool TryUseParkedPlacement(int activePlayer, DraftSlot[] slots,
+        private bool TryUseParkedPlacement(int activePlayer, DraftPick[] slots,
             ref int slotIndex, ref DistrictType district, out int gridX, out int gridZ)
         {
             gridX = -1;
@@ -381,7 +381,7 @@ namespace NodeWar.Core
             int slotIndex = draftState.GetFirstUnconsumedSlotIndex(botPlayer);
             if (slotIndex < 0) { AdvanceTurn(); return; }
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(botPlayer);
+            DraftPick[] slots = draftState.GetPlayerSlots(botPlayer);
 
             // Find bot's core position for proximity heuristic
             int coreX = -1, coreZ = -1;
@@ -644,7 +644,7 @@ namespace NodeWar.Core
             if (playerID != draftState.currentTurnPlayerID) return;
 
             // Find first unconsumed slot matching the district type
-            DraftSlot[] slots = draftState.GetPlayerSlots(playerID);
+            DraftPick[] slots = draftState.GetPlayerSlots(playerID);
             int slotIndex = -1;
             for (int i = 0; i < slots.Length; i++)
             {
@@ -785,9 +785,9 @@ namespace NodeWar.Core
 
         // ===== SLOT BUILDING =====
 
-        private DraftSlot[] BuildPlayerSlots(int playerID)
+        private DraftPick[] BuildPlayerSlots(int playerID)
         {
-            List<DraftSlot> slots = new List<DraftSlot>();
+            List<DraftPick> slots = new List<DraftPick>();
 
             DraftNodeEntry[] baseNodes = (playerID == 0)
                 ? boardConfig.baseDraftNodesP0
@@ -798,7 +798,7 @@ namespace NodeWar.Core
                 for (int i = 0; i < baseNodes.Length; i++)
                 {
                     if (baseNodes[i].districtType == DistrictType.None) continue;
-                    slots.Add(new DraftSlot
+                    slots.Add(new DraftPick
                     {
                         districtType = baseNodes[i].districtType,
                         isConsumed = false,
@@ -820,7 +820,7 @@ namespace NodeWar.Core
                     for (int i = 0; i < boardConfig.botLoadoutNodes.Length; i++)
                     {
                         if (boardConfig.botLoadoutNodes[i].districtType == DistrictType.None) continue;
-                        slots.Add(new DraftSlot
+                        slots.Add(new DraftPick
                         {
                             districtType = boardConfig.botLoadoutNodes[i].districtType,
                             isConsumed = false,
@@ -850,14 +850,14 @@ namespace NodeWar.Core
                 return remoteLoadout;
         }
 
-        private void AddLoadoutNode(List<DraftSlot> slots, string nodeID)
+        private void AddLoadoutNode(List<DraftPick> slots, string nodeID)
         {
             if (string.IsNullOrEmpty(nodeID)) return;
 
             DistrictType type = MapNodeIDToDistrict(nodeID);
             if (type == DistrictType.None) return;
 
-            slots.Add(new DraftSlot
+            slots.Add(new DraftPick
             {
                 districtType = type,
                 isConsumed = false,

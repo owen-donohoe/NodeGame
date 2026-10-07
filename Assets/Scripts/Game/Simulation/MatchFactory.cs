@@ -8,7 +8,7 @@ namespace NodeWar.Simulation
     public struct PlayerSetup
     {
         public int[] suits; // (int)SuitType values
-        public int[] nodes; // (int)DistrictType values
+        public int[] districts; // (int)DistrictType values
 
         /// <summary>
         /// The era this player fields for each suit and district, indexed by
@@ -72,7 +72,7 @@ namespace NodeWar.Simulation
         public static void Fill(SimulationState state, GameBalanceData balance, BoardConfigData board,
             DraftPlacement[] draft, PlayerSetup[] players)
         {
-            state.defaultEdgeWeight = board.defaultEdgeWeight;
+            state.defaultLinkWeight = board.defaultLinkWeight;
             BuildNodes(state, balance, board, draft, players);
             InitializePlayers(state, balance, board, players);
             InitializeVillagers(state, balance, board);
@@ -101,10 +101,10 @@ namespace NodeWar.Simulation
                         nodeID = nodeID,
                         gridX = x,
                         gridZ = z,
-                        edges = GridEdges(x, z, cols, rows, board.defaultEdgeWeight),
+                        links = GridLinks(x, z, cols, rows, board.defaultLinkWeight),
                         districtType = DistrictType.None,
                         baseDistrictType = DistrictType.None,
-                        slotType = NodeSlotType.Fixed,
+                        upgradeCategory = DistrictUpgradeCategory.Fixed,
                         claimBar = 0,
                         ownerID = -1,
                         bonusVillagersOnClaim = 0,
@@ -117,7 +117,7 @@ namespace NodeWar.Simulation
             {
                 for (int i = 0; i < board.initialPlacements.Length; i++)
                 {
-                    BoardConfigData.InitialNodePlacement ip = board.initialPlacements[i];
+                    BoardConfigData.InitialDistrictPlacement ip = board.initialPlacements[i];
                     int nodeID = ip.gridZ * cols + ip.gridX;
                     state.nodes[nodeID].districtType = ip.districtType;
                     state.nodes[nodeID].baseDistrictType = ip.districtType;
@@ -135,7 +135,7 @@ namespace NodeWar.Simulation
                     state.nodes[nodeID].districtType = dp.districtType;
                     state.nodes[nodeID].baseDistrictType = dp.districtType;
                     state.nodes[nodeID].ownerID = -1;
-                    state.nodes[nodeID].slotType = NodeSlotType.Fixed;
+                    state.nodes[nodeID].upgradeCategory = DistrictUpgradeCategory.Fixed;
 
                     int era = dp.playerID >= 0 && players != null && dp.playerID < players.Length
                         ? players[dp.playerID].DistrictEra(dp.districtType) : 0;
@@ -148,18 +148,18 @@ namespace NodeWar.Simulation
 
         /// <summary>
         /// Left, right, down, up: the order the live game has always used, and
-        /// edge order is part of the simulation (pathfinding visits edges in it).
+        /// edge order is part of the simulation (pathfinding visits links in it).
         /// </summary>
-        public static Edge[] GridEdges(int x, int z, int cols, int rows, int weight)
+        public static Link[] GridLinks(int x, int z, int cols, int rows, int weight)
         {
             int count = (x > 0 ? 1 : 0) + (x < cols - 1 ? 1 : 0) + (z > 0 ? 1 : 0) + (z < rows - 1 ? 1 : 0);
-            Edge[] edges = new Edge[count];
+            Link[] links = new Link[count];
             int e = 0;
-            if (x > 0) edges[e++] = new Edge { toNode = z * cols + (x - 1), travelWeight = weight };
-            if (x < cols - 1) edges[e++] = new Edge { toNode = z * cols + (x + 1), travelWeight = weight };
-            if (z > 0) edges[e++] = new Edge { toNode = (z - 1) * cols + x, travelWeight = weight };
-            if (z < rows - 1) edges[e++] = new Edge { toNode = (z + 1) * cols + x, travelWeight = weight };
-            return edges;
+            if (x > 0) links[e++] = new Link { toNodeID = z * cols + (x - 1), travelWeight = weight };
+            if (x < cols - 1) links[e++] = new Link { toNodeID = z * cols + (x + 1), travelWeight = weight };
+            if (z > 0) links[e++] = new Link { toNodeID = (z - 1) * cols + x, travelWeight = weight };
+            if (z < rows - 1) links[e++] = new Link { toNodeID = (z + 1) * cols + x, travelWeight = weight };
+            return links;
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace NodeWar.Simulation
                     breachBar = 0,
                     nextBreacherID = -1,
                     draftedSuits = setup.suits ?? new int[0],
-                    draftedNodes = setup.nodes ?? new int[0],
+                    draftedDistricts = setup.districts ?? new int[0],
                     suitEras = setup.suitEras,
                     districtEras = setup.districtEras
                 };

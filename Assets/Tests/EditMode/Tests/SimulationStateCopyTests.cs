@@ -42,7 +42,7 @@ namespace NodeWar.Tests
             for (int i = 0; i < source.players.Length; i++)
             {
                 Assert.AreNotSame(source.players[i].draftedSuits, copy.players[i].draftedSuits);
-                Assert.AreNotSame(source.players[i].draftedNodes, copy.players[i].draftedNodes);
+                Assert.AreNotSame(source.players[i].draftedDistricts, copy.players[i].draftedDistricts);
                 Assert.AreNotSame(source.players[i].suitEras, copy.players[i].suitEras);
                 Assert.AreNotSame(source.players[i].districtEras, copy.players[i].districtEras);
             }
@@ -183,7 +183,7 @@ namespace NodeWar.Tests
                 return values.GetValue(values.Length - 1);
             }
             if (IsIntArray(t)) return new[] { next++, next++, next++ };
-            if (t == typeof(Edge[])) return new[] { new Edge { toNode = next++, travelWeight = next++ } };
+            if (t == typeof(Link[])) return new[] { new Link { toNodeID = next++, travelWeight = next++ } };
             Assert.Fail("SimulationStateCopyTests does not know how to fill " + field.DeclaringType.Name + "." +
                         field.Name + " (" + t.Name + "). Teach it, and check SimulationState.CopyFrom copies it.");
             return null;

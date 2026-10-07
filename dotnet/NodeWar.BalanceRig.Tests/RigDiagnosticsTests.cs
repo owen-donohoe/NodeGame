@@ -38,8 +38,8 @@ namespace NodeWar.BalanceRig
             setup.mirror = (x, z) => (x, 2 - z);
             setup.playerSetups = new[]
             {
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, nodes = new[] { (int)DistrictType.Farm } },
-                new PlayerSetup { suits = new[] { (int)SuitType.Guardian }, nodes = new[] { (int)DistrictType.Mine } }
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new[] { (int)DistrictType.Farm } },
+                new PlayerSetup { suits = new[] { (int)SuitType.Guardian }, districts = new[] { (int)DistrictType.Mine } }
             };
             var draft = new[] { new DraftPlacement { playerID = 0, gridX = 0, gridZ = 0, districtType = DistrictType.Farm } };
             var first = MatchRunner.Prepare(setup, 31, draft);
@@ -48,7 +48,7 @@ namespace NodeWar.BalanceRig
             Assert.AreEqual(first.pairID, paired.pairID);
             Assert.AreEqual(0, first.seat); Assert.AreEqual(1, paired.seat);
             Assert.AreEqual((0, 2, 1, DistrictType.Farm), (paired.draft[0].gridX, paired.draft[0].gridZ, paired.draft[0].playerID, paired.draft[0].districtType));
-            CollectionAssert.AreEqual(first.players[0].nodes, paired.players[1].nodes);
+            CollectionAssert.AreEqual(first.players[0].districts, paired.players[1].districts);
             CollectionAssert.AreEqual(first.players[1].suits, paired.players[0].suits);
             Assert.AreEqual((1, 2, 1, -10000), (paired.setup.board.initialPlacements[0].gridX, paired.setup.board.initialPlacements[0].gridZ, paired.setup.board.initialPlacements[0].ownerID, paired.setup.board.initialPlacements[0].claimBar));
             Assert.AreEqual(0, first.draft[0].gridZ, "Original draft remains intact");

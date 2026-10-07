@@ -19,8 +19,8 @@ namespace NodeWar.Tests
         {
             return new[]
             {
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior, (int)SuitType.Scout }, nodes = new[] { (int)DistrictType.Rampart } },
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] }
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior, (int)SuitType.Scout }, districts = new[] { (int)DistrictType.Rampart } },
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] }
             };
         }
 
@@ -60,13 +60,13 @@ namespace NodeWar.Tests
         {
             SimulationState state = MatchFactory.Build(Balance(), BoardConfigData.Default(), null, Setups());
 
-            Edge[] middle = state.nodes[5].edges; // (1,1)
-            Assert.AreEqual(new[] { 4, 6, 1, 9 }, new[] { middle[0].toNode, middle[1].toNode, middle[2].toNode, middle[3].toNode });
-            Edge[] corner = state.nodes[0].edges;
+            Link[] middle = state.nodes[5].links; // (1,1)
+            Assert.AreEqual(new[] { 4, 6, 1, 9 }, new[] { middle[0].toNodeID, middle[1].toNodeID, middle[2].toNodeID, middle[3].toNodeID });
+            Link[] corner = state.nodes[0].links;
             Assert.AreEqual(2, corner.Length);
-            Assert.AreEqual(1, corner[0].toNode);
-            Assert.AreEqual(4, corner[1].toNode);
-            Assert.AreEqual(BoardConfigData.DefaultEdgeWeight, corner[0].travelWeight);
+            Assert.AreEqual(1, corner[0].toNodeID);
+            Assert.AreEqual(4, corner[1].toNodeID);
+            Assert.AreEqual(BoardConfigData.DefaultLinkWeight, corner[0].travelWeight);
         }
 
         [Test]
@@ -103,8 +103,8 @@ namespace NodeWar.Tests
             Assert.AreEqual(4, state.players[1].materials);
             Assert.AreEqual(5, state.players[1].metal);
             Assert.AreEqual(new[] { (int)SuitType.Warrior, (int)SuitType.Scout }, state.players[0].draftedSuits);
-            Assert.AreEqual(new[] { (int)DistrictType.Rampart }, state.players[0].draftedNodes);
-            Assert.AreEqual(new int[0], state.players[1].draftedNodes);
+            Assert.AreEqual(new[] { (int)DistrictType.Rampart }, state.players[0].draftedDistricts);
+            Assert.AreEqual(new int[0], state.players[1].draftedDistricts);
         }
 
         [Test]
@@ -132,7 +132,7 @@ namespace NodeWar.Tests
             var state = new SimulationState();
             MatchFactory.Fill(state, Balance(), BoardConfigData.Default(), null, Setups());
 
-            Assert.AreEqual(BoardConfigData.DefaultEdgeWeight, state.defaultEdgeWeight);
+            Assert.AreEqual(BoardConfigData.DefaultLinkWeight, state.defaultLinkWeight);
             Assert.AreEqual(28, state.nodes.Length);
             Assert.AreEqual(SimulationStateHasher.ComputeHash(MatchFactory.Build(Balance(), BoardConfigData.Default(), null, Setups())),
                 SimulationStateHasher.ComputeHash(state));

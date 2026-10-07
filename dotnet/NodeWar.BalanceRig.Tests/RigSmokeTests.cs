@@ -17,8 +17,8 @@ namespace NodeWar.BalanceRig
             board.startingVillagersPerPlayer = 1;
             board.initialPlacements = new[]
             {
-                new BoardConfigData.InitialNodePlacement { gridX = 1, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement { gridX = 1, gridZ = 2, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
+                new BoardConfigData.InitialDistrictPlacement { gridX = 1, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
+                new BoardConfigData.InitialDistrictPlacement { gridX = 1, gridZ = 2, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
             };
             return new RigSetup
             {

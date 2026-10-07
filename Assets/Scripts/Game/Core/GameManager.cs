@@ -177,7 +177,7 @@ namespace NodeWar.Core
                 Debug.LogError("[GameManager] GameBalance '" + balance.name + "' is not the shared balance ("
                     + NodeWar.Config.GameBalance.SharedResourceName + ") the handshake advertised. Peers will desync.");
 
-            state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
+            state.defaultLinkWeight = boardConfig.Data.defaultLinkWeight;
 
             inputBuffer = new InputBuffer();
 
@@ -366,7 +366,7 @@ namespace NodeWar.Core
 
                 if (match != null && match.isBotMatch)
                 {
-                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultEdgeWeight);
+                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultLinkWeight);
                     debugPlayerSwitch.LockToPlayer(0);
 
                     TickRunner runner = GetComponent<TickRunner>();
@@ -1034,7 +1034,7 @@ namespace NodeWar.Core
                 loadouts[p] = new NodeWar.MatchLog.PlayerLoadout
                 {
                     suits = (int[])state.players[p].draftedSuits.Clone(),
-                    nodes = (int[])state.players[p].draftedNodes.Clone(),
+                    districts = (int[])state.players[p].draftedDistricts.Clone(),
                     suitEras = (int[])state.players[p].suitEras?.Clone(),
                     districtEras = (int[])state.players[p].districtEras?.Clone(),
                     skins = LoadoutForPlayer(p, match.loadout).skinIDs
@@ -1424,9 +1424,9 @@ namespace NodeWar.Core
                     if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
                     if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
 
-                    Edge[] edges = new Edge[neighborIDs.Count];
+                    Link[] links = new Link[neighborIDs.Count];
                     for (int i = 0; i < neighborIDs.Count; i++)
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
+                        links[i] = new Link { toNodeID = neighborIDs[i], travelWeight = boardConfig.Data.defaultLinkWeight };
 
                     int bonus = layout[z, x] == DistrictType.Village
                         ? balance.Data.GetDistrictStats(DistrictType.Village, 0).bonusVillagersOnClaim : 0;
@@ -1440,10 +1440,10 @@ namespace NodeWar.Core
                         nodeID = nodeID,
                         gridX = x,
                         gridZ = z,
-                        edges = edges,
+                        links = links,
                         districtType = layout[z, x],
                         baseDistrictType = layout[z, x],
-                        slotType = NodeSlotType.Fixed,
+                        upgradeCategory = DistrictUpgradeCategory.Fixed,
                         claimBar = claimBar,
                         ownerID = ownerID,
                         bonusVillagersOnClaim = bonus,
@@ -1472,7 +1472,7 @@ namespace NodeWar.Core
                 setups[p] = new PlayerSetup
                 {
                     suits = BuildDraftedSuits(p, loadout),
-                    nodes = BuildDraftedNodes(p, loadout),
+                    districts = BuildDraftedNodes(p, loadout),
                     suitEras = own.suitEras,
                     districtEras = own.districtEras
                 };

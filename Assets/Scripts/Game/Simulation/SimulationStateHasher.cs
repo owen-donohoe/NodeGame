@@ -22,7 +22,7 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + state.tickCount;
                 hash = hash * 31 + (state.gameOver ? 1 : 0);
                 hash = hash * 31 + state.winnerID;
-                hash = hash * 31 + state.defaultEdgeWeight;
+                hash = hash * 31 + state.defaultLinkWeight;
 
                 // Players
                 for (int i = 0; i < state.players.Length; i++)
@@ -59,11 +59,11 @@ namespace NodeWar.Simulation
                     }
                     else hash = hash * 31 + 0;
 
-                    if (state.players[i].draftedNodes != null)
+                    if (state.players[i].draftedDistricts != null)
                     {
-                        hash = hash * 31 + state.players[i].draftedNodes.Length;
-                        for (int n = 0; n < state.players[i].draftedNodes.Length; n++)
-                            hash = hash * 31 + state.players[i].draftedNodes[n];
+                        hash = hash * 31 + state.players[i].draftedDistricts.Length;
+                        for (int n = 0; n < state.players[i].draftedDistricts.Length; n++)
+                            hash = hash * 31 + state.players[i].draftedDistricts[n];
                     }
                     else hash = hash * 31 + 0;
 
@@ -79,7 +79,7 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.nodes[i].ownerID;
                     hash = hash * 31 + state.nodes[i].materialAllocation;
                     hash = hash * 31 + (int)state.nodes[i].districtType;
-                    hash = hash * 31 + (int)state.nodes[i].slotType;
+                    hash = hash * 31 + (int)state.nodes[i].upgradeCategory;
                     hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;

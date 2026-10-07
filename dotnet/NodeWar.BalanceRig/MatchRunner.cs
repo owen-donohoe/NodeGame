@@ -107,7 +107,7 @@ namespace NodeWar.BalanceRig
                     players[p] = new PlayerSetup
                     {
                         suits = given.suits == null ? null : (int[])given.suits.Clone(),
-                        nodes = given.nodes == null ? null : (int[])given.nodes.Clone(),
+                        districts = given.districts == null ? null : (int[])given.districts.Clone(),
                         suitEras = given.suitEras == null ? null : (int[])given.suitEras.Clone(),
                         districtEras = given.districtEras == null ? null : (int[])given.districtEras.Clone()
                     };
@@ -121,7 +121,7 @@ namespace NodeWar.BalanceRig
                 players[p] = new PlayerSetup
                 {
                     suits = new[] { (int)SuitType.Warrior },
-                    nodes = nodes,
+                    districts = nodes,
                     suitEras = new int[suitCount],
                     districtEras = new int[districtCount]
                 };
@@ -151,10 +151,10 @@ namespace NodeWar.BalanceRig
                 throw new InvalidOperationException("Swapping seats needs RigSetup.mirror: the board's own symmetry, supplied by whoever built the setup.");
 
             BoardConfigData board = source.board;
-            var placements = new BoardConfigData.InitialNodePlacement[source.board.initialPlacements.Length];
+            var placements = new BoardConfigData.InitialDistrictPlacement[source.board.initialPlacements.Length];
             for (int i = 0; i < placements.Length; i++)
             {
-                BoardConfigData.InitialNodePlacement ip = source.board.initialPlacements[i];
+                BoardConfigData.InitialDistrictPlacement ip = source.board.initialPlacements[i];
                 var cell = source.mirror(ip.gridX, ip.gridZ);
                 ip.gridX = cell.x;
                 ip.gridZ = cell.z;
@@ -250,8 +250,8 @@ namespace NodeWar.BalanceRig
             var buffer = new InputBuffer();
             var bots = new[]
             {
-                new BotPlayer(state, buffer, 0, setup.board.defaultEdgeWeight),
-                new BotPlayer(state, buffer, 1, setup.board.defaultEdgeWeight)
+                new BotPlayer(state, buffer, 0, setup.board.defaultLinkWeight),
+                new BotPlayer(state, buffer, 1, setup.board.defaultLinkWeight)
             };
 
             // Commands held back by an input delay: applied at tick (issued + delay).

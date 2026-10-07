@@ -218,8 +218,8 @@ namespace NodeWar.BalanceRig
             s.board.gridRows = 1;
             s.board.initialPlacements = new[]
             {
-                new BoardConfigData.InitialNodePlacement { gridX = 0, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
+                new BoardConfigData.InitialDistrictPlacement { gridX = 0, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
+                new BoardConfigData.InitialDistrictPlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
             };
             s.mirror = (x, z) => (2 - x, z);
             return s;

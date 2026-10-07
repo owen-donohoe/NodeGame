@@ -53,7 +53,7 @@ namespace NodeWar.Config
             public int unownedMultiplier;
             public int enemyPartiallyOwnedMultiplier;
             public int enemyOwnedMultiplier;
-            public BoardConfigData.InitialNodePlacement[] initialPlacements;
+            public BoardConfigData.InitialDistrictPlacement[] initialPlacements;
 
             public static SerializedBoard From(BoardConfigData board)
             {
@@ -61,7 +61,7 @@ namespace NodeWar.Config
                 {
                     gridCols = board.gridCols,
                     gridRows = board.gridRows,
-                    defaultLinkWeight = board.defaultEdgeWeight,
+                    defaultLinkWeight = board.defaultLinkWeight,
                     startingVillagersPerPlayer = board.startingVillagersPerPlayer,
                     startingFood = board.startingFood,
                     startingMaterials = board.startingMaterials,
@@ -81,7 +81,7 @@ namespace NodeWar.Config
                 {
                     gridCols = gridCols,
                     gridRows = gridRows,
-                    defaultEdgeWeight = defaultLinkWeight,
+                    defaultLinkWeight = defaultLinkWeight,
                     startingVillagersPerPlayer = startingVillagersPerPlayer,
                     startingFood = startingFood,
                     startingMaterials = startingMaterials,

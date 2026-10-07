@@ -472,28 +472,28 @@ namespace NodeWar.Simulation
             }
         }
 
-        public static NodeSlotType GetSlotTypeForDistrict(DistrictType district)
+        public static DistrictUpgradeCategory GetUpgradeCategoryForDistrict(DistrictType district)
         {
             switch (district)
             {
                 case DistrictType.Camp:
                 case DistrictType.Barracks:
                 case DistrictType.Arsenal:
-                    return NodeSlotType.Army;
+                    return DistrictUpgradeCategory.Army;
 
                 case DistrictType.Shrine:
                 case DistrictType.Sanctuary:
-                    return NodeSlotType.Healing;
+                    return DistrictUpgradeCategory.Healing;
 
                 case DistrictType.Watchtower:
                 case DistrictType.Rampart:
-                    return NodeSlotType.Affect;
+                    return DistrictUpgradeCategory.Affect;
 
                 case DistrictType.Market:
-                    return NodeSlotType.ResourceSpecial;
+                    return DistrictUpgradeCategory.ResourceSpecial;
 
                 default:
-                    return NodeSlotType.Fixed;
+                    return DistrictUpgradeCategory.Fixed;
             }
         }
     }
