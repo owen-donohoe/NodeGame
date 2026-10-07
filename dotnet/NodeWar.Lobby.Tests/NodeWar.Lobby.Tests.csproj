@@ -60,6 +60,7 @@
     <Compile Include="RankedResultTrackerTests.cs" />
     <Compile Include="DisconnectHoldTests.cs" />
     <Compile Include="PresenceHeartbeatTests.cs" />
+    <Compile Include="LoadoutCompatibilityTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />
 
@@ -72,6 +73,8 @@
     -->
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutData.cs"
              Link="Lobby/LoadoutData.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutRecord.cs"
+             Link="Lobby/LoadoutRecord.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Data/LoadoutTypes.cs"
              Link="Lobby/LoadoutTypes.cs" />
 

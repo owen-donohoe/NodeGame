@@ -24,7 +24,7 @@ namespace NodeWar.Lobby
             public string username;
             public string uuid;
             public int trophies;
-            public LoadoutData loadout;
+            public LoadoutRecord loadout;
             public string[] unlockedSuitIDs;
             public string[] unlockedNodeIDs;
             public int selectedGameModeIndex; // cast to GameMode
@@ -78,7 +78,7 @@ namespace NodeWar.Lobby
             get => (GameMode)data.selectedGameModeIndex;
             set { data.selectedGameModeIndex = (int)value; Save(); }
         }
-        public LoadoutData Loadout => data.loadout;
+        public LoadoutData Loadout => data.loadout.ToLoadout();
 
         public bool AccountLinkPromptShown => data.accountLinkPromptShown;
 
@@ -133,7 +133,7 @@ namespace NodeWar.Lobby
 
         public void SetLoadout(LoadoutData loadout)
         {
-            data.loadout = LoadoutData.Normalized(loadout);
+            data.loadout = LoadoutRecord.From(LoadoutData.Normalized(loadout));
             Save();
         }
 
@@ -215,7 +215,7 @@ namespace NodeWar.Lobby
                 data = JsonUtility.FromJson<PlayerProfileData>(json);
 
                 bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
-                data.loadout = LoadoutData.Normalized(data.loadout);
+                data.loadout = LoadoutRecord.From(LoadoutData.Normalized(data.loadout.ToLoadout()));
 
                 // A save written before settings existed deserialises to an
                 // all-zero block, which Normalized turns into the defaults.
@@ -271,7 +271,7 @@ namespace NodeWar.Lobby
         /// Returns true when a migration actually happened, so the caller can
         /// rewrite the file and make it a one-time cost.
         /// </summary>
-        private static bool TryMigrateLegacyLoadout(string json, ref LoadoutData loadout)
+        private static bool TryMigrateLegacyLoadout(string json, ref LoadoutRecord loadout)
         {
             bool alreadyMigrated =
                 (loadout.suitIDs != null && loadout.suitIDs.Length > 0) ||
@@ -283,7 +283,7 @@ namespace NodeWar.Lobby
 
             LegacyProfile legacy = JsonUtility.FromJson<LegacyProfile>(json);
 
-            loadout = new LoadoutData
+            loadout = new LoadoutRecord
             {
                 suitIDs = new string[]
                 {
@@ -310,7 +310,7 @@ namespace NodeWar.Lobby
                 username = "player_" + uuid,
                 uuid = uuid,
                 trophies = 0,
-                loadout = LoadoutData.CreateEmpty(),
+                loadout = LoadoutRecord.From(LoadoutData.CreateEmpty()),
                 unlockedSuitIDs = new string[] { "suit_warrior", "suit_guardian" },
                 unlockedNodeIDs = new string[] { "node_watchtower", "node_market" },
                 selectedGameModeIndex = (int)GameMode.Bot,

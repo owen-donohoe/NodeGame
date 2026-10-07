@@ -79,5 +79,24 @@ namespace NodeWar.View.Tests
             // An unset float field on an old asset reads 0; it must not collapse the art.
             Assert.IsTrue(BoardArtRules.IsIdentity(0, 0, 0, 0, 0, 0, BoardArtRules.SafeScale(0f)));
         }
+
+        // Prefabs name their villager positions with the older "WorkSlot"
+        // prefix and are not re-authored by a code rename. Positions are given
+        // out in the order the hierarchy lists them, whatever the suffix.
+        [Test]
+        public void LegacyWorkSlotNames_AreSupported()
+        {
+            string[] children =
+            {
+                "Model", "WORKPOINTS", "WorkSlot_1", "IdleCenter", "WorkSlot_0", "ClaimCenter", "WorkSlot", "workslot_9", null
+            };
+
+            CollectionAssert.AreEqual(new[] { 2, 4, 6 }, WorkPositionNames.Order(children));
+            Assert.IsTrue(WorkPositionNames.IsWorkPosition("WorkSlot_0"));
+            Assert.IsFalse(WorkPositionNames.IsWorkPosition("IdleCenter"));
+            Assert.IsFalse(WorkPositionNames.IsWorkPosition(null));
+            Assert.AreEqual("IdleCenter", WorkPositionNames.IdleCenter);
+            Assert.AreEqual("ClaimCenter", WorkPositionNames.ClaimCenter);
+        }
     }
 }

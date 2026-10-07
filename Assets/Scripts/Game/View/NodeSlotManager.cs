@@ -41,13 +41,13 @@ namespace NodeWar.View
             {
                 if (allChildren[i] == transform) continue; // skip self
 
-                if (allChildren[i].name.StartsWith("WorkSlot"))
+                if (WorkPositionNames.IsWorkPosition(allChildren[i].name))
                     slots.Add(allChildren[i]);
 
-                else if (allChildren[i].name == "IdleCenter")
+                else if (allChildren[i].name == WorkPositionNames.IdleCenter)
                     idleCenter = allChildren[i];
 
-                else if (allChildren[i].name == "ClaimCenter")
+                else if (allChildren[i].name == WorkPositionNames.ClaimCenter)
                     claimCenter = allChildren[i];
             }
             workSlots = slots.ToArray();
