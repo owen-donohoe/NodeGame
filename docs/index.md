@@ -29,6 +29,11 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [tempo-and-breach-proposal](tempo-and-breach-proposal.md) — draft: tempo phases, sudden death
   and a sequential breach bar with swarm scaling. Declares no sources: it describes work not yet
   done.
+* [map-terrain-and-district-redesign](map-terrain-and-district-redesign.md) — draft: premade
+  14–20 node maps with land, lake and ocean terrain, piers and lighthouses, claim restore,
+  recruiting Villages and one-off Towns, banks and minions, a magic well, a revised district
+  roster, and the bot, replay and balance-rig work that measures it. Declares no sources: it
+  describes work not yet done.
 * [suit-tree-spec](suit-tree-spec.md) — draft: per-arena suit unlocks and branching variants
   mapped onto the existing era and catalog system, a content budget, and the lobby tree and
   info panel. Declares no sources: it describes work not yet done.
