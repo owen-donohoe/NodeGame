@@ -17,8 +17,27 @@ namespace NodeWar.Simulation
         Sanctuary,
         Watchtower,
         Rampart,
-        Market
+        Market,
 
+        /// <summary>
+        /// Built on a Lake cell that the board marks as a district slot. Appended
+        /// after Market so every earlier value keeps its number. In stage B it is
+        /// an inert connector: it grants nothing and blocks nobody.
+        /// </summary>
+        Pier = 14
+    }
+
+    /// <summary>
+    /// What a board cell is made of. Land cells always carry a node; a Lake cell
+    /// carries one only when a Pier is built on it; Ocean never does. A Pier slot
+    /// is a Lake cell with <see cref="BoardConfigData.districtSlots"/> set, not a
+    /// fourth terrain value. Values are persisted in match logs: never renumber.
+    /// </summary>
+    public enum TerrainType
+    {
+        Land = 0,
+        Lake = 1,
+        Ocean = 2
     }
 
     public enum DistrictUpgradeCategory
@@ -73,6 +92,9 @@ namespace NodeWar.Simulation
 
         public DistrictUpgradeCategory upgradeCategory;
         public DistrictType baseDistrictType;
+
+        /// <summary>The terrain of this node's cell: Land, or Lake under a Pier.</summary>
+        public TerrainType terrain;
 
         /// <summary>
         /// Which era of its district this node plays: the era of the player who
@@ -178,6 +200,13 @@ namespace NodeWar.Simulation
         public int winnerID;
         public int defaultLinkWeight;
 
+        /// <summary>
+        /// <see cref="BoardHasher"/> fingerprint of the board this state was built
+        /// from, set once by <see cref="MatchFactory"/>. Hashed so two peers on
+        /// different maps diverge at the first checkpoint, not silently.
+        /// </summary>
+        public int boardHash;
+
         public SimulationState()
         {
             tickCount = 0;
@@ -230,6 +259,7 @@ namespace NodeWar.Simulation
             gameOver = source.gameOver;
             winnerID = source.winnerID;
             defaultLinkWeight = source.defaultLinkWeight;
+            boardHash = source.boardHash;
         }
 
         private static int[] CopyInts(int[] values) => values == null ? null : (int[])values.Clone();

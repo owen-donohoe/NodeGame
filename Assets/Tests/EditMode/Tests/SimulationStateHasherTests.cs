@@ -15,10 +15,10 @@ namespace NodeWar.Tests
         {
             "SimulationState.nodes", "SimulationState.villagers", "SimulationState.players",
             "SimulationState.tickCount", "SimulationState.gameOver", "SimulationState.winnerID",
-            "SimulationState.defaultLinkWeight",
+            "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
             "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
-            "NodeData.districtEra",
+            "NodeData.districtEra", "NodeData.terrain",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
             "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",

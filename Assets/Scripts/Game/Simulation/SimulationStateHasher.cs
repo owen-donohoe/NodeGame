@@ -23,6 +23,7 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + (state.gameOver ? 1 : 0);
                 hash = hash * 31 + state.winnerID;
                 hash = hash * 31 + state.defaultLinkWeight;
+                hash = hash * 31 + state.boardHash;
 
                 // Players
                 for (int i = 0; i < state.players.Length; i++)
@@ -81,6 +82,7 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (int)state.nodes[i].districtType;
                     hash = hash * 31 + (int)state.nodes[i].upgradeCategory;
                     hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
+                    hash = hash * 31 + (int)state.nodes[i].terrain;
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;
                 }
