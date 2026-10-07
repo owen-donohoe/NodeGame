@@ -120,6 +120,8 @@
              Link="Backend/MatchReportTypes.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/CatalogIds.cs"
              Link="Backend/CatalogIds.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/CatalogKeys.cs"
+             Link="Backend/CatalogKeys.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerState.cs"
              Link="Backend/PlayerState.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerStateService.cs"

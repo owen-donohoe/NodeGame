@@ -68,11 +68,15 @@ namespace NodeWar.Lobby
         public const int SuitTypeCount = (int)SuitType.Watcher + 1;
         public const int DistrictTypeCount = (int)DistrictType.Market + 1;
 
-        public static string CatalogBaseForSuit(int type) => type > 0 && Enum.IsDefined(typeof(SuitType), type)
-            ? CatalogIds.SuitBase(((SuitType)type).ToString()) : null;
+        public static string CatalogBaseForSuit(int type) => CatalogKeys.SuitBase(type);
 
-        public static string CatalogBaseForDistrict(int type) => type > 0 && Enum.IsDefined(typeof(DistrictType), type)
-            ? CatalogIds.DistrictBase(((DistrictType)type).ToString()) : null;
+        public static string CatalogBaseForDistrict(int type) => CatalogKeys.DistrictBase(type);
+
+        /// <summary>The lobby ID an item is written with ("suit_warrior"); empty for a type with none.</summary>
+        public static string LobbyIdForSuit(SuitType type) => CatalogKeys.SuitLobbyId((int)type) ?? "";
+
+        /// <summary>The lobby ID a district is written with ("node_rampart", frozen); empty for a type with none.</summary>
+        public static string LobbyIdForDistrict(DistrictType type) => CatalogKeys.DistrictLobbyId((int)type) ?? "";
 
         /// <summary>
         /// The era of every suit and district a player has equipped, as the

@@ -28,12 +28,13 @@ namespace NodeWar.Backend
     {
         public static List<string> All()
         {
+            // From the explicit key tables, never from enum member names, so a
+            // domain rename cannot change what the catalog is generated with.
             var bases = new List<string>();
-            foreach (SuitType suit in Enum.GetValues(typeof(SuitType)))
-                if (suit != SuitType.None) bases.Add(CatalogIds.SuitBase(suit.ToString()));
-            foreach (DistrictType district in Enum.GetValues(typeof(DistrictType)))
-                if (district != DistrictType.None && district != DistrictType.Core)
-                    bases.Add(CatalogIds.DistrictBase(district.ToString()));
+            for (int suit = 1; suit < CatalogKeys.SuitTableLength; suit++)
+                bases.Add(CatalogKeys.SuitBase(suit));
+            foreach (int district in CatalogKeys.CatalogDistrictTypes)
+                bases.Add(CatalogKeys.DistrictBase(district));
             return bases;
         }
     }

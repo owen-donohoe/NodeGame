@@ -26,6 +26,19 @@ namespace NodeWar.Tests
                 Assert.AreEqual(i, (int)Enum.Parse(typeof(DistrictType), districts[i]), districts[i]);
             }
 
+            // Suits are stored and keyed by number too (catalog bases, wire loadouts, logs).
+            string[] suits =
+            {
+                "None", "Farmer", "Miner", "Warrior", "Smelter", "Guardian", "Scout",
+                "Berserker", "Medic", "Merchant", "Acolyte", "Watcher"
+            };
+            Assert.AreEqual(12, Enum.GetValues(typeof(SuitType)).Length);
+            for (int i = 0; i < suits.Length; i++)
+            {
+                Assert.AreEqual(suits[i], ((SuitType)i).ToString(), "SuitType " + i);
+                Assert.AreEqual(i, (int)Enum.Parse(typeof(SuitType), suits[i]), suits[i]);
+            }
+
             string[] categories = { "Fixed", "Army", "Healing", "Affect", "ResourceSpecial" };
             Assert.AreEqual(5, Enum.GetValues(typeof(DistrictUpgradeCategory)).Length);
             for (int i = 0; i < categories.Length; i++)

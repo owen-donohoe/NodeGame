@@ -27,12 +27,13 @@ namespace NodeWar.UI
     public static class DraftPieceInfo
     {
         /// <summary>
-        /// The ID convention DraftManager.MapDistrictID reads in the
-        /// other direction: "node_" plus the lowercased district name.
+        /// The lobby ID DraftManager.MapDistrictID reads in the other
+        /// direction ("node_rampart"), from the explicit table rather than the
+        /// enum member name.
         /// </summary>
-        public static string NodeID(DistrictType type)
+        public static string DistrictID(DistrictType type)
         {
-            return "node_" + type.ToString().ToLowerInvariant();
+            return NodeWar.Lobby.LoadoutTypes.LobbyIdForDistrict(type);
         }
 
         /// <summary>
@@ -43,7 +44,7 @@ namespace NodeWar.UI
         /// </summary>
         public static string DisplayName(DistrictType type, DistrictDefinition[] definitions)
         {
-            string id = NodeID(type);
+            string id = DistrictID(type);
 
             if (definitions != null)
             {
@@ -76,7 +77,7 @@ namespace NodeWar.UI
         /// </summary>
         public static string TintClass(DistrictType type)
         {
-            return "ui-tile-tint--" + ItemTint.IndexFor(NodeID(type));
+            return "ui-tile-tint--" + ItemTint.IndexFor(DistrictID(type));
         }
     }
 }

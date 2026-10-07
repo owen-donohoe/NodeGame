@@ -77,6 +77,68 @@ namespace NodeWar.Lobby.Tests
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, BasePicks(lines, "baseDraftNodesP1", "baseDraftDistrictsP1"));
         }
 
+        // Every lobby ID the game has shipped, and the numbers they resolve to.
+        // The numbers are literals on purpose: they are what logs, wire packets
+        // and the catalog's bases were written against.
+        [TestCase("node_farm", 1)]
+        [TestCase("node_mine", 2)]
+        [TestCase("node_village", 3)]
+        [TestCase("node_barracks", 4)]
+        [TestCase("node_forge", 6)]
+        [TestCase("node_camp", 7)]
+        [TestCase("node_shrine", 8)]
+        [TestCase("node_arsenal", 9)]
+        [TestCase("node_sanctuary", 10)]
+        [TestCase("node_watchtower", 11)]
+        [TestCase("node_rampart", 12)]
+        [TestCase("node_market", 13)]
+        [TestCase("node_crossroads", 0)]
+        [TestCase("NODE_RAMPART", 12)]
+        [TestCase("some_farm_variant", 1)]
+        [TestCase("", 0)]
+        [TestCase(null, 0)]
+        public void KnownIds_KeepExactMappings(string lobbyId, int district)
+        {
+            Assert.AreEqual(district, (int)LoadoutTypes.DistrictForLobbyId(lobbyId), lobbyId);
+        }
+
+        [TestCase("suit_warrior", 3)]
+        [TestCase("suit_guardian", 5)]
+        [TestCase("suit_scout", 6)]
+        [TestCase("suit_berserker", 7)]
+        [TestCase("suit_medic", 8)]
+        [TestCase("SUIT_WARRIOR", 3)]
+        [TestCase("suit_unknown", 0)]
+        [TestCase(null, 0)]
+        public void KnownSuitIds_KeepExactMappings(string lobbyId, int suit)
+        {
+            Assert.AreEqual(suit, (int)LoadoutTypes.SuitForLobbyId(lobbyId), lobbyId);
+        }
+
+        // The catalog base each simulation number hangs its variants and skins off.
+        [Test]
+        public void CatalogBases_KeepExactMappings()
+        {
+            string[] suits =
+            {
+                null, "suit.farmer", "suit.miner", "suit.warrior", "suit.smelter", "suit.guardian", "suit.scout",
+                "suit.berserker", "suit.medic", "suit.merchant", "suit.acolyte", "suit.watcher"
+            };
+            string[] districts =
+            {
+                null, "district.farm", "district.mine", "district.village", "district.barracks", "district.core",
+                "district.forge", "district.camp", "district.shrine", "district.arsenal", "district.sanctuary",
+                "district.watchtower", "district.rampart", "district.market"
+            };
+            for (int i = 0; i < suits.Length; i++) Assert.AreEqual(suits[i], LoadoutTypes.CatalogBaseForSuit(i), "suit " + i);
+            for (int i = 0; i < districts.Length; i++) Assert.AreEqual(districts[i], LoadoutTypes.CatalogBaseForDistrict(i), "district " + i);
+            Assert.IsNull(LoadoutTypes.CatalogBaseForSuit(suits.Length));
+            Assert.IsNull(LoadoutTypes.CatalogBaseForDistrict(districts.Length));
+            Assert.IsNull(LoadoutTypes.CatalogBaseForSuit(-1));
+            Assert.AreEqual("district.rampart", LoadoutTypes.CatalogBaseForLobbyId("node_rampart"));
+            Assert.AreEqual("suit.warrior", LoadoutTypes.CatalogBaseForLobbyId("suit_warrior"));
+            Assert.IsNull(LoadoutTypes.CatalogBaseForLobbyId("node_crossroads"));
+        }
         // The profile file's top-level keys, frozen by every save on disk.
         // unlockedNodeIDs holds the district unlocks; code reaches it through
         // UnlockedDistrictIDs.

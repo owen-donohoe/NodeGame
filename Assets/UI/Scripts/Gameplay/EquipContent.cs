@@ -300,7 +300,7 @@ namespace NodeWar.UI
 
                 string name = suit.ToString();
 
-                VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor("suit_" + name.ToLowerInvariant()));
+                VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor(NodeWar.Lobby.LoadoutTypes.LobbyIdForSuit(suit)));
                 tile.Add(Text(name.Substring(0, 1), "ui-tile__monogram", "equip__card-letter"));
 
                 sub = ResourceRow("equip__card-sub");

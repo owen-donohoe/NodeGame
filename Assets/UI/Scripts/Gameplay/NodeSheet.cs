@@ -394,7 +394,7 @@ namespace NodeWar.UI
 
             // A monogram tile, tinted from the district's ID the same way the
             // lobby tints its cards, so a district looks alike in both scenes.
-            string tint = ItemTint.ClassFor("node_" + name.ToLowerInvariant());
+            string tint = ItemTint.ClassFor(NodeWar.Lobby.LoadoutTypes.LobbyIdForDistrict(node.districtType));
             if (thumb != null && tint != thumbTint)
             {
                 if (thumbTint != null) thumb.RemoveFromClassList(thumbTint);
