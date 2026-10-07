@@ -245,5 +245,31 @@ namespace NodeWar.MatchLog
                 Assert.DoesNotThrow(() => MatchLogFormat.TryRead(bytes, out _, out _));
             }
         }
+
+        // A minimal simVersion-2 file as the format wrote it before the
+        // graph/district vocabulary rename, checked in as bytes. Renaming
+        // fields must not move a byte of what the format reads or writes.
+        private const string MinimalV2 =
+            "4E574D4C010001003B00000034120200EB32A4F808006D617463682D34320900E78EA9E5AEB62DC3A90A00706C617965" +
+            "722D74776F01070000004F9721C508070605040302010202005C00000005000000090000000300000004000000110000" +
+            "001D0000001F000000330000004C0000006500000097000000C900000002000000010000000800000005000000000000" +
+            "001027000003000000000000000600000001000000C3DDFFFF0300380000000300000002000000040000000600000002" +
+            "000000030000000500000002000000070000000800000003000000090000000A0000000B000000040004000000000000" +
+            "000500880000000200000004000000030001000000010000000B0000000400000003000000FEFFFFFF02000000000000" +
+            "00FFFFFFFF08000000020000002500000001000000010000000C00000005000000040000000000000035000000020001" +
+            "00000000000000020000000300000034000000010000000200000001000000FFFFFFFF07000000330000001300000006" +
+            "000400000000000000";
+
+        [Test]
+        public void MechanicalRename_PreservesV2Bytes()
+        {
+            byte[] bytes = new byte[MinimalV2.Length / 2];
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = Convert.ToByte(MinimalV2.Substring(i * 2, 2), 16);
+
+            MatchLog log = TestLogs.Read(bytes);
+            Assert.AreEqual(2, log.header.sim);
+            CollectionAssert.AreEqual(bytes, MatchLogFormat.Write(log));
+        }
     }
 }
