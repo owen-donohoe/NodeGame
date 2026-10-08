@@ -152,6 +152,7 @@ namespace NodeWar.Core
 
         // Draft
         private DraftManager draftManager;
+        private NodeWar.View.BoardTerrainView terrainView;
         private DraftResult? pendingDraftResult;
 
         private enum MatchPhase { PreDraft, Drafting, PostDraft, Countdown, Playing }
@@ -169,6 +170,8 @@ namespace NodeWar.Core
             if (boardConfig == null) { Debug.LogError("[GameManager] BoardConfig not assigned!"); return; }
 
             MatchFactory.Configure(balance.Data, boardConfig.Data);
+            terrainView = NodeWar.View.BoardTerrainView.Create(boardConfig);
+            terrainView.transform.SetParent(transform, false);
 
             // The lobby's handshake advertised the shared asset's hash. Playing
             // anything else would pass the handshake and desync mid-match.
@@ -234,7 +237,8 @@ namespace NodeWar.Core
                 match.isBotMatch,
                 cameraController,
                 gridCellMarkerPrefab,
-                loadout
+                loadout,
+                terrainView
             );
 
             draftManager.OnDraftComplete += OnDraftComplete;
@@ -310,8 +314,7 @@ namespace NodeWar.Core
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
 
-        // The match log of a drafted match. Null on the testing path, whose
-        // hardcoded board a log's BOARD and DRAFT chunks cannot describe.
+        // The match log of a drafted match. Testing mode does not start recording.
         private NodeWar.MatchLog.MatchRecorder recorder;
 
         private void OnDraftComplete(DraftResult result)
@@ -351,6 +354,7 @@ namespace NodeWar.Core
         private void InitializeFromDraftResult(DraftResult result)
         {
             MatchFactory.Fill(state, balance.Data, boardConfig.Data, result.placements, BuildPlayerSetups());
+            terrainView.ShowMatch(result.placements);
             SetCameraHomeAnchors();
             InitializeInputSystems();
 
@@ -427,15 +431,15 @@ namespace NodeWar.Core
             if (lockstep != null) lockstep.Unpause(Time.time, Time.realtimeSinceStartup);
         }
 
-        // ===== TESTING MODE (skip draft, legacy board) =====
+        // ===== TESTING MODE (skip draft, shared map and factory) =====
 
         private void SkipDraftAndInitialize()
         {
             matchPhase = MatchPhase.Playing;
 
-            InitializeNodes();
-            MatchFactory.InitializePlayers(state, balance.Data, boardConfig.Data, BuildPlayerSetups());
-            MatchFactory.InitializeVillagers(state, balance.Data, boardConfig.Data);
+            DraftPlacement[] placements = DraftPlanner.TestingPlacements(boardConfig.Data);
+            MatchFactory.Fill(state, balance.Data, boardConfig.Data, placements, BuildPlayerSetups());
+            terrainView.ShowMatch(placements);
             SetCameraHomeAnchors();
             InitializeInputSystems();
 
@@ -1397,63 +1401,6 @@ namespace NodeWar.Core
             }
         }
 
-        // ===== NODE INITIALIZATION (legacy testing mode) =====
-
-        private void InitializeNodes()
-        {
-            int GRID_COLS = boardConfig.Data.gridCols;
-            int GRID_ROWS = boardConfig.Data.gridRows;
-            state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
-
-            DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
-            layout[0, 0] = DistrictType.None; layout[0, 1] = DistrictType.None; layout[0, 2] = DistrictType.Core; layout[0, 3] = DistrictType.None;
-            layout[1, 0] = DistrictType.None; layout[1, 1] = DistrictType.Mine; layout[1, 2] = DistrictType.Farm; layout[1, 3] = DistrictType.None;
-            layout[2, 0] = DistrictType.Mine; layout[2, 1] = DistrictType.Barracks; layout[2, 2] = DistrictType.Village; layout[2, 3] = DistrictType.Farm;
-            layout[3, 0] = DistrictType.Forge; layout[3, 1] = DistrictType.Market; layout[3, 2] = DistrictType.Market; layout[3, 3] = DistrictType.Forge;
-            layout[4, 0] = DistrictType.Farm; layout[4, 1] = DistrictType.Village; layout[4, 2] = DistrictType.Barracks; layout[4, 3] = DistrictType.Mine;
-            layout[5, 0] = DistrictType.None; layout[5, 1] = DistrictType.Farm; layout[5, 2] = DistrictType.Mine; layout[5, 3] = DistrictType.None;
-            layout[6, 0] = DistrictType.None; layout[6, 1] = DistrictType.Core; layout[6, 2] = DistrictType.None; layout[6, 3] = DistrictType.None;
-
-            for (int z = 0; z < GRID_ROWS; z++)
-            {
-                for (int x = 0; x < GRID_COLS; x++)
-                {
-                    int nodeID = z * GRID_COLS + x;
-                    List<int> neighborIDs = new List<int>();
-                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
-                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
-                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
-                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
-
-                    Link[] links = new Link[neighborIDs.Count];
-                    for (int i = 0; i < neighborIDs.Count; i++)
-                        links[i] = new Link { toNodeID = neighborIDs[i], travelWeight = boardConfig.Data.defaultLinkWeight };
-
-                    int bonus = layout[z, x] == DistrictType.Village
-                        ? balance.Data.GetDistrictStats(DistrictType.Village, 0).bonusVillagersOnClaim : 0;
-                    int ownerID = -1;
-                    int claimBar = 0;
-                    if (z == 6 && x == 1) { ownerID = 0; claimBar = balance.Data.claimThreshold; }
-                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -balance.Data.claimThreshold; }
-
-                    state.nodes[nodeID] = new NodeData
-                    {
-                        nodeID = nodeID,
-                        gridX = x,
-                        gridZ = z,
-                        links = links,
-                        districtType = layout[z, x],
-                        baseDistrictType = layout[z, x],
-                        upgradeCategory = DistrictUpgradeCategory.Fixed,
-                        claimBar = claimBar,
-                        ownerID = ownerID,
-                        bonusVillagersOnClaim = bonus,
-                        materialAllocation = 0
-                    };
-                }
-            }
-        }
-
         /// <summary>
         /// Both players' drafted suits and districts, resolved from the lobby
         /// loadouts. The simulation takes them as types; which loadout belongs
@@ -1669,7 +1616,12 @@ namespace NodeWar.Core
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                GameObject nodeGO = SpawnBoardNode(state.nodes[i].districtType, nodeParent);
+                NodeData node = state.nodes[i];
+                NodeWar.View.DistrictVisual visual = BoardVisualFor(node.districtType);
+                GameObject nodeGO = node.districtType == DistrictType.Pier &&
+                    (visual == null || visual.boardPrefab == null)
+                    ? NodeWar.View.BoardTerrainView.CreatePierNode(terrainView, node.gridX, node.gridZ, nodeParent)
+                    : SpawnBoardNode(node.districtType, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
                 nodeGO.transform.position = new Vector3(
                     state.nodes[i].gridX * boardConfig.nodeScale,

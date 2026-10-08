@@ -27,29 +27,28 @@ namespace NodeWar.Network.Tests
         [TestCase(true)]
         public void Hourglass_LossRollbackMatchesReference(bool withPier)
         {
-            // 1500 ticks. A 400 ms one-way blackout is longer than the redundant copies of an
-            // input can bridge but shorter than the speculation window, so the peer that
-            // missed the inputs plays on, rolls back, and must land on the same hashes.
+            // 1500 ticks. A 400 ms one-way delay spike exceeds 300 ms but recovers
+            // inside the 20-tick speculation window. Loss also forces input recovery.
             var scenario = new LockstepScenario
             {
-                Seconds = 150,
+                Seconds = 150.1, // allow the initial input delay, then simulate exactly 1500 ticks
                 Board = PremadeMaps.Hourglass01(),
                 Draft = Draft(withPier),
-                ZeroToOne = new LinkProfile().Cut(60.0, 60.4),
+                ZeroToOne = new LinkProfile { DelayAt = t => t >= 60.0 && t < 60.4 ? 0.4 : 0.065 }.Cut(90.0, 90.4),
                 OneToZero = new LinkProfile { Loss = 0.02 }
             }.Run();
             scenario.Report("hourglass " + (withPier ? "with" : "without") + " Pier");
 
             Assert.AreEqual(withPier ? 19 : 18, scenario.Peers[0].State.nodes.Length);
-            scenario.AssertMatchesReference(minimum: 20);
+            scenario.AssertMatchesReference(minimum: 29);
             int rollbacks = 0;
             foreach (HarnessPeer p in scenario.Peers)
             {
-                Assert.Greater(p.State.tickCount, 1400, scenario.Describe("P" + p.Player + " did not play on"));
+                Assert.AreEqual(1500, p.State.tickCount, scenario.Describe("P" + p.Player + " must simulate 1500 ticks"));
                 rollbacks += p.Rollbacks;
             }
             Assert.Greater(rollbacks, 0, scenario.Describe("the blackout must actually cost a rollback"));
-            Assert.GreaterOrEqual(scenario.ConfirmedTicks(), 1400);
+            Assert.AreEqual(1451, scenario.ConfirmedTicks(), "The final checkpoint before tick 1500 was confirmed on both peers.");
         }
 
         [Test]

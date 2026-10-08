@@ -480,9 +480,18 @@ namespace NodeWar.Core
         // Bounds are world-axis rectangles on the rig position, on purpose: they
         // say where on the board the camera may look, which does not change with
         // the viewing side. Only the screen-space feel of hitting one does.
+        private void GetBoardBounds(out float minX, out float maxX, out float minZ, out float maxZ)
+        {
+            BoardFraming.ExpandBounds(boardConfig.boundsMinX, boardConfig.boundsMaxX,
+                boardConfig.Data.gridCols, boardConfig.nodeScale, out minX, out maxX);
+            BoardFraming.ExpandBounds(boardConfig.boundsMinZ, boardConfig.boundsMaxZ,
+                boardConfig.Data.gridRows, boardConfig.nodeScale, out minZ, out maxZ);
+        }
+
         private void ApplyBounds()
         {
             if (!useBounds || boardConfig == null) return;
+            GetBoardBounds(out float minX, out float maxX, out float minZ, out float maxZ);
 
             // The spring would fight the focus tween and drag the camera back
             // after it lands, turning "one short motion" into a motion plus a
@@ -494,14 +503,14 @@ namespace NodeWar.Core
             Vector3 push = Vector3.zero;
 
             // Soft spring pushback rather than hard clamp — feels natural
-            if (pos.x < boardConfig.boundsMinX)
-                push.x = boundsPushbackForce * (boardConfig.boundsMinX - pos.x) * Time.deltaTime;
-            if (pos.x > boardConfig.boundsMaxX)
-                push.x = boundsPushbackForce * (boardConfig.boundsMaxX - pos.x) * Time.deltaTime;
-            if (pos.z < boardConfig.boundsMinZ)
-                push.z = boundsPushbackForce * (boardConfig.boundsMinZ - pos.z) * Time.deltaTime;
-            if (pos.z > boardConfig.boundsMaxZ)
-                push.z = boundsPushbackForce * (boardConfig.boundsMaxZ - pos.z) * Time.deltaTime;
+            if (pos.x < minX)
+                push.x = boundsPushbackForce * (minX - pos.x) * Time.deltaTime;
+            if (pos.x > maxX)
+                push.x = boundsPushbackForce * (maxX - pos.x) * Time.deltaTime;
+            if (pos.z < minZ)
+                push.z = boundsPushbackForce * (minZ - pos.z) * Time.deltaTime;
+            if (pos.z > maxZ)
+                push.z = boundsPushbackForce * (maxZ - pos.z) * Time.deltaTime;
 
             if (push.Equals(Vector3.zero)) return;
 
@@ -923,8 +932,9 @@ namespace NodeWar.Core
         {
             if (!useBounds || boardConfig == null) return position;
 
-            position.x = Mathf.Clamp(position.x, boardConfig.boundsMinX, boardConfig.boundsMaxX);
-            position.z = Mathf.Clamp(position.z, boardConfig.boundsMinZ, boardConfig.boundsMaxZ);
+            GetBoardBounds(out float minX, out float maxX, out float minZ, out float maxZ);
+            position.x = Mathf.Clamp(position.x, minX, maxX);
+            position.z = Mathf.Clamp(position.z, minZ, maxZ);
             return position;
         }
 
@@ -1419,6 +1429,7 @@ namespace NodeWar.Core
             float maxX = boardConfig != null ? boardConfig.boundsMaxX : 12f;
             float minZ = boardConfig != null ? boardConfig.boundsMinZ : -8f;
             float maxZ = boardConfig != null ? boardConfig.boundsMaxZ : 8f;
+            if (boardConfig != null) GetBoardBounds(out minX, out maxX, out minZ, out maxZ);
 
             Gizmos.color = new Color(1f, 1f, 0f, 0.4f);
             Gizmos.DrawLine(new Vector3(minX, 0f, minZ), new Vector3(maxX, 0f, minZ));

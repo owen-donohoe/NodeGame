@@ -22,6 +22,7 @@ namespace NodeWar.View
     {
         private static readonly Color OceanColor = new Color(0.05f, 0.16f, 0.30f, 1f);
         private static readonly Color LakeColor = new Color(0.16f, 0.46f, 0.66f, 1f);
+        private static readonly Color LandColor = new Color(0.38f, 0.43f, 0.29f, 1f);
         private static readonly Color SlotFrameColor = new Color(0.85f, 0.95f, 1f, 0.55f);
         private static readonly Color LegalTint = new Color(0.30f, 0.90f, 0.45f, 0.38f);
         private static readonly Color LegalOutline = new Color(1f, 0.95f, 0.35f, 1f);
@@ -38,8 +39,9 @@ namespace NodeWar.View
         private Material material;
         private Transform tiles;
         private Transform bridges;
-        private readonly List<GameObject> highlights = new List<GameObject>();
         private GameObject[] highlightByCell;
+        private bool[] bridgeByCell;
+        private readonly List<Mesh> ownedMeshes = new List<Mesh>();
 
         /// <summary>Builds the terrain for a board and returns the view that owns it.</summary>
         public static BoardTerrainView Create(BoardConfig config)
@@ -48,6 +50,45 @@ namespace NodeWar.View
             BoardTerrainView view = go.AddComponent<BoardTerrainView>();
             view.Build(config.Data, config.nodeScale);
             return view;
+        }
+
+        /// <summary>A tappable bridge deck when no Pier art is assigned. Never uses land art.</summary>
+        public static GameObject CreatePierNode(BoardTerrainView terrain, int x, int z, Transform parent)
+        {
+            var root = new GameObject("PierFallback");
+            root.transform.SetParent(parent, false);
+            int nodeLayer = LayerMask.NameToLayer("Nodes");
+            if (nodeLayer >= 0) root.layer = nodeLayer;
+            // Align the deck with its land neighbours; the hourglass crosses north/south.
+            bool alongX = (x > 0 && terrain.board.terrain[z * terrain.board.gridCols + x - 1] == TerrainType.Land) ||
+                (x + 1 < terrain.board.gridCols && terrain.board.terrain[z * terrain.board.gridCols + x + 1] == TerrainType.Land);
+            float width = terrain.nodeScale * 0.28f;
+            float length = terrain.nodeScale * 0.96f;
+            Vector3 deckSize = alongX ? new Vector3(length, PlankHeight, width) : new Vector3(width, PlankHeight, length);
+            terrain.MakePierPart(root.transform, "Deck", new Vector3(0f, 0.22f, 0f), deckSize);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 offset = alongX ? new Vector3(0f, 0.6f, side * width * 0.45f)
+                    : new Vector3(side * width * 0.45f, 0.6f, 0f);
+                Vector3 railSize = alongX ? new Vector3(length, 0.12f, 0.12f) : new Vector3(0.12f, 0.12f, length);
+                terrain.MakePierPart(root.transform, "Rail", offset, railSize);
+            }
+            BoxCollider target = root.AddComponent<BoxCollider>();
+            target.center = new Vector3(0f, 0.25f, 0f);
+            target.size = new Vector3(width, 0.5f, width);
+            root.AddComponent<NodeView>();
+            return root;
+        }
+
+        private void MakePierPart(Transform parent, string name, Vector3 offset, Vector3 size)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = offset;
+            part.transform.localScale = size;
+            RemoveCollider(part);
+            Tint(part.GetComponent<Renderer>(), PlankColor);
         }
 
         public void Build(BoardConfigData data, float scale)
@@ -60,19 +101,18 @@ namespace NodeWar.View
 
             int cells = board.gridCols * board.gridRows;
             highlightByCell = new GameObject[cells];
+            bridgeByCell = new bool[cells];
             for (int cell = 0; cell < cells; cell++)
             {
                 int x = cell % board.gridCols;
                 int z = cell / board.gridCols;
                 TerrainType terrain = board.terrain[cell];
-                if (terrain == TerrainType.Land) continue; // land is drawn by its node
-
-                Color color = terrain == TerrainType.Ocean ? OceanColor : LakeColor;
-                MakeQuad("Water_" + x + "_" + z, tiles, Center(x, z, GroundY), nodeScale, color);
+                Color color = terrain == TerrainType.Ocean ? OceanColor : terrain == TerrainType.Lake ? LakeColor : LandColor;
+                MakeQuad(terrain + "_" + x + "_" + z, tiles, Center(x, z, GroundY), nodeScale, color);
 
                 // The empty pier slot keeps a faint frame, so the way across is visible
                 // before anyone drafts a bridge.
-                if (board.districtSlots[cell])
+                if (terrain == TerrainType.Lake && board.districtSlots[cell])
                     MakeOutline("PierSlot_" + x + "_" + z, tiles, Center(x, z, GroundY + 0.02f), SlotFrameColor, 0.12f);
             }
         }
@@ -88,7 +128,13 @@ namespace NodeWar.View
             CellDescriptor[] cells = TerrainPresentation.Describe(board, placed, hasPick, pick);
             for (int i = 0; i < cells.Length; i++)
                 SetHighlight(cells[i]);
-            RebuildBridges(cells);
+            bool changed = false;
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (bridgeByCell[i] != cells[i].bridge) changed = true;
+                bridgeByCell[i] = cells[i].bridge;
+            }
+            if (changed) RebuildBridges(cells);
         }
 
         /// <summary>The bridges for a built match: the same shapes, with no piece in hand.</summary>
@@ -114,7 +160,6 @@ namespace NodeWar.View
                 MakeQuad("Tint", holder.transform, Center(cell.x, cell.z, HighlightY), nodeScale * 0.92f, LegalTint);
                 MakeOutline("Outline", holder.transform, Center(cell.x, cell.z, HighlightY + 0.02f), LegalOutline, OutlineWidth);
                 highlightByCell[cell.cell] = holder;
-                highlights.Add(holder);
                 existing = holder;
             }
             existing.SetActive(true);
@@ -123,7 +168,7 @@ namespace NodeWar.View
         private void RebuildBridges(CellDescriptor[] cells)
         {
             for (int i = bridges.childCount - 1; i >= 0; i--)
-                Destroy(bridges.GetChild(i).gameObject);
+                DisposeObject(bridges.GetChild(i).gameObject);
 
             for (int i = 0; i < cells.Length; i++)
             {
@@ -172,8 +217,7 @@ namespace NodeWar.View
             GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = name;
             // Nothing on the water can be tapped or hit.
-            Collider collider = quad.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
+            RemoveCollider(quad);
             quad.transform.SetParent(parent, false);
             quad.transform.position = position;
             quad.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
@@ -186,8 +230,7 @@ namespace NodeWar.View
         {
             GameObject plank = GameObject.CreatePrimitive(PrimitiveType.Cube);
             plank.name = name;
-            Collider collider = plank.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
+            RemoveCollider(plank);
             plank.transform.SetParent(bridges, false);
             plank.transform.position = position;
             plank.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
@@ -227,6 +270,7 @@ namespace NodeWar.View
             if (filter != null && filter.sharedMesh != null)
             {
                 Mesh mesh = filter.mesh;
+                ownedMeshes.Add(mesh);
                 var white = new Color32[mesh.vertexCount];
                 for (int i = 0; i < white.Length; i++) white[i] = new Color32(255, 255, 255, 255);
                 mesh.colors32 = white;
@@ -243,7 +287,22 @@ namespace NodeWar.View
 
         private void OnDestroy()
         {
-            if (material != null) Destroy(material);
+            for (int i = 0; i < ownedMeshes.Count; i++) DisposeObject(ownedMeshes[i]);
+            if (material != null) DisposeObject(material);
+        }
+
+        private static void RemoveCollider(GameObject shape)
+        {
+            Collider collider = shape.GetComponent<Collider>();
+            if (collider == null) return;
+            collider.enabled = false;
+            DisposeObject(collider);
+        }
+
+        private static void DisposeObject(Object value)
+        {
+            if (Application.isPlaying) Destroy(value);
+            else DestroyImmediate(value);
         }
     }
 }

@@ -224,7 +224,7 @@ namespace NodeWar.UI
 
             DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
-            if (slots[slotIndex].isConsumed) return;
+            if (!draftState.IsPlayable(slots[slotIndex])) return;
 
             placementController.BeginDrag(slotIndex, slots[slotIndex].districtType);
         }
@@ -255,7 +255,7 @@ namespace NodeWar.UI
 
             for (int i = 0; i < slots.Length; i++)
             {
-                if (slots[i].isConsumed) continue;
+                if (!draftState.IsPlayable(slots[i])) continue;
 
                 GameObject go = Instantiate(draftSlotPrefab, barContainer);
                 DraftPickUI slotUI = go.GetComponent<DraftPickUI>();

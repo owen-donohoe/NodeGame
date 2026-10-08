@@ -1,4 +1,5 @@
 using System.Linq;
+using System.IO;
 using NodeWar.Simulation;
 using NodeWar.View;
 using NUnit.Framework;
@@ -18,6 +19,56 @@ namespace NodeWar.View.Tests
 
         private static DraftPlacement Pier() =>
             new DraftPlacement { playerID = 0, districtType = DistrictType.Pier, gridX = 1, gridZ = 3 };
+
+        private static string Source(string path)
+        {
+            DirectoryInfo root = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (root != null && !File.Exists(Path.Combine(root.FullName, "CLAUDE.md"))) root = root.Parent;
+            Assert.IsNotNull(root, "Find the checkout whose runtime wiring is under test.");
+            return File.ReadAllText(Path.Combine(root.FullName, path));
+        }
+
+        [Test]
+        public void RuntimeEntryPathsBuildTerrainAndUseTheFactory()
+        {
+            string game = Source("Assets/Scripts/Game/Core/GameManager.cs");
+            Assert.IsFalse(game.Contains("InitializeNodes"), "Testing must not retain a second board generator.");
+            Assert.IsTrue(game.Contains("DraftPlanner.TestingPlacements"));
+            Assert.IsTrue(game.Contains("BoardTerrainView.Create"), "Code-only terrain needs an actual runtime owner.");
+            Assert.IsTrue(game.Contains(".ShowMatch("));
+            string draft = Source("Assets/Scripts/Game/Core/DraftManager.cs");
+            Assert.IsTrue(draft.Contains(".ShowDraft("));
+            Assert.IsFalse(draft.Contains("occupiedCells"));
+            Assert.IsFalse(draft.Contains("boardConfig.baseDraftDistricts"), "The map catalog owns the base pool.");
+            string terrain = Source("Assets/Scripts/Game/View/BoardTerrainView.cs");
+            Assert.IsFalse(terrain.Contains("if (terrain == TerrainType.Land) continue"),
+                "The land routes must be visible during draft, before NodeViews are spawned.");
+        }
+
+        [TestCase("Assets/Scripts/Game/UI/DraftPlacementController.cs")]
+        [TestCase("Assets/UI/Scripts/Gameplay/DraftScreenController.cs")]
+        public void BothDraftSurfacesUseDistrictLegalityAndUpdateHighlights(string path)
+        {
+            string source = Source(path);
+            Assert.IsFalse(source.Contains("IsCellAvailable"), "Occupancy alone cannot distinguish Farm and Pier.");
+            Assert.IsTrue(source.Contains(".CanPlace("));
+            Assert.IsTrue(source.Contains(".SetHighlightedPick("), "Highlights must follow the piece in hand.");
+        }
+
+        [Test]
+        public void PierFallbackIntentIsABridgeWithANodeTargetAndNoLandPrefab()
+        {
+            var cells = TerrainPresentation.Describe(Board, new[] { Pier() }, false, DistrictType.None);
+            Assert.IsTrue(At(cells, 1, 3).bridge);
+            Assert.IsTrue(At(cells, 1, 3).hasNodeTarget);
+            // The runtime fallback must not cover the bridge with the default land node.
+            string game = Source("Assets/Scripts/Game/Core/GameManager.cs");
+            Assert.IsTrue(game.Contains("BoardTerrainView.CreatePierNode"));
+            string terrain = Source("Assets/Scripts/Game/View/BoardTerrainView.cs");
+            Assert.IsTrue(terrain.Contains("PierDeck_"));
+            Assert.IsTrue(terrain.Contains("Walkway_"));
+            Assert.IsTrue(terrain.Contains("AddComponent<NodeView>"));
+        }
 
         [Test]
         public void OceanAndEmptyLakeHaveNoNodeTargets()

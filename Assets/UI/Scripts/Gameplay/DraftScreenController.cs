@@ -517,7 +517,7 @@ namespace NodeWar.UI
 
             for (int i = 0; i < slots.Length; i++)
             {
-                if (slots[i].isConsumed) continue;
+                if (!draftState.IsPlayable(slots[i])) continue;
 
                 remaining++;
                 cards.Add(BuildCard(i, slots[i].districtType));
@@ -628,7 +628,7 @@ namespace NodeWar.UI
 
             DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
-            if (slots[slotIndex].isConsumed) return;
+            if (!draftState.IsPlayable(slots[slotIndex])) return;
 
             // The capture is not how the drag is read - that is Pointer.current
             // in Update. It is so no other element in the panel can claim this
@@ -709,7 +709,7 @@ namespace NodeWar.UI
                 // Confirm pair for the frame between landing and lifting off.
                 if (!boardPressOverUI && handSlot >= 0 &&
                     ScreenToCell(boardPressScreen, out int pressX, out int pressZ) &&
-                    draftState.IsCellAvailable(pressX, pressZ))
+                    draftState.CanPlace(handDistrict, pressX, pressZ))
                 {
                     ParkAt(pressX, pressZ, false);
                 }
@@ -735,7 +735,7 @@ namespace NodeWar.UI
 
                 if (handSlot < 0) return;
                 if (!ScreenToCell(screen, out int gx, out int gz)) return;
-                if (!draftState.IsCellAvailable(gx, gz)) return;
+                if (!draftState.CanPlace(handDistrict, gx, gz)) return;
 
                 ParkAt(gx, gz);
                 return;
@@ -850,6 +850,7 @@ namespace NodeWar.UI
                 dragMoved = true;
 
                 if (!dragFromBoard) ShrinkReplacedPendingPiece(dragSlot);
+                draftManager.SetHighlightedPick(dragSlot);
 
                 // A new drag drops whatever was parked. The piece is in the
                 // air again and the old cell is no longer an answer.
@@ -952,6 +953,7 @@ namespace NodeWar.UI
 
             handSlot = slot;
             handDistrict = district;
+            draftManager.SetHighlightedPick(slot);
             ParkAt(landX, landZ);
         }
 
@@ -971,6 +973,7 @@ namespace NodeWar.UI
 
             handSlot = slotIndex;
             handDistrict = district;
+            draftManager.SetHighlightedPick(slotIndex);
             parked = false;
             parkedX = -1;
             parkedZ = -1;
@@ -1002,6 +1005,7 @@ namespace NodeWar.UI
         private void ClearHand()
         {
             handSlot = -1;
+            if (draftManager != null) draftManager.SetHighlightedPick(-1);
             parked = false;
             parkedX = -1;
             parkedZ = -1;
@@ -1039,7 +1043,7 @@ namespace NodeWar.UI
         /// </summary>
         private void ParkAt(int gridX, int gridZ, bool confirm = true)
         {
-            if (draftState == null || !draftState.IsCellAvailable(gridX, gridZ)) return;
+            if (draftState == null || !draftState.CanPlace(handDistrict, gridX, gridZ)) return;
 
             parked = true;
             parkedX = gridX;
@@ -1268,7 +1272,7 @@ namespace NodeWar.UI
                 return;
             }
 
-            PlaceGhostOnCell(gx, gz, draftState != null && draftState.IsCellAvailable(gx, gz));
+            PlaceGhostOnCell(gx, gz, draftState != null && draftState.CanPlace(dragging ? dragDistrict : handDistrict, gx, gz));
         }
 
         private void PlaceGhostOnCell(int gx, int gz, bool valid)

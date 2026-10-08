@@ -108,6 +108,7 @@ namespace NodeWar.Tests
             DraftState state = DraftWith(new[] { DistrictType.Pier, DistrictType.Farm },
                                          new[] { DistrictType.Pier });
             state.Apply(1, 0, 1, 3, false);
+            state.consecutiveTimeouts[0] = 1;
 
             Assert.IsFalse(state.HasLegalCell(DistrictType.Pier));
             Assert.IsTrue(state.HasLegalCell(DistrictType.Farm));
@@ -115,7 +116,8 @@ namespace NodeWar.Tests
             Assert.IsTrue(state.IsPlayable(state.player0Picks[1]), "the Farm is unaffected");
             Assert.IsTrue(state.PlayerHasPlayablePick(0));
             Assert.AreEqual(1, state.GetLowestPlayablePickIndex(0));
-            Assert.AreEqual(new[] { 0, 0 }, state.consecutiveTimeouts, "Skipping a pick is not a timeout.");
+            Assert.IsTrue(state.AdvanceToNextValidTurn());
+            Assert.AreEqual(new[] { 1, 0 }, state.consecutiveTimeouts, "Skipping a blocked Pier preserves the timeout streak.");
             Assert.AreEqual(-1, state.AcceptLocal(0, 0, 1, 3), "and the occupied slot stays refused");
 
             // The Farm is played; the stranded Pier does not keep the draft alive.

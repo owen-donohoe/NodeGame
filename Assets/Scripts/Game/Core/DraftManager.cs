@@ -93,8 +93,8 @@ namespace NodeWar.Core
         // once and the turn machine must not know which one is drawing.
         private IDraftPresenter draftUI;
 
-        // Grid markers
-        private List<GameObject> gridMarkers = new List<GameObject>();
+        private NodeWar.View.BoardTerrainView terrainView;
+        private int highlightedPick = -1;
 
         // Events
         public System.Action<DraftResult> OnDraftComplete;
@@ -107,7 +107,7 @@ namespace NodeWar.Core
         public void Initialize(BoardConfig config, NetworkManager netManager,
                     int playerID, bool networked, bool botMatch,
                     CameraController camController, GameObject gridCellPrefab,
-                    NodeWar.Lobby.LoadoutData loadout)
+                    NodeWar.Lobby.LoadoutData loadout, NodeWar.View.BoardTerrainView terrain)
         {
             boardConfig = config;
             networkManager = netManager;
@@ -130,6 +130,7 @@ namespace NodeWar.Core
             // The draft state holds the board, with the Cores already standing. Every question
             // about where a district may go is answered by it, through PlacementLegality.
             draftState = new DraftState(config.Data);
+            terrainView = terrain;
 
             // Each player drafts looking at their own half, from the side the
             // match will give them.
@@ -379,7 +380,6 @@ namespace NodeWar.Core
         private void ApplyPlacement(int playerID, int slotIndex, int gridX, int gridZ, bool wasTimeout)
         {
             DraftPlacement placement = draftState.Apply(playerID, slotIndex, gridX, gridZ, wasTimeout);
-            RemovePlacementMarker(gridX, gridZ);
 
             if (wasTimeout)
             {
@@ -699,22 +699,24 @@ namespace NodeWar.Core
 
         private void SpawnPlacementGrid()
         {
-            if (placementGridCellPrefab == null) return;
+            RefreshHighlights();
+        }
 
-            for (int z = 0; z < boardConfig.Data.gridRows; z++)
-            {
-                for (int x = 0; x < boardConfig.Data.gridCols; x++)
-                {
-                    if (draftState.occupiedCells[z, x]) continue;
+        /// <summary>Both presenters report their held pick through this one highlight path.</summary>
+        public void SetHighlightedPick(int slotIndex)
+        {
+            highlightedPick = slotIndex;
+            RefreshHighlights();
+        }
 
-                    Vector3 pos = GridToWorld(x, z);
-                    pos.y = gridMarkerYOffset;
-
-                    GameObject marker = Instantiate(placementGridCellPrefab);
-                    marker.transform.position = pos;
-                    gridMarkers.Add(marker);
-                }
-            }
+        private void RefreshHighlights()
+        {
+            if (terrainView == null || draftState == null) return;
+            DraftPick[] picks = draftState.GetPlayerPicks(localPlayerID);
+            bool hasPick = IsLocalPlayerTurn() && picks != null && highlightedPick >= 0 &&
+                highlightedPick < picks.Length && draftState.IsPlayable(picks[highlightedPick]);
+            terrainView.ShowDraft(draftState.confirmedPlacements.ToArray(), hasPick,
+                hasPick ? picks[highlightedPick].districtType : DistrictType.None);
         }
 
         private void OnDestroy()
@@ -725,12 +727,7 @@ namespace NodeWar.Core
 
         private void DestroyPlacementGrid()
         {
-            for (int i = 0; i < gridMarkers.Count; i++)
-            {
-                if (gridMarkers[i] != null)
-                    Destroy(gridMarkers[i]);
-            }
-            gridMarkers.Clear();
+            SetHighlightedPick(-1);
         }
 
         // ===== SLOT BUILDING =====
@@ -739,18 +736,18 @@ namespace NodeWar.Core
         {
             List<DraftPick> slots = new List<DraftPick>();
 
-            DraftDistrictEntry[] baseNodes = (playerID == 0)
-                ? boardConfig.baseDraftDistrictsP0
-                : boardConfig.baseDraftDistrictsP1;
+            DistrictType[] baseNodes = (playerID == 0)
+                ? draftState.board.baseDraftDistrictsP0
+                : draftState.board.baseDraftDistrictsP1;
 
             if (baseNodes != null)
             {
                 for (int i = 0; i < baseNodes.Length; i++)
                 {
-                    if (baseNodes[i].districtType == DistrictType.None) continue;
+                    if (baseNodes[i] == DistrictType.None) continue;
                     slots.Add(new DraftPick
                     {
-                        districtType = baseNodes[i].districtType,
+                        districtType = baseNodes[i],
                         isConsumed = false,
                         isFromLoadout = false
                     });
