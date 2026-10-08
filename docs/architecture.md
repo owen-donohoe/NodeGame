@@ -6,7 +6,7 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:47Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
@@ -266,9 +266,11 @@ information flow too, but hold rules of their own: see
 [Backend, match logs and the referee](#backend-match-logs-and-the-referee).
 
 **1. Lobby/** — Pre-match menu flow: game mode selection, player profile,
-loadout/node/suit selection. Runs entirely in the Lobby scene, before a
+loadout/district/suit selection. Runs entirely in the Lobby scene, before a
 `SimulationState` exists. This layer is now data and state only
-(`LobbyManager`, `PlayerProfile`, `LoadoutData`, the definition assets);
+(`LobbyManager`, `PlayerProfile`, `LoadoutData`, the definition assets, among them
+`DistrictDefinition`); the persisted lobby IDs (`node_rampart`, `suit_warrior`) are
+frozen strings held in explicit tables, never derived from an enum name;
 its uGUI panels moved to `Assets/Legacy/Lobby/` and its live presentation
 is `Assets/UI/`.
 
@@ -278,8 +280,8 @@ timing (`TickRunner`), and camera/transition control. This is the layer
 that starts a match and wires every other layer together. It builds the
 starting `SimulationState` for drafted matches through
 `Simulation/MatchFactory`, the same builder the referee and headless
-replays use. Testing mode still builds its legacy board in `GameManager`,
-then uses the factory to initialize players and villagers.
+replays use. Testing mode (skip-draft) takes the same route: a planned set of
+placements on the shipped map, handed to the factory.
 
 **3. Simulation/** — All gameplay rules and the entire mutable match
 state. Pure C#, no `UnityEngine` dependency (see `docs/simulation-rules.md`
@@ -588,10 +590,11 @@ Pointer (mouse / touch)        or  BotPlayer
 
 `SimulationState` is the single source of truth. During play, commands and
 ticks mutate it inside `Simulation/`; presentation only reads it.
-`Core/` still initializes state before play, including Testing mode's
-legacy board. See `docs/simulation-rules.md` for the in-match boundary.
-Rampart bonuses follow movement; post-combat resume follows win-check;
-the derived `nextBreacherID` refresh is last. Simulation version 2 adds
+`Core/` still initializes state before play, through `MatchFactory` on every
+path, Testing mode included. See `docs/simulation-rules.md` for the in-match boundary.
+Rampart bonuses follow movement; order resume follows win-check;
+the derived `nextBreacherID` refresh is last. Claiming and breaching read each node's
+owner as it stood when the tick began. Simulation version 2 adds
 `Breaching` after `Dead` and player breach progress, next candidate and
 paid-respawn count, all covered by hashing and rollback copy. Breach wins
 require a new breach at the current threshold; a sudden-death drop alone
@@ -603,6 +606,13 @@ the same recruit path after ordinary production and before healing, in ascending
 node ID. Player `recruitCount` persists for the match; each Village's
 `recruitReadyTick` and `autoRecruit` reset on ownership loss. All three fields are
 hashed and copied. Village capture itself no longer spawns bonus villagers.
+
+A move order is sticky: `VillagerData.targetNodeID` keeps the destination through
+a fight or a blocked route, and `TickOrderResume` replans from the villager's
+current node once a tick, after every rule pass. Simulation version 3 adds terrain:
+`NodeData.terrain` and `SimulationState.boardHash` (the `BoardHasher` fingerprint of
+the board) are hashed, and the capture bonus, restore and the retired Watchtower and
+Rampart claim effects are described in `docs/game-model.md`.
 
 ### What a tick did
 
@@ -663,7 +673,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   scene, then shut down (`MatchConnection.Shutdown()`) when returning to
   the lobby.
 - **`PlayerProfile`** — the persistent player-identity singleton
-  (username, uuid, trophies, unlocked suits/nodes, selected loadout),
+  (username, uuid, trophies, unlocked suits/districts, selected loadout),
   loaded from/saved to local JSON. Survives every scene transition for
   the life of the application.
 
@@ -690,8 +700,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `PlayerProfile` — persistent player identity/progression singleton.
   Its JSON holds local profile, settings and loadout choices; backend
   player state owns rated progression and inventory.
-- `LoadoutData`, `NodeDefinition`, `SuitDefinition` — data describing a
-  player's drafted nodes/suits. `LoadoutData` also carries the player's
+- `LoadoutData`, `DistrictDefinition`, `SuitDefinition` — data describing a
+  player's drafted districts/suits. `LoadoutData` also carries the player's
   era per suit and district type and their equipped skin IDs; those are
   stamped on at match launch from the server's equipped state
   (`LoadoutTypes.WithEquipment`), not chosen in the lobby's local data.
@@ -702,7 +712,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
   PostDraft → Countdown → Playing`); builds `SimulationState` and spawns
   node/villager views.
-- `DraftManager` — runs the pre-match node-placement draft as its own
+- `DraftManager` — runs the pre-match district-placement draft as its own
   turn-based phase machine (`WaitingForReady → InitialReveal →
   ActiveDraft → Complete`). Draws nothing itself: it drives an
   `IDraftPresenter`, and asks it one question back — whether a piece is
@@ -737,18 +747,30 @@ Three objects are carried across the Lobby → Gameplay scene load via
   integer cost multipliers.
 - `MatchFactory` — builds a match's tick-0 state from board, draft and
   per-player setup; `Configure` sets the simulation's statics separately
-  from `Build`/`Fill`. Testing mode only shares its player and villager
-  initialization. See
+  from `Build`/`Fill`. Every path uses it, Testing mode included. It refuses an
+  illegal board or draft (`RequireBuildable`) and builds a sparse node array,
+  numbering the cells that carry a node. See
   `docs/simulation-rules.md`, *The starting board*.
-- `GameBalanceData` / `BoardConfigData` — the plain tuning structs behind
-  the `GameBalance` and `BoardConfig` assets in `Config/`, read at match
-  start. Suits and districts have one stats entry per era
-  (`SuitStats.era`, `DistrictStats`); a lookup for a missing era falls back
-  to era 0.
+- `GameBalanceData` / `BoardConfigData` — the plain tuning structs read at
+  match start. `GameBalanceData` is behind the `GameBalance` asset in `Config/`.
+  `BoardConfigData` is a map as plain data (grid, `TerrainType` per cell, district
+  slot mask, `InitialDistrictPlacement`s, base draft pools); the `BoardConfig` asset
+  names a map by ID and `PremadeMaps` builds it. Suits and districts have one stats
+  entry per era (`SuitStats.era`, `DistrictStats`); a lookup for a missing era falls
+  back to era 0.
+- `PremadeMaps` / `IBoardCatalog` — the shipped maps (today `hourglass-01`) and the
+  catalog a build vouches for. The live game, the rig and the referee all build
+  their board here.
+- `MatchSetup` — map ID, board hash, simulation version and balance hash: what two
+  peers, a log and the server compare. `BoardHasher` fingerprints a board.
+- `PlacementLegality` / `MapAuthoringRules` — the one spatial rule for placing a
+  district (terrain, slot, occupancy), and the checks a board must pass to be built
+  or shipped. Every placement or preview path asks them.
 - `BalanceHasher` / `SimulationVersion` — the content hash and version a
   build is identified by in the handshake and the match log.
-- `DraftState` — grid occupancy and per-player slots during the draft
-  phase.
+- `DraftState` — grid occupancy, each player's picks and the legal cells for a
+  piece during the draft phase, all through `PlacementLegality`; `DraftPlanner` plans
+  the skip-draft placements.
 - `SimulationStateHasher` — deterministic integer fingerprint of
   `SimulationState`, used for desync detection.
 
@@ -768,15 +790,19 @@ Three objects are carried across the Lobby → Gameplay scene load via
   `UnityLockstepLog` sends the core's log lines to the console.
 - `NetworkManager` — transport abstraction (send/receive raw packets).
 - `InputSerializer` — wire format for tick inputs, heartbeats and the
-  versioned handshake. `InputSerializer.ProtocolVersion` aliases
+  versioned handshake. It refuses any `CommandType` that `CommandTypes.IsKnown` does not list. `InputSerializer.ProtocolVersion` aliases
   `NodeWar.Backend.ProtocolVersion.Current`, declared in
   `Assets/Scripts/Backend/Shared/ProtocolVersion.cs` and shared with Cloud
   Code. It changes with any packet layout.
 - `LocalBuildIdentity` — this build's `BuildIdentity` (protocol, simulation
   version, balance content hash). Peers compare it in the handshake and
   refuse a mismatch rather than desync.
+- `SetupAgreement` — the pre-draft map and rules agreement (protocol 5): the host
+  proposes a `MatchSetup` until the guest verifies it against `PremadeMaps.Catalog` and
+  acknowledges, and no draft packet is honoured before then. Pure data, no clocks.
 - `DraftSerializer` — wire format for draft-phase packets (ready,
-  placement, loadout). The loadout carries eras and skins (protocol 2).
+  placement, loadout) and the `MatchSetup`/`MatchSetupAck` packets, which are exact
+  length. The loadout carries eras and skins (protocol 2).
   `TryDeserializeDraftLoadout` checks the whole layout beside the writer,
   so the receive check cannot fall behind a new section again.
 
@@ -805,7 +831,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   UI Toolkit uses `HasSheet`, including owned Farms, Mines and Markets;
   the uGUI path still uses the older `IsFunctional` rule.
 - `DraftUI` — draft-phase interface, with `DraftPlacementController`
-  (drag/park/confirm state machine), `DraftSlotUI` and
+  (drag/park/confirm state machine), `DraftPickUI` and
   `DraftConfirmPresenter`. Implements `IDraftPresenter`. Off by default
   now, and mouse-only: it reads `Mouse.current` and cancels on right-click
   or Escape, neither of which a phone has.
@@ -872,7 +898,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   `SimulationState` — `GameManager` has allocated the state, but the
   match board and players are filled only after the draft.
 - `DraftPieceInfo` — a district's name, monogram and tint for the draft
-  cards. Names come from the lobby's `NodeDefinition` assets rather than a
+  cards. Names come from the lobby's `DistrictDefinition` assets rather than a
   switch statement, so the draft and the Workshop cannot disagree about
   what a player picked; the enum name is the fallback for the four base
   draft districts no loadout slot can hold.
@@ -895,8 +921,17 @@ Three objects are carried across the Lobby → Gameplay scene load via
   that has to be re-checked whenever the draft changes.
 
 **View/**
-- `NodeView` / `NodePresentation` / `NodeSlotManager` — node visuals,
-  villager slotting on a node.
+- `NodeView` / `NodePresentation` / `VillagerPositioner` — node visuals,
+  where villagers stand on a node (its work positions, named by `WorkPositionNames`).
+- `BoardTerrainView` / `TerrainPresentation` — the board's ground as code-built
+  placeholder geometry: ocean and lake tiles, a Pier drawn as a bridge, and the
+  legal-cell highlight (fill plus outline, so it never rests on colour alone) during
+  the draft. Ocean and open lake have no collider. `TerrainPresentation` is the
+  UnityEngine-free description of each cell. `GameManager` creates the view and
+  shows the match board once the draft is placed.
+- `OrderPresentation` — read-only: which orders to draw and how, including the
+  amber dashed route of an order interrupted by a fight, derived from
+  `targetNodeID` and so correct after a rollback.
 - `DistrictVisualTable` — per-district art shared with UI through the theme.
   `GameManager` selects board prefabs from the table, then its per-district
   slot, then the default; `BoardArtPlacer` applies offset, rotation and scale.
@@ -992,7 +1027,9 @@ player to a yaw by table.
   board that gives P0 yaw 180 and P1 yaw 0. A spectator gets side 1, side-on for
   a board that runs along Z. Core positions come from the board's
   `initialPlacements` (so the draft can resolve before any node exists) and are
-  refined by `SetHomeAnchor`.
+  refined by `SetHomeAnchor`. `BoardFraming` (UnityEngine-free) supplies the board centre
+and the pan bounds, widened to the node grid whenever the asset's numbers would clip
+it, so the opening zoom shows every column of whichever map is loaded.
 - **Framing follows the side.** The per-side default, the home anchor and its
   push toward the opponent, and the draft's rig offset are all computed along the
   side's forward direction, not from a player slot. Pan, momentum and focus work
@@ -1061,16 +1098,16 @@ the layer line.
   Indicator icons use the `OffScreenIndicator` context. Fredoka carries no
   symbol glyphs, and a fallback font would differ by platform.
 
-### Where a villager is, mid-edge
+### Where a villager is, mid-link
 
 A villager in transit has no position of its own. `currentNodeID` is the node
 it last stood on, and how far it has come is `moveProgress` counted in ticks
 along the leg `movePath[movePathIndex]` to `movePath[movePathIndex + 1]`,
-against `edgeWeight * moveSpeedTicks`.
+against `linkWeight * moveSpeedTicks`.
 
 Normally `movePath[movePathIndex]` and `currentNodeID` are the same node. The
 one exception carries meaning: when they differ, the villager is **walking a
-reversal** -- it was retargeted part-way across an edge, and is returning to
+reversal** -- it was retargeted part-way across a link, and is returning to
 `currentNodeID` from the node named at `movePathIndex`, which it turned around
 before ever reaching. Expressing the return as forward travel along the
 reversed leg is what lets the tick loop stay ignorant of it: `TickMovement`
@@ -1289,21 +1326,30 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   reach the simulation.
 - **Match log** (`.nwml`): magic, format version, then tagged,
   length-prefixed chunks — HEADER, BOARD, LOADOUTS, DRAFT, TICKS, HASHES,
-  RESULT, ERAS, SKINS. A reader skips tags it does not know; a known tag
-  never changes meaning, so a changed payload gets a new tag. The header
-  carries protocol, simulation version and content hash.
+  RESULT, ERAS, SKINS, BOARD_V2 (tag 10) and SETUP (tag 11). A reader skips
+  tags it does not know; a known tag never changes meaning, so a changed payload
+  gets a new tag, which is why terrain went into BOARD_V2 and left BOARD alone.
+  A log of simulation version 3 or later carries BOARD_V2 (the cell terrain, the
+  district slot mask and both base draft pools beside the BOARD fields) and SETUP, always
+  together; older logs carry BOARD and no SETUP, and a log with both boards or a
+  mismatched pair is refused. The header carries protocol, simulation version and
+  content hash.
 - **Referee.** `VerifyMatch` rebuilds the match with `MatchFactory`,
   replays the logged commands with `MatchReplay`, and checks every logged
-  hash, the final hash and a declared winning result. It proves a log is
+  hash, the final hash and a declared winning result. For a current log it first
+  requires the SETUP map ID to be in its own catalog and the recorded board to hash
+  to the catalog's board, never to a hash the log supplies. It proves a log is
   consistent, not that its commands are authentic; reporting does not add
   command signatures. Replays share a process-wide lock because
   `MatchFactory.Configure` sets simulation statics.
 - **Match records and settlement.** `MatchAllocation` stores a private
-  Cloud Save custom item `match-<id>` with the roster, build identity and
+  Cloud Save custom item `match-<id>` with the roster, build identity, the
+  map ID and board hash (`RankedMap`: the server assigns it from its own catalog,
+  today `hourglass-01`, and neither player proposes one) and
   pre-match rating, rank and owned-variant snapshots. `ActiveMatchClaims`
   allows one active match per player, with expiring claims and conditional
   writes. `ReportMatch` checks membership and log eligibility against that
-  record, then runs the referee. Two accepted reports must agree on
+  record, including that the log's SETUP and board are the record's map, then runs the referee. Two accepted reports must agree on
   winner, end tick and final hash before rating, RR, arena and inventory
   updates settle. Retries are idempotent; disputed or expired matches do
   not settle. `GetMatchHistory` reads the caller's history and stored match

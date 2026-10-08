@@ -6,7 +6,7 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:49Z }
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
@@ -58,9 +58,13 @@ Step 1: Identify what is being tested
 
 Step 2: Set up initial state
 - Create a minimal SimulationState with only what the test needs
-- Reuse TestBoardFactory for small fixtures. For a complete drafted match,
-  use MatchFactory.Build so the test starts from the same tick-0 board as
-  the live game and referee
+- Reuse TestBoardFactory for small hand-built fixtures (set `terrain` and leave
+  `boardHash` at 0; they have no board identity). For a complete drafted match,
+  use MatchFactory.Build so the test starts from the same tick-0 board as the
+  live game and referee: on BoardFixtures.LandGrid / LandGrid3x3 when the shape
+  is incidental, or on PremadeMaps.Hourglass01 when terrain or Pier legality is
+  the point. Node IDs on a terrain board are cell order with the gaps closed up,
+  so look them up with MatchFactory.CellToNode rather than computing z * cols + x
 - Install the balance on both GameSimulation and CommandProcessor before
   running commands or ticks. MatchFactory.Configure also sets Pathfinding's
   board multipliers; Build alone does not configure those statics. Do not
@@ -88,8 +92,15 @@ Step 4: Advance ticks
 - Do not over-tick -- test the minimum needed to verify behavior
 - For tempo, include the stage boundary tick and a below-100 timer axis;
   assert inclusive integer integration and production remainder carry
-- For breaches, distinguish arrival, channel completion and post-combat resume;
-  test no loss on a threshold drop alone and simultaneous-loss cancellation
+- For breaches, distinguish arrival, channel completion and order resume
+  (TickOrderResume); test no loss on a threshold drop alone and
+  simultaneous-loss cancellation
+- For sticky orders, assert targetNodeID survives a fight and an unreachable
+  destination, that an order given while Fighting leaves the attack clock alone,
+  and that work or claim begun at resume counts from the next tick
+- For claiming, assert against the tick-start owner snapshot: the capture bonus
+  (clamped neighbour balance, tempo applied after) and restore must give the
+  same result whatever order the nodes are processed in
 
 Step 5: Assert expected state
 - Assert specific integer field values on SimulationState
@@ -119,8 +130,9 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 3. C3's neutral recruit fields retain
-  its two numeric fingerprints; the earlier terrain addition re-pinned both.
+- The current baseline pin is version 3 (411123996 and 2101726457). The neutral
+  recruit fields retain those two fingerprints; the terrain addition re-pinned both,
+  because terrain and boardHash are always hashed.
   Conditional hashing does not make older simulation-version logs replayable
 - Name this test with _Determinism suffix
 
