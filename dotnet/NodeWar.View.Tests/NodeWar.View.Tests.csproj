@@ -109,6 +109,8 @@
 
     <!-- The card-to-board cross-fade's two opacity curves. The drag that
          reads them needs a Camera and a panel and stays in Unity. -->
+    <Compile Include="DisconnectPresentationTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/DisconnectPresentation.cs" Link="View/DisconnectPresentation.cs" />
     <Compile Include="TerrainPresentationTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/TerrainPresentation.cs"
              Link="View/TerrainPresentation.cs" />

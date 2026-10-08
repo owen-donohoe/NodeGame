@@ -341,6 +341,8 @@ namespace NodeWar.Core
         private void OnDraftDisconnect()
         {
             Debug.LogError("[GameManager] Draft disconnected.");
+            draftPresenter?.SweepOut();
+            if (draftPresenter is MonoBehaviour presenter) presenter.gameObject.SetActive(false);
             if (draftManager != null)
             {
                 Destroy(draftManager.gameObject);
@@ -1173,19 +1175,41 @@ namespace NodeWar.Core
         {
             int viewer = ViewerPlayerID();
 
-            if (uiToolkitHud != null && state != null)
+            // A draft disconnect happens before InitializeUI has resolved either presenter.
+            bool hasMatchTally = NodeWar.View.DisconnectPresentation.HasMatchTally(state);
+            if (uiToolkitHud == null && useUIToolkitHUD && uiToolkitHudRoot != null)
+            {
+                uiToolkitHud = uiToolkitHudRoot.GetComponent<GameplayHUDController>();
+                if (uiToolkitHud != null)
+                {
+                    uiToolkitHudRoot.SetActive(true);
+                    uiToolkitHud.ReturnToLobby += ReturnToLobby;
+                }
+            }
+
+            if (uiToolkitHud != null)
             {
                 uiToolkitHud.ShowDisconnected(viewer);
                 return;
             }
 
+            if (gameOverPanel == null && !hasMatchTally && uiManagerPrefab != null)
+            {
+                GameOverPanel template = uiManagerPrefab.GetComponentInChildren<GameOverPanel>(true);
+                if (template != null)
+                {
+                    gameOverPanel = Instantiate(template);
+                    gameOverPanel.gameObject.SetActive(true);
+                    gameOverPanel.OnReturnToLobby += ReturnToLobby;
+                }
+            }
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found.");
                 return;
             }
 
-            if (state != null)
+            if (hasMatchTally)
             {
                 gameOverPanel.ShowDisconnected(state, viewer, balance.Data.breachThreshold);
                 return;
