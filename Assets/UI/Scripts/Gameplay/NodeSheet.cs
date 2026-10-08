@@ -479,8 +479,8 @@ namespace NodeWar.UI
             if (claimLabel != null)
             {
                 if (claim == 0) claimLabel.text = "Neutral";
-                else if (claim > 0) claimLabel.text = "Player 1 Ã‚Â· " + claim + " / " + threshold;
-                else claimLabel.text = "Player 2 Ã‚Â· " + (-claim) + " / " + threshold;
+                else if (claim > 0) claimLabel.text = "Player 1 · " + claim + " / " + threshold;
+                else claimLabel.text = "Player 2 · " + (-claim) + " / " + threshold;
             }
 
             if (claimNote != null)

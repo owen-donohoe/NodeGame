@@ -528,7 +528,7 @@ namespace NodeWar.UI
             if (barLabel != null)
             {
                 barLabel.text = remaining > 0
-                    ? "YOUR PIECES Â· " + remaining + " LEFT"
+                    ? "YOUR PIECES · " + remaining + " LEFT"
                     : "ALL PLACED";
             }
 
@@ -1343,7 +1343,7 @@ namespace NodeWar.UI
             if (whoLabel != null)
                 whoLabel.text = mine ? "YOUR TURN" : "OPPONENT'S TURN";
 
-            // D1 and Â§2.2: the turn owner's colour never travels alone. The
+            // D1 and §2.2: the turn owner's colour never travels alone. The
             // square-with-1 / circle-with-2 mark is the channel that survives
             // colour blindness and a washed-out phone screen in sunlight.
             if (turnMark != null)

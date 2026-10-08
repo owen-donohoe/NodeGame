@@ -61,7 +61,7 @@ namespace NodeWar.UI
 
             CollectFits();
 
-            fitsLine = Heading("FITS HERE Â· " + DescribeFits());
+            fitsLine = Heading("FITS HERE · " + DescribeFits());
             Root.Add(fitsLine);
 
             enemyNote = Caption("Not your district. You cannot equip here.");
