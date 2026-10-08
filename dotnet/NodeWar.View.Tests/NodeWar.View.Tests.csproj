@@ -32,9 +32,12 @@
     <Compile Include="../../Assets/Scripts/Lobby/Data/InputBindings.cs" Link="Lobby/InputBindings.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Data/GameSettingsData.cs" Link="Lobby/GameSettingsData.cs" />
     <Compile Include="ViewSideTests.cs" />
+    <Compile Include="DistrictFallbackTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/DistrictFallback.cs" Link="View/DistrictFallback.cs" />
     <Compile Include="BoardFramingTests.cs" />
     <Compile Include="BoardArtRulesTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/BoardArtRules.cs" Link="View/BoardArtRules.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/WorkPositionNames.cs" Link="View/WorkPositionNames.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/BoardFraming.cs" Link="Core/BoardFraming.cs" />
     <Compile Include="EmoteRateLimiterTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteRateLimiter.cs"
@@ -55,6 +58,8 @@
     <Compile Include="../../Assets/Scripts/Game/View/BreachTempoMath.cs"
              Link="View/BreachTempoMath.cs" />
 
+    <Compile Include="OrderPresentationTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/OrderPresentation.cs" Link="View/OrderPresentation.cs" />
     <Compile Include="RouteRevealTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
              Link="View/RouteReveal.cs" />
@@ -104,6 +109,11 @@
 
     <!-- The card-to-board cross-fade's two opacity curves. The drag that
          reads them needs a Camera and a panel and stays in Unity. -->
+    <Compile Include="DisconnectPresentationTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/DisconnectPresentation.cs" Link="View/DisconnectPresentation.cs" />
+    <Compile Include="TerrainPresentationTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/TerrainPresentation.cs"
+             Link="View/TerrainPresentation.cs" />
     <Compile Include="DraftHandoverTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/DraftHandover.cs"
              Link="Gameplay/DraftHandover.cs" />

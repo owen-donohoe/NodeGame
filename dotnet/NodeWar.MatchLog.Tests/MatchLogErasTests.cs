@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.MatchLog
 {
@@ -81,31 +82,31 @@ namespace NodeWar.MatchLog
 
             var eras = new int[(int)DistrictType.Market + 1];
             eras[(int)DistrictType.Farm] = 1;
-            BoardConfigData board = BoardConfigData.Default();
-            DraftPlacement[] draft = { new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 5 } };
+            BoardConfigData board = BoardFixtures.LandGrid3x3();
+            DraftPlacement[] draft = { new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 } };
             PlayerLoadout[] loadouts =
             {
-                new PlayerLoadout { suits = new int[0], nodes = new int[0], suitEras = new int[12], districtEras = eras },
-                new PlayerLoadout { suits = new int[0], nodes = new int[0] }
+                new PlayerLoadout { suits = new int[0], districts = new int[0], suitEras = new int[12], districtEras = eras },
+                new PlayerLoadout { suits = new int[0], districts = new int[0] }
             };
             var header = new MatchLogHeader
             {
                 sim = (ushort)SimulationVersion.Current, matchId = "eras", playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
-            var recorder = new MatchRecorder(header, board, loadouts, draft);
+            var recorder = new MatchRecorder(header, BoardFixtures.SetupFor(board, header.content), board, loadouts, draft);
             MatchFactory.Configure(balance, board);
             SimulationState state = MatchFactory.Build(balance, board, draft, new[]
             {
-                new PlayerSetup { suits = loadouts[0].suits, nodes = loadouts[0].nodes, suitEras = loadouts[0].suitEras, districtEras = eras },
-                new PlayerSetup { suits = loadouts[1].suits, nodes = loadouts[1].nodes }
+                new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts, suitEras = loadouts[0].suitEras, districtEras = eras },
+                new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
-            Assert.AreEqual(1, state.nodes[21].districtEra);
+            Assert.AreEqual(1, state.nodes[3].districtEra);
 
             while (state.tickCount < 1500) // one claimer takes ~590 ticks to claim the farm
             {
                 GameCommand[] commands = state.tickCount == 0
-                    ? new[] { new GameCommand { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 21 } }
+                    ? new[] { new GameCommand { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 3 } }
                     : null;
                 recorder.RecordTick(state.tickCount, commands);
                 if (commands != null) CommandProcessor.ProcessCommand(state, commands[0]);

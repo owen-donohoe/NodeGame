@@ -43,10 +43,10 @@ namespace NodeWar.Tests
             state.villagers[playerID].currentNodeID = 1;
             if (upgrade)
             {
-                state.nodes[1].slotType = NodeSlotType.Army;
-                state.nodes[1].baseDistrictType = DistrictType.Camp;
-                state.nodes[1].districtType = DistrictType.Camp;
-                state.players[playerID].draftedNodes = new[] { (int)DistrictType.Barracks };
+                state.nodes[1].upgradeCategory = DistrictUpgradeCategory.Army;
+                state.nodes[1].baseDistrictType = DistrictType.Barracks;
+                state.nodes[1].districtType = DistrictType.Barracks;
+                state.players[playerID].draftedDistricts = new[] { (int)DistrictType.Barracks };
             }
             // No commands: the villager is already on the neutral node; one tick completes it.
             GameSimulation.SimulateTick(state);
@@ -74,7 +74,6 @@ namespace NodeWar.Tests
             Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownMax);
             Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownRemaining);
             Assert.AreEqual(0, v.respawnTicksRemaining);
-            Assert.IsFalse(v.hasRampartBonus);
             Assert.AreEqual(paid ? 0 : 1, state.players[0].food);
         }
 
@@ -114,26 +113,27 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void Rampart_DeathRemovesBonusAcrossRepeatedRespawns()
+        public void Fortress_DeathPreservesOrdinaryHPAcrossRepeatedRespawns()
         {
-            RunRampartCycles(true);
+            RunFortressCycles(true);
         }
 
         [Test]
-        public void Rampart_DeathRemovesBonusAcrossRepeatedRespawns_Determinism()
+        public void Fortress_DeathPreservesOrdinaryHPAcrossRepeatedRespawns_Determinism()
         {
-            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRampartCycles(false)),
-                SimulationStateHasher.ComputeHash(RunRampartCycles(false)));
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunFortressCycles(false)),
+                SimulationStateHasher.ComputeHash(RunFortressCycles(false)));
         }
 
-        private static SimulationState RunRampartCycles(bool verify)
+        private static SimulationState RunFortressCycles(bool verify)
         {
             GameBalanceData balance = SetDefaultBalance();
             balance.respawnTicks = 2; // Death tick decrements to one; next tick respawns.
             GameSimulation.SetBalance(balance);
             CommandProcessor.SetBalance(balance);
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Rampart;
+            state.nodes[1].districtType = DistrictType.Fortress;
+            state.nodes[1].fortressLevel = 3;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[1].currentNodeID = 1;
@@ -141,7 +141,7 @@ namespace NodeWar.Tests
             state.villagers[1].attackCooldownMax = 1;
             for (int cycle = 0; cycle < 3; cycle++)
             {
-                // Each life walks onto its own Rampart and dies to the waiting enemy.
+                // Each life walks onto its own Fortress and dies to the waiting enemy.
                 CommandProcessor.ProcessCommand(state, new GameCommand
                 { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 1 });
                 for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(state);
@@ -149,7 +149,6 @@ namespace NodeWar.Tests
                 {
                     Assert.AreEqual(VillagerState.Dead, state.villagers[0].state);
                     Assert.AreEqual(balance.baseHP, state.villagers[0].maxHP, "death cycle " + cycle);
-                    Assert.IsFalse(state.villagers[0].hasRampartBonus);
                 }
                 GameSimulation.SimulateTick(state);
                 if (verify)
@@ -163,33 +162,30 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void Rampart_BreachRemovesBonus()
+        public void Fortress_BreachPreservesOrdinaryHP()
         {
-            SimulationState state = RunRampartBreach();
+            SimulationState state = RunFortressBreach();
             Assert.IsTrue(state.villagers[0].isConsumed);
-            Assert.IsFalse(state.villagers[0].hasRampartBonus);
             Assert.AreEqual(GameBalanceData.Default().baseHP, state.villagers[0].maxHP);
             Assert.AreEqual(1, state.players[1].breachCount);
         }
 
         [Test]
-        public void Rampart_BreachRemovesBonus_Determinism()
+        public void Fortress_BreachPreservesOrdinaryHP_Determinism()
         {
-            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRampartBreach()),
-                SimulationStateHasher.ComputeHash(RunRampartBreach()));
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunFortressBreach()),
+                SimulationStateHasher.ComputeHash(RunFortressBreach()));
         }
 
-        private static SimulationState RunRampartBreach()
+        private static SimulationState RunFortressBreach()
         {
             GameBalanceData balance = SetDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Rampart;
+            state.nodes[1].districtType = DistrictType.Fortress;
+            state.nodes[1].fortressLevel = 3;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
-            state.villagers[0].hasRampartBonus = true;
-            state.villagers[0].maxHP += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
-            state.villagers[0].hp += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
             state.villagers[1].state = VillagerState.Dead;
             state.villagers[1].isConsumed = true; // Empty enemy Core allows an uninterrupted channel.
             CommandProcessor.ProcessCommand(state, new GameCommand
@@ -198,12 +194,12 @@ namespace NodeWar.Tests
             return state;
         }
 
-        [TestCase(20, 4, 3)]
-        [TestCase(30, 4, 4)]
-        public void Healing_UsesEachVillagersOwnInterval(int tick, int shrineHP, int normalHP)
+        [TestCase(10, 4, 3)]
+        [TestCase(30, 5, 4)]
+        public void Healing_UsesEachVillagersOwnInterval(int tick, int infirmaryHP, int normalHP)
         {
             SimulationState state = RunHealing(tick);
-            Assert.AreEqual(shrineHP, state.villagers[0].hp);
+            Assert.AreEqual(infirmaryHP, state.villagers[0].hp);
             Assert.AreEqual(normalHP, state.villagers[1].hp);
         }
 
@@ -219,13 +215,13 @@ namespace NodeWar.Tests
         {
             GameBalanceData balance = SetDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Shrine;
+            state.nodes[1].districtType = DistrictType.Infirmary;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].hp = 3;
             state.villagers[1].hp = 3;
-            // No commands: wait for the first Shrine interval, then the first normal one.
+            // No commands: wait for the first Infirmary interval, then the first normal one.
             for (int i = 0; i < tick; i++) GameSimulation.SimulateTick(state);
             return state;
         }
@@ -290,7 +286,7 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Mine, SuitType.Miner, 40)]
         [TestCase(DistrictType.Forge, SuitType.Smelter, 50)]
         [TestCase(DistrictType.Market, SuitType.Merchant, 45)]
-        [TestCase(DistrictType.Sanctuary, SuitType.Acolyte, 0)]
+        [TestCase(DistrictType.Infirmary, SuitType.Acolyte, 0)]
         [TestCase(DistrictType.Watchtower, SuitType.Watcher, 0)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap(
             DistrictType district, SuitType suit, int ticks)
@@ -301,9 +297,9 @@ namespace NodeWar.Tests
                 VillagerData arrived = state.villagers[0];
                 Assert.AreEqual(1, arrived.currentNodeID);
                 Assert.AreEqual(suit, arrived.suit);
-                Assert.AreEqual(atCap ? VillagerState.Idle : VillagerState.Working, arrived.state);
+                Assert.AreEqual(atCap && district != DistrictType.Infirmary ? VillagerState.Idle : VillagerState.Working, arrived.state);
                 Assert.AreEqual(atCap ? 0 : ticks, arrived.productionTicksMax);
-                // Production runs after arrival, except passive Sanctuary/Watchtower work.
+                // Production runs after arrival, except passive Infirmary/Watchtower work.
                 Assert.AreEqual(atCap || ticks == 0 ? 0 : ticks - 1, arrived.productionTicksRemaining);
             }
         }
@@ -312,7 +308,7 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Mine)]
         [TestCase(DistrictType.Forge)]
         [TestCase(DistrictType.Market)]
-        [TestCase(DistrictType.Sanctuary)]
+        [TestCase(DistrictType.Infirmary)]
         [TestCase(DistrictType.Watchtower)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap_Determinism(DistrictType district)
         {

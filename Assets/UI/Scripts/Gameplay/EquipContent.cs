@@ -6,9 +6,9 @@ using NodeWar.Lobby;
 namespace NodeWar.UI
 {
     /// <summary>
-    /// The equip bench, shared by Barracks, Camp, Arsenal and Sanctuary - the
-    /// four districts CanEquipSuitAtNode accepts. They differ only in which
-    /// suits they permit, and that difference is data, so one content covers
+    /// The equip bench at Barracks, offering the five combat suits. The
+    /// CanEquipSuitAtNode rule determines which
+    /// suits appear, so this content covers
     /// all four.
     ///
     /// SUIT FIRST, THEN UNIT, THEN EQUIP, after the prototype. The suits that
@@ -300,7 +300,7 @@ namespace NodeWar.UI
 
                 string name = suit.ToString();
 
-                VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor("suit_" + name.ToLowerInvariant()));
+                VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor(NodeWar.Lobby.LoadoutTypes.LobbyIdForSuit(suit)));
                 tile.Add(Text(name.Substring(0, 1), "ui-tile__monogram", "equip__card-letter"));
 
                 sub = ResourceRow("equip__card-sub");

@@ -14,7 +14,9 @@ namespace NodeWar.Network
         DraftLoadout = 6,
         DraftAck = 7,
         Emote = 8,
-        HandshakeReject = 9
+        HandshakeReject = 9,
+        MatchSetup = 10,
+        MatchSetupAck = 11
     }
 
     /// <summary>
@@ -115,6 +117,9 @@ namespace NodeWar.Network
 
             for (int i = 0; i < commandCount; i++)
             {
+                // UpgradeFortress=7 uses the existing six-integer payload.
+                if (!CommandTypes.IsKnown(input.commands[i].type))
+                    throw new System.ArgumentException("Unknown command type.", nameof(input));
                 WriteInt(data, ref offset, (int)input.commands[i].type);
                 WriteInt(data, ref offset, input.commands[i].playerID);
                 WriteInt(data, ref offset, input.commands[i].villagerID);
@@ -166,6 +171,8 @@ namespace NodeWar.Network
             for (int i = 0; i < commandCount; i++)
             {
                 input.commands[i].type = (CommandType)ReadInt(data, ref offset);
+                // UpgradeFortress=7 uses the existing six-integer payload.
+                if (!CommandTypes.IsKnown(input.commands[i].type)) { input = default; return false; }
                 input.commands[i].playerID = ReadInt(data, ref offset);
                 input.commands[i].villagerID = ReadInt(data, ref offset);
                 input.commands[i].targetNodeID = ReadInt(data, ref offset);

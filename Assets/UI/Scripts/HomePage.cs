@@ -27,7 +27,7 @@ namespace NodeWar.Lobby
 
         private readonly Label victoryBadge;
         private readonly VisualElement boxMeterFill;
-        private readonly VisualElement[] nodeChips = new VisualElement[LoadoutData.NodeSlots];
+        private readonly VisualElement[] nodeChips = new VisualElement[LoadoutData.DistrictSlots];
         private readonly VisualElement[] suitChips = new VisualElement[LoadoutData.SuitSlots];
         private readonly VisualElement villager;
         private IVisualElementScheduledItem bob;
@@ -160,13 +160,13 @@ namespace NodeWar.Lobby
             // unfinished loadout is visible before BATTLE. A side they cannot
             // fill yet is left quiet.
             LoadoutEditor loadout = catalog.CurrentLoadout();
-            bool nodesShort = loadout.IsNodeSideShort(catalog.OwnedNodeCount());
+            bool nodesShort = loadout.IsDistrictSideShort(catalog.OwnedDistrictCount());
             bool suitsShort = loadout.IsSuitSideShort(catalog.OwnedSuitCount());
 
             for (int i = 0; i < nodeChips.Length; i++)
             {
-                string id = loadout.NodeAt(i);
-                SetChip(nodeChips[i], id, catalog.NodeName(id), nodesShort);
+                string id = loadout.DistrictAt(i);
+                SetChip(nodeChips[i], id, catalog.DistrictName(id), nodesShort);
             }
 
             for (int i = 0; i < suitChips.Length; i++)

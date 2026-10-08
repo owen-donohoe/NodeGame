@@ -1,3 +1,5 @@
+using System;
+
 namespace NodeWar.Simulation
 {
     /// <summary>
@@ -8,7 +10,7 @@ namespace NodeWar.Simulation
     public struct PlayerSetup
     {
         public int[] suits; // (int)SuitType values
-        public int[] nodes; // (int)DistrictType values
+        public int[] districts; // (int)DistrictType values
 
         /// <summary>
         /// The era this player fields for each suit and district, indexed by
@@ -32,6 +34,13 @@ namespace NodeWar.Simulation
     /// for what a board looks like at tick 0. A second copy would be free to
     /// drift, and a referee whose starting board differed from the players'
     /// would reject every honest log.
+    ///
+    /// The board is sparse. Only traversable cells become nodes: every Land
+    /// cell, and a Lake cell once a Pier is drafted on it. Node IDs are
+    /// assigned to those cells in ascending cell order, so they follow the
+    /// board's row-major authoring order with the gaps closed up. A board or
+    /// draft that is not legal is refused with an <see cref="ArgumentException"/>
+    /// before any state is touched; nothing is guessed or defaulted.
     ///
     /// The simulation still reads its balance and path costs from statics, so
     /// <see cref="Configure"/> must run before <see cref="Build"/> and before
@@ -67,63 +76,118 @@ namespace NodeWar.Simulation
         /// <summary>
         /// <see cref="Build"/> into a state the caller already holds. The live
         /// game creates its state before the draft, and hands the same object
-        /// to everything that reads it.
+        /// to everything that reads it. A refused board leaves it untouched.
         /// </summary>
         public static void Fill(SimulationState state, GameBalanceData balance, BoardConfigData board,
             DraftPlacement[] draft, PlayerSetup[] players)
         {
-            state.defaultEdgeWeight = board.defaultEdgeWeight;
+            RequireBuildable(board, draft);
+
+            state.defaultLinkWeight = board.defaultLinkWeight;
+            state.boardHash = BoardHasher.Hash(board);
             BuildNodes(state, balance, board, draft, players);
             InitializePlayers(state, balance, board, players);
             InitializeVillagers(state, balance, board);
         }
 
         /// <summary>
-        /// The grid, with every node connected to its four neighbours at the
-        /// board's default weight, then the board's fixed placements, then the
-        /// draft's. Draft placements start unowned, at the era their placer
-        /// fields for that district; the board's own placements are era 0.
+        /// Throws <see cref="ArgumentException"/> unless the board can be built
+        /// and every draft placement is legal on it.
+        /// </summary>
+        public static void RequireBuildable(BoardConfigData board, DraftPlacement[] draft)
+        {
+            if (!MapAuthoringRules.ValidateBoard(board, out string error) ||
+                !MapAuthoringRules.ValidateDraft(board, draft, out error))
+                throw new ArgumentException(error);
+        }
+
+        /// <summary>
+        /// For every board cell, the ID of the node standing on it, or -1 where
+        /// there is none: ocean, open lake, and any Lake cell no Pier was drafted
+        /// on. IDs run in ascending cell order. The board must be buildable.
+        /// </summary>
+        public static int[] CellToNode(BoardConfigData board, DraftPlacement[] draft)
+        {
+            RequireBuildable(board, draft);
+
+            int[] cellToNode = new int[board.terrain.Length];
+            for (int cell = 0; cell < cellToNode.Length; cell++)
+                cellToNode[cell] = board.terrain[cell] == TerrainType.Land ? 0 : -1;
+
+            // Only a Pier turns a Lake cell into a node, and PlacementLegality has
+            // already established that a Pier stands on a Lake slot.
+            if (draft != null)
+                for (int i = 0; i < draft.Length; i++)
+                    if (draft[i].districtType == DistrictType.Pier)
+                        cellToNode[draft[i].gridZ * board.gridCols + draft[i].gridX] = 0;
+
+            int next = 0;
+            for (int cell = 0; cell < cellToNode.Length; cell++)
+                cellToNode[cell] = cellToNode[cell] == 0 ? next++ : -1;
+            return cellToNode;
+        }
+
+        /// <summary>The cell each node stands on: the inverse of <see cref="CellToNode"/>.</summary>
+        public static int[] NodeToCell(int[] cellToNode)
+        {
+            int count = 0;
+            for (int cell = 0; cell < cellToNode.Length; cell++)
+                if (cellToNode[cell] >= 0) count++;
+
+            int[] nodeToCell = new int[count];
+            for (int cell = 0; cell < cellToNode.Length; cell++)
+                if (cellToNode[cell] >= 0) nodeToCell[cellToNode[cell]] = cell;
+            return nodeToCell;
+        }
+
+        /// <summary>
+        /// The nodes, connected to their traversable neighbours at the board's
+        /// default weight, then the board's fixed placements, then the draft's.
+        /// Draft placements start unowned, at the era their placer fields for
+        /// that district; the board's own placements are era 0.
         /// </summary>
         public static void BuildNodes(SimulationState state, GameBalanceData balance,
             BoardConfigData board, DraftPlacement[] draft, PlayerSetup[] players)
         {
+            int[] cellToNode = CellToNode(board, draft);
+            int[] nodeToCell = NodeToCell(cellToNode);
             int cols = board.gridCols;
             int rows = board.gridRows;
-            state.nodes = new NodeData[cols * rows];
+            state.nodes = new NodeData[nodeToCell.Length];
 
-            for (int z = 0; z < rows; z++)
+            for (int nodeID = 0; nodeID < nodeToCell.Length; nodeID++)
             {
-                for (int x = 0; x < cols; x++)
+                int cell = nodeToCell[nodeID];
+                int x = cell % cols;
+                int z = cell / cols;
+                state.nodes[nodeID] = new NodeData
                 {
-                    int nodeID = z * cols + x;
-                    state.nodes[nodeID] = new NodeData
-                    {
-                        nodeID = nodeID,
-                        gridX = x,
-                        gridZ = z,
-                        edges = GridEdges(x, z, cols, rows, board.defaultEdgeWeight),
-                        districtType = DistrictType.None,
-                        baseDistrictType = DistrictType.None,
-                        slotType = NodeSlotType.Fixed,
-                        claimBar = 0,
-                        ownerID = -1,
-                        bonusVillagersOnClaim = 0,
-                        materialAllocation = 0
-                    };
-                }
+                    nodeID = nodeID,
+                    gridX = x,
+                    gridZ = z,
+                    links = CellLinks(x, z, cols, rows, board.defaultLinkWeight, cellToNode),
+                    districtType = DistrictType.None,
+                    baseDistrictType = DistrictType.None,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = board.terrain[cell],
+                    claimBar = 0,
+                    ownerID = -1,
+                    townPaidMask = 0,
+                    fortressLevel = 0,
+                    materialAllocation = 0,
+                    recruitReadyTick = 0,
+                    autoRecruit = false
+                };
             }
 
-            if (board.initialPlacements != null)
+            for (int i = 0; i < board.initialPlacements.Length; i++)
             {
-                for (int i = 0; i < board.initialPlacements.Length; i++)
-                {
-                    BoardConfigData.InitialNodePlacement ip = board.initialPlacements[i];
-                    int nodeID = ip.gridZ * cols + ip.gridX;
-                    state.nodes[nodeID].districtType = ip.districtType;
-                    state.nodes[nodeID].baseDistrictType = ip.districtType;
-                    state.nodes[nodeID].ownerID = ip.ownerID;
-                    state.nodes[nodeID].claimBar = ip.claimBar;
-                }
+                BoardConfigData.InitialDistrictPlacement ip = board.initialPlacements[i];
+                int nodeID = cellToNode[ip.gridZ * cols + ip.gridX];
+                state.nodes[nodeID].districtType = ip.districtType;
+                state.nodes[nodeID].baseDistrictType = ip.districtType;
+                state.nodes[nodeID].ownerID = ip.ownerID;
+                state.nodes[nodeID].claimBar = ip.claimBar;
             }
 
             if (draft != null)
@@ -131,35 +195,44 @@ namespace NodeWar.Simulation
                 for (int i = 0; i < draft.Length; i++)
                 {
                     DraftPlacement dp = draft[i];
-                    int nodeID = dp.gridZ * cols + dp.gridX;
+                    int nodeID = cellToNode[dp.gridZ * cols + dp.gridX];
                     state.nodes[nodeID].districtType = dp.districtType;
                     state.nodes[nodeID].baseDistrictType = dp.districtType;
                     state.nodes[nodeID].ownerID = -1;
-                    state.nodes[nodeID].slotType = NodeSlotType.Fixed;
+                    state.nodes[nodeID].upgradeCategory = DistrictUpgradeCategory.Fixed;
 
                     int era = dp.playerID >= 0 && players != null && dp.playerID < players.Length
                         ? players[dp.playerID].DistrictEra(dp.districtType) : 0;
                     state.nodes[nodeID].districtEra = era;
-                    state.nodes[nodeID].bonusVillagersOnClaim =
-                        balance.GetDistrictStats(dp.districtType, era).bonusVillagersOnClaim;
                 }
             }
         }
 
         /// <summary>
         /// Left, right, down, up: the order the live game has always used, and
-        /// edge order is part of the simulation (pathfinding visits edges in it).
+        /// link order is part of the simulation (pathfinding visits links in it).
+        /// A neighbour with no node (ocean, open lake, an unbuilt Pier slot) is
+        /// skipped, never jumped: a link only ever joins adjacent cells.
         /// </summary>
-        public static Edge[] GridEdges(int x, int z, int cols, int rows, int weight)
+        public static Link[] CellLinks(int x, int z, int cols, int rows, int weight, int[] cellToNode)
         {
-            int count = (x > 0 ? 1 : 0) + (x < cols - 1 ? 1 : 0) + (z > 0 ? 1 : 0) + (z < rows - 1 ? 1 : 0);
-            Edge[] edges = new Edge[count];
-            int e = 0;
-            if (x > 0) edges[e++] = new Edge { toNode = z * cols + (x - 1), travelWeight = weight };
-            if (x < cols - 1) edges[e++] = new Edge { toNode = z * cols + (x + 1), travelWeight = weight };
-            if (z > 0) edges[e++] = new Edge { toNode = (z - 1) * cols + x, travelWeight = weight };
-            if (z < rows - 1) edges[e++] = new Edge { toNode = (z + 1) * cols + x, travelWeight = weight };
-            return edges;
+            Link[] links = new Link[4];
+            int count = 0;
+            if (x > 0) count = AddLink(links, count, cellToNode[z * cols + (x - 1)], weight);
+            if (x < cols - 1) count = AddLink(links, count, cellToNode[z * cols + (x + 1)], weight);
+            if (z > 0) count = AddLink(links, count, cellToNode[(z - 1) * cols + x], weight);
+            if (z < rows - 1) count = AddLink(links, count, cellToNode[(z + 1) * cols + x], weight);
+
+            Link[] result = new Link[count];
+            Array.Copy(links, result, count);
+            return result;
+        }
+
+        private static int AddLink(Link[] links, int count, int toNodeID, int weight)
+        {
+            if (toNodeID < 0) return count;
+            links[count] = new Link { toNodeID = toNodeID, travelWeight = weight };
+            return count + 1;
         }
 
         /// <summary>
@@ -183,10 +256,11 @@ namespace NodeWar.Simulation
                     metal = GameBalanceData.ClampResource(board.startingMetal, balance.metalCap),
                     breachCount = 0,
                     paidRespawns = 0,
+                    recruitCount = 0,
                     breachBar = 0,
                     nextBreacherID = -1,
                     draftedSuits = setup.suits ?? new int[0],
-                    draftedNodes = setup.nodes ?? new int[0],
+                    draftedDistricts = setup.districts ?? new int[0],
                     suitEras = setup.suitEras,
                     districtEras = setup.districtEras
                 };
@@ -201,11 +275,14 @@ namespace NodeWar.Simulation
         }
 
         /// <summary>
-        /// P0 owns the highest-Z core and P1 the lowest; the first core found
-        /// wins a tie on Z. The fallbacks are the default 4x7 board's cores.
+        /// P0 owns the highest-Z core and P1 the lowest. There must be exactly
+        /// two Cores on different rows; anything else throws
+        /// <see cref="InvalidOperationException"/>. There is no default core to
+        /// fall back on: a state without two Cores is not a board.
         /// </summary>
         public static int FindCoreNodeID(SimulationState state, int playerID)
         {
+            int cores = 0;
             int lowestZNode = -1;
             int highestZNode = -1;
             int lowestZ = int.MaxValue;
@@ -215,14 +292,18 @@ namespace NodeWar.Simulation
             {
                 if (state.nodes[i].districtType != DistrictType.Core) continue;
 
+                cores++;
                 int z = state.nodes[i].gridZ;
                 if (z < lowestZ) { lowestZ = z; lowestZNode = i; }
                 if (z > highestZ) { highestZ = z; highestZNode = i; }
             }
 
-            if (playerID == 0)
-                return highestZNode >= 0 ? highestZNode : 25;
-            return lowestZNode >= 0 ? lowestZNode : 2;
+            if (cores != 2)
+                throw new InvalidOperationException("A board needs exactly two Cores, found " + cores + ".");
+            if (lowestZ == highestZ)
+                throw new InvalidOperationException("The two Cores share a row, so neither is the high-Z one.");
+
+            return playerID == 0 ? highestZNode : lowestZNode;
         }
 
         /// <summary>

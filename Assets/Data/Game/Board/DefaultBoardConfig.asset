@@ -12,30 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7dfee6c68e0ca34469b710921eaf766d, type: 3}
   m_Name: DefaultBoardConfig
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Config.BoardConfig
+  mapId: hourglass-01
   data:
-    gridCols: 4
-    gridRows: 7
-    defaultEdgeWeight: 4
-    startingVillagersPerPlayer: 3
+    gridCols: 0
+    gridRows: 0
+    defaultLinkWeight: 0
+    startingVillagersPerPlayer: 0
     startingFood: 0
     startingMaterials: 0
     startingMetal: 0
-    ownedMultiplier: 50
-    partiallyOwnedMultiplier: 75
-    unownedMultiplier: 100
-    enemyPartiallyOwnedMultiplier: 150
-    enemyOwnedMultiplier: 200
-    initialPlacements:
-    - gridX: 1
-      gridZ: 6
-      districtType: 5
-      ownerID: 0
-      claimBar: 10000
-    - gridX: 2
-      gridZ: 0
-      districtType: 5
-      ownerID: 1
-      claimBar: -10000
+    ownedMultiplier: 0
+    partiallyOwnedMultiplier: 0
+    unownedMultiplier: 0
+    enemyPartiallyOwnedMultiplier: 0
+    enemyOwnedMultiplier: 0
+    initialPlacements: []
   nodeScale: 6
   boundsMinX: -10
   boundsMaxX: 30
@@ -43,12 +34,6 @@ MonoBehaviour:
   boundsMaxZ: 45
   draftTurnDuration: 15
   maxConsecutiveTimeouts: 2
-  baseDraftNodesP0:
-  - districtType: 1
-  - districtType: 2
-  - districtType: 3
-  baseDraftNodesP1:
-  - districtType: 1
-  - districtType: 2
-  - districtType: 3
-  botLoadoutNodes: []
+  baseDraftDistrictsP0: []
+  baseDraftDistrictsP1: []
+  botLoadoutDistricts: []

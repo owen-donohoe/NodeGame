@@ -6,13 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:07:09Z }
-verified_at_commit: 7f0e83da
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
 status: stable
 sources:
   - id: tests
@@ -63,9 +58,13 @@ Step 1: Identify what is being tested
 
 Step 2: Set up initial state
 - Create a minimal SimulationState with only what the test needs
-- Reuse TestBoardFactory for small fixtures. For a complete drafted match,
-  use MatchFactory.Build so the test starts from the same tick-0 board as
-  the live game and referee
+- Reuse TestBoardFactory for small hand-built fixtures (set `terrain` and leave
+  `boardHash` at 0; they have no board identity). For a complete drafted match,
+  use MatchFactory.Build so the test starts from the same tick-0 board as the
+  live game and referee: on BoardFixtures.LandGrid / LandGrid3x3 when the shape
+  is incidental, or on PremadeMaps.Hourglass01 when terrain or Pier legality is
+  the point. Node IDs on a terrain board are cell order with the gaps closed up,
+  so look them up with MatchFactory.CellToNode rather than computing z * cols + x
 - Install the balance on both GameSimulation and CommandProcessor before
   running commands or ticks. MatchFactory.Configure also sets Pathfinding's
   board multipliers; Build alone does not configure those statics. Do not
@@ -78,6 +77,9 @@ Step 2: Set up initial state
   nextBreacherID at -1. Default balance enables the channel, tempo and caps;
   disable those explicitly when testing legacy behaviour
 - Document what the starting state represents
+- For recruitment, initialize player recruitCount and node recruitReadyTick to 0,
+  and autoRecruit to false. Use explicit positive recruit tuning; historical
+  exports with missing tuning must not silently enable free recruits.
 
 Step 3: Define the command sequence
 - List the GameCommands in the order they will be applied
@@ -90,8 +92,15 @@ Step 4: Advance ticks
 - Do not over-tick -- test the minimum needed to verify behavior
 - For tempo, include the stage boundary tick and a below-100 timer axis;
   assert inclusive integer integration and production remainder carry
-- For breaches, distinguish arrival, channel completion and post-combat resume;
-  test no loss on a threshold drop alone and simultaneous-loss cancellation
+- For breaches, distinguish arrival, channel completion and order resume
+  (TickOrderResume); test no loss on a threshold drop alone and
+  simultaneous-loss cancellation
+- For sticky orders, assert targetNodeID survives a fight and an unreachable
+  destination, that an order given while Fighting leaves the attack clock alone,
+  and that work or claim begun at resume counts from the next tick
+- For claiming, assert against the tick-start owner snapshot: the capture bonus
+  (clamped neighbour balance, tempo applied after) and restore must give the
+  same result whatever order the nodes are processed in
 
 Step 5: Assert expected state
 - Assert specific integer field values on SimulationState
@@ -102,7 +111,21 @@ Step 5: Assert expected state
 - For caps, assert wasted completions still cycle, Forge spends no material
   at the metal cap, Market still alternates, and cap 0 remains uncapped
 - For paid respawns, assert only successful commands increment paidRespawns
-  and Sanctuary discounts the escalated cost with integer rounding/minimum 1
+  and the Infirmary (at most two counted workers, lowest villager ID, none under enemy presence) discounts the escalated cost with integer rounding/minimum 1
+- For an integration scenario over loss, duplication and reordering with replay and
+  rollback, use `dotnet/CoreRulesFixture` (map `hourglass-01-acceptance`, a test-only copy that
+  never advertises its hash under the shipped map ID) rather than the shipped board.
+- For the Fortress, assert level-by-level costs in either currency, refusal under enemy presence,
+  non-stacking auras read from tick-start state, the divisor floor of 1 on claim and breach,
+  and that ownership loss resets the level.
+- For Town, assert each player is paid once on their first full claim (including a
+  raider taking the enemy Town), the reward is capped by population room and still
+  consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.
+- For Recruit, assert pre-increment price and cooldown, exact food/count/body
+  changes, refusal hash equality, dead-inclusive population, and overflow refusal.
+  Test per-Village cooldowns with shared player count, ascending-node automatic
+  attempts after production, ownership-loss reset, and absolute idempotent toggles.
+  Keep the food cap at 30: N=8 costs 30; N=9 costs 33 and must be refused.
 
 Step 6: Add determinism variant (always, for simulation tests)
 - Run the identical scenario a second time from scratch
@@ -116,9 +139,10 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 2. Its short, non-breaching fixtures
-  retain their numeric hashes through neutral-field conditional hashing;
-  this does not make version-1 match logs replayable on version 2
+- The current baseline pin is version 3 (647286254 and 357327383 after C7). The neutral
+  recruit fields retain those two fingerprints; the terrain addition re-pinned both,
+  because terrain and boardHash are always hashed.
+  Conditional hashing does not make older simulation-version logs replayable
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests

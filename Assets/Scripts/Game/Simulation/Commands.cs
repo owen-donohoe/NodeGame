@@ -6,7 +6,10 @@ namespace NodeWar.Simulation
         Move,
         SetAllocation,
         Equip,    
-        Respawn   
+        Respawn,
+        Recruit = 5,
+        SetAutoRecruit = 6,
+        UpgradeFortress = 7
     }
 
     [System.Serializable]
@@ -18,5 +21,26 @@ namespace NodeWar.Simulation
         public int targetNodeID;
         public int issuedOnTick;
         public int value; // NEW: generic int for commands that need a number (e.g., allocation amount)
+    }
+
+    public static class CommandTypes
+    {
+        public static bool IsKnown(CommandType type)
+        {
+            switch (type)
+            {
+                case CommandType.None:
+                case CommandType.Move:
+                case CommandType.SetAllocation:
+                case CommandType.Equip:
+                case CommandType.Respawn:
+                case CommandType.Recruit:
+                case CommandType.UpgradeFortress:
+                case CommandType.SetAutoRecruit:
+                    return true;
+                default:
+                    return false;
+            }
+        }
     }
 }

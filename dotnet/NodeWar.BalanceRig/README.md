@@ -11,7 +11,9 @@ dotnet run --project dotnet/NodeWar.BalanceRig -- --matches 100 --seed 1 --cap 6
 
 Options: `--matches N`, `--seed S`, `--cap TICKS`, `--out path.csv`,
 `--loadout Barracks,...|none`, `--delay TICKS`, `--swap-seats on|off`,
-`--v2-overlay`, `--balance file.json`, `--board file.asset`, `--trace SEED`.
+`--v2-overlay`, `--balance file.json`, `--board file.asset`, `--trace SEED`. The default board is
+the shipped map (hourglass-01) from the same catalog the game and the referee use; a `--board` file
+that has no terrain is refused.
 
 ## Seeds, seats and pairs
 
@@ -23,7 +25,8 @@ always apply P0 then P1, each in the order that player issued them.
 
 Paired results are reported; equal outcomes are never promised, because an ID
 tie-break can favour a seat. Mirroring needs the board's own symmetry, which
-is `RigSetup.mirror`: the loader sets a half-turn for the shipped board, and a
+is `RigSetup.mirror`: the loader takes it from the map's declared symmetry (top to bottom for
+hourglass-01, `(x, rows-1-z)`, not a half turn); an explicit `--board` file gets the half turn, and a
 test fixture supplies its own.
 
 ## Balance hashes

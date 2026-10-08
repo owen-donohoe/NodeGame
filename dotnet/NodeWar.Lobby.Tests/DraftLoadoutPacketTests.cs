@@ -18,7 +18,7 @@ namespace NodeWar.Lobby.Tests
             var loadout = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = new[] { "warrior", "scout" },
-                nodeIDs = new[] { "farm" },
+                districtIDs = new[] { "farm" },
                 skinIDs = new[] { "skin.suit.warrior.default" }
             });
             loadout.suitEras[3] = 1;

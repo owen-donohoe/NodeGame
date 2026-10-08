@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.BalanceRig
 {
     public class TimelineMetricsTests
     {
-        // RigSmokeTests.Setup(): 3x3, cores at node 1 (P0) and node 7 (P1).
+        // RigSmokeTests.Setup(): 3x3, P0's core is node 7 (high Z) and P1's node 1.
         private const int CoreP0 = 1, CoreP1 = 7;
 
         private static SimulationState State(RigSetup setup = null)
@@ -214,18 +215,14 @@ namespace NodeWar.BalanceRig
         private static RigSetup Line3()
         {
             RigSetup s = RigSmokeTests.Setup();
-            s.board.gridCols = 3;
-            s.board.gridRows = 1;
-            s.board.initialPlacements = new[]
-            {
-                new BoardConfigData.InitialNodePlacement { gridX = 0, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
-            };
-            s.mirror = (x, z) => (2 - x, z);
+            // Three nodes in a column: P1's core at z=0, one connector, P0's core at z=2.
+            s.board = BoardFixtures.LandGrid(1, 3);
+            s.board.startingVillagersPerPlayer = 1;
+            s.mirror = (x, z) => (x, 2 - z);
             return s;
         }
 
-        [TestCase(3, "3x1")]
+        [TestCase(3, "1x3")]
         [TestCase(9, "3x3")]
         public void Reports_HaveStableSchemaAndNoDefaultNodeAssumption(int nodeCount, string grid)
         {
@@ -238,7 +235,7 @@ namespace NodeWar.BalanceRig
             // so one scripted match flips the highest-numbered non-core node (so IDs up to the map's size are exercised).
             SimulationState scripted = State(setup);
             var scriptedTimeline = new TimelineMetrics(scripted, 10);
-            int last = nodeCount == 3 ? 1 : nodeCount - 1; // node 2 is P1's core on the 3x1 line
+            int last = nodeCount == 3 ? 1 : nodeCount - 1; // the connector between the two cores
             Assert.AreNotEqual(DistrictType.Core, scripted.nodes[last].districtType);
             foreach (int owner in new[] { 0, -1, 1 })
             {

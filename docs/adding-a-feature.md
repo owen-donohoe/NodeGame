@@ -6,14 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
+verified_at_commit: 55b647a7
 status: stable
 sources:
   - id: sim-state
@@ -115,14 +109,42 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      the neutral value explicitly (`nextBreacherID` is -1, while
      `breachBar` and `paidRespawns` start at 0).
      That preserves old hashes; avoiding a version bump also requires
-     unchanged results for those existing inputs, as with eras.
+     unchanged results for those existing inputs, as with eras. Version 3
+     is the current one; the terrain board moved both baselines.
+   - If the field describes the *board* rather than the match (terrain, slot
+     mask, base pools), it belongs on `BoardConfigData`, not on state, and it must
+     reach `BoardHasher` (so `SimulationState.boardHash` and the `MatchSetup`
+     agreement see it) and the match log. The BOARD chunk layout is frozen: board data
+     the old layout cannot hold goes in BOARD_V2 (tag 10) or a new tag.
+
+2b. **Does it add, retire or renumber a district type?**
+   - Give the enum value an explicit number; numbers are persisted in logs and
+     never reused or renumbered.
+   - A new playable type goes in `DistrictRoster.IsActive`, `DistrictMigration`
+     (so saved data and the catalog know it), the catalog export, and
+     `DistrictFallback` (so it reads without art). Retiring one maps its old number
+     to a replacement in `DistrictMigration.CanonicalType`; the runtime and wire accept no aliases.
+   - A per-node one-time flag follows the `townPaidMask` pattern: hashed only when
+     non-zero under its own tag, initialized in `MatchFactory`, copied, with tests.
 
 3. **Does it need a new player-triggerable action?**
    - Add a `CommandType` in `Commands.cs` if no existing type fits.
+   - Add the type to `CommandTypes.IsKnown`, the one list the serializer and
+     the log reader refuse everything else against.
    - Add a case in `CommandProcessor.ProcessCommand` that validates
      ownership/state/cost before mutating anything (follow
      `ProcessEquipCommand`'s shape: ownership check → state check → cost
      check → apply).
+   - For node actions, share read-only eligibility with the automatic tick
+     pass and UI (`NodeActionRules`), then perform writes in `CommandProcessor`.
+     Recruit uses `villagerID = -1`, `value = 0`; SetAutoRecruit uses an absolute
+     value of 0 or 1 and does not recruit directly.
+   - Node actions in the UI (`NodeActionModel`, `NodeActionPanelContent`) exist in both live stacks;
+     add a new one to both, with eligibility and price from the simulation helper, and build the
+     uGUI panel at runtime rather than through prefab wiring.
+   - A price or eligibility the UI shows must come from the same helper the
+     simulation uses (as `GameSimulation.CountInfirmaryWorkers` serves both the
+     respawn timer and the paid-respawn price), never a second copy of the rule.
    - Capture the input in `Input/` (`CommandSystem`, and `BotPlayer` if
      the bot should be able to do it too) and push it through
      `InputBuffer`, with `issuedOnTick` set from `SimulationState.tickCount`
@@ -131,6 +153,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - If the command needs new data on the wire, extend `InputSerializer`
      (or `DraftSerializer` for draft-phase actions) — both peers must
      encode/decode it identically.
+     A new enum value also needs explicit acceptance in `InputSerializer` and
+     `MatchLogFormat`, plus round-trip and unknown-type refusal tests. Recruit=5,
+     SetAutoRecruit=6 and UpgradeFortress=7 retain the six-field, 24-byte command payload and TICKS tag.
    - Any wire layout change bumps `ProtocolVersion.Current`
      (`Assets/Scripts/Backend/Shared/ProtocolVersion.cs`; `InputSerializer.ProtocolVersion`
      aliases it) in the same commit. A `GameCommand` change also needs a new TICKS tag in
@@ -142,9 +167,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Never use `UnityEngine.Random` or anything seeded from wall-clock
      time inside `Simulation/`.
    - Derive a seed from already-replicated state (tick count, player ID,
-     entity ID) — see `DraftManager.HandleTimeout`'s fallback
-     `turnNumber * 7919 + activePlayer * 31` pattern when no valid parked
-     placement exists. The chosen placement is sent to the other peer.
+     entity ID) — see `DraftState.ChooseTimeout`'s fallback
+     `turnNumber * 7919 + playerID * 31` pattern (reached from
+     `DraftManager.HandleTimeout`) when no valid parked placement exists. The chosen placement is sent to the other peer.
    - If the feature needs randomness mid-match (after `SimulationState`
      exists), any RNG state must itself live on `SimulationState` and
      only advance inside `SimulateTick`.
@@ -158,7 +183,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      `GameSimulation.AssignAllCombatTargets`).
 
 6. **Does it change array sizes at runtime (spawning new entities)?**
-   Follow the `GameSimulation.SpawnBonusVillagers` pattern:
+   Follow the `GameSimulation.SpawnBonusVillagers` pattern (it is also the body
+   spawn behind `Recruit` and the Town reward):
    - Allocate a new, larger array; copy existing entries into it; append
      new entries at the end; assign the new array back onto
      `SimulationState` (e.g. `state.villagers = newArray`).
@@ -178,8 +204,11 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      documented on `GameSimulation.SimulateTick`).
    - Insert at the correct, justified step — do not append a new step at
      the end by default, and do not reorder existing steps.
-   - Claiming begins with `TickBreach` before `TickClaiming`; Rampart
-     bonuses follow movement, and post-combat resume follows win-check.
+   - Claiming begins with `TickBreach` before `TickClaiming`; the Fortress
+     resistance snapshot is taken from tick-start state, auto-recruit follows production, and order
+     resume (`TickOrderResume`) follows win-check.
+     Anything that depends on who owns a neighbouring node reads the
+     tick-start owner snapshot, not live owners, so node order cannot matter.
      Refresh derived `nextBreacherID` last, after all mutations this tick.
      Version 2 checks only new breaches against the current threshold;
      simultaneous losses cancel and a sudden-death drop alone is not a loss.
@@ -213,9 +242,15 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    `SuitStats` and `DistrictStats` and fails if you do not), then export
    the balance for the server (`Tools > Node War >
    Backend > Export Balance For Server`) so the referee can verify matches
-   played on it. `BalanceHasher` does not hash `BoardConfigData`; the
-   board is recorded separately in the match log. The balance content
+   played on it. `BalanceHasher` does not hash `BoardConfigData`; the board
+   is fingerprinted by `BoardHasher` (hashed into state as `boardHash`, compared in
+   `MatchSetup`) and recorded separately in the match log. The balance content
    hash is compared in the handshake, not folded into `SimulationStateHasher`.
+   If the rules depend on the number, say so in `GameBalanceData.CoreRulesValid`
+   so an overflowing balance is refused rather than played. A new tunable per district and era must
+   also pass `BalanceExportData.ReleaseValid` (the server export refuses a balance missing an active
+   district at any era, and never overwrites an existing content-addressed file with different data);
+   `ReleaseContentTests` compare a fresh export with the client balance and catalog.
    Preserve absent-field behaviour: nonpositive resource caps are uncapped,
    absent tempo axes use 100%, and a disabled breach channel keeps the legacy
    fixed-threshold path. Validate schedule lengths/order, positive percentages
@@ -236,8 +271,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
     (`com.unity.test-framework`, per `Packages/manifest.json`) and an
     EditMode suite at `Assets/Tests/EditMode/Tests/`
     (`NodeWar.Simulation.Tests.asmdef`, plus `DeterminismBaselineTests`,
-    `EdgeWeightTests`, `MovementCorrectnessTests`, `SimulationSmokeTest`,
-    and the shared `TestBoardFactory`).
+    `LinkWeightTests`, `MovementCorrectnessTests`, `SimulationSmokeTest`,
+    and the shared `TestBoardFactory` and `BoardFixtures`; sticky orders,
+    restore, the capture bonus, recruiting, terrain, legality and setup each have
+    their own file, such as `StickyOrderTests` and `TerrainMapTests`).
 
     Run it with `dotnet test dotnet/NodeWar.sln` — no Editor, no licence,
     and it is what CI runs, so prefer it for any result you intend to rely

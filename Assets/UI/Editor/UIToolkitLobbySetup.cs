@@ -184,7 +184,7 @@ namespace NodeWar.EditorTools
             AssignLayout(so, "matchHistoryPageLayout", Load(UIRoot + "/Layouts/MatchHistoryPage.uxml"));
 
             AssignDefinitions<SuitDefinition>(so, "allSuits", DataRoot + "/Suits");
-            AssignDefinitions<NodeDefinition>(so, "allNodes", DataRoot + "/Nodes");
+            AssignDefinitions<DistrictDefinition>(so, "allDistricts", DataRoot + "/Nodes");
 
             SerializedProperty managerProperty = so.FindProperty("lobbyManager");
             if (managerProperty != null)

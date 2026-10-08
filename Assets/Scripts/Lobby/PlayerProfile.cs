@@ -18,37 +18,6 @@ namespace NodeWar.Lobby
             instance = null;
         }
 
-        [System.Serializable]
-        public struct PlayerProfileData
-        {
-            public string username;
-            public string uuid;
-            public int trophies;
-            public LoadoutData loadout;
-            public string[] unlockedSuitIDs;
-            public string[] unlockedNodeIDs;
-            public int selectedGameModeIndex; // cast to GameMode
-            public int boxesAvailable;
-            public float boxProgress;
-
-            // Which Workshop tab was open last. 0 is Districts, which is also
-            // what an older save without this field deserialises to - so the
-            // requested default costs no migration.
-            public int workshopTabIndex;
-
-            // Older saves omit this field and start false: the reminder has
-            // not been shown on this device yet.
-            public bool accountLinkPromptShown;
-
-            // The Settings page's values. Unlike workshopTabIndex this one
-            // cannot lean on zero being the wanted default - every slider at 0
-            // and every switch off is a state a player can legitimately choose.
-            // GameSettingsData.version carries that distinction; Load() runs
-            // the block through Normalized, which turns an absent one into the
-            // defaults and rewrites the file.
-            public GameSettingsData settings;
-        }
-
         public PlayerProfileData data;
 
         private string SavePath => Path.Combine(Application.persistentDataPath, "player_profile.json");
@@ -78,7 +47,7 @@ namespace NodeWar.Lobby
             get => (GameMode)data.selectedGameModeIndex;
             set { data.selectedGameModeIndex = (int)value; Save(); }
         }
-        public LoadoutData Loadout => data.loadout;
+        public LoadoutData Loadout => data.loadout.ToLoadout();
 
         public bool AccountLinkPromptShown => data.accountLinkPromptShown;
 
@@ -133,7 +102,7 @@ namespace NodeWar.Lobby
 
         public void SetLoadout(LoadoutData loadout)
         {
-            data.loadout = LoadoutData.Normalized(loadout);
+            data.loadout = LoadoutRecord.From(LoadoutData.Normalized(loadout));
             Save();
         }
 
@@ -159,7 +128,7 @@ namespace NodeWar.Lobby
 
         // Unlock gating has not shipped: every caller is deliberately told "yes".
         // Before setting this to false, ensure profile creation seeds the starter
-        // set in unlockedSuitIDs/unlockedNodeIDs (CreateDefaults already seeds a
+        // set in unlockedSuitIDs/UnlockedDistrictIDs (CreateDefaults already seeds a
         // small set), and migrate existing saves to preserve intended access.
         // static readonly rather than const on purpose: a const true folds the
         // lookup away at compile time, and every call site then compiles with an
@@ -170,8 +139,8 @@ namespace NodeWar.Lobby
         public bool IsSuitUnlocked(string suitID) =>
             AllContentUnlocked || ContainsUnlockedID(data.unlockedSuitIDs, suitID);
 
-        public bool IsNodeUnlocked(string nodeID) =>
-            AllContentUnlocked || ContainsUnlockedID(data.unlockedNodeIDs, nodeID);
+        public bool IsDistrictUnlocked(string districtID) =>
+            AllContentUnlocked || ContainsUnlockedID(data.UnlockedDistrictIDs, districtID);
 
         private static bool ContainsUnlockedID(string[] unlockedIDs, string contentID)
         {
@@ -215,7 +184,18 @@ namespace NodeWar.Lobby
                 data = JsonUtility.FromJson<PlayerProfileData>(json);
 
                 bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
-                data.loadout = LoadoutData.Normalized(data.loadout);
+                LoadoutData saved = LoadoutData.Normalized(data.loadout.ToLoadout());
+                migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.loadout.nodeIDs, saved.districtIDs);
+                int[] savedEras = data.loadout.districtEras;
+                if (savedEras == null || savedEras.Length != saved.districtEras.Length) migrated = true;
+                else
+                    for (int i = 0; i < savedEras.Length; i++)
+                        if (savedEras[i] != saved.districtEras[i]) migrated = true;
+                data.loadout = LoadoutRecord.From(saved);
+                string[] unlocks = NodeWar.Backend.DistrictMigration.Deck(data.UnlockedDistrictIDs,
+                    data.UnlockedDistrictIDs == null ? 0 : data.UnlockedDistrictIDs.Length);
+                migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.UnlockedDistrictIDs, unlocks);
+                data.UnlockedDistrictIDs = unlocks;
 
                 // A save written before settings existed deserialises to an
                 // all-zero block, which Normalized turns into the defaults.
@@ -271,7 +251,7 @@ namespace NodeWar.Lobby
         /// Returns true when a migration actually happened, so the caller can
         /// rewrite the file and make it a one-time cost.
         /// </summary>
-        private static bool TryMigrateLegacyLoadout(string json, ref LoadoutData loadout)
+        private static bool TryMigrateLegacyLoadout(string json, ref LoadoutRecord loadout)
         {
             bool alreadyMigrated =
                 (loadout.suitIDs != null && loadout.suitIDs.Length > 0) ||
@@ -283,7 +263,7 @@ namespace NodeWar.Lobby
 
             LegacyProfile legacy = JsonUtility.FromJson<LegacyProfile>(json);
 
-            loadout = new LoadoutData
+            loadout = new LoadoutRecord
             {
                 suitIDs = new string[]
                 {
@@ -310,9 +290,9 @@ namespace NodeWar.Lobby
                 username = "player_" + uuid,
                 uuid = uuid,
                 trophies = 0,
-                loadout = LoadoutData.CreateEmpty(),
+                loadout = LoadoutRecord.From(LoadoutData.CreateEmpty()),
                 unlockedSuitIDs = new string[] { "suit_warrior", "suit_guardian" },
-                unlockedNodeIDs = new string[] { "node_watchtower", "node_market" },
+                UnlockedDistrictIDs = new string[] { "node_watchtower", "node_market" },
                 selectedGameModeIndex = (int)GameMode.Bot,
                 boxesAvailable = 0,
                 boxProgress = 0f,

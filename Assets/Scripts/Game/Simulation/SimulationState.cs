@@ -3,25 +3,47 @@ namespace NodeWar.Simulation
     // ===== ENUMS =====
     public enum DistrictType
     {
-        None, // empty connector / crossroads
-        Farm,
-        Mine,
-        Village,
-        Barracks,
-        Core,
-        Forge,
+        None = 0, // empty connector / crossroads
+        Farm = 1,
+        Mine = 2,
+        Village = 3,
+        Barracks = 4,
+        Core = 5,
+        Forge = 6,
         
-        Camp,
-        Shrine,
-        Arsenal,
-        Sanctuary,
-        Watchtower,
-        Rampart,
-        Market
+        Camp = 7,
+        Shrine = 8,
+        Arsenal = 9,
+        Sanctuary = 10,
+        Watchtower = 11,
+        Rampart = 12,
+        Market = 13,
 
+        /// <summary>
+        /// Built on a Lake cell that the board marks as a district slot. Appended
+        /// after Market so every earlier value keeps its number. In stage B it is
+        /// an inert connector: it grants nothing and blocks nobody.
+        /// </summary>
+        Pier = 14,
+        Town = 15,
+        Infirmary = 16,
+        Fortress = 17
     }
 
-    public enum NodeSlotType
+    /// <summary>
+    /// What a board cell is made of. Land cells always carry a node; a Lake cell
+    /// carries one only when a Pier is built on it; Ocean never does. A Pier slot
+    /// is a Lake cell with <see cref="BoardConfigData.districtSlots"/> set, not a
+    /// fourth terrain value. Values are persisted in match logs: never renumber.
+    /// </summary>
+    public enum TerrainType
+    {
+        Land = 0,
+        Lake = 1,
+        Ocean = 2
+    }
+
+    public enum DistrictUpgradeCategory
     {
         Fixed,
         Army,
@@ -43,7 +65,7 @@ namespace NodeWar.Simulation
 
     public enum SuitType
     {
-        None,
+        None = 0,
         Farmer,
         Miner,
         Warrior, // renamed from Soldier
@@ -64,15 +86,21 @@ namespace NodeWar.Simulation
         public int nodeID;
         public int gridX;
         public int gridZ;
-        public Edge[] edges;
+        public Link[] links;
         public DistrictType districtType;
         public int claimBar;
         public int ownerID;
-        public int bonusVillagersOnClaim;
+        public int townPaidMask;
+        public int fortressLevel;
         public int materialAllocation;
+        public int recruitReadyTick;
+        public bool autoRecruit;
 
-        public NodeSlotType slotType;
+        public DistrictUpgradeCategory upgradeCategory;
         public DistrictType baseDistrictType;
+
+        /// <summary>The terrain of this node's cell: Land, or Lake under a Pier.</summary>
+        public TerrainType terrain;
 
         /// <summary>
         /// Which era of its district this node plays: the era of the player who
@@ -84,9 +112,9 @@ namespace NodeWar.Simulation
 
     [System.Serializable]
 
-    public struct Edge
+    public struct Link
     {
-        public int toNode;
+        public int toNodeID;
         public int travelWeight;
     }
 
@@ -116,14 +144,6 @@ namespace NodeWar.Simulation
         public bool isConsumed;
         public int productionTicksRemaining;
         public int productionTicksMax;
-        public bool hasRampartBonus;
-
-        /// <summary>
-        /// The era of the Rampart whose bonus this villager holds, so leaving
-        /// takes back exactly what arriving gave. Meaningless without
-        /// hasRampartBonus.
-        /// </summary>
-        public int rampartBonusEra;
     }
 
     [System.Serializable]
@@ -137,12 +157,14 @@ namespace NodeWar.Simulation
         public int breachCount;
         /// <summary>Successful paid respawns by this player during this match.</summary>
         public int paidRespawns;
+        /// <summary>Successful recruits during this match; persists through ownership loss.</summary>
+        public int recruitCount;
         /// <summary>Progress against this player's core.</summary>
         public int breachBar;
         /// <summary>Derived candidate cache, refreshed after all tick mutations; -1 for none.</summary>
         public int nextBreacherID;
         public int[] draftedSuits; // (int)SuitType values this player can equip
-        public int[] draftedNodes; // (int)DistrictType values for draft upgrades
+        public int[] draftedDistricts; // (int)DistrictType values for draft upgrades
 
         /// <summary>
         /// The era of each suit and district this player fields, indexed by
@@ -176,14 +198,21 @@ namespace NodeWar.Simulation
         public int tickCount;
         public bool gameOver;
         public int winnerID;
-        public int defaultEdgeWeight;
+        public int defaultLinkWeight;
+
+        /// <summary>
+        /// <see cref="BoardHasher"/> fingerprint of the board this state was built
+        /// from, set once by <see cref="MatchFactory"/>. Hashed so two peers on
+        /// different maps diverge at the first checkpoint, not silently.
+        /// </summary>
+        public int boardHash;
 
         public SimulationState()
         {
             tickCount = 0;
             gameOver = false;
             winnerID = -1;
-            defaultEdgeWeight = BoardConfigData.DefaultEdgeWeight;
+            defaultLinkWeight = BoardConfigData.DefaultLinkWeight;
         }
 
         /// <summary>
@@ -191,7 +220,7 @@ namespace NodeWar.Simulation
         /// place: views, selection and the HUD hold a reference to this object,
         /// so a rollback (8.2e) must change what it contains, not which object
         /// it is. Every mutable array is copied fresh so the two never share a
-        /// write. Node edges are shared: they are fixed once the board is built
+        /// write. Node links are shared: they are fixed once the board is built
         /// and no tick writes them.
         ///
         /// Like SimulationStateHasher, this must name every field. A field added
@@ -220,7 +249,7 @@ namespace NodeWar.Simulation
                 for (int i = 0; i < players.Length; i++)
                 {
                     players[i].draftedSuits = CopyInts(players[i].draftedSuits);
-                    players[i].draftedNodes = CopyInts(players[i].draftedNodes);
+                    players[i].draftedDistricts = CopyInts(players[i].draftedDistricts);
                     players[i].suitEras = CopyInts(players[i].suitEras);
                     players[i].districtEras = CopyInts(players[i].districtEras);
                 }
@@ -229,7 +258,8 @@ namespace NodeWar.Simulation
             tickCount = source.tickCount;
             gameOver = source.gameOver;
             winnerID = source.winnerID;
-            defaultEdgeWeight = source.defaultEdgeWeight;
+            defaultLinkWeight = source.defaultLinkWeight;
+            boardHash = source.boardHash;
         }
 
         private static int[] CopyInts(int[] values) => values == null ? null : (int[])values.Clone();

@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using NodeWar.Simulation;
 
 namespace NodeWar.Tests
@@ -95,20 +95,20 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void SanctuaryDiscountIsAppliedAfterEscalationWithFloorRounding()
+        public void InfirmaryDiscountIsAppliedAfterEscalationWithFloorRounding()
         {
-            state.nodes[1].districtType = DistrictType.Sanctuary;
+            state.nodes[1].districtType = DistrictType.Infirmary;
             state.nodes[1].ownerID = 0;
             state.villagers[0].currentNodeID = 1;
-            state.villagers[0].state = VillagerState.Working;
+            state.villagers[0].state = VillagerState.Working; state.villagers[0].suit = SuitType.Acolyte;
             state.villagers[1].ownerID = 0;
             state.villagers[1].state = VillagerState.Dead;
             state.players[0].paidRespawns = 3;
-            Assert.AreEqual(3, CommandProcessor.GetRespawnCost(state, 0)); // 4 - floor(4*25/100)
+            Assert.AreEqual(4, CommandProcessor.GetRespawnCost(state, 0)); // 4 - floor(4*20/100)
             CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Respawn, playerID = 0, villagerID = 1 });
-            Assert.AreEqual(97, state.players[0].food);
+            Assert.AreEqual(96, state.players[0].food);
             Assert.AreEqual(4, state.players[0].paidRespawns);
-            Assert.AreEqual(4, CommandProcessor.GetRespawnCost(state, 0)); // 5 - floor(5*25/100)
+            Assert.AreEqual(4, CommandProcessor.GetRespawnCost(state, 0)); // 5 - floor(5*20/100)
         }
 
         [TestCase(0, 0, 1)] [TestCase(1, 0, 2)] [TestCase(2, 0, 3)]

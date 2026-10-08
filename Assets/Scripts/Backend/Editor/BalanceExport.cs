@@ -1,8 +1,6 @@
 #if UNITY_EDITOR
 using System.Globalization;
 using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using NodeWar.Config;
 using NodeWar.Simulation;
 using UnityEditor;
@@ -22,24 +20,23 @@ namespace NodeWar.Backend.Editor
                 return;
             }
 
+            if (!BalanceExportData.ReleaseValid(balance.Data, out string reason))
+            {
+                Debug.LogError("Cannot export core-rules release balance: " + reason);
+                return;
+            }
             string directory = Path.GetFullPath(Path.Combine(Application.dataPath,
                 "../dotnet/NodeWarCloud/NodeWarCloud/Balances"));
             Directory.CreateDirectory(directory);
             string path = Path.Combine(directory,
                 BalanceHasher.Hash(balance.Data).ToString(CultureInfo.InvariantCulture) + ".json");
-            // Opt-out serialization includes public fields; no StringEnumConverter:
-            // enums stay integers. Use a fresh serializer, ignoring global defaults.
-            var serializer = JsonSerializer.Create(new JsonSerializerSettings
+            string json = BalanceExportData.Serialize(balance.Data);
+            if (File.Exists(path) && File.ReadAllText(path) != json)
             {
-                ContractResolver = new DefaultContractResolver(),
-                Formatting = Formatting.Indented,
-                Culture = CultureInfo.InvariantCulture,
-                TypeNameHandling = TypeNameHandling.None
-            });
-            using (var writer = new StreamWriter(path))
-            using (var json = new JsonTextWriter(writer))
-                serializer.Serialize(json, balance.Data);
-
+                Debug.LogError("Cannot overwrite an existing content-addressed balance with different Data: " + path);
+                return;
+            }
+            File.WriteAllText(path, json);
             Debug.Log("Exported server balance: " + path);
         }
     }

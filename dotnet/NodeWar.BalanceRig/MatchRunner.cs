@@ -97,7 +97,7 @@ namespace NodeWar.BalanceRig
         public static PreparedMatch Prepare(RigSetup setup, int seed, DraftPlacement[] draft = null)
         {
             int suitCount = (int)SuitType.Watcher + 1;
-            int districtCount = (int)DistrictType.Market + 1;
+            int districtCount = (int)DistrictType.Fortress + 1;
             var players = new PlayerSetup[2];
             for (int p = 0; p < 2; p++)
             {
@@ -107,7 +107,7 @@ namespace NodeWar.BalanceRig
                     players[p] = new PlayerSetup
                     {
                         suits = given.suits == null ? null : (int[])given.suits.Clone(),
-                        nodes = given.nodes == null ? null : (int[])given.nodes.Clone(),
+                        districts = given.districts == null ? null : (int[])given.districts.Clone(),
                         suitEras = given.suitEras == null ? null : (int[])given.suitEras.Clone(),
                         districtEras = given.districtEras == null ? null : (int[])given.districtEras.Clone()
                     };
@@ -121,7 +121,7 @@ namespace NodeWar.BalanceRig
                 players[p] = new PlayerSetup
                 {
                     suits = new[] { (int)SuitType.Warrior },
-                    nodes = nodes,
+                    districts = nodes,
                     suitEras = new int[suitCount],
                     districtEras = new int[districtCount]
                 };
@@ -151,10 +151,10 @@ namespace NodeWar.BalanceRig
                 throw new InvalidOperationException("Swapping seats needs RigSetup.mirror: the board's own symmetry, supplied by whoever built the setup.");
 
             BoardConfigData board = source.board;
-            var placements = new BoardConfigData.InitialNodePlacement[source.board.initialPlacements.Length];
+            var placements = new BoardConfigData.InitialDistrictPlacement[source.board.initialPlacements.Length];
             for (int i = 0; i < placements.Length; i++)
             {
-                BoardConfigData.InitialNodePlacement ip = source.board.initialPlacements[i];
+                BoardConfigData.InitialDistrictPlacement ip = source.board.initialPlacements[i];
                 var cell = source.mirror(ip.gridX, ip.gridZ);
                 ip.gridX = cell.x;
                 ip.gridZ = cell.z;
@@ -163,6 +163,14 @@ namespace NodeWar.BalanceRig
                 placements[i] = ip;
             }
             board.initialPlacements = placements;
+
+            // Terrain, slots and pools move with the board: cell (x,z) becomes its mirror, and
+            // the two players' base pools trade places. On a map that is its own mirror image
+            // (hourglass-01) the terrain comes out identical, which the tests assert.
+            board.terrain = MirrorCells(source.board.terrain, board.gridCols, board.gridRows, source.mirror);
+            board.districtSlots = MirrorCells(source.board.districtSlots, board.gridCols, board.gridRows, source.mirror);
+            board.baseDraftDistrictsP0 = source.board.baseDraftDistrictsP1;
+            board.baseDraftDistrictsP1 = source.board.baseDraftDistrictsP0;
 
             var draft = new DraftPlacement[original.draft.Length];
             for (int i = 0; i < draft.Length; i++)
@@ -184,6 +192,7 @@ namespace NodeWar.BalanceRig
                 overlaidFields = source.overlaidFields,
                 board = board,
                 boardSource = source.boardSource,
+                mapId = source.mapId,
                 baseDraft = new[] { source.baseDraft[1], source.baseDraft[0] },
                 loadoutNodes = source.loadoutNodes,
                 playerSetups = source.playerSetups == null ? null : new[] { source.playerSetups[1], source.playerSetups[0] },
@@ -199,6 +208,19 @@ namespace NodeWar.BalanceRig
                 pairID = original.pairID,
                 seat = 1 - original.seat
             };
+        }
+
+        private static T[] MirrorCells<T>(T[] cells, int cols, int rows, Func<int, int, (int x, int z)> mirror)
+        {
+            if (cells == null) return null;
+            var result = new T[cells.Length];
+            for (int z = 0; z < rows; z++)
+                for (int x = 0; x < cols; x++)
+                {
+                    var m = mirror(x, z);
+                    result[m.z * cols + m.x] = cells[z * cols + x];
+                }
+            return result;
         }
 
         /// <summary>
@@ -250,8 +272,8 @@ namespace NodeWar.BalanceRig
             var buffer = new InputBuffer();
             var bots = new[]
             {
-                new BotPlayer(state, buffer, 0, setup.board.defaultEdgeWeight),
-                new BotPlayer(state, buffer, 1, setup.board.defaultEdgeWeight)
+                new BotPlayer(state, buffer, 0, setup.board.defaultLinkWeight),
+                new BotPlayer(state, buffer, 1, setup.board.defaultLinkWeight)
             };
 
             // Commands held back by an input delay: applied at tick (issued + delay).
@@ -440,12 +462,20 @@ namespace NodeWar.BalanceRig
             {
                 if (remaining[turn].Count > 0)
                 {
+                    int slot = rng.Next(remaining[turn].Count);
+
+                    // Only cells the pick may legally stand on (PlacementLegality, the same
+                    // rule the live draft uses). A pick with no legal cell is skipped, not
+                    // forced onto water; the other pick types stay playable.
                     free.Clear();
                     for (int c = 0; c < occupied.Length; c++)
-                        if (!occupied[c]) free.Add(c);
-                    if (free.Count == 0) break;
-
-                    int slot = rng.Next(remaining[turn].Count);
+                        if (PlacementLegality.CanPlace(setup.board, occupied, remaining[turn][slot], c % cols, c / cols))
+                            free.Add(c);
+                    if (free.Count == 0)
+                    {
+                        remaining[turn].RemoveAt(slot);
+                        continue;
+                    }
                     int cell = free[rng.Next(free.Count)];
                     placements.Add(new DraftPlacement
                     {

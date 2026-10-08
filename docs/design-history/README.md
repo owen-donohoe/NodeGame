@@ -5,13 +5,9 @@ description: Banner and reconciliation for the v2.1 master design PDF — histor
 tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
-verified_at_commit: b229a89e
+  # full history: docs/verification-log.md
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
 status: stable
 sources:
   - id: v21-pdf
@@ -70,7 +66,13 @@ is done. A reconciliation against the code at commit `db19485` found:
 The list above is a record of that reconciliation and is kept as it was. Three
 of its points have moved since:
 
-- `BotPlayer` has grown to 781 lines.
+- `BotPlayer` has grown to about 800 lines.
+- The manual placement draft now places on a terrain map (Land, Lake and Ocean cells,
+  with a slot mask) under one legality rule, and the district list includes the Pier,
+  which only a Lake slot takes. Neither is in the document. The Watchtower's claim boost
+  has been retired in favour of a frontier capture bonus. The district roster has since been
+  consolidated: Camp and Arsenal became Barracks, Shrine and Sanctuary became Infirmary, Rampart
+  became Fortress and Watchtower an empty slot, with a Town added; the old numbers are reserved.
 - The suit roster is now eleven, including three auto-assigned workers
   (Merchant, Acolyte, Watcher). Suit and district numbers are per era.
 - The networking direction settled on peer-to-peer lockstep with a server-side

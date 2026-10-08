@@ -125,7 +125,7 @@ namespace NodeWar.Core
         private CommandSystem commandSystem;
 
         // View references
-        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] villagerPositioners;
         private int trackedVillagerCount;
         private Transform[] villagerTransforms;
 
@@ -152,6 +152,7 @@ namespace NodeWar.Core
 
         // Draft
         private DraftManager draftManager;
+        private NodeWar.View.BoardTerrainView terrainView;
         private DraftResult? pendingDraftResult;
 
         private enum MatchPhase { PreDraft, Drafting, PostDraft, Countdown, Playing }
@@ -169,6 +170,8 @@ namespace NodeWar.Core
             if (boardConfig == null) { Debug.LogError("[GameManager] BoardConfig not assigned!"); return; }
 
             MatchFactory.Configure(balance.Data, boardConfig.Data);
+            terrainView = NodeWar.View.BoardTerrainView.Create(boardConfig);
+            terrainView.transform.SetParent(transform, false);
 
             // The lobby's handshake advertised the shared asset's hash. Playing
             // anything else would pass the handshake and desync mid-match.
@@ -177,7 +180,7 @@ namespace NodeWar.Core
                 Debug.LogError("[GameManager] GameBalance '" + balance.name + "' is not the shared balance ("
                     + NodeWar.Config.GameBalance.SharedResourceName + ") the handshake advertised. Peers will desync.");
 
-            state.defaultEdgeWeight = boardConfig.Data.defaultEdgeWeight;
+            state.defaultLinkWeight = boardConfig.Data.defaultLinkWeight;
 
             inputBuffer = new InputBuffer();
 
@@ -234,7 +237,8 @@ namespace NodeWar.Core
                 match.isBotMatch,
                 cameraController,
                 gridCellMarkerPrefab,
-                loadout
+                loadout,
+                terrainView
             );
 
             draftManager.OnDraftComplete += OnDraftComplete;
@@ -310,8 +314,7 @@ namespace NodeWar.Core
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
 
-        // The match log of a drafted match. Null on the testing path, whose
-        // hardcoded board a log's BOARD and DRAFT chunks cannot describe.
+        // The match log of a drafted match. Testing mode does not start recording.
         private NodeWar.MatchLog.MatchRecorder recorder;
 
         private void OnDraftComplete(DraftResult result)
@@ -338,6 +341,8 @@ namespace NodeWar.Core
         private void OnDraftDisconnect()
         {
             Debug.LogError("[GameManager] Draft disconnected.");
+            draftPresenter?.SweepOut();
+            if (draftPresenter is MonoBehaviour presenter) presenter.gameObject.SetActive(false);
             if (draftManager != null)
             {
                 Destroy(draftManager.gameObject);
@@ -351,6 +356,7 @@ namespace NodeWar.Core
         private void InitializeFromDraftResult(DraftResult result)
         {
             MatchFactory.Fill(state, balance.Data, boardConfig.Data, result.placements, BuildPlayerSetups());
+            terrainView.ShowMatch(result.placements);
             SetCameraHomeAnchors();
             InitializeInputSystems();
 
@@ -366,7 +372,7 @@ namespace NodeWar.Core
 
                 if (match != null && match.isBotMatch)
                 {
-                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultEdgeWeight);
+                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultLinkWeight);
                     debugPlayerSwitch.LockToPlayer(0);
 
                     TickRunner runner = GetComponent<TickRunner>();
@@ -427,15 +433,15 @@ namespace NodeWar.Core
             if (lockstep != null) lockstep.Unpause(Time.time, Time.realtimeSinceStartup);
         }
 
-        // ===== TESTING MODE (skip draft, legacy board) =====
+        // ===== TESTING MODE (skip draft, shared map and factory) =====
 
         private void SkipDraftAndInitialize()
         {
             matchPhase = MatchPhase.Playing;
 
-            InitializeNodes();
-            MatchFactory.InitializePlayers(state, balance.Data, boardConfig.Data, BuildPlayerSetups());
-            MatchFactory.InitializeVillagers(state, balance.Data, boardConfig.Data);
+            DraftPlacement[] placements = DraftPlanner.TestingPlacements(boardConfig.Data);
+            MatchFactory.Fill(state, balance.Data, boardConfig.Data, placements, BuildPlayerSetups());
+            terrainView.ShowMatch(placements);
             SetCameraHomeAnchors();
             InitializeInputSystems();
 
@@ -596,14 +602,14 @@ namespace NodeWar.Core
             int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
             pathRenderer.Initialize(state, localPID, pathCurveSettings,
                                     opponentRouteSettings, tickProvider, Camera.main);
-            pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+            pathRenderer.SetVillagerPositioners(villagerPositioners);
 
             // The provisional route between issuing a move and lockstep
             // applying it. A child of the routes object so it shares its
             // lifetime and the material it borrows.
             pendingOrderView = routesGO.AddComponent<NodeWar.View.PendingOrderView>();
             pendingOrderView.Initialize(state, localPID, pathCurveSettings, pathRenderer);
-            pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
+            pendingOrderView.SetVillagerPositioners(villagerPositioners);
             pendingOrderView.SetVillagerTransforms(villagerTransforms);
             if (commandSystem != null)
             {
@@ -1034,13 +1040,14 @@ namespace NodeWar.Core
                 loadouts[p] = new NodeWar.MatchLog.PlayerLoadout
                 {
                     suits = (int[])state.players[p].draftedSuits.Clone(),
-                    nodes = (int[])state.players[p].draftedNodes.Clone(),
+                    districts = (int[])state.players[p].draftedDistricts.Clone(),
                     suitEras = (int[])state.players[p].suitEras?.Clone(),
                     districtEras = (int[])state.players[p].districtEras?.Clone(),
                     skins = LoadoutForPlayer(p, match.loadout).skinIDs
                 };
 
-            recorder = new NodeWar.MatchLog.MatchRecorder(header, boardConfig.Data, loadouts,
+            recorder = new NodeWar.MatchLog.MatchRecorder(header, LocalBuildIdentity.SetupFor(boardConfig.MapId),
+                boardConfig.Data, loadouts,
                 result.placements ?? new DraftPlacement[0]);
 
             if (lockstep != null)
@@ -1168,19 +1175,41 @@ namespace NodeWar.Core
         {
             int viewer = ViewerPlayerID();
 
-            if (uiToolkitHud != null && state != null)
+            // A draft disconnect happens before InitializeUI has resolved either presenter.
+            bool hasMatchTally = NodeWar.View.DisconnectPresentation.HasMatchTally(state);
+            if (uiToolkitHud == null && useUIToolkitHUD && uiToolkitHudRoot != null)
+            {
+                uiToolkitHud = uiToolkitHudRoot.GetComponent<GameplayHUDController>();
+                if (uiToolkitHud != null)
+                {
+                    uiToolkitHudRoot.SetActive(true);
+                    uiToolkitHud.ReturnToLobby += ReturnToLobby;
+                }
+            }
+
+            if (uiToolkitHud != null)
             {
                 uiToolkitHud.ShowDisconnected(viewer);
                 return;
             }
 
+            if (gameOverPanel == null && !hasMatchTally && uiManagerPrefab != null)
+            {
+                GameOverPanel template = uiManagerPrefab.GetComponentInChildren<GameOverPanel>(true);
+                if (template != null)
+                {
+                    gameOverPanel = Instantiate(template);
+                    gameOverPanel.gameObject.SetActive(true);
+                    gameOverPanel.OnReturnToLobby += ReturnToLobby;
+                }
+            }
             if (gameOverPanel == null)
             {
                 Debug.LogWarning("[GameManager] GameOverPanel not found.");
                 return;
             }
 
-            if (state != null)
+            if (hasMatchTally)
             {
                 gameOverPanel.ShowDisconnected(state, viewer, balance.Data.breachThreshold);
                 return;
@@ -1324,7 +1353,7 @@ namespace NodeWar.Core
             indicatorDirector = new NodeWar.View.IndicatorDirector(state, tickProvider, indicatorSettings,
                 opponentRouteSettings,
                 () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
-            indicatorDirector.SetNodeSlotManagers(nodeSlotManagers);
+            indicatorDirector.SetVillagerPositioners(villagerPositioners);
             indicatorDirector.SetVillagerTransforms(villagerTransforms);
             uiToolkitHud.BindIndicators(indicatorDirector);
 
@@ -1396,63 +1425,6 @@ namespace NodeWar.Core
             }
         }
 
-        // ===== NODE INITIALIZATION (legacy testing mode) =====
-
-        private void InitializeNodes()
-        {
-            int GRID_COLS = boardConfig.Data.gridCols;
-            int GRID_ROWS = boardConfig.Data.gridRows;
-            state.nodes = new NodeData[GRID_COLS * GRID_ROWS];
-
-            DistrictType[,] layout = new DistrictType[GRID_ROWS, GRID_COLS];
-            layout[0, 0] = DistrictType.None; layout[0, 1] = DistrictType.None; layout[0, 2] = DistrictType.Core; layout[0, 3] = DistrictType.None;
-            layout[1, 0] = DistrictType.None; layout[1, 1] = DistrictType.Mine; layout[1, 2] = DistrictType.Farm; layout[1, 3] = DistrictType.None;
-            layout[2, 0] = DistrictType.Mine; layout[2, 1] = DistrictType.Barracks; layout[2, 2] = DistrictType.Village; layout[2, 3] = DistrictType.Farm;
-            layout[3, 0] = DistrictType.Forge; layout[3, 1] = DistrictType.Market; layout[3, 2] = DistrictType.Market; layout[3, 3] = DistrictType.Forge;
-            layout[4, 0] = DistrictType.Farm; layout[4, 1] = DistrictType.Village; layout[4, 2] = DistrictType.Barracks; layout[4, 3] = DistrictType.Mine;
-            layout[5, 0] = DistrictType.None; layout[5, 1] = DistrictType.Farm; layout[5, 2] = DistrictType.Mine; layout[5, 3] = DistrictType.None;
-            layout[6, 0] = DistrictType.None; layout[6, 1] = DistrictType.Core; layout[6, 2] = DistrictType.None; layout[6, 3] = DistrictType.None;
-
-            for (int z = 0; z < GRID_ROWS; z++)
-            {
-                for (int x = 0; x < GRID_COLS; x++)
-                {
-                    int nodeID = z * GRID_COLS + x;
-                    List<int> neighborIDs = new List<int>();
-                    if (x > 0) neighborIDs.Add(z * GRID_COLS + (x - 1));
-                    if (x < GRID_COLS - 1) neighborIDs.Add(z * GRID_COLS + (x + 1));
-                    if (z > 0) neighborIDs.Add((z - 1) * GRID_COLS + x);
-                    if (z < GRID_ROWS - 1) neighborIDs.Add((z + 1) * GRID_COLS + x);
-
-                    Edge[] edges = new Edge[neighborIDs.Count];
-                    for (int i = 0; i < neighborIDs.Count; i++)
-                        edges[i] = new Edge { toNode = neighborIDs[i], travelWeight = boardConfig.Data.defaultEdgeWeight };
-
-                    int bonus = layout[z, x] == DistrictType.Village
-                        ? balance.Data.GetDistrictStats(DistrictType.Village, 0).bonusVillagersOnClaim : 0;
-                    int ownerID = -1;
-                    int claimBar = 0;
-                    if (z == 6 && x == 1) { ownerID = 0; claimBar = balance.Data.claimThreshold; }
-                    if (z == 0 && x == 2) { ownerID = 1; claimBar = -balance.Data.claimThreshold; }
-
-                    state.nodes[nodeID] = new NodeData
-                    {
-                        nodeID = nodeID,
-                        gridX = x,
-                        gridZ = z,
-                        edges = edges,
-                        districtType = layout[z, x],
-                        baseDistrictType = layout[z, x],
-                        slotType = NodeSlotType.Fixed,
-                        claimBar = claimBar,
-                        ownerID = ownerID,
-                        bonusVillagersOnClaim = bonus,
-                        materialAllocation = 0
-                    };
-                }
-            }
-        }
-
         /// <summary>
         /// Both players' drafted suits and districts, resolved from the lobby
         /// loadouts. The simulation takes them as types; which loadout belongs
@@ -1472,7 +1444,7 @@ namespace NodeWar.Core
                 setups[p] = new PlayerSetup
                 {
                     suits = BuildDraftedSuits(p, loadout),
-                    nodes = BuildDraftedNodes(p, loadout),
+                    districts = BuildDraftedDistricts(p, loadout),
                     suitEras = own.suitEras,
                     districtEras = own.districtEras
                 };
@@ -1552,7 +1524,7 @@ namespace NodeWar.Core
             return suits.ToArray();
         }
 
-        private int[] BuildDraftedNodes(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
+        private int[] BuildDraftedDistricts(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
         {
             List<int> nodes = new List<int>();
 
@@ -1573,8 +1545,8 @@ namespace NodeWar.Core
             }
 
             playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
-            for (int i = 0; i < playerLoadout.nodeIDs.Length; i++)
-                AddNodeFromID(nodes, playerLoadout.nodeIDs[i]);
+            for (int i = 0; i < playerLoadout.districtIDs.Length; i++)
+                AddNodeFromID(nodes, playerLoadout.districtIDs[i]);
 
             return nodes.ToArray();
         }
@@ -1593,10 +1565,10 @@ namespace NodeWar.Core
             suits.Add(intType);
         }
 
-        private void AddNodeFromID(List<int> nodes, string nodeID)
+        private void AddNodeFromID(List<int> nodes, string districtID)
         {
-            if (string.IsNullOrEmpty(nodeID)) return;
-            DistrictType type = DraftManager.MapNodeIDToDistrict(nodeID);
+            if (string.IsNullOrEmpty(districtID)) return;
+            DistrictType type = DraftManager.MapDistrictID(districtID);
             if (type == DistrictType.None) return;
             int intType = (int)type;
             for (int i = 0; i < nodes.Count; i++)
@@ -1661,14 +1633,19 @@ namespace NodeWar.Core
         private void SpawnNodeViews()
         {
             nodeParent = new GameObject("NodeViews").transform;
-            nodeSlotManagers = new NodeWar.View.NodeSlotManager[state.nodes.Length];
+            villagerPositioners = new NodeWar.View.VillagerPositioner[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
             nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
             nodeOutlines = new OutlineGroup[state.nodes.Length];
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                GameObject nodeGO = SpawnBoardNode(state.nodes[i].districtType, nodeParent);
+                NodeData node = state.nodes[i];
+                NodeWar.View.DistrictVisual visual = BoardVisualFor(node.districtType);
+                GameObject nodeGO = node.districtType == DistrictType.Pier &&
+                    (visual == null || visual.boardPrefab == null)
+                    ? NodeWar.View.BoardTerrainView.CreatePierNode(terrainView, node.gridX, node.gridZ, nodeParent)
+                    : SpawnBoardNode(node.districtType, nodeParent);
                 nodeGO.name = "NodeView_" + i + "_" + state.nodes[i].districtType.ToString();
                 nodeGO.transform.position = new Vector3(
                     state.nodes[i].gridX * boardConfig.nodeScale,
@@ -1680,11 +1657,11 @@ namespace NodeWar.Core
                     view.Initialize(state, i, balance.Data.claimThreshold);
                 nodeViews[i] = view;
 
-                NodeWar.View.NodeSlotManager slotManager = nodeGO.GetComponent<NodeWar.View.NodeSlotManager>();
+                NodeWar.View.VillagerPositioner slotManager = nodeGO.GetComponent<NodeWar.View.VillagerPositioner>();
                 if (slotManager == null)
-                    slotManager = nodeGO.AddComponent<NodeWar.View.NodeSlotManager>();
+                    slotManager = nodeGO.AddComponent<NodeWar.View.VillagerPositioner>();
                 slotManager.Initialize(i, boardConfig.nodeScale);
-                nodeSlotManagers[i] = slotManager;
+                villagerPositioners[i] = slotManager;
 
                 NodeWar.View.NodePresentation presentation = nodeGO.GetComponent<NodeWar.View.NodePresentation>();
                 if (presentation == null)
@@ -1720,11 +1697,11 @@ namespace NodeWar.Core
                     nodePresentations[i].SetHidden();
             }
 
-            selectionSystem.SetNodeSlotManagers(nodeSlotManagers);
+            selectionSystem.SetVillagerPositioners(villagerPositioners);
             if (pathRenderer != null)
-                pathRenderer.SetNodeSlotManagers(nodeSlotManagers);
+                pathRenderer.SetVillagerPositioners(villagerPositioners);
             if (pendingOrderView != null)
-                pendingOrderView.SetNodeSlotManagers(nodeSlotManagers);
+                pendingOrderView.SetVillagerPositioners(villagerPositioners);
 
             // Lets a move issued by node ID still fire the destination
             // highlight, which the raycast path got from the hit directly.
@@ -1744,9 +1721,9 @@ namespace NodeWar.Core
             for (int p = 0; p < state.players.Length; p++)
             {
                 int core = state.players[p].coreNodeID;
-                if (core < 0 || core >= nodeSlotManagers.Length || nodeSlotManagers[core] == null) continue;
+                if (core < 0 || core >= villagerPositioners.Length || villagerPositioners[core] == null) continue;
 
-                CoreBreachBar bar = nodeSlotManagers[core].gameObject.AddComponent<CoreBreachBar>();
+                CoreBreachBar bar = villagerPositioners[core].gameObject.AddComponent<CoreBreachBar>();
                 bar.Initialize(state, p, breachCues, boardConfig.nodeScale);
             }
         }
@@ -1814,7 +1791,7 @@ namespace NodeWar.Core
             {
                 view.Initialize(state, index);
                 view.SetTickProvider(tickProvider);
-                view.SetNodeSlotManagers(nodeSlotManagers);
+                view.SetVillagerPositioners(villagerPositioners);
                 view.SetPathCurveSettings(pathCurveSettings);
                 view.SetBreachCueSettings(breachCues);
 

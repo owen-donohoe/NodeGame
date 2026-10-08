@@ -87,8 +87,8 @@ namespace NodeWar.UI
         private DraftState draftState;
         private int localPlayerID;
 
-        private List<DraftSlotUI> slotDisplays = new List<DraftSlotUI>();
-        private DraftSlotUI activeSlotUI;
+        private List<DraftPickUI> slotDisplays = new List<DraftPickUI>();
+        private DraftPickUI activeSlotUI;
         private List<GameObject> persistentPlacements = new List<GameObject>();
         private Tween sweepTween;
         private Tween playerPanelSweepTween;
@@ -118,7 +118,7 @@ namespace NodeWar.UI
         // The uGUI draft has no waiting surface.
         public void ShowWaiting(bool waiting) { }
 
-        public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
+        public void ShowInitialReveal(BoardConfigData.InitialDistrictPlacement[] placements)
         {
             if (placements == null) return;
             for (int i = 0; i < placements.Length; i++)
@@ -212,19 +212,19 @@ namespace NodeWar.UI
                    placementController.TryGetPendingPlacement(out slotIndex, out gridX, out gridZ);
         }
 
-        // ===== SLOT INTERACTION (called by DraftSlotUI) =====
+        // ===== SLOT INTERACTION (called by DraftPickUI) =====
 
         /// <summary>
-        /// Routes slot click to placement controller. Called by DraftSlotUI.OnPointerDown.
+        /// Routes slot click to placement controller. Called by DraftPickUI.OnPointerDown.
         /// </summary>
         public void BeginDrag(int slotIndex)
         {
             if (draftState == null) return;
             if (placementController == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
-            if (slots[slotIndex].isConsumed) return;
+            if (!draftState.IsPlayable(slots[slotIndex])) return;
 
             placementController.BeginDrag(slotIndex, slots[slotIndex].districtType);
         }
@@ -250,15 +250,15 @@ namespace NodeWar.UI
             ClearBar();
             if (draftState == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             bool isMyTurn = draftManager.IsLocalPlayerTurn();
 
             for (int i = 0; i < slots.Length; i++)
             {
-                if (slots[i].isConsumed) continue;
+                if (!draftState.IsPlayable(slots[i])) continue;
 
                 GameObject go = Instantiate(draftSlotPrefab, barContainer);
-                DraftSlotUI slotUI = go.GetComponent<DraftSlotUI>();
+                DraftPickUI slotUI = go.GetComponent<DraftPickUI>();
                 if (slotUI != null)
                 {
                     slotUI.Initialize(slots[i], i, this);
@@ -278,7 +278,7 @@ namespace NodeWar.UI
             slotDisplays.Clear();
         }
 
-        private DraftSlotUI FindSlotUI(int slotIndex)
+        private DraftPickUI FindSlotUI(int slotIndex)
         {
             for (int i = 0; i < slotDisplays.Count; i++)
             {
@@ -335,20 +335,12 @@ namespace NodeWar.UI
 
         public Sprite GetStickerSprite(DistrictType type)
         {
-            if (stickerMappings == null)
-            {
-                Debug.LogWarning("[DraftUI] stickerMappings array is null");
-                return null;
-            }
-            for (int i = 0; i < stickerMappings.Length; i++)
-            {
-                if (stickerMappings[i].districtType == type)
-                    return stickerMappings[i].sprite;
-            }
-            Debug.LogWarning("[DraftUI] No sticker mapping found for district type: " + type);
-            return null;
+            if (stickerMappings != null)
+                for (int i = 0; i < stickerMappings.Length; i++)
+                    if (stickerMappings[i].districtType == type && stickerMappings[i].sprite != null)
+                        return stickerMappings[i].sprite;
+            return NodeWar.View.DistrictFallbackArt.Sticker(type);
         }
-
         // ===== CLEANUP =====
 
         private void OnDestroy()

@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using NodeWar.Input;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.Network.Tests
 {
@@ -11,14 +12,14 @@ namespace NodeWar.Network.Tests
         public void BotReservesEscalatingPricesForSameTickBatch(int food, int expectedRespawns)
         {
             var balance = GameBalanceData.Default();
-            var board = BoardConfigData.Default();
+            var board = BoardFixtures.LandGrid3x3();
             MatchFactory.Configure(balance, board);
             var state = MatchFactory.Build(balance, board, new DraftPlacement[0], new PlayerSetup[0]);
             state.players[0].food = food;
             for (int i = 0; i < state.villagers.Length; i++)
                 state.villagers[i].state = VillagerState.Dead;
             var buffer = new InputBuffer();
-            new BotPlayer(state, buffer, 0, board.defaultEdgeWeight).Evaluate();
+            new BotPlayer(state, buffer, 0, board.defaultLinkWeight).Evaluate();
             var commands = buffer.DrainCommands();
             Assert.AreEqual(expectedRespawns, Array.FindAll(commands, c => c.type == CommandType.Respawn).Length);
             foreach (var command in commands) CommandProcessor.ProcessCommand(state, command);
@@ -28,15 +29,15 @@ namespace NodeWar.Network.Tests
         public void CoreEmergencyPreservesBreacherAndSendsAvailableDefender(SuitType suit)
         {
             var b = GameBalanceData.Default();
-            MatchFactory.Configure(b, BoardConfigData.Default());
+            MatchFactory.Configure(b, BoardFixtures.LandGrid3x3());
             var state = new SimulationState
             {
                 players = new[] { new PlayerData { playerID = 0, coreNodeID = 0 }, new PlayerData { playerID = 1, coreNodeID = 2 } },
                 nodes = new[]
                 {
-                    new NodeData { nodeID = 0, ownerID = 0, districtType = DistrictType.Core, edges = new[] { new Edge { toNode = 1, travelWeight = 1 } } },
-                    new NodeData { nodeID = 1, ownerID = -1, edges = new[] { new Edge { toNode = 0, travelWeight = 1 }, new Edge { toNode = 2, travelWeight = 1 } } },
-                    new NodeData { nodeID = 2, ownerID = 1, districtType = DistrictType.Core, edges = new[] { new Edge { toNode = 1, travelWeight = 1 } } }
+                    new NodeData { nodeID = 0, ownerID = 0, districtType = DistrictType.Core, links = new[] { new Link { toNodeID = 1, travelWeight = 1 } } },
+                    new NodeData { nodeID = 1, ownerID = -1, links = new[] { new Link { toNodeID = 0, travelWeight = 1 }, new Link { toNodeID = 2, travelWeight = 1 } } },
+                    new NodeData { nodeID = 2, ownerID = 1, districtType = DistrictType.Core, links = new[] { new Link { toNodeID = 1, travelWeight = 1 } } }
                 },
                 villagers = new[]
                 {

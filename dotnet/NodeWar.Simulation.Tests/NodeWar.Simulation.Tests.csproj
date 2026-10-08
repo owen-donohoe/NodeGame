@@ -18,7 +18,10 @@
 
   <ItemGroup>
     <Compile Include="DefaultBalanceAssetTests.cs" />
-    <Compile Include="../../Assets/Tests/EditMode/Tests/**/*.cs"
+    <Compile Include="../../Assets/Tests/EditMode/Tests/RestoreTests.cs" Link="Tests/RestoreTests.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/Tests/CaptureBonusTests.cs" Link="Tests/CaptureBonusTests.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/Tests/TickOrderTests.cs" Link="Tests/TickOrderTests.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/Tests/**/*.cs" Exclude="../../Assets/Tests/EditMode/Tests/RestoreTests.cs;../../Assets/Tests/EditMode/Tests/CaptureBonusTests.cs;../../Assets/Tests/EditMode/Tests/TickOrderTests.cs"
              Link="Tests/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

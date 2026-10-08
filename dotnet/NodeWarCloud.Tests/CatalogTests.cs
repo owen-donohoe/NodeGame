@@ -17,12 +17,8 @@ namespace NodeWar.Cloud.Tests
         internal const string CatalogPath = "dotnet/NodeWarCloud/NodeWarCloud/Catalog/catalog.json";
 
         internal static IEnumerable<string> ExpectedBases() =>
-            Enum.GetValues(typeof(SuitType)).Cast<SuitType>().Where(s => s != SuitType.None)
-                .Select(s => CatalogIds.SuitBase(s.ToString()))
-                .Concat(Enum.GetValues(typeof(DistrictType)).Cast<DistrictType>()
-                    .Where(d => d != DistrictType.None && d != DistrictType.Core)
-                    .Select(d => CatalogIds.DistrictBase(d.ToString())));
-
+            Enumerable.Range(1, CatalogKeys.SuitTableLength - 1).Select(CatalogKeys.SuitBase)
+                .Concat(CatalogKeys.CatalogDistrictTypes.Select(CatalogKeys.DistrictBase));
         [Test]
         public void EmbeddedCatalog_ContainsExactlyEveryEnumBaseAndEra_AndDefaultSkin()
         {
@@ -30,11 +26,11 @@ namespace NodeWar.Cloud.Tests
                 .Select(e => CatalogIds.Variant(b, e)).Append(CatalogIds.DefaultSkin(b))).ToList();
             var catalog = ServerCatalog.Items;
             Assert.That(CatalogValidation.Validate(catalog, 6), Is.Empty);
-            Assert.That(catalog.Select(i => i.Id), Is.EquivalentTo(expected));
-            Assert.That(catalog.Count, Is.EqualTo(161));
+            Assert.That(catalog.Where(i => !i.Retired).Select(i => i.Id), Is.EquivalentTo(expected));
+            Assert.That(catalog.Count, Is.EqualTo(189));
             foreach (var item in catalog)
             {
-                Assert.That(item.Retired, Is.False);
+                if (item.Retired) continue;
                 Assert.That(ExpectedBases(), Does.Contain(item.BaseId));
                 Assert.That(item.Id, Is.EqualTo(item.Kind == CatalogItemKind.Variant
                     ? CatalogIds.Variant(item.BaseId, item.Era) : CatalogIds.DefaultSkin(item.BaseId)));
@@ -98,7 +94,7 @@ namespace NodeWar.Cloud.Tests
             Assert.That(CatalogValidation.ValidateAgainstPrevious(previous, candidate), Is.Empty);
         }
 
-        private static List<CatalogItem> CommittedCatalog()
+        internal static List<CatalogItem> CommittedCatalog()
         {
             var start = new ProcessStartInfo("git")
             {

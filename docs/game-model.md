@@ -5,12 +5,9 @@ description: What Node War is — the match model, board, villagers, districts, 
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
-verified_at_commit: b229a89e
+  # full history: docs/verification-log.md
+  - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
+verified_at_commit: 55b647a7
 status: draft
 sources:
   - id: sim-state
@@ -21,10 +18,10 @@ sources:
     title: GameSimulation.SimulateTick and all tick steps
   - id: balance
     resource: Assets/Scripts/Game/Simulation/GameBalanceData.cs
-    title: GameBalanceData.Default, IsCombatSuit, CanEquipSuitAtNode, GetSlotTypeForDistrict
+    title: GameBalanceData.Default, IsCombatSuit, CanEquipSuitAtNode, GetUpgradeCategoryForDistrict
   - id: board
     resource: Assets/Scripts/Game/Simulation/BoardConfigData.cs
-    title: BoardConfigData.Default and InitialNodePlacement
+    title: BoardConfigData and InitialDistrictPlacement
   - id: pathfinding
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding.FindPath and ownership preference multipliers
@@ -59,17 +56,31 @@ This document describes *what the game is*. [architecture](architecture.md) desc
 is layered; [simulation-rules](simulation-rules.md) describes the determinism contract the
 simulation must uphold.
 
-All numbers below are the **code defaults** from `GameBalanceData.Default()` and
-`BoardConfigData.Default()`. A real match reads its values from the `GameBalance` and `BoardConfig`
-`ScriptableObject`s, so treat these as the shape of the tuning, not as fixed constants.
+All numbers below are the **code defaults** from `GameBalanceData.Default()` and the shipped map in
+`PremadeMaps`. A real match reads its balance from the `GameBalance` `ScriptableObject`, and its map
+from the map ID a `BoardConfig` names, so treat these as the shape of the tuning, not as fixed
+constants. The checked-in `DefaultGameBalance` asset carries the capture-bonus, recruit, Town,
+Infirmary and Fortress values at these defaults; where it differs from them (the claim threshold,
+heal interval, breach swarm and production timers below), the asset is what a match plays.
 
 ## The board
 
-The board is a grid (default 4 columns × 7 rows) of nodes connected by edges. Each `NodeData`
-carries a grid position, an `Edge[]` of connections, a district type, an owner, and a signed claim
-bar.
+A map is a grid of cells, each made of one **terrain**: `Land`, `Lake` or `Ocean`. Land cells carry a
+node. Ocean never does. A Lake cell carries one only if a `Pier` district is drafted on it, which is
+only possible where the map marks that Lake cell as a district slot; open lake is impassable water.
+Each `NodeData` carries a grid position, its terrain, a `Link[]` of connections, a district type,
+an owner, and a signed claim bar. The board is therefore sparse: node IDs follow cell order with the
+gaps closed up, and a link joins only orthogonally adjacent cells that both have nodes.
 
-An `Edge` has a `travelWeight` (default 4). Crossing it takes `travelWeight × moveSpeedTicks` ticks,
+The one shipped map is `hourglass-01`, a 7×7 grid ringed by ocean. Each player's Core sits on the
+second row from their own edge, and a lake fills the middle of the board, so the land runs round it
+in two banks that meet at the Core rows. It is mirrored top to bottom. The left bank is cut by
+one Pier slot, a lake cell halfway down; drafting a Pier there bridges it, but a map must always
+keep a land route between the Cores, so a Pier is never the only way across. A map is authored data
+(`BoardConfigData`, built by `PremadeMaps`) and named by its ID; a map is also checked to have
+14 to 20 nodes counting every legal Pier.
+
+A `Link` has a `travelWeight` (default 4). Crossing it takes `travelWeight × moveSpeedTicks` ticks,
 so movement cost is a property of the board, not of real time.
 
 Both players begin owning one Core, placed at opposite ends of the grid. Everything else is
@@ -107,24 +118,33 @@ percentage:
 | Enemy owned | 200 (2.0×) |
 
 Cost is `ceil(travelWeight × multiplier / 100)`, minimum 1. Villagers therefore prefer to travel
-through friendly territory and route around enemy ground unless the detour is long.
+through friendly territory and route around enemy ground unless the detour is long. An enemy Core
+may start or end a route but is never a transit node: a path does not run through it.
 
 Movement is checked on **every node arrival**, not just at the destination: arriving on a node with
 living enemies interrupts the path and starts a fight, and arriving on the enemy Core triggers a
 breach channel or a fight (an instant breach only when the channel is disabled).
 
 A villager in transit has no position of its own. `currentNodeID` is the node it last stood on, and
-how far it has come is a tick count along the edge it is crossing.
+how far it has come is a tick count along the link it is crossing.
 
-**Retargeting mid-edge costs the ground already covered.** Ordering a moving villager somewhere new
+**Retargeting mid-link costs the ground already covered.** Ordering a moving villager somewhere new
 does not rewind it onto the node behind it. If the new route continues through the node it is
 already approaching, the crossing carries over and the order is free. If the new route leaves in
 another direction, the villager turns around and re-walks exactly the distance it had covered before
 taking it. Ordering it back to the node it just left is a legitimate order, and is how a player
 cancels one.
 
-Turning around therefore has a price, and repeated orders cannot stall a villager in place — neither of
-which was true before, when every order reset the crossing.
+Turning around therefore has a price, and repeated orders cannot stall a villager in place.
+
+**Orders are sticky.** A move order records its destination as the villager's intent
+(`targetNodeID`), and the intent outlives whatever interrupts the walk. A fight does not cancel it,
+and an order given mid-fight changes only the intent, never the attack clock or the fight. An
+unreachable or blocked destination is not dropped either: the villager waits and retries. Once
+combat has resolved, the final order-resume step of the tick replans from where each survivor
+stands and sets it walking again, or breaches, or arrives. Work and claim begun there count from
+the next tick. A villager whose intent points elsewhere does not work or claim on the node it
+stands on. Arriving at the destination clears the intent.
 
 ## Claiming
 
@@ -136,43 +156,68 @@ Claiming villagers push the bar by `baseClaimPerTick × claimers` per tick, capp
 node. Pushing *against* an opponent's existing lean is multiplied by `decrementMultiplier`
 (default 4), so taking ground back from an established claim is faster than establishing it — the
 bar is a tug-of-war, not a per-player progress meter. Crossing zero drops the node to neutral
-(`ownerID = -1`) before it can be claimed the other way.
+(`ownerID = -1`) before it can be claimed the other way. The bar never passes `claimThreshold`
+either way.
 
-The current tempo percentage scales the claim rate after Watchtower bonuses, using integer
-division. A node with **both** players' claimers present is frozen; combat resolves it instead.
+**The capture bonus** rewards a connected frontier. The claim rate is multiplied by
+`100 + captureBonusPercentPerStep × steps`%, where `steps` is the number of linked neighbours the
+claimer owned minus the number the opponent owned, taken at the **start of the tick** and clamped
+between 0 and `captureBonusMaxSteps` (code defaults 25% and 2, so up to 150%). Ground next to your
+own territory falls faster; a node behind enemy lines gets no bonus. The same frontier percentage
+scales breach progress against a Core. The Watchtower's (now retired) adjacent-claim boost and the Rampart's
+decrement reduction no longer exist in claiming; the capture bonus replaces the first.
+
+The current tempo percentage then scales the claim rate, using integer division. A node with
+**both** players' claimers present is frozen; combat resolves it instead.
+
+**Restore.** An owned node whose bar has been pushed back toward neutral recovers when its owner's
+villagers stand on it unopposed (working, idle or claiming, up to four, no enemy present): they push
+the bar back toward the threshold at the ordinary claim rate, tempo-scaled but without the
+decrement multiplier or capture bonus. Cores do not restore.
 
 When a claim completes, a non-`Fixed` node becomes whichever district the claiming player drafted
-for that slot type, falling back to the node's `baseDistrictType`. Some nodes grant bonus villagers
-on claim.
+for that slot type, falling back to the node's `baseDistrictType`. A completed claim on a
+`Town` pays that player a one-time bonus (below); Villages pay nothing on capture.
 
 ## Districts
 
-`slotType` determines which drafted upgrade a non-`Fixed` node can become when claimed.
-The table gives each district's slot category. The manual draft's `MatchFactory` board
+`upgradeCategory` determines which drafted upgrade a non-`Fixed` node can become when claimed.
+The table gives each district's category. The manual draft's `MatchFactory` board
 places every district as `Fixed`, so those districts keep their type and placer's era on capture.
 
-| District | Slot | Role |
+| District | Category | Role |
 |---|---|---|
 | `None` | Fixed | Empty connector / crossroads |
 | `Core` | Fixed | Home node. Friendly arrivals idle unless contested. The breach target. |
 | `Farm` | Fixed | Farmer works it → +1 food |
 | `Mine` | Fixed | Miner works it → +1 material |
 | `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0` |
-| `Village` | Fixed | Grants bonus villagers on claim |
-| `Camp` | Army | Equip Warrior or Scout |
-| `Barracks` | Army | Equip Warrior, Guardian, Berserker or Scout |
-| `Arsenal` | Army | Equip Warrior, Guardian or Scout |
-| `Shrine` | Healing | Faster passive healing for its owner's villagers standing on it |
-| `Sanctuary` | Healing | Acolyte works it → faster respawns; also the only Medic equip point |
-| `Watchtower` | Affect | Watcher works it → boosts its owner's claiming on **adjacent** nodes, including neutral and enemy ground |
-| `Rampart` | Affect | Owner's occupants gain max HP and damage reduction; slows claim decrement against an existing lean |
+| `Village` | Fixed | Paid Recruit action and optional automatic repeat; no claim bonus |
+| `Town` | Fixed | One-time reward: the first full claim by each player spawns `townBonusVillagers` (code default 2, per era) at the Town, limited by room under the population cap. The entitlement is spent even if the cap leaves nothing to pay, and never deferred. A player taking the enemy's Town is paid too. Afterwards the Town does nothing |
+| `Barracks` | Army | Equip any drafted combat suit (Warrior, Guardian, Scout, Berserker, Medic) |
+| `Infirmary` | Healing | Heals its owner's living, non-moving villagers standing on it every `healIntervalTicks` (code default 10, per era) on the global tick, in addition to ordinary healing. Acolytes work it: at most 2 count, chosen by lowest villager ID, each speeding the owner's respawn countdown and cutting the paid-respawn cost (below). Not usable while an enemy stands on it or it is not owned by the worker's player |
+| `Fortress` | Affect | Paid resistance. Its owner upgrades it with `UpgradeFortress` to level 1, 2 or 3 (each level once, in order), paying either materials (4/8/12) or metal (1/2/3) per era. At level 1-3 the Fortress and each owned node linked to it resist enemy claiming by 25/40/50%: the enemy's claim rate on those nodes (when the Fortress's owner held them at tick start) is divided by `1 + resistance`, never below 1. Auras do not stack (the highest applies, ties to the lowest source node), are read from the tick-start owners and levels, and also slow a breach of a Core they cover. The upgrade is refused with an enemy villager on the node. Losing the Fortress resets its level to 0 |
 | `Market` | ResourceSpecial | Merchant works it → alternates +1 food and +1 material |
+| `Pier` | Fixed | Drafted only on a Lake slot. Turns that cell into a node that connects its land neighbours; grants nothing and blocks nobody |
+
+**The active roster** is `DistrictType` values 0–6 and 13–17 (`DistrictRoster.IsActive`): None,
+Farm, Mine, Village, Barracks, Core, Forge, Market, Pier, Town, Infirmary, Fortress. The draft, a
+board's placements and base pools, a loadout and a match log accept only these; nothing is
+accepted by an alias. Seven numbers are retired and stay reserved, never reused: Camp 7 and
+Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary, which takes over both jobs), Rampart 12 (now Fortress) and
+Watchtower 11 (now an empty slot). Saved decks and inventories are converted once
+(`DistrictMigration`, in `Backend/Shared`), keeping the old item owned, adding the replacement at
+the same era and collapsing duplicates. Rampart's
+occupant buffs (max HP and damage reduction) are gone from the simulation entirely; the Fortress replaces them
+with the paid aura above. The Watcher has no workplace.
 
 ## Suits
 
 A suit is a villager's role. Production suits (`Farmer`, `Miner`, `Smelter`, `Merchant`, `Acolyte`,
 `Watcher`) are **assigned automatically** on arrival at the matching owned district and stripped
-when the villager leaves.
+when the villager leaves. An Infirmary is shared ground: it counts only while every living villager
+on it is its owner's, and only the two lowest-ID eligible (non-combat, stationary) villagers there
+work it; a third waits idle.
 
 Combat suits (`Warrior`, `Guardian`, `Scout`, `Berserker`, `Medic`) are **equipped deliberately**
 via an `Equip` command and are **permanent until death**. Equipping requires all of: the villager
@@ -188,7 +233,7 @@ villager on its node.
 ## Resources
 
 Three resources per player: **food**, **materials**, **metal**. Materials feed the Forge, which
-consumes them to make metal. Resources pay for suits and for respawns. All production runs on
+consumes them to make metal. Resources pay for suits, respawns and recruits. Ordinary production runs on
 per-villager tick timers, so output is a function of how many workers a player keeps alive and
 employed — capped at 2 workers per node.
 
@@ -212,22 +257,22 @@ When both players have living villagers on the same node, everyone there is forc
 Targets are assigned **round-robin**: attackers stay in `villagerID` order, while each side's
 target list is sorted by `fightPriority` descending then `villagerID` ascending — a total order
 with no ties, which the determinism contract requires. Each fighter attacks when its cooldown
-expires. A defender with the bonus from an owned Rampart takes
-reduced damage, to a floor of 1.
+expires. Damage is not reduced by district.
 
 At 0 HP a villager dies, drops its path, and respawns at its owner's Core after `respawnTicks`
 (default 50), reset to base stats with no suit. A player may also spend food on a `Respawn` command
-to bring a dead villager back immediately instead of waiting. Each Acolyte working a Sanctuary both
-speeds the passive countdown and reduces that food cost by its Sanctuary's era-specific values.
-Workers' boosts and cost-reduction percentages add. Tempo scales the passive countdown first,
-then Sanctuary adds its boost. Each successful paid respawn increments the player's match-long
-`paidRespawns`: the next cost is `respawnCostFood × (paidRespawns + 1)`. Sanctuary reductions
+to bring a dead villager back immediately instead of waiting. Each Acolyte counted at an owned Infirmary both
+speeds the passive countdown and reduces that food cost by that Infirmary's era-specific values
+(`respawnBoostPerWorker`, default 1; `respawnCostReductionPercent`, default 20). Counted workers' boosts and
+cost-reduction percentages add. Tempo scales the passive countdown first,
+then the Infirmary adds its boost. Each successful paid respawn increments the player's match-long
+`paidRespawns`: the next cost is `respawnCostFood × (paidRespawns + 1)`. Infirmary reductions
 apply to that escalated cost, subtracting the integer-rounded-down discount, with a minimum
 payment of 1 food. Failed commands do not advance the counter.
 
 Combat is deliberately resolved across two separate tick steps. Damage and deaths happen in the
-combat step; survivors decide what to do next in a final post-combat resume step after the
-win-check. See the reasoning on `TickPostCombatResume`.
+combat step; survivors decide what to do next in a final order-resume step after the
+win-check. See the reasoning on `TickOrderResume`.
 
 ## Breach and the win condition
 
@@ -256,14 +301,20 @@ the legacy win check applies.
 
 ## The pre-match draft
 
-Before play, players run a turn-based placement draft, tracked by `DraftState`, choosing where
-their districts sit on the grid. `MatchFactory` builds the starting board from those placements,
+Before play, the two peers agree on the map and rules (`MatchSetup`: map ID, board fingerprint,
+simulation version and balance), and refuse each other on any difference. Then players run a
+turn-based placement draft, tracked by `DraftState`, choosing where their districts sit on the
+grid. Where a district may go is one rule, `PlacementLegality`: inside the grid, on an empty
+slot cell that is not a Core, ordinary districts on Land and a Pier only on a Lake slot. A pick
+with no legal cell left is skipped, not forced, and the draft ends when neither player has a
+playable pick. On a timeout the parked piece is placed if still legal, otherwise the lowest
+playable pick goes to a legal cell chosen from a seed derived from replicated state.
+`MatchFactory` builds the starting board from those placements,
 at their placers' eras. They begin unowned and `Fixed`; claiming one does not replace it with the
 claimer's loadout. The simulation still supports non-`Fixed` slots, whose claim upgrades use the
 claimer's drafted district for that slot type.
 
-Both players' base draft nodes in the shipped `DefaultBoardConfig` are the same three districts,
-Farm, Mine and Village. Production is slower than the code defaults: a worker yields food every 40
+Both players' base draft districts on `hourglass-01` are the same three, Farm, Mine and Village. Production is slower than the code defaults: a worker yields food every 40
 ticks, material every 50 and metal every 60, and a Market's secondary material every 55
 (`DefaultGameBalance`, identical in every era).
 
@@ -293,7 +344,7 @@ because rating cannot see the era gap.
 
 ## Player commands
 
-Every player action reaches the simulation as exactly one of four `GameCommand` types:
+Every player action reaches the simulation as one of seven active `GameCommand` types:
 
 | Command | Effect |
 |---|---|
@@ -301,5 +352,25 @@ Every player action reaches the simulation as exactly one of four `GameCommand` 
 | `SetAllocation` | Set an owned Forge's `materialAllocation`, gating its material→metal conversion |
 | `Equip` | Put a combat suit on an Idle villager standing on an owned district that permits it |
 | `Respawn` | Pay food to return a dead villager to its Core **immediately**, skipping the timer |
+| `Recruit` (5) | Pay food to append one base, unsuited Idle villager at an owned, uncontested Village |
+| `SetAutoRecruit` (6) | Set an owned Village's repeat flag to the absolute value 0 or 1 |
+| `UpgradeFortress` (7) | Raise an owned, unoccupied Fortress one level; `value` 0 pays materials, 1 pays metal; `villagerID = -1` |
+
+Recruit needs no worker or visitor. With pre-recruit player count N, the default
+price is `6 + 3N` food and the Village cooldown is that many seconds, converted
+with `ticksPerSecond` (default 10). Successful recruits increment the match-long
+`recruitCount`, separately from paid respawns. Population includes dead bodies
+but excludes consumed ones. Cooldown, insufficient food, a price above a positive
+food cap, a full population, living enemy presence, or invalid/overflowing tuning
+refuse without spending, spawning, or changing counters and cooldown.
+
+Automatic recruitment runs after ordinary production in ascending node ID;
+Villages share their owner's recruit count and food pool but have separate
+cooldowns. The flag stays on when an attempt is refused and retries each tick.
+SetAutoRecruit does not require food, population room or readiness and does not
+recruit or start cooldown. Losing a Village clears its flag and ready tick;
+the player's count persists. Cooldown is not tempo-scaled. The food cap stays 30:
+the ninth recruit costs 30; the tenth costs 33 and is refused. Node commands use
+`villagerID = -1`; Recruit requires `value = 0`, while the toggle requires 0 or 1.
 
 There is no other way to affect game state. See [simulation-rules](simulation-rules.md).

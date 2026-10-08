@@ -264,7 +264,19 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void BreachFreesSlotBeforeSameTickVillageCapture()
+        public void BreachFreesSlot_VillageCaptureDoesNotSpawn()
+        {
+            VillageCaptureAfterBreach();
+        }
+
+        [Test]
+        public void BreachFreesSlot_VillageCaptureDoesNotSpawn_Determinism()
+        {
+            int first = SimulationStateHasher.ComputeHash(VillageCaptureAfterBreach());
+            Assert.AreEqual(first, SimulationStateHasher.ComputeHash(VillageCaptureAfterBreach()));
+        }
+
+        private SimulationState VillageCaptureAfterBreach()
         {
             balance.maxVillagersPerPlayer = 2;
             Install();
@@ -274,14 +286,15 @@ namespace NodeWar.Tests
             claimer.state = VillagerState.Claiming;
             Add(state, claimer);
             state.nodes[1].districtType = state.nodes[1].baseDistrictType = DistrictType.Village;
-            state.nodes[1].bonusVillagersOnClaim = 1;
             state.nodes[1].claimBar = balance.claimThreshold - 1;
             state.players[1].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             GameSimulation.SimulateTick(state);
-            Assert.AreEqual(3, state.villagers.Length);
+            Assert.AreEqual(2, state.villagers.Length);
             Assert.IsTrue(state.villagers[0].isConsumed);
             Assert.AreEqual(0, state.nodes[1].ownerID);
             Assert.AreEqual(-1, state.players[1].nextBreacherID);
+            Assert.AreEqual(1, NodeActionRules.CountPopulation(state, 0));
+            return state;
         }
 
         [TestCase(0, 1199, 17)] [TestCase(0, 1200, 25)] [TestCase(0, 1800, 34)]
@@ -344,10 +357,10 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void SanctuaryBoostStaysAdditiveAfterTempo()
+        public void InfirmaryBoostStaysAdditiveAfterTempo()
         {
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Sanctuary;
+            state.nodes[1].districtType = DistrictType.Infirmary;
             state.nodes[1].ownerID = 0;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].state = VillagerState.Working;
@@ -417,12 +430,12 @@ namespace NodeWar.Tests
             Install();
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             Ticks(state, 100);
-            Assert.AreEqual(17457352, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(647286254, SimulationStateHasher.ComputeHash(state));
             state = TestBoardFactory.BuildThreeNodeBoard(balance);
             for (int p = 0; p < 2; p++) CommandProcessor.ProcessCommand(state,
                 new GameCommand { type = CommandType.Move, playerID = p, villagerID = p, targetNodeID = 1 });
             Ticks(state, 4);
-            Assert.AreEqual(626950565, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(357327383, SimulationStateHasher.ComputeHash(state));
         }
 
         [Test]
@@ -453,7 +466,7 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void WatchtowerAppliesBeforeClaimTempo()
+        public void BalancedFrontierReplacesWatchtowerClaimBoostBeforeTempo()
         {
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             state.tickCount = 1199;
@@ -464,7 +477,7 @@ namespace NodeWar.Tests
             claimer.state = VillagerState.Claiming;
             Add(state, claimer);
             GameSimulation.SimulateTick(state);
-            Assert.AreEqual(37, state.nodes[1].claimBar); // (17 * 3 / 2) * 150 / 100
+            Assert.AreEqual(25, state.nodes[1].claimBar); // net frontier 0: 17 * 100 / 100, then * 150 / 100
         }
 
         [Test]

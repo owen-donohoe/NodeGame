@@ -269,8 +269,8 @@ namespace NodeWar.Lobby
             {
                 LoadoutEditor loadout = catalog.CurrentLoadout();
 
-                SetCount(loadoutNodes, loadout.FilledNodeCount, loadout.NodeSlotCount, "districts",
-                         loadout.IsNodeSideShort(catalog.OwnedNodeCount()));
+                SetCount(loadoutNodes, loadout.FilledDistrictCount, loadout.DistrictSlotCount, "districts",
+                         loadout.IsDistrictSideShort(catalog.OwnedDistrictCount()));
                 SetCount(loadoutSuits, loadout.FilledSuitCount, loadout.SuitSlotCount, "suits",
                          loadout.IsSuitSideShort(catalog.OwnedSuitCount()));
             }

@@ -29,9 +29,23 @@ namespace NodeWar.Cloud
         private static readonly object replayLock = new object();
         private readonly BalanceCatalog balances;
 
-        public Referee(BalanceCatalog balances)
+        private readonly NodeWar.Simulation.IBoardCatalog boards;
+
+        public Referee(BalanceCatalog balances, NodeWar.Simulation.IBoardCatalog boards = null)
         {
+            this.boards = boards ?? NodeWar.Simulation.PremadeMaps.Catalog;
             this.balances = balances ?? throw new ArgumentNullException(nameof(balances));
+        }
+
+        private string CheckMap(NodeWar.MatchLog.MatchLog log)
+        {
+            if (log.setup == null) return "log has no match setup";
+            if (!boards.TryGet(log.setup.MapId, out NodeWar.Simulation.BoardConfigData shipped))
+                return "unknown map " + log.setup.MapId;
+            int shippedHash = NodeWar.Simulation.BoardHasher.Hash(shipped);
+            if (NodeWar.Simulation.BoardHasher.Hash(log.board) != shippedHash || log.setup.BoardHash != shippedHash)
+                return "recorded board does not match the server's map catalog for " + log.setup.MapId;
+            return null;
         }
 
         public RefereeVerdict Verify(byte[] logBytes)
@@ -54,6 +68,19 @@ namespace NodeWar.Cloud
                 {
                     verdict.error = "unknown balance";
                     return verdict;
+                }
+                // A log of this simulation must name a map this server ships, and its board must
+                // BE that map's board. The hash a client writes is never the authority: an
+                // attacker can recompute it for a board of their own. Logs from other
+                // simulation versions get MatchReplay's version refusal instead.
+                if (log.header.sim == NodeWar.Simulation.SimulationVersion.Current)
+                {
+                    string mapError = CheckMap(log);
+                    if (mapError != null)
+                    {
+                        verdict.error = mapError;
+                        return verdict;
+                    }
                 }
                 ReplayOutcome outcome;
                 lock (replayLock)

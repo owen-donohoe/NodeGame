@@ -65,6 +65,29 @@ namespace NodeWar.Progression.Tests
                 new CatalogItem { Kind = CatalogItemKind.Skin }, 0));
         }
 
+        [Test]
+        public void CanonicalRoster_HasSixEras_NoRetiredGrants_AndKeepsLegacyOwnershipOnDemotion()
+        {
+            var catalog = new List<CatalogItem>();
+            foreach (string key in new[] { "farm", "mine", "village", "barracks", "forge", "market",
+                "pier", "town", "infirmary", "fortress", "camp", "shrine", "arsenal", "sanctuary", "watchtower", "rampart" })
+                for (int era = 0; era < 6; era++)
+                    catalog.Add(new CatalogItem { Id = "district." + key + ".e" + era,
+                        BaseId = "district." + key, Era = era, Kind = CatalogItemKind.Variant,
+                        Retired = key == "camp" || key == "shrine" || key == "arsenal" ||
+                            key == "sanctuary" || key == "watchtower" || key == "rampart" });
+            var owned = new List<string> { "district.camp.e5", "district.rampart.e3" };
+            var grants = EraUnlocks.GrantsFor(catalog, 5, owned);
+            Assert.AreEqual(60, grants.Count);
+            Assert.IsFalse(grants.Contains("district.camp.e0"));
+            owned.AddRange(grants);
+            CollectionAssert.Contains(owned, "district.camp.e5");
+            CollectionAssert.Contains(owned, "district.rampart.e3");
+            Assert.IsEmpty(EraUnlocks.GrantsFor(catalog, 5, owned));
+            foreach (var item in catalog)
+                if (!item.Retired && item.Era > 2) Assert.IsFalse(EraUnlocks.IsUsable(item, 2));
+        }
+
         private static CatalogItem Variant(string id, int era, bool retired = false)
         {
             return new CatalogItem { Id = id, Kind = CatalogItemKind.Variant,

@@ -19,6 +19,34 @@ namespace NodeWar.Core
             z = (rows - 1) * nodeScale * 0.5f;
         }
 
+        /// <summary>
+        /// One axis of the camera's pan bounds: whatever the BoardConfig asset says, widened if
+        /// it would clip the node grid. The asset's numbers were authored for one board; the map
+        /// is now a catalog value, so the grid (with one cell of margin) wins when it is larger.
+        /// </summary>
+        public static void ExpandBounds(float configuredMin, float configuredMax, int count, float nodeScale,
+            out float min, out float max)
+        {
+            float gridMax = (count - 1) * nodeScale;
+            min = configuredMin < -nodeScale ? configuredMin : -nodeScale;
+            max = configuredMax > gridMax + nodeScale ? configuredMax : gridMax + nodeScale;
+        }
+
+        /// <summary>
+        /// The camera distance at which <paramref name="cellsAcross"/> whole cells fit the view's
+        /// width, for a perspective camera with the given vertical field of view and aspect. The
+        /// width is measured at the point the rig looks at; margin scales it (1 = edge to edge).
+        /// </summary>
+        public static float WidthFitDistance(int cellsAcross, float nodeScale, float verticalFovDegrees,
+            float aspect, float margin)
+        {
+            double halfVertical = verticalFovDegrees * 0.5 * System.Math.PI / 180.0;
+            double tanHalfHorizontal = System.Math.Tan(halfVertical) * aspect;
+            if (tanHalfHorizontal <= 0.0) return 0f;
+            double halfWidth = cellsAcross * nodeScale * margin * 0.5;
+            return (float)(halfWidth / tanHalfHorizontal);
+        }
+
         public static bool IsAtFit(float targetZoom, float maxZoom)
         {
             return targetZoom >= maxZoom * AtFitFraction;

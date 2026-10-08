@@ -70,10 +70,10 @@ namespace NodeWar.View
                 int current = bfsQueue[head++];
                 if (hopsFromPlayer[current] >= limit) continue;
 
-                Edge[] edges = state.nodes[current].edges;
-                for (int e = 0; e < edges.Length; e++)
+                Link[] links = state.nodes[current].links;
+                for (int e = 0; e < links.Length; e++)
                 {
-                    int next = edges[e].toNode;
+                    int next = links[e].toNodeID;
                     if (next < 0 || next >= nodeCount) continue;
                     if (hopsFromPlayer[next] >= 0) continue;
 

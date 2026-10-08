@@ -67,10 +67,12 @@ namespace NodeWar.Backend
 
         public bool GrantDefaults(PlayerState state)
         {
-            bool changed = PlayerStateLogic.NormalizeInventory(state.Inventory);
+            bool changed = PlayerStateLogic.NormalizeInventory(state.Inventory) | DistrictMigration.Apply(state);
             var inventory = state.Inventory;
             foreach (string baseId in bases)
             {
+                if (baseId.StartsWith("district.", StringComparison.Ordinal) &&
+                    (DistrictMigration.SourceType(baseId) == 0 || !DistrictMigration.IsActive(DistrictMigration.SourceType(baseId)))) continue;
                 for (int era = 0; era < CatalogIds.EraCount && era <= state.Rank.HighestArena; era++)
                 {
                     string id = CatalogIds.Variant(baseId, era);
@@ -83,15 +85,17 @@ namespace NodeWar.Backend
                 if (!inventory.Equipped.Skins.ContainsKey(baseId))
                 { inventory.Equipped.Skins.Add(baseId, skin); changed = true; }
             }
-            return changed;
+            return InventoryClamp.ClampToArena(state.Inventory, state.Rank.Arena) | changed;
         }
 
         public async Task<PlayerState> EquipAsync(EquippedRecord changes)
         {
             PlayerState state = await store.ReadAsync();
-            bool changed = InventoryEquip.Apply(state, changes, (baseId, id, skin) =>
+            var staged = DistrictMigration.Detached(state);
+            bool migrated = DistrictMigration.Apply(staged);
+            bool changed = InventoryEquip.Apply(staged, changes, (baseId, id, skin) =>
             {
-                if (!bases.Contains(baseId)) throw new InventoryValidationException($"Unknown base '{baseId}'.");
+                if (!bases.Contains(baseId) || (baseId.StartsWith("district.", StringComparison.Ordinal) && (DistrictMigration.SourceType(baseId) == 0 || !DistrictMigration.IsActive(DistrictMigration.SourceType(baseId))))) throw new InventoryValidationException($"Unknown base '{baseId}'.");
                 string parsedBase;
                 int era = -1;
                 bool known = skin
@@ -99,11 +103,13 @@ namespace NodeWar.Backend
                     : CatalogIds.TryParseVariant(id, out parsedBase, out era);
                 if (!known) throw new InventoryValidationException($"Unknown item '{id}'.");
                 if (parsedBase != baseId) throw new InventoryValidationException($"Item '{id}' is not for base '{baseId}'.");
-                var owned = skin ? state.Inventory.OwnedSkins : state.Inventory.OwnedVariants;
+                var owned = skin ? staged.Inventory.OwnedSkins : staged.Inventory.OwnedVariants;
                 if (owned == null || !owned.Contains(id)) throw new InventoryValidationException($"Item '{id}' is not owned.");
                 bool usable = SuitTree.IsTreeSuit(baseId) ? SuitTree.IsAvailable(id, state.Rank.Arena) : era <= state.Rank.Arena;
                 if (!skin && !usable) throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
             });
+            changed |= migrated;
+            if (changed) state.Inventory = staged.Inventory;
             if (changed) await store.WriteAsync(new PlayerState { Inventory = state.Inventory });
             return state;
         }

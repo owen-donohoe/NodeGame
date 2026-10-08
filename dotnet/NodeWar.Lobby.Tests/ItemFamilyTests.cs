@@ -12,25 +12,25 @@ namespace NodeWar.Lobby.Tests
     public class ItemFamilyTests
     {
         [TestCase("node_market", ItemFamily.Family.Round)]
-        [TestCase("node_shrine", ItemFamily.Family.Round)]
-        [TestCase("node_sanctuary", ItemFamily.Family.Round)]
-        [TestCase("node_rampart", ItemFamily.Family.Square)]
-        [TestCase("node_camp", ItemFamily.Family.Triangle)]
+        [TestCase("node_infirmary", ItemFamily.Family.Round)]
+        [TestCase("node_town", ItemFamily.Family.Round)]
+        [TestCase("node_fortress", ItemFamily.Family.Square)]
         [TestCase("node_barracks", ItemFamily.Family.Triangle)]
-        [TestCase("node_arsenal", ItemFamily.Family.Triangle)]
-        [TestCase("node_watchtower", ItemFamily.Family.Triangle)]
-        public void ForNode_PlacesEveryOfferedDistrict(string nodeID, ItemFamily.Family expected)
+        [TestCase("node_farm", ItemFamily.Family.Round)]
+        [TestCase("node_forge", ItemFamily.Family.Round)]
+        [TestCase("node_pier", ItemFamily.Family.Square)]
+        public void ForDistrict_PlacesEveryOfferedDistrict(string districtID, ItemFamily.Family expected)
         {
-            Assert.AreEqual(expected, ItemFamily.ForNode(nodeID));
+            Assert.AreEqual(expected, ItemFamily.ForDistrict(districtID));
         }
 
         /// <summary>A district added later must not throw or vanish from the grid.</summary>
         [TestCase("node_not_yet_designed")]
         [TestCase("")]
         [TestCase(null)]
-        public void ForNode_UnknownIDIsSquare(string nodeID)
+        public void ForDistrict_UnknownIDIsSquare(string districtID)
         {
-            Assert.AreEqual(ItemFamily.Family.Square, ItemFamily.ForNode(nodeID));
+            Assert.AreEqual(ItemFamily.Family.Square, ItemFamily.ForDistrict(districtID));
         }
 
         [Test]

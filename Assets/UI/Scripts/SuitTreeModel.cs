@@ -303,7 +303,7 @@ namespace NodeWar.Lobby
             var result = new List<DistrictType>();
             if (!TrySuitType(baseId, out SuitType suit)) return result;
             foreach (DistrictType district in Enum.GetValues(typeof(DistrictType)))
-                if (district != DistrictType.None && balance.CanEquipSuitAtNode(suit, district)) result.Add(district);
+                if (DistrictRoster.IsActive(district) && district != DistrictType.None && balance.CanEquipSuitAtNode(suit, district)) result.Add(district);
             return result;
         }
 

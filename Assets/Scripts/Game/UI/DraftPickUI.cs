@@ -6,7 +6,7 @@ using NodeWar.Simulation;
 
 namespace NodeWar.UI
 {
-    public class DraftSlotUI : MonoBehaviour, IPointerDownHandler
+    public class DraftPickUI : MonoBehaviour, IPointerDownHandler
     {
         [SerializeField] private Image backgroundImage;
         [SerializeField] private Image iconImage;
@@ -22,7 +22,7 @@ namespace NodeWar.UI
 
         public int SlotIndex => slotIndex;
 
-        public void Initialize(DraftSlot slot, int index, DraftUI ui)
+        public void Initialize(DraftPick slot, int index, DraftUI ui)
         {
             slotIndex = index;
             parentUI = ui;
@@ -32,7 +32,8 @@ namespace NodeWar.UI
                 canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
             if (labelText != null)
-                labelText.text = GetDistrictName(slot.districtType);
+                labelText.text = GetDistrictName(slot.districtType) + " (" +
+                    NodeWar.View.DistrictFallback.Describe(slot.districtType).Monogram + ")";
 
             if (iconImage != null && parentUI != null)
             {
@@ -74,22 +75,7 @@ namespace NodeWar.UI
 
         private string GetDistrictName(DistrictType type)
         {
-            switch (type)
-            {
-                case DistrictType.Farm: return "Farm";
-                case DistrictType.Mine: return "Mine";
-                case DistrictType.Village: return "Village";
-                case DistrictType.Barracks: return "Barracks";
-                case DistrictType.Forge: return "Forge";
-                case DistrictType.Camp: return "Camp";
-                case DistrictType.Shrine: return "Shrine";
-                case DistrictType.Arsenal: return "Arsenal";
-                case DistrictType.Sanctuary: return "Sanctuary";
-                case DistrictType.Watchtower: return "Watchtower";
-                case DistrictType.Rampart: return "Rampart";
-                case DistrictType.Market: return "Market";
-                default: return "Node";
-            }
+            return NodeWar.View.DistrictFallback.Describe(type).Name ?? type.ToString();
         }
     }
 }

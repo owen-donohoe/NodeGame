@@ -19,7 +19,7 @@ namespace NodeWar.Lobby.Tests
     [TestFixture]
     public class CommandEligibilityTests
     {
-        private const int Core0 = 0, Barracks0 = 1, Sanctuary0 = 2, Barracks1 = 3, Forge0 = 4, Forge1 = 5, Camp0 = 6, Farm0 = 7, Sanctuary1 = 8;
+        private const int Core0 = 0, Barracks0 = 1, Infirmary0 = 2, Barracks1 = 3, Forge0 = 4, Forge1 = 5, Camp0 = 6, Farm0 = 7, Infirmary1 = 8;
 
         private static GameBalanceData Balance()
         {
@@ -38,7 +38,7 @@ namespace NodeWar.Lobby.Tests
 
         private static NodeData Node(int id, DistrictType district, int owner)
         {
-            return new NodeData { nodeID = id, districtType = district, ownerID = owner, edges = new Edge[0] };
+            return new NodeData { nodeID = id, districtType = district, ownerID = owner, links = new Link[0] };
         }
 
         private static VillagerData Villager(int id, int owner, int node, VillagerState state,
@@ -55,7 +55,7 @@ namespace NodeWar.Lobby.Tests
         /// <summary>
         /// Nine nodes and a villager in every situation the checks care about:
         /// idle on each kind of district, busy, already suited, dead, consumed,
-        /// the opponent's, and working a Sanctuary on either side's ground.
+        /// the opponent's, and working an Infirmary on either side's ground.
         /// </summary>
         private static SimulationState Board(int food, int materials, int[] drafted)
         {
@@ -63,15 +63,15 @@ namespace NodeWar.Lobby.Tests
             s.nodes = new[]
             {
                 Node(Core0, DistrictType.Core, 0), Node(Barracks0, DistrictType.Barracks, 0),
-                Node(Sanctuary0, DistrictType.Sanctuary, 0), Node(Barracks1, DistrictType.Barracks, 1),
+                Node(Infirmary0, DistrictType.Infirmary, 0), Node(Barracks1, DistrictType.Barracks, 1),
                 Node(Forge0, DistrictType.Forge, 0), Node(Forge1, DistrictType.Forge, 1),
                 Node(Camp0, DistrictType.Camp, 0), Node(Farm0, DistrictType.Farm, 0),
-                Node(Sanctuary1, DistrictType.Sanctuary, 1),
+                Node(Infirmary1, DistrictType.Infirmary, 1),
             };
             s.villagers = new[]
             {
                 Villager(0, 0, Barracks0, VillagerState.Idle),
-                Villager(1, 0, Sanctuary0, VillagerState.Idle),
+                Villager(1, 0, Infirmary0, VillagerState.Idle),
                 Villager(2, 0, Camp0, VillagerState.Idle),
                 Villager(3, 0, Farm0, VillagerState.Idle),
                 Villager(4, 0, Barracks1, VillagerState.Idle),
@@ -84,8 +84,8 @@ namespace NodeWar.Lobby.Tests
                 Villager(11, 0, Core0, VillagerState.Dead, consumed: true, respawn: 40),
                 Villager(12, 1, Barracks1, VillagerState.Idle),
                 Villager(13, 1, Core0, VillagerState.Dead, respawn: 45),
-                Villager(14, 0, Sanctuary0, VillagerState.Working, SuitType.Acolyte),
-                Villager(15, 0, Sanctuary1, VillagerState.Working, SuitType.Acolyte),
+                Villager(14, 0, Infirmary0, VillagerState.Working, SuitType.Acolyte),
+                Villager(15, 0, Infirmary1, VillagerState.Working, SuitType.Acolyte),
                 Villager(16, 0, Barracks0, VillagerState.Idle, consumed: true),
             };
             s.players = new[]
@@ -230,12 +230,12 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void RespawnCost_CountsOnlySanctuariesThePlayerOwns()
+        public void RespawnCost_CountsOnlyInfirmariesThePlayerOwns()
         {
-            // Villager 14 works player 0's Sanctuary; villager 15 works one player 1
-            // owns. Only 14 discounts: 8 food less 25% is 6. The earlier sheet
+            // Villager 14 works player 0's Infirmary; villager 15 works one player 1
+            // owns. Only 14 discounts: 8 food less floor(20%) is 7. The earlier sheet
             // counted both and showed 4.
-            Assert.AreEqual(6, CommandEligibility.RespawnCost(Board(20, 0, null), Balance(), 0));
+            Assert.AreEqual(7, CommandEligibility.RespawnCost(Board(20, 0, null), Balance(), 0));
         }
 
         [Test]
@@ -245,14 +245,14 @@ namespace NodeWar.Lobby.Tests
             CommandProcessor.SetBalance(balance);
             SimulationState state = Board(23, 0, null);
             state.players[0].paidRespawns = 3;
-            Assert.AreEqual(24, CommandEligibility.RespawnCost(state, balance, 0)); // 8*4 less 25%.
+            Assert.AreEqual(26, CommandEligibility.RespawnCost(state, balance, 0)); // 8*4 less 20%.
             Assert.AreEqual(RespawnRefusal.CannotAfford, CommandEligibility.Respawn(state, balance, 0, 9));
-            state.players[0].food = 24;
+            state.players[0].food = 26;
             Assert.AreEqual(RespawnRefusal.None, CommandEligibility.Respawn(state, balance, 0, 9));
             CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Respawn, playerID = 0, villagerID = 9 });
             Assert.AreEqual(0, state.players[0].food);
             Assert.AreEqual(4, state.players[0].paidRespawns);
-            Assert.AreEqual(30, CommandEligibility.RespawnCost(state, balance, 0));
+            Assert.AreEqual(32, CommandEligibility.RespawnCost(state, balance, 0));
         }
 
         [Test]

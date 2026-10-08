@@ -27,6 +27,19 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
 
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:47Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+
 ## `docs/architecture.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -37,16 +50,51 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
 - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
 
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:24Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:47Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
 ## `docs/simulation-rules.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
 ## `docs/skills/run-dotnet-tests.md`
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
+
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:25Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `.claude/skills/cs-review.md`
 
@@ -57,6 +105,16 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
 - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `.claude/skills/determinism-guard.md`
 
@@ -65,8 +123,81 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
 
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
 ## `.claude/skills/write-sim-test.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
 
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:07:09Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:49Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
+## `docs/game-model.md`
+
+
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
+## `docs/computations/determinism-baseline.md`
+
+
+- { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+- { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
+- { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
+## `docs/skills/run-editmode-tests.md`
+
+- { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:25Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+
+## `docs/design-history/README.md`
+
+- { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }

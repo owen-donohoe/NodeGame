@@ -25,9 +25,9 @@ namespace NodeWar.Simulation
     /// district does not use stays 0. Each district type fills only its own:
     ///   Farm, Mine, Forge  productionTicks
     ///   Market             productionTicks (food), secondaryProductionTicks (materials)
-    ///   Village            bonusVillagersOnClaim
+    ///   Town               townBonusVillagers (Village bonusVillagersOnClaim is historical)
     ///   Shrine             healIntervalTicks
-    ///   Rampart            claimDecrementMultiplier, damageReduction, maxHPBonus
+    ///   Fortress           fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
     ///   Watchtower         claimRateNumerator / claimRateDenominator
     ///   Sanctuary          respawnBoostPerWorker, respawnCostReductionPercent
     /// </summary>
@@ -39,9 +39,13 @@ namespace NodeWar.Simulation
 
         public int productionTicks;
         public int secondaryProductionTicks;
-        public int bonusVillagersOnClaim;
+        public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
+        public int townBonusVillagers;
+        public int[] fortressMaterialsCosts;
+        public int[] fortressMetalCosts;
+        public int[] fortressResistancePercent;
         public int healIntervalTicks;
-        public int claimDecrementMultiplier;
+        public int claimDecrementMultiplier; // Historical Rampart fields remain decoded and hashed.
         public int damageReduction;
         public int maxHPBonus;
         public int claimRateNumerator;
@@ -62,6 +66,8 @@ namespace NodeWar.Simulation
         public int decrementMultiplier;
         public int claimThreshold;
         public int maxClaimersPerNode;
+        public int captureBonusPercentPerStep;
+        public int captureBonusMaxSteps;
 
         public int respawnTicks;
         public int healIntervalTicks;
@@ -82,6 +88,8 @@ namespace NodeWar.Simulation
         public int maxVillagersPerPlayer;
 
         public int respawnCostFood;
+        public int recruitBaseCost;
+        public int recruitCostPerRecruit;
 
         /// <summary>Resource ceilings; zero or negative means uncapped.</summary>
         public int foodCap;
@@ -224,7 +232,7 @@ namespace NodeWar.Simulation
         }
 
         /// <summary>
-        /// Escalate first, then subtract the integer-floor Sanctuary discount.
+        /// Escalate first, then subtract the integer-floor Infirmary discount.
         /// Preserve the one-food minimum; saturate unrepresentable prices.
         /// Shared arithmetic for command validation and read-only UI pricing.
         /// </summary>
@@ -254,12 +262,107 @@ namespace NodeWar.Simulation
             return cap > 0 && value >= cap ? cap : unchecked(value + 1);
         }
 
+        public static bool FortressStatsValid(DistrictStats d)
+        {
+            int[] materials = d.fortressMaterialsCosts, metal = d.fortressMetalCosts, resistance = d.fortressResistancePercent;
+            if (materials == null || metal == null || resistance == null || materials.Length != 4 || metal.Length != 4 || resistance.Length != 4)
+                return false;
+            if (materials[0] != 0 || metal[0] != 0 || resistance[0] != 0) return false;
+            for (int level = 1; level <= 3; level++)
+                if (materials[level] <= 0 || metal[level] <= 0 || resistance[level] < resistance[level - 1] || resistance[level] > 100)
+                    return false;
+            return true;
+        }
+
+        public bool CoreRulesValid(out string reason)
+        {
+            if (districtStats != null)
+                for (int i = 0; i < districtStats.Length; i++)
+                {
+                    DistrictStats d = districtStats[i];
+                    // Missing historical arrays remain readable, but cannot enable upgrading.
+                    if (d.districtType == DistrictType.Fortress &&
+                        (d.fortressMaterialsCosts != null || d.fortressMetalCosts != null || d.fortressResistancePercent != null) && !FortressStatsValid(d))
+                    { reason = "Invalid Fortress costs or resistance."; return false; }
+                    if (d.districtType == DistrictType.Infirmary &&
+                        (d.healIntervalTicks <= 0 || d.respawnBoostPerWorker < 0 ||
+                         d.respawnCostReductionPercent < 0 || d.respawnCostReductionPercent > 100))
+                    { reason = "Invalid Infirmary interval, boost or discount."; return false; }
+                }
+            if (districtStats != null)
+                for (int i = 0; i < districtStats.Length; i++)
+                    if (districtStats[i].townBonusVillagers < 0)
+                    {
+                        reason = "Town bonus must be nonnegative.";
+                        return false;
+                    }
+            if (captureBonusPercentPerStep < 0 || captureBonusMaxSteps < 0)
+            {
+                reason = "Capture bonus step and cap must be nonnegative.";
+                return false;
+            }
+            try
+            {
+                checked
+                {
+                    long frontier = 100L + (long)captureBonusPercentPerStep * captureBonusMaxSteps;
+                    int maxTempo = 100;
+                    if (tempoClaimPercent != null)
+                        for (int i = 0; i < tempoClaimPercent.Length; i++)
+                            if (tempoClaimPercent[i] > maxTempo) maxTempo = tempoClaimPercent[i];
+                    // Validate both ordinary and opposing-lean contributions.
+                    long claim = (long)baseClaimPerTick * 4 * System.Math.Max(1, decrementMultiplier);
+                    claim = claim * frontier / 100;
+                    claim = claim * maxTempo / 100;
+                    long restore = (long)baseClaimPerTick * 4 * maxTempo / 100;
+                    if (breachSwarmRate != null)
+                        for (int i = 0; i < breachSwarmRate.Length; i++)
+                        {
+                            long breach = (long)breachSwarmRate[i] * frontier / 100;
+                        }
+                }
+            }
+            catch (System.OverflowException)
+            {
+                reason = "Core rule percentage products exceed the integer range.";
+                return false;
+            }
+            reason = null;
+            return true;
+        }
+
+        /// <summary>Price is also the cooldown in seconds, using the pre-recruit count.</summary>
+        public bool TryRecruitCostAndCooldown(int count, int tick, out int cost, out int readyTick)
+        {
+            cost = 0;
+            readyTick = 0;
+            if (count < 0 || recruitBaseCost <= 0 || recruitCostPerRecruit <= 0 || ticksPerSecond <= 0)
+                return false;
+            try
+            {
+                checked
+                {
+                    long price = (long)recruitBaseCost + (long)recruitCostPerRecruit * count;
+                    long duration = price * ticksPerSecond;
+                    long ready = tick + duration;
+                    if (price > int.MaxValue || duration > int.MaxValue || ready < int.MinValue || ready > int.MaxValue)
+                        return false;
+                    cost = (int)price;
+                    readyTick = (int)ready;
+                    return true;
+                }
+            }
+            catch (System.OverflowException) { return false; }
+        }
+
         public static GameBalanceData Default()
         {
             return new GameBalanceData
             {
                 ticksPerSecond = 10,
                 baseClaimPerTick = 17,
+                captureBonusPercentPerStep = 25,
+                captureBonusMaxSteps = 2,
                 decrementMultiplier = 4,
                 claimThreshold = 10000,
                 maxClaimersPerNode = 4,
@@ -278,6 +381,8 @@ namespace NodeWar.Simulation
                 maxWorkersPerNode = 2,
                 maxVillagersPerPlayer = 25,
                 respawnCostFood = 1,
+                recruitBaseCost = 6,
+                recruitCostPerRecruit = 3,
                 foodCap = 30,
                 materialsCap = 30,
                 metalCap = 10,
@@ -320,7 +425,11 @@ namespace NodeWar.Simulation
                 new DistrictStats { districtType = DistrictType.Watchtower, claimRateNumerator = watchtowerNumerator,
                     claimRateDenominator = watchtowerDenominator },
                 new DistrictStats { districtType = DistrictType.Sanctuary, respawnBoostPerWorker = sanctuaryBoost,
-                    respawnCostReductionPercent = sanctuaryCostReductionPercent }
+                    respawnCostReductionPercent = sanctuaryCostReductionPercent },
+                new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 },
+                new DistrictStats { districtType = DistrictType.Barracks },
+                new DistrictStats { districtType = DistrictType.Infirmary, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
+                new DistrictStats { districtType = DistrictType.Fortress }
             };
 
             DistrictStats[] all = new DistrictStats[template.Length * EraCount];
@@ -330,6 +439,12 @@ namespace NodeWar.Simulation
                 {
                     DistrictStats entry = template[d];
                     entry.era = era;
+                    if (entry.districtType == DistrictType.Fortress)
+                    {
+                        entry.fortressMaterialsCosts = new[] { 0, 4, 8, 12 };
+                        entry.fortressMetalCosts = new[] { 0, 1, 2, 3 };
+                        entry.fortressResistancePercent = new[] { 0, 25, 40, 50 };
+                    }
                     all[d * EraCount + era] = entry;
                 }
             }
@@ -365,12 +480,6 @@ namespace NodeWar.Simulation
         public SuitStats GetSuitStats(SuitType type)
         {
             return GetSuitStats(type, 0);
-        }
-
-        /// <summary>The max HP a villager's Rampart bonus added; 0 without one.</summary>
-        public int RampartBonusHP(VillagerData v)
-        {
-            return v.hasRampartBonus ? GetDistrictStats(DistrictType.Rampart, v.rampartBonusEra).maxHPBonus : 0;
         }
 
         public SuitStats GetSuitStats(SuitType type, int era)
@@ -435,25 +544,7 @@ namespace NodeWar.Simulation
 
         public bool CanEquipSuitAtNode(SuitType suit, DistrictType district)
         {
-            switch (district)
-            {
-                case DistrictType.Camp:
-                    return suit == SuitType.Warrior || suit == SuitType.Scout;
-
-                case DistrictType.Barracks:
-                    return suit == SuitType.Warrior || suit == SuitType.Guardian ||
-                           suit == SuitType.Berserker || suit == SuitType.Scout;
-
-                case DistrictType.Arsenal:
-                    return suit == SuitType.Warrior || suit == SuitType.Guardian ||
-                           suit == SuitType.Scout;
-
-                case DistrictType.Sanctuary:
-                    return suit == SuitType.Medic;
-
-                default:
-                    return false;
-            }
+            return district == DistrictType.Barracks && IsCombatSuit(suit);
         }
 
         public static bool IsCombatSuit(SuitType suit)
@@ -472,28 +563,28 @@ namespace NodeWar.Simulation
             }
         }
 
-        public static NodeSlotType GetSlotTypeForDistrict(DistrictType district)
+        public static DistrictUpgradeCategory GetUpgradeCategoryForDistrict(DistrictType district)
         {
             switch (district)
             {
                 case DistrictType.Camp:
                 case DistrictType.Barracks:
                 case DistrictType.Arsenal:
-                    return NodeSlotType.Army;
+                    return DistrictUpgradeCategory.Army;
 
                 case DistrictType.Shrine:
                 case DistrictType.Sanctuary:
-                    return NodeSlotType.Healing;
+                    return DistrictUpgradeCategory.Healing;
 
                 case DistrictType.Watchtower:
                 case DistrictType.Rampart:
-                    return NodeSlotType.Affect;
+                    return DistrictUpgradeCategory.Affect;
 
                 case DistrictType.Market:
-                    return NodeSlotType.ResourceSpecial;
+                    return DistrictUpgradeCategory.ResourceSpecial;
 
                 default:
-                    return NodeSlotType.Fixed;
+                    return DistrictUpgradeCategory.Fixed;
             }
         }
     }

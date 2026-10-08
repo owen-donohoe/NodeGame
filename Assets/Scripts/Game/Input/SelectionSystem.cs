@@ -26,7 +26,7 @@ namespace NodeWar.Input
 
         private LayerMask villagerLayer;
         private Transform[] villagerTransforms;
-        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] villagerPositioners;
 
         public void Initialize(SimulationState state, int playerID)
         {
@@ -47,9 +47,9 @@ namespace NodeWar.Input
             villagerTransforms = transforms;
         }
 
-        public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
+        public void SetVillagerPositioners(NodeWar.View.VillagerPositioner[] managers)
         {
-            nodeSlotManagers = managers;
+            villagerPositioners = managers;
         }
 
         /// <summary>
@@ -272,10 +272,10 @@ namespace NodeWar.Input
                 {
                     worldPos = villagerTransforms[i].position;
                 }
-                else if (nodeSlotManagers != null && v.currentNodeID < nodeSlotManagers.Length &&
-                    nodeSlotManagers[v.currentNodeID] != null)
+                else if (villagerPositioners != null && v.currentNodeID < villagerPositioners.Length &&
+                    villagerPositioners[v.currentNodeID] != null)
                 {
-                    worldPos = nodeSlotManagers[v.currentNodeID].transform.position;
+                    worldPos = villagerPositioners[v.currentNodeID].transform.position;
                 }
                 else
                 {

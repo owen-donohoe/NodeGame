@@ -1445,13 +1445,24 @@ namespace NodeWar.UI
         /// </summary>
         public void ShowDisconnected(int viewerPID)
         {
-            if (state == null || endRoot == null) return;
+            if (endRoot == null) return;
 
+            bool hasMatchTally = NodeWar.View.DisconnectPresentation.HasMatchTally(state);
             endTitle.text = "Disconnected";
             endTitle.EnableInClassList("hud__end-title--won", false);
-            endSub.text = "Your opponent has disconnected. " + MatchLength();
+            endSub.text = "Your opponent has disconnected." + (hasMatchTally ? " " + MatchLength() : "");
 
-            ShowEnd(viewerPID);
+            if (hasMatchTally)
+            {
+                ShowEnd(viewerPID);
+                return;
+            }
+
+            // Reuse the end card before a match exists, without placeholder match stats.
+            endRoot.Q<VisualElement>("hud-end-tally").style.display = DisplayStyle.None;
+            foreach (VisualElement child in hudRoot.Children())
+                if (child != endRoot) child.style.display = DisplayStyle.None;
+            endRoot.AddToClassList("hud__end--on");
         }
 
         /// <summary>

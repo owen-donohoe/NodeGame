@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.MatchLog
 {
@@ -42,7 +43,7 @@ namespace NodeWar.MatchLog
         {
             MatchLog log = RoundTrip(Record(300, Script));
             LoggedTick first = log.ticks[0];
-            first.commands[0].targetNodeID = first.commands[0].targetNodeID == 21 ? 17 : 21;
+            first.commands[0].targetNodeID = first.commands[0].targetNodeID == 3 ? 4 : 3;
 
             ReplayOutcome outcome = MatchReplay.Run(log, Balance);
 
@@ -124,16 +125,16 @@ namespace NodeWar.MatchLog
 
         private static MatchLog Record(int maxTicks, CommandScript script)
         {
-            BoardConfigData board = BoardConfigData.Default();
+            BoardConfigData board = BoardFixtures.LandGrid3x3();
             DraftPlacement[] draft =
             {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 5 },
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
                 new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
             };
             PlayerLoadout[] loadouts =
             {
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] },
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] }
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] },
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] }
             };
             var header = new MatchLogHeader
             {
@@ -141,12 +142,12 @@ namespace NodeWar.MatchLog
                 playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
-            var recorder = new MatchRecorder(header, board, loadouts, draft);
+            var recorder = new MatchRecorder(header, BoardFixtures.SetupFor(board, header.content), board, loadouts, draft);
             MatchFactory.Configure(Balance, board);
             SimulationState state = MatchFactory.Build(Balance, board, draft, new[]
             {
-                new PlayerSetup { suits = loadouts[0].suits, nodes = loadouts[0].nodes },
-                new PlayerSetup { suits = loadouts[1].suits, nodes = loadouts[1].nodes }
+                new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts },
+                new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
 
             while (state.tickCount < maxTicks && !state.gameOver)
@@ -175,10 +176,10 @@ namespace NodeWar.MatchLog
         {
             switch (state.tickCount)
             {
-                case 3: return new[] { Move(0, 0, 21), Move(3, 1, 6) };
-                case 40: return new[] { Move(1, 0, 17), Move(4, 1, 10), Move(0, 0, 13) };
-                case 90: return new[] { Move(5, 1, 14) };
-                case 160: return new[] { Move(2, 0, 21), Move(3, 1, 18) };
+                case 3: return new[] { Move(0, 0, 3), Move(3, 1, 5) };
+                case 40: return new[] { Move(1, 0, 4), Move(4, 1, 0), Move(0, 0, 8) };
+                case 90: return new[] { Move(5, 1, 2) };
+                case 160: return new[] { Move(2, 0, 3), Move(3, 1, 6) };
                 default: return null;
             }
         }
@@ -191,7 +192,7 @@ namespace NodeWar.MatchLog
         private static GameCommand[] Rush(SimulationState state)
         {
             if (state.tickCount == 0)
-                return new[] { Move(3, 1, 3), Move(4, 1, 3), Move(5, 1, 3) };
+                return new[] { Move(3, 1, 0), Move(4, 1, 0), Move(5, 1, 0) };
             if (state.tickCount % 20 != 0) return null;
             int enemyCore = state.players[1].coreNodeID;
             var commands = new System.Collections.Generic.List<GameCommand>();

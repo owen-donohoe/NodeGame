@@ -110,6 +110,10 @@ namespace NodeWar.Core
         [Tooltip("Normalized position between min/max zoom for gameplay start. 0=closest, 1=farthest.")]
         [SerializeField][Range(0f, 1f)] private float sideDefaultZoomNormalized = 0.65f;
 
+        [Tooltip("The opening zoom is at least far enough out to show every column across " +
+                 "the view; this scales that width (1 = edge to edge, higher leaves a border).")]
+        [SerializeField] private float openingWidthMargin = 1.05f;
+
         [Tooltip("How far the starting camera is pushed from your own edge " +
                  "toward the opponent's, as a fraction of the board's depth. " +
                  "0 sits on your edge as before; higher shows more of their half.")]
@@ -480,9 +484,18 @@ namespace NodeWar.Core
         // Bounds are world-axis rectangles on the rig position, on purpose: they
         // say where on the board the camera may look, which does not change with
         // the viewing side. Only the screen-space feel of hitting one does.
+        private void GetBoardBounds(out float minX, out float maxX, out float minZ, out float maxZ)
+        {
+            BoardFraming.ExpandBounds(boardConfig.boundsMinX, boardConfig.boundsMaxX,
+                boardConfig.Data.gridCols, boardConfig.nodeScale, out minX, out maxX);
+            BoardFraming.ExpandBounds(boardConfig.boundsMinZ, boardConfig.boundsMaxZ,
+                boardConfig.Data.gridRows, boardConfig.nodeScale, out minZ, out maxZ);
+        }
+
         private void ApplyBounds()
         {
             if (!useBounds || boardConfig == null) return;
+            GetBoardBounds(out float minX, out float maxX, out float minZ, out float maxZ);
 
             // The spring would fight the focus tween and drag the camera back
             // after it lands, turning "one short motion" into a motion plus a
@@ -494,14 +507,14 @@ namespace NodeWar.Core
             Vector3 push = Vector3.zero;
 
             // Soft spring pushback rather than hard clamp — feels natural
-            if (pos.x < boardConfig.boundsMinX)
-                push.x = boundsPushbackForce * (boardConfig.boundsMinX - pos.x) * Time.deltaTime;
-            if (pos.x > boardConfig.boundsMaxX)
-                push.x = boundsPushbackForce * (boardConfig.boundsMaxX - pos.x) * Time.deltaTime;
-            if (pos.z < boardConfig.boundsMinZ)
-                push.z = boundsPushbackForce * (boardConfig.boundsMinZ - pos.z) * Time.deltaTime;
-            if (pos.z > boardConfig.boundsMaxZ)
-                push.z = boundsPushbackForce * (boardConfig.boundsMaxZ - pos.z) * Time.deltaTime;
+            if (pos.x < minX)
+                push.x = boundsPushbackForce * (minX - pos.x) * Time.deltaTime;
+            if (pos.x > maxX)
+                push.x = boundsPushbackForce * (maxX - pos.x) * Time.deltaTime;
+            if (pos.z < minZ)
+                push.z = boundsPushbackForce * (minZ - pos.z) * Time.deltaTime;
+            if (pos.z > maxZ)
+                push.z = boundsPushbackForce * (maxZ - pos.z) * Time.deltaTime;
 
             if (push.Equals(Vector3.zero)) return;
 
@@ -923,8 +936,9 @@ namespace NodeWar.Core
         {
             if (!useBounds || boardConfig == null) return position;
 
-            position.x = Mathf.Clamp(position.x, boardConfig.boundsMinX, boardConfig.boundsMaxX);
-            position.z = Mathf.Clamp(position.z, boardConfig.boundsMinZ, boardConfig.boundsMaxZ);
+            GetBoardBounds(out float minX, out float maxX, out float minZ, out float maxZ);
+            position.x = Mathf.Clamp(position.x, minX, maxX);
+            position.z = Mathf.Clamp(position.z, minZ, maxZ);
             return position;
         }
 
@@ -936,6 +950,7 @@ namespace NodeWar.Core
         /// </summary>
         public void InitializeSides(BoardConfig config)
         {
+            EnsureCameraInitialized();
             boardDepthX = (config.Data.gridCols - 1) * config.nodeScale;
             boardDepthZ = (config.Data.gridRows - 1) * config.nodeScale;
             boardCentreX = boardDepthX * 0.5f;
@@ -957,10 +972,23 @@ namespace NodeWar.Core
                 float depth = DepthAlong(side);
                 float along = -depth * 0.5f + edgeOffset + depth * sideOpponentBiasFactor;
 
+                // Every column across the view is in frame at the opening zoom; the
+                // authored default only wins when it is already wider than that.
+                // The gameplay ceiling follows, or the first pinch would clamp it away.
+                float sideZoom = defaultZoom;
+                if (cam != null)
+                {
+                    int across = Mathf.Abs(fx) > Mathf.Abs(fz) ? config.Data.gridRows : config.Data.gridCols;
+                    float fit = BoardFraming.WidthFitDistance(across, config.nodeScale, cam.fieldOfView,
+                        cam.aspect, openingWidthMargin);
+                    sideZoom = Mathf.Max(defaultZoom, fit);
+                    zoomMaxDistance = Mathf.Max(zoomMaxDistance, sideZoom);
+                }
+
                 sideStates[side] = new SideState
                 {
                     position = new Vector3(boardCentreX + fx * along, 0f, boardCentreZ + fz * along),
-                    zoomDistance = defaultZoom,
+                    zoomDistance = sideZoom,
                     initialized = true
                 };
                 sideHomeStates[side] = sideStates[side];
@@ -969,7 +997,7 @@ namespace NodeWar.Core
             // The draft runs before any node exists, so a player's side has to
             // be resolvable from the layout alone. The same placements the
             // board is built from say where each core will be.
-            BoardConfigData.InitialNodePlacement[] placements = config.Data.initialPlacements;
+            BoardConfigData.InitialDistrictPlacement[] placements = config.Data.initialPlacements;
             if (placements == null) return;
 
             for (int i = 0; i < placements.Length; i++)
@@ -1419,6 +1447,7 @@ namespace NodeWar.Core
             float maxX = boardConfig != null ? boardConfig.boundsMaxX : 12f;
             float minZ = boardConfig != null ? boardConfig.boundsMinZ : -8f;
             float maxZ = boardConfig != null ? boardConfig.boundsMaxZ : 8f;
+            if (boardConfig != null) GetBoardBounds(out minX, out maxX, out minZ, out maxZ);
 
             Gizmos.color = new Color(1f, 1f, 0f, 0.4f);
             Gizmos.DrawLine(new Vector3(minX, 0f, minZ), new Vector3(maxX, 0f, minZ));

@@ -4,16 +4,16 @@ using NodeWar.Simulation;
 namespace NodeWar.Tests
 {
     /// <summary>
-    /// Covers issue #7: the default/fallback edge weight is sourced from
-    /// state.defaultEdgeWeight (itself seeded from BoardConfigData at
+    /// Covers issue #7: the default/fallback link weight is sourced from
+    /// state.defaultLinkWeight (itself seeded from BoardConfigData at
     /// SimulationState construction) instead of a hardcoded literal, and the
     /// corrupt movement-path guard in TickMovement recovers deterministically
     /// instead of indexing off the end of movePath.
     /// </summary>
-    public class EdgeWeightTests
+    public class LinkWeightTests
     {
         [Test]
-        public void GetEdgeWeight_NonAdjacentNodes_ReturnsStateDefaultEdgeWeight()
+        public void GetLinkWeight_NonAdjacentNodes_ReturnsStateDefaultLinkWeight()
         {
             GameBalanceData balance = GameBalanceData.Default();
             GameSimulation.SetBalance(balance);
@@ -23,14 +23,14 @@ namespace NodeWar.Tests
             Assert.IsNotNull(state);
 
             // Nodes 0 and 2 are not directly connected (only via node 1 in
-            // TestBoardFactory's three-node board), so GetEdgeWeight must fall
-            // back to state.defaultEdgeWeight. Set it to a value distinctive
-            // from any real edge weight in the test board (all 1) and from
+            // TestBoardFactory's three-node board), so GetLinkWeight must fall
+            // back to state.defaultLinkWeight. Set it to a value distinctive
+            // from any real link weight in the test board (all 1) and from
             // the old hardcoded literal (3), to prove the literal is gone.
             const int distinctiveWeight = 99;
-            state.defaultEdgeWeight = distinctiveWeight;
+            state.defaultLinkWeight = distinctiveWeight;
 
-            int result = GameSimulation.GetEdgeWeight(state, 0, 2);
+            int result = GameSimulation.GetLinkWeight(state, 0, 2);
 
             Assert.AreEqual(distinctiveWeight, result);
         }
@@ -64,7 +64,7 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void ComputeHash_DiffersWhenOnlyDefaultEdgeWeightDiffers()
+        public void ComputeHash_DiffersWhenOnlyDefaultLinkWeightDiffers()
         {
             GameBalanceData balance = GameBalanceData.Default();
 
@@ -73,12 +73,12 @@ namespace NodeWar.Tests
             Assert.IsNotNull(stateA);
             Assert.IsNotNull(stateB);
 
-            // Otherwise-identical states, differing only in defaultEdgeWeight,
+            // Otherwise-identical states, differing only in defaultLinkWeight,
             // must produce different hashes -- proving SimulationStateHasher
             // covers the field and a peer-to-peer config mismatch would be
             // caught as a desync instead of diverging silently.
-            stateA.defaultEdgeWeight = 4;
-            stateB.defaultEdgeWeight = 12;
+            stateA.defaultLinkWeight = 4;
+            stateB.defaultLinkWeight = 12;
 
             int hashA = SimulationStateHasher.ComputeHash(stateA);
             int hashB = SimulationStateHasher.ComputeHash(stateB);

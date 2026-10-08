@@ -8,7 +8,7 @@ namespace NodeWar.Lobby
     ///
     /// No definition asset carries a family yet, so this is a table keyed by
     /// item ID, following the prototype's assignments where the names match.
-    /// TODO(data): move the family onto NodeDefinition when the district data is
+    /// TODO(data): move the family onto DistrictDefinition when the district data is
     /// next revised; this class then reads the field and the table goes.
     ///
     /// No UnityEngine reference, like LoadoutEditor and ItemTint, so the test
@@ -24,19 +24,19 @@ namespace NodeWar.Lobby
             Combat
         }
 
-        private static readonly string[] RoundNodes = { "node_market", "node_shrine", "node_sanctuary" };
-        private static readonly string[] SquareNodes = { "node_rampart" };
-        private static readonly string[] TriangleNodes = { "node_camp", "node_barracks", "node_arsenal", "node_watchtower" };
+        private static readonly string[] RoundDistricts = { "node_farm", "node_mine", "node_forge", "node_market", "node_village", "node_town", "node_infirmary" };
+        private static readonly string[] SquareDistricts = { "node_pier", "node_fortress" };
+        private static readonly string[] TriangleDistricts = { "node_barracks" };
 
         /// <summary>
         /// A district's family. An ID the table does not know is Square, the
         /// neutral middle, rather than an exception on a new asset.
         /// </summary>
-        public static Family ForNode(string nodeID)
+        public static Family ForDistrict(string districtID)
         {
-            if (Contains(RoundNodes, nodeID)) return Family.Round;
-            if (Contains(TriangleNodes, nodeID)) return Family.Triangle;
-            if (Contains(SquareNodes, nodeID)) return Family.Square;
+            if (Contains(RoundDistricts, districtID)) return Family.Round;
+            if (Contains(TriangleDistricts, districtID)) return Family.Triangle;
+            if (Contains(SquareDistricts, districtID)) return Family.Square;
             return Family.Square;
         }
 

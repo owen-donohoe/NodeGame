@@ -16,7 +16,7 @@ namespace NodeWar.MatchLog
             MatchLog setup = TestLogs.Full();
             setup.board = ReplayConfig();
             setup.draft = Array.Empty<DraftPlacement>();
-            MatchRecorder recorder = new MatchRecorder(setup.header, setup.board, setup.loadouts, setup.draft);
+            MatchRecorder recorder = new MatchRecorder(setup.header, BoardFixtures.SetupFor(setup.board), setup.board, setup.loadouts, setup.draft);
             SimulationState original = BuildBoard(balance, setup.board);
             for (int i = 0; i < 120; i++)
             {
@@ -66,18 +66,18 @@ namespace NodeWar.MatchLog
 
         private static BoardConfigData ReplayConfig()
         {
-            BoardConfigData config = BoardConfigData.Default();
-            config.gridCols = 2; config.gridRows = 2; config.defaultEdgeWeight = 1;
+            BoardConfigData config = BoardFixtures.LandGrid(2, 2);
+            config.gridCols = 2; config.gridRows = 2; config.defaultLinkWeight = 1;
             config.startingVillagersPerPlayer = 1;
             config.initialPlacements = new[]
             {
-                new BoardConfigData.InitialNodePlacement
+                new BoardConfigData.InitialDistrictPlacement
                 { gridX = 0, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement
+                new BoardConfigData.InitialDistrictPlacement
                 { gridX = 1, gridZ = 0, districtType = DistrictType.Forge, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement
+                new BoardConfigData.InitialDistrictPlacement
                 { gridX = 0, gridZ = 1, districtType = DistrictType.Forge, ownerID = 1, claimBar = -10000 },
-                new BoardConfigData.InitialNodePlacement
+                new BoardConfigData.InitialDistrictPlacement
                 { gridX = 1, gridZ = 1, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
             };
             return config;
@@ -88,7 +88,7 @@ namespace NodeWar.MatchLog
             SimulationState state = TestBoardFactory.BuildSquareBoard(balance);
             // Fixture setup only: keep the factory's graph and villagers while
             // giving each player a forge on which SetAllocation is meaningful.
-            foreach (BoardConfigData.InitialNodePlacement p in config.initialPlacements)
+            foreach (BoardConfigData.InitialDistrictPlacement p in config.initialPlacements)
             {
                 int node = p.gridZ * config.gridCols + p.gridX;
                 state.nodes[node].districtType = p.districtType;

@@ -23,15 +23,35 @@ namespace NodeWar.Lobby
         /// Districts no slot may hold. Only Crossroads (inventory finding 4).
         /// When DistrictType gains a Crossroads member, this array empties.
         /// </summary>
-        private static readonly string[] UnmappedNodeIDs = { "node_crossroads" };
+        private static readonly string[] UnmappedDistrictIDs = { "node_crossroads" };
 
         public SuitDefinition[] Suits { get; private set; }
-        public NodeDefinition[] Nodes { get; private set; }
+        public DistrictDefinition[] Districts { get; private set; }
 
-        public LoadoutCatalog(SuitDefinition[] suits, NodeDefinition[] nodes)
+        public LoadoutCatalog(SuitDefinition[] suits, DistrictDefinition[] districts)
         {
             Suits = suits != null ? suits : new SuitDefinition[0];
-            Nodes = nodes != null ? nodes : new NodeDefinition[0];
+            var canonical = new System.Collections.Generic.List<DistrictDefinition>();
+            foreach (int type in NodeWar.Backend.CatalogKeys.CatalogDistrictTypes)
+            {
+                string id = NodeWar.Backend.CatalogKeys.DistrictLobbyId(type);
+                DistrictDefinition definition = null;
+                if (districts != null)
+                    foreach (var item in districts)
+                        if (item != null && item.districtID == id) { definition = item; break; }
+                if (definition == null)
+                {
+                    var descriptor = NodeWar.View.DistrictFallback.Describe((NodeWar.Simulation.DistrictType)type);
+                    definition = UnityEngine.ScriptableObject.CreateInstance<DistrictDefinition>();
+                    definition.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                    definition.districtID = id;
+                    definition.displayName = descriptor.Name;
+                    definition.description = descriptor.Description;
+                    definition.category = DistrictCategory.Selectable;
+                }
+                canonical.Add(definition);
+            }
+            Districts = canonical.ToArray();
         }
 
         public SuitDefinition FindSuit(string suitID)
@@ -42,11 +62,11 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        public NodeDefinition FindNode(string nodeID)
+        public DistrictDefinition FindDistrict(string districtID)
         {
-            if (string.IsNullOrEmpty(nodeID)) return null;
-            for (int i = 0; i < Nodes.Length; i++)
-                if (Nodes[i] != null && Nodes[i].nodeID == nodeID) return Nodes[i];
+            if (string.IsNullOrEmpty(districtID)) return null;
+            for (int i = 0; i < Districts.Length; i++)
+                if (Districts[i] != null && Districts[i].districtID == districtID) return Districts[i];
             return null;
         }
 
@@ -58,16 +78,16 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>Whether a slot may hold this district: it exists and the draft can use it.</summary>
-        public bool IsNodeOffered(string nodeID)
+        public bool IsDistrictOffered(string districtID)
         {
-            return FindNode(nodeID) != null && !IsUnmapped(nodeID);
+            return FindDistrict(districtID) != null && !IsUnmapped(districtID);
         }
 
-        public static bool IsUnmapped(string nodeID)
+        public static bool IsUnmapped(string districtID)
         {
-            for (int i = 0; i < UnmappedNodeIDs.Length; i++)
-                if (UnmappedNodeIDs[i] == nodeID) return true;
-            return false;
+            for (int i = 0; i < UnmappedDistrictIDs.Length; i++)
+                if (UnmappedDistrictIDs[i] == districtID) return true;
+            return !NodeWar.Simulation.PlacementLegality.IsDraftable((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID));
         }
 
         /// <summary>Suits the player could put in a slot: offered and unlocked.</summary>
@@ -87,16 +107,16 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>Districts the player could put in a slot: offered and unlocked.</summary>
-        public int OwnedNodeCount()
+        public int OwnedDistrictCount()
         {
             PlayerProfile profile = PlayerProfile.Instance;
             int owned = 0;
 
-            for (int i = 0; i < Nodes.Length; i++)
+            for (int i = 0; i < Districts.Length; i++)
             {
-                NodeDefinition node = Nodes[i];
-                if (node == null || !IsNodeOffered(node.nodeID)) continue;
-                if (profile == null || profile.IsNodeUnlocked(node.nodeID)) owned++;
+                DistrictDefinition node = Districts[i];
+                if (node == null || !IsDistrictOffered(node.districtID)) continue;
+                if (profile == null || profile.IsDistrictUnlocked(node.districtID)) owned++;
             }
 
             return owned;
@@ -109,10 +129,11 @@ namespace NodeWar.Lobby
             return suit != null && !string.IsNullOrEmpty(suit.displayName) ? suit.displayName : suitID;
         }
 
-        public string NodeName(string nodeID)
+        public string DistrictName(string districtID)
         {
-            NodeDefinition node = FindNode(nodeID);
-            return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName : nodeID;
+            DistrictDefinition node = FindDistrict(districtID);
+            return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName :
+                NodeWar.View.DistrictFallback.Describe((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID)).Name ?? districtID;
         }
 
         /// <summary>
@@ -126,7 +147,7 @@ namespace NodeWar.Lobby
         {
             PlayerProfile profile = PlayerProfile.Instance;
             LoadoutEditor loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
-            loadout.DropUnavailable(IsSuitOffered, IsNodeOffered);
+            loadout.DropUnavailable(IsSuitOffered, IsDistrictOffered);
             return loadout;
         }
     }

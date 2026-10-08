@@ -8,6 +8,54 @@ namespace NodeWar.MatchLog
 {
     public class MatchLogFormatTests
     {
+        [TestCase(7)]
+        [TestCase(11)]
+        public void CurrentPacketsRejectRetiredTypes(int district)
+        {
+            var log = TestLogs.Full();
+            log.header.sim = 3;
+            log.loadouts[0].districts = new[] { district };
+            Assert.IsFalse(MatchLogFormat.TryRead(MatchLogFormat.Write(log), out _, out string error));
+            StringAssert.Contains("Inactive", error);
+            log.header.sim = 2;
+            Assert.IsTrue(MatchLogFormat.TryRead(MatchLogFormat.Write(log), out var decoded, out _));
+            Assert.AreEqual(district, decoded.loadouts[0].districts[0]);
+        }
+
+        [TestCase(0)] [TestCase(1)]
+        public void UpgradeFortress_RoundTripsBothCurrencies(int currency)
+        {
+            Assert.AreEqual("UpgradeFortress", Enum.GetName(typeof(CommandType), 7));
+            var command = new GameCommand { type = (CommandType)7, playerID = 1, villagerID = -1, targetNodeID = 17, issuedOnTick = 123, value = currency };
+            var log = TestLogs.Full(); log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
+            byte[] bytes = MatchLogFormat.Write(log); Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2)); Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
+        }
+        [TestCase(5, 0, 0)] [TestCase(5, 1, 0)]
+        [TestCase(6, 0, 0)] [TestCase(6, 0, 1)] [TestCase(6, 1, 0)] [TestCase(6, 1, 1)]
+        public void RecruitAndSetAuto_RoundTripAllFields(int type, int player, int value)
+        {
+            Assert.AreEqual(type == 5 ? "Recruit" : "SetAutoRecruit", Enum.GetName(typeof(CommandType), type));
+            var log = TestLogs.Full();
+            var command = new GameCommand { type = (CommandType)type, playerID = player, villagerID = -1,
+                targetNodeID = 17, issuedOnTick = 123, value = value };
+            log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
+            byte[] bytes = MatchLogFormat.Write(log);
+            Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2));
+            Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
+        }
+
+        [TestCase(-1)] [TestCase(8)] [TestCase(int.MaxValue)]
+        public void UnknownCommandType_IsRefused(int type)
+        {
+            var log = TestLogs.Full();
+            log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { new GameCommand() } });
+            byte[] bytes = MatchLogFormat.Write(log);
+            TestLogs.PutInt(bytes, TestLogs.Find(bytes, 5) + 16, type);
+            TestLogs.Refused(bytes);
+            log.ticks[0].commands[0].type = (CommandType)type;
+            Assert.Throws<ArgumentException>(() => MatchLogFormat.Write(log));
+        }
+
         [TestCase(true)]
         [TestCase(false)]
         public void RoundTrip_EveryField(bool finished)
@@ -73,8 +121,8 @@ namespace NodeWar.MatchLog
             TestLogs.Refused(bytes);
         }
 
-        [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]
-        [TestCase(5)] [TestCase(6)] [TestCase(7)]
+        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(4)]
+        [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(11)]
         public void DuplicateKnownChunk_IsRefused(int tag)
         {
             byte[] bytes = MatchLogFormat.Write(TestLogs.Full());
@@ -83,14 +131,14 @@ namespace NodeWar.MatchLog
                 TestLogs.Segment(bytes, start, 6 + TestLogs.IntAt(bytes, start + 2))));
         }
 
-        [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(5)]
+        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(5)] [TestCase(11)]
         public void MissingRequiredChunk_IsRefused(int tag)
         {
             TestLogs.Refused(TestLogs.Remove(MatchLogFormat.Write(TestLogs.Full()), tag));
         }
 
-        [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]
-        [TestCase(5)] [TestCase(6)] [TestCase(7)]
+        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(4)]
+        [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(11)]
         public void KnownChunkTrailingByte_IsRefused(int tag)
         {
             byte[] bytes = MatchLogFormat.Write(TestLogs.Full());
@@ -101,7 +149,7 @@ namespace NodeWar.MatchLog
             TestLogs.Refused(bytes);
         }
 
-        [TestCase(2, 48)] [TestCase(3, 0)] [TestCase(3, 16)]
+        [TestCase(10, 48)] [TestCase(3, 0)] [TestCase(3, 16)]
         [TestCase(3, 28)] [TestCase(3, 40)] [TestCase(4, 0)]
         [TestCase(5, 0)] [TestCase(6, 0)]
         public void InvalidCounts_AreRefusedBeforeAllocation(int tag, int countOffset)
@@ -153,12 +201,11 @@ namespace NodeWar.MatchLog
         }
 
         [Test]
-        public void DefinedMatchEnums_AndUnknownSimulationEnums_RoundTrip()
+        public void DefinedMatchEnums_AndUnknownDistrictEnums_RoundTrip()
         {
-            MatchLog log = TestLogs.Full();
+            MatchLog log = TestLogs.FullV2History();
             log.board.initialPlacements[0].districtType = (DistrictType)12345;
             log.draft[0].districtType = (DistrictType)(-12345);
-            log.ticks[0].commands[0].type = (CommandType)int.MaxValue;
             foreach (MatchKind kind in Enum.GetValues(typeof(MatchKind)))
                 foreach (MatchEndReason reason in Enum.GetValues(typeof(MatchEndReason)))
                 {
@@ -182,7 +229,7 @@ namespace NodeWar.MatchLog
             Assert.IsEmpty(read.board.initialPlacements); Assert.IsEmpty(read.draft);
             Assert.IsEmpty(read.ticks); Assert.IsEmpty(read.hashes);
             foreach (PlayerLoadout loadout in read.loadouts)
-            { Assert.IsEmpty(loadout.suits); Assert.IsEmpty(loadout.nodes); }
+            { Assert.IsEmpty(loadout.suits); Assert.IsEmpty(loadout.districts); }
         }
 
         [Test]
@@ -204,7 +251,7 @@ namespace NodeWar.MatchLog
             int header = TestLogs.Find(bytes, 1) + 6;
             CollectionAssert.AreEqual(new byte[] { 0x34, 0x12, 0x78, 0x56, 0xEB, 0x32, 0xA4, 0xF8 },
                 TestLogs.Segment(bytes, header, 8));
-            int headerEnd = TestLogs.Find(bytes, 2);
+            int headerEnd = TestLogs.Find(bytes, 10);
             CollectionAssert.AreEqual(new byte[] { 8, 7, 6, 5, 4, 3, 2, 1, 2 },
                 TestLogs.Segment(bytes, headerEnd - 9, 9));
             int command = TestLogs.Find(bytes, 5) + 6 + 4 + 6;
@@ -244,6 +291,32 @@ namespace NodeWar.MatchLog
                     Array.Copy(new byte[] { 78, 87, 77, 76, 1, 0 }, bytes, 6);
                 Assert.DoesNotThrow(() => MatchLogFormat.TryRead(bytes, out _, out _));
             }
+        }
+
+        // A minimal simVersion-2 file as the format wrote it before the
+        // graph/district vocabulary rename, checked in as bytes. Renaming
+        // fields must not move a byte of what the format reads or writes.
+        internal const string MinimalV2 =
+            "4E574D4C010001003B00000034120200EB32A4F808006D617463682D34320900E78EA9E5AEB62DC3A90A00706C617965" +
+            "722D74776F01070000004F9721C508070605040302010202005C00000005000000090000000300000004000000110000" +
+            "001D0000001F000000330000004C0000006500000097000000C900000002000000010000000800000005000000000000" +
+            "001027000003000000000000000600000001000000C3DDFFFF0300380000000300000002000000040000000600000002" +
+            "000000030000000500000002000000070000000800000003000000090000000A0000000B000000040004000000000000" +
+            "000500880000000200000004000000030001000000010000000B0000000400000003000000FEFFFFFF02000000000000" +
+            "00FFFFFFFF08000000020000002500000001000000010000000C00000005000000040000000000000035000000020001" +
+            "00000000000000020000000300000034000000010000000200000001000000FFFFFFFF07000000330000001300000006" +
+            "000400000000000000";
+
+        [Test]
+        public void MechanicalRename_PreservesV2Bytes()
+        {
+            byte[] bytes = new byte[MinimalV2.Length / 2];
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = Convert.ToByte(MinimalV2.Substring(i * 2, 2), 16);
+
+            MatchLog log = TestLogs.Read(bytes);
+            Assert.AreEqual(2, log.header.sim);
+            CollectionAssert.AreEqual(bytes, MatchLogFormat.Write(log));
         }
     }
 }

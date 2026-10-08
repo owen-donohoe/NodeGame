@@ -18,6 +18,25 @@ namespace NodeWar.Tests
         private int next;
 
         [Test]
+        public void CopyFrom_RecruitFieldsRoundTripAndStayIndependent()
+        {
+            var source = TestBoardFactory.BuildThreeNodeBoard(GameBalanceData.Default());
+            object player = source.players[0]; object node = source.nodes[1];
+            foreach (var name in new[] { "recruitCount", "recruitReadyTick", "autoRecruit" })
+            {
+                var type = name == "recruitCount" ? typeof(PlayerData) : typeof(NodeData);
+                var field = type.GetField(name); Assert.IsNotNull(field, name);
+                field.SetValue(name == "recruitCount" ? player : node, name == "autoRecruit" ? (object)true : 17);
+            }
+            source.players[0] = (PlayerData)player; source.nodes[1] = (NodeData)node;
+            var copy = new SimulationState(); copy.CopyFrom(source);
+            AssertSame(source, copy, "recruit copy");
+            int hash = SimulationStateHasher.ComputeHash(source);
+            copy.players[0] = default; copy.nodes[1] = default;
+            Assert.AreEqual(hash, SimulationStateHasher.ComputeHash(source));
+        }
+
+        [Test]
         public void CopyFrom_CarriesEveryFieldOfEveryStateType()
         {
             SimulationState source = FilledState();
@@ -42,7 +61,7 @@ namespace NodeWar.Tests
             for (int i = 0; i < source.players.Length; i++)
             {
                 Assert.AreNotSame(source.players[i].draftedSuits, copy.players[i].draftedSuits);
-                Assert.AreNotSame(source.players[i].draftedNodes, copy.players[i].draftedNodes);
+                Assert.AreNotSame(source.players[i].draftedDistricts, copy.players[i].draftedDistricts);
                 Assert.AreNotSame(source.players[i].suitEras, copy.players[i].suitEras);
                 Assert.AreNotSame(source.players[i].districtEras, copy.players[i].districtEras);
             }
@@ -183,7 +202,7 @@ namespace NodeWar.Tests
                 return values.GetValue(values.Length - 1);
             }
             if (IsIntArray(t)) return new[] { next++, next++, next++ };
-            if (t == typeof(Edge[])) return new[] { new Edge { toNode = next++, travelWeight = next++ } };
+            if (t == typeof(Link[])) return new[] { new Link { toNodeID = next++, travelWeight = next++ } };
             Assert.Fail("SimulationStateCopyTests does not know how to fill " + field.DeclaringType.Name + "." +
                         field.Name + " (" + t.Name + "). Teach it, and check SimulationState.CopyFrom copies it.");
             return null;

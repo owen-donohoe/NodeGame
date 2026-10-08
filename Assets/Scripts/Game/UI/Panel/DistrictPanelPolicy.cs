@@ -41,6 +41,10 @@ namespace NodeWar.UI
         {
             switch (district)
             {
+                case DistrictType.Village:
+                case DistrictType.Town:
+                case DistrictType.Infirmary:
+                case DistrictType.Fortress:
                 case DistrictType.Core:        // respawn (by convention, see above)
                 case DistrictType.Forge:       // SetAllocation
                 case DistrictType.Camp:        // Equip

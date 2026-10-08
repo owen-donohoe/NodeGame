@@ -22,7 +22,8 @@ namespace NodeWar.Simulation
                 hash = hash * 31 + state.tickCount;
                 hash = hash * 31 + (state.gameOver ? 1 : 0);
                 hash = hash * 31 + state.winnerID;
-                hash = hash * 31 + state.defaultEdgeWeight;
+                hash = hash * 31 + state.defaultLinkWeight;
+                hash = hash * 31 + state.boardHash;
 
                 // Players
                 for (int i = 0; i < state.players.Length; i++)
@@ -33,6 +34,12 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.players[i].materials;
                     hash = hash * 31 + state.players[i].metal;
                     hash = hash * 31 + state.players[i].breachCount;
+                    if (state.players[i].recruitCount != 0)
+                    {
+                        hash = hash * 31 + 2010;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.players[i].recruitCount;
+                    }
                     // The new counter starts at zero; retain existing neutral hash paths.
                     if (state.players[i].paidRespawns != 0)
                     {
@@ -59,11 +66,11 @@ namespace NodeWar.Simulation
                     }
                     else hash = hash * 31 + 0;
 
-                    if (state.players[i].draftedNodes != null)
+                    if (state.players[i].draftedDistricts != null)
                     {
-                        hash = hash * 31 + state.players[i].draftedNodes.Length;
-                        for (int n = 0; n < state.players[i].draftedNodes.Length; n++)
-                            hash = hash * 31 + state.players[i].draftedNodes[n];
+                        hash = hash * 31 + state.players[i].draftedDistricts.Length;
+                        for (int n = 0; n < state.players[i].draftedDistricts.Length; n++)
+                            hash = hash * 31 + state.players[i].draftedDistricts[n];
                     }
                     else hash = hash * 31 + 0;
 
@@ -79,10 +86,35 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.nodes[i].ownerID;
                     hash = hash * 31 + state.nodes[i].materialAllocation;
                     hash = hash * 31 + (int)state.nodes[i].districtType;
-                    hash = hash * 31 + (int)state.nodes[i].slotType;
+                    hash = hash * 31 + (int)state.nodes[i].upgradeCategory;
                     hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
+                    hash = hash * 31 + (int)state.nodes[i].terrain;
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;
+                    if (state.nodes[i].recruitReadyTick != 0)
+                    {
+                        hash = hash * 31 + 4010;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.nodes[i].recruitReadyTick;
+                    }
+                    if (state.nodes[i].fortressLevel != 0)
+                    {
+                        hash = hash * 31 + 4013;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.nodes[i].fortressLevel;
+                    }
+                    if (state.nodes[i].townPaidMask != 0)
+                    {
+                        hash = hash * 31 + 4012;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.nodes[i].townPaidMask;
+                    }
+                    if (state.nodes[i].autoRecruit)
+                    {
+                        hash = hash * 31 + 4011;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + 1;
+                    }
                 }
 
                 // Villagers (all mutable fields)
@@ -110,9 +142,6 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (v.isConsumed ? 1 : 0);
                     hash = hash * 31 + v.productionTicksRemaining;
                     hash = hash * 31 + v.productionTicksMax;
-                    hash = hash * 31 + (v.hasRampartBonus ? 1 : 0);
-                    if (v.rampartBonusEra != 0)
-                        hash = hash * 31 + v.rampartBonusEra;
 
                     // movePath contents
                     if (v.movePath != null)

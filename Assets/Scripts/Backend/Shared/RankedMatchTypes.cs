@@ -26,6 +26,14 @@ namespace NodeWar.Backend
 
         /// <summary>True once either peer has confirmed the connection.</summary>
         public bool connected;
+
+        /// <summary>
+        /// The map the server allocated this match to and the fingerprint of its board
+        /// (null / 0 for a match allocated before maps). Plain data: Shared never
+        /// references the simulation.
+        /// </summary>
+        public string mapId;
+        public int boardHash;
     }
 
     /// <summary>

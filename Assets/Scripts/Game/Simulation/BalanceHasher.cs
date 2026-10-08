@@ -26,6 +26,23 @@ namespace NodeWar.Simulation
             }
         }
 
+        private static int HashFortressArray(int hash, int[] values, int tag, int districtIndex)
+        {
+            if (values == null) return hash;
+            unchecked
+            {
+                hash = hash * 31 + tag;
+                hash = hash * 31 + districtIndex;
+                hash = hash * 31 + values.Length;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    hash = hash * 31 + i;
+                    hash = hash * 31 + values[i];
+                }
+                return hash;
+            }
+        }
+
         public static int Hash(GameBalanceData b)
         {
             unchecked
@@ -113,6 +130,26 @@ namespace NodeWar.Simulation
                 if (b.foodCap != 0) { hash = hash * 31 + 3000; hash = hash * 31 + b.foodCap; }
                 if (b.materialsCap != 0) { hash = hash * 31 + 3001; hash = hash * 31 + b.materialsCap; }
                 if (b.metalCap != 0) { hash = hash * 31 + 3002; hash = hash * 31 + b.metalCap; }
+                if (b.captureBonusPercentPerStep != 0) { hash = hash * 31 + 3003; hash = hash * 31 + b.captureBonusPercentPerStep; }
+                if (b.captureBonusMaxSteps != 0) { hash = hash * 31 + 3004; hash = hash * 31 + b.captureBonusMaxSteps; }
+                if (b.recruitBaseCost != 0) { hash = hash * 31 + 3005; hash = hash * 31 + b.recruitBaseCost; }
+                if (b.recruitCostPerRecruit != 0) { hash = hash * 31 + 3006; hash = hash * 31 + b.recruitCostPerRecruit; }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                        if (b.districtStats[i].townBonusVillagers != 0)
+                        {
+                            hash = hash * 31 + 3007;
+                            hash = hash * 31 + i;
+                            hash = hash * 31 + b.districtStats[i].townBonusVillagers;
+                        }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                    {
+                        DistrictStats d = b.districtStats[i];
+                        hash = HashFortressArray(hash, d.fortressMaterialsCosts, 3008, i);
+                        hash = HashFortressArray(hash, d.fortressMetalCosts, 3009, i);
+                        hash = HashFortressArray(hash, d.fortressResistancePercent, 3010, i);
+                    }
                 return hash;
             }
         }

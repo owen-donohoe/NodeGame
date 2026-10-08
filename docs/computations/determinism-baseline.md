@@ -14,15 +14,9 @@ attester:
   resource: docs/attesters/hash_baseline.ps1
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  # full history: docs/verification-log.md
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
+verified_at_commit: 3a476dc47ea6085a5e8c0a3c7263b795f5a089f2
 status: stable
 sources:
   - id: tests
@@ -79,12 +73,12 @@ integer against the recorded baseline.
 
 Two fixtures are sanctioned, both on `TestBoardFactory.BuildThreeNodeBoard` — player 0's Core
 (node 0) and player 1's Core (node 2) joined by one neutral connector (node 1), one Idle villager
-each, edge weights of 1, and `GameBalanceData.Default()`:
+each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `17457352` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `626950565` |
+| `EmptyTick` | 100 | none | `647286254` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `357327383` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -92,11 +86,11 @@ attested; adding a third to this table means recording and defending a new const
 
 `EmptyTick` exercises the idle path: healing fires at ticks 30/60/90 but both villagers are at
 `maxHP`, so only `tickCount` moves. `MoveAndCombat` exercises movement and combat entry: each
-villager crosses one edge at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ticks, arrives on
+villager crosses one link at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ticks, arrives on
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 2`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 3`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
 
@@ -107,6 +101,26 @@ do not move these fingerprints. Adding eras had needed no bump; the breach/tempo
 did. Version-1 logs are refused by version-2 replay even when their era-0 hashes would match.
 The separate `BalanceHasher` covers balance data, including the new schedules, breach tuning
 and caps; these are state fingerprints, not balance fingerprints.
+
+C3's recruit count and ready tick are zero-neutral, and its repeat flag is
+false-neutral, with tagged indexed contributions only for non-neutral values.
+Neither sanctioned fixture recruits or captures a Village, so these additions
+and the auto-recruit production pass retain both pinned state fingerprints.
+
+**v3 re-pin (terrain board, B4).** `SimulationState.boardHash` (after `defaultLinkWeight`) and
+`NodeData.terrain` (after `baseDistrictType`) are hashed unconditionally, and the version went 2 → 3.
+The three-node fixtures hold `boardHash = 0` and `Land` on every node, so no board or rule difference
+moved the numbers: the hash simply folds in four more terms (one for the state, one per node), which
+changes the polynomial. `17457352 → 411123996` (`EmptyTick`) and `626950565 → 2101726457`
+(`MoveAndCombat`). Both were computed twice in separate processes.
+
+**C7 re-pin (Fortress, still version 3).** C7 removed the unconditional per-villager `hasRampartBonus`
+hash term (and the conditional `rampartBonusEra` one) when it replaced the Rampart buffs with the
+node-level `fortressLevel`. The fixtures hold two villagers, so the polynomial lost two terms and both
+fingerprints moved: `411123996 → 647286254` (`EmptyTick`) and `2101726457 → 357327383`
+(`MoveAndCombat`). No rule difference reaches these fixtures. Version 3 is unreleased, so it was not bumped again. `BreachTempoTests.
+LegacyNoTempoRetainsVersionOneBaselineHashPaths` runs the same two fixtures and carries the same two
+constants.
 
 ## Where it runs
 

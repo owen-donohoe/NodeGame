@@ -20,6 +20,9 @@ namespace NodeWar.BalanceRig
         public string[] overlaidFields = new string[0];
 
         public BoardConfigData board;
+
+        /// <summary>The shipped map the board came from, or null for an explicit board file.</summary>
+        public string mapId;
         public string boardSource;
 
         /// <summary>The board's base draft pool per player (Farm, Mine, Village on the shipped board).</summary>
@@ -39,15 +42,19 @@ namespace NodeWar.BalanceRig
     /// BalanceCatalog does and checked against its filename, so the rig plays
     /// the numbers the referee would accept.
     ///
-    /// Board: a referee takes its board from the match log. A rig has no log,
-    /// so it reads the same fields from the BoardConfig .asset's YAML text,
-    /// read-only. The asset is the one Unity loads.
+    /// Board: a referee takes its board from the match log. A rig has no log, so
+    /// by default it takes the shipped map from the same catalog the live game and
+    /// the referee use (<see cref="PremadeMaps"/>). An explicit board file can still
+    /// be read, but a file that predates terrain is refused for a match.
     /// </summary>
     public static class RigSetupLoader
     {
         /// <summary>The v2 export (breach bar, tempo, sudden death), the newest in Balances/ by commit.</summary>
-        public const string DefaultBalanceFile = "1832066265.json";
+        public const string DefaultBalanceFile = "971356564.json";
 
+        // Unity rewrites these keys only on the asset's next save, so both spellings are read:
+        // defaultEdgeWeight and baseDraftNodesP0/P1 are the legacy ones.
+        private const string LegacyLinkWeightKey = "defaultEdgeWeight";
         private const string BoardAssetPath = "Assets/Data/Game/Board/DefaultBoardConfig.asset";
         private const string BalancesDir = "dotnet/NodeWarCloud/NodeWarCloud/Balances";
 
@@ -73,16 +80,50 @@ namespace NodeWar.BalanceRig
             if (v2Overlay) setup.balance = ApplyV2Overlay(setup.balance, out setup.overlaidFields);
             setup.balanceHash = BalanceHasher.Hash(setup.balance);
 
-            setup.boardSource = Path.GetFullPath(boardPath ?? Path.Combine(root, BoardAssetPath));
-            LoadBoard(setup.boardSource, setup);
+            if (boardPath == null)
+            {
+                // The default is the shipped map, from the same catalog the live game, the
+                // referee and the lobby build from. No file is read, and no file can drift.
+                LoadShippedBoard(PremadeMaps.Hourglass01Id, setup);
+            }
+            else
+            {
+                setup.boardSource = Path.GetFullPath(boardPath);
+                LoadBoard(setup.boardSource, setup);
+                // A board file that predates terrain cannot start a current match.
+                if (!MapAuthoringRules.ValidateBoard(setup.board, out string boardError))
+                    throw new FormatException("Board '" + setup.boardSource + "' cannot start a match: " + boardError);
 
-            // The shipped board's cores sit at opposite corners of the grid, so
-            // its symmetry is the half-turn. A board of another shape supplies its own.
-            int cols = setup.board.gridCols, rows = setup.board.gridRows;
-            setup.mirror = (x, z) => (cols - 1 - x, rows - 1 - z);
+                // An explicit board supplies its own symmetry; the half-turn is the old default.
+                int cols = setup.board.gridCols, rows = setup.board.gridRows;
+                setup.mirror = (x, z) => (cols - 1 - x, rows - 1 - z);
+            }
 
             setup.loadoutNodes = ParseLoadout(loadout);
             return setup;
+        }
+
+        /// <summary>
+        /// Takes a shipped map from the catalog: its board, its base draft pools, and the
+        /// symmetry the map declares (hourglass-01 is mirrored top to bottom).
+        /// </summary>
+        public static void LoadShippedBoard(string mapId, RigSetup setup)
+        {
+            if (!PremadeMaps.TryGet(mapId, out BoardConfigData board))
+                throw new ArgumentException("Unknown map '" + mapId + "'.", nameof(mapId));
+            setup.mapId = mapId;
+            setup.board = board;
+            setup.boardSource = "catalog:" + mapId;
+            setup.baseDraft[0] = (DistrictType[])board.baseDraftDistrictsP0.Clone();
+            setup.baseDraft[1] = (DistrictType[])board.baseDraftDistrictsP1.Clone();
+
+            MapSymmetry symmetry = PremadeMaps.SymmetryOf(mapId);
+            int cols = board.gridCols, rows = board.gridRows;
+            setup.mirror = (x, z) =>
+            {
+                PremadeMaps.Mirror(symmetry, cols, rows, x, z, out int mx, out int mz);
+                return (mx, mz);
+            };
         }
 
         public static GameBalanceData LoadBalance(string path, out int hash)
@@ -158,7 +199,7 @@ namespace NodeWar.BalanceRig
         {
             string[] lines = File.ReadAllLines(path);
             var board = new BoardConfigData();
-            var placements = new List<BoardConfigData.InitialNodePlacement>();
+            var placements = new List<BoardConfigData.InitialDistrictPlacement>();
             var draft = new[] { new List<DistrictType>(), new List<DistrictType>() };
 
             object boxed = board;
@@ -167,7 +208,7 @@ namespace NodeWar.BalanceRig
             bool inData = false;
             int list = -1; // -1 none, 0/1 = base draft list for that player
             bool inPlacements = false;
-            BoardConfigData.InitialNodePlacement current = default;
+            BoardConfigData.InitialDistrictPlacement current = default;
             bool haveCurrent = false;
 
             foreach (string raw in lines)
@@ -189,7 +230,8 @@ namespace NodeWar.BalanceRig
                     if (haveCurrent) { placements.Add(current); haveCurrent = false; }
                     inData = line == "data:";
                     inPlacements = false;
-                    list = line.StartsWith("baseDraftNodesP0:") ? 0 : line.StartsWith("baseDraftNodesP1:") ? 1 : -1;
+                    list = line.StartsWith("baseDraftNodesP0:") || line.StartsWith("baseDraftDistrictsP0:") ? 0
+                        : line.StartsWith("baseDraftNodesP1:") || line.StartsWith("baseDraftDistrictsP1:") ? 1 : -1;
                     continue;
                 }
 
@@ -223,6 +265,8 @@ namespace NodeWar.BalanceRig
                 int c = line.IndexOf(':');
                 if (c < 0) continue;
                 string name = line.Substring(0, c).Trim();
+                // The asset is Unity's text and keeps the key it was saved with.
+                if (name == LegacyLinkWeightKey) name = nameof(BoardConfigData.defaultLinkWeight);
                 foreach (var f in fields)
                 {
                     if (f.Name == name && f.FieldType == typeof(int))

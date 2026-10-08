@@ -165,12 +165,15 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void EquipDistrictsComeFromTheSimulationsRule()
+        // Every combat suit has exactly one equip district.
+        public void SuitTree_ListsOnlyBarracksForCombatSuits()
         {
+            foreach (string suit in new[] { "warrior", "guardian", "scout", "berserker", "medic" })
+                Assert.That(SuitTreeModel.EquipDistricts(new GameBalanceData(), "suit." + suit), Is.EqualTo(new[] { DistrictType.Barracks }));
             var balance = new GameBalanceData();
             Assert.That(SuitTreeModel.EquipDistricts(balance, Warrior),
-                Is.EquivalentTo(new[] { DistrictType.Camp, DistrictType.Barracks, DistrictType.Arsenal }));
-            Assert.That(SuitTreeModel.EquipDistricts(balance, "suit.medic"), Is.EqualTo(new[] { DistrictType.Sanctuary }));
+                Is.EquivalentTo(new[] { DistrictType.Barracks }));
+            Assert.That(SuitTreeModel.EquipDistricts(balance, "suit.medic"), Is.EqualTo(new[] { DistrictType.Barracks }));
             Assert.That(SuitTreeModel.EquipDistricts(balance, "suit.berserker"), Is.EqualTo(new[] { DistrictType.Barracks }));
             Assert.That(SuitTreeModel.EquipDistricts(balance, "district.farm"), Is.Empty);
         }

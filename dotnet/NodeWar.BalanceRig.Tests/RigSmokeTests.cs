@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 
 namespace NodeWar.BalanceRig
 {
@@ -12,14 +13,8 @@ namespace NodeWar.BalanceRig
 
         internal static RigSetup Setup()
         {
-            var board = BoardConfigData.Default();
-            board.gridCols = board.gridRows = 3;
+            var board = BoardFixtures.LandGrid3x3();
             board.startingVillagersPerPlayer = 1;
-            board.initialPlacements = new[]
-            {
-                new BoardConfigData.InitialNodePlacement { gridX = 1, gridZ = 0, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                new BoardConfigData.InitialNodePlacement { gridX = 1, gridZ = 2, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
-            };
             return new RigSetup
             {
                 balance = GameBalanceData.Default(), board = board,
@@ -96,11 +91,55 @@ namespace NodeWar.BalanceRig
         public void ShippedBoardAndBalanceLoad()
         {
             RigSetup setup = RigSetupLoader.Load(null, null, "Barracks");
-            Assert.AreEqual(4, setup.board.gridCols);
+            Assert.AreEqual(7, setup.board.gridCols);
             Assert.AreEqual(7, setup.board.gridRows);
             Assert.AreEqual(2, setup.board.initialPlacements.Length);
             Assert.AreEqual(3, setup.baseDraft[0].Length);
-            Assert.AreEqual(1832066265, setup.balanceHash);
+            Assert.AreEqual(PremadeMaps.Hourglass01Id, setup.mapId);
+            Assert.AreEqual(971356564, setup.balanceHash);
+        }
+
+        [Test]
+        public void HourglassPairedRun_UsesLegalDraftAndTimeline()
+        {
+            // A plumbing smoke on the shipped map: no win-rate claim, a small current-bot sample.
+            RigSetup setup = RigSetupLoader.Load(null, null, "Barracks,Forge");
+            var rows = new List<string>();
+            var results = new List<MatchResult>();
+            for (int pass = 0; pass < 2; pass++)
+            {
+                results.Clear();
+                for (int seed = 1; seed <= 3; seed++)
+                {
+                    PreparedMatch first = MatchRunner.Prepare(setup, seed);
+                    foreach (PreparedMatch match in new[] { first, MatchRunner.SwapSeats(first) })
+                    {
+                        // Every pick is legal, in the order it was drafted, on the very map being played.
+                        var occupied = new bool[49];
+                        foreach (var ip in match.setup.board.initialPlacements) occupied[ip.gridZ * 7 + ip.gridX] = true;
+                        foreach (DraftPlacement dp in match.draft)
+                        {
+                            Assert.IsTrue(PlacementLegality.CanPlace(match.setup.board, occupied, dp.districtType, dp.gridX, dp.gridZ),
+                                "seed " + seed + " seat " + match.seat + ": " + dp.districtType + " at " + dp.gridX + "," + dp.gridZ);
+                            occupied[dp.gridZ * 7 + dp.gridX] = true;
+                        }
+
+                        MatchFactory.Configure(match.setup.balance, match.setup.board);
+                        SimulationState built = MatchFactory.Build(match.setup.balance, match.setup.board, match.draft, match.players);
+                        Assert.That(built.nodes.Length, Is.InRange(18, 19), "the hourglass has 18 nodes, 19 with a Pier");
+
+                        MatchResult r = MatchRunner.Run(match, 600, 0, null, new RunHooks { timeline = true });
+                        Assert.IsNotNull(r.timeline);
+                        foreach (OwnerTransition t in r.timeline.Transitions)
+                            Assert.That(t.nodeID, Is.InRange(0, built.nodes.Length - 1), "a timeline ID is a node of the board that was built");
+                        results.Add(r);
+                    }
+                }
+                Assert.AreEqual(6, results.Count, "3 seeds x 2 seats");
+                if (pass == 0) foreach (MatchResult r in results) rows.Add(Report.Row(r));
+                else for (int i = 0; i < results.Count; i++)
+                    Assert.AreEqual(rows[i], Report.Row(results[i]), "row " + i + " is a function of the seed and the setup");
+            }
         }
 
         [Test]

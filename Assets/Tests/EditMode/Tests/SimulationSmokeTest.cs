@@ -20,13 +20,12 @@ namespace NodeWar.Tests
                     nodeID = 0,
                     gridX = 0,
                     gridZ = 0,
-                    edges = new Edge[0],
+                    links = new Link[0],
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
                     claimBar = 0,
                     ownerID = 0,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 }
             };
@@ -63,7 +62,6 @@ namespace NodeWar.Tests
                     isConsumed = false,
                     productionTicksRemaining = 0,
                     productionTicksMax = 0,
-                    hasRampartBonus = false
                 }
             };
 

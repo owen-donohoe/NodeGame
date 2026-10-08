@@ -55,7 +55,7 @@ namespace NodeWar.View
         private readonly System.Func<int> localPlayer;
         private readonly NodeWar.Core.ITickProvider tickProvider;
 
-        private NodeSlotManager[] nodeSlotManagers;
+        private VillagerPositioner[] villagerPositioners;
         private Transform[] villagerTransforms;
 
         private readonly List<ActiveIndicator> active = new List<ActiveIndicator>();
@@ -96,9 +96,9 @@ namespace NodeWar.View
             active.Clear();
         }
 
-        public void SetNodeSlotManagers(NodeSlotManager[] managers)
+        public void SetVillagerPositioners(VillagerPositioner[] managers)
         {
-            nodeSlotManagers = managers;
+            villagerPositioners = managers;
         }
 
         /// <summary>Grows with the villager array, so GameManager hands it over again after a bonus spawn.</summary>
@@ -130,9 +130,9 @@ namespace NodeWar.View
 
             if (indicator.nodeID >= 0)
             {
-                if (nodeSlotManagers == null || indicator.nodeID >= nodeSlotManagers.Length) return false;
+                if (villagerPositioners == null || indicator.nodeID >= villagerPositioners.Length) return false;
 
-                NodeSlotManager node = nodeSlotManagers[indicator.nodeID];
+                VillagerPositioner node = villagerPositioners[indicator.nodeID];
                 if (node == null) return false;
 
                 ground = node.transform.position;

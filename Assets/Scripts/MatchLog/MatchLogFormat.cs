@@ -22,6 +22,11 @@ namespace NodeWar.MatchLog
         internal const ushort ResultTag = 7;
         internal const ushort ErasTag = 8;
         internal const ushort SkinsTag = 9;
+        internal const ushort BoardV2Tag = 10;
+        internal const ushort SetupTag = 11;
+
+        /// <summary>First simulation version whose boards carry terrain and so use BOARD_V2.</summary>
+        private const ushort BoardV2FromSim = 3;
         private const int BytesPerCommand = 24;
 
         public static byte[] Write(MatchLog log)
@@ -50,7 +55,7 @@ namespace NodeWar.MatchLog
 
             payload = new Writer();
             BoardConfigData b = log.board;
-            payload.I32(b.gridCols); payload.I32(b.gridRows); payload.I32(b.defaultEdgeWeight);
+            payload.I32(b.gridCols); payload.I32(b.gridRows); payload.I32(b.defaultLinkWeight);
             payload.I32(b.startingVillagersPerPlayer); payload.I32(b.startingFood);
             payload.I32(b.startingMaterials); payload.I32(b.startingMetal);
             payload.I32(b.ownedMultiplier); payload.I32(b.partiallyOwnedMultiplier);
@@ -58,18 +63,46 @@ namespace NodeWar.MatchLog
             payload.I32(b.enemyOwnedMultiplier);
             payload.I32(b.initialPlacements?.Length ?? 0);
             if (b.initialPlacements != null)
-                foreach (BoardConfigData.InitialNodePlacement p in b.initialPlacements)
+                foreach (BoardConfigData.InitialDistrictPlacement p in b.initialPlacements)
                 {
                     payload.I32(p.gridX); payload.I32(p.gridZ); payload.I32((int)p.districtType);
                     payload.I32(p.ownerID); payload.I32(p.claimBar);
                 }
-            file.Chunk(BoardTag, payload);
+            if (h.sim >= BoardV2FromSim)
+            {
+                // BOARD_V2 appends what a terrain board is: the cell grid, the slot
+                // mask and both base draft pools. Tag 2 keeps its layout for history.
+                long cells = (long)b.gridCols * b.gridRows;
+                if (b.terrain == null || b.terrain.Length != cells ||
+                    b.districtSlots == null || b.districtSlots.Length != cells)
+                    throw new ArgumentException("BOARD_V2 needs terrain and a slot flag for every cell.", nameof(log));
+                payload.I32(b.terrain.Length);
+                foreach (TerrainType t in b.terrain) payload.U8((byte)t);
+                payload.I32(b.districtSlots.Length);
+                foreach (bool slot in b.districtSlots) payload.U8(slot ? (byte)1 : (byte)0);
+                WritePool(payload, b.baseDraftDistrictsP0);
+                WritePool(payload, b.baseDraftDistrictsP1);
+                file.Chunk(BoardV2Tag, payload);
+            }
+            else file.Chunk(BoardTag, payload);
+
+            if (h.sim >= BoardV2FromSim)
+            {
+                // SETUP names the map and rules the board claims to be, for a server to
+                // check against its own catalog. It travels with BOARD_V2, never alone.
+                if (log.setup == null)
+                    throw new ArgumentException("A current log needs its match setup.", nameof(log));
+                payload = new Writer();
+                payload.String(log.setup.MapId); payload.I32(log.setup.BoardHash);
+                payload.U16(log.setup.SimulationVersion); payload.I32(log.setup.BalanceHash);
+                file.Chunk(SetupTag, payload);
+            }
 
             payload = new Writer();
             for (int i = 0; i < 2; i++)
             {
                 payload.Ints(log.loadouts[i].suits);
-                payload.Ints(log.loadouts[i].nodes);
+                payload.Ints(log.loadouts[i].districts);
             }
             file.Chunk(LoadoutsTag, payload);
 
@@ -95,6 +128,8 @@ namespace NodeWar.MatchLog
                     if (tick.commands != null)
                         foreach (GameCommand c in tick.commands)
                         {
+                            // UpgradeFortress=7 uses the existing six-integer payload.
+                            if (!CommandTypes.IsKnown(c.type)) throw new ArgumentException("Unknown command type.");
                             payload.I32((int)c.type); payload.I32(c.playerID); payload.I32(c.villagerID);
                             payload.I32(c.targetNodeID); payload.I32(c.issuedOnTick); payload.I32(c.value);
                         }
@@ -174,15 +209,42 @@ namespace NodeWar.MatchLog
                     uint length = unchecked((uint)file.I32());
                     if (length > (uint)file.Remaining) throw new FormatException("Chunk payload is truncated.");
                     Reader payload = file.Slice((int)length);
-                    if (tag < HeaderTag || tag > SkinsTag) continue;
+                    if (tag < HeaderTag || tag > SetupTag) continue;
                     int bit = 1 << tag;
                     if ((seen & bit) != 0) throw new FormatException("Duplicate known chunk.");
                     seen |= bit;
                     ReadChunk(tag, payload, parsed);
                     if (payload.Remaining != 0) throw new FormatException("Trailing bytes in known chunk.");
                 }
-                const int required = (1 << HeaderTag) | (1 << BoardTag) | (1 << LoadoutsTag) | (1 << TicksTag);
+                const int required = (1 << HeaderTag) | (1 << LoadoutsTag) | (1 << TicksTag);
                 if ((seen & required) != required) throw new FormatException("Missing required chunk.");
+                const int boards = (1 << BoardTag) | (1 << BoardV2Tag);
+                if ((seen & boards) == 0) throw new FormatException("Missing required chunk.");
+                if ((seen & boards) == boards) throw new FormatException("Conflicting BOARD chunks.");
+                // SETUP belongs to a terrain board: required beside BOARD_V2, meaningless beside BOARD.
+                bool hasSetup = (seen & (1 << SetupTag)) != 0;
+                bool v2Board = (seen & (1 << BoardV2Tag)) != 0;
+                if (v2Board && !hasSetup) throw new FormatException("Missing required chunk.");
+                if (!v2Board && hasSetup) throw new FormatException("Conflicting BOARD and SETUP chunks.");
+                if (parsed.header.sim >= 3)
+                {
+                    foreach (var loadout in parsed.loadouts)
+                        foreach (int district in loadout.districts)
+                            if (!DistrictRoster.IsActive((DistrictType)district))
+                                throw new FormatException("Inactive loadout district.");
+                    if (parsed.draft != null)
+                        foreach (var placement in parsed.draft)
+                            if (!PlacementLegality.IsDraftable(placement.districtType))
+                                throw new FormatException("Inactive draft district.");
+                    foreach (var placement in parsed.board.initialPlacements)
+                        if (!DistrictRoster.IsActive(placement.districtType))
+                            throw new FormatException("Inactive board district.");
+                    foreach (var pool in new[] { parsed.board.baseDraftDistrictsP0, parsed.board.baseDraftDistrictsP1 })
+                        if (pool != null)
+                            foreach (var district in pool)
+                                if (!PlacementLegality.IsDraftable(district))
+                                    throw new FormatException("Inactive pool district.");
+                }
                 log = parsed;
                 return true;
             }
@@ -214,22 +276,45 @@ namespace NodeWar.MatchLog
                     if (!ValidKind(log.header.kind)) throw new FormatException("Invalid match kind.");
                     break;
                 case BoardTag:
+                case BoardV2Tag:
                     BoardConfigData b = new BoardConfigData
                     {
-                        gridCols = r.I32(), gridRows = r.I32(), defaultEdgeWeight = r.I32(),
+                        gridCols = r.I32(), gridRows = r.I32(), defaultLinkWeight = r.I32(),
                         startingVillagersPerPlayer = r.I32(), startingFood = r.I32(),
                         startingMaterials = r.I32(), startingMetal = r.I32(),
                         ownedMultiplier = r.I32(), partiallyOwnedMultiplier = r.I32(),
                         unownedMultiplier = r.I32(), enemyPartiallyOwnedMultiplier = r.I32(),
                         enemyOwnedMultiplier = r.I32()
                     };
-                    b.initialPlacements = new BoardConfigData.InitialNodePlacement[r.Count(20)];
+                    b.initialPlacements = new BoardConfigData.InitialDistrictPlacement[r.Count(20)];
                     for (int i = 0; i < b.initialPlacements.Length; i++)
-                        b.initialPlacements[i] = new BoardConfigData.InitialNodePlacement
+                        b.initialPlacements[i] = new BoardConfigData.InitialDistrictPlacement
                         {
                             gridX = r.I32(), gridZ = r.I32(), districtType = (DistrictType)r.I32(),
                             ownerID = r.I32(), claimBar = r.I32()
                         };
+                    if (tag == BoardV2Tag)
+                    {
+                        long cells = (long)b.gridCols * b.gridRows;
+                        b.terrain = new TerrainType[r.Count(1)];
+                        if (b.terrain.Length != cells) throw new FormatException("Terrain does not cover the grid.");
+                        for (int i = 0; i < b.terrain.Length; i++)
+                        {
+                            byte t = r.U8();
+                            if (t > (byte)TerrainType.Ocean) throw new FormatException("Invalid terrain.");
+                            b.terrain[i] = (TerrainType)t;
+                        }
+                        b.districtSlots = new bool[r.Count(1)];
+                        if (b.districtSlots.Length != cells) throw new FormatException("Slots do not cover the grid.");
+                        for (int i = 0; i < b.districtSlots.Length; i++)
+                        {
+                            byte s = r.U8();
+                            if (s > 1) throw new FormatException("Invalid slot flag.");
+                            b.districtSlots[i] = s == 1;
+                        }
+                        b.baseDraftDistrictsP0 = ReadPool(r);
+                        b.baseDraftDistrictsP1 = ReadPool(r);
+                    }
                     log.board = b;
                     break;
                 case LoadoutsTag:
@@ -237,7 +322,7 @@ namespace NodeWar.MatchLog
                     {
                         PlayerLoadout loadout = LoadoutOf(log, i);
                         loadout.suits = r.Ints();
-                        loadout.nodes = r.Ints();
+                        loadout.districts = r.Ints();
                     }
                     break;
                 case DraftTag:
@@ -259,11 +344,15 @@ namespace NodeWar.MatchLog
                         r.CheckCount(count, BytesPerCommand);
                         GameCommand[] commands = new GameCommand[count];
                         for (int j = 0; j < count; j++)
+                        {
                             commands[j] = new GameCommand
                             {
                                 type = (CommandType)r.I32(), playerID = r.I32(), villagerID = r.I32(),
                                 targetNodeID = r.I32(), issuedOnTick = r.I32(), value = r.I32()
                             };
+                            // UpgradeFortress=7 uses the existing six-integer payload.
+                            if (!CommandTypes.IsKnown(commands[j].type)) throw new FormatException("Unknown command type.");
+                        }
                         log.ticks.Add(new LoggedTick { tick = tick, commands = commands });
                     }
                     break;
@@ -280,6 +369,9 @@ namespace NodeWar.MatchLog
                         endTick = r.I32(), finalHash = r.I32(), firstDesyncTick = r.I32()
                     };
                     if (!ValidReason(log.result.reason)) throw new FormatException("Invalid match end reason.");
+                    break;
+                case SetupTag:
+                    log.setup = new MatchSetup(r.String(), r.I32(), r.U16(), r.I32());
                     break;
                 case ErasTag:
                     for (int i = 0; i < 2; i++)
@@ -309,6 +401,20 @@ namespace NodeWar.MatchLog
             if (log.loadouts == null) log.loadouts = new PlayerLoadout[2];
             if (log.loadouts[player] == null) log.loadouts[player] = new PlayerLoadout();
             return log.loadouts[player];
+        }
+
+        private static void WritePool(Writer payload, DistrictType[] pool)
+        {
+            payload.I32(pool?.Length ?? 0);
+            if (pool != null)
+                foreach (DistrictType d in pool) payload.I32((int)d);
+        }
+
+        private static DistrictType[] ReadPool(Reader r)
+        {
+            DistrictType[] pool = new DistrictType[r.Count(4)];
+            for (int i = 0; i < pool.Length; i++) pool[i] = (DistrictType)r.I32();
+            return pool;
         }
 
         private static bool Any(PlayerLoadout[] loadouts, Func<PlayerLoadout, bool> test)

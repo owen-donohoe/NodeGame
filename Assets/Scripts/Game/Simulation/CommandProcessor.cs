@@ -28,6 +28,15 @@ namespace NodeWar.Simulation
                 case CommandType.Respawn:
                     ProcessRespawnCommand(state, command, log);
                     break;
+                case CommandType.Recruit:
+                    ProcessRecruit(state, command);
+                    break;
+                case CommandType.UpgradeFortress:
+                    ProcessUpgradeFortress(state, command);
+                    break;
+                case CommandType.SetAutoRecruit:
+                    ProcessSetAutoRecruit(state, command);
+                    break;
             }
         }
         /// <summary>
@@ -53,6 +62,7 @@ namespace NodeWar.Simulation
         /// </summary>
         private static void ProcessMoveCommand(SimulationState state, GameCommand command)
         {
+            if (command.playerID < 0 || command.playerID >= state.players.Length) return;
             int vid = command.villagerID;
             if (vid < 0 || vid >= state.villagers.Length) return;
 
@@ -64,6 +74,13 @@ namespace NodeWar.Simulation
 
             int destination = command.targetNodeID;
             if (destination < 0 || destination >= state.nodes.Length) return;
+
+            // Orders change intent during combat, never the attack clock or fight state.
+            if (villager.state == VillagerState.Fighting)
+            {
+                state.villagers[vid].targetNodeID = destination == villager.currentNodeID ? -1 : destination;
+                return;
+            }
 
             bool onLeg = villager.state == VillagerState.Moving &&
                          villager.movePath != null &&
@@ -107,7 +124,14 @@ namespace NodeWar.Simulation
             }
 
             int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination);
-            if (path.Length < 2) return;
+            if (path.Length < 2)
+            {
+                // Pay the return crossing before waiting for an unreachable destination.
+                int backTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+                ApplyMove(state, vid, new int[] { otherEnd, anchor },
+                          backTicks - Rescale(covered, legTicks, backTicks), destination);
+                return;
+            }
 
             if (path[1] == otherEnd)
             {
@@ -136,7 +160,17 @@ namespace NodeWar.Simulation
         private static void RepathFromNode(SimulationState state, int villagerIndex,
                                            int ownerID, int fromNode, int destination)
         {
-            if (fromNode == destination) return;
+            state.villagers[villagerIndex].targetNodeID = fromNode == destination ? -1 : destination;
+            state.villagers[villagerIndex].movePath = new int[0];
+            state.villagers[villagerIndex].movePathIndex = 0;
+            state.villagers[villagerIndex].moveProgress = 0;
+            state.villagers[villagerIndex].combatTargetID = -1;
+            state.villagers[villagerIndex].state = VillagerState.Idle;
+            if (fromNode == destination)
+            {
+                GameSimulation.ApplyArrivalState(state, villagerIndex);
+                return;
+            }
 
             int[] path = Pathfinding.FindPath(state, ownerID, fromNode, destination);
             if (path.Length < 2) return;
@@ -161,7 +195,7 @@ namespace NodeWar.Simulation
         /// </summary>
         private static int GetLegTicks(SimulationState state, int fromNode, int toNode, int moveSpeedTicks)
         {
-            int ticks = GameSimulation.GetEdgeWeight(state, fromNode, toNode) * moveSpeedTicks;
+            int ticks = GameSimulation.GetLinkWeight(state, fromNode, toNode) * moveSpeedTicks;
             return ticks < 1 ? 1 : ticks;
         }
 
@@ -182,6 +216,43 @@ namespace NodeWar.Simulation
             if (scaled < 0) scaled = 0;
             if (scaled > toTicks) scaled = toTicks;
             return scaled;
+        }
+
+        private static void ProcessUpgradeFortress(SimulationState state, GameCommand command)
+        {
+            if (!NodeActionRules.CanUpgradeFortress(state, bal, command.playerID, command.targetNodeID,
+                command.value, command.villagerID)) return;
+            NodeData node = state.nodes[command.targetNodeID];
+            DistrictStats stats = bal.GetDistrictStats(DistrictType.Fortress, node.districtEra);
+            int next = node.fortressLevel + 1;
+            if (command.value == 0) state.players[command.playerID].materials -= stats.fortressMaterialsCosts[next];
+            else state.players[command.playerID].metal -= stats.fortressMetalCosts[next];
+            state.nodes[command.targetNodeID].fortressLevel = next;
+        }
+
+        private static void ProcessRecruit(SimulationState state, GameCommand command)
+        {
+            if (command.villagerID != -1 || command.value != 0) return;
+            TryRecruit(state, command.playerID, command.targetNodeID);
+        }
+
+        private static void ProcessSetAutoRecruit(SimulationState state, GameCommand command)
+        {
+            if (command.villagerID != -1 ||
+                !NodeActionRules.CanSetAutoRecruit(state, command.playerID, command.targetNodeID, command.value)) return;
+            state.nodes[command.targetNodeID].autoRecruit = command.value == 1;
+        }
+
+        internal static bool TryRecruit(SimulationState state, int playerID, int nodeID)
+        {
+            if (!NodeActionRules.CanRecruit(state, bal, playerID, nodeID, out _)) return false;
+            if (!bal.TryRecruitCostAndCooldown(state.players[playerID].recruitCount, state.tickCount,
+                out int cost, out int readyTick)) return false;
+            state.players[playerID].food -= cost;
+            GameSimulation.SpawnBonusVillagers(state, nodeID, playerID, 1);
+            state.players[playerID].recruitCount++;
+            state.nodes[nodeID].recruitReadyTick = readyTick;
+            return true;
         }
 
         private static void ProcessSetAllocation(SimulationState state, GameCommand command)
@@ -225,9 +296,9 @@ namespace NodeWar.Simulation
             state.villagers[vid].attackCooldownMax = stats.attackCooldownMax;
             state.villagers[vid].attackCooldownRemaining = stats.attackCooldownMax;
             state.villagers[vid].fightPriority = stats.fightPriority;
-            // Apply HP (baseHP + bonusHP, accounting for Rampart if present)
+            // Apply civilian HP plus the equipped suit bonus.
             int newMaxHP = bal.baseHP + stats.bonusHP;
-            newMaxHP += bal.RampartBonusHP(villager);
+
             state.villagers[vid].maxHP = newMaxHP;
             state.villagers[vid].hp = newMaxHP;
         }
@@ -235,7 +306,7 @@ namespace NodeWar.Simulation
         {
             int paidRespawns = (int)System.Math.Min(int.MaxValue,
                 (long)state.players[playerID].paidRespawns + additionalPaidRespawns);
-            int reductionPercent = SanctuaryCostReductionPercent(state, playerID);
+            int reductionPercent = InfirmaryCostReductionPercent(state, playerID);
             return bal.PaidRespawnCost(paidRespawns, reductionPercent);
         }
 
@@ -268,22 +339,15 @@ namespace NodeWar.Simulation
         }
 
         /// <summary>
-        /// Each working Sanctuary worker takes its Sanctuary era's percentage off
+        /// Each working Infirmary worker takes its Infirmary era's percentage off
         /// the respawn cost; the percentages add.
         /// </summary>
-        private static int SanctuaryCostReductionPercent(SimulationState state, int playerID)
+        private static int InfirmaryCostReductionPercent(SimulationState state, int playerID)
         {
             int percent = 0;
-            for (int i = 0; i < state.villagers.Length; i++)
-            {
-                VillagerData v = state.villagers[i];
-                if (v.ownerID != playerID) continue;
-                if (v.state != VillagerState.Working) continue;
-                if (v.isConsumed) continue;
-                if (state.nodes[v.currentNodeID].districtType != DistrictType.Sanctuary) continue;
-                if (state.nodes[v.currentNodeID].ownerID != playerID) continue;
-                percent += bal.GetDistrictStats(DistrictType.Sanctuary, state.nodes[v.currentNodeID].districtEra).respawnCostReductionPercent;
-            }
+            for (int node = 0; node < state.nodes.Length; node++)
+                percent += GameSimulation.CountInfirmaryWorkers(state, node, playerID) *
+                    bal.GetDistrictStats(DistrictType.Infirmary, state.nodes[node].districtEra).respawnCostReductionPercent;
             return percent;
         }
     }

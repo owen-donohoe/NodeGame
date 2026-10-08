@@ -15,10 +15,10 @@ namespace NodeWar.Tests
         {
             "SimulationState.nodes", "SimulationState.villagers", "SimulationState.players",
             "SimulationState.tickCount", "SimulationState.gameOver", "SimulationState.winnerID",
-            "SimulationState.defaultEdgeWeight",
+            "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
-            "NodeData.materialAllocation", "NodeData.slotType", "NodeData.baseDistrictType",
-            "NodeData.districtEra",
+            "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
+            "NodeData.fortressLevel", "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
             "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",
@@ -27,22 +27,18 @@ namespace NodeWar.Tests
             "VillagerData.attackCooldownRemaining", "VillagerData.attackCooldownMax",
             "VillagerData.combatTargetID", "VillagerData.fightPriority", "VillagerData.isConsumed",
             "VillagerData.productionTicksRemaining", "VillagerData.productionTicksMax",
-            "VillagerData.hasRampartBonus", "VillagerData.rampartBonusEra",
             "PlayerData.playerID", "PlayerData.coreNodeID", "PlayerData.food", "PlayerData.materials",
             "PlayerData.metal", "PlayerData.breachCount", "PlayerData.paidRespawns", "PlayerData.breachBar", "PlayerData.nextBreacherID", "PlayerData.draftedSuits",
-            "PlayerData.draftedNodes", "PlayerData.suitEras", "PlayerData.districtEras"
+            "PlayerData.draftedDistricts", "PlayerData.suitEras", "PlayerData.districtEras", "PlayerData.recruitCount"
         };
 
         private static readonly string[] Excluded =
         {
             // ComputeHash explicitly excludes grid position as view-only data.
             "NodeData.gridX", "NodeData.gridZ",
-            // CopyFrom shares edges because board topology is fixed and no tick
+            // CopyFrom shares links because board topology is fixed and no tick
             // writes it. The edge fields have the same construction-only lifetime.
-            "NodeData.edges", "Edge.toNode", "Edge.travelWeight",
-            // SpawnBonusVillagers reads this board-construction setting on claim;
-            // no tick changes it. docs/simulation-rules.md explicitly excludes it.
-            "NodeData.bonusVillagersOnClaim"
+            "NodeData.links", "Link.toNodeID", "Link.travelWeight"
         };
 
         [Test]
@@ -67,6 +63,20 @@ namespace NodeWar.Tests
         public void ExcludedField_MutationLeavesHashUnchanged(string name, FieldInfo[] path)
         {
             AssertMutation(name, path, shouldChange: false);
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        public void TownPaidMask_EachBitHashesAndCopiesIndependently(int bit)
+        {
+            var source = TestBoardFactory.BuildThreeNodeBoard(GameBalanceData.Default());
+            int baseline = SimulationStateHasher.ComputeHash(source);
+            source.nodes[0].townPaidMask = bit;
+            Assert.AreNotEqual(baseline, SimulationStateHasher.ComputeHash(source));
+            var copy = new SimulationState(); copy.CopyFrom(source);
+            Assert.AreEqual(bit, copy.nodes[0].townPaidMask);
+            copy.nodes[0].townPaidMask = 3;
+            Assert.AreEqual(bit, source.nodes[0].townPaidMask);
         }
 
         private static IEnumerable<TestCaseData> HashedCases() => Cases(Hashed);
@@ -138,7 +148,7 @@ namespace NodeWar.Tests
         }
 
         // Box structs, mutate one field, then write the box back into its cloned
-        // collection. In particular, clone shared node edges before touching them.
+        // collection. In particular, clone shared node links before touching them.
         private static void ChangeField(object owner, FieldInfo[] path, int depth)
         {
             FieldInfo field = path[depth];

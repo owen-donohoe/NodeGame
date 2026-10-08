@@ -72,7 +72,7 @@ namespace NodeWar.Tests
         {
             GameBalanceData b = GameBalanceData.Default();
             foreach (DistrictType type in new[] { DistrictType.Farm, DistrictType.Market, DistrictType.Rampart,
-                         DistrictType.Watchtower, DistrictType.Sanctuary, DistrictType.Shrine, DistrictType.Village })
+                         DistrictType.Watchtower, DistrictType.Infirmary, DistrictType.Barracks, DistrictType.Village })
             {
                 DistrictStats era0 = b.GetDistrictStats(type, 0);
                 for (int era = 1; era < GameBalanceData.EraCount; era++)
@@ -120,9 +120,9 @@ namespace NodeWar.Tests
             Assert.AreNotEqual(before, withNode);
             state.nodes[1].districtEra = 0;
 
-            state.villagers[0].rampartBonusEra = 1;
+            state.nodes[1].fortressLevel = 1;
             Assert.AreNotEqual(before, SimulationStateHasher.ComputeHash(state));
-            state.villagers[0].rampartBonusEra = 0;
+            state.nodes[1].fortressLevel = 0;
 
             state.players[0].suitEras[3] = 1;
             int suitHash = SimulationStateHasher.ComputeHash(state);
@@ -170,48 +170,44 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void RampartEra1_GivesAndTakesBackItsOwnBonus()
+        public void LegacyRampartEra1_NoLongerChangesOccupantHP()
         {
             GameBalanceData balance = UseBalance(WithEra1(d => { d.maxHPBonus = 4; return d; }, DistrictType.Rampart));
             SimulationState state = BoardWithWorkerOn(balance, DistrictType.Rampart, 1);
             int baseMax = state.villagers[0].maxHP;
 
             Tick(state, 1);
-            Assert.AreEqual(baseMax + 4, state.villagers[0].maxHP);
-            Assert.AreEqual(1, state.villagers[0].rampartBonusEra);
+            Assert.AreEqual(baseMax, state.villagers[0].maxHP);
 
-            // Era 1's numbers change under it: leaving must still take back
-            // what arriving gave, read from the era the bonus came from.
+            // Leaving the retired district also preserves ordinary HP.
             state.nodes[WorkNode].districtType = DistrictType.None;
             Tick(state, 1);
             Assert.AreEqual(baseMax, state.villagers[0].maxHP);
-            Assert.IsFalse(state.villagers[0].hasRampartBonus);
-            Assert.AreEqual(0, state.villagers[0].rampartBonusEra);
         }
 
         [Test]
-        public void DraftedDistrict_TakesItsPlacersEra_AndVillageBonusFollows()
+        public void DraftedDistrict_TakesItsPlacersEra_AndTownMaskStartsUnpaid()
         {
             GameBalanceData balance = WithEra1(d => { d.bonusVillagersOnClaim = 5; return d; }, DistrictType.Village);
             var eras = new int[14];
             eras[(int)DistrictType.Village] = 1;
             PlayerSetup[] players =
             {
-                new PlayerSetup { suits = new int[0], nodes = new int[0], districtEras = eras },
-                new PlayerSetup { suits = new int[0], nodes = new int[0] }
+                new PlayerSetup { suits = new int[0], districts = new int[0], districtEras = eras },
+                new PlayerSetup { suits = new int[0], districts = new int[0] }
             };
             DraftPlacement[] draft =
             {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Village, gridX = 0, gridZ = 3 },
-                new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 3, gridZ = 3 }
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Village, gridX = 0, gridZ = 1 },
+                new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
             };
 
-            SimulationState state = MatchFactory.Build(balance, BoardConfigData.Default(), draft, players);
+            SimulationState state = MatchFactory.Build(balance, BoardFixtures.LandGrid3x3(), draft, players);
 
-            Assert.AreEqual(1, state.nodes[12].districtEra);
-            Assert.AreEqual(5, state.nodes[12].bonusVillagersOnClaim);
-            Assert.AreEqual(0, state.nodes[15].districtEra);
-            Assert.AreEqual(2, state.nodes[15].bonusVillagersOnClaim);
+            Assert.AreEqual(1, state.nodes[3].districtEra);
+            Assert.AreEqual(0, state.nodes[3].townPaidMask);
+            Assert.AreEqual(0, state.nodes[5].districtEra);
+            Assert.AreEqual(0, state.nodes[5].townPaidMask);
             Assert.AreEqual(eras, state.players[0].districtEras);
         }
 

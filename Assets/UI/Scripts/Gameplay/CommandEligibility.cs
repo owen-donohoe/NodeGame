@@ -134,14 +134,14 @@ namespace NodeWar.UI
         /// <summary>
         /// What a respawn costs this player right now. The same integer
         /// arithmetic as ProcessRespawnCommand: base times (paidRespawns + 1),
-        /// then each Sanctuary worker takes its
-        /// Sanctuary era's percentage off, where the worker is the player's,
-        /// working, not consumed, and standing on a Sanctuary the player owns -
+        /// then each Infirmary worker takes its
+        /// Infirmary era's percentage off, where the worker is the player's,
+        /// working, not consumed, and standing on a Infirmary the player owns -
         /// floor 1.
         /// </summary>
         public static int RespawnCost(SimulationState state, GameBalanceData balance, int playerID)
         {
-            int reductionPercent = SanctuaryReductionPercent(state, balance, playerID);
+            int reductionPercent = InfirmaryReductionPercent(state, balance, playerID);
             return balance.PaidRespawnCost(state.players[playerID].paidRespawns, reductionPercent);
         }
 
@@ -184,26 +184,13 @@ namespace NodeWar.UI
             return best;
         }
 
-        private static int SanctuaryReductionPercent(SimulationState state, GameBalanceData balance, int playerID)
+        private static int InfirmaryReductionPercent(SimulationState state, GameBalanceData balance, int playerID)
         {
             int percent = 0;
 
-            for (int i = 0; i < state.villagers.Length; i++)
-            {
-                VillagerData v = state.villagers[i];
-                if (v.ownerID != playerID) continue;
-                if (v.state != VillagerState.Working) continue;
-                if (v.isConsumed) continue;
-
-                int node = v.currentNodeID;
-                if (node < 0 || node >= state.nodes.Length) continue;
-                if (state.nodes[node].districtType != DistrictType.Sanctuary) continue;
-                if (state.nodes[node].ownerID != playerID) continue;
-
-                percent += balance.GetDistrictStats(DistrictType.Sanctuary, state.nodes[node].districtEra)
-                    .respawnCostReductionPercent;
-            }
-
+            for (int node = 0; node < state.nodes.Length; node++)
+                percent += GameSimulation.CountInfirmaryWorkers(state, node, playerID) *
+                    balance.GetDistrictStats(DistrictType.Infirmary, state.nodes[node].districtEra).respawnCostReductionPercent;
             return percent;
         }
 

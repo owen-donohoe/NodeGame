@@ -57,8 +57,8 @@ namespace NodeWar.Cloud.Tests
             header = new MatchLogHeader { matchId = "m", playerIds = new[] { "p0", "p1" }, protocol = 1, sim = 1, content = 1 },
             loadouts = new[]
             {
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = Array.Empty<int>() },
-                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, nodes = Array.Empty<int>() }
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = Array.Empty<int>() },
+                new PlayerLoadout { suits = new[] { (int)SuitType.Warrior }, districts = Array.Empty<int>() }
             },
             draft = new[] { new DraftPlacement { playerID = 0, districtType = DistrictType.Farm } }
         };

@@ -20,10 +20,11 @@ namespace NodeWar.UI
         private int nodeID;
         private int controlledPID;
         private bool isOwned;
-        private SuitType districtSuit = SuitType.None;
+        private static readonly SuitType[] CombatSuits = { SuitType.Warrior, SuitType.Guardian, SuitType.Scout, SuitType.Berserker, SuitType.Medic };
 
         private List<EquipEntryDisplay> activeEntries = new List<EquipEntryDisplay>();
         private List<int> trackedVillagerIDs = new List<int>();
+        private List<SuitType> trackedSuits = new List<SuitType>();
 
         public void Initialize(SimulationState state, InputBuffer buffer, GameBalanceData balanceData,
             int node, int pid, bool owned)
@@ -35,7 +36,6 @@ namespace NodeWar.UI
             controlledPID = pid;
             isOwned = owned;
 
-            districtSuit = ResolveDistrictSuit(state.nodes[node].districtType);
 
             if (!owned)
             {
@@ -51,6 +51,8 @@ namespace NodeWar.UI
         private void Update()
         {
             if (simState == null || !isOwned) return;
+            if (simState.nodes[nodeID].districtType != DistrictType.Barracks || simState.nodes[nodeID].ownerID != controlledPID)
+            { SyncEntries(new List<int>()); return; }
 
             List<int> idleIDs = new List<int>();
             for (int i = 0; i < simState.villagers.Length; i++)
@@ -77,32 +79,6 @@ namespace NodeWar.UI
             }
         }
 
-        /// <summary>
-        /// The suit this district actually equips.
-        ///
-        /// One prefab serves Camp, Barracks, Arsenal and Sanctuary, and those
-        /// accept different suits -- Sanctuary takes only Medic. Picking the
-        /// first suit CanEquipSuitAtNode allows keeps the panel honest without
-        /// duplicating the eligibility table here.
-        ///
-        /// A single suit per district is a placeholder for the suit picker the
-        /// entry still lacks; Barracks accepts four and this offers the first.
-        /// </summary>
-        private SuitType ResolveDistrictSuit(DistrictType district)
-        {
-            // GameBalanceData is a struct, so there is no null to guard against.
-            // CanEquipSuitAtNode switches on the district and answers correctly
-            // even for a default-constructed value.
-            foreach (SuitType candidate in System.Enum.GetValues(typeof(SuitType)))
-            {
-                if (candidate == SuitType.None) continue;
-                if (!GameBalanceData.IsCombatSuit(candidate)) continue;
-                if (balance.CanEquipSuitAtNode(candidate, district)) return candidate;
-            }
-
-            return SuitType.None;
-        }
-
         private void SyncEntries(List<int> idleIDs)
         {
             // Remove stale entries
@@ -114,40 +90,48 @@ namespace NodeWar.UI
                         Destroy(activeEntries[i].gameObject);
                     activeEntries.RemoveAt(i);
                     trackedVillagerIDs.RemoveAt(i);
+                    trackedSuits.RemoveAt(i);
                 }
             }
 
             // Add new entries
             for (int i = 0; i < idleIDs.Count; i++)
             {
-                if (trackedVillagerIDs.Contains(idleIDs[i])) continue;
-
-                GameObject entryGO = Instantiate(equipEntryPrefab, equipListContent);
-                EquipEntryDisplay entry = entryGO.GetComponent<EquipEntryDisplay>();
-
-                if (entry == null)
+                for (int suitIndex = 0; suitIndex < CombatSuits.Length; suitIndex++)
                 {
-                    Debug.LogError("[Barracks] EquipEntry prefab missing EquipEntryDisplay component!");
-                    Destroy(entryGO);
-                    // Still track it so we don't retry every frame
-                    trackedVillagerIDs.Add(idleIDs[i]);
-                    activeEntries.Add(null);
-                    continue;
-                }
+                    SuitType districtSuit = CombatSuits[suitIndex];
+                    bool exists = false;
+                    for (int entryIndex = 0; entryIndex < trackedVillagerIDs.Count; entryIndex++)
+                        if (trackedVillagerIDs[entryIndex] == idleIDs[i] && trackedSuits[entryIndex] == districtSuit) exists = true;
+                    if (exists) continue;
 
-                if (!entry.Initialize(simState, inputBuffer, idleIDs[i], controlledPID,
-                                      districtSuit, balance.GetSuitStats(districtSuit,
-                                          simState.players[controlledPID].SuitEra(districtSuit))))
-                {
-                    Debug.LogError("[Barracks] EquipEntry Initialize failed for villager " + idleIDs[i]);
-                    Destroy(entryGO);
-                    trackedVillagerIDs.Add(idleIDs[i]);
-                    activeEntries.Add(null);
-                    continue;
-                }
+                    GameObject entryGO = Instantiate(equipEntryPrefab, equipListContent);
+                    EquipEntryDisplay entry = entryGO.GetComponent<EquipEntryDisplay>();
 
-                activeEntries.Add(entry);
-                trackedVillagerIDs.Add(idleIDs[i]);
+                    if (entry == null)
+                    {
+                        Debug.LogError("[Barracks] EquipEntry prefab missing EquipEntryDisplay component!");
+                        Destroy(entryGO);
+                        // Still track it so we don't retry every frame
+                        trackedVillagerIDs.Add(idleIDs[i]); trackedSuits.Add(districtSuit);
+                        activeEntries.Add(null);
+                        continue;
+                    }
+
+                    if (!entry.Initialize(simState, inputBuffer, idleIDs[i], controlledPID,
+                                          districtSuit, balance.GetSuitStats(districtSuit,
+                                              simState.players[controlledPID].SuitEra(districtSuit))))
+                    {
+                        Debug.LogError("[Barracks] EquipEntry Initialize failed for villager " + idleIDs[i]);
+                        Destroy(entryGO);
+                        trackedVillagerIDs.Add(idleIDs[i]); trackedSuits.Add(districtSuit);
+                        activeEntries.Add(null);
+                        continue;
+                    }
+
+                    activeEntries.Add(entry);
+                    trackedVillagerIDs.Add(idleIDs[i]); trackedSuits.Add(districtSuit);
+                }
             }
         }
     }

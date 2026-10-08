@@ -6,7 +6,7 @@ namespace NodeWar.Lobby
     ///
     /// Array-backed rather than five flat fields, so the slot counts are data.
     /// How many of each a player gets is an open balance question, and moving
-    /// it should be an edit to <see cref="SuitSlots"/> / <see cref="NodeSlots"/>
+    /// it should be an edit to <see cref="SuitSlots"/> / <see cref="DistrictSlots"/>
     /// rather than an edit to six call sites and a wire format.
     ///
     /// This struct crosses the wire (DraftSerializer) and persists to disk
@@ -24,16 +24,16 @@ namespace NodeWar.Lobby
         public const int SuitSlots = 3;
 
         /// <summary>Districts a player brings into the draft pool.</summary>
-        public const int NodeSlots = 2;
+        public const int DistrictSlots = 2;
 
         public string[] suitIDs;
-        public string[] nodeIDs;
+        public string[] districtIDs;
 
         /// <summary>Length of <see cref="suitEras"/>: one entry per SuitType value.</summary>
         public const int SuitEraSlots = (int)NodeWar.Simulation.SuitType.Watcher + 1;
 
         /// <summary>Length of <see cref="districtEras"/>: one entry per DistrictType value.</summary>
-        public const int DistrictEraSlots = (int)NodeWar.Simulation.DistrictType.Market + 1;
+        public const int DistrictEraSlots = (int)NodeWar.Simulation.DistrictType.Fortress + 1;
 
         /// <summary>
         /// The era of every suit and district this player fields, indexed by
@@ -75,7 +75,7 @@ namespace NodeWar.Lobby
             return new LoadoutData
             {
                 suitIDs = NormalizeSlots(source.suitIDs, SuitSlots),
-                nodeIDs = NormalizeSlots(source.nodeIDs, NodeSlots),
+                districtIDs = NormalizeSlots(source.districtIDs, DistrictSlots),
                 suitEras = NormalizeEras(source.suitEras, SuitEraSlots),
                 districtEras = NormalizeEras(source.districtEras, DistrictEraSlots),
                 skinIDs = NormalizeSkins(source.skinIDs)
@@ -119,7 +119,7 @@ namespace NodeWar.Lobby
         }
     }
 
-    public enum NodeCategory
+    public enum DistrictCategory
     {
         Generic,    // Available in base draft pool for all players
         Selectable  // Only available when selected in player loadout

@@ -1,14 +1,25 @@
 namespace NodeWar.Simulation
 {
+    /// <summary>
+    /// Everything about a board that does not change during a match: its grid,
+    /// what each cell is made of, which cells may take a district, the fixed
+    /// placements, each player's base draft pool, and the starting and path-cost
+    /// numbers. Plain data with no Unity reference; <see cref="MatchFactory"/>
+    /// turns it into a tick-0 <see cref="SimulationState"/>.
+    ///
+    /// <see cref="terrain"/> and <see cref="districtSlots"/> hold exactly
+    /// gridCols * gridRows entries, row-major (cell = z * gridCols + x). A board
+    /// without them is history data only: a new match refuses it.
+    /// </summary>
     [System.Serializable]
     public struct BoardConfigData
     {
-        public const int DefaultEdgeWeight = 4;
+        public const int DefaultLinkWeight = 4;
 
         public int gridCols;
         public int gridRows;
 
-        public int defaultEdgeWeight;
+        public int defaultLinkWeight;
 
         public int startingVillagersPerPlayer;
         public int startingFood;
@@ -21,40 +32,30 @@ namespace NodeWar.Simulation
         public int enemyPartiallyOwnedMultiplier;
         public int enemyOwnedMultiplier;
 
-        public InitialNodePlacement[] initialPlacements;
+        public InitialDistrictPlacement[] initialPlacements;
+
+        /// <summary>What each cell is: Land, Lake or Ocean. Row-major.</summary>
+        public TerrainType[] terrain;
+
+        /// <summary>
+        /// Which cells may take a drafted district: a Land slot takes any
+        /// ordinary district, a Lake slot takes only a Pier. Row-major. Open
+        /// lake and ocean are never slots, and a Core's cell is not one.
+        /// </summary>
+        public bool[] districtSlots;
+
+        /// <summary>The districts each player drafts on this map before their loadout.</summary>
+        public DistrictType[] baseDraftDistrictsP0;
+        public DistrictType[] baseDraftDistrictsP1;
 
         [System.Serializable]
-        public struct InitialNodePlacement
+        public struct InitialDistrictPlacement
         {
             public int gridX;
             public int gridZ;
             public DistrictType districtType;
             public int ownerID; // -1 = unowned, 0 = P0, 1 = P1
             public int claimBar; // Use +/-10000 for fully owned.
-        }
-
-        public static BoardConfigData Default()
-        {
-            return new BoardConfigData
-            {
-                gridCols = 4,
-                gridRows = 7,
-                defaultEdgeWeight = DefaultEdgeWeight,
-                startingVillagersPerPlayer = 3,
-                startingFood = 0,
-                startingMaterials = 0,
-                startingMetal = 0,
-                ownedMultiplier = 50,
-                partiallyOwnedMultiplier = 75,
-                unownedMultiplier = 100,
-                enemyPartiallyOwnedMultiplier = 150,
-                enemyOwnedMultiplier = 200,
-                initialPlacements = new InitialNodePlacement[]
-                {
-                    new InitialNodePlacement { gridX = 1, gridZ = 6, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                    new InitialNodePlacement { gridX = 2, gridZ = 0, districtType = DistrictType.Core, ownerID = 1, claimBar = -10000 }
-                }
-            };
         }
     }
 }

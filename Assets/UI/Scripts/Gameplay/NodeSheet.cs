@@ -50,6 +50,7 @@ namespace NodeWar.UI
         private readonly ScrollView body;
         private readonly SafeAreaBinder bottomInset;
 
+        private readonly NodeActionContent nodeActions = new NodeActionContent();
         private readonly ForgeContent forge = new ForgeContent();
         private readonly CoreContent core = new CoreContent();
         private readonly EquipContent equip = new EquipContent();
@@ -335,6 +336,12 @@ namespace NodeWar.UI
         {
             switch (district)
             {
+                case DistrictType.Village:
+                case DistrictType.Town:
+                case DistrictType.Infirmary:
+                case DistrictType.Fortress:
+                    return nodeActions;
+
                 case DistrictType.Forge:
                     return forge;
 
@@ -388,13 +395,14 @@ namespace NodeWar.UI
 
         private void RefreshDistrict(NodeData node)
         {
-            string name = node.districtType.ToString();
+            var identity = NodeWar.View.DistrictFallback.Describe(node.districtType);
+            string name = identity.Name ?? node.districtType.ToString();
 
             if (districtLabel != null) districtLabel.text = name;
 
             // A monogram tile, tinted from the district's ID the same way the
             // lobby tints its cards, so a district looks alike in both scenes.
-            string tint = ItemTint.ClassFor("node_" + name.ToLowerInvariant());
+            string tint = ItemTint.ClassFor(NodeWar.Lobby.LoadoutTypes.LobbyIdForDistrict(node.districtType));
             if (thumb != null && tint != thumbTint)
             {
                 if (thumbTint != null) thumb.RemoveFromClassList(thumbTint);
@@ -402,7 +410,7 @@ namespace NodeWar.UI
                 thumbTint = tint;
             }
 
-            if (thumbLetter != null) thumbLetter.text = name.Substring(0, 1);
+            if (thumbLetter != null) thumbLetter.text = identity.Monogram ?? "?";
             var theme = UIArt.Theme;
             var visual = theme != null && theme.districtVisuals != null
                 ? theme.districtVisuals.For(node.districtType) : null;

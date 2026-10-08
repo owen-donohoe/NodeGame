@@ -50,14 +50,17 @@ namespace NodeWar.Simulation
                 if (current == endNode) return ReconstructPath(cameFrom, startNode, endNode);
 
                 visited[current] = true;
+                // An enemy Core may start/end a route, but cannot be a transit node.
+                if (current != startNode && current == state.players[1 - askingOwnerId].coreNodeID)
+                    continue;
 
-                Edge[] edges = state.nodes[current].edges;
-                for (int i = 0; i < edges.Length; i++)
+                Link[] links = state.nodes[current].links;
+                for (int i = 0; i < links.Length; i++)
                 {
-                    int neighbor = edges[i].toNode;
+                    int neighbor = links[i].toNodeID;
                     if (visited[neighbor]) continue;
 
-                    int travelWeight = edges[i].travelWeight;
+                    int travelWeight = links[i].travelWeight;
                     int multiplier = GetPreferenceMultiplier(state, neighbor, askingOwnerId);
 
                     // Integer percentage: (weight * multiplier) / 100, minimum 1

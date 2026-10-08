@@ -7,16 +7,16 @@ namespace NodeWar.UI
     /// What a draft card says about a district: its name, its monogram, and the
     /// tint that stands in for the icon it has not got.
     ///
-    /// WHY THE NAME IS NOT A SWITCH STATEMENT HERE. DraftSlotUI hard-codes the
+    /// WHY THE NAME IS NOT A SWITCH STATEMENT HERE. DraftPickUI hard-codes the
     /// twelve names, and the brief calls that out: Camp.asset once carried the
     /// display name "Watchtower", so the lobby and the draft disagreed about
-    /// what the player had picked. The NodeDefinition assets are the lobby's
+    /// what the player had picked. The DistrictDefinition assets are the lobby's
     /// source for a district's name, so they are this surface's source too, and
     /// a district whose name is wrong is now wrong in exactly one place.
     ///
     /// The enum name is the fallback, not the answer. Four districts - Farm,
     /// Mine, Village, Forge - are base draft nodes that no loadout slot can
-    /// hold, so no NodeDefinition asset exists for them. Their enum name reads
+    /// hold, so no DistrictDefinition asset exists for them. Their enum name reads
     /// correctly ("Farm"), and inventing four more assets to hold four strings
     /// that already exist would be the worse trade.
     ///
@@ -27,37 +27,39 @@ namespace NodeWar.UI
     public static class DraftPieceInfo
     {
         /// <summary>
-        /// The ID convention DraftManager.MapNodeIDToDistrict reads in the
-        /// other direction: "node_" plus the lowercased district name.
+        /// The lobby ID DraftManager.MapDistrictID reads in the other
+        /// direction ("node_rampart"), from the explicit table rather than the
+        /// enum member name.
         /// </summary>
-        public static string NodeID(DistrictType type)
+        public static string DistrictID(DistrictType type)
         {
-            return "node_" + type.ToString().ToLowerInvariant();
+            return NodeWar.Lobby.LoadoutTypes.LobbyIdForDistrict(type);
         }
 
         /// <summary>
-        /// The district's display name. Prefers the NodeDefinition the lobby
+        /// The district's display name. Prefers the DistrictDefinition the lobby
         /// shows; falls back to the enum name when no asset defines it.
         /// A definition with a blank displayName is treated as no definition -
         /// an empty card is worse than one named from the enum.
         /// </summary>
-        public static string DisplayName(DistrictType type, NodeDefinition[] definitions)
+        public static string DisplayName(DistrictType type, DistrictDefinition[] definitions)
         {
-            string id = NodeID(type);
+            if (type == DistrictType.Village) return NodeWar.View.DistrictFallback.Describe(type).Name;
+            string id = DistrictID(type);
 
             if (definitions != null)
             {
                 for (int i = 0; i < definitions.Length; i++)
                 {
                     if (definitions[i] == null) continue;
-                    if (definitions[i].nodeID != id) continue;
+                    if (definitions[i].districtID != id) continue;
                     if (string.IsNullOrEmpty(definitions[i].displayName)) break;
 
                     return definitions[i].displayName;
                 }
             }
 
-            return type.ToString();
+            return NodeWar.View.DistrictFallback.Describe(type).Name ?? "Unknown district";
         }
 
         /// <summary>
@@ -67,6 +69,12 @@ namespace NodeWar.UI
         /// </summary>
         public static string Monogram(string displayName)
         {
+            foreach (DistrictType type in System.Enum.GetValues(typeof(DistrictType)))
+            {
+                if (!DistrictRoster.IsActive(type)) continue;
+                var descriptor = NodeWar.View.DistrictFallback.Describe(type);
+                if (descriptor.Name == displayName) return descriptor.Monogram;
+            }
             if (string.IsNullOrEmpty(displayName)) return "?";
             return displayName.Substring(0, 1).ToUpperInvariant();
         }
@@ -76,7 +84,7 @@ namespace NodeWar.UI
         /// </summary>
         public static string TintClass(DistrictType type)
         {
-            return "ui-tile-tint--" + ItemTint.IndexFor(NodeID(type));
+            return "ui-tile-tint--" + ItemTint.IndexFor(DistrictID(type));
         }
     }
 }

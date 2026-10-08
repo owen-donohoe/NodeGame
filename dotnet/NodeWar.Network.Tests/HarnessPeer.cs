@@ -23,6 +23,8 @@ namespace NodeWar.Network.Tests
 
         /// <summary>Hash after the tick count in the key, confirmed ticks only (live or replayed).</summary>
         public readonly Dictionary<int, int> Hashes = new Dictionary<int, int>();
+        public readonly Dictionary<int,int> ConfirmedHashes = new Dictionary<int,int>();
+        public readonly Dictionary<int,int[]> ConfirmedPopulations = new Dictionary<int,int[]>();
         public readonly List<string> Log = new List<string>();
         public readonly List<int> DesyncTicks = new List<int>();
 
@@ -53,7 +55,7 @@ namespace NodeWar.Network.Tests
         private bool wasSpeculating;
 
         public HarnessPeer(int player, SimulationState state, LinkDirection outgoing, LinkDirection incoming,
-            Func<int, int, GameCommand[]> script, Func<double> clock)
+            Func<int, int, GameCommand[]> script, Func<double> clock, bool captureConfirmed = false)
         {
             Player = player;
             State = state;
@@ -73,6 +75,11 @@ namespace NodeWar.Network.Tests
             Core.RolledBack += _ => Rollbacks++;
             Core.HashComputed += (tickCount, hash) => Hashes[tickCount] = hash;
             Core.TickSimulated += _ => OnTick();
+            if (captureConfirmed) Core.ConfirmedTickSimulated += tick =>
+            {
+                ConfirmedHashes[tick] = SimulationStateHasher.ComputeHash(State);
+                ConfirmedPopulations[tick] = NodeWar.Tests.CoreRulesFixture.Population(State);
+            };
             Core.LocalInputDue += forTick =>
             {
                 GameCommand[] commands = script(Player, forTick);

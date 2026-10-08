@@ -8,6 +8,7 @@ using NodeWar.Backend;
 using NodeWar.MatchLog;
 using NodeWar.Progression;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 using NUnit.Framework;
 using Log = NodeWar.MatchLog.MatchLog;
 
@@ -48,10 +49,11 @@ namespace NodeWar.Cloud.Tests
                 { matchId = MatchId, expiresUnixSeconds = 1 + ActiveMatchClaims.LifetimeSeconds };
             players = states.Select(s => new FakeSettlementPlayerStore(s)).ToArray();
             var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1,
-                1, (ushort)SimulationVersion.Current, BalanceHasher.Hash(balance));
+                1, (ushort)SimulationVersion.Current, BalanceHasher.Hash(balance),
+                BoardFixtures.FixtureMapId(BoardFixtures.LandGrid3x3()), BoardHasher.Hash(BoardFixtures.LandGrid3x3()));
             matches = new HookMatchStore(new InMemoryMatchRecordStore(record));
             reporting = new MatchReporting(matches, id => players[id == "p0" ? 0 : 1],
-                new Referee(RefereeTests.Catalog(balance)), new InventoryRules(ServerCatalog.Items));
+                RefereeTests.NewReferee(RefereeTests.Catalog(balance)), new InventoryRules(ServerCatalog.Items));
         }
 
         [Test]
@@ -345,7 +347,7 @@ namespace NodeWar.Cloud.Tests
             var loser = await State(1);
             Assert.That(winner.Rank.Arena, Is.EqualTo(1));
             Assert.That(winner.Rank.HighestArena, Is.EqualTo(1));
-            Assert.That(winner.Inventory.OwnedVariants.Count(id => id.EndsWith(".e1")), Is.EqualTo(23));
+            Assert.That(winner.Inventory.OwnedVariants.Count(id => id.EndsWith(".e1")), Is.EqualTo(21));
             Assert.That(loser.Rank.Arena, Is.Zero);
             Assert.That(loser.Rank.HighestArena, Is.EqualTo(1));
             Assert.That(loser.Inventory.OwnedVariants, Does.Contain("suit.warrior.e1"));
@@ -465,7 +467,7 @@ namespace NodeWar.Cloud.Tests
             return MatchLogFormat.Write(log);
         }
 
-        private int[] BreachesOf(byte[] bytes) => new Referee(RefereeTests.Catalog(balance)).Verify(bytes).breaches;
+        private int[] BreachesOf(byte[] bytes) => RefereeTests.NewReferee(RefereeTests.Catalog(balance)).Verify(bytes).breaches;
 
         [Test]
         public async Task BothLeft_IsDecidedOnCoreHealth_WithoutAStrike()

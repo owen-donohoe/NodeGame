@@ -3,7 +3,7 @@ namespace NodeWar.Lobby
     /// <summary>
     /// Picks a stable tint for an item that has no art.
     ///
-    /// Every NodeDefinition.icon and SuitDefinition.icon in the project is null
+    /// Every DistrictDefinition.icon and SuitDefinition.icon in the project is null
     /// and Assets/Sprites/Icons is an empty directory
     /// (docs/ui-migration-inventory.md, finding 6). Rather than show fourteen
     /// identical grey squares, each item gets a lettered tile tinted from its

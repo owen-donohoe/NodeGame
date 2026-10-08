@@ -14,18 +14,21 @@ namespace NodeWar.Cloud
                 header.playerIds[1] != record.playerIds[1] || header.protocol != record.protocol ||
                 header.sim != record.sim || header.content != record.content)
                 return "Log header does not match the server match record.";
+            string mapError = CheckMap(record, log);
+            if (mapError != null) return mapError;
             if (log.loadouts == null || log.loadouts.Length != 2) return "Log needs two loadouts.";
             for (int p = 0; p < 2; p++)
             {
                 var loadout = log.loadouts[p];
-                if (loadout?.suits == null || loadout.nodes == null) return "Log needs complete loadouts.";
+                if (loadout?.suits == null || loadout.districts == null) return "Log needs complete loadouts.";
                 foreach (int type in loadout.suits)
                 {
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForSuit(type), type, loadout.suitEras);
                     if (error != null) return error;
                 }
-                foreach (int type in loadout.nodes)
+                foreach (int type in loadout.districts)
                 {
+                    if (!NodeWar.Simulation.DistrictRoster.IsActive((NodeWar.Simulation.DistrictType)type)) return "Inactive district.";
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras);
                     if (error != null) return error;
                 }
@@ -36,11 +39,31 @@ namespace NodeWar.Cloud
                 {
                     int p = placement.playerID;
                     if (p != 0 && p != 1) return "Invalid draft player.";
+                    if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
                         type, log.loadouts[p].districtEras);
                     if (error != null) return error;
                 }
+            return null;
+        }
+
+        /// <summary>
+        /// The log's setup must be the record's map and rules. A record stored before maps
+        /// has none and is only checked as far as it ever was, but a current-version record
+        /// without a map is never admitted: the server always writes one.
+        /// </summary>
+        private static string CheckMap(MatchRecord record, Log log)
+        {
+            if (record.mapId == null)
+                return record.sim >= 3 ? "Server match record has no map." : null;
+
+            var setup = log.setup;
+            if (setup == null || setup.MapId != record.mapId || setup.BoardHash != record.boardHash ||
+                setup.SimulationVersion != record.sim || setup.BalanceHash != record.content ||
+                log.board.terrain == null ||
+                NodeWar.Simulation.BoardHasher.Hash(log.board) != record.boardHash)
+                return "Log map does not match the server match record.";
             return null;
         }
 

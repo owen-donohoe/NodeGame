@@ -6,13 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:25Z }
-verified_at_commit: c0c3b0cc
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
 status: draft
 sources:
   - id: solution
@@ -38,9 +33,9 @@ sources:
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-  - id: tests-edge-weight
-    resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
-    title: Edge weight cases
+  - id: tests-link-weight
+    resource: Assets/Tests/EditMode/Tests/LinkWeightTests.cs
+    title: Link weight cases
   - id: tests-movement
     resource: Assets/Tests/EditMode/Tests/MovementCorrectnessTests.cs
     title: Movement correctness cases
@@ -60,19 +55,20 @@ The solution holds eight test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **3144 passed** (counted 2026-10-05; the table says where each lives, so a changed total
-is easy to place).
+Expect **3583 cases** at the time of writing (the table says where each lives, so a changed
+total is easy to place), with none failing. `NodeWar.Network.Tests` also contains an explicit
+`Sweep` case that a plain run reports as skipped.
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 322 | `Assets/Tests/EditMode/Tests/`: the version-2 determinism baseline, edge weights, movement, production, combat fixes, `MatchFactory`, eras, breach/tempo, paid respawns, resource caps and balance hashing; also the dotnet-only balance-asset text guard |
-| `NodeWar.Lobby.Tests` | 525 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets |
-| `NodeWar.View.Tests` | 1529 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art, icon/context resolution and usage, required UXML names, draft handover |
-| `NodeWar.MatchLog.Tests` | 65 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS |
-| `NodeWar.Network.Tests` | 119 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants |
-| `NodeWar.Progression.Tests` | 148 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
-| `NodeWar.BalanceRig.Tests` | 7 | the headless balance rig, scenario validation and repeatable execution against an exported JSON balance |
-| `NodeWarCloud.Tests` | 429 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, era eligibility, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
+| `NodeWar.Simulation.Tests` | 584 | `Assets/Tests/EditMode/Tests/`: the version-3 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, Barracks equipping, Infirmary healing and workers, Fortress resistance, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
+| `NodeWar.Lobby.Tests` | 590 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals |
+| `NodeWar.View.Tests` | 1554 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation, the district fallback descriptors and art keys, icon/context resolution and usage, required UXML names, draft handover |
+| `NodeWar.MatchLog.Tests` | 96 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay, the core-rules replay), node-command round trips and unknown-command refusal |
+| `NodeWar.Network.Tests` | 125 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario and the 1,500-tick core-rules acceptance on `hourglass-01-acceptance` over a lossy link |
+| `NodeWar.Progression.Tests` | 149 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
+| `NodeWar.BalanceRig.Tests` | 36 | the headless balance rig, scenario validation, repeatable execution against an exported JSON balance, its diagnostics and timeline metrics, and setup compatibility with the shared map |
+| `NodeWarCloud.Tests` | 449 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, `ReleaseContentTests` (a fresh balance export against the client balance and catalog), district migration of stored inventory, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## Producing the receipt
 
@@ -88,7 +84,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 322 passed, and both version-2 pinned fingerprints from
+Expect 584 passed, and both version-3 pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 
@@ -105,7 +101,7 @@ new file is picked up by both build systems without a second file list to mainta
 
 The dotnet project additionally includes `DefaultBalanceAssetTests.cs`, a text guard for the
 serialized balance's v2 keys. It is not an Editor test, so total case counts need not match
-between runners. The current dotnet run has no failures or skipped cases.
+between runners. The simulation suite skips no cases.
 
 Two constraints follow from the arrangement and must be preserved:
 

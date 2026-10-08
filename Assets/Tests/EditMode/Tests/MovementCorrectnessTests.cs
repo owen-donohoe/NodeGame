@@ -29,7 +29,7 @@ namespace NodeWar.Tests
             };
             CommandProcessor.ProcessCommand(state, moveCommand);
 
-            // Edge 0->1 has travelWeight = 1, and balance.baseMoveSpeedTicks = 4,
+            // Link 0->1 has travelWeight = 1, and balance.baseMoveSpeedTicks = 4,
             // so crossing it costs 1 * 4 = 4 ticks of moveProgress. One tick only
             // advances moveProgress from 0 to 1, far short of the 4 needed to
             // arrive -- the villager must still be Moving, not yet at node 1.

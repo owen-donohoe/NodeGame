@@ -4,12 +4,12 @@ using NodeWar.Simulation;
 namespace NodeWar.Tests
 {
     /// <summary>
-    /// The respawn countdown, which is the half of Sanctuary that works.
+    /// The respawn countdown, which is the half of Infirmary that works.
     ///
     /// SimulationFixTests already covers what a respawn *resets* -- stats,
     /// production, the Rampart bonus. What it does not cover is the clock:
     /// how fast the counter runs, that it is driven by the tick loop rather
-    /// than by a command, and that a Sanctuary worker makes it run faster.
+    /// than by a command, and that a Infirmary worker makes it run faster.
     ///
     /// The decrement is `1 + workers * sanctuaryRespawnBoostPerWorker`, applied
     /// once per tick per dead villager. It is plain integer subtraction with no
@@ -30,11 +30,11 @@ namespace NodeWar.Tests
 
         /// <summary>
         /// Player 0 with a dead villager waiting at its core, and optionally a
-        /// second villager put to work in a Sanctuary on the middle node.
+        /// second villager put to work in a Infirmary on the middle node.
         /// </summary>
         private static SimulationState BoardWithADeadVillager(GameBalanceData balance,
                                                               int respawnTicksRemaining,
-                                                              bool withSanctuaryWorker)
+                                                              bool withInfirmaryWorker)
         {
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
@@ -45,14 +45,14 @@ namespace NodeWar.Tests
 
             VillagerData enemy = TestBoardFactory.MakeIdleVillager(1, ownerID: 1, currentNodeID: 2, balance);
 
-            if (!withSanctuaryWorker)
+            if (!withInfirmaryWorker)
             {
                 state.villagers = new VillagerData[] { dead, enemy };
                 return state;
             }
 
-            state.nodes[MiddleNode].districtType = DistrictType.Sanctuary;
-            state.nodes[MiddleNode].baseDistrictType = DistrictType.Sanctuary;
+            state.nodes[MiddleNode].districtType = DistrictType.Infirmary;
+            state.nodes[MiddleNode].baseDistrictType = DistrictType.Infirmary;
             state.nodes[MiddleNode].ownerID = 0;
             state.nodes[MiddleNode].claimBar = balance.claimThreshold;
 
@@ -66,7 +66,7 @@ namespace NodeWar.Tests
         public void Respawn_CountsDownOneTickAtATimeWithoutACommand()
         {
             GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = BoardWithADeadVillager(balance, 4, withSanctuaryWorker: false);
+            SimulationState state = BoardWithADeadVillager(balance, 4, withInfirmaryWorker: false);
 
             GameSimulation.SimulateTick(state);
             Assert.AreEqual(3, state.villagers[0].respawnTicksRemaining);
@@ -85,13 +85,13 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void Respawn_ASanctuaryWorkerMakesTheCounterRunFaster()
+        public void Respawn_AInfirmaryWorkerMakesTheCounterRunFaster()
         {
             GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = BoardWithADeadVillager(balance, 4, withSanctuaryWorker: true);
+            SimulationState state = BoardWithADeadVillager(balance, 4, withInfirmaryWorker: true);
 
             // One Acolyte means the decrement is 1 + 1 = 2, so the same four
-            // ticks of waiting are served in two. The Sanctuary worker is put to
+            // ticks of waiting are served in two. The Infirmary worker is put to
             // work by UpdateVillagerClaimStates inside the first tick, which
             // runs before TickRespawns -- so the boost applies from tick one and
             // not from tick two.
@@ -107,7 +107,7 @@ namespace NodeWar.Tests
         public void Respawn_AConsumedVillagerNeverComesBack()
         {
             GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = BoardWithADeadVillager(balance, 1, withSanctuaryWorker: false);
+            SimulationState state = BoardWithADeadVillager(balance, 1, withInfirmaryWorker: false);
 
             state.villagers[0].isConsumed = true;
 

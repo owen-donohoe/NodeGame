@@ -51,6 +51,7 @@ namespace NodeWar.EditorTools
 
             foreach (DistrictType district in districts)
             {
+                if (!DistrictRoster.IsActive(district)) continue;
                 string path = VisualsFolder + "/" + district + ".asset";
 
                 DistrictVisual visual = AssetDatabase.LoadAssetAtPath<DistrictVisual>(path);

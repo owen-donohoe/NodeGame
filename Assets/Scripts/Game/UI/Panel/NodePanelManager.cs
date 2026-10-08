@@ -592,8 +592,8 @@ namespace NodeWar.UI
 
             // Spawn appropriate content
             bool isOwned = (node.ownerID == controlledPID);
-            GameObject prefab = GetContentPrefab(node.districtType);
-            if (prefab == null)
+            GameObject prefab = UsesNodeActions(node.districtType) ? null : GetContentPrefab(node.districtType);
+            if (prefab == null && !UsesNodeActions(node.districtType))
             {
                 // Nothing to show. Bail before Instantiate throws, and leave the
                 // sheet closed rather than sliding up an empty one.
@@ -603,7 +603,10 @@ namespace NodeWar.UI
                 return;
             }
 
-            currentContent = Instantiate(prefab, contentArea);
+            currentContent = UsesNodeActions(node.districtType)
+                ? new GameObject("Node Actions", typeof(RectTransform), typeof(NodeActionPanelContent))
+                : Instantiate(prefab, contentArea);
+            currentContent.transform.SetParent(contentArea, false);
             RectTransform contentRect = currentContent.GetComponent<RectTransform>();
             contentRect.anchorMin = Vector2.zero;
             contentRect.anchorMax = Vector2.one;
@@ -738,11 +741,22 @@ namespace NodeWar.UI
         private void RefreshContent()
         {
             if (!isOpen || currentNodeID < 0) return;
-            // Each content script handles its own per-frame refresh in its own Update()
+            if (currentContent != null)
+            {
+                var actions = currentContent.GetComponent<NodeActionPanelContent>();
+                if (actions != null) actions.Refresh();
+            }
         }
 
         private void InitializeContent(NodeData node, bool isOwned, int controlledPID)
         {
+            var actions = currentContent.GetComponent<NodeActionPanelContent>();
+            if (actions != null)
+            {
+                actions.Initialize(simState, inputBuffer, tickProvider, balance, currentNodeID,
+                    () => debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
+                return;
+            }
             // Try each content type
             ForgePanelContent forgeContent = currentContent.GetComponent<ForgePanelContent>();
             if (forgeContent != null)
@@ -777,6 +791,9 @@ namespace NodeWar.UI
         /// reach here -- OpenForNode filters the rest -- so an unmapped type is
         /// a bug rather than a case to absorb silently.
         /// </summary>
+        private static bool UsesNodeActions(DistrictType type) => type == DistrictType.Village ||
+            type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress;
+
         private GameObject GetContentPrefab(DistrictType type)
         {
             switch (type)
@@ -800,23 +817,7 @@ namespace NodeWar.UI
 
         private string GetDistrictName(DistrictType type)
         {
-            switch (type)
-            {
-                case DistrictType.Farm: return "Farm";
-                case DistrictType.Mine: return "Mine";
-                case DistrictType.Forge: return "Forge";
-                case DistrictType.Core: return "Core";
-                case DistrictType.Barracks: return "Barracks";
-                case DistrictType.Village: return "Village";
-                case DistrictType.Camp: return "Camp";
-                case DistrictType.Shrine: return "Shrine";
-                case DistrictType.Arsenal: return "Arsenal";
-                case DistrictType.Sanctuary: return "Sanctuary";
-                case DistrictType.Watchtower: return "Watchtower";
-                case DistrictType.Rampart: return "Rampart";
-                case DistrictType.Market: return "Market";
-                default: return "Crossroads";
-            }
+            return NodeWar.View.DistrictFallback.Describe(type).Name ?? type.ToString();
         }
 
         private void OnDestroy()

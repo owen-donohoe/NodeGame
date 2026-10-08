@@ -121,6 +121,7 @@ namespace NodeWar.UI
 
             activeSlotIndex = slotIndex;
             activeDistrictType = districtType;
+            draftManager.SetHighlightedPick(slotIndex);
             dragMode = DragMode.Dragging;
 
             if (confirmPresenter != null)
@@ -139,6 +140,7 @@ namespace NodeWar.UI
 
             activeSlotIndex = -1;
             dragMode = DragMode.Idle;
+            draftManager.SetHighlightedPick(-1);
 
             OnDragCancelled?.Invoke();
         }
@@ -338,7 +340,7 @@ namespace NodeWar.UI
                 return;
             }
 
-            previewOnValidCell = draftState.IsCellAvailable(gx, gz);
+            previewOnValidCell = draftState.CanPlace(activeDistrictType, gx, gz);
             previewGridX = gx;
             previewGridZ = gz;
             previewInstance.transform.position = draftManager.GridToWorld(gx, gz) + Vector3.up * previewYOffset;

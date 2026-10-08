@@ -30,15 +30,44 @@ namespace NodeWar.View
         /// </summary>
         public DistrictVisual For(DistrictType district)
         {
-            if (entries == null) return null;
+            if (!DistrictRoster.IsActive(district)) return null;
+            if (entries == null) return FallbackFor(district);
 
             for (int i = 0; i < entries.Length; i++)
             {
                 if (entries[i] != null && entries[i].district == district) return entries[i];
             }
 
+            return FallbackFor(district);
+        }
+
+        private DistrictVisual FallbackFor(DistrictType district)
+        {
+            var descriptor = DistrictFallback.Describe(district);
+            if (string.IsNullOrEmpty(descriptor.PrefabKey)) return null;
+            int index = (int)district;
+            if (fallbacks[index] == null)
+            {
+                var visual = CreateInstance<DistrictVisual>();
+                visual.hideFlags = HideFlags.HideAndDontSave;
+                visual.name = descriptor.Name;
+                visual.district = district;
+                DistrictType art = DistrictFallback.ResolveArt(district, type => Entry(type)?.boardPrefab != null);
+                visual.boardPrefab = Entry(art)?.boardPrefab;
+                fallbacks[index] = visual;
+            }
+            return fallbacks[index];
+        }
+
+        private DistrictVisual Entry(DistrictType type)
+        {
+            if (entries != null)
+                foreach (var entry in entries)
+                    if (entry != null && entry.district == type) return entry;
             return null;
         }
+
+        private readonly DistrictVisual[] fallbacks = new DistrictVisual[(int)DistrictType.Fortress + 1];
 
         /// <summary>How many districts have nothing drawn for them. The art checklist's number.</summary>
         public int CountUnillustrated()
@@ -48,7 +77,7 @@ namespace NodeWar.View
             int n = 0;
             for (int i = 0; i < entries.Length; i++)
             {
-                if (entries[i] != null && entries[i].IsUnillustrated) n++;
+                if (entries[i] != null && DistrictRoster.IsActive(entries[i].district) && entries[i].IsUnillustrated) n++;
             }
 
             return n;

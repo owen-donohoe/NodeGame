@@ -47,7 +47,7 @@ namespace NodeWar.View
         private Transform gfxTransform;
 
         private NodeWar.Core.ITickProvider tickProvider;
-        private NodeWar.View.NodeSlotManager[] nodeSlotManagers;
+        private NodeWar.View.VillagerPositioner[] villagerPositioners;
 
         public void Initialize(SimulationState state, int id)
         {
@@ -74,9 +74,9 @@ namespace NodeWar.View
             tickProvider = provider;
         }
 
-        public void SetNodeSlotManagers(NodeWar.View.NodeSlotManager[] managers)
+        public void SetVillagerPositioners(NodeWar.View.VillagerPositioner[] managers)
         {
-            nodeSlotManagers = managers;
+            villagerPositioners = managers;
         }
 
         /// <summary>
@@ -229,7 +229,7 @@ namespace NodeWar.View
         /// </summary>
         private bool BuildRouteCurve(VillagerData villager)
         {
-            if (nodeSlotManagers == null) return false;
+            if (villagerPositioners == null) return false;
 
             if (RouteCurveCache.TryGetCurrent(villagerID, villager.movePath, out curvePoints, out curveLegStarts))
                 return true;
@@ -239,10 +239,10 @@ namespace NodeWar.View
             for (int i = 0; i < villager.movePath.Length; i++)
             {
                 int nodeID = villager.movePath[i];
-                if (nodeID < 0 || nodeID >= nodeSlotManagers.Length) return false;
-                if (nodeSlotManagers[nodeID] == null) return false;
+                if (nodeID < 0 || nodeID >= villagerPositioners.Length) return false;
+                if (villagerPositioners[nodeID] == null) return false;
 
-                Vector3 point = nodeSlotManagers[nodeID].transform.position;
+                Vector3 point = villagerPositioners[nodeID].transform.position;
                 point.y = VillagerViewHeight;
                 routeWaypoints.Add(point);
             }
@@ -287,7 +287,7 @@ namespace NodeWar.View
                     ? villager.movePath[legIndex + 1]
                     : legFrom;
 
-                int edgeWeight = GameSimulation.GetEdgeWeight(simState, legFrom, legTo);
+                int edgeWeight = GameSimulation.GetLinkWeight(simState, legFrom, legTo);
                 int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
                 if (totalTicksForEdge < 1) totalTicksForEdge = 1;
 
@@ -322,9 +322,9 @@ namespace NodeWar.View
                 departureOffset.y = 0f;
                 targetPos += departureOffset;
             }
-            else if (nodeSlotManagers != null && villager.currentNodeID < nodeSlotManagers.Length)
+            else if (villagerPositioners != null && villager.currentNodeID < villagerPositioners.Length)
             {
-                NodeSlotManager slotManager = nodeSlotManagers[villager.currentNodeID];
+                VillagerPositioner slotManager = villagerPositioners[villager.currentNodeID];
 
                 switch (villager.state)
                 {

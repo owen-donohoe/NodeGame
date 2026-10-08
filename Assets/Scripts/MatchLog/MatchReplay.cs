@@ -63,12 +63,25 @@ namespace NodeWar.MatchLog
             string orderError = CheckOrder(log, endTick);
             if (orderError != null) return Refuse(outcome, orderError);
 
+            // A board from an old BOARD chunk has no terrain: history, not a map.
+            if (!MapAuthoringRules.ValidateBoard(log.board, out string boardError) ||
+                !MapAuthoringRules.ValidateDraft(log.board, log.draft, out boardError))
+                return Refuse(outcome, "Log board cannot be built: " + boardError);
+
+            // The setup is the log's claim about which map and rules this was. Here it must at
+            // least be about this very board; whether the map is a shipped one is the
+            // server's question (Referee), because tests and tools replay boards of their own.
+            if (log.setup == null) return Refuse(outcome, "Log has no match setup.");
+            if (log.setup.SimulationVersion != log.header.sim || log.setup.BalanceHash != log.header.content ||
+                log.setup.BoardHash != BoardHasher.Hash(log.board))
+                return Refuse(outcome, "Log setup does not describe the log's board and rules.");
+
             MatchFactory.Configure(balance, log.board);
             SimulationState state = MatchFactory.Build(balance, log.board, log.draft, new[]
             {
-                new PlayerSetup { suits = log.loadouts[0].suits, nodes = log.loadouts[0].nodes,
+                new PlayerSetup { suits = log.loadouts[0].suits, districts = log.loadouts[0].districts,
                     suitEras = log.loadouts[0].suitEras, districtEras = log.loadouts[0].districtEras },
-                new PlayerSetup { suits = log.loadouts[1].suits, nodes = log.loadouts[1].nodes,
+                new PlayerSetup { suits = log.loadouts[1].suits, districts = log.loadouts[1].districts,
                     suitEras = log.loadouts[1].suitEras, districtEras = log.loadouts[1].districtEras }
             });
 

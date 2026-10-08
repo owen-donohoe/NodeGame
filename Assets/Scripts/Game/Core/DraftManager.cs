@@ -60,6 +60,12 @@ namespace NodeWar.Core
         private NodeWar.Lobby.LoadoutData remoteLoadout;
         private bool remoteLoadoutReceived;
 
+        // Map and rules agreement. A networked draft does nothing until it holds: the host
+        // proposes, the guest verifies against the shipped catalog, and every draft packet
+        // that arrives before then is ignored (its sender keeps resending it).
+        private SetupAgreement setupAgreement;
+        private bool draftHandshakeSent;
+
         // State
         private DraftState draftState;
         private float turnTimer;
@@ -87,8 +93,8 @@ namespace NodeWar.Core
         // once and the turn machine must not know which one is drawing.
         private IDraftPresenter draftUI;
 
-        // Grid markers
-        private List<GameObject> gridMarkers = new List<GameObject>();
+        private NodeWar.View.BoardTerrainView terrainView;
+        private int highlightedPick = -1;
 
         // Events
         public System.Action<DraftResult> OnDraftComplete;
@@ -101,7 +107,7 @@ namespace NodeWar.Core
         public void Initialize(BoardConfig config, NetworkManager netManager,
                     int playerID, bool networked, bool botMatch,
                     CameraController camController, GameObject gridCellPrefab,
-                    NodeWar.Lobby.LoadoutData loadout)
+                    NodeWar.Lobby.LoadoutData loadout, NodeWar.View.BoardTerrainView terrain)
         {
             boardConfig = config;
             networkManager = netManager;
@@ -121,17 +127,10 @@ namespace NodeWar.Core
             peerHeardFrom = false;
             if (isNetworked && !isBotMatch) networkManager.ResetDraftDelivery();
 
-            // Build draft state and mark initial placements as occupied
-            draftState = new DraftState(config.Data.gridCols, config.Data.gridRows);
-
-            if (config.Data.initialPlacements != null)
-            {
-                for (int i = 0; i < config.Data.initialPlacements.Length; i++)
-                {
-                    var ip = config.Data.initialPlacements[i];
-                    draftState.OccupyCell(ip.gridX, ip.gridZ);
-                }
-            }
+            // The draft state holds the board, with the Cores already standing. Every question
+            // about where a district may go is answered by it, through PlacementLegality.
+            draftState = new DraftState(config.Data);
+            terrainView = terrain;
 
             // Each player drafts looking at their own half, from the side the
             // match will give them.
@@ -157,9 +156,12 @@ namespace NodeWar.Core
                 localReady = false;
                 remoteReady = false;
                 remoteLoadoutReceived = false;
-                SendDraftReady();
-                SendDraftLoadout();
-                localReady = true;
+                draftHandshakeSent = false;
+                setupAgreement = localPlayerID == 0
+                    ? SetupAgreement.Host(LocalBuildIdentity.SetupFor(config.MapId))
+                    : SetupAgreement.Guest(PremadeMaps.Catalog, LocalBuildIdentity.Current.sim,
+                        LocalBuildIdentity.Current.content);
+                SendSetupIfPending();
             }
 
             SpawnPlacementGrid();
@@ -212,8 +214,8 @@ namespace NodeWar.Core
             if (draftUI != null) draftUI.ShowWaiting(false);
 
             // Both loadouts are now known - rebuild slots with full information
-            draftState.player0Slots = BuildPlayerSlots(0);
-            draftState.player1Slots = BuildPlayerSlots(1);
+            draftState.player0Picks = BuildPlayerPicks(0);
+            draftState.player1Picks = BuildPlayerPicks(1);
 
             if (draftUI != null)
                 draftUI.ShowInitialReveal(boardConfig.Data.initialPlacements);
@@ -240,8 +242,13 @@ namespace NodeWar.Core
                 return;
             }
 
-            AdvanceToNextValidTurn();
+            if (!draftState.AdvanceToNextValidTurn())
+            {
+                CompleteDraft();
+                return;
+            }
             turnTimer = boardConfig.draftTurnDuration;
+            RefreshHighlights();
 
             if (draftUI != null)
                 draftUI.SweepIn(draftState, localPlayerID);
@@ -291,99 +298,57 @@ namespace NodeWar.Core
         public void ConfirmLocalPlacement(int slotIndex, int gridX, int gridZ)
         {
             if (!IsLocalPlayerTurn()) return;
-            if (!draftState.IsCellAvailable(gridX, gridZ)) return;
+            // A refusal changes nothing: the pick stays in hand, no packet is sent.
+            if (draftState.AcceptLocal(localPlayerID, slotIndex, gridX, gridZ) < 0) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
-            if (slotIndex < 0 || slotIndex >= slots.Length) return;
-            if (slots[slotIndex].isConsumed) return;
-
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             SendDraftPlacement(slots[slotIndex].districtType, gridX, gridZ, false);
-            ApplyPlacement(localPlayerID, slots[slotIndex].districtType,
-                gridX, gridZ, slotIndex, false);
+            ApplyPlacement(localPlayerID, slotIndex, gridX, gridZ, false);
         }
 
         private void HandleTimeout()
         {
             int activePlayer = draftState.currentTurnPlayerID;
 
-            int slotIndex = draftState.GetFirstUnconsumedSlotIndex(activePlayer);
-            if (slotIndex < 0)
+            // A piece parked on a cell and waiting on Confirm is already the answer to
+            // "where". Running out of time should not discard a decision the player has
+            // visibly made and send the piece somewhere random instead. The pick is taken
+            // from the parked placement too, not just the cell - a parked Forge belongs on
+            // that cell, and placing the first pick there would be a different move than
+            // the one on screen.
+            //
+            // Only the local player can have one: HandleTimeout runs on the peer whose turn
+            // it is, and the result is sent as a placement packet, so the two sides never
+            // have to agree on this independently.
+            int parkedSlot = -1, parkedX = -1, parkedZ = -1;
+            if (activePlayer == localPlayerID && draftUI != null &&
+                !draftUI.TryGetPendingPlacement(out parkedSlot, out parkedX, out parkedZ))
+                parkedSlot = -1;
+
+            // DraftState decides: the parked piece if it is still legal, otherwise the lowest
+            // PLAYABLE pick on a legal cell seeded from replicated state. Never water, never
+            // ocean, and a pick with nowhere to go is passed over rather than forced.
+            if (!draftState.ChooseTimeout(activePlayer, parkedSlot, parkedX, parkedZ,
+                    out int slotIndex, out int gridX, out int gridZ))
             {
                 AdvanceTurn();
                 return;
             }
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(activePlayer);
-            DistrictType district = slots[slotIndex].districtType;
-
-            int gridX, gridZ;
-
-            // A piece parked on a cell and waiting on Confirm is already the
-            // answer to "where". Running out of time should not discard a
-            // decision the player has visibly made and send the piece somewhere
-            // random instead. The slot is taken from the parked placement too,
-            // not just the cell - a parked Forge belongs on that cell, and
-            // placing the first unconsumed piece there would be a different
-            // move than the one on screen.
-            //
-            // Only the local player can have one: HandleTimeout runs on the
-            // peer whose turn it is, and the result is sent as a placement
-            // packet, so the two sides never have to agree on this independently.
-            if (!TryUseParkedPlacement(activePlayer, slots, ref slotIndex, ref district,
-                                       out gridX, out gridZ))
-            {
-                // Nothing on the board. Deterministic random cell, turn-seeded.
-                int seed = draftState.turnNumber * 7919 + activePlayer * 31;
-                if (!draftState.FindRandomAvailableCell(seed, out gridX, out gridZ))
-                {
-                    CompleteDraft();
-                    return;
-                }
-            }
-
+            DistrictType district = draftState.GetPlayerPicks(activePlayer)[slotIndex].districtType;
             SendDraftPlacement(district, gridX, gridZ, true);
-            ApplyPlacement(activePlayer, district, gridX, gridZ, slotIndex, true);
-        }
-
-        /// <summary>
-        /// Takes the placement the player parked but never confirmed, if it is
-        /// still legal. Rejects it rather than forcing it when the slot has been
-        /// consumed or the cell has been taken since - the opponent may have
-        /// landed on that cell while the Confirm button was sitting there.
-        /// </summary>
-        private bool TryUseParkedPlacement(int activePlayer, DraftSlot[] slots,
-            ref int slotIndex, ref DistrictType district, out int gridX, out int gridZ)
-        {
-            gridX = -1;
-            gridZ = -1;
-
-            if (draftUI == null) return false;
-            if (activePlayer != localPlayerID) return false;
-
-            if (!draftUI.TryGetPendingPlacement(out int parkedSlot, out int x, out int z))
-                return false;
-
-            if (parkedSlot < 0 || parkedSlot >= slots.Length) return false;
-            if (slots[parkedSlot].isConsumed) return false;
-            if (!draftState.IsCellAvailable(x, z)) return false;
-
-            slotIndex = parkedSlot;
-            district = slots[parkedSlot].districtType;
-            gridX = x;
-            gridZ = z;
-
-            return true;
+            ApplyPlacement(activePlayer, slotIndex, gridX, gridZ, true);
         }
 
         private void HandleBotTurn()
         {
             int botPlayer = 1 - localPlayerID;
-            int slotIndex = draftState.GetFirstUnconsumedSlotIndex(botPlayer);
+            int slotIndex = draftState.GetLowestPlayablePickIndex(botPlayer);
             if (slotIndex < 0) { AdvanceTurn(); return; }
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(botPlayer);
+            DistrictType district = draftState.GetPlayerPicks(botPlayer)[slotIndex].districtType;
 
-            // Find bot's core position for proximity heuristic
+            // The legal cell nearest the bot's own core.
             int coreX = -1, coreZ = -1;
             if (boardConfig.Data.initialPlacements != null)
             {
@@ -398,63 +363,28 @@ namespace NodeWar.Core
                 }
             }
 
-            // Pick closest available cell to bot's core (manhattan distance)
-            int bestX = -1, bestZ = -1;
-            int bestDist = int.MaxValue;
-            for (int z = 0; z < draftState.gridRows; z++)
+            if (!draftState.FindNearestLegalCell(district, coreX, coreZ, out int bestX, out int bestZ))
             {
-                for (int x = 0; x < draftState.gridCols; x++)
-                {
-                    if (!draftState.IsCellAvailable(x, z)) continue;
-                    int dist = Mathf.Abs(x - coreX) + Mathf.Abs(z - coreZ);
-                    if (dist < bestDist)
-                    {
-                        bestDist = dist;
-                        bestX = x;
-                        bestZ = z;
-                    }
-                }
-            }
-
-            if (bestX < 0)
-            {
-                CompleteDraft();
+                AdvanceTurn();
                 return;
             }
 
-            ApplyPlacement(botPlayer, slots[slotIndex].districtType,
-                bestX, bestZ, slotIndex, false);
+            ApplyPlacement(botPlayer, slotIndex, bestX, bestZ, false);
         }
 
         /// <summary>
-        /// Central placement application. Called for local, remote, bot, and timeout placements.
-        /// Updates state, consumes slot, checks timeout disconnect rules, notifies UI, advances turn.
+        /// Central placement application. Called for local, remote, bot, and timeout placements,
+        /// all of which have already been accepted by DraftState. Updates state, checks timeout
+        /// disconnect rules, notifies UI, advances turn.
         /// </summary>
-        private void ApplyPlacement(int playerID, DistrictType district,
-            int gridX, int gridZ, int slotIndex, bool wasTimeout)
+        private void ApplyPlacement(int playerID, int slotIndex, int gridX, int gridZ, bool wasTimeout)
         {
-            draftState.OccupyCell(gridX, gridZ);
-
-            DraftPlacement placement = new DraftPlacement
-            {
-                playerID = playerID,
-                districtType = district,
-                gridX = gridX,
-                gridZ = gridZ,
-                wasTimeout = wasTimeout
-            };
-            draftState.confirmedPlacements.Add(placement);
-
-            // Consume the used slot
-            if (playerID == 0)
-                draftState.player0Slots[slotIndex].isConsumed = true;
-            else
-                draftState.player1Slots[slotIndex].isConsumed = true;
+            DraftPlacement placement = draftState.Apply(playerID, slotIndex, gridX, gridZ, wasTimeout);
+            // An accepted placement ends the held-pick cue, including timeout placements.
+            SetHighlightedPick(-1);
 
             if (wasTimeout)
             {
-                draftState.consecutiveTimeouts[playerID]++;
-
                 // Only disconnect for consecutive timeouts in networked non-bot matches
                 if (isNetworked && !isBotMatch &&
                     draftState.consecutiveTimeouts[playerID] >= boardConfig.maxConsecutiveTimeouts)
@@ -464,13 +394,10 @@ namespace NodeWar.Core
                     return;
                 }
             }
-            else
-            {
-                draftState.consecutiveTimeouts[playerID] = 0;
-            }
 
             if (draftUI != null)
                 draftUI.OnPlacementConfirmed(placement);
+            RefreshHighlights();
 
             AdvanceTurn();
         }
@@ -488,26 +415,19 @@ namespace NodeWar.Core
                 return;
             }
 
+            // A player with nothing playable is passed - no timeout, no penalty - and the
+            // draft ends when neither has a playable pick.
             draftState.currentTurnPlayerID = 1 - draftState.currentTurnPlayerID;
-            AdvanceToNextValidTurn();
+            if (!draftState.AdvanceToNextValidTurn())
+            {
+                CompleteDraft();
+                return;
+            }
             turnTimer = boardConfig.draftTurnDuration;
+            RefreshHighlights();
 
             if (draftUI != null)
                 draftUI.OnTurnChanged(draftState, localPlayerID);
-        }
-
-        /// <summary>
-        /// Skips players with no remaining nodes. Completes draft if neither has nodes.
-        /// </summary>
-        private void AdvanceToNextValidTurn()
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                if (draftState.PlayerHasRemainingNodes(draftState.currentTurnPlayerID))
-                    return;
-                draftState.currentTurnPlayerID = 1 - draftState.currentTurnPlayerID;
-            }
-            CompleteDraft();
         }
 
         private void CompleteDraft()
@@ -563,6 +483,17 @@ namespace NodeWar.Core
                     PacketType type = InputSerializer.ReadPacketType(packets[i]);
                     typeLabel = type.ToString();
 
+                    if (type == PacketType.MatchSetup || type == PacketType.MatchSetupAck)
+                    {
+                        HandleSetupPacket(packets[i]);
+                        if (!enabled) return;
+                        continue;
+                    }
+                    // Nothing about the draft is honoured before the map and rules are agreed.
+                    bool draftPacket = type == PacketType.DraftReady || type == PacketType.DraftPlacement
+                        || type == PacketType.DraftLoadout || type == PacketType.DraftAck;
+                    if (draftPacket && (setupAgreement == null || !setupAgreement.AcceptsDraftPackets)) continue;
+
                     switch (type)
                     {
                         case PacketType.DraftReady:
@@ -591,6 +522,36 @@ namespace NodeWar.Core
                 }
                 if (!enabled) return;
             }
+        }
+
+        private void HandleSetupPacket(byte[] data)
+        {
+            if (setupAgreement == null) return;
+            byte[] reply = setupAgreement.Receive(data);
+            if (reply != null) networkManager.Send(reply);
+
+            if (setupAgreement.Refused)
+            {
+                Debug.LogError("[DraftManager] Match setup refused: " + setupAgreement.Error);
+                OnDraftDisconnect?.Invoke();
+                enabled = false;
+                return;
+            }
+            if (setupAgreement.Agreed && !draftHandshakeSent)
+            {
+                // Agreed: only now does this side announce itself and its loadout.
+                draftHandshakeSent = true;
+                SendDraftReady();
+                SendDraftLoadout();
+                localReady = true;
+            }
+        }
+
+        private void SendSetupIfPending()
+        {
+            if (setupAgreement == null || networkManager == null) return;
+            byte[] pending = setupAgreement.NextToSend();
+            if (pending != null) networkManager.Send(pending);
         }
 
         private void HandleRemoteLoadout(byte[] data)
@@ -643,23 +604,13 @@ namespace NodeWar.Core
             if (draftState.phase != DraftPhase.ActiveDraft) return;
             if (playerID != draftState.currentTurnPlayerID) return;
 
-            // Find first unconsumed slot matching the district type
-            DraftSlot[] slots = draftState.GetPlayerSlots(playerID);
-            int slotIndex = -1;
-            for (int i = 0; i < slots.Length; i++)
-            {
-                if (!slots[i].isConsumed && (int)slots[i].districtType == districtType)
-                {
-                    slotIndex = i;
-                    break;
-                }
-            }
-
+            // The same legality as every other path: a held pick of that type, and a cell
+            // PlacementLegality allows for it. A packet that fails either is dropped whole -
+            // no pick is spent, nothing is occupied - and its sender, never acked, resends.
+            int slotIndex = draftState.AcceptReceived(playerID, (DistrictType)districtType, gridX, gridZ);
             if (slotIndex < 0) return;
-            if (!draftState.IsCellAvailable(gridX, gridZ)) return;
 
-            ApplyPlacement(playerID, (DistrictType)districtType,
-                gridX, gridZ, slotIndex, wasTimeout);
+            ApplyPlacement(playerID, slotIndex, gridX, gridZ, wasTimeout);
             SendDraftAck();
         }
 
@@ -712,6 +663,7 @@ namespace NodeWar.Core
         private void ResendIfNeeded()
         {
             if (Time.time - lastResendTime < RESEND_INTERVAL) return;
+            SendSetupIfPending();
             if (pendingReady != null) networkManager.Send(pendingReady);
             if (pendingLoadout != null) networkManager.Send(pendingLoadout);
             if (pendingPlacement != null) networkManager.Send(pendingPlacement);
@@ -749,22 +701,24 @@ namespace NodeWar.Core
 
         private void SpawnPlacementGrid()
         {
-            if (placementGridCellPrefab == null) return;
+            RefreshHighlights();
+        }
 
-            for (int z = 0; z < boardConfig.Data.gridRows; z++)
-            {
-                for (int x = 0; x < boardConfig.Data.gridCols; x++)
-                {
-                    if (draftState.occupiedCells[z, x]) continue;
+        /// <summary>Both presenters report their held pick through this one highlight path.</summary>
+        public void SetHighlightedPick(int slotIndex)
+        {
+            highlightedPick = slotIndex;
+            RefreshHighlights();
+        }
 
-                    Vector3 pos = GridToWorld(x, z);
-                    pos.y = gridMarkerYOffset;
-
-                    GameObject marker = Instantiate(placementGridCellPrefab);
-                    marker.transform.position = pos;
-                    gridMarkers.Add(marker);
-                }
-            }
+        private void RefreshHighlights()
+        {
+            if (terrainView == null || draftState == null) return;
+            DraftPick[] picks = draftState.GetPlayerPicks(localPlayerID);
+            bool hasPick = IsLocalPlayerTurn() && picks != null && highlightedPick >= 0 &&
+                highlightedPick < picks.Length && draftState.IsPlayable(picks[highlightedPick]);
+            terrainView.ShowDraft(draftState.confirmedPlacements.ToArray(), hasPick,
+                hasPick ? picks[highlightedPick].districtType : DistrictType.None);
         }
 
         private void OnDestroy()
@@ -775,32 +729,27 @@ namespace NodeWar.Core
 
         private void DestroyPlacementGrid()
         {
-            for (int i = 0; i < gridMarkers.Count; i++)
-            {
-                if (gridMarkers[i] != null)
-                    Destroy(gridMarkers[i]);
-            }
-            gridMarkers.Clear();
+            SetHighlightedPick(-1);
         }
 
         // ===== SLOT BUILDING =====
 
-        private DraftSlot[] BuildPlayerSlots(int playerID)
+        private DraftPick[] BuildPlayerPicks(int playerID)
         {
-            List<DraftSlot> slots = new List<DraftSlot>();
+            List<DraftPick> slots = new List<DraftPick>();
 
-            DraftNodeEntry[] baseNodes = (playerID == 0)
-                ? boardConfig.baseDraftNodesP0
-                : boardConfig.baseDraftNodesP1;
+            DistrictType[] baseNodes = (playerID == 0)
+                ? draftState.board.baseDraftDistrictsP0
+                : draftState.board.baseDraftDistrictsP1;
 
             if (baseNodes != null)
             {
                 for (int i = 0; i < baseNodes.Length; i++)
                 {
-                    if (baseNodes[i].districtType == DistrictType.None) continue;
-                    slots.Add(new DraftSlot
+                    if (baseNodes[i] == DistrictType.None) continue;
+                    slots.Add(new DraftPick
                     {
-                        districtType = baseNodes[i].districtType,
+                        districtType = baseNodes[i],
                         isConsumed = false,
                         isFromLoadout = false
                     });
@@ -815,14 +764,14 @@ namespace NodeWar.Core
             if (isBotMatch && playerID != localPlayerID)
             {
                 // Bot player: use nodes configured directly in BoardConfig
-                if (boardConfig.botLoadoutNodes != null)
+                if (boardConfig.botLoadoutDistricts != null)
                 {
-                    for (int i = 0; i < boardConfig.botLoadoutNodes.Length; i++)
+                    for (int i = 0; i < boardConfig.botLoadoutDistricts.Length; i++)
                     {
-                        if (boardConfig.botLoadoutNodes[i].districtType == DistrictType.None) continue;
-                        slots.Add(new DraftSlot
+                        if (boardConfig.botLoadoutDistricts[i].districtType == DistrictType.None) continue;
+                        slots.Add(new DraftPick
                         {
-                            districtType = boardConfig.botLoadoutNodes[i].districtType,
+                            districtType = boardConfig.botLoadoutDistricts[i].districtType,
                             isConsumed = false,
                             isFromLoadout = true
                         });
@@ -835,8 +784,8 @@ namespace NodeWar.Core
                 NodeWar.Lobby.LoadoutData loadout =
                     NodeWar.Lobby.LoadoutData.Normalized(GetLoadoutForPlayer(playerID));
 
-                for (int i = 0; i < loadout.nodeIDs.Length; i++)
-                    AddLoadoutNode(slots, loadout.nodeIDs[i]);
+                for (int i = 0; i < loadout.districtIDs.Length; i++)
+                    AddLoadoutNode(slots, loadout.districtIDs[i]);
             }
 
             return slots.ToArray();
@@ -850,14 +799,14 @@ namespace NodeWar.Core
                 return remoteLoadout;
         }
 
-        private void AddLoadoutNode(List<DraftSlot> slots, string nodeID)
+        private void AddLoadoutNode(List<DraftPick> slots, string districtID)
         {
-            if (string.IsNullOrEmpty(nodeID)) return;
+            if (string.IsNullOrEmpty(districtID)) return;
 
-            DistrictType type = MapNodeIDToDistrict(nodeID);
+            DistrictType type = MapDistrictID(districtID);
             if (type == DistrictType.None) return;
 
-            slots.Add(new DraftSlot
+            slots.Add(new DraftPick
             {
                 districtType = type,
                 isConsumed = false,
@@ -866,12 +815,12 @@ namespace NodeWar.Core
         }
 
         /// <summary>
-        /// Convention: nodeID format is "node_[lowercase district name]".
+        /// Convention: districtID format is "node_[lowercase district name]".
         /// Informal string matching — a registry would be more robust long-term.
         /// </summary>
-        internal static DistrictType MapNodeIDToDistrict(string nodeID)
+        internal static DistrictType MapDistrictID(string districtID)
         {
-            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(nodeID);
+            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(districtID);
         }
 
         // ===== PUBLIC API FOR UI =====

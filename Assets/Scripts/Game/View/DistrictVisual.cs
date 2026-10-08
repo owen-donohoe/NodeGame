@@ -10,7 +10,7 @@ namespace NodeWar.View
     /// board wants a prefab, the draft wants a sticker, the lobby's Workshop
     /// wants an icon, and each of the three is wired somewhere different --
     /// DraftScreenController carries its own DistrictType-to-Sprite table,
-    /// NodeDefinition carries an icon field, and the board looks a prefab up by
+    /// DistrictDefinition carries an icon field, and the board looks a prefab up by
     /// district. Three answers to one question is three things to keep in step.
     ///
     /// This is the fourth answer that is meant to replace them, and until it

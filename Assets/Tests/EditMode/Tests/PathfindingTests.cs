@@ -52,7 +52,7 @@ namespace NodeWar.Tests
             // Cut node 2 off: it keeps its edge to node 1, but node 1 no longer
             // offers one back, so the search can never reach it. A one-way edge
             // is exactly what a hand-authored board gets wrong.
-            state.nodes[1].edges = new Edge[] { new Edge { toNode = 0, travelWeight = 1 } };
+            state.nodes[1].links = new Link[] { new Link { toNodeID = 0, travelWeight = 1 } };
 
             int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 2);
 
@@ -66,9 +66,7 @@ namespace NodeWar.Tests
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
-            state.nodes[1].edges = new Edge[] { new Edge { toNode = 0, travelWeight = 1 } };
-
-            int before = SimulationStateHasher.ComputeHash(state);
+            state.nodes[1].links = new Link[] { new Link { toNodeID = 0, travelWeight = 1 } };
 
             CommandProcessor.ProcessCommand(state, new GameCommand
             {
@@ -80,10 +78,13 @@ namespace NodeWar.Tests
                 value = 0
             });
 
-            // The empty path is refused before ApplyMove, so the villager is not
-            // left Moving along a path it cannot walk.
+            // The valid intent survives an empty path; no travel begins until retry succeeds.
             Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
-            Assert.AreEqual(before, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(0, state.villagers[0].currentNodeID);
+            Assert.AreEqual(2, state.villagers[0].targetNodeID);
+            Assert.IsEmpty(state.villagers[0].movePath);
+            Assert.AreEqual(0, state.villagers[0].movePathIndex);
+            Assert.AreEqual(0, state.villagers[0].moveProgress);
         }
 
         // ===== TIE-BREAKING =====
@@ -131,8 +132,8 @@ namespace NodeWar.Tests
 
             for (int i = 0; i < state.nodes.Length; i++)
             {
-                Edge[] edges = state.nodes[i].edges;
-                for (int e = 0; e < edges.Length; e++) edges[e].travelWeight = 4;
+                Link[] links = state.nodes[i].links;
+                for (int e = 0; e < links.Length; e++) links[e].travelWeight = 4;
             }
 
             return state;

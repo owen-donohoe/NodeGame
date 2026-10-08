@@ -6,14 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
+verified_at_commit: 3a476dc47ea6085a5e8c0a3c7263b795f5a089f2
 status: stable
 sources:
   - id: contract
@@ -84,9 +78,11 @@ Read the changed or proposed code, then check each item:
      wall-clock time or per-machine state?
    - SimulationState holds no RNG field today, so "stored in
      SimulationState" is not yet the test. The precedent is
-     DraftManager.HandleTimeout's random-cell fallback, which derives a
-     seed from already-replicated values when there is no valid parked
-     placement. The active peer sends the resulting placement. If a change
+     DraftState.ChooseTimeout's random-cell fallback (reached from
+     DraftManager.HandleTimeout), which derives a seed from
+     already-replicated values when there is no valid parked placement and
+     picks only a cell PlacementLegality allows. The active peer sends the
+     resulting placement. If a change
      introduces stored RNG state, does it
      live on SimulationState and advance only inside SimulateTick?
 
@@ -104,9 +100,24 @@ Read the changed or proposed code, then check each item:
      tick sequence?
    - Canonical order: movement -> combat -> claiming -> 
      production -> healing -> respawns -> win-check
-   - Preserve the Rampart-bonus pass after movement and the post-combat
-     resume pass after win-check too. TickBreach precedes TickClaiming inside
-     claiming; the derived nextBreacherID refresh is last, after resume.
+   - Preserve the tick-start resistance snapshot and the order-resume
+     pass (TickOrderResume) after win-check too. TickBreach precedes TickClaiming
+     inside claiming; the derived nextBreacherID refresh is last, after resume.
+   - Does a rule that depends on neighbouring owners (the capture bonus,
+     breach frontier) read the tick-start owner snapshot, not live owners? Are
+     rates computed in long and bounded, so node order and large balances
+     cannot change or overflow a result?
+   - Do worker-count rules (the Infirmary's two counted Acolytes) pick by a total order
+     (lowest villager ID) and share one function between the tick and any UI price?
+   - Fortress resistance must read the tick-start snapshot (owners and levels), take the
+     highest aura (not a sum) with a lowest-source tiebreak, and reset fortressLevel on every
+     ownership loss; invalid fortress cost or resistance arrays must disable upgrading, not be repaired.
+   - A Town reward is paid inside the claim-complete step, with its entitlement
+     spent before the population-cap check (no deferred credit), tracked by the
+     hashed `townPaidMask`.
+   - Auto-recruit follows ordinary production and precedes healing, in ascending
+     node ID. Commands and the automatic pass share eligibility and mutation;
+     recruitment cooldown is not tempo-scaled.
    - With the breach channel enabled, does a loss require a breach this tick
      at the current threshold, with simultaneous losses cancelled? A drop
      alone must not lose; disabling the channel keeps the legacy win path.
@@ -121,26 +132,50 @@ Read the changed or proposed code, then check each item:
      defaults: era fields, breachBar and paidRespawns are zero-neutral;
      nextBreacherID is -1-neutral. Check initialization as well as hashing.
      Breaching must stay appended after Dead to preserve enum values.
+     Recruit count and ready tick are zero-neutral; autoRecruit is false-neutral.
+     Their tagged hash contributions include player/node index, and ownership
+     loss clears only the node fields, leaving the match-long player count intact.
    - Conditional hashing alone does not waive a SimulationVersion bump:
      do existing inputs still produce the same results and hashes, as
      they did when eras were added? If not, bump SimulationVersion.Current
      and review the pinned baseline version with the change. The version
      test checks equality with that pin, not whether hash constants were edited.
-     Current and BaselinesPinnedAtSimVersion are both 2; the v2 re-pin retained
-     the two numeric baseline hashes for the short, non-breaching fixtures.
+     Current and BaselinesPinnedAtSimVersion are both 3; the v2 re-pin retained
+     the two numeric baseline hashes for the short, non-breaching fixtures; the v3
+     re-pin (terrain board) moved both, and C7 (removing the per-villager Rampart hash term) moved them again to 647286254 and 357327383 within the same unreleased version, because
+     boardHash and terrain are always hashed.
+   - DistrictType numbers are persisted and explicit: active set 0-6 and 13-17
+     (DistrictRoster.IsActive), retired numbers reserved. Does any new path accept
+     an inactive type or an alias? Only DistrictMigration (saved data) maps old
+     numbers, and the log reader refuses inactive types for simulation version 3 and later.
+   - Board data (terrain, slot mask, base pools, placements, link tuning) is
+     identity, not state: does a new BoardConfigData field reach BoardHasher, so
+     boardHash and MatchSetup see it, and BOARD_V2 (or a new tag) so the log
+     carries it? The BOARD chunk layout is frozen.
    - Balance is not in SimulationStateHasher. Does a new GameBalanceData,
      SuitStats or DistrictStats field reach BalanceHasher? Per-suit and
      per-district numbers belong on their era entries, not new globals.
      The handshake's content-hash comparison mitigates issue #59; it does
      not put balance into the state hash.
    - Does starting-state setup still go through MatchFactory for live
-     drafted matches, the referee and headless matches? Its Configure
+     drafted matches, the skip-draft mode, the referee and headless matches,
+     and does every placement or preview ask PlacementLegality rather than
+     a second rule? RequireBuildable refuses, never repairs, a bad board. Its Configure
      method installs process-global statics, so matches and test fixtures
      must not run concurrently in one process.
 
 9. Command/serializer pairing
-   - Does any new CommandType have a case in CommandProcessor?
+   - Does any new CommandType have a case in CommandProcessor and an entry
+     in CommandTypes.IsKnown?
+   - Are new enum values explicitly accepted in InputSerializer and MatchLogFormat,
+     with unknown-type refusal and six-field round-trip coverage? Recruit=5,
+     SetAutoRecruit=6 and UpgradeFortress=7 keep the existing payload and TICKS shape. Node commands
+     require villagerID=-1; Recruit value=0, repeat toggle value=0 or 1.
    - Does any GameCommand struct change update InputSerializer?
+   - Is a map or rules agreement still made before any draft packet is
+     honoured (MatchSetup, SetupAgreement), with the board built from the
+     shipped catalog rather than taken from the wire, and does the referee
+     check the log's map against its own catalog?
    - Does a wire layout change (a GameCommand field, or a TickInput header
      byte such as senderDelay and requestedDelay) bump ProtocolVersion.Current
      in Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion

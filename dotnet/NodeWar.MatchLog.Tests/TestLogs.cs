@@ -9,7 +9,34 @@ namespace NodeWar.MatchLog
 {
     internal static class TestLogs
     {
+        /// <summary>A current (BOARD_V2) log: every field set, terrain on a 5x9 board.</summary>
         public static MatchLog Full()
+        {
+            MatchLog log = Build();
+            BoardConfigData b = log.board;
+            b.terrain = new TerrainType[45];
+            b.districtSlots = new bool[45];
+            for (int i = 0; i < 45; i++)
+            {
+                b.terrain[i] = (TerrainType)(i % 3);
+                b.districtSlots[i] = i % 4 == 1;
+            }
+            b.baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Pier };
+            b.baseDraftDistrictsP1 = new[] { DistrictType.Mine };
+            log.board = b;
+            return log;
+        }
+
+        /// <summary>The same log as a simulation version 2 left it: BOARD (tag 2), no terrain.</summary>
+        public static MatchLog FullV2History()
+        {
+            MatchLog log = Build();
+            log.header.sim = 2;
+            log.setup = null;
+            return log;
+        }
+
+        private static MatchLog Build()
         {
             return new MatchLog
             {
@@ -20,29 +47,30 @@ namespace NodeWar.MatchLog
                     localPlayer = 1, tier = 7, seed = -987654321,
                     startUnixSeconds = 0x0102030405060708L, kind = MatchKind.Networked
                 },
+                setup = new MatchSetup("test-map", -1234, 0x5678, -123456789),
                 board = new BoardConfigData
                 {
-                    gridCols = 5, gridRows = 9, defaultEdgeWeight = 3,
+                    gridCols = 5, gridRows = 9, defaultLinkWeight = 3,
                     startingVillagersPerPlayer = 4, startingFood = 17, startingMaterials = 29,
                     startingMetal = 31, ownedMultiplier = 51, partiallyOwnedMultiplier = 76,
                     unownedMultiplier = 101, enemyPartiallyOwnedMultiplier = 151, enemyOwnedMultiplier = 201,
                     initialPlacements = new[]
                     {
-                        new BoardConfigData.InitialNodePlacement
+                        new BoardConfigData.InitialDistrictPlacement
                         { gridX = 1, gridZ = 8, districtType = DistrictType.Core, ownerID = 0, claimBar = 10000 },
-                        new BoardConfigData.InitialNodePlacement
+                        new BoardConfigData.InitialDistrictPlacement
                         { gridX = 3, gridZ = 0, districtType = DistrictType.Forge, ownerID = 1, claimBar = -8765 }
                     }
                 },
                 loadouts = new[]
                 {
-                    new PlayerLoadout { suits = new[] { 2, 4, 6 }, nodes = new[] { 3, 5 } },
-                    new PlayerLoadout { suits = new[] { 7, 8 }, nodes = new[] { 9, 10, 11 } }
+                    new PlayerLoadout { suits = new[] { 2, 4, 6 }, districts = new[] { 3, 5 } },
+                    new PlayerLoadout { suits = new[] { 7, 8 }, districts = new[] { 4, 16, 17 } }
                 },
                 draft = new[]
                 {
                     new DraftPlacement { playerID = 0, districtType = DistrictType.Forge, gridX = 2, gridZ = 7 },
-                    new DraftPlacement { playerID = 1, districtType = DistrictType.Core, gridX = 4, gridZ = 1, wasTimeout = true }
+                    new DraftPlacement { playerID = 1, districtType = DistrictType.Fortress, gridX = 4, gridZ = 1, wasTimeout = true }
                 },
                 ticks = new List<LoggedTick>
                 {

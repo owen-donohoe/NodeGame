@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.UIElements;
@@ -60,7 +61,7 @@ namespace NodeWar.UI
     ///
     /// The uGUI draft reads Mouse.current and cancels on right-click or Escape,
     /// neither of which a phone has. This reads Pointer.current, which is the
-    /// mouse or the touchscreen, and the cancel is a ✕ next to Confirm and a
+    /// mouse or the touchscreen, and the cancel is a âœ• next to Confirm and a
     /// drag back into the bar. That is the single biggest thing the prototype
     /// was asked to fix.
     ///
@@ -122,7 +123,7 @@ namespace NodeWar.UI
 
         [Tooltip("The lobby's NodeDefinitions, for display names. A district with " +
                  "no definition falls back to its enum name.")]
-        [SerializeField] private NodeDefinition[] nodeDefinitions;
+        [FormerlySerializedAs("nodeDefinitions")] [SerializeField] private DistrictDefinition[] districtDefinitions;
 
         [System.Serializable]
         public struct StickerEntry
@@ -360,7 +361,7 @@ namespace NodeWar.UI
             if (waiting != null) waiting.EnableInClassList("draft__waiting--on", isWaiting);
         }
 
-        public void ShowInitialReveal(BoardConfigData.InitialNodePlacement[] placements)
+        public void ShowInitialReveal(BoardConfigData.InitialDistrictPlacement[] placements)
         {
             if (placements == null || draftManager == null) return;
 
@@ -511,12 +512,12 @@ namespace NodeWar.UI
 
             if (draftState == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             int remaining = 0;
 
             for (int i = 0; i < slots.Length; i++)
             {
-                if (slots[i].isConsumed) continue;
+                if (!draftState.IsPlayable(slots[i])) continue;
 
                 remaining++;
                 cards.Add(BuildCard(i, slots[i].districtType));
@@ -552,7 +553,7 @@ namespace NodeWar.UI
         /// </summary>
         private VisualElement BuildCard(int slotIndex, DistrictType district)
         {
-            string name = DraftPieceInfo.DisplayName(district, nodeDefinitions);
+            string name = DraftPieceInfo.DisplayName(district, districtDefinitions);
 
             VisualElement card = new VisualElement();
             card.AddToClassList("draft__card");
@@ -625,9 +626,9 @@ namespace NodeWar.UI
             int slotIndex = (int)card.userData;
             if (draftState == null) return;
 
-            DraftSlot[] slots = draftState.GetPlayerSlots(localPlayerID);
+            DraftPick[] slots = draftState.GetPlayerPicks(localPlayerID);
             if (slotIndex < 0 || slotIndex >= slots.Length) return;
-            if (slots[slotIndex].isConsumed) return;
+            if (!draftState.IsPlayable(slots[slotIndex])) return;
 
             // The capture is not how the drag is read - that is Pointer.current
             // in Update. It is so no other element in the panel can claim this
@@ -708,7 +709,7 @@ namespace NodeWar.UI
                 // Confirm pair for the frame between landing and lifting off.
                 if (!boardPressOverUI && handSlot >= 0 &&
                     ScreenToCell(boardPressScreen, out int pressX, out int pressZ) &&
-                    draftState.IsCellAvailable(pressX, pressZ))
+                    draftState.CanPlace(handDistrict, pressX, pressZ))
                 {
                     ParkAt(pressX, pressZ, false);
                 }
@@ -734,7 +735,7 @@ namespace NodeWar.UI
 
                 if (handSlot < 0) return;
                 if (!ScreenToCell(screen, out int gx, out int gz)) return;
-                if (!draftState.IsCellAvailable(gx, gz)) return;
+                if (!draftState.CanPlace(handDistrict, gx, gz)) return;
 
                 ParkAt(gx, gz);
                 return;
@@ -849,6 +850,7 @@ namespace NodeWar.UI
                 dragMoved = true;
 
                 if (!dragFromBoard) ShrinkReplacedPendingPiece(dragSlot);
+                draftManager.SetHighlightedPick(dragSlot);
 
                 // A new drag drops whatever was parked. The piece is in the
                 // air again and the old cell is no longer an answer.
@@ -951,6 +953,7 @@ namespace NodeWar.UI
 
             handSlot = slot;
             handDistrict = district;
+            draftManager.SetHighlightedPick(slot);
             ParkAt(landX, landZ);
         }
 
@@ -970,6 +973,7 @@ namespace NodeWar.UI
 
             handSlot = slotIndex;
             handDistrict = district;
+            draftManager.SetHighlightedPick(slotIndex);
             parked = false;
             parkedX = -1;
             parkedZ = -1;
@@ -1001,6 +1005,7 @@ namespace NodeWar.UI
         private void ClearHand()
         {
             handSlot = -1;
+            if (draftManager != null) draftManager.SetHighlightedPick(-1);
             parked = false;
             parkedX = -1;
             parkedZ = -1;
@@ -1038,7 +1043,7 @@ namespace NodeWar.UI
         /// </summary>
         private void ParkAt(int gridX, int gridZ, bool confirm = true)
         {
-            if (draftState == null || !draftState.IsCellAvailable(gridX, gridZ)) return;
+            if (draftState == null || !draftState.CanPlace(handDistrict, gridX, gridZ)) return;
 
             parked = true;
             parkedX = gridX;
@@ -1082,7 +1087,7 @@ namespace NodeWar.UI
 
         private void HandleCancelPressed()
         {
-            // ✕ puts the piece back in the bar entirely, rather than leaving it
+            // âœ• puts the piece back in the bar entirely, rather than leaving it
             // armed. A player who pressed cancel wants out of the placement,
             // not a half-step back into it.
             ClearHand();
@@ -1160,7 +1165,7 @@ namespace NodeWar.UI
         {
             if (proxy == null) return;
 
-            string name = DraftPieceInfo.DisplayName(district, nodeDefinitions);
+            string name = DraftPieceInfo.DisplayName(district, districtDefinitions);
 
             if (proxyName != null) proxyName.text = name;
             if (proxyMonogram != null) proxyMonogram.text = DraftPieceInfo.Monogram(name);
@@ -1267,7 +1272,7 @@ namespace NodeWar.UI
                 return;
             }
 
-            PlaceGhostOnCell(gx, gz, draftState != null && draftState.IsCellAvailable(gx, gz));
+            PlaceGhostOnCell(gx, gz, draftState != null && draftState.CanPlace(dragging ? dragDistrict : handDistrict, gx, gz));
         }
 
         private void PlaceGhostOnCell(int gx, int gz, bool valid)
@@ -1320,17 +1325,12 @@ namespace NodeWar.UI
             var theme = NodeWar.Lobby.UIArt.Theme;
             var visual = theme != null && theme.districtVisuals != null ? theme.districtVisuals.For(type) : null;
             if (visual != null && visual.StickerOrIcon != null) return visual.StickerOrIcon;
-            if (stickerMappings == null) return null;
-
-            for (int i = 0; i < stickerMappings.Length; i++)
-            {
-                if (stickerMappings[i].districtType == type)
-                    return stickerMappings[i].sprite;
-            }
-
-            return null;
+            if (stickerMappings != null)
+                for (int i = 0; i < stickerMappings.Length; i++)
+                    if (stickerMappings[i].districtType == type && stickerMappings[i].sprite != null)
+                        return stickerMappings[i].sprite;
+            return NodeWar.View.DistrictFallbackArt.Sticker(type);
         }
-
         // ===== TURN DISPLAY =====
 
         private void UpdateTurnDisplay()

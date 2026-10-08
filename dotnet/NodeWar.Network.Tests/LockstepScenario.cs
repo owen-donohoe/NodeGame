@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using NodeWar.Simulation;
+using NodeWar.Tests;
 using NUnit.Framework;
 
 namespace NodeWar.Network.Tests
@@ -49,27 +50,35 @@ namespace NodeWar.Network.Tests
         public double Now;
 
         private int nodeCount;
+        public Func<int,int,GameCommand[]> CommandScript;
+        public bool CaptureConfirmedTicks;
 
         public static GameBalanceData Balance;
 
-        public static void Configure()
+        /// <summary>The board the match is played on. The default is the tiny 3x3 land fixture.</summary>
+        public BoardConfigData Board = BoardFixtures.LandGrid3x3();
+
+        /// <summary>The draft both peers and the reference start from, legal on <see cref="Board"/>.</summary>
+        public DraftPlacement[] Draft =
+        {
+            new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
+            new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
+        };
+
+        public void Configure()
         {
             Balance = GameBalanceData.Default();
-            MatchFactory.Configure(Balance, BoardConfigData.Default());
+            MatchFactory.Configure(Balance, Board);
         }
 
-        private static SimulationState NewState()
+        private SimulationState NewState()
         {
-            BoardConfigData board = BoardConfigData.Default();
-            DraftPlacement[] draft =
-            {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 5 },
-                new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
-            };
+            BoardConfigData board = Board;
+            DraftPlacement[] draft = Draft;
             return MatchFactory.Build(Balance, board, draft, new[]
             {
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] },
-                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, nodes = new int[0] }
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] },
+                new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] }
             });
         }
 
@@ -81,6 +90,7 @@ namespace NodeWar.Network.Tests
         /// </summary>
         public GameCommand[] Script(int player, int forTick)
         {
+            if (CommandScript != null) return CommandScript(player, forTick);
             if (forTick < InputDelay || forTick % 5 != player + 1) return null;
             return new[]
             {
@@ -108,8 +118,8 @@ namespace NodeWar.Network.Tests
             };
             Peers = new[]
             {
-                new HarnessPeer(0, NewState(), Links[0], Links[1], Script, () => Now),
-                new HarnessPeer(1, NewState(), Links[1], Links[0], Script, () => Now)
+                new HarnessPeer(0, NewState(), Links[0], Links[1], Script, () => Now, CaptureConfirmedTicks),
+                new HarnessPeer(1, NewState(), Links[1], Links[0], Script, () => Now, CaptureConfirmedTicks)
             };
 
             int[] spikeUsed = new int[Spikes.Count];

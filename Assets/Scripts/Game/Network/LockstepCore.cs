@@ -257,6 +257,9 @@ namespace NodeWar.Network
 
         public event System.Action<TickEventLog> TickSimulated;
 
+        /// <summary>After every confirmed tick, including replay. Observers read the current state.</summary>
+        public event System.Action<int> ConfirmedTickSimulated;
+
         /// <summary>
         /// Every tick's commands in the order they were applied (all of P0's,
         /// then all of P1's), with the tick count before them. For recording
@@ -872,7 +875,11 @@ namespace NodeWar.Network
             }
 
             // Memory cleanup, keyed off confirmed ticks only.
-            if (confirmedTick) CleanupOldInputs(tick);
+            if (confirmedTick)
+            {
+                CleanupOldInputs(tick);
+                ConfirmedTickSimulated?.Invoke(simState.tickCount);
+            }
 
             // A replayed tick already played its cues when it was speculated; a
             // speculative game over is about to be rolled back. Neither is shown.

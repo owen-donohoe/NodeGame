@@ -22,6 +22,7 @@ namespace NodeWar.Tests
         public static SimulationState BuildThreeNodeBoard(GameBalanceData balance)
         {
             SimulationState state = new SimulationState();
+            state.boardHash = 0; // a tiny hand-built fixture has no board identity
 
             state.nodes = new NodeData[]
             {
@@ -30,16 +31,16 @@ namespace NodeWar.Tests
                     nodeID = 0,
                     gridX = 0, // view-only; excluded from SimulationStateHasher
                     gridZ = 0,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 1, travelWeight = 1 } // minimal weight for a tight test
+                        new Link { toNodeID = 1, travelWeight = 1 } // minimal weight for a tight test
                     },
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 10000, // fully owned by player 0 (GameManager's +/-10000 core convention)
                     ownerID = 0,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -47,17 +48,17 @@ namespace NodeWar.Tests
                     nodeID = 1,
                     gridX = 1,
                     gridZ = 0,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 0, travelWeight = 1 },
-                        new Edge { toNode = 2, travelWeight = 1 }
+                        new Link { toNodeID = 0, travelWeight = 1 },
+                        new Link { toNodeID = 2, travelWeight = 1 }
                     },
                     districtType = DistrictType.None, // neutral connector node
                     baseDistrictType = DistrictType.None,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -65,23 +66,23 @@ namespace NodeWar.Tests
                     nodeID = 2,
                     gridX = 2,
                     gridZ = 0,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 1, travelWeight = 1 }
+                        new Link { toNodeID = 1, travelWeight = 1 }
                     },
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = -10000, // fully owned by player 1
                     ownerID = 1,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 }
             };
 
             state.players = new PlayerData[]
             {
-                // Starting resources match BoardConfigData.Default() (0/0/0) --
+                // Starting resources are the shipped board's (0/0/0) --
                 // GameBalanceData itself defines no starting-resource fields.
                 new PlayerData { playerID = 0, coreNodeID = 0, food = 0, materials = 0, metal = 0, breachCount = 0 },
                 new PlayerData { playerID = 1, coreNodeID = 2, food = 0, materials = 0, metal = 0, breachCount = 0 }
@@ -116,6 +117,7 @@ namespace NodeWar.Tests
         public static SimulationState BuildSquareBoard(GameBalanceData balance)
         {
             SimulationState state = new SimulationState();
+            state.boardHash = 0; // a tiny hand-built fixture has no board identity
 
             state.nodes = new NodeData[]
             {
@@ -124,17 +126,17 @@ namespace NodeWar.Tests
                     nodeID = 0,
                     gridX = 0, // view-only; excluded from SimulationStateHasher
                     gridZ = 0,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 1, travelWeight = 1 },
-                        new Edge { toNode = 2, travelWeight = 1 }
+                        new Link { toNodeID = 1, travelWeight = 1 },
+                        new Link { toNodeID = 2, travelWeight = 1 }
                     },
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 10000, // fully owned by player 0
                     ownerID = 0,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -142,17 +144,17 @@ namespace NodeWar.Tests
                     nodeID = 1,
                     gridX = 1,
                     gridZ = 0,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 0, travelWeight = 1 },
-                        new Edge { toNode = 3, travelWeight = 1 }
+                        new Link { toNodeID = 0, travelWeight = 1 },
+                        new Link { toNodeID = 3, travelWeight = 1 }
                     },
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -160,17 +162,17 @@ namespace NodeWar.Tests
                     nodeID = 2,
                     gridX = 0,
                     gridZ = 1,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 0, travelWeight = 1 },
-                        new Edge { toNode = 3, travelWeight = 1 }
+                        new Link { toNodeID = 0, travelWeight = 1 },
+                        new Link { toNodeID = 3, travelWeight = 1 }
                     },
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -178,17 +180,17 @@ namespace NodeWar.Tests
                     nodeID = 3,
                     gridX = 1,
                     gridZ = 1,
-                    edges = new Edge[]
+                    links = new Link[]
                     {
-                        new Edge { toNode = 1, travelWeight = 1 },
-                        new Edge { toNode = 2, travelWeight = 1 }
+                        new Link { toNodeID = 1, travelWeight = 1 },
+                        new Link { toNodeID = 2, travelWeight = 1 }
                     },
                     districtType = DistrictType.Core,
                     baseDistrictType = DistrictType.Core,
-                    slotType = NodeSlotType.Fixed,
+                    upgradeCategory = DistrictUpgradeCategory.Fixed,
+                    terrain = TerrainType.Land,
                     claimBar = -10000, // fully owned by player 1
                     ownerID = 1,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 }
             };
@@ -234,7 +236,6 @@ namespace NodeWar.Tests
                 isConsumed = false,
                 productionTicksRemaining = 0,
                 productionTicksMax = 0,
-                hasRampartBonus = false
             };
         }
     }
