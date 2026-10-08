@@ -91,6 +91,7 @@ namespace NodeWar.Simulation
         public int claimBar;
         public int ownerID;
         public int townPaidMask;
+        public int fortressLevel;
         public int materialAllocation;
         public int recruitReadyTick;
         public bool autoRecruit;
@@ -143,14 +144,6 @@ namespace NodeWar.Simulation
         public bool isConsumed;
         public int productionTicksRemaining;
         public int productionTicksMax;
-        public bool hasRampartBonus;
-
-        /// <summary>
-        /// The era of the Rampart whose bonus this villager holds, so leaving
-        /// takes back exactly what arriving gave. Meaningless without
-        /// hasRampartBonus.
-        /// </summary>
-        public int rampartBonusEra;
     }
 
     [System.Serializable]

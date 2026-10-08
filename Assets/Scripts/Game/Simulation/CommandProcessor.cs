@@ -31,6 +31,9 @@ namespace NodeWar.Simulation
                 case CommandType.Recruit:
                     ProcessRecruit(state, command);
                     break;
+                case CommandType.UpgradeFortress:
+                    ProcessUpgradeFortress(state, command);
+                    break;
                 case CommandType.SetAutoRecruit:
                     ProcessSetAutoRecruit(state, command);
                     break;
@@ -215,6 +218,18 @@ namespace NodeWar.Simulation
             return scaled;
         }
 
+        private static void ProcessUpgradeFortress(SimulationState state, GameCommand command)
+        {
+            if (!NodeActionRules.CanUpgradeFortress(state, bal, command.playerID, command.targetNodeID,
+                command.value, command.villagerID)) return;
+            NodeData node = state.nodes[command.targetNodeID];
+            DistrictStats stats = bal.GetDistrictStats(DistrictType.Fortress, node.districtEra);
+            int next = node.fortressLevel + 1;
+            if (command.value == 0) state.players[command.playerID].materials -= stats.fortressMaterialsCosts[next];
+            else state.players[command.playerID].metal -= stats.fortressMetalCosts[next];
+            state.nodes[command.targetNodeID].fortressLevel = next;
+        }
+
         private static void ProcessRecruit(SimulationState state, GameCommand command)
         {
             if (command.villagerID != -1 || command.value != 0) return;
@@ -281,9 +296,9 @@ namespace NodeWar.Simulation
             state.villagers[vid].attackCooldownMax = stats.attackCooldownMax;
             state.villagers[vid].attackCooldownRemaining = stats.attackCooldownMax;
             state.villagers[vid].fightPriority = stats.fightPriority;
-            // Apply HP (baseHP + bonusHP, accounting for Rampart if present)
+            // Apply civilian HP plus the equipped suit bonus.
             int newMaxHP = bal.baseHP + stats.bonusHP;
-            newMaxHP += bal.RampartBonusHP(villager);
+
             state.villagers[vid].maxHP = newMaxHP;
             state.villagers[vid].hp = newMaxHP;
         }

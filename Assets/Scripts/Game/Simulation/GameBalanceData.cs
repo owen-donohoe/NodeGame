@@ -27,7 +27,7 @@ namespace NodeWar.Simulation
     ///   Market             productionTicks (food), secondaryProductionTicks (materials)
     ///   Town               townBonusVillagers (Village bonusVillagersOnClaim is historical)
     ///   Shrine             healIntervalTicks
-    ///   Rampart            claimDecrementMultiplier, damageReduction, maxHPBonus
+    ///   Fortress           fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
     ///   Watchtower         claimRateNumerator / claimRateDenominator
     ///   Sanctuary          respawnBoostPerWorker, respawnCostReductionPercent
     /// </summary>
@@ -41,8 +41,11 @@ namespace NodeWar.Simulation
         public int secondaryProductionTicks;
         public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
         public int townBonusVillagers;
+        public int[] fortressMaterialsCosts;
+        public int[] fortressMetalCosts;
+        public int[] fortressResistancePercent;
         public int healIntervalTicks;
-        public int claimDecrementMultiplier;
+        public int claimDecrementMultiplier; // Historical Rampart fields remain decoded and hashed.
         public int damageReduction;
         public int maxHPBonus;
         public int claimRateNumerator;
@@ -259,12 +262,28 @@ namespace NodeWar.Simulation
             return cap > 0 && value >= cap ? cap : unchecked(value + 1);
         }
 
+        public static bool FortressStatsValid(DistrictStats d)
+        {
+            int[] materials = d.fortressMaterialsCosts, metal = d.fortressMetalCosts, resistance = d.fortressResistancePercent;
+            if (materials == null || metal == null || resistance == null || materials.Length != 4 || metal.Length != 4 || resistance.Length != 4)
+                return false;
+            if (materials[0] != 0 || metal[0] != 0 || resistance[0] != 0) return false;
+            for (int level = 1; level <= 3; level++)
+                if (materials[level] <= 0 || metal[level] <= 0 || resistance[level] < resistance[level - 1] || resistance[level] > 100)
+                    return false;
+            return true;
+        }
+
         public bool CoreRulesValid(out string reason)
         {
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                 {
                     DistrictStats d = districtStats[i];
+                    // Missing historical arrays remain readable, but cannot enable upgrading.
+                    if (d.districtType == DistrictType.Fortress &&
+                        (d.fortressMaterialsCosts != null || d.fortressMetalCosts != null || d.fortressResistancePercent != null) && !FortressStatsValid(d))
+                    { reason = "Invalid Fortress costs or resistance."; return false; }
                     if (d.districtType == DistrictType.Infirmary &&
                         (d.healIntervalTicks <= 0 || d.respawnBoostPerWorker < 0 ||
                          d.respawnCostReductionPercent < 0 || d.respawnCostReductionPercent > 100))
@@ -420,6 +439,12 @@ namespace NodeWar.Simulation
                 {
                     DistrictStats entry = template[d];
                     entry.era = era;
+                    if (entry.districtType == DistrictType.Fortress)
+                    {
+                        entry.fortressMaterialsCosts = new[] { 0, 4, 8, 12 };
+                        entry.fortressMetalCosts = new[] { 0, 1, 2, 3 };
+                        entry.fortressResistancePercent = new[] { 0, 25, 40, 50 };
+                    }
                     all[d * EraCount + era] = entry;
                 }
             }
@@ -455,12 +480,6 @@ namespace NodeWar.Simulation
         public SuitStats GetSuitStats(SuitType type)
         {
             return GetSuitStats(type, 0);
-        }
-
-        /// <summary>The max HP a villager's Rampart bonus added; 0 without one.</summary>
-        public int RampartBonusHP(VillagerData v)
-        {
-            return v.hasRampartBonus ? GetDistrictStats(DistrictType.Rampart, v.rampartBonusEra).maxHPBonus : 0;
         }
 
         public SuitStats GetSuitStats(SuitType type, int era)

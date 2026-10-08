@@ -8,7 +8,8 @@ namespace NodeWar.Simulation
         Equip,    
         Respawn,
         Recruit = 5,
-        SetAutoRecruit = 6
+        SetAutoRecruit = 6,
+        UpgradeFortress = 7
     }
 
     [System.Serializable]
@@ -34,6 +35,7 @@ namespace NodeWar.Simulation
                 case CommandType.Equip:
                 case CommandType.Respawn:
                 case CommandType.Recruit:
+                case CommandType.UpgradeFortress:
                 case CommandType.SetAutoRecruit:
                     return true;
                 default:

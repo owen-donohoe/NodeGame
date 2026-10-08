@@ -97,6 +97,12 @@ namespace NodeWar.Simulation
                         hash = hash * 31 + i;
                         hash = hash * 31 + state.nodes[i].recruitReadyTick;
                     }
+                    if (state.nodes[i].fortressLevel != 0)
+                    {
+                        hash = hash * 31 + 4013;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.nodes[i].fortressLevel;
+                    }
                     if (state.nodes[i].townPaidMask != 0)
                     {
                         hash = hash * 31 + 4012;
@@ -136,9 +142,6 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (v.isConsumed ? 1 : 0);
                     hash = hash * 31 + v.productionTicksRemaining;
                     hash = hash * 31 + v.productionTicksMax;
-                    hash = hash * 31 + (v.hasRampartBonus ? 1 : 0);
-                    if (v.rampartBonusEra != 0)
-                        hash = hash * 31 + v.rampartBonusEra;
 
                     // movePath contents
                     if (v.movePath != null)

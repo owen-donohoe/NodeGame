@@ -34,19 +34,19 @@ namespace NodeWar.Simulation
             state.tickCount++;
             int[] ownersAtTickStart = new int[state.nodes.Length];
             for (int i = 0; i < state.nodes.Length; i++) ownersAtTickStart[i] = state.nodes[i].ownerID;
+            BuildResistanceSnapshot(state, ownersAtTickStart, out int[] resistancePercent, out _);
             TickTempoEvents(state.tickCount, log);
 
             // Step 2: Movement
             TickAllMovement(state, log);
 
-            TickRampartBonuses(state);   // NEW
 
             // Step 3: Combat
             TickCombat(state, log);
 
             // Step 4: Claiming
-            bool[] breachedThisTick = TickBreach(state, ownersAtTickStart, log);
-            TickClaiming(state, ownersAtTickStart, log);
+            bool[] breachedThisTick = TickBreach(state, ownersAtTickStart, resistancePercent, log);
+            TickClaiming(state, ownersAtTickStart, resistancePercent, log);
 
             // Step 5: Production
             TickProduction(state);
@@ -215,38 +215,6 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].movePathIndex = 0;
         }
 
-        private static void TickRampartBonuses(SimulationState state)
-        {
-            for (int i = 0; i < state.villagers.Length; i++)
-            {
-                VillagerData v = state.villagers[i];
-                if (v.state == VillagerState.Dead || v.isConsumed) continue;
-
-                bool shouldHaveBonus =
-                    state.nodes[v.currentNodeID].districtType == DistrictType.Rampart &&
-                    state.nodes[v.currentNodeID].ownerID == v.ownerID;
-
-                if (shouldHaveBonus && !v.hasRampartBonus)
-                {
-                    int era = state.nodes[v.currentNodeID].districtEra;
-                    int bonus = bal.GetDistrictStats(DistrictType.Rampart, era).maxHPBonus;
-                    state.villagers[i].maxHP += bonus;
-                    state.villagers[i].hp += bonus;
-                    state.villagers[i].hasRampartBonus = true;
-                    state.villagers[i].rampartBonusEra = era;
-                }
-                else if (!shouldHaveBonus && v.hasRampartBonus)
-                {
-                    state.villagers[i].maxHP -= bal.RampartBonusHP(v);
-                    if (state.villagers[i].hp > state.villagers[i].maxHP)
-                        state.villagers[i].hp = state.villagers[i].maxHP;
-                    state.villagers[i].hasRampartBonus = false;
-                    state.villagers[i].rampartBonusEra = 0;
-                }
-            }
-        }
-
-
         /// <summary>
         /// Applies suit assignment, production timer, and state for a villager
         /// that has arrived at a node (end of path or post-combat with no path).
@@ -397,12 +365,6 @@ namespace NodeWar.Simulation
                                 !state.villagers[targetID].isConsumed)
                             {
                                 int damage = state.villagers[v].attackDamage;
-                                if (state.villagers[targetID].hasRampartBonus)
-                                {
-                                    damage -= bal.GetDistrictStats(DistrictType.Rampart,
-                                        state.villagers[targetID].rampartBonusEra).damageReduction;
-                                    if (damage < 1) damage = 1;
-                                }
                                 state.villagers[targetID].hp -= damage;
                             }
                         }
@@ -430,9 +392,6 @@ namespace NodeWar.Simulation
                     state.villagers[v].moveProgress = 0;
                     state.villagers[v].targetNodeID = -1;
                     state.villagers[v].combatTargetID = -1;
-                    state.villagers[v].maxHP -= bal.RampartBonusHP(state.villagers[v]);
-                    state.villagers[v].hasRampartBonus = false;
-                    state.villagers[v].rampartBonusEra = 0;
                 }
             }
         }
@@ -508,7 +467,7 @@ namespace NodeWar.Simulation
 
         // ===== STEP 4: CLAIMING =====
 
-        private static void TickClaiming(SimulationState state, int[] ownersAtTickStart, TickEventLog log)
+        private static void TickClaiming(SimulationState state, int[] ownersAtTickStart, int[] resistancePercent, TickEventLog log)
         {
             // Re-evaluate Idle/Claiming states based on current ownership
             UpdateVillagerClaimStates(state);
@@ -544,7 +503,7 @@ namespace NodeWar.Simulation
                 // --- Player 0 claiming ---
                 if (p0Claimers > 0 && node.ownerID != 0)
                 {
-                    long rate = ClaimRate(state, nodeIndex, 0, p0Claimers, ownersAtTickStart);
+                    long rate = ClaimRate(state, nodeIndex, 0, p0Claimers, ownersAtTickStart, resistancePercent);
                     node.claimBar = (int)System.Math.Min(bal.claimThreshold, (long)node.claimBar + rate);
 
                     if (node.claimBar >= bal.claimThreshold)
@@ -560,6 +519,7 @@ namespace NodeWar.Simulation
                         node.ownerID = -1;
                         node.autoRecruit = false;
                         node.recruitReadyTick = 0;
+                        node.fortressLevel = 0;
                         log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 1, 0);
                     }
                 }
@@ -567,7 +527,7 @@ namespace NodeWar.Simulation
                 // --- Player 1 claiming ---
                 if (p1Claimers > 0 && node.ownerID != 1)
                 {
-                    long rate = ClaimRate(state, nodeIndex, 1, p1Claimers, ownersAtTickStart);
+                    long rate = ClaimRate(state, nodeIndex, 1, p1Claimers, ownersAtTickStart, resistancePercent);
                     node.claimBar = (int)System.Math.Max(-(long)bal.claimThreshold, (long)node.claimBar - rate);
 
                     if (node.claimBar <= -bal.claimThreshold)
@@ -583,6 +543,7 @@ namespace NodeWar.Simulation
                         node.ownerID = -1;
                         node.autoRecruit = false;
                         node.recruitReadyTick = 0;
+                        node.fortressLevel = 0;
                         log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 0, 1);
                     }
                 }
@@ -609,7 +570,54 @@ namespace NodeWar.Simulation
             return 100L + (long)bal.captureBonusPercentPerStep * steps;
         }
 
+        /// <summary>Tick-local aura, read solely from the ownership snapshot and paid levels.</summary>
+        public static void BuildResistanceSnapshot(SimulationState state, int[] ownersAtTickStart,
+            out int[] resistancePercent, out int[] resistanceSourceNodeID)
+        {
+            resistancePercent = new int[state.nodes.Length];
+            resistanceSourceNodeID = new int[state.nodes.Length];
+            for (int i = 0; i < state.nodes.Length; i++) resistanceSourceNodeID[i] = -1;
+            for (int source = 0; source < state.nodes.Length; source++)
+            {
+                NodeData node = state.nodes[source];
+                int owner = ownersAtTickStart[source];
+                if (owner < 0 || owner > 1 || node.districtType != DistrictType.Fortress || node.fortressLevel < 1 || node.fortressLevel > 3) continue;
+                DistrictStats stats = bal.GetDistrictStats(DistrictType.Fortress, node.districtEra);
+                if (!GameBalanceData.FortressStatsValid(stats)) continue;
+                int percent = stats.fortressResistancePercent[node.fortressLevel];
+                ApplyResistance(source, source, owner, percent, ownersAtTickStart, resistancePercent, resistanceSourceNodeID);
+                if (node.links != null)
+                    for (int edge = 0; edge < node.links.Length; edge++)
+                        ApplyResistance(node.links[edge].toNodeID, source, owner, percent, ownersAtTickStart, resistancePercent, resistanceSourceNodeID);
+            }
+        }
+
+        private static void ApplyResistance(int target, int source, int owner, int percent, int[] owners,
+            int[] resistancePercent, int[] resistanceSourceNodeID)
+        {
+            if (target < 0 || target >= owners.Length || owners[target] != owner || percent <= 0) return;
+            if (percent > resistancePercent[target] || (percent == resistancePercent[target] &&
+                (resistanceSourceNodeID[target] < 0 || source < resistanceSourceNodeID[target])))
+            {
+                resistancePercent[target] = percent;
+                resistanceSourceNodeID[target] = source;
+            }
+        }
+
+        private static long ResistRate(long rate, int resistance)
+        {
+            long divisor = 100L + resistance;
+            // Equivalent integer floor, without overflowing an already-long claim product.
+            return System.Math.Max(1, rate / divisor * 100 + rate % divisor * 100 / divisor);
+        }
+
         public static long ClaimRate(SimulationState state, int nodeID, int attackerID, int bodies, int[] ownersAtTickStart)
+        {
+            BuildResistanceSnapshot(state, ownersAtTickStart, out int[] resistancePercent, out _);
+            return ClaimRate(state, nodeID, attackerID, bodies, ownersAtTickStart, resistancePercent);
+        }
+
+        public static long ClaimRate(SimulationState state, int nodeID, int attackerID, int bodies, int[] ownersAtTickStart, int[] resistancePercent)
         {
             if (bodies <= 0 || bal.baseClaimPerTick <= 0) return 0;
             long rate = (long)bal.baseClaimPerTick * System.Math.Min(4, bodies);
@@ -618,6 +626,8 @@ namespace NodeWar.Simulation
                 rate = checked(rate * bal.decrementMultiplier);
             rate = checked(rate * FrontierPercent(state, nodeID, attackerID, ownersAtTickStart)) / 100;
             rate = checked(rate * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount)) / 100;
+            if (ownersAtTickStart[nodeID] == 1 - attackerID)
+                rate = ResistRate(rate, resistancePercent[nodeID]);
             // A single tick may cross the entire signed bar, which spans twice
             // int.MaxValue. Bound only beyond that observationally equivalent range.
             return System.Math.Min(2L * int.MaxValue, System.Math.Max(1, rate));
@@ -815,6 +825,7 @@ namespace NodeWar.Simulation
             {
                 state.nodes[nodeIndex].autoRecruit = false;
                 state.nodes[nodeIndex].recruitReadyTick = 0;
+                state.nodes[nodeIndex].fortressLevel = 0;
             }
             state.nodes[nodeIndex].ownerID = playerID;
 
@@ -921,7 +932,6 @@ namespace NodeWar.Simulation
                     isConsumed = false,
                     productionTicksRemaining = 0,
                     productionTicksMax = 0,
-                    hasRampartBonus = false
                 };
             }
 
@@ -1008,8 +1018,6 @@ namespace NodeWar.Simulation
             state.villagers[vid].respawnTicksRemaining = 0;
             state.villagers[vid].productionTicksRemaining = 0;
             state.villagers[vid].productionTicksMax = 0;
-            state.villagers[vid].hasRampartBonus = false;
-            state.villagers[vid].rampartBonusEra = 0;
         }
 
         // ===== STEP 8: WIN CONDITION =====
@@ -1130,7 +1138,7 @@ namespace NodeWar.Simulation
         }
 
         // Inside the claiming step, before claiming so consumption frees a population slot.
-        private static bool[] TickBreach(SimulationState state, int[] ownersAtTickStart, TickEventLog log)
+        private static bool[] TickBreach(SimulationState state, int[] ownersAtTickStart, int[] resistancePercent, TickEventLog log)
         {
             if (!bal.BreachBarEnabled()) return null;
             bool[] breachedThisTick = new bool[state.players.Length];
@@ -1146,6 +1154,7 @@ namespace NodeWar.Simulation
                 long rate = bal.breachSwarmRate[System.Math.Min(count, bal.breachSwarmRate.Length) - 1];
                 rate = System.Math.Min(int.MaxValue, System.Math.Max(1,
                     checked(rate * FrontierPercent(state, state.players[p].coreNodeID, 1 - p, ownersAtTickStart)) / 100));
+                rate = ResistRate(rate, resistancePercent[state.players[p].coreNodeID]);
                 long progress = (long)state.players[p].breachBar + rate;
                 if (progress >= bal.breachBarMax)
                 {
@@ -1176,9 +1185,6 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].moveProgress = 0;
             state.villagers[villagerIndex].targetNodeID = -1;
             state.villagers[villagerIndex].combatTargetID = -1;
-            state.villagers[villagerIndex].maxHP -= bal.RampartBonusHP(state.villagers[villagerIndex]);
-            state.villagers[villagerIndex].hasRampartBonus = false;
-            state.villagers[villagerIndex].rampartBonusEra = 0;
         }
 
         // ===== HELPER FUNCTIONS =====

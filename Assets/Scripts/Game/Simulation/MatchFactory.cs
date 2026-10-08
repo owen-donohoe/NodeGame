@@ -173,6 +173,7 @@ namespace NodeWar.Simulation
                     claimBar = 0,
                     ownerID = -1,
                     townPaidMask = 0,
+                    fortressLevel = 0,
                     materialAllocation = 0,
                     recruitReadyTick = 0,
                     autoRecruit = false

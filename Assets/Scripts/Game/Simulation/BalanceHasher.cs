@@ -26,6 +26,23 @@ namespace NodeWar.Simulation
             }
         }
 
+        private static int HashFortressArray(int hash, int[] values, int tag, int districtIndex)
+        {
+            if (values == null) return hash;
+            unchecked
+            {
+                hash = hash * 31 + tag;
+                hash = hash * 31 + districtIndex;
+                hash = hash * 31 + values.Length;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    hash = hash * 31 + i;
+                    hash = hash * 31 + values[i];
+                }
+                return hash;
+            }
+        }
+
         public static int Hash(GameBalanceData b)
         {
             unchecked
@@ -125,6 +142,14 @@ namespace NodeWar.Simulation
                             hash = hash * 31 + i;
                             hash = hash * 31 + b.districtStats[i].townBonusVillagers;
                         }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                    {
+                        DistrictStats d = b.districtStats[i];
+                        hash = HashFortressArray(hash, d.fortressMaterialsCosts, 3008, i);
+                        hash = HashFortressArray(hash, d.fortressMetalCosts, 3009, i);
+                        hash = HashFortressArray(hash, d.fortressResistancePercent, 3010, i);
+                    }
                 return hash;
             }
         }

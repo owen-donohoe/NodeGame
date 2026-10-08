@@ -120,9 +120,9 @@ namespace NodeWar.Tests
             Assert.AreNotEqual(before, withNode);
             state.nodes[1].districtEra = 0;
 
-            state.villagers[0].rampartBonusEra = 1;
+            state.nodes[1].fortressLevel = 1;
             Assert.AreNotEqual(before, SimulationStateHasher.ComputeHash(state));
-            state.villagers[0].rampartBonusEra = 0;
+            state.nodes[1].fortressLevel = 0;
 
             state.players[0].suitEras[3] = 1;
             int suitHash = SimulationStateHasher.ComputeHash(state);
@@ -170,23 +170,19 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void RampartEra1_GivesAndTakesBackItsOwnBonus()
+        public void LegacyRampartEra1_NoLongerChangesOccupantHP()
         {
             GameBalanceData balance = UseBalance(WithEra1(d => { d.maxHPBonus = 4; return d; }, DistrictType.Rampart));
             SimulationState state = BoardWithWorkerOn(balance, DistrictType.Rampart, 1);
             int baseMax = state.villagers[0].maxHP;
 
             Tick(state, 1);
-            Assert.AreEqual(baseMax + 4, state.villagers[0].maxHP);
-            Assert.AreEqual(1, state.villagers[0].rampartBonusEra);
+            Assert.AreEqual(baseMax, state.villagers[0].maxHP);
 
-            // Era 1's numbers change under it: leaving must still take back
-            // what arriving gave, read from the era the bonus came from.
+            // Leaving the retired district also preserves ordinary HP.
             state.nodes[WorkNode].districtType = DistrictType.None;
             Tick(state, 1);
             Assert.AreEqual(baseMax, state.villagers[0].maxHP);
-            Assert.IsFalse(state.villagers[0].hasRampartBonus);
-            Assert.AreEqual(0, state.villagers[0].rampartBonusEra);
         }
 
         [Test]

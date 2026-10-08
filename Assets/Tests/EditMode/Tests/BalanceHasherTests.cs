@@ -84,6 +84,31 @@ namespace NodeWar.Tests
                 if (field == "respawnCostReductionPercent") { f.SetValue(entry, 101); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _)); }
             }
         }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void FortressArrays_EveryElementEraHashedAndValidated(int era)
+        {
+            var b = GameBalanceData.Default(); int index = Array.FindIndex(b.districtStats, d => d.districtType == DistrictType.Fortress && d.era == era);
+            foreach (string name in new[] { "fortressMaterialsCosts", "fortressMetalCosts", "fortressResistancePercent" })
+            {
+                var field = typeof(DistrictStats).GetField(name); Assert.IsNotNull(field, name);
+                var values = (int[])field.GetValue(b.districtStats[index]);
+                CollectionAssert.AreEqual(name == "fortressMaterialsCosts" ? new[] { 0, 4, 8, 12 } : name == "fortressMetalCosts" ? new[] { 0, 1, 2, 3 } : new[] { 0, 25, 40, 50 }, values);
+                int other = Array.FindIndex(b.districtStats, d => d.districtType == DistrictType.Fortress && d.era == (era + 1) % 6);
+                Assert.AreNotSame(values, field.GetValue(b.districtStats[other]));
+                for (int j = 0; j < 4; j++)
+                {
+                    var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index];
+                    var changed = (int[])values.Clone(); changed[j]++; field.SetValue(entry, changed); copy.districtStats[index] = (DistrictStats)entry;
+                    Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy), name + j);
+                    changed[j] = j == 0 ? 1 : -1; Assert.IsFalse(copy.CoreRulesValid(out _));
+                }
+                foreach (var invalid in new[] { new int[3], new int[5] })
+                {
+                    var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index]; field.SetValue(entry, invalid); copy.districtStats[index] = (DistrictStats)entry;
+                    Assert.IsFalse(copy.CoreRulesValid(out _)); Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                }
+            }
+        }
         private static GameBalanceData WithOneSuit()
         {
             GameBalanceData b = GameBalanceData.Default();
@@ -165,7 +190,9 @@ namespace NodeWar.Tests
             {
                 GameBalanceData b = WithOneSuit();
                 object boxed = b.districtStats[0];
-                if (field.FieldType == typeof(int))
+                if (field.FieldType == typeof(int[]))
+                    field.SetValue(boxed, new[] { 0, 1, 2, 3 });
+                else if (field.FieldType == typeof(int))
                     field.SetValue(boxed, (int)field.GetValue(boxed) + 1);
                 else if (field.FieldType == typeof(DistrictType))
                     field.SetValue(boxed, DistrictType.Camp);

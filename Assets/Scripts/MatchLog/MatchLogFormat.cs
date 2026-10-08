@@ -128,6 +128,7 @@ namespace NodeWar.MatchLog
                     if (tick.commands != null)
                         foreach (GameCommand c in tick.commands)
                         {
+                            // UpgradeFortress=7 uses the existing six-integer payload.
                             if (!CommandTypes.IsKnown(c.type)) throw new ArgumentException("Unknown command type.");
                             payload.I32((int)c.type); payload.I32(c.playerID); payload.I32(c.villagerID);
                             payload.I32(c.targetNodeID); payload.I32(c.issuedOnTick); payload.I32(c.value);
@@ -349,6 +350,7 @@ namespace NodeWar.MatchLog
                                 type = (CommandType)r.I32(), playerID = r.I32(), villagerID = r.I32(),
                                 targetNodeID = r.I32(), issuedOnTick = r.I32(), value = r.I32()
                             };
+                            // UpgradeFortress=7 uses the existing six-integer payload.
                             if (!CommandTypes.IsKnown(commands[j].type)) throw new FormatException("Unknown command type.");
                         }
                         log.ticks.Add(new LoggedTick { tick = tick, commands = commands });

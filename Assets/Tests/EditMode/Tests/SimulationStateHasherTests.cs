@@ -18,7 +18,7 @@ namespace NodeWar.Tests
             "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
             "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
-            "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
+            "NodeData.fortressLevel", "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
             "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",
@@ -27,7 +27,6 @@ namespace NodeWar.Tests
             "VillagerData.attackCooldownRemaining", "VillagerData.attackCooldownMax",
             "VillagerData.combatTargetID", "VillagerData.fightPriority", "VillagerData.isConsumed",
             "VillagerData.productionTicksRemaining", "VillagerData.productionTicksMax",
-            "VillagerData.hasRampartBonus", "VillagerData.rampartBonusEra",
             "PlayerData.playerID", "PlayerData.coreNodeID", "PlayerData.food", "PlayerData.materials",
             "PlayerData.metal", "PlayerData.breachCount", "PlayerData.paidRespawns", "PlayerData.breachBar", "PlayerData.nextBreacherID", "PlayerData.draftedSuits",
             "PlayerData.draftedDistricts", "PlayerData.suitEras", "PlayerData.districtEras", "PlayerData.recruitCount"

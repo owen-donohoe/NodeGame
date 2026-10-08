@@ -74,7 +74,6 @@ namespace NodeWar.Tests
             Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownMax);
             Assert.AreEqual(balance.baseAttackCooldownMax, v.attackCooldownRemaining);
             Assert.AreEqual(0, v.respawnTicksRemaining);
-            Assert.IsFalse(v.hasRampartBonus);
             Assert.AreEqual(paid ? 0 : 1, state.players[0].food);
         }
 
@@ -114,26 +113,27 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void Rampart_DeathRemovesBonusAcrossRepeatedRespawns()
+        public void Fortress_DeathPreservesOrdinaryHPAcrossRepeatedRespawns()
         {
-            RunRampartCycles(true);
+            RunFortressCycles(true);
         }
 
         [Test]
-        public void Rampart_DeathRemovesBonusAcrossRepeatedRespawns_Determinism()
+        public void Fortress_DeathPreservesOrdinaryHPAcrossRepeatedRespawns_Determinism()
         {
-            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRampartCycles(false)),
-                SimulationStateHasher.ComputeHash(RunRampartCycles(false)));
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunFortressCycles(false)),
+                SimulationStateHasher.ComputeHash(RunFortressCycles(false)));
         }
 
-        private static SimulationState RunRampartCycles(bool verify)
+        private static SimulationState RunFortressCycles(bool verify)
         {
             GameBalanceData balance = SetDefaultBalance();
             balance.respawnTicks = 2; // Death tick decrements to one; next tick respawns.
             GameSimulation.SetBalance(balance);
             CommandProcessor.SetBalance(balance);
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Rampart;
+            state.nodes[1].districtType = DistrictType.Fortress;
+            state.nodes[1].fortressLevel = 3;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[1].currentNodeID = 1;
@@ -141,7 +141,7 @@ namespace NodeWar.Tests
             state.villagers[1].attackCooldownMax = 1;
             for (int cycle = 0; cycle < 3; cycle++)
             {
-                // Each life walks onto its own Rampart and dies to the waiting enemy.
+                // Each life walks onto its own Fortress and dies to the waiting enemy.
                 CommandProcessor.ProcessCommand(state, new GameCommand
                 { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 1 });
                 for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(state);
@@ -149,7 +149,6 @@ namespace NodeWar.Tests
                 {
                     Assert.AreEqual(VillagerState.Dead, state.villagers[0].state);
                     Assert.AreEqual(balance.baseHP, state.villagers[0].maxHP, "death cycle " + cycle);
-                    Assert.IsFalse(state.villagers[0].hasRampartBonus);
                 }
                 GameSimulation.SimulateTick(state);
                 if (verify)
@@ -163,33 +162,30 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void Rampart_BreachRemovesBonus()
+        public void Fortress_BreachPreservesOrdinaryHP()
         {
-            SimulationState state = RunRampartBreach();
+            SimulationState state = RunFortressBreach();
             Assert.IsTrue(state.villagers[0].isConsumed);
-            Assert.IsFalse(state.villagers[0].hasRampartBonus);
             Assert.AreEqual(GameBalanceData.Default().baseHP, state.villagers[0].maxHP);
             Assert.AreEqual(1, state.players[1].breachCount);
         }
 
         [Test]
-        public void Rampart_BreachRemovesBonus_Determinism()
+        public void Fortress_BreachPreservesOrdinaryHP_Determinism()
         {
-            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunRampartBreach()),
-                SimulationStateHasher.ComputeHash(RunRampartBreach()));
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(RunFortressBreach()),
+                SimulationStateHasher.ComputeHash(RunFortressBreach()));
         }
 
-        private static SimulationState RunRampartBreach()
+        private static SimulationState RunFortressBreach()
         {
             GameBalanceData balance = SetDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Rampart;
+            state.nodes[1].districtType = DistrictType.Fortress;
+            state.nodes[1].fortressLevel = 3;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
-            state.villagers[0].hasRampartBonus = true;
-            state.villagers[0].maxHP += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
-            state.villagers[0].hp += balance.GetDistrictStats(DistrictType.Rampart, 0).maxHPBonus;
             state.villagers[1].state = VillagerState.Dead;
             state.villagers[1].isConsumed = true; // Empty enemy Core allows an uninterrupted channel.
             CommandProcessor.ProcessCommand(state, new GameCommand

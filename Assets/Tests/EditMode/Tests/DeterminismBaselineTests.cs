@@ -21,8 +21,10 @@ namespace NodeWar.Tests
         //
         // Declared in docs/computations/determinism-baseline.md as an Attested
         // Computation; docs/attesters/hash_baseline.ps1 verifies a run's receipt.
-        private const int EmptyTick100Hash = 411123996;
-        private const int MoveAndCombat4Hash = 2101726457;
+        // C7: removing the unconditional neutral Rampart bonus field changes hashes.
+        // Fortress level 0 is tagged-zero-neutral; SimulationVersion remains 3.
+        private const int EmptyTick100Hash = 647286254;
+        private const int MoveAndCombat4Hash = 357327383;
 
         [Test]
         public void EmptyTick_100Iterations_ProducesDeterministicHash()

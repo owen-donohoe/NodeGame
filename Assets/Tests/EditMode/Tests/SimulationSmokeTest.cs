@@ -62,7 +62,6 @@ namespace NodeWar.Tests
                     isConsumed = false,
                     productionTicksRemaining = 0,
                     productionTicksMax = 0,
-                    hasRampartBonus = false
                 }
             };
 
