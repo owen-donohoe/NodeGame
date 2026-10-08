@@ -59,6 +59,14 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 
+- { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
+- { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
+- { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
+- { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
+- { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
+
+
 ## `docs/skills/run-dotnet-tests.md`
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }

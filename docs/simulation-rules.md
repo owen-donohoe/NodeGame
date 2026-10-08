@@ -6,14 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
-verified_at_commit: 5fa33d94
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
   - id: sim-loop
@@ -184,7 +178,9 @@ player's `nextBreacherID` follows resume, so it reflects all mutations
 this tick. Tempo events are emitted after incrementing the tick count,
 before movement.) A new step must
 be inserted at a specific, justified point in this sequence, not appended
-by default.
+by default. Production runs ordinary workers, then auto-recruit, before healing.
+Auto-recruit visits ascending node ID and uses the same validated recruit path
+as the command processor; no tempo scaling is applied to its ready tick.
 
 **View and UI never write to `SimulationState`.**
 Why: any write from outside the tick path runs on that machine's own
@@ -217,6 +213,18 @@ with explicit defaults, not just zero. The v2 player fields `breachBar`,
 `paidRespawns` and derived `nextBreacherID` are covered; the last starts
 at -1, not the struct's implicit zero. `VillagerState.Breaching` is
 appended after `Dead`, preserving existing enum values.
+
+C3 adds zero-neutral `PlayerData.recruitCount` and `NodeData.recruitReadyTick`,
+plus false-neutral `NodeData.autoRecruit`. Each non-neutral hash contribution
+has a distinct tag and player/node array index. `MatchFactory` initializes them
+explicitly; the existing struct-array copy carries them, with hash-mutation and
+copy-independence tests. Ownership loss resets the node fields, never the player
+count. The legacy `bonusVillagersOnClaim` field remains construction-only until
+its later removal; Village claims no longer read it or spawn bodies.
+
+Recruit=5 and SetAutoRecruit=6 have explicit processor cases and serializer/log
+acceptance. Unknown command types are refused. The six existing command fields,
+24-byte wire payload, protocol and TICKS shape remain unchanged.
 
 `TickEventLog` is outside this rule because it is outside `SimulationState`:
 the simulation only ever appends to it and never reads it back, so nothing in
