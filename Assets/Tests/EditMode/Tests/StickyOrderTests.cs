@@ -61,6 +61,44 @@ namespace NodeWar.Tests
             int b = SimulationStateHasher.ComputeHash(scenario());
             Assert.AreEqual(a, b);
         }
+        private static SimulationState PendingAtUnreachableDestination(int currentOwner)
+        {
+            var s = Board(false);
+            balance.baseClaimPerTick = 10;
+            for (int i = 0; i < balance.districtStats.Length; i++)
+                if (balance.districtStats[i].districtType == DistrictType.Farm)
+                    balance.districtStats[i].productionTicks = 1;
+            GameSimulation.SetBalance(balance);
+            CommandProcessor.SetBalance(balance);
+            s.nodes[0].districtType = currentOwner == 0 ? DistrictType.Farm : DistrictType.None;
+            s.nodes[0].ownerID = currentOwner;
+            s.nodes[0].claimBar = currentOwner == -1 ? 0 : currentOwner == 0 ? balance.claimThreshold : -balance.claimThreshold;
+            s.villagers[0].state = VillagerState.Idle;
+            s.villagers[0].suit = SuitType.None;
+            s.villagers[0].targetNodeID = 2;
+            s.players[0].food = 7;
+            int food = s.players[0].food;
+            int bar = s.nodes[0].claimBar;
+            GameSimulation.SimulateTick(s);
+            GameSimulation.SimulateTick(s);
+            Assert.AreEqual(food, s.players[0].food, "Pending travel cannot produce at the current node");
+            Assert.AreEqual(bar, s.nodes[0].claimBar, "Pending travel cannot claim the current node");
+            Assert.AreEqual(currentOwner, s.nodes[0].ownerID);
+            Assert.AreEqual(SuitType.None, s.villagers[0].suit);
+            Assert.AreEqual(VillagerState.Idle, s.villagers[0].state);
+            Assert.AreEqual(0, s.villagers[0].currentNodeID);
+            Assert.AreEqual(2, s.villagers[0].targetNodeID);
+            Assert.AreEqual(0, s.villagers[0].productionTicksMax);
+            Assert.AreEqual(0, s.villagers[0].productionTicksRemaining);
+            Assert.IsEmpty(s.villagers[0].movePath);
+            return s;
+        }
+        [Test] public void UnreachableDestinationAtOwnedFarm_DoesNotWork() => PendingAtUnreachableDestination(0);
+        [Test] public void UnreachableDestinationAtOwnedFarm_DoesNotWork_Determinism() => Determinism(() => PendingAtUnreachableDestination(0));
+        [Test] public void UnreachableDestinationAtNeutralNode_DoesNotClaim() => PendingAtUnreachableDestination(-1);
+        [Test] public void UnreachableDestinationAtNeutralNode_DoesNotClaim_Determinism() => Determinism(() => PendingAtUnreachableDestination(-1));
+        [Test] public void UnreachableDestinationAtOpposingOwnedNode_PreservesSignedBar() => PendingAtUnreachableDestination(1);
+        [Test] public void UnreachableDestinationAtOpposingOwnedNode_PreservesSignedBar_Determinism() => Determinism(() => PendingAtUnreachableDestination(1));
         private static SimulationState Intermediate()
         {
             var s = Board(); Fight(s, 1, 2); Enemy(s, 1);

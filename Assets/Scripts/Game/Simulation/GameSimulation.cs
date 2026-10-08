@@ -694,6 +694,14 @@ namespace NodeWar.Simulation
                 // Only re-evaluate Idle, Claiming, and Working villagers
                 if (v.state != VillagerState.Idle && v.state != VillagerState.Claiming && v.state != VillagerState.Working) continue;
                 if (v.isConsumed) continue;
+                // Intent elsewhere forbids local work/claim, but leaves stationary
+                // Idle presence available to passive rules.
+                if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)
+                {
+                    if (v.state != VillagerState.Idle)
+                        state.villagers[idx].state = VillagerState.Idle;
+                    continue;
+                }
 
                 NodeData node = state.nodes[v.currentNodeID];
 
