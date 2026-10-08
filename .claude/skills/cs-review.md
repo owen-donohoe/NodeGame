@@ -7,7 +7,7 @@ generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
   - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: e7e968a80076be4a12902191f076b8c141a6c9d0
+verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
 status: stable
 sources:
   - id: architecture
