@@ -788,294 +788,294 @@
         "Kind":  "Variant",
         "BaseId":  "district.camp",
         "Era":  0,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.camp.e1",
         "Kind":  "Variant",
         "BaseId":  "district.camp",
         "Era":  1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.camp.e2",
         "Kind":  "Variant",
         "BaseId":  "district.camp",
         "Era":  2,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.camp.e3",
         "Kind":  "Variant",
         "BaseId":  "district.camp",
         "Era":  3,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.camp.e4",
         "Kind":  "Variant",
         "BaseId":  "district.camp",
         "Era":  4,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.camp.e5",
         "Kind":  "Variant",
         "BaseId":  "district.camp",
         "Era":  5,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "skin.district.camp.default",
         "Kind":  "Skin",
         "BaseId":  "district.camp",
         "Era":  -1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.shrine.e0",
         "Kind":  "Variant",
         "BaseId":  "district.shrine",
         "Era":  0,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.shrine.e1",
         "Kind":  "Variant",
         "BaseId":  "district.shrine",
         "Era":  1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.shrine.e2",
         "Kind":  "Variant",
         "BaseId":  "district.shrine",
         "Era":  2,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.shrine.e3",
         "Kind":  "Variant",
         "BaseId":  "district.shrine",
         "Era":  3,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.shrine.e4",
         "Kind":  "Variant",
         "BaseId":  "district.shrine",
         "Era":  4,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.shrine.e5",
         "Kind":  "Variant",
         "BaseId":  "district.shrine",
         "Era":  5,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "skin.district.shrine.default",
         "Kind":  "Skin",
         "BaseId":  "district.shrine",
         "Era":  -1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.arsenal.e0",
         "Kind":  "Variant",
         "BaseId":  "district.arsenal",
         "Era":  0,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.arsenal.e1",
         "Kind":  "Variant",
         "BaseId":  "district.arsenal",
         "Era":  1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.arsenal.e2",
         "Kind":  "Variant",
         "BaseId":  "district.arsenal",
         "Era":  2,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.arsenal.e3",
         "Kind":  "Variant",
         "BaseId":  "district.arsenal",
         "Era":  3,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.arsenal.e4",
         "Kind":  "Variant",
         "BaseId":  "district.arsenal",
         "Era":  4,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.arsenal.e5",
         "Kind":  "Variant",
         "BaseId":  "district.arsenal",
         "Era":  5,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "skin.district.arsenal.default",
         "Kind":  "Skin",
         "BaseId":  "district.arsenal",
         "Era":  -1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.sanctuary.e0",
         "Kind":  "Variant",
         "BaseId":  "district.sanctuary",
         "Era":  0,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.sanctuary.e1",
         "Kind":  "Variant",
         "BaseId":  "district.sanctuary",
         "Era":  1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.sanctuary.e2",
         "Kind":  "Variant",
         "BaseId":  "district.sanctuary",
         "Era":  2,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.sanctuary.e3",
         "Kind":  "Variant",
         "BaseId":  "district.sanctuary",
         "Era":  3,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.sanctuary.e4",
         "Kind":  "Variant",
         "BaseId":  "district.sanctuary",
         "Era":  4,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.sanctuary.e5",
         "Kind":  "Variant",
         "BaseId":  "district.sanctuary",
         "Era":  5,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "skin.district.sanctuary.default",
         "Kind":  "Skin",
         "BaseId":  "district.sanctuary",
         "Era":  -1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.watchtower.e0",
         "Kind":  "Variant",
         "BaseId":  "district.watchtower",
         "Era":  0,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.watchtower.e1",
         "Kind":  "Variant",
         "BaseId":  "district.watchtower",
         "Era":  1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.watchtower.e2",
         "Kind":  "Variant",
         "BaseId":  "district.watchtower",
         "Era":  2,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.watchtower.e3",
         "Kind":  "Variant",
         "BaseId":  "district.watchtower",
         "Era":  3,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.watchtower.e4",
         "Kind":  "Variant",
         "BaseId":  "district.watchtower",
         "Era":  4,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.watchtower.e5",
         "Kind":  "Variant",
         "BaseId":  "district.watchtower",
         "Era":  5,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "skin.district.watchtower.default",
         "Kind":  "Skin",
         "BaseId":  "district.watchtower",
         "Era":  -1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.rampart.e0",
         "Kind":  "Variant",
         "BaseId":  "district.rampart",
         "Era":  0,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.rampart.e1",
         "Kind":  "Variant",
         "BaseId":  "district.rampart",
         "Era":  1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.rampart.e2",
         "Kind":  "Variant",
         "BaseId":  "district.rampart",
         "Era":  2,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.rampart.e3",
         "Kind":  "Variant",
         "BaseId":  "district.rampart",
         "Era":  3,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.rampart.e4",
         "Kind":  "Variant",
         "BaseId":  "district.rampart",
         "Era":  4,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.rampart.e5",
         "Kind":  "Variant",
         "BaseId":  "district.rampart",
         "Era":  5,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "skin.district.rampart.default",
         "Kind":  "Skin",
         "BaseId":  "district.rampart",
         "Era":  -1,
-        "Retired":  false
+        "Retired":  true
     },
     {
         "Id":  "district.market.e0",
@@ -1123,6 +1123,202 @@
         "Id":  "skin.district.market.default",
         "Kind":  "Skin",
         "BaseId":  "district.market",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.pier.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.pier",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.pier.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.pier",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.pier.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.pier",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.pier.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.pier",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.pier.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.pier",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.pier.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.pier",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.pier.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.pier",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.town.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.town",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.town.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.town",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.town.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.town",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.town.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.town",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.town.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.town",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.town.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.town",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.town.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.town",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.infirmary.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.infirmary",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.infirmary.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.infirmary",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.infirmary.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.infirmary",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.infirmary.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.infirmary",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.infirmary.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.infirmary",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.infirmary.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.infirmary",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.infirmary.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.infirmary",
+        "Era":  -1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.fortress.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.fortress",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.fortress.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.fortress",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.fortress.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.fortress",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.fortress.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.fortress",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.fortress.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.fortress",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.fortress.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.fortress",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.fortress.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.fortress",
         "Era":  -1,
         "Retired":  false
     }

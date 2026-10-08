@@ -62,6 +62,10 @@
     <Compile Include="DisconnectHoldTests.cs" />
     <Compile Include="PresenceHeartbeatTests.cs" />
     <Compile Include="LoadoutCompatibilityTests.cs" />
+    <Compile Include="DistrictMigrationTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/InventoryService.cs" Link="Backend/InventoryService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/InventoryClamp.cs" Link="Backend/InventoryClamp.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/DistrictMigration.cs" Link="Backend/DistrictMigration.cs" />
     <Compile Include="MatchSetupPacketTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
              Link="Core/EmoteType.cs" />

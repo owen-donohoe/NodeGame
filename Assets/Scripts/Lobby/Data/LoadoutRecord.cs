@@ -30,14 +30,28 @@ namespace NodeWar.Lobby
             };
         }
 
+        private static int[] MigrateDistrictEras(int[] source)
+        {
+            var result = new int[LoadoutData.DistrictEraSlots];
+            if (source == null) return result;
+            for (int i = 0; i < source.Length; i++)
+            {
+                int target = NodeWar.Backend.DistrictMigration.CanonicalType(i);
+                if (target == 0) continue;
+                int era = source[i];
+                if (era >= 0 && era < NodeWar.Backend.CatalogIds.EraCount && era > result[target]) result[target] = era;
+            }
+            return result;
+        }
+
         public LoadoutData ToLoadout()
         {
             return new LoadoutData
             {
                 suitIDs = suitIDs,
-                districtIDs = nodeIDs,
+                districtIDs = NodeWar.Backend.DistrictMigration.Deck(nodeIDs, LoadoutData.DistrictSlots),
                 suitEras = suitEras,
-                districtEras = districtEras,
+                districtEras = MigrateDistrictEras(districtEras),
                 skinIDs = skinIDs
             };
         }

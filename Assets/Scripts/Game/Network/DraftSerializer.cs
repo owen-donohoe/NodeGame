@@ -117,6 +117,8 @@ namespace NodeWar.Network
             int offset = 1; // skip type byte
             playerID = ReadInt(data, ref offset);
             districtType = ReadInt(data, ref offset);
+            if (!NodeWar.Simulation.PlacementLegality.IsDraftable((NodeWar.Simulation.DistrictType)districtType))
+                throw new System.FormatException("Inactive draft district.");
             gridX = ReadInt(data, ref offset);
             gridZ = ReadInt(data, ref offset);
             wasTimeout = data[offset] != 0;
@@ -188,6 +190,12 @@ namespace NodeWar.Network
                 skinIDs = offset < data.Length ? ReadStringArray(data, ref offset) : null
             };
 
+            foreach (string id in loadout.districtIDs)
+            {
+                int source = NodeWar.Backend.DistrictMigration.SourceType(id);
+                if (source != 0 && !NodeWar.Simulation.DistrictRoster.IsActive((NodeWar.Simulation.DistrictType)source))
+                    throw new System.FormatException("Inactive loadout district.");
+            }
             // Reconcile with this build's slot counts before anyone reads it.
             loadout = NodeWar.Lobby.LoadoutData.Normalized(loadout);
         }
@@ -215,7 +223,8 @@ namespace NodeWar.Network
             if (offset < data.Length && !SkipStringArray(data, ref offset)) return false;   // skins
             if (offset != data.Length) return false;
 
-            DeserializeDraftLoadout(data, out playerID, out loadout);
+            try { DeserializeDraftLoadout(data, out playerID, out loadout); }
+            catch (System.FormatException) { playerID = -1; loadout = default; return false; }
             return true;
         }
 

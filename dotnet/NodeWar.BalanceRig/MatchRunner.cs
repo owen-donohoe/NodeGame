@@ -97,7 +97,7 @@ namespace NodeWar.BalanceRig
         public static PreparedMatch Prepare(RigSetup setup, int seed, DraftPlacement[] draft = null)
         {
             int suitCount = (int)SuitType.Watcher + 1;
-            int districtCount = (int)DistrictType.Market + 1;
+            int districtCount = (int)DistrictType.Fortress + 1;
             var players = new PlayerSetup[2];
             for (int p = 0; p < 2; p++)
             {

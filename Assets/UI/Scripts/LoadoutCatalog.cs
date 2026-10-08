@@ -31,7 +31,27 @@ namespace NodeWar.Lobby
         public LoadoutCatalog(SuitDefinition[] suits, DistrictDefinition[] districts)
         {
             Suits = suits != null ? suits : new SuitDefinition[0];
-            Districts = districts != null ? districts : new DistrictDefinition[0];
+            var canonical = new System.Collections.Generic.List<DistrictDefinition>();
+            foreach (int type in NodeWar.Backend.CatalogKeys.CatalogDistrictTypes)
+            {
+                string id = NodeWar.Backend.CatalogKeys.DistrictLobbyId(type);
+                DistrictDefinition definition = null;
+                if (districts != null)
+                    foreach (var item in districts)
+                        if (item != null && item.districtID == id) { definition = item; break; }
+                if (definition == null)
+                {
+                    var descriptor = NodeWar.View.DistrictFallback.Describe((NodeWar.Simulation.DistrictType)type);
+                    definition = UnityEngine.ScriptableObject.CreateInstance<DistrictDefinition>();
+                    definition.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                    definition.districtID = id;
+                    definition.displayName = descriptor.Name;
+                    definition.description = descriptor.Description;
+                    definition.category = DistrictCategory.Selectable;
+                }
+                canonical.Add(definition);
+            }
+            Districts = canonical.ToArray();
         }
 
         public SuitDefinition FindSuit(string suitID)
@@ -67,7 +87,7 @@ namespace NodeWar.Lobby
         {
             for (int i = 0; i < UnmappedDistrictIDs.Length; i++)
                 if (UnmappedDistrictIDs[i] == districtID) return true;
-            return false;
+            return !NodeWar.Simulation.PlacementLegality.IsDraftable((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID));
         }
 
         /// <summary>Suits the player could put in a slot: offered and unlocked.</summary>

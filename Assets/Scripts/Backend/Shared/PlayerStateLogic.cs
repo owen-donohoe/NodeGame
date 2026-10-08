@@ -51,7 +51,7 @@ namespace NodeWar.Backend
             if (stored.History == null) stored.History = created.History = PlayerStateDefaults.History();
             if (stored.Discipline == null) stored.Discipline = created.Discipline = new DisciplineRecord();
 
-            if (NormalizeInventory(stored.Inventory)) created.Inventory = stored.Inventory;
+            if (NormalizeInventory(stored.Inventory) | DistrictMigration.Apply(stored)) created.Inventory = stored.Inventory;
             if (updateInventory != null && updateInventory(stored)) created.Inventory = stored.Inventory;
 
             return created;

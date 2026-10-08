@@ -123,7 +123,7 @@ namespace NodeWar.Lobby.Tests
         public void FullLoadout_SurvivesRoundTrip()
         {
             string[] suitPool = { "suit_warrior", "suit_guardian", "suit_berserker", "suit_scout", "suit_medic" };
-            string[] nodePool = { "node_watchtower", "node_market", "node_shrine", "node_camp" };
+            string[] nodePool = { "node_pier", "node_market", "node_infirmary", "node_barracks" };
 
             LoadoutData original = LoadoutData.Normalized(new LoadoutData
             {
@@ -181,7 +181,7 @@ namespace NodeWar.Lobby.Tests
                 suitIDs = Slots(S, "suit_medic"),
                 districtIDs = Slots(N)
             });
-            partial.districtIDs[N - 1] = "node_shrine";
+            partial.districtIDs[N - 1] = "node_infirmary";
 
             LoadoutData decoded = RoundTrip(partial, 1);
 
@@ -265,14 +265,14 @@ namespace NodeWar.Lobby.Tests
             LoadoutData big = LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = Slots(S, new string('x', 400), "suit_scout"),
-                districtIDs = Slots(N, "node_camp")
+                districtIDs = Slots(N, "node_barracks")
             });
 
             LoadoutData decoded = RoundTrip(big, 0);
 
             Assert.AreEqual(255, decoded.suitIDs[0].Length);
             if (S > 1) Assert.AreEqual("suit_scout", decoded.suitIDs[1]);
-            Assert.AreEqual("node_camp", decoded.districtIDs[0]);
+            Assert.AreEqual("node_barracks", decoded.districtIDs[0]);
         }
 
         [Test]

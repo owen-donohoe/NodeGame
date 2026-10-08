@@ -28,6 +28,7 @@ namespace NodeWar.Cloud
                 }
                 foreach (int type in loadout.districts)
                 {
+                    if (!NodeWar.Simulation.DistrictRoster.IsActive((NodeWar.Simulation.DistrictType)type)) return "Inactive district.";
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras);
                     if (error != null) return error;
                 }
@@ -38,6 +39,7 @@ namespace NodeWar.Cloud
                 {
                     int p = placement.playerID;
                     if (p != 0 && p != 1) return "Invalid draft player.";
+                    if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
                         type, log.loadouts[p].districtEras);

@@ -8,6 +8,20 @@ namespace NodeWar.MatchLog
 {
     public class MatchLogFormatTests
     {
+        [TestCase(7)]
+        [TestCase(11)]
+        public void CurrentPacketsRejectRetiredTypes(int district)
+        {
+            var log = TestLogs.Full();
+            log.header.sim = 3;
+            log.loadouts[0].districts = new[] { district };
+            Assert.IsFalse(MatchLogFormat.TryRead(MatchLogFormat.Write(log), out _, out string error));
+            StringAssert.Contains("Inactive", error);
+            log.header.sim = 2;
+            Assert.IsTrue(MatchLogFormat.TryRead(MatchLogFormat.Write(log), out var decoded, out _));
+            Assert.AreEqual(district, decoded.loadouts[0].districts[0]);
+        }
+
         [TestCase(5, 0, 0)] [TestCase(5, 1, 0)]
         [TestCase(6, 0, 0)] [TestCase(6, 0, 1)] [TestCase(6, 1, 0)] [TestCase(6, 1, 1)]
         public void RecruitAndSetAuto_RoundTripAllFields(int type, int player, int value)
@@ -181,7 +195,7 @@ namespace NodeWar.MatchLog
         [Test]
         public void DefinedMatchEnums_AndUnknownDistrictEnums_RoundTrip()
         {
-            MatchLog log = TestLogs.Full();
+            MatchLog log = TestLogs.FullV2History();
             log.board.initialPlacements[0].districtType = (DistrictType)12345;
             log.draft[0].districtType = (DistrictType)(-12345);
             foreach (MatchKind kind in Enum.GetValues(typeof(MatchKind)))

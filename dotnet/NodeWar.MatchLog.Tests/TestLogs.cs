@@ -65,12 +65,12 @@ namespace NodeWar.MatchLog
                 loadouts = new[]
                 {
                     new PlayerLoadout { suits = new[] { 2, 4, 6 }, districts = new[] { 3, 5 } },
-                    new PlayerLoadout { suits = new[] { 7, 8 }, districts = new[] { 9, 10, 11 } }
+                    new PlayerLoadout { suits = new[] { 7, 8 }, districts = new[] { 4, 16, 17 } }
                 },
                 draft = new[]
                 {
                     new DraftPlacement { playerID = 0, districtType = DistrictType.Forge, gridX = 2, gridZ = 7 },
-                    new DraftPlacement { playerID = 1, districtType = DistrictType.Core, gridX = 4, gridZ = 1, wasTimeout = true }
+                    new DraftPlacement { playerID = 1, districtType = DistrictType.Fortress, gridX = 4, gridZ = 1, wasTimeout = true }
                 },
                 ticks = new List<LoggedTick>
                 {

@@ -12,13 +12,13 @@ namespace NodeWar.Lobby.Tests
     public class ItemFamilyTests
     {
         [TestCase("node_market", ItemFamily.Family.Round)]
-        [TestCase("node_shrine", ItemFamily.Family.Round)]
-        [TestCase("node_sanctuary", ItemFamily.Family.Round)]
-        [TestCase("node_rampart", ItemFamily.Family.Square)]
-        [TestCase("node_camp", ItemFamily.Family.Triangle)]
+        [TestCase("node_infirmary", ItemFamily.Family.Round)]
+        [TestCase("node_town", ItemFamily.Family.Round)]
+        [TestCase("node_fortress", ItemFamily.Family.Square)]
         [TestCase("node_barracks", ItemFamily.Family.Triangle)]
-        [TestCase("node_arsenal", ItemFamily.Family.Triangle)]
-        [TestCase("node_watchtower", ItemFamily.Family.Triangle)]
+        [TestCase("node_farm", ItemFamily.Family.Round)]
+        [TestCase("node_forge", ItemFamily.Family.Round)]
+        [TestCase("node_pier", ItemFamily.Family.Square)]
         public void ForDistrict_PlacesEveryOfferedDistrict(string districtID, ItemFamily.Family expected)
         {
             Assert.AreEqual(expected, ItemFamily.ForDistrict(districtID));

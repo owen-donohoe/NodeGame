@@ -15,6 +15,18 @@ namespace NodeWar.Lobby.Tests
     /// </summary>
     public class LoadoutCompatibilityTests
     {
+        [TestCase("node_camp", 4)]
+        [TestCase("district.arsenal.e5", 4)]
+        [TestCase("district.shrine", 16)]
+        [TestCase("node_fortress", 17)]
+        [TestCase("not_node_camp_fake", 0)]
+        [TestCase("some_farm_variant", 0)]
+        [TestCase("district.camp.e6", 0)]
+        [TestCase("node_watchtower", 0)]
+        public void ExactIds_RejectSubstringLookalikes(string id, int expected)
+        {
+            Assert.AreEqual(expected, (int)LoadoutTypes.DistrictForLobbyId(id));
+        }
         // The profile file's JSON keys, frozen by every save already written.
         private static readonly string[] PersistedKeys = { "suitIDs", "nodeIDs", "suitEras", "districtEras", "skinIDs" };
 
@@ -23,7 +35,7 @@ namespace NodeWar.Lobby.Tests
             return new LoadoutData
             {
                 suitIDs = new[] { "suit_warrior", "suit_guardian", "suit_scout" },
-                districtIDs = new[] { "node_crossroads", "node_market" },
+                districtIDs = new[] { "node_farm", "node_market" },
                 suitEras = new[] { 0, 1, 0, 2, 0, 0, 0, 0 },
                 districtEras = new[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1 },
                 skinIDs = new[] { "skin.suit.warrior.default", "skin.district.farm.gilded" }
@@ -38,7 +50,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData normalized = LoadoutData.Normalized(legacy);
             CollectionAssert.AreEqual(legacy.suitIDs, normalized.suitIDs);
             CollectionAssert.AreEqual(legacy.districtIDs, normalized.districtIDs, "No truncated or reordered district choice.");
-            CollectionAssert.AreEqual(legacy.districtEras, normalized.districtEras);
+            CollectionAssert.AreEqual(legacy.districtEras, normalized.districtEras.Take(legacy.districtEras.Length));
             CollectionAssert.AreEqual(legacy.skinIDs, normalized.skinIDs);
 
             // The wire.
@@ -58,7 +70,9 @@ namespace NodeWar.Lobby.Tests
             CollectionAssert.AreEqual(normalized.suitIDs, back.suitIDs);
             CollectionAssert.AreEqual(normalized.districtIDs, back.districtIDs);
             CollectionAssert.AreEqual(normalized.suitEras, back.suitEras);
-            CollectionAssert.AreEqual(normalized.districtEras, back.districtEras);
+            Assert.AreEqual(0, back.districtEras[12], "Retired era moves to the canonical table.");
+            Assert.AreEqual(3, back.districtEras[17]);
+            Assert.AreEqual(1, back.districtEras[13]);
             CollectionAssert.AreEqual(normalized.skinIDs, back.skinIDs);
         }
 
@@ -96,16 +110,16 @@ namespace NodeWar.Lobby.Tests
         [TestCase("node_village", 3)]
         [TestCase("node_barracks", 4)]
         [TestCase("node_forge", 6)]
-        [TestCase("node_camp", 7)]
-        [TestCase("node_shrine", 8)]
-        [TestCase("node_arsenal", 9)]
-        [TestCase("node_sanctuary", 10)]
-        [TestCase("node_watchtower", 11)]
-        [TestCase("node_rampart", 12)]
+        [TestCase("node_camp", 4)]
+        [TestCase("node_shrine", 16)]
+        [TestCase("node_arsenal", 4)]
+        [TestCase("node_sanctuary", 16)]
+        [TestCase("node_watchtower", 0)]
+        [TestCase("node_rampart", 17)]
         [TestCase("node_market", 13)]
         [TestCase("node_crossroads", 0)]
-        [TestCase("NODE_RAMPART", 12)]
-        [TestCase("some_farm_variant", 1)]
+        [TestCase("NODE_RAMPART", 0)]
+        [TestCase("some_farm_variant", 0)]
         [TestCase("", 0)]
         [TestCase(null, 0)]
         public void KnownIds_KeepExactMappings(string lobbyId, int district)
@@ -118,7 +132,7 @@ namespace NodeWar.Lobby.Tests
         [TestCase("suit_scout", 6)]
         [TestCase("suit_berserker", 7)]
         [TestCase("suit_medic", 8)]
-        [TestCase("SUIT_WARRIOR", 3)]
+        [TestCase("SUIT_WARRIOR", 0)]
         [TestCase("suit_unknown", 0)]
         [TestCase(null, 0)]
         public void KnownSuitIds_KeepExactMappings(string lobbyId, int suit)
@@ -138,15 +152,15 @@ namespace NodeWar.Lobby.Tests
             string[] districts =
             {
                 null, "district.farm", "district.mine", "district.village", "district.barracks", "district.core",
-                "district.forge", "district.camp", "district.shrine", "district.arsenal", "district.sanctuary",
-                "district.watchtower", "district.rampart", "district.market"
+                "district.forge", null, null, null, null,
+                null, null, "district.market", "district.pier", "district.town", "district.infirmary", "district.fortress"
             };
             for (int i = 0; i < suits.Length; i++) Assert.AreEqual(suits[i], LoadoutTypes.CatalogBaseForSuit(i), "suit " + i);
             for (int i = 0; i < districts.Length; i++) Assert.AreEqual(districts[i], LoadoutTypes.CatalogBaseForDistrict(i), "district " + i);
             Assert.IsNull(LoadoutTypes.CatalogBaseForSuit(suits.Length));
             Assert.IsNull(LoadoutTypes.CatalogBaseForDistrict(districts.Length));
             Assert.IsNull(LoadoutTypes.CatalogBaseForSuit(-1));
-            Assert.AreEqual("district.rampart", LoadoutTypes.CatalogBaseForLobbyId("node_rampart"));
+            Assert.AreEqual("district.fortress", LoadoutTypes.CatalogBaseForLobbyId("node_rampart"));
             Assert.AreEqual("suit.warrior", LoadoutTypes.CatalogBaseForLobbyId("suit_warrior"));
             Assert.IsNull(LoadoutTypes.CatalogBaseForLobbyId("node_crossroads"));
         }

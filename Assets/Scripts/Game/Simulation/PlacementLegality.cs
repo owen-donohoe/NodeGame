@@ -42,9 +42,8 @@ namespace NodeWar.Simulation
         /// </summary>
         public static bool IsDraftable(DistrictType district)
         {
-            int value = (int)district;
-            return value >= (int)DistrictType.Farm && value <= (int)DistrictType.Pier
-                && district != DistrictType.Core;
+            return DistrictRoster.IsActive(district)
+                && district != DistrictType.None && district != DistrictType.Core;
         }
 
         private static bool IsFixedCell(BoardConfigData board, int x, int z)

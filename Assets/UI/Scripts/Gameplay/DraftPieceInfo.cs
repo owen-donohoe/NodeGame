@@ -58,7 +58,7 @@ namespace NodeWar.UI
                 }
             }
 
-            return type.ToString();
+            return NodeWar.View.DistrictFallback.Describe(type).Name ?? "Unknown district";
         }
 
         /// <summary>

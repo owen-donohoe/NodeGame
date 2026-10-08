@@ -26,8 +26,8 @@ namespace NodeWar.Lobby.Tests
         public void EraSlots_CoverEveryEnumValue()
         {
             Assert.AreEqual(Enum.GetValues(typeof(SuitType)).Length, LoadoutData.SuitEraSlots);
-            // Pier (14) is a board district with no loadout, catalog or era entry until the C5 roster.
-            Assert.AreEqual((int)DistrictType.Pier, LoadoutData.DistrictEraSlots);
+            // Reserved IDs still occupy indices; the canonical table includes the appended roster.
+            Assert.AreEqual((int)DistrictType.Fortress + 1, LoadoutData.DistrictEraSlots);
             Assert.AreEqual(LoadoutData.SuitEraSlots, LoadoutTypes.SuitTypeCount);
             Assert.AreEqual(LoadoutData.DistrictEraSlots, LoadoutTypes.DistrictTypeCount);
         }
@@ -55,8 +55,8 @@ namespace NodeWar.Lobby.Tests
             var source = LoadoutData.CreateEmpty();
             source.suitIDs[0] = "suit_scout";
             source.suitEras[(int)SuitType.Scout] = 2;
-            source.districtEras[(int)DistrictType.Rampart] = 4;
-            source.skinIDs = new[] { "skin.suit.scout.default", "skin.district.rampart.default" };
+            source.districtEras[(int)DistrictType.Fortress] = 4;
+            source.skinIDs = new[] { "skin.suit.scout.default", "skin.district.fortress.default" };
 
             LoadoutData decoded = RoundTrip(source);
 
@@ -87,7 +87,7 @@ namespace NodeWar.Lobby.Tests
         public void WithEquipment_ReadsTheServersEquippedVariantsAndSkins()
         {
             string scout = CatalogIds.SuitBase("Scout");
-            string rampart = CatalogIds.DistrictBase("Rampart");
+            string fortress = CatalogIds.DistrictBase("Fortress");
             var state = new PlayerState
             {
                 Inventory = new InventoryRecord
@@ -97,14 +97,14 @@ namespace NodeWar.Lobby.Tests
                         Variants = new Dictionary<string, string>
                         {
                             [scout] = CatalogIds.Variant(scout, 3),
-                            [rampart] = CatalogIds.Variant(rampart, 1),
+                            [fortress] = CatalogIds.Variant(fortress, 1),
                             // Wrong base for the key: ignored, era 0.
                             [CatalogIds.SuitBase("Medic")] = CatalogIds.Variant(scout, 5)
                         },
                         Skins = new Dictionary<string, string>
                         {
                             [scout] = CatalogIds.DefaultSkin(scout),
-                            [rampart] = CatalogIds.DefaultSkin(rampart)
+                            [fortress] = CatalogIds.DefaultSkin(fortress)
                         }
                     }
                 }
@@ -113,9 +113,9 @@ namespace NodeWar.Lobby.Tests
             LoadoutData result = LoadoutTypes.WithEquipment(LoadoutData.CreateEmpty(), state);
 
             Assert.AreEqual(3, result.suitEras[(int)SuitType.Scout]);
-            Assert.AreEqual(1, result.districtEras[(int)DistrictType.Rampart]);
+            Assert.AreEqual(1, result.districtEras[(int)DistrictType.Fortress]);
             Assert.AreEqual(0, result.suitEras[(int)SuitType.Medic]);
-            Assert.AreEqual(new[] { CatalogIds.DefaultSkin(rampart), CatalogIds.DefaultSkin(scout) }, result.skinIDs,
+            Assert.AreEqual(new[] { CatalogIds.DefaultSkin(fortress), CatalogIds.DefaultSkin(scout) }, result.skinIDs,
                 "skins are sorted, so the wire never depends on dictionary order");
         }
 
@@ -136,7 +136,7 @@ namespace NodeWar.Lobby.Tests
         public void CatalogBase_MapsLobbyIdsToSimulationTypes()
         {
             Assert.AreEqual("suit.warrior", LoadoutTypes.CatalogBaseForLobbyId("suit_warrior"));
-            Assert.AreEqual("district.rampart", LoadoutTypes.CatalogBaseForLobbyId("node_rampart"));
+            Assert.AreEqual("district.fortress", LoadoutTypes.CatalogBaseForLobbyId("node_fortress"));
             Assert.IsNull(LoadoutTypes.CatalogBaseForLobbyId("node_crossroads"));
         }
     }

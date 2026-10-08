@@ -28,7 +28,7 @@ namespace NodeWar.Backend
     {
         public static List<string> All()
         {
-            // From the explicit key tables, never from enum member names, so a
+            // Active bases from the explicit key tables; historical keys only decode saves. A
             // domain rename cannot change what the catalog is generated with.
             var bases = new List<string>();
             for (int suit = 1; suit < CatalogKeys.SuitTableLength; suit++)

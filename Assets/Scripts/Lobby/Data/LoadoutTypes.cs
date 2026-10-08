@@ -16,42 +16,21 @@ namespace NodeWar.Lobby
     /// </summary>
     public static class LoadoutTypes
     {
-        /// <summary>Matched by substring, as the lobby IDs always have been.</summary>
+        /// <summary>Only complete supported IDs resolve; unknown strings are empty.</summary>
         public static SuitType SuitForLobbyId(string suitID)
         {
-            if (suitID == null) return SuitType.None;
-            string lower = suitID.ToLowerInvariant();
-
-            if (lower.Contains("warrior")) return SuitType.Warrior;
-            if (lower.Contains("guardian")) return SuitType.Guardian;
-            if (lower.Contains("scout")) return SuitType.Scout;
-            if (lower.Contains("berserker")) return SuitType.Berserker;
-            if (lower.Contains("medic")) return SuitType.Medic;
-
+            for (int type = 1; type < CatalogKeys.SuitTableLength; type++)
+            {
+                if (suitID == CatalogKeys.SuitLobbyId(type) || suitID == CatalogKeys.SuitBase(type)) return (SuitType)type;
+                for (int era = 0; era < CatalogIds.EraCount; era++)
+                    if (suitID == CatalogIds.Variant(CatalogKeys.SuitBase(type), era)) return (SuitType)type;
+            }
             return SuitType.None;
         }
-
         public static DistrictType DistrictForLobbyId(string districtID)
         {
-            if (districtID == null) return DistrictType.None;
-            string lower = districtID.ToLowerInvariant();
-
-            if (lower.Contains("farm")) return DistrictType.Farm;
-            if (lower.Contains("mine")) return DistrictType.Mine;
-            if (lower.Contains("village")) return DistrictType.Village;
-            if (lower.Contains("barracks")) return DistrictType.Barracks;
-            if (lower.Contains("forge")) return DistrictType.Forge;
-            if (lower.Contains("camp")) return DistrictType.Camp;
-            if (lower.Contains("shrine")) return DistrictType.Shrine;
-            if (lower.Contains("arsenal")) return DistrictType.Arsenal;
-            if (lower.Contains("sanctuary")) return DistrictType.Sanctuary;
-            if (lower.Contains("watchtower")) return DistrictType.Watchtower;
-            if (lower.Contains("rampart")) return DistrictType.Rampart;
-            if (lower.Contains("market")) return DistrictType.Market;
-
-            return DistrictType.None;
+            return (DistrictType)DistrictMigration.CanonicalType(DistrictMigration.SourceType(districtID));
         }
-
         /// <summary>
         /// The catalog base a lobby item's variants and skins hang off, or null
         /// for an item with no simulation type (node_crossroads).
@@ -66,11 +45,11 @@ namespace NodeWar.Lobby
         }
 
         public const int SuitTypeCount = (int)SuitType.Watcher + 1;
-        public const int DistrictTypeCount = (int)DistrictType.Market + 1;
+        public const int DistrictTypeCount = (int)DistrictType.Fortress + 1;
 
         public static string CatalogBaseForSuit(int type) => CatalogKeys.SuitBase(type);
 
-        public static string CatalogBaseForDistrict(int type) => CatalogKeys.DistrictBase(type);
+        public static string CatalogBaseForDistrict(int type) => DistrictRoster.IsActive((DistrictType)type) ? CatalogKeys.DistrictBase(type) : null;
 
         /// <summary>The lobby ID an item is written with ("suit_warrior"); empty for a type with none.</summary>
         public static string LobbyIdForSuit(SuitType type) => CatalogKeys.SuitLobbyId((int)type) ?? "";
@@ -120,7 +99,7 @@ namespace NodeWar.Lobby
 
         private static int EraOf(Dictionary<string, string> variants, string baseId)
         {
-            if (!variants.TryGetValue(baseId, out string variantId)) return 0;
+            if (baseId == null || !variants.TryGetValue(baseId, out string variantId)) return 0;
             if (!CatalogIds.TryParseVariant(variantId, out string parsedBase, out int era)) return 0;
             if (!string.Equals(parsedBase, baseId, StringComparison.Ordinal)) return 0;
             return era >= 0 && era < GameBalanceData.EraCount ? era : 0;

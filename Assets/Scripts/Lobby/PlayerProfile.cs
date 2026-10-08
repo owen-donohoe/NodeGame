@@ -184,7 +184,18 @@ namespace NodeWar.Lobby
                 data = JsonUtility.FromJson<PlayerProfileData>(json);
 
                 bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
-                data.loadout = LoadoutRecord.From(LoadoutData.Normalized(data.loadout.ToLoadout()));
+                LoadoutData saved = LoadoutData.Normalized(data.loadout.ToLoadout());
+                migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.loadout.nodeIDs, saved.districtIDs);
+                int[] savedEras = data.loadout.districtEras;
+                if (savedEras == null || savedEras.Length != saved.districtEras.Length) migrated = true;
+                else
+                    for (int i = 0; i < savedEras.Length; i++)
+                        if (savedEras[i] != saved.districtEras[i]) migrated = true;
+                data.loadout = LoadoutRecord.From(saved);
+                string[] unlocks = NodeWar.Backend.DistrictMigration.Deck(data.UnlockedDistrictIDs,
+                    data.UnlockedDistrictIDs == null ? 0 : data.UnlockedDistrictIDs.Length);
+                migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.UnlockedDistrictIDs, unlocks);
+                data.UnlockedDistrictIDs = unlocks;
 
                 // A save written before settings existed deserialises to an
                 // all-zero block, which Normalized turns into the defaults.

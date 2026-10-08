@@ -25,8 +25,7 @@ namespace NodeWar.Cloud.Tests
             "suit.farmer", "suit.miner", "suit.warrior", "suit.smelter", "suit.guardian", "suit.scout",
             "suit.berserker", "suit.medic", "suit.merchant", "suit.acolyte", "suit.watcher",
             "district.farm", "district.mine", "district.village", "district.barracks", "district.forge",
-            "district.camp", "district.shrine", "district.arsenal", "district.sanctuary", "district.watchtower",
-            "district.rampart", "district.market"
+            "district.market", "district.pier", "district.town", "district.infirmary", "district.fortress"
         };
 
         private const string LegacyInventory = @"{
@@ -84,9 +83,11 @@ namespace NodeWar.Cloud.Tests
 
             JObject expected = JObject.Parse(LegacyInventory);
             expected["Equipped"]["Variants"]["suit.warrior"] = "suit.warrior.e2";
-            Assert.That(JObject.DeepEquals(expected, JObject.FromObject(written.Inventory)), Is.True,
+            var expectedState = new PlayerState { Inventory = expected.ToObject<InventoryRecord>(), Rank = result.Rank };
+            DistrictMigration.Apply(expectedState);
+            Assert.That(JObject.DeepEquals(JObject.FromObject(expectedState.Inventory), JObject.FromObject(written.Inventory)), Is.True,
                 JsonConvert.SerializeObject(written.Inventory));
-            Assert.That(result.Inventory.EquippedNodeIDs, Is.EqualTo(new[] { "node_rampart", "node_market" }));
+            Assert.That(result.Inventory.EquippedNodeIDs, Is.EqualTo(new[] { "node_fortress", "node_market" }));
         }
 
         [Test]
@@ -100,8 +101,8 @@ namespace NodeWar.Cloud.Tests
                 .Select(e => CatalogIds.Variant(b, e)).Append(CatalogIds.DefaultSkin(b))).ToList();
             string json = File.ReadAllText(Path.Combine(RepositoryRoot(), CatalogTests.CatalogPath));
             var committed = ServerCatalog.Parse(json);
-            Assert.That(committed.Select(i => i.Id), Is.EquivalentTo(expected));
-            Assert.That(committed.Select(i => i.BaseId).Distinct(), Is.EquivalentTo(Bases));
+            Assert.That(committed.Where(i => !i.Retired).Select(i => i.Id), Is.EquivalentTo(expected));
+            Assert.That(committed.Where(i => !i.Retired).Select(i => i.BaseId).Distinct(), Is.EquivalentTo(Bases));
             Assert.That(CatalogValidation.ValidateAgainstPrevious(committed, ServerCatalog.Items), Is.Empty);
             Assert.That(CatalogValidation.ValidateAgainstPrevious(ServerCatalog.Items, committed), Is.Empty);
         }
@@ -122,7 +123,7 @@ namespace NodeWar.Cloud.Tests
             Assert.That(CatalogKeys.DistrictBase(-1), Is.Null);
             Assert.That(CatalogKeys.SuitLobbyId(3), Is.EqualTo("suit_warrior"));
             Assert.That(CatalogKeys.DistrictLobbyId(12), Is.EqualTo("node_rampart"));
-            Assert.That(CatalogKeys.DistrictLobbyId(14), Is.Null);
+            Assert.That(CatalogKeys.DistrictLobbyId(14), Is.EqualTo("node_pier"));
         }
 
         private static string RepositoryRoot()

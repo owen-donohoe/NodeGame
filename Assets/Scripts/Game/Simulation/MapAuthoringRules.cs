@@ -52,7 +52,7 @@ namespace NodeWar.Simulation
                 if (taken[cell])
                     return Fail("Two fixed placements share (" + p.gridX + "," + p.gridZ + ").", out error);
                 taken[cell] = true;
-                if ((int)p.districtType < 0 || (int)p.districtType > (int)DistrictType.Pier)
+                if (!DistrictRoster.IsActive(p.districtType) || p.districtType == DistrictType.Pier)
                     return Fail("Fixed placement " + i + " is an unknown district.", out error);
                 if (p.ownerID < -1 || p.ownerID > 1)
                     return Fail("Fixed placement " + i + " has owner " + p.ownerID + ".", out error);
@@ -70,6 +70,8 @@ namespace NodeWar.Simulation
                 return Fail("The two Cores share row " + placements[firstCore].gridZ
                     + ", so neither is the high-Z one.", out error);
 
+            if (!ValidPool(board.baseDraftDistrictsP0) || !ValidPool(board.baseDraftDistrictsP1))
+                return Fail("Board has an inactive or non-draftable base district.", out error);
             error = null;
             return true;
         }
@@ -237,6 +239,14 @@ namespace NodeWar.Simulation
                 }
             }
             return best;
+        }
+
+        private static bool ValidPool(DistrictType[] pool)
+        {
+            if (pool == null) return true;
+            for (int i = 0; i < pool.Length; i++)
+                if (!PlacementLegality.IsDraftable(pool[i])) return false;
+            return true;
         }
 
         private static bool SamePool(DistrictType[] a, DistrictType[] b)

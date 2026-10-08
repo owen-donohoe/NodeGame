@@ -398,7 +398,10 @@ namespace NodeWar.Simulation
                     claimRateDenominator = watchtowerDenominator },
                 new DistrictStats { districtType = DistrictType.Sanctuary, respawnBoostPerWorker = sanctuaryBoost,
                     respawnCostReductionPercent = sanctuaryCostReductionPercent },
-                new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 }
+                new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 },
+                new DistrictStats { districtType = DistrictType.Barracks },
+                new DistrictStats { districtType = DistrictType.Infirmary },
+                new DistrictStats { districtType = DistrictType.Fortress }
             };
 
             DistrictStats[] all = new DistrictStats[template.Length * EraCount];

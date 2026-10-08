@@ -24,9 +24,9 @@ namespace NodeWar.Lobby
             Combat
         }
 
-        private static readonly string[] RoundDistricts = { "node_market", "node_shrine", "node_sanctuary" };
-        private static readonly string[] SquareDistricts = { "node_rampart" };
-        private static readonly string[] TriangleDistricts = { "node_camp", "node_barracks", "node_arsenal", "node_watchtower" };
+        private static readonly string[] RoundDistricts = { "node_farm", "node_mine", "node_forge", "node_market", "node_village", "node_town", "node_infirmary" };
+        private static readonly string[] SquareDistricts = { "node_pier", "node_fortress" };
+        private static readonly string[] TriangleDistricts = { "node_barracks" };
 
         /// <summary>
         /// A district's family. An ID the table does not know is Square, the

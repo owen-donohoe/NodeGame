@@ -30,6 +30,9 @@ namespace NodeWar.Backend.EditorTools
                     Add(definition, ids, CatalogIds.Variant(baseId, era), CatalogEntryKind.Variant, baseId, era);
                 Add(definition, ids, CatalogIds.DefaultSkin(baseId), CatalogEntryKind.Skin, baseId, -1);
             }
+            foreach (var entry in definition.entries)
+                if (entry != null && entry.baseId != null && entry.baseId.StartsWith("district.", StringComparison.Ordinal))
+                    entry.retired = DistrictMigration.SourceType(entry.baseId) == 0 || !DistrictMigration.IsActive(DistrictMigration.SourceType(entry.baseId));
             EditorUtility.SetDirty(definition);
             AssetDatabase.SaveAssets();
             Selection.activeObject = definition;

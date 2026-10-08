@@ -25,6 +25,7 @@ namespace NodeWar.Cloud
             {
                 var (state, inventoryLock) = await store.ReadInventoryLockedAsync();
                 state ??= new PlayerState();
+                // Shared defaults migrate saved inventory before canonical grants and clamp.
                 var changed = PlayerStateLogic.ApplyDefaults(state, rules.GrantDefaults);
                 if (changed.Rating == null && changed.Rank == null && changed.Inventory == null && changed.History == null &&
                     changed.Discipline == null)
@@ -53,6 +54,7 @@ namespace NodeWar.Cloud
             for (int attempt = 0; ; attempt++)
             {
                 var (state, inventoryLock) = await store.ReadInventoryLockedAsync();
+                // Rules stage migration on a detached copy; refusal causes no migration write.
                 if (!rules.Equip(state, changes)) return state;
                 try
                 {

@@ -25,11 +25,11 @@ namespace NodeWar.Backend
         private static readonly string[] DistrictKeys =
         {
             null, "farm", "mine", "village", "barracks", "core", "forge",
-            "camp", "shrine", "arsenal", "sanctuary", "watchtower", "rampart", "market"
+            "camp", "shrine", "arsenal", "sanctuary", "watchtower", "rampart", "market", "pier", "town", "infirmary", "fortress"
         };
 
-        /// <summary>The district numbers that have a catalog base (every one with a key except Core), ascending.</summary>
-        public static readonly int[] CatalogDistrictTypes = { 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13 };
+        /// <summary>The active catalog district numbers, ascending. Historical keys remain available for decoding.</summary>
+        public static readonly int[] CatalogDistrictTypes = { 1, 2, 3, 4, 6, 13, 14, 15, 16, 17 };
 
         /// <summary>One past the highest suit number with a key.</summary>
         public static int SuitTableLength => SuitKeys.Length;

@@ -3,21 +3,21 @@ namespace NodeWar.Simulation
     // ===== ENUMS =====
     public enum DistrictType
     {
-        None, // empty connector / crossroads
-        Farm,
-        Mine,
-        Village,
-        Barracks,
-        Core,
-        Forge,
+        None = 0, // empty connector / crossroads
+        Farm = 1,
+        Mine = 2,
+        Village = 3,
+        Barracks = 4,
+        Core = 5,
+        Forge = 6,
         
-        Camp,
-        Shrine,
-        Arsenal,
-        Sanctuary,
-        Watchtower,
-        Rampart,
-        Market,
+        Camp = 7,
+        Shrine = 8,
+        Arsenal = 9,
+        Sanctuary = 10,
+        Watchtower = 11,
+        Rampart = 12,
+        Market = 13,
 
         /// <summary>
         /// Built on a Lake cell that the board marks as a district slot. Appended
@@ -25,7 +25,9 @@ namespace NodeWar.Simulation
         /// an inert connector: it grants nothing and blocks nobody.
         /// </summary>
         Pier = 14,
-        Town = 15
+        Town = 15,
+        Infirmary = 16,
+        Fortress = 17
     }
 
     /// <summary>
@@ -63,7 +65,7 @@ namespace NodeWar.Simulation
 
     public enum SuitType
     {
-        None,
+        None = 0,
         Farmer,
         Miner,
         Warrior, // renamed from Soldier

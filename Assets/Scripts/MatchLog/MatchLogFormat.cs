@@ -225,6 +225,25 @@ namespace NodeWar.MatchLog
                 bool v2Board = (seen & (1 << BoardV2Tag)) != 0;
                 if (v2Board && !hasSetup) throw new FormatException("Missing required chunk.");
                 if (!v2Board && hasSetup) throw new FormatException("Conflicting BOARD and SETUP chunks.");
+                if (parsed.header.sim >= 3)
+                {
+                    foreach (var loadout in parsed.loadouts)
+                        foreach (int district in loadout.districts)
+                            if (!DistrictRoster.IsActive((DistrictType)district))
+                                throw new FormatException("Inactive loadout district.");
+                    if (parsed.draft != null)
+                        foreach (var placement in parsed.draft)
+                            if (!PlacementLegality.IsDraftable(placement.districtType))
+                                throw new FormatException("Inactive draft district.");
+                    foreach (var placement in parsed.board.initialPlacements)
+                        if (!DistrictRoster.IsActive(placement.districtType))
+                            throw new FormatException("Inactive board district.");
+                    foreach (var pool in new[] { parsed.board.baseDraftDistrictsP0, parsed.board.baseDraftDistrictsP1 })
+                        if (pool != null)
+                            foreach (var district in pool)
+                                if (!PlacementLegality.IsDraftable(district))
+                                    throw new FormatException("Inactive pool district.");
+                }
                 log = parsed;
                 return true;
             }

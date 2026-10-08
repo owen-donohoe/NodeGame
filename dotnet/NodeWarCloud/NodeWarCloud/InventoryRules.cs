@@ -23,7 +23,7 @@ namespace NodeWar.Cloud
         public bool GrantDefaults(PlayerState state)
         {
             var inventory = state.Inventory;
-            bool changed = PlayerStateLogic.NormalizeInventory(inventory);
+            bool changed = PlayerStateLogic.NormalizeInventory(inventory) | DistrictMigration.Apply(state);
             var grants = EraUnlocks.GrantsFor(catalog, state.Rank.HighestArena, inventory.OwnedVariants);
             if (grants.Count > 0) { inventory.OwnedVariants.AddRange(grants); changed = true; }
             foreach (var item in catalog)
@@ -40,12 +40,14 @@ namespace NodeWar.Cloud
                     inventory.OwnedVariants.Contains(item.Id) && !inventory.Equipped.Variants.ContainsKey(item.BaseId))
                 { inventory.Equipped.Variants.Add(item.BaseId, item.Id); changed = true; }
             }
-            return changed;
+            return InventoryClamp.ClampToArena(state.Inventory, state.Rank.Arena) | changed;
         }
 
         public bool Equip(PlayerState state, EquippedRecord changes)
         {
-            return InventoryEquip.Apply(state, changes, (baseId, id, skin) =>
+            var staged = DistrictMigration.Detached(state);
+            bool migrated = DistrictMigration.Apply(staged);
+            bool changed = InventoryEquip.Apply(staged, changes, (baseId, id, skin) =>
             {
                 if (!bases.Contains(baseId)) throw new InventoryValidationException($"Unknown base '{baseId}'.");
                 if (id == null || !items.TryGetValue(id, out var item))
@@ -54,7 +56,7 @@ namespace NodeWar.Cloud
                 if (item.Kind != expectedKind || item.BaseId != baseId)
                     throw new InventoryValidationException($"Item '{id}' is not a {expectedKind} for base '{baseId}'.");
                 if (item.Retired) throw new InventoryValidationException($"Item '{id}' is retired.");
-                var owned = skin ? state.Inventory.OwnedSkins : state.Inventory.OwnedVariants;
+                var owned = skin ? staged.Inventory.OwnedSkins : staged.Inventory.OwnedVariants;
                 if (owned == null || !owned.Contains(id)) throw new InventoryValidationException($"Item '{id}' is not owned.");
                 // Suits follow the tree; everything else keeps the era rule.
                 bool usable = SuitTree.IsTreeSuit(baseId)
@@ -63,6 +65,8 @@ namespace NodeWar.Cloud
                 if (!skin && !usable)
                     throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
             });
+            if (changed || migrated) state.Inventory = staged.Inventory;
+            return changed || migrated;
         }
     }
 }
