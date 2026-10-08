@@ -6,14 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
   - id: contract
@@ -107,6 +101,9 @@ Read the changed or proposed code, then check each item:
    - Preserve the Rampart-bonus pass after movement and the post-combat
      resume pass after win-check too. TickBreach precedes TickClaiming inside
      claiming; the derived nextBreacherID refresh is last, after resume.
+   - Auto-recruit follows ordinary production and precedes healing, in ascending
+     node ID. Commands and the automatic pass share eligibility and mutation;
+     recruitment cooldown is not tempo-scaled.
    - With the breach channel enabled, does a loss require a breach this tick
      at the current threshold, with simultaneous losses cancelled? A drop
      alone must not lose; disabling the channel keeps the legacy win path.
@@ -121,6 +118,9 @@ Read the changed or proposed code, then check each item:
      defaults: era fields, breachBar and paidRespawns are zero-neutral;
      nextBreacherID is -1-neutral. Check initialization as well as hashing.
      Breaching must stay appended after Dead to preserve enum values.
+     Recruit count and ready tick are zero-neutral; autoRecruit is false-neutral.
+     Their tagged hash contributions include player/node index, and ownership
+     loss clears only the node fields, leaving the match-long player count intact.
    - Conditional hashing alone does not waive a SimulationVersion bump:
      do existing inputs still produce the same results and hashes, as
      they did when eras were added? If not, bump SimulationVersion.Current
@@ -141,6 +141,10 @@ Read the changed or proposed code, then check each item:
 
 9. Command/serializer pairing
    - Does any new CommandType have a case in CommandProcessor?
+   - Are new enum values explicitly accepted in InputSerializer and MatchLogFormat,
+     with unknown-type refusal and six-field round-trip coverage? Recruit=5 and
+     SetAutoRecruit=6 keep the existing payload and TICKS shape. Node commands
+     require villagerID=-1; Recruit value=0, repeat toggle value=0 or 1.
    - Does any GameCommand struct change update InputSerializer?
    - Does a wire layout change (a GameCommand field, or a TickInput header
      byte such as senderDelay and requestedDelay) bump ProtocolVersion.Current
