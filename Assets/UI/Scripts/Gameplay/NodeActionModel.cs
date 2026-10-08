@@ -46,6 +46,7 @@ namespace NodeWar.UI
                 { d.MaterialsCost=stats.fortressMaterialsCosts[n.fortressLevel+1]; d.MetalCost=stats.fortressMetalCosts[n.fortressLevel+1]; }
                 d.CanMaterials=NodeActionRules.CanUpgradeFortress(s,b,player,node,0);
                 d.CanMetal=NodeActionRules.CanUpgradeFortress(s,b,player,node,1);
+                d.Refusal=d.CanMaterials || d.CanMetal ? "None" : "UpgradeUnavailable";
                 d.Information="Fortress level "+d.Level+" / 3. Next: "+d.MaterialsCost+" materials or "+d.MetalCost+" metal.";
             }
             else if(n.districtType==DistrictType.Town)
@@ -87,4 +88,3 @@ namespace NodeWar.UI
         }
     }
 }
-

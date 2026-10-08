@@ -50,6 +50,8 @@ namespace NodeWar.Network.Tests
         public double Now;
 
         private int nodeCount;
+        public Func<int,int,GameCommand[]> CommandScript;
+        public bool CaptureConfirmedTicks;
 
         public static GameBalanceData Balance;
 
@@ -88,6 +90,7 @@ namespace NodeWar.Network.Tests
         /// </summary>
         public GameCommand[] Script(int player, int forTick)
         {
+            if (CommandScript != null) return CommandScript(player, forTick);
             if (forTick < InputDelay || forTick % 5 != player + 1) return null;
             return new[]
             {
@@ -115,8 +118,8 @@ namespace NodeWar.Network.Tests
             };
             Peers = new[]
             {
-                new HarnessPeer(0, NewState(), Links[0], Links[1], Script, () => Now),
-                new HarnessPeer(1, NewState(), Links[1], Links[0], Script, () => Now)
+                new HarnessPeer(0, NewState(), Links[0], Links[1], Script, () => Now, CaptureConfirmedTicks),
+                new HarnessPeer(1, NewState(), Links[1], Links[0], Script, () => Now, CaptureConfirmedTicks)
             };
 
             int[] spikeUsed = new int[Spikes.Count];

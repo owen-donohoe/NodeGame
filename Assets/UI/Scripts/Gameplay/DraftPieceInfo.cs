@@ -69,7 +69,12 @@ namespace NodeWar.UI
         /// </summary>
         public static string Monogram(string displayName)
         {
-            if (displayName == "Recruit") return "V";
+            foreach (DistrictType type in System.Enum.GetValues(typeof(DistrictType)))
+            {
+                if (!DistrictRoster.IsActive(type)) continue;
+                var descriptor = NodeWar.View.DistrictFallback.Describe(type);
+                if (descriptor.Name == displayName) return descriptor.Monogram;
+            }
             if (string.IsNullOrEmpty(displayName)) return "?";
             return displayName.Substring(0, 1).ToUpperInvariant();
         }

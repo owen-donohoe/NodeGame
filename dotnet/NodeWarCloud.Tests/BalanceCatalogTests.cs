@@ -34,12 +34,14 @@ namespace NodeWar.Cloud.Tests
                 files.Add(new KeyValuePair<string, string>(name.Substring(prefix.Length), reader.ReadToEnd()));
             }
 
-            CollectionAssert.AreEquivalent(Shipped.Keys, files.Select(f => Path.GetFileNameWithoutExtension(f.Key)));
+            Assert.That(files.Select(f => Path.GetFileNameWithoutExtension(f.Key)), Is.SupersetOf(Shipped.Keys),
+                "All named historical exports must remain when a new release is added.");
             foreach (var file in files)
             {
                 string name = Path.GetFileNameWithoutExtension(file.Key);
                 GameBalanceData balance = JsonConvert.DeserializeObject<GameBalanceData>(file.Value);
-                Assert.AreEqual(Shipped[name], BalanceHasher.Hash(balance), file.Key);
+                int expected = Shipped.TryGetValue(name, out int historical) ? historical : int.Parse(name, System.Globalization.CultureInfo.InvariantCulture);
+                Assert.AreEqual(expected, BalanceHasher.Hash(balance), file.Key);
             }
 
             var warnings = new List<string>();

@@ -43,6 +43,8 @@
     <Compile Include="LifecycleTests.cs" />
     <Compile Include="BotBreachingTests.cs" />
     <Compile Include="TerrainLockstepTests.cs" />
+    <Compile Include="CoreRulesLockstepTests.cs" />
+    <Compile Include="../CoreRulesFixture.cs" Link="Tests/CoreRulesFixture.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/BoardFixtures.cs"
              Link="Tests/BoardFixtures.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/BotPlayer.cs"

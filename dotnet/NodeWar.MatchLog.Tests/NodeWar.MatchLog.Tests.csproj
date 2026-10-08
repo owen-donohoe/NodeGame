@@ -23,6 +23,8 @@
     <Compile Include="MatchLogErasTests.cs" />
     <Compile Include="TerrainLogTests.cs" />
     <Compile Include="TerrainReplayTests.cs" />
+    <Compile Include="CoreRulesReplayTests.cs" />
+    <Compile Include="../CoreRulesFixture.cs" Link="Tests/CoreRulesFixture.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/BoardFixtures.cs"
              Link="Tests/BoardFixtures.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/TestBoardFactory.cs"
