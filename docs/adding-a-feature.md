@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: e7e968a80076be4a12902191f076b8c141a6c9d0
 status: stable
 sources:
   - id: sim-state
@@ -139,6 +139,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      pass and UI (`NodeActionRules`), then perform writes in `CommandProcessor`.
      Recruit uses `villagerID = -1`, `value = 0`; SetAutoRecruit uses an absolute
      value of 0 or 1 and does not recruit directly.
+   - A price or eligibility the UI shows must come from the same helper the
+     simulation uses (as `GameSimulation.CountInfirmaryWorkers` serves both the
+     respawn timer and the paid-respawn price), never a second copy of the rule.
    - Capture the input in `Input/` (`CommandSystem`, and `BotPlayer` if
      the bot should be able to do it too) and push it through
      `InputBuffer`, with `issuedOnTick` set from `SimulationState.tickCount`

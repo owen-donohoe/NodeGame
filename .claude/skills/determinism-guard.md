@@ -6,8 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: e7e968a80076be4a12902191f076b8c141a6c9d0
 status: stable
 sources:
   - id: contract
@@ -107,6 +107,8 @@ Read the changed or proposed code, then check each item:
      breach frontier) read the tick-start owner snapshot, not live owners? Are
      rates computed in long and bounded, so node order and large balances
      cannot change or overflow a result?
+   - Do worker-count rules (the Infirmary's two counted Acolytes) pick by a total order
+     (lowest villager ID) and share one function between the tick and any UI price?
    - A Town reward is paid inside the claim-complete step, with its entitlement
      spent before the population-cap check (no deferred credit), tracked by the
      hashed `townPaidMask`.
