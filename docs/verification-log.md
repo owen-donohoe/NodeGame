@@ -37,6 +37,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `docs/architecture.md`
 
@@ -58,6 +59,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `docs/simulation-rules.md`
 
@@ -75,6 +77,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `docs/skills/run-dotnet-tests.md`
 
@@ -90,6 +93,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `.claude/skills/cs-review.md`
 
@@ -109,6 +113,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `.claude/skills/determinism-guard.md`
 
@@ -127,6 +132,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `.claude/skills/write-sim-test.md`
 
@@ -142,6 +148,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `docs/game-model.md`
 
@@ -171,6 +178,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 ## `docs/skills/run-editmode-tests.md`
 

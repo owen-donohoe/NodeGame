@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
 status: stable
 sources:
   - id: sim-state
@@ -889,10 +889,18 @@ Three objects are carried across the Lobby → Gameplay scene load via
   it. See [In-match indicators](#in-match-indicators).
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
   to open; `NodePanelManager` still owns that.
-- `NodeSheetContent` and its four subclasses — `ForgeContent`,
-  `CoreContent`, `EquipContent` cover all six actionable districts;
+- `NodeSheetContent` and its subclasses — `ForgeContent`, `CoreContent`, `EquipContent`
+  (Barracks) and `NodeActionContent` (Village, Town, Infirmary, Fortress);
   `ProductionContent` shows an owner's Farm, Mine or Market without actions.
   Each declares `InvolvedResources`; `Send` is the only path to the simulation.
+- `NodeActionModel` / `NodeActionContent` — the node actions in UI Toolkit: Recruit,
+  Repeat (an absolute toggle) and the Fortress upgrade in either currency (disabled at
+  level 3), with enemy panels informational and Town showing its paid flags without actions.
+  The model is UnityEngine-free and read-only: every eligibility and price comes from the
+  simulation's shared helpers (`NodeActionRules`, `GameBalanceData`), and its binding to the state,
+  node array and tick is invalidated when a rollback replaces the node array, so it is rollback-safe. Its uGUI counterpart is
+  `NodeActionPanelContent`, which `NodePanelManager` builds at runtime for those four districts
+  (no prefab wiring). Names, monograms and descriptions come from `DistrictFallback`.
 - `DraftScreenController` — the draft screen, and the one place in this
   tree that owns an interaction end to end. The chrome and the placement
   cannot be separated here: a drag can begin on a UI Toolkit card or on
@@ -934,8 +942,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
   the draft. Ocean and open lake have no collider. `TerrainPresentation` is the
   UnityEngine-free description of each cell. `GameManager` creates the view and
   shows the match board once the draft is placed.
-- `DistrictFallback` — a readable name, monogram and description for every active
-  district, so a district with no art still reads on the board (UnityEngine-free).
+- `DistrictFallback` / `DistrictFallbackArt` — a readable name, monogram, description and
+  preferred prefab key for every active district (Village reads as "Recruit"), and generated
+  fallback glyphs and a runtime Pier bridge, so a district with no art still reads on the board.
+  `DistrictFallback` is UnityEngine-free.
 - `OrderPresentation` — read-only: which orders to draw and how, including the
   amber dashed route of an order interrupted by a fight, derived from
   `targetNodeID` and so correct after a rollback.
@@ -1195,6 +1205,9 @@ and must therefore arrive at identical results every tick.
   because the packet switch has no default. `EmotePanel` (HUD) applies the
   rate limit (under 5 per 1 s and under 10 per 5 s) on send and again on
   receive, and owns mute.
+- **Confirmed ticks.** `LockstepCore.ConfirmedTickSimulated` fires after every confirmed tick,
+  replay included and speculation excluded, so an observer (the lockstep tests today) sees only
+  ticks that are part of the match.
 - **Recording** — both tick drivers raise `CommandsApplied` (the tick count
   before, and the commands in the order they were applied — lockstep's P0
   then P1, the local driver's buffer order) and `HashComputed` (the tick
@@ -1292,7 +1305,9 @@ Assets/Scripts/Backend/          client services, NodeWar.Backend
   Shared/DisconnectHold           UnityEngine-free three-stage hold: presence, claim, resolution
   Shared/RankedResultTracker      UnityEngine-free end-card follower of the server's result
   Catalog/                       CatalogDefinition asset + editor Generate / Export
-  Editor/BalanceExport           writes the shared balance for the server, named by content hash
+  Editor/BalanceExport           writes the shared balance for the server, named by content hash;
+                                 BalanceExportData validates it first (core rules, recruit tuning,
+                                 every active district at every era) and never overwrites a different file
   LocalMatchLogStore             finished logs on disk, newest 20
 Assets/Scripts/MatchLog/         NodeWar.MatchLog: format, MatchRecorder, MatchReplay
 dotnet/NodeWarCloud/             the Cloud Code module (deploy: ugs deploy dotnet/NodeWarCloud -e development)
