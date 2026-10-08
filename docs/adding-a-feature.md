@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+verified_at_commit: d529c753810366befd22432086b613ea5f6e6e0b
 status: stable
 sources:
   - id: sim-state
@@ -139,6 +139,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      pass and UI (`NodeActionRules`), then perform writes in `CommandProcessor`.
      Recruit uses `villagerID = -1`, `value = 0`; SetAutoRecruit uses an absolute
      value of 0 or 1 and does not recruit directly.
+   - Node actions in the UI (`NodeActionModel`, `NodeActionPanelContent`) exist in both live stacks;
+     add a new one to both, with eligibility and price from the simulation helper, and build the
+     uGUI panel at runtime rather than through prefab wiring.
    - A price or eligibility the UI shows must come from the same helper the
      simulation uses (as `GameSimulation.CountInfirmaryWorkers` serves both the
      respawn timer and the paid-respawn price), never a second copy of the rule.
@@ -244,7 +247,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    `MatchSetup`) and recorded separately in the match log. The balance content
    hash is compared in the handshake, not folded into `SimulationStateHasher`.
    If the rules depend on the number, say so in `GameBalanceData.CoreRulesValid`
-   so an overflowing balance is refused rather than played.
+   so an overflowing balance is refused rather than played. A new tunable per district and era must
+   also pass `BalanceExportData.ReleaseValid` (the server export refuses a balance missing an active
+   district at any era, and never overwrites an existing content-addressed file with different data);
+   `ReleaseContentTests` compare a fresh export with the client balance and catalog.
    Preserve absent-field behaviour: nonpositive resource caps are uncapped,
    absent tempo axes use 100%, and a disabled breach channel keeps the legacy
    fixed-threshold path. Validate schedule lengths/order, positive percentages

@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+verified_at_commit: d529c753810366befd22432086b613ea5f6e6e0b
 status: stable
 sources:
   - id: tests
@@ -112,6 +112,9 @@ Step 5: Assert expected state
   at the metal cap, Market still alternates, and cap 0 remains uncapped
 - For paid respawns, assert only successful commands increment paidRespawns
   and the Infirmary (at most two counted workers, lowest villager ID, none under enemy presence) discounts the escalated cost with integer rounding/minimum 1
+- For an integration scenario over loss, duplication and reordering with replay and
+  rollback, use `dotnet/CoreRulesFixture` (map `hourglass-01-acceptance`, a test-only copy that
+  never advertises its hash under the shipped map ID) rather than the shipped board.
 - For the Fortress, assert level-by-level costs in either currency, refusal under enemy presence,
   non-stacking auras read from tick-start state, the divisor floor of 1 on claim and breach,
   and that ownership loss resets the level.

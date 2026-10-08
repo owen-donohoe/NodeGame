@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+verified_at_commit: d529c753810366befd22432086b613ea5f6e6e0b
 status: stable
 sources:
   - id: sim-loop
@@ -423,4 +423,6 @@ For match recording, `CommandsApplied` reports a non-empty command batch
 in P0-then-P1 order with the pre-tick count, before applying it.
 `HashComputed` reports the checkpoint with the post-tick count, one greater
 than the tick index used by `OnDesync`. These recording events observe the
-tick path; they do not add another way to change the simulation.
+tick path; they do not add another way to change the simulation. `ConfirmedTickSimulated`
+is the same kind of observer: it fires after each confirmed tick (replay after a rollback
+included, speculative ticks never) with the new tick count.
