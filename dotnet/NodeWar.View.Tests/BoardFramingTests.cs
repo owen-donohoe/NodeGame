@@ -16,6 +16,22 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
+        public void WidthFitDistance_PutsEveryColumnInFrame()
+        {
+            // 90-degree vertical FOV at aspect 1: half-width equals distance.
+            Assert.AreEqual(21f, BoardFraming.WidthFitDistance(7, 6f, 90f, 1f, 1f), 1e-3f);
+            // A narrow portrait screen needs to stand further back than a square one.
+            float portrait = BoardFraming.WidthFitDistance(7, 6f, 60f, 0.45f, 1f);
+            float square = BoardFraming.WidthFitDistance(7, 6f, 60f, 1f, 1f);
+            Assert.Greater(portrait, square);
+            // The width seen at that distance is exactly the board's seven cells.
+            double seen = 2.0 * portrait * System.Math.Tan(30.0 * System.Math.PI / 180.0) * 0.45;
+            Assert.AreEqual(42.0, seen, 1e-3);
+            // Margin widens it proportionally.
+            Assert.AreEqual(square * 1.1f, BoardFraming.WidthFitDistance(7, 6f, 60f, 1f, 1.1f), 1e-3f);
+        }
+
+        [Test]
         public void ConfiguredBoundsNeverClipTheNodeGrid()
         {
             // The asset's camera bounds were authored for the old 4x7 board. The shipped

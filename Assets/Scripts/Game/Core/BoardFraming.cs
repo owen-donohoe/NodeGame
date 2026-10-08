@@ -32,6 +32,21 @@ namespace NodeWar.Core
             max = configuredMax > gridMax + nodeScale ? configuredMax : gridMax + nodeScale;
         }
 
+        /// <summary>
+        /// The camera distance at which <paramref name="cellsAcross"/> whole cells fit the view's
+        /// width, for a perspective camera with the given vertical field of view and aspect. The
+        /// width is measured at the point the rig looks at; margin scales it (1 = edge to edge).
+        /// </summary>
+        public static float WidthFitDistance(int cellsAcross, float nodeScale, float verticalFovDegrees,
+            float aspect, float margin)
+        {
+            double halfVertical = verticalFovDegrees * 0.5 * System.Math.PI / 180.0;
+            double tanHalfHorizontal = System.Math.Tan(halfVertical) * aspect;
+            if (tanHalfHorizontal <= 0.0) return 0f;
+            double halfWidth = cellsAcross * nodeScale * margin * 0.5;
+            return (float)(halfWidth / tanHalfHorizontal);
+        }
+
         public static bool IsAtFit(float targetZoom, float maxZoom)
         {
             return targetZoom >= maxZoom * AtFitFraction;
