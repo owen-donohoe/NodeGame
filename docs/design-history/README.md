@@ -7,7 +7,7 @@ generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   # full history: docs/verification-log.md
   - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
+verified_at_commit: 048597d1
 status: stable
 sources:
   - id: v21-pdf

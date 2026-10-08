@@ -7,7 +7,7 @@ generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
   - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
+verified_at_commit: 048597d1
 status: draft
 sources:
   - id: sim-state
