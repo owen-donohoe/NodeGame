@@ -6,14 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:47Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
   - id: sim-state
@@ -123,6 +117,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      ownership/state/cost before mutating anything (follow
      `ProcessEquipCommand`'s shape: ownership check → state check → cost
      check → apply).
+   - For node actions, share read-only eligibility with the automatic tick
+     pass and UI (`NodeActionRules`), then perform writes in `CommandProcessor`.
+     Recruit uses `villagerID = -1`, `value = 0`; SetAutoRecruit uses an absolute
+     value of 0 or 1 and does not recruit directly.
    - Capture the input in `Input/` (`CommandSystem`, and `BotPlayer` if
      the bot should be able to do it too) and push it through
      `InputBuffer`, with `issuedOnTick` set from `SimulationState.tickCount`
@@ -131,6 +129,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - If the command needs new data on the wire, extend `InputSerializer`
      (or `DraftSerializer` for draft-phase actions) — both peers must
      encode/decode it identically.
+     A new enum value also needs explicit acceptance in `InputSerializer` and
+     `MatchLogFormat`, plus round-trip and unknown-type refusal tests. Recruit=5
+     and SetAutoRecruit=6 retain the six-field, 24-byte command payload and TICKS tag.
    - Any wire layout change bumps `ProtocolVersion.Current`
      (`Assets/Scripts/Backend/Shared/ProtocolVersion.cs`; `InputSerializer.ProtocolVersion`
      aliases it) in the same commit. A `GameCommand` change also needs a new TICKS tag in
