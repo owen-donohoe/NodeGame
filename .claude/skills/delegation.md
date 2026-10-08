@@ -95,6 +95,30 @@ been done in advance, and should have been. A wave of two containing one web
 research task is 4.8M, which is also too much — the pair matters, not just the
 count.
 
+### Planner, supervisor and coder (terrain redesign, 2026-10-07/08)
+
+A planner (`gpt-6-astra`, high) wrote a commit-by-commit contract, then supervised
+a `gpt-6.1-sol` coder commit by commit. Claude Sonnet coders covered a GPT outage.
+
+| Task | Tokens |
+|---|---:|
+| Astra: whole-system plan for four PRs (22 commits), one turn | **4.78M** |
+| Sol + Astra: one view/draft commit, finished from a WIP | **8.05M** (coder 5.5, supervisor 1.7, review 0.85) |
+| Sol + Astra: a two-file test fix | **~3.3M** |
+| Sonnet: five bounded commits (A1–B3), files and specs named | well under one Claude session |
+
+What it says:
+
+- **A supervisor's cost is its context, re-sent every turn.** The planner reached
+  180k+ context and every small review paid for all of it. Plan in one agent,
+  then supervise from a fresh one whose brief names only the files of the PR in
+  hand, and audit from diffs rather than whole files.
+- **A whole-system plan is a web-research-sized task.** Budget it as most of a
+  window, or plan one PR at a time.
+- **Split the plan by what each role reads.** A coder working one commit should
+  open that commit's spec and the decisions it cites, not every decision for
+  every PR (see `.claude/plans/<change>/README.md`).
+
 ## The rule
 
 **Two Codex agents in flight at once. No more.** Dispatch a wave, wait for both,
