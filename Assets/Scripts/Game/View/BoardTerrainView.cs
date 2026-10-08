@@ -269,7 +269,10 @@ namespace NodeWar.View
             MeshFilter filter = renderer.GetComponent<MeshFilter>();
             if (filter != null && filter.sharedMesh != null)
             {
-                Mesh mesh = filter.mesh;
+                // An explicit copy rather than filter.mesh, which copies implicitly and
+                // logs a leak error in edit mode. The copy is ours, disposed in OnDestroy.
+                Mesh mesh = Instantiate(filter.sharedMesh);
+                filter.sharedMesh = mesh;
                 ownedMeshes.Add(mesh);
                 var white = new Color32[mesh.vertexCount];
                 for (int i = 0; i < white.Length; i++) white[i] = new Color32(255, 255, 255, 255);
