@@ -40,6 +40,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
+- { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
+
 ## `docs/architecture.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }

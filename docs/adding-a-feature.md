@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
-verified_at_commit: 55b647a7
+  - { by: gpt-6, at: 2026-10-08T21:08:43Z }
+verified_at_commit: aaf9cfb406b140d5e54b2ae755c2938f1ec529fc
 status: stable
 sources:
   - id: sim-state
