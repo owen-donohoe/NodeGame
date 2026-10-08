@@ -64,6 +64,26 @@ namespace NodeWar.Tests
             foreach (var d in GameBalanceData.Default().districtStats)
                 if ((int)d.districtType != 15) Assert.AreEqual(0, f.GetValue(d));
         }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void Infirmary_DefaultAndHashMutationPerEra(int era)
+        {
+            var b = GameBalanceData.Default();
+            int index = Array.FindIndex(b.districtStats, d => d.districtType == DistrictType.Infirmary && d.era == era);
+            Assert.GreaterOrEqual(index, 0);
+            Assert.AreEqual(10, b.districtStats[index].healIntervalTicks);
+            Assert.AreEqual(1, b.districtStats[index].respawnBoostPerWorker);
+            Assert.AreEqual(20, b.districtStats[index].respawnCostReductionPercent);
+            foreach (string field in new[] { "healIntervalTicks", "respawnBoostPerWorker", "respawnCostReductionPercent" })
+            {
+                var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone();
+                var f = typeof(DistrictStats).GetField(field); object entry = copy.districtStats[index];
+                f.SetValue(entry, (int)f.GetValue(entry) + 1); copy.districtStats[index] = (DistrictStats)entry;
+                Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy), field);
+                f.SetValue(entry, field == "healIntervalTicks" ? 0 : -1); copy.districtStats[index] = (DistrictStats)entry;
+                Assert.IsFalse(copy.CoreRulesValid(out _), field);
+                if (field == "respawnCostReductionPercent") { f.SetValue(entry, 101); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _)); }
+            }
+        }
         private static GameBalanceData WithOneSuit()
         {
             GameBalanceData b = GameBalanceData.Default();

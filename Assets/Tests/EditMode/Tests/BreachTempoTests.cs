@@ -357,10 +357,10 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void SanctuaryBoostStaysAdditiveAfterTempo()
+        public void InfirmaryBoostStaysAdditiveAfterTempo()
         {
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Sanctuary;
+            state.nodes[1].districtType = DistrictType.Infirmary;
             state.nodes[1].ownerID = 0;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].state = VillagerState.Working;

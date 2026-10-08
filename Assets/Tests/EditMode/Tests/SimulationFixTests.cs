@@ -44,8 +44,8 @@ namespace NodeWar.Tests
             if (upgrade)
             {
                 state.nodes[1].upgradeCategory = DistrictUpgradeCategory.Army;
-                state.nodes[1].baseDistrictType = DistrictType.Camp;
-                state.nodes[1].districtType = DistrictType.Camp;
+                state.nodes[1].baseDistrictType = DistrictType.Barracks;
+                state.nodes[1].districtType = DistrictType.Barracks;
                 state.players[playerID].draftedDistricts = new[] { (int)DistrictType.Barracks };
             }
             // No commands: the villager is already on the neutral node; one tick completes it.
@@ -198,12 +198,12 @@ namespace NodeWar.Tests
             return state;
         }
 
-        [TestCase(20, 4, 3)]
-        [TestCase(30, 4, 4)]
-        public void Healing_UsesEachVillagersOwnInterval(int tick, int shrineHP, int normalHP)
+        [TestCase(10, 4, 3)]
+        [TestCase(30, 5, 4)]
+        public void Healing_UsesEachVillagersOwnInterval(int tick, int infirmaryHP, int normalHP)
         {
             SimulationState state = RunHealing(tick);
-            Assert.AreEqual(shrineHP, state.villagers[0].hp);
+            Assert.AreEqual(infirmaryHP, state.villagers[0].hp);
             Assert.AreEqual(normalHP, state.villagers[1].hp);
         }
 
@@ -219,13 +219,13 @@ namespace NodeWar.Tests
         {
             GameBalanceData balance = SetDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Shrine;
+            state.nodes[1].districtType = DistrictType.Infirmary;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].hp = 3;
             state.villagers[1].hp = 3;
-            // No commands: wait for the first Shrine interval, then the first normal one.
+            // No commands: wait for the first Infirmary interval, then the first normal one.
             for (int i = 0; i < tick; i++) GameSimulation.SimulateTick(state);
             return state;
         }
@@ -290,7 +290,7 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Mine, SuitType.Miner, 40)]
         [TestCase(DistrictType.Forge, SuitType.Smelter, 50)]
         [TestCase(DistrictType.Market, SuitType.Merchant, 45)]
-        [TestCase(DistrictType.Sanctuary, SuitType.Acolyte, 0)]
+        [TestCase(DistrictType.Infirmary, SuitType.Acolyte, 0)]
         [TestCase(DistrictType.Watchtower, SuitType.Watcher, 0)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap(
             DistrictType district, SuitType suit, int ticks)
@@ -301,9 +301,9 @@ namespace NodeWar.Tests
                 VillagerData arrived = state.villagers[0];
                 Assert.AreEqual(1, arrived.currentNodeID);
                 Assert.AreEqual(suit, arrived.suit);
-                Assert.AreEqual(atCap ? VillagerState.Idle : VillagerState.Working, arrived.state);
+                Assert.AreEqual(atCap && district != DistrictType.Infirmary ? VillagerState.Idle : VillagerState.Working, arrived.state);
                 Assert.AreEqual(atCap ? 0 : ticks, arrived.productionTicksMax);
-                // Production runs after arrival, except passive Sanctuary/Watchtower work.
+                // Production runs after arrival, except passive Infirmary/Watchtower work.
                 Assert.AreEqual(atCap || ticks == 0 ? 0 : ticks - 1, arrived.productionTicksRemaining);
             }
         }
@@ -312,7 +312,7 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Mine)]
         [TestCase(DistrictType.Forge)]
         [TestCase(DistrictType.Market)]
-        [TestCase(DistrictType.Sanctuary)]
+        [TestCase(DistrictType.Infirmary)]
         [TestCase(DistrictType.Watchtower)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap_Determinism(DistrictType district)
         {

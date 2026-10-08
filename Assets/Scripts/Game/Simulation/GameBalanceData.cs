@@ -229,7 +229,7 @@ namespace NodeWar.Simulation
         }
 
         /// <summary>
-        /// Escalate first, then subtract the integer-floor Sanctuary discount.
+        /// Escalate first, then subtract the integer-floor Infirmary discount.
         /// Preserve the one-food minimum; saturate unrepresentable prices.
         /// Shared arithmetic for command validation and read-only UI pricing.
         /// </summary>
@@ -261,6 +261,15 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
+            if (districtStats != null)
+                for (int i = 0; i < districtStats.Length; i++)
+                {
+                    DistrictStats d = districtStats[i];
+                    if (d.districtType == DistrictType.Infirmary &&
+                        (d.healIntervalTicks <= 0 || d.respawnBoostPerWorker < 0 ||
+                         d.respawnCostReductionPercent < 0 || d.respawnCostReductionPercent > 100))
+                    { reason = "Invalid Infirmary interval, boost or discount."; return false; }
+                }
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                     if (districtStats[i].townBonusVillagers < 0)
@@ -400,7 +409,7 @@ namespace NodeWar.Simulation
                     respawnCostReductionPercent = sanctuaryCostReductionPercent },
                 new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 },
                 new DistrictStats { districtType = DistrictType.Barracks },
-                new DistrictStats { districtType = DistrictType.Infirmary },
+                new DistrictStats { districtType = DistrictType.Infirmary, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
                 new DistrictStats { districtType = DistrictType.Fortress }
             };
 
@@ -516,25 +525,7 @@ namespace NodeWar.Simulation
 
         public bool CanEquipSuitAtNode(SuitType suit, DistrictType district)
         {
-            switch (district)
-            {
-                case DistrictType.Camp:
-                    return suit == SuitType.Warrior || suit == SuitType.Scout;
-
-                case DistrictType.Barracks:
-                    return suit == SuitType.Warrior || suit == SuitType.Guardian ||
-                           suit == SuitType.Berserker || suit == SuitType.Scout;
-
-                case DistrictType.Arsenal:
-                    return suit == SuitType.Warrior || suit == SuitType.Guardian ||
-                           suit == SuitType.Scout;
-
-                case DistrictType.Sanctuary:
-                    return suit == SuitType.Medic;
-
-                default:
-                    return false;
-            }
+            return district == DistrictType.Barracks && IsCombatSuit(suit);
         }
 
         public static bool IsCombatSuit(SuitType suit)

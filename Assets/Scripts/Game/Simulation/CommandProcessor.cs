@@ -291,7 +291,7 @@ namespace NodeWar.Simulation
         {
             int paidRespawns = (int)System.Math.Min(int.MaxValue,
                 (long)state.players[playerID].paidRespawns + additionalPaidRespawns);
-            int reductionPercent = SanctuaryCostReductionPercent(state, playerID);
+            int reductionPercent = InfirmaryCostReductionPercent(state, playerID);
             return bal.PaidRespawnCost(paidRespawns, reductionPercent);
         }
 
@@ -324,22 +324,15 @@ namespace NodeWar.Simulation
         }
 
         /// <summary>
-        /// Each working Sanctuary worker takes its Sanctuary era's percentage off
+        /// Each working Infirmary worker takes its Infirmary era's percentage off
         /// the respawn cost; the percentages add.
         /// </summary>
-        private static int SanctuaryCostReductionPercent(SimulationState state, int playerID)
+        private static int InfirmaryCostReductionPercent(SimulationState state, int playerID)
         {
             int percent = 0;
-            for (int i = 0; i < state.villagers.Length; i++)
-            {
-                VillagerData v = state.villagers[i];
-                if (v.ownerID != playerID) continue;
-                if (v.state != VillagerState.Working) continue;
-                if (v.isConsumed) continue;
-                if (state.nodes[v.currentNodeID].districtType != DistrictType.Sanctuary) continue;
-                if (state.nodes[v.currentNodeID].ownerID != playerID) continue;
-                percent += bal.GetDistrictStats(DistrictType.Sanctuary, state.nodes[v.currentNodeID].districtEra).respawnCostReductionPercent;
-            }
+            for (int node = 0; node < state.nodes.Length; node++)
+                percent += GameSimulation.CountInfirmaryWorkers(state, node, playerID) *
+                    bal.GetDistrictStats(DistrictType.Infirmary, state.nodes[node].districtEra).respawnCostReductionPercent;
             return percent;
         }
     }

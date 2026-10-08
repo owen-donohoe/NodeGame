@@ -72,7 +72,7 @@ namespace NodeWar.Tests
         {
             GameBalanceData b = GameBalanceData.Default();
             foreach (DistrictType type in new[] { DistrictType.Farm, DistrictType.Market, DistrictType.Rampart,
-                         DistrictType.Watchtower, DistrictType.Sanctuary, DistrictType.Shrine, DistrictType.Village })
+                         DistrictType.Watchtower, DistrictType.Infirmary, DistrictType.Barracks, DistrictType.Village })
             {
                 DistrictStats era0 = b.GetDistrictStats(type, 0);
                 for (int era = 1; era < GameBalanceData.EraCount; era++)

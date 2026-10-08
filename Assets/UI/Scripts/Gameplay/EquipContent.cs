@@ -6,9 +6,9 @@ using NodeWar.Lobby;
 namespace NodeWar.UI
 {
     /// <summary>
-    /// The equip bench, shared by Barracks, Camp, Arsenal and Sanctuary - the
-    /// four districts CanEquipSuitAtNode accepts. They differ only in which
-    /// suits they permit, and that difference is data, so one content covers
+    /// The equip bench at Barracks, offering the five combat suits. The
+    /// CanEquipSuitAtNode rule determines which
+    /// suits appear, so this content covers
     /// all four.
     ///
     /// SUIT FIRST, THEN UNIT, THEN EQUIP, after the prototype. The suits that
@@ -61,7 +61,7 @@ namespace NodeWar.UI
 
             CollectFits();
 
-            fitsLine = Heading("FITS HERE · " + DescribeFits());
+            fitsLine = Heading("FITS HERE Â· " + DescribeFits());
             Root.Add(fitsLine);
 
             enemyNote = Caption("Not your district. You cannot equip here.");

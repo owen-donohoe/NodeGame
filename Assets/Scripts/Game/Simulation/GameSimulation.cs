@@ -21,7 +21,7 @@ namespace NodeWar.Simulation
         /// 3. Combat (detect fights, process cooldowns, deal damage, handle deaths)
         /// 4. Breach channel, then claim bars
         /// 5. Production
-        /// 6. Healing (normal or owned-Shrine interval)
+        /// 6. Healing (normal or owned-Infirmary interval)
         /// 7. Respawn timers
         /// 8. Win condition (new breach at threshold; simultaneous losses cancel)
         /// 9. Post-combat resume (fight ended, determine next state)
@@ -261,7 +261,7 @@ namespace NodeWar.Simulation
             // Core nodes: always Idle.
             // Non-combat suits (Farmer, Miner, Smelter) are free and re-assigned on arrival
             // at production nodes, so reverting them here is harmless and keeps things clean.
-            // Soldier suit is PERMANENT until death — do not strip it.
+            // Soldier suit is PERMANENT until death â€” do not strip it.
             if (node.districtType == DistrictType.Core)
             {
                 if (!GameBalanceData.IsCombatSuit(v.suit))
@@ -289,7 +289,7 @@ namespace NodeWar.Simulation
                 {
                     state.villagers[villagerIndex].suit = expectedSuit;
                     int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (workers < bal.maxWorkersPerNode)
+                    if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, villagerIndex) : workers < bal.maxWorkersPerNode)
                     {
                         int ticks = GetProductionTicks(node.districtType, node.districtEra);
                         state.villagers[villagerIndex].productionTicksMax = ticks;
@@ -300,7 +300,7 @@ namespace NodeWar.Simulation
                     return;
                 }
 
-                // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None — strip non-combat suit, go Idle
+                // Barracks, Rampart, Village, None â€” strip non-combat suit, go Idle
                 if (!GameBalanceData.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
@@ -769,10 +769,10 @@ namespace NodeWar.Simulation
                             state.villagers[idx].suit = expectedSuit;
 
                         // Try Working if not already
-                        if (v.state != VillagerState.Working)
+                        if (v.state != VillagerState.Working || node.districtType == DistrictType.Infirmary)
                         {
                             int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
-                            if (workers < bal.maxWorkersPerNode)
+                            if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, idx) : workers < bal.maxWorkersPerNode)
                             {
                                 state.villagers[idx].state = VillagerState.Working;
                                 state.villagers[idx].productionTicksMax = GetProductionTicks(node.districtType, node.districtEra);
@@ -832,7 +832,7 @@ namespace NodeWar.Simulation
                     ? state.players[playerID].DistrictEra(upgrade)
                     : 0;
 
-                // Reset non-combat workers — node type just changed
+                // Reset non-combat workers â€” node type just changed
                 for (int i = 0; i < state.villagers.Length; i++)
                 {
                     if (state.villagers[i].currentNodeID != nodeIndex) continue;
@@ -932,7 +932,7 @@ namespace NodeWar.Simulation
 
         /// <summary>
         /// Heal damaged, living, non-fighting villagers by 1 HP on their applicable
-        /// interval: owned-Shrine occupants use the Shrine interval, others the normal one.
+        /// interval: ordinary healing or stationary owned-Infirmary healing, once per tick.
         /// </summary>
         private static void TickHealing(SimulationState state)
         {
@@ -948,11 +948,11 @@ namespace NodeWar.Simulation
 
                 NodeData node = state.nodes[v.currentNodeID];
                 bool due = normalDue;
-                if (node.districtType == DistrictType.Shrine && node.ownerID == v.ownerID)
+                if (node.districtType == DistrictType.Infirmary && node.ownerID == v.ownerID && v.state != VillagerState.Moving && v.hp > 0)
                 {
-                    // Each Shrine heals on its own era's interval; one with none never does.
-                    int interval = bal.GetDistrictStats(DistrictType.Shrine, node.districtEra).healIntervalTicks;
-                    due = interval > 0 && state.tickCount % interval == 0;
+                    // Each Infirmary heals on its own era's interval; one with none never does.
+                    int interval = bal.GetDistrictStats(DistrictType.Infirmary, node.districtEra).healIntervalTicks;
+                    due = normalDue || (interval > 0 && state.tickCount % interval == 0);
                 }
                 if (due)
                     state.villagers[i].hp++;
@@ -969,7 +969,7 @@ namespace NodeWar.Simulation
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
 
-                int decrement = bal.TimerDecrement(bal.tempoRespawnPercent, state.tickCount) + SanctuaryRespawnBoost(state, v.ownerID);
+                int decrement = bal.TimerDecrement(bal.tempoRespawnPercent, state.tickCount) + InfirmaryRespawnBoost(state, v.ownerID);
                 state.villagers[i].respawnTicksRemaining -= decrement;
 
                 if (state.villagers[i].respawnTicksRemaining <= 0)
@@ -1267,7 +1267,7 @@ namespace NodeWar.Simulation
                 case DistrictType.Mine: return SuitType.Miner;
                 case DistrictType.Forge: return SuitType.Smelter;
                 case DistrictType.Market: return SuitType.Merchant;
-                case DistrictType.Sanctuary: return SuitType.Acolyte;
+                case DistrictType.Infirmary: return SuitType.Acolyte;
                 case DistrictType.Watchtower: return SuitType.Watcher;
                 default: return SuitType.None;
             }
@@ -1314,21 +1314,48 @@ namespace NodeWar.Simulation
         /// </summary>
         /// <summary>
         /// How many extra ticks a dead villager of this player respawns by each
-        /// tick: each working Sanctuary worker adds its Sanctuary era's boost.
+        /// tick: each working Infirmary worker adds its Infirmary era's boost.
         /// </summary>
-        private static int SanctuaryRespawnBoost(SimulationState state, int playerID)
+        private static int InfirmaryRespawnBoost(SimulationState state, int playerID)
         {
             int boost = 0;
+            for (int node = 0; node < state.nodes.Length; node++)
+                boost += CountInfirmaryWorkers(state, node, playerID) *
+                    bal.GetDistrictStats(DistrictType.Infirmary, state.nodes[node].districtEra).respawnBoostPerWorker;
+            return boost;
+        }
+
+        /// <summary>Shared capped worker qualification for timers, paid respawns and UI prices.</summary>
+        public static int CountInfirmaryWorkers(SimulationState state, int nodeID, int playerID)
+        {
+            NodeData node = state.nodes[nodeID];
+            if (node.districtType != DistrictType.Infirmary || node.ownerID != playerID) return 0;
+            int count = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
-                if (v.ownerID != playerID) continue;
-                if (v.state != VillagerState.Working || v.isConsumed) continue;
-                if (state.nodes[v.currentNodeID].districtType != DistrictType.Sanctuary) continue;
-                if (state.nodes[v.currentNodeID].ownerID != playerID) continue;
-                boost += bal.GetDistrictStats(DistrictType.Sanctuary, state.nodes[v.currentNodeID].districtEra).respawnBoostPerWorker;
+                if (v.currentNodeID != nodeID || v.isConsumed || v.state == VillagerState.Dead || v.hp <= 0) continue;
+                if (v.ownerID != playerID) return 0;
+                if (v.suit == SuitType.Acolyte && v.state == VillagerState.Working && count < 2) count++;
             }
-            return boost;
+            return count;
+        }
+
+        private static bool InfirmaryWorkerSlot(SimulationState state, int villagerIndex)
+        {
+            VillagerData visitor = state.villagers[villagerIndex];
+            int rank = 0;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.currentNodeID != visitor.currentNodeID || v.isConsumed || v.hp <= 0 || v.state == VillagerState.Dead) continue;
+                if (v.ownerID != visitor.ownerID) return false;
+                if (GameBalanceData.IsCombatSuit(v.suit) ||
+                    (v.state != VillagerState.Idle && v.state != VillagerState.Working && v.state != VillagerState.Claiming) ||
+                    (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)) continue;
+                if (i <= villagerIndex) rank++;
+            }
+            return rank <= 2;
         }
     }
 }

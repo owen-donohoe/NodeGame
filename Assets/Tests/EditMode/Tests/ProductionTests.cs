@@ -4,7 +4,7 @@ using NodeWar.Simulation;
 namespace NodeWar.Tests
 {
     /// <summary>
-    /// The production phase, and the respawn cost that Sanctuary is meant to
+    /// The production phase, and the respawn cost that Infirmary is meant to
     /// reduce. Neither had coverage of its output -- the existing tests cover
     /// how a villager is assigned to work, not what the work produces.
     ///
@@ -169,34 +169,23 @@ namespace NodeWar.Tests
         // ===== RESPAWN COST =====
 
         [Test]
-        public void GetRespawnCost_TheSanctuaryReductionIsANoOpAtTheDefaultBalance()
+        public void GetRespawnCost_TheInfirmaryReductionIsANoOpAtTheDefaultBalance()
         {
             GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = BoardWithWorkerOn(balance, DistrictType.Sanctuary);
+            SimulationState state = BoardWithWorkerOn(balance, DistrictType.Infirmary);
 
             Assert.AreEqual(1, balance.respawnCostFood, "this test is about that 1");
 
             int withoutWorkers = CommandProcessor.GetRespawnCost(state, 0);
 
             // One tick to let UpdateVillagerClaimStates put the villager to work
-            // in the Sanctuary, which is what CountSanctuaryWorkers counts.
+            // in the Infirmary, which is what CountInfirmaryWorkers counts.
             Tick(state, 1);
             Assert.AreEqual(VillagerState.Working, state.villagers[0].state);
 
             int withOneWorker = CommandProcessor.GetRespawnCost(state, 0);
 
-            // THIS IS PINNING A DEAD FEATURE, not a rule. The reduction is
-            // `(baseCost * reductionPercent) / 100` in integers, and baseCost is
-            // 1, so one worker computes (1 * 25) / 100 == 0 and four workers
-            // compute (1 * 100) / 100 == 1, which the `finalCost < 1` floor
-            // takes straight back to 1. At the shipped balance the Sanctuary
-            // cost reduction cannot change the cost by any number of workers.
-            //
-            // Whether that matters depends on what respawnCostFood is meant to
-            // become. If it stays 1, the percentage is the wrong shape and a
-            // flat per-worker reduction would at least be honest. Sanctuary's
-            // other effect -- sanctuaryRespawnBoostPerWorker, which shortens the
-            // wait -- is real and is not what this pins.
+            // The one-food minimum preserves the default price with a 20% worker discount.
             Assert.AreEqual(1, withoutWorkers);
             Assert.AreEqual(1, withOneWorker);
         }
