@@ -128,9 +128,12 @@ same failure mode as the documents it polices.
   used to be blind to the commit being made: `git log` cannot see the index, so it reported old
   debt and noticed the current change only on the next run. It now reads `git diff --cached` and
   the working tree too, and marks those sources `[uncommitted]`.
-  Re-reading a document against moved sources is human work a commit cannot be compelled to
-  contain, and blocking on it would mean every code change dragged a documentation review behind
-  it until the hook got bypassed. It also runs `scripts/sim-guard.ps1`, which **does** block, and
+  It stays advisory because the re-read cannot go in the same commit: the stamp names the code
+  commit's SHA, which does not exist until that commit does. Instead, since 2026-10-08 the agent
+  that made the commit owes a follow-up `docs: reverify <doc> against <sha>` commit on the same
+  branch, which re-reads each REVIEW document against that diff, corrects the drift and stamps it
+  (rule in `CLAUDE.md`, "Automatic Guards"). Commits are small enough to make that a short read;
+  deferring it to the PR made it a long one. It also runs `scripts/sim-guard.ps1`, which **does** block, and
   only when the commit touches `Simulation/`. See `scripts/hooks/README.md`; install per clone
   with `git config core.hooksPath scripts/hooks`.
 * **CI** runs `.github/workflows/determinism.yml` on every push and pull request: `sim-guard.ps1`,
@@ -171,7 +174,8 @@ between legs is a finding about the simulation, not a CI problem.
   subject, and re-verifying anything would permanently generate its own next round. `okf-stale.ps1`
   therefore walks back past commits that touched only a markdown source's frontmatter. Code sources
   are unaffected — a `.cs` file has no frontmatter, and any commit touching one still counts.
-* Only a `human:` actor may write `verified:`. An agent that checks a document writes an agent-tier
-  entry (`claude-opus-5`); that is the machine-confirmed tier, not human-reviewed. See the trust
-  tiers in the OKF spec.
+* Only a `human:` actor may write a human-tier `verified:` entry. An agent that re-reads a document
+  at commit time writes an agent-tier entry (`claude-opus-5-5`, `gpt-6.1-sol`); that is the
+  machine-confirmed tier, not human-reviewed, and it is what keeps `verified_at_commit` current
+  between human reviews. See the trust tiers in the OKF spec.
 * Body links between documents are ordinary relative markdown links.

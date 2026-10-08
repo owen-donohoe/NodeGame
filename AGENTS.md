@@ -38,6 +38,10 @@ desyncs. Full contract in `docs/simulation-rules.md`.
 - Work in an isolated git worktree/branch, not directly on `main`
 - Do not merge into `main` automatically — leave that for review
 - After `Simulation/` changes: flag which tests should be run
+- Re-verify at commit time: if your commit leaves a document in REVIEW
+  (`scripts/okf-stale.ps1`), re-read it against your diff, fix what drifted,
+  and stamp it in a follow-up `docs: reverify <doc> against <sha>` commit —
+  see `CLAUDE.md`, "Automatic Guards", for the exact stamp
 
 ## When you are a delegated agent
 

@@ -140,9 +140,15 @@ the pinned hash baselines across Linux and Windows. How all of it is wired:
 
 Two rules those guards cannot enforce on themselves:
 
-- **Never stamp `verified:` or bump `verified_at_commit` on my behalf.**
-  Re-verification is reading a document against its changed sources. It is a
-  human act, and reconciling commits is not it.
+- **Re-verify at commit time, not at PR time.** After a commit whose code
+  sources leave a document in REVIEW (`scripts/okf-stale.ps1`), the agent that
+  made it re-reads that document against the commit's diff, corrects what
+  drifted, and stamps it in a follow-up `docs: reverify <doc> against <sha>`
+  commit on the same branch: `verified_at_commit: <that sha>` and a single
+  agent-tier `verified:` entry (`{ by: <model-id>, at: <UTC> }`), the old
+  entry moved to `docs/verification-log.md`. Stamp only what was actually
+  re-read; a `human:` entry is still mine alone. Reconciling commits
+  (`/update`) is not re-verification and never stamps.
 - **A hash that differs between CI legs is a finding about the simulation, not
   a CI problem. Never re-pin a baseline to make it green.**
 

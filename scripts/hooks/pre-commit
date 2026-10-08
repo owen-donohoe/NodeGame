@@ -9,10 +9,11 @@
 #                   commit actually touches the simulation layer, so the
 #                   verdict is always about *this* change.
 #
-#   okf-stale.ps1   ADVISORY. A document whose sources moved needs a human to
-#                   re-read it, which is not something a commit can be forced
-#                   to contain. Blocking here would mean every code change
-#                   drags a documentation review along with it, and the
+#   okf-stale.ps1   ADVISORY. A document whose sources moved must be re-read
+#                   in a follow-up `docs: reverify` commit (CLAUDE.md), because
+#                   its stamp names this commit's SHA, which does not exist
+#                   yet. Blocking here would mean every code change drags
+#                   a documentation review into the same commit, and the
 #                   predictable result is that the hook gets bypassed. So it
 #                   reports and lets the commit through.
 #

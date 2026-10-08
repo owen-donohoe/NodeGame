@@ -446,11 +446,11 @@ if ($review.Count -eq 0 -and $stale.Count -eq 0) {
     exit 0
 }
 
-# Re-verification is a human act: read the doc against its changed sources,
-# correct what drifted, then bump verified_at_commit and add a `verified:` entry.
-# An agent may record an agent-tier entry; only a human: actor may claim the
-# human-reviewed tier. See docs/index.md.
-Write-Host "Re-verify each REVIEW document against its changed sources, then bump verified_at_commit."
+# Re-verification happens at commit time (CLAUDE.md, "Automatic Guards"): the agent
+# that made the commit reads each REVIEW doc against its diff, corrects what drifted,
+# and stamps it in a follow-up `docs: reverify <doc> against <sha>` commit. Agents
+# write the agent tier; only a human: actor may claim the human-reviewed tier.
+Write-Host "Re-verify each REVIEW document against this diff in a follow-up 'docs: reverify <doc> against <sha>' commit, stamping verified_at_commit."
 Write-Host "The split is a heuristic: a declaration-shaped diff line, or any non-C# source."
 Write-Host "It can put a real drift in the quiet list. Trust it to triage, not to decide."
 exit 1
