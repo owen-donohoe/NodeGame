@@ -6,6 +6,41 @@ namespace NodeWar.Tests
 {
     public class BalanceHasherTests
     {
+        private static GameBalanceData SetCoreScalar(GameBalanceData b, string name, int value)
+        {
+            var field = typeof(GameBalanceData).GetField(name);
+            Assert.IsNotNull(field, name + " must be registered in the DTO");
+            object boxed = b; field.SetValue(boxed, value); return (GameBalanceData)boxed;
+        }
+        [TestCase("captureBonusPercentPerStep", 25)]
+        [TestCase("captureBonusMaxSteps", 2)]
+        public void CoreScalar_RegisteredDefaultAndIndependentMutation(string name, int expected)
+        {
+            var b = GameBalanceData.Default(); var field = typeof(GameBalanceData).GetField(name);
+            Assert.IsNotNull(field); Assert.AreEqual(expected, field.GetValue(b));
+            Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(SetCoreScalar(b, name, expected + 1)));
+        }
+        [Test]
+        public void CoreRulesValidation_RejectsNegativeAndOverflowingPercentageProducts()
+        {
+            var method = typeof(GameBalanceData).GetMethod("CoreRulesValid"); Assert.IsNotNull(method);
+            var b = GameBalanceData.Default(); object[] args = { null };
+            Assert.IsTrue((bool)method.Invoke(b, args));
+            foreach (string name in new[] { "captureBonusPercentPerStep", "captureBonusMaxSteps" })
+            {
+                Assert.IsFalse((bool)method.Invoke(SetCoreScalar(b, name, -1), args)); Assert.IsNotEmpty((string)args[0]);
+            }
+            b = SetCoreScalar(SetCoreScalar(b, "captureBonusPercentPerStep", int.MaxValue), "captureBonusMaxSteps", int.MaxValue);
+            Assert.IsFalse((bool)method.Invoke(b, args)); Assert.IsNotEmpty((string)args[0]);
+        }
+        [Test]
+        public void CoreRulesValidation_ChecksNonOpposingRateWhenDecrementIsZero()
+        {
+            var b = GameBalanceData.Default(); b.baseClaimPerTick = int.MaxValue;
+            b.decrementMultiplier = 0; b.breachSwarmRate = null;
+            b.captureBonusPercentPerStep = b.captureBonusMaxSteps = 100000;
+            Assert.IsFalse(b.CoreRulesValid(out string reason)); Assert.IsNotEmpty(reason);
+        }
         private static GameBalanceData WithOneSuit()
         {
             GameBalanceData b = GameBalanceData.Default();

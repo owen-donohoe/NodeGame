@@ -5,6 +5,49 @@ namespace NodeWar.Tests
 {
     public class TickOrderTests
     {
+        private static int Capture()
+        {
+            int hash = 0;
+            foreach (bool relabel in new[] { false, true })
+            {
+                var b = CoreRulesFixture.Balance(); var s = CoreRulesFixture.Board(b);
+                int target = relabel ? 1 : 0, neighbour = relabel ? 0 : 1;
+                s.nodes[target].links = new[] { new Link { toNodeID = neighbour, travelWeight = 1 } };
+                s.nodes[neighbour].claimBar = 990;
+                s.villagers = new[] { CoreRulesFixture.Body(b, 0, 0, target, VillagerState.Claiming), CoreRulesFixture.Body(b, 1, 0, neighbour, VillagerState.Claiming) };
+                GameSimulation.SimulateTick(s);
+                Assert.AreEqual(0, s.nodes[neighbour].ownerID); Assert.AreEqual(1000, s.nodes[neighbour].claimBar);
+                Assert.AreEqual(10, s.nodes[target].claimBar, "This tick uses the pre-capture neighbour owner");
+                GameSimulation.SimulateTick(s); Assert.AreEqual(22, s.nodes[target].claimBar);
+                hash = CoreRulesFixture.Fold(hash, s);
+            }
+            return hash;
+        }
+        private static int Breach()
+        {
+            int hash = 0;
+            foreach (int net in new[] { 2, 0 })
+            {
+                var b = CoreRulesFixture.Balance(200); var s = CoreRulesFixture.Board(b);
+                CoreRulesFixture.Neighbours(s, 7, net, 0);
+                s.villagers = new[] { CoreRulesFixture.Body(b, 0, 0, 7, VillagerState.Breaching) }; s.villagers[0].targetNodeID = 7;
+                GameSimulation.SimulateTick(s); Assert.AreEqual(net == 2 ? 75 : 50, s.players[1].breachBar);
+                Assert.IsFalse(s.villagers[0].isConsumed); hash = CoreRulesFixture.Fold(hash, s);
+            }
+            var finish = CoreRulesFixture.Balance(200); finish.breachBarMax = 75; var consumed = CoreRulesFixture.Board(finish);
+            CoreRulesFixture.Neighbours(consumed, 7, 2, 0); consumed.players[1].breachCount = 2;
+            consumed.villagers = new[] { CoreRulesFixture.Body(finish, 0, 0, 7, VillagerState.Breaching) }; consumed.villagers[0].targetNodeID = 7;
+            GameSimulation.SimulateTick(consumed); Assert.IsTrue(consumed.villagers[0].isConsumed); Assert.AreEqual(-1, consumed.villagers[0].targetNodeID);
+            Assert.AreEqual(3, consumed.players[1].breachCount); Assert.IsTrue(consumed.gameOver); Assert.AreEqual(0, consumed.winnerID);
+            hash = CoreRulesFixture.Fold(hash, consumed);
+            var decay = CoreRulesFixture.Board(finish); decay.players[1].breachBar = 100;
+            GameSimulation.SimulateTick(decay); Assert.AreEqual(93, decay.players[1].breachBar); return CoreRulesFixture.Fold(hash, decay);
+        }
+        [Test] public void SameTickNeighbourCapture_DoesNotCascade() => Capture();
+        [Test] public void SameTickNeighbourCapture_DoesNotCascade_Determinism() => CoreRulesFixture.Determinism(Capture);
+        [Test] public void BreachUsesFrontierButNotClaimTempo() => Breach();
+        [Test] public void BreachUsesFrontierButNotClaimTempo_Determinism() => CoreRulesFixture.Determinism(Breach);
+
         [Test]
         public void ClaimingBeforeProduction_NewFarmWorkerAdvancesOnTheClaimTick()
         {

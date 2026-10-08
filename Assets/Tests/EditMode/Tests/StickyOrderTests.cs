@@ -191,7 +191,8 @@ namespace NodeWar.Tests
         }
         private static SimulationState InterruptedBreach()
         {
-            var s = Board(); s.villagers[0].currentNodeID = 2; Order(s, 3);
+            var s = Board(); balance.captureBonusPercentPerStep = 0; GameSimulation.SetBalance(balance);
+            s.villagers[0].currentNodeID = 2; Order(s, 3);
             for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(s);
             Assert.AreEqual(VillagerState.Breaching, s.villagers[0].state);
             Assert.AreEqual(3, s.villagers[0].targetNodeID);

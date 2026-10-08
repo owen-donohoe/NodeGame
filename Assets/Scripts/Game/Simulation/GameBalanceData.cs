@@ -62,6 +62,8 @@ namespace NodeWar.Simulation
         public int decrementMultiplier;
         public int claimThreshold;
         public int maxClaimersPerNode;
+        public int captureBonusPercentPerStep;
+        public int captureBonusMaxSteps;
 
         public int respawnTicks;
         public int healIntervalTicks;
@@ -254,12 +256,51 @@ namespace NodeWar.Simulation
             return cap > 0 && value >= cap ? cap : unchecked(value + 1);
         }
 
+        public bool CoreRulesValid(out string reason)
+        {
+            if (captureBonusPercentPerStep < 0 || captureBonusMaxSteps < 0)
+            {
+                reason = "Capture bonus step and cap must be nonnegative.";
+                return false;
+            }
+            try
+            {
+                checked
+                {
+                    long frontier = 100L + (long)captureBonusPercentPerStep * captureBonusMaxSteps;
+                    int maxTempo = 100;
+                    if (tempoClaimPercent != null)
+                        for (int i = 0; i < tempoClaimPercent.Length; i++)
+                            if (tempoClaimPercent[i] > maxTempo) maxTempo = tempoClaimPercent[i];
+                    // Validate both ordinary and opposing-lean contributions.
+                    long claim = (long)baseClaimPerTick * 4 * System.Math.Max(1, decrementMultiplier);
+                    claim = claim * frontier / 100;
+                    claim = claim * maxTempo / 100;
+                    long restore = (long)baseClaimPerTick * 4 * maxTempo / 100;
+                    if (breachSwarmRate != null)
+                        for (int i = 0; i < breachSwarmRate.Length; i++)
+                        {
+                            long breach = (long)breachSwarmRate[i] * frontier / 100;
+                        }
+                }
+            }
+            catch (System.OverflowException)
+            {
+                reason = "Core rule percentage products exceed the integer range.";
+                return false;
+            }
+            reason = null;
+            return true;
+        }
+
         public static GameBalanceData Default()
         {
             return new GameBalanceData
             {
                 ticksPerSecond = 10,
                 baseClaimPerTick = 17,
+                captureBonusPercentPerStep = 25,
+                captureBonusMaxSteps = 2,
                 decrementMultiplier = 4,
                 claimThreshold = 10000,
                 maxClaimersPerNode = 4,

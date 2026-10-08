@@ -32,6 +32,8 @@ namespace NodeWar.Simulation
         public static void SimulateTick(SimulationState state, TickEventLog log = null)
         {
             state.tickCount++;
+            int[] ownersAtTickStart = new int[state.nodes.Length];
+            for (int i = 0; i < state.nodes.Length; i++) ownersAtTickStart[i] = state.nodes[i].ownerID;
             TickTempoEvents(state.tickCount, log);
 
             // Step 2: Movement
@@ -43,8 +45,8 @@ namespace NodeWar.Simulation
             TickCombat(state, log);
 
             // Step 4: Claiming
-            bool[] breachedThisTick = TickBreach(state, log);
-            TickClaiming(state, log);
+            bool[] breachedThisTick = TickBreach(state, ownersAtTickStart, log);
+            TickClaiming(state, ownersAtTickStart, log);
 
             // Step 5: Production
             TickProduction(state);
@@ -505,7 +507,7 @@ namespace NodeWar.Simulation
 
         // ===== STEP 4: CLAIMING =====
 
-        private static void TickClaiming(SimulationState state, TickEventLog log)
+        private static void TickClaiming(SimulationState state, int[] ownersAtTickStart, TickEventLog log)
         {
             // Re-evaluate Idle/Claiming states based on current ownership
             UpdateVillagerClaimStates(state);
@@ -516,6 +518,8 @@ namespace NodeWar.Simulation
                 NodeData node = state.nodes[nodeIndex];
 
                 if (node.districtType == DistrictType.Core) continue;
+                TryRestoreOwnedNode(state, nodeIndex);
+                node = state.nodes[nodeIndex];
 
                 int p0Claimers = 0;
                 int p1Claimers = 0;
@@ -539,24 +543,8 @@ namespace NodeWar.Simulation
                 // --- Player 0 claiming ---
                 if (p0Claimers > 0 && node.ownerID != 0)
                 {
-                    int activeDecrement = bal.decrementMultiplier;
-                    if (node.districtType == DistrictType.Rampart)
-                        activeDecrement = bal.GetDistrictStats(DistrictType.Rampart, node.districtEra).claimDecrementMultiplier;
-
-                    int rate;
-                    if (node.claimBar < 0)
-                    {
-                        rate = activeDecrement * bal.baseClaimPerTick * p0Claimers;
-                    }
-                    else
-                    {
-                        rate = bal.baseClaimPerTick * p0Claimers;
-                    }
-
-                    rate = ApplyWatchtower(state, nodeIndex, 0, rate);
-                    rate = (int)((long)rate * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount) / 100);
-
-                    node.claimBar += rate;
+                    long rate = ClaimRate(state, nodeIndex, 0, p0Claimers, ownersAtTickStart);
+                    node.claimBar = (int)System.Math.Min(bal.claimThreshold, (long)node.claimBar + rate);
 
                     if (node.claimBar >= bal.claimThreshold)
                     {
@@ -576,24 +564,8 @@ namespace NodeWar.Simulation
                 // --- Player 1 claiming ---
                 if (p1Claimers > 0 && node.ownerID != 1)
                 {
-                    int activeDecrement = bal.decrementMultiplier;
-                    if (node.districtType == DistrictType.Rampart)
-                        activeDecrement = bal.GetDistrictStats(DistrictType.Rampart, node.districtEra).claimDecrementMultiplier;
-
-                    int rate;
-                    if (node.claimBar > 0)
-                    {
-                        rate = activeDecrement * bal.baseClaimPerTick * p1Claimers;
-                    }
-                    else
-                    {
-                        rate = bal.baseClaimPerTick * p1Claimers;
-                    }
-
-                    rate = ApplyWatchtower(state, nodeIndex, 1, rate);
-                    rate = (int)((long)rate * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount) / 100);
-
-                    node.claimBar -= rate;
+                    long rate = ClaimRate(state, nodeIndex, 1, p1Claimers, ownersAtTickStart);
+                    node.claimBar = (int)System.Math.Max(-(long)bal.claimThreshold, (long)node.claimBar - rate);
 
                     if (node.claimBar <= -bal.claimThreshold)
                     {
@@ -617,6 +589,56 @@ namespace NodeWar.Simulation
         }
 
         // ===== STEP 5: PRODUCTION =====
+
+        public static long FrontierPercent(SimulationState state, int nodeID, int attackerID, int[] ownersAtTickStart)
+        {
+            int net = 0;
+            Link[] links = state.nodes[nodeID].links;
+            for (int i = 0; i < links.Length; i++)
+            {
+                int owner = ownersAtTickStart[links[i].toNodeID];
+                if (owner == attackerID) net++;
+                else if (owner == 1 - attackerID) net--;
+            }
+            int steps = System.Math.Max(0, System.Math.Min(bal.captureBonusMaxSteps, net));
+            return 100L + (long)bal.captureBonusPercentPerStep * steps;
+        }
+
+        public static long ClaimRate(SimulationState state, int nodeID, int attackerID, int bodies, int[] ownersAtTickStart)
+        {
+            if (bodies <= 0 || bal.baseClaimPerTick <= 0) return 0;
+            long rate = (long)bal.baseClaimPerTick * System.Math.Min(4, bodies);
+            int bar = state.nodes[nodeID].claimBar;
+            if ((attackerID == 0 && bar < 0) || (attackerID == 1 && bar > 0))
+                rate = checked(rate * bal.decrementMultiplier);
+            rate = checked(rate * FrontierPercent(state, nodeID, attackerID, ownersAtTickStart)) / 100;
+            rate = checked(rate * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount)) / 100;
+            // A single tick may cross the entire signed bar, which spans twice
+            // int.MaxValue. Bound only beyond that observationally equivalent range.
+            return System.Math.Min(2L * int.MaxValue, System.Math.Max(1, rate));
+        }
+
+        private static void TryRestoreOwnedNode(SimulationState state, int nodeID)
+        {
+            NodeData node = state.nodes[nodeID];
+            if (node.districtType == DistrictType.Core || node.ownerID < 0 || node.ownerID > 1) return;
+            int bodies = 0;
+            for (int i = 0; i < state.villagers.Length; i++)
+            {
+                VillagerData v = state.villagers[i];
+                if (v.currentNodeID != nodeID || v.state == VillagerState.Dead || v.isConsumed || v.hp <= 0) continue;
+                if (v.ownerID != node.ownerID) return;
+                if (v.state == VillagerState.Working || v.state == VillagerState.Idle || v.state == VillagerState.Claiming)
+                    bodies = System.Math.Min(4, bodies + 1);
+            }
+            long rate = checked((long)bal.baseClaimPerTick * bodies * bal.TempoPercent(bal.tempoClaimPercent, state.tickCount)) / 100;
+            rate = System.Math.Min(2L * int.MaxValue, rate);
+            if (node.ownerID == 0 && node.claimBar < bal.claimThreshold)
+                node.claimBar = (int)System.Math.Min(bal.claimThreshold, (long)node.claimBar + rate);
+            else if (node.ownerID == 1 && node.claimBar > -(long)bal.claimThreshold)
+                node.claimBar = (int)System.Math.Max(-(long)bal.claimThreshold, (long)node.claimBar - rate);
+            state.nodes[nodeID] = node;
+        }
 
         /// <summary>
         /// Every tick, decrements production timers for Working villagers.
@@ -1083,7 +1105,7 @@ namespace NodeWar.Simulation
         }
 
         // Inside the claiming step, before claiming so consumption frees a population slot.
-        private static bool[] TickBreach(SimulationState state, TickEventLog log)
+        private static bool[] TickBreach(SimulationState state, int[] ownersAtTickStart, TickEventLog log)
         {
             if (!bal.BreachBarEnabled()) return null;
             bool[] breachedThisTick = new bool[state.players.Length];
@@ -1096,7 +1118,9 @@ namespace NodeWar.Simulation
                     state.players[p].breachBar = decayed > 0 ? (int)decayed : 0;
                     continue;
                 }
-                int rate = bal.breachSwarmRate[System.Math.Min(count, bal.breachSwarmRate.Length) - 1];
+                long rate = bal.breachSwarmRate[System.Math.Min(count, bal.breachSwarmRate.Length) - 1];
+                rate = System.Math.Min(int.MaxValue, System.Math.Max(1,
+                    checked(rate * FrontierPercent(state, state.players[p].coreNodeID, 1 - p, ownersAtTickStart)) / 100));
                 long progress = (long)state.players[p].breachBar + rate;
                 if (progress >= bal.breachBarMax)
                 {
@@ -1263,34 +1287,6 @@ namespace NodeWar.Simulation
         /// working watchtower is adjacent. The first such tower in edge order
         /// decides the era; one tower's bonus applies, never several.
         /// </summary>
-        private static int ApplyWatchtower(SimulationState state, int nodeIndex, int playerID, int rate)
-        {
-            int tower = FindAdjacentFriendlyWorkingWatchtower(state, nodeIndex, playerID);
-            if (tower < 0) return rate;
-            DistrictStats stats = bal.GetDistrictStats(DistrictType.Watchtower, state.nodes[tower].districtEra);
-            if (stats.claimRateDenominator <= 0) return rate;
-            return rate * stats.claimRateNumerator / stats.claimRateDenominator;
-        }
-
-        private static int FindAdjacentFriendlyWorkingWatchtower(SimulationState state, int nodeIndex, int playerID)
-        {
-            Link[] links = state.nodes[nodeIndex].links;
-            for (int e = 0; e < links.Length; e++)
-            {
-                int adjNode = links[e].toNodeID;
-                if (state.nodes[adjNode].districtType != DistrictType.Watchtower) continue;
-                if (state.nodes[adjNode].ownerID != playerID) continue;
-                for (int v = 0; v < state.villagers.Length; v++)
-                {
-                    VillagerData vil = state.villagers[v];
-                    if (vil.currentNodeID != adjNode) continue;
-                    if (vil.ownerID != playerID) continue;
-                    if (vil.state != VillagerState.Working || vil.isConsumed) continue;
-                    return adjNode;
-                }
-            }
-            return -1;
-        }
         /// <summary>
         /// How many extra ticks a dead villager of this player respawns by each
         /// tick: each working Sanctuary worker adds its Sanctuary era's boost.

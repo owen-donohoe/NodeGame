@@ -113,6 +113,8 @@ namespace NodeWar.Simulation
                 if (b.foodCap != 0) { hash = hash * 31 + 3000; hash = hash * 31 + b.foodCap; }
                 if (b.materialsCap != 0) { hash = hash * 31 + 3001; hash = hash * 31 + b.materialsCap; }
                 if (b.metalCap != 0) { hash = hash * 31 + 3002; hash = hash * 31 + b.metalCap; }
+                if (b.captureBonusPercentPerStep != 0) { hash = hash * 31 + 3003; hash = hash * 31 + b.captureBonusPercentPerStep; }
+                if (b.captureBonusMaxSteps != 0) { hash = hash * 31 + 3004; hash = hash * 31 + b.captureBonusMaxSteps; }
                 return hash;
             }
         }

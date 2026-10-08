@@ -453,7 +453,7 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void WatchtowerAppliesBeforeClaimTempo()
+        public void BalancedFrontierReplacesWatchtowerClaimBoostBeforeTempo()
         {
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             state.tickCount = 1199;
@@ -464,7 +464,7 @@ namespace NodeWar.Tests
             claimer.state = VillagerState.Claiming;
             Add(state, claimer);
             GameSimulation.SimulateTick(state);
-            Assert.AreEqual(37, state.nodes[1].claimBar); // (17 * 3 / 2) * 150 / 100
+            Assert.AreEqual(25, state.nodes[1].claimBar); // net frontier 0: 17 * 100 / 100, then * 150 / 100
         }
 
         [Test]
