@@ -6,8 +6,8 @@ tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: stable
 sources:
   - id: v21-pdf
@@ -70,7 +70,9 @@ of its points have moved since:
 - The manual placement draft now places on a terrain map (Land, Lake and Ocean cells,
   with a slot mask) under one legality rule, and the district list includes the Pier,
   which only a Lake slot takes. Neither is in the document. The Watchtower's claim boost
-  has been retired in favour of a frontier capture bonus.
+  has been retired in favour of a frontier capture bonus. The district roster has since been
+  consolidated: Camp and Arsenal became Barracks, Shrine and Sanctuary became Infirmary, Rampart
+  became Fortress and Watchtower an empty slot, with a Town added; the old numbers are reserved.
 - The suit roster is now eleven, including three auto-assigned workers
   (Merchant, Acolyte, Watcher). Suit and district numbers are per era.
 - The networking direction settled on peer-to-peer lockstep with a server-side

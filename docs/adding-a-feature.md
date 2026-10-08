@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: stable
 sources:
   - id: sim-state
@@ -117,6 +117,16 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      agreement see it) and the match log. The BOARD chunk layout is frozen: board data
      the old layout cannot hold goes in BOARD_V2 (tag 10) or a new tag.
 
+2b. **Does it add, retire or renumber a district type?**
+   - Give the enum value an explicit number; numbers are persisted in logs and
+     never reused or renumbered.
+   - A new playable type goes in `DistrictRoster.IsActive`, `DistrictMigration`
+     (so saved data and the catalog know it), the catalog export, and
+     `DistrictFallback` (so it reads without art). Retiring one maps its old number
+     to a replacement in `DistrictMigration.CanonicalType`; the runtime and wire accept no aliases.
+   - A per-node one-time flag follows the `townPaidMask` pattern: hashed only when
+     non-zero under its own tag, initialized in `MatchFactory`, copied, with tests.
+
 3. **Does it need a new player-triggerable action?**
    - Add a `CommandType` in `Commands.cs` if no existing type fits.
    - Add the type to `CommandTypes.IsKnown`, the one list the serializer and
@@ -168,7 +178,7 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
 
 6. **Does it change array sizes at runtime (spawning new entities)?**
    Follow the `GameSimulation.SpawnBonusVillagers` pattern (it is also the body
-   spawn behind `Recruit`):
+   spawn behind `Recruit` and the Town reward):
    - Allocate a new, larger array; copy existing entries into it; append
      new entries at the end; assign the new array back onto
      `SimulationState` (e.g. `state.villagers = newArray`).

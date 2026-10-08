@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: stable
 sources:
   - id: tests
@@ -112,6 +112,9 @@ Step 5: Assert expected state
   at the metal cap, Market still alternates, and cap 0 remains uncapped
 - For paid respawns, assert only successful commands increment paidRespawns
   and Sanctuary discounts the escalated cost with integer rounding/minimum 1
+- For Town, assert each player is paid once on their first full claim (including a
+  raider taking the enemy Town), the reward is capped by population room and still
+  consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.
 - For Recruit, assert pre-increment price and cooldown, exact food/count/body
   changes, refusal hash equality, dead-inclusive population, and overflow refusal.
   Test per-Village cooldowns with shared player count, ascending-node automatic

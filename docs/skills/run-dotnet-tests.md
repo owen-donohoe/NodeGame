@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: draft
 sources:
   - id: solution
@@ -55,20 +55,20 @@ The solution holds eight test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **3409 cases** at the time of writing (the table says where each lives, so a changed
+Expect **3450 cases** at the time of writing (the table says where each lives, so a changed
 total is easy to place), with none failing. `NodeWar.Network.Tests` also contains an explicit
 `Sweep` case that a plain run reports as skipped.
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 457 | `Assets/Tests/EditMode/Tests/`: the version-3 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
-| `NodeWar.Lobby.Tests` | 571 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, and node-command round trips/refusals |
-| `NodeWar.View.Tests` | 1546 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation, icon/context resolution and usage, required UXML names, draft handover |
-| `NodeWar.MatchLog.Tests` | 90 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay), node-command round trips and unknown-command refusal |
+| `NodeWar.Simulation.Tests` | 475 | `Assets/Tests/EditMode/Tests/`: the version-3 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
+| `NodeWar.Lobby.Tests` | 584 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals |
+| `NodeWar.View.Tests` | 1547 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation, the district fallback descriptors, icon/context resolution and usage, required UXML names, draft handover |
+| `NodeWar.MatchLog.Tests` | 92 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay), node-command round trips and unknown-command refusal |
 | `NodeWar.Network.Tests` | 122 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario |
-| `NodeWar.Progression.Tests` | 148 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
+| `NodeWar.Progression.Tests` | 149 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
 | `NodeWar.BalanceRig.Tests` | 36 | the headless balance rig, scenario validation, repeatable execution against an exported JSON balance, its diagnostics and timeline metrics, and setup compatibility with the shared map |
-| `NodeWarCloud.Tests` | 439 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
+| `NodeWarCloud.Tests` | 445 | the Cloud Code module: player state, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, district migration of stored inventory, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## Producing the receipt
 
@@ -84,7 +84,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 457 passed, and both version-3 pinned fingerprints from
+Expect 475 passed, and both version-3 pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 

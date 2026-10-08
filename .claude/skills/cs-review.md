@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: stable
 sources:
   - id: architecture
@@ -48,6 +48,9 @@ Read all files modified in this session, then check:
    - Does the pre-draft setup (MatchSetup, MatchSetupAck, SetupAgreement) only
      carry and compare map ID, board hash and versions, with the board itself
      coming from the shipped PremadeMaps.Catalog rather than the wire?
+   - Do saved-data conversions for retired districts stay in Backend/Shared
+     DistrictMigration, with the runtime and wire accepting only active
+     DistrictRoster types and no aliases?
    - Does Backend/Shared/ remain UnityEngine-free so the same DTOs,
      rules and service contracts compile into Cloud Code?
    - Does MatchLog/ preserve applied command order and replay through MatchFactory,

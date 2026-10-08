@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: stable
 sources:
   - id: sim-loop
@@ -203,7 +203,7 @@ or `SimulationState` itself must be added to this method.** A field left
 out is invisible to desync detection: bugs involving it will show up as
 silent, undiagnosable gameplay divergence instead of a caught desync.
 Fields that are set once at construction and never mutated during play
-(on `NodeData`: `gridX`/`gridZ`, `links`, `bonusVillagersOnClaim`) are
+(on `NodeData`: `gridX`/`gridZ`, `links`) are
 intentionally excluded — keep it that way rather than hashing static data.
 The board's identity is hashed instead, in two parts: each node's `terrain`, and
 `SimulationState.boardHash`, the `BoardHasher` fingerprint of the whole board
@@ -227,9 +227,22 @@ plus false-neutral `NodeData.autoRecruit`. Each non-neutral hash contribution
 has a distinct tag and player/node array index. `MatchFactory` initializes them
 explicitly; the existing struct-array copy carries them, with hash-mutation and
 copy-independence tests. Ownership loss resets the node fields, never the player
-count. The legacy `bonusVillagersOnClaim` field remains construction-only until
-its later removal; Village claims no longer read it or spawn bodies. A recruit
-spawns through the same body-spawning helper the claim bonus used.
+count. A recruit spawns through the same body-spawning helper that Town rewards use.
+`NodeData.bonusVillagersOnClaim` is gone; `DistrictStats.bonusVillagersOnClaim` survives
+only as a historical balance JSON field that no rule reads.
+
+C4 adds the false-neutral `NodeData.townPaidMask` (bit 0 and bit 1 for the players whose
+first full claim of that Town has paid), hashed only when non-zero under tag 4012 with
+the node index, initialized by `MatchFactory`, copied with the node array, and never
+reset by ownership change. The reward is spent before the population-cap check so a full
+roster cannot defer it. `DistrictStats.townBonusVillagers` is conditionally hashed by
+`BalanceHasher` (tag 3007 with its array index) and must be nonnegative.
+
+`DistrictType` values are now explicit in the source and persisted in match logs: the
+active set is 0–6 and 13–17 (`DistrictRoster.IsActive`), and the retired numbers are
+reserved and never reused. Placement legality, board validation and the log reader refuse
+an inactive type (the log reader for simulation version 3 and later; version 2 logs keep their historical numbers), with no aliasing in the runtime; only saved-data migration in
+`Backend/Shared` maps old numbers to new ones.
 
 Recruit=5 and SetAutoRecruit=6 have explicit processor cases and serializer/log
 acceptance. `CommandTypes.IsKnown` is the one list of valid types; the serializer

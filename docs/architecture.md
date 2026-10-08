@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
 status: stable
 sources:
   - id: sim-state
@@ -605,7 +605,10 @@ The command processor spends food and appends recruits; the automatic pass calls
 the same recruit path after ordinary production and before healing, in ascending
 node ID. Player `recruitCount` persists for the match; each Village's
 `recruitReadyTick` and `autoRecruit` reset on ownership loss. All three fields are
-hashed and copied. Village capture itself no longer spawns bonus villagers.
+hashed and copied. Village capture itself spawns nothing; a `Town` pays each player's first
+full claim of it once (`townPaidMask`, hashed and copied), limited by population room.
+The district roster is `DistrictRoster` (types 0–6 and 13–17); retired numbers stay
+reserved and `DistrictMigration` converts saved data once.
 
 A move order is sticky: `VillagerData.targetNodeID` keeps the destination through
 a fight or a blocked route, and `TickOrderResume` replans from the villager's
@@ -706,7 +709,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
   stamped on at match launch from the server's equipped state
   (`LoadoutTypes.WithEquipment`), not chosen in the lobby's local data.
 - `LoadoutTypes` — the one translation between lobby item IDs
-  (`suit_warrior`), simulation types and catalog base IDs (`suit.warrior`).
+  (`suit_warrior`), simulation types and catalog base IDs (`suit.warrior`). It
+  resolves only complete, current IDs (no substring matching), and a retired district
+  has no catalog base.
 
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
@@ -929,6 +934,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
   the draft. Ocean and open lake have no collider. `TerrainPresentation` is the
   UnityEngine-free description of each cell. `GameManager` creates the view and
   shows the match board once the draft is placed.
+- `DistrictFallback` — a readable name, monogram and description for every active
+  district, so a district with no art still reads on the board (UnityEngine-free).
 - `OrderPresentation` — read-only: which orders to draw and how, including the
   amber dashed route of an order interrupted by a fight, derived from
   `targetNodeID` and so correct after a rollback.
@@ -1281,6 +1288,7 @@ Assets/Scripts/Backend/          client services, NodeWar.Backend
                                  player records, catalog/equip rules, protocol version and service contracts
   Shared/RankedQueuePresenter     UnityEngine-free ranked attempt controller and IRankedQueueView
   Shared/RankedRendezvous         UnityEngine-free join-code exchange around IRankedConnection
+  Shared/DistrictMigration       one-time conversion of saved decks and inventory to the current district roster
   Shared/DisconnectHold           UnityEngine-free three-stage hold: presence, claim, resolution
   Shared/RankedResultTracker      UnityEngine-free end-card follower of the server's result
   Catalog/                       CatalogDefinition asset + editor Generate / Export
@@ -1349,7 +1357,7 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   pre-match rating, rank and owned-variant snapshots. `ActiveMatchClaims`
   allows one active match per player, with expiring claims and conditional
   writes. `ReportMatch` checks membership and log eligibility against that
-  record, including that the log's SETUP and board are the record's map, then runs the referee. Two accepted reports must agree on
+  record, including that the log's SETUP and board are the record's map and that its loadouts and draft use only active districts, then runs the referee. Two accepted reports must agree on
   winner, end tick and final hash before rating, RR, arena and inventory
   updates settle. Retries are idempotent; disputed or expired matches do
   not settle. `GetMatchHistory` reads the caller's history and stored match
