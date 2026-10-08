@@ -6,13 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:07:09Z }
-verified_at_commit: 7f0e83da
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:49Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
   - id: tests
@@ -78,6 +73,9 @@ Step 2: Set up initial state
   nextBreacherID at -1. Default balance enables the channel, tempo and caps;
   disable those explicitly when testing legacy behaviour
 - Document what the starting state represents
+- For recruitment, initialize player recruitCount and node recruitReadyTick to 0,
+  and autoRecruit to false. Use explicit positive recruit tuning; historical
+  exports with missing tuning must not silently enable free recruits.
 
 Step 3: Define the command sequence
 - List the GameCommands in the order they will be applied
@@ -103,6 +101,11 @@ Step 5: Assert expected state
   at the metal cap, Market still alternates, and cap 0 remains uncapped
 - For paid respawns, assert only successful commands increment paidRespawns
   and Sanctuary discounts the escalated cost with integer rounding/minimum 1
+- For Recruit, assert pre-increment price and cooldown, exact food/count/body
+  changes, refusal hash equality, dead-inclusive population, and overflow refusal.
+  Test per-Village cooldowns with shared player count, ascending-node automatic
+  attempts after production, ownership-loss reset, and absolute idempotent toggles.
+  Keep the food cap at 30: N=8 costs 30; N=9 costs 33 and must be refused.
 
 Step 6: Add determinism variant (always, for simulation tests)
 - Run the identical scenario a second time from scratch
@@ -116,9 +119,9 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 2. Its short, non-breaching fixtures
-  retain their numeric hashes through neutral-field conditional hashing;
-  this does not make version-1 match logs replayable on version 2
+- The current baseline pin is version 3. C3's neutral recruit fields retain
+  its two numeric fingerprints; the earlier terrain addition re-pinned both.
+  Conditional hashing does not make older simulation-version logs replayable
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests
