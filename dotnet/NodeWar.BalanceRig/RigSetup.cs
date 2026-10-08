@@ -13,7 +13,11 @@ namespace NodeWar.BalanceRig
     {
         public GameBalanceData balance;
         public int balanceHash;
+        public int sourceBalanceHash;
         public string balanceSource;
+
+        /// <summary>Balance fields copied from GameBalanceData.Default() by --v2-overlay.</summary>
+        public string[] overlaidFields = new string[0];
 
         public BoardConfigData board;
         public string boardSource;
@@ -23,6 +27,8 @@ namespace NodeWar.BalanceRig
 
         /// <summary>Districts each player brings on top of the base pool, like a lobby loadout.</summary>
         public DistrictType[] loadoutNodes = new DistrictType[0];
+        public PlayerSetup[] playerSetups;
+        public Func<int, int, (int x, int z)> mirror;
     }
 
     /// <summary>
@@ -56,16 +62,24 @@ namespace NodeWar.BalanceRig
             throw new FileNotFoundException("Could not find the repository root (looked for " + BoardAssetPath + ").");
         }
 
-        public static RigSetup Load(string balancePath, string boardPath, string loadout)
+        public static RigSetup Load(string balancePath, string boardPath, string loadout, bool v2Overlay = false)
         {
             string root = FindRepoRoot();
             var setup = new RigSetup();
 
             setup.balanceSource = Path.GetFullPath(balancePath ?? Path.Combine(root, BalancesDir, DefaultBalanceFile));
-            setup.balance = LoadBalance(setup.balanceSource, out setup.balanceHash);
+            // The filename is checked against the source JSON, overlay or not.
+            setup.balance = LoadBalance(setup.balanceSource, out setup.sourceBalanceHash);
+            if (v2Overlay) setup.balance = ApplyV2Overlay(setup.balance, out setup.overlaidFields);
+            setup.balanceHash = BalanceHasher.Hash(setup.balance);
 
             setup.boardSource = Path.GetFullPath(boardPath ?? Path.Combine(root, BoardAssetPath));
             LoadBoard(setup.boardSource, setup);
+
+            // The shipped board's cores sit at opposite corners of the grid, so
+            // its symmetry is the half-turn. A board of another shape supplies its own.
+            int cols = setup.board.gridCols, rows = setup.board.gridRows;
+            setup.mirror = (x, z) => (cols - 1 - x, rows - 1 - z);
 
             setup.loadoutNodes = ParseLoadout(loadout);
             return setup;
@@ -91,6 +105,32 @@ namespace NodeWar.BalanceRig
                     throw new FormatException("Balance hash " + hash + " does not match filename " + name + ".");
                 return balance;
             }
+        }
+
+        /// <summary>
+        /// Fills the v2 breach/tempo/sudden-death fields from
+        /// GameBalanceData.Default() wherever an exported balance lacks them.
+        /// The exports predate v2, so an absent field deserialises to null/0,
+        /// which the simulation reads as "feature off". Returns the same
+        /// object; its hash is the effective balance, not the source file's.
+        /// </summary>
+        public static GameBalanceData ApplyV2Overlay(GameBalanceData balance, out string[] applied)
+        {
+            GameBalanceData d = GameBalanceData.Default();
+            var names = new List<string>();
+
+            if (balance.tempoStageTicks == null) { balance.tempoStageTicks = d.tempoStageTicks; names.Add("tempoStageTicks"); }
+            if (balance.tempoClaimPercent == null) { balance.tempoClaimPercent = d.tempoClaimPercent; names.Add("tempoClaimPercent"); }
+            if (balance.tempoRespawnPercent == null) { balance.tempoRespawnPercent = d.tempoRespawnPercent; names.Add("tempoRespawnPercent"); }
+            if (balance.tempoProductionPercent == null) { balance.tempoProductionPercent = d.tempoProductionPercent; names.Add("tempoProductionPercent"); }
+            if (balance.suddenDeathTicks == null) { balance.suddenDeathTicks = d.suddenDeathTicks; names.Add("suddenDeathTicks"); }
+            if (balance.suddenDeathThresholds == null) { balance.suddenDeathThresholds = d.suddenDeathThresholds; names.Add("suddenDeathThresholds"); }
+            if (balance.breachBarMax == 0) { balance.breachBarMax = d.breachBarMax; names.Add("breachBarMax"); }
+            if (balance.breachSwarmRate == null) { balance.breachSwarmRate = d.breachSwarmRate; names.Add("breachSwarmRate"); }
+            if (balance.breachBarDecayPerTick == 0) { balance.breachBarDecayPerTick = d.breachBarDecayPerTick; names.Add("breachBarDecayPerTick"); }
+
+            applied = names.ToArray();
+            return balance;
         }
 
         /// <summary>"Barracks,Forge", "none", or "" for no loadout districts.</summary>

@@ -9,8 +9,17 @@ namespace NodeWar.BalanceRig
     public sealed class MatchResult
     {
         public int seed;
+        public int pairID;
+        public int seat;
         public int ticks;
         public int winner = -1;
+
+        /// <summary>The match's timeline when it was observed, else null.</summary>
+        public TimelineMetrics timeline;
+
+        /// <summary>Whether the post-tick-1200 lead was taken (the match lasted that long), and P0 minus P1 non-core districts then.</summary>
+        public bool hasLead;
+        public int twoMinuteLead;
         public bool capped;
 
         public int[] breaches = new int[2];
@@ -21,6 +30,27 @@ namespace NodeWar.BalanceRig
         public int[] food = new int[2];
         public int[] materials = new int[2];
         public int[] metal = new int[2];
+
+        // Why a match stalls: what each side could field at all.
+        public bool[] ownsBarracksEnd = new bool[2];
+        public bool[] everOwnedBarracks = new bool[2];
+        public int[] soldiersEnd = new int[2];
+        public int[] peakSoldiers = new int[2];
+        public int[] ticksThreeIdleSoldiers = new int[2];
+
+        /// <summary>Ticks with a non-soldier idle on its own Barracks: the one place BotPlayer equips from.</summary>
+        public int[] ticksIdleOnBarracks = new int[2];
+
+        /// <summary>Owned at the end, by side: the bot expands Village, Farm, Mine, then Barracks, strictly in that order.</summary>
+        public int[] villagesEnd = new int[2];
+        public int[] farmsEnd = new int[2];
+        public int[] minesEnd = new int[2];
+
+        /// <summary>Breaches that landed on the last tick played; 0 if the match stopped on a later, breach-free tick.</summary>
+        public int finalTickBreaches;
+
+        /// <summary>Ended in a win with the loser below the base breach threshold: a sudden-death drop decided it.</summary>
+        public bool wonBelowBaseThreshold;
 
         /// <summary>Tick of the first breach by either side, or -1.</summary>
         public int FirstBreachTick
@@ -36,34 +66,187 @@ namespace NodeWar.BalanceRig
         }
     }
 
+    public sealed class PreparedMatch
+    {
+        public RigSetup setup;
+        public DraftPlacement[] draft;
+        public PlayerSetup[] players;
+        public int seed, pairID, seat;
+    }
+
+    /// <summary>What a run reports to, none of it able to change the match.</summary>
+    public sealed class RunHooks
+    {
+        /// <summary>Record the timeline (and hand the simulation a TickEventLog to fill).</summary>
+        public bool timeline;
+
+        /// <summary>The batch applied on each tick that applies any, before it is applied.</summary>
+        public Action<GameCommand[]> onCommands;
+
+        /// <summary>The state after each tick.</summary>
+        public Action<SimulationState> afterTick;
+    }
+
     public static class MatchRunner
     {
-        public static MatchResult Run(RigSetup setup, int seed, int capTicks, int inputDelay)
+        /// <summary>
+        /// One match ready to run: the draft and the two players' setups for a
+        /// given seat assignment. Seat 0 is the setup as supplied; seat 1 is its
+        /// mirrored pair (<see cref="SwapSeats"/>), which shares the seed and pair ID.
+        /// </summary>
+        public static PreparedMatch Prepare(RigSetup setup, int seed, DraftPlacement[] draft = null)
         {
-            var rng = new Random(seed);
-            DraftPlacement[] draft = RandomDraft(setup, rng);
-
             int suitCount = (int)SuitType.Watcher + 1;
             int districtCount = (int)DistrictType.Market + 1;
-            int[] nodes = new int[setup.loadoutNodes.Length];
-            for (int i = 0; i < nodes.Length; i++) nodes[i] = (int)setup.loadoutNodes[i];
-
-            // What a lobby loadout resolves to: Warrior is granted to everyone,
-            // the loadout's districts ride along, and every era is 0.
             var players = new PlayerSetup[2];
             for (int p = 0; p < 2; p++)
+            {
+                if (setup.playerSetups != null)
+                {
+                    PlayerSetup given = setup.playerSetups[p];
+                    players[p] = new PlayerSetup
+                    {
+                        suits = given.suits == null ? null : (int[])given.suits.Clone(),
+                        nodes = given.nodes == null ? null : (int[])given.nodes.Clone(),
+                        suitEras = given.suitEras == null ? null : (int[])given.suitEras.Clone(),
+                        districtEras = given.districtEras == null ? null : (int[])given.districtEras.Clone()
+                    };
+                    continue;
+                }
+
+                // What a lobby loadout resolves to: Warrior is granted to everyone,
+                // the loadout's districts ride along, and every era is 0.
+                int[] nodes = new int[setup.loadoutNodes.Length];
+                for (int i = 0; i < nodes.Length; i++) nodes[i] = (int)setup.loadoutNodes[i];
                 players[p] = new PlayerSetup
                 {
                     suits = new[] { (int)SuitType.Warrior },
-                    nodes = (int[])nodes.Clone(),
+                    nodes = nodes,
                     suitEras = new int[suitCount],
                     districtEras = new int[districtCount]
                 };
+            }
 
+            return new PreparedMatch
+            {
+                setup = setup,
+                draft = draft ?? RandomDraft(setup, new Random(seed)),
+                players = players,
+                seed = seed,
+                pairID = seed,
+                seat = 0
+            };
+        }
+
+        /// <summary>
+        /// The same match from the other seat: board placements and draft are
+        /// mirrored through <see cref="RigSetup.mirror"/>, the two players'
+        /// setups and base draft pools trade places, and ownership of the
+        /// mirrored placements follows. The original is left untouched.
+        /// </summary>
+        public static PreparedMatch SwapSeats(PreparedMatch original)
+        {
+            RigSetup source = original.setup;
+            if (source.mirror == null)
+                throw new InvalidOperationException("Swapping seats needs RigSetup.mirror: the board's own symmetry, supplied by whoever built the setup.");
+
+            BoardConfigData board = source.board;
+            var placements = new BoardConfigData.InitialNodePlacement[source.board.initialPlacements.Length];
+            for (int i = 0; i < placements.Length; i++)
+            {
+                BoardConfigData.InitialNodePlacement ip = source.board.initialPlacements[i];
+                var cell = source.mirror(ip.gridX, ip.gridZ);
+                ip.gridX = cell.x;
+                ip.gridZ = cell.z;
+                if (ip.ownerID == 0 || ip.ownerID == 1) ip.ownerID = 1 - ip.ownerID;
+                ip.claimBar = -ip.claimBar;
+                placements[i] = ip;
+            }
+            board.initialPlacements = placements;
+
+            var draft = new DraftPlacement[original.draft.Length];
+            for (int i = 0; i < draft.Length; i++)
+            {
+                DraftPlacement dp = original.draft[i];
+                var cell = source.mirror(dp.gridX, dp.gridZ);
+                dp.gridX = cell.x;
+                dp.gridZ = cell.z;
+                dp.playerID = 1 - dp.playerID;
+                draft[i] = dp;
+            }
+
+            var setup = new RigSetup
+            {
+                balance = source.balance,
+                balanceHash = source.balanceHash,
+                sourceBalanceHash = source.sourceBalanceHash,
+                balanceSource = source.balanceSource,
+                overlaidFields = source.overlaidFields,
+                board = board,
+                boardSource = source.boardSource,
+                baseDraft = new[] { source.baseDraft[1], source.baseDraft[0] },
+                loadoutNodes = source.loadoutNodes,
+                playerSetups = source.playerSetups == null ? null : new[] { source.playerSetups[1], source.playerSetups[0] },
+                mirror = source.mirror
+            };
+
+            return new PreparedMatch
+            {
+                setup = setup,
+                draft = draft,
+                players = new[] { original.players[1], original.players[0] },
+                seed = original.seed,
+                pairID = original.pairID,
+                seat = 1 - original.seat
+            };
+        }
+
+        /// <summary>
+        /// Queues this tick's fresh commands for tick (now + inputDelay), then
+        /// applies every command that has come due: P0's, then P1's, each in the
+        /// order that player issued them, so neither seat's commands lead by
+        /// parity or by evaluation order. The observer sees exactly the applied
+        /// batch, before it is applied.
+        /// </summary>
+        public static void ApplyCommands(SimulationState state, GameCommand[] fresh, int inputDelay,
+            List<KeyValuePair<int, GameCommand>> delayed, Action<GameCommand[]> observer = null, TickEventLog log = null)
+        {
+            for (int i = 0; i < fresh.Length; i++)
+                delayed.Add(new KeyValuePair<int, GameCommand>(state.tickCount + inputDelay, fresh[i]));
+
+            var due = new List<GameCommand>();
+            int kept = 0;
+            for (int i = 0; i < delayed.Count; i++)
+            {
+                if (delayed[i].Key <= state.tickCount) due.Add(delayed[i].Value);
+                else delayed[kept++] = delayed[i];
+            }
+            delayed.RemoveRange(kept, delayed.Count - kept);
+            if (due.Count == 0) return;
+
+            var ordered = new GameCommand[due.Count];
+            int at = 0;
+            for (int p = 0; p < 2; p++)
+                for (int i = 0; i < due.Count; i++)
+                    if (due[i].playerID == p) ordered[at++] = due[i];
+            for (int i = 0; i < due.Count; i++)
+                if (due[i].playerID != 0 && due[i].playerID != 1) ordered[at++] = due[i];
+
+            observer?.Invoke(ordered);
+            for (int i = 0; i < ordered.Length; i++) CommandProcessor.ProcessCommand(state, ordered[i], log);
+        }
+
+        /// <summary>One match from the setup as supplied (seat 0); see <see cref="SwapSeats"/> for its pair.</summary>
+        public static MatchResult Run(RigSetup setup, int seed, int capTicks, int inputDelay, System.IO.TextWriter trace = null)
+            => Run(Prepare(setup, seed), capTicks, inputDelay, trace, null);
+
+        public static MatchResult Run(PreparedMatch match, int capTicks, int inputDelay, System.IO.TextWriter trace, RunHooks hooks)
+        {
+            RigSetup setup = match.setup;
             MatchFactory.Configure(setup.balance, setup.board);
-            SimulationState state = MatchFactory.Build(setup.balance, setup.board, draft, players);
+            SimulationState state = MatchFactory.Build(setup.balance, setup.board, match.draft, match.players);
 
-            var result = new MatchResult { seed = seed };
+            var result = new MatchResult { seed = match.seed, pairID = match.pairID, seat = match.seat };
             var buffer = new InputBuffer();
             var bots = new[]
             {
@@ -75,35 +258,30 @@ namespace NodeWar.BalanceRig
             var delayed = new List<KeyValuePair<int, GameCommand>>();
             int[] seenBreaches = new int[2];
 
+            TimelineMetrics timeline = hooks != null && hooks.timeline ? new TimelineMetrics(state, setup.balance.ticksPerSecond) : null;
+            TickEventLog log = timeline != null ? new TickEventLog() : null;
+            Action<GameCommand[]> observer = commands =>
+            {
+                timeline?.ObserveCommands(state.tickCount, commands);
+                hooks?.onCommands?.Invoke(commands);
+            };
+
             while (!state.gameOver && state.tickCount < capTicks)
             {
                 // The live bot path (TickRunner.Update): evaluate, drain the
-                // buffer, process in buffer order, then SimulateTick. P0 first,
-                // as a human's commands would sit ahead of the bot's.
-                for (int b = 0; b < bots.Length; b++) bots[b].Evaluate();
+                // buffer, apply, then SimulateTick. Commands apply P0 then P1
+                // every tick whatever order the bots evaluated in.
+                bots[0].Evaluate();
+                bots[1].Evaluate();
+                log?.Clear();
+                ApplyCommands(state, buffer.DrainCommands(), inputDelay, delayed, observer, log);
 
-                GameCommand[] fresh = buffer.DrainCommands();
-                if (inputDelay <= 0)
-                {
-                    for (int i = 0; i < fresh.Length; i++)
-                        CommandProcessor.ProcessCommand(state, fresh[i]);
-                }
-                else
-                {
-                    for (int i = 0; i < fresh.Length; i++)
-                        delayed.Add(new KeyValuePair<int, GameCommand>(state.tickCount + inputDelay, fresh[i]));
-                    int kept = 0;
-                    for (int i = 0; i < delayed.Count; i++)
-                    {
-                        if (delayed[i].Key <= state.tickCount)
-                            CommandProcessor.ProcessCommand(state, delayed[i].Value);
-                        else
-                            delayed[kept++] = delayed[i];
-                    }
-                    delayed.RemoveRange(kept, delayed.Count - kept);
-                }
+                GameSimulation.SimulateTick(state, log);
+                timeline?.ObserveTick(state, log);
+                hooks?.afterTick?.Invoke(state);
 
-                GameSimulation.SimulateTick(state);
+                TrackFleet(state, result);
+                if (trace != null && state.tickCount % 200 == 0) Trace(trace, state);
 
                 for (int p = 0; p < 2; p++)
                 {
@@ -115,9 +293,23 @@ namespace NodeWar.BalanceRig
                 }
             }
 
+            Finish(state, result, setup.balance);
+            timeline?.Complete(result);
+            return result;
+        }
+
+        public static void Finish(SimulationState state, MatchResult result, GameBalanceData balance)
+        {
             result.ticks = state.tickCount;
             result.capped = !state.gameOver;
             result.winner = state.gameOver ? state.winnerID : -1;
+            // Breaches that landed on the last tick played. A capped match's
+            // earlier breaches do not count: only the tick the match stopped on.
+            for (int p = 0; p < 2; p++)
+                foreach (int t in result.breachTicks[p])
+                    if (t == state.tickCount) result.finalTickBreaches++;
+            if (result.winner >= 0)
+                result.wonBelowBaseThreshold = state.players[1 - result.winner].breachCount < balance.breachThreshold;
 
             for (int p = 0; p < 2; p++)
             {
@@ -137,7 +329,84 @@ namespace NodeWar.BalanceRig
                 if (vil.state == VillagerState.Dead || vil.isConsumed) continue;
                 if (vil.ownerID == 0 || vil.ownerID == 1) result.villagersAlive[vil.ownerID]++;
             }
-            return result;
+        }
+
+        /// <summary>One line per side: owned districts, villagers by state, soldiers, resources.</summary>
+        public static void Trace(System.IO.TextWriter w, SimulationState state)
+        {
+            for (int p = 0; p < 2; p++)
+            {
+                var owned = new List<string>();
+                for (int n = 0; n < state.nodes.Length; n++)
+                    if (state.nodes[n].ownerID == p && state.nodes[n].districtType != DistrictType.Core)
+                        owned.Add(state.nodes[n].districtType + "@" + n);
+                int[] byState = new int[Enum.GetValues(typeof(VillagerState)).Length];
+                int soldiers = 0;
+                var where = new List<string>();
+                for (int v = 0; v < state.villagers.Length; v++)
+                {
+                    VillagerData vil = state.villagers[v];
+                    if (vil.ownerID != p || vil.isConsumed) continue;
+                    byState[(int)vil.state]++;
+                    if (vil.state != VillagerState.Dead && GameBalanceData.IsCombatSuit(vil.suit)) soldiers++;
+                }
+                PlayerData pd = state.players[p];
+                w.WriteLine("t=" + state.tickCount + " P" + p + " owned[" + string.Join(" ", owned) + "] idle=" + byState[0]
+                    + " moving=" + byState[1] + " working=" + byState[2] + " claiming=" + byState[3] + " fighting=" + byState[4]
+                    + " dead=" + byState[(int)VillagerState.Dead] + " breaching=" + byState[(int)VillagerState.Breaching] + " soldiers=" + soldiers + " food=" + pd.food + " mat=" + pd.materials);
+            }
+        }
+
+        /// <summary>Per-tick bookkeeping for the stall diagnostics.</summary>
+        public static void TrackFleet(SimulationState state, MatchResult result)
+        {
+            int[] soldiers = new int[2];
+            int[] idle = new int[2];
+            bool[] barracks = new bool[2];
+            int[] villages = new int[2], farms = new int[2], mines = new int[2];
+            bool[] idleOnBarracks = new bool[2];
+
+            for (int n = 0; n < state.nodes.Length; n++)
+            {
+                int owner = state.nodes[n].ownerID;
+                if ((owner == 0 || owner == 1) && state.nodes[n].districtType == DistrictType.Barracks)
+                    barracks[owner] = true;
+                if (owner == 0 || owner == 1)
+                {
+                    DistrictType d = state.nodes[n].districtType;
+                    if (d == DistrictType.Village) villages[owner]++;
+                    else if (d == DistrictType.Farm) farms[owner]++;
+                    else if (d == DistrictType.Mine) mines[owner]++;
+                }
+            }
+            for (int v = 0; v < state.villagers.Length; v++)
+            {
+                VillagerData vil = state.villagers[v];
+                if (vil.ownerID < 0 || vil.ownerID > 1) continue;
+                if (vil.state == VillagerState.Dead || vil.isConsumed) continue;
+                if (!GameBalanceData.IsCombatSuit(vil.suit))
+                {
+                    int at = vil.currentNodeID;
+                    if (vil.state == VillagerState.Idle && state.nodes[at].districtType == DistrictType.Barracks
+                        && state.nodes[at].ownerID == vil.ownerID)
+                        idleOnBarracks[vil.ownerID] = true;
+                    continue;
+                }
+                soldiers[vil.ownerID]++;
+                if (vil.state == VillagerState.Idle) idle[vil.ownerID]++;
+            }
+            for (int p = 0; p < 2; p++)
+            {
+                result.ownsBarracksEnd[p] = barracks[p];
+                result.everOwnedBarracks[p] |= barracks[p];
+                result.soldiersEnd[p] = soldiers[p];
+                if (soldiers[p] > result.peakSoldiers[p]) result.peakSoldiers[p] = soldiers[p];
+                if (idle[p] >= 3) result.ticksThreeIdleSoldiers[p]++;
+                if (idleOnBarracks[p]) result.ticksIdleOnBarracks[p]++;
+                result.villagesEnd[p] = villages[p];
+                result.farmsEnd[p] = farms[p];
+                result.minesEnd[p] = mines[p];
+            }
         }
 
         /// <summary>
