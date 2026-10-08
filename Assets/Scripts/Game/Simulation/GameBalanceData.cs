@@ -25,7 +25,7 @@ namespace NodeWar.Simulation
     /// district does not use stays 0. Each district type fills only its own:
     ///   Farm, Mine, Forge  productionTicks
     ///   Market             productionTicks (food), secondaryProductionTicks (materials)
-    ///   Village            bonusVillagersOnClaim
+    ///   Town               townBonusVillagers (Village bonusVillagersOnClaim is historical)
     ///   Shrine             healIntervalTicks
     ///   Rampart            claimDecrementMultiplier, damageReduction, maxHPBonus
     ///   Watchtower         claimRateNumerator / claimRateDenominator
@@ -39,7 +39,8 @@ namespace NodeWar.Simulation
 
         public int productionTicks;
         public int secondaryProductionTicks;
-        public int bonusVillagersOnClaim;
+        public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
+        public int townBonusVillagers;
         public int healIntervalTicks;
         public int claimDecrementMultiplier;
         public int damageReduction;
@@ -260,6 +261,13 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
+            if (districtStats != null)
+                for (int i = 0; i < districtStats.Length; i++)
+                    if (districtStats[i].townBonusVillagers < 0)
+                    {
+                        reason = "Town bonus must be nonnegative.";
+                        return false;
+                    }
             if (captureBonusPercentPerStep < 0 || captureBonusMaxSteps < 0)
             {
                 reason = "Capture bonus step and cap must be nonnegative.";
@@ -389,7 +397,8 @@ namespace NodeWar.Simulation
                 new DistrictStats { districtType = DistrictType.Watchtower, claimRateNumerator = watchtowerNumerator,
                     claimRateDenominator = watchtowerDenominator },
                 new DistrictStats { districtType = DistrictType.Sanctuary, respawnBoostPerWorker = sanctuaryBoost,
-                    respawnCostReductionPercent = sanctuaryCostReductionPercent }
+                    respawnCostReductionPercent = sanctuaryCostReductionPercent },
+                new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 }
             };
 
             DistrictStats[] all = new DistrictStats[template.Length * EraCount];

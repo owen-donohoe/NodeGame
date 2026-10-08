@@ -845,6 +845,16 @@ namespace NodeWar.Simulation
                 }
             }
 
+            int playerBit = 1 << playerID;
+            if (state.nodes[nodeIndex].districtType == DistrictType.Town &&
+                (state.nodes[nodeIndex].townPaidMask & playerBit) == 0)
+            {
+                // Consume the entitlement before the cap check; no deferred credit.
+                state.nodes[nodeIndex].townPaidMask |= playerBit;
+                int bonus = bal.GetDistrictStats(DistrictType.Town, state.nodes[nodeIndex].districtEra).townBonusVillagers;
+                int room = System.Math.Max(0, bal.maxVillagersPerPlayer - NodeActionRules.CountPopulation(state, playerID));
+                SpawnBonusVillagers(state, nodeIndex, playerID, System.Math.Min(bonus, room));
+            }
         }
 
         private static DistrictType GetPlayerUpgradeForSlot(SimulationState state, int playerID, DistrictUpgradeCategory upgradeCategory)

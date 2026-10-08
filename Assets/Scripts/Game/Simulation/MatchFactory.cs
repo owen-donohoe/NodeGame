@@ -172,7 +172,7 @@ namespace NodeWar.Simulation
                     terrain = board.terrain[cell],
                     claimBar = 0,
                     ownerID = -1,
-                    bonusVillagersOnClaim = 0,
+                    townPaidMask = 0,
                     materialAllocation = 0,
                     recruitReadyTick = 0,
                     autoRecruit = false
@@ -203,8 +203,6 @@ namespace NodeWar.Simulation
                     int era = dp.playerID >= 0 && players != null && dp.playerID < players.Length
                         ? players[dp.playerID].DistrictEra(dp.districtType) : 0;
                     state.nodes[nodeID].districtEra = era;
-                    state.nodes[nodeID].bonusVillagersOnClaim =
-                        balance.GetDistrictStats(dp.districtType, era).bonusVillagersOnClaim;
                 }
             }
         }

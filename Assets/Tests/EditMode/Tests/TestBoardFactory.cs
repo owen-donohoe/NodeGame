@@ -41,7 +41,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = 10000, // fully owned by player 0 (GameManager's +/-10000 core convention)
                     ownerID = 0,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -60,7 +59,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -78,7 +76,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = -10000, // fully owned by player 1
                     ownerID = 1,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 }
             };
@@ -140,7 +137,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = 10000, // fully owned by player 0
                     ownerID = 0,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -159,7 +155,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -178,7 +173,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = 0,
                     ownerID = -1, // unowned
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 },
                 new NodeData
@@ -197,7 +191,6 @@ namespace NodeWar.Tests
                     terrain = TerrainType.Land,
                     claimBar = -10000, // fully owned by player 1
                     ownerID = 1,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 }
             };

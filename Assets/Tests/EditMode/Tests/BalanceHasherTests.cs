@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using NUnit.Framework;
 using NodeWar.Simulation;
@@ -42,6 +43,26 @@ namespace NodeWar.Tests
             b.decrementMultiplier = 0; b.breachSwarmRate = null;
             b.captureBonusPercentPerStep = b.captureBonusMaxSteps = 100000;
             Assert.IsFalse(b.CoreRulesValid(out string reason)); Assert.IsNotEmpty(reason);
+        }
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        public void TownBonus_DefaultAndMutationPerEra(int era)
+        {
+            var b = GameBalanceData.Default();
+            var f = typeof(DistrictStats).GetField("townBonusVillagers"); Assert.IsNotNull(f);
+            int index = Array.FindIndex(b.districtStats, d => (int)d.districtType == 15 && d.era == era);
+            Assert.GreaterOrEqual(index, 0); Assert.AreEqual(2, f.GetValue(b.districtStats[index]));
+            int baseline = BalanceHasher.Hash(b);
+            object entry = b.districtStats[index]; f.SetValue(entry, 3); b.districtStats[index] = (DistrictStats)entry;
+            Assert.AreNotEqual(baseline, BalanceHasher.Hash(b));
+            f.SetValue(entry, -1); b.districtStats[index] = (DistrictStats)entry;
+            Assert.IsFalse(b.CoreRulesValid(out string reason)); Assert.IsNotEmpty(reason);
+            foreach (var d in GameBalanceData.Default().districtStats)
+                if ((int)d.districtType != 15) Assert.AreEqual(0, f.GetValue(d));
         }
         private static GameBalanceData WithOneSuit()
         {

@@ -286,7 +286,6 @@ namespace NodeWar.Tests
             claimer.state = VillagerState.Claiming;
             Add(state, claimer);
             state.nodes[1].districtType = state.nodes[1].baseDistrictType = DistrictType.Village;
-            state.nodes[1].bonusVillagersOnClaim = 1;
             state.nodes[1].claimBar = balance.claimThreshold - 1;
             state.players[1].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             GameSimulation.SimulateTick(state);

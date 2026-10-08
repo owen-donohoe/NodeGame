@@ -18,7 +18,7 @@ namespace NodeWar.Tests
             "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
             "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
-            "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
+            "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
             "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",
@@ -39,10 +39,7 @@ namespace NodeWar.Tests
             "NodeData.gridX", "NodeData.gridZ",
             // CopyFrom shares links because board topology is fixed and no tick
             // writes it. The edge fields have the same construction-only lifetime.
-            "NodeData.links", "Link.toNodeID", "Link.travelWeight",
-            // Legacy board-construction setting; C3 removes claim-spawn gameplay.
-            // Retained until C4 removes the DTO field; no tick reads or changes it.
-            "NodeData.bonusVillagersOnClaim"
+            "NodeData.links", "Link.toNodeID", "Link.travelWeight"
         };
 
         [Test]
@@ -67,6 +64,20 @@ namespace NodeWar.Tests
         public void ExcludedField_MutationLeavesHashUnchanged(string name, FieldInfo[] path)
         {
             AssertMutation(name, path, shouldChange: false);
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        public void TownPaidMask_EachBitHashesAndCopiesIndependently(int bit)
+        {
+            var source = TestBoardFactory.BuildThreeNodeBoard(GameBalanceData.Default());
+            int baseline = SimulationStateHasher.ComputeHash(source);
+            source.nodes[0].townPaidMask = bit;
+            Assert.AreNotEqual(baseline, SimulationStateHasher.ComputeHash(source));
+            var copy = new SimulationState(); copy.CopyFrom(source);
+            Assert.AreEqual(bit, copy.nodes[0].townPaidMask);
+            copy.nodes[0].townPaidMask = 3;
+            Assert.AreEqual(bit, source.nodes[0].townPaidMask);
         }
 
         private static IEnumerable<TestCaseData> HashedCases() => Cases(Hashed);

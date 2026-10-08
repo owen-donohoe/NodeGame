@@ -117,6 +117,14 @@ namespace NodeWar.Simulation
                 if (b.captureBonusMaxSteps != 0) { hash = hash * 31 + 3004; hash = hash * 31 + b.captureBonusMaxSteps; }
                 if (b.recruitBaseCost != 0) { hash = hash * 31 + 3005; hash = hash * 31 + b.recruitBaseCost; }
                 if (b.recruitCostPerRecruit != 0) { hash = hash * 31 + 3006; hash = hash * 31 + b.recruitCostPerRecruit; }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                        if (b.districtStats[i].townBonusVillagers != 0)
+                        {
+                            hash = hash * 31 + 3007;
+                            hash = hash * 31 + i;
+                            hash = hash * 31 + b.districtStats[i].townBonusVillagers;
+                        }
                 return hash;
             }
         }

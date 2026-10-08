@@ -29,7 +29,7 @@ namespace NodeWar.Tests
         {
             nodeID = id, districtType = type, baseDistrictType = type, ownerID = owner,
             claimBar = owner == 0 ? balance.claimThreshold : -balance.claimThreshold,
-            links = Array.Empty<Link>(), bonusVillagersOnClaim = type == DistrictType.Village ? 2 : 0
+            links = Array.Empty<Link>()
         };
 
         // Reflection lets the test-first commit compile before the DTO fields exist.

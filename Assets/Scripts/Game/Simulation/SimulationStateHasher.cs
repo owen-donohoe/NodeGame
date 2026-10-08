@@ -97,6 +97,12 @@ namespace NodeWar.Simulation
                         hash = hash * 31 + i;
                         hash = hash * 31 + state.nodes[i].recruitReadyTick;
                     }
+                    if (state.nodes[i].townPaidMask != 0)
+                    {
+                        hash = hash * 31 + 4012;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.nodes[i].townPaidMask;
+                    }
                     if (state.nodes[i].autoRecruit)
                     {
                         hash = hash * 31 + 4011;

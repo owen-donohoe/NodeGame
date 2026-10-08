@@ -24,7 +24,8 @@ namespace NodeWar.Simulation
         /// after Market so every earlier value keeps its number. In stage B it is
         /// an inert connector: it grants nothing and blocks nobody.
         /// </summary>
-        Pier = 14
+        Pier = 14,
+        Town = 15
     }
 
     /// <summary>
@@ -87,7 +88,7 @@ namespace NodeWar.Simulation
         public DistrictType districtType;
         public int claimBar;
         public int ownerID;
-        public int bonusVillagersOnClaim;
+        public int townPaidMask;
         public int materialAllocation;
         public int recruitReadyTick;
         public bool autoRecruit;

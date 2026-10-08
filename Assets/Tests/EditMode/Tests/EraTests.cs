@@ -190,7 +190,7 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void DraftedDistrict_TakesItsPlacersEra_AndVillageBonusFollows()
+        public void DraftedDistrict_TakesItsPlacersEra_AndTownMaskStartsUnpaid()
         {
             GameBalanceData balance = WithEra1(d => { d.bonusVillagersOnClaim = 5; return d; }, DistrictType.Village);
             var eras = new int[14];
@@ -209,9 +209,9 @@ namespace NodeWar.Tests
             SimulationState state = MatchFactory.Build(balance, BoardFixtures.LandGrid3x3(), draft, players);
 
             Assert.AreEqual(1, state.nodes[3].districtEra);
-            Assert.AreEqual(5, state.nodes[3].bonusVillagersOnClaim);
+            Assert.AreEqual(0, state.nodes[3].townPaidMask);
             Assert.AreEqual(0, state.nodes[5].districtEra);
-            Assert.AreEqual(2, state.nodes[5].bonusVillagersOnClaim);
+            Assert.AreEqual(0, state.nodes[5].townPaidMask);
             Assert.AreEqual(eras, state.players[0].districtEras);
         }
 

@@ -26,7 +26,6 @@ namespace NodeWar.Tests
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
                     claimBar = 0,
                     ownerID = 0,
-                    bonusVillagersOnClaim = 0,
                     materialAllocation = 0
                 }
             };
