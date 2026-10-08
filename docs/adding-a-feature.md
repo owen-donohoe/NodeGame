@@ -7,7 +7,7 @@ generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
   - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
-verified_at_commit: d529c753810366befd22432086b613ea5f6e6e0b
+verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
 status: stable
 sources:
   - id: sim-state
