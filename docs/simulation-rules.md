@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: bdb967ed1524de151f220a3be1733bec8177e56d
 status: stable
 sources:
   - id: sim-loop
@@ -172,8 +172,8 @@ Why: each step reads state the previous step produced (e.g. claiming
 depends on where combat left villagers standing this tick); reordering
 changes game behavior in a way that's easy to miss testing against
 yourself but will desync against any peer/build still running the old
-order. (`GameSimulation.SimulateTick` also runs a rampart-bonus pass
-right after movement, `TickBreach` immediately before `TickClaiming`, and
+order. (`GameSimulation.SimulateTick` also builds a resistance snapshot
+from the tick-start owners and Fortress levels, `TickBreach` immediately before `TickClaiming`, and
 order resume (`TickOrderResume`) after win-check. The final derived refresh of every
 player's `nextBreacherID` follows resume, so it reflects all mutations
 this tick. Tempo events are emitted after incrementing the tick count,
@@ -217,7 +217,7 @@ unconditionally, so two peers on different maps diverge at the first checkpoint.
 
 **Era fields are hashed only where they are not 0**: `PlayerData.suitEras`
 / `districtEras` (index and value, the two tables kept apart by an offset),
-`NodeData.districtEra` and `VillagerData.rampartBonusEra`. Omitting zero
+`NodeData.districtEra` and `VillagerData`'s remaining era fields. Omitting zero
 era fields preserves their pre-era hash contribution, while any era the peers disagree
 on still moves the hash. Version-1 logs are nevertheless refused by a
 version-2 replay. Neutral extension fields may use conditional hashing
@@ -235,6 +235,18 @@ count. A recruit spawns through the same body-spawning helper that Town rewards 
 `NodeData.bonusVillagersOnClaim` is gone; `DistrictStats.bonusVillagersOnClaim` survives
 only as a historical balance JSON field that no rule reads.
 
+C7 replaces the per-villager Rampart buffs (`hasRampartBonus`, `rampartBonusEra`, removed from
+`VillagerData`) with the zero-neutral `NodeData.fortressLevel` (0 to 3), hashed under tag 4013 with
+the node index, initialized by `MatchFactory`, copied with the node array and reset to 0 whenever
+ownership is lost. `DistrictStats.fortressMaterialsCosts`, `fortressMetalCosts` and
+`fortressResistancePercent` (four entries each, level 0 first) are hashed by `BalanceHasher`
+under tags 3008 to 3010 with the stats index, and an invalid trio disables upgrading rather than
+being repaired. `NodeActionRules.CanUpgradeFortress` is the shared eligibility. Resistance is
+computed once per tick from the tick-start snapshot (`BuildResistanceSnapshot`: the
+highest aura on a node wins, ties to the lowest source node) and divides the claim rate and
+the Core breach rate after the frontier and tempo steps, with a floor of 1; breach keeps its
+tempo independence.
+
 C4 adds the false-neutral `NodeData.townPaidMask` (bit 0 and bit 1 for the players whose
 first full claim of that Town has paid), hashed only when non-zero under tag 4012 with
 the node index, initialized by `MatchFactory`, copied with the node array, and never
@@ -248,7 +260,7 @@ reserved and never reused. Placement legality, board validation and the log read
 an inactive type (the log reader for simulation version 3 and later; version 2 logs keep their historical numbers), with no aliasing in the runtime; only saved-data migration in
 `Backend/Shared` maps old numbers to new ones.
 
-Recruit=5 and SetAutoRecruit=6 have explicit processor cases and serializer/log
+Recruit=5, SetAutoRecruit=6 and UpgradeFortress=7 have explicit processor cases and serializer/log
 acceptance. `CommandTypes.IsKnown` is the one list of valid types; the serializer
 and the log reader refuse anything else. The six existing command fields,
 24-byte wire payload and TICKS shape are unchanged. Recruit eligibility and cost
@@ -318,8 +330,9 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
 
 The current simulation version and baseline pin are **3** (v3 added terrain and a
-board fingerprint to the hashed state and re-pinned both baselines, to 411123996
-and 2101726457). With a valid
+board fingerprint to the hashed state and re-pinned both baselines; C7 then removed the
+unconditional per-villager `hasRampartBonus` hash term and moved them again, to 647286254
+and 357327383, still within version 3). With a valid
 breach channel enabled, a loss requires a breach this tick at or above
 `BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
 threshold alone never loses a match. Disabling the channel retains

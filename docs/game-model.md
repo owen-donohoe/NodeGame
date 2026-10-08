@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: bdb967ed1524de151f220a3be1733bec8177e56d
 status: draft
 sources:
   - id: sim-state
@@ -195,7 +195,7 @@ places every district as `Fixed`, so those districts keep their type and placer'
 | `Town` | Fixed | One-time reward: the first full claim by each player spawns `townBonusVillagers` (code default 2, per era) at the Town, limited by room under the population cap. The entitlement is spent even if the cap leaves nothing to pay, and never deferred. A player taking the enemy's Town is paid too. Afterwards the Town does nothing |
 | `Barracks` | Army | Equip any drafted combat suit (Warrior, Guardian, Scout, Berserker, Medic) |
 | `Infirmary` | Healing | Heals its owner's living, non-moving villagers standing on it every `healIntervalTicks` (code default 10, per era) on the global tick, in addition to ordinary healing. Acolytes work it: at most 2 count, chosen by lowest villager ID, each speeding the owner's respawn countdown and cutting the paid-respawn cost (below). Not usable while an enemy stands on it or it is not owned by the worker's player |
-| `Fortress` | Affect | Placeholder: in the roster and draftable, with no effect yet (inert until its rules land) |
+| `Fortress` | Affect | Paid resistance. Its owner upgrades it with `UpgradeFortress` to level 1, 2 or 3 (each level once, in order), paying either materials (4/8/12) or metal (1/2/3) per era. At level 1-3 the Fortress and each owned node linked to it resist enemy claiming by 25/40/50%: the enemy's claim rate on those nodes (when the Fortress's owner held them at tick start) is divided by `1 + resistance`, never below 1. Auras do not stack (the highest applies, ties to the lowest source node), are read from the tick-start owners and levels, and also slow a breach of a Core they cover. The upgrade is refused with an enemy villager on the node. Losing the Fortress resets its level to 0 |
 | `Market` | ResourceSpecial | Merchant works it → alternates +1 food and +1 material |
 | `Pier` | Fixed | Drafted only on a Lake slot. Turns that cell into a node that connects its land neighbours; grants nothing and blocks nobody |
 
@@ -206,9 +206,9 @@ accepted by an alias. Seven numbers are retired and stay reserved, never reused:
 Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary, which takes over both jobs), Rampart 12 (now Fortress) and
 Watchtower 11 (now an empty slot). Saved decks and inventories are converted once
 (`DistrictMigration`, in `Backend/Shared`), keeping the old item owned, adding the replacement at
-the same era and collapsing duplicates. The old Rampart rules
-still exist in the simulation code for the historical numbers, but no new match can contain that
-district, and the Watcher has no workplace. The Rampart text in the combat section describes the retained rule.
+the same era and collapsing duplicates. Rampart's
+occupant buffs (max HP and damage reduction) are gone from the simulation entirely; the Fortress replaces them
+with the paid aura above. The Watcher has no workplace.
 
 ## Suits
 
@@ -256,8 +256,7 @@ When both players have living villagers on the same node, everyone there is forc
 Targets are assigned **round-robin**: attackers stay in `villagerID` order, while each side's
 target list is sorted by `fightPriority` descending then `villagerID` ascending — a total order
 with no ties, which the determinism contract requires. Each fighter attacks when its cooldown
-expires. A defender with the bonus from an owned Rampart takes
-reduced damage, to a floor of 1.
+expires. Damage is not reduced by district.
 
 At 0 HP a villager dies, drops its path, and respawns at its owner's Core after `respawnTicks`
 (default 50), reset to base stats with no suit. A player may also spend food on a `Respawn` command
@@ -344,7 +343,7 @@ because rating cannot see the era gap.
 
 ## Player commands
 
-Every player action reaches the simulation as one of six active `GameCommand` types:
+Every player action reaches the simulation as one of seven active `GameCommand` types:
 
 | Command | Effect |
 |---|---|
@@ -354,6 +353,7 @@ Every player action reaches the simulation as one of six active `GameCommand` ty
 | `Respawn` | Pay food to return a dead villager to its Core **immediately**, skipping the timer |
 | `Recruit` (5) | Pay food to append one base, unsuited Idle villager at an owned, uncontested Village |
 | `SetAutoRecruit` (6) | Set an owned Village's repeat flag to the absolute value 0 or 1 |
+| `UpgradeFortress` (7) | Raise an owned, unoccupied Fortress one level; `value` 0 pays materials, 1 pays metal; `villagerID = -1` |
 
 Recruit needs no worker or visitor. With pre-recruit player count N, the default
 price is `6 + 3N` food and the Village cooldown is that many seconds, converted

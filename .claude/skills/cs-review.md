@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: bdb967ed1524de151f220a3be1733bec8177e56d
 status: stable
 sources:
   - id: architecture
@@ -96,7 +96,7 @@ Read all files modified in this session, then check:
    - Simulation behavior changes bump SimulationVersion.Current, with
      balance-only edits tracked by the content hash?
      Current and the sanctioned baseline pin are 3; the v3 terrain board moved both
-     baseline fingerprints (411123996 and 2101726457).
+     baseline fingerprints, and C7 moved them again (now 647286254 and 357327383).
 
 ## Output format
 Report each category as PASS, FAIL, or N/A.
