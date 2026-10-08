@@ -50,6 +50,7 @@ namespace NodeWar.UI
         private readonly ScrollView body;
         private readonly SafeAreaBinder bottomInset;
 
+        private readonly NodeActionContent nodeActions = new NodeActionContent();
         private readonly ForgeContent forge = new ForgeContent();
         private readonly CoreContent core = new CoreContent();
         private readonly EquipContent equip = new EquipContent();
@@ -335,6 +336,12 @@ namespace NodeWar.UI
         {
             switch (district)
             {
+                case DistrictType.Village:
+                case DistrictType.Town:
+                case DistrictType.Infirmary:
+                case DistrictType.Fortress:
+                    return nodeActions;
+
                 case DistrictType.Forge:
                     return forge;
 
@@ -471,8 +478,8 @@ namespace NodeWar.UI
             if (claimLabel != null)
             {
                 if (claim == 0) claimLabel.text = "Neutral";
-                else if (claim > 0) claimLabel.text = "Player 1 · " + claim + " / " + threshold;
-                else claimLabel.text = "Player 2 · " + (-claim) + " / " + threshold;
+                else if (claim > 0) claimLabel.text = "Player 1 Â· " + claim + " / " + threshold;
+                else claimLabel.text = "Player 2 Â· " + (-claim) + " / " + threshold;
             }
 
             if (claimNote != null)

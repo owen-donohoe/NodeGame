@@ -47,6 +47,8 @@
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
     <Compile Include="CommandEligibilityTests.cs" />
+    <Compile Include="NodeActionTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/NodeActionModel.cs" Link="Gameplay/NodeActionModel.cs" />
     <Compile Include="TrophyBarLogicTests.cs" />
     <Compile Include="RankDisplayTests.cs" />
     <Compile Include="GameSettingsTests.cs" />
