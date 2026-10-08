@@ -18,6 +18,8 @@ MonoBehaviour:
     decrementMultiplier: 4
     claimThreshold: 5000
     maxClaimersPerNode: 4
+    captureBonusPercentPerStep: 25
+    captureBonusMaxSteps: 2
     respawnTicks: 50
     healIntervalTicks: 20
     breachThreshold: 3
@@ -33,6 +35,8 @@ MonoBehaviour:
     maxWorkersPerNode: 2
     maxVillagersPerPlayer: 25
     respawnCostFood: 1
+    recruitBaseCost: 6
+    recruitCostPerRecruit: 3
     foodCap: 30
     materialsCap: 30
     metalCap: 10
@@ -695,6 +699,10 @@ MonoBehaviour:
       productionTicks: 40
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -708,6 +716,10 @@ MonoBehaviour:
       productionTicks: 40
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -721,6 +733,10 @@ MonoBehaviour:
       productionTicks: 40
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -734,6 +750,10 @@ MonoBehaviour:
       productionTicks: 40
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -747,6 +767,10 @@ MonoBehaviour:
       productionTicks: 40
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -760,6 +784,10 @@ MonoBehaviour:
       productionTicks: 40
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -773,6 +801,10 @@ MonoBehaviour:
       productionTicks: 50
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -786,6 +818,10 @@ MonoBehaviour:
       productionTicks: 50
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -799,6 +835,10 @@ MonoBehaviour:
       productionTicks: 50
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -812,6 +852,10 @@ MonoBehaviour:
       productionTicks: 50
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -825,6 +869,10 @@ MonoBehaviour:
       productionTicks: 50
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -838,6 +886,10 @@ MonoBehaviour:
       productionTicks: 50
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -851,6 +903,10 @@ MonoBehaviour:
       productionTicks: 60
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -864,6 +920,10 @@ MonoBehaviour:
       productionTicks: 60
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -877,6 +937,10 @@ MonoBehaviour:
       productionTicks: 60
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -890,6 +954,10 @@ MonoBehaviour:
       productionTicks: 60
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -903,6 +971,10 @@ MonoBehaviour:
       productionTicks: 60
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -916,6 +988,10 @@ MonoBehaviour:
       productionTicks: 60
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -929,6 +1005,10 @@ MonoBehaviour:
       productionTicks: 45
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -942,6 +1022,10 @@ MonoBehaviour:
       productionTicks: 45
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -955,6 +1039,10 @@ MonoBehaviour:
       productionTicks: 45
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -968,6 +1056,10 @@ MonoBehaviour:
       productionTicks: 45
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -981,6 +1073,10 @@ MonoBehaviour:
       productionTicks: 45
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -994,6 +1090,10 @@ MonoBehaviour:
       productionTicks: 45
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1007,6 +1107,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1020,6 +1124,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1033,6 +1141,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1046,6 +1158,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1059,6 +1175,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1072,6 +1192,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1085,6 +1209,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 20
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1098,6 +1226,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 20
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1111,6 +1243,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 20
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1124,6 +1260,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 20
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1137,6 +1277,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 20
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1150,6 +1294,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 20
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1163,6 +1311,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 2
       damageReduction: 1
@@ -1176,6 +1328,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 2
       damageReduction: 1
@@ -1189,6 +1345,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 2
       damageReduction: 1
@@ -1202,6 +1362,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 2
       damageReduction: 1
@@ -1215,6 +1379,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 2
       damageReduction: 1
@@ -1228,6 +1396,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 2
       damageReduction: 1
@@ -1241,6 +1413,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1254,6 +1430,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1267,6 +1447,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1280,6 +1464,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1293,6 +1481,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1306,6 +1498,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1319,6 +1515,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1332,6 +1532,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1345,6 +1549,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1358,6 +1566,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1371,6 +1583,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1384,6 +1600,10 @@ MonoBehaviour:
       productionTicks: 0
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
       healIntervalTicks: 0
       claimDecrementMultiplier: 0
       damageReduction: 0
@@ -1392,3 +1612,513 @@ MonoBehaviour:
       claimRateDenominator: 0
       respawnBoostPerWorker: 1
       respawnCostReductionPercent: 25
+    - districtType: 15
+      era: 0
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 15
+      era: 1
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 15
+      era: 2
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 15
+      era: 3
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 15
+      era: 4
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 15
+      era: 5
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 4
+      era: 0
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 4
+      era: 1
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 4
+      era: 2
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 4
+      era: 3
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 4
+      era: 4
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 4
+      era: 5
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 16
+      era: 0
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 10
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 1
+      respawnCostReductionPercent: 20
+    - districtType: 16
+      era: 1
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 10
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 1
+      respawnCostReductionPercent: 20
+    - districtType: 16
+      era: 2
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 10
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 1
+      respawnCostReductionPercent: 20
+    - districtType: 16
+      era: 3
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 10
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 1
+      respawnCostReductionPercent: 20
+    - districtType: 16
+      era: 4
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 10
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 1
+      respawnCostReductionPercent: 20
+    - districtType: 16
+      era: 5
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 10
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 1
+      respawnCostReductionPercent: 20
+    - districtType: 17
+      era: 0
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 0000000004000000080000000c000000i
+      fortressMetalCosts: 00000000010000000200000003000000i
+      fortressResistancePercent: 00000000190000002800000032000000i
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 17
+      era: 1
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 0000000004000000080000000c000000i
+      fortressMetalCosts: 00000000010000000200000003000000i
+      fortressResistancePercent: 00000000190000002800000032000000i
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 17
+      era: 2
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 0000000004000000080000000c000000i
+      fortressMetalCosts: 00000000010000000200000003000000i
+      fortressResistancePercent: 00000000190000002800000032000000i
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 17
+      era: 3
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 0000000004000000080000000c000000i
+      fortressMetalCosts: 00000000010000000200000003000000i
+      fortressResistancePercent: 00000000190000002800000032000000i
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 17
+      era: 4
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 0000000004000000080000000c000000i
+      fortressMetalCosts: 00000000010000000200000003000000i
+      fortressResistancePercent: 00000000190000002800000032000000i
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 17
+      era: 5
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 0000000004000000080000000c000000i
+      fortressMetalCosts: 00000000010000000200000003000000i
+      fortressResistancePercent: 00000000190000002800000032000000i
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 14
+      era: 0
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 14
+      era: 1
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 14
+      era: 2
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 14
+      era: 3
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 14
+      era: 4
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 14
+      era: 5
+      productionTicks: 0
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
