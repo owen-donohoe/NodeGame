@@ -46,6 +46,7 @@ namespace NodeWar.View
 
         private readonly List<LineRenderer> pool = new List<LineRenderer>();
         private readonly List<Vector3> remainder = new List<Vector3>();
+        private readonly List<Vector3> routeWaypoints = new List<Vector3>();
 
         // Villagers whose route has already been drawn this frame, kept apart by
         // side: an opponent route is compared only over the stretch that is
@@ -59,6 +60,9 @@ namespace NodeWar.View
         // simulation.
         private float[] routeOrderedAt;
         private int[] lastTargetNode;
+        private bool[] lastInterrupted;
+        private float[] interruptedAt;
+        private OrderPresentation.Route[] presentedRoutes;
 
         private readonly OpponentRouteGate opponentGate = new OpponentRouteGate();
 
@@ -68,6 +72,7 @@ namespace NodeWar.View
         private float lastNodeSpacing;
 
         private Material dashMaterial;
+        private Material dotMaterial;
         private SortingLayer[] sortingLayers;
 
         private readonly Gradient gradient = new Gradient();
@@ -143,10 +148,9 @@ namespace NodeWar.View
                 // inheriting the old one already-faded age.
                 if (mine) TrackOrderTime(i, villager);
 
-                if (villager.isConsumed) continue;
-                if (villager.state != VillagerState.Moving) continue;
-                if (villager.movePath == null || villager.movePath.Length < 2) continue;
-                if (villager.movePathIndex + 1 >= villager.movePath.Length) continue;
+                var route = OrderPresentation.BuildRoute(simState, villager, mine, opponentSettings.revealLegs);
+                presentedRoutes[i] = route;
+                if (route.nodes.Length < 2 && !route.intentMarker) continue;
 
                 float screenAlpha = 1f;
                 if (!mine && !OpponentRouteVisible(villager, out screenAlpha)) continue;
@@ -156,7 +160,11 @@ namespace NodeWar.View
                 int compareNodes = mine ? int.MaxValue : opponentSettings.revealLegs + 1;
 
                 if (AlreadyDrawn(i, mine ? drawnOwn : drawnOpponent, compareNodes)) continue;
-                if (!BuildRemainder(villager, i, mine, legs)) continue;
+                if (villager.state == VillagerState.Moving)
+                {
+                    if (!BuildRemainder(villager, i, mine, legs)) continue;
+                }
+                else if (!BuildInterruptedRemainder(route)) continue;
                 if (remainder.Count < 2) continue;
 
                 DrawRoute(used, i, mine, screenAlpha);
@@ -228,9 +236,64 @@ namespace NodeWar.View
         {
             VillagerData va = simState.villagers[a];
             VillagerData vb = simState.villagers[b];
+            if (OrderPresentation.Interrupted(va) != OrderPresentation.Interrupted(vb)) return false;
+            bool mine = va.ownerID == localPlayerID;
+            if (mine && va.targetNodeID != vb.targetNodeID) return false;
+            if (presentedRoutes[a].intentConnector != presentedRoutes[b].intentConnector) return false;
+            if (presentedRoutes[a].intentMarker != presentedRoutes[b].intentMarker) return false;
+            return RouteReveal.SameRoute(presentedRoutes[a].nodes, 0,
+                                         presentedRoutes[b].nodes, 0, compareNodes);
+        }
 
-            return RouteReveal.SameRoute(va.movePath, va.movePathIndex,
-                                         vb.movePath, vb.movePathIndex, compareNodes);
+        private bool ReadWaypoints(int[] nodes)
+        {
+            routeWaypoints.Clear();
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                int node = nodes[i];
+                if (node < 0 || node >= villagerPositioners.Length || villagerPositioners[node] == null) return false;
+                Vector3 point = villagerPositioners[node].transform.position;
+                point.y = settings.lineHeight;
+                routeWaypoints.Add(point);
+            }
+            return routeWaypoints.Count >= 2;
+        }
+
+        private bool BuildInterruptedRemainder(OrderPresentation.Route route)
+        {
+            if (route.intentMarker)
+            {
+                int node = route.nodes[0];
+                if (node < 0 || node >= villagerPositioners.Length || villagerPositioners[node] == null) return false;
+                Vector3 center = villagerPositioners[node].transform.position;
+                center.y = settings.lineHeight;
+                remainder.Clear();
+                float radius = Mathf.Max(0.01f, settings.intentMarkerRadius);
+                for (int i = 0; i < 24; i++)
+                {
+                    float angle = i * Mathf.PI * 2f / 24;
+                    remainder.Add(center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius));
+                }
+                return true;
+            }
+            if (!ReadWaypoints(route.nodes)) return false;
+            remainder.Clear();
+            if (route.intentConnector) remainder.AddRange(routeWaypoints);
+            else
+            {
+                PathCurve.Build(routeWaypoints, settings.cornerRadius, settings.cornerSegments);
+                for (int i = 0; i < PathCurve.PointCount; i++) remainder.Add(PathCurve.GetPoint(i));
+            }
+            lastNodeSpacing = (routeWaypoints[1] - routeWaypoints[0]).magnitude;
+            MeasureStub();
+            return true;
+        }
+
+        private void MeasureStub()
+        {
+            lastStubLength = 0f;
+            for (int i = 1; i < remainder.Count; i++)
+                lastStubLength += (remainder[i] - remainder[i - 1]).magnitude;
         }
 
         /// <summary>
@@ -249,7 +312,13 @@ namespace NodeWar.View
         private bool BuildRemainder(VillagerData villager, int villagerIndex, bool mine, int legs)
         {
             if (!RouteCurveCache.TryGetCurrent(villagerIndex, villager.movePath, out List<Vector3> curvePoints, out List<int> curveLegStarts))
-                return false;
+            {
+                // Rollback can replace a path before the sprite has populated its cache.
+                if (!ReadWaypoints(villager.movePath)) return false;
+                PathCurve.Build(routeWaypoints, settings.cornerRadius, settings.cornerSegments);
+                RouteCurveCache.Store(villagerIndex, villager.movePath);
+                if (!RouteCurveCache.TryGetCurrent(villagerIndex, villager.movePath, out curvePoints, out curveLegStarts)) return false;
+            }
 
             int fromNode = villager.movePath[villager.movePathIndex];
             int toNode = villager.movePath[villager.movePathIndex + 1];
@@ -282,9 +351,7 @@ namespace NodeWar.View
                 remainder[i] = p;
             }
 
-            lastStubLength = 0f;
-            for (int i = 1; i < remainder.Count; i++)
-                lastStubLength += (remainder[i] - remainder[i - 1]).magnitude;
+            MeasureStub();
 
             return true;
         }
@@ -310,6 +377,8 @@ namespace NodeWar.View
         private void DrawRoute(int slot, int villagerIndex, bool mine, float screenAlpha)
         {
             LineRenderer line = GetLine(slot);
+            line.loop = presentedRoutes[villagerIndex].intentMarker;
+            line.sharedMaterial = EnsureDashMaterial(presentedRoutes[villagerIndex].intentConnector);
 
             float width = mine ? settings.lineWidth : settings.lineWidth * opponentSettings.widthScale;
 
@@ -338,6 +407,16 @@ namespace NodeWar.View
                     : 1f;
 
                 float alpha = Mathf.Lerp(settings.freshAlpha, settings.settledAlpha, settled);
+                var villager = simState.villagers[villagerIndex];
+                bool reducedMotion = NodeWar.Lobby.PlayerProfile.Instance != null &&
+                    NodeWar.Lobby.PlayerProfile.Instance.Settings.reducedMotion;
+                var style = OrderPresentation.Style(villager, Time.time - interruptedAt[villagerIndex], reducedMotion);
+                if (style.amber)
+                {
+                    color = settings.interruptedColor;
+                    float fade = (1f - style.alpha) / 0.75f;
+                    alpha = Mathf.Lerp(Mathf.Max(0.25f, alpha), 0.25f, fade);
+                }
                 // Flat: no distance fade on your own routes, and no off-screen
                 // dimming either -- your own intent is yours to see.
                 ApplyGradient(line, color, alpha, alpha, 1f, 1f);
@@ -451,9 +530,10 @@ namespace NodeWar.View
         /// sprite, so this needs no asset and no serialized reference -- the same
         /// reason VillagerTouchTarget builds its collider at runtime.
         /// </summary>
-        private Material EnsureDashMaterial()
+        private Material EnsureDashMaterial(bool dotted = false)
         {
-            if (dashMaterial != null) return dashMaterial;
+            Material existing = dotted ? dotMaterial : dashMaterial;
+            if (existing != null) return existing;
 
             Texture2D texture = new Texture2D(8, 1, TextureFormat.RGBA32, false);
             texture.wrapMode = TextureWrapMode.Repeat;
@@ -461,15 +541,16 @@ namespace NodeWar.View
 
             for (int x = 0; x < 8; x++)
             {
-                bool ink = x < 4;
+                bool ink = x < (dotted ? 1 : 4);
                 texture.SetPixel(x, 0, new Color(1f, 1f, 1f, ink ? 1f : 0f));
             }
             texture.Apply();
 
-            dashMaterial = new Material(Shader.Find("Sprites/Default"));
-            dashMaterial.mainTexture = texture;
-
-            return dashMaterial;
+            var material = new Material(Shader.Find("Sprites/Default"));
+            material.mainTexture = texture;
+            if (dotted) dotMaterial = material;
+            else dashMaterial = material;
+            return material;
         }
 
         /// <summary>
@@ -484,6 +565,8 @@ namespace NodeWar.View
 
             float[] grownTimes = new float[count];
             int[] grownTargets = new int[count];
+            var grownInterrupted = new bool[count];
+            var grownInterruptedTimes = new float[count];
 
             for (int i = 0; i < count; i++)
                 grownTargets[i] = -1;
@@ -494,15 +577,24 @@ namespace NodeWar.View
                 {
                     grownTimes[i] = routeOrderedAt[i];
                     grownTargets[i] = lastTargetNode[i];
+                    grownInterrupted[i] = lastInterrupted[i];
+                    grownInterruptedTimes[i] = interruptedAt[i];
                 }
             }
 
             routeOrderedAt = grownTimes;
             lastTargetNode = grownTargets;
+            lastInterrupted = grownInterrupted;
+            interruptedAt = grownInterruptedTimes;
+            presentedRoutes = new OrderPresentation.Route[count];
         }
 
         private void TrackOrderTime(int villagerIndex, VillagerData villager)
         {
+            bool interrupted = OrderPresentation.Interrupted(villager);
+            if (lastInterrupted[villagerIndex] != interrupted || lastTargetNode[villagerIndex] != villager.targetNodeID)
+                interruptedAt[villagerIndex] = Time.time;
+            lastInterrupted[villagerIndex] = interrupted;
             if (lastTargetNode[villagerIndex] == villager.targetNodeID) return;
 
             lastTargetNode[villagerIndex] = villager.targetNodeID;
@@ -511,6 +603,11 @@ namespace NodeWar.View
 
         private void OnDestroy()
         {
+            if (dotMaterial != null)
+            {
+                if (dotMaterial.mainTexture != null) Destroy(dotMaterial.mainTexture);
+                Destroy(dotMaterial);
+            }
             if (dashMaterial != null)
             {
                 if (dashMaterial.mainTexture != null) Destroy(dashMaterial.mainTexture);

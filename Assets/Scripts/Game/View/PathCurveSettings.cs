@@ -80,5 +80,10 @@ namespace NodeWar.View
                  "opacity, so the order just given reads loudest.")]
         [Range(0.5f, 15f)]
         public float settleSeconds = 4f;
+
+        [Tooltip("Colour of a live order interrupted by combat or an unavailable route.")]
+        public Color interruptedColor = new Color(1f, 0.65f, 0.15f, 1f);
+        [Tooltip("Radius of the local intent marker at an interrupted enemy Core.")]
+        public float intentMarkerRadius = 0.22f;
     }
 }

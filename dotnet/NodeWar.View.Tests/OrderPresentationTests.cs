@@ -70,6 +70,36 @@ namespace NodeWar.View.Tests
             Assert.IsTrue(Field<bool>(style, "amber"));
         }
         [Test]
+        public void InterruptedCore_IsLocalIntentMarkerAtQuarterAlpha()
+        {
+            var s = Board(); s.villagers[0].currentNodeID = 4; s.villagers[0].targetNodeID = 4;
+            s.villagers[0].movePath = new int[0];
+            var route = Route(s);
+            Assert.IsTrue(Field<bool>(route, "intentMarker"));
+            Assert.IsFalse(Field<bool>(route, "intentConnector"));
+            CollectionAssert.AreEqual(new[] { 4 }, Field<int[]>(route, "nodes"));
+            var style = Call("Style", s.villagers[0], 0.35f, false);
+            Assert.IsTrue(Field<bool>(style, "amber"));
+            Assert.IsTrue(Field<bool>(style, "visible"));
+            Assert.AreEqual(0.25f, Field<float>(style, "alpha"), 0.0001f);
+            Assert.IsEmpty(s.villagers[0].movePath);
+        }
+        [Test]
+        public void CoreMarker_RollbackRebuildsFromCurrentState()
+        {
+            var s = Board(); s.villagers[0].currentNodeID = 4; s.villagers[0].targetNodeID = 4;
+            s.villagers[0].movePath = new int[0];
+            var saved = new SimulationState(); saved.CopyFrom(s);
+            Assert.IsTrue(Field<bool>(Route(s), "intentMarker"));
+            s.villagers[0].targetNodeID = 3;
+            Assert.IsFalse(Field<bool>(Route(s), "intentMarker"));
+            CollectionAssert.AreEqual(new[] { 4, 3 }, Field<int[]>(Route(s), "nodes"));
+            s.CopyFrom(saved);
+            Assert.IsTrue(Field<bool>(Route(s), "intentMarker"));
+            CollectionAssert.AreEqual(new[] { 4 }, Field<int[]>(Route(s), "nodes"));
+            Assert.IsEmpty(s.villagers[0].movePath);
+        }
+        [Test]
         public void OpponentInterruptedRoute_StillTruncated()
         {
             var s = Board(); s.villagers[0].targetNodeID = 3;

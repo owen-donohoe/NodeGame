@@ -96,6 +96,25 @@ namespace NodeWar.Tests
             }
             return result;
         }
+        private static SimulationState ContestedDestination()
+        {
+            var s = Board(); s.villagers[0].currentNodeID = 1; Enemy(s, 2);
+            Order(s, 2);
+            for (int i = 0; i < balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(s);
+            Assert.AreEqual(2, s.villagers[0].currentNodeID);
+            Assert.AreEqual(VillagerState.Fighting, s.villagers[0].state);
+            Assert.AreEqual(2, s.villagers[0].targetNodeID);
+            Assert.AreEqual(0, s.players[0].food);
+            s.villagers[0].attackCooldownRemaining = 1; s.villagers[1].hp = 1;
+            GameSimulation.SimulateTick(s);
+            Assert.AreEqual(VillagerState.Working, s.villagers[0].state);
+            Assert.AreEqual(-1, s.villagers[0].targetNodeID);
+            Assert.AreEqual(0, s.players[0].food);
+            Assert.AreEqual(s.villagers[0].productionTicksMax, s.villagers[0].productionTicksRemaining);
+            return s;
+        }
+        [Test] public void ContestedDestination_RetainsIntentUntilArrivalActionBegins() => ContestedDestination();
+        [Test] public void ContestedDestination_RetainsIntentUntilArrivalActionBegins_Determinism() => Determinism(ContestedDestination);
         private static SimulationState Unreachable()
         {
             var s = Board(false); Order(s, 1);

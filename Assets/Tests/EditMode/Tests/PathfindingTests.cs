@@ -68,8 +68,6 @@ namespace NodeWar.Tests
 
             state.nodes[1].links = new Link[] { new Link { toNodeID = 0, travelWeight = 1 } };
 
-            int before = SimulationStateHasher.ComputeHash(state);
-
             CommandProcessor.ProcessCommand(state, new GameCommand
             {
                 type = CommandType.Move,
@@ -80,10 +78,13 @@ namespace NodeWar.Tests
                 value = 0
             });
 
-            // The empty path is refused before ApplyMove, so the villager is not
-            // left Moving along a path it cannot walk.
+            // The valid intent survives an empty path; no travel begins until retry succeeds.
             Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
-            Assert.AreEqual(before, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(0, state.villagers[0].currentNodeID);
+            Assert.AreEqual(2, state.villagers[0].targetNodeID);
+            Assert.IsEmpty(state.villagers[0].movePath);
+            Assert.AreEqual(0, state.villagers[0].movePathIndex);
+            Assert.AreEqual(0, state.villagers[0].moveProgress);
         }
 
         // ===== TIE-BREAKING =====

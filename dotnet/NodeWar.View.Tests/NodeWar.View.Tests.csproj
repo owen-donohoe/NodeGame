@@ -57,6 +57,7 @@
              Link="View/BreachTempoMath.cs" />
 
     <Compile Include="OrderPresentationTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/OrderPresentation.cs" Link="View/OrderPresentation.cs" />
     <Compile Include="RouteRevealTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/RouteReveal.cs"
              Link="View/RouteReveal.cs" />
