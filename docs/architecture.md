@@ -6,14 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:24Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:27Z }
-verified_at_commit: 5fa33d94
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:47Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
   - id: sim-state
@@ -603,6 +597,13 @@ paid-respawn count, all covered by hashing and rollback copy. Breach wins
 require a new breach at the current threshold; a sudden-death drop alone
 does not lose a match, and simultaneous losses cancel.
 
+Recruit and SetAutoRecruit are node commands validated through `NodeActionRules`.
+The command processor spends food and appends recruits; the automatic pass calls
+the same recruit path after ordinary production and before healing, in ascending
+node ID. Player `recruitCount` persists for the match; each Village's
+`recruitReadyTick` and `autoRecruit` reset on ownership loss. All three fields are
+hashed and copied. Village capture itself no longer spawns bonus villagers.
+
 ### What a tick did
 
 Beside the state it produces, a tick can report the moments it passed through,
@@ -730,6 +731,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `CommandProcessor` — validates and applies a `GameCommand` to
   `SimulationState`.
 - `Commands.cs` — `GameCommand` struct and `CommandType` enum.
+- `NodeActionRules` — read-only Village recruitment and repeat-toggle eligibility,
+  population counting (dead included, consumed excluded), and enemy presence.
 - `Pathfinding` — Dijkstra over the node graph with ownership-based
   integer cost multipliers.
 - `MatchFactory` — builds a match's tick-0 state from board, draft and
