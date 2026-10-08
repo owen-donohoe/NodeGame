@@ -6,8 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: ad9bbcccabaec8ef063ff431e3f821b4bc549663
 status: stable
 sources:
   - id: contract
@@ -107,6 +107,9 @@ Read the changed or proposed code, then check each item:
      breach frontier) read the tick-start owner snapshot, not live owners? Are
      rates computed in long and bounded, so node order and large balances
      cannot change or overflow a result?
+   - A Town reward is paid inside the claim-complete step, with its entitlement
+     spent before the population-cap check (no deferred credit), tracked by the
+     hashed `townPaidMask`.
    - Auto-recruit follows ordinary production and precedes healing, in ascending
      node ID. Commands and the automatic pass share eligibility and mutation;
      recruitment cooldown is not tempo-scaled.
@@ -136,6 +139,10 @@ Read the changed or proposed code, then check each item:
      the two numeric baseline hashes for the short, non-breaching fixtures; the v3
      re-pin (terrain board) moved both, to 411123996 and 2101726457, because
      boardHash and terrain are always hashed.
+   - DistrictType numbers are persisted and explicit: active set 0-6 and 13-17
+     (DistrictRoster.IsActive), retired numbers reserved. Does any new path accept
+     an inactive type or an alias? Only DistrictMigration (saved data) maps old
+     numbers, and the log reader refuses inactive types for simulation version 3 and later.
    - Board data (terrain, slot mask, base pools, placements, link tuning) is
      identity, not state: does a new BoardConfigData field reach BoardHasher, so
      boardHash and MatchSetup see it, and BOARD_V2 (or a new tag) so the log

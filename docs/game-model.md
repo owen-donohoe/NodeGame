@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
-verified_at_commit: 048597d1
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
+verified_at_commit: ad9bbcccabaec8ef063ff431e3f821b4bc549663
 status: draft
 sources:
   - id: sim-state
@@ -163,7 +163,7 @@ either way.
 claimer owned minus the number the opponent owned, taken at the **start of the tick** and clamped
 between 0 and `captureBonusMaxSteps` (code defaults 25% and 2, so up to 150%). Ground next to your
 own territory falls faster; a node behind enemy lines gets no bonus. The same frontier percentage
-scales breach progress against a Core. The Watchtower's adjacent-claim boost and the Rampart's
+scales breach progress against a Core. The Watchtower's (now retired) adjacent-claim boost and the Rampart's
 decrement reduction no longer exist in claiming; the capture bonus replaces the first.
 
 The current tempo percentage then scales the claim rate, using integer division. A node with
@@ -175,8 +175,8 @@ the bar back toward the threshold at the ordinary claim rate, tempo-scaled but w
 decrement multiplier or capture bonus. Cores do not restore.
 
 When a claim completes, a non-`Fixed` node becomes whichever district the claiming player drafted
-for that slot type, falling back to the node's `baseDistrictType`. Village claims
-do not spawn bonus villagers.
+for that slot type, falling back to the node's `baseDistrictType`. A completed claim on a
+`Town` pays that player a one-time bonus (below); Villages pay nothing on capture.
 
 ## Districts
 
@@ -192,15 +192,24 @@ places every district as `Fixed`, so those districts keep their type and placer'
 | `Mine` | Fixed | Miner works it → +1 material |
 | `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0` |
 | `Village` | Fixed | Paid Recruit action and optional automatic repeat; no claim bonus |
-| `Camp` | Army | Equip Warrior or Scout |
+| `Town` | Fixed | One-time reward: the first full claim by each player spawns `townBonusVillagers` (code default 2, per era) at the Town, limited by room under the population cap. The entitlement is spent even if the cap leaves nothing to pay, and never deferred. A player taking the enemy's Town is paid too. Afterwards the Town does nothing |
 | `Barracks` | Army | Equip Warrior, Guardian, Berserker or Scout |
-| `Arsenal` | Army | Equip Warrior, Guardian or Scout |
-| `Shrine` | Healing | Faster passive healing for its owner's villagers standing on it |
-| `Sanctuary` | Healing | Acolyte works it → faster respawns; also the only Medic equip point |
-| `Watchtower` | Affect | Watcher works it. Its claim boost was retired in favour of the capture bonus; its stats are still in the balance but no tick rule reads them |
-| `Rampart` | Affect | Owner's occupants gain max HP and damage reduction |
+| `Infirmary` | Healing | Placeholder: in the roster and draftable, with no effect yet |
+| `Fortress` | Affect | Placeholder: in the roster and draftable, with no effect yet |
 | `Market` | ResourceSpecial | Merchant works it → alternates +1 food and +1 material |
 | `Pier` | Fixed | Drafted only on a Lake slot. Turns that cell into a node that connects its land neighbours; grants nothing and blocks nobody |
+
+**The active roster** is `DistrictType` values 0–6 and 13–17 (`DistrictRoster.IsActive`): None,
+Farm, Mine, Village, Barracks, Core, Forge, Market, Pier, Town, Infirmary, Fortress. The draft, a
+board's placements and base pools, a loadout and a match log accept only these; nothing is
+accepted by an alias. Seven numbers are retired and stay reserved, never reused: Camp 7 and
+Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary), Rampart 12 (now Fortress) and
+Watchtower 11 (now an empty slot). Saved decks and inventories are converted once
+(`DistrictMigration`, in `Backend/Shared`), keeping the old item owned, adding the replacement at
+the same era and collapsing duplicates. The old Camp, Arsenal, Shrine, Sanctuary and Rampart rules
+still exist in the simulation code for the historical numbers, but no new match can contain those
+districts, so the Medic has no equip point and the Acolyte and Watcher no workplace. Combat and
+respawn text below that mentions them describes those retained rules.
 
 ## Suits
 
