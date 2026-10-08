@@ -16,6 +16,25 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
+        public void ConfiguredBoundsNeverClipTheNodeGrid()
+        {
+            // The asset's camera bounds were authored for the old 4x7 board. The shipped
+            // hourglass is 7x7 at the same spacing: its far edge sits at 36, past the old 30.
+            BoardFraming.ExpandBounds(-10f, 30f, 7, 6f, out float minX, out float maxX);
+            Assert.GreaterOrEqual(maxX, 36f + 6f, "a cell of margin beyond the last column");
+            Assert.LessOrEqual(minX, -6f, "and before the first");
+            Assert.LessOrEqual(minX, -10f, "bounds the asset already allows are kept");
+
+            BoardFraming.ExpandBounds(-15f, 45f, 7, 6f, out float minZ, out float maxZ);
+            Assert.AreEqual(-15f, minZ, 1e-5f);
+            Assert.AreEqual(45f, maxZ, 1e-5f, "already roomy enough: unchanged");
+
+            BoardFraming.ExpandBounds(-12f, 12f, 3, 4f, out float a, out float b);
+            Assert.AreEqual(-12f, a, 1e-5f);
+            Assert.AreEqual(12f, b, 1e-5f);
+        }
+
+        [Test]
         public void FitIsReachedAtOrNearTheFarthestZoom()
         {
             Assert.IsTrue(BoardFraming.IsAtFit(30f, 30f));

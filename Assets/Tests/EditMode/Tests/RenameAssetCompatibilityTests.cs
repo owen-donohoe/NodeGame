@@ -20,6 +20,7 @@ namespace NodeWar.Tests
     {
         private const string DefinitionScriptGuid = "96268278c45b7e843a0bc05b0f2dc522"; // was NodeDefinition.cs
         private const string PositionerScriptGuid = "2d61d348016264d438b84b725d8a56fc"; // was NodeSlotManager.cs
+        private const string BoardConfigScriptGuid = "7dfee6c68e0ca34469b710921eaf766d"; // BoardConfig.cs, never moved
 
         private static SerializedProperty Find(SerializedObject so, params string[] names)
         {
@@ -42,25 +43,45 @@ namespace NodeWar.Tests
         [Test]
         public void MovedScripts_KeepGuidAndSerializedValues()
         {
-            // Board: numbers and the base draft lists.
+            // Board: the script keeps its GUID, and the asset is in one of two states. As first
+            // saved it still holds the old 4x7 grid and base draft lists. After the
+            // "Migrate BoardConfig To Map ID" command it names a shipped map and holds none of
+            // that. Either way its presentation numbers and bot loadout are untouched.
             var board = AssetDatabase.LoadAssetAtPath<ScriptableObject>("Assets/Data/Game/Board/DefaultBoardConfig.asset");
             Assert.IsNotNull(board);
+            Assert.AreEqual(BoardConfigScriptGuid, GuidOfScript(board));
             var boardObject = new SerializedObject(board);
-            Assert.AreEqual(4, Find(boardObject, "data.gridCols").intValue);
-            Assert.AreEqual(7, Find(boardObject, "data.gridRows").intValue);
-            Assert.AreEqual(4, Find(boardObject, "data.defaultLinkWeight", "data.defaultEdgeWeight").intValue);
-            Assert.AreEqual(2, Find(boardObject, "data.initialPlacements").arraySize);
-            foreach (string[] names in new[]
+            SerializedProperty mapId = boardObject.FindProperty("mapId");
+            bool migrated = mapId != null && mapId.stringValue == "hourglass-01" &&
+                Find(boardObject, "data.gridCols").intValue == 0;
+            if (!migrated)
             {
-                new[] { "baseDraftDistrictsP0", "baseDraftNodesP0" },
-                new[] { "baseDraftDistrictsP1", "baseDraftNodesP1" }
-            })
-            {
-                SerializedProperty list = Find(boardObject, names);
-                Assert.AreEqual(3, list.arraySize);
-                for (int i = 0; i < 3; i++)
-                    Assert.AreEqual(i + 1, list.GetArrayElementAtIndex(i).FindPropertyRelative("districtType").intValue);
+                Assert.AreEqual(4, Find(boardObject, "data.gridCols").intValue);
+                Assert.AreEqual(7, Find(boardObject, "data.gridRows").intValue);
+                Assert.AreEqual(4, Find(boardObject, "data.defaultLinkWeight", "data.defaultEdgeWeight").intValue);
+                Assert.AreEqual(2, Find(boardObject, "data.initialPlacements").arraySize);
+                foreach (string[] names in new[]
+                {
+                    new[] { "baseDraftDistrictsP0", "baseDraftNodesP0" },
+                    new[] { "baseDraftDistrictsP1", "baseDraftNodesP1" }
+                })
+                {
+                    SerializedProperty list = Find(boardObject, names);
+                    Assert.AreEqual(3, list.arraySize);
+                    for (int i = 0; i < 3; i++)
+                        Assert.AreEqual(i + 1, list.GetArrayElementAtIndex(i).FindPropertyRelative("districtType").intValue);
+                }
             }
+            else
+            {
+                Assert.AreEqual(0, Find(boardObject, "data.gridRows").intValue);
+                Assert.AreEqual(0, Find(boardObject, "data.initialPlacements").arraySize);
+                Assert.AreEqual(0, Find(boardObject, "baseDraftDistrictsP0", "baseDraftNodesP0").arraySize);
+                Assert.AreEqual(0, Find(boardObject, "baseDraftDistrictsP1", "baseDraftNodesP1").arraySize);
+            }
+            Assert.AreEqual(6f, Find(boardObject, "nodeScale").floatValue);
+            Assert.AreEqual(15f, Find(boardObject, "draftTurnDuration").floatValue);
+            Assert.AreEqual(2, Find(boardObject, "maxConsecutiveTimeouts").intValue);
             Assert.AreEqual(0, Find(boardObject, "botLoadoutDistricts", "botLoadoutNodes").arraySize);
 
             // Definition assets: script GUID, ID string and name.

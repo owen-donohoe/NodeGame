@@ -53,20 +53,26 @@ namespace NodeWar.Network.Tests
 
         public static GameBalanceData Balance;
 
-        public static void Configure()
+        /// <summary>The board the match is played on. The default is the tiny 3x3 land fixture.</summary>
+        public BoardConfigData Board = BoardFixtures.LandGrid3x3();
+
+        /// <summary>The draft both peers and the reference start from, legal on <see cref="Board"/>.</summary>
+        public DraftPlacement[] Draft =
+        {
+            new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
+            new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
+        };
+
+        public void Configure()
         {
             Balance = GameBalanceData.Default();
-            MatchFactory.Configure(Balance, BoardFixtures.LandGrid3x3());
+            MatchFactory.Configure(Balance, Board);
         }
 
-        private static SimulationState NewState()
+        private SimulationState NewState()
         {
-            BoardConfigData board = BoardFixtures.LandGrid3x3();
-            DraftPlacement[] draft =
-            {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
-                new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 2, gridZ = 1 }
-            };
+            BoardConfigData board = Board;
+            DraftPlacement[] draft = Draft;
             return MatchFactory.Build(Balance, board, draft, new[]
             {
                 new PlayerSetup { suits = new[] { (int)SuitType.Warrior }, districts = new int[0] },

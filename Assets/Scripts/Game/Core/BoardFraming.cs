@@ -19,6 +19,19 @@ namespace NodeWar.Core
             z = (rows - 1) * nodeScale * 0.5f;
         }
 
+        /// <summary>
+        /// One axis of the camera's pan bounds: whatever the BoardConfig asset says, widened if
+        /// it would clip the node grid. The asset's numbers were authored for one board; the map
+        /// is now a catalog value, so the grid (with one cell of margin) wins when it is larger.
+        /// </summary>
+        public static void ExpandBounds(float configuredMin, float configuredMax, int count, float nodeScale,
+            out float min, out float max)
+        {
+            float gridMax = (count - 1) * nodeScale;
+            min = configuredMin < -nodeScale ? configuredMin : -nodeScale;
+            max = configuredMax > gridMax + nodeScale ? configuredMax : gridMax + nodeScale;
+        }
+
         public static bool IsAtFit(float targetZoom, float maxZoom)
         {
             return targetZoom >= maxZoom * AtFitFraction;
