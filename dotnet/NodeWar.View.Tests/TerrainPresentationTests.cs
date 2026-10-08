@@ -29,6 +29,29 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
+        public void TerrainAndCuesDrawBelowDraftPieces()
+        {
+            Assert.Less(TerrainPresentation.GroundSortingOrder, TerrainPresentation.TintSortingOrder);
+            Assert.Less(TerrainPresentation.TintSortingOrder, TerrainPresentation.OutlineSortingOrder);
+            Assert.Less(TerrainPresentation.OutlineSortingOrder, 0, "Draft preview groups use order zero.");
+        }
+
+        [TestCase(DistrictType.Farm, 1, 1)]
+        [TestCase(DistrictType.Pier, 1, 3)]
+        public void PlacementRemovesBothCuesFromTheOccupiedCell(DistrictType pick, int x, int z)
+        {
+            var draft = new DraftState(Board);
+            draft.player0Picks = new[] { new DraftPick { districtType = pick } };
+            var before = TerrainPresentation.Describe(Board, null, true, pick);
+            Assert.IsTrue(At(before, x, z).tint && At(before, x, z).outline);
+            draft.Apply(0, 0, x, z, false);
+            var after = TerrainPresentation.Describe(Board, draft.confirmedPlacements.ToArray(), true, pick);
+            Assert.IsFalse(At(after, x, z).tint || At(after, x, z).outline);
+            Assert.IsFalse(TerrainPresentation.Describe(Board, draft.confirmedPlacements.ToArray(), false, pick)
+                .Any(c => c.tint || c.outline));
+        }
+
+        [Test]
         public void RuntimeEntryPathsBuildTerrainAndUseTheFactory()
         {
             string game = Source("Assets/Scripts/Game/Core/GameManager.cs");

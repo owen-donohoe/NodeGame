@@ -45,6 +45,11 @@ namespace NodeWar.View
     /// </summary>
     public static class TerrainPresentation
     {
+        // Transparent terrain must draw before cues, and cues before district groups (order 0).
+        public const int GroundSortingOrder = -3;
+        public const int TintSortingOrder = -2;
+        public const int OutlineSortingOrder = -1;
+
         /// <summary>
         /// Describes every cell, row-major. <paramref name="placed"/> are the draft placements so
         /// far (they occupy cells, and a Pier on a Lake slot makes it a node target); the board's

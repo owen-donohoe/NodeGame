@@ -7,7 +7,7 @@ namespace NodeWar.View
 {
     /// <summary>
     /// The board's terrain as plain runtime geometry, so the map reads before any art exists:
-    /// ocean and lake as flat tiles, a faint frame on the one empty pier slot, a highlight on
+    /// ocean and lake as flat tiles, a draft-only cue on the empty pier slot, a highlight on
     /// every cell the piece in hand may legally take, and a bridge where a Pier stands.
     ///
     /// Every decision comes from <see cref="TerrainPresentation"/>, which asks
@@ -23,7 +23,6 @@ namespace NodeWar.View
         private static readonly Color OceanColor = new Color(0.05f, 0.16f, 0.30f, 1f);
         private static readonly Color LakeColor = new Color(0.16f, 0.46f, 0.66f, 1f);
         private static readonly Color LandColor = new Color(0.38f, 0.43f, 0.29f, 1f);
-        private static readonly Color SlotFrameColor = new Color(0.85f, 0.95f, 1f, 0.55f);
         private static readonly Color LegalTint = new Color(0.30f, 0.90f, 0.45f, 0.38f);
         private static readonly Color LegalOutline = new Color(1f, 0.95f, 0.35f, 1f);
         private static readonly Color PlankColor = new Color(0.55f, 0.38f, 0.20f, 1f);
@@ -110,10 +109,7 @@ namespace NodeWar.View
                 Color color = terrain == TerrainType.Ocean ? OceanColor : terrain == TerrainType.Lake ? LakeColor : LandColor;
                 MakeQuad(terrain + "_" + x + "_" + z, tiles, Center(x, z, GroundY), nodeScale, color);
 
-                // The empty pier slot keeps a faint frame, so the way across is visible
-                // before anyone drafts a bridge.
-                if (terrain == TerrainType.Lake && board.districtSlots[cell])
-                    MakeOutline("PierSlot_" + x + "_" + z, tiles, Center(x, z, GroundY + 0.02f), SlotFrameColor, 0.12f);
+
             }
         }
 
@@ -222,7 +218,10 @@ namespace NodeWar.View
             quad.transform.position = position;
             quad.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             quad.transform.localScale = new Vector3(size, size, 1f);
-            Tint(quad.GetComponent<Renderer>(), color);
+            Renderer renderer = quad.GetComponent<Renderer>();
+            renderer.sortingOrder = name == "Tint" ? TerrainPresentation.TintSortingOrder
+                : TerrainPresentation.GroundSortingOrder;
+            Tint(renderer, color);
             return quad;
         }
 
@@ -249,6 +248,7 @@ namespace NodeWar.View
             line.widthMultiplier = width;
             line.numCapVertices = 0;
             line.sharedMaterial = material;
+            line.sortingOrder = TerrainPresentation.OutlineSortingOrder;
             line.startColor = line.endColor = color;
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;

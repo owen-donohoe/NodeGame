@@ -380,6 +380,8 @@ namespace NodeWar.Core
         private void ApplyPlacement(int playerID, int slotIndex, int gridX, int gridZ, bool wasTimeout)
         {
             DraftPlacement placement = draftState.Apply(playerID, slotIndex, gridX, gridZ, wasTimeout);
+            // An accepted placement ends the held-pick cue, including timeout placements.
+            SetHighlightedPick(-1);
 
             if (wasTimeout)
             {
