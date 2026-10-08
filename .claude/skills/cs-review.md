@@ -6,14 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:52Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+verified_at_commit: 048597d1
 status: stable
 sources:
   - id: architecture
@@ -51,6 +45,9 @@ Read all files modified in this session, then check:
    - Do Backend/ and dotnet/NodeWarCloud/ keep rated progression,
      inventory and match settlement server-owned, with client UI using
      the async service contracts and returned state?
+   - Does the pre-draft setup (MatchSetup, MatchSetupAck, SetupAgreement) only
+     carry and compare map ID, board hash and versions, with the board itself
+     coming from the shipped PremadeMaps.Catalog rather than the wire?
    - Does Backend/Shared/ remain UnityEngine-free so the same DTOs,
      rules and service contracts compile into Cloud Code?
    - Does MatchLog/ preserve applied command order and replay through MatchFactory,
@@ -86,14 +83,15 @@ Read all files modified in this session, then check:
 6. Conventions
    - New SimulationState fields added to SimulationStateHasher and CopyFrom,
      with their explicit neutral defaults initialized by MatchFactory?
-   - New CommandType has a CommandProcessor case?
+   - New CommandType has a CommandProcessor case (Recruit and SetAutoRecruit
+     validate through NodeActionRules, which presentation may call read-only)?
    - GameCommand struct and InputSerializer updated together?
-   - Wire layout changes bump ProtocolVersion.Current in
+   - Wire layout changes (current protocol is 5) bump ProtocolVersion.Current in
      Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion aliases?
    - Simulation behavior changes bump SimulationVersion.Current, with
      balance-only edits tracked by the content hash?
-     Current and the sanctioned baseline pin are 2; numeric fingerprints
-     remained unchanged in the coordinated v2 re-pin.
+     Current and the sanctioned baseline pin are 3; the v3 terrain board moved both
+     baseline fingerprints (411123996 and 2101726457).
 
 ## Output format
 Report each category as PASS, FAIL, or N/A.

@@ -15,8 +15,8 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
-verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+verified_at_commit: 048597d1
 status: stable
 sources:
   - id: tests
@@ -73,7 +73,7 @@ integer against the recorded baseline.
 
 Two fixtures are sanctioned, both on `TestBoardFactory.BuildThreeNodeBoard` — player 0's Core
 (node 0) and player 1's Core (node 2) joined by one neutral connector (node 1), one Idle villager
-each, edge weights of 1, and `GameBalanceData.Default()`:
+each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
@@ -86,7 +86,7 @@ attested; adding a third to this table means recording and defending a new const
 
 `EmptyTick` exercises the idle path: healing fires at ticks 30/60/90 but both villagers are at
 `maxHP`, so only `tickCount` moves. `MoveAndCombat` exercises movement and combat entry: each
-villager crosses one edge at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ticks, arrives on
+villager crosses one link at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ticks, arrives on
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside

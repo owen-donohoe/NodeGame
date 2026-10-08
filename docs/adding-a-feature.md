@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:47Z }
-verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+verified_at_commit: 048597d1
 status: stable
 sources:
   - id: sim-state
@@ -109,10 +109,18 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      the neutral value explicitly (`nextBreacherID` is -1, while
      `breachBar` and `paidRespawns` start at 0).
      That preserves old hashes; avoiding a version bump also requires
-     unchanged results for those existing inputs, as with eras.
+     unchanged results for those existing inputs, as with eras. Version 3
+     is the current one; the terrain board moved both baselines.
+   - If the field describes the *board* rather than the match (terrain, slot
+     mask, base pools), it belongs on `BoardConfigData`, not on state, and it must
+     reach `BoardHasher` (so `SimulationState.boardHash` and the `MatchSetup`
+     agreement see it) and the match log. The BOARD chunk layout is frozen: board data
+     the old layout cannot hold goes in BOARD_V2 (tag 10) or a new tag.
 
 3. **Does it need a new player-triggerable action?**
    - Add a `CommandType` in `Commands.cs` if no existing type fits.
+   - Add the type to `CommandTypes.IsKnown`, the one list the serializer and
+     the log reader refuse everything else against.
    - Add a case in `CommandProcessor.ProcessCommand` that validates
      ownership/state/cost before mutating anything (follow
      `ProcessEquipCommand`'s shape: ownership check → state check → cost
@@ -143,9 +151,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Never use `UnityEngine.Random` or anything seeded from wall-clock
      time inside `Simulation/`.
    - Derive a seed from already-replicated state (tick count, player ID,
-     entity ID) — see `DraftManager.HandleTimeout`'s fallback
-     `turnNumber * 7919 + activePlayer * 31` pattern when no valid parked
-     placement exists. The chosen placement is sent to the other peer.
+     entity ID) — see `DraftState.ChooseTimeout`'s fallback
+     `turnNumber * 7919 + playerID * 31` pattern (reached from
+     `DraftManager.HandleTimeout`) when no valid parked placement exists. The chosen placement is sent to the other peer.
    - If the feature needs randomness mid-match (after `SimulationState`
      exists), any RNG state must itself live on `SimulationState` and
      only advance inside `SimulateTick`.
@@ -159,7 +167,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      `GameSimulation.AssignAllCombatTargets`).
 
 6. **Does it change array sizes at runtime (spawning new entities)?**
-   Follow the `GameSimulation.SpawnBonusVillagers` pattern:
+   Follow the `GameSimulation.SpawnBonusVillagers` pattern (it is also the body
+   spawn behind `Recruit`):
    - Allocate a new, larger array; copy existing entries into it; append
      new entries at the end; assign the new array back onto
      `SimulationState` (e.g. `state.villagers = newArray`).
@@ -180,7 +189,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    - Insert at the correct, justified step — do not append a new step at
      the end by default, and do not reorder existing steps.
    - Claiming begins with `TickBreach` before `TickClaiming`; Rampart
-     bonuses follow movement, and post-combat resume follows win-check.
+     bonuses follow movement, auto-recruit follows production, and order
+     resume (`TickOrderResume`) follows win-check.
+     Anything that depends on who owns a neighbouring node reads the
+     tick-start owner snapshot, not live owners, so node order cannot matter.
      Refresh derived `nextBreacherID` last, after all mutations this tick.
      Version 2 checks only new breaches against the current threshold;
      simultaneous losses cancel and a sudden-death drop alone is not a loss.
@@ -214,9 +226,12 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    `SuitStats` and `DistrictStats` and fails if you do not), then export
    the balance for the server (`Tools > Node War >
    Backend > Export Balance For Server`) so the referee can verify matches
-   played on it. `BalanceHasher` does not hash `BoardConfigData`; the
-   board is recorded separately in the match log. The balance content
+   played on it. `BalanceHasher` does not hash `BoardConfigData`; the board
+   is fingerprinted by `BoardHasher` (hashed into state as `boardHash`, compared in
+   `MatchSetup`) and recorded separately in the match log. The balance content
    hash is compared in the handshake, not folded into `SimulationStateHasher`.
+   If the rules depend on the number, say so in `GameBalanceData.CoreRulesValid`
+   so an overflowing balance is refused rather than played.
    Preserve absent-field behaviour: nonpositive resource caps are uncapped,
    absent tempo axes use 100%, and a disabled breach channel keeps the legacy
    fixed-threshold path. Validate schedule lengths/order, positive percentages
@@ -237,8 +252,10 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
     (`com.unity.test-framework`, per `Packages/manifest.json`) and an
     EditMode suite at `Assets/Tests/EditMode/Tests/`
     (`NodeWar.Simulation.Tests.asmdef`, plus `DeterminismBaselineTests`,
-    `EdgeWeightTests`, `MovementCorrectnessTests`, `SimulationSmokeTest`,
-    and the shared `TestBoardFactory`).
+    `LinkWeightTests`, `MovementCorrectnessTests`, `SimulationSmokeTest`,
+    and the shared `TestBoardFactory` and `BoardFixtures`; sticky orders,
+    restore, the capture bonus, recruiting, terrain, legality and setup each have
+    their own file, such as `StickyOrderTests` and `TerrainMapTests`).
 
     Run it with `dotnet test dotnet/NodeWar.sln` — no Editor, no licence,
     and it is what CI runs, so prefer it for any result you intend to rely

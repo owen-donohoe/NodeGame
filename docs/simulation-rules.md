@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
-verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+verified_at_commit: 048597d1
 status: stable
 sources:
   - id: sim-loop
@@ -142,8 +142,9 @@ combat targets by `fightPriority` descending, then falls back to
 Why: `UnityEngine.Random` (or any source seeded from wall-clock time or
 per-machine state) produces different sequences on different peers. The
 existing precedent is `DraftManager.HandleTimeout`'s fallback: if there is
-no valid parked placement, it derives a deterministic seed from
-already-replicated values (`turnNumber * 7919 + activePlayer * 31`). A
+no valid parked placement, `DraftState.ChooseTimeout` derives a deterministic
+seed from already-replicated values (`turnNumber * 7919 + playerID * 31`) and picks
+one of the cells `PlacementLegality` allows, so never water or ocean. A
 valid parked placement wins instead, and the active peer sends the chosen
 placement to the other peer. This runs before the match starts ticking,
 not before the live game's `SimulationState` object is allocated.
@@ -173,10 +174,12 @@ changes game behavior in a way that's easy to miss testing against
 yourself but will desync against any peer/build still running the old
 order. (`GameSimulation.SimulateTick` also runs a rampart-bonus pass
 right after movement, `TickBreach` immediately before `TickClaiming`, and
-post-combat resume after win-check. The final derived refresh of every
+order resume (`TickOrderResume`) after win-check. The final derived refresh of every
 player's `nextBreacherID` follows resume, so it reflects all mutations
 this tick. Tempo events are emitted after incrementing the tick count,
-before movement.) A new step must
+before movement. The tick also snapshots every node's owner at its start;
+`TickBreach` and `TickClaiming` read that snapshot, never the owners they are
+changing, so the order in which nodes are processed cannot move a result.) A new step must
 be inserted at a specific, justified point in this sequence, not appended
 by default. Production runs ordinary workers, then auto-recruit, before healing.
 Auto-recruit visits ascending node ID and uses the same validated recruit path
@@ -200,8 +203,13 @@ or `SimulationState` itself must be added to this method.** A field left
 out is invisible to desync detection: bugs involving it will show up as
 silent, undiagnosable gameplay divergence instead of a caught desync.
 Fields that are set once at construction and never mutated during play
-(on `NodeData`: `gridX`/`gridZ`, `edges`, `bonusVillagersOnClaim`) are
+(on `NodeData`: `gridX`/`gridZ`, `links`, `bonusVillagersOnClaim`) are
 intentionally excluded — keep it that way rather than hashing static data.
+The board's identity is hashed instead, in two parts: each node's `terrain`, and
+`SimulationState.boardHash`, the `BoardHasher` fingerprint of the whole board
+(dimensions, terrain, slot mask, fixed placements, both base draft pools, the
+starting numbers and link tuning) that `MatchFactory` sets once. Both are hashed
+unconditionally, so two peers on different maps diverge at the first checkpoint.
 
 **Era fields are hashed only where they are not 0**: `PlayerData.suitEras`
 / `districtEras` (index and value, the two tables kept apart by an offset),
@@ -220,11 +228,34 @@ has a distinct tag and player/node array index. `MatchFactory` initializes them
 explicitly; the existing struct-array copy carries them, with hash-mutation and
 copy-independence tests. Ownership loss resets the node fields, never the player
 count. The legacy `bonusVillagersOnClaim` field remains construction-only until
-its later removal; Village claims no longer read it or spawn bodies.
+its later removal; Village claims no longer read it or spawn bodies. A recruit
+spawns through the same body-spawning helper the claim bonus used.
 
 Recruit=5 and SetAutoRecruit=6 have explicit processor cases and serializer/log
-acceptance. Unknown command types are refused. The six existing command fields,
-24-byte wire payload, protocol and TICKS shape remain unchanged.
+acceptance. `CommandTypes.IsKnown` is the one list of valid types; the serializer
+and the log reader refuse anything else. The six existing command fields,
+24-byte wire payload and TICKS shape are unchanged. Recruit eligibility and cost
+live in `NodeActionRules` and `GameBalanceData.TryRecruitCostAndCooldown`, which
+UI may call read-only; only `CommandProcessor` and the auto-recruit pass spend.
+
+Claiming, restoring and breaching take their frontier input from the tick-start
+owner snapshot above: the capture bonus is `100 + captureBonusPercentPerStep *
+clamp(net adjacent friendly links, 0, captureBonusMaxSteps)` percent, where each
+adjacent link counts for the owner it had when the tick began. Rates are computed
+in `long`, bodies are capped at four, the signed claim bar clamps to
+`claimThreshold`, and an owner's present, unopposed villagers restore their own
+node's bar (`TryRestoreOwnedNode`) by the same tempo-scaled arithmetic.
+`GameBalanceData.CoreRulesValid` rejects balances whose percentage products would
+overflow. The captureBonus and recruit balance fields are conditionally hashed by
+`BalanceHasher` and so need no bump on their own.
+
+A movement order is intent that survives interruption: `VillagerData.targetNodeID`
+stays set through combat, a blocked route or a full node, and `TickOrderResume`
+replans from the villager's current state once per tick, after every rule pass,
+so work, claim or travel it begins cannot count until the next tick. This adds
+no state field beyond those already hashed and copied. Pathfinding refuses to
+route through the enemy Core as a transit node; a route may still start or
+end there.
 
 `TickEventLog` is outside this rule because it is outside `SimulationState`:
 the simulation only ever appends to it and never reads it back, so nothing in
@@ -239,7 +270,7 @@ like everything else. See `docs/architecture.md`, *What a tick did*.
 (8.2e). Then it rolls back to a copy of the last confirmed state and either
 replays the span with the real inputs or holds. `CopyFrom` makes that copy
 **into the same instance**, because views, selection and the HUD hold the
-reference. It copies every array fresh except node `edges`, which are
+reference. It copies every array fresh except node `links`, which are
 fixed once the board is built.
 
 **Every field a state type gains must be copied too**, exactly as it must
@@ -263,13 +294,15 @@ survive a rollback independently of the rest of the player.
 
 Two builds that play the same inputs differently must refuse each other
 instead of desyncing. The lobby handshake (`InputSerializer`'s
-`BuildIdentity`, sent from `MatchLauncher`) compares three numbers:
+`BuildIdentity`, sent from `MatchLauncher`) compares three numbers
+(protocol 5 also adds the pre-draft `MatchSetup` exchange, below):
 `InputSerializer.ProtocolVersion` (wire layout),
 `SimulationVersion.Current`, and a content hash,
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
 
 The current simulation version and baseline pin are **3** (v3 added terrain and a
-board fingerprint to the hashed state and re-pinned both baselines). With a valid
+board fingerprint to the hashed state and re-pinned both baselines, to 411123996
+and 2101726457). With a valid
 breach channel enabled, a loss requires a breach this tick at or above
 `BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
 threshold alone never loses a match. Disabling the channel retains
@@ -288,7 +321,12 @@ instant arrival breaches and the fixed-threshold legacy win path.
   `GameBalanceData` field is added without being hashed.
 - The match log (`Assets/Scripts/MatchLog/`) records all three, and
   `MatchReplay` refuses a log from another `SimulationVersion`, so a
-  replay only runs on the simulation that produced it. The referee looks
+  replay only runs on the simulation that produced it. A current log also
+  carries the board (BOARD_V2, tag 10: terrain, slot mask, base draft pools) and
+  the SETUP chunk (tag 11, a `MatchSetup`); `MatchReplay` requires the setup to
+  describe the log's own board, version and balance, and the referee further
+  requires the map ID to be in its catalog and the board to hash to the
+  catalog's own. The referee looks
   the balance up by content hash, so every shipped balance must be
   exported for the server (`Tools > Node War > Backend > Export Balance
   For Server`).
@@ -309,19 +347,30 @@ it does not fix that omission.
 
 ## The starting board: `MatchFactory`
 
-`MatchFactory` (`Simulation/`) is the one place a drafted match's tick-0 state is
+`MatchFactory` (`Simulation/`) is the one place a match's tick-0 state is
 built: `Configure` sets the statics the simulation reads (balance on
 `GameSimulation` and `CommandProcessor`, the `Pathfinding` multipliers),
-and `Build`/`Fill` lay out the grid, the board's fixed placements, the
+and `Build`/`Fill` lay out the nodes, the board's fixed placements, the
 draft's placements at their placer's era, both players and their starting
-villagers. The live game (`GameManager`), the referee (`MatchReplay`) and
-any headless run all start here, so they cannot disagree about tick 0. A
-change to it changes every match: treat it like a tick-rule change.
+villagers. The board is sparse: only Land cells and Lake cells with a drafted
+Pier become nodes, numbered in ascending cell order, and a `Link` joins only
+adjacent cells that both have nodes. `RequireBuildable` (through
+`MapAuthoringRules.ValidateBoard` and `ValidateDraft`, which ask
+`PlacementLegality`) refuses a board or draft that is not legal with an
+`ArgumentException` before touching state, and `FindCoreNodeID` throws unless the
+board has exactly two Cores on different rows. The live game (`GameManager`),
+the skip-draft testing mode (`DraftPlanner.TestingPlacements` into `Fill`), the
+referee (`MatchReplay`) and any headless run all start here, so they cannot
+disagree about tick 0. A change to it changes every match: treat it like a
+tick-rule change. Small unit-test fixtures construct their own minimal boards;
+none is a second builder for a recorded match.
 
-The skip-draft testing mode still builds its legacy nodes in
-`GameManager.InitializeNodes`, then uses `MatchFactory` for players and
-villagers. Small unit-test fixtures also construct their own minimal boards;
-neither is a second builder for a recorded drafted match.
+The map is agreed before anything is drafted. `MatchSetup` (map ID, board hash,
+simulation version, balance hash) is what two peers, a log and the server
+compare; the board itself never travels the wire in a live match, each side builds
+it from `PremadeMaps.Catalog` (today `hourglass-01`, with `TerrainType` Land, Lake
+and Ocean). `SetupAgreement` has the host propose it and the guest verify it, and
+neither honours a draft packet until it holds.
 
 Those statics also mean **two matches cannot run at once in one process**.
 The Cloud Code referee serializes replays behind one lock for this reason.

@@ -5,12 +5,9 @@ description: The two ways to run Assets/Tests/EditMode/, when each applies, and 
 tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:25Z }
-verified_at_commit: c0c3b0cc
+  # full history: docs/verification-log.md
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
+verified_at_commit: 048597d1
 status: stable
 sources:
   - id: batch-runner
@@ -27,9 +24,9 @@ sources:
   - id: tests-determinism
     resource: Assets/Tests/EditMode/Tests/DeterminismBaselineTests.cs
     title: Determinism baseline cases
-  - id: tests-edge-weight
-    resource: Assets/Tests/EditMode/Tests/EdgeWeightTests.cs
-    title: Edge weight cases
+  - id: tests-link-weight
+    resource: Assets/Tests/EditMode/Tests/LinkWeightTests.cs
+    title: Link weight cases
   - id: tests-movement
     resource: Assets/Tests/EditMode/Tests/MovementCorrectnessTests.cs
     title: Movement correctness cases
@@ -125,8 +122,8 @@ Note that a runner's own exit code answers "did the run complete and did every t
 not the same question as "is the determinism gate satisfied at this commit". The attester answers
 the second.
 
-The current baseline pin is simulation version **2**, with numeric fingerprints unchanged
-by the v2 re-pin. Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
+The current baseline pin is simulation version **3**, with fingerprints `411123996`
+(`EmptyTick`) and `2101726457` (`MoveAndCombat`); the v3 terrain board moved both. Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
 they include a balance-asset text guard outside the shared EditMode suite and are not a claim
 about how many cases a Unity run executes.
 
