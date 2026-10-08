@@ -5,12 +5,9 @@ description: What Node War is — the match model, board, villagers, districts, 
 tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:06Z }
-verified_at_commit: b229a89e
+  # full history: docs/verification-log.md
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: draft
 sources:
   - id: sim-state
@@ -142,8 +139,8 @@ The current tempo percentage scales the claim rate after Watchtower bonuses, usi
 division. A node with **both** players' claimers present is frozen; combat resolves it instead.
 
 When a claim completes, a non-`Fixed` node becomes whichever district the claiming player drafted
-for that slot type, falling back to the node's `baseDistrictType`. Some nodes grant bonus villagers
-on claim.
+for that slot type, falling back to the node's `baseDistrictType`. Village claims
+do not spawn bonus villagers.
 
 ## Districts
 
@@ -158,7 +155,7 @@ places every district as `Fixed`, so those districts keep their type and placer'
 | `Farm` | Fixed | Farmer works it → +1 food |
 | `Mine` | Fixed | Miner works it → +1 material |
 | `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0` |
-| `Village` | Fixed | Grants bonus villagers on claim |
+| `Village` | Fixed | Paid Recruit action and optional automatic repeat; no claim bonus |
 | `Camp` | Army | Equip Warrior or Scout |
 | `Barracks` | Army | Equip Warrior, Guardian, Berserker or Scout |
 | `Arsenal` | Army | Equip Warrior, Guardian or Scout |
@@ -188,7 +185,7 @@ villager on its node.
 ## Resources
 
 Three resources per player: **food**, **materials**, **metal**. Materials feed the Forge, which
-consumes them to make metal. Resources pay for suits and for respawns. All production runs on
+consumes them to make metal. Resources pay for suits, respawns and recruits. Ordinary production runs on
 per-villager tick timers, so output is a function of how many workers a player keeps alive and
 employed — capped at 2 workers per node.
 
@@ -293,7 +290,7 @@ because rating cannot see the era gap.
 
 ## Player commands
 
-Every player action reaches the simulation as exactly one of four `GameCommand` types:
+Every player action reaches the simulation as one of six active `GameCommand` types:
 
 | Command | Effect |
 |---|---|
@@ -301,5 +298,24 @@ Every player action reaches the simulation as exactly one of four `GameCommand` 
 | `SetAllocation` | Set an owned Forge's `materialAllocation`, gating its material→metal conversion |
 | `Equip` | Put a combat suit on an Idle villager standing on an owned district that permits it |
 | `Respawn` | Pay food to return a dead villager to its Core **immediately**, skipping the timer |
+| `Recruit` (5) | Pay food to append one base, unsuited Idle villager at an owned, uncontested Village |
+| `SetAutoRecruit` (6) | Set an owned Village's repeat flag to the absolute value 0 or 1 |
+
+Recruit needs no worker or visitor. With pre-recruit player count N, the default
+price is `6 + 3N` food and the Village cooldown is that many seconds, converted
+with `ticksPerSecond` (default 10). Successful recruits increment the match-long
+`recruitCount`, separately from paid respawns. Population includes dead bodies
+but excludes consumed ones. Cooldown, insufficient food, a price above a positive
+food cap, a full population, living enemy presence, or invalid/overflowing tuning
+refuse without spending, spawning, or changing counters and cooldown.
+
+Automatic recruitment runs after ordinary production in ascending node ID;
+Villages share their owner's recruit count and food pool but have separate
+cooldowns. The flag stays on when an attempt is refused and retries each tick.
+SetAutoRecruit does not require food, population room or readiness and does not
+recruit or start cooldown. Losing a Village clears its flag and ready tick;
+the player's count persists. Cooldown is not tempo-scaled. The food cap stays 30:
+the ninth recruit costs 30; the tenth costs 33 and is refused. Node commands use
+`villagerID = -1`; Recruit requires `value = 0`, while the toggle requires 0 or 1.
 
 There is no other way to affect game state. See [simulation-rules](simulation-rules.md).
