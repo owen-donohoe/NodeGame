@@ -335,20 +335,12 @@ namespace NodeWar.UI
 
         public Sprite GetStickerSprite(DistrictType type)
         {
-            if (stickerMappings == null)
-            {
-                Debug.LogWarning("[DraftUI] stickerMappings array is null");
-                return null;
-            }
-            for (int i = 0; i < stickerMappings.Length; i++)
-            {
-                if (stickerMappings[i].districtType == type)
-                    return stickerMappings[i].sprite;
-            }
-            Debug.LogWarning("[DraftUI] No sticker mapping found for district type: " + type);
-            return null;
+            if (stickerMappings != null)
+                for (int i = 0; i < stickerMappings.Length; i++)
+                    if (stickerMappings[i].districtType == type && stickerMappings[i].sprite != null)
+                        return stickerMappings[i].sprite;
+            return NodeWar.View.DistrictFallbackArt.Sticker(type);
         }
-
         // ===== CLEANUP =====
 
         private void OnDestroy()

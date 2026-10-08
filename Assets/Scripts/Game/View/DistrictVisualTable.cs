@@ -52,13 +52,19 @@ namespace NodeWar.View
                 visual.hideFlags = HideFlags.HideAndDontSave;
                 visual.name = descriptor.Name;
                 visual.district = district;
-                // The caller already owns the generic prefab. Reuse a table entry for it when available.
-                if (entries != null)
-                    foreach (var entry in entries)
-                        if (entry != null && entry.district == DistrictType.None) visual.boardPrefab = entry.boardPrefab;
+                DistrictType art = DistrictFallback.ResolveArt(district, type => Entry(type)?.boardPrefab != null);
+                visual.boardPrefab = Entry(art)?.boardPrefab;
                 fallbacks[index] = visual;
             }
             return fallbacks[index];
+        }
+
+        private DistrictVisual Entry(DistrictType type)
+        {
+            if (entries != null)
+                foreach (var entry in entries)
+                    if (entry != null && entry.district == type) return entry;
+            return null;
         }
 
         private readonly DistrictVisual[] fallbacks = new DistrictVisual[(int)DistrictType.Fortress + 1];

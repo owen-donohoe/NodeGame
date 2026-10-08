@@ -395,7 +395,8 @@ namespace NodeWar.UI
 
         private void RefreshDistrict(NodeData node)
         {
-            string name = node.districtType.ToString();
+            var identity = NodeWar.View.DistrictFallback.Describe(node.districtType);
+            string name = identity.Name ?? node.districtType.ToString();
 
             if (districtLabel != null) districtLabel.text = name;
 
@@ -409,7 +410,7 @@ namespace NodeWar.UI
                 thumbTint = tint;
             }
 
-            if (thumbLetter != null) thumbLetter.text = name.Substring(0, 1);
+            if (thumbLetter != null) thumbLetter.text = identity.Monogram ?? "?";
             var theme = UIArt.Theme;
             var visual = theme != null && theme.districtVisuals != null
                 ? theme.districtVisuals.For(node.districtType) : null;
@@ -478,8 +479,8 @@ namespace NodeWar.UI
             if (claimLabel != null)
             {
                 if (claim == 0) claimLabel.text = "Neutral";
-                else if (claim > 0) claimLabel.text = "Player 1 Â· " + claim + " / " + threshold;
-                else claimLabel.text = "Player 2 Â· " + (-claim) + " / " + threshold;
+                else if (claim > 0) claimLabel.text = "Player 1 Ã‚Â· " + claim + " / " + threshold;
+                else claimLabel.text = "Player 2 Ã‚Â· " + (-claim) + " / " + threshold;
             }
 
             if (claimNote != null)

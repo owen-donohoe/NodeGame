@@ -3,33 +3,42 @@ namespace NodeWar.View
 {
     public readonly struct DistrictFallbackDescriptor
     {
-        public readonly string Name;
-        public readonly string Monogram;
-        public readonly string PrefabKey;
-        public readonly string Description;
-        public DistrictFallbackDescriptor(string name, string monogram, string description)
-        { Name = name; Monogram = monogram; Description = description; PrefabKey = "Crossroads"; }
+        public readonly string Name, Monogram, PrefabKey, Description;
+        public DistrictFallbackDescriptor(string name,string monogram,string description,string prefabKey="Crossroads")
+        { Name=name; Monogram=monogram; Description=description; PrefabKey=prefabKey; }
     }
-
-    /// <summary>Readable identity independent of art assets; Crossroads is the existing generic node prefab.</summary>
     public static class DistrictFallback
     {
+        /// <summary>Exact art wins, then the D07 historical keys, then the generic node.</summary>
+        public static DistrictType ResolveArt(DistrictType type,System.Func<DistrictType,bool> available)
+        {
+            if(available(type)) return type;
+            switch(type)
+            {
+                case DistrictType.Town: if(available(DistrictType.Village)) return DistrictType.Village; break;
+                case DistrictType.Infirmary:
+                    if(available(DistrictType.Shrine)) return DistrictType.Shrine;
+                    if(available(DistrictType.Sanctuary)) return DistrictType.Sanctuary; break;
+                case DistrictType.Fortress: if(available(DistrictType.Rampart)) return DistrictType.Rampart; break;
+            }
+            return DistrictType.None;
+        }
         public static DistrictFallbackDescriptor Describe(DistrictType type)
         {
-            switch (type)
+            switch(type)
             {
-                case DistrictType.None: return new DistrictFallbackDescriptor("Crossroads", "X", "An empty connector.");
-                case DistrictType.Farm: return new DistrictFallbackDescriptor("Farm", "Fa", "Produces food.");
-                case DistrictType.Mine: return new DistrictFallbackDescriptor("Mine", "Mi", "Produces materials.");
-                case DistrictType.Village: return new DistrictFallbackDescriptor("Village", "V", "Recruits villagers.");
-                case DistrictType.Barracks: return new DistrictFallbackDescriptor("Barracks", "B", "An army district.");
-                case DistrictType.Core: return new DistrictFallbackDescriptor("Core", "C", "Your home district.");
-                case DistrictType.Forge: return new DistrictFallbackDescriptor("Forge", "Fo", "Produces metal.");
-                case DistrictType.Market: return new DistrictFallbackDescriptor("Market", "Ma", "Produces food and materials.");
-                case DistrictType.Pier: return new DistrictFallbackDescriptor("Pier", "P", "Connects districts across a lake.");
-                case DistrictType.Town: return new DistrictFallbackDescriptor("Town", "T", "Grants villagers on its first capture.");
-                case DistrictType.Infirmary: return new DistrictFallbackDescriptor("Infirmary", "I", "A healing district.");
-                case DistrictType.Fortress: return new DistrictFallbackDescriptor("Fortress", "F", "A defensive district.");
+                case DistrictType.None: return new DistrictFallbackDescriptor("Crossroads","X","An empty connector.");
+                case DistrictType.Farm: return new DistrictFallbackDescriptor("Farm","Fa","Produces food.");
+                case DistrictType.Mine: return new DistrictFallbackDescriptor("Mine","Mi","Produces materials.");
+                case DistrictType.Village: return new DistrictFallbackDescriptor("Recruit","V","Recruits villagers.","Village");
+                case DistrictType.Barracks: return new DistrictFallbackDescriptor("Barracks","B","Equips all drafted combat suits.","Barracks");
+                case DistrictType.Core: return new DistrictFallbackDescriptor("Core","C","Your home district.");
+                case DistrictType.Forge: return new DistrictFallbackDescriptor("Forge","Fo","Produces metal.");
+                case DistrictType.Market: return new DistrictFallbackDescriptor("Market","Ma","Produces food and materials.");
+                case DistrictType.Pier: return new DistrictFallbackDescriptor("Pier","P","Connects districts across a lake.");
+                case DistrictType.Town: return new DistrictFallbackDescriptor("Town","T","Grants villagers once per player.","Village");
+                case DistrictType.Infirmary: return new DistrictFallbackDescriptor("Infirmary","I","Local healing and Core respawn assistance.","Shrine");
+                case DistrictType.Fortress: return new DistrictFallbackDescriptor("Fortress","F","Paid resistance upgrades.","Rampart");
                 default: return default;
             }
         }

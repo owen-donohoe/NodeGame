@@ -61,7 +61,7 @@ namespace NodeWar.UI
     ///
     /// The uGUI draft reads Mouse.current and cancels on right-click or Escape,
     /// neither of which a phone has. This reads Pointer.current, which is the
-    /// mouse or the touchscreen, and the cancel is a ✕ next to Confirm and a
+    /// mouse or the touchscreen, and the cancel is a âœ• next to Confirm and a
     /// drag back into the bar. That is the single biggest thing the prototype
     /// was asked to fix.
     ///
@@ -528,7 +528,7 @@ namespace NodeWar.UI
             if (barLabel != null)
             {
                 barLabel.text = remaining > 0
-                    ? "YOUR PIECES · " + remaining + " LEFT"
+                    ? "YOUR PIECES Â· " + remaining + " LEFT"
                     : "ALL PLACED";
             }
 
@@ -1087,7 +1087,7 @@ namespace NodeWar.UI
 
         private void HandleCancelPressed()
         {
-            // ✕ puts the piece back in the bar entirely, rather than leaving it
+            // âœ• puts the piece back in the bar entirely, rather than leaving it
             // armed. A player who pressed cancel wants out of the placement,
             // not a half-step back into it.
             ClearHand();
@@ -1325,17 +1325,12 @@ namespace NodeWar.UI
             var theme = NodeWar.Lobby.UIArt.Theme;
             var visual = theme != null && theme.districtVisuals != null ? theme.districtVisuals.For(type) : null;
             if (visual != null && visual.StickerOrIcon != null) return visual.StickerOrIcon;
-            if (stickerMappings == null) return null;
-
-            for (int i = 0; i < stickerMappings.Length; i++)
-            {
-                if (stickerMappings[i].districtType == type)
-                    return stickerMappings[i].sprite;
-            }
-
-            return null;
+            if (stickerMappings != null)
+                for (int i = 0; i < stickerMappings.Length; i++)
+                    if (stickerMappings[i].districtType == type && stickerMappings[i].sprite != null)
+                        return stickerMappings[i].sprite;
+            return NodeWar.View.DistrictFallbackArt.Sticker(type);
         }
-
         // ===== TURN DISPLAY =====
 
         private void UpdateTurnDisplay()
@@ -1348,7 +1343,7 @@ namespace NodeWar.UI
             if (whoLabel != null)
                 whoLabel.text = mine ? "YOUR TURN" : "OPPONENT'S TURN";
 
-            // D1 and §2.2: the turn owner's colour never travels alone. The
+            // D1 and Â§2.2: the turn owner's colour never travels alone. The
             // square-with-1 / circle-with-2 mark is the channel that survives
             // colour blindness and a washed-out phone screen in sunlight.
             if (turnMark != null)

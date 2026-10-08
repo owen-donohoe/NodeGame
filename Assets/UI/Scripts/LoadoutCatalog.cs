@@ -132,7 +132,8 @@ namespace NodeWar.Lobby
         public string DistrictName(string districtID)
         {
             DistrictDefinition node = FindDistrict(districtID);
-            return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName : districtID;
+            return node != null && !string.IsNullOrEmpty(node.displayName) ? node.displayName :
+                NodeWar.View.DistrictFallback.Describe((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID)).Name ?? districtID;
         }
 
         /// <summary>

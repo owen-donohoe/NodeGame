@@ -44,6 +44,7 @@ namespace NodeWar.UI
         /// </summary>
         public static string DisplayName(DistrictType type, DistrictDefinition[] definitions)
         {
+            if (type == DistrictType.Village) return NodeWar.View.DistrictFallback.Describe(type).Name;
             string id = DistrictID(type);
 
             if (definitions != null)
@@ -68,6 +69,7 @@ namespace NodeWar.UI
         /// </summary>
         public static string Monogram(string displayName)
         {
+            if (displayName == "Recruit") return "V";
             if (string.IsNullOrEmpty(displayName)) return "?";
             return displayName.Substring(0, 1).ToUpperInvariant();
         }

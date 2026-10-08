@@ -817,23 +817,7 @@ namespace NodeWar.UI
 
         private string GetDistrictName(DistrictType type)
         {
-            switch (type)
-            {
-                case DistrictType.Farm: return "Farm";
-                case DistrictType.Mine: return "Mine";
-                case DistrictType.Forge: return "Forge";
-                case DistrictType.Core: return "Core";
-                case DistrictType.Barracks: return "Barracks";
-                case DistrictType.Village: return "Village";
-                case DistrictType.Camp: return "Camp";
-                case DistrictType.Shrine: return "Shrine";
-                case DistrictType.Arsenal: return "Arsenal";
-                case DistrictType.Sanctuary: return "Sanctuary";
-                case DistrictType.Watchtower: return "Watchtower";
-                case DistrictType.Rampart: return "Rampart";
-                case DistrictType.Market: return "Market";
-                default: return "Crossroads";
-            }
+            return NodeWar.View.DistrictFallback.Describe(type).Name ?? type.ToString();
         }
 
         private void OnDestroy()
