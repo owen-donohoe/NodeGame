@@ -14,15 +14,9 @@ attester:
   resource: docs/attesters/hash_baseline.ps1
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
-  - { by: claude-opus-5, at: 2026-09-13T01:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
-  - { by: claude-opus-5-5, at: 2026-09-30T07:00:00Z }
-  - { by: gpt-6-sol, at: 2026-09-30T07:00:00Z }
-  - { by: claude-sonnet-5-5, at: 2026-10-03T00:41:16Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:06:51Z }
-  - { by: gpt-6-sol, at: 2026-10-06T01:08:47Z }
-verified_at_commit: 673cc4b9
+  # full history: docs/verification-log.md
+  - { by: gpt-6.1-sol, at: 2026-10-08T16:00:48Z }
+verified_at_commit: 9dd245606088c93c1d0725327ad1613355b69e15
 status: stable
 sources:
   - id: tests
@@ -107,6 +101,11 @@ do not move these fingerprints. Adding eras had needed no bump; the breach/tempo
 did. Version-1 logs are refused by version-2 replay even when their era-0 hashes would match.
 The separate `BalanceHasher` covers balance data, including the new schedules, breach tuning
 and caps; these are state fingerprints, not balance fingerprints.
+
+C3's recruit count and ready tick are zero-neutral, and its repeat flag is
+false-neutral, with tagged indexed contributions only for non-neutral values.
+Neither sanctioned fixture recruits or captures a Village, so these additions
+and the auto-recruit production pass retain both pinned state fingerprints.
 
 **v3 re-pin (terrain board, B4).** `SimulationState.boardHash` (after `defaultLinkWeight`) and
 `NodeData.terrain` (after `baseDistrictType`) are hashed unconditionally, and the version went 2 → 3.
