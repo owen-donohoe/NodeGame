@@ -37,7 +37,9 @@ Full contract in `docs/simulation-rules.md`.
 - All sorts need total-order comparators with ID tiebreakers
 - Tick order is canonical, never reordered:
   movement → combat → claiming → production → healing → respawns → win-check
-  (`TickBreach` precedes `TickClaiming` inside claiming; post-combat resume
+  (Tick-start ownership and Fortress-resistance snapshots are read before
+  movement. `TickBreach` precedes `TickClaiming` inside claiming;
+  `TickAutoRecruit` follows `TickProduction`; order resume (`TickOrderResume`)
   follows win-check, then the derived `nextBreacherID` refresh runs last.)
 - View and UI never write `SimulationState`. All changes go through:
   `GameCommand` → `InputBuffer` → `CommandProcessor` → `SimulateTick`
@@ -85,7 +87,7 @@ Read the file. Do not ask me to summarise it here.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 3144 cases in eight projects: `Simulation/`,
+- `dotnet test dotnet/NodeWar.sln` — 3583 cases in eight projects: `Simulation/`,
   the lobby and wire formats, the UnityEngine-free view maths, the match log,
   the progression rules, the lockstep core under a simulated lossy link, the balance rig, and
   the Cloud Code module. Per-project counts are in
