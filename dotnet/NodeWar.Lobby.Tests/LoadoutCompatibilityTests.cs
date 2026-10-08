@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using NodeWar.Lobby;
 using NodeWar.Network;
+using NodeWar.Simulation;
 using NUnit.Framework;
 
 namespace NodeWar.Lobby.Tests
@@ -70,11 +71,21 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(2, empty.districtIDs.Length);
             Assert.AreEqual(3, empty.suitIDs.Length);
 
-            // The board's base picks, read from the asset as Unity wrote it
-            // (the key is renamed with the asset's next Editor save, not before).
-            string[] lines = File.ReadAllLines(Path.Combine(FindRepoRoot(), "Assets/Data/Game/Board/DefaultBoardConfig.asset"));
+            // The catalog owns the base picks after migration; deck capacity is unchanged.
+            BoardConfigData board = PremadeMaps.Hourglass01();
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, board.baseDraftDistrictsP0.Select(d => (int)d));
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, board.baseDraftDistrictsP1.Select(d => (int)d));
+
+            // Keep obsolete serialized-key coverage independent of the migrated live asset.
+            const string legacyYaml = "%YAML 1.1\nMonoBehaviour:\n"
+                + "  baseDraftNodesP0:\n  - districtType: 1\n  - districtType: 2\n  - districtType: 3\n"
+                + "  baseDraftNodesP1:\n  - districtType: 1\n  - districtType: 2\n  - districtType: 3\n";
+            string[] lines = legacyYaml.Split('\n');
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, BasePicks(lines, "baseDraftNodesP0", "baseDraftDistrictsP0"));
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, BasePicks(lines, "baseDraftNodesP1", "baseDraftDistrictsP1"));
+
+            string[] liveLines = File.ReadAllLines(Path.Combine(FindRepoRoot(), "Assets/Data/Game/Board/DefaultBoardConfig.asset"));
+            CollectionAssert.Contains(liveLines.Select(line => line.Trim()), "mapId: hourglass-01");
         }
 
         // Every lobby ID the game has shipped, and the numbers they resolve to.

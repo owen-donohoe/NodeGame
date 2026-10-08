@@ -65,12 +65,18 @@ namespace NodeWar.BalanceRig
         [Test]
         public void ShippedBoardAsset_KeepsItsLegacyKey()
         {
-            // The asset is Unity's to rewrite; until it does, its key is the legacy one.
-            // The rig no longer plays it (it has no terrain); it can still be read.
-            var setup = new RigSetup();
-            RigSetupLoader.LoadBoard(Path.Combine(RigSetupLoader.FindRepoRoot(), "Assets/Data/Game/Board/DefaultBoardConfig.asset"), setup);
-            Assert.AreEqual(4, LinkWeight(setup.board));
-            Assert.IsNull(setup.board.terrain, "A legacy asset has no terrain to read.");
+            // Freeze the obsolete key in embedded YAML rather than depend on the live asset.
+            // The rig no longer plays a legacy board (it has no terrain); it can still be read.
+            string asset = Path.Combine(Path.GetTempPath(), "rig-legacy-key-" + Guid.NewGuid() + ".asset");
+            try
+            {
+                File.WriteAllText(asset, LegacyBoard.Replace("defaultEdgeWeight: 7", "defaultEdgeWeight: 4"));
+                var setup = new RigSetup();
+                RigSetupLoader.LoadBoard(asset, setup);
+                Assert.AreEqual(4, LinkWeight(setup.board));
+                Assert.IsNull(setup.board.terrain, "A legacy asset has no terrain to read.");
+            }
+            finally { File.Delete(asset); }
         }
 
         [Test]
@@ -104,9 +110,14 @@ namespace NodeWar.BalanceRig
         [Test]
         public void ALegacyAssetBoard_IsRefusedForAMatch()
         {
-            string asset = Path.Combine(RigSetupLoader.FindRepoRoot(), "Assets/Data/Game/Board/DefaultBoardConfig.asset");
-            var ex = Assert.Throws<FormatException>(() => RigSetupLoader.Load(null, asset, "none"));
-            StringAssert.Contains("terrain", ex.Message);
+            string asset = Path.Combine(Path.GetTempPath(), "rig-legacy-match-" + Guid.NewGuid() + ".asset");
+            try
+            {
+                File.WriteAllText(asset, LegacyBoard);
+                var ex = Assert.Throws<FormatException>(() => RigSetupLoader.Load(null, asset, "none"));
+                StringAssert.Contains("terrain", ex.Message);
+            }
+            finally { File.Delete(asset); }
         }
 
         [Test]
