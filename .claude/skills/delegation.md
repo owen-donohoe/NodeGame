@@ -106,6 +106,9 @@ a `gpt-6.1-sol` coder commit by commit. Claude Sonnet coders covered a GPT outag
 | Sol + Astra: one view/draft commit, finished from a WIP | **8.05M** (coder 5.5, supervisor 1.7, review 0.85) |
 | Sol + Astra: a two-file test fix | **~3.3M** |
 | Sonnet: five bounded commits (A1–B3), files and specs named | well under one Claude session |
+| Sol, one commit, fresh agent, brief = execution rules + its own spec section, one red run + one full run (C3 recruit) | **0.46M** |
+| Same shape, smaller commit (C4 Town) | **0.33M** |
+| Same coder kept across C1 + fix + C2 (84 turns, context growing) | **10.0M** |
 
 What it says:
 
