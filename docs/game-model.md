@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
+verified_at_commit: 55b647a7
 status: draft
 sources:
   - id: sim-state
@@ -59,8 +59,9 @@ simulation must uphold.
 All numbers below are the **code defaults** from `GameBalanceData.Default()` and the shipped map in
 `PremadeMaps`. A real match reads its balance from the `GameBalance` `ScriptableObject`, and its map
 from the map ID a `BoardConfig` names, so treat these as the shape of the tuning, not as fixed
-constants. The checked-in `DefaultGameBalance` asset does not yet list the capture-bonus or recruit
-fields, so confirm in the Editor what a match actually plays before relying on those numbers.
+constants. The checked-in `DefaultGameBalance` asset carries the capture-bonus, recruit, Town,
+Infirmary and Fortress values at these defaults; where it differs from them (the claim threshold,
+heal interval, breach swarm and production timers below), the asset is what a match plays.
 
 ## The board
 
