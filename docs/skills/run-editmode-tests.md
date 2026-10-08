@@ -7,7 +7,7 @@ generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
   - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: bdb967ed1524de151f220a3be1733bec8177e56d
+verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
 status: stable
 sources:
   - id: batch-runner
