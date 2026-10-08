@@ -53,6 +53,7 @@ namespace NodeWar.Simulation
         /// </summary>
         private static void ProcessMoveCommand(SimulationState state, GameCommand command)
         {
+            if (command.playerID < 0 || command.playerID >= state.players.Length) return;
             int vid = command.villagerID;
             if (vid < 0 || vid >= state.villagers.Length) return;
 
@@ -64,6 +65,13 @@ namespace NodeWar.Simulation
 
             int destination = command.targetNodeID;
             if (destination < 0 || destination >= state.nodes.Length) return;
+
+            // Orders change intent during combat, never the attack clock or fight state.
+            if (villager.state == VillagerState.Fighting)
+            {
+                state.villagers[vid].targetNodeID = destination == villager.currentNodeID ? -1 : destination;
+                return;
+            }
 
             bool onLeg = villager.state == VillagerState.Moving &&
                          villager.movePath != null &&
@@ -107,7 +115,14 @@ namespace NodeWar.Simulation
             }
 
             int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination);
-            if (path.Length < 2) return;
+            if (path.Length < 2)
+            {
+                // Pay the return crossing before waiting for an unreachable destination.
+                int backTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+                ApplyMove(state, vid, new int[] { otherEnd, anchor },
+                          backTicks - Rescale(covered, legTicks, backTicks), destination);
+                return;
+            }
 
             if (path[1] == otherEnd)
             {
@@ -136,7 +151,17 @@ namespace NodeWar.Simulation
         private static void RepathFromNode(SimulationState state, int villagerIndex,
                                            int ownerID, int fromNode, int destination)
         {
-            if (fromNode == destination) return;
+            state.villagers[villagerIndex].targetNodeID = fromNode == destination ? -1 : destination;
+            state.villagers[villagerIndex].movePath = new int[0];
+            state.villagers[villagerIndex].movePathIndex = 0;
+            state.villagers[villagerIndex].moveProgress = 0;
+            state.villagers[villagerIndex].combatTargetID = -1;
+            state.villagers[villagerIndex].state = VillagerState.Idle;
+            if (fromNode == destination)
+            {
+                GameSimulation.ApplyArrivalState(state, villagerIndex);
+                return;
+            }
 
             int[] path = Pathfinding.FindPath(state, ownerID, fromNode, destination);
             if (path.Length < 2) return;

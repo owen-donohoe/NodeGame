@@ -50,6 +50,9 @@ namespace NodeWar.Simulation
                 if (current == endNode) return ReconstructPath(cameFrom, startNode, endNode);
 
                 visited[current] = true;
+                // An enemy Core may start/end a route, but cannot be a transit node.
+                if (current != startNode && current == state.players[1 - askingOwnerId].coreNodeID)
+                    continue;
 
                 Link[] links = state.nodes[current].links;
                 for (int i = 0; i < links.Length; i++)

@@ -64,7 +64,7 @@ namespace NodeWar.Simulation
             // This prevents a villager from killing an enemy and immediately starting to
             // claim in the same tick, which could cause edge cases with the claim
             // evaluation also running in step 4.
-            TickPostCombatResume(state, log);
+            TickOrderResume(state, log);
             // Derived cache, after every rule mutation (including respawns/resume).
             for (int p = 0; p < state.players.Length; p++)
             {
@@ -93,14 +93,13 @@ namespace NodeWar.Simulation
             // Invariant: a Moving villager always has a further node ahead on its path.
             // If that is violated the villager is in a corrupt movement state -- recover
             // deterministically rather than indexing off the end of movePath below.
-            if (v.movePathIndex + 1 >= v.movePath.Length)
+            if (v.movePath == null || v.movePathIndex + 1 >= v.movePath.Length)
             {
                 v.movePath = new int[0];
                 v.movePathIndex = 0;
                 v.moveProgress = 0;
-                v.targetNodeID = -1;
+                v.state = VillagerState.Idle;
                 state.villagers[villagerIndex] = v;
-                ApplyArrivalState(state, villagerIndex);
                 return;
             }
 
@@ -158,9 +157,13 @@ namespace NodeWar.Simulation
                     v.movePath = new int[0];
                     v.movePathIndex = 0;
                     v.moveProgress = 0;
-                    v.targetNodeID = -1;
+                    v.state = VillagerState.Idle;
                     state.villagers[villagerIndex] = v;
-                    ApplyArrivalState(state, villagerIndex);
+                    if (v.targetNodeID == v.currentNodeID || v.targetNodeID < 0)
+                    {
+                        state.villagers[villagerIndex].targetNodeID = -1;
+                        ApplyArrivalState(state, villagerIndex);
+                    }
                     return;
                 }
             }
@@ -246,7 +249,7 @@ namespace NodeWar.Simulation
         /// that has arrived at a node (end of path or post-combat with no path).
         /// Directly modifies state.villagers[villagerIndex].
         /// </summary>
-        private static void ApplyArrivalState(SimulationState state, int villagerIndex)
+        internal static void ApplyArrivalState(SimulationState state, int villagerIndex)
         {
             VillagerData v = state.villagers[villagerIndex];
             int nodeID = v.currentNodeID;
@@ -255,7 +258,7 @@ namespace NodeWar.Simulation
             // Core nodes: always Idle.
             // Non-combat suits (Farmer, Miner, Smelter) are free and re-assigned on arrival
             // at production nodes, so reverting them here is harmless and keeps things clean.
-            // Soldier suit is PERMANENT until death — do not strip it.
+            // Soldier suit is PERMANENT until death â€” do not strip it.
             if (node.districtType == DistrictType.Core)
             {
                 if (!GameBalanceData.IsCombatSuit(v.suit))
@@ -294,7 +297,7 @@ namespace NodeWar.Simulation
                     return;
                 }
 
-                // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None — strip non-combat suit, go Idle
+                // Camp, Barracks, Arsenal, Rampart, Shrine, Village, None â€” strip non-combat suit, go Idle
                 if (!GameBalanceData.IsCombatSuit(v.suit))
                 {
                     state.villagers[villagerIndex].suit = SuitType.None;
@@ -781,7 +784,7 @@ namespace NodeWar.Simulation
                     ? state.players[playerID].DistrictEra(upgrade)
                     : 0;
 
-                // Reset non-combat workers — node type just changed
+                // Reset non-combat workers â€” node type just changed
                 for (int i = 0; i < state.villagers.Length; i++)
                 {
                     if (state.villagers[i].currentNodeID != nodeIndex) continue;
@@ -983,98 +986,42 @@ namespace NodeWar.Simulation
             }
         }
 
-        // ===== STEP 9: POST-COMBAT RESUME =====
+        // ===== STEP 9: ORDER RESUME =====
 
-        /// <summary>
-        /// For villagers in Fighting state whose fight just ended (no enemies remain on node):
-        /// Determine next state - resume path, claim, idle, or breach if on enemy core.
-        /// 
-        /// This is separated from TickCombat (step 3) to avoid state thrashing.
-        /// Combat resolves and deaths happen first, THEN survivors figure out what to do.
-        /// Without this separation, a villager could kill an enemy and immediately begin
-        /// claiming in the same tick that TickClaiming also evaluates, potentially causing
-        /// double-counting or ordering-dependent bugs.
-        /// </summary>
-        private static void TickPostCombatResume(SimulationState state, TickEventLog log)
+        // Resolve surviving intent once, after all rule passes. Work, claim and travel
+        // begun here cannot contribute until the next tick. Replan from current state.
+        private static void TickOrderResume(SimulationState state, TickEventLog log)
         {
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
-                if (v.state != VillagerState.Fighting) continue;
-                if (v.isConsumed) continue;
-
-                // Check if enemies remain on this node
+                if (v.state == VillagerState.Dead || v.isConsumed || v.state == VillagerState.Moving) continue;
+                bool fighting = v.state == VillagerState.Fighting;
                 if (HasLivingEnemiesOnNode(state, v.currentNodeID, v.ownerID)) continue;
+                if (v.targetNodeID < 0 && !fighting) continue;
+                if (v.state == VillagerState.Breaching && v.targetNodeID == v.currentNodeID) continue;
 
-                // Fight is over. Determine next state.
-
-                // Check: are we on the enemy core? If so, breach.
-                int enemyCoreID = state.players[1 - v.ownerID].coreNodeID;
-                if (v.currentNodeID == enemyCoreID)
+                v.movePath = new int[0];
+                v.movePathIndex = 0;
+                v.moveProgress = 0;
+                v.combatTargetID = -1;
+                if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)
+                {
+                    v.movePath = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID);
+                    v.state = v.movePath.Length >= 2 ? VillagerState.Moving : VillagerState.Idle;
+                    state.villagers[i] = v;
+                    continue;
+                }
+                if (v.currentNodeID == state.players[1 - v.ownerID].coreNodeID)
                 {
                     EnterBreachOrProcessLegacy(state, i, v, log);
                     continue;
                 }
-
-                // Check: do we have a remaining path to resume?
-                if (v.movePath.Length > 0 && v.movePathIndex < v.movePath.Length - 1)
-                {
-                    NodeData currentNode = state.nodes[v.currentNodeID];
-
-                    if (currentNode.ownerID == v.ownerID)
-                    {
-                        // Own node: check if suit matches for Working
-                        if (!GameBalanceData.IsCombatSuit(v.suit) && v.suit == GetExpectedSuit(currentNode.districtType))
-                        {
-                            int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
-                            if (workers < bal.maxWorkersPerNode)
-                            {
-                                // Stop and work here
-                                state.villagers[i].state = VillagerState.Working;
-                                state.villagers[i].productionTicksMax = GetProductionTicks(currentNode.districtType, currentNode.districtEra);
-                                state.villagers[i].productionTicksRemaining = GetProductionTicks(currentNode.districtType, currentNode.districtEra);
-                                state.villagers[i].combatTargetID = -1;
-                                continue;
-                            }
-                        }
-                        // No match or at cap: resume movement
-                        state.villagers[i].state = VillagerState.Moving;
-                        state.villagers[i].combatTargetID = -1;
-                    }
-                    else if (currentNode.districtType == DistrictType.Core)
-                    {
-                        // On a core node (not enemy, handled above): resume
-                        state.villagers[i].state = VillagerState.Moving;
-                        state.villagers[i].combatTargetID = -1;
-                    }
-                    else
-                    {
-                        // Not our node: check if we should help claim or keep moving
-                        int friendlyClaimers = CountFriendlyClaimersOnNode(state, v.currentNodeID, v.ownerID);
-                        if (friendlyClaimers < bal.maxClaimersPerNode)
-                        {
-                            state.villagers[i].state = VillagerState.Claiming;
-                            state.villagers[i].combatTargetID = -1;
-                        }
-                        else
-                        {
-                            state.villagers[i].state = VillagerState.Moving;
-                            state.villagers[i].combatTargetID = -1;
-                        }
-                    }
-                }
-                else
-                {
-                    // No remaining path: full arrival logic
-                    state.villagers[i].combatTargetID = -1;
-                    state.villagers[i].movePath = new int[0];
-                    state.villagers[i].movePathIndex = 0;
-                    state.villagers[i].targetNodeID = -1;
-                    ApplyArrivalState(state, i);
-                }
+                v.targetNodeID = -1;
+                state.villagers[i] = v;
+                ApplyArrivalState(state, i);
             }
         }
-
         private static void TickTempoEvents(int tick, TickEventLog log)
         {
             if (log == null) return;
@@ -1100,7 +1047,7 @@ namespace NodeWar.Simulation
             v.movePath = new int[0];
             v.movePathIndex = 0;
             v.moveProgress = 0;
-            v.targetNodeID = -1;
+            v.targetNodeID = v.currentNodeID;
             v.combatTargetID = -1;
             state.villagers[index] = v;
         }
