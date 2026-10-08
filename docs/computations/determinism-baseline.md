@@ -15,8 +15,8 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
 status: stable
 sources:
   - id: tests
@@ -77,8 +77,8 @@ each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `411123996` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `2101726457` |
+| `EmptyTick` | 100 | none | `647286254` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `357327383` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -112,7 +112,13 @@ and the auto-recruit production pass retain both pinned state fingerprints.
 The three-node fixtures hold `boardHash = 0` and `Land` on every node, so no board or rule difference
 moved the numbers: the hash simply folds in four more terms (one for the state, one per node), which
 changes the polynomial. `17457352 → 411123996` (`EmptyTick`) and `626950565 → 2101726457`
-(`MoveAndCombat`). Both were computed twice in separate processes. `BreachTempoTests.
+(`MoveAndCombat`). Both were computed twice in separate processes.
+
+**C7 re-pin (Fortress, still version 3).** C7 removed the unconditional per-villager `hasRampartBonus`
+hash term (and the conditional `rampartBonusEra` one) when it replaced the Rampart buffs with the
+node-level `fortressLevel`. The fixtures hold two villagers, so the polynomial lost two terms and both
+fingerprints moved: `411123996 → 647286254` (`EmptyTick`) and `2101726457 → 357327383`
+(`MoveAndCombat`). No rule difference reaches these fixtures. Version 3 is unreleased, so it was not bumped again. `BreachTempoTests.
 LegacyNoTempoRetainsVersionOneBaselineHashPaths` runs the same two fixtures and carries the same two
 constants.
 

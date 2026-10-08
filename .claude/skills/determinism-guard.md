@@ -6,8 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
 status: stable
 sources:
   - id: contract
@@ -100,7 +100,7 @@ Read the changed or proposed code, then check each item:
      tick sequence?
    - Canonical order: movement -> combat -> claiming -> 
      production -> healing -> respawns -> win-check
-   - Preserve the Rampart-bonus pass after movement and the order-resume
+   - Preserve the tick-start resistance snapshot and the order-resume
      pass (TickOrderResume) after win-check too. TickBreach precedes TickClaiming
      inside claiming; the derived nextBreacherID refresh is last, after resume.
    - Does a rule that depends on neighbouring owners (the capture bonus,
@@ -109,6 +109,9 @@ Read the changed or proposed code, then check each item:
      cannot change or overflow a result?
    - Do worker-count rules (the Infirmary's two counted Acolytes) pick by a total order
      (lowest villager ID) and share one function between the tick and any UI price?
+   - Fortress resistance must read the tick-start snapshot (owners and levels), take the
+     highest aura (not a sum) with a lowest-source tiebreak, and reset fortressLevel on every
+     ownership loss; invalid fortress cost or resistance arrays must disable upgrading, not be repaired.
    - A Town reward is paid inside the claim-complete step, with its entitlement
      spent before the population-cap check (no deferred credit), tracked by the
      hashed `townPaidMask`.
@@ -139,7 +142,7 @@ Read the changed or proposed code, then check each item:
      test checks equality with that pin, not whether hash constants were edited.
      Current and BaselinesPinnedAtSimVersion are both 3; the v2 re-pin retained
      the two numeric baseline hashes for the short, non-breaching fixtures; the v3
-     re-pin (terrain board) moved both, to 411123996 and 2101726457, because
+     re-pin (terrain board) moved both, and C7 (removing the per-villager Rampart hash term) moved them again to 647286254 and 357327383 within the same unreleased version, because
      boardHash and terrain are always hashed.
    - DistrictType numbers are persisted and explicit: active set 0-6 and 13-17
      (DistrictRoster.IsActive), retired numbers reserved. Does any new path accept
@@ -165,8 +168,8 @@ Read the changed or proposed code, then check each item:
    - Does any new CommandType have a case in CommandProcessor and an entry
      in CommandTypes.IsKnown?
    - Are new enum values explicitly accepted in InputSerializer and MatchLogFormat,
-     with unknown-type refusal and six-field round-trip coverage? Recruit=5 and
-     SetAutoRecruit=6 keep the existing payload and TICKS shape. Node commands
+     with unknown-type refusal and six-field round-trip coverage? Recruit=5,
+     SetAutoRecruit=6 and UpgradeFortress=7 keep the existing payload and TICKS shape. Node commands
      require villagerID=-1; Recruit value=0, repeat toggle value=0 or 1.
    - Does any GameCommand struct change update InputSerializer?
    - Is a map or rules agreement still made before any draft packet is

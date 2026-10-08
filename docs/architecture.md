@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
 status: stable
 sources:
   - id: sim-state
@@ -592,7 +592,7 @@ Pointer (mouse / touch)        or  BotPlayer
 ticks mutate it inside `Simulation/`; presentation only reads it.
 `Core/` still initializes state before play, through `MatchFactory` on every
 path, Testing mode included. See `docs/simulation-rules.md` for the in-match boundary.
-Rampart bonuses follow movement; order resume follows win-check;
+The Fortress resistance snapshot is built at the start of the tick; order resume follows win-check;
 the derived `nextBreacherID` refresh is last. Claiming and breaching read each node's
 owner as it stood when the tick began. Simulation version 2 adds
 `Breaching` after `Dead` and player breach progress, next candidate and
@@ -615,7 +615,7 @@ a fight or a blocked route, and `TickOrderResume` replans from the villager's
 current node once a tick, after every rule pass. Simulation version 3 adds terrain:
 `NodeData.terrain` and `SimulationState.boardHash` (the `BoardHasher` fingerprint of
 the board) are hashed, and the capture bonus, restore and the retired Watchtower and
-Rampart claim effects are described in `docs/game-model.md`.
+Rampart effects (Fortress resistance replaced the latter: `NodeData.fortressLevel`, the `UpgradeFortress` command validated through `NodeActionRules`) are described in `docs/game-model.md`.
 
 ### What a tick did
 

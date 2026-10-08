@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
-verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
+  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
 status: stable
 sources:
   - id: sim-state
@@ -151,8 +151,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      (or `DraftSerializer` for draft-phase actions) — both peers must
      encode/decode it identically.
      A new enum value also needs explicit acceptance in `InputSerializer` and
-     `MatchLogFormat`, plus round-trip and unknown-type refusal tests. Recruit=5
-     and SetAutoRecruit=6 retain the six-field, 24-byte command payload and TICKS tag.
+     `MatchLogFormat`, plus round-trip and unknown-type refusal tests. Recruit=5,
+     SetAutoRecruit=6 and UpgradeFortress=7 retain the six-field, 24-byte command payload and TICKS tag.
    - Any wire layout change bumps `ProtocolVersion.Current`
      (`Assets/Scripts/Backend/Shared/ProtocolVersion.cs`; `InputSerializer.ProtocolVersion`
      aliases it) in the same commit. A `GameCommand` change also needs a new TICKS tag in
@@ -201,8 +201,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      documented on `GameSimulation.SimulateTick`).
    - Insert at the correct, justified step — do not append a new step at
      the end by default, and do not reorder existing steps.
-   - Claiming begins with `TickBreach` before `TickClaiming`; Rampart
-     bonuses follow movement, auto-recruit follows production, and order
+   - Claiming begins with `TickBreach` before `TickClaiming`; the Fortress
+     resistance snapshot is taken from tick-start state, auto-recruit follows production, and order
      resume (`TickOrderResume`) follows win-check.
      Anything that depends on who owns a neighbouring node reads the
      tick-start owner snapshot, not live owners, so node order cannot matter.
