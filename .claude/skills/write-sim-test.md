@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
 status: stable
 sources:
   - id: tests
@@ -111,7 +111,7 @@ Step 5: Assert expected state
 - For caps, assert wasted completions still cycle, Forge spends no material
   at the metal cap, Market still alternates, and cap 0 remains uncapped
 - For paid respawns, assert only successful commands increment paidRespawns
-  and Sanctuary discounts the escalated cost with integer rounding/minimum 1
+  and the Infirmary (at most two counted workers, lowest villager ID, none under enemy presence) discounts the escalated cost with integer rounding/minimum 1
 - For Town, assert each player is paid once on their first full claim (including a
   raider taking the enemy Town), the reward is capped by population room and still
   consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.

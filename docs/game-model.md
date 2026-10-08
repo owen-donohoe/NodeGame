@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
 status: draft
 sources:
   - id: sim-state
@@ -193,9 +193,9 @@ places every district as `Fixed`, so those districts keep their type and placer'
 | `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0` |
 | `Village` | Fixed | Paid Recruit action and optional automatic repeat; no claim bonus |
 | `Town` | Fixed | One-time reward: the first full claim by each player spawns `townBonusVillagers` (code default 2, per era) at the Town, limited by room under the population cap. The entitlement is spent even if the cap leaves nothing to pay, and never deferred. A player taking the enemy's Town is paid too. Afterwards the Town does nothing |
-| `Barracks` | Army | Equip Warrior, Guardian, Berserker or Scout |
-| `Infirmary` | Healing | Placeholder: in the roster and draftable, with no effect yet |
-| `Fortress` | Affect | Placeholder: in the roster and draftable, with no effect yet |
+| `Barracks` | Army | Equip any drafted combat suit (Warrior, Guardian, Scout, Berserker, Medic) |
+| `Infirmary` | Healing | Heals its owner's living, non-moving villagers standing on it every `healIntervalTicks` (code default 10, per era) on the global tick, in addition to ordinary healing. Acolytes work it: at most 2 count, chosen by lowest villager ID, each speeding the owner's respawn countdown and cutting the paid-respawn cost (below). Not usable while an enemy stands on it or it is not owned by the worker's player |
+| `Fortress` | Affect | Placeholder: in the roster and draftable, with no effect yet (inert until its rules land) |
 | `Market` | ResourceSpecial | Merchant works it → alternates +1 food and +1 material |
 | `Pier` | Fixed | Drafted only on a Lake slot. Turns that cell into a node that connects its land neighbours; grants nothing and blocks nobody |
 
@@ -203,19 +203,20 @@ places every district as `Fixed`, so those districts keep their type and placer'
 Farm, Mine, Village, Barracks, Core, Forge, Market, Pier, Town, Infirmary, Fortress. The draft, a
 board's placements and base pools, a loadout and a match log accept only these; nothing is
 accepted by an alias. Seven numbers are retired and stay reserved, never reused: Camp 7 and
-Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary), Rampart 12 (now Fortress) and
+Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary, which takes over both jobs), Rampart 12 (now Fortress) and
 Watchtower 11 (now an empty slot). Saved decks and inventories are converted once
 (`DistrictMigration`, in `Backend/Shared`), keeping the old item owned, adding the replacement at
-the same era and collapsing duplicates. The old Camp, Arsenal, Shrine, Sanctuary and Rampart rules
-still exist in the simulation code for the historical numbers, but no new match can contain those
-districts, so the Medic has no equip point and the Acolyte and Watcher no workplace. Combat and
-respawn text below that mentions them describes those retained rules.
+the same era and collapsing duplicates. The old Rampart rules
+still exist in the simulation code for the historical numbers, but no new match can contain that
+district, and the Watcher has no workplace. The Rampart text in the combat section describes the retained rule.
 
 ## Suits
 
 A suit is a villager's role. Production suits (`Farmer`, `Miner`, `Smelter`, `Merchant`, `Acolyte`,
 `Watcher`) are **assigned automatically** on arrival at the matching owned district and stripped
-when the villager leaves.
+when the villager leaves. An Infirmary is shared ground: it counts only while every living villager
+on it is its owner's, and only the two lowest-ID eligible (non-combat, stationary) villagers there
+work it; a third waits idle.
 
 Combat suits (`Warrior`, `Guardian`, `Scout`, `Berserker`, `Medic`) are **equipped deliberately**
 via an `Equip` command and are **permanent until death**. Equipping requires all of: the villager
@@ -260,11 +261,12 @@ reduced damage, to a floor of 1.
 
 At 0 HP a villager dies, drops its path, and respawns at its owner's Core after `respawnTicks`
 (default 50), reset to base stats with no suit. A player may also spend food on a `Respawn` command
-to bring a dead villager back immediately instead of waiting. Each Acolyte working a Sanctuary both
-speeds the passive countdown and reduces that food cost by its Sanctuary's era-specific values.
-Workers' boosts and cost-reduction percentages add. Tempo scales the passive countdown first,
-then Sanctuary adds its boost. Each successful paid respawn increments the player's match-long
-`paidRespawns`: the next cost is `respawnCostFood × (paidRespawns + 1)`. Sanctuary reductions
+to bring a dead villager back immediately instead of waiting. Each Acolyte counted at an owned Infirmary both
+speeds the passive countdown and reduces that food cost by that Infirmary's era-specific values
+(`respawnBoostPerWorker`, default 1; `respawnCostReductionPercent`, default 20). Counted workers' boosts and
+cost-reduction percentages add. Tempo scales the passive countdown first,
+then the Infirmary adds its boost. Each successful paid respawn increments the player's match-long
+`paidRespawns`: the next cost is `respawnCostFood × (paidRespawns + 1)`. Infirmary reductions
 apply to that escalated cost, subtracting the integer-rounded-down discount, with a minimum
 payment of 1 food. Failed commands do not advance the counter.
 

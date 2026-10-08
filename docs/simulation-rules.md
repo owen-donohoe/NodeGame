@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
 status: stable
 sources:
   - id: sim-loop
@@ -183,7 +183,11 @@ changing, so the order in which nodes are processed cannot move a result.) A new
 be inserted at a specific, justified point in this sequence, not appended
 by default. Production runs ordinary workers, then auto-recruit, before healing.
 Auto-recruit visits ascending node ID and uses the same validated recruit path
-as the command processor; no tempo scaling is applied to its ready tick.
+as the command processor; no tempo scaling is applied to its ready tick. The Infirmary
+rules add no state: which Acolytes count (`GameSimulation.CountInfirmaryWorkers`, at most two,
+lowest villager ID first, none if any enemy stands there) is derived from existing fields, and the
+simulation and the UI's paid-respawn price both call that one function. Its boost is added to the
+respawn decrement after the tempo adjustment, and its heal runs on `tickCount % healIntervalTicks`.
 
 **View and UI never write to `SimulationState`.**
 Why: any write from outside the tick path runs on that machine's own

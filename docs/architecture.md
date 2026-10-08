@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
 status: stable
 sources:
   - id: sim-state

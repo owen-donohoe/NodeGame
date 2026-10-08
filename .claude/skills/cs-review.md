@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
-verified_at_commit: 5362604267674ab2247be1efd4ad8e9b6f100852
+  - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
+verified_at_commit: 9b4ea209b2004f3ccfdc3209fb4133b051b12ab0
 status: stable
 sources:
   - id: architecture
@@ -48,6 +48,8 @@ Read all files modified in this session, then check:
    - Does the pre-draft setup (MatchSetup, MatchSetupAck, SetupAgreement) only
      carry and compare map ID, board hash and versions, with the board itself
      coming from the shipped PremadeMaps.Catalog rather than the wire?
+   - Does a UI price or eligibility call the simulation's own helper
+     (NodeActionRules, CountInfirmaryWorkers) rather than restate the rule?
    - Do saved-data conversions for retired districts stay in Backend/Shared
      DistrictMigration, with the runtime and wire accepting only active
      DistrictRoster types and no aliases?
