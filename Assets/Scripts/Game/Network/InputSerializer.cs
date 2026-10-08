@@ -117,6 +117,8 @@ namespace NodeWar.Network
 
             for (int i = 0; i < commandCount; i++)
             {
+                if (!CommandTypes.IsKnown(input.commands[i].type))
+                    throw new System.ArgumentException("Unknown command type.", nameof(input));
                 WriteInt(data, ref offset, (int)input.commands[i].type);
                 WriteInt(data, ref offset, input.commands[i].playerID);
                 WriteInt(data, ref offset, input.commands[i].villagerID);
@@ -168,6 +170,7 @@ namespace NodeWar.Network
             for (int i = 0; i < commandCount; i++)
             {
                 input.commands[i].type = (CommandType)ReadInt(data, ref offset);
+                if (!CommandTypes.IsKnown(input.commands[i].type)) { input = default; return false; }
                 input.commands[i].playerID = ReadInt(data, ref offset);
                 input.commands[i].villagerID = ReadInt(data, ref offset);
                 input.commands[i].targetNodeID = ReadInt(data, ref offset);

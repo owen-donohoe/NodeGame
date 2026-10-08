@@ -84,6 +84,8 @@ namespace NodeWar.Simulation
         public int maxVillagersPerPlayer;
 
         public int respawnCostFood;
+        public int recruitBaseCost;
+        public int recruitCostPerRecruit;
 
         /// <summary>Resource ceilings; zero or negative means uncapped.</summary>
         public int foodCap;
@@ -293,6 +295,30 @@ namespace NodeWar.Simulation
             return true;
         }
 
+        /// <summary>Price is also the cooldown in seconds, using the pre-recruit count.</summary>
+        public bool TryRecruitCostAndCooldown(int count, int tick, out int cost, out int readyTick)
+        {
+            cost = 0;
+            readyTick = 0;
+            if (count < 0 || recruitBaseCost <= 0 || recruitCostPerRecruit <= 0 || ticksPerSecond <= 0)
+                return false;
+            try
+            {
+                checked
+                {
+                    long price = (long)recruitBaseCost + (long)recruitCostPerRecruit * count;
+                    long duration = price * ticksPerSecond;
+                    long ready = tick + duration;
+                    if (price > int.MaxValue || duration > int.MaxValue || ready < int.MinValue || ready > int.MaxValue)
+                        return false;
+                    cost = (int)price;
+                    readyTick = (int)ready;
+                    return true;
+                }
+            }
+            catch (System.OverflowException) { return false; }
+        }
+
         public static GameBalanceData Default()
         {
             return new GameBalanceData
@@ -319,6 +345,8 @@ namespace NodeWar.Simulation
                 maxWorkersPerNode = 2,
                 maxVillagersPerPlayer = 25,
                 respawnCostFood = 1,
+                recruitBaseCost = 6,
+                recruitCostPerRecruit = 3,
                 foodCap = 30,
                 materialsCap = 30,
                 metalCap = 10,

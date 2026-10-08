@@ -89,6 +89,8 @@ namespace NodeWar.Simulation
         public int ownerID;
         public int bonusVillagersOnClaim;
         public int materialAllocation;
+        public int recruitReadyTick;
+        public bool autoRecruit;
 
         public DistrictUpgradeCategory upgradeCategory;
         public DistrictType baseDistrictType;
@@ -159,6 +161,8 @@ namespace NodeWar.Simulation
         public int breachCount;
         /// <summary>Successful paid respawns by this player during this match.</summary>
         public int paidRespawns;
+        /// <summary>Successful recruits during this match; persists through ownership loss.</summary>
+        public int recruitCount;
         /// <summary>Progress against this player's core.</summary>
         public int breachBar;
         /// <summary>Derived candidate cache, refreshed after all tick mutations; -1 for none.</summary>

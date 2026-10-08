@@ -38,6 +38,7 @@
   <ItemGroup>
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
+    <Compile Include="NodeCommandWireTests.cs" />
     <Compile Include="LoadoutEraTests.cs" />
     <Compile Include="DraftLoadoutPacketTests.cs" />
     <Compile Include="LoadoutEditorTests.cs" />
@@ -177,4 +178,3 @@
   </ItemGroup>
 
 </Project>
-

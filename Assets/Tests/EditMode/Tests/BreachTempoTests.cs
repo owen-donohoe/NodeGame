@@ -264,7 +264,19 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void BreachFreesSlotBeforeSameTickVillageCapture()
+        public void BreachFreesSlot_VillageCaptureDoesNotSpawn()
+        {
+            VillageCaptureAfterBreach();
+        }
+
+        [Test]
+        public void BreachFreesSlot_VillageCaptureDoesNotSpawn_Determinism()
+        {
+            int first = SimulationStateHasher.ComputeHash(VillageCaptureAfterBreach());
+            Assert.AreEqual(first, SimulationStateHasher.ComputeHash(VillageCaptureAfterBreach()));
+        }
+
+        private SimulationState VillageCaptureAfterBreach()
         {
             balance.maxVillagersPerPlayer = 2;
             Install();
@@ -278,10 +290,12 @@ namespace NodeWar.Tests
             state.nodes[1].claimBar = balance.claimThreshold - 1;
             state.players[1].breachBar = balance.breachBarMax - balance.breachSwarmRate[0];
             GameSimulation.SimulateTick(state);
-            Assert.AreEqual(3, state.villagers.Length);
+            Assert.AreEqual(2, state.villagers.Length);
             Assert.IsTrue(state.villagers[0].isConsumed);
             Assert.AreEqual(0, state.nodes[1].ownerID);
             Assert.AreEqual(-1, state.players[1].nextBreacherID);
+            Assert.AreEqual(1, NodeActionRules.CountPopulation(state, 0));
+            return state;
         }
 
         [TestCase(0, 1199, 17)] [TestCase(0, 1200, 25)] [TestCase(0, 1800, 34)]

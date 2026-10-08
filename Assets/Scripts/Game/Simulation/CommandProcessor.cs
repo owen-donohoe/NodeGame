@@ -28,6 +28,12 @@ namespace NodeWar.Simulation
                 case CommandType.Respawn:
                     ProcessRespawnCommand(state, command, log);
                     break;
+                case CommandType.Recruit:
+                    ProcessRecruit(state, command);
+                    break;
+                case CommandType.SetAutoRecruit:
+                    ProcessSetAutoRecruit(state, command);
+                    break;
             }
         }
         /// <summary>
@@ -207,6 +213,31 @@ namespace NodeWar.Simulation
             if (scaled < 0) scaled = 0;
             if (scaled > toTicks) scaled = toTicks;
             return scaled;
+        }
+
+        private static void ProcessRecruit(SimulationState state, GameCommand command)
+        {
+            if (command.villagerID != -1 || command.value != 0) return;
+            TryRecruit(state, command.playerID, command.targetNodeID);
+        }
+
+        private static void ProcessSetAutoRecruit(SimulationState state, GameCommand command)
+        {
+            if (command.villagerID != -1 ||
+                !NodeActionRules.CanSetAutoRecruit(state, command.playerID, command.targetNodeID, command.value)) return;
+            state.nodes[command.targetNodeID].autoRecruit = command.value == 1;
+        }
+
+        internal static bool TryRecruit(SimulationState state, int playerID, int nodeID)
+        {
+            if (!NodeActionRules.CanRecruit(state, bal, playerID, nodeID, out _)) return false;
+            if (!bal.TryRecruitCostAndCooldown(state.players[playerID].recruitCount, state.tickCount,
+                out int cost, out int readyTick)) return false;
+            state.players[playerID].food -= cost;
+            GameSimulation.SpawnBonusVillagers(state, nodeID, playerID, 1);
+            state.players[playerID].recruitCount++;
+            state.nodes[nodeID].recruitReadyTick = readyTick;
+            return true;
         }
 
         private static void ProcessSetAllocation(SimulationState state, GameCommand command)

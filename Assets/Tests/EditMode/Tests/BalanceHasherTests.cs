@@ -14,6 +14,8 @@ namespace NodeWar.Tests
         }
         [TestCase("captureBonusPercentPerStep", 25)]
         [TestCase("captureBonusMaxSteps", 2)]
+        [TestCase("recruitBaseCost", 6)]
+        [TestCase("recruitCostPerRecruit", 3)]
         public void CoreScalar_RegisteredDefaultAndIndependentMutation(string name, int expected)
         {
             var b = GameBalanceData.Default(); var field = typeof(GameBalanceData).GetField(name);

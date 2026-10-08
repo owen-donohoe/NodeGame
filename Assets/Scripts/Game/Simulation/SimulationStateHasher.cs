@@ -34,6 +34,12 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + state.players[i].materials;
                     hash = hash * 31 + state.players[i].metal;
                     hash = hash * 31 + state.players[i].breachCount;
+                    if (state.players[i].recruitCount != 0)
+                    {
+                        hash = hash * 31 + 2010;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.players[i].recruitCount;
+                    }
                     // The new counter starts at zero; retain existing neutral hash paths.
                     if (state.players[i].paidRespawns != 0)
                     {
@@ -85,6 +91,18 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (int)state.nodes[i].terrain;
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;
+                    if (state.nodes[i].recruitReadyTick != 0)
+                    {
+                        hash = hash * 31 + 4010;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + state.nodes[i].recruitReadyTick;
+                    }
+                    if (state.nodes[i].autoRecruit)
+                    {
+                        hash = hash * 31 + 4011;
+                        hash = hash * 31 + i;
+                        hash = hash * 31 + 1;
+                    }
                 }
 
                 // Villagers (all mutable fields)

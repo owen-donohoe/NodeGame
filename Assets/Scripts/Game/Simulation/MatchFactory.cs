@@ -173,7 +173,9 @@ namespace NodeWar.Simulation
                     claimBar = 0,
                     ownerID = -1,
                     bonusVillagersOnClaim = 0,
-                    materialAllocation = 0
+                    materialAllocation = 0,
+                    recruitReadyTick = 0,
+                    autoRecruit = false
                 };
             }
 
@@ -255,6 +257,7 @@ namespace NodeWar.Simulation
                     metal = GameBalanceData.ClampResource(board.startingMetal, balance.metalCap),
                     breachCount = 0,
                     paidRespawns = 0,
+                    recruitCount = 0,
                     breachBar = 0,
                     nextBreacherID = -1,
                     draftedSuits = setup.suits ?? new int[0],

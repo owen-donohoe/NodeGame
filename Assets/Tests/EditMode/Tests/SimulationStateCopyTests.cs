@@ -18,6 +18,25 @@ namespace NodeWar.Tests
         private int next;
 
         [Test]
+        public void CopyFrom_RecruitFieldsRoundTripAndStayIndependent()
+        {
+            var source = TestBoardFactory.BuildThreeNodeBoard(GameBalanceData.Default());
+            object player = source.players[0]; object node = source.nodes[1];
+            foreach (var name in new[] { "recruitCount", "recruitReadyTick", "autoRecruit" })
+            {
+                var type = name == "recruitCount" ? typeof(PlayerData) : typeof(NodeData);
+                var field = type.GetField(name); Assert.IsNotNull(field, name);
+                field.SetValue(name == "recruitCount" ? player : node, name == "autoRecruit" ? (object)true : 17);
+            }
+            source.players[0] = (PlayerData)player; source.nodes[1] = (NodeData)node;
+            var copy = new SimulationState(); copy.CopyFrom(source);
+            AssertSame(source, copy, "recruit copy");
+            int hash = SimulationStateHasher.ComputeHash(source);
+            copy.players[0] = default; copy.nodes[1] = default;
+            Assert.AreEqual(hash, SimulationStateHasher.ComputeHash(source));
+        }
+
+        [Test]
         public void CopyFrom_CarriesEveryFieldOfEveryStateType()
         {
             SimulationState source = FilledState();

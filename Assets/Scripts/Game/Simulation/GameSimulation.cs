@@ -50,6 +50,7 @@ namespace NodeWar.Simulation
 
             // Step 5: Production
             TickProduction(state);
+            TickAutoRecruit(state);
 
             // Step 6: Healing
             TickHealing(state);
@@ -557,6 +558,8 @@ namespace NodeWar.Simulation
                     {
                         node.claimBar = 0;
                         node.ownerID = -1;
+                        node.autoRecruit = false;
+                        node.recruitReadyTick = 0;
                         log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 1, 0);
                     }
                 }
@@ -578,6 +581,8 @@ namespace NodeWar.Simulation
                     {
                         node.claimBar = 0;
                         node.ownerID = -1;
+                        node.autoRecruit = false;
+                        node.recruitReadyTick = 0;
                         log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 0, 1);
                     }
                 }
@@ -638,6 +643,14 @@ namespace NodeWar.Simulation
             else if (node.ownerID == 1 && node.claimBar > -(long)bal.claimThreshold)
                 node.claimBar = (int)System.Math.Max(-(long)bal.claimThreshold, (long)node.claimBar - rate);
             state.nodes[nodeID] = node;
+        }
+
+        private static void TickAutoRecruit(SimulationState state)
+        {
+            // MatchFactory assigns compact ascending node IDs in array order.
+            for (int nodeID = 0; nodeID < state.nodes.Length; nodeID++)
+                if (state.nodes[nodeID].autoRecruit)
+                    CommandProcessor.TryRecruit(state, state.nodes[nodeID].ownerID, nodeID);
         }
 
         /// <summary>
@@ -798,6 +811,11 @@ namespace NodeWar.Simulation
         {
             log?.Add(TickEventType.NodeClaimed, nodeIndex, -1, playerID, state.nodes[nodeIndex].ownerID);
 
+            if (state.nodes[nodeIndex].ownerID != playerID)
+            {
+                state.nodes[nodeIndex].autoRecruit = false;
+                state.nodes[nodeIndex].recruitReadyTick = 0;
+            }
             state.nodes[nodeIndex].ownerID = playerID;
 
             if (state.nodes[nodeIndex].upgradeCategory != DistrictUpgradeCategory.Fixed)
@@ -827,9 +845,6 @@ namespace NodeWar.Simulation
                 }
             }
 
-            int bonus = state.nodes[nodeIndex].bonusVillagersOnClaim;
-            if (bonus > 0)
-                SpawnBonusVillagers(state, nodeIndex, playerID, bonus);
         }
 
         private static DistrictType GetPlayerUpgradeForSlot(SimulationState state, int playerID, DistrictUpgradeCategory upgradeCategory)
@@ -845,7 +860,7 @@ namespace NodeWar.Simulation
             return DistrictType.None;
         }
 
-        private static void SpawnBonusVillagers(SimulationState state, int nodeID, int playerID, int count)
+        internal static void SpawnBonusVillagers(SimulationState state, int nodeID, int playerID, int count)
         {
             // Count how many villagers this player currently has (including dead, excluding consumed)
             int playerVillagerCount = 0;

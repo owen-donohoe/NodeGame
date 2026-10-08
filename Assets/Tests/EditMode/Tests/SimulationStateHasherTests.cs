@@ -18,7 +18,7 @@ namespace NodeWar.Tests
             "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
             "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
-            "NodeData.districtEra", "NodeData.terrain",
+            "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
             "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",
@@ -30,7 +30,7 @@ namespace NodeWar.Tests
             "VillagerData.hasRampartBonus", "VillagerData.rampartBonusEra",
             "PlayerData.playerID", "PlayerData.coreNodeID", "PlayerData.food", "PlayerData.materials",
             "PlayerData.metal", "PlayerData.breachCount", "PlayerData.paidRespawns", "PlayerData.breachBar", "PlayerData.nextBreacherID", "PlayerData.draftedSuits",
-            "PlayerData.draftedDistricts", "PlayerData.suitEras", "PlayerData.districtEras"
+            "PlayerData.draftedDistricts", "PlayerData.suitEras", "PlayerData.districtEras", "PlayerData.recruitCount"
         };
 
         private static readonly string[] Excluded =
@@ -40,8 +40,8 @@ namespace NodeWar.Tests
             // CopyFrom shares links because board topology is fixed and no tick
             // writes it. The edge fields have the same construction-only lifetime.
             "NodeData.links", "Link.toNodeID", "Link.travelWeight",
-            // SpawnBonusVillagers reads this board-construction setting on claim;
-            // no tick changes it. docs/simulation-rules.md explicitly excludes it.
+            // Legacy board-construction setting; C3 removes claim-spawn gameplay.
+            // Retained until C4 removes the DTO field; no tick reads or changes it.
             "NodeData.bonusVillagersOnClaim"
         };
 
