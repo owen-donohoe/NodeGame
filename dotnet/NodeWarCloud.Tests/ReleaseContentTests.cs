@@ -92,7 +92,7 @@ namespace NodeWar.Cloud.Tests
         }
 
         // The lead exports the Editor balance asset at D-E; this is the whole acceptance assertion for it.
-        [Test, Ignore("D-E: needs the v4 balance export")]
+        [Test]
         public void V4ExportHashMatchesFilenameAndCarriesBankTuning()
         {
             var assembly = typeof(BalanceCatalog).Assembly;

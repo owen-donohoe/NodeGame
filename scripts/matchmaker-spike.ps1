@@ -10,11 +10,10 @@
 param(
     [string]$Environment = "development",
     [int]$Seconds = 60,
-    # PR #82 release identity: MatchSetup, terrain maps and core rules.
+    # PR D release identity: banks, structures and Pier gates (sim 4).
     [int]$Protocol = 5,
     [int]$Sim = 4,
-    # Content is deliberately not updated here: the lead sets it to the v4 balance export hash at the D-E release gate.
-    [int]$Content = 971356564,
+    [int]$Content = -1867912668,
     [switch]$EnsureRecords,
     # After a match forms: publish a code as slot 0, read it as slot 1, then
     # leave before connecting, which must void the match and free both players.

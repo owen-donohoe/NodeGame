@@ -14,6 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.Simulation.GameBalance
   data:
     ticksPerSecond: 10
+    minionHP: 16
+    minionMetalCost: 3
+    bankCapacity: 5
+    collectProgressPerTick: 5
+    collectProgressPerUnit: 16
+    structureDamagePerTick: 1
+    maxStructureAttackersPerNode: 4
     baseClaimPerTick: 17
     decrementMultiplier: 4
     claimThreshold: 5000
@@ -700,6 +707,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -717,6 +726,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -734,6 +745,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -751,6 +764,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -768,6 +783,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -785,6 +802,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -802,6 +821,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -819,6 +840,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -836,6 +859,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -853,6 +878,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -870,6 +897,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -887,6 +916,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -904,6 +935,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -921,6 +954,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -938,6 +973,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -955,6 +992,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -972,6 +1011,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -989,6 +1030,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1006,6 +1049,8 @@ MonoBehaviour:
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1023,6 +1068,8 @@ MonoBehaviour:
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1040,6 +1087,8 @@ MonoBehaviour:
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1057,6 +1106,8 @@ MonoBehaviour:
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1074,6 +1125,8 @@ MonoBehaviour:
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1091,6 +1144,8 @@ MonoBehaviour:
       secondaryProductionTicks: 55
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1108,6 +1163,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1125,6 +1182,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1142,6 +1201,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1159,6 +1220,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1176,6 +1239,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1193,6 +1258,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 2
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1210,6 +1277,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1227,6 +1296,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1244,6 +1315,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1261,6 +1334,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1278,6 +1353,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1295,6 +1372,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1312,6 +1391,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1329,6 +1410,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1346,6 +1429,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1363,6 +1448,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1380,6 +1467,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1397,6 +1486,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1414,6 +1505,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1431,6 +1524,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1448,6 +1543,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1465,6 +1562,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1482,6 +1581,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1499,6 +1600,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1516,6 +1619,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1533,6 +1638,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1550,6 +1657,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1567,6 +1676,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1584,6 +1695,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1601,6 +1714,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1618,6 +1733,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 2
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1635,6 +1752,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 2
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1652,6 +1771,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 2
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1669,6 +1790,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 2
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1686,6 +1809,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 2
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1703,6 +1828,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 2
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1720,6 +1847,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1737,6 +1866,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1754,6 +1885,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1771,6 +1904,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1788,6 +1923,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1805,6 +1942,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1822,6 +1961,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1839,6 +1980,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1856,6 +1999,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1873,6 +2018,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1890,6 +2037,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1907,6 +2056,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -1924,6 +2075,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 16
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 0000000004000000080000000c000000i
       fortressMetalCosts: 00000000010000000200000003000000i
       fortressResistancePercent: 00000000190000002800000032000000i
@@ -1941,6 +2094,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 16
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 0000000004000000080000000c000000i
       fortressMetalCosts: 00000000010000000200000003000000i
       fortressResistancePercent: 00000000190000002800000032000000i
@@ -1958,6 +2113,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 16
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 0000000004000000080000000c000000i
       fortressMetalCosts: 00000000010000000200000003000000i
       fortressResistancePercent: 00000000190000002800000032000000i
@@ -1975,6 +2132,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 16
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 0000000004000000080000000c000000i
       fortressMetalCosts: 00000000010000000200000003000000i
       fortressResistancePercent: 00000000190000002800000032000000i
@@ -1992,6 +2151,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 16
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 0000000004000000080000000c000000i
       fortressMetalCosts: 00000000010000000200000003000000i
       fortressResistancePercent: 00000000190000002800000032000000i
@@ -2009,6 +2170,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 16
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 0000000004000000080000000c000000i
       fortressMetalCosts: 00000000010000000200000003000000i
       fortressResistancePercent: 00000000190000002800000032000000i
@@ -2026,6 +2189,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 2
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -2043,6 +2208,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 2
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -2060,6 +2227,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 2
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -2077,6 +2246,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 2
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -2094,6 +2265,8 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 2
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
@@ -2111,6 +2284,122 @@ MonoBehaviour:
       secondaryProductionTicks: 0
       bonusVillagersOnClaim: 0
       townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 2
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 18
+      era: 0
+      productionTicks: 80
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 18
+      era: 1
+      productionTicks: 80
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 18
+      era: 2
+      productionTicks: 80
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 18
+      era: 3
+      productionTicks: 80
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 18
+      era: 4
+      productionTicks: 80
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
+      fortressMaterialsCosts: 
+      fortressMetalCosts: 
+      fortressResistancePercent: 
+      healIntervalTicks: 0
+      claimDecrementMultiplier: 0
+      damageReduction: 0
+      maxHPBonus: 0
+      claimRateNumerator: 0
+      claimRateDenominator: 0
+      respawnBoostPerWorker: 0
+      respawnCostReductionPercent: 0
+    - districtType: 18
+      era: 5
+      productionTicks: 80
+      secondaryProductionTicks: 0
+      bonusVillagersOnClaim: 0
+      townBonusVillagers: 0
+      fortificationHP: 0
+      pierTravelDivisor: 0
       fortressMaterialsCosts: 
       fortressMetalCosts: 
       fortressResistancePercent: 
