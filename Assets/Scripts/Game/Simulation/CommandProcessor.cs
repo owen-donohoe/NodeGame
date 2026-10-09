@@ -121,7 +121,7 @@ namespace NodeWar.Simulation
             int anchor = villager.currentNodeID;
             int otherEnd = (legFrom == anchor) ? legTo : legFrom;
 
-            int legTicks = GetLegTicks(state, legFrom, legTo, villager.moveSpeedTicks);
+            int legTicks = GameSimulation.GetMoveLegDurationTicks(state, villager);
 
             // Ticks already spent getting away from the anchor. On a reversal leg
             // progress counts back toward the anchor, so it inverts.
@@ -140,19 +140,19 @@ namespace NodeWar.Simulation
             // villager order to its own node is.
             if (anchor == destination)
             {
-                int cancelTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+                int cancelTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, otherEnd, anchor, villager.moveSpeedTicks);
                 ApplyMove(state, vid, new int[] { otherEnd, anchor },
-                          cancelTicks - Rescale(covered, legTicks, cancelTicks), destination);
+                          cancelTicks - (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, cancelTicks)), destination);
                 return;
             }
 
-            int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination);
+            int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination, villager.moveSpeedTicks);
             if (path.Length < 2)
             {
                 // Pay the return crossing before waiting for an unreachable destination.
-                int backTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+                int backTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, otherEnd, anchor, villager.moveSpeedTicks);
                 ApplyMove(state, vid, new int[] { otherEnd, anchor },
-                          backTicks - Rescale(covered, legTicks, backTicks), destination);
+                          backTicks - (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, backTicks)), destination);
                 return;
             }
 
@@ -160,8 +160,8 @@ namespace NodeWar.Simulation
             {
                 // The new route runs on through the node already being approached.
                 // Keep crossing; only what comes after it changes.
-                int aheadTicks = GetLegTicks(state, anchor, otherEnd, villager.moveSpeedTicks);
-                ApplyMove(state, vid, path, Rescale(covered, legTicks, aheadTicks), destination);
+                int aheadTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, anchor, otherEnd, villager.moveSpeedTicks);
+                ApplyMove(state, vid, path, (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, aheadTicks)), destination);
                 return;
             }
 
@@ -172,9 +172,9 @@ namespace NodeWar.Simulation
             reversed[0] = otherEnd;
             for (int i = 0; i < path.Length; i++) reversed[i + 1] = path[i];
 
-            int returnTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+            int returnTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, otherEnd, anchor, villager.moveSpeedTicks);
             ApplyMove(state, vid, reversed,
-                      returnTicks - Rescale(covered, legTicks, returnTicks), destination);
+                      returnTicks - (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, returnTicks)), destination);
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].targetNodeID = fromNode == destination ? -1 : destination;
             state.villagers[villagerIndex].movePath = new int[0];
             state.villagers[villagerIndex].movePathIndex = 0;
-            state.villagers[villagerIndex].moveProgress = 0;
+            GameSimulation.ClearLeg(ref state.villagers[villagerIndex]);
             state.villagers[villagerIndex].combatTargetID = -1;
             state.villagers[villagerIndex].state = VillagerState.Idle;
             if (fromNode == destination)
@@ -195,7 +195,7 @@ namespace NodeWar.Simulation
                 return;
             }
 
-            int[] path = Pathfinding.FindPath(state, ownerID, fromNode, destination);
+            int[] path = Pathfinding.FindPath(state, ownerID, fromNode, destination, state.villagers[villagerIndex].moveSpeedTicks);
             if (path.Length < 2) return;
 
             ApplyMove(state, villagerIndex, path, 0, destination);
@@ -204,10 +204,14 @@ namespace NodeWar.Simulation
         private static void ApplyMove(SimulationState state, int villagerIndex,
                                       int[] path, int progress, int destination)
         {
+            state.villagers[villagerIndex].targetNodeID = destination;
+            if (PierGate.BlocksDeparture(state, state.villagers[villagerIndex], path[1])) return;
             state.villagers[villagerIndex].movePath = path;
             state.villagers[villagerIndex].movePathIndex = 0;
             state.villagers[villagerIndex].moveProgress = progress;
             state.villagers[villagerIndex].targetNodeID = destination;
+            if (state.villagers[villagerIndex].moveLegDurationTicks == 0)
+                GameSimulation.BeginLeg(state, ref state.villagers[villagerIndex]);
             state.villagers[villagerIndex].state = VillagerState.Moving;
             state.villagers[villagerIndex].combatTargetID = -1;
         }
@@ -216,10 +220,9 @@ namespace NodeWar.Simulation
         /// Ticks needed to cross a leg. Never zero -- progress against a zero-tick
         /// leg would be meaningless, and the division in Rescale would fault.
         /// </summary>
-        private static int GetLegTicks(SimulationState state, int fromNode, int toNode, int moveSpeedTicks)
+        private static int GetLegTicks(SimulationState state, int ownerID, int fromNode, int toNode, int moveSpeedTicks)
         {
-            int ticks = GameSimulation.GetLinkWeight(state, fromNode, toNode) * moveSpeedTicks;
-            return ticks < 1 ? 1 : ticks;
+            return GameSimulation.CalculateLegTicks(state, ownerID, fromNode, toNode, moveSpeedTicks);
         }
 
         /// <summary>

@@ -157,6 +157,27 @@ namespace NodeWar.Tests
             var historical = SetCoreScalar(SetCoreScalar(SetCoreScalar(b, "minionHP", 0), "minionMetalCost", 0), "bankCapacity", 0);
             Assert.IsTrue(historical.CoreRulesValid(out _)); Assert.IsFalse(historical.BankTuningValid());
         }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void PierTuning_EveryEraHashesAndValidates(int era)
+        {
+            var b = GameBalanceData.Default();
+            int index = Array.FindIndex(b.districtStats, d => d.districtType == DistrictType.Pier && d.era == era);
+            Assert.GreaterOrEqual(index, 0);
+            foreach (string name in new[] { "pierTravelDivisor" })
+            {
+                var f = typeof(DistrictStats).GetField(name); Assert.IsNotNull(f);
+                Assert.AreEqual(2, f.GetValue(b.districtStats[index]));
+                var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone();
+                object entry = copy.districtStats[index]; f.SetValue(entry, (int)f.GetValue(entry) + 1);
+                copy.districtStats[index] = (DistrictStats)entry;
+                Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                foreach (int invalid in new[] { -1, int.MaxValue })
+                {
+                    f.SetValue(entry, invalid); copy.districtStats[index] = (DistrictStats)entry;
+                    Assert.IsFalse(copy.CoreRulesValid(out _));
+                }
+            }
+        }
         private static GameBalanceData WithOneSuit()
         {
             GameBalanceData b = GameBalanceData.Default();

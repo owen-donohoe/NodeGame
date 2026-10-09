@@ -7,6 +7,31 @@ namespace NodeWar.View.Tests
 {
     public class OrderPresentationTests
     {
+        [TestCase(VillagerState.Idle)] [TestCase(VillagerState.Claiming)] [TestCase(VillagerState.Fighting)]
+        public void EnemyPierGate_RetainsAmberIntentWithoutWrites(VillagerState state)
+        {
+            GameSimulation.SetBalance(GameBalanceData.Default());
+            var s = Board(); s.nodes[1].districtType = DistrictType.Pier; s.nodes[1].ownerID = 1;
+            s.nodes[1].claimBar = -1000; s.villagers[0].currentNodeID = 1;
+            s.villagers[0].previousNodeID = 0; s.villagers[0].state = state; s.villagers[0].moveSpeedTicks = 16;
+            int before = SimulationStateHasher.ComputeHash(s);
+            Assert.IsTrue(Field<bool>(Call("Style", s.villagers[0], 1f, false), "amber"));
+            CollectionAssert.AreEqual(new[] { 1, 2 }, Field<int[]>(Route(s), "nodes"));
+            Assert.AreEqual(before, SimulationStateHasher.ComputeHash(s));
+        }
+
+        [Test]
+        public void LegInterpolationGetter_UsesLatchAcrossOwnershipChangesWithoutWrites()
+        {
+            GameSimulation.SetBalance(GameBalanceData.Default());
+            var s = Board(); s.villagers[0].state = VillagerState.Moving;
+            s.villagers[0].moveSpeedTicks = 16; s.villagers[0].moveLegDurationTicks = 8;
+            s.nodes[3].districtType = DistrictType.Pier; s.nodes[3].ownerID = 1;
+            int before = SimulationStateHasher.ComputeHash(s);
+            Assert.AreEqual(8, GameSimulation.GetMoveLegDurationTicks(s, s.villagers[0]));
+            Assert.AreEqual(before, SimulationStateHasher.ComputeHash(s));
+        }
+
         // Reflection lets the tests run RED before the new helper exists.
         private static object Call(string method, params object[] args)
         {

@@ -230,9 +230,9 @@ namespace NodeWar.Tests
             var s = Board(); s.players[1].coreNodeID = 2;
             s.nodes[2].districtType = DistrictType.Core; s.nodes[2].ownerID = 1;
             s.nodes[3].districtType = DistrictType.None;
-            CollectionAssert.IsEmpty(Pathfinding.FindPath(s, 0, 0, 3));
-            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, Pathfinding.FindPath(s, 0, 0, 2));
-            CollectionAssert.AreEqual(new[] { 2, 3 }, Pathfinding.FindPath(s, 0, 2, 3));
+            CollectionAssert.IsEmpty(Pathfinding.FindPath(s, 0, 0, 3, moveSpeedTicks: 4));
+            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, Pathfinding.FindPath(s, 0, 0, 2, moveSpeedTicks: 4));
+            CollectionAssert.AreEqual(new[] { 2, 3 }, Pathfinding.FindPath(s, 0, 2, 3, moveSpeedTicks: 4));
             Order(s, 3); Assert.AreEqual(3, s.villagers[0].targetNodeID);
             Assert.AreEqual(VillagerState.Idle, s.villagers[0].state); return s;
         }

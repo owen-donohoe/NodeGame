@@ -336,6 +336,7 @@ namespace NodeWar.Simulation
                     movePath = new int[0],
                     movePathIndex = 0,
                     moveProgress = 0,
+                    moveLegDurationTicks = 0,
                     previousNodeID = coreNode,
                     state = VillagerState.Idle,
                     suit = SuitType.None,

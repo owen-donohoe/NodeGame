@@ -92,6 +92,58 @@ namespace NodeWar.Simulation
             }
         }
 
+        public static int BaseMoveSpeedTicks => bal.baseMoveSpeedTicks;
+
+        internal static void ClearLeg(ref VillagerData v)
+        {
+            v.moveProgress = 0;
+            v.moveLegDurationTicks = 0;
+        }
+
+        internal static void BeginLeg(SimulationState state, ref VillagerData v)
+        {
+            v.moveLegDurationTicks = CalculateLegTicks(state, v.ownerID,
+                v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1], v.moveSpeedTicks);
+        }
+
+        /// <summary>Read-only interpolation clock; zero-latch legacy states use the departure rule.</summary>
+        public static int GetMoveLegDurationTicks(SimulationState state, VillagerData v)
+        {
+            if (v.moveLegDurationTicks > 0) return v.moveLegDurationTicks;
+            if (v.movePath == null || v.movePathIndex < 0 || v.movePathIndex + 1 >= v.movePath.Length) return 1;
+            return CalculateLegTicks(state, v.ownerID, v.movePath[v.movePathIndex],
+                v.movePath[v.movePathIndex + 1], v.moveSpeedTicks);
+        }
+
+        internal static int CalculateLegTicks(SimulationState state, int ownerID, int from, int to, int speed)
+        {
+            long ticks = System.Math.Max(1, (long)GetLinkWeight(state, from, to) * speed);
+            NodeData node = state.nodes[to];
+            int divisor = bal.GetDistrictStats(DistrictType.Pier, node.districtEra).pierTravelDivisor;
+            if (node.districtType == DistrictType.Pier && node.ownerID == ownerID && divisor > 0)
+                ticks = (ticks + divisor - 1) / divisor;
+            return (int)System.Math.Min(int.MaxValue, System.Math.Max(1, ticks));
+        }
+
+        internal static long EstimatedGateTicks(SimulationState state, int nodeID, int attackerID)
+        {
+            NodeData node = state.nodes[nodeID];
+            if (node.districtType != DistrictType.Pier || node.ownerID != 1 - attackerID) return 0;
+            int[] owners = new int[state.nodes.Length];
+            for (int i = 0; i < owners.Length; i++) owners[i] = state.nodes[i].ownerID;
+            long rate = ClaimRate(state, nodeID, attackerID, 1, owners);
+            if (rate <= 0) return int.MaxValue;
+            long bar = System.Math.Max(0, attackerID == 0 ? -(long)node.claimBar : node.claimBar);
+            return (bar + rate - 1) / rate;
+        }
+
+        private static void ApplyGateState(SimulationState state, int index)
+        {
+            VillagerData v = state.villagers[index];
+            state.villagers[index].state = PierGate.HasClaimerSlot(state, v, bal.maxClaimersPerNode)
+                ? VillagerState.Claiming : VillagerState.Idle;
+        }
+
         private static void TickMovement(SimulationState state, int villagerIndex, TickEventLog log)
         {
             VillagerData v = state.villagers[villagerIndex];
@@ -99,28 +151,28 @@ namespace NodeWar.Simulation
             // Invariant: a Moving villager always has a further node ahead on its path.
             // If that is violated the villager is in a corrupt movement state -- recover
             // deterministically rather than indexing off the end of movePath below.
-            if (v.movePath == null || v.movePathIndex + 1 >= v.movePath.Length)
+            if (v.movePath == null || v.movePathIndex < 0 || v.movePathIndex + 1 >= v.movePath.Length)
             {
                 v.movePath = new int[0];
                 v.movePathIndex = 0;
-                v.moveProgress = 0;
+                ClearLeg(ref v);
                 v.state = VillagerState.Idle;
                 state.villagers[villagerIndex] = v;
                 return;
             }
 
+            if (v.moveLegDurationTicks == 0) BeginLeg(state, ref v);
             v.moveProgress++;
 
-            // Calculate ticks needed for current edge
-            int edgeWeight = GetLinkWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
-            int ticksForEdge = edgeWeight * v.moveSpeedTicks;
+            // The departure clock survives ownership changes and reversals.
+            int ticksForEdge = v.moveLegDurationTicks;
 
             if (v.moveProgress >= ticksForEdge)
             {
                 // Advance to next node in path
                 v.previousNodeID = v.movePath[v.movePathIndex];
                 v.movePathIndex++;
-                v.moveProgress = 0;
+                ClearLeg(ref v);
 
                 v.currentNodeID = v.movePath[v.movePathIndex];
 
@@ -134,7 +186,7 @@ namespace NodeWar.Simulation
                     if (enemiesPresent)
                     {
                         v.state = VillagerState.Fighting;
-                        v.moveProgress = 0;
+                        ClearLeg(ref v);
                         v.attackCooldownRemaining = v.attackCooldownMax;
                         v.combatTargetID = -1;
                         state.villagers[villagerIndex] = v;
@@ -150,19 +202,33 @@ namespace NodeWar.Simulation
                 if (enemiesPresent)
                 {
                     v.state = VillagerState.Fighting;
-                    v.moveProgress = 0;
+                    ClearLeg(ref v);
                     v.attackCooldownRemaining = v.attackCooldownMax;
                     v.combatTargetID = -1;
                     state.villagers[villagerIndex] = v;
                     return;
                 }
 
+                // At arrival the villager stands on the node before asking the gate.
+                v.state = VillagerState.Idle;
+                if (v.movePathIndex + 1 < v.movePath.Length &&
+                    PierGate.BlocksDeparture(state, v, v.movePath[v.movePathIndex + 1]))
+                {
+                    state.villagers[villagerIndex] = v;
+                    ApplyGateState(state, villagerIndex);
+                    return;
+                }
+                if (v.movePathIndex + 1 < v.movePath.Length)
+                {
+                    v.state = VillagerState.Moving;
+                    BeginLeg(state, ref v);
+                }
                 // --- Normal arrival logic (no enemies) ---
                 if (v.movePathIndex >= v.movePath.Length - 1)
                 {
                     v.movePath = new int[0];
                     v.movePathIndex = 0;
-                    v.moveProgress = 0;
+                    ClearLeg(ref v);
                     v.state = VillagerState.Idle;
                     state.villagers[villagerIndex] = v;
                     if (v.targetNodeID == v.currentNodeID || v.targetNodeID < 0)
@@ -288,6 +354,11 @@ namespace NodeWar.Simulation
                 return;
             }
 
+            if (PierGate.IsEnemyPier(state, v))
+            {
+                ApplyGateState(state, villagerIndex);
+                return;
+            }
             // Not own node: Claiming logic
             int friendlyClaimers = CountFriendlyClaimersOnNode(state, nodeID, v.ownerID);
             if (friendlyClaimers < bal.maxClaimersPerNode)
@@ -333,7 +404,7 @@ namespace NodeWar.Simulation
                 state.villagers[v].state = VillagerState.Fighting;
                 state.villagers[v].attackCooldownRemaining = vil.attackCooldownMax;
                 state.villagers[v].combatTargetID = -1;
-                state.villagers[v].moveProgress = 0;
+                ClearLeg(ref state.villagers[v]);
 
                 // Zero progress leaves the villager on its current node, so discard
                 // any half-walked reversal leg that points at a different node.
@@ -397,7 +468,7 @@ namespace NodeWar.Simulation
                     state.villagers[v].respawnTicksRemaining = bal.respawnTicks;
                     state.villagers[v].movePath = new int[0];
                     state.villagers[v].movePathIndex = 0;
-                    state.villagers[v].moveProgress = 0;
+                    ClearLeg(ref state.villagers[v]);
                     state.villagers[v].targetNodeID = -1;
                     state.villagers[v].combatTargetID = -1;
                 }
@@ -542,7 +613,7 @@ namespace NodeWar.Simulation
                 if (p0Claimers > 0 && node.ownerID != 0)
                 {
                     long rate = ClaimRate(state, nodeIndex, 0, p0Claimers, ownersAtTickStart, resistancePercent);
-                    node.claimBar = (int)System.Math.Min(bal.claimThreshold, (long)node.claimBar + rate);
+                    node.claimBar = (int)System.Math.Min(node.districtType == DistrictType.Pier && node.ownerID == 1 ? 0 : bal.claimThreshold, (long)node.claimBar + rate);
 
                     if (node.claimBar >= bal.claimThreshold)
                     {
@@ -562,7 +633,7 @@ namespace NodeWar.Simulation
                 if (p1Claimers > 0 && node.ownerID != 1)
                 {
                     long rate = ClaimRate(state, nodeIndex, 1, p1Claimers, ownersAtTickStart, resistancePercent);
-                    node.claimBar = (int)System.Math.Max(-(long)bal.claimThreshold, (long)node.claimBar - rate);
+                    node.claimBar = (int)System.Math.Max(node.districtType == DistrictType.Pier && node.ownerID == 0 ? 0 : -(long)bal.claimThreshold, (long)node.claimBar - rate);
 
                     if (node.claimBar <= -bal.claimThreshold)
                     {
@@ -808,7 +879,7 @@ namespace NodeWar.Simulation
                 if (v.isConsumed) continue;
                 // Intent elsewhere forbids local work/claim, but leaves stationary
                 // Idle presence available to passive rules.
-                if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)
+                if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID && !PierGate.IsEnemyPier(state, v))
                 {
                     if (v.state != VillagerState.Idle)
                         state.villagers[idx].state = VillagerState.Idle;
@@ -871,6 +942,11 @@ namespace NodeWar.Simulation
                     continue;
                 }
 
+                if (PierGate.IsEnemyPier(state, v))
+                {
+                    ApplyGateState(state, idx);
+                    continue;
+                }
                 // === NOT OWN NODE ===
                 if (v.state != VillagerState.Claiming)
                 {
@@ -1005,6 +1081,7 @@ namespace NodeWar.Simulation
                     movePath = new int[0],
                     movePathIndex = 0,
                     moveProgress = 0,
+                    moveLegDurationTicks = 0,
                     previousNodeID = nodeID,
                     state = VillagerState.Idle,
                     suit = SuitType.None,
@@ -1093,7 +1170,7 @@ namespace NodeWar.Simulation
             state.villagers[vid].targetNodeID = -1;
             state.villagers[vid].movePath = new int[0];
             state.villagers[vid].movePathIndex = 0;
-            state.villagers[vid].moveProgress = 0;
+            ClearLeg(ref state.villagers[vid]);
             state.villagers[vid].hp = balance.baseHP;
             state.villagers[vid].maxHP = balance.baseHP;
             state.villagers[vid].suit = SuitType.None;
@@ -1156,12 +1233,23 @@ namespace NodeWar.Simulation
 
                 v.movePath = new int[0];
                 v.movePathIndex = 0;
-                v.moveProgress = 0;
+                ClearLeg(ref v);
                 v.combatTargetID = -1;
                 if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)
                 {
-                    v.movePath = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID);
-                    v.state = v.movePath.Length >= 2 ? VillagerState.Moving : VillagerState.Idle;
+                    v.movePath = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID, v.moveSpeedTicks);
+                    v.state = VillagerState.Idle;
+                    if (v.movePath.Length >= 2 && PierGate.BlocksDeparture(state, v, v.movePath[1]))
+                    {
+                        state.villagers[i] = v;
+                        ApplyGateState(state, i);
+                        continue;
+                    }
+                    if (v.movePath.Length >= 2)
+                    {
+                        v.state = VillagerState.Moving;
+                        BeginLeg(state, ref v);
+                    }
                     state.villagers[i] = v;
                     continue;
                 }
@@ -1199,7 +1287,7 @@ namespace NodeWar.Simulation
             v.state = VillagerState.Breaching;
             v.movePath = new int[0];
             v.movePathIndex = 0;
-            v.moveProgress = 0;
+            ClearLeg(ref v);
             v.targetNodeID = v.currentNodeID;
             v.combatTargetID = -1;
             state.villagers[index] = v;
@@ -1272,7 +1360,7 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].hp = 0;
             state.villagers[villagerIndex].movePath = new int[0];
             state.villagers[villagerIndex].movePathIndex = 0;
-            state.villagers[villagerIndex].moveProgress = 0;
+            ClearLeg(ref state.villagers[villagerIndex]);
             state.villagers[villagerIndex].targetNodeID = -1;
             state.villagers[villagerIndex].combatTargetID = -1;
         }

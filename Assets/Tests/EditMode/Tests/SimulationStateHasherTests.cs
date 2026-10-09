@@ -22,7 +22,7 @@ namespace NodeWar.Tests
             "NodeData.bankFood", "NodeData.bankMaterials", "NodeData.bankMetal", "NodeData.minionProductionRemaining", "NodeData.storehouseNextResource", "NodeData.storehouseInitialised", "NodeData.structureKind", "NodeData.structureHP", "NodeData.fortressLevel", "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
-            "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",
+            "VillagerData.moveLegDurationTicks", "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",
             "VillagerData.suit", "VillagerData.hp", "VillagerData.maxHP", "VillagerData.attackDamage",
             "VillagerData.moveSpeedTicks", "VillagerData.respawnTicksRemaining",
             "VillagerData.attackCooldownRemaining", "VillagerData.attackCooldownMax",

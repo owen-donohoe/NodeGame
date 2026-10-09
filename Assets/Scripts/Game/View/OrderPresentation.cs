@@ -46,7 +46,7 @@ namespace NodeWar.View
             {
                 if (v.currentNodeID == v.targetNodeID && v.currentNodeID == state.players[1 - v.ownerID].coreNodeID)
                     return mine ? new Route { nodes = new[] { v.currentNodeID }, intentMarker = true } : empty;
-                path = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID);
+                path = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID, v.moveSpeedTicks);
                 // At a contested destination retain the final approach, from replicated
                 // movement state, until arrival action begins. Never use a cached curve.
                 if (path.Length == 1 && v.movePath != null && v.movePathIndex > 0 &&

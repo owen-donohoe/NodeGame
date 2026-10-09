@@ -160,6 +160,13 @@ namespace NodeWar.Simulation
                 if (b.bankCapacity != 0) { hash = hash * 31 + 3017; hash = hash * 31 + b.bankCapacity; }
                 if (b.structureDamagePerTick != 0) { hash = hash * 31 + 3012; hash = hash * 31 + b.structureDamagePerTick; }
                 if (b.maxStructureAttackersPerNode != 0) { hash = hash * 31 + 3013; hash = hash * 31 + b.maxStructureAttackersPerNode; }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                    {
+                        DistrictStats d = b.districtStats[i];
+                        if (d.pierTravelDivisor != 0)
+                        { hash = hash * 31 + 3018; hash = hash * 31 + i; hash = hash * 31 + d.pierTravelDivisor; }
+                    }
                 return hash;
             }
         }

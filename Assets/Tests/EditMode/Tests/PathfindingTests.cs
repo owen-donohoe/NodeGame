@@ -34,7 +34,7 @@ namespace NodeWar.Tests
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
 
-            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 1, endNode: 1);
+            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 1, endNode: 1, moveSpeedTicks: 4);
 
             // Length 1, which is below the `path.Length < 2` bar every caller in
             // CommandProcessor applies -- so "go where you already are" is
@@ -54,7 +54,7 @@ namespace NodeWar.Tests
             // is exactly what a hand-authored board gets wrong.
             state.nodes[1].links = new Link[] { new Link { toNodeID = 0, travelWeight = 1 } };
 
-            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 2);
+            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 2, moveSpeedTicks: 4);
 
             Assert.IsNotNull(path);
             Assert.AreEqual(0, path.Length);
@@ -96,7 +96,7 @@ namespace NodeWar.Tests
             SimulationState state = TestBoardFactory.BuildSquareBoard(balance);
 
             // 0 to 3 has two routes of identical cost, through node 1 or node 2.
-            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
+            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4);
 
             Assert.AreEqual(new int[] { 0, 1, 3 }, path);
         }
@@ -107,11 +107,11 @@ namespace NodeWar.Tests
             GameBalanceData balance = UseDefaultBalance();
             SimulationState state = TestBoardFactory.BuildSquareBoard(balance);
 
-            int[] first = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
+            int[] first = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4);
 
             for (int i = 0; i < 20; i++)
             {
-                Assert.AreEqual(first, Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3));
+                Assert.AreEqual(first, Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4));
             }
         }
 
@@ -151,7 +151,7 @@ namespace NodeWar.Tests
             state.nodes[2].ownerID = 0;
             state.nodes[2].claimBar = balance.claimThreshold;
 
-            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
+            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4);
 
             Assert.AreEqual(new int[] { 0, 2, 3 }, path);
         }
@@ -167,7 +167,7 @@ namespace NodeWar.Tests
             state.nodes[1].ownerID = 1;
             state.nodes[1].claimBar = -balance.claimThreshold;
 
-            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
+            int[] path = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4);
 
             Assert.AreEqual(new int[] { 0, 2, 3 }, path);
         }
@@ -214,12 +214,12 @@ namespace NodeWar.Tests
 
             try
             {
-                int[] withDefaults = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
+                int[] withDefaults = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4);
                 Assert.AreEqual(new int[] { 0, 2, 3 }, withDefaults);
 
                 Pathfinding.EnemyPartiallyOwnedMultiplier = 100;
 
-                int[] withTweak = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3);
+                int[] withTweak = Pathfinding.FindPath(state, askingOwnerId: 0, startNode: 0, endNode: 3, moveSpeedTicks: 4);
 
                 // Same state, same hash, different route. This is issue #20 in
                 // one assertion: Pathfinding's five multipliers are mutable

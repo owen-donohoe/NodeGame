@@ -148,6 +148,7 @@ namespace NodeWar.Simulation
         public int[] movePath;
         public int movePathIndex;
         public int moveProgress;
+        public int moveLegDurationTicks; // Zero off leg; latched until arrival or interruption.
         public int previousNodeID;
         public VillagerState state;
         public SuitType suit;
@@ -257,6 +258,7 @@ namespace NodeWar.Simulation
             if (source.villagers == null) villagers = null;
             else
             {
+                // Scalar clone includes the latched movement clock.
                 villagers = (VillagerData[])source.villagers.Clone();
                 for (int i = 0; i < villagers.Length; i++)
                     villagers[i].movePath = CopyInts(villagers[i].movePath);

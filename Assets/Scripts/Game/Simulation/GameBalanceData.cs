@@ -43,6 +43,7 @@ namespace NodeWar.Simulation
         public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
         public int townBonusVillagers;
         public int fortificationHP;
+        public int pierTravelDivisor;
         public int[] fortressMaterialsCosts;
         public int[] fortressMetalCosts;
         public int[] fortressResistancePercent;
@@ -289,6 +290,8 @@ namespace NodeWar.Simulation
                 for (int i = 0; i < districtStats.Length; i++)
                 {
                     DistrictStats entry = districtStats[i];
+                    if (entry.pierTravelDivisor < 0 || entry.pierTravelDivisor > 100)
+                    { reason = "Invalid Pier travel divisor."; return false; }
                     if (entry.fortificationHP < 0 || (entry.districtType == DistrictType.Storehouse && entry.productionTicks < 2))
                     { reason = "Invalid Fortress HP or Storehouse duration."; return false; }
                 }
@@ -459,7 +462,8 @@ namespace NodeWar.Simulation
                 new DistrictStats { districtType = DistrictType.Barracks },
                 new DistrictStats { districtType = DistrictType.Infirmary, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
                 new DistrictStats { districtType = DistrictType.Fortress, fortificationHP = 16 },
-                new DistrictStats { districtType = DistrictType.Storehouse, productionTicks = 80 }
+                new DistrictStats { districtType = DistrictType.Storehouse, productionTicks = 80 },
+                new DistrictStats { districtType = DistrictType.Pier, pierTravelDivisor = 2 }
             };
 
             DistrictStats[] all = new DistrictStats[template.Length * EraCount];

@@ -77,8 +77,8 @@ each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `-563755666` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `-2013445737` |
+| `EmptyTick` | 100 | none | `-2085505832` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `534653207` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -130,6 +130,14 @@ bare nodes, adding six zero terms to the hash polynomial: `647286254 → -563755
 structure; this numeric change comes solely from the state hash schema. Both scenarios
 still run twice from independent states. `BreachTempoTests` carries the same updated pins.
 New balance tuning is separately tagged and zero-neutral, retaining historical export hashes.
+
+**D4 re-pin (latched leg clock, still version 4).** Each villager now hashes
+`moveLegDurationTicks` unconditionally immediately after `moveProgress`. Both
+fixtures finish off-leg with duration zero, so their two villagers add two zero
+terms to the polynomial: `-563755666` to `-2085505832` (`EmptyTick`) and
+`-2013445737` to `534653207` (`MoveAndCombat`). No route choice or travel-time
+change reaches these line-board fixtures. `BreachTempoTests` carries the same
+pins. Version 4 remains the unreleased PR D version introduced in D1.
 
 ## Where it runs
 

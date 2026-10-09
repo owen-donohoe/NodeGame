@@ -365,8 +365,7 @@ namespace NodeWar.View
             int legFrom = villager.movePath[villager.movePathIndex];
             int legTo = villager.movePath[villager.movePathIndex + 1];
 
-            int ticks = GameSimulation.GetLinkWeight(simState, legFrom, legTo) * villager.moveSpeedTicks;
-            if (ticks < 1) ticks = 1;
+            int ticks = GameSimulation.GetMoveLegDurationTicks(simState, villager);
 
             float progress = (float)villager.moveProgress / (float)ticks;
             float subTick = tickProvider != null ? tickProvider.TickAlpha / (float)ticks : 0f;

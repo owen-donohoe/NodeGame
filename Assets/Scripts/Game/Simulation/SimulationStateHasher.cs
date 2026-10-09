@@ -142,6 +142,7 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + v.targetNodeID;
                     hash = hash * 31 + v.movePathIndex;
                     hash = hash * 31 + v.moveProgress;
+                    hash = hash * 31 + v.moveLegDurationTicks;
                     hash = hash * 31 + v.previousNodeID;
                     hash = hash * 31 + (int)v.state;
                     hash = hash * 31 + (int)v.suit;

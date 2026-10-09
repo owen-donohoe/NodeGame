@@ -23,8 +23,10 @@ namespace NodeWar.Tests
         // Computation; docs/attesters/hash_baseline.ps1 verifies a run's receipt.
         // D1: structure kind/HP add two unconditional zero terms per node.
         // Structure attack changes rules; both baselines are re-pinned at sim v4.
-        private const int EmptyTick100Hash = -563755666;
-        private const int MoveAndCombat4Hash = -2013445737;
+        // D4: one unconditional moveLegDurationTicks term per villager (zero here).
+        // These line-board routes do not change; the hash schema alone moves the pins.
+        private const int EmptyTick100Hash = -2085505832;
+        private const int MoveAndCombat4Hash = 534653207;
 
         [Test]
         public void EmptyTick_100Iterations_ProducesDeterministicHash()
