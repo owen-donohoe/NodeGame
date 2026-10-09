@@ -95,7 +95,7 @@ namespace NodeWar.UI
             if (v.state == VillagerState.Dead) return EquipRefusal.Dead;
             if (v.isConsumed) return EquipRefusal.Consumed;
             if (v.state != VillagerState.Idle) return EquipRefusal.Busy;
-            if (GameBalanceData.IsCombatSuit(v.suit)) return EquipRefusal.AlreadySuited;
+            if (GameBalanceData.IsCombatSuit(v.suit) || v.suit == SuitType.Minion) return EquipRefusal.AlreadySuited;
 
             return EquipRefusal.None;
         }

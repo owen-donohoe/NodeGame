@@ -435,6 +435,8 @@ namespace NodeWar.View
 
         private Color GetStateColor(VillagerData villager)
         {
+            if (StructurePresentation.TrySuitTint(villager.suit, out float r, out float g, out float b))
+                return new Color(r, g, b);
             if (villager.ownerID == 0)
             {
                 switch (villager.state)

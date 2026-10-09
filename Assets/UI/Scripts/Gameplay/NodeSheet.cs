@@ -174,6 +174,8 @@ namespace NodeWar.UI
             }
 
             Close();
+            Root.RegisterCallback<GeometryChangedEvent>(_ => RefreshSheetPosition());
+            if (sheet != null) sheet.RegisterCallback<GeometryChangedEvent>(_ => RefreshSheetPosition());
         }
 
         public void Bind(SimulationState simulationState, InputBuffer inputBuffer,
@@ -247,7 +249,11 @@ namespace NodeWar.UI
         {
             if (current != null) current.Unbind();
             nodeID = -1;
-            if (sheet != null) sheet.RemoveFromClassList("ui-sheet--open");
+            if (sheet != null)
+            {
+                sheet.RemoveFromClassList("ui-sheet--open");
+                sheet.style.bottom = 0f;
+            }
         }
 
         private void CloseByPlayer()
@@ -338,6 +344,7 @@ namespace NodeWar.UI
             switch (district)
             {
                 case DistrictType.Village:
+                case DistrictType.Workshop:
                 case DistrictType.Town:
                 case DistrictType.Infirmary:
                 case DistrictType.Fortress:
@@ -473,6 +480,7 @@ namespace NodeWar.UI
                 sheet.EnableInClassList("sheet--claim", !secure);
                 int bankHeight = NodeWar.View.StructurePresentation.BankSheetHeight(node.districtType, !secure);
                 sheet.style.height = bankHeight > 0 ? new StyleLength(bankHeight) : new StyleLength(StyleKeyword.Null);
+                RefreshSheetPosition();
             }
 
             if (secure || claimP0 == null || claimP1 == null) return;
@@ -497,6 +505,13 @@ namespace NodeWar.UI
                     : "";
                 claimNote.text = faster + "With both sides standing on it, a node holds still until the fight ends.";
             }
+        }
+
+        private void RefreshSheetPosition()
+        {
+            if (sheet == null || !IsOpen || state == null || nodeID >= state.nodes.Length) return;
+            sheet.style.bottom = NodeWar.View.StructurePresentation.SheetBottom(
+                state.nodes[nodeID].districtType, Root.resolvedStyle.height, sheet.resolvedStyle.height);
         }
 
         // ===== DRAG TO DISMISS =====

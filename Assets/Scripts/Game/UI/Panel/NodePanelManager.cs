@@ -149,8 +149,17 @@ namespace NodeWar.UI
 
         private Vector2 OpenPosition =>
             useBottomSheet
-                ? new Vector2(0f, 0f)
+                ? new Vector2(0f, StorehouseOpenY())
                 : new Vector2(0f, panelRect.anchoredPosition.y);
+
+        private float StorehouseOpenY()
+        {
+            if (simState == null || currentNodeID < 0 || simState.nodes[currentNodeID].districtType != DistrictType.Storehouse)
+                return 0f;
+            var parent = panelRect.parent as RectTransform;
+            return parent == null ? 0f : StructurePresentation.SheetAnchoredY(parent.rect.height,
+                CurrentHeight, panelRect.pivot.y, panelRect.anchorMin.y, panelRect.anchorMax.y);
+        }
 
         /// <summary>
         /// Gone. Nothing left on screen.
@@ -568,6 +577,9 @@ namespace NodeWar.UI
             float extra = simState.nodes[nodeID].districtType == DistrictType.Forge
                 ? Mathf.Max(0f, StructurePresentation.ForgeContentHeight - baseContentHeight) : 0f;
             panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, basePanelHeight + extra);
+            if (simState.nodes[nodeID].districtType == DistrictType.Storehouse)
+                panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,
+                    StructurePresentation.BankSheetHeight(DistrictType.Storehouse, false));
 
             currentNodeID = nodeID;
             NodeData node = simState.nodes[nodeID];
@@ -634,6 +646,10 @@ namespace NodeWar.UI
                 // Height must be resolved before the target is computed, or the
                 // sheet slides to an offset derived from the previous content.
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+                SlideTo(OpenPosition, slideEase);
+            }
+            else
+            {
                 SlideTo(OpenPosition, slideEase);
             }
 
@@ -812,6 +828,7 @@ namespace NodeWar.UI
         /// a bug rather than a case to absorb silently.
         /// </summary>
         private static bool UsesNodeActions(DistrictType type) => type == DistrictType.Village ||
+            type == DistrictType.Workshop ||
             type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress ||
             type == DistrictType.Farm || type == DistrictType.Mine || type == DistrictType.Storehouse;
 

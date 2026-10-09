@@ -9,7 +9,7 @@ namespace NodeWar.UI
     {
         private readonly NodeActionModel model=new NodeActionModel();
         private readonly BankActionModel bankModel=new BankActionModel();
-        private Button collect,install;
+        private Button collect;
         private bool requested;
         private SimulationState state;
         private InputBuffer input;
@@ -18,7 +18,7 @@ namespace NodeWar.UI
         private int node;
         private bool shownAutoRecruit;
         private TextMeshProUGUI information;
-        private Button recruit,repeat,materials,metal;
+        private Button recruit,forgeMinion,repeat,materials,metal;
         public void Unbind() { input=null; enabled=false; }
         public void Initialize(SimulationState s,InputBuffer buffer,NodeWar.Core.ITickProvider ticks,GameBalanceData b,int nodeID,System.Func<int> controlledPlayer)
         {
@@ -26,16 +26,16 @@ namespace NodeWar.UI
             var layout=gameObject.AddComponent<VerticalLayoutGroup>(); layout.childControlHeight=true; layout.childForceExpandHeight=false;
             information=Text("Information");
             recruit=Control("Recruit",() => { if(model.TryRecruit(state,balance,viewer(),node,out var c)) input.EnqueueCommand(c); Refresh(); });
+            forgeMinion=Control("Forge Minion",() => { if(model.TryForgeMinion(state,balance,viewer(),node,out var c)) input.EnqueueCommand(c); Refresh(); });
             repeat=Control("Repeat",() => { if(model.TrySetAutoRecruit(state,balance,viewer(),node,!shownAutoRecruit,out var c)) input.EnqueueCommand(c); Refresh(); });
             materials=Control("Materials",() => Upgrade(0)); metal=Control("Metal",() => Upgrade(1));
             collect=Control("Collect",() => { if(input!=null && isActiveAndEnabled && bankModel.TryCollect(state,balance,viewer(),node,!requested,out var c)) input.EnqueueCommand(c); Refresh(); });
-            install=Control("Install",() => { if(input!=null && isActiveAndEnabled && bankModel.TryInstall(state,balance,viewer(),node,out var c)) input.EnqueueCommand(c); Refresh(); });
             Refresh();
         }
         private TextMeshProUGUI Text(string name)
         {
             var go=new GameObject(name,typeof(RectTransform),typeof(TextMeshProUGUI),typeof(LayoutElement)); go.transform.SetParent(transform,false);
-            go.GetComponent<LayoutElement>().preferredHeight=52;
+            go.GetComponent<LayoutElement>().preferredHeight=150;
             var text=go.GetComponent<TextMeshProUGUI>(); text.fontSize=18; text.color=Color.white; text.raycastTarget=false;
             return text;
         }
@@ -59,13 +59,13 @@ namespace NodeWar.UI
             bool village=state.nodes[node].districtType==DistrictType.Village;
             bool fortress=state.nodes[node].districtType==DistrictType.Fortress;
             Set(recruit,"Recruit - "+d.Price+" food",yours&&village,d.CanRecruit);
+            Set(forgeMinion,"Forge Minion - "+d.Price+" metal",yours&&state.nodes[node].districtType==DistrictType.Workshop,d.CanForge);
             Set(repeat,"Repeat: "+(d.AutoRecruit?"On":"Off"),yours&&village,d.CanRepeat);
             Set(materials,"Upgrade - "+d.MaterialsCost+" materials",yours&&fortress,d.CanMaterials);
             Set(metal,"Upgrade - "+d.MetalCost+" metal",yours&&fortress,d.CanMetal);
             var bank=bankModel.Describe(state,balance,player,node); requested=bank.Requested;
             if(bank.Visible) information.text=bank.Information;
             Set(collect,bank.CollectLabel,bank.Visible&&bank.ShowActions,bank.CanCollect);
-            Set(install,bank.InstallLabel,false,false);
         }
     }
 }

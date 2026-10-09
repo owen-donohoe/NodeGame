@@ -1683,13 +1683,13 @@ namespace NodeWar.Core
 
                 NodeClaimBar claimBar = nodeGO.GetComponentInChildren<NodeClaimBar>();
                 if (claimBar != null)
-                    claimBar.Initialize(state, i, balance.Data.claimThreshold);
+                    claimBar.Initialize(state, i, balance.Data);
             }
 
             SpawnBreachBars();
             for(int i=0;i<state.nodes.Length;i++)
-                if(villagerPositioners[i]!=null && state.nodes[i].districtType!=DistrictType.Core)
-                    villagerPositioners[i].gameObject.AddComponent<StructureHPBar>().Initialize(state,i,balance.Data,boardConfig.nodeScale);
+                if(villagerPositioners[i]!=null && state.nodes[i].districtType==DistrictType.Storehouse)
+                    villagerPositioners[i].gameObject.AddComponent<BankPips>().Initialize(state,i,boardConfig.nodeScale);
 
             if (outlineDriver != null) outlineDriver.SetNodeGroups(nodeOutlines);
 
