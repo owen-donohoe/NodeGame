@@ -147,6 +147,7 @@ namespace NodeWar.BalanceRig
             for (int v = 0; v < post.villagers.Length; v++)
             {
                 VillagerData vil = post.villagers[v];
+                if (vil.state == VillagerState.AttackingStructure) continue;
                 if (vil.isConsumed || vil.state != VillagerState.Idle) continue;
                 if (vil.ownerID == 0 || vil.ownerID == 1) idle[vil.ownerID]++;
             }

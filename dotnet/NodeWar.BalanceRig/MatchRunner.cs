@@ -375,7 +375,9 @@ namespace NodeWar.BalanceRig
                 PlayerData pd = state.players[p];
                 w.WriteLine("t=" + state.tickCount + " P" + p + " owned[" + string.Join(" ", owned) + "] idle=" + byState[0]
                     + " moving=" + byState[1] + " working=" + byState[2] + " claiming=" + byState[3] + " fighting=" + byState[4]
-                    + " dead=" + byState[(int)VillagerState.Dead] + " breaching=" + byState[(int)VillagerState.Breaching] + " soldiers=" + soldiers + " food=" + pd.food + " mat=" + pd.materials);
+                    + " dead=" + byState[(int)VillagerState.Dead] + " breaching=" + byState[(int)VillagerState.Breaching]
+                    + " attackingStructure=" + byState[(int)VillagerState.AttackingStructure]
+                    + " soldiers=" + soldiers + " food=" + pd.food + " mat=" + pd.materials);
             }
         }
 
@@ -415,7 +417,12 @@ namespace NodeWar.BalanceRig
                     continue;
                 }
                 soldiers[vil.ownerID]++;
-                if (vil.state == VillagerState.Idle) idle[vil.ownerID]++;
+                switch (vil.state)
+                {
+                    case VillagerState.Idle: idle[vil.ownerID]++; break;
+                    case VillagerState.AttackingStructure: break; // Busy, independent of person combat.
+                    default: break;
+                }
             }
             for (int p = 0; p < 2; p++)
             {

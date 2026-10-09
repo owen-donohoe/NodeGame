@@ -17,6 +17,9 @@ namespace NodeWar.Tests
         [TestCase("captureBonusMaxSteps", 2)]
         [TestCase("recruitBaseCost", 6)]
         [TestCase("recruitCostPerRecruit", 3)]
+        [TestCase("fortificationHP", 16)]
+        [TestCase("structureDamagePerTick", 1)]
+        [TestCase("maxStructureAttackersPerNode", 4)]
         public void CoreScalar_RegisteredDefaultAndIndependentMutation(string name, int expected)
         {
             var b = GameBalanceData.Default(); var field = typeof(GameBalanceData).GetField(name);
@@ -109,6 +112,23 @@ namespace NodeWar.Tests
                 }
             }
         }
+        [Test]
+        public void StructureTuning_HistoricalZeroNeutralAndActiveValidation()
+        {
+            var b = GameBalanceData.Default();
+            foreach (string field in new[] { "fortificationHP", "structureDamagePerTick", "maxStructureAttackersPerNode" })
+            {
+                Assert.IsFalse(SetCoreScalar(b, field, -1).CoreRulesValid(out _));
+                Assert.IsFalse(SetCoreScalar(b, field, 0).CoreRulesValid(out _));
+            }
+            Assert.IsFalse(SetCoreScalar(b, "maxStructureAttackersPerNode", 5).CoreRulesValid(out _));
+            Assert.IsFalse(SetCoreScalar(b, "structureDamagePerTick", int.MaxValue).CoreRulesValid(out _));
+            var historical = SetCoreScalar(SetCoreScalar(SetCoreScalar(b, "fortificationHP", 0), "structureDamagePerTick", 0), "maxStructureAttackersPerNode", 0);
+            Assert.IsTrue(historical.CoreRulesValid(out _));
+            // Historical catalog filename/hash tests cover missing zero-neutral fields.
+            Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(historical));
+        }
+
         private static GameBalanceData WithOneSuit()
         {
             GameBalanceData b = GameBalanceData.Default();

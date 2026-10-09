@@ -61,6 +61,9 @@ namespace NodeWar.Simulation
         public const int EraCount = 6;
 
         public int ticksPerSecond;
+        public int fortificationHP;
+        public int structureDamagePerTick;
+        public int maxStructureAttackersPerNode;
 
         public int baseClaimPerTick;
         public int decrementMultiplier;
@@ -276,6 +279,10 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
+            // All-zero historical exports remain readable, but cannot enable the ability.
+            if ((fortificationHP != 0 || structureDamagePerTick != 0 || maxStructureAttackersPerNode != 0) &&
+                !StructureTuningValid())
+            { reason = "Invalid structure HP, damage or attacker cap."; return false; }
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                 {
@@ -355,11 +362,18 @@ namespace NodeWar.Simulation
             catch (System.OverflowException) { return false; }
         }
 
+        public bool StructureTuningValid() => fortificationHP > 0 && structureDamagePerTick > 0 &&
+            maxStructureAttackersPerNode > 0 && maxStructureAttackersPerNode <= 4 &&
+            (long)structureDamagePerTick * maxStructureAttackersPerNode <= int.MaxValue;
+
         public static GameBalanceData Default()
         {
             return new GameBalanceData
             {
                 ticksPerSecond = 10,
+                fortificationHP = 16,
+                structureDamagePerTick = 1,
+                maxStructureAttackersPerNode = 4,
                 baseClaimPerTick = 17,
                 captureBonusPercentPerStep = 25,
                 captureBonusMaxSteps = 2,

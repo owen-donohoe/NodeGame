@@ -77,8 +77,8 @@ each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `647286254` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `357327383` |
+| `EmptyTick` | 100 | none | `-563755666` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `-2013445737` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -90,7 +90,7 @@ villager crosses one link at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ti
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 3`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 4`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
 
@@ -121,6 +121,15 @@ fingerprints moved: `411123996 → 647286254` (`EmptyTick`) and `2101726457 → 
 (`MoveAndCombat`). No rule difference reaches these fixtures. Version 3 is unreleased, so it was not bumped again. `BreachTempoTests.
 LegacyNoTempoRetainsVersionOneBaselineHashPaths` runs the same two fixtures and carries the same two
 constants.
+
+**v4 re-pin (shared structures, D1).** The suit-driven structure attack changes the rules,
+so `SimulationVersion.Current` advances from 3 to 4. `NodeData.structureKind` and
+`NodeData.structureHP` are hashed unconditionally after terrain. Both fixtures have three
+bare nodes, adding six zero terms to the hash polynomial: `647286254 → -563755666`
+(`EmptyTick`) and `357327383 → -2013445737` (`MoveAndCombat`). Neither fixture attacks a
+structure; this numeric change comes solely from the state hash schema. Both scenarios
+still run twice from independent states. `BreachTempoTests` carries the same updated pins.
+New balance tuning is separately tagged and zero-neutral, retaining historical export hashes.
 
 ## Where it runs
 

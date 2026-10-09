@@ -33,6 +33,18 @@ namespace NodeWar.View.Tests
             Call("BuildRoute", s, s.villagers[0], mine, 1);
 
         [Test]
+        public void AttackingStructure_IsAnActiveArrivalAction()
+        {
+            var s = Board(); s.villagers[0].state = VillagerState.AttackingStructure;
+            s.villagers[0].currentNodeID = s.villagers[0].targetNodeID;
+            int before = SimulationStateHasher.ComputeHash(s);
+            Assert.IsFalse((bool)Call("Interrupted", s.villagers[0]));
+            Assert.IsFalse(Field<bool>(Call("Style", s.villagers[0], 1f, false), "amber"));
+            Assert.IsEmpty(Field<int[]>(Route(s), "nodes"));
+            Assert.AreEqual(before, SimulationStateHasher.ComputeHash(s));
+        }
+
+        [Test]
         public void InterruptedRoute_RemainsAtQuarterAlpha()
         {
             var s = Board();

@@ -32,6 +32,24 @@ namespace NodeWar.BalanceRig
         }
 
         [Test]
+        public void AttackingStructure_TraceAndFleetCountItAsBusy()
+        {
+            var state = State();
+            state.villagers = new VillagerData[3];
+            for (int i = 0; i < 3; i++) state.villagers[i] = new VillagerData {
+                villagerID = i, ownerID = 0, currentNodeID = state.players[0].coreNodeID,
+                state = VillagerState.AttackingStructure, suit = SuitType.Warrior, hp = 5 };
+            int before = SimulationStateHasher.ComputeHash(state);
+            var text = new StringWriter(); MatchRunner.Trace(text, state);
+            StringAssert.Contains("attackingStructure=3", text.ToString());
+            var result = new MatchResult(); MatchRunner.TrackFleet(state, result);
+            Assert.AreEqual(3, result.soldiersEnd[0]); Assert.AreEqual(0, result.ticksThreeIdleSoldiers[0]);
+            var timeline = new TimelineMetrics(state, 10); state.tickCount = 1;
+            timeline.ObserveTick(state, null); Assert.AreEqual(0, timeline.Windows[0].idleVillagerTicks[0]);
+            state.tickCount = 0; Assert.AreEqual(before, SimulationStateHasher.ComputeHash(state));
+        }
+
+        [Test]
         public void SwapSeats_MirrorsDraftAndSwapsSetups()
         {
             var setup = RigSmokeTests.Setup();

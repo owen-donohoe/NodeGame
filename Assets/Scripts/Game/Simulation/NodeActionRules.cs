@@ -55,6 +55,7 @@ namespace NodeWar.Simulation
                 playerID >= state.players.Length || nodeID < 0 || nodeID >= state.nodes.Length) return false;
             NodeData node = state.nodes[nodeID];
             if (node.districtType != DistrictType.Fortress || node.ownerID != playerID ||
+                node.structureKind == StructureKind.Minion || !balance.StructureTuningValid() ||
                 node.fortressLevel < 0 || node.fortressLevel >= 3 || HasLivingEnemyAtNode(state, playerID, nodeID)) return false;
             DistrictStats stats = balance.GetDistrictStats(DistrictType.Fortress, node.districtEra);
             if (!GameBalanceData.FortressStatsValid(stats)) return false;

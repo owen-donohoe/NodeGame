@@ -19,7 +19,7 @@ namespace NodeWar.Simulation
         /// 1. Commands (handled by TickRunner before this call)
         /// 2. Movement (with combat interruption and breach-on-arrival)
         /// 3. Combat (detect fights, process cooldowns, deal damage, handle deaths)
-        /// 4. Breach channel, then claim bars
+        /// 4. Breach channel, structure damage, then claim bars
         /// 5. Production
         /// 6. Healing (normal or owned-Infirmary interval)
         /// 7. Respawn timers
@@ -46,7 +46,8 @@ namespace NodeWar.Simulation
 
             // Step 4: Claiming
             bool[] breachedThisTick = TickBreach(state, ownersAtTickStart, resistancePercent, log);
-            TickClaiming(state, ownersAtTickStart, resistancePercent, log);
+            bool[] structureParticipants = TickStructureAttacks(state);
+            TickClaiming(state, ownersAtTickStart, resistancePercent, structureParticipants, log);
 
             // Step 5: Production
             TickProduction(state);
@@ -67,7 +68,7 @@ namespace NodeWar.Simulation
             // This prevents a villager from killing an enemy and immediately starting to
             // claim in the same tick, which could cause edge cases with the claim
             // evaluation also running in step 4.
-            TickOrderResume(state, log);
+            TickOrderResume(state, structureParticipants, log);
             // Derived cache, after every rule mutation (including respawns/resume).
             for (int p = 0; p < state.players.Length; p++)
             {
@@ -225,6 +226,12 @@ namespace NodeWar.Simulation
             VillagerData v = state.villagers[villagerIndex];
             int nodeID = v.currentNodeID;
             NodeData node = state.nodes[nodeID];
+
+            if (StructureRules.IsSelectedAttacker(state, villagerIndex, bal))
+            {
+                state.villagers[villagerIndex].state = VillagerState.AttackingStructure;
+                return;
+            }
 
             // Core nodes: always Idle.
             // Non-combat suits (Farmer, Miner, Smelter) are free and re-assigned on arrival
@@ -467,10 +474,35 @@ namespace NodeWar.Simulation
 
         // ===== STEP 4: CLAIMING =====
 
-        private static void TickClaiming(SimulationState state, int[] ownersAtTickStart, int[] resistancePercent, TickEventLog log)
+        private static bool[] TickStructureAttacks(SimulationState state)
+        {
+            bool[] participants = new bool[state.villagers.Length];
+            for (int nodeID = 0; nodeID < state.nodes.Length; nodeID++)
+            {
+                int attackers = 0;
+                // Select everyone before applying damage, even when HP is only 1.
+                for (int i = 0; i < state.villagers.Length; i++)
+                {
+                    VillagerData v = state.villagers[i];
+                    if (v.currentNodeID != nodeID || v.state == VillagerState.Fighting ||
+                        !StructureRules.IsSelectedAttacker(state, i, bal)) continue;
+                    participants[i] = true;
+                    state.villagers[i].state = VillagerState.AttackingStructure;
+                    attackers++;
+                }
+                if (attackers == 0) continue;
+                NodeData node = state.nodes[nodeID];
+                node.structureHP = (int)System.Math.Max(0, (long)node.structureHP - (long)attackers * bal.structureDamagePerTick);
+                if (node.structureHP == 0) node = StructureRules.Destroy(node);
+                state.nodes[nodeID] = node;
+            }
+            return participants;
+        }
+
+        private static void TickClaiming(SimulationState state, int[] ownersAtTickStart, int[] resistancePercent, bool[] structureParticipants, TickEventLog log)
         {
             // Re-evaluate Idle/Claiming states based on current ownership
-            UpdateVillagerClaimStates(state);
+            UpdateVillagerClaimStates(state, structureParticipants);
 
             // Process claim bars per node
             for (int nodeIndex = 0; nodeIndex < state.nodes.Length; nodeIndex++)
@@ -516,11 +548,7 @@ namespace NodeWar.Simulation
                     else if (node.ownerID == 1 && node.claimBar >= 0)
                     {
                         node.claimBar = 0;
-                        node.ownerID = -1;
-                        node.autoRecruit = false;
-                        node.recruitReadyTick = 0;
-                        node.fortressLevel = 0;
-                        log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 1, 0);
+                        node = OnOwnershipChanged(state, node, node.ownerID, -1, log);
                     }
                 }
 
@@ -540,18 +568,14 @@ namespace NodeWar.Simulation
                     else if (node.ownerID == 0 && node.claimBar <= 0)
                     {
                         node.claimBar = 0;
-                        node.ownerID = -1;
-                        node.autoRecruit = false;
-                        node.recruitReadyTick = 0;
-                        node.fortressLevel = 0;
-                        log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 0, 1);
+                        node = OnOwnershipChanged(state, node, node.ownerID, -1, log);
                     }
                 }
 
                 state.nodes[nodeIndex] = node;
             }
 
-            UpdateVillagerClaimStates(state);
+            UpdateVillagerClaimStates(state, structureParticipants);
         }
 
         // ===== STEP 5: PRODUCTION =====
@@ -730,11 +754,23 @@ namespace NodeWar.Simulation
             }
         }
 
-        private static void UpdateVillagerClaimStates(SimulationState state)
+        private static void UpdateVillagerClaimStates(SimulationState state, bool[] structureParticipants)
         {
             for (int idx = 0; idx < state.villagers.Length; idx++)
             {
                 VillagerData v = state.villagers[idx];
+
+                if (idx < structureParticipants.Length && structureParticipants[idx])
+                {
+                    state.villagers[idx].state = StructureRules.IsSelectedAttacker(state, idx, bal)
+                        ? VillagerState.AttackingStructure : VillagerState.Idle;
+                    continue;
+                }
+                if (v.state == VillagerState.AttackingStructure)
+                {
+                    state.villagers[idx].state = VillagerState.Idle;
+                    v = state.villagers[idx];
+                }
 
                 // Only re-evaluate Idle, Claiming, and Working villagers
                 if (v.state != VillagerState.Idle && v.state != VillagerState.Claiming && v.state != VillagerState.Working) continue;
@@ -817,17 +853,24 @@ namespace NodeWar.Simulation
             }
         }
 
+        private static NodeData OnOwnershipChanged(SimulationState state, NodeData node, int oldOwner, int newOwner, TickEventLog log)
+        {
+            if (oldOwner != newOwner)
+            {
+                node.autoRecruit = false;
+                node.recruitReadyTick = 0;
+                node.fortressLevel = 0;
+            }
+            if (node.structureKind == StructureKind.Fortification) node = StructureRules.Destroy(node);
+            node.ownerID = newOwner;
+            if (newOwner < 0) log?.Add(TickEventType.NodeNeutralised, node.nodeID, -1, oldOwner, 1 - oldOwner);
+            else log?.Add(TickEventType.NodeClaimed, node.nodeID, -1, newOwner, oldOwner);
+            return node;
+        }
+
         private static void CompleteClaimForPlayer(SimulationState state, int nodeIndex, int playerID, TickEventLog log)
         {
-            log?.Add(TickEventType.NodeClaimed, nodeIndex, -1, playerID, state.nodes[nodeIndex].ownerID);
-
-            if (state.nodes[nodeIndex].ownerID != playerID)
-            {
-                state.nodes[nodeIndex].autoRecruit = false;
-                state.nodes[nodeIndex].recruitReadyTick = 0;
-                state.nodes[nodeIndex].fortressLevel = 0;
-            }
-            state.nodes[nodeIndex].ownerID = playerID;
+            state.nodes[nodeIndex] = OnOwnershipChanged(state, state.nodes[nodeIndex], state.nodes[nodeIndex].ownerID, playerID, log);
 
             if (state.nodes[nodeIndex].upgradeCategory != DistrictUpgradeCategory.Fixed)
             {
@@ -1053,11 +1096,13 @@ namespace NodeWar.Simulation
 
         // Resolve surviving intent once, after all rule passes. Work, claim and travel
         // begun here cannot contribute until the next tick. Replan from current state.
-        private static void TickOrderResume(SimulationState state, TickEventLog log)
+        private static void TickOrderResume(SimulationState state, bool[] structureParticipants, TickEventLog log)
         {
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
+                // Destruction leaves participants Idle until the following tick.
+                if (i < structureParticipants.Length && structureParticipants[i]) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed || v.state == VillagerState.Moving) continue;
                 bool fighting = v.state == VillagerState.Fighting;
                 if (HasLivingEnemiesOnNode(state, v.currentNodeID, v.ownerID)) continue;

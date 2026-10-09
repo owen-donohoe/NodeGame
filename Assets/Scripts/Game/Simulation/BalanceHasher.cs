@@ -150,6 +150,9 @@ namespace NodeWar.Simulation
                         hash = HashFortressArray(hash, d.fortressMetalCosts, 3009, i);
                         hash = HashFortressArray(hash, d.fortressResistancePercent, 3010, i);
                     }
+                if (b.fortificationHP != 0) { hash = hash * 31 + 3011; hash = hash * 31 + b.fortificationHP; }
+                if (b.structureDamagePerTick != 0) { hash = hash * 31 + 3012; hash = hash * 31 + b.structureDamagePerTick; }
+                if (b.maxStructureAttackersPerNode != 0) { hash = hash * 31 + 3013; hash = hash * 31 + b.maxStructureAttackersPerNode; }
                 return hash;
             }
         }

@@ -491,7 +491,7 @@ namespace NodeWar.Input
             if (!IsOffCooldown(villagerID)) return;
 
             VillagerData v = state.villagers[villagerID];
-            if (v.state == VillagerState.Breaching) return;
+            if (v.state == VillagerState.Breaching || v.state == VillagerState.AttackingStructure) return;
             if (v.currentNodeID == targetNode && v.state != VillagerState.Moving) return;
             if (v.targetNodeID == targetNode) return;
 
@@ -519,7 +519,7 @@ namespace NodeWar.Input
             if (claimedThisTick[villagerID]) return;
 
             VillagerData v = state.villagers[villagerID];
-            if (v.state == VillagerState.Breaching) return;
+            if (v.state == VillagerState.Breaching || v.state == VillagerState.AttackingStructure) return;
             if (v.currentNodeID == targetNode && v.state != VillagerState.Moving) return;
             if (v.targetNodeID == targetNode) return;
 
@@ -576,7 +576,7 @@ namespace NodeWar.Input
                 if (v.ownerID != playerID) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 // CoreEmergency must not pull attackers off the enemy core.
-                if (v.state == VillagerState.Breaching) continue;
+                if (v.state == VillagerState.Breaching || v.state == VillagerState.AttackingStructure) continue;
                 result.Add(i);
             }
             return result;
@@ -592,7 +592,7 @@ namespace NodeWar.Input
                 if (!GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
-                if (v.state == VillagerState.Breaching) continue;
+                if (v.state == VillagerState.Breaching || v.state == VillagerState.AttackingStructure) continue;
                 if (claimedThisTick[i]) continue;
                 result.Add(i);
             }
@@ -609,7 +609,7 @@ namespace NodeWar.Input
                 if (GameBalanceData.IsCombatSuit(v.suit)) continue;
                 if (v.state == VillagerState.Dead || v.isConsumed) continue;
                 if (v.state == VillagerState.Fighting) continue;
-                if (v.state == VillagerState.Breaching) continue;
+                if (v.state == VillagerState.Breaching || v.state == VillagerState.AttackingStructure) continue;
                 if (!includeWorking && v.state == VillagerState.Working) continue;
                 if (claimedThisTick[i]) continue;
                 if (!IsOffCooldown(i)) continue;

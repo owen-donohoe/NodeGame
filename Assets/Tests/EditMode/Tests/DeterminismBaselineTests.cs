@@ -21,10 +21,10 @@ namespace NodeWar.Tests
         //
         // Declared in docs/computations/determinism-baseline.md as an Attested
         // Computation; docs/attesters/hash_baseline.ps1 verifies a run's receipt.
-        // C7: removing the unconditional neutral Rampart bonus field changes hashes.
-        // Fortress level 0 is tagged-zero-neutral; SimulationVersion remains 3.
-        private const int EmptyTick100Hash = 647286254;
-        private const int MoveAndCombat4Hash = 357327383;
+        // D1: structure kind/HP add two unconditional zero terms per node.
+        // Structure attack changes rules; both baselines are re-pinned at sim v4.
+        private const int EmptyTick100Hash = -563755666;
+        private const int MoveAndCombat4Hash = -2013445737;
 
         [Test]
         public void EmptyTick_100Iterations_ProducesDeterministicHash()
@@ -126,7 +126,8 @@ namespace NodeWar.Tests
         // Neutral breach fields are omitted from the hash to preserve the v1 legacy path.
         // v3 re-pin: SimulationState.boardHash and NodeData.terrain are hashed unconditionally
         // (terrain board, B4), so both baselines moved. See docs/computations/determinism-baseline.md.
-        private const int BaselinesPinnedAtSimVersion = 3;
+        // v4: shared structure kind/HP are hashed even on bare nodes (D1).
+        private const int BaselinesPinnedAtSimVersion = 4;
 
         [Test]
         public void SimVersion_MatchesPinnedBaselines()

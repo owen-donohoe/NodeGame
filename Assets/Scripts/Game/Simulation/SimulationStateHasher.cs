@@ -89,6 +89,8 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (int)state.nodes[i].upgradeCategory;
                     hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
                     hash = hash * 31 + (int)state.nodes[i].terrain;
+                    hash = hash * 31 + (int)state.nodes[i].structureKind;
+                    hash = hash * 31 + state.nodes[i].structureHP;
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;
                     if (state.nodes[i].recruitReadyTick != 0)

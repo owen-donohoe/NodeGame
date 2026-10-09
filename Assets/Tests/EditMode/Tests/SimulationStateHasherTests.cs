@@ -18,7 +18,7 @@ namespace NodeWar.Tests
             "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
             "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
-            "NodeData.fortressLevel", "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
+            "NodeData.structureKind", "NodeData.structureHP", "NodeData.fortressLevel", "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",
             "VillagerData.moveProgress", "VillagerData.previousNodeID", "VillagerData.state",

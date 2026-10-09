@@ -18,7 +18,8 @@ namespace NodeWar.View
         }
         public static bool Interrupted(VillagerData v) =>
             v.targetNodeID >= 0 && !v.isConsumed && v.state != VillagerState.Dead &&
-            v.state != VillagerState.Moving && v.state != VillagerState.Breaching;
+            v.state != VillagerState.Moving && v.state != VillagerState.Breaching &&
+            v.state != VillagerState.AttackingStructure;
 
         public static Appearance Style(VillagerData v, float interruptedSeconds, bool reducedMotion)
         {

@@ -174,6 +174,8 @@ namespace NodeWar.Simulation
                     ownerID = -1,
                     townPaidMask = 0,
                     fortressLevel = 0,
+                    structureKind = StructureKind.None,
+                    structureHP = 0,
                     materialAllocation = 0,
                     recruitReadyTick = 0,
                     autoRecruit = false

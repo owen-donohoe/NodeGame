@@ -345,6 +345,12 @@ namespace NodeWar.View
                         targetPos = slotManager.GetClaimPosition(breachIndex, totalBreaching);
                         break;
 
+                    case VillagerState.AttackingStructure:
+                        int structureIndex = GetLocalIndex(villager.currentNodeID, villager.ownerID, VillagerState.AttackingStructure);
+                        int totalAttacking = GetTotalOnNode(villager.currentNodeID, villager.ownerID, VillagerState.AttackingStructure);
+                        targetPos = slotManager.GetFightPosition(structureIndex, totalAttacking);
+                        break;
+
                     case VillagerState.Fighting:
                         int fightIndex = GetLocalIndexAllPlayers(villager.currentNodeID, VillagerState.Fighting);
                         int totalFighting = GetTotalOnNodeAllPlayers(villager.currentNodeID, VillagerState.Fighting);
@@ -446,6 +452,7 @@ namespace NodeWar.View
                     case VillagerState.Claiming: return p0ClaimingColor;
                     case VillagerState.Fighting: return p0FightingColor;
                     case VillagerState.Breaching: return p0FightingColor;
+                    case VillagerState.AttackingStructure: return p0FightingColor;
                     case VillagerState.Idle: return p0IdleColor;
                     default: return p0BaseColor;
                 }
@@ -459,6 +466,7 @@ namespace NodeWar.View
                     case VillagerState.Claiming: return p1ClaimingColor;
                     case VillagerState.Fighting: return p1FightingColor;
                     case VillagerState.Breaching: return p1FightingColor;
+                    case VillagerState.AttackingStructure: return p1FightingColor;
                     case VillagerState.Idle: return p1IdleColor;
                     default: return p1BaseColor;
                 }
