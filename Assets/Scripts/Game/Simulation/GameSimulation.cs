@@ -51,6 +51,7 @@ namespace NodeWar.Simulation
 
             // Step 5: Production
             TickProduction(state);
+            TickMinionProduction(state);
             TickAutoRecruit(state);
 
             // Step 6: Healing
@@ -263,8 +264,7 @@ namespace NodeWar.Simulation
                 if (expectedSuit != SuitType.None)
                 {
                     state.villagers[villagerIndex].suit = expectedSuit;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, villagerIndex) : workers < bal.maxWorkersPerNode)
+                    if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, villagerIndex) : BankRules.HasWorkerSlot(state, villagerIndex, bal))
                     {
                         int ticks = GetProductionTicks(node.districtType, node.districtEra);
                         state.villagers[villagerIndex].productionTicksMax = ticks;
@@ -687,6 +687,39 @@ namespace NodeWar.Simulation
                     CommandProcessor.TryRecruit(state, state.nodes[nodeID].ownerID, nodeID);
         }
 
+        private static void TickMinionProduction(SimulationState state)
+        {
+            int decrement = bal.ProductionTempoValid()
+                ? bal.TimerDecrement(bal.tempoProductionPercent, state.tickCount) : 1;
+            for (int i = 0; i < state.nodes.Length; i++)
+            {
+                NodeData node = state.nodes[i];
+                if (!BankRules.CanProduce(state, node, bal)) continue;
+                node.minionProductionRemaining -= decrement;
+                if (node.minionProductionRemaining <= 0)
+                {
+                    switch (node.districtType)
+                    {
+                        case DistrictType.Farm: node.bankFood++; break;
+                        case DistrictType.Mine: node.bankMaterials++; break;
+                        case DistrictType.Forge:
+                            // Missing input/allocation wastes this cycle, as for human
+                            // Forge workers. Only dormancy/full bank pauses the timer.
+                            if (node.materialAllocation > 0 && state.players[node.ownerID].materials > 0)
+                            { state.players[node.ownerID].materials--; node.bankMetal++; }
+                            break;
+                        case DistrictType.Storehouse:
+                            if (node.storehouseNextResource == 0) node.bankFood++;
+                            else node.bankMaterials++;
+                            node.storehouseNextResource = 1 - node.storehouseNextResource;
+                            break;
+                    }
+                    node.minionProductionRemaining += BankRules.ProductionTicks(node, bal);
+                }
+                state.nodes[i] = node;
+            }
+        }
+
         /// <summary>
         /// Every tick, decrements production timers for Working villagers.
         /// When a timer reaches 0: awards the appropriate resource to the owner
@@ -731,20 +764,6 @@ namespace NodeWar.Simulation
                                 state.players[ownerID].metal = GameBalanceData.AddResource(state.players[ownerID].metal, bal.metalCap);
                             }
                             // A blocked conversion still cycles without consuming materials.
-                            break;
-                        case DistrictType.Market:
-                            // Alternate even when a full stock wastes this payout.
-                            DistrictStats market = bal.GetDistrictStats(DistrictType.Market, state.nodes[nodeID].districtEra);
-                            if (state.villagers[idx].productionTicksMax == market.productionTicks)
-                            {
-                                state.players[ownerID].food = GameBalanceData.AddResource(state.players[ownerID].food, bal.foodCap);
-                                state.villagers[idx].productionTicksMax = market.secondaryProductionTicks;
-                            }
-                            else
-                            {
-                                state.players[ownerID].materials = GameBalanceData.AddResource(state.players[ownerID].materials, bal.materialsCap);
-                                state.villagers[idx].productionTicksMax = market.productionTicks;
-                            }
                             break;
                     }
 
@@ -815,10 +834,9 @@ namespace NodeWar.Simulation
                             state.villagers[idx].suit = expectedSuit;
 
                         // Try Working if not already
-                        if (v.state != VillagerState.Working || node.districtType == DistrictType.Infirmary)
+                        if (v.state != VillagerState.Working || node.districtType == DistrictType.Infirmary || !BankRules.HasWorkerSlot(state, idx, bal))
                         {
-                            int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
-                            if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, idx) : workers < bal.maxWorkersPerNode)
+                            if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, idx) : BankRules.HasWorkerSlot(state, idx, bal))
                             {
                                 state.villagers[idx].state = VillagerState.Working;
                                 state.villagers[idx].productionTicksMax = GetProductionTicks(node.districtType, node.districtEra);
@@ -861,6 +879,11 @@ namespace NodeWar.Simulation
                 node.recruitReadyTick = 0;
                 node.fortressLevel = 0;
             }
+            if (newOwner >= 0 && node.structureKind == StructureKind.Minion)
+            {
+                BankRules.PayBank(state, node, newOwner, bal);
+                node = StructureRules.Destroy(node);
+            }
             if (node.structureKind == StructureKind.Fortification) node = StructureRules.Destroy(node);
             node.ownerID = newOwner;
             if (newOwner < 0) log?.Add(TickEventType.NodeNeutralised, node.nodeID, -1, oldOwner, 1 - oldOwner);
@@ -897,6 +920,14 @@ namespace NodeWar.Simulation
                     state.villagers[i].productionTicksRemaining = 0;
                     state.villagers[i].productionTicksMax = 0;
                 }
+            }
+
+            NodeData claimed = state.nodes[nodeIndex];
+            if (claimed.districtType == DistrictType.Storehouse && !claimed.storehouseInitialised &&
+                bal.BankTuningValid() && BankRules.ProductionTicks(claimed, bal) > 0)
+            {
+                claimed.storehouseInitialised = true;
+                state.nodes[nodeIndex] = BankRules.CreateMinion(claimed, bal);
             }
 
             int playerBit = 1 << playerID;
@@ -1281,7 +1312,6 @@ namespace NodeWar.Simulation
                 case DistrictType.Farm:
                 case DistrictType.Mine:
                 case DistrictType.Forge:
-                case DistrictType.Market: // food first; TickProduction alternates
                     return bal.GetDistrictStats(district, era).productionTicks;
                 default:
                     return 0;
@@ -1317,7 +1347,6 @@ namespace NodeWar.Simulation
                 case DistrictType.Farm: return SuitType.Farmer;
                 case DistrictType.Mine: return SuitType.Miner;
                 case DistrictType.Forge: return SuitType.Smelter;
-                case DistrictType.Market: return SuitType.Merchant;
                 case DistrictType.Infirmary: return SuitType.Acolyte;
                 case DistrictType.Watchtower: return SuitType.Watcher;
                 default: return SuitType.None;

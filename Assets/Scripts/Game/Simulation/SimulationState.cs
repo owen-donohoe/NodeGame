@@ -27,7 +27,8 @@ namespace NodeWar.Simulation
         Pier = 14,
         Town = 15,
         Infirmary = 16,
-        Fortress = 17
+        Fortress = 17,
+        Storehouse = 18
     }
 
     /// <summary>
@@ -82,7 +83,7 @@ namespace NodeWar.Simulation
         Scout,
         Berserker,
         Medic,
-        Merchant, // auto-assigned: Market worker
+        Merchant, // Historical Market suit; never assigned by active production
         Acolyte, // auto-assigned: Sanctuary worker
         Watcher // auto-assigned: Watchtower worker
     }
@@ -102,6 +103,12 @@ namespace NodeWar.Simulation
         public int fortressLevel;
         public StructureKind structureKind;
         public int structureHP;
+        public int bankFood;
+        public int bankMaterials;
+        public int bankMetal;
+        public int minionProductionRemaining;
+        public int storehouseNextResource;
+        public bool storehouseInitialised;
         public int materialAllocation;
         public int recruitReadyTick;
         public bool autoRecruit;
@@ -242,7 +249,7 @@ namespace NodeWar.Simulation
             if (source == null) throw new System.ArgumentNullException(nameof(source));
             if (ReferenceEquals(source, this)) return;
 
-            // Value-type clone includes structureKind/structureHP and every node scalar.
+            // Value-type clone includes banks, minion timers/construction and every node scalar.
             nodes = source.nodes == null ? null : (NodeData[])source.nodes.Clone();
 
             if (source.villagers == null) villagers = null;

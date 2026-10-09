@@ -285,7 +285,6 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Farm, SuitType.Farmer, 30)]
         [TestCase(DistrictType.Mine, SuitType.Miner, 40)]
         [TestCase(DistrictType.Forge, SuitType.Smelter, 50)]
-        [TestCase(DistrictType.Market, SuitType.Merchant, 45)]
         [TestCase(DistrictType.Infirmary, SuitType.Acolyte, 0)]
         [TestCase(DistrictType.Watchtower, SuitType.Watcher, 0)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap(
@@ -307,7 +306,6 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Farm)]
         [TestCase(DistrictType.Mine)]
         [TestCase(DistrictType.Forge)]
-        [TestCase(DistrictType.Market)]
         [TestCase(DistrictType.Infirmary)]
         [TestCase(DistrictType.Watchtower)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap_Determinism(DistrictType district)

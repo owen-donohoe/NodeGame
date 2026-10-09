@@ -17,6 +17,20 @@ namespace NodeWar.Tests
     {
         private int next;
 
+        [TestCase("bankFood")] [TestCase("bankMaterials")] [TestCase("bankMetal")]
+        [TestCase("minionProductionRemaining")] [TestCase("storehouseNextResource")] [TestCase("storehouseInitialised")]
+        public void CopyFrom_BankFieldsRoundTripAndStayIndependent(string name)
+        {
+            var source = TestBoardFactory.BuildThreeNodeBoard(GameBalanceData.Default());
+            var field = typeof(NodeData).GetField(name); Assert.IsNotNull(field);
+            object node = source.nodes[1]; field.SetValue(node, field.FieldType == typeof(bool) ? (object)true : 1);
+            source.nodes[1] = (NodeData)node;
+            var copy = new SimulationState(); copy.CopyFrom(source);
+            Assert.AreEqual(field.GetValue(source.nodes[1]), field.GetValue(copy.nodes[1]));
+            int hash = SimulationStateHasher.ComputeHash(source); copy.nodes[1] = default;
+            Assert.AreEqual(hash, SimulationStateHasher.ComputeHash(source));
+        }
+
         [Test]
         public void CopyFrom_RecruitFieldsRoundTripAndStayIndependent()
         {

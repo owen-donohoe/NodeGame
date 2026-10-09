@@ -45,7 +45,7 @@ namespace NodeWar.Lobby
         }
 
         public const int SuitTypeCount = (int)SuitType.Watcher + 1;
-        public const int DistrictTypeCount = (int)DistrictType.Fortress + 1;
+        public const int DistrictTypeCount = (int)DistrictType.Storehouse + 1;
 
         public static string CatalogBaseForSuit(int type) => CatalogKeys.SuitBase(type);
 

@@ -150,7 +150,14 @@ namespace NodeWar.Simulation
                         hash = HashFortressArray(hash, d.fortressMetalCosts, 3009, i);
                         hash = HashFortressArray(hash, d.fortressResistancePercent, 3010, i);
                     }
-                if (b.fortificationHP != 0) { hash = hash * 31 + 3011; hash = hash * 31 + b.fortificationHP; }
+                // 3011 was D1's global Fortress HP; reserve it after moving HP per era.
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                        if (b.districtStats[i].fortificationHP != 0)
+                        { hash = hash * 31 + 3014; hash = hash * 31 + i; hash = hash * 31 + b.districtStats[i].fortificationHP; }
+                if (b.minionHP != 0) { hash = hash * 31 + 3015; hash = hash * 31 + b.minionHP; }
+                if (b.minionMetalCost != 0) { hash = hash * 31 + 3016; hash = hash * 31 + b.minionMetalCost; }
+                if (b.bankCapacity != 0) { hash = hash * 31 + 3017; hash = hash * 31 + b.bankCapacity; }
                 if (b.structureDamagePerTick != 0) { hash = hash * 31 + 3012; hash = hash * 31 + b.structureDamagePerTick; }
                 if (b.maxStructureAttackersPerNode != 0) { hash = hash * 31 + 3013; hash = hash * 31 + b.maxStructureAttackersPerNode; }
                 return hash;

@@ -13,6 +13,11 @@ namespace NodeWar.Simulation
     /// </summary>
     public static class SimulationStateHasher
     {
+        private static int HashNodeExtension(int hash, int index, int tag, int value)
+        {
+            if (value == 0) return hash;
+            unchecked { return ((hash * 31 + tag) * 31 + index) * 31 + value; }
+        }
         public static int ComputeHash(SimulationState state)
         {
             unchecked
@@ -91,6 +96,12 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (int)state.nodes[i].terrain;
                     hash = hash * 31 + (int)state.nodes[i].structureKind;
                     hash = hash * 31 + state.nodes[i].structureHP;
+                    hash = HashNodeExtension(hash, i, 2020, state.nodes[i].bankFood);
+                    hash = HashNodeExtension(hash, i, 2021, state.nodes[i].bankMaterials);
+                    hash = HashNodeExtension(hash, i, 2022, state.nodes[i].bankMetal);
+                    hash = HashNodeExtension(hash, i, 2023, state.nodes[i].minionProductionRemaining);
+                    hash = HashNodeExtension(hash, i, 2024, state.nodes[i].storehouseNextResource);
+                    hash = HashNodeExtension(hash, i, 2025, state.nodes[i].storehouseInitialised ? 1 : 0);
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;
                     if (state.nodes[i].recruitReadyTick != 0)

@@ -35,7 +35,7 @@ namespace NodeWar.Lobby.Tests
             return new LoadoutData
             {
                 suitIDs = new[] { "suit_warrior", "suit_guardian", "suit_scout" },
-                districtIDs = new[] { "node_farm", "node_market" },
+                districtIDs = new[] { "node_farm", "node_storehouse" },
                 suitEras = new[] { 0, 1, 0, 2, 0, 0, 0, 0 },
                 districtEras = new[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1 },
                 skinIDs = new[] { "skin.suit.warrior.default", "skin.district.farm.gilded" }
@@ -72,7 +72,8 @@ namespace NodeWar.Lobby.Tests
             CollectionAssert.AreEqual(normalized.suitEras, back.suitEras);
             Assert.AreEqual(0, back.districtEras[12], "Retired era moves to the canonical table.");
             Assert.AreEqual(3, back.districtEras[17]);
-            Assert.AreEqual(1, back.districtEras[13]);
+            Assert.AreEqual(0, back.districtEras[13]);
+            Assert.AreEqual(1, back.districtEras[18]);
             CollectionAssert.AreEqual(normalized.skinIDs, back.skinIDs);
         }
 
@@ -116,7 +117,7 @@ namespace NodeWar.Lobby.Tests
         [TestCase("node_sanctuary", 16)]
         [TestCase("node_watchtower", 0)]
         [TestCase("node_rampart", 17)]
-        [TestCase("node_market", 13)]
+        [TestCase("node_market", 18)] [TestCase("node_storehouse", 18)]
         [TestCase("node_crossroads", 0)]
         [TestCase("NODE_RAMPART", 0)]
         [TestCase("some_farm_variant", 0)]
@@ -153,7 +154,7 @@ namespace NodeWar.Lobby.Tests
             {
                 null, "district.farm", "district.mine", "district.village", "district.barracks", "district.core",
                 "district.forge", null, null, null, null,
-                null, null, "district.market", "district.pier", "district.town", "district.infirmary", "district.fortress"
+                null, null, null, "district.pier", "district.town", "district.infirmary", "district.fortress", "district.storehouse"
             };
             for (int i = 0; i < suits.Length; i++) Assert.AreEqual(suits[i], LoadoutTypes.CatalogBaseForSuit(i), "suit " + i);
             for (int i = 0; i < districts.Length; i++) Assert.AreEqual(districts[i], LoadoutTypes.CatalogBaseForDistrict(i), "district " + i);

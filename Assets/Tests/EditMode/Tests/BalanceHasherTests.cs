@@ -17,7 +17,7 @@ namespace NodeWar.Tests
         [TestCase("captureBonusMaxSteps", 2)]
         [TestCase("recruitBaseCost", 6)]
         [TestCase("recruitCostPerRecruit", 3)]
-        [TestCase("fortificationHP", 16)]
+        [TestCase("minionHP", 16)] [TestCase("minionMetalCost", 3)] [TestCase("bankCapacity", 5)]
         [TestCase("structureDamagePerTick", 1)]
         [TestCase("maxStructureAttackersPerNode", 4)]
         public void CoreScalar_RegisteredDefaultAndIndependentMutation(string name, int expected)
@@ -116,19 +116,47 @@ namespace NodeWar.Tests
         public void StructureTuning_HistoricalZeroNeutralAndActiveValidation()
         {
             var b = GameBalanceData.Default();
-            foreach (string field in new[] { "fortificationHP", "structureDamagePerTick", "maxStructureAttackersPerNode" })
+            foreach (string field in new[] { "structureDamagePerTick", "maxStructureAttackersPerNode" })
             {
                 Assert.IsFalse(SetCoreScalar(b, field, -1).CoreRulesValid(out _));
                 Assert.IsFalse(SetCoreScalar(b, field, 0).CoreRulesValid(out _));
             }
             Assert.IsFalse(SetCoreScalar(b, "maxStructureAttackersPerNode", 5).CoreRulesValid(out _));
             Assert.IsFalse(SetCoreScalar(b, "structureDamagePerTick", int.MaxValue).CoreRulesValid(out _));
-            var historical = SetCoreScalar(SetCoreScalar(SetCoreScalar(b, "fortificationHP", 0), "structureDamagePerTick", 0), "maxStructureAttackersPerNode", 0);
+            var historical = SetCoreScalar(SetCoreScalar(b, "structureDamagePerTick", 0), "maxStructureAttackersPerNode", 0);
             Assert.IsTrue(historical.CoreRulesValid(out _));
             // Historical catalog filename/hash tests cover missing zero-neutral fields.
             Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(historical));
         }
 
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void D2DistrictNumbers_PerEraAndHash(int era)
+        {
+            var b = GameBalanceData.Default();
+            Assert.IsNull(typeof(GameBalanceData).GetField("fortificationHP"));
+            foreach (var type in new[] { DistrictType.Fortress, (DistrictType)18 }) {
+                int index = Array.FindIndex(b.districtStats, d => d.districtType == type && d.era == era);
+                Assert.GreaterOrEqual(index, 0);
+                var field = typeof(DistrictStats).GetField(type == DistrictType.Fortress ? "fortificationHP" : "productionTicks");
+                Assert.IsNotNull(field); int expected = type == DistrictType.Fortress ? 16 : 80;
+                Assert.AreEqual(expected, field.GetValue(b.districtStats[index]));
+                var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index];
+                field.SetValue(entry, expected + 1); copy.districtStats[index] = (DistrictStats)entry;
+                Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                field.SetValue(entry, -1); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _));
+            }
+        }
+
+        [Test]
+        public void BankTuning_RejectsInvalidActiveScalarsAndAllowsHistoricalZeros()
+        {
+            var b = GameBalanceData.Default();
+            foreach (string name in new[] { "minionHP", "minionMetalCost", "bankCapacity" })
+                foreach (int value in new[] { -1, 0 })
+                    Assert.IsFalse(SetCoreScalar(b, name, value).CoreRulesValid(out _));
+            var historical = SetCoreScalar(SetCoreScalar(SetCoreScalar(b, "minionHP", 0), "minionMetalCost", 0), "bankCapacity", 0);
+            Assert.IsTrue(historical.CoreRulesValid(out _)); Assert.IsFalse(historical.BankTuningValid());
+        }
         private static GameBalanceData WithOneSuit()
         {
             GameBalanceData b = GameBalanceData.Default();

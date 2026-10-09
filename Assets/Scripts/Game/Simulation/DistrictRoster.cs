@@ -9,7 +9,7 @@ namespace NodeWar.Simulation
             {
                 case DistrictType.None: case DistrictType.Farm: case DistrictType.Mine:
                 case DistrictType.Village: case DistrictType.Barracks: case DistrictType.Core:
-                case DistrictType.Forge: case DistrictType.Market: case DistrictType.Pier:
+                case DistrictType.Forge: case DistrictType.Storehouse: case DistrictType.Pier:
                 case DistrictType.Town: case DistrictType.Infirmary: case DistrictType.Fortress:
                     return true;
                 default: return false;

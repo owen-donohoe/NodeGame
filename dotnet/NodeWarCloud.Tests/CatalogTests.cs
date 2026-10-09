@@ -27,7 +27,7 @@ namespace NodeWar.Cloud.Tests
             var catalog = ServerCatalog.Items;
             Assert.That(CatalogValidation.Validate(catalog, 6), Is.Empty);
             Assert.That(catalog.Where(i => !i.Retired).Select(i => i.Id), Is.EquivalentTo(expected));
-            Assert.That(catalog.Count, Is.EqualTo(189));
+            Assert.That(catalog.Count, Is.EqualTo(196));
             foreach (var item in catalog)
             {
                 if (item.Retired) continue;

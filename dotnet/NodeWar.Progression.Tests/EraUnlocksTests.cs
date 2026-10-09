@@ -69,7 +69,7 @@ namespace NodeWar.Progression.Tests
         public void CanonicalRoster_HasSixEras_NoRetiredGrants_AndKeepsLegacyOwnershipOnDemotion()
         {
             var catalog = new List<CatalogItem>();
-            foreach (string key in new[] { "farm", "mine", "village", "barracks", "forge", "market",
+            foreach (string key in new[] { "farm", "mine", "village", "barracks", "forge", "storehouse",
                 "pier", "town", "infirmary", "fortress", "camp", "shrine", "arsenal", "sanctuary", "watchtower", "rampart" })
                 for (int era = 0; era < 6; era++)
                     catalog.Add(new CatalogItem { Id = "district." + key + ".e" + era,

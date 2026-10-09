@@ -97,7 +97,7 @@ namespace NodeWar.Cloud.Tests
                 "district.infirmary.e1", "district.infirmary.e2", "district.fortress.e1" })
                 CollectionAssert.Contains(state.Inventory.OwnedVariants, id);
             CollectionAssert.AreEqual(new[] { "node_barracks", "" }, state.Inventory.EquippedNodeIDs);
-            Assert.AreEqual("district.market.e2", state.Inventory.Equipped.Variants["district.market"]);
+            Assert.AreEqual("district.storehouse.e2", state.Inventory.Equipped.Variants["district.storehouse"]);
             Assert.IsFalse(Migrate(state), "Second run must require zero writes.");
         }
         [Test]
@@ -132,10 +132,10 @@ namespace NodeWar.Cloud.Tests
         public void CatalogRetainsOldIdsAsRetired()
         {
             var catalog = NodeWar.Cloud.ServerCatalog.Items;
-            foreach (string key in new[] { "camp", "shrine", "arsenal", "sanctuary", "watchtower", "rampart" })
+            foreach (string key in new[] { "camp", "shrine", "arsenal", "sanctuary", "watchtower", "rampart", "market" })
                 Assert.That(catalog.Where(i => i.BaseId == "district." + key).Select(i => i.Retired),
                     Is.Not.Empty.And.All.True);
-            foreach (string key in new[] { "farm", "mine", "village", "barracks", "forge", "market",
+            foreach (string key in new[] { "farm", "mine", "village", "barracks", "forge", "storehouse",
                 "pier", "town", "infirmary", "fortress" })
             {
                 var items = catalog.Where(i => i.BaseId == "district." + key && !i.Retired).ToArray();

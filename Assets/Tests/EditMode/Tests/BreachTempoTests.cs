@@ -309,7 +309,7 @@ namespace NodeWar.Tests
         }
 
         [TestCase(DistrictType.Farm)] [TestCase(DistrictType.Mine)]
-        [TestCase(DistrictType.Forge)] [TestCase(DistrictType.Market)]
+        [TestCase(DistrictType.Forge)]
         public void ProductionCarriesNegativeRemainderIntoNextDuration(DistrictType district)
         {
             balance.tempoStageTicks = new[] { 1 };
@@ -327,10 +327,10 @@ namespace NodeWar.Tests
             state.villagers[0].productionTicksMax = duration;
             state.villagers[0].productionTicksRemaining = 1;
             GameSimulation.SimulateTick(state);
-            int next = district == DistrictType.Market ? balance.GetDistrictStats(district, 0).secondaryProductionTicks : duration;
+            int next = duration;
             Assert.AreEqual(next, state.villagers[0].productionTicksMax);
             Assert.AreEqual(next - 1, state.villagers[0].productionTicksRemaining);
-            Assert.AreEqual(district == DistrictType.Farm || district == DistrictType.Market ? 1 : 0, state.players[0].food);
+            Assert.AreEqual(district == DistrictType.Farm ? 1 : 0, state.players[0].food);
             Assert.AreEqual(district == DistrictType.Forge ? 1 : 0, state.players[0].metal);
         }
 
@@ -499,21 +499,16 @@ namespace NodeWar.Tests
         }
 
         [Test]
-        public void MarketCarriesRemainderIntoFoodAfterMaterialCycle()
+        public void StorehouseCarriesRemainderIntoFoodAfterMaterialCycle()
         {
-            balance.tempoStageTicks = new[] { 1 };
-            balance.tempoProductionPercent = new[] { 200 };
-            Install();
+            balance.tempoStageTicks = new[] { 1 }; balance.tempoProductionPercent = new[] { 200 }; Install();
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Market;
-            state.nodes[1].ownerID = 0;
-            state.villagers[0].currentNodeID = 1;
-            state.villagers[0].state = VillagerState.Working;
-            state.villagers[0].productionTicksMax = balance.GetDistrictStats(DistrictType.Market, 0).secondaryProductionTicks;
-            state.villagers[0].productionTicksRemaining = 1;
+            state.nodes[1].districtType = DistrictType.Storehouse; state.nodes[1].ownerID = 0;
+            state.nodes[1].structureKind = StructureKind.Minion; state.nodes[1].structureHP = 16;
+            state.nodes[1].minionProductionRemaining = 1; state.nodes[1].storehouseNextResource = 1;
             GameSimulation.SimulateTick(state);
-            Assert.AreEqual(1, state.players[0].materials);
-            Assert.AreEqual(44, state.villagers[0].productionTicksRemaining);
+            Assert.AreEqual(1, state.nodes[1].bankMaterials); Assert.AreEqual(0, state.nodes[1].storehouseNextResource);
+            Assert.AreEqual(79, state.nodes[1].minionProductionRemaining);
         }
     }
 }

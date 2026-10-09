@@ -24,10 +24,11 @@ namespace NodeWar.Simulation
     /// belongs to that district rather than to the game as a whole. A field a
     /// district does not use stays 0. Each district type fills only its own:
     ///   Farm, Mine, Forge  productionTicks
-    ///   Market             productionTicks (food), secondaryProductionTicks (materials)
+    ///   Storehouse         productionTicks (alternating bank output)
+    ///   Market             historical productionTicks / secondaryProductionTicks
     ///   Town               townBonusVillagers (Village bonusVillagersOnClaim is historical)
     ///   Shrine             healIntervalTicks
-    ///   Fortress           fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
+    ///   Fortress           fortificationHP, fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
     ///   Watchtower         claimRateNumerator / claimRateDenominator
     ///   Sanctuary          respawnBoostPerWorker, respawnCostReductionPercent
     /// </summary>
@@ -41,6 +42,7 @@ namespace NodeWar.Simulation
         public int secondaryProductionTicks;
         public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
         public int townBonusVillagers;
+        public int fortificationHP;
         public int[] fortressMaterialsCosts;
         public int[] fortressMetalCosts;
         public int[] fortressResistancePercent;
@@ -61,7 +63,9 @@ namespace NodeWar.Simulation
         public const int EraCount = 6;
 
         public int ticksPerSecond;
-        public int fortificationHP;
+        public int minionHP;
+        public int minionMetalCost;
+        public int bankCapacity;
         public int structureDamagePerTick;
         public int maxStructureAttackersPerNode;
 
@@ -279,8 +283,17 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
+            if ((minionHP != 0 || minionMetalCost != 0 || bankCapacity != 0) && !BankTuningValid())
+            { reason = "Invalid minion HP, cost or bank capacity."; return false; }
+            if (districtStats != null)
+                for (int i = 0; i < districtStats.Length; i++)
+                {
+                    DistrictStats entry = districtStats[i];
+                    if (entry.fortificationHP < 0 || (entry.districtType == DistrictType.Storehouse && entry.productionTicks < 2))
+                    { reason = "Invalid Fortress HP or Storehouse duration."; return false; }
+                }
             // All-zero historical exports remain readable, but cannot enable the ability.
-            if ((fortificationHP != 0 || structureDamagePerTick != 0 || maxStructureAttackersPerNode != 0) &&
+            if ((structureDamagePerTick != 0 || maxStructureAttackersPerNode != 0) &&
                 !StructureTuningValid())
             { reason = "Invalid structure HP, damage or attacker cap."; return false; }
             if (districtStats != null)
@@ -362,7 +375,9 @@ namespace NodeWar.Simulation
             catch (System.OverflowException) { return false; }
         }
 
-        public bool StructureTuningValid() => fortificationHP > 0 && structureDamagePerTick > 0 &&
+        public bool BankTuningValid() => minionHP > 0 && minionMetalCost > 0 && bankCapacity > 0;
+
+        public bool StructureTuningValid() => structureDamagePerTick > 0 &&
             maxStructureAttackersPerNode > 0 && maxStructureAttackersPerNode <= 4 &&
             (long)structureDamagePerTick * maxStructureAttackersPerNode <= int.MaxValue;
 
@@ -371,7 +386,7 @@ namespace NodeWar.Simulation
             return new GameBalanceData
             {
                 ticksPerSecond = 10,
-                fortificationHP = 16,
+                minionHP = 16, minionMetalCost = 3, bankCapacity = 5,
                 structureDamagePerTick = 1,
                 maxStructureAttackersPerNode = 4,
                 baseClaimPerTick = 17,
@@ -443,7 +458,8 @@ namespace NodeWar.Simulation
                 new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 },
                 new DistrictStats { districtType = DistrictType.Barracks },
                 new DistrictStats { districtType = DistrictType.Infirmary, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
-                new DistrictStats { districtType = DistrictType.Fortress }
+                new DistrictStats { districtType = DistrictType.Fortress, fortificationHP = 16 },
+                new DistrictStats { districtType = DistrictType.Storehouse, productionTicks = 80 }
             };
 
             DistrictStats[] all = new DistrictStats[template.Length * EraCount];

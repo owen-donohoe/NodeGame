@@ -67,7 +67,7 @@ namespace NodeWar.View
             return null;
         }
 
-        private readonly DistrictVisual[] fallbacks = new DistrictVisual[(int)DistrictType.Fortress + 1];
+        private readonly DistrictVisual[] fallbacks = new DistrictVisual[(int)DistrictType.Storehouse + 1];
 
         /// <summary>How many districts have nothing drawn for them. The art checklist's number.</summary>
         public int CountUnillustrated()

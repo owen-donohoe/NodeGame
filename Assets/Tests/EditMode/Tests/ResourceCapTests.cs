@@ -59,46 +59,35 @@ namespace NodeWar.Tests
             Assert.AreEqual(3, state.players[0].materials);
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void MarketAlternatesEvenWhenOneResourceIsFull(bool foodFull)
+        [TestCase(true)] [TestCase(false)]
+        public void StorehouseBanksEvenWhenPoolIsFull(bool foodFull)
         {
-            var b = GameBalanceData.Default();
-            var state = Worker(b, DistrictType.Market);
-            state.players[0].food = foodFull ? 30 : 0;
-            state.players[0].materials = foodFull ? 0 : 30;
-            var market = b.GetDistrictStats(DistrictType.Market, 0);
-            Ticks(state, market.productionTicks);
-            Assert.AreEqual(foodFull ? 30 : 1, state.players[0].food);
-            Assert.AreEqual(market.secondaryProductionTicks, state.villagers[0].productionTicksMax);
-            Assert.AreEqual(market.secondaryProductionTicks, state.villagers[0].productionTicksRemaining);
-            Ticks(state, market.secondaryProductionTicks);
-            Assert.AreEqual(foodFull ? 1 : 30, state.players[0].materials);
-            Assert.AreEqual(market.productionTicks, state.villagers[0].productionTicksMax);
-            Assert.AreEqual(market.productionTicks, state.villagers[0].productionTicksRemaining);
+            var b = GameBalanceData.Default(); var state = Worker(b, DistrictType.Storehouse);
+            state.nodes[1].structureKind = StructureKind.Minion; state.nodes[1].structureHP = b.minionHP;
+            state.nodes[1].minionProductionRemaining = 80; state.nodes[1].storehouseInitialised = true;
+            state.players[0].food = foodFull ? 30 : 0; state.players[0].materials = foodFull ? 0 : 30;
+            Ticks(state, 160);
+            Assert.AreEqual(1, state.nodes[1].bankFood); Assert.AreEqual(1, state.nodes[1].bankMaterials);
+            Assert.AreEqual(foodFull ? 30 : 0, state.players[0].food);
+            Assert.AreEqual(foodFull ? 0 : 30, state.players[0].materials);
+            Assert.AreEqual(80, state.nodes[1].minionProductionRemaining);
         }
 
         [Test]
-        public void FullMarketStillAlternatesBothWastedPayouts()
+        public void HistoricalMarketAtFullStocksDoesNotProduce()
         {
-            var b = GameBalanceData.Default();
-            var state = Worker(b, DistrictType.Market);
-            state.players[0].food = state.players[0].materials = 30;
-            var market = b.GetDistrictStats(DistrictType.Market, 0);
-            Ticks(state, market.productionTicks + market.secondaryProductionTicks);
-            Assert.AreEqual(30, state.players[0].food);
-            Assert.AreEqual(30, state.players[0].materials);
-            Assert.AreEqual(market.productionTicks, state.villagers[0].productionTicksRemaining);
+            var b = GameBalanceData.Default(); var state = Worker(b, DistrictType.Market);
+            state.players[0].food = state.players[0].materials = 30; Ticks(state, 160);
+            Assert.AreEqual(30, state.players[0].food); Assert.AreEqual(30, state.players[0].materials);
+            Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
         }
 
         [TestCase(DistrictType.Farm, 0)]
         [TestCase(DistrictType.Mine, 0)]
         [TestCase(DistrictType.Forge, 0)]
-        [TestCase(DistrictType.Market, 0)]
         [TestCase(DistrictType.Farm, -1)]
         [TestCase(DistrictType.Mine, -1)]
         [TestCase(DistrictType.Forge, -1)]
-        [TestCase(DistrictType.Market, -1)]
         public void NonpositiveCapsKeepUncappedProduction(DistrictType district, int cap)
         {
             var b = GameBalanceData.Default();
@@ -106,9 +95,9 @@ namespace NodeWar.Tests
             var state = Worker(b, district);
             state.players[0].food = state.players[0].materials = state.players[0].metal = 100;
             var stats = b.GetDistrictStats(district, 0);
-            Ticks(state, stats.productionTicks + (district == DistrictType.Market ? stats.secondaryProductionTicks : 0));
-            Assert.AreEqual(district == DistrictType.Farm || district == DistrictType.Market ? 101 : 100, state.players[0].food);
-            Assert.AreEqual(district == DistrictType.Mine || district == DistrictType.Market ? 101 : district == DistrictType.Forge ? 99 : 100, state.players[0].materials);
+            Ticks(state, stats.productionTicks);
+            Assert.AreEqual(district == DistrictType.Farm ? 101 : 100, state.players[0].food);
+            Assert.AreEqual(district == DistrictType.Mine ? 101 : district == DistrictType.Forge ? 99 : 100, state.players[0].materials);
             Assert.AreEqual(district == DistrictType.Forge ? 101 : 100, state.players[0].metal);
         }
 

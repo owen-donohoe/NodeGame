@@ -7,7 +7,9 @@ namespace NodeWar.Simulation
             suit == SuitType.Guardian || suit == SuitType.Scout || suit == SuitType.Berserker;
 
         public static int MaxHP(NodeData node, GameBalanceData balance) =>
-            node.structureKind == StructureKind.Fortification ? balance.fortificationHP : 0;
+            node.structureKind == StructureKind.Fortification
+                ? balance.GetDistrictStats(DistrictType.Fortress, node.districtEra).fortificationHP
+                : node.structureKind == StructureKind.Minion ? balance.minionHP : 0;
 
         private static bool Eligible(SimulationState state, VillagerData v)
         {
@@ -39,6 +41,11 @@ namespace NodeWar.Simulation
 
         public static NodeData Destroy(NodeData node)
         {
+            // D3 will pay raider loot before calling this clearing helper.
+            // Never leave bank contents on a bare node (bank > 0 implies Minion).
+            node.bankFood = node.bankMaterials = node.bankMetal = 0;
+            node.minionProductionRemaining = 0;
+            node.storehouseNextResource = 0;
             node.structureKind = StructureKind.None;
             node.structureHP = 0;
             node.fortressLevel = 0;

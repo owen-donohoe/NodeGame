@@ -176,6 +176,8 @@ namespace NodeWar.Simulation
                     fortressLevel = 0,
                     structureKind = StructureKind.None,
                     structureHP = 0,
+                    bankFood = 0, bankMaterials = 0, bankMetal = 0,
+                    minionProductionRemaining = 0, storehouseNextResource = 0, storehouseInitialised = false,
                     materialAllocation = 0,
                     recruitReadyTick = 0,
                     autoRecruit = false
