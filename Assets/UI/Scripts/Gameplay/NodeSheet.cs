@@ -174,8 +174,6 @@ namespace NodeWar.UI
             }
 
             Close();
-            Root.RegisterCallback<GeometryChangedEvent>(_ => RefreshSheetPosition());
-            if (sheet != null) sheet.RegisterCallback<GeometryChangedEvent>(_ => RefreshSheetPosition());
         }
 
         public void Bind(SimulationState simulationState, InputBuffer inputBuffer,
@@ -191,6 +189,9 @@ namespace NodeWar.UI
         public void UpdateSafeArea()
         {
             if (bottomInset != null) bottomInset.Update();
+            // Position outside the layout pass. Geometry callbacks that write bottom
+            // can recursively relayout the sheet while its height is transitioning.
+            RefreshSheetPosition();
         }
 
         /// <summary>
@@ -510,8 +511,14 @@ namespace NodeWar.UI
         private void RefreshSheetPosition()
         {
             if (sheet == null || !IsOpen || state == null || nodeID >= state.nodes.Length) return;
-            sheet.style.bottom = NodeWar.View.StructurePresentation.SheetBottom(
-                state.nodes[nodeID].districtType, Root.resolvedStyle.height, sheet.resolvedStyle.height);
+            var node = state.nodes[nodeID];
+            bool secure = balance.claimThreshold <= 0 ||
+                (node.ownerID == 0 && node.claimBar >= balance.claimThreshold) ||
+                (node.ownerID == 1 && node.claimBar <= -balance.claimThreshold);
+            float bottom = NodeWar.View.StructurePresentation.BankSheetBottom(
+                node.districtType, Root.resolvedStyle.height, !secure);
+            if (sheet.style.bottom.value.value != bottom)
+                sheet.style.bottom = bottom;
         }
 
         // ===== DRAG TO DISMISS =====

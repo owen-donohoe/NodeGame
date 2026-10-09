@@ -20,6 +20,9 @@ namespace NodeWar.View
             (type == DistrictType.Forge ? 430 : 360) + (claim ? 44 : 0);
         public static float SheetBottom(DistrictType type,float viewportHeight,float sheetHeight) =>
             type==DistrictType.Storehouse && viewportHeight>0f && sheetHeight>0f ? Math.Max(0f,(viewportHeight-sheetHeight)*0.5f) : 0f;
+        // Centre against the target height, never an intermediate animated layout.
+        public static float BankSheetBottom(DistrictType type,float viewportHeight,bool claim) =>
+            SheetBottom(type,viewportHeight,BankSheetHeight(type,claim));
         public static float SheetAnchoredY(float viewportHeight,float sheetHeight,float pivotY,float anchorMinY,float anchorMaxY) =>
             SheetBottom(DistrictType.Storehouse,viewportHeight,sheetHeight)+pivotY*sheetHeight-
             viewportHeight*(anchorMinY+(anchorMaxY-anchorMinY)*pivotY);

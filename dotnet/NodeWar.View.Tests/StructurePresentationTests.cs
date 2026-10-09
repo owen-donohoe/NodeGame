@@ -90,6 +90,23 @@ namespace NodeWar.View.Tests
                 Assert.That(anchored+viewport*anchorMax*pivot-pivot*height,Is.EqualTo(bottom).Within(0.001f));
             }
         }
+        [TestCase(540, 1200, false)]
+        [TestCase(540, 1200, true)]
+        [TestCase(1200, 800, false)]
+        [TestCase(1200, 800, true)]
+        public void StorehouseCentreUsesTargetHeightAcrossResizeAndClaimTransitions(int width, int height, bool claim)
+        {
+            float viewport = height / StructurePresentation.HudScale(width, height, 390, 844);
+            int targetHeight = StructurePresentation.BankSheetHeight(DistrictType.Storehouse, claim);
+            float bottom = StructurePresentation.BankSheetBottom(DistrictType.Storehouse, viewport, claim);
+            Assert.That(bottom + targetHeight / 2f, Is.EqualTo(viewport / 2f).Within(0.001f));
+            Assert.That(StructurePresentation.BankSheetBottom(DistrictType.Workshop, viewport, claim), Is.Zero);
+            Assert.That(StructurePresentation.BankSheetBottom(DistrictType.Storehouse, 0, claim), Is.Zero);
+            Assert.That(StructurePresentation.BankSheetBottom(DistrictType.Storehouse, 200, claim), Is.Zero);
+            float otherBottom = StructurePresentation.BankSheetBottom(DistrictType.Storehouse, viewport, !claim);
+            Assert.That(bottom - otherBottom, Is.EqualTo(claim ? -22f : 22f).Within(0.001f));
+        }
+
         [Test] public void PassiveEffectsOnlyReturnAtFullHealthAndInfirmaryWorkersMatchRules()
         {
             var b=GameBalanceData.Default();
