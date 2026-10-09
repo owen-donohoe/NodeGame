@@ -19,6 +19,24 @@ namespace NodeWar.View.Tests
             Assert.That(StructurePresentation.MinionBadge(n), Is.False);
             Assert.That(StructurePresentation.PipResource(n, 0), Is.EqualTo(-1));
         }
+        [Test] public void HealthBar_ShowsOnlyOnceDamaged()
+        {
+            var b = GameBalanceData.Default();
+            foreach (var kind in new[] { StructureKind.Minion, StructureKind.Fortification })
+            {
+                var n = new NodeData { structureKind = kind, districtType = kind == StructureKind.Fortification ? DistrictType.Fortress : DistrictType.Farm };
+                int max = StructureRules.MaxHP(n, b);
+                Assert.That(max, Is.GreaterThan(1), kind.ToString());
+                n.structureHP = max;
+                Assert.That(StructurePresentation.Visible(n, b), Is.True, "the structure's art stays up at full HP");
+                Assert.That(StructurePresentation.HealthVisible(n, b), Is.False, "no HP bar before any damage");
+                n.structureHP = max - 1;
+                Assert.That(StructurePresentation.HealthVisible(n, b), Is.True, "HP bar once damaged");
+                n = StructureRules.Destroy(n);
+                Assert.That(StructurePresentation.HealthVisible(n, b), Is.False, "nothing once destroyed");
+            }
+            Assert.That(StructurePresentation.HealthVisible(new NodeData(), b), Is.False);
+        }
         [Test] public void StorehouseFallbackHasDistinctLabelAndIncome()
         {
             var d = DistrictFallback.Describe(DistrictType.Storehouse);

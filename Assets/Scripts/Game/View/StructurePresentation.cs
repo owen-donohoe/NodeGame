@@ -17,6 +17,9 @@ namespace NodeWar.View
             width > 0 && height > 0 && referenceWidth > 0 && referenceHeight > 0
                 ? Math.Min((float)width / referenceWidth, (float)height / referenceHeight) : 1f;
         public static bool Visible(NodeData n,GameBalanceData b) => n.structureKind!=StructureKind.None && n.structureHP>0 && StructureRules.MaxHP(n,b)>0;
+        // The HP bar itself appears only once the structure has taken damage, like the
+        // claim bar; HP never regenerates, so a damaged structure keeps showing it.
+        public static bool HealthVisible(NodeData n,GameBalanceData b) => Visible(n,b) && n.structureHP<StructureRules.MaxHP(n,b);
         public static bool MinionBadge(NodeData n) => n.structureKind==StructureKind.Minion && n.structureHP>0;
         public static float Fill(NodeData n,GameBalanceData b) => StructureRules.MaxHP(n,b)>0 ? Math.Max(0f,Math.Min(1f,(float)n.structureHP/StructureRules.MaxHP(n,b))) : 0f;
         public static int PipCount(NodeData n) => n.structureKind==StructureKind.Minion ? (int)Math.Max(0L,Math.Min(MaxPips,BankRules.Total(n))) : 0;

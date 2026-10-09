@@ -60,6 +60,7 @@ namespace NodeWar.UI
             if(root==null || state==null || node<0 || node>=state.nodes.Length) return;
             var n=state.nodes[node]; bool visible=StructurePresentation.Visible(n,balance);
             root.gameObject.SetActive(visible); if(!visible) return;
+            bool health=StructurePresentation.HealthVisible(n,balance); back.enabled=fill.enabled=health;
             float width=StructurePresentation.Width*scale, fraction=StructurePresentation.Fill(n,balance);
             fill.transform.localScale=new Vector3(width*fraction,StructurePresentation.Height*scale*0.7f,1);
             fill.transform.localPosition=new Vector3(-width*(1-fraction)*0.5f,0,0);
