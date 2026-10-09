@@ -76,11 +76,9 @@ namespace NodeWar.UI
             if(root==null) return; if(viewCamera==null) viewCamera=Camera.main; if(viewCamera==null) return;
             root.rotation=viewCamera.transform.rotation;
             int side=ViewSide.FromYaw(viewCamera.transform.eulerAngles.y);
-            StructurePresentation.Offset(side,out float x,out float z);
-            // Claim canvas sits above the node. The HP bar sits below it along camera-up,
-            // with the horizontal direction snapped through ViewSide for both seats.
             float horizontal=new Vector2(viewCamera.transform.up.x,viewCamera.transform.up.z).magnitude;
-            root.position=transform.position-new Vector3(x*horizontal,StructurePresentation.OffsetDistance*viewCamera.transform.up.y,z*horizontal)*scale;
+            StructurePresentation.GroundOffset(side,viewCamera.transform.up.y,horizontal,out float x,out float y,out float z);
+            root.position=transform.position+new Vector3(x,y,z)*scale;
         }
     }
 }

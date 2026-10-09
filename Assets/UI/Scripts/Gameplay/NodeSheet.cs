@@ -468,7 +468,12 @@ namespace NodeWar.UI
                           (node.ownerID == 1 && claim <= -threshold);
 
             if (claimStrip != null) claimStrip.EnableInClassList("sheet__claim--on", !secure);
-            if (sheet != null) sheet.EnableInClassList("sheet--claim", !secure);
+            if (sheet != null)
+            {
+                sheet.EnableInClassList("sheet--claim", !secure);
+                int bankHeight = NodeWar.View.StructurePresentation.BankSheetHeight(node.districtType, !secure);
+                sheet.style.height = bankHeight > 0 ? new StyleLength(bankHeight) : new StyleLength(StyleKeyword.Null);
+            }
 
             if (secure || claimP0 == null || claimP1 == null) return;
 

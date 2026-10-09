@@ -65,5 +65,42 @@ namespace NodeWar.View.Tests
             StructurePresentation.Offset(2, out float x2, out float z2);
             Assert.That((x2,z2), Is.EqualTo((-x0,-z0)));
         }
+        [Test] public void BankSheetsLeaveRoomForReadoutsAndFixedControls()
+        {
+            foreach (var type in new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Storehouse, DistrictType.Forge })
+            {
+                int actions = type == DistrictType.Forge ? 170 : 110;
+                int height = StructurePresentation.BankSheetHeight(type, false);
+                Assert.That(height - 80 - actions, Is.GreaterThanOrEqualTo(160), "Bank readout and production body must remain visible");
+                Assert.That(StructurePresentation.BankSheetHeight(type, true) - height, Is.EqualTo(44));
+            }
+            Assert.That(StructurePresentation.BankSheetHeight(DistrictType.Core, false), Is.Zero);
+            Assert.That(StructurePresentation.ForgeContentHeight * StructurePresentation.BankPanelHeight, Is.GreaterThanOrEqualTo(136));
+            Assert.That(StructurePresentation.ForgeContentHeight * (1-StructurePresentation.BankPanelHeight), Is.GreaterThanOrEqualTo(220));
+        }
+        [Test] public void HpOffsetIsAboveTerrainAndBelowNodeForBothSeats()
+        {
+            foreach (int side in new[] { 0, 2 })
+            {
+                StructurePresentation.GroundOffset(side, 0.6428f, 0.7660f, out float x, out float y, out float z);
+                ViewSide.Forward(side, out float fx, out float fz);
+                Assert.That(y, Is.GreaterThan(0), "Opaque terrain must not occlude the bar");
+                Assert.That(y + (StructurePresentation.PipY - StructurePresentation.PipSize * 0.5f) * 0.6428f,
+                    Is.GreaterThan(0), "The lowest edge of the bank pips must also clear terrain");
+                float screenUp = y * 0.6428f + (x * fx + z * fz) * 0.7660f;
+                Assert.That(screenUp, Is.EqualTo(-StructurePresentation.OffsetDistance).Within(0.0001f));
+            }
+        }
+        [TestCase(540, 1200)]
+        [TestCase(1200, 800)]
+        public void HudFitsBothScreenDimensions(int width, int height)
+        {
+            float scale = StructurePresentation.HudScale(width, height, 390, 844);
+            Assert.That(390 * scale, Is.LessThanOrEqualTo(width + 0.001f));
+            Assert.That(844 * scale, Is.LessThanOrEqualTo(height + 0.001f));
+            Assert.That(height / scale - StructurePresentation.BankSheetHeight(DistrictType.Forge, true),
+                Is.GreaterThan(300), "The board must remain visible above a contested Forge sheet");
+            if (width < height) Assert.That(scale, Is.EqualTo(width / 390f), "Keep the portrait sizing");
+        }
     }
 }

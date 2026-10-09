@@ -70,6 +70,7 @@ namespace NodeWar.UI
         private int currentNodeID = -1;
         private bool isOpen = false;
         private float panelWidth;
+        private float basePanelHeight, baseContentHeight;
         private GameObject currentContent;
         private Tween slideTween;
 
@@ -94,6 +95,8 @@ namespace NodeWar.UI
             villagerLayer = LayerMask.GetMask("Villagers");  // add this
 
             SetupSheetGeometry();
+            basePanelHeight = panelRect.rect.height;
+            baseContentHeight = contentArea.rect.height;
 
             panelWidth = panelRect.sizeDelta.x;
             panelRect.anchoredPosition = HiddenPosition;
@@ -562,6 +565,10 @@ namespace NodeWar.UI
         {
             if (currentNodeID == nodeID && isOpen) return;
 
+            float extra = simState.nodes[nodeID].districtType == DistrictType.Forge
+                ? Mathf.Max(0f, StructurePresentation.ForgeContentHeight - baseContentHeight) : 0f;
+            panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, basePanelHeight + extra);
+
             currentNodeID = nodeID;
             NodeData node = simState.nodes[nodeID];
             int controlledPID = debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
@@ -761,7 +768,7 @@ namespace NodeWar.UI
             ForgePanelContent forgeContent = currentContent.GetComponent<ForgePanelContent>();
             if (forgeContent != null)
             {
-                forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned);
+                forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned, balance);
                 var bankObject=new GameObject("Bank",typeof(RectTransform),typeof(NodeActionPanelContent));
                 bankObject.transform.SetParent(currentContent.transform,false);
                 var rect=bankObject.GetComponent<RectTransform>();
