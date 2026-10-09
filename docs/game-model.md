@@ -162,7 +162,8 @@ Turning around therefore has a price, and repeated orders cannot stall a village
 **Orders are sticky.** A move order records its destination as the villager's intent
 (`targetNodeID`), and the intent outlives whatever interrupts the walk. A fight does not cancel it,
 and an order given mid-fight changes only the intent, never the attack clock or the fight. An
-unreachable or blocked destination is not dropped either: the villager waits and retries. Once
+order to a destination with no route at all is refused and changes nothing, which is what the
+order preview shows; a Pier gate is a cost, not a missing route, so a gated order is kept. Once
 combat has resolved, the final order-resume step of the tick replans from where each survivor
 stands and sets it walking again, or breaches, or arrives. Work, claim and structure attack begun there count from
 the next tick. A villager whose intent points elsewhere does not work or claim on the node it

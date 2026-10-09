@@ -115,9 +115,9 @@ Step 4: Advance ticks
 - For breaches, distinguish arrival, channel completion and order resume
   (TickOrderResume); test no loss on a threshold drop alone and
   simultaneous-loss cancellation
-- For sticky orders, assert targetNodeID survives a fight and an unreachable
-  destination, that an order given while Fighting leaves the attack clock alone,
-  and that work or claim begun at resume counts from the next tick
+- For sticky orders, assert targetNodeID survives a fight, that a move with no route is
+  refused with the hash unchanged, that an order given while Fighting leaves the attack
+  clock alone, and that work or claim begun at resume counts from the next tick
 - For claiming, assert against the tick-start owner snapshot: the capture bonus
   (clamped neighbour balance, tempo applied after) and restore must give the
   same result whatever order the nodes are processed in

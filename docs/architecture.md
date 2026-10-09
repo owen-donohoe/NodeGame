@@ -993,6 +993,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
   (`GateBlocked`), derived from `targetNodeID` and so correct after a rollback.
 - `StructureHPBar` / `StructurePresentation` — the runtime-attached bar for a node's Minion or
   Fortification HP, bank pips (colour plus a distinct shape per resource) and Minion badge.
+  The HP bar itself shows only once the structure has taken damage, like `NodeClaimBar`;
+  the pips and badge show whenever the structure exists.
   `StructureHPBar` is code-built like `CoreBreachBar` (Villagers sorting layer, orders 402/403,
   clear of the terrain band and the breach bar's 400/401), billboarded and seat-flipped through
   `ViewSide`, on the side of the node opposite `NodeClaimBar`; `StructurePresentation` holds the
