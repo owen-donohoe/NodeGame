@@ -78,10 +78,9 @@ The E rework's code defaults add district health (3000 maximum, 17 regenerated p
 on Fortress, Storehouse and Infirmary, plus Workshop forging (3 metal, 30-tick cooldown)
 and mobile minions (8 HP, movement duration 2). Bank capacity is 5, collection adds
 5 progress per tick and pays one unit at 16, and Storehouse production takes 80 ticks.
-These defaults are covered by tests; the checked-in client asset still needs the lead's
-Editor migration and fresh export. The E2 server-side test export is `-893741384`;
-the explicit client/export release gate remains unexecuted, so this is not a claim
-that the client asset already matches it.
+These values are in the checked-in client asset, exported for the server as
+`-1242191275`, and the explicit client/export release gate passes against it.
+(`-893741384` is an older source-derived test export, kept for a hasher test.)
 
 ## The board
 

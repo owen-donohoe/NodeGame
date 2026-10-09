@@ -125,11 +125,11 @@ stale Editor DLLs. A temporary copy with the explicit worktree root and current
 .NET-built Simulation/MatchLog DLLs compiles cleanly (250 sources, 330 references).
 Neither result verifies scene/prefab wiring or Play Mode visuals.
 
-D35 paired rig smoke: use export `-893741384`, map `hourglass-01`, seeds 4100-4101,
+D35 paired rig smoke: use export `-1242191275`, map `hourglass-01`, seeds 4100-4101,
 1500 ticks, zero delay, both seats, loadout Barracks/Workshop/Storehouse/Fortress:
 
 ```powershell
-dotnet run --project dotnet/NodeWar.BalanceRig --no-build -- --matches 2 --seed 4100 --cap 1500 --swap-seats on --loadout Barracks,Workshop,Storehouse,Fortress --balance dotnet/NodeWarCloud/NodeWarCloud/Balances/-893741384.json --out "$env:TEMP\nodewar-e4-paired.csv"
+dotnet run --project dotnet/NodeWar.BalanceRig --no-build -- --matches 2 --seed 4100 --cap 1500 --swap-seats on --loadout Barracks,Workshop,Storehouse,Fortress --balance dotnet/NodeWarCloud/NodeWarCloud/Balances/-1242191275.json --out "$env:TEMP\nodewar-e4-paired.csv"
 ```
 
 All four matches capped with no breaches. **Current bot limitations:** it does not

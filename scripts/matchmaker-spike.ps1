@@ -10,10 +10,10 @@
 param(
     [string]$Environment = "development",
     [int]$Seconds = 60,
-    # PR D release identity: banks, structures and Pier gates (sim 4).
+    # PR D release identity: banks, district health, minions and Pier gates (sim 4).
     [int]$Protocol = 5,
     [int]$Sim = 4,
-    [int]$Content = -1867912668,
+    [int]$Content = -1242191275,
     [switch]$EnsureRecords,
     # After a match forms: publish a code as slot 0, read it as slot 1, then
     # leave before connecting, which must void the match and free both players.
