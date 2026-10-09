@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
-verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
+  - { by: gpt-6.1-sol, at: 2026-10-09T14:51:28Z }
+verified_at_commit: 805cabd4355dcc6e092ecff97a903a80272b685d
 status: stable
 sources:
   - id: sim-state
@@ -523,6 +523,12 @@ The settings card drops down from beneath that button. The recentre/zoom
 handle defaults to the bottom right, with the emote dock at the bottom left;
 Controls settings can change the handle's side, visibility and zoom behaviour.
 
+`GameplayHUDController` clones its authored `PanelSettings` at runtime and fits
+the reference resolution to both screen dimensions through
+`StructurePresentation.HudScale`. Portrait keeps its width-based sizing;
+landscape fits the height so the HUD and node sheet remain on screen. Disabling
+the controller restores the authored settings and destroys the runtime copy.
+
 Resources sit near the bottom of the safe area, above the control docks
 and emote stack. Food and materials use concentric segmented semicircles,
 flat side down, with a glyph and live count. Metal and display-only magic
@@ -545,6 +551,17 @@ content even when both types share `EquipContent`; unsupported types use
 the normal close path. `LobbyIcon` supplies shared resource glyphs for
 the HUD, sheet and text. `NodeSheetContent.SetResourceText` turns `{food}`,
 `{materials}` and `{metal}` templates into inline icons beside text spans.
+
+Farm, Mine, Forge and Storehouse sheets include bank contents, collection
+progress/status and Collect/Cancel plus Install Minion controls. Their heights
+reserve room for the fixed actions and scrolling readouts; a contested claim
+adds room for the claim strip. Both Forge stacks read human-worker capacity
+from `BankRules`, including the slot occupied by a minion. The compiled uGUI
+Forge panel grows enough to keep its authored production controls above the
+bank area in the bottom 45%. `StructurePresentation` owns these layout rules.
+The runtime structure bar billboards below the node in screen space, with its
+bar and pips above the terrain plane for both seats, outside the district
+SortingGroup. Empty structures hide it; missing Storehouse sheet art uses “S”.
 
 Legacy code is kept compiling rather than commented out or deleted, so
 that a break in it is a compiler error rather than a discovery made later.
@@ -702,7 +719,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   Single mode while covered, then exits above after load completion and at
   least one destination frame (minimum cover time 0.25 s). The temporary
   `DontDestroyOnLoad` root and runtime `PanelSettings` are destroyed after
-  reveal. The panel matches HUD's 390×844 width-based scaling and uses sort
+  reveal. The panel uses 390×844 width-based scaling and uses sort
   order 32768, above the other panels and uGUI. Resources UXML and a TSS
   wrapper import the existing shared theme; no Editor setup is needed.
   A full-screen picking shield and consumption of control-device input
