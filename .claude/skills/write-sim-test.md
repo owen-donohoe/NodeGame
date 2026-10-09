@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
-verified_at_commit: 4e9509aadd1a4436d4f65c5be59c1876ad80d8bb
+  - { by: gpt-6.1-sol, at: 2026-10-09T01:16:59Z }
+verified_at_commit: ce96bae0f18f0e9052e2b27fa2d1b810284db8f3
 status: stable
 sources:
   - id: tests
@@ -43,6 +43,12 @@ sources:
   - id: collection-tests
     resource: Assets/Tests/EditMode/Tests/BankCollectionTests.cs
     title: Progressive collection, lock, raid and ownership lifecycle scenarios
+  - id: pier-gate
+    resource: Assets/Scripts/Game/Simulation/PierGate.cs
+    title: Shared position gate and lowest-ID claim slots
+  - id: pier-tests
+    resource: Assets/Tests/EditMode/Tests/PierGateTests.cs
+    title: Pier transit, retreat, highway, reversal and physical-tick routing
   - id: baseline-contract
     resource: docs/computations/determinism-baseline.md
     title: Pinned fingerprint and version policy
@@ -164,6 +170,25 @@ Step 5: Assert expected state
   InstallMinion=8 and Collect=9 keep the six-int wire/log shape and do not bump ProtocolVersion.
   Market=13 remains historical saved data, migrates to Storehouse=18, and is refused
   on current packets; do not test active Market worker production.
+- For Piers, initialize moveLegDurationTicks to 0 off-leg; BeginLeg latches it and
+  ClearLeg clears it on arrival, corrupt-path recovery, combat, death, breach and
+  respawn. Per-era pierTravelDivisor defaults to 2; historical zero tuning has
+  ordinary physical travel, and release content must supply a positive divisor.
+  Test enemy transit stopping with its final target, garrison combat first, and
+  neutralisation using the existing global decrementMultiplier (default 4).
+  The neutralisation tick stops at zero: transit resumes after win-check and
+  moves next tick, while a destination continues ordinary full capture.
+  The shared position gate blocks over-cap Idle villagers, combat survivors,
+  fresh Move commands and every-tick resume. Only previousNodeID retreat escapes;
+  blocked Move retains targetNodeID. Lowest IDs occupy maxClaimersPerNode slots;
+  excess Idle villagers never advance the bar. Owner travel uses ceiling/minimum
+  one and never rescales after mid-edge ownership changes. Continuing preserves
+  progress and duration; reversing an 8-tick latch at 3 returns in exactly 3.
+  Route in the unit's physical ticks with existing preferences; own Pier uses
+  preference 100 once. Gate delay is ceil(current opposing bar / lone ClaimRate)
+  with current frontier/resistance, never on the start node. Test gate36/detour32,
+  gate24/detour32, speed-dependent routes, lowest-ID ceiling ties, odd durations,
+  next-leg latching, copy/hash completeness and read-only amber intent.
 - For Town, assert each player is paid once on their first full claim (including a
   raider taking the enemy Town), the reward is capped by population room and still
   consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.
@@ -185,12 +210,16 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 4 (-563755666 and -2013445737 after D1).
+- The current baseline pin is version 4 (-2085505832 and 534653207 after D4).
   Unconditional structure kind/HP terms on all three bare nodes moved the previous
   C7 fingerprints (647286254 and 357327383). Balance tuning extensions are tagged
   and zero-neutral; historical absent tuning does not enable Fortress upgrading.
   D2 bank/timer/construction and D3 collection fields are tagged, indexed and zero/false-neutral, so
-  both D1 pins remain unchanged. Conditional hashing does not make older logs replayable
+  both D1 pins remain unchanged through D3. D4 hashes moveLegDurationTicks
+  unconditionally after moveProgress, adding a zero term for each of the two
+  villagers in both completed fixtures: EmptyTick -563755666 to -2085505832,
+  MoveAndCombat -2013445737 to 534653207. Those line-board routes are unchanged;
+  the unreleased PR D version stays 4. Conditional hashing does not make older logs replayable
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests

@@ -106,6 +106,8 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
 
+- { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
+
 ## `.claude/skills/cs-review.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -166,6 +168,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
+
+- { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
 
 ## `docs/game-model.md`
 
@@ -269,3 +273,33 @@ The post-docs freshness check also flags write-sim-test.md because this same
 follow-up changes its cited run-dotnet-tests.md body. Both documents were
 reviewed together; the mandated stamps point to the code SHA, not the later
 docs commit. This dependency cascade is reported without a third commit.
+
+## D4 review backlog at `ce96bae0f18f0e9052e2b27fa2d1b810284db8f3`
+
+Ran the main-checkout freshness script from the worktree as requested. Its
+RepoRoot resolves to main, so an outside-repo copy with only RepoRoot changed
+also audited the feature worktree. It reported eleven REVIEW documents.
+Re-read write-sim-test.md and run-dotnet-tests.md fully against the D4 diff and
+final result: 3741 passed, with 721 simulation and 1565 view cases. Added Pier
+rules/tests, current pins and case counts; only these two receive stamps.
+
+The following remain unstamped. Their wider claims and older source changes
+were not fully audited in this bounded D4 task. The baseline table and D4
+schema explanation were corrected in the code commit; that does not verify
+its older cited contract/source history.
+
+- `docs/adding-a-feature.md`
+- `docs/architecture.md`
+- `docs/game-model.md`
+- `docs/simulation-rules.md`
+- `docs/computations/determinism-baseline.md`
+- `docs/design-history/README.md`
+- `docs/skills/run-editmode-tests.md`
+- `.claude/skills/cs-review.md`
+- `.claude/skills/determinism-guard.md`
+
+Both stamped documents were reviewed together. The mandated stamp points to
+the code SHA; this follow-up's runner body change can still flag write-sim-test.md
+through their dependency, without warranting a third commit. Editor wiring,
+positive release Pier tuning/export and Linux CI remain lead acceptance steps;
+no asset, metadata, scene or prefab content was edited.
