@@ -78,10 +78,10 @@ namespace NodeWar.Tests
                 value = 0
             });
 
-            // The valid intent survives an empty path; no travel begins until retry succeeds.
+            // An order with no route is refused (D48): no intent is recorded, nothing moves.
             Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
             Assert.AreEqual(0, state.villagers[0].currentNodeID);
-            Assert.AreEqual(2, state.villagers[0].targetNodeID);
+            Assert.AreEqual(-1, state.villagers[0].targetNodeID);
             Assert.IsEmpty(state.villagers[0].movePath);
             Assert.AreEqual(0, state.villagers[0].movePathIndex);
             Assert.AreEqual(0, state.villagers[0].moveProgress);

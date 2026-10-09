@@ -1249,9 +1249,13 @@ namespace NodeWar.Simulation
                     {
                         v.state = VillagerState.Moving;
                         BeginLeg(state, ref v);
+                        state.villagers[i] = v;
+                        continue;
                     }
-                    state.villagers[i] = v;
-                    continue;
+                    // No route: drop the intent rather than keep an unreachable target
+                    // (D48), then resolve the node it stands on like any arrival.
+                    v.movePath = new int[0];
+                    v.targetNodeID = -1;
                 }
                 if (v.currentNodeID == state.players[1 - v.ownerID].coreNodeID)
                 {

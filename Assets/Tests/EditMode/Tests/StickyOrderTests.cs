@@ -75,30 +75,29 @@ namespace NodeWar.Tests
             s.nodes[0].claimBar = currentOwner == -1 ? 0 : currentOwner == 0 ? balance.claimThreshold : -balance.claimThreshold;
             s.villagers[0].state = VillagerState.Idle;
             s.villagers[0].suit = SuitType.None;
+            // A dangling unreachable target (an order cannot create one since D48) is
+            // dropped at the resume pass; the node then resolves like any arrival,
+            // contributing from the next tick only.
             s.villagers[0].targetNodeID = 2;
             s.players[0].food = 7;
             int food = s.players[0].food;
             int bar = s.nodes[0].claimBar;
             GameSimulation.SimulateTick(s);
-            GameSimulation.SimulateTick(s);
-            Assert.AreEqual(food, s.players[0].food, "Pending travel cannot produce at the current node");
-            Assert.AreEqual(bar, s.nodes[0].claimBar, "Pending travel cannot claim the current node");
+            Assert.AreEqual(food, s.players[0].food, "Work resolved at resume cannot produce that tick");
+            Assert.AreEqual(bar, s.nodes[0].claimBar, "Claiming resolved at resume cannot claim that tick");
             Assert.AreEqual(currentOwner, s.nodes[0].ownerID);
-            Assert.AreEqual(SuitType.None, s.villagers[0].suit);
-            Assert.AreEqual(VillagerState.Idle, s.villagers[0].state);
+            Assert.AreEqual(-1, s.villagers[0].targetNodeID);
             Assert.AreEqual(0, s.villagers[0].currentNodeID);
-            Assert.AreEqual(2, s.villagers[0].targetNodeID);
-            Assert.AreEqual(0, s.villagers[0].productionTicksMax);
-            Assert.AreEqual(0, s.villagers[0].productionTicksRemaining);
             Assert.IsEmpty(s.villagers[0].movePath);
+            Assert.AreEqual(currentOwner == 0 ? VillagerState.Working : VillagerState.Claiming, s.villagers[0].state);
             return s;
         }
-        [Test] public void UnreachableDestinationAtOwnedFarm_DoesNotWork() => PendingAtUnreachableDestination(0);
-        [Test] public void UnreachableDestinationAtOwnedFarm_DoesNotWork_Determinism() => Determinism(() => PendingAtUnreachableDestination(0));
-        [Test] public void UnreachableDestinationAtNeutralNode_DoesNotClaim() => PendingAtUnreachableDestination(-1);
-        [Test] public void UnreachableDestinationAtNeutralNode_DoesNotClaim_Determinism() => Determinism(() => PendingAtUnreachableDestination(-1));
-        [Test] public void UnreachableDestinationAtOpposingOwnedNode_PreservesSignedBar() => PendingAtUnreachableDestination(1);
-        [Test] public void UnreachableDestinationAtOpposingOwnedNode_PreservesSignedBar_Determinism() => Determinism(() => PendingAtUnreachableDestination(1));
+        [Test] public void DanglingUnreachableTarget_AtOwnedFarm_ClearsThenWorks() => PendingAtUnreachableDestination(0);
+        [Test] public void DanglingUnreachableTarget_AtOwnedFarm_ClearsThenWorks_Determinism() => Determinism(() => PendingAtUnreachableDestination(0));
+        [Test] public void DanglingUnreachableTarget_AtNeutralNode_ClearsThenClaims() => PendingAtUnreachableDestination(-1);
+        [Test] public void DanglingUnreachableTarget_AtNeutralNode_ClearsThenClaims_Determinism() => Determinism(() => PendingAtUnreachableDestination(-1));
+        [Test] public void DanglingUnreachableTarget_AtOpposingNode_ClearsThenClaims() => PendingAtUnreachableDestination(1);
+        [Test] public void DanglingUnreachableTarget_AtOpposingNode_ClearsThenClaims_Determinism() => Determinism(() => PendingAtUnreachableDestination(1));
         private static SimulationState Intermediate()
         {
             var s = Board(); Fight(s, 1, 2); Enemy(s, 1);
@@ -153,22 +152,33 @@ namespace NodeWar.Tests
         }
         [Test] public void ContestedDestination_RetainsIntentUntilArrivalActionBegins() => ContestedDestination();
         [Test] public void ContestedDestination_RetainsIntentUntilArrivalActionBegins_Determinism() => Determinism(ContestedDestination);
+        // D48: an order with no route is refused outright and changes nothing --
+        // standing, mid-leg or fighting -- matching the order preview.
+        private static void AssertRefused(SimulationState s, int target)
+        {
+            int before = SimulationStateHasher.ComputeHash(s);
+            Order(s, target);
+            Assert.AreEqual(before, SimulationStateHasher.ComputeHash(s), "A move with no route changes nothing");
+        }
         private static SimulationState Unreachable()
         {
-            var s = Board(false); Order(s, 1);
-            Assert.AreEqual(1, s.villagers[0].targetNodeID);
-            Order(s, 2);
-            Assert.AreEqual(VillagerState.Idle, s.villagers[0].state);
-            Assert.AreEqual(2, s.villagers[0].targetNodeID);
+            var s = Board(false);
+            s.villagers[0].state = VillagerState.Idle;
+            AssertRefused(s, 2);
+            Assert.AreEqual(-1, s.villagers[0].targetNodeID);
+            Order(s, 1);
+            CheckRoute(s, 1, 0, 1);
+            AssertRefused(s, 2); // on the leg before any progress
+            CheckRoute(s, 1, 0, 1);
             GameSimulation.SimulateTick(s);
-            Assert.AreEqual(VillagerState.Idle, s.villagers[0].state);
-            Assert.AreEqual(2, s.villagers[0].targetNodeID);
-            Assert.AreEqual(0, s.players[0].food);
-            // Independent reachable fixture models pending intent at the final retry pass.
-            var retry = Board(); retry.villagers[0].targetNodeID = 2;
-            GameSimulation.SimulateTick(retry);
-            CheckRoute(retry, 2, 0, 1, 2);
-            return retry;
+            AssertRefused(s, 2); // mid-leg, crossing already paid
+            Assert.AreEqual(1, s.villagers[0].targetNodeID);
+            Assert.AreEqual(1, s.villagers[0].moveProgress);
+            var fight = Board(false); Fight(fight, 1, -1); Enemy(fight, 1);
+            AssertRefused(fight, 2); // fighting
+            Assert.AreEqual(-1, fight.villagers[0].targetNodeID);
+            Assert.AreEqual(7, fight.villagers[0].attackCooldownRemaining);
+            return s;
         }
         private static SimulationState OverrideFight()
         {
@@ -233,7 +243,8 @@ namespace NodeWar.Tests
             CollectionAssert.IsEmpty(Pathfinding.FindPath(s, 0, 0, 3, moveSpeedTicks: 4));
             CollectionAssert.AreEqual(new[] { 0, 1, 2 }, Pathfinding.FindPath(s, 0, 0, 2, moveSpeedTicks: 4));
             CollectionAssert.AreEqual(new[] { 2, 3 }, Pathfinding.FindPath(s, 0, 2, 3, moveSpeedTicks: 4));
-            Order(s, 3); Assert.AreEqual(3, s.villagers[0].targetNodeID);
+            // Beyond the enemy Core there is no route, so the order is refused.
+            Order(s, 3); Assert.AreEqual(-1, s.villagers[0].targetNodeID);
             Assert.AreEqual(VillagerState.Idle, s.villagers[0].state); return s;
         }
         [Test] public void BreachInterrupted_RetainsCoreIntentAndResumesNextTick() => InterruptedBreach();
@@ -250,7 +261,7 @@ namespace NodeWar.Tests
         [Test] public void OverrideToCurrentNode_CancelsPendingIntent_Determinism() => Determinism(Cancel);
         [Test] public void TargetOwnershipFlip_UsesCurrentArrivalAction() => Ownership();
         [Test] public void TargetOwnershipFlip_UsesCurrentArrivalAction_Determinism() => Determinism(Ownership);
-        [Test] public void UnreachableTarget_IsRetainedAndRetried() => Unreachable();
-        [Test] public void UnreachableTarget_IsRetainedAndRetried_Determinism() => Determinism(Unreachable);
+        [Test] public void UnreachableMove_IsRefusedAndStateUnchanged() => Unreachable();
+        [Test] public void UnreachableMove_IsRefusedAndStateUnchanged_Determinism() => Determinism(Unreachable);
     }
 }

@@ -101,6 +101,8 @@ namespace NodeWar.Simulation
             // Orders change intent during combat, never the attack clock or fight state.
             if (villager.state == VillagerState.Fighting)
             {
+                if (destination != villager.currentNodeID &&
+                    !HasRoute(state, villager, villager.currentNodeID, destination)) return;
                 state.villagers[vid].targetNodeID = destination == villager.currentNodeID ? -1 : destination;
                 return;
             }
@@ -147,14 +149,9 @@ namespace NodeWar.Simulation
             }
 
             int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination, villager.moveSpeedTicks);
-            if (path.Length < 2)
-            {
-                // Pay the return crossing before waiting for an unreachable destination.
-                int backTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, otherEnd, anchor, villager.moveSpeedTicks);
-                ApplyMove(state, vid, new int[] { otherEnd, anchor },
-                          backTicks - (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, backTicks)), destination);
-                return;
-            }
+            // No route: refuse the order and keep the current leg and target, as the
+            // order preview (PendingOrderView) already shows. Supersedes D13's retry.
+            if (path.Length < 2) return;
 
             if (path[1] == otherEnd)
             {
@@ -183,6 +180,8 @@ namespace NodeWar.Simulation
         private static void RepathFromNode(SimulationState state, int villagerIndex,
                                            int ownerID, int fromNode, int destination)
         {
+            // A destination with no route is refused before anything changes.
+            if (fromNode != destination && !HasRoute(state, state.villagers[villagerIndex], fromNode, destination)) return;
             state.villagers[villagerIndex].targetNodeID = fromNode == destination ? -1 : destination;
             state.villagers[villagerIndex].movePath = new int[0];
             state.villagers[villagerIndex].movePathIndex = 0;
@@ -199,6 +198,12 @@ namespace NodeWar.Simulation
             if (path.Length < 2) return;
 
             ApplyMove(state, villagerIndex, path, 0, destination);
+        }
+
+        // Same question the order preview asks: is there any route at all?
+        private static bool HasRoute(SimulationState state, VillagerData villager, int fromNode, int destination)
+        {
+            return Pathfinding.FindPath(state, villager.ownerID, fromNode, destination, villager.moveSpeedTicks).Length >= 2;
         }
 
         private static void ApplyMove(SimulationState state, int villagerIndex,
