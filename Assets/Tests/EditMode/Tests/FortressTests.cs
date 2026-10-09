@@ -10,6 +10,7 @@ namespace NodeWar.Tests
         {
             var b = GameBalanceData.Default(); b.baseClaimPerTick = rate; b.decrementMultiplier = 1;
             b.captureBonusPercentPerStep = 0; b.tempoStageTicks = null; b.tempoClaimPercent = null;
+            for (int i = 0; i < b.districtStats.Length; i++) b.districtStats[i].healthMax = b.districtStats[i].healthRegenPerTick = 0;
             GameSimulation.SetBalance(b); CommandProcessor.SetBalance(b); return b;
         }
         private static SimulationState Board(GameBalanceData b)

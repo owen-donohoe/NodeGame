@@ -376,7 +376,6 @@ namespace NodeWar.BalanceRig
                 w.WriteLine("t=" + state.tickCount + " P" + p + " owned[" + string.Join(" ", owned) + "] idle=" + byState[0]
                     + " moving=" + byState[1] + " working=" + byState[2] + " claiming=" + byState[3] + " fighting=" + byState[4]
                     + " dead=" + byState[(int)VillagerState.Dead] + " breaching=" + byState[(int)VillagerState.Breaching]
-                    + " attackingStructure=" + byState[(int)VillagerState.AttackingStructure]
                     + " soldiers=" + soldiers + " food=" + pd.food + " mat=" + pd.materials);
             }
         }
@@ -420,7 +419,6 @@ namespace NodeWar.BalanceRig
                 switch (vil.state)
                 {
                     case VillagerState.Idle: idle[vil.ownerID]++; break;
-                    case VillagerState.AttackingStructure: break; // Busy, independent of person combat.
                     default: break;
                 }
             }

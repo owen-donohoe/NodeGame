@@ -96,7 +96,7 @@ namespace NodeWar.BalanceRig
             Assert.AreEqual(2, setup.board.initialPlacements.Length);
             Assert.AreEqual(3, setup.baseDraft[0].Length);
             Assert.AreEqual(PremadeMaps.Hourglass01Id, setup.mapId);
-            Assert.AreEqual(-1867912668, setup.balanceHash);
+            Assert.AreEqual(-1600299589, setup.balanceHash);
         }
 
         [Test]

@@ -65,7 +65,7 @@ namespace NodeWar.UI
             var bank=bankModel.Describe(state,balance,player,node); requested=bank.Requested;
             if(bank.Visible) information.text=bank.Information;
             Set(collect,bank.CollectLabel,bank.Visible&&bank.ShowActions,bank.CanCollect);
-            Set(install,bank.InstallLabel,bank.Visible&&bank.ShowActions,bank.CanInstall);
+            Set(install,bank.InstallLabel,false,false);
         }
     }
 }

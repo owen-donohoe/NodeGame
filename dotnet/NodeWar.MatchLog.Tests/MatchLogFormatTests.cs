@@ -30,14 +30,7 @@ namespace NodeWar.MatchLog
             var log = TestLogs.Full(); log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
             byte[] bytes = MatchLogFormat.Write(log); Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2)); Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
         }
-        [Test]
-        public void InstallMinion_RoundTripsAllFields()
-        {
-            Assert.AreEqual("InstallMinion", Enum.GetName(typeof(CommandType), 8));
-            var command = new GameCommand { type = (CommandType)8, playerID = 1, villagerID = -1, targetNodeID = 18, issuedOnTick = 123, value = 0 };
-            var log = TestLogs.Full(); log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
-            byte[] bytes = MatchLogFormat.Write(log); Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2)); Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
-        }
+
         [TestCase(0)] [TestCase(1)]
         public void UpgradeFortress_RoundTripsBothCurrencies(int currency)
         {
@@ -60,7 +53,7 @@ namespace NodeWar.MatchLog
             Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
         }
 
-        [TestCase(-1)] [TestCase(10)] [TestCase(int.MaxValue)]
+        [TestCase(-1)] [TestCase(8)] [TestCase(10)] [TestCase(int.MaxValue)]
         public void UnknownCommandType_IsRefused(int type)
         {
             var log = TestLogs.Full();

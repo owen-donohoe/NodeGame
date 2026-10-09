@@ -182,7 +182,7 @@ namespace NodeWar.Tests
             CollectionAssert.AreEqual(new[] { 0, 1, 3 }, Pathfinding.FindPath(s, 0, 0, 3, 1));
             // Current enemy Fortress support removes frontier bonus and resists at50%.
             s.nodes[3].districtType = DistrictType.Fortress; s.nodes[3].ownerID = 1;
-            s.nodes[3].fortressLevel = 3; s.nodes[3].links = new[] { new Link { toNodeID = 1, travelWeight = 1 } };
+            s.nodes[3].districtHealth = 3000; s.nodes[3].fortressLevel = 3; s.nodes[3].links = new[] { new Link { toNodeID = 1, travelWeight = 1 } };
             CollectionAssert.AreEqual(new[] { 0, 2, 3 }, Pathfinding.FindPath(s, 0, 0, 3, 1));
             return s;
         }

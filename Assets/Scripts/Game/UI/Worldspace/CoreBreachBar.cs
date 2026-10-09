@@ -142,7 +142,6 @@ namespace NodeWar.UI
             {
                 VillagerData v = simState.villagers[i];
                 if (v.isConsumed || v.ownerID != attacker) continue;
-                if (v.state == VillagerState.AttackingStructure) continue; // Never a core channel participant.
                 if (v.state != VillagerState.Breaching || v.currentNodeID != core) continue;
                 count++;
             }

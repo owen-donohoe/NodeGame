@@ -360,7 +360,7 @@ namespace NodeWar.Tests
         public void InfirmaryBoostStaysAdditiveAfterTempo()
         {
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Infirmary;
+            state.nodes[1].districtType = DistrictType.Infirmary; state.nodes[1].districtHealth = 3000;
             state.nodes[1].ownerID = 0;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].state = VillagerState.Working;
@@ -430,12 +430,12 @@ namespace NodeWar.Tests
             Install();
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             Ticks(state, 100);
-            Assert.AreEqual(-2085505832, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(2084609368, SimulationStateHasher.ComputeHash(state));
             state = TestBoardFactory.BuildThreeNodeBoard(balance);
             for (int p = 0; p < 2; p++) CommandProcessor.ProcessCommand(state,
                 new GameCommand { type = CommandType.Move, playerID = p, villagerID = p, targetNodeID = 1 });
             Ticks(state, 4);
-            Assert.AreEqual(534653207, SimulationStateHasher.ComputeHash(state));
+            Assert.AreEqual(-1780012649, SimulationStateHasher.ComputeHash(state));
         }
 
         [Test]
@@ -504,11 +504,11 @@ namespace NodeWar.Tests
             balance.tempoStageTicks = new[] { 1 }; balance.tempoProductionPercent = new[] { 200 }; Install();
             var state = TestBoardFactory.BuildThreeNodeBoard(balance);
             state.nodes[1].districtType = DistrictType.Storehouse; state.nodes[1].ownerID = 0;
-            state.nodes[1].structureKind = StructureKind.Minion; state.nodes[1].structureHP = 16;
-            state.nodes[1].minionProductionRemaining = 1; state.nodes[1].storehouseNextResource = 1;
+            state.nodes[1].districtHealth = 3000;
+            state.nodes[1].bankProductionRemaining = 1; state.nodes[1].storehouseNextResource = 1;
             GameSimulation.SimulateTick(state);
             Assert.AreEqual(1, state.nodes[1].bankMaterials); Assert.AreEqual(0, state.nodes[1].storehouseNextResource);
-            Assert.AreEqual(79, state.nodes[1].minionProductionRemaining);
+            Assert.AreEqual(79, state.nodes[1].bankProductionRemaining);
         }
     }
 }

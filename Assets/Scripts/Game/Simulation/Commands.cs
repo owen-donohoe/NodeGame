@@ -10,7 +10,7 @@ namespace NodeWar.Simulation
         Recruit = 5,
         SetAutoRecruit = 6,
         UpgradeFortress = 7,
-        InstallMinion = 8,
+        // 8 is unknown until E2 introduces ForgeMinion.
         Collect = 9
     }
 
@@ -37,7 +37,6 @@ namespace NodeWar.Simulation
                 case CommandType.Equip:
                 case CommandType.Respawn:
                 case CommandType.Recruit:
-                case CommandType.InstallMinion:
                 case CommandType.Collect:
                 case CommandType.UpgradeFortress:
                 case CommandType.SetAutoRecruit:

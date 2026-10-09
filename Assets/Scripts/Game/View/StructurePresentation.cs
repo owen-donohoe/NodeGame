@@ -9,20 +9,18 @@ namespace NodeWar.View
         public const float Width=0.7f, Height=0.09f, PipSize=0.08f, PipGap=0.12f, PipY=-0.14f, BadgeX=-0.46f;
         public const float OffsetDistance=0.62f, BankPanelHeight=0.45f;
         // Reserve room for the fixed action bar as well as a readable scrolling body.
-        public static int BankSheetHeight(DistrictType type, bool claim) => !BankRules.MinionDistrict(type) ? 0 :
+        public static int BankSheetHeight(DistrictType type, bool claim) => !(type == DistrictType.Farm || type == DistrictType.Mine || type == DistrictType.Forge || type == DistrictType.Storehouse) ? 0 :
             (type == DistrictType.Forge ? 430 : 360) + (claim ? 44 : 0);
         // The authored Forge controls reach 220px below the top; the bank needs 136px.
         public static float ForgeContentHeight => Math.Max(220f / (1f-BankPanelHeight), 136f / BankPanelHeight);
         public static float HudScale(int width, int height, int referenceWidth, int referenceHeight) =>
             width > 0 && height > 0 && referenceWidth > 0 && referenceHeight > 0
                 ? Math.Min((float)width / referenceWidth, (float)height / referenceHeight) : 1f;
-        public static bool Visible(NodeData n,GameBalanceData b) => n.structureKind!=StructureKind.None && n.structureHP>0 && StructureRules.MaxHP(n,b)>0;
-        // The HP bar itself appears only once the structure has taken damage, like the
-        // claim bar; HP never regenerates, so a damaged structure keeps showing it.
-        public static bool HealthVisible(NodeData n,GameBalanceData b) => Visible(n,b) && n.structureHP<StructureRules.MaxHP(n,b);
-        public static bool MinionBadge(NodeData n) => n.structureKind==StructureKind.Minion && n.structureHP>0;
-        public static float Fill(NodeData n,GameBalanceData b) => StructureRules.MaxHP(n,b)>0 ? Math.Max(0f,Math.Min(1f,(float)n.structureHP/StructureRules.MaxHP(n,b))) : 0f;
-        public static int PipCount(NodeData n) => n.structureKind==StructureKind.Minion ? (int)Math.Max(0L,Math.Min(MaxPips,BankRules.Total(n))) : 0;
+        public static bool Visible(NodeData n,GameBalanceData b) => BankRules.Total(n)>0;
+        public static bool HealthVisible(NodeData n,GameBalanceData b) => false;
+        public static bool MinionBadge(NodeData n) => false;
+        public static float Fill(NodeData n,GameBalanceData b) => 0f;
+        public static int PipCount(NodeData n) => (int)Math.Max(0L,Math.Min(MaxPips,BankRules.Total(n)));
         public static int PipResource(NodeData n,int i) => i<0 || i>=PipCount(n) ? -1 : i<n.bankFood ? 0 : i<n.bankFood+n.bankMaterials ? 1 : 2;
         public static float PipX(int i,int count) => (i-(count-1)*0.5f)*PipGap;
         public static bool WorkerPresentation(DistrictType type) => type!=DistrictType.Storehouse;

@@ -174,11 +174,10 @@ namespace NodeWar.Simulation
                     ownerID = -1,
                     townPaidMask = 0,
                     fortressLevel = 0,
-                    structureKind = StructureKind.None,
-                    structureHP = 0,
+                    districtHealth = 0,
                     bankFood = 0, bankMaterials = 0, bankMetal = 0,
                     collectProgress = 0, collectRequested = false,
-                    minionProductionRemaining = 0, storehouseNextResource = 0, storehouseInitialised = false,
+                    bankProductionRemaining = 0, storehouseNextResource = 0,
                     materialAllocation = 0,
                     recruitReadyTick = 0,
                     autoRecruit = false

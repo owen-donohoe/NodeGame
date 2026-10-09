@@ -1,7 +1,6 @@
 namespace NodeWar.Simulation
 {
     public enum CollectState { Empty, Neutral, Locked, StorageFull, Waiting, Collecting }
-    public enum InstallRefusal { None, InvalidBinding, InvalidTuning, NotOwner, WrongDistrict, StructurePresent, BankPresent, Locked, InsufficientMetal }
     /// <summary>Shared bank eligibility, lock, production and worker definitions.</summary>
     public static class BankRules
     {
@@ -22,9 +21,6 @@ namespace NodeWar.Simulation
             }
             return false;
         }
-
-        public static bool MinionDistrict(DistrictType type) => type == DistrictType.Farm || type == DistrictType.Mine ||
-            type == DistrictType.Forge || type == DistrictType.Storehouse;
 
         // A locked owner's request is accepted; the production pass pauses it.
         public static bool CanCollect(SimulationState state, GameCommand command)
@@ -55,21 +51,6 @@ namespace NodeWar.Simulation
             if (Total(node) == 0) return CollectState.Empty;
             if (CollectibleResource(state, node, balance) < 0) return CollectState.StorageFull;
             return node.collectRequested || HasStationaryCollector(state, node) ? CollectState.Collecting : CollectState.Waiting;
-        }
-
-        public static InstallRefusal InstallReason(SimulationState state, GameBalanceData balance, int player, int nodeID)
-        {
-            if (state == null || state.nodes == null || state.players == null || state.villagers == null ||
-                player < 0 || player > 1 || player >= state.players.Length || nodeID < 0 || nodeID >= state.nodes.Length)
-                return InstallRefusal.InvalidBinding;
-            if (!balance.BankTuningValid() || balance.maxWorkersPerNode < 1) return InstallRefusal.InvalidTuning;
-            NodeData node = state.nodes[nodeID];
-            if (node.ownerID != player) return InstallRefusal.NotOwner;
-            if (!MinionDistrict(node.districtType) || ProductionTicks(node, balance) <= 0) return InstallRefusal.WrongDistrict;
-            if (node.structureKind != StructureKind.None) return InstallRefusal.StructurePresent;
-            if (Total(node) != 0) return InstallRefusal.BankPresent;
-            if (Locked(state, node, balance)) return InstallRefusal.Locked;
-            return state.players[player].metal < balance.minionMetalCost ? InstallRefusal.InsufficientMetal : InstallRefusal.None;
         }
 
         public static NodeData TickCollection(SimulationState state, NodeData node, GameBalanceData balance)
@@ -110,78 +91,30 @@ namespace NodeWar.Simulation
         }
 
         public static int ProductionTicks(NodeData node, GameBalanceData balance) =>
-            MinionDistrict(node.districtType) ? balance.GetDistrictStats(node.districtType, node.districtEra).productionTicks : 0;
-
-        public static bool CanInstallMinion(SimulationState state, GameBalanceData balance, GameCommand command)
-        {
-            if (command.value != 0 || command.villagerID != -1 || command.playerID < 0 || command.playerID > 1 ||
-                command.playerID >= state.players.Length || command.targetNodeID < 0 || command.targetNodeID >= state.nodes.Length ||
-                (!balance.BankTuningValid() || balance.maxWorkersPerNode < 1)) return false;
-            return InstallReason(state, balance, command.playerID, command.targetNodeID) == InstallRefusal.None;
-        }
-
-        public static NodeData CreateMinion(NodeData node, GameBalanceData balance)
-        {
-            node.structureKind = StructureKind.Minion;
-            node.structureHP = balance.minionHP;
-            node.minionProductionRemaining = ProductionTicks(node, balance);
-            node.storehouseNextResource = 0;
-            node.bankFood = node.bankMaterials = node.bankMetal = 0;
-            return node;
-        }
+            node.districtType == DistrictType.Storehouse ? balance.GetDistrictStats(node.districtType, node.districtEra).productionTicks : 0;
 
         public static bool CanProduce(SimulationState state, NodeData node, GameBalanceData balance) =>
-            node.structureKind == StructureKind.Minion && node.structureHP > 0 && node.ownerID >= 0 &&
+            node.districtType == DistrictType.Storehouse && node.ownerID >= 0 && DistrictHealth.Healthy(state, node) &&
             balance.BankTuningValid() && ProductionTicks(node, balance) > 0 && Total(node) < balance.bankCapacity;
 
-        public static int WorkerCapacity(NodeData node, GameBalanceData balance) =>
-            System.Math.Max(0, balance.maxWorkersPerNode - (node.structureKind == StructureKind.Minion ? 1 : 0));
-
-        // Rank candidates by ID, irrespective of array storage order. Both arrival
-        // and the per-tick worker update use this same capacity and ranking.
+        // Ordinary human workers retain the existing capacity; banks consume no slot.
         public static bool HasWorkerSlot(SimulationState state, int index, GameBalanceData balance)
         {
             VillagerData candidate = state.villagers[index];
-            if (state.nodes[candidate.currentNodeID].structureKind != StructureKind.Minion)
-            {
-                if (candidate.state == VillagerState.Working) return true;
-                int workers = 0;
-                for (int i = 0; i < state.villagers.Length; i++)
-                    if (state.villagers[i].currentNodeID == candidate.currentNodeID && state.villagers[i].ownerID == candidate.ownerID &&
-                        state.villagers[i].state == VillagerState.Working) workers++;
-                return workers < WorkerCapacity(state.nodes[candidate.currentNodeID], balance);
-            }
-            int rank = 0;
+            if (candidate.state == VillagerState.Working) return true;
+            int workers = 0;
             for (int i = 0; i < state.villagers.Length; i++)
-            {
-                VillagerData v = state.villagers[i];
-                if (v.ownerID != candidate.ownerID || v.currentNodeID != candidate.currentNodeID || v.hp <= 0 || v.isConsumed ||
-                    GameBalanceData.IsCombatSuit(v.suit) ||
-                    (v.state != VillagerState.Idle && v.state != VillagerState.Working && v.state != VillagerState.Claiming) ||
-                    (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)) continue;
-                if (v.villagerID < candidate.villagerID || (v.villagerID == candidate.villagerID && i < index)) rank++;
-            }
-            return rank < WorkerCapacity(state.nodes[candidate.currentNodeID], balance);
+                if (state.villagers[i].currentNodeID == candidate.currentNodeID && state.villagers[i].ownerID == candidate.ownerID &&
+                    state.villagers[i].state == VillagerState.Working) workers++;
+            return workers < balance.maxWorkersPerNode;
         }
-
-        public static void DemoteSurplusWorkers(SimulationState state, int nodeID, GameBalanceData balance)
-        {
-            for (int i = 0; i < state.villagers.Length; i++)
-                if (state.villagers[i].currentNodeID == nodeID && state.villagers[i].state == VillagerState.Working &&
-                    !HasWorkerSlot(state, i, balance))
-                {
-                    state.villagers[i].state = VillagerState.Idle;
-                    state.villagers[i].productionTicksRemaining = state.villagers[i].productionTicksMax = 0;
-                }
-        }
-
         private static int AddLoot(int value, int amount, int cap)
         {
             long sum = (long)value + amount;
             return (int)System.Math.Min(cap > 0 ? cap : int.MaxValue, sum);
         }
 
-        // Capture and structure destruction share this capped payout before Destroy.
+        // Full capture pays the bank before its contents are cleared.
         public static void PayBank(SimulationState state, NodeData node, int playerID, GameBalanceData balance)
         {
             state.players[playerID].food = AddLoot(state.players[playerID].food, node.bankFood, balance.foodCap);

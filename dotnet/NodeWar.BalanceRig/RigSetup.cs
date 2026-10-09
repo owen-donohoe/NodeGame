@@ -50,7 +50,7 @@ namespace NodeWar.BalanceRig
     public static class RigSetupLoader
     {
         /// <summary>The v2 export (breach bar, tempo, sudden death), the newest in Balances/ by commit.</summary>
-        public const string DefaultBalanceFile = "-1867912668.json";
+        public const string DefaultBalanceFile = "-1600299589.json";
 
         // Unity rewrites these keys only on the asset's next save, so both spellings are read:
         // defaultEdgeWeight and baseDraftNodesP0/P1 are the legacy ones.

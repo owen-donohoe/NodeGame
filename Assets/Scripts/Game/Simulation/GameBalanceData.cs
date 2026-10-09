@@ -28,7 +28,7 @@ namespace NodeWar.Simulation
     ///   Market             historical productionTicks / secondaryProductionTicks
     ///   Town               townBonusVillagers (Village bonusVillagersOnClaim is historical)
     ///   Shrine             healIntervalTicks
-    ///   Fortress           fortificationHP, fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
+    ///   Fortress           healthMax, healthRegenPerTick, fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
     ///   Watchtower         claimRateNumerator / claimRateDenominator
     ///   Sanctuary          respawnBoostPerWorker, respawnCostReductionPercent
     /// </summary>
@@ -42,7 +42,8 @@ namespace NodeWar.Simulation
         public int secondaryProductionTicks;
         public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
         public int townBonusVillagers;
-        public int fortificationHP;
+        public int healthMax;
+        public int healthRegenPerTick;
         public int pierTravelDivisor;
         public int[] fortressMaterialsCosts;
         public int[] fortressMetalCosts;
@@ -64,14 +65,10 @@ namespace NodeWar.Simulation
         public const int EraCount = 6;
 
         public int ticksPerSecond;
-        public int minionHP;
-        public int minionMetalCost;
         public int bankCapacity;
         /// <summary>Dwell progress added per tick while a bank is being collected, and the progress that pays one unit.</summary>
         public int collectProgressPerTick;
         public int collectProgressPerUnit;
-        public int structureDamagePerTick;
-        public int maxStructureAttackersPerNode;
 
         public int baseClaimPerTick;
         public int decrementMultiplier;
@@ -287,21 +284,19 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
-            if ((minionHP != 0 || minionMetalCost != 0 || bankCapacity != 0 || collectProgressPerTick != 0 || collectProgressPerUnit != 0) && !BankTuningValid())
-            { reason = "Invalid minion HP, cost, bank capacity or collection progress."; return false; }
+            if ((bankCapacity != 0 || collectProgressPerTick != 0 || collectProgressPerUnit != 0) && !BankTuningValid())
+            { reason = "Invalid bank capacity or collection progress."; return false; }
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                 {
                     DistrictStats entry = districtStats[i];
+                    if (entry.healthMax < 0 || entry.healthRegenPerTick < 0 || (entry.healthMax > 0 && entry.healthRegenPerTick == 0))
+                    { reason = "Invalid district health or regeneration."; return false; }
                     if (entry.pierTravelDivisor < 0 || entry.pierTravelDivisor > 100)
                     { reason = "Invalid Pier travel divisor."; return false; }
-                    if (entry.fortificationHP < 0 || (entry.districtType == DistrictType.Storehouse && entry.productionTicks < 2))
-                    { reason = "Invalid Fortress HP or Storehouse duration."; return false; }
+                    if ((entry.districtType == DistrictType.Storehouse && entry.productionTicks < 2))
+                    { reason = "Invalid Storehouse duration."; return false; }
                 }
-            // All-zero historical exports remain readable, but cannot enable the ability.
-            if ((structureDamagePerTick != 0 || maxStructureAttackersPerNode != 0) &&
-                !StructureTuningValid())
-            { reason = "Invalid structure HP, damage or attacker cap."; return false; }
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                 {
@@ -381,22 +376,16 @@ namespace NodeWar.Simulation
             catch (System.OverflowException) { return false; }
         }
 
-        public bool BankTuningValid() => minionHP > 0 && minionMetalCost > 0 && bankCapacity > 0 &&
+        public bool BankTuningValid() => bankCapacity > 0 &&
             collectProgressPerTick > 0 && collectProgressPerUnit > 0;
-
-        public bool StructureTuningValid() => structureDamagePerTick > 0 &&
-            maxStructureAttackersPerNode > 0 && maxStructureAttackersPerNode <= 4 &&
-            (long)structureDamagePerTick * maxStructureAttackersPerNode <= int.MaxValue;
 
         public static GameBalanceData Default()
         {
             return new GameBalanceData
             {
                 ticksPerSecond = 10,
-                minionHP = 16, minionMetalCost = 3, bankCapacity = 5,
+                bankCapacity = 5,
                 collectProgressPerTick = 5, collectProgressPerUnit = 16,
-                structureDamagePerTick = 1,
-                maxStructureAttackersPerNode = 4,
                 baseClaimPerTick = 17,
                 captureBonusPercentPerStep = 25,
                 captureBonusMaxSteps = 2,
@@ -465,9 +454,9 @@ namespace NodeWar.Simulation
                     respawnCostReductionPercent = sanctuaryCostReductionPercent },
                 new DistrictStats { districtType = DistrictType.Town, townBonusVillagers = 2 },
                 new DistrictStats { districtType = DistrictType.Barracks },
-                new DistrictStats { districtType = DistrictType.Infirmary, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
-                new DistrictStats { districtType = DistrictType.Fortress, fortificationHP = 16 },
-                new DistrictStats { districtType = DistrictType.Storehouse, productionTicks = 80 },
+                new DistrictStats { districtType = DistrictType.Infirmary, healthMax = 3000, healthRegenPerTick = 17, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
+                new DistrictStats { districtType = DistrictType.Fortress, healthMax = 3000, healthRegenPerTick = 17 },
+                new DistrictStats { districtType = DistrictType.Storehouse, healthMax = 3000, healthRegenPerTick = 17, productionTicks = 80 },
                 new DistrictStats { districtType = DistrictType.Pier, pierTravelDivisor = 2 }
             };
 

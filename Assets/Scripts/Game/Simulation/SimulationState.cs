@@ -61,15 +61,7 @@ namespace NodeWar.Simulation
         Claiming,
         Fighting,
         Dead,
-        Breaching,
-        AttackingStructure
-    }
-
-    public enum StructureKind
-    {
-        None = 0,
-        Minion = 1,
-        Fortification = 2
+        Breaching
     }
 
     public enum SuitType
@@ -101,16 +93,14 @@ namespace NodeWar.Simulation
         public int ownerID;
         public int townPaidMask;
         public int fortressLevel;
-        public StructureKind structureKind;
-        public int structureHP;
+        public int districtHealth;
         public int bankFood;
         public int bankMaterials;
         public int bankMetal;
         public int collectProgress;
         public bool collectRequested;
-        public int minionProductionRemaining;
+        public int bankProductionRemaining;
         public int storehouseNextResource;
-        public bool storehouseInitialised;
         public int materialAllocation;
         public int recruitReadyTick;
         public bool autoRecruit;
@@ -252,7 +242,7 @@ namespace NodeWar.Simulation
             if (source == null) throw new System.ArgumentNullException(nameof(source));
             if (ReferenceEquals(source, this)) return;
 
-            // Value-type clone includes banks, collection, minion timers/construction and every node scalar.
+            // Value-type clone includes banks, collection, district health, bank timers and every node scalar.
             nodes = source.nodes == null ? null : (NodeData[])source.nodes.Clone();
 
             if (source.villagers == null) villagers = null;

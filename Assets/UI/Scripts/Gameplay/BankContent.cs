@@ -20,7 +20,7 @@ namespace NodeWar.UI
         {
             var d=model.Describe(State,Balance,ControlledPID,NodeID);
             information.text=d.Information; requested=d.Requested;
-            Show(information,d.Visible); Show(collect,d.Visible&&d.ShowActions); Show(install,d.Visible&&d.ShowActions);
+            Show(information,d.Visible); Show(collect,d.Visible&&d.ShowActions); Show(install,false);
             collect.text=d.CollectLabel; collect.SetEnabled(d.CanCollect);
             install.text=d.InstallLabel; install.SetEnabled(d.CanInstall);
         }

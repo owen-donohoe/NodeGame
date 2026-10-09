@@ -194,7 +194,7 @@ namespace NodeWar.UI
             for (int i = found; i < cap; i++)
                 Show(smelterGauges[i], false);
 
-            int capacity = BankRules.WorkerCapacity(State.nodes[NodeID], Balance);
+            int capacity = Balance.maxWorkersPerNode;
             workerDial.Progress = capacity > 0 ? found / (float)capacity : 0f;
             if (shownWorkers != found || shownCapacity != capacity)
             {

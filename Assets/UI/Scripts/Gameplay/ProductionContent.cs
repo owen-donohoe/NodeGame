@@ -140,7 +140,7 @@ namespace NodeWar.UI
             }
 
             int working = RefreshDials(node.ownerID);
-            int cap = BankRules.WorkerCapacity(node, Balance);
+            int cap = Balance.maxWorkersPerNode;
 
             Show(gauges, working > 0);
             Show(idleCaption, working == 0);

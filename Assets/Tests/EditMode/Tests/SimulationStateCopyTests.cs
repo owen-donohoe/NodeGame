@@ -19,7 +19,7 @@ namespace NodeWar.Tests
 
         [TestCase("bankFood")] [TestCase("bankMaterials")] [TestCase("bankMetal")]
         [TestCase("collectProgress")] [TestCase("collectRequested")]
-        [TestCase("minionProductionRemaining")] [TestCase("storehouseNextResource")] [TestCase("storehouseInitialised")]
+        [TestCase("bankProductionRemaining")] [TestCase("storehouseNextResource")] [TestCase("districtHealth")]
         public void CopyFrom_BankFieldsRoundTripAndStayIndependent(string name)
         {
             var source = TestBoardFactory.BuildThreeNodeBoard(GameBalanceData.Default());

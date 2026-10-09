@@ -15,13 +15,11 @@ namespace NodeWar.Tests
                 if(fixture==2) s.nodes[1].ownerID=-1;
                 if(fixture==3) s.villagers=new[] { TestBoardFactory.MakeIdleVillager(0,1,1,b) };
                 if(fixture==4) s.players[0].food=b.foodCap;
-                if(fixture==5) s.nodes[1]=StructureRules.Destroy(s.nodes[1]);
+                if(fixture==5) s.nodes[1].bankFood=0;
                 int hash=SimulationStateHasher.ComputeHash(s);
                 var reason=BankRules.CollectionState(s,s.nodes[1],b);
                 Assert.AreEqual(BankRules.Locked(s,s.nodes[1],b),reason==CollectState.Locked || reason==CollectState.Neutral);
                 Assert.AreEqual(s.nodes[1].ownerID==0 && BankRules.Total(s.nodes[1])>0,BankRules.CanCollect(s,Collect()));
-                var c=new GameCommand { type=CommandType.InstallMinion,playerID=0,targetNodeID=1,villagerID=-1 };
-                Assert.AreEqual(BankRules.InstallReason(s,b,0,1)==InstallRefusal.None,BankRules.CanInstallMinion(s,b,c));
                 Assert.AreEqual(hash,SimulationStateHasher.ComputeHash(s));
             }
         }
@@ -39,9 +37,7 @@ namespace NodeWar.Tests
             var s = TestBoardFactory.BuildThreeNodeBoard(b);
             s.nodes[1].districtType = s.nodes[1].baseDistrictType = DistrictType.Storehouse;
             s.nodes[1].ownerID = 0; s.nodes[1].claimBar = b.claimThreshold;
-            s.nodes[1].structureKind = StructureKind.Minion; s.nodes[1].structureHP = 16;
-            s.nodes[1].storehouseInitialised = true;
-            s.nodes[1].minionProductionRemaining = 1000; // isolate collection from new output
+            s.nodes[1].bankProductionRemaining = 1000; // isolate collection from new output
             s.nodes[1].bankFood = food;
             s.villagers = new VillagerData[0];
             return s;
@@ -52,8 +48,7 @@ namespace NodeWar.Tests
         {
             for (int i = 0; i < count; i++) {
                 GameSimulation.SimulateTick(s);
-                for (int n = 0; n < s.nodes.Length; n++)
-                    Assert.IsTrue(BankRules.Total(s.nodes[n]) == 0 || s.nodes[n].structureKind == StructureKind.Minion);
+
             }
         }
         private static int Fold(int h, SimulationState s) => unchecked(h * 31 + SimulationStateHasher.ComputeHash(s));
@@ -159,37 +154,19 @@ namespace NodeWar.Tests
         }, determinism);
 
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void CaptureOrRaidTakesOnlyRemainingBank(bool determinism) => Repeat(() => {
+        public void CaptureTakesOnlyRemainingBank(bool determinism) => Repeat(() => {
             int hash = 0;
-            for (int raid = 0; raid < 2; raid++) for (int overflow = 0; overflow < 2; overflow++) {
+            for (int overflow = 0; overflow < 2; overflow++) {
                 var b = Configure(); var s = Board(b); CommandProcessor.ProcessCommand(s, Collect()); Tick(s, 4);
                 Assert.AreEqual(1, s.players[0].food); Assert.AreEqual(4, s.nodes[1].bankFood);
                 s.players[1].food = overflow == 1 ? b.foodCap - 1 : 0;
                 s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b) };
-                if (raid == 1) { s.nodes[1].structureHP = 1; s.villagers[0].suit = SuitType.Warrior; }
-                else s.nodes[1].claimBar = -b.claimThreshold + 1;
+                s.nodes[1].districtHealth = 0; s.nodes[1].claimBar = -b.claimThreshold + 1;
                 Tick(s); Assert.AreEqual(overflow == 1 ? b.foodCap : 4, s.players[1].food);
-                Assert.AreEqual(1, s.players[0].food); Empty(s); Assert.AreEqual(StructureKind.None, s.nodes[1].structureKind);
+                Assert.AreEqual(1, s.players[0].food); Empty(s);
                 Tick(s); Assert.AreEqual(overflow == 1 ? b.foodCap : 4, s.players[1].food); hash = Fold(hash, s);
             }
             return hash;
-        }, determinism);
-
-        [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void StructureAndClaimCompletion_LootOnlyOnce(bool determinism) => Repeat(() => {
-            var b = Configure(); var s = Board(b, 3); s.nodes[1].structureHP = 1;
-            s.nodes[1].claimBar = 2 * b.baseClaimPerTick + 1;
-            s.nodes[1].collectRequested = true; s.nodes[1].collectProgress = 10;
-            s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b), TestBoardFactory.MakeIdleVillager(1, 1, 1, b) };
-            s.villagers[0].suit = SuitType.Warrior;
-            Tick(s); Assert.AreEqual(0, s.nodes[1].ownerID, "Soldier must not supply the second claim step on destruction");
-            Assert.AreEqual(b.baseClaimPerTick + 1, s.nodes[1].claimBar); Assert.AreEqual(3, s.players[1].food); Empty(s);
-            int hash = Fold(0, s);
-            s = Board(Configure(), 3); s.nodes[1].structureHP = 1; s.nodes[1].claimBar = -b.claimThreshold + 1;
-            s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b), TestBoardFactory.MakeIdleVillager(1, 1, 1, b) };
-            s.villagers[0].suit = SuitType.Warrior; Tick(s);
-            Assert.AreEqual(1, s.nodes[1].ownerID); Assert.AreEqual(3, s.players[1].food); Empty(s);
-            Tick(s); Assert.AreEqual(3, s.players[1].food); return Fold(hash, s);
         }, determinism);
 
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
@@ -207,18 +184,6 @@ namespace NodeWar.Tests
             CommandProcessor.ProcessCommand(s, Collect()); Assert.IsTrue(s.nodes[1].collectRequested);
             CommandProcessor.ProcessCommand(s, Collect(0)); Assert.IsFalse(s.nodes[1].collectRequested);
             return Fold(0, s); // six-field wire and MatchLog assertions live in their owning projects
-        }, determinism);
-
-        [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void OwnerReclaimOfDormantMinion_Destroys(bool determinism) => Repeat(() => {
-            var b = Configure(); var s = Board(b, 2); s.nodes[1].collectRequested = true; s.nodes[1].collectProgress = 10;
-            s.nodes[1].claimBar = 1; s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b) };
-            Tick(s); Assert.AreEqual(-1, s.nodes[1].ownerID); Assert.AreEqual(2, s.nodes[1].bankFood);
-            Assert.IsFalse(s.nodes[1].collectRequested); Assert.AreEqual(0, s.nodes[1].collectProgress);
-            s.nodes[1].claimBar = b.claimThreshold - 1; s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 0, 1, b) };
-            Tick(s); Assert.AreEqual(0, s.nodes[1].ownerID); Assert.AreEqual(2, s.players[0].food);
-            Assert.AreEqual(StructureKind.None, s.nodes[1].structureKind); Assert.IsTrue(s.nodes[1].storehouseInitialised); Empty(s);
-            return Fold(0, s);
         }, determinism);
 
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
@@ -247,25 +212,16 @@ namespace NodeWar.Tests
         }, determinism);
 
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void EnemyOnNode_MinionStillProduces(bool determinism) => Repeat(() => {
-            var b = Configure(); var s = Board(b, 0); s.nodes[1].minionProductionRemaining = 1;
+        public void EnemyOnNode_HealthyStorehouseStillProduces(bool determinism) => Repeat(() => {
+            var b = Configure(); var s = Board(b, 0); s.nodes[1].bankProductionRemaining = 1; s.nodes[1].districtHealth = 3000;
             s.nodes[1].collectProgress = 10; s.nodes[1].collectRequested = true;
             s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b) };
             s.villagers[0].state = VillagerState.Moving; s.villagers[0].movePath = new[] { 1, 2 }; s.villagers[0].targetNodeID = 2;
             s.villagers[0].moveSpeedTicks = 100;
             Tick(s); Assert.AreEqual(1, s.nodes[1].bankFood); Assert.AreEqual(10, s.nodes[1].collectProgress);
-            Assert.AreEqual(0, s.players[0].food); Assert.AreEqual(80, s.nodes[1].minionProductionRemaining);
+            Assert.AreEqual(0, s.players[0].food); Assert.AreEqual(80, s.nodes[1].bankProductionRemaining);
             return Fold(0, s);
         }, determinism);
 
-        [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void BankImpliesMinion_Invariant(bool determinism) => Repeat(() => {
-            var b = Configure(); var s = Board(b, 0); s.nodes[1].minionProductionRemaining = 1;
-            Tick(s); Assert.AreEqual(1, BankRules.Total(s.nodes[1])); CommandProcessor.ProcessCommand(s, Collect());
-            Tick(s, 4); Empty(s); Assert.AreEqual(StructureKind.Minion, s.nodes[1].structureKind);
-            s.nodes[1].minionProductionRemaining = 1; Tick(s); Assert.AreEqual(1, BankRules.Total(s.nodes[1]));
-            s.nodes[1].structureHP = 1; s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b) }; s.villagers[0].suit = SuitType.Warrior;
-            Tick(s); Empty(s); Assert.AreEqual(StructureKind.None, s.nodes[1].structureKind); return Fold(0, s);
-        }, determinism);
     }
 }

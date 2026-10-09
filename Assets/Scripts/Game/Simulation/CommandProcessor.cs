@@ -31,9 +31,6 @@ namespace NodeWar.Simulation
                 case CommandType.Recruit:
                     ProcessRecruit(state, command);
                     break;
-                case CommandType.InstallMinion:
-                    ProcessInstallMinion(state, command);
-                    break;
                 case CommandType.Collect:
                     ProcessCollect(state, command);
                     break;
@@ -54,14 +51,6 @@ namespace NodeWar.Simulation
                 state.nodes[nodeID].collectProgress = 0;
         }
 
-        private static void ProcessInstallMinion(SimulationState state, GameCommand command)
-        {
-            if (!BankRules.CanInstallMinion(state, bal, command)) return;
-            int nodeID = command.targetNodeID;
-            state.players[command.playerID].metal -= bal.minionMetalCost;
-            state.nodes[nodeID] = BankRules.CreateMinion(state.nodes[nodeID], bal);
-            BankRules.DemoteSurplusWorkers(state, nodeID, bal);
-        }
         /// <summary>
         /// Retargets a villager, honouring the edge it is already on.
         ///
@@ -259,12 +248,7 @@ namespace NodeWar.Simulation
             if (command.value == 0) state.players[command.playerID].materials -= stats.fortressMaterialsCosts[next];
             else state.players[command.playerID].metal -= stats.fortressMetalCosts[next];
             state.nodes[command.targetNodeID].fortressLevel = next;
-            // Historical all-zero tuning has no structure mechanism: no HP-less Fortification.
-            if (next == 1 && bal.StructureTuningValid())
-            {
-                state.nodes[command.targetNodeID].structureKind = StructureKind.Fortification;
-                state.nodes[command.targetNodeID].structureHP = bal.GetDistrictStats(DistrictType.Fortress, state.nodes[command.targetNodeID].districtEra).fortificationHP;
-            }
+
         }
 
         private static void ProcessRecruit(SimulationState state, GameCommand command)

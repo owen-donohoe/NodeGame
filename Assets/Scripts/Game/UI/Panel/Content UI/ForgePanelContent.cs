@@ -83,7 +83,7 @@ namespace NodeWar.UI
 
             if (isOwned)
             {
-                int capacity = BankRules.WorkerCapacity(simState.nodes[nodeID], balance);
+                int capacity = balance.maxWorkersPerNode;
                 workerCountLabel.text = "Workers: " + Mathf.Min(workerCount, capacity) + " / " + capacity;
             }
 

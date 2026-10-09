@@ -33,7 +33,7 @@ namespace NodeWar.MatchLog
             Assert.That(logged,Is.EqualTo(scripted)); Assert.That(logged,Is.GreaterThan(0));
             var types=new System.Collections.Generic.HashSet<CommandType>();
             foreach(var tick in log.ticks) foreach(var c in tick.commands) types.Add(c.type);
-            CollectionAssert.IsSupersetOf(types,new[]{CommandType.InstallMinion,CommandType.Collect,CommandType.Recruit,CommandType.UpgradeFortress,CommandType.Equip,CommandType.Move});
+            CollectionAssert.IsSupersetOf(types,new[]{CommandType.Collect,CommandType.Recruit,CommandType.UpgradeFortress,CommandType.Equip,CommandType.Move});
             Assert.That(log.hashes.Count,Is.EqualTo(1500));
             var outcome=MatchReplay.Run(log,balance); Assert.That(outcome.ok,Is.True,outcome.error);
             Assert.That(outcome.finalHash,Is.EqualTo(SimulationStateHasher.ComputeHash(reference)));
@@ -52,8 +52,8 @@ namespace NodeWar.MatchLog
             var s=BankRulesFixture.NewState(); Advance(s,750); var copy=new SimulationState(); copy.CopyFrom(s);
             Advance(s,770); s.CopyFrom(copy); Advance(s,1500);
             Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(outcome.finalHash));
-            for(int i=0;i<s.nodes.Length;i++) Assert.That((s.nodes[i].bankFood,s.nodes[i].structureKind,s.nodes[i].ownerID,s.nodes[i].collectProgress),
-                Is.EqualTo((reference.nodes[i].bankFood,reference.nodes[i].structureKind,reference.nodes[i].ownerID,reference.nodes[i].collectProgress)));
+            for(int i=0;i<s.nodes.Length;i++) Assert.That((s.nodes[i].bankFood,s.nodes[i].districtHealth,s.nodes[i].ownerID,s.nodes[i].collectProgress),
+                Is.EqualTo((reference.nodes[i].bankFood,reference.nodes[i].districtHealth,reference.nodes[i].ownerID,reference.nodes[i].collectProgress)));
         }
         [Test] public void Version4Script_ReplaysAllCommands_Determinism()
         {BankRulesFixture.Reference(out var a,out _); BankRulesFixture.Reference(out var b,out _); CollectionAssert.AreEqual(a,b);}

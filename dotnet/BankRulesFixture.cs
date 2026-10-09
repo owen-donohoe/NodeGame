@@ -12,6 +12,9 @@ namespace NodeWar.Tests
             get
             {
                 var b=GameBalanceData.Default();
+                // A small explicit health reserve lets this bounded script witness collection before the raid.
+                for (int i=0;i<b.districtStats.Length;i++)
+                    if (b.districtStats[i].districtType==DistrictType.Storehouse) b.districtStats[i].healthMax=170;
                 b.suitStats=new[] { new SuitStats {suitType=SuitType.Warrior,era=0,bonusHP=5,attackDamage=2,moveSpeedTicks=16,attackCooldownMax=10,foodCost=2,materialCost=2,fightPriority=1} };
                 return b;
             }
@@ -21,7 +24,7 @@ namespace NodeWar.Tests
             var b=CoreRulesFixture.Board();
             var p=new System.Collections.Generic.List<BoardConfigData.InitialDistrictPlacement>(b.initialPlacements);
             p.Add(Placement(2,1,DistrictType.Barracks,1,-10000));
-            p.Add(Placement(5,5,DistrictType.Farm,0,10000));
+            p.Add(Placement(5,5,DistrictType.Storehouse,0,10000));
             b.initialPlacements=p.ToArray(); return b;
         }
         private static BoardConfigData.InitialDistrictPlacement Placement(int x,int z,DistrictType type,int owner,int bar) =>
@@ -35,7 +38,7 @@ namespace NodeWar.Tests
             if(player==0)
                 switch(tick)
                 {
-                    case 2: return new[] {Cmd(CommandType.InstallMinion,0,Bank,-1,0,tick),Cmd(CommandType.Recruit,0,Village,-1,0,tick),
+                    case 2: return new[] {Cmd(CommandType.Recruit,0,Village,-1,0,tick),
                         Cmd(CommandType.UpgradeFortress,0,Fortress,-1,0,tick),Cmd(CommandType.Move,0,Town,1,0,tick)};
                     case 3: return new[] {Cmd(CommandType.SetAutoRecruit,0,Village,-1,1,tick),Cmd(CommandType.UpgradeFortress,0,Fortress,-1,1,tick)};
                     case 4: return new[] {Cmd(CommandType.SetAutoRecruit,0,Village,-1,0,tick)};
@@ -68,13 +71,11 @@ namespace NodeWar.Tests
         }
         public sealed class Witness
         {
-            public bool Installed,Partial,Paused,Restored,Attacked,Raided,Gate,Neutralised,MidLeg,Recruited,Upgraded,TownPaid;
+            public bool Produced,Partial,Paused,Restored,Drained,Gate,Neutralised,MidLeg,Recruited,Upgraded,TownPaid;
             public void Command(SimulationState s,GameCommand c)
             {
                 int metal=s.players[c.playerID].metal, food=s.players[c.playerID].food, count=s.players[c.playerID].recruitCount;
                 CommandProcessor.ProcessCommand(s,c);
-                if(c.type==CommandType.InstallMinion && s.nodes[Bank].structureKind==StructureKind.Minion)
-                {Assert.That(s.players[0].metal,Is.EqualTo(metal-3)); Assert.That(s.nodes[Bank].structureHP,Is.EqualTo(16)); Installed=true;}
                 if(c.type==CommandType.Collect && c.value==1) Assert.That(s.nodes[Bank].collectRequested,Is.EqualTo(BankRules.Total(s.nodes[Bank])>0));
                 if(c.type==CommandType.Recruit && s.players[0].recruitCount==count+1) {Assert.That(s.players[0].food,Is.LessThan(food)); Recruited=true;}
                 if(c.type==CommandType.UpgradeFortress && c.value==1) Upgraded=s.nodes[Fortress].fortressLevel==2;
@@ -84,31 +85,13 @@ namespace NodeWar.Tests
                 var before=new SimulationState(); before.CopyFrom(s); GameSimulation.SimulateTick(s);
                 NodeData a=before.nodes[Bank], b=s.nodes[Bank];
                 bool lockedBefore=BankRules.Locked(before,a,balance);
-                if(a.ownerID==0 && b.ownerID==0 && a.collectRequested && BankRules.Total(a)>0 && lockedBefore && BankRules.Locked(s,b,balance) && a.structureKind==StructureKind.Minion)
+                if(a.ownerID==0 && b.ownerID==0 && a.collectRequested && BankRules.Total(a)>0 && lockedBefore && BankRules.Locked(s,b,balance))
                 {Assert.That(b.collectProgress,Is.EqualTo(a.collectProgress),"a locked bank pauses its dwell clock"); Assert.That(b.bankFood,Is.GreaterThanOrEqualTo(a.bankFood)); Paused=true;}
                 if(a.ownerID==0 && b.ownerID==0 && a.collectRequested && lockedBefore && !BankRules.Locked(s,b,balance) && BankRules.Total(b)>0) Restored=true;
                 if(b.collectRequested && a.collectRequested && b.bankFood<a.bankFood && BankRules.Total(b)>0)
                 {Assert.That(s.players[0].food,Is.EqualTo(Math.Min(balance.foodCap,before.players[0].food+1))); Partial=true;}
-                if(a.structureKind==StructureKind.Minion && b.structureHP<a.structureHP)
-                {
-                    int raiders=0, attacking=0;
-                    for(int i=0;i<s.villagers.Length;i++)
-                    {
-                        var v=s.villagers[i];
-                        if(v.currentNodeID==Bank && v.ownerID==1 && v.suit==SuitType.Warrior && v.hp>0 && !v.isConsumed) raiders++;
-                        if(v.currentNodeID==Bank && v.state==VillagerState.AttackingStructure) attacking++;
-                    }
-                    if(b.structureKind!=StructureKind.None) {Assert.That(attacking,Is.EqualTo(raiders)); Attacked=raiders>0;}
-                    Assert.That(raiders,Is.GreaterThan(0));
-                    Assert.That(a.structureHP-b.structureHP,Is.EqualTo(Math.Min(raiders,balance.maxStructureAttackersPerNode)*balance.structureDamagePerTick),"structure damage comes only from the equipped raiders");
-                    if(b.structureKind==StructureKind.None)
-                    {
-                        Assert.That(b.structureHP,Is.EqualTo(0)); Assert.That(b.ownerID,Is.EqualTo(a.ownerID),"destroyed by damage, not by claim");
-                        Assert.That(BankRules.Total(b),Is.EqualTo(0)); Assert.That(a.bankFood,Is.GreaterThan(0));
-                        Assert.That(s.players[1].food,Is.EqualTo(Math.Min(balance.foodCap,before.players[1].food+a.bankFood)),"PayBank pays the raider before Destroy");
-                        Raided=true;
-                    }
-                }
+                if (b.ownerID == 0 && b.bankFood + b.bankMaterials > a.bankFood + a.bankMaterials) Produced=true;
+                if (a.ownerID == 0 && b.ownerID == 0 && b.districtHealth < a.districtHealth) Drained=true;
                 NodeData pa=before.nodes[Pier], pb=s.nodes[Pier];
                 for(int i=0;i<before.villagers.Length;i++)
                 {
@@ -121,10 +104,10 @@ namespace NodeWar.Tests
             }
             public void Complete()
             {
-                Assert.That((Installed,Partial,Paused,Restored,Attacked,Raided,Gate,Neutralised,MidLeg,Recruited,Upgraded,TownPaid),
-                    Is.EqualTo((true,true,true,true,true,true,true,true,true,true,true,true)),"Every D oracle must be witnessed: "+Describe());
+                Assert.That((Produced,Partial,Paused,Restored,Drained,Gate,Neutralised,MidLeg,Recruited,Upgraded,TownPaid),
+                    Is.EqualTo((true,true,true,true,true,true,true,true,true,true,true)),"Every D oracle must be witnessed: "+Describe());
             }
-            private string Describe() => $"installed={Installed} partial={Partial} paused={Paused} restored={Restored} attacked={Attacked} raided={Raided} gate={Gate} neutralised={Neutralised} midLeg={MidLeg} recruit={Recruited} fortress={Upgraded} town={TownPaid}";
+            private string Describe() => $"produced={Produced} partial={Partial} paused={Paused} restored={Restored} drained={Drained} gate={Gate} neutralised={Neutralised} midLeg={MidLeg} recruit={Recruited} fortress={Upgraded} town={TownPaid}";
         }
         public static int[] Population(SimulationState s) => CoreRulesFixture.Population(s);
         public static SimulationState Reference(out int[] hashes,out int[][] populations)

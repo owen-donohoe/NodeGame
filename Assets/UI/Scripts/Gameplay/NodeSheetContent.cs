@@ -103,7 +103,7 @@ namespace NodeWar.UI
                 Actions.Clear();
                 actionElements.Clear();
                 OnBind();
-                if (!(this is BankContent) && NodeWar.Simulation.BankRules.MinionDistrict(boundDistrictType))
+                if (!(this is BankContent) && boundDistrictType == DistrictType.Storehouse)
                 {
                     bank=new BankContent();
                     // Separate action host keeps the embedded content's binding from clearing

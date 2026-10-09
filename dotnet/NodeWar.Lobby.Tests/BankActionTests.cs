@@ -7,9 +7,9 @@ namespace NodeWar.Lobby.Tests
     {
         private static SimulationState State(GameBalanceData b) => new SimulationState {
             tickCount=123, nodes=new[] { new NodeData { nodeID=0, ownerID=0, districtType=DistrictType.Storehouse,
-                claimBar=b.claimThreshold, structureKind=StructureKind.Minion, structureHP=16, bankFood=5, collectProgress=10 } },
+                claimBar=b.claimThreshold, bankFood=5, collectProgress=10 } },
             villagers=new VillagerData[0], players=new[] { new PlayerData { metal=3 }, new PlayerData() } };
-        [Test] public void CollectionAndMinionActionsOnlyQueueCommands()
+        [Test] public void CollectionOnlyQueuesCommands()
         {
             var b=GameBalanceData.Default(); var s=State(b); var m=new BankActionModel();
             m.Describe(s,b,0,0); int hash=SimulationStateHasher.ComputeHash(s);
@@ -18,9 +18,8 @@ namespace NodeWar.Lobby.Tests
                 Assert.That((c.type,c.value,c.issuedOnTick,c.villagerID),Is.EqualTo(((CommandType)9,start?1:0,123,-1)));
             }
             Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(hash));
-            s.nodes[0]=StructureRules.Destroy(s.nodes[0]); m.Describe(s,b,0,0); hash=SimulationStateHasher.ComputeHash(s);
-            Assert.That(m.TryInstall(s,b,0,0,out var install),Is.True);
-            Assert.That((install.type,install.value,install.issuedOnTick),Is.EqualTo(((CommandType)8,0,123)));
+            s.nodes[0].bankFood=0; m.Describe(s,b,0,0); hash=SimulationStateHasher.ComputeHash(s);
+            Assert.That(m.TryInstall(s,b,0,0,out _),Is.False);
             Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(hash));
             s.nodes[0].ownerID=1; Assert.That(m.TryInstall(s,b,0,0,out _),Is.False);
             s.nodes[0].ownerID=0; m.Describe(s,b,0,0);
@@ -37,12 +36,12 @@ namespace NodeWar.Lobby.Tests
                 if(fixture==1) s.nodes[0].claimBar--;
                 if(fixture==2) s.nodes[0].ownerID=-1;
                 if(fixture==3) s.players[0].food=b.foodCap;
-                if(fixture==4) { s.nodes[0]=StructureRules.Destroy(s.nodes[0]); s.players[0].metal=2; }
+                if(fixture==4) { s.nodes[0].bankFood=0; s.players[0].metal=2; }
                 var d=m.Describe(s,b,0,0);
                 Assert.That(d.Status,Is.EqualTo(BankRules.CollectionState(s,s.nodes[0],b).ToString()));
-                Assert.That(d.Refusal,Is.EqualTo(BankRules.InstallReason(s,b,0,0).ToString()));
+                Assert.That(d.CanInstall,Is.False);
                 if(fixture==3) Assert.That(d.Status,Is.EqualTo("StorageFull"));
-                if(fixture==4) Assert.That(d.Refusal,Is.EqualTo("InsufficientMetal"));
+                if(fixture==4) Assert.That(d.Status,Is.EqualTo("Empty"));
             }
         }
     }

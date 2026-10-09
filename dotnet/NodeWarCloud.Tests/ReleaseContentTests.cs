@@ -40,7 +40,6 @@ namespace NodeWar.Cloud.Tests
         [Test] public void ExplicitCompleteBalancePassesReleaseValidation()
         {Assert.That(BalanceExportData.ReleaseValid(CompleteClient(),out var reason),Is.True,reason);}
 
-
         // D6: the parts of the v4 release that need no new export.
         [Test] public void V4ContentAndMigrationAreComplete()
         {
@@ -108,7 +107,7 @@ namespace NodeWar.Cloud.Tests
             {
                 Assert.That(BalanceHasher.Hash(data).ToString(CultureInfo.InvariantCulture), Is.EqualTo(id), "new file hash == filename");
                 Assert.That(BalanceExportData.ReleaseValid(data, out var reason), Is.True, reason);
-                Assert.That(data.BankTuningValid() && data.StructureTuningValid(), Is.True);
+                Assert.That(data.BankTuningValid(), Is.True);
                 Assert.That(BalanceCatalog.Embedded.TryGet(int.Parse(id, CultureInfo.InvariantCulture), out _), Is.True);
             }
         }
@@ -157,7 +156,4 @@ namespace NodeWar.Cloud.Tests
         }
     }
 }
-
-
-
 

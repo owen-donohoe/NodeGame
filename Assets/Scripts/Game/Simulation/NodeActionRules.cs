@@ -55,10 +55,9 @@ namespace NodeWar.Simulation
                 playerID >= state.players.Length || nodeID < 0 || nodeID >= state.nodes.Length) return false;
             NodeData node = state.nodes[nodeID];
             if (node.districtType != DistrictType.Fortress || node.ownerID != playerID ||
-                node.structureKind == StructureKind.Minion || !balance.StructureTuningValid() ||
                 node.fortressLevel < 0 || node.fortressLevel >= 3 || HasLivingEnemyAtNode(state, playerID, nodeID)) return false;
             DistrictStats stats = balance.GetDistrictStats(DistrictType.Fortress, node.districtEra);
-            if (stats.fortificationHP <= 0 || !GameBalanceData.FortressStatsValid(stats)) return false;
+            if (!GameBalanceData.FortressStatsValid(stats)) return false;
             int cost = (currency == 0 ? stats.fortressMaterialsCosts : stats.fortressMetalCosts)[node.fortressLevel + 1];
             return (currency == 0 ? state.players[playerID].materials : state.players[playerID].metal) >= cost;
         }

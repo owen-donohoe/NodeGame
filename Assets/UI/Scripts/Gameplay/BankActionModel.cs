@@ -22,22 +22,22 @@ namespace NodeWar.UI
             var node=s.nodes[n]; boundState=s; boundNodes=s.nodes; boundNode=n; boundPlayer=p;
             boundOwner=node.ownerID; boundType=node.districtType; boundTick=s.tickCount;
             string status=BankRules.CollectionState(s,node,b).ToString();
-            string refusal=BankRules.InstallReason(s,b,p,n).ToString();
+            string refusal="";
             int duration=BankRules.ProductionTicks(node,b);
-            return new BankActionDescription { Visible=BankRules.MinionDistrict(node.districtType), ShowActions=node.ownerID==p,
+            return new BankActionDescription { Visible=(node.districtType==DistrictType.Storehouse || BankRules.Total(node)>0), ShowActions=node.ownerID==p,
                 CanCollect=BankRules.CanCollect(s,Command(s,p,n,CommandType.Collect,node.collectRequested?0:1)),
-                CanInstall=BankRules.CanInstallMinion(s,b,Command(s,p,n,CommandType.InstallMinion,0)),
+                CanInstall=false,
                 Requested=node.collectRequested, Workers=NodeWar.View.StructurePresentation.WorkerPresentation(node.districtType),
                 Status=status, Refusal=refusal, CollectLabel=node.collectRequested?"Cancel collection":"Collect",
-                InstallLabel="Install Minion - "+b.minionMetalCost+" metal",
+                InstallLabel="",
                 Information="Bank "+BankRules.Total(node)+" / "+b.bankCapacity+": "+node.bankFood+" food, "+node.bankMaterials+" materials, "+node.bankMetal+" metal. Collection "+node.collectProgress+" / "+b.collectProgressPerUnit+": "+status+
-                    ". Minion: "+refusal+". Production "+node.minionProductionRemaining+" / "+duration+" ticks remaining." };
+                    ". Production "+node.bankProductionRemaining+" / "+duration+" ticks remaining." };
         }
         private bool Current(SimulationState s,int p,int n) => ReferenceEquals(s,boundState) && s!=null && ReferenceEquals(s.nodes,boundNodes) &&
             n==boundNode && p==boundPlayer && s.tickCount>=boundTick && s.nodes[n].ownerID==boundOwner && s.nodes[n].districtType==boundType;
         public bool TryCollect(SimulationState s,GameBalanceData b,int p,int n,bool start,out GameCommand c)
         { c=default; if(!Current(s,p,n)) return false; var candidate=Command(s,p,n,CommandType.Collect,start?1:0); if(!BankRules.CanCollect(s,candidate)) return false; c=candidate; return true; }
         public bool TryInstall(SimulationState s,GameBalanceData b,int p,int n,out GameCommand c)
-        { c=default; if(!Current(s,p,n)) return false; var candidate=Command(s,p,n,CommandType.InstallMinion,0); if(!BankRules.CanInstallMinion(s,b,candidate)) return false; c=candidate; return true; }
+        { c=default; return false; }
     }
 }

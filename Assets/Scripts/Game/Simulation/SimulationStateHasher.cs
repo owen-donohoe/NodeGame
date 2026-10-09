@@ -94,14 +94,12 @@ namespace NodeWar.Simulation
                     hash = hash * 31 + (int)state.nodes[i].upgradeCategory;
                     hash = hash * 31 + (int)state.nodes[i].baseDistrictType;
                     hash = hash * 31 + (int)state.nodes[i].terrain;
-                    hash = hash * 31 + (int)state.nodes[i].structureKind;
-                    hash = hash * 31 + state.nodes[i].structureHP;
+                    hash = HashNodeExtension(hash, i, 2028, state.nodes[i].districtHealth);
                     hash = HashNodeExtension(hash, i, 2020, state.nodes[i].bankFood);
                     hash = HashNodeExtension(hash, i, 2021, state.nodes[i].bankMaterials);
                     hash = HashNodeExtension(hash, i, 2022, state.nodes[i].bankMetal);
-                    hash = HashNodeExtension(hash, i, 2023, state.nodes[i].minionProductionRemaining);
+                    hash = HashNodeExtension(hash, i, 2023, state.nodes[i].bankProductionRemaining);
                     hash = HashNodeExtension(hash, i, 2024, state.nodes[i].storehouseNextResource);
-                    hash = HashNodeExtension(hash, i, 2025, state.nodes[i].storehouseInitialised ? 1 : 0);
                     hash = HashNodeExtension(hash, i, 2026, state.nodes[i].collectProgress);
                     hash = HashNodeExtension(hash, i, 2027, state.nodes[i].collectRequested ? 1 : 0);
                     if (state.nodes[i].districtEra != 0)

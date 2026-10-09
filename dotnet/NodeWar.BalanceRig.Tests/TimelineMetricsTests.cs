@@ -98,7 +98,6 @@ namespace NodeWar.BalanceRig
             Assert.AreEqual((-1, 0), (m.Transitions[0].fromOwner, m.Transitions[0].toOwner));
         }
 
-
         [Test]
         public void BanksDoNotChangeMetricMeaning()
         {
@@ -109,8 +108,8 @@ namespace NodeWar.BalanceRig
                 s.villagers[i] = new VillagerData { villagerID = i, ownerID = 0, currentNodeID = 3, hp = 1, state = VillagerState.Idle };
             var m = new TimelineMetrics(s, 10);
 
-            // Raiding a structure and a gated claim on an enemy Pier are busy, not idle.
-            s.villagers[0].state = VillagerState.AttackingStructure;
+            // An ordinary claim and a gated claim on an enemy Pier are busy, not idle.
+            s.villagers[0].state = VillagerState.Claiming;
             s.villagers[1].state = VillagerState.Claiming; s.villagers[1].targetNodeID = 4;
             Tick(m, s, 1);
             Assert.AreEqual(1, m.Windows[0].idleVillagerTicks[0], "only the third villager is idle");

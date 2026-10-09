@@ -15,14 +15,7 @@ namespace NodeWar.Lobby.Tests
             byte[] bytes = InputSerializer.Serialize(new TickInput { forTick = 123, commands = new[] { command } });
             Assert.AreEqual(39, bytes.Length); Assert.IsTrue(InputSerializer.TryDeserialize(bytes, out var read)); Assert.AreEqual(command, read.commands[0]);
         }
-        [Test]
-        public void InstallMinion_RoundTripsAllFields()
-        {
-            Assert.AreEqual("InstallMinion", Enum.GetName(typeof(CommandType), 8));
-            var command = new GameCommand { type = (CommandType)8, playerID = 1, villagerID = -1, targetNodeID = 18, issuedOnTick = 123, value = 0 };
-            byte[] bytes = InputSerializer.Serialize(new TickInput { forTick = 123, commands = new[] { command } });
-            Assert.AreEqual(39, bytes.Length); Assert.IsTrue(InputSerializer.TryDeserialize(bytes, out var read)); Assert.AreEqual(command, read.commands[0]);
-        }
+
         [Test]
         public void CurrentPacket_Market13IsRefused_Storehouse18Accepted()
         {
@@ -54,7 +47,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(command, read.commands[0]);
         }
 
-        [TestCase(-1)] [TestCase(10)] [TestCase(int.MaxValue)]
+        [TestCase(-1)] [TestCase(8)] [TestCase(10)] [TestCase(int.MaxValue)]
         public void UnknownCommandType_IsRefused(int type)
         {
             byte[] bytes = InputSerializer.Serialize(new TickInput { commands = new[] { new GameCommand() } });

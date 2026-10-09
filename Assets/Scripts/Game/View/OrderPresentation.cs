@@ -18,8 +18,7 @@ namespace NodeWar.View
         }
         public static bool Interrupted(VillagerData v) =>
             v.targetNodeID >= 0 && !v.isConsumed && v.state != VillagerState.Dead &&
-            v.state != VillagerState.Moving && v.state != VillagerState.Breaching &&
-            v.state != VillagerState.AttackingStructure;
+            v.state != VillagerState.Moving && v.state != VillagerState.Breaching;
 
         public static bool GateBlocked(SimulationState state,VillagerData v)
         {
