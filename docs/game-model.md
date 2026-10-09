@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
-verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
+  - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
+verified_at_commit: c736775d94d5e11c352dd3af6bb2bc0edecef1be
 status: draft
 sources:
   - id: sim-state
@@ -68,12 +68,12 @@ from the map ID a `BoardConfig` names, so treat these as the shape of the tuning
 constants. The checked-in `DefaultGameBalance` asset carries the capture-bonus, recruit, Town,
 Infirmary and Fortress values at these defaults; where it differs from them (the claim threshold,
 heal interval, breach swarm and production timers below), the asset is what a match plays.
-The D1 to D6 structure, bank and Pier tunables (`structureDamagePerTick`,
-`maxStructureAttackersPerNode`, per-era `fortificationHP`, `minionHP`, `minionMetalCost`,
-`bankCapacity`, `collectProgressPerTick`, `collectProgressPerUnit`, Storehouse `productionTicks`
-and Pier `pierTravelDivisor`) are code defaults pending the lead's Editor asset update/export;
-an old balance with them absent remains readable but cannot enable Fortress upgrading,
-structure attacks or minions.
+The D1 to D6 structure, bank and Pier tunables (structureDamagePerTick,
+maxStructureAttackersPerNode, per-era ortificationHP, minionHP, minionMetalCost,
+ankCapacity, collectProgressPerTick, collectProgressPerUnit, Storehouse productionTicks`nand Pier pierTravelDivisor) are written into the checked-in asset at these same values (Fortress
+HP 16 and Pier divisor 2 on every era row, Storehouse rows for eras 0 to 5), and the server balance
+export hash is -1867912668. An old balance with them absent remains readable but cannot enable
+Fortress upgrading, structure attacks or minions.
 
 ## The board
 
