@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
-verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: draft
 sources:
   - id: sim-state
@@ -22,6 +22,12 @@ sources:
   - id: board
     resource: Assets/Scripts/Game/Simulation/BoardConfigData.cs
     title: BoardConfigData and InitialDistrictPlacement
+  - id: bank-rules
+    resource: Assets/Scripts/Game/Simulation/BankRules.cs
+    title: Locks, collection, Minion install and bank payout
+  - id: pier-gate
+    resource: Assets/Scripts/Game/Simulation/PierGate.cs
+    title: Enemy Pier gate rule
   - id: pathfinding
     resource: Assets/Scripts/Game/Simulation/Pathfinding.cs
     title: Pathfinding.FindPath and ownership preference multipliers
@@ -62,9 +68,12 @@ from the map ID a `BoardConfig` names, so treat these as the shape of the tuning
 constants. The checked-in `DefaultGameBalance` asset carries the capture-bonus, recruit, Town,
 Infirmary and Fortress values at these defaults; where it differs from them (the claim threshold,
 heal interval, breach swarm and production timers below), the asset is what a match plays.
-The D1 structure tunables are code defaults pending the lead's Editor asset update/export;
-an old balance with all three structure tunables absent remains readable but cannot enable
-Fortress upgrading or structure attacks.
+The D1 to D6 structure, bank and Pier tunables (`structureDamagePerTick`,
+`maxStructureAttackersPerNode`, per-era `fortificationHP`, `minionHP`, `minionMetalCost`,
+`bankCapacity`, `collectProgressPerTick`, `collectProgressPerUnit`, Storehouse `productionTicks`
+and Pier `pierTravelDivisor`) are code defaults pending the lead's Editor asset update/export;
+an old balance with them absent remains readable but cannot enable Fortress upgrading,
+structure attacks or minions.
 
 ## The board
 
@@ -84,7 +93,10 @@ keep a land route between the Cores, so a Pier is never the only way across. A m
 14 to 20 nodes counting every legal Pier.
 
 A `Link` has a `travelWeight` (default 4). Crossing it takes `travelWeight × moveSpeedTicks` ticks,
-so movement cost is a property of the board, not of real time.
+so movement cost is a property of the board, not of real time. A leg into the mover's own `Pier`
+takes that time divided by the Pier's `pierTravelDivisor` (default 2, rounded up): a highway for
+its owner. The duration is fixed when the leg begins (`moveLegDurationTicks`), so a Pier changing
+hands mid-leg changes nothing for a villager already crossing.
 
 Both players begin owning one Core, placed at opposite ends of the grid. Everything else is
 unowned and contested.
@@ -121,13 +133,19 @@ percentage:
 | Enemy partially owned | 150 |
 | Enemy owned | 200 (2.0×) |
 
-Cost is `ceil(travelWeight × multiplier / 100)`, minimum 1. Villagers therefore prefer to travel
-through friendly territory and route around enemy ground unless the detour is long. An enemy Core
-may start or end a route but is never a transit node: a path does not run through it.
+Cost is the leg's travel time in ticks (`travelWeight × moveSpeedTicks`, Pier highway applied)
+scaled by the multiplier, rounded up, minimum 1; an own Pier is costed as owned land (100) rather
+than preferred. Villagers therefore prefer to travel through friendly territory and route around
+enemy ground unless the detour is long. An enemy Pier adds its expected neutralisation time to a
+route (see the Pier below), except when it is the starting node. An enemy Core
+may start or end a route but is never a transit node: a path does not run through it. Equal-cost
+routes break ties on the lower predecessor node ID.
 
 Movement is checked on **every node arrival**, not just at the destination: arriving on a node with
 living enemies interrupts the path and starts a fight, and arriving on the enemy Core triggers a
 breach channel or a fight (an instant breach only when the channel is disabled).
+
+**The Pier gate.** A villager standing on an enemy Pier may only go back the way it came (its previous node); any other order waits there, claiming the Pier down toward neutral like any claimer (Idle if the claimer cap is full), and moves on once it is neutral. The claim against an enemy Pier stops at neutral rather than flipping it.
 
 A villager in transit has no position of its own. `currentNodeID` is the node it last stood on, and
 how far it has come is a tick count along the link it is crossing.
@@ -193,23 +211,23 @@ places every district as `Fixed`, so those districts keep their type and placer'
 |---|---|---|
 | `None` | Fixed | Empty connector / crossroads |
 | `Core` | Fixed | Home node. Friendly arrivals idle unless contested. The breach target. |
-| `Farm` | Fixed | Farmer works it → +1 food |
-| `Mine` | Fixed | Miner works it → +1 material |
-| `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0` |
+| `Farm` | Fixed | Farmer works it → +1 food. Its owner may install a Minion (below), which then banks the food |
+| `Mine` | Fixed | Miner works it → +1 material. May hold a Minion |
+| `Forge` | Fixed | Smelter converts 1 material → 1 metal, only while `materialAllocation > 0`. May hold a Minion, which converts under the same rule and banks the metal |
 | `Village` | Fixed | Paid Recruit action and optional automatic repeat; no claim bonus |
 | `Town` | Fixed | One-time reward: the first full claim by each player spawns `townBonusVillagers` (code default 2, per era) at the Town, limited by room under the population cap. The entitlement is spent even if the cap leaves nothing to pay, and never deferred. A player taking the enemy's Town is paid too. Afterwards the Town does nothing |
 | `Barracks` | Army | Equip any drafted combat suit (Warrior, Guardian, Scout, Berserker, Medic) |
 | `Infirmary` | Healing | Heals its owner's living, non-moving villagers standing on it every `healIntervalTicks` (code default 10, per era) on the global tick, in addition to ordinary healing. Acolytes work it: at most 2 count, chosen by lowest villager ID, each speeding the owner's respawn countdown and cutting the paid-respawn cost (below). Not usable while an enemy stands on it or it is not owned by the worker's player |
 | `Fortress` | Affect | Paid resistance. Its owner upgrades it with `UpgradeFortress` to level 1, 2 or 3 (each level once, in order), paying either materials (4/8/12) or metal (1/2/3) per era. At level 1-3 the Fortress and each owned node linked to it resist enemy claiming by 25/40/50%: the enemy's claim rate on those nodes (when the Fortress's owner held them at tick start) is divided by `1 + resistance`, never below 1. Auras do not stack (the highest applies, ties to the lowest source node), are read from the tick-start owners and levels, and also slow a breach of a Core they cover. The upgrade is refused with an enemy villager on the node. Losing the Fortress resets its level to 0 |
-| `Market` | ResourceSpecial | Merchant works it → alternates +1 food and +1 material |
-| `Pier` | Fixed | Drafted only on a Lake slot. Turns that cell into a node that connects its land neighbours; grants nothing and blocks nobody |
+| `Storehouse` | Fixed | Replaces the retired Market (13). No workers: it becomes a free Minion on its owner's first full claim and banks alternating food and materials (code default 80 ticks per unit) |
+| `Pier` | Fixed | Drafted only on a Lake slot. Turns that cell into a node that connects its land neighbours. A highway for its owner (halved leg time) and a gate for the enemy: an enemy villager standing on it cannot go on until it is neutralised |
 
-**The active roster** is `DistrictType` values 0–6 and 13–17 (`DistrictRoster.IsActive`): None,
-Farm, Mine, Village, Barracks, Core, Forge, Market, Pier, Town, Infirmary, Fortress. The draft, a
+**The active roster** is `DistrictType` values 0–6 and 14–18 (`DistrictRoster.IsActive`): None,
+Farm, Mine, Village, Barracks, Core, Forge, Pier, Town, Infirmary, Fortress, Storehouse. The draft, a
 board's placements and base pools, a loadout and a match log accept only these; nothing is
-accepted by an alias. Six numbers are retired and stay reserved, never reused: Camp 7 and
-Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary, which takes over both jobs), Rampart 12 (now Fortress) and
-Watchtower 11 (now an empty slot). Saved decks and inventories are converted once
+accepted by an alias. Seven numbers are retired and stay reserved, never reused: Camp 7 and
+Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary, which takes over both jobs), Rampart 12 (now Fortress),
+Watchtower 11 (now an empty slot) and Market 13 (now Storehouse; its saved owners and equips migrate). Saved decks and inventories are converted once
 (`DistrictMigration`, in `Backend/Shared`), keeping the old item owned, adding the replacement at
 the same era and collapsing duplicates. Rampart's
 occupant buffs (max HP and damage reduction) are gone from the simulation entirely; the Fortress replaces them
@@ -230,12 +248,31 @@ that tick and may claim next tick; a civilian may complete capture in the destru
 Fortress resistance does not reduce structural damage and still applies from the tick-start
 snapshot on the destruction tick. Re-upgrading starts at level 1 and its price again.
 Neutralisation and full claim both clear a Fortification through the central ownership transition.
-Minion is a reserved structure kind only at D1; installation, production and banks are not implemented.
+
+**Minions and banks.** A Farm, Mine, Forge or Storehouse may carry a Minion structure (16 HP
+by default, the same structure that raiders damage). The owner pays 3 metal with `InstallMinion`;
+an installed Minion takes over one worker slot (a node holds `maxWorkersPerNode` workers, minus
+one) and produces on its own timer into a **bank** of up to 5 units, never touching the player's
+pool until cashed out. A bank only exists on a Minion. The Minion keeps producing while an enemy
+stands on the node, and stops only while the node is neutral (dormant) or the bank is full.
+
+Cashing out is slow and conditional. A node is **locked** if it is neutral, an enemy villager is
+anchored on it, or its owner's claim bar is short of full. While locked, `InstallMinion` is
+refused and collection pauses, though a `Collect` request is still accepted. Otherwise, a friendly
+Idle or Working villager standing on the node (a passing visitor does not count), or a standing
+`Collect` request, moves one unit at a time into the owner's pool: 5 progress per tick, 16 per
+unit, never tempo-scaled, paused while the pool is at its cap. A request ends when the bank
+empties or is cancelled with `Collect` value 0.
+
+Taking the node ends the bank. Neutralisation alone leaves it dormant. A completed claim pays the
+remaining bank to the new owner (capped by their storage) and removes the Minion; destroying it
+with structure damage pays the raiders' owner first, then clears the structure, leaving the node
+with its owner. A Storehouse bank is created the first time its owner fully claims it.
 
 ## Suits
 
-A suit is a villager's role. Production suits (`Farmer`, `Miner`, `Smelter`, `Merchant`, `Acolyte`,
-`Watcher`) are **assigned automatically** on arrival at the matching owned district and stripped
+A suit is a villager's role. Production suits (`Farmer`, `Miner`, `Smelter`, `Acolyte`,
+`Watcher`; `Merchant` is a historical Market suit that is never assigned) are **assigned automatically** on arrival at the matching owned district and stripped
 when the villager leaves. An Infirmary is shared ground: it counts only while every living villager
 on it is its owner's, and only the two lowest-ID eligible (non-combat, stationary) villagers there
 work it; a third waits idle.
@@ -261,7 +298,7 @@ employed — capped at 2 workers per node.
 The default storage caps are 30 food, 30 materials and 10 metal. A cap of 0 or less is uncapped;
 missing cap fields therefore retain the old behaviour. Starting resources and every gain are
 clamped. A production completion at capacity is wasted but its timer still cycles. A Forge at
-the metal cap does not consume a material; a Market still alternates food/materials after a
+the metal cap does not consume a material; a Storehouse still alternates food/materials after a
 wasted completion. Spending is unchanged. Magic in the HUD is display-only, not a fourth
 simulation resource.
 
@@ -336,7 +373,7 @@ claimer's loadout. The simulation still supports non-`Fixed` slots, whose claim 
 claimer's drafted district for that slot type.
 
 Both players' base draft districts on `hourglass-01` are the same three, Farm, Mine and Village. Production is slower than the code defaults: a worker yields food every 40
-ticks, material every 50 and metal every 60, and a Market's secondary material every 55
+ticks, material every 50 and metal every 60 (a Minion on those districts, and a Storehouse, use the same per-district timer: 80 ticks by code default for the Storehouse)
 (`DefaultGameBalance`, identical in every era).
 
 The draft is a **manual placement** system. The v2.1 design document describes a different
@@ -365,7 +402,7 @@ because rating cannot see the era gap.
 
 ## Player commands
 
-Every player action reaches the simulation as one of seven active `GameCommand` types:
+Every player action reaches the simulation as one of nine active `GameCommand` types:
 
 | Command | Effect |
 |---|---|
@@ -376,6 +413,8 @@ Every player action reaches the simulation as one of seven active `GameCommand` 
 | `Recruit` (5) | Pay food to append one base, unsuited Idle villager at an owned, uncontested Village |
 | `SetAutoRecruit` (6) | Set an owned Village's repeat flag to the absolute value 0 or 1 |
 | `UpgradeFortress` (7) | Raise an owned, uncontested Fortress one level; `value` 0 pays materials, 1 pays metal; `villagerID = -1`; the first upgrade creates a full-HP Fortification |
+| `InstallMinion` (8) | Pay the metal cost to place a Minion on an owned, unlocked, structure-free and bank-free Farm, Mine, Forge or Storehouse; `value = 0`, `villagerID = -1` |
+| `Collect` (9) | Start (`value` 1) or cancel (0) cashing out an owned bank; accepted while locked, a no-op on an empty bank; `villagerID = -1` |
 
 Recruit needs no worker or visitor. With pre-recruit player count N, the default
 price is `6 + 3N` food and the Village cooldown is that many seconds, converted

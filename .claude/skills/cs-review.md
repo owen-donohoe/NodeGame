@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
-verified_at_commit: 3a476dc47ea6085a5e8c0a3c7263b795f5a089f2
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: architecture
@@ -49,7 +49,7 @@ Read all files modified in this session, then check:
      carry and compare map ID, board hash and versions, with the board itself
      coming from the shipped PremadeMaps.Catalog rather than the wire?
    - Does a UI price or eligibility call the simulation's own helper
-     (NodeActionRules, CountInfirmaryWorkers) rather than restate the rule?
+     (NodeActionRules, BankRules, CountInfirmaryWorkers) rather than restate the rule?
    - Do saved-data conversions for retired districts stay in Backend/Shared
      DistrictMigration, with the runtime and wire accepting only active
      DistrictRoster types and no aliases?
@@ -88,15 +88,15 @@ Read all files modified in this session, then check:
 6. Conventions
    - New SimulationState fields added to SimulationStateHasher and CopyFrom,
      with their explicit neutral defaults initialized by MatchFactory?
-   - New CommandType has a CommandProcessor case (Recruit and SetAutoRecruit
-     validate through NodeActionRules, which presentation may call read-only)?
+   - New CommandType has a CommandProcessor case (Recruit, SetAutoRecruit, InstallMinion and Collect
+     validate through NodeActionRules or BankRules, which presentation may call read-only)?
    - GameCommand struct and InputSerializer updated together?
    - Wire layout changes (current protocol is 5) bump ProtocolVersion.Current in
      Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion aliases?
    - Simulation behavior changes bump SimulationVersion.Current, with
      balance-only edits tracked by the content hash?
-     Current and the sanctioned baseline pin are 3; the v3 terrain board moved both
-     baseline fingerprints, and C7 moved them again (now 647286254 and 357327383).
+     Current and the sanctioned baseline pin are 4 (D1 structure terms and D4's leg-clock term
+     moved the fingerprints to -2085505832 and 534653207).
 
 ## Output format
 Report each category as PASS, FAIL, or N/A.

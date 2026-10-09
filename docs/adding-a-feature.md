@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
-verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: sim-state
@@ -110,7 +110,9 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      `breachBar` and `paidRespawns` start at 0).
      That preserves old hashes; avoiding a version bump also requires
      unchanged results for those existing inputs, as with eras. Version 4
-     is current; D1's unconditional structure kind/HP terms moved both baselines.
+     is current; D1's unconditional structure kind/HP terms and D3/D4's unconditional
+     `moveLegDurationTicks` term moved both baselines (now -2085505832 and 534653207). The bank
+     fields are the neutral-extension precedent: tags 2020–2027 through `HashNodeExtension`.
    - If the field describes the *board* rather than the match (terrain, slot
      mask, base pools), it belongs on `BoardConfigData`, not on state, and it must
      reach `BoardHasher` (so `SimulationState.boardHash` and the `MatchSetup`
@@ -155,7 +157,12 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      encode/decode it identically.
      A new enum value also needs explicit acceptance in `InputSerializer` and
      `MatchLogFormat`, plus round-trip and unknown-type refusal tests. Recruit=5,
-     SetAutoRecruit=6 and UpgradeFortress=7 retain the six-field, 24-byte command payload and TICKS tag.
+     SetAutoRecruit=6, UpgradeFortress=7, InstallMinion=8 and Collect=9 retain the six-field,
+     24-byte command payload and TICKS tag (no `ProtocolVersion` bump; simulation version 4 and the
+     content hash keep mixed builds apart). Bank actions use `villagerID = -1`; InstallMinion has
+     `value = 0` and Collect `value = 1` (start) or `0` (cancel). `BankRules` is the shared
+     eligibility, and both UI stacks go through `BankActionModel`, whose `Try*` methods only
+     queue commands.
    - Any wire layout change bumps `ProtocolVersion.Current`
      (`Assets/Scripts/Backend/Shared/ProtocolVersion.cs`; `InputSerializer.ProtocolVersion`
      aliases it) in the same commit. A `GameCommand` change also needs a new TICKS tag in
@@ -201,7 +208,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
 7. **Does it change the tick loop itself?**
    - Confirm where it fits in the canonical order: `movement → combat →
      claiming → production → healing → respawns → win-check` (as
-     documented on `GameSimulation.SimulateTick`).
+     documented on `GameSimulation.SimulateTick`; production runs workers,
+     `TickMinionProduction`, `TickBankCollection`, then auto-recruit).
    - Insert at the correct, justified step — do not append a new step at
      the end by default, and do not reorder existing steps.
    - Claiming runs `TickBreach`, then `TickStructureAttacks`, then `TickClaiming`; the Fortress
@@ -211,7 +219,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      tick-start owner snapshot, not live owners, so node order cannot matter.
      Refresh derived `nextBreacherID` last, after all mutations this tick.
      Structure attack participation is tick-local: participants cannot claim or resume
-     a local action on the destruction tick. `OnOwnershipChanged` owns recruit and Fortress resets.
+     a local action on the destruction tick. `OnOwnershipChanged` owns recruit, Fortress and collection resets, and pays then destroys a
+     minion's bank when a node changes hands.
      Version 2 checks only new breaches against the current threshold;
      simultaneous losses cancel and a sudden-death drop alone is not a loss.
 
@@ -249,7 +258,11 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
    `MatchSetup`) and recorded separately in the match log. The balance content
    hash is compared in the handshake, not folded into `SimulationStateHasher`.
    If the rules depend on the number, say so in `GameBalanceData.CoreRulesValid`
-   so an overflowing balance is refused rather than played. A new tunable per district and era must
+   so an overflowing balance is refused rather than played. A global with a historical
+   all-zero export (the bank scalars `minionHP`, `minionMetalCost`, `bankCapacity`,
+   `collectProgressPerTick`, `collectProgressPerUnit`) is hashed only when non-zero, and a
+   partly-set group is refused by `BankTuningValid`; UI text reads the balance value, never a
+   copy of the literal. A new tunable per district and era must
    also pass `BalanceExportData.ReleaseValid` (the server export refuses a balance missing an active
    district at any era, and never overwrites an existing content-addressed file with different data);
    `ReleaseContentTests` compare a fresh export with the client balance and catalog.
@@ -277,6 +290,12 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
     and the shared `TestBoardFactory` and `BoardFixtures`; sticky orders,
     restore, the capture bonus, recruiting, terrain, legality and setup each have
     their own file, such as `StickyOrderTests` and `TerrainMapTests`).
+
+    Larger features also get a scripted acceptance match: `dotnet/CoreRulesFixture.cs` and
+    `dotnet/BankRulesFixture.cs` hold a command script with a witness that asserts each rule
+    actually fired, replayed through the lossy lockstep harness
+    (`CoreRulesLockstepTests`, `BankRulesLockstepTests`) and the binary match log
+    (`CoreRulesReplayTests`, `BankRulesReplayTests`).
 
     Run it with `dotnet test dotnet/NodeWar.sln` — no Editor, no licence,
     and it is what CI runs, so prefer it for any result you intend to rely

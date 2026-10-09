@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
-verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: sim-loop
@@ -166,7 +166,7 @@ itself only ever counts ticks.
 
 **Tick order is canonical and must not be reordered:**
 ```
-movement → combat → claiming (breach → structure attack → claim) → production → healing → respawns → win-check
+movement → combat → claiming (breach → structure attack → claim) → production (workers → minion output → bank collection → auto-recruit) → healing → respawns → win-check
 ```
 Why: each step reads state the previous step produced (e.g. claiming
 depends on where combat left villagers standing this tick); reordering
@@ -181,7 +181,7 @@ before movement. The tick also snapshots every node's owner at its start;
 `TickBreach` and `TickClaiming` read that snapshot, never the owners they are
 changing, so the order in which nodes are processed cannot move a result.) A new step must
 be inserted at a specific, justified point in this sequence, not appended
-by default. Production runs ordinary workers, then auto-recruit, before healing.
+by default. Production runs ordinary workers, then `TickMinionProduction`, then `TickBankCollection`, then auto-recruit, before healing.
 Auto-recruit visits ascending node ID and uses the same validated recruit path
 as the command processor; no tempo scaling is applied to its ready tick. The Infirmary
 rules add no state: which Acolytes count (`GameSimulation.CountInfirmaryWorkers`, at most two,
@@ -257,7 +257,42 @@ Post-combat resume starts the action for damage on the next tick. `OnOwnershipCh
 recruit resets and clearing Fortress level and Fortification kind/HP on neutralisation/full claim.
 First upgrade creates full HP; higher upgrades do not repair; destruction removes the aura
 from the next tick's snapshot. Structure balance scalars append tagged zero-neutral contributions
-under 3011–3013; absent historical tuning cannot enable the ability.
+under 3012–3014 (3011 is reserved); absent historical tuning cannot enable the ability.
+
+D2 to D4 add the bank, the Pier gate and the latched leg clock. `NodeData` gains `bankFood`,
+`bankMaterials`, `bankMetal`, `collectProgress`, `collectRequested`, `minionProductionRemaining`,
+`storehouseNextResource` and `storehouseInitialised`, each hashed only when non-zero or true under
+tags 2020–2027 with the node index (`HashNodeExtension`), initialised explicitly by `MatchFactory`
+and carried by the node value clone. `VillagerData.moveLegDurationTicks` (zero off a leg) is hashed
+unconditionally. Invariant, asserted in tests: bank total > 0 implies `structureKind == Minion`.
+`BankRules` owns every definition the simulation, the processor and both UI stacks use.
+`Locked` is neutral, or an enemy anchored on the node (`NodeActionRules.HasLivingEnemyAtNode`), or
+the owner-side claim bar short of `claimThreshold`. A lock stops cash-out, not output: minion
+output pauses only while the node is neutral (dormant) or the bank is full. A stationary collector
+(a friendly Idle or Working villager on the node) or a standing `Collect` request drains one unit
+at a time: `collectProgressPerTick` (default 5) is added per tick and `collectProgressPerUnit`
+(default 16) pays one unit. Collection is never tempo-scaled, and its clock pauses while locked or
+while the owner's pool is at its cap. A claim pays any bank to the new owner (`PayBank`, capped by
+the resource caps) and then destroys the minion; destroying one by structure damage pays the
+raider the same way before `Destroy`. A Storehouse (`DistrictType` 18: no workers, alternating
+food and materials) becomes a free minion on its first full claim. `InstallMinion` (type 8, value
+0) is refused while locked, with a bank present, off a minion district or under the metal cost.
+`Collect` (type 9, value 1 start or 0 cancel) is accepted while locked and then pauses; on an
+empty bank or from a non-owner it is a hash-neutral no-op. `BankRules.WorkerCapacity` is the one
+worker limit (`maxWorkersPerNode`, minus one on a minion node). The read-only `CollectionState`
+and `InstallReason` helpers the node sheets display are tested to agree with the boolean rules
+they mirror.
+
+The Pier is a position rule (`PierGate`, `GameSimulation.CalculateLegTicks`). A villager standing
+on an enemy Pier may depart only back to its `previousNodeID`; any other order waits as Claiming
+(Idle without a claimer slot) while the Pier is neutralised, and a claim against an enemy Pier
+stops at neutral first. A leg lasts `travelWeight * moveSpeedTicks` physical ticks, divided
+(ceiling) by `DistrictStats.pierTravelDivisor` when the destination is the mover's own Pier, and
+that duration is latched into `moveLegDurationTicks` when the leg begins, so a mid-leg ownership
+change cannot alter it; reversing onto an asymmetric leg pays the ticks already covered.
+Pathfinding costs use the same physical ticks (preference multipliers survive for non-Pier legs
+and an own Pier is not preferred), add a gate's expected neutralisation time except at the start
+node, and break ties on the lower predecessor node ID.
 
 C4 adds the false-neutral `NodeData.townPaidMask` (bit 0 and bit 1 for the players whose
 first full claim of that Town has paid), hashed only when non-zero under tag 4012 with
@@ -267,12 +302,12 @@ roster cannot defer it. `DistrictStats.townBonusVillagers` is conditionally hash
 `BalanceHasher` (tag 3007 with its array index) and must be nonnegative.
 
 `DistrictType` values are now explicit in the source and persisted in match logs: the
-active set is 0–6 and 13–17 (`DistrictRoster.IsActive`), and the retired numbers are
+active set is 0–6 and 14–18 (`DistrictRoster.IsActive`; Storehouse is 18), and the retired numbers (Market 13 and the merged 7–12) are
 reserved and never reused. Placement legality, board validation and the log reader refuse
 an inactive type (the log reader for simulation version 3 and later; version 2 logs keep their historical numbers), with no aliasing in the runtime; only saved-data migration in
 `Backend/Shared` maps old numbers to new ones.
 
-Recruit=5, SetAutoRecruit=6 and UpgradeFortress=7 have explicit processor cases and serializer/log
+Recruit=5, SetAutoRecruit=6, UpgradeFortress=7, InstallMinion=8 and Collect=9 have explicit processor cases and serializer/log
 acceptance. `CommandTypes.IsKnown` is the one list of valid types; the serializer
 and the log reader refuse anything else. The six existing command fields,
 24-byte wire payload and TICKS shape are unchanged. Recruit eligibility and cost
@@ -342,8 +377,9 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
 
 The current simulation version and baseline pin are **4**. D1 adds suit-driven structure
-attack and two unconditional structure terms per node, moving the C7 v3 fingerprints
-to -563755666 and -2013445737. With a valid
+attack and two unconditional structure terms per node; D3/D4 added the unconditional
+`moveLegDurationTicks` villager term. The pinned fingerprints are `EmptyTick100Hash =
+-2085505832` and `MoveAndCombat4Hash = 534653207`. With a valid
 breach channel enabled, a loss requires a breach this tick at or above
 `BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
 threshold alone never loses a match. Disabling the channel retains
@@ -383,7 +419,7 @@ caps are tagged separately. Nonpositive caps are uncapped in gameplay,
 including negative values, whose raw values still affect the balance hash.
 All resource gains and starting values clamp to a positive cap. Wasted
 completions still cycle; a metal-capped Forge consumes no material and
-a Market still alternates. The handshake therefore mitigates issue #59;
+a Storehouse still alternates. The handshake therefore mitigates issue #59;
 it does not fix that omission.
 
 ## The starting board: `MatchFactory`

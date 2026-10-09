@@ -6,8 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
-verified_at_commit: 3a476dc47ea6085a5e8c0a3c7263b795f5a089f2
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: contract
@@ -66,7 +66,7 @@ Read the changed or proposed code, then check each item:
      below 100 accepted and production durations safe for the largest decrement?
    - Do nonpositive resource caps retain uncapped behaviour, with every gain
      and starting value clamped for positive caps? At metal capacity a Forge
-     must not spend materials; a wasted Market completion still alternates.
+     must not spend materials; a wasted Storehouse completion still alternates.
 
 3. Time and frame APIs
    - Any Time.deltaTime, Time.time, Time.fixedDeltaTime?
@@ -99,7 +99,8 @@ Read the changed or proposed code, then check each item:
    - Does any change reorder or skip steps in the canonical 
      tick sequence?
    - Canonical order: movement -> combat -> claiming -> 
-     production -> healing -> respawns -> win-check
+     production -> healing -> respawns -> win-check (production: workers,
+     minion output, bank collection, auto-recruit)
    - Preserve the tick-start resistance snapshot and the order-resume
      pass (TickOrderResume) after win-check too. TickBreach precedes TickStructureAttacks, then TickClaiming
      inside claiming; the derived nextBreacherID refresh is last, after resume.
@@ -116,6 +117,15 @@ Read the changed or proposed code, then check each item:
      or without an order. Tick-local participation prevents destruction-tick claiming;
      post-combat resume defers damage. Fortress resistance never reduces structure damage,
      higher upgrades never repair HP, and ownership resets use OnOwnershipChanged.
+   - Banks: bank contents exist only on a Minion (total > 0 implies structureKind Minion;
+     every Destroy path clears them after PayBank), Locked/collection/production definitions live
+     only in BankRules, collection constants come from the balance (collectProgressPerTick and
+     collectProgressPerUnit, never literals) and are not tempo-scaled, and InstallMinion and
+     Collect keep their hash-neutral refusals. Bank fields hash zero-neutral under tags 2020-2027.
+   - Pier gate: departure from an enemy Pier is refused except back to previousNodeID through the
+     one PierGate rule shared by the command processor and the tick (pathfinding only prices it via
+     EstimatedGateTicks); leg time is CalculateLegTicks,
+     latched in moveLegDurationTicks at departure and never recomputed from live ownership.
    - A Town reward is paid inside the claim-complete step, with its entitlement
      spent before the population-cap check (no deferred credit), tracked by the
      hashed `townPaidMask`.
@@ -145,9 +155,10 @@ Read the changed or proposed code, then check each item:
      and review the pinned baseline version with the change. The version
      test checks equality with that pin, not whether hash constants were edited.
      Current and BaselinesPinnedAtSimVersion are both 4. D1's unconditional structure
-     kind/HP terms moved the C7 v3 hashes to -563755666 and -2013445737. Both new fields
+     kind/HP terms and D4's unconditional moveLegDurationTicks term moved the C7 v3 hashes to
+     -2085505832 and 534653207. The structure fields
      must be initialized None/0, hashed, copied and registered in the reflection guard.
-   - DistrictType numbers are persisted and explicit: active set 0-6 and 13-17
+   - DistrictType numbers are persisted and explicit: active set 0-6 and 14-18
      (DistrictRoster.IsActive), retired numbers reserved. Does any new path accept
      an inactive type or an alias? Only DistrictMigration (saved data) maps old
      numbers, and the log reader refuses inactive types for simulation version 3 and later.
@@ -172,8 +183,8 @@ Read the changed or proposed code, then check each item:
      in CommandTypes.IsKnown?
    - Are new enum values explicitly accepted in InputSerializer and MatchLogFormat,
      with unknown-type refusal and six-field round-trip coverage? Recruit=5,
-     SetAutoRecruit=6 and UpgradeFortress=7 keep the existing payload and TICKS shape. Node commands
-     require villagerID=-1; Recruit value=0, repeat toggle value=0 or 1.
+     SetAutoRecruit=6, UpgradeFortress=7, InstallMinion=8 and Collect=9 keep the existing payload and TICKS shape. Node commands
+     require villagerID=-1; Recruit and InstallMinion value=0, repeat toggle value=0 or 1, Collect value=0 or 1.
    - Does any GameCommand struct change update InputSerializer?
    - Is a map or rules agreement still made before any draft packet is
      honoured (MatchSetup, SetupAgreement), with the board built from the

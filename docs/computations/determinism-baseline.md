@@ -15,8 +15,8 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
-verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: tests
@@ -138,6 +138,14 @@ terms to the polynomial: `-563755666` to `-2085505832` (`EmptyTick`) and
 `-2013445737` to `534653207` (`MoveAndCombat`). No route choice or travel-time
 change reaches these line-board fixtures. `BreachTempoTests` carries the same
 pins. Version 4 remains the unreleased PR D version introduced in D1.
+
+**D2, D3, D5 and D6 left both pins alone.** The bank fields (`bankFood`, `bankMaterials`,
+`bankMetal`, `collectProgress`, `collectRequested`, `minionProductionRemaining`,
+`storehouseNextResource`, `storehouseInitialised`) are hashed only when non-zero under tags
+2020–2027, and the bank, collection and gate balance scalars (including D6's
+`collectProgressPerTick` and `collectProgressPerUnit`, moved out of `BankRules` literals) are
+zero-neutral in `BalanceHasher`. Neither fixture installs a minion, so the pins stayed
+`-2085505832` and `534653207` through D6.
 
 ## Where it runs
 

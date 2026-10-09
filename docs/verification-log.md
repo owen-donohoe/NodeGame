@@ -43,6 +43,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
 
 - { by: gpt-6, at: 2026-10-08T21:08:43Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 ## `docs/architecture.md`
 
@@ -65,6 +66,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
 ## `docs/simulation-rules.md`
 
@@ -83,6 +85,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
 ## `docs/skills/run-dotnet-tests.md`
 
@@ -107,6 +110,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
 
 - { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T01:16:59Z }
 
 ## `.claude/skills/cs-review.md`
 
@@ -127,6 +131,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
 
 ## `.claude/skills/determinism-guard.md`
 
@@ -146,6 +151,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
 
 ## `.claude/skills/write-sim-test.md`
 
@@ -170,6 +176,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
 
 - { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T01:16:59Z }
 
 ## `docs/game-model.md`
 
@@ -186,6 +193,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 ## `docs/computations/determinism-baseline.md`
 
@@ -205,6 +213,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 ## `docs/skills/run-editmode-tests.md`
 
@@ -216,6 +225,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 ## `docs/design-history/README.md`
 
@@ -228,6 +238,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 ## D2 review backlog at `45eed7f258f0b26fb748f446332817b83ed5fbe1`
 

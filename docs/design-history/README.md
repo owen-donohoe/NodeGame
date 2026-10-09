@@ -6,8 +6,8 @@ tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
-verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: v21-pdf
@@ -74,9 +74,11 @@ of its points have moved since:
   consolidated: Camp and Arsenal became Barracks, Shrine and Sanctuary became Infirmary, Rampart
   became Fortress and Watchtower an empty slot, with a Town added; the old numbers are reserved.
   D1 adds a shared structure slot and suit-driven attacks: a paid Fortress upgrade builds
-  a destructible Fortification. Minion is only a reserved kind at this step, with no production or banks.
+  a destructible Fortification. D2 to D4 then add the Minion structure and its bank (installed on a
+  Farm, Mine, Forge or the new Storehouse, which replaces the retired Market, collected slowly and
+  paid to whoever takes the node) and make the Pier a highway for its owner and a gate for the enemy.
 - The suit roster is now eleven, including three auto-assigned workers
-  (Merchant, Acolyte, Watcher). Suit and district numbers are per era.
+  (Merchant, Acolyte, Watcher; Merchant is now historical and never assigned). Suit and district numbers are per era.
 - The networking direction settled on peer-to-peer lockstep with a server-side
   referee that replays uploaded match logs, not a server running the match.
   Arena-tier *eras* are now unlocked by rank on the server; the lobby's

@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T01:16:59Z }
-verified_at_commit: ce96bae0f18f0e9052e2b27fa2d1b810284db8f3
+  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
 status: stable
 sources:
   - id: tests
@@ -135,7 +135,10 @@ Step 5: Assert expected state
   and the Infirmary (at most two counted workers, lowest villager ID, none under enemy presence) discounts the escalated cost with integer rounding/minimum 1
 - For an integration scenario over loss, duplication and reordering with replay and
   rollback, use `dotnet/CoreRulesFixture` (map `hourglass-01-acceptance`, a test-only copy that
-  never advertises its hash under the shipped map ID) rather than the shipped board.
+  never advertises its hash under the shipped map ID) rather than the shipped board. For banks,
+  gates and structure raids use `dotnet/BankRulesFixture` (map `hourglass-01-banks-acceptance`):
+  its witness asserts each rule actually fired, and its balance adds a Warrior suit entry, since
+  the default balance has no suit stats and Equip would otherwise refuse.
 - For the Fortress, assert level-by-level costs in either currency, refusal under enemy presence,
   non-stacking auras read from tick-start state, the divisor floor of 1 on claim and breach,
   and that ownership loss resets the level.
@@ -159,11 +162,13 @@ Step 5: Assert expected state
   Collect=9 uses value 1 to start and 0 to cancel; an empty bank, non-owner or invalid
   value refuses without hash mutation. A locked owner's start is accepted and paused.
   Collection follows minion production and precedes auto-recruit: one shared node clock,
-  +5 progress per active unlocked tick, transfer one at >=16 and subtract 16. A full five
+  +collectProgressPerTick (default 5) per active unlocked tick, transfer one at >=collectProgressPerUnit
+  (default 16) and subtract it; the constants live in GameBalanceData, not in BankRules. A full five
   drains at ticks 4,7,10,13,16, independent of tempo. Food/materials/metal priority skips
   full pools; all eligible pools full freezes progress. No requester resets progress;
   empty bank resets progress/request; cancel resets unless a stationary collector remains.
-  Use BankRules.Locked and HasStationaryCollector rather than restating eligibility.
+  Use BankRules.Locked and HasStationaryCollector rather than restating eligibility; the
+  CollectionState and InstallReason helpers must agree with CanCollect and CanInstallMinion.
   Lock pauses without reset; Restore completion unlocks collection in the same tick.
   Ownership changes cancel request/progress, including neutralisation.
   Assert bank total > 0 implies Minion; hash, copy and register every added node field.
