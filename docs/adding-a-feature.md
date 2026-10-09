@@ -6,8 +6,8 @@ tags: [process, checklist, simulation, testing]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-08T21:08:43Z }
-verified_at_commit: aaf9cfb406b140d5e54b2ae755c2938f1ec529fc
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
 status: stable
 sources:
   - id: sim-state
@@ -109,8 +109,8 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      the neutral value explicitly (`nextBreacherID` is -1, while
      `breachBar` and `paidRespawns` start at 0).
      That preserves old hashes; avoiding a version bump also requires
-     unchanged results for those existing inputs, as with eras. Version 3
-     is the current one; the terrain board moved both baselines.
+     unchanged results for those existing inputs, as with eras. Version 4
+     is current; D1's unconditional structure kind/HP terms moved both baselines.
    - If the field describes the *board* rather than the match (terrain, slot
      mask, base pools), it belongs on `BoardConfigData`, not on state, and it must
      reach `BoardHasher` (so `SimulationState.boardHash` and the `MatchSetup`
@@ -204,12 +204,14 @@ skipping a "yes" answer is how desyncs and silent bugs get introduced.
      documented on `GameSimulation.SimulateTick`).
    - Insert at the correct, justified step — do not append a new step at
      the end by default, and do not reorder existing steps.
-   - Claiming begins with `TickBreach` before `TickClaiming`; the Fortress
+   - Claiming runs `TickBreach`, then `TickStructureAttacks`, then `TickClaiming`; the Fortress
      resistance snapshot is taken from tick-start state, auto-recruit follows production, and order
      resume (`TickOrderResume`) follows win-check.
      Anything that depends on who owns a neighbouring node reads the
      tick-start owner snapshot, not live owners, so node order cannot matter.
      Refresh derived `nextBreacherID` last, after all mutations this tick.
+     Structure attack participation is tick-local: participants cannot claim or resume
+     a local action on the destruction tick. `OnOwnershipChanged` owns recruit and Fortress resets.
      Version 2 checks only new breaches against the current threshold;
      simultaneous losses cancel and a sudden-death drop alone is not a loss.
 

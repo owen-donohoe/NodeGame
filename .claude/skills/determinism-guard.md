@@ -101,7 +101,7 @@ Read the changed or proposed code, then check each item:
    - Canonical order: movement -> combat -> claiming -> 
      production -> healing -> respawns -> win-check
    - Preserve the tick-start resistance snapshot and the order-resume
-     pass (TickOrderResume) after win-check too. TickBreach precedes TickClaiming
+     pass (TickOrderResume) after win-check too. TickBreach precedes TickStructureAttacks, then TickClaiming
      inside claiming; the derived nextBreacherID refresh is last, after resume.
    - Does a rule that depends on neighbouring owners (the capture bonus,
      breach frontier) read the tick-start owner snapshot, not live owners? Are
@@ -112,6 +112,10 @@ Read the changed or proposed code, then check each item:
    - Fortress resistance must read the tick-start snapshot (owners and levels), take the
      highest aura (not a sum) with a lowest-source tiebreak, and reset fortressLevel on every
      ownership loss; invalid fortress cost or resistance arrays must disable upgrading, not be repaired.
+   - Structure attackers must be lowest-ID four non-Medic combat suits at the destination
+     or without an order. Tick-local participation prevents destruction-tick claiming;
+     post-combat resume defers damage. Fortress resistance never reduces structure damage,
+     higher upgrades never repair HP, and ownership resets use OnOwnershipChanged.
    - A Town reward is paid inside the claim-complete step, with its entitlement
      spent before the population-cap check (no deferred credit), tracked by the
      hashed `townPaidMask`.
@@ -140,10 +144,9 @@ Read the changed or proposed code, then check each item:
      they did when eras were added? If not, bump SimulationVersion.Current
      and review the pinned baseline version with the change. The version
      test checks equality with that pin, not whether hash constants were edited.
-     Current and BaselinesPinnedAtSimVersion are both 3; the v2 re-pin retained
-     the two numeric baseline hashes for the short, non-breaching fixtures; the v3
-     re-pin (terrain board) moved both, and C7 (removing the per-villager Rampart hash term) moved them again to 647286254 and 357327383 within the same unreleased version, because
-     boardHash and terrain are always hashed.
+     Current and BaselinesPinnedAtSimVersion are both 4. D1's unconditional structure
+     kind/HP terms moved the C7 v3 hashes to -563755666 and -2013445737. Both new fields
+     must be initialized None/0, hashed, copied and registered in the reflection guard.
    - DistrictType numbers are persisted and explicit: active set 0-6 and 13-17
      (DistrictRoster.IsActive), retired numbers reserved. Does any new path accept
      an inactive type or an alias? Only DistrictMigration (saved data) maps old

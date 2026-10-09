@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
-verified_at_commit: 55b647a7
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
 status: draft
 sources:
   - id: sim-state
@@ -62,6 +62,9 @@ from the map ID a `BoardConfig` names, so treat these as the shape of the tuning
 constants. The checked-in `DefaultGameBalance` asset carries the capture-bonus, recruit, Town,
 Infirmary and Fortress values at these defaults; where it differs from them (the claim threshold,
 heal interval, breach swarm and production timers below), the asset is what a match plays.
+The D1 structure tunables are code defaults pending the lead's Editor asset update/export;
+an old balance with all three structure tunables absent remains readable but cannot enable
+Fortress upgrading or structure attacks.
 
 ## The board
 
@@ -99,6 +102,7 @@ Each player starts with 3 villagers. A villager is always in exactly one `Villag
 | `Fighting` | On a node where both players have living villagers |
 | `Dead` | Awaiting respawn at the owner's Core |
 | `Breaching` | Filling the breach bar on an undefended enemy Core |
+| `AttackingStructure` | Damaging an undefended enemy structure at the destination or with no order |
 
 Villagers carry HP (default 5), attack damage, move speed, an attack cooldown, and a
 `fightPriority` used as the combat targeting sort key. A player is capped at 25 villagers.
@@ -142,7 +146,7 @@ Turning around therefore has a price, and repeated orders cannot stall a village
 and an order given mid-fight changes only the intent, never the attack clock or the fight. An
 unreachable or blocked destination is not dropped either: the villager waits and retries. Once
 combat has resolved, the final order-resume step of the tick replans from where each survivor
-stands and sets it walking again, or breaches, or arrives. Work and claim begun there count from
+stands and sets it walking again, or breaches, or arrives. Work, claim and structure attack begun there count from
 the next tick. A villager whose intent points elsewhere does not work or claim on the node it
 stands on. Arriving at the destination clears the intent.
 
@@ -203,13 +207,30 @@ places every district as `Fixed`, so those districts keep their type and placer'
 **The active roster** is `DistrictType` values 0–6 and 13–17 (`DistrictRoster.IsActive`): None,
 Farm, Mine, Village, Barracks, Core, Forge, Market, Pier, Town, Infirmary, Fortress. The draft, a
 board's placements and base pools, a loadout and a match log accept only these; nothing is
-accepted by an alias. Seven numbers are retired and stay reserved, never reused: Camp 7 and
+accepted by an alias. Six numbers are retired and stay reserved, never reused: Camp 7 and
 Arsenal 9 (now Barracks), Shrine 8 and Sanctuary 10 (now Infirmary, which takes over both jobs), Rampart 12 (now Fortress) and
 Watchtower 11 (now an empty slot). Saved decks and inventories are converted once
 (`DistrictMigration`, in `Backend/Shared`), keeping the old item owned, adding the replacement at
 the same era and collapsing duplicates. Rampart's
 occupant buffs (max HP and damage reduction) are gone from the simulation entirely; the Fortress replaces them
 with the paid aura above. The Watcher has no workplace.
+
+**Structures (simulation version 4).** A node has one optional `structureKind` and integer
+`structureHP`. Bare nodes are None/0. The first Fortress upgrade creates a Fortification
+with 16 HP; later upgrades never repair it, and it has no regeneration. Warrior, Guardian,
+Scout and Berserker deal one structural damage per tick, with at most four attackers chosen
+by lowest villager ID. Medic and excess soldiers claim alongside civilians, under the claim cap.
+Person combat interrupts the attack; survivors resume the structure action after win-check
+and deal damage starting next tick. Ordinary intermediate structures do not interrupt a route,
+and a Core always breaches instead.
+
+Structure damage resolves after breach and before claim bars. Destruction clears kind/HP and
+Fortress level without changing the district, owner or bar. Participating attackers idle for
+that tick and may claim next tick; a civilian may complete capture in the destruction tick.
+Fortress resistance does not reduce structural damage and still applies from the tick-start
+snapshot on the destruction tick. Re-upgrading starts at level 1 and its price again.
+Neutralisation and full claim both clear a Fortification through the central ownership transition.
+Minion is a reserved structure kind only at D1; installation, production and banks are not implemented.
 
 ## Suits
 
@@ -354,7 +375,7 @@ Every player action reaches the simulation as one of seven active `GameCommand` 
 | `Respawn` | Pay food to return a dead villager to its Core **immediately**, skipping the timer |
 | `Recruit` (5) | Pay food to append one base, unsuited Idle villager at an owned, uncontested Village |
 | `SetAutoRecruit` (6) | Set an owned Village's repeat flag to the absolute value 0 or 1 |
-| `UpgradeFortress` (7) | Raise an owned, unoccupied Fortress one level; `value` 0 pays materials, 1 pays metal; `villagerID = -1` |
+| `UpgradeFortress` (7) | Raise an owned, uncontested Fortress one level; `value` 0 pays materials, 1 pays metal; `villagerID = -1`; the first upgrade creates a full-HP Fortification |
 
 Recruit needs no worker or visitor. With pre-recruit player count N, the default
 price is `6 + 3N` food and the Village cooldown is that many seconds, converted

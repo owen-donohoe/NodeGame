@@ -166,14 +166,14 @@ itself only ever counts ticks.
 
 **Tick order is canonical and must not be reordered:**
 ```
-movement → combat → claiming (breach → claim) → production → healing → respawns → win-check
+movement → combat → claiming (breach → structure attack → claim) → production → healing → respawns → win-check
 ```
 Why: each step reads state the previous step produced (e.g. claiming
 depends on where combat left villagers standing this tick); reordering
 changes game behavior in a way that's easy to miss testing against
 yourself but will desync against any peer/build still running the old
 order. (`GameSimulation.SimulateTick` also builds a resistance snapshot
-from the tick-start owners and Fortress levels, `TickBreach` immediately before `TickClaiming`, and
+from the tick-start owners and Fortress levels, `TickBreach` then `TickStructureAttacks` before `TickClaiming`, and
 order resume (`TickOrderResume`) after win-check. The final derived refresh of every
 player's `nextBreacherID` follows resume, so it reflects all mutations
 this tick. Tempo events are emitted after incrementing the tick count,
@@ -246,6 +246,18 @@ computed once per tick from the tick-start snapshot (`BuildResistanceSnapshot`: 
 highest aura on a node wins, ties to the lowest source node) and divides the claim rate and
 the Core breach rate after the frontier and tempo steps, with a floor of 1; breach keeps its
 tempo independence.
+
+D1 adds unconditional `NodeData.structureKind` and `structureHP` hash terms after terrain,
+initialized None/0 by `MatchFactory` and copied by the node-array value clone. `AttackingStructure`
+is appended after Breaching. `StructureRules` selects the lowest-ID four eligible non-Medic
+combat suits on an undefended enemy structure at their destination or without an order.
+Damage is integer-only, unscaled by tempo or Fortress resistance. A tick-local participation
+array prevents attacking and claiming on the destruction tick; it is not persistent state.
+Post-combat resume starts the action for damage on the next tick. `OnOwnershipChanged` centralizes
+recruit resets and clearing Fortress level and Fortification kind/HP on neutralisation/full claim.
+First upgrade creates full HP; higher upgrades do not repair; destruction removes the aura
+from the next tick's snapshot. Structure balance scalars append tagged zero-neutral contributions
+under 3011–3013; absent historical tuning cannot enable the ability.
 
 C4 adds the false-neutral `NodeData.townPaidMask` (bit 0 and bit 1 for the players whose
 first full claim of that Town has paid), hashed only when non-zero under tag 4012 with
@@ -329,10 +341,9 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `SimulationVersion.Current`, and a content hash,
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
 
-The current simulation version and baseline pin are **3** (v3 added terrain and a
-board fingerprint to the hashed state and re-pinned both baselines; C7 then removed the
-unconditional per-villager `hasRampartBonus` hash term and moved them again, to 647286254
-and 357327383, still within version 3). With a valid
+The current simulation version and baseline pin are **4**. D1 adds suit-driven structure
+attack and two unconditional structure terms per node, moving the C7 v3 fingerprints
+to -563755666 and -2013445737. With a valid
 breach channel enabled, a loss requires a breach this tick at or above
 `BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
 threshold alone never loses a match. Disabling the channel retains

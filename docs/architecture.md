@@ -579,7 +579,7 @@ Pointer (mouse / touch)        or  BotPlayer
         │
         ▼
  GameSimulation.SimulateTick            (Simulation/)
-        │  advances the tick: movement → combat → claiming (breach → claim) →
+        │  advances the tick: movement → combat → claiming (breach → structure attack → claim) →
         │  production → healing → respawns → win-check
         ▼
      SimulationState  (updated)
@@ -616,6 +616,13 @@ current node once a tick, after every rule pass. Simulation version 3 adds terra
 `NodeData.terrain` and `SimulationState.boardHash` (the `BoardHasher` fingerprint of
 the board) are hashed, and the capture bonus, restore and the retired Watchtower and
 Rampart effects (Fortress resistance replaced the latter: `NodeData.fortressLevel`, the `UpgradeFortress` command validated through `NodeActionRules`) are described in `docs/game-model.md`.
+
+Simulation version 4 adds the shared `NodeData.structureKind`/`structureHP` fields and
+appends `VillagerState.AttackingStructure`. `StructureRules` owns suit eligibility and
+lowest-ID selection; tick-local participation prevents destruction-tick claiming.
+`OnOwnershipChanged` is the one reset path for recruit fields and Fortress level/structure.
+Bots preserve the channel, the view handles it explicitly, and rig diagnostics count it as busy.
+At D1 only Fortifications are constructed; Minion is a reserved enum kind.
 
 ### What a tick did
 

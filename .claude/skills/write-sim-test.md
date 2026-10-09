@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
-verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
 status: stable
 sources:
   - id: tests
@@ -118,6 +118,11 @@ Step 5: Assert expected state
 - For the Fortress, assert level-by-level costs in either currency, refusal under enemy presence,
   non-stacking auras read from tick-start state, the divisor floor of 1 on claim and breach,
   and that ownership loss resets the level.
+- For structures, assert HP16 takes 16 lone attack ticks, lowest-ID four attackers,
+  Medic and surplus soldiers claiming, no attack on transit/own nodes or Cores,
+  post-combat damage deferred to the next tick, and no destruction-tick claim by participants.
+  Fortress upgrades above level 1 preserve damaged HP; destruction resets the level,
+  rebuy costs level 1, and the aura disappears only on the following tick.
 - For Town, assert each player is paid once on their first full claim (including a
   raider taking the enemy Town), the reward is capped by population room and still
   consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.
@@ -139,9 +144,10 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 3 (647286254 and 357327383 after C7). The neutral
-  recruit fields retain those two fingerprints; the terrain addition re-pinned both,
-  because terrain and boardHash are always hashed.
+- The current baseline pin is version 4 (-563755666 and -2013445737 after D1).
+  Unconditional structure kind/HP terms on all three bare nodes moved the previous
+  C7 fingerprints (647286254 and 357327383). Balance tuning extensions are tagged
+  and zero-neutral; historical absent tuning does not enable Fortress upgrading.
   Conditional hashing does not make older simulation-version logs replayable
 - Name this test with _Determinism suffix
 

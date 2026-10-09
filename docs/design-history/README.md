@@ -6,8 +6,8 @@ tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
 status: stable
 sources:
   - id: v21-pdf
@@ -73,6 +73,8 @@ of its points have moved since:
   has been retired in favour of a frontier capture bonus. The district roster has since been
   consolidated: Camp and Arsenal became Barracks, Shrine and Sanctuary became Infirmary, Rampart
   became Fortress and Watchtower an empty slot, with a Town added; the old numbers are reserved.
+  D1 adds a shared structure slot and suit-driven attacks: a paid Fortress upgrade builds
+  a destructible Fortification. Minion is only a reserved kind at this step, with no production or banks.
 - The suit roster is now eleven, including three auto-assigned workers
   (Merchant, Acolyte, Watcher). Suit and district numbers are per era.
 - The networking direction settled on peer-to-peer lockstep with a server-side

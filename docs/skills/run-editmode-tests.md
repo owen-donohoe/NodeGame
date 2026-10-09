@@ -6,8 +6,8 @@ tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
-verified_at_commit: 3f84db4b852e99ecda6ba5107b24c04cfdc0569b
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
 status: stable
 sources:
   - id: batch-runner
@@ -122,8 +122,9 @@ Note that a runner's own exit code answers "did the run complete and did every t
 not the same question as "is the determinism gate satisfied at this commit". The attester answers
 the second.
 
-The current baseline pin is simulation version **3**, with fingerprints `647286254`
-(`EmptyTick`) and `357327383` (`MoveAndCombat`); the v3 terrain board moved both, and C7 moved them again. Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
+The current baseline pin is simulation version **4**, with fingerprints `-563755666`
+(`EmptyTick`) and `-2013445737` (`MoveAndCombat`); D1's unconditional structure kind/HP
+terms moved both after the v3 terrain/C7 changes. Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
 they include a balance-asset text guard outside the shared EditMode suite and are not a claim
 about how many cases a Unity run executes.
 
