@@ -18,6 +18,7 @@ namespace NodeWar.Tests
         private int next;
 
         [TestCase("bankFood")] [TestCase("bankMaterials")] [TestCase("bankMetal")]
+        [TestCase("collectProgress")] [TestCase("collectRequested")]
         [TestCase("minionProductionRemaining")] [TestCase("storehouseNextResource")] [TestCase("storehouseInitialised")]
         public void CopyFrom_BankFieldsRoundTripAndStayIndependent(string name)
         {

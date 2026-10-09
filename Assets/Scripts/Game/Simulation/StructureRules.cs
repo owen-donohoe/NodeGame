@@ -41,9 +41,11 @@ namespace NodeWar.Simulation
 
         public static NodeData Destroy(NodeData node)
         {
-            // D3 will pay raider loot before calling this clearing helper.
+            // Callers pay any capture/raider loot before this clearing helper.
             // Never leave bank contents on a bare node (bank > 0 implies Minion).
             node.bankFood = node.bankMaterials = node.bankMetal = 0;
+            node.collectProgress = 0;
+            node.collectRequested = false;
             node.minionProductionRemaining = 0;
             node.storehouseNextResource = 0;
             node.structureKind = StructureKind.None;

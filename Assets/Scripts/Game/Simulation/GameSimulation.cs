@@ -52,6 +52,7 @@ namespace NodeWar.Simulation
             // Step 5: Production
             TickProduction(state);
             TickMinionProduction(state);
+            TickBankCollection(state);
             TickAutoRecruit(state);
 
             // Step 6: Healing
@@ -493,7 +494,12 @@ namespace NodeWar.Simulation
                 if (attackers == 0) continue;
                 NodeData node = state.nodes[nodeID];
                 node.structureHP = (int)System.Math.Max(0, (long)node.structureHP - (long)attackers * bal.structureDamagePerTick);
-                if (node.structureHP == 0) node = StructureRules.Destroy(node);
+                if (node.structureHP == 0)
+                {
+                    if (node.structureKind == StructureKind.Minion)
+                        BankRules.PayBank(state, node, 1 - node.ownerID, bal);
+                    node = StructureRules.Destroy(node);
+                }
                 state.nodes[nodeID] = node;
             }
             return participants;
@@ -687,6 +693,12 @@ namespace NodeWar.Simulation
                     CommandProcessor.TryRecruit(state, state.nodes[nodeID].ownerID, nodeID);
         }
 
+        private static void TickBankCollection(SimulationState state)
+        {
+            for (int nodeID = 0; nodeID < state.nodes.Length; nodeID++)
+                state.nodes[nodeID] = BankRules.TickCollection(state, state.nodes[nodeID], bal);
+        }
+
         private static void TickMinionProduction(SimulationState state)
         {
             int decrement = bal.ProductionTempoValid()
@@ -878,6 +890,8 @@ namespace NodeWar.Simulation
                 node.autoRecruit = false;
                 node.recruitReadyTick = 0;
                 node.fortressLevel = 0;
+                node.collectProgress = 0;
+                node.collectRequested = false;
             }
             if (newOwner >= 0 && node.structureKind == StructureKind.Minion)
             {

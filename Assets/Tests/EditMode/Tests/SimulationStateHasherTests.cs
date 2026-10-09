@@ -18,6 +18,7 @@ namespace NodeWar.Tests
             "SimulationState.defaultLinkWeight", "SimulationState.boardHash",
             "NodeData.nodeID", "NodeData.districtType", "NodeData.claimBar", "NodeData.ownerID",
             "NodeData.materialAllocation", "NodeData.upgradeCategory", "NodeData.baseDistrictType",
+            "NodeData.collectProgress", "NodeData.collectRequested",
             "NodeData.bankFood", "NodeData.bankMaterials", "NodeData.bankMetal", "NodeData.minionProductionRemaining", "NodeData.storehouseNextResource", "NodeData.storehouseInitialised", "NodeData.structureKind", "NodeData.structureHP", "NodeData.fortressLevel", "NodeData.townPaidMask", "NodeData.districtEra", "NodeData.terrain", "NodeData.recruitReadyTick", "NodeData.autoRecruit",
             "VillagerData.villagerID", "VillagerData.ownerID", "VillagerData.currentNodeID",
             "VillagerData.targetNodeID", "VillagerData.movePath", "VillagerData.movePathIndex",

@@ -68,11 +68,14 @@ namespace NodeWar.Tests
             s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 0, 1, b) }; Tick(s);
             Assert.AreEqual(16, s.nodes[1].structureHP); Assert.IsTrue(s.nodes[1].storehouseInitialised);
             Assert.AreEqual(VillagerState.Idle, s.villagers[0].state); Assert.AreEqual(SuitType.None, s.villagers[0].suit);
+            // D3 stationary presence collects; isolate the production clock here.
+            s.villagers = new VillagerData[0];
             Tick(s, 79); Assert.AreEqual(1, s.nodes[1].bankFood); Assert.AreEqual(0, s.nodes[1].bankMaterials);
             Tick(s, 80); Assert.AreEqual(1, s.nodes[1].bankMaterials); Assert.AreEqual(0, s.players[0].food);
             s.nodes[1] = StructureRules.Destroy(s.nodes[1]);
             Assert.IsTrue(s.nodes[1].storehouseInitialised); Assert.AreEqual(0, s.nodes[1].minionProductionRemaining);
-            s.nodes[1].ownerID = -1; s.nodes[1].claimBar = b.claimThreshold - 1; Tick(s);
+            s.nodes[1].ownerID = -1; s.nodes[1].claimBar = b.claimThreshold - 1;
+            s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 0, 1, b) }; Tick(s);
             Assert.AreEqual(0, s.nodes[1].structureHP); Assert.AreEqual(StructureKind.None, s.nodes[1].structureKind);
             s.players[0].metal = 3; CommandProcessor.ProcessCommand(s, Install()); Assert.AreEqual(16, s.nodes[1].structureHP); return s;
         }, determinism);
@@ -139,13 +142,14 @@ namespace NodeWar.Tests
         }, determinism);
 
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void AttackerDestroysMinion_ClearsAutomationWithLootDeferredToD3(bool determinism) => Repeat(() => {
+        public void AttackerDestroysMinion_ClearsAutomationAndPaysLoot(bool determinism) => Repeat(() => {
             var b = Configure(); var s = Board(b); Minion(s); s.nodes[1].structureHP = 1; s.nodes[1].bankFood = 2;
             s.nodes[1].storehouseNextResource = 1; s.nodes[1].minionProductionRemaining = 9;
             s.villagers = new[] { TestBoardFactory.MakeIdleVillager(0, 1, 1, b) }; s.villagers[0].suit = SuitType.Warrior;
             Tick(s); Assert.AreEqual(StructureKind.None, s.nodes[1].structureKind); Assert.AreEqual(0, s.nodes[1].structureHP);
             Assert.AreEqual(0, s.nodes[1].minionProductionRemaining); Assert.AreEqual(0, s.nodes[1].storehouseNextResource);
             Assert.AreEqual(0, BankRules.Total(s.nodes[1])); Assert.AreEqual(0, s.nodes[1].ownerID);
+            Assert.AreEqual(2, s.players[1].food);
             Assert.AreEqual(b.claimThreshold, s.nodes[1].claimBar); Assert.AreEqual(VillagerState.Idle, s.villagers[0].state); return s;
         }, determinism);
 

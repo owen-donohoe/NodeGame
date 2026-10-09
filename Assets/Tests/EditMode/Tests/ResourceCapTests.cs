@@ -63,6 +63,8 @@ namespace NodeWar.Tests
         public void StorehouseBanksEvenWhenPoolIsFull(bool foodFull)
         {
             var b = GameBalanceData.Default(); var state = Worker(b, DistrictType.Storehouse);
+            // D3 idle presence collects; this test isolates bank production.
+            state.villagers[0].currentNodeID = state.villagers[0].previousNodeID = 0;
             state.nodes[1].structureKind = StructureKind.Minion; state.nodes[1].structureHP = b.minionHP;
             state.nodes[1].minionProductionRemaining = 80; state.nodes[1].storehouseInitialised = true;
             state.players[0].food = foodFull ? 30 : 0; state.players[0].materials = foodFull ? 0 : 30;

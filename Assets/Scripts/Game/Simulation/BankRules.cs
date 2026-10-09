@@ -24,6 +24,63 @@ namespace NodeWar.Simulation
         public static bool MinionDistrict(DistrictType type) => type == DistrictType.Farm || type == DistrictType.Mine ||
             type == DistrictType.Forge || type == DistrictType.Storehouse;
 
+        // A locked owner's request is accepted; the production pass pauses it.
+        public static bool CanCollect(SimulationState state, GameCommand command)
+        {
+            if ((command.value != 0 && command.value != 1) || command.villagerID != -1 ||
+                command.playerID < 0 || command.playerID > 1 || command.playerID >= state.players.Length ||
+                command.targetNodeID < 0 || command.targetNodeID >= state.nodes.Length) return false;
+            NodeData node = state.nodes[command.targetNodeID];
+            return node.ownerID == command.playerID && Total(node) > 0;
+        }
+
+        private static bool PoolHasRoom(int value, int cap) => value < (cap > 0 ? cap : int.MaxValue);
+
+        private static int CollectibleResource(SimulationState state, NodeData node, GameBalanceData balance)
+        {
+            PlayerData player = state.players[node.ownerID];
+            if (node.bankFood > 0 && PoolHasRoom(player.food, balance.foodCap)) return 0;
+            if (node.bankMaterials > 0 && PoolHasRoom(player.materials, balance.materialsCap)) return 1;
+            if (node.bankMetal > 0 && PoolHasRoom(player.metal, balance.metalCap)) return 2;
+            return -1;
+        }
+
+        public static NodeData TickCollection(SimulationState state, NodeData node, GameBalanceData balance)
+        {
+            if (Total(node) == 0)
+            {
+                node.collectProgress = 0;
+                node.collectRequested = false;
+                return node;
+            }
+            if (!node.collectRequested && !HasStationaryCollector(state, node))
+            {
+                node.collectProgress = 0;
+                return node;
+            }
+            if (Locked(state, node, balance)) return node;
+            int resource = CollectibleResource(state, node, balance);
+            if (resource < 0) return node;
+            // One shared dwell clock, independent of production tempo.
+            node.collectProgress += 5;
+            if (node.collectProgress >= 16)
+            {
+                node.collectProgress -= 16;
+                switch (resource)
+                {
+                    case 0: node.bankFood--; state.players[node.ownerID].food++; break;
+                    case 1: node.bankMaterials--; state.players[node.ownerID].materials++; break;
+                    case 2: node.bankMetal--; state.players[node.ownerID].metal++; break;
+                }
+                if (Total(node) == 0)
+                {
+                    node.collectProgress = 0;
+                    node.collectRequested = false;
+                }
+            }
+            return node;
+        }
+
         public static int ProductionTicks(NodeData node, GameBalanceData balance) =>
             MinionDistrict(node.districtType) ? balance.GetDistrictStats(node.districtType, node.districtEra).productionTicks : 0;
 
@@ -99,7 +156,7 @@ namespace NodeWar.Simulation
             return (int)System.Math.Min(cap > 0 ? cap : int.MaxValue, sum);
         }
 
-        // D3's destruction payout can use this exact transfer before Destroy.
+        // Capture and structure destruction share this capped payout before Destroy.
         public static void PayBank(SimulationState state, NodeData node, int playerID, GameBalanceData balance)
         {
             state.players[playerID].food = AddLoot(state.players[playerID].food, node.bankFood, balance.foodCap);

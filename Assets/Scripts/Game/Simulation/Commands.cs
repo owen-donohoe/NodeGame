@@ -10,7 +10,8 @@ namespace NodeWar.Simulation
         Recruit = 5,
         SetAutoRecruit = 6,
         UpgradeFortress = 7,
-        InstallMinion = 8
+        InstallMinion = 8,
+        Collect = 9
     }
 
     [System.Serializable]
@@ -37,6 +38,7 @@ namespace NodeWar.Simulation
                 case CommandType.Respawn:
                 case CommandType.Recruit:
                 case CommandType.InstallMinion:
+                case CommandType.Collect:
                 case CommandType.UpgradeFortress:
                 case CommandType.SetAutoRecruit:
                     return true;

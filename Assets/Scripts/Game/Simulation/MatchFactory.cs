@@ -177,6 +177,7 @@ namespace NodeWar.Simulation
                     structureKind = StructureKind.None,
                     structureHP = 0,
                     bankFood = 0, bankMaterials = 0, bankMetal = 0,
+                    collectProgress = 0, collectRequested = false,
                     minionProductionRemaining = 0, storehouseNextResource = 0, storehouseInitialised = false,
                     materialAllocation = 0,
                     recruitReadyTick = 0,

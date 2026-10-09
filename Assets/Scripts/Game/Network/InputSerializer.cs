@@ -117,7 +117,7 @@ namespace NodeWar.Network
 
             for (int i = 0; i < commandCount; i++)
             {
-                // InstallMinion=8 and UpgradeFortress=7 use the existing six-integer payload.
+                // Collect=9, InstallMinion=8 and UpgradeFortress=7 keep the six-integer payload.
                 if (!CommandTypes.IsKnown(input.commands[i].type))
                     throw new System.ArgumentException("Unknown command type.", nameof(input));
                 WriteInt(data, ref offset, (int)input.commands[i].type);

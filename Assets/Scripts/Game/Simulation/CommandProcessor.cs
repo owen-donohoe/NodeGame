@@ -34,6 +34,9 @@ namespace NodeWar.Simulation
                 case CommandType.InstallMinion:
                     ProcessInstallMinion(state, command);
                     break;
+                case CommandType.Collect:
+                    ProcessCollect(state, command);
+                    break;
                 case CommandType.UpgradeFortress:
                     ProcessUpgradeFortress(state, command);
                     break;
@@ -42,6 +45,15 @@ namespace NodeWar.Simulation
                     break;
             }
         }
+        private static void ProcessCollect(SimulationState state, GameCommand command)
+        {
+            if (!BankRules.CanCollect(state, command)) return;
+            int nodeID = command.targetNodeID;
+            state.nodes[nodeID].collectRequested = command.value == 1;
+            if (command.value == 0 && !BankRules.HasStationaryCollector(state, state.nodes[nodeID]))
+                state.nodes[nodeID].collectProgress = 0;
+        }
+
         private static void ProcessInstallMinion(SimulationState state, GameCommand command)
         {
             if (!BankRules.CanInstallMinion(state, bal, command)) return;

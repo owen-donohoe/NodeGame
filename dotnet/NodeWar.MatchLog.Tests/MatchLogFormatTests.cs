@@ -22,6 +22,14 @@ namespace NodeWar.MatchLog
             Assert.AreEqual(district, decoded.loadouts[0].districts[0]);
         }
 
+        [TestCase(0)] [TestCase(1)]
+        public void Collect_RoundTripsStartCancelAllFields(int value)
+        {
+            Assert.AreEqual("Collect", Enum.GetName(typeof(CommandType), 9));
+            var command = new GameCommand { type = (CommandType)9, playerID = 1, villagerID = -1, targetNodeID = 18, issuedOnTick = 123, value = value };
+            var log = TestLogs.Full(); log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
+            byte[] bytes = MatchLogFormat.Write(log); Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2)); Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
+        }
         [Test]
         public void InstallMinion_RoundTripsAllFields()
         {
@@ -52,7 +60,7 @@ namespace NodeWar.MatchLog
             Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
         }
 
-        [TestCase(-1)] [TestCase(9)] [TestCase(int.MaxValue)]
+        [TestCase(-1)] [TestCase(10)] [TestCase(int.MaxValue)]
         public void UnknownCommandType_IsRefused(int type)
         {
             var log = TestLogs.Full();

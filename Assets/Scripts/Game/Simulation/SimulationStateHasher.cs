@@ -102,6 +102,8 @@ namespace NodeWar.Simulation
                     hash = HashNodeExtension(hash, i, 2023, state.nodes[i].minionProductionRemaining);
                     hash = HashNodeExtension(hash, i, 2024, state.nodes[i].storehouseNextResource);
                     hash = HashNodeExtension(hash, i, 2025, state.nodes[i].storehouseInitialised ? 1 : 0);
+                    hash = HashNodeExtension(hash, i, 2026, state.nodes[i].collectProgress);
+                    hash = HashNodeExtension(hash, i, 2027, state.nodes[i].collectRequested ? 1 : 0);
                     if (state.nodes[i].districtEra != 0)
                         hash = hash * 31 + state.nodes[i].districtEra;
                     if (state.nodes[i].recruitReadyTick != 0)
