@@ -33,7 +33,7 @@ namespace NodeWar.MatchLog
             Assert.That(logged,Is.EqualTo(scripted)); Assert.That(logged,Is.GreaterThan(0));
             var types=new System.Collections.Generic.HashSet<CommandType>();
             foreach(var tick in log.ticks) foreach(var c in tick.commands) types.Add(c.type);
-            CollectionAssert.IsSupersetOf(types,new[]{CommandType.Collect,CommandType.Recruit,CommandType.UpgradeFortress,CommandType.Equip,CommandType.Move});
+            CollectionAssert.IsSupersetOf(types,new[]{CommandType.ForgeMinion,CommandType.Collect,CommandType.Recruit,CommandType.UpgradeFortress,CommandType.Equip,CommandType.Move});
             Assert.That(log.hashes.Count,Is.EqualTo(1500));
             var outcome=MatchReplay.Run(log,balance); Assert.That(outcome.ok,Is.True,outcome.error);
             Assert.That(outcome.finalHash,Is.EqualTo(SimulationStateHasher.ComputeHash(reference)));
@@ -42,18 +42,24 @@ namespace NodeWar.MatchLog
             var v3=RoundTrip(log); v3.header.sim=3;
             var refused=MatchReplay.Run(v3,balance); Assert.That(refused.ok,Is.False); StringAssert.Contains("simulation version",refused.error);
 
-            // A tampered bank outcome (a checkpoint inside the lock/restore window, then the final hash) is rejected.
-            var tampered=RoundTrip(log); int index=tampered.hashes.FindIndex(h => h.tick>=420);
+            // A checkpoint during the first health raid, and the final hash, are independent rejection oracles.
+            var tampered=RoundTrip(log); int index=tampered.hashes.FindIndex(h => h.tick>=120);
             var cp=tampered.hashes[index]; tampered.hashes[index]=new HashCheckpoint {tick=cp.tick,hash=cp.hash+1};
             var bad=MatchReplay.Run(tampered,balance); Assert.That(bad.ok,Is.False); Assert.That(bad.firstMismatchTick,Is.EqualTo(cp.tick));
             var badFinal=RoundTrip(log); badFinal.result.finalHash++; Assert.That(MatchReplay.Run(badFinal,balance).ok,Is.False);
 
             // A midpoint copy, replayed to the end, is the same full state.
             var s=BankRulesFixture.NewState(); Advance(s,750); var copy=new SimulationState(); copy.CopyFrom(s);
-            Advance(s,770); s.CopyFrom(copy); Advance(s,1500);
+            int midpointHash=SimulationStateHasher.ComputeHash(copy);
+            Advance(s,770); Assert.That(SimulationStateHasher.ComputeHash(copy),Is.EqualTo(midpointHash),"The saved snapshot is independent.");
+            s.CopyFrom(copy); Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(midpointHash)); Advance(s,1500);
             Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(outcome.finalHash));
-            for(int i=0;i<s.nodes.Length;i++) Assert.That((s.nodes[i].bankFood,s.nodes[i].districtHealth,s.nodes[i].ownerID,s.nodes[i].collectProgress),
-                Is.EqualTo((reference.nodes[i].bankFood,reference.nodes[i].districtHealth,reference.nodes[i].ownerID,reference.nodes[i].collectProgress)));
+            for(int i=0;i<s.nodes.Length;i++) Assert.That((s.nodes[i].bankFood,s.nodes[i].bankMaterials,s.nodes[i].bankMetal,s.nodes[i].districtHealth,
+                s.nodes[i].bankProductionRemaining,s.nodes[i].ownerID,s.nodes[i].collectProgress,s.nodes[i].collectRequested),
+                Is.EqualTo((reference.nodes[i].bankFood,reference.nodes[i].bankMaterials,reference.nodes[i].bankMetal,reference.nodes[i].districtHealth,
+                reference.nodes[i].bankProductionRemaining,reference.nodes[i].ownerID,reference.nodes[i].collectProgress,reference.nodes[i].collectRequested)));
+            Assert.That((s.villagers[BankRulesFixture.Minion].suit,s.villagers[BankRulesFixture.Minion].hp,s.villagers[BankRulesFixture.Minion].isConsumed),
+                Is.EqualTo((SuitType.Minion,0,true)));
         }
         [Test] public void Version4Script_ReplaysAllCommands_Determinism()
         {BankRulesFixture.Reference(out var a,out _); BankRulesFixture.Reference(out var b,out _); CollectionAssert.AreEqual(a,b);}

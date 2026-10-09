@@ -353,7 +353,7 @@ namespace NodeWar.BalanceRig
             }
         }
 
-        /// <summary>One line per side: owned districts, villagers by state, soldiers, resources.</summary>
+        /// <summary>One line per side: owned districts, bodies by state (excluding minions), soldiers, resources.</summary>
         public static void Trace(System.IO.TextWriter w, SimulationState state)
         {
             for (int p = 0; p < 2; p++)
@@ -368,7 +368,7 @@ namespace NodeWar.BalanceRig
                 for (int v = 0; v < state.villagers.Length; v++)
                 {
                     VillagerData vil = state.villagers[v];
-                    if (vil.ownerID != p || vil.isConsumed) continue;
+                    if (vil.ownerID != p || vil.isConsumed || !NodeActionRules.IsBody(vil)) continue;
                     byState[(int)vil.state]++;
                     if (vil.state != VillagerState.Dead && GameBalanceData.IsCombatSuit(vil.suit)) soldiers++;
                 }
@@ -406,7 +406,7 @@ namespace NodeWar.BalanceRig
             {
                 VillagerData vil = state.villagers[v];
                 if (vil.ownerID < 0 || vil.ownerID > 1) continue;
-                if (vil.state == VillagerState.Dead || vil.isConsumed) continue;
+                if (vil.state == VillagerState.Dead || vil.isConsumed || !NodeActionRules.IsBody(vil)) continue;
                 if (!GameBalanceData.IsCombatSuit(vil.suit))
                 {
                     int at = vil.currentNodeID;

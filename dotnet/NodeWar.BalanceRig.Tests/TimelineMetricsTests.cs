@@ -99,6 +99,28 @@ namespace NodeWar.BalanceRig
         }
 
         [Test]
+        public void CollectorMinions_ArePopulationButNotIdleBodiesOrBarracksStalls()
+        {
+            var s = State();
+            s.nodes[3].districtType = DistrictType.Barracks; s.nodes[3].ownerID = 0;
+            s.villagers = new[] {
+                new VillagerData { villagerID = 0, ownerID = 0, currentNodeID = 3, hp = 8, suit = SuitType.Minion, state = VillagerState.Idle },
+                new VillagerData { villagerID = 1, ownerID = 0, currentNodeID = 3, hp = 0, suit = SuitType.Minion, state = VillagerState.Dead, isConsumed = true },
+                new VillagerData { villagerID = 2, ownerID = 0, currentNodeID = CoreP0, hp = 5, state = VillagerState.Idle }
+            };
+            var m = new TimelineMetrics(s, 10); Tick(m, s, 1);
+            Assert.That(m.Windows[0].idleVillagerTicks[0], Is.EqualTo(1));
+            Assert.That(m.Windows[0].idlePeak[0], Is.EqualTo(1));
+            var result = new MatchResult(); MatchRunner.TrackFleet(s, result);
+            Assert.That(result.ticksIdleOnBarracks[0], Is.Zero);
+            Assert.That(result.soldiersEnd[0], Is.Zero);
+            MatchRunner.Finish(s, result, GameBalanceData.Default());
+            Assert.That(result.villagersAlive[0], Is.EqualTo(2), "Living minions count toward the final population.");
+            var trace = new System.IO.StringWriter(); MatchRunner.Trace(trace, s);
+            StringAssert.Contains("idle=1", trace.ToString());
+        }
+
+        [Test]
         public void BanksDoNotChangeMetricMeaning()
         {
             var s = State();
