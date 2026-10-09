@@ -39,6 +39,17 @@ namespace NodeWar.View.Tests
             Assert.That(display.Workers,Is.False);
             Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(hash));
         }
+        [Test] public void DestroyedStructureClearsArtWithoutWritingState()
+        {
+            var b = GameBalanceData.Default();
+            var n = new NodeData { districtType = DistrictType.Farm, structureKind = StructureKind.Minion, structureHP = 16, bankFood = 3 };
+            Assert.That(StructurePresentation.PipCount(n), Is.EqualTo(3));
+            Assert.That(StructurePresentation.Visible(n, b), Is.True);
+            Assert.That((n.structureKind, n.structureHP, n.bankFood), Is.EqualTo((StructureKind.Minion, 16, 3)));
+            n = StructureRules.Destroy(n);
+            Assert.That((StructurePresentation.Visible(n, b), StructurePresentation.PipCount(n), StructurePresentation.MinionBadge(n)),
+                Is.EqualTo((false, 0, false)));
+        }
         [Test] public void LayeringAndSeatOffsetsStayClear()
         {
             Assert.That(StructurePresentation.BackOrder, Is.EqualTo(402));
@@ -46,6 +57,8 @@ namespace NodeWar.View.Tests
             foreach (int order in new[] { StructurePresentation.BackOrder, StructurePresentation.FillOrder })
             {
                 Assert.That(order, Is.GreaterThan(TerrainPresentation.OutlineSortingOrder));
+                Assert.That(order, Is.GreaterThan(TerrainPresentation.GroundSortingOrder));
+                Assert.That(order, Is.GreaterThan(TerrainPresentation.TintSortingOrder));
                 Assert.That(order, Is.Not.EqualTo(400)); Assert.That(order, Is.Not.EqualTo(401));
             }
             StructurePresentation.Offset(0, out float x0, out float z0);
