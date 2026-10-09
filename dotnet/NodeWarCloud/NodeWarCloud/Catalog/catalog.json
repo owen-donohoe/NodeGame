@@ -1370,5 +1370,54 @@
         "BaseId":  "district.storehouse",
         "Era":  -1,
         "Retired":  false
+    },
+    {
+        "Id":  "district.workshop.e0",
+        "Kind":  "Variant",
+        "BaseId":  "district.workshop",
+        "Era":  0,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.workshop.e1",
+        "Kind":  "Variant",
+        "BaseId":  "district.workshop",
+        "Era":  1,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.workshop.e2",
+        "Kind":  "Variant",
+        "BaseId":  "district.workshop",
+        "Era":  2,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.workshop.e3",
+        "Kind":  "Variant",
+        "BaseId":  "district.workshop",
+        "Era":  3,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.workshop.e4",
+        "Kind":  "Variant",
+        "BaseId":  "district.workshop",
+        "Era":  4,
+        "Retired":  false
+    },
+    {
+        "Id":  "district.workshop.e5",
+        "Kind":  "Variant",
+        "BaseId":  "district.workshop",
+        "Era":  5,
+        "Retired":  false
+    },
+    {
+        "Id":  "skin.district.workshop.default",
+        "Kind":  "Skin",
+        "BaseId":  "district.workshop",
+        "Era":  -1,
+        "Retired":  false
     }
 ]

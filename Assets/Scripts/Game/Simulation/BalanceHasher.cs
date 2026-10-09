@@ -164,6 +164,14 @@ namespace NodeWar.Simulation
                         if (d.pierTravelDivisor != 0)
                         { hash = hash * 31 + 3018; hash = hash * 31 + i; hash = hash * 31 + d.pierTravelDivisor; }
                     }
+                // E2 extensions: absent historical tuning is zero-neutral.
+                if (b.minionHP != 0) { hash = hash * 31 + 3023; hash = hash * 31 + b.minionHP; }
+                if (b.minionMetalCost != 0) { hash = hash * 31 + 3024; hash = hash * 31 + b.minionMetalCost; }
+                if (b.minionMoveSpeedTicks != 0) { hash = hash * 31 + 3025; hash = hash * 31 + b.minionMoveSpeedTicks; }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                        if (b.districtStats[i].forgeCooldownTicks != 0)
+                        { hash = hash * 31 + 3026; hash = hash * 31 + i; hash = hash * 31 + b.districtStats[i].forgeCooldownTicks; }
                 return hash;
             }
         }

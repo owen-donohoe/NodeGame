@@ -31,6 +31,9 @@ namespace NodeWar.Simulation
                 case CommandType.Recruit:
                     ProcessRecruit(state, command);
                     break;
+                case CommandType.ForgeMinion:
+                    ProcessForgeMinion(state, command);
+                    break;
                 case CommandType.Collect:
                     ProcessCollect(state, command);
                     break;
@@ -251,6 +254,16 @@ namespace NodeWar.Simulation
 
         }
 
+        private static void ProcessForgeMinion(SimulationState state, GameCommand command)
+        {
+            if (command.villagerID != -1 || command.value != 0 ||
+                !NodeActionRules.CanForgeMinion(state, bal, command.playerID, command.targetNodeID, out _)) return;
+            if (!bal.TryForgeReadyTick(state.nodes[command.targetNodeID].districtEra, state.tickCount, out int readyTick)) return;
+            state.players[command.playerID].metal -= bal.minionMetalCost;
+            GameSimulation.SpawnBonusVillagers(state, command.targetNodeID, command.playerID, 1, SuitType.Minion);
+            state.nodes[command.targetNodeID].recruitReadyTick = readyTick;
+        }
+
         private static void ProcessRecruit(SimulationState state, GameCommand command)
         {
             if (command.villagerID != -1 || command.value != 0) return;
@@ -293,6 +306,7 @@ namespace NodeWar.Simulation
             if (vid < 0 || vid >= state.villagers.Length) return;
             VillagerData villager = state.villagers[vid];
             if (villager.ownerID != command.playerID) return;
+            if (!NodeActionRules.IsBody(villager)) return;
             if (villager.state == VillagerState.Dead) return;
             if (villager.isConsumed) return;
             if (villager.state != VillagerState.Idle) return;
@@ -338,6 +352,7 @@ namespace NodeWar.Simulation
             VillagerData villager = state.villagers[vid];
             if (villager.ownerID != command.playerID) return;
             if (villager.state != VillagerState.Dead) return;
+            if (!NodeActionRules.IsBody(villager)) return;
             if (villager.isConsumed) return;
             int finalCost = GetRespawnCost(state, command.playerID);
             if (state.players[command.playerID].food < finalCost) return;

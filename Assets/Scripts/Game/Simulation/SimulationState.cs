@@ -28,7 +28,8 @@ namespace NodeWar.Simulation
         Town = 15,
         Infirmary = 16,
         Fortress = 17,
-        Storehouse = 18
+        Storehouse = 18,
+        Workshop = 19
     }
 
     /// <summary>
@@ -77,7 +78,8 @@ namespace NodeWar.Simulation
         Medic,
         Merchant, // Historical Market suit; never assigned by active production
         Acolyte, // auto-assigned: Sanctuary worker
-        Watcher // auto-assigned: Watchtower worker
+        Watcher, // auto-assigned: Watchtower worker
+        Minion = 12
     }
 
     // ===== DATA STRUCTS =====

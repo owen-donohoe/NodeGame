@@ -19,7 +19,7 @@ namespace NodeWar.Simulation
             {
                 VillagerData other = state.villagers[i];
                 if (other.currentNodeID != v.currentNodeID || other.ownerID != v.ownerID ||
-                    other.villagerID >= v.villagerID || other.isConsumed || other.hp <= 0) continue;
+                    other.villagerID >= v.villagerID || other.isConsumed || other.hp <= 0 || !NodeActionRules.IsBody(other)) continue;
                 if (other.state == VillagerState.Idle || other.state == VillagerState.Claiming || other.state == VillagerState.Working || other.state == VillagerState.Fighting)
                     ahead++;
             }

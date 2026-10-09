@@ -27,6 +27,7 @@ namespace NodeWar.Simulation
     ///   Storehouse         productionTicks (alternating bank output)
     ///   Market             historical productionTicks / secondaryProductionTicks
     ///   Town               townBonusVillagers (Village bonusVillagersOnClaim is historical)
+    ///   Workshop           forgeCooldownTicks
     ///   Shrine             healIntervalTicks
     ///   Fortress           healthMax, healthRegenPerTick, fortressMaterialsCosts, fortressMetalCosts, fortressResistancePercent
     ///   Watchtower         claimRateNumerator / claimRateDenominator
@@ -42,6 +43,7 @@ namespace NodeWar.Simulation
         public int secondaryProductionTicks;
         public int bonusVillagersOnClaim; // Historical JSON field; inactive on Village.
         public int townBonusVillagers;
+        public int forgeCooldownTicks;
         public int healthMax;
         public int healthRegenPerTick;
         public int pierTravelDivisor;
@@ -66,6 +68,9 @@ namespace NodeWar.Simulation
 
         public int ticksPerSecond;
         public int bankCapacity;
+        public int minionHP;
+        public int minionMetalCost;
+        public int minionMoveSpeedTicks;
         /// <summary>Dwell progress added per tick while a bank is being collected, and the progress that pays one unit.</summary>
         public int collectProgressPerTick;
         public int collectProgressPerUnit;
@@ -284,12 +289,18 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
+            if ((minionHP != 0 || minionMetalCost != 0 || minionMoveSpeedTicks != 0) &&
+                (minionHP <= 0 || minionMetalCost <= 0 || minionMoveSpeedTicks <= 0))
+            { reason = "Invalid minion HP, metal cost or movement duration."; return false; }
             if ((bankCapacity != 0 || collectProgressPerTick != 0 || collectProgressPerUnit != 0) && !BankTuningValid())
             { reason = "Invalid bank capacity or collection progress."; return false; }
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                 {
                     DistrictStats entry = districtStats[i];
+                    if (entry.forgeCooldownTicks < 0 ||
+                        (entry.districtType == DistrictType.Workshop && !TryForgeReadyTick(entry.era, 0, out _)))
+                    { reason = "Invalid Workshop cooldown or minion tuning."; return false; }
                     if (entry.healthMax < 0 || entry.healthRegenPerTick < 0 || (entry.healthMax > 0 && entry.healthRegenPerTick == 0))
                     { reason = "Invalid district health or regeneration."; return false; }
                     if (entry.pierTravelDivisor < 0 || entry.pierTravelDivisor > 100)
@@ -376,15 +387,29 @@ namespace NodeWar.Simulation
             catch (System.OverflowException) { return false; }
         }
 
+        public bool TryForgeReadyTick(int era, int tick, out int readyTick)
+        {
+            readyTick = 0;
+            int duration = GetDistrictStats(DistrictType.Workshop, era).forgeCooldownTicks;
+            long ready = (long)tick + duration;
+            if (minionHP <= 0 || minionMetalCost <= 0 || minionMoveSpeedTicks <= 0 ||
+                duration <= 0 || ready > int.MaxValue || ready < int.MinValue) return false;
+            readyTick = (int)ready;
+            return true;
+        }
+
         public bool BankTuningValid() => bankCapacity > 0 &&
             collectProgressPerTick > 0 && collectProgressPerUnit > 0;
 
         public static GameBalanceData Default()
         {
+            const int defaultMoveSpeedTicks = 4;
             return new GameBalanceData
             {
                 ticksPerSecond = 10,
                 bankCapacity = 5,
+                minionHP = 8, minionMetalCost = 3,
+                minionMoveSpeedTicks = System.Math.Max(1, (defaultMoveSpeedTicks + 1) / 2),
                 collectProgressPerTick = 5, collectProgressPerUnit = 16,
                 baseClaimPerTick = 17,
                 captureBonusPercentPerStep = 25,
@@ -414,7 +439,7 @@ namespace NodeWar.Simulation
                 metalCap = 10,
                 baseHP = 5,
                 baseAttackDamage = 1,
-                baseMoveSpeedTicks = 4,
+                baseMoveSpeedTicks = defaultMoveSpeedTicks,
                 baseAttackCooldownMax = 20,
                 suitStats = null,
                 districtStats = UniformDistrictStats(
@@ -457,7 +482,8 @@ namespace NodeWar.Simulation
                 new DistrictStats { districtType = DistrictType.Infirmary, healthMax = 3000, healthRegenPerTick = 17, healIntervalTicks = 10, respawnBoostPerWorker = 1, respawnCostReductionPercent = 20 },
                 new DistrictStats { districtType = DistrictType.Fortress, healthMax = 3000, healthRegenPerTick = 17 },
                 new DistrictStats { districtType = DistrictType.Storehouse, healthMax = 3000, healthRegenPerTick = 17, productionTicks = 80 },
-                new DistrictStats { districtType = DistrictType.Pier, pierTravelDivisor = 2 }
+                new DistrictStats { districtType = DistrictType.Pier, pierTravelDivisor = 2 },
+                new DistrictStats { districtType = DistrictType.Workshop, forgeCooldownTicks = 30 }
             };
 
             DistrictStats[] all = new DistrictStats[template.Length * EraCount];

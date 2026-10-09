@@ -13,6 +13,28 @@ namespace NodeWar.Cloud.Tests
 {
     public class ReleaseContentTests
     {
+        [Test] public void WorkshopCatalogAllErasAndSkinValidate()
+        {
+            var items = NodeWar.Cloud.ServerCatalog.Items;
+            for (int era = 0; era < 6; era++) Assert.IsTrue(items.Any(i => i.Id == "district.workshop.e" + era && !i.Retired));
+            Assert.AreEqual(7, items.Count(i => i.BaseId == "district.workshop" && !i.Retired));
+            Assert.That(CatalogValidation.Validate(items, CatalogIds.EraCount), Is.Empty);
+            var state = new PlayerState { Rank = new RankRecord { Arena = 5, HighestArena = 5 }, Inventory = PlayerStateDefaults.Inventory() };
+            state.Inventory.OwnedVariants.Add("district.workshop.e5");
+            state.Inventory.Equipped.Variants["district.workshop"] = "district.workshop.e5";
+            state.Inventory.EquippedNodeIDs = new[] { "node_workshop", "" };
+            DistrictMigration.Apply(state);
+            Assert.AreEqual("district.workshop.e5", state.Inventory.Equipped.Variants["district.workshop"]);
+            Assert.AreEqual("node_workshop", state.Inventory.EquippedNodeIDs[0]);
+            Assert.IsFalse(DistrictMigration.Apply(state));
+        }
+        [Test] public void E2BalanceExtensionsAreZeroNeutralForE1()
+        {
+            Assert.IsTrue(BalanceCatalog.Embedded.TryGet(-893741384, out var b));
+            b.minionHP = b.minionMetalCost = b.minionMoveSpeedTicks = 0;
+            b.districtStats = b.districtStats.Where(d => d.districtType != DistrictType.Workshop).ToArray();
+            Assert.AreEqual(-1600299589, BalanceHasher.Hash(b));
+        }
         // Serialization oracle only. This explicitly built balance is not evidence about the Editor asset.
         [Test] public void NewExportHasExactClientDataShape()
         {
@@ -45,7 +67,7 @@ namespace NodeWar.Cloud.Tests
         {
             // Active types exclude Market and every old merged district; Storehouse replaced Market.
             var active = CatalogKeys.CatalogDistrictTypes;
-            CollectionAssert.AreEquivalent(new[] { 1, 2, 3, 4, 6, 14, 15, 16, 17, 18 }, active);
+            CollectionAssert.AreEquivalent(new[] { 1, 2, 3, 4, 6, 14, 15, 16, 17, 18, 19 }, active);
             foreach (int retired in new[] { 5, 7, 8, 9, 10, 11, 12, 13 }) CollectionAssert.DoesNotContain(active, retired);
             Assert.That(DistrictRoster.IsActive(DistrictType.Market), Is.False);
             Assert.That(DistrictRoster.IsActive(DistrictType.Storehouse), Is.True);

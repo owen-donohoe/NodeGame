@@ -5,7 +5,7 @@ namespace NodeWar.View
     /// <summary>Small code-only letter stickers for missing flat art. No imported asset required.</summary>
     public static class DistrictFallbackArt
     {
-        private static readonly Sprite[] sprites=new Sprite[(int)DistrictType.Storehouse+1];
+        private static readonly Sprite[] sprites=new Sprite[(int)DistrictType.Workshop+1];
         public static Sprite Sticker(DistrictType type)
         {
             if(!DistrictRoster.IsActive(type)) return null;

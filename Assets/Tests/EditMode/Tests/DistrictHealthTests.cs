@@ -41,9 +41,9 @@ namespace NodeWar.Tests
         }
 
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism")]
-        public void CommandEightUnknownAndHashNeutral(bool determinism) => Repeat(() => {
+        public void ForgeMinionOnStorehouseRefusedAndHashNeutral(bool determinism) => Repeat(() => {
             var s = Board(Configure(), DistrictType.Storehouse); s.players[0].metal = 3;
-            Assert.IsFalse(CommandTypes.IsKnown((CommandType)8));
+            Assert.IsTrue(CommandTypes.IsKnown((CommandType)8));
             int h = SimulationStateHasher.ComputeHash(s);
             CommandProcessor.ProcessCommand(s, new GameCommand { type = (CommandType)8, playerID = 0, targetNodeID = 1, villagerID = -1 });
             Assert.AreEqual(h, SimulationStateHasher.ComputeHash(s)); return s;

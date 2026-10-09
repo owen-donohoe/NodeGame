@@ -347,7 +347,7 @@ namespace NodeWar.Cloud.Tests
             var loser = await State(1);
             Assert.That(winner.Rank.Arena, Is.EqualTo(1));
             Assert.That(winner.Rank.HighestArena, Is.EqualTo(1));
-            Assert.That(winner.Inventory.OwnedVariants.Count(id => id.EndsWith(".e1")), Is.EqualTo(21));
+            Assert.That(winner.Inventory.OwnedVariants.Count(id => id.EndsWith(".e1")), Is.EqualTo(22));
             Assert.That(loser.Rank.Arena, Is.Zero);
             Assert.That(loser.Rank.HighestArena, Is.EqualTo(1));
             Assert.That(loser.Inventory.OwnedVariants, Does.Contain("suit.warrior.e1"));

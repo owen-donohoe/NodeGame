@@ -27,7 +27,7 @@ namespace NodeWar.Lobby.Tests
         {
             Assert.AreEqual(Enum.GetValues(typeof(SuitType)).Length, LoadoutData.SuitEraSlots);
             // Reserved IDs still occupy indices; the canonical table includes the appended roster.
-            Assert.AreEqual((int)DistrictType.Storehouse + 1, LoadoutData.DistrictEraSlots);
+            Assert.AreEqual((int)DistrictType.Workshop + 1, LoadoutData.DistrictEraSlots);
             Assert.AreEqual(LoadoutData.SuitEraSlots, LoadoutTypes.SuitTypeCount);
             Assert.AreEqual(LoadoutData.DistrictEraSlots, LoadoutTypes.DistrictTypeCount);
         }

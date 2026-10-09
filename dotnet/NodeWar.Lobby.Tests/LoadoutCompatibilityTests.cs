@@ -154,7 +154,7 @@ namespace NodeWar.Lobby.Tests
             {
                 null, "district.farm", "district.mine", "district.village", "district.barracks", "district.core",
                 "district.forge", null, null, null, null,
-                null, null, null, "district.pier", "district.town", "district.infirmary", "district.fortress", "district.storehouse"
+                null, null, null, "district.pier", "district.town", "district.infirmary", "district.fortress", "district.storehouse", "district.workshop"
             };
             for (int i = 0; i < suits.Length; i++) Assert.AreEqual(suits[i], LoadoutTypes.CatalogBaseForSuit(i), "suit " + i);
             for (int i = 0; i < districts.Length; i++) Assert.AreEqual(districts[i], LoadoutTypes.CatalogBaseForDistrict(i), "district " + i);

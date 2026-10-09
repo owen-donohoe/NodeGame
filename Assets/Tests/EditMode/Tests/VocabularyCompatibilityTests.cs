@@ -17,9 +17,9 @@ namespace NodeWar.Tests
             string[] districts =
             {
                 "None", "Farm", "Mine", "Village", "Barracks", "Core", "Forge",
-                "Camp", "Shrine", "Arsenal", "Sanctuary", "Watchtower", "Rampart", "Market", "Pier", "Town", "Infirmary", "Fortress", "Storehouse"
+                "Camp", "Shrine", "Arsenal", "Sanctuary", "Watchtower", "Rampart", "Market", "Pier", "Town", "Infirmary", "Fortress", "Storehouse", "Workshop"
             };
-            Assert.AreEqual(19, Enum.GetValues(typeof(DistrictType)).Length);
+            Assert.AreEqual(20, Enum.GetValues(typeof(DistrictType)).Length);
             for (int i = 0; i < districts.Length; i++)
             {
                 Assert.AreEqual(districts[i], ((DistrictType)i).ToString(), "DistrictType " + i);
@@ -30,9 +30,9 @@ namespace NodeWar.Tests
             string[] suits =
             {
                 "None", "Farmer", "Miner", "Warrior", "Smelter", "Guardian", "Scout",
-                "Berserker", "Medic", "Merchant", "Acolyte", "Watcher"
+                "Berserker", "Medic", "Merchant", "Acolyte", "Watcher", "Minion"
             };
-            Assert.AreEqual(12, Enum.GetValues(typeof(SuitType)).Length);
+            Assert.AreEqual(13, Enum.GetValues(typeof(SuitType)).Length);
             for (int i = 0; i < suits.Length; i++)
             {
                 Assert.AreEqual(suits[i], ((SuitType)i).ToString(), "SuitType " + i);

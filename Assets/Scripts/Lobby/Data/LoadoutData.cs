@@ -30,10 +30,10 @@ namespace NodeWar.Lobby
         public string[] districtIDs;
 
         /// <summary>Length of <see cref="suitEras"/>: one entry per SuitType value.</summary>
-        public const int SuitEraSlots = (int)NodeWar.Simulation.SuitType.Watcher + 1;
+        public const int SuitEraSlots = (int)NodeWar.Simulation.SuitType.Minion + 1;
 
         /// <summary>Length of <see cref="districtEras"/>: one entry per DistrictType value.</summary>
-        public const int DistrictEraSlots = (int)NodeWar.Simulation.DistrictType.Storehouse + 1;
+        public const int DistrictEraSlots = (int)NodeWar.Simulation.DistrictType.Workshop + 1;
 
         /// <summary>
         /// The era of every suit and district this player fields, indexed by

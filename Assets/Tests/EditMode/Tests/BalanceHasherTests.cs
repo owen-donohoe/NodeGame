@@ -7,6 +7,25 @@ namespace NodeWar.Tests
 {
     public class BalanceHasherTests
     {
+        [TestCase("minionHP", 8)] [TestCase("minionMetalCost", 3)] [TestCase("minionMoveSpeedTicks", 2)]
+        public void MinionGlobals_DefaultHashAndValidation(string name, int expected)
+        {
+            var b = GameBalanceData.Default(); var f = typeof(GameBalanceData).GetField(name); Assert.IsNotNull(f);
+            Assert.AreEqual(expected, f.GetValue(b));
+            Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(SetCoreScalar(b, name, expected + 1)));
+            foreach (int invalid in new[] { 0, -1 }) Assert.IsFalse(SetCoreScalar(b, name, invalid).CoreRulesValid(out _));
+        }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void WorkshopCooldown_PerEraHashAndValidation(int era)
+        {
+            var b = GameBalanceData.Default(); var f = typeof(DistrictStats).GetField("forgeCooldownTicks"); Assert.IsNotNull(f);
+            int index = Array.FindIndex(b.districtStats, d => (int)d.districtType == 19 && d.era == era); Assert.GreaterOrEqual(index, 0);
+            Assert.AreEqual(30, f.GetValue(b.districtStats[index]));
+            var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index];
+            f.SetValue(entry, 31); copy.districtStats[index] = (DistrictStats)entry;
+            Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+            foreach (int invalid in new[] { 0, -1 }) { f.SetValue(entry, invalid); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _)); }
+        }
         [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
         public void DistrictHealth_DefaultsEveryEraHashAndValidate(int era)
         {
