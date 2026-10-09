@@ -104,6 +104,8 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
+- { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
+
 ## `.claude/skills/cs-review.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -162,6 +164,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+
+- { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
 
 ## `docs/game-model.md`
 
@@ -243,3 +247,25 @@ does not verify its cited simulation contract, so it is included here too.
 - `docs/design-history/README.md`
 - `.claude/skills/cs-review.md`
 - `.claude/skills/determinism-guard.md`
+
+## D3 review backlog at `4e9509aadd1a4436d4f65c5be59c1876ad80d8bb`
+
+Ran the main-checkout freshness script as requested; it hard-codes the main
+root. Re-ran the same script in memory with only RepoRoot set to the feature
+worktree. It reported ten REVIEW documents. Re-read write-sim-test.md and
+run-dotnet-tests.md fully against D3 and the 3708-pass result; updated collection
+and raid semantics, six-int Collect=9 coverage, and counts (692 simulation,
+595 lobby, 99 match log). Only those two documents are stamped. Their moved
+sources since D2 are D3 code/tests and the previously read runner document.
+
+The eight documents already in the D2 backlog remain unstamped. Their older
+source changes in 0c0c3cf, D1 or D2 were not fully audited in this bounded D3
+task. The combined review read was output-truncated, so it is not claimed as
+whole-document verification. Their current source/document claims still need
+lead review; the D2 backlog above lists all eight. No baseline re-pin occurred:
+EmptyTick=-563755666 and MoveAndCombat=-2013445737, SimulationVersion 4.
+
+The post-docs freshness check also flags write-sim-test.md because this same
+follow-up changes its cited run-dotnet-tests.md body. Both documents were
+reviewed together; the mandated stamps point to the code SHA, not the later
+docs commit. This dependency cascade is reported without a third commit.

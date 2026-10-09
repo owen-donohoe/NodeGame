@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
-verified_at_commit: 45eed7f258f0b26fb748f446332817b83ed5fbe1
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
+verified_at_commit: 4e9509aadd1a4436d4f65c5be59c1876ad80d8bb
 status: stable
 sources:
   - id: tests
@@ -40,6 +40,9 @@ sources:
   - id: bank-tests
     resource: Assets/Tests/EditMode/Tests/BankProductionTests.cs
     title: Bank production, Storehouse and capture lifecycle scenarios
+  - id: collection-tests
+    resource: Assets/Tests/EditMode/Tests/BankCollectionTests.cs
+    title: Progressive collection, lock, raid and ownership lifecycle scenarios
   - id: baseline-contract
     resource: docs/computations/determinism-baseline.md
     title: Pinned fingerprint and version policy
@@ -83,7 +86,8 @@ Step 2: Set up initial state
   nextBreacherID at -1. Default balance enables the channel, tempo and caps;
   disable those explicitly when testing legacy behaviour
 - For banks, initialize bankFood/bankMaterials/bankMetal, minionProductionRemaining
-  and storehouseNextResource to 0, and storehouseInitialised to false. Supply positive
+  and storehouseNextResource to 0, and storehouseInitialised to false.
+  collectProgress starts at 0 and collectRequested at false. Supply positive
   minionHP/minionMetalCost/bankCapacity tuning; historical zero tuning disables minions.
   Fortress HP and Storehouse productionTicks belong to their per-era DistrictStats.
 - Document what the starting state represents
@@ -143,10 +147,21 @@ Step 5: Assert expected state
   Forge allocation/material wastes a cycle. Carry production overshoot and use district era.
   Any full claim, including the previous owner's re-claim, destroys a dormant Minion and
   pays its remaining bank with pool caps/overflow discard. Storehouse grants a free Minion
-  once; its construction flag survives destruction/capture. D2 destruction clears Minion
-  automation/bank; raider destruction loot and progressive collection are D3 work.
+  once; its construction flag survives destruction/capture. Structure destruction pays
+  remaining loot before clearing Minion automation/bank; a same-tick civilian capture
+  cannot pay it again, and structure participants cannot claim on that tick.
+  Collect=9 uses value 1 to start and 0 to cancel; an empty bank, non-owner or invalid
+  value refuses without hash mutation. A locked owner's start is accepted and paused.
+  Collection follows minion production and precedes auto-recruit: one shared node clock,
+  +5 progress per active unlocked tick, transfer one at >=16 and subtract 16. A full five
+  drains at ticks 4,7,10,13,16, independent of tempo. Food/materials/metal priority skips
+  full pools; all eligible pools full freezes progress. No requester resets progress;
+  empty bank resets progress/request; cancel resets unless a stationary collector remains.
+  Use BankRules.Locked and HasStationaryCollector rather than restating eligibility.
+  Lock pauses without reset; Restore completion unlocks collection in the same tick.
+  Ownership changes cancel request/progress, including neutralisation.
   Assert bank total > 0 implies Minion; hash, copy and register every added node field.
-  InstallMinion=8 keeps the six-int wire/log shape and does not bump ProtocolVersion.
+  InstallMinion=8 and Collect=9 keep the six-int wire/log shape and do not bump ProtocolVersion.
   Market=13 remains historical saved data, migrates to Storehouse=18, and is refused
   on current packets; do not test active Market worker production.
 - For Town, assert each player is paid once on their first full claim (including a
@@ -174,7 +189,7 @@ Step 6: Add determinism variant (always, for simulation tests)
   Unconditional structure kind/HP terms on all three bare nodes moved the previous
   C7 fingerprints (647286254 and 357327383). Balance tuning extensions are tagged
   and zero-neutral; historical absent tuning does not enable Fortress upgrading.
-  D2 bank/timer/construction fields are tagged, indexed and zero/false-neutral, so
+  D2 bank/timer/construction and D3 collection fields are tagged, indexed and zero/false-neutral, so
   both D1 pins remain unchanged. Conditional hashing does not make older logs replayable
 - Name this test with _Determinism suffix
 

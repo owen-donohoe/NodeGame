@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
-verified_at_commit: 45eed7f258f0b26fb748f446332817b83ed5fbe1
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
+verified_at_commit: 4e9509aadd1a4436d4f65c5be59c1876ad80d8bb
 status: draft
 sources:
   - id: solution
@@ -33,6 +33,9 @@ sources:
   - id: tests-bank-production
     resource: Assets/Tests/EditMode/Tests/BankProductionTests.cs
     title: D2 bank production scenarios and independent determinism variants
+  - id: tests-bank-collection
+    resource: Assets/Tests/EditMode/Tests/BankCollectionTests.cs
+    title: D3 progressive collection, lock and loot with independent determinism variants
   - id: tests-node-command-wire
     resource: dotnet/NodeWar.Lobby.Tests/NodeCommandWireTests.cs
     title: Stable six-int node command payloads and packet refusals
@@ -67,17 +70,17 @@ The solution holds eight test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **3674 passing cases** at the time of writing (the table says where each lives, so a changed
+Expect **3708 passing cases** at the time of writing (the table says where each lives, so a changed
 total is easy to place), with none failing. `NodeWar.Network.Tests` also contains an explicit
 `Sweep` case that a plain run reports as skipped; Cloud release-content acceptance
 requires an explicit fresh export and is also skipped by a plain run.
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 662 | `Assets/Tests/EditMode/Tests/`: the version-4 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, Barracks equipping, Infirmary healing and workers, Fortress resistance and shared structure attack/lifecycle, banks and minion production, Storehouse construction/capture, per-era Fortress HP, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
-| `NodeWar.Lobby.Tests` | 593 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including InstallMinion=8 and current Market packet refusal |
+| `NodeWar.Simulation.Tests` | 692 | `Assets/Tests/EditMode/Tests/`: the version-4 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, Barracks equipping, Infirmary healing and workers, Fortress resistance and shared structure attack/lifecycle, banks and minion production, progressive collection and lock/Restore lifecycle, remaining-bank raid loot and single payout on same-tick destruction/capture, Storehouse construction/capture, per-era Fortress HP, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
+| `NodeWar.Lobby.Tests` | 595 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including InstallMinion=8, Collect=9 start/cancel and current Market packet refusal |
 | `NodeWar.View.Tests` | 1561 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation, the district fallback descriptors and art keys, icon/context resolution and usage, required UXML names, draft handover |
-| `NodeWar.MatchLog.Tests` | 97 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay, the core-rules replay), node-command round trips and unknown-command refusal |
+| `NodeWar.MatchLog.Tests` | 99 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay, the core-rules replay), node-command round trips (including Collect=9 start/cancel) and unknown-command refusal |
 | `NodeWar.Network.Tests` | 125 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario and the 1,500-tick core-rules acceptance on `hourglass-01-acceptance` over a lossy link |
 | `NodeWar.Progression.Tests` | 149 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
 | `NodeWar.BalanceRig.Tests` | 37 | the headless balance rig, scenario validation, repeatable execution against an exported JSON balance, its diagnostics and timeline metrics, and setup compatibility with the shared map |
@@ -97,7 +100,7 @@ dotnet test dotnet/NodeWar.Simulation.Tests/NodeWar.Simulation.Tests.csproj \
   --logger "nunit;LogFilePath=<repo-root>/TestResults/results.xml"
 ```
 
-Expect 662 passed, and both version-4 pinned fingerprints from
+Expect 692 passed, and both version-4 pinned fingerprints from
 [computations/determinism-baseline](../computations/determinism-baseline.md) matching.
 `.github/workflows/determinism.yml` runs these as two separate steps for exactly this reason.
 
