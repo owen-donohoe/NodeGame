@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
-verified_at_commit: cc1ee2a988253e94ecef41efa72499506ecf449c
+  - { by: gpt-6.1-sol, at: 2026-10-09T00:49:39Z }
+verified_at_commit: 45eed7f258f0b26fb748f446332817b83ed5fbe1
 status: stable
 sources:
   - id: tests
@@ -34,6 +34,12 @@ sources:
   - id: balance-tests
     resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
     title: Coverage of balance fields
+  - id: bank-rules
+    resource: Assets/Scripts/Game/Simulation/BankRules.cs
+    title: Shared lock, minion eligibility and worker capacity
+  - id: bank-tests
+    resource: Assets/Tests/EditMode/Tests/BankProductionTests.cs
+    title: Bank production, Storehouse and capture lifecycle scenarios
   - id: baseline-contract
     resource: docs/computations/determinism-baseline.md
     title: Pinned fingerprint and version policy
@@ -76,6 +82,10 @@ Step 2: Set up initial state
 - Initialize v2 player fields deliberately: breachBar and paidRespawns at 0,
   nextBreacherID at -1. Default balance enables the channel, tempo and caps;
   disable those explicitly when testing legacy behaviour
+- For banks, initialize bankFood/bankMaterials/bankMetal, minionProductionRemaining
+  and storehouseNextResource to 0, and storehouseInitialised to false. Supply positive
+  minionHP/minionMetalCost/bankCapacity tuning; historical zero tuning disables minions.
+  Fortress HP and Storehouse productionTicks belong to their per-era DistrictStats.
 - Document what the starting state represents
 - For recruitment, initialize player recruitCount and node recruitReadyTick to 0,
   and autoRecruit to false. Use explicit positive recruit tuning; historical
@@ -109,7 +119,8 @@ Step 5: Assert expected state
 - One assertion per logical outcome -- do not bundle unrelated 
   assertions
 - For caps, assert wasted completions still cycle, Forge spends no material
-  at the metal cap, Market still alternates, and cap 0 remains uncapped
+  at the metal cap, and cap 0 remains uncapped for global resource pools. Storehouse
+  alternates bank food/materials every 80 production ticks; bank capacity is five total.
 - For paid respawns, assert only successful commands increment paidRespawns
   and the Infirmary (at most two counted workers, lowest villager ID, none under enemy presence) discounts the escalated cost with integer rounding/minimum 1
 - For an integration scenario over loss, duplication and reordering with replay and
@@ -123,6 +134,21 @@ Step 5: Assert expected state
   post-combat damage deferred to the next tick, and no destruction-tick claim by participants.
   Fortress upgrades above level 1 preserve damaged HP; destruction resets the level,
   rebuy costs level 1, and the aura disappears only on the following tick.
+- For minions, assert ordinary output pays the pool while minion output banks; InstallMinion
+  costs three metal and retains the lowest-ID human in the remaining worker position.
+  Refuse invalid district/value/owner, locked nodes and existing structures without mutation.
+  Lock is neutral ownership, an anchored enemy (including departing Moving enemies), or
+  an incomplete owner bar. Enemy presence does not pause minion production. Neutral
+  ownership and a full bank pause its timer without Forge input spend or catch-up; missing
+  Forge allocation/material wastes a cycle. Carry production overshoot and use district era.
+  Any full claim, including the previous owner's re-claim, destroys a dormant Minion and
+  pays its remaining bank with pool caps/overflow discard. Storehouse grants a free Minion
+  once; its construction flag survives destruction/capture. D2 destruction clears Minion
+  automation/bank; raider destruction loot and progressive collection are D3 work.
+  Assert bank total > 0 implies Minion; hash, copy and register every added node field.
+  InstallMinion=8 keeps the six-int wire/log shape and does not bump ProtocolVersion.
+  Market=13 remains historical saved data, migrates to Storehouse=18, and is refused
+  on current packets; do not test active Market worker production.
 - For Town, assert each player is paid once on their first full claim (including a
   raider taking the enemy Town), the reward is capped by population room and still
   consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.
@@ -148,7 +174,8 @@ Step 6: Add determinism variant (always, for simulation tests)
   Unconditional structure kind/HP terms on all three bare nodes moved the previous
   C7 fingerprints (647286254 and 357327383). Balance tuning extensions are tagged
   and zero-neutral; historical absent tuning does not enable Fortress upgrading.
-  Conditional hashing does not make older simulation-version logs replayable
+  D2 bank/timer/construction fields are tagged, indexed and zero/false-neutral, so
+  both D1 pins remain unchanged. Conditional hashing does not make older logs replayable
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests

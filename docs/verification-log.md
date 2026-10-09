@@ -102,6 +102,8 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+
 ## `.claude/skills/cs-review.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -158,6 +160,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+
+- { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 
 ## `docs/game-model.md`
 
@@ -216,3 +220,26 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:13:42Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
+
+## D2 review backlog at `45eed7f258f0b26fb748f446332817b83ed5fbe1`
+
+The main-checkout `okf-stale.ps1` hard-codes its own repository root. It was
+run as requested, then a temporary outside-repo copy of that exact script
+with only RepoRoot changed checked the feature worktree. The worktree reported
+nine REVIEW documents. `write-sim-test.md` was read and corrected against D2;
+`run-dotnet-tests.md` was also read fully and its case counts corrected from
+the final 3674-pass run. Only those two documents receive verification stamps.
+
+The following REVIEW documents remain unstamped for lead review. Their whole
+document/source claims were not re-read in this bounded D2 task; some sources
+also moved in `0c0c3cf` or D1 before D2. Reading the baseline computation alone
+does not verify its cited simulation contract, so it is included here too.
+
+- `docs/adding-a-feature.md`
+- `docs/architecture.md`
+- `docs/game-model.md`
+- `docs/simulation-rules.md`
+- `docs/computations/determinism-baseline.md`
+- `docs/design-history/README.md`
+- `.claude/skills/cs-review.md`
+- `.claude/skills/determinism-guard.md`
