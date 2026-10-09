@@ -10,7 +10,7 @@ namespace NodeWar.Network.Tests
         {
             var expected=BankRulesFixture.Reference(out var hashes,out var populations);
             var s=new LockstepScenario {Seconds=150.1,Board=BankRulesFixture.Board(),Draft=BankRulesFixture.Draft,
-                CommandScript=BankRulesFixture.Script,CaptureConfirmedTicks=true};
+                CommandScript=BankRulesFixture.Script,CaptureConfirmedTicks=true,BalanceFactory=() => BankRulesFixture.Balance};
             if(lossy)
             {
                 s.ZeroToOne=new LinkProfile {Loss=0.02,Duplicate=0.1,Reorder=0.1}.Cut(90,90.4);
