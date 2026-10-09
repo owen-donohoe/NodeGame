@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
-verified_at_commit: c736775d94d5e11c352dd3af6bb2bc0edecef1be
+  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable
 sources:
   - id: architecture
@@ -88,15 +88,16 @@ Read all files modified in this session, then check:
 6. Conventions
    - New SimulationState fields added to SimulationStateHasher and CopyFrom,
      with their explicit neutral defaults initialized by MatchFactory?
-   - New CommandType has a CommandProcessor case (Recruit, SetAutoRecruit, InstallMinion and Collect
+   - New CommandType has a CommandProcessor case (Recruit, SetAutoRecruit, ForgeMinion and Collect
      validate through NodeActionRules or BankRules, which presentation may call read-only)?
    - GameCommand struct and InputSerializer updated together?
    - Wire layout changes (current protocol is 5) bump ProtocolVersion.Current in
      Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion aliases?
    - Simulation behavior changes bump SimulationVersion.Current, with
      balance-only edits tracked by the content hash?
-     Current and the sanctioned baseline pin are 4 (D1 structure terms and D4's leg-clock term
-     moved the fingerprints to -2085505832 and 534653207).
+     Current and the sanctioned baseline pin are 4. E1 removed unconditional
+     structure terms, retaining the leg clock and adding zero-neutral district
+     health: fingerprints 2084609368 and -1780012649. E4 does not move them.
 
 ## Output format
 Report each category as PASS, FAIL, or N/A.

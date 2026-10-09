@@ -46,6 +46,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
+
 ## `docs/architecture.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -71,6 +73,8 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
+- { by: gpt-6.1-sol, at: 2026-10-09T14:51:28Z }
+
 ## `docs/simulation-rules.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -89,6 +93,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:47:09Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## `docs/skills/run-dotnet-tests.md`
 
@@ -115,6 +121,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T00:59:49Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T01:16:59Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+
 ## `.claude/skills/cs-review.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -137,6 +145,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
+
 ## `.claude/skills/determinism-guard.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -157,6 +167,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
 
 ## `.claude/skills/write-sim-test.md`
 
@@ -184,6 +196,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T01:16:59Z }
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
+
 ## `docs/game-model.md`
 
 
@@ -201,6 +215,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-opus-5-5, at: 2026-10-08T17:33:28Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
 
 ## `docs/computations/determinism-baseline.md`
 
@@ -223,6 +239,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
+
 ## `docs/skills/run-editmode-tests.md`
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
@@ -234,6 +252,8 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## `docs/design-history/README.md`
 
@@ -247,6 +267,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T16:35:44Z }
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:01:14Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T00:31:48Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## D2 review backlog at `45eed7f258f0b26fb748f446332817b83ed5fbe1`
 
@@ -322,3 +344,24 @@ the code SHA; this follow-up's runner body change can still flag write-sim-test.
 through their dependency, without warranting a third commit. Editor wiring,
 positive release Pier tuning/export and Linux CI remain lead acceptance steps;
 no asset, metadata, scene or prefab content was edited.
+
+## E4 re-verification at `36c57c73087ced5dd842a653f676c83b51c83031`
+
+Re-read the ten initial REVIEW documents against their declared sources in
+`git diff ce883747 HEAD`, correcting E1-E3 district health, Storehouse output,
+Workshop/minion units, presentation and test totals. Also corrected and verified
+`.claude/skills/cs-review.md`. All eleven carry the E4 code SHA and a single
+`gpt-6.1-sol` verification entry; their former agent entries are archived above.
+Human provenance was preserved.
+
+The same documentation commit changes bodies of documents cited by six of these
+members: adding-a-feature, game-model, determinism-baseline, cs-review,
+determinism-guard and write-sim-test. The freshness script consequently reports
+those cross-document edges as REVIEW after this commit. Those updated bodies
+were reviewed together here; the requested stamp remains the E4 code SHA rather
+than the later documentation SHA. This is a freshness follow-up for the lead,
+not an unread E1-E3 source backlog.
+
+The untracked main-checkout `pr-d.md` remains the lead's backlog. It was not copied
+or edited. Editor asset migration/fresh export, the explicit release-content gate,
+Unity visual/wiring checks and a Linux CI receipt were not performed by E4.

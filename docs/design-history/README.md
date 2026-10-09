@@ -6,8 +6,8 @@ tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
-verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
+  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable
 sources:
   - id: v21-pdf
@@ -63,7 +63,7 @@ is done. A reconciliation against the code at commit `db19485` found:
   authoritative server indefinitely; the current plan is a migration to a
   server-authoritative hybrid.
 
-The list above is a record of that reconciliation and is kept as it was. Three
+The list above is a record of that reconciliation and is kept as it was. Several
 of its points have moved since:
 
 - `BotPlayer` has grown to about 800 lines.
@@ -73,12 +73,13 @@ of its points have moved since:
   has been retired in favour of a frontier capture bonus. The district roster has since been
   consolidated: Camp and Arsenal became Barracks, Shrine and Sanctuary became Infirmary, Rampart
   became Fortress and Watchtower an empty slot, with a Town added; the old numbers are reserved.
-  D1 adds a shared structure slot and suit-driven attacks: a paid Fortress upgrade builds
-  a destructible Fortification. D2 to D4 then add the Minion structure and its bank (installed on a
-  Farm, Mine, Forge or the new Storehouse, which replaces the retired Market, collected slowly and
-  paid to whoever takes the node) and make the Pier a highway for its owner and a gate for the enemy.
-- The suit roster is now eleven, including three auto-assigned workers
-  (Merchant, Acolyte, Watcher; Merchant is now historical and never assigned). Suit and district numbers are per era.
+  The E rework adds district health to Fortress, Storehouse and Infirmary, with
+  passive effects active only at full health. Storehouse replaces retired Market
+  and produces into its own bank; Workshop forges mobile collector minions that
+  are consumed on combat death. Pier is a highway for its owner and a gate for the enemy.
+- The suit enum now includes Minion=12 alongside the twelve pre-existing values
+  (including None). Acolyte and Watcher are auto-assigned workers; Merchant is now
+  historical and never assigned. Suit and district numbers are per era.
 - The networking direction settled on peer-to-peer lockstep with a server-side
   referee that replays uploaded match logs, not a server running the match.
   Arena-tier *eras* are now unlocked by rank on the server; the lobby's

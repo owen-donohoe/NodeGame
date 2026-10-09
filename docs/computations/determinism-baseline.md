@@ -15,8 +15,8 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
-verified_at_commit: c736775d94d5e11c352dd3af6bb2bc0edecef1be
+  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable
 sources:
   - id: tests
@@ -77,8 +77,8 @@ each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `-2085505832` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `534653207` |
+| `EmptyTick` | 100 | none | `2084609368` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `-1780012649` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -146,6 +146,15 @@ pins. Version 4 remains the unreleased PR D version introduced in D1.
 `collectProgressPerTick` and `collectProgressPerUnit`, moved out of `BankRules` literals) are
 zero-neutral in `BalanceHasher`. Neither fixture installs a minion, so the pins stayed
 `-2085505832` and `534653207` through D6.
+
+**E1 re-pin (district health, still unreleased version 4).** The rework removes
+the two unconditional structure kind/HP terms from each of the three bare nodes,
+losing six zero terms. `districtHealth` uses tagged, indexed zero-neutral hashing;
+these fixtures have no passive district health. D4's leg clock remains. Thus
+`-2085505832 → 2084609368` (EmptyTick) and `534653207 → -1780012649`
+(MoveAndCombat). `BreachTempoTests` carries the same pins. E2 mobile minions,
+E3 presentation and E4 acceptance do not move them. The older D1-D6 paragraphs
+above describe historical schemas, not current fields or rules.
 
 ## Where it runs
 

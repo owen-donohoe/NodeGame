@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
-verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
+  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable
 sources:
   - id: sim-loop
@@ -166,14 +166,14 @@ itself only ever counts ticks.
 
 **Tick order is canonical and must not be reordered:**
 ```
-movement → combat → claiming (breach → structure attack → claim) → production (workers → minion output → bank collection → auto-recruit) → healing → respawns → win-check
+movement → combat → claiming (breach → district health / claim) → production (workers → Storehouse output → bank collection → auto-recruit) → healing → respawns → win-check
 ```
 Why: each step reads state the previous step produced (e.g. claiming
 depends on where combat left villagers standing this tick); reordering
 changes game behavior in a way that's easy to miss testing against
 yourself but will desync against any peer/build still running the old
 order. (`GameSimulation.SimulateTick` also builds a resistance snapshot
-from the tick-start owners and Fortress levels, `TickBreach` then `TickStructureAttacks` before `TickClaiming`, and
+from the tick-start owners, Fortress levels and district health, `TickBreach` before `TickClaiming`, and
 order resume (`TickOrderResume`) after win-check. The final derived refresh of every
 player's `nextBreacherID` follows resume, so it reflects all mutations
 this tick. Tempo events are emitted after incrementing the tick count,
@@ -181,7 +181,7 @@ before movement. The tick also snapshots every node's owner at its start;
 `TickBreach` and `TickClaiming` read that snapshot, never the owners they are
 changing, so the order in which nodes are processed cannot move a result.) A new step must
 be inserted at a specific, justified point in this sequence, not appended
-by default. Production runs ordinary workers, then `TickMinionProduction`, then `TickBankCollection`, then auto-recruit, before healing.
+by default. Production runs ordinary workers, then `TickStorehouseProduction`, then `TickBankCollection`, then auto-recruit, before healing.
 Auto-recruit visits ascending node ID and uses the same validated recruit path
 as the command processor; no tempo scaling is applied to its ready tick. The Infirmary
 rules add no state: which Acolytes count (`GameSimulation.CountInfirmaryWorkers`, at most two,
@@ -247,42 +247,39 @@ highest aura on a node wins, ties to the lowest source node) and divides the cla
 the Core breach rate after the frontier and tempo steps, with a floor of 1; breach keeps its
 tempo independence.
 
-D1 adds unconditional `NodeData.structureKind` and `structureHP` hash terms after terrain,
-initialized None/0 by `MatchFactory` and copied by the node-array value clone. `AttackingStructure`
-is appended after Breaching. `StructureRules` selects the lowest-ID four eligible non-Medic
-combat suits on an undefended enemy structure at their destination or without an order.
-Damage is integer-only, unscaled by tempo or Fortress resistance. A tick-local participation
-array prevents attacking and claiming on the destruction tick; it is not persistent state.
-Post-combat resume starts the action for damage on the next tick. `OnOwnershipChanged` centralizes
-recruit resets and clearing Fortress level and Fortification kind/HP on neutralisation/full claim.
-First upgrade creates full HP; higher upgrades do not repair; destruction removes the aura
-from the next tick's snapshot. Structure balance scalars append tagged zero-neutral contributions
-under 3012–3014 (3011 is reserved); absent historical tuning cannot enable the ability.
+The E rework removes structure kind/HP and the attack state, leaving district health
+as a zero-neutral `NodeData.districtHealth` contribution under tag 2028 and node index.
+`MatchFactory` initializes it to 0; the node value clone copies it and reflection
+guards cover it. Enemy claiming consumes health before moving the bar, with the
+computed claim rate. Healing regenerates it in ascending node ID only at a full
+owner-side bar. `OnOwnershipChanged` resets health, recruit fields, Fortress levels
+and collection; full capture pays and clears remaining bank stock once.
 
-D2 to D4 add the bank, the Pier gate and the latched leg clock. `NodeData` gains `bankFood`,
-`bankMaterials`, `bankMetal`, `collectProgress`, `collectRequested`, `minionProductionRemaining`,
-`storehouseNextResource` and `storehouseInitialised`, each hashed only when non-zero or true under
-tags 2020–2027 with the node index (`HashNodeExtension`), initialised explicitly by `MatchFactory`
-and carried by the node value clone. `VillagerData.moveLegDurationTicks` (zero off a leg) is hashed
-unconditionally. Invariant, asserted in tests: bank total > 0 implies `structureKind == Minion`.
-`BankRules` owns every definition the simulation, the processor and both UI stacks use.
-`Locked` is neutral, or an enemy anchored on the node (`NodeActionRules.HasLivingEnemyAtNode`), or
-the owner-side claim bar short of `claimThreshold`. A lock stops cash-out, not output: minion
-output pauses only while the node is neutral (dormant) or the bank is full. A stationary collector
-(a friendly Idle or Working villager on the node) or a standing `Collect` request drains one unit
-at a time: `collectProgressPerTick` (default 5) is added per tick and `collectProgressPerUnit`
-(default 16) pays one unit. Collection is never tempo-scaled, and its clock pauses while locked or
-while the owner's pool is at its cap. A claim pays any bank to the new owner (`PayBank`, capped by
-the resource caps) and then destroys the minion; destroying one by structure damage pays the
-raider the same way before `Destroy`. A Storehouse (`DistrictType` 18: no workers, alternating
-food and materials) becomes a free minion on its first full claim. `InstallMinion` (type 8, value
-0) is refused while locked, with a bank present, off a minion district or under the metal cost.
-`Collect` (type 9, value 1 start or 0 cancel) is accepted while locked and then pauses; on an
-empty bank or from a non-owner it is a hash-neutral no-op. `BankRules.WorkerCapacity` is the one
-worker limit (`maxWorkersPerNode`, minus one on a minion node). The read-only `CollectionState`
-and `InstallReason` helpers the node sheets display are tested to agree with the boolean rules
-they mirror.
+`DistrictHealth.Healthy` is shared by Fortress resistance, Storehouse production and
+Infirmary healing/worker/respawn effects. A positive maximum requires full health;
+zero means always healthy. Tick-start Fortress resistance includes the health gate.
+Per-era `healthMax` / `healthRegenPerTick` use zero-neutral BalanceHasher tags 3021/3022.
 
+Bank state is `bankFood`, `bankMaterials`, `bankMetal`, `bankProductionRemaining`,
+`storehouseNextResource`, `collectProgress` and `collectRequested`, under indexed
+zero/false-neutral tags 2020-2024 and 2026-2027. The construction flag is removed.
+Only owned, healthy Storehouse nodes produce alternating food/materials into their
+bank, carrying timer overshoot. Full banks pause output. `BankRules` owns lock,
+collection and payout. A lock is neutral ownership, an enemy body anchored on the
+node, or an incomplete owner-side bar. Stationary friendly Idle/Working collectors
+(including minions) or remote Collect drain one unit at a time. Collection uses
+balance progress values (5/tick, 16/unit), never tempo, and pauses while locked or
+all relevant pools are full. Neutralisation keeps stock; capture pays then clears it.
+
+Workshop=19 and ForgeMinion=8 append a `SuitType.Minion` unit through the existing
+spawn helper: 3 metal, 8 HP, movement duration 2 and 30-tick per-era cooldown by default.
+Cooldown reuses `recruitReadyTick`; ForgeMinion never auto-repeats. `IsBody` excludes
+minions from claim/work/Restore/breach/equip/respawn and economic enemy-presence
+checks, while combat still targets them. They deal no damage and death marks them
+consumed permanently. Their suit, HP, motion and consumed flag use existing villager
+hash/copy registrations. Balance tags 3023-3026 cover minion globals and Workshop
+cooldown, with absent/zero contributions omitted. Ordinary workers retain the full
+`maxWorkersPerNode` capacity; minions occupy no worker slot.
 The Pier is a position rule (`PierGate`, `GameSimulation.CalculateLegTicks`). A villager standing
 on an enemy Pier may depart only back to its `previousNodeID`; any other order waits as Claiming
 (Idle without a claimer slot) while the Pier is neutralised, and a claim against an enemy Pier
@@ -302,12 +299,12 @@ roster cannot defer it. `DistrictStats.townBonusVillagers` is conditionally hash
 `BalanceHasher` (tag 3007 with its array index) and must be nonnegative.
 
 `DistrictType` values are now explicit in the source and persisted in match logs: the
-active set is 0–6 and 14–18 (`DistrictRoster.IsActive`; Storehouse is 18), and the retired numbers (Market 13 and the merged 7–12) are
+active set is 0–6 and 14–19 (`DistrictRoster.IsActive`; Storehouse is 18, Workshop is 19), and the retired numbers (Market 13 and the merged 7–12) are
 reserved and never reused. Placement legality, board validation and the log reader refuse
 an inactive type (the log reader for simulation version 3 and later; version 2 logs keep their historical numbers), with no aliasing in the runtime; only saved-data migration in
 `Backend/Shared` maps old numbers to new ones.
 
-Recruit=5, SetAutoRecruit=6, UpgradeFortress=7, InstallMinion=8 and Collect=9 have explicit processor cases and serializer/log
+Recruit=5, SetAutoRecruit=6, UpgradeFortress=7, ForgeMinion=8 and Collect=9 have explicit processor cases and serializer/log
 acceptance. `CommandTypes.IsKnown` is the one list of valid types; the serializer
 and the log reader refuse anything else. The six existing command fields,
 24-byte wire payload and TICKS shape are unchanged. Recruit eligibility and cost
@@ -376,10 +373,12 @@ instead of desyncing. The lobby handshake (`InputSerializer`'s
 `SimulationVersion.Current`, and a content hash,
 `BalanceHasher.Hash` over the shared `GameBalance` asset.
 
-The current simulation version and baseline pin are **4**. D1 adds suit-driven structure
-attack and two unconditional structure terms per node; D3/D4 added the unconditional
-`moveLegDurationTicks` villager term. The pinned fingerprints are `EmptyTick100Hash =
--2085505832` and `MoveAndCombat4Hash = 534653207`. With a valid
+The current simulation version and baseline pin are **4**. E1 removed the two
+unconditional structure terms per node; the district-health extension is zero-neutral,
+and the unconditional latched leg clock remains. The pinned fingerprints are
+`EmptyTick100Hash = 2084609368` and `MoveAndCombat4Hash = -1780012649`.
+The rework remains in unreleased v4; E4 changes no simulation rules or pins.
+With a valid
 breach channel enabled, a loss requires a breach this tick at or above
 `BreachThresholdAt(tickCount)`; simultaneous losses cancel. Lowering the
 threshold alone never loses a match. Disabling the channel retains
@@ -418,8 +417,8 @@ resource caps. Zero caps are omitted as a legacy hash extension; nonzero
 caps are tagged separately. Nonpositive caps are uncapped in gameplay,
 including negative values, whose raw values still affect the balance hash.
 All resource gains and starting values clamp to a positive cap. Wasted
-completions still cycle; a metal-capped Forge consumes no material and
-a Storehouse still alternates. The handshake therefore mitigates issue #59;
+ordinary-worker completions still cycle; a metal-capped Forge consumes no material.
+A full Storehouse bank pauses its production timer. The handshake therefore mitigates issue #59;
 it does not fix that omission.
 
 ## The starting board: `MatchFactory`

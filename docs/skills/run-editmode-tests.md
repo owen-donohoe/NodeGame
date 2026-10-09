@@ -6,8 +6,8 @@ tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
-verified_at_commit: c23a378c216fcc99b426dac0973ce4560144e4d4
+  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable
 sources:
   - id: batch-runner
@@ -122,10 +122,11 @@ Note that a runner's own exit code answers "did the run complete and did every t
 not the same question as "is the determinism gate satisfied at this commit". The attester answers
 the second.
 
-The current baseline pin is simulation version **4**, with fingerprints `-2085505832`
-(`EmptyTick`) and `534653207` (`MoveAndCombat`); D1's unconditional structure kind/HP
-terms and D4's unconditional `moveLegDurationTicks` term moved both after the v3 terrain/C7
-changes. Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
+The current baseline pin is simulation version **4**, with fingerprints `2084609368`
+(`EmptyTick`) and `-1780012649` (`MoveAndCombat`). E1 removed unconditional structure
+terms; district health is zero-neutral and D4's latched leg-clock term remains.
+The unreleased version stays 4, and E4 acceptance coverage changes no pins.
+Current dotnet totals are listed in [run-dotnet-tests](run-dotnet-tests.md);
 they include a balance-asset text guard outside the shared EditMode suite and are not a claim
 about how many cases a Unity run executes.
 

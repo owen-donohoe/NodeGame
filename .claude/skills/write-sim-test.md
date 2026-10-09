@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
-verified_at_commit: c736775d94d5e11c352dd3af6bb2bc0edecef1be
+  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable
 sources:
   - id: tests
@@ -36,9 +36,9 @@ sources:
     title: Coverage of balance fields
   - id: bank-rules
     resource: Assets/Scripts/Game/Simulation/BankRules.cs
-    title: Shared lock, minion eligibility and worker capacity
+    title: Shared bank lock, collection, Storehouse production and payout
   - id: bank-tests
-    resource: Assets/Tests/EditMode/Tests/BankProductionTests.cs
+    resource: Assets/Tests/EditMode/Tests/StorehouseBankTests.cs
     title: Bank production, Storehouse and capture lifecycle scenarios
   - id: collection-tests
     resource: Assets/Tests/EditMode/Tests/BankCollectionTests.cs
@@ -91,11 +91,12 @@ Step 2: Set up initial state
 - Initialize v2 player fields deliberately: breachBar and paidRespawns at 0,
   nextBreacherID at -1. Default balance enables the channel, tempo and caps;
   disable those explicitly when testing legacy behaviour
-- For banks, initialize bankFood/bankMaterials/bankMetal, minionProductionRemaining
-  and storehouseNextResource to 0, and storehouseInitialised to false.
-  collectProgress starts at 0 and collectRequested at false. Supply positive
-  minionHP/minionMetalCost/bankCapacity tuning; historical zero tuning disables minions.
-  Fortress HP and Storehouse productionTicks belong to their per-era DistrictStats.
+- For banks, initialize bankFood/bankMaterials/bankMetal, bankProductionRemaining,
+  storehouseNextResource and collectProgress to 0, collectRequested to false, and
+  districtHealth to 0. Explicitly fill health when an effect should be active.
+  Supply positive bankCapacity and collection tuning; minion HP/cost/speed and
+  Workshop forgeCooldownTicks are validated separately. Passive district health
+  maximum/regeneration and Storehouse production duration belong to per-era stats.
 - Document what the starting state represents
 - For recruitment, initialize player recruitCount and node recruitReadyTick to 0,
   and autoRecruit to false. Use explicit positive recruit tuning; historical
@@ -136,45 +137,37 @@ Step 5: Assert expected state
 - For an integration scenario over loss, duplication and reordering with replay and
   rollback, use `dotnet/CoreRulesFixture` (map `hourglass-01-acceptance`, a test-only copy that
   never advertises its hash under the shipped map ID) rather than the shipped board. For banks,
-  gates and structure raids use `dotnet/BankRulesFixture` (map `hourglass-01-banks-acceptance`):
+  gates, district health and mobile minions use `dotnet/BankRulesFixture` (map `hourglass-01-banks-acceptance`):
   its witness asserts each rule actually fired, and its balance adds a Warrior suit entry, since
   the default balance has no suit stats and Equip would otherwise refuse.
 - For the Fortress, assert level-by-level costs in either currency, refusal under enemy presence,
   non-stacking auras read from tick-start state, the divisor floor of 1 on claim and breach,
   and that ownership loss resets the level.
-- For structures, assert HP16 takes 16 lone attack ticks, lowest-ID four attackers,
-  Medic and surplus soldiers claiming, no attack on transit/own nodes or Cores,
-  post-combat damage deferred to the next tick, and no destruction-tick claim by participants.
-  Fortress upgrades above level 1 preserve damaged HP; destruction resets the level,
-  rebuy costs level 1, and the aura disappears only on the following tick.
-- For minions, assert ordinary output pays the pool while minion output banks; InstallMinion
-  costs three metal and retains the lowest-ID human in the remaining worker position.
-  Refuse invalid district/value/owner, locked nodes and existing structures without mutation.
-  Lock is neutral ownership, an anchored enemy (including departing Moving enemies), or
-  an incomplete owner bar. Enemy presence does not pause minion production. Neutral
-  ownership and a full bank pause its timer without Forge input spend or catch-up; missing
-  Forge allocation/material wastes a cycle. Carry production overshoot and use district era.
-  Any full claim, including the previous owner's re-claim, destroys a dormant Minion and
-  pays its remaining bank with pool caps/overflow discard. Storehouse grants a free Minion
-  once; its construction flag survives destruction/capture. Structure destruction pays
-  remaining loot before clearing Minion automation/bank; a same-tick civilian capture
-  cannot pay it again, and structure participants cannot claim on that tick.
-  Collect=9 uses value 1 to start and 0 to cancel; an empty bank, non-owner or invalid
-  value refuses without hash mutation. A locked owner's start is accepted and paused.
-  Collection follows minion production and precedes auto-recruit: one shared node clock,
-  +collectProgressPerTick (default 5) per active unlocked tick, transfer one at >=collectProgressPerUnit
-  (default 16) and subtract it; the constants live in GameBalanceData, not in BankRules. A full five
-  drains at ticks 4,7,10,13,16, independent of tempo. Food/materials/metal priority skips
-  full pools; all eligible pools full freezes progress. No requester resets progress;
-  empty bank resets progress/request; cancel resets unless a stationary collector remains.
-  Use BankRules.Locked and HasStationaryCollector rather than restating eligibility; the
-  CollectionState and InstallReason helpers must agree with CanCollect and CanInstallMinion.
-  Lock pauses without reset; Restore completion unlocks collection in the same tick.
-  Ownership changes cancel request/progress, including neutralisation.
-  Assert bank total > 0 implies Minion; hash, copy and register every added node field.
-  InstallMinion=8 and Collect=9 keep the six-int wire/log shape and do not bump ProtocolVersion.
-  Market=13 remains historical saved data, migrates to Storehouse=18, and is refused
-  on current packets; do not test active Market worker production.
+- For district health, assert exact drain-before-bar arithmetic, no regeneration
+  below a full owner bar, linear/clamped recovery, reset on ownership transitions
+  and healthMax 0 always healthy. Test each passive effect and tick-start aura
+  timing; resistance returns only at full health. `DistrictHealthTests` covers these.
+- For minions, assert Workshop cost/cooldown/cap and refusal hash equality,
+  speed and movement, no claim/work/breach/equip/respawn, zero combat damage,
+  targetability and permanent consumption on death. They collect an owned bank
+  while stationary and do not block economic enemy-presence checks (`IsBody`).
+  `WorkshopMinionTests` supplies independent correctness/determinism runs.
+- For Storehouse, assert self-production at full health, alternating bank output,
+  capacity pause and timer overshoot; no worker or minion is required. Capture
+  pays remaining stock once, neutralisation preserves stock, and the old owner's
+  re-claim produces again after healing (`StorehouseBankTests`).
+  Collect=9 starts at value 1 and cancels at 0; invalid/empty/non-owner requests
+  are hash-neutral refusals. A locked owner's start is accepted and paused.
+  Collection follows Storehouse production and precedes auto-recruit. Its shared
+  dwell clock adds 5/tick by default and pays one at 16, preserving remainder;
+  five units drain on ticks 4,7,10,13,16 without tempo scaling. Full pools pause
+  progress; priority is food/materials/metal, skipping full pools. No collector
+  resets progress; empty resets progress/request; cancel preserves progress only
+  if a stationary collector remains. Use BankRules for lock/collector/status;
+  Restore completion unlocks cash-out in the same tick. Ownership changes clear
+  requests/progress. ForgeMinion=8 and Collect=9 retain the six-int wire/log shape.
+  Market=13 is saved-data history, migrates to Storehouse=18 and is refused on
+  current packets. Workshop=19 joins the active roster.
 - For Piers, initialize moveLegDurationTicks to 0 off-leg; BeginLeg latches it and
   ClearLeg clears it on arrival, corrupt-path recovery, combat, death, breach and
   respawn. Per-era pierTravelDivisor defaults to 2; historical zero tuning has
@@ -215,16 +208,11 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 4 (-2085505832 and 534653207 after D4).
-  Unconditional structure kind/HP terms on all three bare nodes moved the previous
-  C7 fingerprints (647286254 and 357327383). Balance tuning extensions are tagged
-  and zero-neutral; historical absent tuning does not enable Fortress upgrading.
-  D2 bank/timer/construction and D3 collection fields are tagged, indexed and zero/false-neutral, so
-  both D1 pins remain unchanged through D3. D4 hashes moveLegDurationTicks
-  unconditionally after moveProgress, adding a zero term for each of the two
-  villagers in both completed fixtures: EmptyTick -563755666 to -2085505832,
-  MoveAndCombat -2013445737 to 534653207. Those line-board routes are unchanged;
-  the unreleased PR D version stays 4. Conditional hashing does not make older logs replayable
+- Current pins are version 4, 2084609368 / -1780012649. E1 removed six
+  unconditional zero structure terms from the bare three-node fixtures while
+  retaining D4's leg-clock terms; health is zero-neutral. Unreleased v4 stayed
+  v4. E2/E3/E4 do not move the pins. Tagged balance extensions omit absent/zero
+  values; missing active Workshop tuning cannot enable free forging.
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests
