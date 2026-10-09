@@ -12,7 +12,8 @@ param(
     [int]$Seconds = 60,
     # PR #82 release identity: MatchSetup, terrain maps and core rules.
     [int]$Protocol = 5,
-    [int]$Sim = 3,
+    [int]$Sim = 4,
+    # Content is deliberately not updated here: the lead sets it to the v4 balance export hash at the D-E release gate.
     [int]$Content = 971356564,
     [switch]$EnsureRecords,
     # After a match forms: publish a code as slot 0, read it as slot 1, then

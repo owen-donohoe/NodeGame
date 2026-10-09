@@ -89,10 +89,11 @@ namespace NodeWar.Simulation
             int resource = CollectibleResource(state, node, balance);
             if (resource < 0) return node;
             // One shared dwell clock, independent of production tempo.
-            node.collectProgress += 5;
-            if (node.collectProgress >= 16)
+            if (balance.collectProgressPerTick <= 0 || balance.collectProgressPerUnit <= 0) return node;
+            node.collectProgress += balance.collectProgressPerTick;
+            if (node.collectProgress >= balance.collectProgressPerUnit)
             {
-                node.collectProgress -= 16;
+                node.collectProgress -= balance.collectProgressPerUnit;
                 switch (resource)
                 {
                     case 0: node.bankFood--; state.players[node.ownerID].food++; break;

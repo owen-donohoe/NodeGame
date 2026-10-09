@@ -18,6 +18,7 @@ namespace NodeWar.Tests
         [TestCase("recruitBaseCost", 6)]
         [TestCase("recruitCostPerRecruit", 3)]
         [TestCase("minionHP", 16)] [TestCase("minionMetalCost", 3)] [TestCase("bankCapacity", 5)]
+        [TestCase("collectProgressPerTick", 5)] [TestCase("collectProgressPerUnit", 16)]
         [TestCase("structureDamagePerTick", 1)]
         [TestCase("maxStructureAttackersPerNode", 4)]
         public void CoreScalar_RegisteredDefaultAndIndependentMutation(string name, int expected)
@@ -151,10 +152,12 @@ namespace NodeWar.Tests
         public void BankTuning_RejectsInvalidActiveScalarsAndAllowsHistoricalZeros()
         {
             var b = GameBalanceData.Default();
-            foreach (string name in new[] { "minionHP", "minionMetalCost", "bankCapacity" })
+            foreach (string name in new[] { "minionHP", "minionMetalCost", "bankCapacity", "collectProgressPerTick", "collectProgressPerUnit" })
                 foreach (int value in new[] { -1, 0 })
                     Assert.IsFalse(SetCoreScalar(b, name, value).CoreRulesValid(out _));
-            var historical = SetCoreScalar(SetCoreScalar(SetCoreScalar(b, "minionHP", 0), "minionMetalCost", 0), "bankCapacity", 0);
+            var historical = b;
+            foreach (string name in new[] { "minionHP", "minionMetalCost", "bankCapacity", "collectProgressPerTick", "collectProgressPerUnit" })
+                historical = SetCoreScalar(historical, name, 0);
             Assert.IsTrue(historical.CoreRulesValid(out _)); Assert.IsFalse(historical.BankTuningValid());
         }
         [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]

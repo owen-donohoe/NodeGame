@@ -158,6 +158,8 @@ namespace NodeWar.Simulation
                 if (b.minionHP != 0) { hash = hash * 31 + 3015; hash = hash * 31 + b.minionHP; }
                 if (b.minionMetalCost != 0) { hash = hash * 31 + 3016; hash = hash * 31 + b.minionMetalCost; }
                 if (b.bankCapacity != 0) { hash = hash * 31 + 3017; hash = hash * 31 + b.bankCapacity; }
+                if (b.collectProgressPerTick != 0) { hash = hash * 31 + 3019; hash = hash * 31 + b.collectProgressPerTick; }
+                if (b.collectProgressPerUnit != 0) { hash = hash * 31 + 3020; hash = hash * 31 + b.collectProgressPerUnit; }
                 if (b.structureDamagePerTick != 0) { hash = hash * 31 + 3012; hash = hash * 31 + b.structureDamagePerTick; }
                 if (b.maxStructureAttackersPerNode != 0) { hash = hash * 31 + 3013; hash = hash * 31 + b.maxStructureAttackersPerNode; }
                 if (b.districtStats != null)

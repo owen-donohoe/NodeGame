@@ -30,7 +30,7 @@ namespace NodeWar.UI
                 Requested=node.collectRequested, Workers=NodeWar.View.StructurePresentation.WorkerPresentation(node.districtType),
                 Status=status, Refusal=refusal, CollectLabel=node.collectRequested?"Cancel collection":"Collect",
                 InstallLabel="Install Minion - "+b.minionMetalCost+" metal",
-                Information="Bank "+BankRules.Total(node)+" / "+b.bankCapacity+": "+node.bankFood+" food, "+node.bankMaterials+" materials, "+node.bankMetal+" metal. Collection "+node.collectProgress+" / 16: "+status+
+                Information="Bank "+BankRules.Total(node)+" / "+b.bankCapacity+": "+node.bankFood+" food, "+node.bankMaterials+" materials, "+node.bankMetal+" metal. Collection "+node.collectProgress+" / "+b.collectProgressPerUnit+": "+status+
                     ". Minion: "+refusal+". Production "+node.minionProductionRemaining+" / "+duration+" ticks remaining." };
         }
         private bool Current(SimulationState s,int p,int n) => ReferenceEquals(s,boundState) && s!=null && ReferenceEquals(s.nodes,boundNodes) &&

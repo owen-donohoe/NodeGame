@@ -67,6 +67,9 @@ namespace NodeWar.Simulation
         public int minionHP;
         public int minionMetalCost;
         public int bankCapacity;
+        /// <summary>Dwell progress added per tick while a bank is being collected, and the progress that pays one unit.</summary>
+        public int collectProgressPerTick;
+        public int collectProgressPerUnit;
         public int structureDamagePerTick;
         public int maxStructureAttackersPerNode;
 
@@ -284,8 +287,8 @@ namespace NodeWar.Simulation
 
         public bool CoreRulesValid(out string reason)
         {
-            if ((minionHP != 0 || minionMetalCost != 0 || bankCapacity != 0) && !BankTuningValid())
-            { reason = "Invalid minion HP, cost or bank capacity."; return false; }
+            if ((minionHP != 0 || minionMetalCost != 0 || bankCapacity != 0 || collectProgressPerTick != 0 || collectProgressPerUnit != 0) && !BankTuningValid())
+            { reason = "Invalid minion HP, cost, bank capacity or collection progress."; return false; }
             if (districtStats != null)
                 for (int i = 0; i < districtStats.Length; i++)
                 {
@@ -378,7 +381,8 @@ namespace NodeWar.Simulation
             catch (System.OverflowException) { return false; }
         }
 
-        public bool BankTuningValid() => minionHP > 0 && minionMetalCost > 0 && bankCapacity > 0;
+        public bool BankTuningValid() => minionHP > 0 && minionMetalCost > 0 && bankCapacity > 0 &&
+            collectProgressPerTick > 0 && collectProgressPerUnit > 0;
 
         public bool StructureTuningValid() => structureDamagePerTick > 0 &&
             maxStructureAttackersPerNode > 0 && maxStructureAttackersPerNode <= 4 &&
@@ -390,6 +394,7 @@ namespace NodeWar.Simulation
             {
                 ticksPerSecond = 10,
                 minionHP = 16, minionMetalCost = 3, bankCapacity = 5,
+                collectProgressPerTick = 5, collectProgressPerUnit = 16,
                 structureDamagePerTick = 1,
                 maxStructureAttackersPerNode = 4,
                 baseClaimPerTick = 17,

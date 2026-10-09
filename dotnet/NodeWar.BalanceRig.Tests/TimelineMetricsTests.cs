@@ -98,6 +98,45 @@ namespace NodeWar.BalanceRig
             Assert.AreEqual((-1, 0), (m.Transitions[0].fromOwner, m.Transitions[0].toOwner));
         }
 
+
+        [Test]
+        public void BanksDoNotChangeMetricMeaning()
+        {
+            var s = State();
+            s.nodes[3].districtType = DistrictType.Pier; s.nodes[3].ownerID = 1;
+            s.villagers = new VillagerData[3];
+            for (int i = 0; i < 3; i++)
+                s.villagers[i] = new VillagerData { villagerID = i, ownerID = 0, currentNodeID = 3, hp = 1, state = VillagerState.Idle };
+            var m = new TimelineMetrics(s, 10);
+
+            // Raiding a structure and a gated claim on an enemy Pier are busy, not idle.
+            s.villagers[0].state = VillagerState.AttackingStructure;
+            s.villagers[1].state = VillagerState.Claiming; s.villagers[1].targetNodeID = 4;
+            Tick(m, s, 1);
+            Assert.AreEqual(1, m.Windows[0].idleVillagerTicks[0], "only the third villager is idle");
+            Assert.AreEqual(1, m.Windows[0].idlePeak[0]);
+            int before = m.Windows[0].idleVillagerTicks[0];
+
+            // A population append (a recruit lands at the end of the array) never drops what was counted.
+            var grown = new VillagerData[4];
+            System.Array.Copy(s.villagers, grown, 3);
+            grown[3] = new VillagerData { villagerID = 3, ownerID = 0, currentNodeID = CoreP0, hp = 1, state = VillagerState.Idle };
+            s.villagers = grown;
+            Tick(m, s, 2);
+            Assert.GreaterOrEqual(m.Windows[0].idleVillagerTicks[0], before);
+            Assert.AreEqual(1 + 2, m.Windows[0].idleVillagerTicks[0]);
+            Assert.AreEqual(2, m.Windows[0].idlePeak[0]);
+
+            // The Pier is neutralised by the gated claimers: one Neutralisation, no Claim, not a Core.
+            s.nodes[3].ownerID = -1;
+            Tick(m, s, 3);
+            Assert.AreEqual(1, m.NeutralisationCount);
+            Assert.AreEqual(0, m.ClaimCount);
+            Assert.AreEqual((OwnerTransitionKind.Neutralisation, 1, -1, false),
+                (m.Transitions[0].kind, m.Transitions[0].fromOwner, m.Transitions[0].toOwner, m.Transitions[0].isCore));
+            Assert.AreEqual(1, m.NeutralisedFrom[1]);
+        }
+
         [Test]
         public void OpeningContest_OnlyNonCoreThroughTick600()
         {
