@@ -1687,6 +1687,9 @@ namespace NodeWar.Core
             }
 
             SpawnBreachBars();
+            for(int i=0;i<state.nodes.Length;i++)
+                if(villagerPositioners[i]!=null && state.nodes[i].districtType!=DistrictType.Core)
+                    villagerPositioners[i].gameObject.AddComponent<StructureHPBar>().Initialize(state,i,balance.Data,boardConfig.nodeScale);
 
             if (outlineDriver != null) outlineDriver.SetNodeGroups(nodeOutlines);
 

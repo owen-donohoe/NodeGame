@@ -6,6 +6,25 @@ namespace NodeWar.Tests
 {
     public class BankCollectionTests
     {
+        [Test] public void PresentationReasonsAgreeWithEligibility()
+        {
+            var b=Configure();
+            for(int fixture=0;fixture<6;fixture++) {
+                var s=Board(b); s.nodes[1].collectRequested=true;
+                if(fixture==1) s.nodes[1].claimBar--;
+                if(fixture==2) s.nodes[1].ownerID=-1;
+                if(fixture==3) s.villagers=new[] { TestBoardFactory.MakeIdleVillager(0,1,1,b) };
+                if(fixture==4) s.players[0].food=b.foodCap;
+                if(fixture==5) s.nodes[1]=StructureRules.Destroy(s.nodes[1]);
+                int hash=SimulationStateHasher.ComputeHash(s);
+                var reason=BankRules.CollectionState(s,s.nodes[1],b);
+                Assert.AreEqual(BankRules.Locked(s,s.nodes[1],b),reason==CollectState.Locked || reason==CollectState.Neutral);
+                Assert.AreEqual(s.nodes[1].ownerID==0 && BankRules.Total(s.nodes[1])>0,BankRules.CanCollect(s,Collect()));
+                var c=new GameCommand { type=CommandType.InstallMinion,playerID=0,targetNodeID=1,villagerID=-1 };
+                Assert.AreEqual(BankRules.InstallReason(s,b,0,1)==InstallRefusal.None,BankRules.CanInstallMinion(s,b,c));
+                Assert.AreEqual(hash,SimulationStateHasher.ComputeHash(s));
+            }
+        }
         private static GameBalanceData Configure()
         {
             var b = GameBalanceData.Default();

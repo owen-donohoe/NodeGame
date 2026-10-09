@@ -15,7 +15,10 @@ namespace NodeWar.View.Tests
             s.nodes[1].claimBar = -1000; s.villagers[0].currentNodeID = 1;
             s.villagers[0].previousNodeID = 0; s.villagers[0].state = state; s.villagers[0].moveSpeedTicks = 16;
             int before = SimulationStateHasher.ComputeHash(s);
+            s.villagers[0].hp=1; before=SimulationStateHasher.ComputeHash(s);
             Assert.IsTrue(Field<bool>(Call("Style", s.villagers[0], 1f, false), "amber"));
+            Assert.IsTrue(OrderPresentation.GateBlocked(s,s.villagers[0]));
+            Assert.IsTrue(OrderPresentation.StyleWithState(s,s.villagers[0],1f,false).amber);
             CollectionAssert.AreEqual(new[] { 1, 2 }, Field<int[]>(Route(s), "nodes"));
             Assert.AreEqual(before, SimulationStateHasher.ComputeHash(s));
         }

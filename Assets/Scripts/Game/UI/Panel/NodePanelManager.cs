@@ -716,6 +716,7 @@ namespace NodeWar.UI
             if (!isOpen) return;
             isOpen = false;
             handleResting = restingAtHandle;
+            if(currentContent!=null) foreach(var actions in currentContent.GetComponentsInChildren<NodeActionPanelContent>()) actions.Unbind();
 
             // Remembered so the handle has something to restore. currentNodeID
             // is cleared because no panel is showing; lastNodeID is what the
@@ -743,8 +744,7 @@ namespace NodeWar.UI
             if (!isOpen || currentNodeID < 0) return;
             if (currentContent != null)
             {
-                var actions = currentContent.GetComponent<NodeActionPanelContent>();
-                if (actions != null) actions.Refresh();
+                foreach(var actions in currentContent.GetComponentsInChildren<NodeActionPanelContent>()) actions.Refresh();
             }
         }
 
@@ -762,6 +762,19 @@ namespace NodeWar.UI
             if (forgeContent != null)
             {
                 forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned);
+                var bankObject=new GameObject("Bank",typeof(RectTransform),typeof(NodeActionPanelContent));
+                bankObject.transform.SetParent(currentContent.transform,false);
+                var rect=bankObject.GetComponent<RectTransform>();
+                rect.anchorMin=new Vector2(0,0); rect.anchorMax=new Vector2(1,NodeWar.View.StructurePresentation.BankPanelHeight); rect.offsetMin=Vector2.zero; rect.offsetMax=Vector2.zero;
+                var forgeArea=new GameObject("Forge production",typeof(RectTransform)).GetComponent<RectTransform>();
+                forgeArea.SetParent(currentContent.transform,false); forgeArea.anchorMin=new Vector2(0,NodeWar.View.StructurePresentation.BankPanelHeight);
+                forgeArea.anchorMax=Vector2.one; forgeArea.offsetMin=Vector2.zero; forgeArea.offsetMax=Vector2.zero;
+                for(int i=currentContent.transform.childCount-1;i>=0;i--) {
+                    var child=currentContent.transform.GetChild(i);
+                    if(child!=bankObject.transform && child!=forgeArea) child.SetParent(forgeArea,false);
+                }
+                bankObject.GetComponent<NodeActionPanelContent>().Initialize(simState,inputBuffer,tickProvider,balance,currentNodeID,
+                    () => debugPlayerSwitch!=null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
                 return;
             }
 
@@ -792,7 +805,8 @@ namespace NodeWar.UI
         /// a bug rather than a case to absorb silently.
         /// </summary>
         private static bool UsesNodeActions(DistrictType type) => type == DistrictType.Village ||
-            type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress;
+            type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress ||
+            type == DistrictType.Farm || type == DistrictType.Mine || type == DistrictType.Storehouse;
 
         private GameObject GetContentPrefab(DistrictType type)
         {

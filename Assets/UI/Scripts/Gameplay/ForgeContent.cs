@@ -136,6 +136,7 @@ namespace NodeWar.UI
 
         public override void Refresh()
         {
+            RefreshBank();
             bool yours = State.nodes[NodeID].ownerID == ControlledPID;
 
             int working = RefreshDials();

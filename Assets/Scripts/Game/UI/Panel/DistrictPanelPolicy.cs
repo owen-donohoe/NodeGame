@@ -82,6 +82,7 @@ namespace NodeWar.UI
                 case DistrictType.Farm:
                 case DistrictType.Mine:
                 case DistrictType.Market:
+                case DistrictType.Storehouse:
                     return true;
 
                 default:

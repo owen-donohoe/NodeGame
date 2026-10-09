@@ -8,6 +8,9 @@ namespace NodeWar.UI
     public sealed class NodeActionPanelContent : MonoBehaviour
     {
         private readonly NodeActionModel model=new NodeActionModel();
+        private readonly BankActionModel bankModel=new BankActionModel();
+        private Button collect,install;
+        private bool requested;
         private SimulationState state;
         private InputBuffer input;
         private GameBalanceData balance;
@@ -16,6 +19,7 @@ namespace NodeWar.UI
         private bool shownAutoRecruit;
         private TextMeshProUGUI information;
         private Button recruit,repeat,materials,metal;
+        public void Unbind() { input=null; enabled=false; }
         public void Initialize(SimulationState s,InputBuffer buffer,NodeWar.Core.ITickProvider ticks,GameBalanceData b,int nodeID,System.Func<int> controlledPlayer)
         {
             state=s; input=buffer; balance=b; node=nodeID; viewer=controlledPlayer;
@@ -24,6 +28,8 @@ namespace NodeWar.UI
             recruit=Control("Recruit",() => { if(model.TryRecruit(state,balance,viewer(),node,out var c)) input.EnqueueCommand(c); Refresh(); });
             repeat=Control("Repeat",() => { if(model.TrySetAutoRecruit(state,balance,viewer(),node,!shownAutoRecruit,out var c)) input.EnqueueCommand(c); Refresh(); });
             materials=Control("Materials",() => Upgrade(0)); metal=Control("Metal",() => Upgrade(1));
+            collect=Control("Collect",() => { if(input!=null && isActiveAndEnabled && bankModel.TryCollect(state,balance,viewer(),node,!requested,out var c)) input.EnqueueCommand(c); Refresh(); });
+            install=Control("Install",() => { if(input!=null && isActiveAndEnabled && bankModel.TryInstall(state,balance,viewer(),node,out var c)) input.EnqueueCommand(c); Refresh(); });
             Refresh();
         }
         private TextMeshProUGUI Text(string name)
@@ -47,7 +53,7 @@ namespace NodeWar.UI
         { button.gameObject.SetActive(visible); button.interactable=enabled; button.GetComponentInChildren<TextMeshProUGUI>().text=text; }
         public void Refresh()
         {
-            if(state==null || node<0 || node>=state.nodes.Length) return;
+            if(input==null || state==null || node<0 || node>=state.nodes.Length) return;
             int player=viewer(); var d=model.Describe(state,balance,player,node); information.text=d.Information; shownAutoRecruit=d.AutoRecruit;
             bool yours=state.nodes[node].ownerID==player;
             bool village=state.nodes[node].districtType==DistrictType.Village;
@@ -56,6 +62,10 @@ namespace NodeWar.UI
             Set(repeat,"Repeat: "+(d.AutoRecruit?"On":"Off"),yours&&village,d.CanRepeat);
             Set(materials,"Upgrade - "+d.MaterialsCost+" materials",yours&&fortress,d.CanMaterials);
             Set(metal,"Upgrade - "+d.MetalCost+" metal",yours&&fortress,d.CanMetal);
+            var bank=bankModel.Describe(state,balance,player,node); requested=bank.Requested;
+            if(bank.Visible) information.text=bank.Information;
+            Set(collect,bank.CollectLabel,bank.Visible&&bank.ShowActions,bank.CanCollect);
+            Set(install,bank.InstallLabel,bank.Visible&&bank.ShowActions,bank.CanInstall);
         }
     }
 }

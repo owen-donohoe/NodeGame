@@ -1,5 +1,7 @@
 namespace NodeWar.Simulation
 {
+    public enum CollectState { Empty, Neutral, Locked, StorageFull, Waiting, Collecting }
+    public enum InstallRefusal { None, InvalidBinding, InvalidTuning, NotOwner, WrongDistrict, StructurePresent, BankPresent, Locked, InsufficientMetal }
     /// <summary>Shared bank eligibility, lock, production and worker definitions.</summary>
     public static class BankRules
     {
@@ -43,6 +45,31 @@ namespace NodeWar.Simulation
             if (node.bankMaterials > 0 && PoolHasRoom(player.materials, balance.materialsCap)) return 1;
             if (node.bankMetal > 0 && PoolHasRoom(player.metal, balance.metalCap)) return 2;
             return -1;
+        }
+
+        /// <summary>Read-only presentation query using the collection pass's exact pool check.</summary>
+        public static CollectState CollectionState(SimulationState state, NodeData node, GameBalanceData balance)
+        {
+            if (node.ownerID < 0) return CollectState.Neutral;
+            if (Locked(state, node, balance)) return CollectState.Locked;
+            if (Total(node) == 0) return CollectState.Empty;
+            if (CollectibleResource(state, node, balance) < 0) return CollectState.StorageFull;
+            return node.collectRequested || HasStationaryCollector(state, node) ? CollectState.Collecting : CollectState.Waiting;
+        }
+
+        public static InstallRefusal InstallReason(SimulationState state, GameBalanceData balance, int player, int nodeID)
+        {
+            if (state == null || state.nodes == null || state.players == null || state.villagers == null ||
+                player < 0 || player > 1 || player >= state.players.Length || nodeID < 0 || nodeID >= state.nodes.Length)
+                return InstallRefusal.InvalidBinding;
+            if (!balance.BankTuningValid() || balance.maxWorkersPerNode < 1) return InstallRefusal.InvalidTuning;
+            NodeData node = state.nodes[nodeID];
+            if (node.ownerID != player) return InstallRefusal.NotOwner;
+            if (!MinionDistrict(node.districtType) || ProductionTicks(node, balance) <= 0) return InstallRefusal.WrongDistrict;
+            if (node.structureKind != StructureKind.None) return InstallRefusal.StructurePresent;
+            if (Total(node) != 0) return InstallRefusal.BankPresent;
+            if (Locked(state, node, balance)) return InstallRefusal.Locked;
+            return state.players[player].metal < balance.minionMetalCost ? InstallRefusal.InsufficientMetal : InstallRefusal.None;
         }
 
         public static NodeData TickCollection(SimulationState state, NodeData node, GameBalanceData balance)
@@ -89,10 +116,7 @@ namespace NodeWar.Simulation
             if (command.value != 0 || command.villagerID != -1 || command.playerID < 0 || command.playerID > 1 ||
                 command.playerID >= state.players.Length || command.targetNodeID < 0 || command.targetNodeID >= state.nodes.Length ||
                 (!balance.BankTuningValid() || balance.maxWorkersPerNode < 1)) return false;
-            NodeData node = state.nodes[command.targetNodeID];
-            return node.ownerID == command.playerID && MinionDistrict(node.districtType) &&
-                node.structureKind == StructureKind.None && Total(node) == 0 && ProductionTicks(node, balance) > 0 &&
-                !Locked(state, node, balance) && state.players[command.playerID].metal >= balance.minionMetalCost;
+            return InstallReason(state, balance, command.playerID, command.targetNodeID) == InstallRefusal.None;
         }
 
         public static NodeData CreateMinion(NodeData node, GameBalanceData balance)

@@ -35,7 +35,7 @@ namespace NodeWar.View
                 case DistrictType.Barracks: return new DistrictFallbackDescriptor("Barracks","B","Equips all drafted combat suits.","Barracks");
                 case DistrictType.Core: return new DistrictFallbackDescriptor("Core","C","Your home district.");
                 case DistrictType.Forge: return new DistrictFallbackDescriptor("Forge","Fo","Produces metal.");
-                case DistrictType.Storehouse: return new DistrictFallbackDescriptor("Storehouse","St","Banks alternating food and materials.","Market");
+                case DistrictType.Storehouse: return new DistrictFallbackDescriptor("Storehouse","S","Banks alternating food and materials; no workers.","Market");
                 case DistrictType.Pier: return new DistrictFallbackDescriptor("Pier","P","Connects districts across a lake.");
                 case DistrictType.Town: return new DistrictFallbackDescriptor("Town","T","Grants villagers once per player.","Village");
                 case DistrictType.Infirmary: return new DistrictFallbackDescriptor("Infirmary","I","Local healing and Core respawn assistance.","Shrine");

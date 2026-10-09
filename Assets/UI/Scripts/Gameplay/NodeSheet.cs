@@ -55,6 +55,7 @@ namespace NodeWar.UI
         private readonly CoreContent core = new CoreContent();
         private readonly EquipContent equip = new EquipContent();
         private readonly ProductionContent production = new ProductionContent();
+        private readonly BankContent bank = new BankContent();
 
         // One chip per resource, pinned above the sheet's own top edge (see
         // NodeSheet.uss) so they ride its slide and resize for free rather
@@ -361,8 +362,9 @@ namespace NodeWar.UI
                 // opponent's node.
                 case DistrictType.Farm:
                 case DistrictType.Mine:
-                case DistrictType.Market:
                     return production;
+                case DistrictType.Storehouse:
+                    return bank;
 
                 default:
                     return null;

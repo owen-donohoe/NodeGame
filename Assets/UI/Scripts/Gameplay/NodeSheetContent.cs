@@ -40,6 +40,7 @@ namespace NodeWar.UI
         private SimulationState builtState;
         private int builtLayoutKey;
         private DistrictType boundDistrictType;
+        private BankContent bank;
 
         // Core and Forge share a layout across nodes; Equip depends on the district.
         protected virtual int LayoutKey { get { return 0; } }
@@ -102,6 +103,15 @@ namespace NodeWar.UI
                 Actions.Clear();
                 actionElements.Clear();
                 OnBind();
+                if (!(this is BankContent) && NodeWar.Simulation.BankRules.MinionDistrict(boundDistrictType))
+                {
+                    bank=new BankContent();
+                    // Separate action host keeps the embedded content's binding from clearing
+                    // Forge's allocation controls and participates in cached action restoration.
+                    var bankActions=new VisualElement(); Actions.Add(bankActions);
+                    bank.Bind(State,Input,Ticks,Balance,NodeID,ControlledPID,bankActions);
+                    Root.Add(bank.Root);
+                }
                 for (int i = 0; i < Actions.childCount; i++)
                     actionElements.Add(Actions[i]);
                 builtState = state;
@@ -116,6 +126,13 @@ namespace NodeWar.UI
                 }
             }
             Refresh();
+            RefreshBank();
+        }
+
+        protected void RefreshBank()
+        {
+            if(bank==null) return;
+            bank.Bind(State,Input,Ticks,Balance,NodeID,ControlledPID,bank.Actions);
         }
 
         /// <summary>The debug switch can change the viewer while the sheet is open.</summary>
@@ -128,6 +145,7 @@ namespace NodeWar.UI
         public void Unbind()
         {
             Input = null;
+            bank?.Unbind();
         }
 
         /// <summary>Called when the content layout changes. Build here.</summary>

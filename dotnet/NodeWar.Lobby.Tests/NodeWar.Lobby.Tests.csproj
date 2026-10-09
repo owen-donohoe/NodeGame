@@ -36,6 +36,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="BankActionTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs" Link="View/ViewSide.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
     <Compile Include="NodeCommandWireTests.cs" />

@@ -409,7 +409,7 @@ namespace NodeWar.View
                 var villager = simState.villagers[villagerIndex];
                 bool reducedMotion = NodeWar.Lobby.PlayerProfile.Instance != null &&
                     NodeWar.Lobby.PlayerProfile.Instance.Settings.reducedMotion;
-                var style = OrderPresentation.Style(villager, Time.time - interruptedAt[villagerIndex], reducedMotion);
+                var style = OrderPresentation.StyleWithState(simState,villager, Time.time - interruptedAt[villagerIndex], reducedMotion);
                 if (style.amber)
                 {
                     color = settings.interruptedColor;
@@ -590,7 +590,7 @@ namespace NodeWar.View
 
         private void TrackOrderTime(int villagerIndex, VillagerData villager)
         {
-            bool interrupted = OrderPresentation.Interrupted(villager);
+            bool interrupted = OrderPresentation.InterruptedWithState(simState,villager);
             if (lastInterrupted[villagerIndex] != interrupted || lastTargetNode[villagerIndex] != villager.targetNodeID)
                 interruptedAt[villagerIndex] = Time.time;
             lastInterrupted[villagerIndex] = interrupted;
