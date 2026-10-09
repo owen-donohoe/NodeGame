@@ -228,7 +228,8 @@ namespace NodeWar.Simulation
             if (command.value == 0) state.players[command.playerID].materials -= stats.fortressMaterialsCosts[next];
             else state.players[command.playerID].metal -= stats.fortressMetalCosts[next];
             state.nodes[command.targetNodeID].fortressLevel = next;
-            if (next == 1)
+            // Historical all-zero tuning has no structure mechanism: no HP-less Fortification.
+            if (next == 1 && bal.StructureTuningValid())
             {
                 state.nodes[command.targetNodeID].structureKind = StructureKind.Fortification;
                 state.nodes[command.targetNodeID].structureHP = bal.fortificationHP;
