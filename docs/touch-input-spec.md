@@ -1,15 +1,33 @@
 ---
 type: Direction
-title: Controls and input bindings — spec draft
-description: A player-configurable input table (each input has an on/off toggle and an action), a Controls section in Settings, a toggleable camera button, and the tap-to-add selection rules. Defaults reproduce today's behaviour. Written against the code as it stands on 2026-10-04.
+title: Controls and input bindings
+description: Landed controls contracts, including swept paint selection, deferred node taps, settings v6 migration and the safe-area selection count.
 tags: [input, mobile, desktop, selection, settings, ux]
 generated: { by: claude-sonnet-5-5, at: 2026-10-04T00:00:00Z }
 status: draft
-# No `sources:`. Describes work that has not happened. When a section lands, its
-# content belongs in architecture.md and the section here should be deleted.
+# Runtime architecture lives in architecture.md; this document records the
+# controls contract and explicitly pending device checks.
+sources:
+  - resource: Assets/Scripts/Game/Input/GestureClassifier.cs
+  - resource: Assets/Scripts/Game/Input/GestureThresholds.cs
+  - resource: Assets/Scripts/Game/Input/PointerGestureSource.cs
+  - resource: Assets/Scripts/Game/Input/PaintGeometry.cs
+  - resource: Assets/Scripts/Game/Input/LassoGeometry.cs
+  - resource: Assets/Scripts/Game/Input/SelectionSystem.cs
+  - resource: Assets/Scripts/Game/Input/SelectionRules.cs
+  - resource: Assets/Scripts/Game/Input/TapRouter.cs
+  - resource: Assets/Scripts/Game/UI/Selection/SelectionLasso.cs
+  - resource: Assets/Resources/UI/PaintCoverage.shader
+  - resource: Assets/Scripts/Lobby/Data/InputBindings.cs
+  - resource: Assets/Scripts/Lobby/Data/GameSettingsData.cs
+  - resource: Assets/UI/Scripts/ControlsViewModel.cs
+  - resource: Assets/UI/Scripts/SettingsPage.cs
+  - resource: Assets/UI/Scripts/Gameplay/GameplayHUDController.cs
+  - resource: Assets/UI/Layouts/GameplayHUD.uxml
+  - resource: Assets/UI/Styles/HUD.uss
 ---
 
-# Controls and input bindings — spec draft
+# Controls and input bindings
 
 Scope: view, input and settings only. Nothing here touches `Simulation/`, a
 `GameCommand`, or the serializer. A binding changes which *intent* is published;
@@ -17,10 +35,8 @@ the command a move order produces is identical either way. That is the reason
 this cannot desync a match, and it is the same rule `GameSettingsData` already
 states for every setting.
 
-This replaces the earlier version of this spec, which proposed removing the
-hold-to-lasso and moving the camera to two fingers. The direction is now the
-opposite: hold-to-lasso stays as the default, and every input is the player's
-choice.
+Hold-to-paint stays the default. The legacy Lasso API names and persisted
+`InputAction.LassoSelect = 2` remain, with the player-facing label “Paint select”.
 
 ## 1. What already exists
 
@@ -29,7 +45,7 @@ Read from `PointerGestureSource`, `GestureThresholds`, `TapRouter`,
 `GameplayHUDController`.
 
 - **A settings system.** `GameSettingsData` is a UnityEngine-free struct with a
-  version (`CurrentVersion = 4`), `Normalized` migration, `Differ`, and tests in
+  version (`CurrentVersion = 6`), `Normalized` migration, `Differ`, and tests in
   `NodeWar.Lobby.Tests`. It is saved through `PlayerProfile.SetSettings`.
   `SettingsPage` builds rows as a switch plus, for multi-choice values, a label
   that cycles on tap (`CycleFrameCap`). An in-match panel also reads it.
@@ -37,30 +53,20 @@ Read from `PointerGestureSource`, `GestureThresholds`, `TapRouter`,
   `GameplayHUDController.RegisterZoomHandle`: a click returns the camera to your
   core (`CameraController.RecentreOnHome`), a vertical drag zooms. It uses raw
   pointer events, so one press cannot do both.
-- **Hold-to-lasso is live and its hold time is already marked for settings.**
-  `GestureThresholds.longPressTime` (0.3 s, range 0.15–1) carries a TODO to expose
-  it in player settings as an accessibility control.
-- **Hold-to-lasso's flaw is known.** In `ContinuePress`, a press that has moved
-  no more than `tapSlopMm` (4 mm) *from where it started* when 0.3 s elapses arms
-  the lasso, and `PanSuppressed` then locks the camera for the stroke. A slow
-  drift of 3 mm counts as "still". See §5 for a fix that keeps the gesture.
-- **A small dead zone.** The pan branch needs `held < longPressTime`, the lasso
-  branch needs `moved <= slop`. A frame that both exceeds the slop and passes the
-  timer matches neither; the stroke ends as "no gesture".
-- **A tap never adds to a selection** (`TapRouter.HandleTap` → `SelectSingle`
-  clears first), and **a villager under the finger beats the node under it**, so
-  tapping a node that has one of your own villagers on it cannot order a move.
-- **Villager picking takes the first raycast hit,** not the one nearest the finger.
-- **A large lasso that captures nobody clears the selection** (`ApplyLasso`
-  clears before it loops), contradicting the "no-op" intent for small strokes.
+- **Hold time is configurable**, default 0.3 s, range 0.15–1. Hold stillness is
+  a separate 1.5 mm accumulated-path limit; tap slop remains 4 mm.
+- **Villager taps add/remove by default.** A selectable villager under the finger
+  beats the node; nearest projected centre wins, with ID breaking ties.
+- **Paint captures centres, and an empty paint preserves selection.** See §5.
+- **Node double/triple bindings default ON.** Singles and doubles defer; §4
+  defines the node-only chain and §6 its selection/order policy.
 - **No touch route for Equip or Respawn** (keyboard only, TODO for a suit picker).
   Out of scope here.
 
 ## 2. Principles
 
-- **The player picks the trade-off; the defaults reproduce today's behaviour.**
-  A fresh profile plays exactly as the game does now, plus the one approved
-  change (tap-to-add).
+- **The player picks the trade-off.** Defaults include add/remove villager taps,
+  hold-to-paint and both node selection bindings.
 - **One table, one action per input.** A slot maps to exactly one action, so two
   inputs can never fight over the same trigger by construction.
 - **Nothing the player can change is able to brick the game.** The tap grammar is
@@ -78,10 +84,10 @@ for that input.
 | Slot | Input | Default | Allowed actions |
 |---|---|---|---|
 | Tap a villager | tap on your villager | **locked on**, Add/remove | Add/remove · Replace |
-| Hold + drag | hold still, then drag | ON, Lasso select | Lasso select · Pan |
-| Drag | one finger or left button, drag from ground | ON, Pan | Pan · Lasso select |
+| Hold + drag | hold still, then drag | ON, Paint select | Paint select · Pan |
+| Drag | one finger or left button, drag from ground | ON, Pan | Pan · Paint select |
 | Drag from a villager | drag starting on your villager | OFF, Order | Order (with live path) |
-| Two-finger drag | two fingers moving together | ON, Pan | Pan · Lasso select |
+| Two-finger drag | two fingers moving together | ON, Pan | Pan · Paint select |
 | Pinch | two fingers spreading or closing | ON, Zoom | Zoom |
 | Double-tap ground | two taps on empty ground | OFF, Return to core | Return to core · Select all idle · Toggle fit/default zoom |
 | Double-tap a villager | two taps on your villager | OFF, Select all idle | Select all idle · Select all on this node |
@@ -90,6 +96,8 @@ for that input.
 | Hold (no drag) | hold still on a node or villager | OFF, Open info | Open info |
 | Middle-drag (mouse) | middle button drag | ON, Pan | Pan |
 | Scroll wheel (mouse) | scroll | ON, Zoom | Zoom |
+| Double-tap a node | two taps on the same node | ON, Select idle on node | Select idle on node |
+| Triple-tap a node | three taps on the same node | ON, Select all on node | Select all on node |
 
 **Why "Drag from a villager" is OFF by default.** It is new, and today a press that
 starts on a villager and moves becomes a camera pan. Switching it on changes that.
@@ -108,14 +116,27 @@ in time* are these, and each has a fixed rule:
 
 - **Drag vs Hold + drag.** Both on: told apart by the hold timer (today's
   behaviour, and the source of the slow-drag misfire, softened in §5). Only Drag
-  on: the drag starts at the slop with no timer at all, so a lasso bound to Drag
+  on: the drag starts at the slop with no timer at all, so paint bound to Drag
   is instant. Only Hold + drag on: moving before the hold completes does nothing.
   Neither on: no one-finger drag exists.
-- **Tap vs Double-tap.** A tap always fires immediately; a double-tap action is
-  an *addition*, never a replacement, so taps never wait. That is only safe if the
-  first tap is harmless to repeat, so double-tap exists only for empty ground
-  (first tap clears) and for villagers (first tap selects). It is deliberately not
-  offered on nodes, where the first tap would issue an order.
+- **Villager/ground tap vs double.** Their first tap commits immediately on
+  release. An enabled second-tap action replaces that second single; their
+  release-to-next-press gap remains 0.3 s, with 8 mm slop. Double-drag keeps this
+  existing gap and never uses node taps as its preceding tap.
+- **Node single/double/triple.** The original node ID and first press position
+  identify a chain. A matching next press within 8 mm and gap <= 0.22 s continues
+  it. Single expires strictly after one 0.22 s gap; with triple enabled, double
+  waits a further gap after its release. Third release commits triple immediately.
+  `GestureClassifier.AdvanceTime` runs after presses every Update, including
+  no-pointer frames; matching pressed continuations suspend expiry until resolved.
+  The deferred payload carries `TargetClass`/`TargetId`, so dispatch never uses
+  mutable down-target state or a fresh raycast. Intermediate releases issue no
+  moves, rings or `MoveIssued` events.
+- **Node binding toggles.** Both OFF: single is immediate. Double ON/triple OFF:
+  double commits on second release. Double OFF/triple ON: two taps resolve to
+  one single after timeout; three still select all. Both ON is the default.
+  Hold, drag, changed target/UI, second finger, secondary click, cancel/disable,
+  or changed bindings/hold time abandon unresolved chains without flushing orders.
 - **Pinch vs Two-finger drag.** Both may run at once (midpoint moves, span
   changes). Either can be off.
 - **Two-finger tap vs Two-finger drag.** Split by the tap slop.
@@ -131,18 +152,31 @@ in time* are these, and each has a fixed rule:
    as a hold");
 4. two slots bind the same action redundantly.
 
-## 5. Hold tuning, keeping the gesture
+## 5. Paint selection and hold
 
-The current arming rule is *net displacement from the start ≤ 4 mm*. A hesitant
-drag that drifts 3 mm over 300 ms passes it. Separate the two ideas:
-- **Tap slop** stays 4 mm (it decides tap versus pan).
-- **Hold stillness** becomes a tighter, separate limit, tested on the *path length
-  since touch-down*, for example 1.5 mm. A slow drag exceeds it and is read as a
-  pan; a deliberate hold does not.
+Hold arming keeps the configurable timer and 1.5 mm accumulated-path stillness
+limit; pan suppression starts when paint arms. The brush disc is visible then,
+even without drag. Tap slop remains 4 mm.
 
-This is a hypothesis about thumbs, not a measurement. `GestureDebugOverlay`
-already exists to check it on a device. Alongside it, a **Hold time** slider
-(0.15–1 s, default 0.3) in Controls closes the existing TODO.
+The approved radius is **5 mm on screen at every zoom**, converted with
+`ScreenMetrics` (160 dpi fallback). `PointerGestureSource` snapshots density and
+`CurrentPaintRadiusPx` at begin and retains them through completion subscribers.
+World reach grows through camera projection when zooming out; no extra zoom
+multiplier changes the physical screen radius.
+
+One recorded point is a disc; successive points sweep inclusive capsules.
+There is no implicit closing edge or polygon interior: an open U selects only
+painted coverage. Decimation and the point cap define the authoritative stroke;
+rendering and CPU membership use those same samples, without independent
+smoothing or an unsampled selecting tail.
+
+`SelectionSystem.ApplyLasso` projects local, alive, unconsumed villager centres,
+using the transform then positioner fallback, rejects z <= 0, and checks expanded
+bounds then capsule membership. Collider/sprite/touch radius is irrelevant.
+Empty/invalid capture preserves selection; nonempty capture replaces it.
+`SelectionLasso` stamps an opaque union mask and composites translucent tint
+once with an outer outline, so retracing cannot darken overlap. The shader is
+loaded from Resources (`UI/PaintCoverage`); the separate armed pulse remains.
 
 ## 6. Tap rules
 
@@ -153,7 +187,9 @@ already exists to check it on a device. Alongside it, a **Hold time** slider
 | none | empty | nothing |
 | any | own villager, not selected | add (or replace, per the Tap a villager choice) |
 | any | own villager, selected | remove |
-| any | node | move order for the whole selection (unchanged) |
+| any | node single | after the node gap, move the whole selection unless every eligible resident is selected |
+| any | node double | replace with idle local residents on this node; no order or ring |
+| any | node triple | replace with all eligible local residents on this node; no order or ring |
 | any | empty | clear selection and close panel (unchanged) |
 | any | enemy villager | falls through to the node beneath (unchanged) |
 
@@ -171,7 +207,13 @@ already uses). A drag that ends on the node it started from is treated as a tap,
 so a rolling thumb does not lose the tap. Pick the villager whose centre is
 nearest the touch, not the first raycast hit.
 
-A lasso that captures nobody leaves the selection untouched.
+Residents are local, alive, unconsumed and non-Moving with that `currentNodeID`;
+double additionally requires `Idle`. Moving arrivals, dead/consumed/enemy villagers
+do not qualify. Output is ordered by ID. A nonempty resident set entirely selected
+makes a node single a selection-preserving no-op, including with extra selections.
+Empty resident sets do not qualify; partial coverage still moves. The router
+revalidates node ID at dispatch; a real move uses the current issuing tick and
+the existing `IssueMoveTo` path. Right-click/order-drag retain their order behaviour.
 
 ## 7. Order drag (the optional slot)
 
@@ -201,8 +243,8 @@ any input.
 
 A **Controls side** setting, Right or Left, default **Right**, which is where the
 button sits today (`.hud__recentre-dock` in `HUD.uss`: `right: 12px; bottom: 38%`).
-It mirrors every control that is placed for a thumb: the camera button and the
-selection bar below. It does not touch the zoom readout (centred), the node sheet
+It mirrors the camera button. The selection count stays bottom-centre within the
+safe rectangle. It does not touch the zoom readout (centred), the node sheet
 (full width) or the opponent's side of anything.
 
 Implementation is one USS class on the HUD root (for example `hud--left`) that
@@ -213,32 +255,37 @@ under the left thumb as easily as the right.
 
 ## 8b. Selection bar
 
-This was in the first draft of this spec and is restored. A persistent strip, in
-thumb reach on the controls side, never appearing over the board: the selected
-count, small suit icons, and an **X** that calls `ClearSelection`. It exists only
-while something is selected. **Show selection bar** is a toggle, default ON.
-Tapping empty ground still clears. Equip and Respawn, which are keyboard-only today,
-would live here when they get a touch route.
+The count/clear button sits bottom-centre within the safe rectangle, with a
+12-panel-unit bottom gap. Stable names are `hud-selbar-dock` (picking Ignore),
+`hud-selbar` and `hud-selbar-count`. The controller converts left/right/bottom
+safe insets to panel units and refreshes them on size/inset changes. Controls side
+does not mirror this dock. Empty or **Show selection bar** OFF (default ON) gives
+display:none and no hit area. The count gives way to X on hover/press; captured
+pointer release inside clears, while drag-out/cancel does not. Ground still clears.
 
 ## 9. Data, persistence and the traps in it
 
-- **Where.** Fields on `GameSettingsData`, version 4 → 5: an `inputBindings`
+- **Where.** `GameSettingsData.CurrentVersion = 6`. Controls fields include an `inputBindings`
   array indexed by slot (each entry an `enabled` flag and an action index),
   `holdTime`, `showCameraButton`, `cameraButtonZoom`, `controlsSide` (0 Right,
   1 Left) and `showSelectionBar`. The table, defaults, allowed
   actions and the warning check are UnityEngine-free so `NodeWar.Lobby.Tests` can
   cover them, as it does the existing settings.
-- **Migration.** An older save has no array. `Normalized` pads missing or short
-  arrays with the defaults, and an unknown action index falls back to that slot's
-  default rather than to the nearest value, the same rule `ClampFrameCap` uses. A
-  new slot added later is a version bump that pads the same way.
-- **Trap 1: `SettingsPage.Capture` rebuilds the struct field by field.** Its own
-  comment says a field edited elsewhere "is carried through, or the first lobby
-  change would reset both to false." Every new field here has the same hazard. Change
-  `Capture` to copy `current` and overwrite only what the page edits, so new fields
-  are carried by default.
-- **Trap 2: `Differ` compares field by field.** It must compare the array, or a
-  binding change is never written to disk.
+- **Append-only IDs.** Slots 0–12 stay unchanged; `DoubleTapNode = 13` and
+  `TripleTapNode = 14` make `SlotCount = 15`. Both default ON and are single-action
+  rows: existing `SelectAllIdle = 7` and `SelectAllOnNode = 9`, routed node-locally.
+  `LassoSelect = 2` remains persisted with the “Paint select” label. No action
+  renumbering; settings v6 is independent of network protocol v6.
+- **Migration.** Version 0 becomes full defaults. Pre-v5 saves receive the
+  existing controls defaults; v5 keeps all old entries, including disabled/custom
+  actions, while missing node slots are appended with defaults. Normalization
+  clones the array, repairs unknown actions to the slot default without enabling
+  disabled unlocked slots, and is idempotent. Existing v6 OFF node slots stay OFF.
+  Other preferences, including audio, are preserved subject to normal clamping.
+- **Capture/Differ.** `SettingsPage.Capture` already copies `current` and clones
+  `inputBindings`; unrelated page edits retain controls without sharing arrays.
+  `GameSettingsData.Differ` already compares bindings. Keep both guarantees when
+  adding future slots; P2 needed no extra scalar setting or capture rewrite.
 - **Trap 3: bindings are per device.** A phone's table is wrong on a desktop. I
   did not verify whether `PlayerProfile` syncs between devices. If it does, bindings
   must be stored per device class or kept out of the sync.
@@ -253,13 +300,15 @@ a compact copy in the in-match panel so a bad combination can be undone mid-matc
 
 ```
 CONTROLS
- Hold + drag         [ON ]  Lasso select  ›
+ Hold + drag         [ON ]  Paint select  ›
  Drag                [ON ]  Pan camera    ›
  Two-finger drag     [ON ]  Pan camera    ›
  Pinch               [ON ]  Zoom
  Drag from villager  [OFF]  Order
  Double-tap ground   [OFF]  Return to core ›
  Double-tap villager [OFF]  Select all idle ›
+ Double-tap node     [ON ]  Select idle on node
+ Triple-tap node     [ON ]  Select all on node
  Two-finger tap      [OFF]  Clear selection ›
  Double-tap + drag   [OFF]  Zoom
  Hold (no drag)      [OFF]  Open info
@@ -279,37 +328,40 @@ Rows whose input has one allowed action show it as plain text, not a cycler.
 
 | File | Change |
 |---|---|
-| `Lobby/Data/GameSettingsData.cs` | v5 fields, padding, `Differ`; new UnityEngine-free `InputBindings` (table, defaults, validator) |
+| `Lobby/Data/GameSettingsData.cs`, `InputBindings.cs` | settings v6, append-only node slots, preserving padding and `Differ` |
 | `UI/Scripts/SettingsPage.cs` | Controls section; `Capture` copies `current` |
 | `Input/PointerGestureSource.cs` | read bindings; new triggers (double tap, two-finger tap, double-tap + drag, hold); the stillness rule; two-finger pan |
-| `Input/SelectionSystem.cs`, `TapRouter.cs` | add/remove, select-all actions, lasso captures-nobody |
+| `Input/SelectionSystem.cs`, `SelectionRules.cs`, `TapRouter.cs` | add/remove, node residents, no-op fully-selected node, empty-paint preservation |
+| `Input/PaintGeometry.cs`, `LassoGeometry.cs`, `UI/Selection/SelectionLasso.cs`, `Resources/UI/PaintCoverage.shader` | shared open-capsule coverage and single-composite rendering |
 | `Input/CommandSystem.cs` | order-drag preview hook |
 | `Core/CameraController.cs` | recentre and fit/default zoom intents; middle-drag and scroll through the gesture source (issue #41, B1) |
 | `UI/Scripts/Gameplay/GameplayHUDController.cs` | camera-button toggles; apply `hud--left`; selection bar |
-| `UI/Styles/HUD.uss`, `UI/Layouts/GameplayHUD.uxml` | `hud--left` mirrored rules; selection bar element |
+| `UI/Styles/HUD.uss`, `UI/Layouts/GameplayHUD.uxml` | camera mirroring; centred non-picking safe-area count dock |
 
-**Extract the classifier** into a UnityEngine-free class driven by synthetic
-pointer traces, as `InputDelayController` is. The input rules become traces: slow
-drag, hitch frame, stacked press, double-tap with a wobble.
+The classifier is UnityEngine-free and driven by synthetic pointer traces. Pure
+View/Lobby tests pin paint membership, node deadlines/cancellation/toggles,
+resident eligibility and settings migration. XML tests check required HUD names
+and picking declarations, without claiming layout or device input verification.
 
 **Tests that matter most:**
-1. *Defaults reproduce today.* Golden traces through the old and new classifier
-   with the default table must publish the same events. This is the regression
-   net for the whole refactor.
-2. *Exhaustive toggles.* For every on/off combination of the ten slots (1024), the
-   classifier never throws, always returns to idle on release, and the tap grammar
-   still works.
-3. *Padding and migration* for versions 0 to 4, and an unknown action index.
+1. *Preserve non-node traces.* Villager/ground timing and existing double-drag
+   remain unchanged; node traces deliberately pin the deferred 0.22 s grammar.
+2. *Toggle safety.* Existing pointer-slot combinations and the four node-binding
+   combinations must stay valid, return to idle and retain their defined grammar.
+3. *Padding and migration* for versions 0, 4, 5 and 6, including disabled/custom
+   old entries, disabled new slots and unknown actions.
 4. *`Capture` carries every new field.*
 
-**Order:** data model and validator (pure C#, no risk) → classifier extraction with
-the default table and the golden-trace test → the new triggers → the Controls UI
-→ the camera button toggles.
+The implementation is landed. Future edits must preserve the contracts above;
+Editor/device checks cover rendering, layout and delivery beyond pure tests.
 
 ## 12. Unverified
 
 - Whether `PlayerProfile` syncs across devices (§9, trap 3).
-- The 1.5 mm hold-stillness figure.
+- Physical-device feel of the 1.5 mm hold-stillness figure and 0.22 s node gap.
+- Physical safe areas/notches, all interface scales, sheet overlap, brush edge
+  correspondence across zoom/seat/perspective, point cap/resize/cancel and phone
+  allocation/fill cost require separate device/manual evidence.
 - Real villager slot spacing in millimetres; if slots overlap within 8 mm,
   nearest-pick is required.
 - Where the camera button sits and whether it competes with the node sheet.
@@ -320,11 +372,9 @@ the default table and the golden-trace test → the new triggers → the Control
 Resolved:
 - **Drag from a villager** is OFF by default, and a press on a villager that drags
   off never selects it.
-- **Mouse defaults** stay as today (left-drag pans, hold-drag lassos).
+- **Mouse defaults** stay left-drag pans, hold-drag paints.
 - **Left-handed side** is in scope (§8a).
 
-Open:
-1. Does the selection bar (§8b) have the right contents, or should it be only the
-   count and the X?
-2. Should the in-match panel carry the full Controls list, or only Reset and the
-   side toggle?
+The count/X button and full in-match Controls/Reset are implemented. Phase 2
+fixes the 5 mm screen radius, 0.22 s node gap, both node bindings ON and the
+fully-selected-node no-op policy. Device checks above remain verification work.

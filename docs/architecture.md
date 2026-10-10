@@ -10,6 +10,42 @@ verified:
 verified_at_commit: df5dc05324fb446a21664947bff72294a950d69a
 status: stable
 sources:
+  - id: pointer-gestures
+    resource: Assets/Scripts/Game/Input/PointerGestureSource.cs
+    title: Paint capture and deferred gesture delivery
+  - id: gesture-classifier
+    resource: Assets/Scripts/Game/Input/GestureClassifier.cs
+    title: Pointer grammar and node-chain deadlines
+  - id: gesture-thresholds
+    resource: Assets/Scripts/Game/Input/GestureThresholds.cs
+    title: Physical brush radius and node gap
+  - id: paint-geometry
+    resource: Assets/Scripts/Game/Input/PaintGeometry.cs
+    title: Swept capsule membership
+  - id: lasso-adapter
+    resource: Assets/Scripts/Game/Input/LassoGeometry.cs
+    title: Recorded screen-point adapter
+  - id: tap-router
+    resource: Assets/Scripts/Game/Input/TapRouter.cs
+    title: Selection and order arbitration
+  - id: selection-system
+    resource: Assets/Scripts/Game/Input/SelectionSystem.cs
+    title: Projected centres and local selection
+  - id: selection-rules
+    resource: Assets/Scripts/Game/Input/SelectionRules.cs
+    title: Resident eligibility and selection preservation
+  - id: selection-paint-view
+    resource: Assets/Scripts/Game/UI/Selection/SelectionLasso.cs
+    title: Runtime union mask and brush boundary
+  - id: paint-shader
+    resource: Assets/Resources/UI/PaintCoverage.shader
+    title: Single tint composite and outer outline
+  - id: hud-layout
+    resource: Assets/UI/Layouts/GameplayHUD.uxml
+    title: Stable selection count dock names
+  - id: hud-style
+    resource: Assets/UI/Styles/HUD.uss
+    title: Safe-area centred count and visibility
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: SimulationState
@@ -336,8 +372,8 @@ desyncs/disconnects.
 directly.
 
 `PointerGestureSource` is the single pointer reader for live selection and
-move orders. It resolves a primary press into a tap, a pan or a long-press
-lasso and publishes the target. Desktop right-clicks publish a node-only
+move orders. It resolves a primary press into a tap, a pan or hold-to-paint
+and publishes the target. Desktop right-clicks publish a node-only
 destination to `CommandSystem`, after a current-position UI raycast blocks
 both uGUI and UI Toolkit (including the HUD and node sheet). Consumers do
 not repeat the world raycast. `GameManager` enables gesture routing for
@@ -351,6 +387,41 @@ What counts as a tap target is asked, not assumed: an opponent's villager
 is not one, and the press falls through it to the node beneath. The rule
 lives with the selection owner rather than in the gesture source, so the
 input layer never learns game ownership.
+
+Paint uses an open union of discs/capsules, with a fixed 5 mm screen radius
+at every zoom (`GestureThresholds.paintRadiusMm`, 160 dpi fallback). The source
+snapshots pixels-per-mm and `CurrentPaintRadiusPx` when the hold arms and
+retains them through completion. Its decimated, capped recorded points drive
+both rendering and selection; there is no closing edge, polygon interior,
+area gate or independently smoothed tail. `SelectionSystem.ApplyLasso` keeps
+the compatibility name: it projects local, alive, unconsumed villager centres
+from their transforms (positioner fallback), rejects z <= 0, and applies
+inclusive expanded bounds and capsule membership. Empty capture preserves
+selection; a nonempty capture replaces it. Sprite and touch-target sizes do
+not affect membership. Zoom changes world reach through projection only.
+
+Node taps have their own deferred chain keyed by the original node ID and
+8 mm slop. `GestureClassifier.NodeTapGap` is 0.22 s, supplied by
+`GestureThresholds.nodeTapGap`; ordinary villager/ground doubles and double-drag
+retain 0.3 s. `AdvanceTime` runs after press processing even without a pointer:
+gap <= 0.22 qualifies, expiry is strictly after the deadline, and a matching
+pressed continuation suspends expiry until it resolves. With both node
+bindings enabled, single waits one gap, double waits another after its release
+and replaces selection with idle residents, and the third release immediately
+selects all eligible residents. Deferred `GestureEvent` payloads carry
+`TargetClass`/`TargetId`; the source publishes `OnDoubleTapNode` and
+`OnTripleTapNode` without a fresh raycast. Hold, drag, UI/target change, second
+finger, secondary click, cancellation/disable and changed binding/hold settings
+cancel unresolved orders. Villager and ground singles remain immediate.
+
+Residents are local, alive, unconsumed, on that node and non-Moving; idle-only
+requires `Idle`. `TapRouter` rejects stale node IDs at dispatch and treats a
+nonempty resident set already entirely selected as a selection-preserving no-op,
+even with extra selected villagers. It bypasses `IssueMoveTo`, so no command,
+highlight or `MoveIssued` fires. Partial coverage still moves, stamped with
+the issuing tick at dispatch. Right-click and order-drag keep their order path.
+Node binding toggle combinations and settings v6's append-only slots are in
+[the controls contract](touch-input-spec.md#4-how-overlaps-resolve).
 
 **6. UI/** — HUD, panels, menus during a match, in uGUI. Reads
 `SimulationState` to render; writes nothing to it. Being replaced by
@@ -626,7 +697,7 @@ Pointer (mouse / touch)        or  BotPlayer
         │
         ▼
  PointerGestureSource                   (Input/)
-        │  one press -> tap | pan | lasso, resolved once
+        │  pointer trace -> tap chain | pan | paint, resolved once
         ▼
  TapRouter / SelectionSystem            (Input/)
         │  decides what the gesture meant; tracks selection
@@ -944,10 +1015,15 @@ Three objects are carried across the Lobby → Gameplay scene load via
 
 **Input/**
 - `PointerGestureSource` — the shared pointer reader for selection and
-  commands; publishes taps, pans, lassos, pinches and right-click destinations.
+  commands; publishes tap chains, pans, paint (legacy Lasso event names),
+  pinches and right-click destinations with a frozen paint radius.
+- `GestureClassifier` — UnityEngine-free pointer traces and deferred node
+  deadlines; `PaintGeometry` — pure swept capsules, adapted by `LassoGeometry`.
 - `TapRouter` — the tap priority ladder: villager, then node-with-selection
-  (move), then node (panel), then empty (clear).
-- `SelectionSystem` — tracks selected villagers; applies lasso results.
+  (move unless all residents are selected), then node (panel), then empty
+  (clear); node doubles/triples replace idle/all resident selection.
+- `SelectionSystem` — tracks selected villagers; applies paint-centre coverage
+  and node-local resident selection through read-only `SelectionRules`.
 - `CommandSystem` — turns player actions into `GameCommand`s.
 - `InputBuffer` — queue of commands awaiting the next tick.
 - `BotPlayer` — generates commands for an AI-controlled side. GameManager and the
@@ -977,7 +1053,11 @@ Three objects are carried across the Lobby → Gameplay scene load via
   now, and mouse-only: it reads `Mouse.current` and cancels on right-click
   or Escape, neither of which a phone has.
 - `GameOverPanel` — end-of-match result display.
-- `SelectionLasso` — draws the in-progress lasso stroke.
+- `SelectionLasso` — existing component/event wiring renders the armed brush
+  disc and swept coverage. Opaque stamps form a bounded screen mask; the
+  Resources-loaded `UI/PaintCoverage` shader composites tint once with an outer
+  outline, so overlap never darkens. Resize rebuilds storage; disable/destroy
+  releases runtime mask/material resources. `LassoArmedCue` remains distinct.
 - `LassoArmedCue` — ring pulse confirming the long press armed.
 
 **`Assets/UI/`** (UI Toolkit)
@@ -1053,6 +1133,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
   slot cannot launch (`LoadoutRules.IsComplete`, rechecked by `MatchLauncher`); Home's
   Battle button explains it and opens the Workshop.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+  Its bottom-centre count/clear control keeps `hud-selbar`/`hud-selbar-count`
+  under the non-picking `hud-selbar-dock`, inset to the safe rectangle. Empty
+  or disabled uses display:none and has no hit area; controls-side mirroring
+  applies to the camera control, while the count stays centred.
   It also carries the disconnect-hold overlay, the end card's ranked result
   block, and the ranked surrender row in `MatchSettingsPanel`.
 - `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its

@@ -122,26 +122,23 @@ Decisions recorded from that work, which override the earlier text in section 1:
 
 ## 5. Phase 2 — Selection and input (`Assets/Scripts/Game/Input/`, HUD)
 
-1. **Paint select replaces the lasso.**
-   - A brush circle drawn under the finger, radius derived from camera zoom (set in
-     millimetres like `GestureThresholds`, converted to world). Larger zoomed out.
-   - Dragging sweeps a capsule between samples (a "pill"); a press with no drag is a circle.
-     Anything inside the swept area is selected, exactly the set the lasso selected.
-   - Draw the swept area outlined with a translucent fill inside (positive space highlighted).
-   - Reuse the events (`OnLassoBegin/Point/Complete`) and `SelectionSystem.ApplyLasso`. In
-     `LassoGeometry` replace the point-in-polygon test with distance to the stroke's segments.
-   - A paint that captures nobody leaves the selection untouched (the touch-input spec's rule).
-   - Hold-to-paint keeps today's arming (`longPressTime`); the binding label changes from lasso
-     to paint in `InputBindings` / the Controls panel.
-2. **Triple-tap a node** selects all of your villagers on it. New `InputBindings` slot,
-   `TapRouter` handling, `GameSettingsData` version bump with `Normalized` padding. Carry the
-   new fields through `SettingsPage.Capture` and `Differ` (touch-input-spec traps 1 and 2).
-   Double-tap on a district keeps selecting non-working villagers.
-3. **No move ring** when a tap lands on a node whose villagers are all already selected.
-4. **Count button** (the "N villagers" button shown with a selection) is centred,
-   bottom-middle: `GameplayHUD.uxml` and `HUD.uss`. Keep the safe area.
-5. Tests: capsule/point-to-segment maths, tap-grammar table incl. triple-tap, settings
-   migration from version 4/5. All UnityEngine-free in `NodeWar.View.Tests` / `Lobby.Tests`.
+The runtime changes are landed. Current contracts belong in
+[architecture's input layer](architecture.md#the-seven-layers),
+[SelectionLasso and HUD entries](architecture.md#key-classes-per-layer), and
+[the controls contract](touch-input-spec.md): paint in §5, deferred node grammar
+in §§4/6, count/clear safe-area layout in §8b and settings v6 in §9.
+
+Code entry points are `PaintGeometry`/`LassoGeometry`,
+`PointerGestureSource.OnLassoBegin/Point/Complete` and `CurrentPaintRadiusPx`,
+`SelectionSystem.ApplyLasso`, `SelectionLasso` with
+`Assets/Resources/UI/PaintCoverage.shader`, `GestureClassifier.AdvanceTime`,
+`TapRouter`, `SelectionRules`, `InputBindings` and `GameSettingsData`.
+The count dock lives in `GameplayHUD.uxml`, `HUD.uss` and
+`GameplayHUDController`; preserve `hud-selbar-dock`, `hud-selbar` and
+`hud-selbar-count` in later phases. Pure tests live in `NodeWar.View.Tests`
+and `NodeWar.Lobby.Tests`. Device acceptance remains separate from tests and
+Editor compilation; a landed contract does not assert that every manual check
+has been performed. Claim visuals and the future phases below are unchanged.
 
 ## 6. Phase 3 — Villager readability (view only)
 
