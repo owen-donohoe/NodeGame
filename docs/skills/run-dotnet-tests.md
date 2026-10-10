@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:56:36Z }
-verified_at_commit: 9ba34e8cef15a13ce37f2cc122827603463455d7
+  - { by: gpt-6, at: 2026-10-10T17:08:56Z }
+verified_at_commit: dd757cf85134b80ca9cf39c28cde61adcd022468
 status: draft
 sources:
   - id: solution
@@ -25,6 +25,9 @@ sources:
   - id: lobby-test-project
     resource: dotnet/NodeWar.Lobby.Tests/NodeWar.Lobby.Tests.csproj
     title: Lobby test project, linked sources
+  - id: tests-loadout-screen
+    resource: dotnet/NodeWar.Lobby.Tests/LoadoutScreenModelTests.cs
+    title: Passive preview, explicit Use, capacity refusal and chosen-only clear
   - id: tests-loadout-info
     resource: dotnet/NodeWar.Lobby.Tests/LoadoutInfoModelTests.cs
     title: Base-villager preview deltas and tree comparison compatibility
@@ -185,6 +188,17 @@ before compilation by MSB4184 SDK access denial. The lead must run the full solu
 and compile-check, plus Editor checks for chips/locks, promotion persistence,
 complete/short decks, fresh-rank launch, cancellation and both mixed-arena seats.
 These added cases are not a passing-test receipt or a UI event-delivery check.
+
+P1.5 adds 10 lobby cases in LoadoutScreenModelTests, explicitly linked with
+its pure LoadoutScreenModel source. They cover passive preview at both canonical
+capacities, first-empty placement and full refusal for both sides, duplicate Use
+without unequipping, chosen-only clearing, equipment retention, source isolation,
+blank preview and denied-use refusal. At dd757cf8, both required commands were
+attempted once and blocked before compilation by MSB4184 SDK access denial.
+The existing Library junction was verified. The lead must run both commands and
+check portrait layout, pointer delivery, locks, sorting, preview/Use states,
+base-villager histogram and clipping in Unity; no passing receipt is claimed.
+Variants and Skins are visible controls with no-op actions pending P1.6/P1.8.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
