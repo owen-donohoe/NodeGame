@@ -313,6 +313,8 @@ namespace NodeWar.Core
 
         private NodeWar.Lobby.LoadoutData cachedLocalLoadout;
         private NodeWar.Lobby.LoadoutData cachedRemoteLoadout;
+        private int cachedLocalPlayerID;
+        private bool hasCachedLoadouts;
 
         // The match log of a drafted match. Testing mode does not start recording.
         private NodeWar.MatchLog.MatchRecorder recorder;
@@ -327,6 +329,8 @@ namespace NodeWar.Core
             {
                 cachedLocalLoadout = draftManager.GetLocalLoadout();
                 cachedRemoteLoadout = draftManager.GetRemoteLoadout();
+                cachedLocalPlayerID = draftManager.LocalPlayerID;
+                hasCachedLoadouts = true;
             }
 
             if (draftManager != null)
@@ -1452,18 +1456,16 @@ namespace NodeWar.Core
             return setups;
         }
 
-        /// <summary>
-        /// Which loadout a seat plays: the lobby's own outside a match
-        /// connection, otherwise the local or the remote one captured when the
-        /// draft ended. Normalized, so every array is present.
-        /// </summary>
+        /// <summary>Frozen local/remote loadouts follow simulation seats, including a guest in P1.</summary>
         private NodeWar.Lobby.LoadoutData LoadoutForPlayer(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
         {
-            MatchConnection match = MatchConnection.Instance;
-            NodeWar.Lobby.LoadoutData chosen = match == null ? localLoadout
-                : playerID == match.localPlayerID ? cachedLocalLoadout
-                : cachedRemoteLoadout;
-            return NodeWar.Lobby.LoadoutData.Normalized(chosen);
+            if (hasCachedLoadouts)
+                return NodeWar.Lobby.LoadoutData.Normalized(playerID == cachedLocalPlayerID
+                    ? cachedLocalLoadout : cachedRemoteLoadout);
+
+            // Without a connection, P1 must not inherit P0's high human deck.
+            return playerID == 0 ? NodeWar.Lobby.LoadoutData.Normalized(localLoadout)
+                : NodeWar.Lobby.LoadoutData.CreateEmpty();
         }
 
         /// <summary>
@@ -1495,94 +1497,13 @@ namespace NodeWar.Core
 
         private int[] BuildDraftedSuits(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
         {
-            List<int> suits = new List<int>();
-
-            // Global suits (always available)
-            suits.Add((int)SuitType.Warrior);
-
-            // Determine which loadout belongs to this player
-            MatchConnection match = MatchConnection.Instance;
-            NodeWar.Lobby.LoadoutData playerLoadout;
-
-            if (match == null)
-            {
-                playerLoadout = localLoadout;
-            }
-            else if (playerID == match.localPlayerID)
-            {
-                playerLoadout = cachedLocalLoadout;
-            }
-            else
-            {
-                playerLoadout = cachedRemoteLoadout;
-            }
-
-            playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
-            for (int i = 0; i < playerLoadout.suitIDs.Length; i++)
-                AddSuitFromID(suits, playerLoadout.suitIDs[i]);
-
-            return suits.ToArray();
+            return NodeWar.Lobby.LoadoutMatchSetup.DraftedSuits(LoadoutForPlayer(playerID, localLoadout));
         }
 
         private int[] BuildDraftedDistricts(int playerID, NodeWar.Lobby.LoadoutData localLoadout)
         {
-            List<int> nodes = new List<int>();
-
-            MatchConnection match = MatchConnection.Instance;
-            NodeWar.Lobby.LoadoutData playerLoadout;
-
-            if (match == null)
-            {
-                playerLoadout = localLoadout;
-            }
-            else if (playerID == match.localPlayerID)
-            {
-                playerLoadout = cachedLocalLoadout;
-            }
-            else
-            {
-                playerLoadout = cachedRemoteLoadout;
-            }
-
-            playerLoadout = NodeWar.Lobby.LoadoutData.Normalized(playerLoadout);
-            for (int i = 0; i < playerLoadout.districtIDs.Length; i++)
-                AddNodeFromID(nodes, playerLoadout.districtIDs[i]);
-
-            return nodes.ToArray();
+            return NodeWar.Lobby.LoadoutMatchSetup.DraftedDistricts(LoadoutForPlayer(playerID, localLoadout));
         }
-
-        private void AddSuitFromID(List<int> suits, string suitID)
-        {
-            if (string.IsNullOrEmpty(suitID)) return;
-            SuitType type = MapSuitIDToType(suitID);
-            if (type == SuitType.None) return;
-            int intType = (int)type;
-            // Prevent duplicates
-            for (int i = 0; i < suits.Count; i++)
-            {
-                if (suits[i] == intType) return;
-            }
-            suits.Add(intType);
-        }
-
-        private void AddNodeFromID(List<int> nodes, string districtID)
-        {
-            if (string.IsNullOrEmpty(districtID)) return;
-            DistrictType type = DraftManager.MapDistrictID(districtID);
-            if (type == DistrictType.None) return;
-            int intType = (int)type;
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                if (nodes[i] == intType) return;
-            }
-            nodes.Add(intType);
-        }
-
-        private SuitType MapSuitIDToType(string suitID)
-        {
-            return NodeWar.Lobby.LoadoutTypes.SuitForLobbyId(suitID);
-        }
-
         // ===== VIEW SPAWNING =====
 
         /// <summary>The DistrictVisual for a district, or null when there is no table or no entry.</summary>
