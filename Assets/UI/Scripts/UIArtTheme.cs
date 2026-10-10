@@ -11,7 +11,7 @@ namespace NodeWar.Lobby
         public struct IconEntry
         {
             public LobbyIconKind kind;
-            [Tooltip("Anywhere is the default for existing entries; specific contexts override it.")]
+            [Tooltip("Anywhere is the default for existing entries; specific contexts override it. Context value 11 (the retired Suit tree) is reserved: old entries using it never match and can be removed.")]
             public LobbyIconContext context;
             public Sprite sprite;
             public bool keepOriginalColours;

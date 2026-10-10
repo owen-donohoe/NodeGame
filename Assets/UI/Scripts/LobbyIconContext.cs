@@ -14,8 +14,8 @@ namespace NodeWar.Lobby
         EmoteBubble,
         OffScreenIndicator,
         ShopCard,
-        SuitTree,
-        Workshop,
+        // 11 is reserved: the retired SuitTree context. Never reuse it; saved themes may still hold it.
+        Workshop = 12,
         Profile,
         Home
     }

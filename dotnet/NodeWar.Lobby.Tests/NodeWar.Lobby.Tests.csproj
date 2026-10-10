@@ -68,7 +68,6 @@
     <Compile Include="../../Assets/UI/Scripts/LoadoutInfoModel.cs" Link="Lobby/LoadoutInfoModel.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/DistrictInfoFacts.cs" Link="Gameplay/DistrictInfoFacts.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/DistrictFallback.cs" Link="View/DistrictFallback.cs" />
-    <Compile Include="SuitTreeModelTests.cs" />
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />
     <Compile Include="CommandEligibilityTests.cs" />
@@ -141,8 +140,6 @@
              Link="Lobby/LoadoutRules.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/SuitTree.cs"
              Link="Backend/SuitTree.cs" />
-    <Compile Include="../../Assets/UI/Scripts/SuitTreeModel.cs"
-             Link="Lobby/SuitTreeModel.cs" />
     <Compile Include="../../Assets/UI/Scripts/EraChips.cs"
              Link="Lobby/EraChips.cs" />
     <Compile Include="../../Assets/UI/Scripts/RankDisplay.cs"

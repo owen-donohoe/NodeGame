@@ -23,7 +23,6 @@ namespace NodeWar.Lobby.Tests
             Assert.That(rows.Single(r => r.Label == "Damage").Delta, Is.EqualTo(8));
             Assert.That(rows[0].Value, Is.EqualTo(6), "bonus HP, not total HP");
             Assert.That(rows[0].Delta, Is.EqualTo(6));
-            Assert.That(SuitTreeModel.StatRows(Balance(), "suit.warrior", 1, 0)[1].Delta, Is.EqualTo(6));
         }
         [Test] public void LowerCostAndCooldown_ArePositiveImprovement()
         {

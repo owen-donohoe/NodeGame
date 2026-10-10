@@ -150,7 +150,6 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.NavBarHome:
                 case LobbyIconKind.DailyBox:
                 case LobbyIconKind.MagicResource:
-                case LobbyIconKind.SuitTreeAvailable:
                 case LobbyIconKind.IndicatorEffect:
                 case LobbyIconKind.Spark: DrawSpark(p); break;
                 case LobbyIconKind.Tools: DrawTools(p); break;
@@ -170,13 +169,10 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.CosmeticStrawHat:
                 case LobbyIconKind.Hat: DrawHat(p); break;
                 case LobbyIconKind.GoldLeaf:
-                case LobbyIconKind.SuitTreeEquipped:
                 case LobbyIconKind.Diamond: DrawDiamond(p); break;
                 case LobbyIconKind.District: DrawDistrict(p); break;
                 case LobbyIconKind.Suit: DrawSuit(p); break;
-                case LobbyIconKind.SuitTreeLocked:
                 case LobbyIconKind.Lock: DrawLock(p); break;
-                case LobbyIconKind.SuitTreeOwned:
                 case LobbyIconKind.ProfileYouAreHere:
                 case LobbyIconKind.Pip: Diamond(p, 12f, 12f, 10f); break;
                 case LobbyIconKind.Close: DrawClose(p); break;
