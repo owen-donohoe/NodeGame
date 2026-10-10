@@ -141,6 +141,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/skills/run-dotnet-tests.md`
 
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:16:17Z }
+
 - { by: gpt-6, at: 2026-10-10T17:08:56Z }
 
 - { by: gpt-6, at: 2026-10-10T16:56:36Z }

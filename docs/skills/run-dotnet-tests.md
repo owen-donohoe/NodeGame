@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T17:16:17Z }
-verified_at_commit: 7a0cf4f0c658b5c63b51415ca2b4c2bd06169836
+  - { by: claude-sonnet-5-5, at: 2026-10-10T17:20:09Z }
+verified_at_commit: 9d3f8aa25314fe1e9072fbe78a70955fd41deece
 status: draft
 sources:
   - id: solution
@@ -201,7 +201,7 @@ attempted once and blocked before compilation by MSB4184 SDK access denial.
 The existing Library junction was verified. The lead must run both commands and
 check portrait layout, pointer delivery, locks, sorting, preview/Use states,
 base-villager histogram and clipping in Unity; no passing receipt is claimed.
-Skins is a visible control with a no-op action pending P1.8; Variants opens at P1.6.
+Variants opens at P1.6 and Skins at P1.8.
 
 P1.6 adds 8 lobby cases in WorkshopInventorySessionTests, explicitly linked with
 its pure WorkshopInventorySession source. They cover the token policy only: a
@@ -212,6 +212,12 @@ not covered. At 7a0cf4f0 the full solution passed 3966 cases (Lobby 758) and
 compile-check reported clean. Check in the Editor: two panels never stack,
 header and rows stay visible, and the equipped variant survives a page reload.
 
+P1.8 adds one lobby case, `SkinBandMathTests.DragDelta_UsesMeasuredTilePitch`,
+for the new `SkinBandMath.DragDelta` pixel-to-item-unit conversion. At 9d3f8aa2 the
+full solution passed 3967 cases (Lobby 759) and compile-check reported clean. The
+`SkinBand` element and the Skins sheet are compile-checked only; drag, tap, snap,
+cancel and detach behaviour need Editor or device checks.
+
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
 release-content gate with a freshly migrated client balance/export before shipping.
@@ -219,7 +225,7 @@ release-content gate with a freshly migrated client balance/export before shippi
 | Project | Cases | Covers |
 |---|---|---|
 | `NodeWar.Simulation.Tests` | 720 | `Assets/Tests/EditMode/Tests/`: the version-4 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, Barracks equipping, Infirmary healing and workers, Fortress resistance and district-health drain/regeneration/passive gating, Workshop forging and mobile minion lifecycle, Storehouse self-production/re-claim, progressive collection and lock/Restore lifecycle, remaining-bank capture loot paid once, Pier gates and retreat, latched leg clocks and asymmetric reversal, owner highway, physical-tick routing and current gate estimates, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
-| `NodeWar.Lobby.Tests` | 758 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including ForgeMinion=8, Collect=9 start/cancel and current Market packet refusal, and the bank action model (collection only queues commands; Workshop forging uses shared node-action eligibility; lock and storage reasons match the simulation) |
+| `NodeWar.Lobby.Tests` | 759 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including ForgeMinion=8, Collect=9 start/cancel and current Market packet refusal, and the bank action model (collection only queues commands; Workshop forging uses shared node-action eligibility; lock and storage reasons match the simulation) |
 | `NodeWar.View.Tests` | 1580 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation (including amber Pier intent and read-only latched interpolation), the district fallback descriptors and art keys, district-health segment visibility/layout, Storehouse bank pips (a row centred above the node along camera-up), grey minion tint, Storehouse-only bank sheet height and Workshop/Storehouse fallback art, icon/context resolution and usage, required UXML names, draft handover |
 | `NodeWar.MatchLog.Tests` | 103 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay, the core-rules and bank-rules replays: the version-4 script replays every command, a version-3 log and tampered hashes are refused, a midpoint copy replays identically), node-command round trips (including ForgeMinion=8 and Collect=9 start/cancel) and unknown-command refusal |
 | `NodeWar.Network.Tests` | 128 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario the 1,500-tick core-rules acceptance on `hourglass-01-acceptance` and the bank-rules acceptance (Workshop forging, minion collection/death, Storehouse drain/lock/Restore/capture payout, Fortress health/aura recovery, remote Collect start/cancel, Pier gate, Recruit/Town) on `hourglass-01-banks-acceptance`, each over a lossy link with rollback |
