@@ -24,6 +24,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/adding-a-feature.md`
 
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
+
 - { by: gpt-6, at: 2026-10-10T16:06:16Z }
 
 - { by: gpt-6, at: 2026-10-10T16:03:02Z }
@@ -206,6 +208,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `.claude/skills/write-sim-test.md`
 
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
+
 - { by: gpt-6, at: 2026-10-10T16:03:02Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -264,6 +268,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 
 ## `docs/computations/determinism-baseline.md`
+
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
 
 - { by: gpt-6, at: 2026-10-10T16:03:02Z }
 
