@@ -90,17 +90,25 @@ namespace NodeWar.Lobby
             return !NodeWar.Simulation.PlacementLegality.IsDraftable((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID));
         }
 
+        /// <summary>Unity adapter: pure rules receive profile ownership and a server snapshot.</summary>
+        public UnlockState UnlockForBase(string lobbyId, NodeWar.Backend.PlayerState state)
+        {
+            PlayerProfile profile = PlayerProfile.Instance;
+            bool owned = profile == null || (FindSuit(lobbyId) != null
+                ? profile.IsSuitUnlocked(lobbyId) : profile.IsDistrictUnlocked(lobbyId));
+            return UnlockStates.ForBase(lobbyId, owned, state);
+        }
+
         /// <summary>Suits the player could put in a slot: offered and unlocked.</summary>
         public int OwnedSuitCount()
         {
-            PlayerProfile profile = PlayerProfile.Instance;
             int owned = 0;
 
             for (int i = 0; i < Suits.Length; i++)
             {
                 SuitDefinition suit = Suits[i];
                 if (suit == null || !IsSuitOffered(suit.suitID)) continue;
-                if (profile == null || profile.IsSuitUnlocked(suit.suitID)) owned++;
+                if (UnlockForBase(suit.suitID, NodeWar.Backend.BackendServices.LastKnownState).CanUse) owned++;
             }
 
             return owned;
@@ -109,14 +117,13 @@ namespace NodeWar.Lobby
         /// <summary>Districts the player could put in a slot: offered and unlocked.</summary>
         public int OwnedDistrictCount()
         {
-            PlayerProfile profile = PlayerProfile.Instance;
             int owned = 0;
 
             for (int i = 0; i < Districts.Length; i++)
             {
                 DistrictDefinition node = Districts[i];
                 if (node == null || !IsDistrictOffered(node.districtID)) continue;
-                if (profile == null || profile.IsDistrictUnlocked(node.districtID)) owned++;
+                if (UnlockForBase(node.districtID, NodeWar.Backend.BackendServices.LastKnownState).CanUse) owned++;
             }
 
             return owned;

@@ -49,6 +49,10 @@
     <Compile Include="DraftLoadoutPacketTests.cs" />
     <Compile Include="LoadoutEditorTests.cs" />
     <Compile Include="EraChipsTests.cs" />
+    <Compile Include="UnlockStateTests.cs" />
+    <Compile Include="LoadoutChoicesTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/UnlockState.cs" Link="Lobby/UnlockState.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LoadoutChoices.cs" Link="Lobby/LoadoutChoices.cs" />
     <Compile Include="SuitTreeModelTests.cs" />
     <Compile Include="ItemTintTests.cs" />
     <Compile Include="ItemFamilyTests.cs" />

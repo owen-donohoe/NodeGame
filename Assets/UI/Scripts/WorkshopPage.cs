@@ -93,6 +93,26 @@ namespace NodeWar.Lobby
         private readonly SuitTreeView treeView;
         private readonly LobbySheet lobbySheet;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private UnlockStatus? debugUnlockStatus;
+
+        /// <summary>Runtime presentation toggle for lock inspection; never used by equip checks.</summary>
+        public void SetDebugUnlockStatus(UnlockStatus? status)
+        {
+            debugUnlockStatus = status;
+            Render();
+            RenderInventory();
+        }
+#endif
+
+        private UnlockState DisplayUnlock(UnlockState unlock)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugUnlockStatus.HasValue) return unlock.WithDisplayStatus(debugUnlockStatus.Value);
+#endif
+            return unlock;
+        }
+
         private PlayerState playerState;
         private Item inspectedItem;
         private bool isOpen;
@@ -211,8 +231,7 @@ namespace NodeWar.Lobby
         /// <summary>
         /// Turns the definition assets into cards, once - they are serialized
         /// fields and cannot change at runtime. Districts are ordered by family
-        /// (round, square, triangle, as the prototype lists them), keeping the
-        /// assets' own order within a family.
+        /// (round, square, triangle, as the prototype lists them), then by name and ID within each ownership section.
         /// </summary>
         private void CollectItems()
         {
@@ -255,23 +274,16 @@ namespace NodeWar.Lobby
             }
         }
 
-        /// <summary>Stable insertion sort: the lists are a handful of items.</summary>
-        private static void SortByFamily(List<Item> items)
+        private void SortByFamily(List<Item> items)
         {
-            for (int i = 1; i < items.Count; i++)
+            items.Sort((a, b) =>
             {
-                Item current = items[i];
-                int key = ItemFamily.SortKey(current.Family);
-                int j = i - 1;
-
-                while (j >= 0 && ItemFamily.SortKey(items[j].Family) > key)
-                {
-                    items[j + 1] = items[j];
-                    j--;
-                }
-
-                items[j + 1] = current;
-            }
+                int order = DisplayUnlock(catalog.UnlockForBase(a.ID, playerState)).Status.CompareTo(
+                    DisplayUnlock(catalog.UnlockForBase(b.ID, playerState)).Status);
+                if (order == 0) order = ItemFamily.SortKey(a.Family).CompareTo(ItemFamily.SortKey(b.Family));
+                if (order == 0) order = StringComparer.Ordinal.Compare(a.Name, b.Name);
+                return order != 0 ? order : StringComparer.Ordinal.Compare(a.ID, b.ID);
+            });
         }
 
         private static Item Find(List<Item> items, string id)
@@ -435,6 +447,7 @@ namespace NodeWar.Lobby
             if (grid == null) return;
 
             List<Item> items = activeTab == Tab.Suits ? suits : districts;
+            SortByFamily(items);
 
             grid.Clear();
 
@@ -449,13 +462,11 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            PlayerProfile profile = PlayerProfile.Instance;
-
             for (int i = 0; i < items.Count; i++)
             {
                 Item item = items[i];
 
-                bool locked = IsLocked(profile, item);
+                bool locked = IsLocked(item);
                 bool used = activeTab == Tab.Suits ? loadout.IsSuitEquipped(item.ID) : loadout.IsDistrictEquipped(item.ID);
 
                 VisualElement wrap = new VisualElement();
@@ -518,13 +529,9 @@ namespace NodeWar.Lobby
             }
         }
 
-        private bool IsLocked(PlayerProfile profile, Item item)
+        private bool IsLocked(Item item)
         {
-            if (profile == null || item.Granted) return false;
-
-            return activeTab == Tab.Suits
-                ? !profile.IsSuitUnlocked(item.ID)
-                : !profile.IsDistrictUnlocked(item.ID);
+            return !item.Granted && DisplayUnlock(catalog.UnlockForBase(item.ID, playerState)).Status != UnlockStatus.Owned;
         }
 
         // ===== INTERACTION =====
@@ -544,7 +551,7 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            if (IsLocked(PlayerProfile.Instance, item))
+            if (!catalog.UnlockForBase(item.ID, playerState).CanUse)
             {
                 Say(item.Name + " is locked");
                 return;
@@ -637,7 +644,7 @@ namespace NodeWar.Lobby
         {
             if (!isOpen || inventoryBusy || inspectedItem == null ||
                 LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID) != baseId) return;
-            EraChips.Chip[] chips = skin ? EraChips.SkinsForItem(playerState, baseId) : EraChips.ForItem(playerState, baseId);
+            LoadoutChoice[] chips = skin ? LoadoutChoices.Skins(baseId, null, playerState) : LoadoutChoices.Variants(baseId, playerState);
             if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return;
 
             int visit = inventoryVisit;
@@ -719,7 +726,7 @@ namespace NodeWar.Lobby
         private async Task<bool> EquipFromTreeAsync(string baseId, string id)
         {
             if (!isOpen || inventoryBusy || playerState == null) return false;
-            EraChips.Chip[] chips = EraChips.ForItem(playerState, baseId);
+            LoadoutChoice[] chips = LoadoutChoices.Variants(baseId, playerState);
             if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return false;
 
             int visit = inventoryVisit;
@@ -761,34 +768,37 @@ namespace NodeWar.Lobby
         private void RenderInventory()
         {
             if (details != null) details.text = inspectedItem == null
-                ? "Select a card to inspect its eras" : DetailsOf(inspectedItem);
+                ? "Select a card to inspect its variants" : DetailsOf(inspectedItem);
             string baseId = inspectedItem == null ? null : LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID);
-            RenderChips(eraRow, EraChips.ForItem(playerState, baseId), baseId, false);
-            RenderChips(skinRow, EraChips.SkinsForItem(playerState, baseId), baseId, true);
+            RenderChips(eraRow, LoadoutChoices.Variants(baseId, playerState), baseId, false);
+            RenderChips(skinRow, LoadoutChoices.Skins(baseId, null, playerState), baseId, true);
             if (eraMessage != null)
             {
                 eraMessage.text = inventoryMessage;
                 eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex;
             }
             if (treeView != null) treeView.Refresh();
+            RenderGrid();
         }
 
-        private void RenderChips(VisualElement row, EraChips.Chip[] chips, string baseId, bool skin)
+        private void RenderChips(VisualElement row, LoadoutChoice[] chips, string baseId, bool skin)
         {
             if (row == null) return;
             row.Clear();
             row.style.display = chips.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             row.SetEnabled(!inventoryBusy);
-            foreach (EraChips.Chip chip in chips)
+            foreach (LoadoutChoice chip in chips)
             {
-                string label = skin ? "Skin: " + chip.ID.Substring(chip.ID.LastIndexOf('.') + 1) : "Era " + chip.Era;
+                UnlockState display = DisplayUnlock(chip.UnlockState);
+                string label = skin ? "Skin: " + chip.Label : chip.Label;
                 if (chip.Equipped) label += "\nEquipped";
-                if (!skin && !chip.Owned) label += "\nArena " + chip.Era;
-                else if (!skin && !chip.Usable) label += "\nNeeds arena " + chip.Era;
+                if (display.Status != UnlockStatus.Owned)
+                    label += skin ? "\nLocked" : "\nArena " + display.UnlockEra;
+                else if (!chip.UnlockState.CanUse && !skin) label += "\nNeeds arena " + display.UnlockEra;
                 Button button = new Button { text = label };
                 button.AddToClassList("ui-reset-button");
                 button.AddToClassList("lb-era-chip");
-                button.EnableInClassList("lb-era-chip--locked", !chip.Owned || !chip.Usable);
+                button.EnableInClassList("lb-era-chip--locked", display.Status != UnlockStatus.Owned || !chip.UnlockState.CanUse);
                 button.EnableInClassList("lb-era-chip--equipped", chip.Equipped);
                 button.SetEnabled(chip.Selectable);
                 button.clicked += async () => await EquipInventoryAsync(baseId, chip.ID, skin);
