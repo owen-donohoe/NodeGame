@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
-verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
+  - { by: gpt-6, at: 2026-10-10T15:44:32Z }
+verified_at_commit: dae33286d113a26f4447a6073826ff35da86ce19
 status: draft
 sources:
   - id: solution
@@ -94,8 +94,15 @@ The solution holds eight test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-Expect **3788 passing cases** at the time of writing (the table says where each lives, so a changed
-total is easy to place), with none failing. The explicit Network `Sweep` and Cloud
+The table below records the historical **3788-case** inventory before P1.1; it is not
+a receipt for the current branch. P1.1 adds 11 lobby cases covering two chosen slots,
+old three-suit packet/save normalization, type-indexed equipment retention and fixed
+arena-1 display locks at every rank. At `dae33286`, both the solution test command and
+stock compile check were blocked before compilation by MSBuild access denial to
+`C:\Users\owend\AppData\Local\Microsoft SDKs` (MSB4184). Re-run both outside that
+sandbox to obtain current pass counts; no new passing total is claimed here.
+
+The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
 release-content gate with a freshly migrated client balance/export before shipping.
 
