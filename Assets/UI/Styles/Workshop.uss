@@ -1,5 +1,6 @@
 /* Workshop only: chrome remains owned by LobbyChrome. */
-.lb-workshop { flex-grow: 1; min-height: 0; padding: 8px; position: relative; }
+/* The page is flush, but its actions and local sheets must clear the floating lobby tabs. */
+.lb-workshop { flex-grow: 1; min-height: 0; padding: 8px; padding-bottom: 96px; position: relative; }
 .lb-workshop .ws-heading { font-size: 12px; margin-top: 3px; margin-bottom: 3px; color: var(--ink); }
 .lb-workshop .ws-slots { flex-direction: row; flex-shrink: 0; }
 .lb-workshop .ws-slot { flex-grow: 1; flex-basis: 0; min-width: 0; margin: 2px; padding: 2px; background-color: var(--surface-raised); border-radius: 5px; }
