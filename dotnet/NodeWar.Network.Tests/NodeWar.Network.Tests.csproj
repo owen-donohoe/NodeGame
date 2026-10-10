@@ -51,6 +51,8 @@
              Link="Tests/BoardFixtures.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/BotPlayer.cs"
              Link="Input/BotPlayer.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/BotSuitChoice.cs"
+             Link="Input/BotSuitChoice.cs" />
 
     <Compile Include="../../Assets/Scripts/Game/Network/LockstepCore.cs"
              Link="Network/LockstepCore.cs" />

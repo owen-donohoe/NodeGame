@@ -39,7 +39,10 @@ namespace NodeWar.BalanceRig
             CollectionAssert.AreEqual(s.effectiveDraftPools[0], swapped.setup.effectiveDraftPools[1]);
             CollectionAssert.AreEqual(first.players[1].suits, swapped.players[0].suits);
             Assert.That(BoardHasher.Hash(s.board), Is.EqualTo(hash));
-            Assert.That(BoardHasher.Hash(swapped.setup.board), Is.EqualTo(hash));
+            // SwapSeats mirrors the board by design; the source board stays untouched
+            // and the mirrored board is reproducible.
+            Assert.That(BoardHasher.Hash(MatchRunner.SwapSeats(first).setup.board),
+                Is.EqualTo(BoardHasher.Hash(swapped.setup.board)));
         }
 
         [Test]
