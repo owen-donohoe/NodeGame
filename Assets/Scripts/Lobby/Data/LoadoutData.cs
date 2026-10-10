@@ -21,7 +21,7 @@ namespace NodeWar.Lobby
     public struct LoadoutData
     {
         /// <summary>Combat suits a player brings. Warrior is granted on top of these.</summary>
-        public const int SuitSlots = 3;
+        public const int SuitSlots = 2;
 
         /// <summary>Districts a player brings into the draft pool.</summary>
         public const int DistrictSlots = 2;

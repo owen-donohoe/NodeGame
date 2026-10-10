@@ -29,7 +29,7 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
 
-            Assert.AreEqual(LoadoutData.SuitSlots, editor.SuitSlotCount);
+            Assert.AreEqual(2, editor.SuitSlotCount);
             Assert.AreEqual(LoadoutData.DistrictSlots, editor.DistrictSlotCount);
         }
 
@@ -40,7 +40,7 @@ namespace NodeWar.Lobby.Tests
             // without Normalized first would NullReference here.
             LoadoutEditor editor = new LoadoutEditor(new LoadoutData());
 
-            Assert.AreEqual(LoadoutData.SuitSlots, editor.SuitSlotCount);
+            Assert.AreEqual(2, editor.SuitSlotCount);
             Assert.AreEqual("", editor.SuitAt(0));
             Assert.IsFalse(editor.SuitSlotsFull);
         }
@@ -181,7 +181,7 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData saved = new LoadoutData
             {
-                suitIDs = new[] { "suit_warrior", "suit_scout", "" },
+                suitIDs = new[] { "suit_warrior", "suit_scout" },
                 districtIDs = new[] { "node_crossroads", "node_market" }
             };
 

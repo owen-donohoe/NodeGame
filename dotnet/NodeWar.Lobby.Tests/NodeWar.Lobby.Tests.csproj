@@ -42,6 +42,8 @@
     <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />
     <!-- The tests themselves. -->
     <Compile Include="LoadoutWireTests.cs" />
+    <Compile Include="LoadoutRulesTests.cs" />
+    <Compile Include="LoadoutMigrationTests.cs" />
     <Compile Include="NodeCommandWireTests.cs" />
     <Compile Include="LoadoutEraTests.cs" />
     <Compile Include="DraftLoadoutPacketTests.cs" />
@@ -116,6 +118,8 @@
     -->
     <Compile Include="../../Assets/UI/Scripts/LoadoutEditor.cs"
              Link="Lobby/LoadoutEditor.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LoadoutRules.cs"
+             Link="Lobby/LoadoutRules.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/SuitTree.cs"
              Link="Backend/SuitTree.cs" />
     <Compile Include="../../Assets/UI/Scripts/SuitTreeModel.cs"

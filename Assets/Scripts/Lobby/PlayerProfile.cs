@@ -185,6 +185,7 @@ namespace NodeWar.Lobby
 
                 bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
                 LoadoutData saved = LoadoutData.Normalized(data.loadout.ToLoadout());
+                migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.loadout.suitIDs, saved.suitIDs);
                 migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.loadout.nodeIDs, saved.districtIDs);
                 int[] savedEras = data.loadout.districtEras;
                 if (savedEras == null || savedEras.Length != saved.districtEras.Length) migrated = true;
@@ -205,7 +206,7 @@ namespace NodeWar.Lobby
                 data.settings = GameSettingsData.Normalized(data.settings);
 
                 if (migrated)
-                    Debug.Log("[PlayerProfile] Migrated flat loadout fields to arrays.");
+                    Debug.Log("[PlayerProfile] Migrated saved loadout to the current choices and equipment.");
 
                 if (settingsAbsent)
                     Debug.Log("[PlayerProfile] Added default settings to an older save.");

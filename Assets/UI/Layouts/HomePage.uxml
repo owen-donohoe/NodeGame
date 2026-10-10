@@ -10,7 +10,7 @@
         Home, after lobby-prototype.html.
 
         Boxes left (one big, one small, count badge top-right of each). Loadout
-        preview right, five chips, deliberately quiet. Villager centre. BATTLE
+        preview right, four chosen chips, deliberately quiet. Villager centre. BATTLE
         and the next-box meter at the bottom, above the floating tab bar.
 
         Everything is absolutely placed against the page, as in the prototype,
@@ -46,7 +46,6 @@
             <engine:VisualElement name="home-loadout-node-1" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-0" class="lb-lpi lb-lpi--gap" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-1" class="lb-lpi" picking-mode="Ignore" />
-            <engine:VisualElement name="home-loadout-suit-2" class="lb-lpi" picking-mode="Ignore" />
             <engine:Label class="lb-lpcap ui-w600" text="LOADOUT" picking-mode="Ignore" />
         </engine:Button>
 

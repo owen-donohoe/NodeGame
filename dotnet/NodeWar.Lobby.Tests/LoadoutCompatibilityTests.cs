@@ -48,7 +48,7 @@ namespace NodeWar.Lobby.Tests
             LoadoutData legacy = Legacy();
 
             LoadoutData normalized = LoadoutData.Normalized(legacy);
-            CollectionAssert.AreEqual(legacy.suitIDs, normalized.suitIDs);
+            CollectionAssert.AreEqual(legacy.suitIDs.Take(2), normalized.suitIDs);
             CollectionAssert.AreEqual(legacy.districtIDs, normalized.districtIDs, "No truncated or reordered district choice.");
             CollectionAssert.AreEqual(legacy.districtEras, normalized.districtEras.Take(legacy.districtEras.Length));
             CollectionAssert.AreEqual(legacy.skinIDs, normalized.skinIDs);
@@ -78,15 +78,15 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void DeckCounts_Unchanged()
+        public void DeckCounts_TwoChosenPerSide()
         {
             Assert.AreEqual(2, LoadoutData.DistrictSlots);
-            Assert.AreEqual(3, LoadoutData.SuitSlots);
+            Assert.AreEqual(2, LoadoutData.SuitSlots);
             LoadoutData empty = LoadoutData.CreateEmpty();
             Assert.AreEqual(2, empty.districtIDs.Length);
-            Assert.AreEqual(3, empty.suitIDs.Length);
+            Assert.AreEqual(2, empty.suitIDs.Length);
 
-            // The catalog owns the base picks after migration; deck capacity is unchanged.
+            // The catalog owns the base picks after migration; base picks remain unchanged.
             BoardConfigData board = PremadeMaps.Hourglass01();
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, board.baseDraftDistrictsP0.Select(d => (int)d));
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, board.baseDraftDistrictsP1.Select(d => (int)d));

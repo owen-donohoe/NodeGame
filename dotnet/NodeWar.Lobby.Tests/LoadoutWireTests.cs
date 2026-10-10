@@ -18,6 +18,22 @@ namespace NodeWar.Lobby.Tests
     [TestFixture]
     public class LoadoutWireTests
     {
+        [Test]
+        public void LiteralOldThreeEntryPacket_KeepsFirstTwoChoices()
+        {
+            // Old count-prefixed packet, ending before the optional equipment tables.
+            byte[] packet = System.Text.Encoding.UTF8.GetBytes(
+                "\0\u0007\0\0\0\u0003\u000dsuit_guardian\u000asuit_scout\u000asuit_medic\u0002\u0009node_pier\u000enode_infirmary");
+            packet[0] = (byte)PacketType.DraftLoadout;
+            Assert.IsTrue(DraftSerializer.TryDeserializeDraftLoadout(packet, out int player, out LoadoutData decoded));
+            Assert.AreEqual(7, player);
+            CollectionAssert.AreEqual(new[] { "suit_guardian", "suit_scout" }, decoded.suitIDs);
+            CollectionAssert.AreEqual(new[] { "node_pier", "node_infirmary" }, decoded.districtIDs);
+            var again = RoundTrip(decoded, player);
+            CollectionAssert.AreEqual(decoded.suitIDs, again.suitIDs);
+            CollectionAssert.AreEqual(decoded.districtIDs, again.districtIDs);
+        }
+
         private static int S => LoadoutData.SuitSlots;
         private static int N => LoadoutData.DistrictSlots;
 
