@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:30:25Z }
-verified_at_commit: 95da9bddcadbac2c60141868e7eb25c7c3be26ee
+  - { by: gpt-6, at: 2026-10-10T16:56:36Z }
+verified_at_commit: 9ba34e8cef15a13ce37f2cc122827603463455d7
 status: draft
 sources:
   - id: solution
@@ -174,6 +174,17 @@ accepted drafted Guardian and unsuited paid Respawn. At `95da9bdd`, the solution
 test command and compile-check were each attempted once and blocked by MSB4184
 before compilation. The lead must run both, generate the new asset's metadata,
 and manually verify mixed-seat launches in Unity; no passing receipt is claimed.
+
+P1.2e adds 11 lobby cases in LoadoutCapacityTests: Warrior/high offers, low grant
+exclusions, incomplete high-mode retention, local-only promotion/demotion,
+sanitization blocking and detached equipment snapshots. LoadoutRules now supplies
+pure offering/local-editor predicates; the Lobby csproj already links both it and
+LoadoutEditor, and no other test csproj links LoadoutRules. No new source links or
+asset metadata are needed. Both required commands were attempted once and blocked
+before compilation by MSB4184 SDK access denial. The lead must run the full solution
+and compile-check, plus Editor checks for chips/locks, promotion persistence,
+complete/short decks, fresh-rank launch, cancellation and both mixed-arena seats.
+These added cases are not a passing-test receipt or a UI event-delivery check.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the

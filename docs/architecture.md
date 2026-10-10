@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:42:51Z }
-verified_at_commit: dec3292bcfb29a80970d84188969047b83a5d956
+  - { by: gpt-6, at: 2026-10-10T16:56:36Z }
+verified_at_commit: 9ba34e8cef15a13ce37f2cc122827603463455d7
 status: stable
 sources:
   - id: sim-state
@@ -792,8 +792,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `LoadoutCapacityPolicy` — arena <2 uses 2/2 and free grants; arena >=2 uses
   3/5 without grants. `LoadoutRules` forwards chosen capacities and returns
   display-only locks at low arenas, empty lock lists at high arenas.
-  `IsComplete` checks all effective local chosen slots. Launch blocking still
-  needs UI integration; this predicate alone does not block matchmaking.
+  `IsComplete` checks every effective local chosen slot. Home dims Battle and
+  shows "Fill your loadout" for any empty slot at every arena; tapping it toasts
+  that reason and opens Workshop. Launch preflight and the final connection
+  boundary re-check completeness, so a deck emptied mid-flow cannot launch.
 - `LoadoutMatchSetup` — validates canonical shapes, supported IDs and duplicate
   choices at the match boundary, preserving chosen order and blank-slot mode.
   Low loadouts receive the player's original map base pool plus chosen districts
@@ -971,25 +973,38 @@ Three objects are carried across the Lobby → Gameplay scene load via
   the whole ranked attempt (see [Backend](#backend-match-logs-and-the-referee)).
   The sheet opens on Ranked; private modes stay one tap away.
 - `LoadoutCatalog` — what a loadout slot may hold and what the player owns
-  (not globally granted, not Crossroads, unlocked). The Workshop, Home and
+  (arena-specific chosen offers, mapped IDs and usable base ownership). The Workshop, Home and
   the battle sheet all ask it; the slot rules themselves are in the
   UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
   covers.
-  Its default constructor preserves the source's canonical capacity; the arena
-  overload explicitly resizes local edits. Fill, clear and availability checks
-  operate on effective array lengths.
+  Warrior and Farm/Mine/Village are chosen offers only at arena >=2, irrespective
+  of asset global flags. CurrentLoadout resizes and sanitizes only local choices
+  against the supplied rank (fallback arena 1). LoadoutEditor preserves canonical
+  source shape by default; its arena overload explicitly resizes local edits.
+  Fill, clear and availability checks operate on effective array lengths.
+- `HomePage` shows four low-arena or eight high-arena chosen chips. Workshop keeps
+  three suit/five district display positions, with disabled low-arena grant locks
+  followed by chosen slots. Confirmed resizing/sanitization persists; merely closing
+  an unconfirmed fallback Workshop view does not trim a saved high deck.
 - `MatchLauncher` — the lobby's route into a match. Private play hosts or
   joins by code with an open-ended host wait; `HostRanked`/`JoinRanked`
   add deadlines and carry the match ID and roster into `MatchConnection`.
   `MatchLauncherConnection` adapts it to the UnityEngine-free
-  `IRankedConnection` that `RankedRendezvous` drives.
+  `IRankedConnection` that `RankedRendezvous` drives. Before queuing or connecting,
+  PlayPopup/MatchLauncher refresh the local PlayerState through GetAsync. Ranked
+  launch requires a returned rank; private/offline launch falls back to arena 1.
+  MatchLauncher freezes local rank, normalized/sanitized choices and equipped
+  eras/skins, then hands that detached deck to MatchConnection on success. Its
+  final re-check uses the frozen arena; later lobby rank cannot resize this match,
+  and remote decks retain their exchanged shape. PlayPopup also routes bot and
+  testing launches through this validation; the legacy LobbyManager path remains.
 - `SettingsPage` account section and `AccountFlow` — guest / link / sign
   in / sign out, the conflict and warning sheets, and the one-time link
   prompt (`LinkPromptPolicy`: starter items are not progress).
-- `WorkshopPage` era and skin chips — per item, one chip per era from the
-  server's `PlayerState` (owned, usable at the current arena, equipped).
-  Equipping calls `IInventoryService` and shows what the server returns.
-  The chip rules are the UnityEngine-free `EraChips`.
+- `WorkshopPage` variant and skin chips use UnlockState/LoadoutChoices and the
+  server PlayerState. Variants appear only for real tree suits; districts and
+  non-tree suits hide them. Skins remain available for both kinds. Equipment
+  changes call IInventoryService and display the returned snapshot.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
   It also carries the disconnect-hold overlay, the end card's ranked result
   block, and the ranked surrender row in `MatchSettingsPanel`.
