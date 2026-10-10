@@ -397,7 +397,10 @@ optional context, and either property can change independently.
 
 Contexts are `Anywhere` (default fallback), `TopBar`, `PageHeader`, `NavBar`,
 `HeadsUpDisplay`, `NodeSheet`, `InlineText`, `EmotePicker`, `EmoteBubble`,
-`OffScreenIndicator`, `ShopCard`, `SuitTree`, `Workshop`, `Profile`, and `Home`.
+`OffScreenIndicator`, `ShopCard`, `Workshop`, `Profile`, and `Home`. Value 11, the
+retired `SuitTree` context, is reserved: it keeps no name, is never reused, and
+`LobbyIconContextCompatibilityTests` pins the surviving values (Workshop 12, Profile 13,
+Home 14). Theme entries that still use it never match and can be removed in the Editor.
 The indicator layer tags both its pointer and event glyph `OffScreenIndicator`,
 including when that same indicator is projected over the board.
 
@@ -412,7 +415,7 @@ including when that same indicator is projected over the board.
 | Envelope | Legacy generic fallback drawer; no active use | — |
 | Mouth | Home villager face | Home |
 | Tv | History button and history page header | TopBar, PageHeader |
-| Back | Page back buttons, controls row, suit-tree back | PageHeader, InlineText, SuitTree |
+| Back | Page back buttons, controls row | PageHeader, InlineText |
 | Flag | Legacy generic fallback drawer; no active use | — |
 | Hat | Legacy generic fallback drawer; no active use | — |
 | Diamond | Legacy generic fallback drawer; no active use | — |
@@ -441,10 +444,10 @@ including when that same indicator is projected over the board.
 | ShopBundle | Shop bundle offers | ShopCard |
 | GoldLeaf | Shop gold-leaf offer | ShopCard |
 | MagicResource | HUD magic bar and sheet readout | HeadsUpDisplay, NodeSheet |
-| SuitTreeAvailable | Available suit-tree node | SuitTree |
-| SuitTreeOwned | Owned suit-tree node | SuitTree |
-| SuitTreeEquipped | Equipped suit-tree node | SuitTree |
-| SuitTreeLocked | Locked suit-tree node | SuitTree |
+| SuitTreeAvailable | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
+| SuitTreeOwned | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
+| SuitTreeEquipped | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
+| SuitTreeLocked | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
 | ProfileYouAreHere | Profile arena-track marker | Profile |
 | IndicatorEffect | Generic effect indicator | OffScreenIndicator |
 | IndicatorThreatToCore | Threat-to-core indicator | OffScreenIndicator |
@@ -1001,10 +1004,34 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `SettingsPage` account section and `AccountFlow` — guest / link / sign
   in / sign out, the conflict and warning sheets, and the one-time link
   prompt (`LinkPromptPolicy`: starter items are not progress).
-- `WorkshopPage` variant and skin chips use UnlockState/LoadoutChoices and the
+- `WorkshopPage` — the T layout: district and suit rows above (five and three
+  display tiles; low-arena grant locks first, then the chosen slots), the selected
+  item's info column on the left (preview, name, stat histogram against the base
+  villager or district facts, description, unlock notice, a Use button) and a
+  two-card grid of Unlocked and Not unlocked items with Districts and Suits tabs on
+  the right. Tapping a card only previews it (`LoadoutScreenModel`); Use equips the
+  first empty chosen slot or refuses a full deck, and tapping a filled chosen slot
+  clears it. Variants and Skins open as bottom sheets inside `workshop-panel-host`
+  with a local scrim, so the header and loadout rows stay visible. Variants appear
+  only for real tree suits (`SuitTree` sidegrades); districts and non-tree suits
+  hide the button. The Skins sheet works for suits and districts, with a looping
+  `SkinBand` (13 reusable tiles positioned by `SkinBandMath`) and a "Buy another box"
+  placeholder that only shows a "Coming soon" toast. `WorkshopInventorySession`
+  holds the visit, selection and single-request gate so a stale response never
+  redraws another item. The old suit-tree view, model and stylesheet are gone;
+  `Backend/Shared/SuitTree.cs` and `InventoryClamp` stay because the server
+  enforces them.
+- `WorkshopPage` equipment: variant and skin choices use UnlockState/LoadoutChoices and the
   server PlayerState. Variants appear only for real tree suits; districts and
   non-tree suits hide them. Skins remain available for both kinds. Equipment
   changes call IInventoryService and display the returned snapshot.
+- Loadout rules decided with the rework: `ProtocolVersion` is 6 (the chosen counts and grants
+  differ from protocol 5, so old clients are refused; Cloud Code is redeployed by hand after
+  merge). From arena 2 every slot is free: three suits and five districts, with no free base
+  district pool and no Warrior grant, so a deck may omit Warrior and then no villager starts
+  armed. Below arena 2 the two-and-two layout keeps its grants. A deck with any empty chosen
+  slot cannot launch (`LoadoutCapacityPolicy.IsComplete`, rechecked by `MatchLauncher`); Home's
+  Battle button explains it and opens the Workshop.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
   It also carries the disconnect-hold overlay, the end card's ranked result
   block, and the ranked surrender row in `MatchSettingsPanel`.

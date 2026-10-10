@@ -111,7 +111,14 @@ duplicate should convert to currency so a drop is never dead. Keep a guaranteed 
 as well as chance. I did not read `InventoryService`, so how grants are issued today is
 unverified.
 
-## 6. The lobby tree
+## 6. The lobby tree (superseded)
+
+**Superseded.** The tree view, its model and its stylesheet were removed. The Workshop now
+uses the T layout and a Variants bottom sheet, shown only for suits that have sidegrades; see
+"WorkshopPage" in [architecture](architecture.md) and the decisions in
+[ui-input-and-claim-rework](ui-input-and-claim-rework.md). The shared rule table in
+`Backend/Shared/SuitTree.cs` and `InventoryClamp` is unchanged and still current. The design
+text below is kept as history.
 
 **Shape.** It should look like the game: nodes on a graph. A suit's root is a node and
 its variants branch from it, drawn like districts being claimed, so progression looks
