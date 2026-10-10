@@ -9,6 +9,86 @@ namespace NodeWar.Lobby.Tests
 {
     public class LoadoutCapacityTests
     {
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(2, true)]
+        [TestCase(100, true)]
+        public void WarriorOfferedOnlyInHigh(int arena, bool offered)
+        {
+            Assert.AreEqual(offered, LoadoutRules.IsSuitOffered("suit_warrior", arena));
+            Assert.IsTrue(LoadoutRules.IsSuitOffered("suit_scout", arena));
+            Assert.IsFalse(LoadoutRules.IsSuitOffered("unknown", arena));
+        }
+
+        [TestCase("node_farm")]
+        [TestCase("node_mine")]
+        [TestCase("node_village")]
+        public void LowLocksNotChosenOffers(string id)
+        {
+            Assert.IsFalse(LoadoutRules.IsDistrictOffered(id, 1));
+            Assert.IsTrue(LoadoutRules.IsDistrictOffered(id, 2));
+            Assert.IsTrue(LoadoutRules.IsDistrictOffered("node_pier", 1));
+            Assert.IsFalse(LoadoutRules.IsDistrictOffered("node_crossroads", 2));
+            Assert.IsFalse(LoadoutRules.IsDistrictOffered("node_core", 2));
+        }
+
+        [Test]
+        public void IncompleteHighStillHighMode()
+        {
+            var editor = LoadoutRules.LocalEditor(LoadoutData.CreateEmpty(2), 2);
+            var deck = editor.ToLoadout();
+            Assert.IsTrue(LoadoutCapacityPolicy.IsHighShape(deck.suitIDs.Length, deck.districtIDs.Length));
+            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(deck, 2));
+            Assert.IsFalse(LoadoutMatchSetup.GetsFreeGrants(deck));
+        }
+
+        [Test]
+        public void PromotionDemotion_LocalOnly()
+        {
+            var remote = LoadoutData.CreateEmpty(2);
+            remote.suitIDs = new[] { "suit_scout", "suit_medic", "suit_guardian" };
+            remote.districtIDs = new[] { "node_pier", "node_infirmary", "node_farm", "node_mine", "node_village" };
+            remote.suitEras[(int)SuitType.Guardian] = 2;
+            remote.skinIDs = new[] { "skin.suit.guardian.default" };
+            var low = LoadoutRules.LocalEditor(remote, 1).ToLoadout();
+            Assert.IsTrue(LoadoutCapacityPolicy.IsComplete(low, 1));
+            var promoted = LoadoutRules.LocalEditor(low, 2).ToLoadout();
+            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(promoted, 2));
+            Assert.AreEqual("", promoted.suitIDs[2]);
+            Assert.AreEqual(2, promoted.suitEras[(int)SuitType.Guardian]);
+            CollectionAssert.AreEqual(remote.skinIDs, promoted.skinIDs);
+            Assert.AreEqual("suit_guardian", remote.suitIDs[2]);
+            Assert.AreEqual(5, remote.districtIDs.Length);
+        }
+
+        [Test]
+        public void Sanitization_EmptiesUnavailableAndBlocksLaunch()
+        {
+            var source = LoadoutData.CreateEmpty(1);
+            source.suitIDs = new[] { "suit_warrior", "suit_scout" };
+            source.districtIDs = new[] { "node_farm", "node_pier" };
+            var sanitized = LoadoutRules.LocalEditor(source, 1).ToLoadout();
+            Assert.AreEqual("", sanitized.suitIDs[0]);
+            Assert.AreEqual("", sanitized.districtIDs[0]);
+            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(sanitized, 1));
+            Assert.AreEqual("suit_warrior", source.suitIDs[0]);
+        }
+
+        [Test]
+        public void FrozenEquipment_IndependentOfLaterProfileAndRankChanges()
+        {
+            var source = LoadoutData.CreateEmpty(2);
+            source.suitIDs = new[] { "suit_scout", "suit_medic", "suit_guardian" };
+            source.districtIDs = new[] { "node_pier", "node_infirmary", "node_farm", "node_mine", "node_village" };
+            var state = new PlayerState { Rank = new RankRecord { Arena = 2 } };
+            var frozen = LoadoutTypes.WithEquipment(LoadoutRules.LocalEditor(source, 2).ToLoadout(), state);
+            source.suitIDs[0] = "";
+            state.Rank.Arena = 1;
+            Assert.IsTrue(LoadoutCapacityPolicy.IsComplete(frozen, 2));
+            Assert.AreEqual("suit_scout", frozen.suitIDs[0]);
+            Assert.AreEqual(5, frozen.districtIDs.Length);
+            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(LoadoutRules.LocalEditor(source, 2).ToLoadout(), 2));
+        }
         [TestCase(0, 2, 2, true)]
         [TestCase(1, 2, 2, true)]
         [TestCase(2, 3, 5, false)]

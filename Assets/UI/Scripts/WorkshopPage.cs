@@ -22,7 +22,7 @@ namespace NodeWar.Lobby
     ///
     /// The rules are unchanged from the previous Workshop, and still not
     /// decided here:
-    ///   - slot counts come from LoadoutData.DistrictSlots and SuitSlots, and what
+    ///   - slot counts come from LoadoutRules and the confirmed local arena, and what
     ///     may occupy a slot lives in LoadoutEditor, which has no UnityEngine
     ///     reference and is covered by dotnet/NodeWar.Lobby.Tests;
     ///   - every change is saved at once through PlayerProfile.SetLoadout - a
@@ -33,10 +33,10 @@ namespace NodeWar.Lobby
     ///     though both return true today, so this is right when they are real.
     ///
     /// Two facts about the game shape the grid (docs/ui-migration-inventory.md):
-    ///   - suits flagged isGlobal (Warrior) are granted to everyone by
+    ///   - Warrior is granted in low arenas by
     ///     GameManager.BuildDraftedSuits. They are shown as cards, in the
     ///     prototype's grid, but say "Always granted" and refuse a slot, which
-    ///     would buy nothing;
+    ///     would buy nothing there; at arena 2 it is a chosen offer;
     ///   - Crossroads is excluded: GameManager cannot map it to a DistrictType,
     ///     so a slot spent on it produces nothing.
     ///
@@ -207,7 +207,8 @@ namespace NodeWar.Lobby
         {
             isOpen = true;
             int visit = ++inventoryVisit;
-            playerState = null;
+            playerState = BackendServices.LastKnownState;
+            CollectItems();
             LoadFromProfile();
             Inspect(null);
             Render();
@@ -215,15 +216,14 @@ namespace NodeWar.Lobby
         }
 
         /// <summary>
-        /// A second save on the way out. Every change already persists as it
-        /// happens; this only covers SetLoadout being made deferred later.
+        /// Every edit already persists. Closing an unconfirmed fallback view
+        /// must not overwrite a saved high-arena deck.
         /// </summary>
         public override void OnHide()
         {
             treeView.Close();
             CloseInventory();
             SetPickerOpen(false);
-            SaveToProfile();
         }
 
         // ===== DEFINITIONS =====
@@ -235,13 +235,16 @@ namespace NodeWar.Lobby
         /// </summary>
         private void CollectItems()
         {
+            districts.Clear();
+            suits.Clear();
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
             // The catalog never hands back a null array.
             DistrictDefinition[] allDistricts = catalog.Districts;
             for (int i = 0; i < allDistricts.Length; i++)
             {
                 DistrictDefinition node = allDistricts[i];
                 if (node == null || string.IsNullOrEmpty(node.districtID)) continue;
-                if (!catalog.IsDistrictOffered(node.districtID)) continue;
+                if (!catalog.IsDistrictOffered(node.districtID, 2)) continue;
 
                 ItemFamily.Family family = ItemFamily.ForDistrict(node.districtID);
                 districts.Add(new Item
@@ -250,7 +253,8 @@ namespace NodeWar.Lobby
                     Name = catalog.DistrictName(node.districtID),
                     Description = node.description,
                     Note = ItemFamily.NoteFor(family),
-                    Family = family
+                    Family = family,
+                    Granted = !catalog.IsDistrictOffered(node.districtID, arena)
                 });
             }
 
@@ -267,9 +271,9 @@ namespace NodeWar.Lobby
                     ID = suit.suitID,
                     Name = catalog.SuitName(suit.suitID),
                     Description = suit.description,
-                    Note = suit.isGlobal ? "Always granted" : suit.description,
+                    Note = !catalog.IsSuitOffered(suit.suitID, arena) ? "Always granted" : suit.description,
                     Family = ItemFamily.Family.Combat,
-                    Granted = suit.isGlobal
+                    Granted = !catalog.IsSuitOffered(suit.suitID, arena)
                 });
             }
         }
@@ -300,22 +304,11 @@ namespace NodeWar.Lobby
         {
             PlayerProfile profile = PlayerProfile.Instance;
 
-            loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
+            loadout = catalog.CurrentLoadout(playerState);
             activeTab = profile != null && profile.WorkshopTabIndex == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
-
-            // A saved loadout can hold a suit that has since become globally
-            // granted, or Crossroads. Both are slots producing nothing; clearing
-            // them hands the slots back.
-            int cleared = loadout.DropUnavailable(catalog.IsSuitOffered, catalog.IsDistrictOffered);
-
-            if (cleared > 0)
-            {
-                Debug.Log("[Workshop] Cleared " + cleared + " loadout entr" +
-                          (cleared == 1 ? "y" : "ies") + " that the draft cannot use.");
-                SaveToProfile();
-            }
+            // Until rank is confirmed, fallback display must not trim a saved high deck.
+            if (playerState?.Rank != null) SaveToProfile();
         }
-
         private void SaveToProfile()
         {
             PlayerProfile profile = PlayerProfile.Instance;
@@ -390,7 +383,12 @@ namespace NodeWar.Lobby
             if (pickIcon != null) pickIcon.Kind = suitsOn ? LobbyIconKind.Suit : LobbyIconKind.District;
             if (pickLabel != null) pickLabel.text = suitsOn ? "SUITS" : "DIST";
 
-            if (treeOpen != null) treeOpen.EnableInClassList("st-open--on", suitsOn && treeView.IsWired && lobbySheet != null);
+            if (treeOpen != null)
+            {
+                bool variants = suitsOn && SuitTree.IsTreeSuit(LoadoutTypes.CatalogBaseForLobbyId(inspectedItem?.ID));
+                treeOpen.style.display = variants ? DisplayStyle.Flex : DisplayStyle.None;
+                treeOpen.EnableInClassList("st-open--on", variants && treeView.IsWired && lobbySheet != null);
+            }
         }
 
         private void RenderSlots()
@@ -398,7 +396,9 @@ namespace NodeWar.Lobby
             if (slotHost == null) return;
 
             bool suitsOn = activeTab == Tab.Suits;
-            int count = suitsOn ? loadout.SuitSlotCount : loadout.DistrictSlotCount;
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            string[] locks = suitsOn ? LoadoutRules.LockedSuits(arena) : LoadoutRules.LockedDistricts(arena);
+            int count = suitsOn ? LoadoutRules.DisplaySuitSlots : LoadoutRules.DisplayDistrictSlots;
 
             slotHost.Clear();
 
@@ -406,12 +406,14 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < count; i++)
             {
-                string id = suitsOn ? loadout.SuitAt(i) : loadout.DistrictAt(i);
+                bool granted = i < locks.Length;
+                int chosen = i - locks.Length;
+                string id = granted ? locks[i] : suitsOn ? loadout.SuitAt(chosen) : loadout.DistrictAt(chosen);
                 Item item = Find(suitsOn ? suits : districts, id);
                 bool filled = !string.IsNullOrEmpty(id);
                 if (!filled) allFull = false;
 
-                int slot = i;
+                int slot = chosen;
                 Button button = new Button();
                 button.AddToClassList("ui-reset-button");
                 button.AddToClassList("lb-slot");
@@ -434,7 +436,12 @@ namespace NodeWar.Lobby
                     button.Add(MakeLabel("Slot\n" + (i + 1), "lb-slot__text", "ui-w500"));
                 }
 
-                button.clicked += () => OnSlotClicked(slot);
+                if (granted)
+                {
+                    button.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
+                    button.SetEnabled(false);
+                }
+                else button.clicked += () => OnSlotClicked(slot);
 
                 slotHost.Add(button);
             }
@@ -607,6 +614,7 @@ namespace NodeWar.Lobby
                 inspectedItem = item;
                 if (!inventoryBusy && playerState != null) inventoryMessage = "";
             }
+            RenderSwitchers();
             RenderInventory();
         }
 
@@ -624,6 +632,9 @@ namespace NodeWar.Lobby
                 if (!IsInventoryActive(visit)) return;
                 if (result == null) throw new InvalidOperationException("Missing player state");
                 playerState = result;
+                CollectItems();
+                LoadFromProfile();
+                Render();
                 inventoryMessage = "";
             }
             catch (Exception)
@@ -664,6 +675,9 @@ namespace NodeWar.Lobby
                 if (!IsInventoryActive(visit) || selectionVisit != selection) return;
                 if (result == null) throw new InvalidOperationException("Missing player state");
                 playerState = result;
+                CollectItems();
+                LoadFromProfile();
+                Render();
                 inventoryMessage = "";
             }
             catch (Exception)
@@ -742,6 +756,9 @@ namespace NodeWar.Lobby
                 if (!IsInventoryActive(visit)) return false;
                 if (result == null) throw new InvalidOperationException("Missing player state");
                 playerState = result;
+                CollectItems();
+                LoadFromProfile();
+                Render();
                 inventoryMessage = "";
                 return true;
             }
@@ -770,6 +787,8 @@ namespace NodeWar.Lobby
             if (details != null) details.text = inspectedItem == null
                 ? "Select a card to inspect its variants" : DetailsOf(inspectedItem);
             string baseId = inspectedItem == null ? null : LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID);
+            bool variants = SuitTree.IsTreeSuit(baseId);
+            if (eraRow != null) eraRow.style.display = variants ? DisplayStyle.Flex : DisplayStyle.None;
             RenderChips(eraRow, LoadoutChoices.Variants(baseId, playerState), baseId, false);
             RenderChips(skinRow, LoadoutChoices.Skins(baseId, null, playerState), baseId, true);
             if (eraMessage != null)
