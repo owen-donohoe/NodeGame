@@ -28,7 +28,7 @@ namespace NodeWar.Input
         public const float HoldStillnessMm = GestureClassifier.DefaultHoldStillnessMm;
 
         [Tooltip("Minimum spacing between recorded lasso points. Kept below " +
-                 "tapSlop so the polygon still tracks a tight curve, while " +
+                 "tapSlop so the brush still tracks a tight curve, while " +
                  "keeping the vertex count bounded.")]
         [Range(0.25f, 5f)]
         public float lassoDecimationMm = 1.5f;
@@ -78,7 +78,11 @@ namespace NodeWar.Input
         [Range(1.5f, 10f)]
         public float touchTargetRadiusMm = 4f;
 
-        [Header("Lasso")]
+        [Header("Paint")]
+        [Tooltip("Fixed physical screen radius at every camera zoom; snapshotted for each stroke.")]
+        public float paintRadiusMm = 5f;
+
+        // Legacy serialized polygon thresholds are retained for saved scenes, but inert.
         [Tooltip("Minimum enclosed area for a lasso to select anything, in " +
                  "SQUARE millimetres. Default is a 5x5 mm square. Below this " +
                  "the stroke is a scribble, not a shape -- the selection is " +

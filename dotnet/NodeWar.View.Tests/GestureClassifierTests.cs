@@ -37,6 +37,38 @@ namespace NodeWar.View.Tests
             CollectionAssert.AreEqual(expected, events.ConvertAll(e => e.Kind));
         }
 
+        [Test]
+        public void PaintHoldWithoutDragCompletesSinglePoint()
+        {
+            Primary(0f, PointerPhase.Began, 7f, 9f);
+            Primary(0.3f, PointerPhase.Held, 7f, 9f);
+            Assert.AreEqual(GestureState.LassoArmed, core.State);
+            Assert.IsTrue(core.PanSuppressed);
+            Primary(0.4f, PointerPhase.Ended, 7f, 9f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Cancelled,
+                GestureEventKind.LassoBegin, GestureEventKind.LassoComplete);
+            Assert.AreEqual(1, events[3].Points.Count);
+            Assert.IsTrue(PaintGeometry.Contains(events[3].Points, new GesturePoint(12f, 9f), 5f));
+            Assert.IsFalse(PaintGeometry.Contains(events[3].Points, new GesturePoint(12.01f, 9f), 5f));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PaintCancelCompletesEmptyOnce(bool dragged)
+        {
+            Primary(0f, PointerPhase.Began);
+            Primary(0.3f, PointerPhase.Held);
+            if (dragged) Primary(0.4f, PointerPhase.Held, 10f);
+            core.Cancel();
+            core.Cancel();
+            Primary(0.5f, PointerPhase.Ended);
+            var completions = events.FindAll(e => e.Kind == GestureEventKind.LassoComplete);
+            Assert.AreEqual(1, completions.Count);
+            Assert.IsEmpty(completions[0].Points);
+            Assert.IsFalse(PaintGeometry.Contains(completions[0].Points, new GesturePoint(0f, 0f), 5f));
+            Assert.AreEqual(GestureState.Idle, core.State);
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void LiveThresholdUpdatesKeepSavedHoldTimeButUpdateFallback(bool savedSettings)

@@ -8,6 +8,18 @@ namespace NodeWar.View.Tests
     public class SelectionRulesTests
     {
         [Test]
+        public void EmptyPaintPreservesSelectionAndNonemptyPaintReplaces()
+        {
+            var selected = new List<int> { 1, 2 };
+            SelectionRules.ReplaceLassoIfAny(selected, new int[0]);
+            CollectionAssert.AreEqual(new[] { 1, 2 }, selected);
+            SelectionRules.ReplaceLassoIfAny(selected, new[] { 3, 4 });
+            CollectionAssert.AreEqual(new[] { 3, 4 }, selected);
+            SelectionRules.ReplaceLassoIfAny(selected, new int[0]);
+            CollectionAssert.AreEqual(new[] { 3, 4 }, selected);
+        }
+
+        [Test]
         public void EmptyLassoLeavesExistingSelectionUntouched()
         {
             var selected = new List<int> { 1, 2 };
