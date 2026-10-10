@@ -46,6 +46,10 @@ namespace NodeWar.Input
         [Range(0.15f, 0.6f)]
         public float doubleTapTime = 0.3f;
 
+        [Tooltip("Release-to-next-press gap for the node single/double/triple chain only.")]
+        [Range(0.15f, 0.6f)]
+        public float nodeTapGap = 0.22f;
+
         [Tooltip("How far the second press of a double-tap may land from the first, in millimetres.")]
         [Range(2f, 20f)]
         public float doubleTapRadiusMm = 8f;

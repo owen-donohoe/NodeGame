@@ -59,6 +59,8 @@ namespace NodeWar.Input
 
         /// <summary>Two taps on the same villager.</summary>
         public event Action<GestureTarget> OnDoubleTapVillager;
+        public event Action<GestureTarget> OnDoubleTapNode;
+        public event Action<GestureTarget> OnTripleTapNode;
 
         /// <summary>
         /// An order drag from an already-selected villager began, is moving, or ended.
@@ -190,6 +192,7 @@ namespace NodeWar.Input
                 thresholds.lassoDecimationMm, thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm,
                 1f / ScreenMetrics.PixelsPerMm, GestureThresholds.HoldStillnessMm);
             classifier.DoubleTapTime = thresholds.doubleTapTime;
+            classifier.NodeTapGap = thresholds.nodeTapGap;
             classifier.DoubleTapRadiusMm = thresholds.doubleTapRadiusMm;
             classifier.TwoFingerTapTime = thresholds.twoFingerTapTime;
             classifier.OneHandZoomMmPerDoubling = thresholds.oneHandZoomMmPerDoubling;
@@ -245,6 +248,7 @@ namespace NodeWar.Input
                 }
             }
             classifier.ProcessFrame(samples);
+            classifier.AdvanceTime(now);
             hasFrameTarget = false;
             if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
         }
@@ -289,7 +293,16 @@ namespace NodeWar.Input
                     if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
                     OnGestureCancelled?.Invoke();
                     break;
-                case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
+                case GestureEventKind.Tap:
+                    OnTap?.Invoke(gesture.TargetClass == GestureTargetClass.Node
+                        ? new GestureTarget(GestureTargetKind.Node, gesture.TargetId) : downTarget);
+                    break;
+                case GestureEventKind.DoubleTapNode:
+                    OnDoubleTapNode?.Invoke(new GestureTarget(GestureTargetKind.Node, gesture.TargetId));
+                    break;
+                case GestureEventKind.TripleTapNode:
+                    OnTripleTapNode?.Invoke(new GestureTarget(GestureTargetKind.Node, gesture.TargetId));
+                    break;
                 case GestureEventKind.OrderBegin:
                     orderStartNode = NodeAt(pos);
                     OnOrderDragBegin?.Invoke(pos);

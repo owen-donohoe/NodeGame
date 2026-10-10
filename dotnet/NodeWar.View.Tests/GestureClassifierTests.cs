@@ -38,6 +38,177 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
+        public void NodeSingleWaitsOneGapAndKeepsTargetId()
+        {
+            TapOn(0f, GestureTargetClass.Node, 7);
+            Kinds(GestureEventKind.PointerDown);
+            core.AdvanceTime(0.05f + 0.22f);
+            Kinds(GestureEventKind.PointerDown);
+            core.ProcessFrame(new PointerSample[0]);
+            core.AdvanceTime(2f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap);
+            Assert.AreEqual(GestureTargetClass.Node, events[1].TargetClass);
+            Assert.AreEqual(7, events[1].TargetId);
+            core.AdvanceTime(3f);
+            Assert.AreEqual(2, events.Count);
+        }
+
+        [Test]
+        public void NodeDoubleWaitsThenEmitsIdleOnlyOnce()
+        {
+            TapOn(0f, GestureTargetClass.Node, 7);
+            TapOn(0.15f, GestureTargetClass.Node, 7);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.PointerDown);
+            core.AdvanceTime(0.2f + 0.22f);
+            Assert.AreEqual(2, events.Count);
+            core.AdvanceTime(1f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.PointerDown, GestureEventKind.DoubleTapNode);
+            Assert.AreEqual(7, events[2].TargetId);
+            core.AdvanceTime(2f);
+            Assert.AreEqual(3, events.Count);
+        }
+
+        [Test]
+        public void NodeTripleEmitsImmediatelyWithoutTapOrDouble()
+        {
+            TapOn(0f, GestureTargetClass.Node, 7);
+            TapOn(0.15f, GestureTargetClass.Node, 7);
+            TapOn(0.3f, GestureTargetClass.Node, 7);
+            core.AdvanceTime(2f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.PointerDown,
+                GestureEventKind.PointerDown, GestureEventKind.TripleTapNode);
+            Assert.AreEqual(7, events[3].TargetId);
+        }
+
+        [TestCase(0.22f, 8f, true)]
+        [TestCase(0.2201f, 8f, false)]
+        [TestCase(0.2199f, 8.0001f, false)]
+        [TestCase(0.2199f, 7.9999f, true)]
+        public void NodeChainGapAndSlopBoundaries(float gap, float distance, bool matches)
+        {
+            Press(-0.05f, PointerPhase.Began, GestureTargetClass.Node, 7);
+            Press(0f, PointerPhase.Ended, GestureTargetClass.Node, 7);
+            TapOn(gap, GestureTargetClass.Node, 7, distance);
+            core.AdvanceTime(1f);
+            Assert.AreEqual(matches ? 1 : 0, Count(GestureEventKind.DoubleTapNode));
+            Assert.AreEqual(matches ? 0 : gap > 0.22f ? 2 : 1, Count(GestureEventKind.Tap));
+        }
+
+        [Test]
+        public void NodeChainExpiryWaitsForMatchingPressResolution()
+        {
+            TapOn(0f, GestureTargetClass.Node, 7);
+            Press(0.27f, PointerPhase.Began, GestureTargetClass.Node, 7);
+            core.AdvanceTime(0.4f);
+            Assert.AreEqual(0, Count(GestureEventKind.Tap));
+            Press(0.45f, PointerPhase.Ended, GestureTargetClass.Node, 7);
+            core.AdvanceTime(1f);
+            Assert.AreEqual(1, Count(GestureEventKind.DoubleTapNode));
+            Assert.AreEqual(0, Count(GestureEventKind.Tap));
+        }
+
+        [TestCase("target")]
+        [TestCase("ui")]
+        [TestCase("hold")]
+        [TestCase("pan")]
+        [TestCase("paint")]
+        [TestCase("pinch")]
+        [TestCase("secondary")]
+        [TestCase("settings")]
+        [TestCase("disable")]
+        [TestCase("cancel")]
+        public void NodeChainCancelsOnInterruption(string interruption)
+        {
+            if (interruption == "hold")
+            {
+                var settings = GameSettingsData.CreateDefault();
+                settings.inputBindings[(int)InputSlot.HoldDrag].enabled = false;
+                settings.inputBindings[(int)InputSlot.Hold].enabled = true;
+                core.ApplySettings(settings);
+            }
+            TapOn(0f, GestureTargetClass.Node, 7);
+            switch (interruption)
+            {
+                case "target": TapOn(0.15f, GestureTargetClass.Node, 8); break;
+                case "ui": PrimaryOn(0.15f, PointerPhase.Began, GestureTargetClass.Node, 7, ui: true); break;
+                case "hold":
+                case "pan":
+                case "paint":
+                    Press(0.15f, PointerPhase.Began, GestureTargetClass.Node, 7);
+                    Press(0.46f, PointerPhase.Held, GestureTargetClass.Node, 7,
+                        interruption == "pan" ? 6f : 0f);
+                    Press(0.5f, PointerPhase.Ended, GestureTargetClass.Node, 7);
+                    break;
+                case "pinch": Pair(0.15f, 0f, 10f); break;
+                case "secondary":
+                    core.ProcessFrame(new[] { new PointerSample(0.15f, default, 0,
+                        PointerButton.Secondary, PointerPhase.Began) }); break;
+                case "settings": Enable(InputSlot.Hold); break;
+                default: core.Cancel(); break; // Cancel is also the source's OnDisable hook.
+            }
+            core.AdvanceTime(2f);
+            Assert.IsFalse(events.Exists(e => e.TargetId == 7 &&
+                (e.Kind == GestureEventKind.Tap || e.Kind == GestureEventKind.DoubleTapNode ||
+                 e.Kind == GestureEventKind.TripleTapNode)));
+            if (interruption == "target") Assert.AreEqual(8, events[events.Count - 1].TargetId);
+            if (interruption == "hold") Assert.AreEqual(1, Count(GestureEventKind.HoldInfo));
+            if (interruption == "pan") Assert.AreEqual(1, Count(GestureEventKind.PanBegin));
+            if (interruption == "paint") Assert.AreEqual(1, Count(GestureEventKind.LassoBegin));
+        }
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void NodeBindingsToggleGrammar(bool doubleOn, bool tripleOn)
+        {
+            var settings = GameSettingsData.CreateDefault();
+            settings.inputBindings[(int)InputSlot.DoubleTapNode].enabled = doubleOn;
+            settings.inputBindings[(int)InputSlot.TripleTapNode].enabled = tripleOn;
+            core.ApplySettings(settings);
+            TapOn(0f, GestureTargetClass.Node, 7);
+            Assert.AreEqual(!doubleOn && !tripleOn ? 1 : 0, Count(GestureEventKind.Tap));
+            TapOn(0.15f, GestureTargetClass.Node, 7);
+            Assert.AreEqual(doubleOn && !tripleOn ? 1 : 0, Count(GestureEventKind.DoubleTapNode));
+            core.AdvanceTime(1f);
+            Assert.AreEqual(doubleOn ? 1 : 0, Count(GestureEventKind.DoubleTapNode));
+            Assert.AreEqual(doubleOn ? 0 : tripleOn ? 1 : 2, Count(GestureEventKind.Tap));
+            events.Clear();
+            TapOn(2f, GestureTargetClass.Node, 7);
+            TapOn(2.15f, GestureTargetClass.Node, 7);
+            TapOn(2.3f, GestureTargetClass.Node, 7);
+            Assert.AreEqual(tripleOn ? 1 : 0, Count(GestureEventKind.TripleTapNode));
+            core.AdvanceTime(3f);
+            Assert.AreEqual(tripleOn ? 0 : doubleOn ? 1 : 3, Count(GestureEventKind.Tap));
+        }
+
+        [TestCase(GestureTargetClass.None, InputSlot.DoubleTapGround)]
+        [TestCase(GestureTargetClass.Villager, InputSlot.DoubleTapVillager)]
+        [TestCase(GestureTargetClass.None, InputSlot.DoubleTapDrag)]
+        public void ExistingDoubleGapRemainsPointThree(GestureTargetClass target, InputSlot slot)
+        {
+            foreach (float gap in new[] { 0.3f, 0.3001f })
+            {
+                SetUp();
+                Enable(slot);
+                Press(-0.05f, PointerPhase.Began, target, 3);
+                Press(0f, PointerPhase.Ended, target, 3);
+                Press(gap, PointerPhase.Began, target, 3);
+                if (slot == InputSlot.DoubleTapDrag)
+                {
+                    Press(gap + 0.05f, PointerPhase.Held, target, 3, y: 6f);
+                    Assert.AreEqual(gap == 0.3f ? GestureState.OneHandZoom : GestureState.Panning, core.State);
+                }
+                else
+                {
+                    Press(gap + 0.05f, PointerPhase.Ended, target, 3);
+                    Assert.AreEqual(gap == 0.3f ? 1 : 0, Count(slot == InputSlot.DoubleTapGround
+                        ? GestureEventKind.DoubleTapGround : GestureEventKind.DoubleTapVillager));
+                }
+            }
+        }
+
+        [Test]
         public void PaintHoldWithoutDragCompletesSinglePoint()
         {
             Primary(0f, PointerPhase.Began, 7f, 9f);
@@ -290,12 +461,13 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
-        public void DoubleTapOnNodesIsNeverOffered()
+        public void DoubleTapOnNodesUsesOnlyNodeBinding()
         {
             Enable(InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager);
             TapOn(0f, GestureTargetClass.Node, 3);
             TapOn(0.2f, GestureTargetClass.Node, 3);
-            Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap, GestureEventKind.PointerDown, GestureEventKind.Tap);
+            core.AdvanceTime(1f);
+            Kinds(GestureEventKind.PointerDown, GestureEventKind.PointerDown, GestureEventKind.DoubleTapNode);
         }
 
         [Test]
@@ -621,6 +793,7 @@ namespace NodeWar.View.Tests
         {
             Enable(InputSlot.Hold);
             HoldOn(GestureTargetClass.Node, 3, 0.2f);
+            core.AdvanceTime(1f);
             Kinds(GestureEventKind.PointerDown, GestureEventKind.Tap);
         }
 
@@ -837,7 +1010,7 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
-        public void Golden_DefaultsPublishNoNewGestureOnAnyTarget()
+        public void Golden_DefaultsPublishOnlyNewNodeGesture()
         {
             foreach (GestureTargetClass target in SweepTargets)
             {
@@ -846,6 +1019,7 @@ namespace NodeWar.View.Tests
                 PrimaryOn(t + 0.05f, PointerPhase.Ended, target, 3);
                 PrimaryOn(t + 0.2f, PointerPhase.Began, target, 3);
                 PrimaryOn(t + 0.25f, PointerPhase.Ended, target, 3);
+                core.AdvanceTime(t + 0.5f);
                 PrimaryOn(t + 1f, PointerPhase.Began, target, 3);
                 PrimaryOn(t + 1.4f, PointerPhase.Held, target, 3);
                 PrimaryOn(t + 1.8f, PointerPhase.Ended, target, 3);
@@ -859,7 +1033,8 @@ namespace NodeWar.View.Tests
                 GestureEventKind.TwoFingerTap, GestureEventKind.HoldInfo, GestureEventKind.OrderBegin,
                 GestureEventKind.OrderUpdate, GestureEventKind.OrderEnd, GestureEventKind.OrderCancel };
             foreach (GestureEventKind kind in added) Assert.AreEqual(0, Count(kind), kind.ToString());
-            Assert.AreEqual(8, Count(GestureEventKind.Tap), "every tap fires, two per target");
+            Assert.AreEqual(6, Count(GestureEventKind.Tap), "villager and ground taps remain immediate");
+            Assert.AreEqual(1, Count(GestureEventKind.DoubleTapNode));
             AssertBalanced("defaults");
         }
 

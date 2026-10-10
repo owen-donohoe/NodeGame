@@ -134,11 +134,23 @@ namespace NodeWar.Input
         {
             if (simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return;
             int node = simState.villagers[villagerID].currentNodeID;
-            selectedVillagerIDs.Clear();
-            for (int i = 0; i < simState.villagers.Length; i++)
-                if (IsSelectable(i) && simState.villagers[i].currentNodeID == node)
-                    selectedVillagerIDs.Add(i);
+            SelectAllOnNode(node);
         }
+
+        public bool IsValidNode(int node) => SelectionRules.IsValidNode(simState, node);
+
+        public void SelectIdleOnNode(int node)
+        {
+            if (IsValidNode(node)) SelectionRules.CollectOnNode(simState, localPlayerID, node, true, selectedVillagerIDs);
+        }
+
+        public void SelectAllOnNode(int node)
+        {
+            if (IsValidNode(node)) SelectionRules.CollectOnNode(simState, localPlayerID, node, false, selectedVillagerIDs);
+        }
+
+        public bool AreAllResidentsSelected(int node) =>
+            SelectionRules.AllResidentsSelected(simState, localPlayerID, node, selectedVillagerIDs);
 
         private void Update()
         {
