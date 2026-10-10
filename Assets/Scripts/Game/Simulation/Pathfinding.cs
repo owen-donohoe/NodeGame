@@ -16,19 +16,19 @@ namespace NodeWar.Simulation
         /// Returns array of node IDs representing the path (inclusive of start and end).
         /// Returns empty array if no path found.
         /// </summary>
-        public static int[] FindPath(SimulationState state, int askingOwnerId, int startNode, int endNode)
+        public static int[] FindPath(SimulationState state, int askingOwnerId, int startNode, int endNode, int moveSpeedTicks)
         {
             if (startNode == endNode)
                 return new int[] { startNode };
 
             int nodeCount = state.nodes.Length;
-            int[] dist = new int[nodeCount];
+            long[] dist = new long[nodeCount];
             int[] cameFrom = new int[nodeCount];
             bool[] visited = new bool[nodeCount];
 
             for (int i = 0; i < nodeCount; i++)
             {
-                dist[i] = int.MaxValue;
+                dist[i] = long.MaxValue;
                 cameFrom[i] = -1;
             }
             dist[startNode] = 0;
@@ -36,7 +36,7 @@ namespace NodeWar.Simulation
             for (int step = 0; step < nodeCount; step++)
             {
                 int current = -1;
-                int currentDist = int.MaxValue;
+                long currentDist = long.MaxValue;
                 for (int i = 0; i < nodeCount; i++)
                 {
                     if (!visited[i] && dist[i] < currentDist)
@@ -60,15 +60,16 @@ namespace NodeWar.Simulation
                     int neighbor = links[i].toNodeID;
                     if (visited[neighbor]) continue;
 
-                    int travelWeight = links[i].travelWeight;
-                    int multiplier = GetPreferenceMultiplier(state, neighbor, askingOwnerId);
-
-                    // Integer percentage: (weight * multiplier) / 100, minimum 1
-                    int scaledCost = (travelWeight * multiplier + 99) / 100; // ceiling division
-                    if (scaledCost < 1) scaledCost = 1;
-
-                    int newDist = dist[current] + scaledCost;
-                    if (newDist < dist[neighbor])
+                    int ticks = GameSimulation.CalculateLegTicks(state, askingOwnerId, current, neighbor, moveSpeedTicks);
+                    NodeData node = state.nodes[neighbor];
+                    int multiplier = node.districtType == DistrictType.Pier && node.ownerID == askingOwnerId
+                        ? 100 : GetPreferenceMultiplier(state, neighbor, askingOwnerId);
+                    long scaledCost = System.Math.Max(1, ((long)ticks * multiplier + 99) / 100);
+                    // Returning to start never charges a gate; visited already prevents it.
+                    long newDist = dist[current] + scaledCost +
+                        (neighbor == startNode ? 0 : GameSimulation.EstimatedGateTicks(state, neighbor, askingOwnerId));
+                    if (newDist < dist[neighbor] ||
+                        (newDist == dist[neighbor] && current < cameFrom[neighbor]))
                     {
                         dist[neighbor] = newDist;
                         cameFrom[neighbor] = current;

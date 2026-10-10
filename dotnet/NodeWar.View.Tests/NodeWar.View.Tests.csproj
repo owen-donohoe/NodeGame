@@ -24,6 +24,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="StructurePresentationTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
     <!-- Physical pointer classification and selection rules, with devices and raycasts left in Unity. -->
     <Compile Include="GestureClassifierTests.cs" />
     <Compile Include="SelectionRulesTests.cs" />

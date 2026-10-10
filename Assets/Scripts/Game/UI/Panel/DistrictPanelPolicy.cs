@@ -42,6 +42,8 @@ namespace NodeWar.UI
             switch (district)
             {
                 case DistrictType.Village:
+                case DistrictType.Workshop:
+                case DistrictType.Storehouse:
                 case DistrictType.Town:
                 case DistrictType.Infirmary:
                 case DistrictType.Fortress:
@@ -82,6 +84,7 @@ namespace NodeWar.UI
                 case DistrictType.Farm:
                 case DistrictType.Mine:
                 case DistrictType.Market:
+                case DistrictType.Storehouse:
                     return true;
 
                 default:

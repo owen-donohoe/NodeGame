@@ -99,6 +99,66 @@ namespace NodeWar.BalanceRig
         }
 
         [Test]
+        public void CollectorMinions_ArePopulationButNotIdleBodiesOrBarracksStalls()
+        {
+            var s = State();
+            s.nodes[3].districtType = DistrictType.Barracks; s.nodes[3].ownerID = 0;
+            s.villagers = new[] {
+                new VillagerData { villagerID = 0, ownerID = 0, currentNodeID = 3, hp = 8, suit = SuitType.Minion, state = VillagerState.Idle },
+                new VillagerData { villagerID = 1, ownerID = 0, currentNodeID = 3, hp = 0, suit = SuitType.Minion, state = VillagerState.Dead, isConsumed = true },
+                new VillagerData { villagerID = 2, ownerID = 0, currentNodeID = CoreP0, hp = 5, state = VillagerState.Idle }
+            };
+            var m = new TimelineMetrics(s, 10); Tick(m, s, 1);
+            Assert.That(m.Windows[0].idleVillagerTicks[0], Is.EqualTo(1));
+            Assert.That(m.Windows[0].idlePeak[0], Is.EqualTo(1));
+            var result = new MatchResult(); MatchRunner.TrackFleet(s, result);
+            Assert.That(result.ticksIdleOnBarracks[0], Is.Zero);
+            Assert.That(result.soldiersEnd[0], Is.Zero);
+            MatchRunner.Finish(s, result, GameBalanceData.Default());
+            Assert.That(result.villagersAlive[0], Is.EqualTo(2), "Living minions count toward the final population.");
+            var trace = new System.IO.StringWriter(); MatchRunner.Trace(trace, s);
+            StringAssert.Contains("idle=1", trace.ToString());
+        }
+
+        [Test]
+        public void BanksDoNotChangeMetricMeaning()
+        {
+            var s = State();
+            s.nodes[3].districtType = DistrictType.Pier; s.nodes[3].ownerID = 1;
+            s.villagers = new VillagerData[3];
+            for (int i = 0; i < 3; i++)
+                s.villagers[i] = new VillagerData { villagerID = i, ownerID = 0, currentNodeID = 3, hp = 1, state = VillagerState.Idle };
+            var m = new TimelineMetrics(s, 10);
+
+            // An ordinary claim and a gated claim on an enemy Pier are busy, not idle.
+            s.villagers[0].state = VillagerState.Claiming;
+            s.villagers[1].state = VillagerState.Claiming; s.villagers[1].targetNodeID = 4;
+            Tick(m, s, 1);
+            Assert.AreEqual(1, m.Windows[0].idleVillagerTicks[0], "only the third villager is idle");
+            Assert.AreEqual(1, m.Windows[0].idlePeak[0]);
+            int before = m.Windows[0].idleVillagerTicks[0];
+
+            // A population append (a recruit lands at the end of the array) never drops what was counted.
+            var grown = new VillagerData[4];
+            System.Array.Copy(s.villagers, grown, 3);
+            grown[3] = new VillagerData { villagerID = 3, ownerID = 0, currentNodeID = CoreP0, hp = 1, state = VillagerState.Idle };
+            s.villagers = grown;
+            Tick(m, s, 2);
+            Assert.GreaterOrEqual(m.Windows[0].idleVillagerTicks[0], before);
+            Assert.AreEqual(1 + 2, m.Windows[0].idleVillagerTicks[0]);
+            Assert.AreEqual(2, m.Windows[0].idlePeak[0]);
+
+            // The Pier is neutralised by the gated claimers: one Neutralisation, no Claim, not a Core.
+            s.nodes[3].ownerID = -1;
+            Tick(m, s, 3);
+            Assert.AreEqual(1, m.NeutralisationCount);
+            Assert.AreEqual(0, m.ClaimCount);
+            Assert.AreEqual((OwnerTransitionKind.Neutralisation, 1, -1, false),
+                (m.Transitions[0].kind, m.Transitions[0].fromOwner, m.Transitions[0].toOwner, m.Transitions[0].isCore));
+            Assert.AreEqual(1, m.NeutralisedFrom[1]);
+        }
+
+        [Test]
         public void OpeningContest_OnlyNonCoreThroughTick600()
         {
             // Core combat at 10 and non-core combat at 601 are not an opening contest.

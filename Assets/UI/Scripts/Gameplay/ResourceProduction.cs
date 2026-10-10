@@ -115,12 +115,6 @@ namespace NodeWar.UI
                     if (villager.ownerID < 0 || villager.ownerID >= state.players.Length) return false;
                     return state.players[villager.ownerID].materials >= 1;
 
-                case DistrictType.Market:
-                    kind = villager.productionTicksMax
-                           == balance.GetDistrictStats(DistrictType.Market, node.districtEra).productionTicks
-                        ? ResourceKind.Food
-                        : ResourceKind.Materials;
-                    return true;
 
                 default:
                     kind = ResourceKind.Food;

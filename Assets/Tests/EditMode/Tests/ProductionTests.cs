@@ -141,29 +141,15 @@ namespace NodeWar.Tests
         // ===== MARKET =====
 
         [Test]
-        public void Production_AMarketAlternatesFoodThenMaterialsOnTwoDifferentClocks()
+        public void HistoricalMarket_HasNoActiveWorkerIncome()
         {
-            GameBalanceData balance = UseDefaultBalance();
-            SimulationState state = BoardWithWorkerOn(balance, DistrictType.Market);
-
-            // The market is the one district whose cycle length changes between
-            // cycles: it starts on the food clock, and paying out switches it to
-            // the longer material clock and back again. The switch is decided by
-            // comparing productionTicksMax against the food clock, so a market
-            // worker whose timer was reset by anything else resumes on food.
-            Tick(state, balance.GetDistrictStats(DistrictType.Market, 0).productionTicks);
-            Assert.AreEqual(1, state.players[0].food);
+            var balance = UseDefaultBalance();
+            var state = BoardWithWorkerOn(balance, DistrictType.Market);
+            Tick(state, 160);
+            Assert.AreEqual(0, state.players[0].food);
             Assert.AreEqual(0, state.players[0].materials);
-
-            Tick(state, balance.GetDistrictStats(DistrictType.Market, 0).secondaryProductionTicks);
-            Assert.AreEqual(1, state.players[0].food);
-            Assert.AreEqual(1, state.players[0].materials);
-
-            Tick(state, balance.GetDistrictStats(DistrictType.Market, 0).productionTicks);
-            Assert.AreEqual(2, state.players[0].food);
-            Assert.AreEqual(1, state.players[0].materials);
-
-            Assert.AreEqual(SuitType.Merchant, state.villagers[0].suit);
+            Assert.AreEqual(SuitType.None, state.villagers[0].suit);
+            Assert.AreEqual(VillagerState.Idle, state.villagers[0].state);
         }
 
         // ===== RESPAWN COST =====

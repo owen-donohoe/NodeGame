@@ -7,6 +7,45 @@ namespace NodeWar.Tests
 {
     public class BalanceHasherTests
     {
+        [TestCase("minionHP", 8)] [TestCase("minionMetalCost", 3)] [TestCase("minionMoveSpeedTicks", 2)]
+        public void MinionGlobals_DefaultHashAndValidation(string name, int expected)
+        {
+            var b = GameBalanceData.Default(); var f = typeof(GameBalanceData).GetField(name); Assert.IsNotNull(f);
+            Assert.AreEqual(expected, f.GetValue(b));
+            Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(SetCoreScalar(b, name, expected + 1)));
+            foreach (int invalid in new[] { 0, -1 }) Assert.IsFalse(SetCoreScalar(b, name, invalid).CoreRulesValid(out _));
+        }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void WorkshopCooldown_PerEraHashAndValidation(int era)
+        {
+            var b = GameBalanceData.Default(); var f = typeof(DistrictStats).GetField("forgeCooldownTicks"); Assert.IsNotNull(f);
+            int index = Array.FindIndex(b.districtStats, d => (int)d.districtType == 19 && d.era == era); Assert.GreaterOrEqual(index, 0);
+            Assert.AreEqual(30, f.GetValue(b.districtStats[index]));
+            var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index];
+            f.SetValue(entry, 31); copy.districtStats[index] = (DistrictStats)entry;
+            Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+            foreach (int invalid in new[] { 0, -1 }) { f.SetValue(entry, invalid); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _)); }
+        }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void DistrictHealth_DefaultsEveryEraHashAndValidate(int era)
+        {
+            var b = GameBalanceData.Default();
+            foreach (var type in new[] { DistrictType.Fortress, DistrictType.Storehouse, DistrictType.Infirmary })
+            foreach (string name in new[] { "healthMax", "healthRegenPerTick" }) {
+                var f = typeof(DistrictStats).GetField(name); Assert.IsNotNull(f);
+                int index = Array.FindIndex(b.districtStats, d => d.districtType == type && d.era == era);
+                Assert.AreEqual(name == "healthMax" ? 3000 : 17, f.GetValue(b.districtStats[index]));
+                var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index];
+                f.SetValue(entry, (int)f.GetValue(entry) + 1); copy.districtStats[index] = (DistrictStats)entry;
+                Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                f.SetValue(entry, -1); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _));
+            }
+            foreach (var d in b.districtStats)
+                if (d.districtType != DistrictType.Fortress && d.districtType != DistrictType.Storehouse && d.districtType != DistrictType.Infirmary) {
+                    Assert.AreEqual(0, typeof(DistrictStats).GetField("healthMax").GetValue(d));
+                    Assert.AreEqual(0, typeof(DistrictStats).GetField("healthRegenPerTick").GetValue(d));
+                }
+        }
         private static GameBalanceData SetCoreScalar(GameBalanceData b, string name, int value)
         {
             var field = typeof(GameBalanceData).GetField(name);
@@ -17,6 +56,8 @@ namespace NodeWar.Tests
         [TestCase("captureBonusMaxSteps", 2)]
         [TestCase("recruitBaseCost", 6)]
         [TestCase("recruitCostPerRecruit", 3)]
+        [TestCase("bankCapacity", 5)]
+        [TestCase("collectProgressPerTick", 5)] [TestCase("collectProgressPerUnit", 16)]
         public void CoreScalar_RegisteredDefaultAndIndependentMutation(string name, int expected)
         {
             var b = GameBalanceData.Default(); var field = typeof(GameBalanceData).GetField(name);
@@ -106,6 +147,58 @@ namespace NodeWar.Tests
                 {
                     var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index]; field.SetValue(entry, invalid); copy.districtStats[index] = (DistrictStats)entry;
                     Assert.IsFalse(copy.CoreRulesValid(out _)); Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                }
+            }
+        }
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void StorehouseDuration_PerEraAndHash(int era)
+        {
+            var b = GameBalanceData.Default();
+            Assert.IsNull(typeof(GameBalanceData).GetField("fortificationHP"));
+            foreach (var type in new[] { DistrictType.Storehouse }) {
+                int index = Array.FindIndex(b.districtStats, d => d.districtType == type && d.era == era);
+                Assert.GreaterOrEqual(index, 0);
+                var field = typeof(DistrictStats).GetField("productionTicks");
+                Assert.IsNotNull(field); int expected = 80;
+                Assert.AreEqual(expected, field.GetValue(b.districtStats[index]));
+                var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone(); object entry = copy.districtStats[index];
+                field.SetValue(entry, expected + 1); copy.districtStats[index] = (DistrictStats)entry;
+                Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                field.SetValue(entry, -1); copy.districtStats[index] = (DistrictStats)entry; Assert.IsFalse(copy.CoreRulesValid(out _));
+            }
+        }
+
+        [Test]
+        public void BankTuning_RejectsInvalidActiveScalarsAndAllowsHistoricalZeros()
+        {
+            var b = GameBalanceData.Default();
+            foreach (string name in new[] { "bankCapacity", "collectProgressPerTick", "collectProgressPerUnit" })
+                foreach (int value in new[] { -1, 0 })
+                    Assert.IsFalse(SetCoreScalar(b, name, value).CoreRulesValid(out _));
+            var historical = b;
+            foreach (string name in new[] { "bankCapacity", "collectProgressPerTick", "collectProgressPerUnit" })
+                historical = SetCoreScalar(historical, name, 0);
+            Assert.IsTrue(historical.CoreRulesValid(out _)); Assert.IsFalse(historical.BankTuningValid());
+        }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+        public void PierTuning_EveryEraHashesAndValidates(int era)
+        {
+            var b = GameBalanceData.Default();
+            int index = Array.FindIndex(b.districtStats, d => d.districtType == DistrictType.Pier && d.era == era);
+            Assert.GreaterOrEqual(index, 0);
+            foreach (string name in new[] { "pierTravelDivisor" })
+            {
+                var f = typeof(DistrictStats).GetField(name); Assert.IsNotNull(f);
+                Assert.AreEqual(2, f.GetValue(b.districtStats[index]));
+                var copy = b; copy.districtStats = (DistrictStats[])b.districtStats.Clone();
+                object entry = copy.districtStats[index]; f.SetValue(entry, (int)f.GetValue(entry) + 1);
+                copy.districtStats[index] = (DistrictStats)entry;
+                Assert.AreNotEqual(BalanceHasher.Hash(b), BalanceHasher.Hash(copy));
+                foreach (int invalid in new[] { -1, int.MaxValue })
+                {
+                    f.SetValue(entry, invalid); copy.districtStats[index] = (DistrictStats)entry;
+                    Assert.IsFalse(copy.CoreRulesValid(out _));
                 }
             }
         }

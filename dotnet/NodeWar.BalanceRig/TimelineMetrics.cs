@@ -34,7 +34,7 @@ namespace NodeWar.BalanceRig
         /// <summary>Ticks sampled in the window; a sample is the state after one tick.</summary>
         public int idleSamples;
 
-        /// <summary>Villager-ticks spent living, unconsumed and Idle, by player, summed over the samples.</summary>
+        /// <summary>Body-ticks spent living, unconsumed and Idle, excluding collector minions, by player.</summary>
         public int[] idleVillagerTicks = new int[2];
 
         /// <summary>Most villagers a player had idle on any one sample.</summary>
@@ -142,12 +142,12 @@ namespace NodeWar.BalanceRig
             TicksPlayed = Math.Max(TicksPlayed, post1);
             WindowStats w = Window(Math.Max(0, post1 - 1));
 
-            // Idle: living, unconsumed, Idle. Samples and summed villager-ticks.
+            // Minions deliberately idle while collecting; they are not unemployed bodies.
             int[] idle = new int[2];
             for (int v = 0; v < post.villagers.Length; v++)
             {
                 VillagerData vil = post.villagers[v];
-                if (vil.isConsumed || vil.state != VillagerState.Idle) continue;
+                if (vil.isConsumed || vil.state != VillagerState.Idle || !NodeActionRules.IsBody(vil)) continue;
                 if (vil.ownerID == 0 || vil.ownerID == 1) idle[vil.ownerID]++;
             }
             w.idleSamples++;

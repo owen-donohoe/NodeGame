@@ -32,10 +32,12 @@ namespace NodeWar.UI
         private NodeWar.Core.ITickProvider tickProvider;
         private int nodeID;
         private bool isOwned;
+        private GameBalanceData balance;
 
         public void Initialize(SimulationState state, NodeWar.Core.ITickProvider provider,
-                               InputBuffer buffer, int node, int pid, bool owned)
+                               InputBuffer buffer, int node, int pid, bool owned, GameBalanceData balanceData)
         {
+            balance = balanceData;
             simState = state;
             tickProvider = provider;
             nodeID = node;
@@ -81,7 +83,8 @@ namespace NodeWar.UI
 
             if (isOwned)
             {
-                workerCountLabel.text = "Workers: " + Mathf.Min(workerCount, 2) + " / 2";
+                int capacity = balance.maxWorkersPerNode;
+                workerCountLabel.text = "Workers: " + Mathf.Min(workerCount, capacity) + " / " + capacity;
             }
 
             if (workerCount >= 1) diskCenterText0.text = "+1";

@@ -15,8 +15,8 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:44Z }
-verified_at_commit: 3a476dc47ea6085a5e8c0a3c7263b795f5a089f2
+  - { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
+verified_at_commit: 8901d8142c371e5d1efb569925696a976a8f3a27
 status: stable
 sources:
   - id: tests
@@ -77,8 +77,8 @@ each, link weights of 1, and `GameBalanceData.Default()`:
 
 | Fixture | Ticks | Commands | Baseline hash |
 |---|---|---|---|
-| `EmptyTick` | 100 | none | `647286254` |
-| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `357327383` |
+| `EmptyTick` | 100 | none | `2084609368` |
+| `MoveAndCombat` | 4 | both villagers `Move` to node 1 | `-1780012649` |
 
 `TestBoardFactory` also holds `BuildSquareBoard`, a 2x2 grid added for movement-retargeting tests.
 It is **not sanctioned** and no baseline is pinned against it. Only the two fixtures above are
@@ -90,7 +90,7 @@ villager crosses one link at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ti
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 3`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 4`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
 
@@ -121,6 +121,40 @@ fingerprints moved: `411123996 → 647286254` (`EmptyTick`) and `2101726457 → 
 (`MoveAndCombat`). No rule difference reaches these fixtures. Version 3 is unreleased, so it was not bumped again. `BreachTempoTests.
 LegacyNoTempoRetainsVersionOneBaselineHashPaths` runs the same two fixtures and carries the same two
 constants.
+
+**v4 re-pin (shared structures, D1).** The suit-driven structure attack changes the rules,
+so `SimulationVersion.Current` advances from 3 to 4. `NodeData.structureKind` and
+`NodeData.structureHP` are hashed unconditionally after terrain. Both fixtures have three
+bare nodes, adding six zero terms to the hash polynomial: `647286254 → -563755666`
+(`EmptyTick`) and `357327383 → -2013445737` (`MoveAndCombat`). Neither fixture attacks a
+structure; this numeric change comes solely from the state hash schema. Both scenarios
+still run twice from independent states. `BreachTempoTests` carries the same updated pins.
+New balance tuning is separately tagged and zero-neutral, retaining historical export hashes.
+
+**D4 re-pin (latched leg clock, still version 4).** Each villager now hashes
+`moveLegDurationTicks` unconditionally immediately after `moveProgress`. Both
+fixtures finish off-leg with duration zero, so their two villagers add two zero
+terms to the polynomial: `-563755666` to `-2085505832` (`EmptyTick`) and
+`-2013445737` to `534653207` (`MoveAndCombat`). No route choice or travel-time
+change reaches these line-board fixtures. `BreachTempoTests` carries the same
+pins. Version 4 remains the unreleased PR D version introduced in D1.
+
+**D2, D3, D5 and D6 left both pins alone.** The bank fields (`bankFood`, `bankMaterials`,
+`bankMetal`, `collectProgress`, `collectRequested`, `minionProductionRemaining`,
+`storehouseNextResource`, `storehouseInitialised`) are hashed only when non-zero under tags
+2020–2027, and the bank, collection and gate balance scalars (including D6's
+`collectProgressPerTick` and `collectProgressPerUnit`, moved out of `BankRules` literals) are
+zero-neutral in `BalanceHasher`. Neither fixture installs a minion, so the pins stayed
+`-2085505832` and `534653207` through D6.
+
+**E1 re-pin (district health, still unreleased version 4).** The rework removes
+the two unconditional structure kind/HP terms from each of the three bare nodes,
+losing six zero terms. `districtHealth` uses tagged, indexed zero-neutral hashing;
+these fixtures have no passive district health. D4's leg clock remains. Thus
+`-2085505832 → 2084609368` (EmptyTick) and `534653207 → -1780012649`
+(MoveAndCombat). `BreachTempoTests` carries the same pins. E2 mobile minions,
+E3 presentation and E4 acceptance do not move them. The older D1-D6 paragraphs
+above describe historical schemas, not current fields or rules.
 
 ## Where it runs
 

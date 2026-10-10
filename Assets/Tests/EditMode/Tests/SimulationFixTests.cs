@@ -133,7 +133,7 @@ namespace NodeWar.Tests
             CommandProcessor.SetBalance(balance);
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
             state.nodes[1].districtType = DistrictType.Fortress;
-            state.nodes[1].fortressLevel = 3;
+            state.nodes[1].districtHealth = 3000; state.nodes[1].fortressLevel = 3;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[1].currentNodeID = 1;
@@ -182,7 +182,7 @@ namespace NodeWar.Tests
             GameBalanceData balance = SetDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
             state.nodes[1].districtType = DistrictType.Fortress;
-            state.nodes[1].fortressLevel = 3;
+            state.nodes[1].districtHealth = 3000; state.nodes[1].fortressLevel = 3;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
@@ -215,7 +215,7 @@ namespace NodeWar.Tests
         {
             GameBalanceData balance = SetDefaultBalance();
             SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-            state.nodes[1].districtType = DistrictType.Infirmary;
+            state.nodes[1].districtType = DistrictType.Infirmary; state.nodes[1].districtHealth = 3000;
             state.nodes[1].ownerID = 0;
             state.nodes[1].claimBar = balance.claimThreshold;
             state.villagers[0].currentNodeID = 1;
@@ -285,7 +285,6 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Farm, SuitType.Farmer, 30)]
         [TestCase(DistrictType.Mine, SuitType.Miner, 40)]
         [TestCase(DistrictType.Forge, SuitType.Smelter, 50)]
-        [TestCase(DistrictType.Market, SuitType.Merchant, 45)]
         [TestCase(DistrictType.Infirmary, SuitType.Acolyte, 0)]
         [TestCase(DistrictType.Watchtower, SuitType.Watcher, 0)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap(
@@ -307,7 +306,6 @@ namespace NodeWar.Tests
         [TestCase(DistrictType.Farm)]
         [TestCase(DistrictType.Mine)]
         [TestCase(DistrictType.Forge)]
-        [TestCase(DistrictType.Market)]
         [TestCase(DistrictType.Infirmary)]
         [TestCase(DistrictType.Watchtower)]
         public void Arrival_AssignsProductionSuitAndHonorsWorkerCap_Determinism(DistrictType district)

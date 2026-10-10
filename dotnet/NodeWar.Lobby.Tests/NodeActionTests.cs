@@ -25,6 +25,61 @@ namespace NodeWar.Lobby.Tests
         {
             Assert.That((c.type,c.playerID,c.targetNodeID,c.villagerID,c.issuedOnTick,c.value),Is.EqualTo((type,0,0,-1,tick,value)));
         }
+        [Test] public void ForgeMinionOnlyQueuesCommandAndRechecksBinding()
+        {
+            var s=State(DistrictType.Workshop); var b=GameBalanceData.Default(); var m=new NodeActionModel();
+            s.tickCount=160; s.players[0].metal=b.minionMetalCost;
+            var d=m.Describe(s,b,0,0); int hash=SimulationStateHasher.ComputeHash(s);
+            Assert.That(d.CanForge,Is.True); Assert.That(d.Price,Is.EqualTo(b.minionMetalCost));
+            Assert.That(m.TryForgeMinion(s,b,0,0,out var c),Is.True); Check(c,(CommandType)8,0,160);
+            var sink=new List<GameCommand> {c};
+            Assert.That(sink,Has.Count.EqualTo(1));
+            Assert.That(SimulationStateHasher.ComputeHash(s),Is.EqualTo(hash));
+            s.nodes[0].ownerID=1; Assert.That(m.TryForgeMinion(s,b,0,0,out _),Is.False);
+            s.nodes[0].ownerID=0; var copy=new SimulationState(); copy.CopyFrom(s); s.CopyFrom(copy);
+            Assert.That(m.TryForgeMinion(s,b,0,0,out _),Is.False);
+            m.Describe(s,b,0,0); s.tickCount--; Assert.That(m.TryForgeMinion(s,b,0,0,out _),Is.False);
+        }
+        [TestCase("None")] [TestCase("NotOwned")] [TestCase("EnemyPresent")]
+        [TestCase("Cooldown")] [TestCase("InvalidCost")] [TestCase("CostAboveMetalCap")]
+        [TestCase("InsufficientMetal")] [TestCase("PopulationCap")]
+        public void ForgeRefusalLabelsMatchRules(string expected)
+        {
+            var s=State(DistrictType.Workshop); var b=GameBalanceData.Default(); var m=new NodeActionModel();
+            s.tickCount=160; s.players[0].metal=b.minionMetalCost;
+            if(expected=="NotOwned") s.nodes[0].ownerID=1;
+            if(expected=="EnemyPresent") s.villagers=new[] {new VillagerData {ownerID=1,currentNodeID=0,hp=1}};
+            if(expected=="Cooldown") s.nodes[0].recruitReadyTick++;
+            if(expected=="InvalidCost") b.minionMetalCost=-1;
+            if(expected=="CostAboveMetalCap") b.metalCap=b.minionMetalCost-1;
+            if(expected=="InsufficientMetal") s.players[0].metal--;
+            if(expected=="PopulationCap") b.maxVillagersPerPlayer=0;
+            bool allowed=NodeActionRules.CanForgeMinion(s,b,0,0,out var refusal);
+            var d=m.Describe(s,b,0,0);
+            Assert.That(refusal.ToString(),Is.EqualTo(expected));
+            Assert.That((d.CanForge,d.Refusal),Is.EqualTo((allowed,refusal.ToString())));
+            Assert.That(m.TryForgeMinion(s,b,0,0,out _),Is.EqualTo(allowed));
+        }
+        [Test] public void MinionIsNamedAndCannotBeOfferedAnEquipAction()
+        {
+            var s=State(); s.villagers=new[] {new VillagerData {ownerID=0,currentNodeID=0,suit=SuitType.Minion,state=VillagerState.Idle,hp=8}};
+            Assert.That(CommandEligibility.EquipVillager(s,0,0),Is.EqualTo(EquipRefusal.AlreadySuited));
+            Assert.That(NodeWar.View.StructurePresentation.SuitLabel(s.villagers[0].suit),Is.EqualTo("Minion"));
+        }
+        [TestCase(DistrictType.Fortress,"Resistance aura")]
+        [TestCase(DistrictType.Infirmary,"Healing and respawn assistance")]
+        public void PassiveSheetsShowHealthAndEffectStatus(DistrictType type,string effect)
+        {
+            var s=State(type); var b=GameBalanceData.Default(); var m=new NodeActionModel();
+            int max=b.GetDistrictStats(type,0).healthMax;
+            foreach(int health in new[] {0,max-1,max})
+            {
+                s.nodes[0].districtHealth=health;
+                var d=m.Describe(s,b,0,0);
+                StringAssert.Contains("Health "+health+" / "+max,d.Information);
+                StringAssert.Contains(effect+" "+(health==max?"active":"disabled until fully healed"),d.Information);
+            }
+        }
         [Test] public void ControlsQueueCommandsNeverMutateState()
         {
             var s=State(); s.tickCount=160; var b=GameBalanceData.Default(); var m=new NodeActionModel(); var sink=new List<GameCommand>();

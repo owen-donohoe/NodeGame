@@ -10,9 +10,10 @@
 param(
     [string]$Environment = "development",
     [int]$Seconds = 60,
-    [int]$Protocol = 3,
-    [int]$Sim = 1,
-    [int]$Content = 1966419918,
+    # PR D release identity: banks, district health, minions and Pier gates (sim 4).
+    [int]$Protocol = 5,
+    [int]$Sim = 4,
+    [int]$Content = -1242191275,
     [switch]$EnsureRecords,
     # After a match forms: publish a code as slot 0, read it as slot 1, then
     # leave before connecting, which must void the match and free both players.
@@ -27,6 +28,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Write-Host "Environment: $Environment; protocol: $Protocol; simulation: $Sim; content: $Content"
 $ProjectId = "b0178b5c-011c-4e8c-8913-6ffe4286c614"
 $AuthUrl = "https://player-auth.services.api.unity.com/v1/authentication/anonymous"
 $TicketsUrl = "https://matchmaker.services.api.unity.com/v2/tickets"
@@ -83,11 +85,20 @@ while ((Get-Date) -lt $deadline -and ($done -contains $false)) {
         $status = Get-TicketStatus $players[$i] $tickets[$i]
         $json = $status | ConvertTo-Json -Depth 10 -Compress
         Write-Host "P$i $json"
-        if ($status.matchId) { $foundMatchId = $status.matchId }
+        if ($status.status -and $status.status -ne "InProgress" -and $status.status -ne "Found") {
+            throw "P$i matchmaking failed: $json"
+        }
+        if ($status.matchId) {
+            if ($foundMatchId -and $foundMatchId -ne $status.matchId) {
+                throw "Players were assigned different matches."
+            }
+            $foundMatchId = $status.matchId
+        }
         if ($status.status -and $status.status -ne "InProgress") { $done[$i] = $true }
     }
 }
 if ($done -contains $false) { Write-Host "Timed out after $Seconds s." ; exit 1 }
+if (-not $foundMatchId) { throw "Matchmaking completed without a match ID." }
 
 if ($Rendezvous) {
     $matchId = $foundMatchId
@@ -106,6 +117,17 @@ if ($Rendezvous) {
     foreach ($p in $players) {
         $s = Invoke-Module $p "GetPlayerState" @{}
         Write-Host "Active match for $($p.Id): '$($s.ActiveMatch.matchId)'"
+        if ($s.ActiveMatch.matchId) { throw "Test match left an active claim for $($p.Id)." }
+    }
+    if ($seen.joinCode -ne "SPIKE1") { throw "Guest did not receive the host's join code." }
+    if ($leave.outcome -ne 0 -or $after.state -ne 3) { throw "Unstarted test match was not voided." }
+    foreach ($view in $views) {
+        if ($view.slot -lt 0 -or -not $view.mapId -or $view.boardHash -eq 0) {
+            throw "Server did not supply the ranked roster and map agreement."
+        }
+        if ($view.mapId -ne $views[0].mapId -or $view.boardHash -ne $views[0].boardHash) {
+            throw "Players received different ranked maps."
+        }
     }
 }
 

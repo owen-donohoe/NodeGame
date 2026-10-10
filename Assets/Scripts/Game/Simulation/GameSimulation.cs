@@ -5,6 +5,7 @@ namespace NodeWar.Simulation
     public static class GameSimulation
     {
         private static GameBalanceData bal;
+        internal static GameBalanceData Balance => bal;
 
         public static void SetBalance(GameBalanceData balance)
         {
@@ -19,7 +20,7 @@ namespace NodeWar.Simulation
         /// 1. Commands (handled by TickRunner before this call)
         /// 2. Movement (with combat interruption and breach-on-arrival)
         /// 3. Combat (detect fights, process cooldowns, deal damage, handle deaths)
-        /// 4. Breach channel, then claim bars
+        /// 4. Breach channel, then district health and claim bars
         /// 5. Production
         /// 6. Healing (normal or owned-Infirmary interval)
         /// 7. Respawn timers
@@ -40,7 +41,6 @@ namespace NodeWar.Simulation
             // Step 2: Movement
             TickAllMovement(state, log);
 
-
             // Step 3: Combat
             TickCombat(state, log);
 
@@ -50,6 +50,8 @@ namespace NodeWar.Simulation
 
             // Step 5: Production
             TickProduction(state);
+            TickStorehouseProduction(state);
+            TickBankCollection(state);
             TickAutoRecruit(state);
 
             // Step 6: Healing
@@ -89,6 +91,58 @@ namespace NodeWar.Simulation
             }
         }
 
+        public static int BaseMoveSpeedTicks => bal.baseMoveSpeedTicks;
+
+        internal static void ClearLeg(ref VillagerData v)
+        {
+            v.moveProgress = 0;
+            v.moveLegDurationTicks = 0;
+        }
+
+        internal static void BeginLeg(SimulationState state, ref VillagerData v)
+        {
+            v.moveLegDurationTicks = CalculateLegTicks(state, v.ownerID,
+                v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1], v.moveSpeedTicks);
+        }
+
+        /// <summary>Read-only interpolation clock; zero-latch legacy states use the departure rule.</summary>
+        public static int GetMoveLegDurationTicks(SimulationState state, VillagerData v)
+        {
+            if (v.moveLegDurationTicks > 0) return v.moveLegDurationTicks;
+            if (v.movePath == null || v.movePathIndex < 0 || v.movePathIndex + 1 >= v.movePath.Length) return 1;
+            return CalculateLegTicks(state, v.ownerID, v.movePath[v.movePathIndex],
+                v.movePath[v.movePathIndex + 1], v.moveSpeedTicks);
+        }
+
+        internal static int CalculateLegTicks(SimulationState state, int ownerID, int from, int to, int speed)
+        {
+            long ticks = System.Math.Max(1, (long)GetLinkWeight(state, from, to) * speed);
+            NodeData node = state.nodes[to];
+            int divisor = bal.GetDistrictStats(DistrictType.Pier, node.districtEra).pierTravelDivisor;
+            if (node.districtType == DistrictType.Pier && node.ownerID == ownerID && divisor > 0)
+                ticks = (ticks + divisor - 1) / divisor;
+            return (int)System.Math.Min(int.MaxValue, System.Math.Max(1, ticks));
+        }
+
+        internal static long EstimatedGateTicks(SimulationState state, int nodeID, int attackerID)
+        {
+            NodeData node = state.nodes[nodeID];
+            if (node.districtType != DistrictType.Pier || node.ownerID != 1 - attackerID) return 0;
+            int[] owners = new int[state.nodes.Length];
+            for (int i = 0; i < owners.Length; i++) owners[i] = state.nodes[i].ownerID;
+            long rate = ClaimRate(state, nodeID, attackerID, 1, owners);
+            if (rate <= 0) return int.MaxValue;
+            long bar = System.Math.Max(0, attackerID == 0 ? -(long)node.claimBar : node.claimBar);
+            return (bar + rate - 1) / rate;
+        }
+
+        private static void ApplyGateState(SimulationState state, int index)
+        {
+            VillagerData v = state.villagers[index];
+            state.villagers[index].state = NodeActionRules.IsBody(v) && PierGate.HasClaimerSlot(state, v, bal.maxClaimersPerNode)
+                ? VillagerState.Claiming : VillagerState.Idle;
+        }
+
         private static void TickMovement(SimulationState state, int villagerIndex, TickEventLog log)
         {
             VillagerData v = state.villagers[villagerIndex];
@@ -96,28 +150,28 @@ namespace NodeWar.Simulation
             // Invariant: a Moving villager always has a further node ahead on its path.
             // If that is violated the villager is in a corrupt movement state -- recover
             // deterministically rather than indexing off the end of movePath below.
-            if (v.movePath == null || v.movePathIndex + 1 >= v.movePath.Length)
+            if (v.movePath == null || v.movePathIndex < 0 || v.movePathIndex + 1 >= v.movePath.Length)
             {
                 v.movePath = new int[0];
                 v.movePathIndex = 0;
-                v.moveProgress = 0;
+                ClearLeg(ref v);
                 v.state = VillagerState.Idle;
                 state.villagers[villagerIndex] = v;
                 return;
             }
 
+            if (v.moveLegDurationTicks == 0) BeginLeg(state, ref v);
             v.moveProgress++;
 
-            // Calculate ticks needed for current edge
-            int edgeWeight = GetLinkWeight(state, v.movePath[v.movePathIndex], v.movePath[v.movePathIndex + 1]);
-            int ticksForEdge = edgeWeight * v.moveSpeedTicks;
+            // The departure clock survives ownership changes and reversals.
+            int ticksForEdge = v.moveLegDurationTicks;
 
             if (v.moveProgress >= ticksForEdge)
             {
                 // Advance to next node in path
                 v.previousNodeID = v.movePath[v.movePathIndex];
                 v.movePathIndex++;
-                v.moveProgress = 0;
+                ClearLeg(ref v);
 
                 v.currentNodeID = v.movePath[v.movePathIndex];
 
@@ -126,12 +180,12 @@ namespace NodeWar.Simulation
 
                 bool enemiesPresent = HasLivingEnemiesOnNode(state, v.currentNodeID, v.ownerID);
 
-                if (v.currentNodeID == enemyCoreID)
+                if (v.currentNodeID == enemyCoreID && NodeActionRules.IsBody(v))
                 {
                     if (enemiesPresent)
                     {
                         v.state = VillagerState.Fighting;
-                        v.moveProgress = 0;
+                        ClearLeg(ref v);
                         v.attackCooldownRemaining = v.attackCooldownMax;
                         v.combatTargetID = -1;
                         state.villagers[villagerIndex] = v;
@@ -147,19 +201,33 @@ namespace NodeWar.Simulation
                 if (enemiesPresent)
                 {
                     v.state = VillagerState.Fighting;
-                    v.moveProgress = 0;
+                    ClearLeg(ref v);
                     v.attackCooldownRemaining = v.attackCooldownMax;
                     v.combatTargetID = -1;
                     state.villagers[villagerIndex] = v;
                     return;
                 }
 
+                // At arrival the villager stands on the node before asking the gate.
+                v.state = VillagerState.Idle;
+                if (v.movePathIndex + 1 < v.movePath.Length &&
+                    PierGate.BlocksDeparture(state, v, v.movePath[v.movePathIndex + 1]))
+                {
+                    state.villagers[villagerIndex] = v;
+                    ApplyGateState(state, villagerIndex);
+                    return;
+                }
+                if (v.movePathIndex + 1 < v.movePath.Length)
+                {
+                    v.state = VillagerState.Moving;
+                    BeginLeg(state, ref v);
+                }
                 // --- Normal arrival logic (no enemies) ---
                 if (v.movePathIndex >= v.movePath.Length - 1)
                 {
                     v.movePath = new int[0];
                     v.movePathIndex = 0;
-                    v.moveProgress = 0;
+                    ClearLeg(ref v);
                     v.state = VillagerState.Idle;
                     state.villagers[villagerIndex] = v;
                     if (v.targetNodeID == v.currentNodeID || v.targetNodeID < 0)
@@ -223,6 +291,11 @@ namespace NodeWar.Simulation
         internal static void ApplyArrivalState(SimulationState state, int villagerIndex)
         {
             VillagerData v = state.villagers[villagerIndex];
+            if (!NodeActionRules.IsBody(v))
+            {
+                state.villagers[villagerIndex].state = VillagerState.Idle;
+                return;
+            }
             int nodeID = v.currentNodeID;
             NodeData node = state.nodes[nodeID];
 
@@ -256,8 +329,7 @@ namespace NodeWar.Simulation
                 if (expectedSuit != SuitType.None)
                 {
                     state.villagers[villagerIndex].suit = expectedSuit;
-                    int workers = CountFriendlyWorkersOnNode(state, nodeID, v.ownerID);
-                    if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, villagerIndex) : workers < bal.maxWorkersPerNode)
+                    if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, villagerIndex) : BankRules.HasWorkerSlot(state, villagerIndex, bal))
                     {
                         int ticks = GetProductionTicks(node.districtType, node.districtEra);
                         state.villagers[villagerIndex].productionTicksMax = ticks;
@@ -280,6 +352,11 @@ namespace NodeWar.Simulation
                 return;
             }
 
+            if (PierGate.IsEnemyPier(state, v))
+            {
+                ApplyGateState(state, villagerIndex);
+                return;
+            }
             // Not own node: Claiming logic
             int friendlyClaimers = CountFriendlyClaimersOnNode(state, nodeID, v.ownerID);
             if (friendlyClaimers < bal.maxClaimersPerNode)
@@ -325,7 +402,7 @@ namespace NodeWar.Simulation
                 state.villagers[v].state = VillagerState.Fighting;
                 state.villagers[v].attackCooldownRemaining = vil.attackCooldownMax;
                 state.villagers[v].combatTargetID = -1;
-                state.villagers[v].moveProgress = 0;
+                ClearLeg(ref state.villagers[v]);
 
                 // Zero progress leaves the villager on its current node, so discard
                 // any half-walked reversal leg that points at a different node.
@@ -340,6 +417,8 @@ namespace NodeWar.Simulation
             {
                 if (state.villagers[v].state != VillagerState.Fighting) continue;
                 if (state.villagers[v].isConsumed) continue;
+
+                if (!NodeActionRules.IsBody(state.villagers[v])) continue;
 
                 state.villagers[v].attackCooldownRemaining--;
 
@@ -386,10 +465,12 @@ namespace NodeWar.Simulation
 
                     state.villagers[v].state = VillagerState.Dead;
                     state.villagers[v].hp = 0;
-                    state.villagers[v].respawnTicksRemaining = bal.respawnTicks;
+                    bool body = NodeActionRules.IsBody(state.villagers[v]);
+                    state.villagers[v].isConsumed = !body;
+                    state.villagers[v].respawnTicksRemaining = body ? bal.respawnTicks : 0;
                     state.villagers[v].movePath = new int[0];
                     state.villagers[v].movePathIndex = 0;
-                    state.villagers[v].moveProgress = 0;
+                    ClearLeg(ref state.villagers[v]);
                     state.villagers[v].targetNodeID = -1;
                     state.villagers[v].combatTargetID = -1;
                 }
@@ -504,7 +585,13 @@ namespace NodeWar.Simulation
                 if (p0Claimers > 0 && node.ownerID != 0)
                 {
                     long rate = ClaimRate(state, nodeIndex, 0, p0Claimers, ownersAtTickStart, resistancePercent);
-                    node.claimBar = (int)System.Math.Min(bal.claimThreshold, (long)node.claimBar + rate);
+                    if (node.ownerID == 1 && node.districtHealth > 0)
+                    {
+                        int drained = (int)System.Math.Min(rate, node.districtHealth);
+                        node.districtHealth -= drained;
+                        rate -= drained;
+                    }
+                    node.claimBar = (int)System.Math.Min(node.districtType == DistrictType.Pier && node.ownerID == 1 ? 0 : bal.claimThreshold, (long)node.claimBar + rate);
 
                     if (node.claimBar >= bal.claimThreshold)
                     {
@@ -516,11 +603,7 @@ namespace NodeWar.Simulation
                     else if (node.ownerID == 1 && node.claimBar >= 0)
                     {
                         node.claimBar = 0;
-                        node.ownerID = -1;
-                        node.autoRecruit = false;
-                        node.recruitReadyTick = 0;
-                        node.fortressLevel = 0;
-                        log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 1, 0);
+                        node = OnOwnershipChanged(state, node, node.ownerID, -1, log);
                     }
                 }
 
@@ -528,7 +611,13 @@ namespace NodeWar.Simulation
                 if (p1Claimers > 0 && node.ownerID != 1)
                 {
                     long rate = ClaimRate(state, nodeIndex, 1, p1Claimers, ownersAtTickStart, resistancePercent);
-                    node.claimBar = (int)System.Math.Max(-(long)bal.claimThreshold, (long)node.claimBar - rate);
+                    if (node.ownerID == 0 && node.districtHealth > 0)
+                    {
+                        int drained = (int)System.Math.Min(rate, node.districtHealth);
+                        node.districtHealth -= drained;
+                        rate -= drained;
+                    }
+                    node.claimBar = (int)System.Math.Max(node.districtType == DistrictType.Pier && node.ownerID == 0 ? 0 : -(long)bal.claimThreshold, (long)node.claimBar - rate);
 
                     if (node.claimBar <= -bal.claimThreshold)
                     {
@@ -540,11 +629,7 @@ namespace NodeWar.Simulation
                     else if (node.ownerID == 0 && node.claimBar <= 0)
                     {
                         node.claimBar = 0;
-                        node.ownerID = -1;
-                        node.autoRecruit = false;
-                        node.recruitReadyTick = 0;
-                        node.fortressLevel = 0;
-                        log?.Add(TickEventType.NodeNeutralised, nodeIndex, -1, 0, 1);
+                        node = OnOwnershipChanged(state, node, node.ownerID, -1, log);
                     }
                 }
 
@@ -581,7 +666,8 @@ namespace NodeWar.Simulation
             {
                 NodeData node = state.nodes[source];
                 int owner = ownersAtTickStart[source];
-                if (owner < 0 || owner > 1 || node.districtType != DistrictType.Fortress || node.fortressLevel < 1 || node.fortressLevel > 3) continue;
+                if (owner < 0 || owner > 1 || node.districtType != DistrictType.Fortress ||
+                    !DistrictHealth.Healthy(state, node) || node.fortressLevel < 1 || node.fortressLevel > 3) continue;
                 DistrictStats stats = bal.GetDistrictStats(DistrictType.Fortress, node.districtEra);
                 if (!GameBalanceData.FortressStatsValid(stats)) continue;
                 int percent = stats.fortressResistancePercent[node.fortressLevel];
@@ -641,7 +727,7 @@ namespace NodeWar.Simulation
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
-                if (v.currentNodeID != nodeID || v.state == VillagerState.Dead || v.isConsumed || v.hp <= 0) continue;
+                if (v.currentNodeID != nodeID || v.state == VillagerState.Dead || v.isConsumed || v.hp <= 0 || !NodeActionRules.IsBody(v)) continue;
                 if (v.ownerID != node.ownerID) return;
                 if (v.state == VillagerState.Working || v.state == VillagerState.Idle || v.state == VillagerState.Claiming)
                     bodies = System.Math.Min(4, bodies + 1);
@@ -661,6 +747,33 @@ namespace NodeWar.Simulation
             for (int nodeID = 0; nodeID < state.nodes.Length; nodeID++)
                 if (state.nodes[nodeID].autoRecruit)
                     CommandProcessor.TryRecruit(state, state.nodes[nodeID].ownerID, nodeID);
+        }
+
+        private static void TickBankCollection(SimulationState state)
+        {
+            for (int nodeID = 0; nodeID < state.nodes.Length; nodeID++)
+                state.nodes[nodeID] = BankRules.TickCollection(state, state.nodes[nodeID], bal);
+        }
+
+        private static void TickStorehouseProduction(SimulationState state)
+        {
+            int decrement = bal.ProductionTempoValid()
+                ? bal.TimerDecrement(bal.tempoProductionPercent, state.tickCount) : 1;
+            for (int i = 0; i < state.nodes.Length; i++)
+            {
+                NodeData node = state.nodes[i];
+                if (!BankRules.CanProduce(state, node, bal)) continue;
+                if (node.bankProductionRemaining == 0) node.bankProductionRemaining = BankRules.ProductionTicks(node, bal);
+                node.bankProductionRemaining -= decrement;
+                if (node.bankProductionRemaining <= 0)
+                {
+                    if (node.storehouseNextResource == 0) node.bankFood++;
+                    else node.bankMaterials++;
+                    node.storehouseNextResource = 1 - node.storehouseNextResource;
+                    node.bankProductionRemaining += BankRules.ProductionTicks(node, bal);
+                }
+                state.nodes[i] = node;
+            }
         }
 
         /// <summary>
@@ -708,20 +821,6 @@ namespace NodeWar.Simulation
                             }
                             // A blocked conversion still cycles without consuming materials.
                             break;
-                        case DistrictType.Market:
-                            // Alternate even when a full stock wastes this payout.
-                            DistrictStats market = bal.GetDistrictStats(DistrictType.Market, state.nodes[nodeID].districtEra);
-                            if (state.villagers[idx].productionTicksMax == market.productionTicks)
-                            {
-                                state.players[ownerID].food = GameBalanceData.AddResource(state.players[ownerID].food, bal.foodCap);
-                                state.villagers[idx].productionTicksMax = market.secondaryProductionTicks;
-                            }
-                            else
-                            {
-                                state.players[ownerID].materials = GameBalanceData.AddResource(state.players[ownerID].materials, bal.materialsCap);
-                                state.villagers[idx].productionTicksMax = market.productionTicks;
-                            }
-                            break;
                     }
 
                     // Reset timer for next production cycle
@@ -739,9 +838,14 @@ namespace NodeWar.Simulation
                 // Only re-evaluate Idle, Claiming, and Working villagers
                 if (v.state != VillagerState.Idle && v.state != VillagerState.Claiming && v.state != VillagerState.Working) continue;
                 if (v.isConsumed) continue;
+                if (!NodeActionRules.IsBody(v))
+                {
+                    state.villagers[idx].state = VillagerState.Idle;
+                    continue;
+                }
                 // Intent elsewhere forbids local work/claim, but leaves stationary
                 // Idle presence available to passive rules.
-                if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)
+                if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID && !PierGate.IsEnemyPier(state, v))
                 {
                     if (v.state != VillagerState.Idle)
                         state.villagers[idx].state = VillagerState.Idle;
@@ -779,10 +883,9 @@ namespace NodeWar.Simulation
                             state.villagers[idx].suit = expectedSuit;
 
                         // Try Working if not already
-                        if (v.state != VillagerState.Working || node.districtType == DistrictType.Infirmary)
+                        if (v.state != VillagerState.Working || node.districtType == DistrictType.Infirmary || !BankRules.HasWorkerSlot(state, idx, bal))
                         {
-                            int workers = CountFriendlyWorkersOnNode(state, v.currentNodeID, v.ownerID);
-                            if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, idx) : workers < bal.maxWorkersPerNode)
+                            if (node.districtType == DistrictType.Infirmary ? InfirmaryWorkerSlot(state, idx) : BankRules.HasWorkerSlot(state, idx, bal))
                             {
                                 state.villagers[idx].state = VillagerState.Working;
                                 state.villagers[idx].productionTicksMax = GetProductionTicks(node.districtType, node.districtEra);
@@ -805,6 +908,11 @@ namespace NodeWar.Simulation
                     continue;
                 }
 
+                if (PierGate.IsEnemyPier(state, v))
+                {
+                    ApplyGateState(state, idx);
+                    continue;
+                }
                 // === NOT OWN NODE ===
                 if (v.state != VillagerState.Claiming)
                 {
@@ -817,17 +925,33 @@ namespace NodeWar.Simulation
             }
         }
 
+        private static NodeData OnOwnershipChanged(SimulationState state, NodeData node, int oldOwner, int newOwner, TickEventLog log)
+        {
+            if (oldOwner != newOwner)
+            {
+                node.autoRecruit = false;
+                node.recruitReadyTick = 0;
+                node.fortressLevel = 0;
+                node.collectProgress = 0;
+                node.collectRequested = false;
+            }
+            node.districtHealth = 0;
+            if (newOwner >= 0)
+            {
+                BankRules.PayBank(state, node, newOwner, bal);
+                node.bankFood = node.bankMaterials = node.bankMetal = 0;
+                node.bankProductionRemaining = 0;
+                node.storehouseNextResource = 0;
+            }
+            node.ownerID = newOwner;
+            if (newOwner < 0) log?.Add(TickEventType.NodeNeutralised, node.nodeID, -1, oldOwner, 1 - oldOwner);
+            else log?.Add(TickEventType.NodeClaimed, node.nodeID, -1, newOwner, oldOwner);
+            return node;
+        }
+
         private static void CompleteClaimForPlayer(SimulationState state, int nodeIndex, int playerID, TickEventLog log)
         {
-            log?.Add(TickEventType.NodeClaimed, nodeIndex, -1, playerID, state.nodes[nodeIndex].ownerID);
-
-            if (state.nodes[nodeIndex].ownerID != playerID)
-            {
-                state.nodes[nodeIndex].autoRecruit = false;
-                state.nodes[nodeIndex].recruitReadyTick = 0;
-                state.nodes[nodeIndex].fortressLevel = 0;
-            }
-            state.nodes[nodeIndex].ownerID = playerID;
+            state.nodes[nodeIndex] = OnOwnershipChanged(state, state.nodes[nodeIndex], state.nodes[nodeIndex].ownerID, playerID, log);
 
             if (state.nodes[nodeIndex].upgradeCategory != DistrictUpgradeCategory.Fixed)
             {
@@ -849,6 +973,7 @@ namespace NodeWar.Simulation
                     if (state.villagers[i].currentNodeID != nodeIndex) continue;
                     if (state.villagers[i].state == VillagerState.Dead || state.villagers[i].isConsumed) continue;
                     if (GameBalanceData.IsCombatSuit(state.villagers[i].suit)) continue;
+                    if (!NodeActionRules.IsBody(state.villagers[i])) continue;
                     state.villagers[i].state = VillagerState.Idle;
                     state.villagers[i].suit = SuitType.None;
                     state.villagers[i].productionTicksRemaining = 0;
@@ -881,7 +1006,7 @@ namespace NodeWar.Simulation
             return DistrictType.None;
         }
 
-        internal static void SpawnBonusVillagers(SimulationState state, int nodeID, int playerID, int count)
+        internal static void SpawnBonusVillagers(SimulationState state, int nodeID, int playerID, int count, SuitType suit = SuitType.None)
         {
             // Count how many villagers this player currently has (including dead, excluding consumed)
             int playerVillagerCount = 0;
@@ -917,13 +1042,14 @@ namespace NodeWar.Simulation
                     movePath = new int[0],
                     movePathIndex = 0,
                     moveProgress = 0,
+                    moveLegDurationTicks = 0,
                     previousNodeID = nodeID,
                     state = VillagerState.Idle,
-                    suit = SuitType.None,
-                    hp = bal.baseHP,
-                    maxHP = bal.baseHP,
-                    attackDamage = bal.baseAttackDamage,
-                    moveSpeedTicks = bal.baseMoveSpeedTicks,
+                    suit = suit,
+                    hp = suit == SuitType.Minion ? bal.minionHP : bal.baseHP,
+                    maxHP = suit == SuitType.Minion ? bal.minionHP : bal.baseHP,
+                    attackDamage = suit == SuitType.Minion ? 0 : bal.baseAttackDamage,
+                    moveSpeedTicks = suit == SuitType.Minion ? bal.minionMoveSpeedTicks : bal.baseMoveSpeedTicks,
                     respawnTicksRemaining = 0,
                     attackCooldownRemaining = bal.baseAttackCooldownMax,
                     attackCooldownMax = bal.baseAttackCooldownMax,
@@ -946,6 +1072,16 @@ namespace NodeWar.Simulation
         /// </summary>
         private static void TickHealing(SimulationState state)
         {
+            // District regeneration belongs to healing, after production; ascending node IDs.
+            for (int nodeID = 0; nodeID < state.nodes.Length; nodeID++)
+            {
+                NodeData node = state.nodes[nodeID];
+                DistrictStats stats = bal.GetDistrictStats(node.districtType, node.districtEra);
+                if (node.ownerID < 0 || stats.healthMax <= 0 || node.districtHealth >= stats.healthMax ||
+                    (node.ownerID == 0 ? node.claimBar < bal.claimThreshold : node.claimBar > -bal.claimThreshold)) continue;
+                node.districtHealth = (int)System.Math.Min(stats.healthMax, (long)node.districtHealth + stats.healthRegenPerTick);
+                state.nodes[nodeID] = node;
+            }
             bool normalDue = state.tickCount % bal.healIntervalTicks == 0;
 
             for (int i = 0; i < state.villagers.Length; i++)
@@ -958,7 +1094,7 @@ namespace NodeWar.Simulation
 
                 NodeData node = state.nodes[v.currentNodeID];
                 bool due = normalDue;
-                if (node.districtType == DistrictType.Infirmary && node.ownerID == v.ownerID && v.state != VillagerState.Moving && v.hp > 0)
+                if (DistrictHealth.Healthy(state, node) && node.districtType == DistrictType.Infirmary && node.ownerID == v.ownerID && v.state != VillagerState.Moving && v.hp > 0)
                 {
                     // Each Infirmary heals on its own era's interval; one with none never does.
                     int interval = bal.GetDistrictStats(DistrictType.Infirmary, node.districtEra).healIntervalTicks;
@@ -978,6 +1114,7 @@ namespace NodeWar.Simulation
                 VillagerData v = state.villagers[i];
                 if (v.state != VillagerState.Dead) continue;
                 if (v.isConsumed) continue;
+                if (!NodeActionRules.IsBody(v)) continue;
 
                 int decrement = bal.TimerDecrement(bal.tempoRespawnPercent, state.tickCount) + InfirmaryRespawnBoost(state, v.ownerID);
                 state.villagers[i].respawnTicksRemaining -= decrement;
@@ -1005,7 +1142,7 @@ namespace NodeWar.Simulation
             state.villagers[vid].targetNodeID = -1;
             state.villagers[vid].movePath = new int[0];
             state.villagers[vid].movePathIndex = 0;
-            state.villagers[vid].moveProgress = 0;
+            ClearLeg(ref state.villagers[vid]);
             state.villagers[vid].hp = balance.baseHP;
             state.villagers[vid].maxHP = balance.baseHP;
             state.villagers[vid].suit = SuitType.None;
@@ -1066,16 +1203,31 @@ namespace NodeWar.Simulation
 
                 v.movePath = new int[0];
                 v.movePathIndex = 0;
-                v.moveProgress = 0;
+                ClearLeg(ref v);
                 v.combatTargetID = -1;
                 if (v.targetNodeID >= 0 && v.targetNodeID != v.currentNodeID)
                 {
-                    v.movePath = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID);
-                    v.state = v.movePath.Length >= 2 ? VillagerState.Moving : VillagerState.Idle;
-                    state.villagers[i] = v;
-                    continue;
+                    v.movePath = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID, v.moveSpeedTicks);
+                    v.state = VillagerState.Idle;
+                    if (v.movePath.Length >= 2 && PierGate.BlocksDeparture(state, v, v.movePath[1]))
+                    {
+                        state.villagers[i] = v;
+                        ApplyGateState(state, i);
+                        continue;
+                    }
+                    if (v.movePath.Length >= 2)
+                    {
+                        v.state = VillagerState.Moving;
+                        BeginLeg(state, ref v);
+                        state.villagers[i] = v;
+                        continue;
+                    }
+                    // No route: drop the intent rather than keep an unreachable target
+                    // (D48), then resolve the node it stands on like any arrival.
+                    v.movePath = new int[0];
+                    v.targetNodeID = -1;
                 }
-                if (v.currentNodeID == state.players[1 - v.ownerID].coreNodeID)
+                if (v.currentNodeID == state.players[1 - v.ownerID].coreNodeID && NodeActionRules.IsBody(v))
                 {
                     EnterBreachOrProcessLegacy(state, i, v, log);
                     continue;
@@ -1109,7 +1261,7 @@ namespace NodeWar.Simulation
             v.state = VillagerState.Breaching;
             v.movePath = new int[0];
             v.movePathIndex = 0;
-            v.moveProgress = 0;
+            ClearLeg(ref v);
             v.targetNodeID = v.currentNodeID;
             v.combatTargetID = -1;
             state.villagers[index] = v;
@@ -1124,7 +1276,7 @@ namespace NodeWar.Simulation
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID != 1 - defender || v.currentNodeID != state.players[defender].coreNodeID ||
-                    v.state != VillagerState.Breaching || v.isConsumed) continue;
+                    v.state != VillagerState.Breaching || v.isConsumed || !NodeActionRules.IsBody(v)) continue;
                 count++;
                 if (best < 0) { best = i; continue; }
                 VillagerData previous = state.villagers[best];
@@ -1182,7 +1334,7 @@ namespace NodeWar.Simulation
             state.villagers[villagerIndex].hp = 0;
             state.villagers[villagerIndex].movePath = new int[0];
             state.villagers[villagerIndex].movePathIndex = 0;
-            state.villagers[villagerIndex].moveProgress = 0;
+            ClearLeg(ref state.villagers[villagerIndex]);
             state.villagers[villagerIndex].targetNodeID = -1;
             state.villagers[villagerIndex].combatTargetID = -1;
         }
@@ -1236,7 +1388,6 @@ namespace NodeWar.Simulation
                 case DistrictType.Farm:
                 case DistrictType.Mine:
                 case DistrictType.Forge:
-                case DistrictType.Market: // food first; TickProduction alternates
                     return bal.GetDistrictStats(district, era).productionTicks;
                 default:
                     return 0;
@@ -1272,7 +1423,6 @@ namespace NodeWar.Simulation
                 case DistrictType.Farm: return SuitType.Farmer;
                 case DistrictType.Mine: return SuitType.Miner;
                 case DistrictType.Forge: return SuitType.Smelter;
-                case DistrictType.Market: return SuitType.Merchant;
                 case DistrictType.Infirmary: return SuitType.Acolyte;
                 case DistrictType.Watchtower: return SuitType.Watcher;
                 default: return SuitType.None;
@@ -1335,12 +1485,12 @@ namespace NodeWar.Simulation
         public static int CountInfirmaryWorkers(SimulationState state, int nodeID, int playerID)
         {
             NodeData node = state.nodes[nodeID];
-            if (node.districtType != DistrictType.Infirmary || node.ownerID != playerID) return 0;
+            if (node.districtType != DistrictType.Infirmary || node.ownerID != playerID || !DistrictHealth.Healthy(state, node)) return 0;
             int count = 0;
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
-                if (v.currentNodeID != nodeID || v.isConsumed || v.state == VillagerState.Dead || v.hp <= 0) continue;
+                if (v.currentNodeID != nodeID || v.isConsumed || v.state == VillagerState.Dead || v.hp <= 0 || !NodeActionRules.IsBody(v)) continue;
                 if (v.ownerID != playerID) return 0;
                 if (v.suit == SuitType.Acolyte && v.state == VillagerState.Working && count < 2) count++;
             }
@@ -1354,7 +1504,7 @@ namespace NodeWar.Simulation
             for (int i = 0; i < state.villagers.Length; i++)
             {
                 VillagerData v = state.villagers[i];
-                if (v.currentNodeID != visitor.currentNodeID || v.isConsumed || v.hp <= 0 || v.state == VillagerState.Dead) continue;
+                if (v.currentNodeID != visitor.currentNodeID || v.isConsumed || v.hp <= 0 || v.state == VillagerState.Dead || !NodeActionRules.IsBody(v)) continue;
                 if (v.ownerID != visitor.ownerID) return false;
                 if (GameBalanceData.IsCombatSuit(v.suit) ||
                     (v.state != VillagerState.Idle && v.state != VillagerState.Working && v.state != VillagerState.Claiming) ||

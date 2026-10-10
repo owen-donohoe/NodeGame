@@ -35,6 +35,7 @@ namespace NodeWar.UI
         private Label allocationValue;
         private int shownAllocation = -1;
         private int shownWorkers = -1;
+        private int shownCapacity = -1;
         private int[] shownPercentages;
 
         protected override int LayoutKey { get { return Balance.maxWorkersPerNode; } }
@@ -136,6 +137,7 @@ namespace NodeWar.UI
 
         public override void Refresh()
         {
+            RefreshBank();
             bool yours = State.nodes[NodeID].ownerID == ControlledPID;
 
             int working = RefreshDials();
@@ -192,11 +194,13 @@ namespace NodeWar.UI
             for (int i = found; i < cap; i++)
                 Show(smelterGauges[i], false);
 
-            workerDial.Progress = found / (float)cap;
-            if (shownWorkers != found)
+            int capacity = Balance.maxWorkersPerNode;
+            workerDial.Progress = capacity > 0 ? found / (float)capacity : 0f;
+            if (shownWorkers != found || shownCapacity != capacity)
             {
                 shownWorkers = found;
-                workerText.text = found + "/" + cap;
+                shownCapacity = capacity;
+                workerText.text = found + "/" + capacity;
             }
 
             return found;

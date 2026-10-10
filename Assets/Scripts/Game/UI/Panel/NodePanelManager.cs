@@ -70,6 +70,7 @@ namespace NodeWar.UI
         private int currentNodeID = -1;
         private bool isOpen = false;
         private float panelWidth;
+        private float basePanelHeight;
         private GameObject currentContent;
         private Tween slideTween;
 
@@ -94,6 +95,7 @@ namespace NodeWar.UI
             villagerLayer = LayerMask.GetMask("Villagers");  // add this
 
             SetupSheetGeometry();
+            basePanelHeight = panelRect.rect.height;
 
             panelWidth = panelRect.sizeDelta.x;
             panelRect.anchoredPosition = HiddenPosition;
@@ -562,6 +564,11 @@ namespace NodeWar.UI
         {
             if (currentNodeID == nodeID && isOpen) return;
 
+            panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, basePanelHeight);
+            if (simState.nodes[nodeID].districtType == DistrictType.Storehouse)
+                panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,
+                    StructurePresentation.BankSheetHeight(DistrictType.Storehouse, false));
+
             currentNodeID = nodeID;
             NodeData node = simState.nodes[nodeID];
             int controlledPID = debugPlayerSwitch != null ? debugPlayerSwitch.GetCurrentPlayerID() : 0;
@@ -627,6 +634,10 @@ namespace NodeWar.UI
                 // Height must be resolved before the target is computed, or the
                 // sheet slides to an offset derived from the previous content.
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+                SlideTo(OpenPosition, slideEase);
+            }
+            else
+            {
                 SlideTo(OpenPosition, slideEase);
             }
 
@@ -716,6 +727,7 @@ namespace NodeWar.UI
             if (!isOpen) return;
             isOpen = false;
             handleResting = restingAtHandle;
+            if(currentContent!=null) foreach(var actions in currentContent.GetComponentsInChildren<NodeActionPanelContent>()) actions.Unbind();
 
             // Remembered so the handle has something to restore. currentNodeID
             // is cleared because no panel is showing; lastNodeID is what the
@@ -743,8 +755,7 @@ namespace NodeWar.UI
             if (!isOpen || currentNodeID < 0) return;
             if (currentContent != null)
             {
-                var actions = currentContent.GetComponent<NodeActionPanelContent>();
-                if (actions != null) actions.Refresh();
+                foreach(var actions in currentContent.GetComponentsInChildren<NodeActionPanelContent>()) actions.Refresh();
             }
         }
 
@@ -761,7 +772,7 @@ namespace NodeWar.UI
             ForgePanelContent forgeContent = currentContent.GetComponent<ForgePanelContent>();
             if (forgeContent != null)
             {
-                forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned);
+                forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned, balance);
                 return;
             }
 
@@ -792,7 +803,9 @@ namespace NodeWar.UI
         /// a bug rather than a case to absorb silently.
         /// </summary>
         private static bool UsesNodeActions(DistrictType type) => type == DistrictType.Village ||
-            type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress;
+            type == DistrictType.Workshop ||
+            type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress ||
+            type == DistrictType.Storehouse;
 
         private GameObject GetContentPrefab(DistrictType type)
         {
