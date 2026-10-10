@@ -16,6 +16,9 @@ namespace NodeWar.View
         [SerializeField] private float idleRadius = 1.5f;
         [SerializeField] private float claimRadius = 1.0f;
         [SerializeField] private float backupWorkSpacing = 1.0f;
+        [SerializeField, Min(0.01f)] private float spacingMultiplier = 1.0f;
+        private float spriteWidth;
+        private bool generatedWorkPositions;
         //[SerializeField] private float villagerY = 0.1f;
         private float villagerY = 0.0f;//this is set in the villager node 3 times. 
 
@@ -91,7 +94,36 @@ namespace NodeWar.View
                     defaultSlots.Add(go.transform);
                 }
                 workPositions = defaultSlots.ToArray();
+                generatedWorkPositions = true;
+                UpdateFallbackWorkSpacing();
             }
+        }
+
+        public void SetSpriteWidth(float width)
+        {
+            spriteWidth = width;
+            UpdateFallbackWorkSpacing();
+        }
+
+        private float DesiredSpacing => VillagerLayoutMath.ScaledSize(spriteWidth, spacingMultiplier);
+
+        private void UpdateFallbackWorkSpacing()
+        {
+            if (!generatedWorkPositions || workPositions == null) return;
+            float spacing = VillagerLayoutMath.WorkSpacing(backupWorkSpacing, spriteWidth, spacingMultiplier);
+            // Only code-created fallback slots move; prefab work anchors stay authored.
+            for (int i = 0; i < workPositions.Length; i++)
+            {
+                Vector3 p = workPositions[i].localPosition;
+                p.z = (i - 0.5f) * spacing;
+                workPositions[i].localPosition = p;
+            }
+        }
+
+        private Vector3 CrowdPosition(Vector3 center, int index, int count, float radius)
+        {
+            var slot = VillagerLayoutMath.Slot(index, count, DesiredSpacing, radius);
+            return center + new Vector3(slot.X, villagerY, slot.Z);
         }
 
         /// <summary>
@@ -112,17 +144,7 @@ namespace NodeWar.View
         /// </summary>
         public Vector3 GetIdlePosition(int localIndex, int totalIdle)
         {
-            Vector3 center = idleCenter.position;
-            if (totalIdle <= 1)
-                return center + new Vector3(0f, villagerY, 0f);
-
-            float angle = (float)localIndex / (float)totalIdle * Mathf.PI * 2f;
-            float radius = idleRadius * Mathf.Min(1f, totalIdle * 0.2f);
-            return center + new Vector3(
-                Mathf.Cos(angle) * radius,
-                villagerY,
-                Mathf.Sin(angle) * radius
-            );
+            return CrowdPosition(idleCenter.position, localIndex, totalIdle, idleRadius);
         }
 
         /// <summary>
@@ -130,16 +152,7 @@ namespace NodeWar.View
         /// </summary>
         public Vector3 GetClaimPosition(int localIndex, int totalClaiming)
         {
-            Vector3 center = claimCenter.position;
-            if (totalClaiming <= 1)
-                return center + new Vector3(0f, villagerY, 0f);
-
-            float angle = (float)localIndex / (float)totalClaiming * Mathf.PI * 2f;
-            return center + new Vector3(
-                Mathf.Cos(angle) * claimRadius,
-                villagerY,
-                Mathf.Sin(angle) * claimRadius
-            );
+            return CrowdPosition(claimCenter.position, localIndex, totalClaiming, claimRadius);
         }
 
         /// <summary>
@@ -148,17 +161,7 @@ namespace NodeWar.View
         /// </summary>
         public Vector3 GetFightPosition(int localIndex, int totalFighting)
         {
-            Vector3 center = transform.position;
-            if (totalFighting <= 1)
-                return center + new Vector3(0f, villagerY, 0f);
-
-            float angle = (float)localIndex / (float)totalFighting * Mathf.PI * 2f;
-            float radius = idleRadius * 0.5f;
-            return center + new Vector3(
-                Mathf.Cos(angle) * radius,
-                villagerY,
-                Mathf.Sin(angle) * radius
-            );
+            return CrowdPosition(transform.position, localIndex, totalFighting, idleRadius * 0.5f);
         }
 
         public int WorkPositionCount => workPositions != null ? workPositions.Length : 0;

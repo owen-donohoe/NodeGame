@@ -244,7 +244,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &707485040950673326
 SpriteRenderer:
-  serializedVersion: 2
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -301,6 +301,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
 --- !u!1 &5645698660344473176
 GameObject:
   m_ObjectHideFlags: 0
@@ -403,14 +404,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.View.VillagerView
   VillagerViewHeight: 0.5
+  spriteSizeMultiplier: 1.35
   slotLerpSpeed: 8
   p0BaseColor: {r: 0.3, g: 0.6, b: 1, a: 1}
   p0MovingColor: {r: 0.5, g: 0.75, b: 1, a: 1}
+  p0WorkingColor: {r: 0.2, g: 0.8, b: 0.4, a: 1}
   p0ClaimingColor: {r: 0.3, g: 0.8, b: 0.9, a: 1}
   p0FightingColor: {r: 0.6, g: 0.3, b: 1, a: 1}
   p0IdleColor: {r: 0.3, g: 0.6, b: 1, a: 1}
   p1BaseColor: {r: 1, g: 0.35, b: 0.5, a: 1}
   p1MovingColor: {r: 1, g: 0.6, b: 0.4, a: 1}
+  p1WorkingColor: {r: 0.9, g: 0.6, b: 0.2, a: 1}
   p1ClaimingColor: {r: 1, g: 0.5, b: 0.7, a: 1}
   p1FightingColor: {r: 1, g: 0.15, b: 0.15, a: 1}
   p1IdleColor: {r: 1, g: 0.35, b: 0.5, a: 1}
@@ -550,6 +554,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 1
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 993318127
@@ -678,7 +683,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!212 &3551948491150239893
 SpriteRenderer:
-  serializedVersion: 2
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -735,3 +740,4 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []

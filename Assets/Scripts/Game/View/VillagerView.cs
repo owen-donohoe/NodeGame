@@ -9,6 +9,7 @@ namespace NodeWar.View
     {
         [Header("View")]
         [SerializeField] private float VillagerViewHeight = 0.1f;
+        [SerializeField, Min(0.01f)] private float spriteSizeMultiplier = VillagerLayoutMath.DefaultSizeMultiplier;
 
         [Header("Movement")]
         [SerializeField] private float slotLerpSpeed = 8f;
@@ -45,6 +46,10 @@ namespace NodeWar.View
         // Cached references
         private SpriteRenderer[] spriteRenderers;
         private Transform gfxTransform;
+        private Vector3 authoredGfxScale;
+        private float authoredSpriteWidth;
+        private bool gfxScaleCached;
+        private float spriteWidth;
 
         private NodeWar.Core.ITickProvider tickProvider;
         private NodeWar.View.VillagerPositioner[] villagerPositioners;
@@ -60,6 +65,22 @@ namespace NodeWar.View
             if (gfxTransform != null)
             {
                 spriteRenderers = gfxTransform.GetComponentsInChildren<SpriteRenderer>();
+                if (!gfxScaleCached)
+                {
+                    authoredGfxScale = gfxTransform.localScale;
+                    for (int i = 0; i < spriteRenderers.Length; i++)
+                    {
+                        SpriteRenderer renderer = spriteRenderers[i];
+                        if (renderer.sprite != null)
+                            authoredSpriteWidth = Mathf.Max(authoredSpriteWidth,
+                                renderer.sprite.bounds.size.x * Mathf.Abs(renderer.transform.lossyScale.x));
+                    }
+                    gfxScaleCached = true;
+                }
+                // Always scale the cached authored baseline, including reinitialize.
+                gfxTransform.localScale = authoredGfxScale * VillagerLayoutMath.ScaledSize(1f, spriteSizeMultiplier);
+                spriteWidth = VillagerLayoutMath.ScaledSize(authoredSpriteWidth, spriteSizeMultiplier);
+                ConfigureSpacing();
             }
             else
             {
@@ -77,6 +98,15 @@ namespace NodeWar.View
         public void SetVillagerPositioners(NodeWar.View.VillagerPositioner[] managers)
         {
             villagerPositioners = managers;
+            ConfigureSpacing();
+        }
+
+        private void ConfigureSpacing()
+        {
+            if (villagerPositioners == null || spriteWidth <= 0f) return;
+            for (int i = 0; i < villagerPositioners.Length; i++)
+                if (villagerPositioners[i] != null)
+                    villagerPositioners[i].SetSpriteWidth(spriteWidth);
         }
 
         /// <summary>
