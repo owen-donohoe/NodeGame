@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T22:45:37Z }
-verified_at_commit: 406403ca423d854863c3e5b04c84078ec82572f5
+  - { by: gpt-6, at: 2026-10-10T23:04:47Z }
+verified_at_commit: df5dc05324fb446a21664947bff72294a950d69a
 status: stable
 sources:
   - id: sim-state
@@ -564,6 +564,16 @@ them; a three-bar settings button sits directly below it in the same column.
 The settings card drops down from beneath that button. The recentre/zoom
 handle defaults to the bottom right, with the emote dock at the bottom left;
 Controls settings can change the handle's side, visibility and zoom behaviour.
+
+The selection count/clear control stays bottom-centred regardless of controls
+side. Its non-picking `hud-selbar-dock` positions the existing `hud-selbar`
+and `hud-selbar-count` in flow, with a 12-panel-unit bottom gap. The controller
+converts safe left/right/bottom insets into panel units and refreshes them on
+safe-area, width or height changes, including a rebuilt visual tree. Empty or
+disabled counters use `display:none`; only the counter picks, captures the
+pointer and clears selection on an inside release. Count/X state classes and
+sheet layering are unchanged. Authored XML tests guard hierarchy and picking
+modes; visual centering and touch delivery require Editor/device checks.
 
 `GameplayHUDController` clones its authored `PanelSettings` at runtime and fits
 the reference resolution to both screen dimensions through

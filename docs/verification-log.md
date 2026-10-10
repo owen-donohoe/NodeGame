@@ -80,6 +80,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/architecture.md`
 
+- { by: gpt-6, at: 2026-10-10T22:45:37Z }
+
 - { by: gpt-6, at: 2026-10-10T16:56:36Z }
 
 - { by: gpt-6, at: 2026-10-10T16:42:51Z }
