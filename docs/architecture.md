@@ -795,7 +795,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `LoadoutCapacityPolicy` — arena <2 uses 2/2 and free grants; arena >=2 uses
   3/5 without grants. `LoadoutRules` forwards chosen capacities and returns
   display-only locks at low arenas, empty lock lists at high arenas.
-  `IsComplete` checks every effective local chosen slot. Home dims Battle and
+  `LoadoutRules.IsComplete` checks every effective local chosen slot (it sits
+  beside `LoadoutData`; the policy stays integer-only for the Shared assembly
+  and Cloud Code). Home dims Battle and
   shows "Fill your loadout" for any empty slot at every arena; tapping it toasts
   that reason and opens Workshop. Launch preflight and the final connection
   boundary re-check completeness, so a deck emptied mid-flow cannot launch.
@@ -1030,7 +1032,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   merge). From arena 2 every slot is free: three suits and five districts, with no free base
   district pool and no Warrior grant, so a deck may omit Warrior and then no villager starts
   armed. Below arena 2 the two-and-two layout keeps its grants. A deck with any empty chosen
-  slot cannot launch (`LoadoutCapacityPolicy.IsComplete`, rechecked by `MatchLauncher`); Home's
+  slot cannot launch (`LoadoutRules.IsComplete`, rechecked by `MatchLauncher`); Home's
   Battle button explains it and opens the Workshop.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
   It also carries the disconnect-hold overlay, the end card's ranked result

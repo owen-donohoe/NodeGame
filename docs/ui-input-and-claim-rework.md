@@ -111,7 +111,7 @@ Decisions recorded from that work, which override the earlier text in section 1:
 - **A deck may omit Warrior** at arena 2 and above. Villagers then start with no suit, and
   a Warrior can be equipped only if it was drafted.
 - **Launch is blocked on an empty chosen slot** at every arena
-  (`LoadoutCapacityPolicy.IsComplete`, rechecked by `MatchLauncher`). Home's Battle button
+  (`LoadoutRules.IsComplete`, rechecked by `MatchLauncher`). Home's Battle button
   reads as disabled with "Fill your loadout"; tapping it shows that toast and opens the
   Workshop.
 - **Variants only for tree suits.** Districts and suits without `SuitTree` sidegrades hide
