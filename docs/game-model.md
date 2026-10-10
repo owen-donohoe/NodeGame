@@ -6,8 +6,8 @@ tags: [game-design, domain-model, districts, suits, combat, claiming]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
-verified_at_commit: 9006a5bdaf9227f014eb3eaacdffb98204364ea1
+  - { by: gpt-6, at: 2026-10-10T16:44:21Z }
+verified_at_commit: 52664812ce5da99990d1faf86a6d56e41db95858
 status: draft
 sources:
   - id: sim-state

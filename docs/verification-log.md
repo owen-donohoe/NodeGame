@@ -172,6 +172,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `.claude/skills/cs-review.md`
 
+- { by: gpt-6, at: 2026-10-10T16:31:33Z }
+
 - { by: gpt-6, at: 2026-10-10T16:21:41Z }
 
 - { by: gpt-6, at: 2026-10-10T16:07:31Z }
@@ -275,6 +277,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6, at: 2026-10-10T15:55:03Z }
 
 ## `docs/game-model.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 
 - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
