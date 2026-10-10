@@ -6,8 +6,8 @@ tags: [skill, simulation, determinism, review]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:06:16Z }
-verified_at_commit: e935573cd52b901b3958ccb3fb36005d74e84034
+  - { by: gpt-6, at: 2026-10-10T16:30:25Z }
+verified_at_commit: 95da9bddcadbac2c60141868e7eb25c7c3be26ee
 status: stable
 sources:
   - id: contract

@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:20:27Z }
-verified_at_commit: c5cdc2e5c94088d3880041e5f4683becd2552f5a
+  - { by: gpt-6, at: 2026-10-10T16:30:25Z }
+verified_at_commit: 95da9bddcadbac2c60141868e7eb25c7c3be26ee
 status: draft
 sources:
   - id: solution
@@ -37,6 +37,9 @@ sources:
   - id: tests-loadout-capacity
     resource: dotnet/NodeWar.Lobby.Tests/LoadoutCapacityTests.cs
     title: Canonical arena capacities, local completeness, resizing and wire refusals
+  - id: tests-loadout-match-setup
+    resource: dotnet/NodeWar.Lobby.Tests/LoadoutMatchSetupTests.cs
+    title: Per-player grants, board identity, setup equality and Equip/Respawn behavior
   - id: tests-loadout-migration
     resource: dotnet/NodeWar.Lobby.Tests/LoadoutMigrationTests.cs
     title: Legacy choices, type-indexed equipment and capacity-preserving saved aliases
@@ -161,6 +164,16 @@ maxima; legacy 3/2 wire packets are refused rather than migrated, and locks stop
 at arena 2. At `c5cdc2e5`, both required commands were attempted once and blocked
 by SDK access denial before compilation. The lead must run both and verify Editor
 imports/profile flow; no passing receipt or launch-blocking integration is claimed.
+
+P1.2c adds 19 lobby cases in `LoadoutMatchSetupTests`, explicitly linked with
+the pure `LoadoutMatchSetup` source. They cover low base-plus-chosen pools,
+high chosen-only pools, Warrior selected once or absent, both mixed seats,
+blank-slot mode, unchanged board pools/hash, invalid shapes/IDs/duplicate choices,
+MatchFactory input retention and equal tick-0 hashes, refused undrafted Warrior,
+accepted drafted Guardian and unsuited paid Respawn. At `95da9bdd`, the solution
+test command and compile-check were each attempted once and blocked by MSB4184
+before compilation. The lead must run both, generate the new asset's metadata,
+and manually verify mixed-seat launches in Unity; no passing receipt is claimed.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the

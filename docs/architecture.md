@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:20:27Z }
-verified_at_commit: c5cdc2e5c94088d3880041e5f4683becd2552f5a
+  - { by: gpt-6, at: 2026-10-10T16:30:25Z }
+verified_at_commit: 95da9bddcadbac2c60141868e7eb25c7c3be26ee
 status: stable
 sources:
   - id: sim-state
@@ -115,6 +115,9 @@ sources:
   - id: loadout-record
     resource: Assets/Scripts/Lobby/Data/LoadoutRecord.cs
     title: Frozen save keys and capacity-preserving alias migration
+  - id: loadout-match-setup
+    resource: Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
+    title: Canonical per-player draft pools and resolved grants
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: InputSerializer, ProtocolVersion and the handshake
@@ -777,20 +780,32 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `LoadoutCapacityPolicy` — arena <2 uses 2/2 and free grants; arena >=2 uses
   3/5 without grants. `LoadoutRules` forwards chosen capacities and returns
   display-only locks at low arenas, empty lock lists at high arenas.
-  `IsComplete` checks all effective local chosen slots. Draft grants and launch
-  blocking still need their Core/UI integration; this predicate alone does not
-  block matchmaking.
+  `IsComplete` checks all effective local chosen slots. Launch blocking still
+  needs UI integration; this predicate alone does not block matchmaking.
+- `LoadoutMatchSetup` — validates canonical shapes, supported IDs and duplicate
+  choices at the match boundary, preserving chosen order and blank-slot mode.
+  Low loadouts receive the player's original map base pool plus chosen districts
+  and Warrior plus chosen non-global suits. High loadouts receive only chosen
+  districts and suits; Warrior may be absent or selected once. Resolved
+  `draftedDistricts` lists chosen types only; placements represent effective pieces.
+  Authored base pools, fixed placements and board identity remain unchanged.
 
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
   PostDraft → Countdown → Playing`); builds `SimulationState` and spawns
   node/villager views.
+  Before destroying `DraftManager`, caches both loadouts and its actual local
+  simulation seat, including guest P1. Setup resolution uses `LoadoutMatchSetup`;
+  without a connection P1 does not inherit the local human's high deck.
 - `DraftManager` — runs the pre-match district-placement draft as its own
   turn-based phase machine (`WaitingForReady → InitialReveal →
   ActiveDraft → Complete`). Draws nothing itself: it drives an
   `IDraftPresenter`, and asks it one question back — whether a piece is
   parked but unconfirmed, so a turn that times out takes the cell the
   player already chose rather than a random one.
+  Human picks use their own loadout's effective pool. Configured bots keep the
+  legacy map base pool plus `boardConfig.botLoadoutDistricts`, independently of
+  the human's mode, and retain the low-mode Warrior grant.
 - `IDraftPresenter` / `ICountdownPresenter` — the two places a phase has
   to be drawn by whichever UI stack is on. Same shape for the same reason:
   the phase owns the rules, the presenter owns the pixels.
