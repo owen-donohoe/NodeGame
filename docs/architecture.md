@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:06:16Z }
-verified_at_commit: e935573cd52b901b3958ccb3fb36005d74e84034
+  - { by: gpt-6, at: 2026-10-10T16:20:27Z }
+verified_at_commit: c5cdc2e5c94088d3880041e5f4683becd2552f5a
 status: stable
 sources:
   - id: sim-state
@@ -106,6 +106,15 @@ sources:
     resource: Assets/Scripts/Lobby/Data/LoadoutTypes.cs
     title: LoadoutTypes, lobby IDs to sim types and catalog bases
     last_modified: 2026-09-27T17:00:22-04:00
+  - id: loadout-capacity
+    resource: Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs
+    title: Arena capacities, canonical shapes and local completeness
+  - id: loadout-data
+    resource: Assets/Scripts/Lobby/Data/LoadoutData.cs
+    title: Shape-preserving normalization and explicit local resizing
+  - id: loadout-record
+    resource: Assets/Scripts/Lobby/Data/LoadoutRecord.cs
+    title: Frozen save keys and capacity-preserving alias migration
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: InputSerializer, ProtocolVersion and the handshake
@@ -751,10 +760,26 @@ Three objects are carried across the Lobby → Gameplay scene load via
   era per suit and district type and their equipped skin IDs; those are
   stamped on at match launch from the server's equipped state
   (`LoadoutTypes.WithEquipment`), not chosen in the lobby's local data.
+  Chosen array lengths encode canonical low (2 suits/2 districts) or high (3/5)
+  mode, including blank slots; the slot constants are maxima. Normalization
+  preserves a canonical saved/remote shape, while default and legacy 3/2 saves
+  become low mode. Explicit arena-aware local resizing pads promotion slots or
+  trims demotion to the first two, without clearing type-indexed equipment.
+  `LoadoutRecord` retains the frozen `nodeIDs` key and determines mode before
+  district alias migration pads the array; profile startup preserves stored
+  mode until rank is confirmed.
 - `LoadoutTypes` — the one translation between lobby item IDs
   (`suit_warrior`), simulation types and catalog base IDs (`suit.warrior`). It
   resolves only complete, current IDs (no substring matching), and a retired district
   has no catalog base.
+  `WithEquipment` resizes local choices from the supplied server rank (arena 1
+  fallback when absent), then overlays equipped eras and sorted skins.
+- `LoadoutCapacityPolicy` — arena <2 uses 2/2 and free grants; arena >=2 uses
+  3/5 without grants. `LoadoutRules` forwards chosen capacities and returns
+  display-only locks at low arenas, empty lock lists at high arenas.
+  `IsComplete` checks all effective local chosen slots. Draft grants and launch
+  blocking still need their Core/UI integration; this predicate alone does not
+  block matchmaking.
 
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
@@ -861,6 +886,11 @@ Three objects are carried across the Lobby → Gameplay scene load via
   length. The loadout carries eras and skins (protocol 2).
   `TryDeserializeDraftLoadout` checks the whole layout beside the writer,
   so the receive check cannot fall behind a new section again.
+  Both readers validate raw chosen counts as exactly (2,2) or (3,5) before
+  normalization; noncanonical pairs, including legacy wire (3,2), are refused.
+  Direct deserialization throws `FormatException`. Count prefixes include blanks
+  and preserve the opponent's mode independently of the local arena; no arena
+  or mode flag is added.
 
 **Input/**
 - `PointerGestureSource` — the shared pointer reader for selection and
@@ -913,6 +943,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
   the battle sheet all ask it; the slot rules themselves are in the
   UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
   covers.
+  Its default constructor preserves the source's canonical capacity; the arena
+  overload explicitly resizes local edits. Fill, clear and availability checks
+  operate on effective array lengths.
 - `MatchLauncher` — the lobby's route into a match. Private play hosts or
   joins by code with an open-ended host wait; `HostRanked`/`JoinRanked`
   add deadlines and carry the match ID and roster into `MatchConnection`.

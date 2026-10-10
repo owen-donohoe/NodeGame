@@ -64,6 +64,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/architecture.md`
 
+- { by: gpt-6, at: 2026-10-10T16:06:16Z }
+
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
@@ -116,6 +118,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## `docs/skills/run-dotnet-tests.md`
+
+- { by: gpt-6, at: 2026-10-10T16:18:52Z }
 
 - { by: gpt-6, at: 2026-10-10T16:06:16Z }
 

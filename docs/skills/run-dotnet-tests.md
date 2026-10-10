@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:18:52Z }
-verified_at_commit: 08bb45e837de89437e6a86271597dcd61f12fc3b
+  - { by: gpt-6, at: 2026-10-10T16:20:27Z }
+verified_at_commit: c5cdc2e5c94088d3880041e5f4683becd2552f5a
 status: draft
 sources:
   - id: solution
@@ -34,6 +34,12 @@ sources:
   - id: tests-skin-band
     resource: dotnet/NodeWar.Lobby.Tests/SkinBandMathTests.cs
     title: Looping skin band identity, snapping, rebasing and allocation checks
+  - id: tests-loadout-capacity
+    resource: dotnet/NodeWar.Lobby.Tests/LoadoutCapacityTests.cs
+    title: Canonical arena capacities, local completeness, resizing and wire refusals
+  - id: tests-loadout-migration
+    resource: dotnet/NodeWar.Lobby.Tests/LoadoutMigrationTests.cs
+    title: Legacy choices, type-indexed equipment and capacity-preserving saved aliases
   - id: workflow
     resource: .github/workflows/determinism.yml
     title: The determinism CI gate
@@ -144,6 +150,17 @@ large-count neighbors, rebasing, buffer reuse and a warmed zero-allocation check
 At `08bb45e8`, both required commands were attempted once and blocked before
 compilation by the SDK access denial above. The lead must run both; these additions
 are not a passing-test receipt and do not verify UI gestures or Editor wiring.
+
+P1.2b adds capacity and save-migration cases covering canonical low 2/2 and
+high 3/5 shapes, default/offline fallback, promotion/demotion, copied equipment,
+editor fill/clear/drop, repeated save round trips, both-seat wire round trips
+including blanks, refused noncanonical raw pairs and effective-slot completeness.
+The shared capacity policy and new test file are explicitly linked in the Lobby
+project. Existing low-mode assertions now distinguish effective counts from
+maxima; legacy 3/2 wire packets are refused rather than migrated, and locks stop
+at arena 2. At `c5cdc2e5`, both required commands were attempted once and blocked
+by SDK access denial before compilation. The lead must run both and verify Editor
+imports/profile flow; no passing receipt or launch-blocking integration is claimed.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
