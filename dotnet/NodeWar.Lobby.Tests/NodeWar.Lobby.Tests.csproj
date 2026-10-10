@@ -51,6 +51,8 @@
     <Compile Include="EraChipsTests.cs" />
     <Compile Include="UnlockStateTests.cs" />
     <Compile Include="LoadoutChoicesTests.cs" />
+    <Compile Include="SkinBandMathTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/SkinBandMath.cs" Link="Lobby/SkinBandMath.cs" />
     <Compile Include="../../Assets/UI/Scripts/UnlockState.cs" Link="Lobby/UnlockState.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutChoices.cs" Link="Lobby/LoadoutChoices.cs" />
     <Compile Include="LoadoutInfoModelTests.cs" />
