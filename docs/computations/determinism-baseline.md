@@ -15,8 +15,8 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T15:55:03Z }
-verified_at_commit: 19f292430aa15d722738fda6e6087295658b2b68
+  - { by: gpt-6, at: 2026-10-10T16:03:02Z }
+verified_at_commit: ce2430b713c5aca78f902408caaa68ba0ac6fe94
 status: stable
 sources:
   - id: tests
