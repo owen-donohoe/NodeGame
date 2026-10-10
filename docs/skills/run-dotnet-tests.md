@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:06:16Z }
-verified_at_commit: e935573cd52b901b3958ccb3fb36005d74e84034
+  - { by: gpt-6, at: 2026-10-10T16:18:52Z }
+verified_at_commit: 08bb45e837de89437e6a86271597dcd61f12fc3b
 status: draft
 sources:
   - id: solution
@@ -31,6 +31,9 @@ sources:
   - id: tests-district-info
     resource: dotnet/NodeWar.Lobby.Tests/DistrictInfoFactsTests.cs
     title: Static district facts from supplied balance without live bindings
+  - id: tests-skin-band
+    resource: dotnet/NodeWar.Lobby.Tests/SkinBandMathTests.cs
+    title: Looping skin band identity, snapping, rebasing and allocation checks
   - id: workflow
     resource: .github/workflows/determinism.yml
     title: The determinism CI gate
@@ -133,6 +136,14 @@ with type-indexed eras. At `e935573c`, the solution test command and stock compi
 check were each attempted once and blocked before compilation by the SDK access
 denial above. The lead must run both, including the existing replay/referee suites;
 these additions are not a passing-test receipt.
+
+P1.7 adds 23 lobby cases in `SkinBandMathTests`, explicitly linked with the
+UnityEngine-free `SkinBandMath` source. They cover signed wrapping, increasing-index
+midpoint ties, empty/single choices, 13-slot identity, symmetric scale/fade,
+large-count neighbors, rebasing, buffer reuse and a warmed zero-allocation check.
+At `08bb45e8`, both required commands were attempted once and blocked before
+compilation by the SDK access denial above. The lead must run both; these additions
+are not a passing-test receipt and do not verify UI gestures or Editor wiring.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
