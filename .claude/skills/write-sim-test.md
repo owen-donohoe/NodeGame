@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T17:16:43Z }
-verified_at_commit: b8a817ddbd113849cf6c9ef07a6235f964e0aafd
+  - { by: claude-sonnet-5-5, at: 2026-10-10T17:20:36Z }
+verified_at_commit: 4e2eab58236d02e49e21e3dcf3c17ea3801af564
 status: stable
 sources:
   - id: tests
