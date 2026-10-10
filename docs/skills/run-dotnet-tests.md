@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T15:54:09Z }
-verified_at_commit: f74782c513c1958a70e84246655f7a35d9bd2437
+  - { by: gpt-6, at: 2026-10-10T16:01:45Z }
+verified_at_commit: 704e43362a0ee005e273df99cf63ea94c6961f35
 status: draft
 sources:
   - id: solution
@@ -25,6 +25,12 @@ sources:
   - id: lobby-test-project
     resource: dotnet/NodeWar.Lobby.Tests/NodeWar.Lobby.Tests.csproj
     title: Lobby test project, linked sources
+  - id: tests-loadout-info
+    resource: dotnet/NodeWar.Lobby.Tests/LoadoutInfoModelTests.cs
+    title: Base-villager preview deltas and tree comparison compatibility
+  - id: tests-district-info
+    resource: dotnet/NodeWar.Lobby.Tests/DistrictInfoFactsTests.cs
+    title: Static district facts from supplied balance without live bindings
   - id: workflow
     resource: .github/workflows/determinism.yml
     title: The determinism CI gate
@@ -108,6 +114,16 @@ current-arena fieldability, exact ownership, skin unions/filtering, stable choic
 ordering, preview/display safety and no variants for districts or non-tree suits.
 Both required commands remain blocked before compilation by the same SDK access
 denial at this code commit; these additions are not a passing-test receipt.
+
+P1.4 adds 14 lobby cases: six in `LoadoutInfoModelTests` and eight in
+`DistrictInfoFactsTests`, with explicit links to the pure preview helpers and
+`DistrictFallback`. They cover base-villager comparisons, signed improvements,
+bonus HP and absolute costs, variant lookup/fallback, parent-comparison compatibility,
+active district descriptions, supplied production/bank/health/action/equip tuning,
+Fortress and Infirmary potential, and absence of live state/action bindings.
+At `704e4336`, both required commands were attempted once and stopped before
+compilation with the SDK access denial above. The lead must run both commands;
+no passing-test receipt or live-sheet/Editor verification is claimed.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
