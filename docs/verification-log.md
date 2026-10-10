@@ -24,6 +24,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/adding-a-feature.md`
 
+- { by: gpt-6, at: 2026-10-10T16:03:02Z }
+
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
 
@@ -57,6 +59,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6, at: 2026-10-10T15:55:03Z }
 
 ## `docs/architecture.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
@@ -108,6 +112,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## `docs/skills/run-dotnet-tests.md`
+
+- { by: gpt-6, at: 2026-10-10T16:01:45Z }
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
@@ -167,6 +173,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 ## `.claude/skills/determinism-guard.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }

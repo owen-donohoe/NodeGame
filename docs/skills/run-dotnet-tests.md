@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:01:45Z }
-verified_at_commit: 704e43362a0ee005e273df99cf63ea94c6961f35
+  - { by: gpt-6, at: 2026-10-10T16:06:16Z }
+verified_at_commit: e935573cd52b901b3958ccb3fb36005d74e84034
 status: draft
 sources:
   - id: solution
@@ -124,6 +124,15 @@ Fortress and Infirmary potential, and absence of live state/action bindings.
 At `704e4336`, both required commands were attempted once and stopped before
 compilation with the SDK access denial above. The lead must run both commands;
 no passing-test receipt or live-sheet/Editor verification is claimed.
+
+P1.2 adds four cases: Lobby `PreviousProtocol_IsRejected`, Cloud
+`PreviousProtocol_IsRejected` and `CurrentProtocol_IsAccepted`, and MatchLog
+`ThreeChosenSuitHistory_RoundTripsWithoutTrimming`. They pin protocol-5 refusal,
+protocol-6 allocation and historical resolved Warrior-plus-three-choice arrays
+with type-indexed eras. At `e935573c`, the solution test command and stock compile
+check were each attempted once and blocked before compilation by the SDK access
+denial above. The lead must run both, including the existing replay/referee suites;
+these additions are not a passing-test receipt.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the

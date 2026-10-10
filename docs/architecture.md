@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
-verified_at_commit: 9006a5bdaf9227f014eb3eaacdffb98204364ea1
+  - { by: gpt-6, at: 2026-10-10T16:06:16Z }
+verified_at_commit: e935573cd52b901b3958ccb3fb36005d74e84034
 status: stable
 sources:
   - id: sim-state
@@ -844,7 +844,12 @@ Three objects are carried across the Lobby → Gameplay scene load via
   versioned handshake. It refuses any `CommandType` that `CommandTypes.IsKnown` does not list. `InputSerializer.ProtocolVersion` aliases
   `NodeWar.Backend.ProtocolVersion.Current`, declared in
   `Assets/Scripts/Backend/Shared/ProtocolVersion.cs` and shared with Cloud
-  Code. It changes with any packet layout.
+  Code. It changes with packet layouts or incompatible match-setup semantics.
+  Current protocol 6 segregates clients for arena-dependent chosen capacities and
+  free grants; its packet layout is unchanged. Release it only after the capacity,
+  grant, server/bot and launch changes are integrated. Older clients normalize to
+  fixed capacities and always grant Warrior and the base districts, so count
+  prefixes alone cannot ensure identical setup.
 - `LocalBuildIdentity` — this build's `BuildIdentity` (protocol, simulation
   version, balance content hash). Peers compare it in the handshake and
   refuse a mismatch rather than desync.
@@ -1412,7 +1417,8 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   district slot mask and both base draft pools beside the BOARD fields) and SETUP, always
   together; older logs carry BOARD and no SETUP, and a log with both boards or a
   mismatched pair is refused. The header carries protocol, simulation version and
-  content hash.
+  content hash. Historical resolved suit arrays and type-indexed eras are preserved;
+  protocol-5 logs with Warrior plus three chosen suits round-trip without trimming.
 - **Referee.** `VerifyMatch` rebuilds the match with `MatchFactory`,
   replays the logged commands with `MatchReplay`, and checks every logged
   hash, the final hash and a declared winning result. For a current log it first
