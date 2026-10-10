@@ -56,3 +56,7 @@
 .lb-workshop .ws-sheet-buttons { flex-direction: row; justify-content: space-between; flex-shrink: 0; margin-top: 6px; }
 .lb-workshop .ws-sheet-button { width: 40%; height: 46px; font-size: 14px; background-color: var(--surface-raised); color: var(--ink); border-radius: 5px; }
 .lb-workshop .ws-sheet-button.ws-primary { background-color: var(--action); color: var(--action-ink); }
+.lb-workshop .ws-band { flex-shrink: 0; height: 64px; margin-left: -6px; margin-right: -6px; margin-top: 4px; overflow: hidden; }
+.lb-workshop .ws-band-tile { background-color: var(--workshop-fam-combat); border-radius: 6px; border-width: 2px; border-color: transparent; justify-content: center; align-items: center; }
+.lb-workshop .ws-band-tile.ws-art--neutral { background-color: #777d87; }
+.lb-workshop .ws-band-tile--center { border-color: var(--action); }

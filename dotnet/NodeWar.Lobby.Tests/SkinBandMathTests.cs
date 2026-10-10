@@ -170,5 +170,15 @@ namespace NodeWar.Lobby.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => SkinBandMath.Fill(double.PositiveInfinity, 2, new SkinBandSlot[13]));
             Assert.Throws<ArgumentOutOfRangeException>(() => SkinBandMath.Wrap(0, -1));
         }
+
+        [Test]
+        public void DragDelta_UsesMeasuredTilePitch()
+        {
+            // Dragging the content right (positive pixels) moves the position toward lower indices.
+            Assert.AreEqual(-1.0, SkinBandMath.DragDelta(56, 56), 1e-12);
+            Assert.AreEqual(0.5, SkinBandMath.DragDelta(-28, 56), 1e-12);
+            Assert.AreEqual(0.0, SkinBandMath.DragDelta(40, 0), 1e-12);
+            Assert.AreEqual(0.0, SkinBandMath.DragDelta(double.NaN, 56), 1e-12);
+        }
     }
 }

@@ -105,6 +105,13 @@ namespace NodeWar.Lobby
             }
         }
 
+        /// <summary>Item-unit position change for a pointer drag; zero for an unmeasured pitch or non-finite input.</summary>
+        public static double DragDelta(double pixels, double tilePitch)
+        {
+            if (double.IsNaN(pixels) || double.IsInfinity(pixels) || double.IsNaN(tilePitch) || tilePitch <= 0) return 0;
+            return -pixels / tilePitch;
+        }
+
         private static void ValidatePosition(double position)
         {
             if (double.IsNaN(position) || double.IsInfinity(position))

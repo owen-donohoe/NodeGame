@@ -31,6 +31,9 @@ namespace NodeWar.Lobby
         private readonly WorkshopInventorySession session = new WorkshopInventorySession();
         private readonly VisualElement panelHost;
         private string panelBaseId, panelChoiceId;
+        private bool panelSkins;
+        private readonly Button skins;
+        private SkinBand activeBand;
         private bool inventoryBusy => session.Busy;
         private string inventoryMessage = "";
         private Task inventoryIdle = Task.CompletedTask;
@@ -56,6 +59,7 @@ namespace NodeWar.Lobby
             segSuits = Root.Q<Button>("workshop-tab-suits");
             primary = Root.Q<Button>("workshop-info-use");
             variants = Root.Q<Button>("workshop-open-variants");
+            skins = Root.Q<Button>("workshop-open-skins");
             districtSlots = Root.Q<VisualElement>("workshop-district-slots");
             suitSlots = Root.Q<VisualElement>("workshop-suit-slots");
             unlocked = Root.Q<VisualElement>("workshop-unlocked");
@@ -72,7 +76,7 @@ namespace NodeWar.Lobby
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
             if (primary != null) primary.clicked += UsePreview;
             if (variants != null) variants.clicked += OpenVariants;
-            // Skins intentionally remains a no-op until P1.8.
+            if (skins != null) skins.clicked += OpenSkins;
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) CloseInventory(); });
             CollectItems();
         }
@@ -304,6 +308,7 @@ namespace NodeWar.Lobby
                 primary.SetEnabled(item != null && !inventoryBusy);
             }
             if (variants != null) variants.style.display = LoadoutChoices.Variants(baseId, playerState).Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            if (skins != null) skins.style.display = item != null && LoadoutChoices.Skins(baseId, null, playerState).Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
         private static void AddStatRows(VisualElement host, LoadoutStatRow[] rows)
         {
@@ -453,9 +458,88 @@ namespace NodeWar.Lobby
             RenderItemPanel();
         }
 
+        private void OpenSkins()
+        {
+            Item item = inspectedItem;
+            if (item == null || panelHost == null || inventoryBusy) return;
+            string baseId = LoadoutTypes.CatalogBaseForLobbyId(item.ID);
+            LoadoutChoice[] choices = LoadoutChoices.Skins(baseId, null, playerState);
+            if (choices.Length == 0) return;
+            CloseItemPanel();
+            panelBaseId = baseId; panelSkins = true;
+            panelChoiceId = choices[0].ID;
+            foreach (var choice in choices) if (choice.Equipped) { panelChoiceId = choice.ID; break; }
+            RenderItemPanel();
+        }
+
+        private void RenderSkinPanel()
+        {
+            activeBand?.Stop(); activeBand = null;
+            panelHost.Clear();
+            string baseId = panelBaseId;
+            LoadoutChoice[] choices = LoadoutChoices.Skins(baseId, null, playerState);
+            if (choices.Length == 0 || inspectedItem == null) { CloseItemPanel(); return; }
+            int centered = 0;
+            for (int i = 0; i < choices.Length; i++) if (choices[i].ID == panelChoiceId) centered = i;
+            panelChoiceId = choices[centered].ID;
+
+            panelHost.pickingMode = PickingMode.Position;
+            var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
+            panelHost.Add(scrim);
+            var sheet = new VisualElement(); sheet.AddToClassList("ws-sheet");
+            var body = new VisualElement { pickingMode = PickingMode.Ignore }; body.AddToClassList("ws-sheet-body");
+            var art = new VisualElement { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            body.Add(art);
+            Label title = MakeLabel("", "ws-title", "ui-w600");
+            Label status = MakeLabel("", "ws-fact", "ui-w500");
+            body.Add(title); body.Add(status);
+            var buy = new Button(() => Say("Coming soon")) { text = "Buy another box" };
+            buy.AddToClassList("ui-reset-button"); buy.AddToClassList("ws-secondary"); buy.AddToClassList("ui-w600");
+            body.Add(buy);
+            sheet.Add(body);
+
+            var band = new SkinBand();
+            activeBand = band;
+            band.SetChoices(choices, centered);
+            sheet.Add(band);
+
+            var buttons = new VisualElement(); buttons.AddToClassList("ws-sheet-buttons");
+            var back = new Button(CloseItemPanel) { text = "Back" };
+            back.AddToClassList("ui-reset-button"); back.AddToClassList("ws-sheet-button"); back.AddToClassList("ui-w600");
+            var use = new Button();
+            use.AddToClassList("ui-reset-button"); use.AddToClassList("ws-sheet-button"); use.AddToClassList("ws-primary"); use.AddToClassList("ui-w600");
+            use.SetEnabled(!inventoryBusy);
+            buttons.Add(back); buttons.Add(use);
+            sheet.Add(buttons);
+            panelHost.Add(sheet);
+
+            // Updates the centred skin's preview, status and Use label in place; the band is untouched.
+            void ShowCentered(int index)
+            {
+                LoadoutChoice choice = choices[Mathf.Clamp(index, 0, choices.Length - 1)];
+                panelChoiceId = choice.ID;
+                var state = DisplayUnlock(choice.UnlockState);
+                art.Clear();
+                art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+                title.text = inspectedItem.Name + ", " + choice.Label.ToLowerInvariant();
+                status.text = choice.Equipped ? "Equipped" : state.Status == UnlockStatus.Owned ? "Owned"
+                    : state.Status == UnlockStatus.CannotUnlock ? "Locked. ! This is unlockable in era " + state.UnlockEra : "Locked";
+                use.text = choice.Equipped ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned";
+            }
+            ShowCentered(centered);
+            band.CenterChanged += ShowCentered;
+            // Actual eligibility is independent of the debug display override.
+            use.clicked += () =>
+            {
+                LoadoutChoice choice = choices[Mathf.Clamp(band.CenteredIndex, 0, choices.Length - 1)];
+                if (choice.Selectable) _ = EquipSkinAsync(baseId, choice.ID);
+            };
+        }
+
         private void CloseItemPanel()
         {
-            panelBaseId = null; panelChoiceId = null;
+            activeBand?.Stop(); activeBand = null;
+            panelBaseId = null; panelChoiceId = null; panelSkins = false;
             if (panelHost == null) return;
             panelHost.Clear();
             panelHost.pickingMode = PickingMode.Ignore;
@@ -464,6 +548,7 @@ namespace NodeWar.Lobby
         private void RenderItemPanel()
         {
             if (panelHost == null || panelBaseId == null) return;
+            if (panelSkins) { RenderSkinPanel(); return; }
             panelHost.Clear();
             string baseId = panelBaseId;
             LoadoutChoice[] choices = LoadoutChoices.Variants(baseId, playerState);
