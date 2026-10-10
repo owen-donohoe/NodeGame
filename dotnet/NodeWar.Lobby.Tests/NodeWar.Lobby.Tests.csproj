@@ -53,6 +53,8 @@
     <Compile Include="DraftLoadoutPacketTests.cs" />
     <Compile Include="LoadoutEditorTests.cs" />
     <Compile Include="LoadoutScreenModelTests.cs" />
+    <Compile Include="WorkshopInventorySessionTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/WorkshopInventorySession.cs" Link="Lobby/WorkshopInventorySession.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutScreenModel.cs" Link="Lobby/LoadoutScreenModel.cs" />
     <Compile Include="EraChipsTests.cs" />
     <Compile Include="UnlockStateTests.cs" />

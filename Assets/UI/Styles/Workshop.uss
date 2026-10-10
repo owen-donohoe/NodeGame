@@ -42,3 +42,17 @@
 .lb-workshop .ws-bar { position: absolute; top: 1px; bottom: 1px; background-color: var(--action); }
 .lb-workshop .ws-bar--worse { background-color: #d57878; }
 .lb-workshop .ws-panel-host { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.lb-workshop .ws-scrim { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.45); }
+.lb-workshop .ws-sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 6px; padding: 6px; background-color: var(--surface); border-width: 2px; border-color: var(--edge); border-radius: 8px; }
+.lb-workshop .ws-sheet-body { flex-grow: 1; flex-shrink: 1; min-height: 0; }
+.lb-workshop .ws-sheet .ws-preview .ws-art-clip { height: 112px; }
+.lb-workshop .ws-sheet .ws-preview .ws-art { height: 108px; }
+.lb-workshop .ws-strip { flex-shrink: 0; height: 72px; margin-top: 4px; }
+.lb-workshop .ws-strip .unity-scroll-view__content-container { flex-direction: row; }
+.lb-workshop .ws-chip { width: 64px; flex-shrink: 0; margin-right: 4px; padding: 2px; background-color: var(--surface-raised); border-width: 2px; border-color: var(--edge); border-radius: 5px; }
+.lb-workshop .ws-chip .ws-art-clip { height: 36px; }
+.lb-workshop .ws-chip .ws-art { height: 32px; }
+.lb-workshop .ws-chip .ws-monogram { font-size: 14px; }
+.lb-workshop .ws-sheet-buttons { flex-direction: row; justify-content: space-between; flex-shrink: 0; margin-top: 6px; }
+.lb-workshop .ws-sheet-button { width: 40%; height: 46px; font-size: 14px; background-color: var(--surface-raised); color: var(--ink); border-radius: 5px; }
+.lb-workshop .ws-sheet-button.ws-primary { background-color: var(--action); color: var(--action-ink); }

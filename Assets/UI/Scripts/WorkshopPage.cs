@@ -28,8 +28,10 @@ namespace NodeWar.Lobby
         private readonly ScrollView grid;
         private PlayerState playerState;
         private Item inspectedItem;
-        private bool isOpen, inventoryBusy;
-        private int inventoryVisit, selectionVisit;
+        private readonly WorkshopInventorySession session = new WorkshopInventorySession();
+        private readonly VisualElement panelHost;
+        private string panelBaseId, panelChoiceId;
+        private bool inventoryBusy => session.Busy;
         private string inventoryMessage = "";
         private Task inventoryIdle = Task.CompletedTask;
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
@@ -65,10 +67,12 @@ namespace NodeWar.Lobby
             notice = Root.Q<Label>("workshop-info-unlock");
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
+            panelHost = Root.Q<VisualElement>("workshop-panel-host");
             if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
             if (primary != null) primary.clicked += UsePreview;
-            // Variants and Skins intentionally remain no-ops until P1.6/P1.8.
+            if (variants != null) variants.clicked += OpenVariants;
+            // Skins intentionally remains a no-op until P1.8.
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) CloseInventory(); });
             CollectItems();
         }
@@ -82,8 +86,8 @@ namespace NodeWar.Lobby
         }
         public override void OnShow()
         {
-            isOpen = true;
-            int visit = ++inventoryVisit;
+            int visit = session.BeginVisit();
+            CloseItemPanel();
             playerState = BackendServices.LastKnownState;
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
             _ = LoadInventoryAsync(visit);
@@ -175,6 +179,7 @@ namespace NodeWar.Lobby
 
         private void SetTab(Tab tab)
         {
+            CloseItemPanel();
             activeTab = tab;
             var profile = PlayerProfile.Instance;
             if (profile != null) profile.WorkshopTabIndex = (int)tab;
@@ -280,17 +285,7 @@ namespace NodeWar.Lobby
             {
                 int type = (int)suit;
                 int era = type >= 0 && type < data.suitEras.Length ? data.suitEras[type] : 0;
-                foreach (var row in LoadoutInfoModel.SuitStats(balance, baseId, era))
-                {
-                    var line = new VisualElement(); line.AddToClassList("ws-stat");
-                    line.Add(MakeLabel(row.Label + " " + row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "ws-fact", "ui-w500"));
-                    var track = new VisualElement(); track.AddToClassList("ws-histogram");
-                    var zero = new VisualElement(); zero.AddToClassList("ws-zero"); track.Add(zero);
-                    var bar = new VisualElement(); bar.AddToClassList("ws-bar"); bar.EnableInClassList("ws-bar--worse", row.Improvement < 0);
-                    float width = Mathf.Abs(row.Improvement) / (float)Mathf.Max(1, Mathf.Abs(row.Value) + Mathf.Abs(row.Delta)) * 50f;
-                    bar.style.width = Length.Percent(width); bar.style.left = Length.Percent(row.Improvement < 0 ? 50f - width : 50f);
-                    track.Add(bar); line.Add(track); stats?.Add(line);
-                }
+                AddStatRows(stats, LoadoutInfoModel.SuitStats(balance, baseId, era));
             }
             else if (item != null && Enum.TryParse(item.ID.Substring(5), true, out DistrictType district))
             {
@@ -310,41 +305,57 @@ namespace NodeWar.Lobby
             }
             if (variants != null) variants.style.display = LoadoutChoices.Variants(baseId, playerState).Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
+        private static void AddStatRows(VisualElement host, LoadoutStatRow[] rows)
+        {
+            if (host == null) return;
+            foreach (var row in rows)
+            {
+                var line = new VisualElement(); line.AddToClassList("ws-stat");
+                line.Add(MakeLabel(row.Label + " " + row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "ws-fact", "ui-w500"));
+                var track = new VisualElement(); track.AddToClassList("ws-histogram");
+                var zero = new VisualElement(); zero.AddToClassList("ws-zero"); track.Add(zero);
+                var bar = new VisualElement(); bar.AddToClassList("ws-bar"); bar.EnableInClassList("ws-bar--worse", row.Improvement < 0);
+                float width = Mathf.Abs(row.Improvement) / (float)Mathf.Max(1, Mathf.Abs(row.Value) + Mathf.Abs(row.Delta)) * 50f;
+                bar.style.width = Length.Percent(width); bar.style.left = Length.Percent(row.Improvement < 0 ? 50f - width : 50f);
+                track.Add(bar); line.Add(track); host.Add(line);
+            }
+        }
         private void RenderInventory()
         {
             if (eraMessage != null) { eraMessage.text = inventoryMessage; eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex; }
-            RenderCards(); RenderInfo();
+            RenderCards(); RenderInfo(); RenderItemPanel();
         }
         private void CloseInventory()
         {
-            isOpen = false;
-            inventoryVisit++;
+            CloseItemPanel();
+            session.Close();
         }
 
-        private bool IsInventoryActive(int visit) => isOpen && inventoryVisit == visit;
+        private bool IsInventoryActive(int visit) => session.IsVisitCurrent(visit);
 
         private void Inspect(Item item)
         {
             if (inspectedItem != item)
             {
-                selectionVisit++;
                 inspectedItem = item;
                 if (!inventoryBusy && playerState != null) inventoryMessage = "";
             }
+            session.Select(item == null ? null : LoadoutTypes.CatalogBaseForLobbyId(item.ID));
+            if (panelBaseId != null && panelBaseId != session.SelectedBaseID) CloseItemPanel();
             loadout.Preview(item?.ID);
             RenderInventory();
         }
 
         private async Task LoadInventoryAsync(int visit)
         {
-            inventoryBusy = true;
             inventoryMessage = "Loading inventory...";
+            RenderInventory();
+            // A reopened page must not fetch a snapshot before an earlier save finishes.
+            await inventoryIdle;
+            if (!IsInventoryActive(visit) || !session.TryBeginRequest(out InventoryRequestToken token)) return;
             RenderInventory();
             try
             {
-                // A reopened page must not fetch a snapshot before an earlier save finishes.
-                await inventoryIdle;
-                if (!IsInventoryActive(visit)) return;
                 PlayerState result = await BackendServices.PlayerState.GetAsync();
                 if (!IsInventoryActive(visit)) return;
                 if (result == null) throw new InvalidOperationException("Missing player state");
@@ -360,28 +371,28 @@ namespace NodeWar.Lobby
             }
             finally
             {
-                if (IsInventoryActive(visit))
-                {
-                    inventoryBusy = false;
-                    RenderInventory();
-                }
+                session.EndRequest(token);
+                if (IsInventoryActive(visit)) RenderInventory();
             }
         }
 
-        private async Task EquipInventoryAsync(string baseId, string id, bool skin)
-        {
-            if (!isOpen || inventoryBusy || inspectedItem == null ||
-                LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID) != baseId) return;
-            LoadoutChoice[] chips = skin ? LoadoutChoices.Skins(baseId, null, playerState) : LoadoutChoices.Variants(baseId, playerState);
-            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return;
+        private Task<bool> EquipVariantAsync(string baseId, string variantId) => EquipInventoryAsync(baseId, variantId, false);
+        private Task<bool> EquipSkinAsync(string baseId, string skinId) => EquipInventoryAsync(baseId, skinId, true);
 
-            int visit = inventoryVisit;
-            int selection = selectionVisit;
+        private async Task<bool> EquipInventoryAsync(string baseId, string id, bool skin)
+        {
+            if (!session.IsOpen || inspectedItem == null ||
+                LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID) != baseId) return false;
+            LoadoutChoice[] chips = skin ? LoadoutChoices.Skins(baseId, null, playerState) : LoadoutChoices.Variants(baseId, playerState);
+            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return false;
+            if (!session.TryBeginRequest(out InventoryRequestToken token)) return false;
+
+            int visit = token.Visit;
             var completion = new TaskCompletionSource<bool>();
             inventoryIdle = completion.Task;
-            inventoryBusy = true;
             inventoryMessage = "Saving...";
             RenderInventory();
+            bool applied = false;
             try
             {
                 var changes = new EquippedRecord();
@@ -389,26 +400,32 @@ namespace NodeWar.Lobby
                 if (skin) changes.Skins = map;
                 else changes.Variants = map;
                 PlayerState result = await BackendServices.Inventory.EquipAsync(changes);
-                if (!IsInventoryActive(visit) || selectionVisit != selection) return;
+                if (!session.IsCurrent(token)) return false;
                 if (result == null) throw new InvalidOperationException("Missing player state");
                 playerState = result;
                 CollectItems();
                 LoadFromProfile();
                 Render();
                 inventoryMessage = "";
+                applied = true;
             }
             catch (Exception)
             {
-                if (IsInventoryActive(visit) && selectionVisit == selection)
+                if (session.IsCurrent(token))
+                {
                     inventoryMessage = "Couldn't equip. Please try again.";
+                    Say(inventoryMessage);
+                }
             }
             finally
             {
+                bool visitCurrent = session.IsVisitCurrent(token);
+                bool current = session.IsCurrent(token);
+                session.EndRequest(token);
                 completion.TrySetResult(true);
-                if (IsInventoryActive(visit))
+                if (visitCurrent)
                 {
-                    inventoryBusy = false;
-                    if (selectionVisit != selection)
+                    if (!current)
                     {
                         // Discard the old selection's response and get a fresh snapshot.
                         playerState = null;
@@ -417,6 +434,95 @@ namespace NodeWar.Lobby
                     else RenderInventory();
                 }
             }
+            return applied;
+        }
+
+        // ===== VARIANT SHEET =====
+
+        private void OpenVariants()
+        {
+            Item item = inspectedItem;
+            if (item == null || panelHost == null || inventoryBusy) return;
+            string baseId = LoadoutTypes.CatalogBaseForLobbyId(item.ID);
+            LoadoutChoice[] choices = LoadoutChoices.Variants(baseId, playerState);
+            if (choices.Length == 0) return;
+            CloseItemPanel();
+            panelBaseId = baseId;
+            panelChoiceId = choices[0].ID;
+            foreach (var choice in choices) if (choice.Equipped) { panelChoiceId = choice.ID; break; }
+            RenderItemPanel();
+        }
+
+        private void CloseItemPanel()
+        {
+            panelBaseId = null; panelChoiceId = null;
+            if (panelHost == null) return;
+            panelHost.Clear();
+            panelHost.pickingMode = PickingMode.Ignore;
+        }
+
+        private void RenderItemPanel()
+        {
+            if (panelHost == null || panelBaseId == null) return;
+            panelHost.Clear();
+            string baseId = panelBaseId;
+            LoadoutChoice[] choices = LoadoutChoices.Variants(baseId, playerState);
+            if (choices.Length == 0 || inspectedItem == null) { CloseItemPanel(); return; }
+            LoadoutChoice current = choices[0];
+            foreach (var choice in choices) if (choice.ID == panelChoiceId) current = choice;
+            panelChoiceId = current.ID;
+            var state = DisplayUnlock(current.UnlockState);
+
+            panelHost.pickingMode = PickingMode.Position;
+            var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
+            panelHost.Add(scrim);
+            var sheet = new VisualElement(); sheet.AddToClassList("ws-sheet");
+            var body = new ScrollView(ScrollViewMode.Vertical);
+            body.AddToClassList("ws-sheet-body");
+            body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            body.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            var art = new VisualElement { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+            body.Add(art);
+            body.Add(MakeLabel(inspectedItem.Name + ", " + current.Label.ToLowerInvariant(), "ws-title", "ui-w600"));
+            var rows = new VisualElement { pickingMode = PickingMode.Ignore };
+            AddStatRows(rows, LoadoutInfoModel.SuitStats(TreeBalance(), baseId, current.OrderKey));
+            body.Add(rows);
+            body.Add(MakeLabel(inspectedItem.Description ?? "", "ws-fact", "ui-w500"));
+            bool locked = state.Status == UnlockStatus.CannotUnlock || state.Status == UnlockStatus.Owned && !state.CanUse;
+            if (locked) body.Add(MakeLabel("! This is unlockable in era " + state.UnlockEra, "ws-fact", "ui-w500"));
+            if (!string.IsNullOrEmpty(inventoryMessage)) body.Add(MakeLabel(inventoryMessage, "ws-fact", "ui-w500"));
+            sheet.Add(body);
+
+            var strip = new ScrollView(ScrollViewMode.Horizontal);
+            strip.AddToClassList("ws-strip");
+            strip.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            strip.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            foreach (LoadoutChoice choice in choices)
+            {
+                string choiceId = choice.ID;
+                var chipState = DisplayUnlock(choice.UnlockState);
+                var chip = new Button(() => { panelChoiceId = choiceId; RenderItemPanel(); });
+                chip.AddToClassList("ui-reset-button"); chip.AddToClassList("ws-chip");
+                chip.EnableInClassList("ws-card--preview", choiceId == current.ID);
+                chip.Add(MakeArt(inspectedItem, chipState.Status != UnlockStatus.Owned, false));
+                chip.Add(MakeLabel(choice.Label, "ws-name", "ui-w600"));
+                strip.Add(chip);
+            }
+            sheet.Add(strip);
+
+            var buttons = new VisualElement(); buttons.AddToClassList("ws-sheet-buttons");
+            var back = new Button(CloseItemPanel) { text = "Back" };
+            back.AddToClassList("ui-reset-button"); back.AddToClassList("ws-sheet-button"); back.AddToClassList("ui-w600");
+            var use = new Button { text = current.Equipped ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned" };
+            use.AddToClassList("ui-reset-button"); use.AddToClassList("ws-sheet-button"); use.AddToClassList("ws-primary"); use.AddToClassList("ui-w600");
+            use.SetEnabled(!inventoryBusy);
+            string useId = current.ID;
+            // Actual eligibility is independent of the debug display override.
+            use.clicked += () => { if (current.Selectable) _ = EquipVariantAsync(baseId, useId); };
+            buttons.Add(back); buttons.Add(use);
+            sheet.Add(buttons);
+            panelHost.Add(sheet);
         }
 
         private static GameBalanceData TreeBalance()
