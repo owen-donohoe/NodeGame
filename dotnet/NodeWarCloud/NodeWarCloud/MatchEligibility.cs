@@ -1,5 +1,6 @@
 using NodeWar.Backend;
 using NodeWar.Lobby;
+using NodeWar.Simulation;
 using Log = NodeWar.MatchLog.MatchLog;
 
 namespace NodeWar.Cloud
@@ -17,6 +18,11 @@ namespace NodeWar.Cloud
             string mapError = CheckMap(record, log);
             if (mapError != null) return mapError;
             if (log.loadouts == null || log.loadouts.Length != 2) return "Log needs two loadouts.";
+            if (record.protocol >= 6)
+            {
+                string budgetError = CheckBudgets(record, log);
+                if (budgetError != null) return budgetError;
+            }
             for (int p = 0; p < 2; p++)
             {
                 var loadout = log.loadouts[p];
@@ -67,6 +73,66 @@ namespace NodeWar.Cloud
             return null;
         }
 
+        private static string CheckBudgets(MatchRecord record, Log log)
+        {
+            if (!PremadeMaps.Catalog.TryGet(record.mapId, out BoardConfigData board) ||
+                BoardHasher.Hash(board) != record.boardHash)
+                return "Unknown server map or board hash.";
+            var budgets = new int[2][];
+            for (int p = 0; p < 2; p++)
+            {
+                var loadout = log.loadouts[p];
+                if (loadout?.suits == null || loadout.districts == null)
+                    return "Log needs complete loadouts.";
+                int arena = record.players[p].Rank.Arena;
+                bool low = LoadoutCapacityPolicy.GetsFreeGrants(arena);
+                int suitBudget = LoadoutCapacityPolicy.SuitCapacity(arena) + (low ? 1 : 0);
+                if (loadout.suits.Length > suitBudget ||
+                    loadout.districts.Length > LoadoutCapacityPolicy.DistrictCapacity(arena))
+                    return "Loadout exceeds snapshot arena budget.";
+                bool warrior = false;
+                for (int i = 0; i < loadout.suits.Length; i++)
+                {
+                    int type = loadout.suits[i];
+                    if (!GameBalanceData.IsCombatSuit((SuitType)type) ||
+                        LoadoutTypes.CatalogBaseForSuit(type) == null)
+                        return "Invalid chosen suit.";
+                    for (int j = 0; j < i; j++)
+                        if (loadout.suits[j] == type) return "Duplicate chosen suit.";
+                    if (type == (int)SuitType.Warrior) warrior = true;
+                }
+                if (low && !warrior) return "Low arena loadout needs its free Warrior.";
+
+                budgets[p] = new int[LoadoutTypes.DistrictTypeCount];
+                for (int i = 0; i < loadout.districts.Length; i++)
+                {
+                    int type = loadout.districts[i];
+                    if (type < 0 || type >= budgets[p].Length ||
+                        !PlacementLegality.IsDraftable((DistrictType)type) ||
+                        LoadoutTypes.CatalogBaseForDistrict(type) == null)
+                        return "Invalid chosen district.";
+                    if (budgets[p][type] != 0) return "Duplicate chosen district.";
+                    budgets[p][type]++;
+                }
+                if (low)
+                {
+                    var basePool = p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
+                    if (basePool != null)
+                        foreach (var type in basePool) budgets[p][(int)type]++;
+                }
+            }
+            if (log.draft != null)
+                foreach (var placement in log.draft)
+                {
+                    int p = placement.playerID;
+                    int type = (int)placement.districtType;
+                    if (p < 0 || p > 1) return "Invalid draft player.";
+                    if (type < 0 || type >= budgets[p].Length || budgets[p][type] == 0)
+                        return "Draft placement exceeds snapshot arena budget.";
+                    budgets[p][type]--;
+                }
+            return null;
+        }
         private static string CheckVariant(MatchPlayerSnapshot player, string baseId, int type, int[] eras)
         {
             if (baseId == null) return "Unknown drafted type.";

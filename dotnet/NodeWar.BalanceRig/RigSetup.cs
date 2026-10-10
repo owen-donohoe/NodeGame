@@ -31,6 +31,8 @@ namespace NodeWar.BalanceRig
         /// <summary>Districts each player brings on top of the base pool, like a lobby loadout.</summary>
         public DistrictType[] loadoutNodes = new DistrictType[0];
         public PlayerSetup[] playerSetups;
+        /// <summary>Optional final per-player draft pools; null preserves base plus loadout.</summary>
+        public DistrictType[][] effectiveDraftPools;
         public Func<int, int, (int x, int z)> mirror;
     }
 

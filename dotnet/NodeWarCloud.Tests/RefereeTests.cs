@@ -20,6 +20,43 @@ namespace NodeWar.Cloud.Tests
     [NonParallelizable]
     public class RefereeTests
     {
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MixedArenaResolvedLog_ReplaysSameCheckpoints(int highSeat)
+        {
+            var globals = new[] { typeof(GameSimulation), typeof(CommandProcessor), typeof(Pathfinding) }
+                .SelectMany(t => t.GetFields(System.Reflection.BindingFlags.Static |
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+                .Where(f => !f.IsInitOnly && !f.IsLiteral).Select(f => (field: f, value: f.GetValue(null))).ToArray();
+            try
+            {
+                var (record, log) = MatchEligibilityTests.Current(highSeat);
+                var balance = GameBalanceData.Default();
+                var recorder = new MatchRecorder(log.header, log.setup, log.board, log.loadouts, log.draft);
+                var players = log.loadouts.Select(l => new PlayerSetup { suits = l.suits, districts = l.districts }).ToArray();
+                MatchFactory.Configure(balance, log.board);
+                var state = MatchFactory.Build(balance, log.board, log.draft, players);
+                for (int tick = 0; tick < 100; tick++)
+                {
+                    recorder.RecordTick(state.tickCount, Array.Empty<GameCommand>());
+                    GameSimulation.SimulateTick(state);
+                    if (state.tickCount % 50 == 0)
+                        recorder.RecordHash(state.tickCount, SimulationStateHasher.ComputeHash(state));
+                }
+                recorder.Finish(new MatchResult { reason = MatchEndReason.Abandoned, winner = -1,
+                    endTick = state.tickCount, finalHash = SimulationStateHasher.ComputeHash(state), firstDesyncTick = -1 });
+                Assert.That(MatchEligibility.Check(record, recorder.Log), Is.Null);
+                var verdict = new Referee(Catalog(balance)).Verify(MatchLogFormat.Write(recorder.Log));
+                Assert.That(verdict.ok, Is.True, verdict.error);
+                Assert.That(verdict.firstMismatchTick, Is.EqualTo(-1));
+                Assert.That(verdict.finalHash, Is.EqualTo(SimulationStateHasher.ComputeHash(state)));
+                Assert.That(verdict.ticksReplayed, Is.EqualTo(100));
+            }
+            finally
+            {
+                foreach (var entry in globals) entry.field.SetValue(null, entry.value);
+            }
+        }
         [Test]
         public void HonestWinningLog_VerifiesActualResult()
         {

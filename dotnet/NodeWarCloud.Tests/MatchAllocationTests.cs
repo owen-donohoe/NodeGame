@@ -25,6 +25,17 @@ namespace NodeWar.Cloud.Tests
         private MatchmakerAllocatorModule module;
         private const long Now = 1234567;
 
+        [Test]
+        public async Task Arena1And2_Accepted()
+        {
+            states["p0"].Rank.Arena = 1;
+            states["p1"].Rank.Arena = 2;
+            var result = await allocation.Allocate("mixed", Roster(), Now);
+            Assert.That(result.ok, Is.True, result.error);
+            var record = (await matches.ReadAsync("mixed")).Record;
+            Assert.That(record.players[0].Rank.Arena, Is.EqualTo(1));
+            Assert.That(record.players[1].Rank.Arena, Is.EqualTo(2));
+        }
         [SetUp]
         public void SetUp()
         {

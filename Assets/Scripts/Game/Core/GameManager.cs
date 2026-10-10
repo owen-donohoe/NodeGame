@@ -376,7 +376,7 @@ namespace NodeWar.Core
 
                 if (match != null && match.isBotMatch)
                 {
-                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultLinkWeight);
+                    botPlayer = new NodeWar.Input.BotPlayer(state, inputBuffer, 1, boardConfig.Data.defaultLinkWeight, balance.Data);
                     debugPlayerSwitch.LockToPlayer(0);
 
                     TickRunner runner = GetComponent<TickRunner>();
