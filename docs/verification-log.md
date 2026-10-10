@@ -70,6 +70,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/architecture.md`
 
+- { by: gpt-6, at: 2026-10-10T16:30:25Z }
+
 - { by: gpt-6, at: 2026-10-10T16:20:27Z }
 
 - { by: gpt-6, at: 2026-10-10T16:06:16Z }
@@ -347,6 +349,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## `docs/design-history/README.md`
+
+- { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }

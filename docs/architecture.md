@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:30:25Z }
-verified_at_commit: 95da9bddcadbac2c60141868e7eb25c7c3be26ee
+  - { by: gpt-6, at: 2026-10-10T16:42:51Z }
+verified_at_commit: dec3292bcfb29a80970d84188969047b83a5d956
 status: stable
 sources:
   - id: sim-state
@@ -118,6 +118,18 @@ sources:
   - id: loadout-match-setup
     resource: Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
     title: Canonical per-player draft pools and resolved grants
+  - id: bot-player
+    resource: Assets/Scripts/Game/Input/BotPlayer.cs
+    title: Bot command generation and match-balance injection
+  - id: bot-suit-choice
+    resource: Assets/Scripts/Game/Input/BotSuitChoice.cs
+    title: Eligible affordable drafted suit selection
+  - id: rig-setup
+    resource: dotnet/NodeWar.BalanceRig/RigSetup.cs
+    title: Optional final per-player headless draft pools
+  - id: rig-match-runner
+    resource: dotnet/NodeWar.BalanceRig/MatchRunner.cs
+    title: Headless draft consumption, bot construction and seat swaps
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: InputSerializer, ProtocolVersion and the handshake
@@ -915,7 +927,12 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `SelectionSystem` — tracks selected villagers; applies lasso results.
 - `CommandSystem` — turns player actions into `GameCommand`s.
 - `InputBuffer` — queue of commands awaiting the next tick.
-- `BotPlayer` — generates commands for an AI-controlled side.
+- `BotPlayer` — generates commands for an AI-controlled side. GameManager and the
+  headless MatchRunner pass the actual match balance; the four-argument constructor
+  retains default-balance compatibility. `BotSuitChoice` prefers an eligible,
+  affordable drafted Warrior, otherwise the lowest-ID eligible combat suit,
+  using the player's current era and equip-node rule. No eligible suit means no
+  Equip command; commands retain their issuing tick.
 - `HitFlashRouter` — the single bridge from gesture events to renderers,
   so the input layer never touches a `SpriteRenderer` itself.
 - `LassoGeometry` / `ScreenMetrics` / `GestureThresholds` — pure helpers:
@@ -1388,6 +1405,12 @@ and must therefore arrive at identical results every tick.
   nothing yet, such as one still loading the scene (the draft shows a
   waiting cue until both are ready).
 
+
+The headless balance rig can supply two final `RigSetup.effectiveDraftPools`.
+RandomDraft consumes those pools exactly; null retains the legacy base-plus-loadout
+path and CLI. Explicit player setups bypass the Warrior fallback. Seat swaps
+trade effective pools and player setups together without changing the original
+board or its hash. Configured Unity bots still use the legacy low-grant setup.
 ## Backend, match logs and the referee
 
 Accounts, progression, inventory and ranked match records use Unity
@@ -1482,7 +1505,13 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   pre-match rating, rank and owned-variant snapshots. `ActiveMatchClaims`
   allows one active match per player, with expiring claims and conditional
   writes. `ReportMatch` checks membership and log eligibility against that
-  record, including that the log's SETUP and board are the record's map and that its loadouts and draft use only active districts, then runs the referee. Two accepted reports must agree on
+  record, including that the log's SETUP and board are the record's map and that its loadouts and draft use only active districts, then runs the referee. For protocol >=6, each snapshot arena sets the budget:
+  low arenas allow up to two chosen districts and three resolved suits including
+  the free Warrior; high arenas allow five chosen districts and three suits,
+  with Warrior optional. Duplicate or invalid choices are refused. Placements
+  consume the chosen district multiset, plus the authoritative catalog base pool
+  only for low arenas; fewer placements remain valid for unplaceable pieces.
+  Protocol <=5 retains historical eligibility. Two accepted reports must agree on
   winner, end tick and final hash before rating, RR, arena and inventory
   updates settle. Retries are idempotent; disputed or expired matches do
   not settle. `GetMatchHistory` reads the caller's history and stored match

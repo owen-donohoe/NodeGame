@@ -6,8 +6,8 @@ tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
-verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
+  - { by: gpt-6, at: 2026-10-10T16:42:51Z }
+verified_at_commit: dec3292bcfb29a80970d84188969047b83a5d956
 status: stable
 sources:
   - id: v21-pdf
@@ -66,7 +66,10 @@ is done. A reconciliation against the code at commit `db19485` found:
 The list above is a record of that reconciliation and is kept as it was. Several
 of its points have moved since:
 
-- `BotPlayer` has grown to about 800 lines.
+- `BotPlayer` has grown to about 800 lines. Its suit choice now uses the actual
+  match balance and drafted combat suits, preferring Warrior when eligible and
+  affordable and otherwise the first eligible type by ID. Explicit headless
+  setups can omit Warrior; configured Unity bots keep their low-arena grants.
 - The manual placement draft now places on a terrain map (Land, Lake and Ocean cells,
   with a slot mask) under one legality rule, and the district list includes the Pier,
   which only a Lake slot takes. Neither is in the document. The Watchtower's claim boost
