@@ -194,7 +194,7 @@ namespace NodeWar.UI
             for (int i = found; i < cap; i++)
                 Show(smelterGauges[i], false);
 
-            int capacity = Balance.maxWorkersPerNode;
+            int capacity = DistrictInfoFacts.WorkerCapacity(Balance);
             workerDial.Progress = capacity > 0 ? found / (float)capacity : 0f;
             if (shownWorkers != found || shownCapacity != capacity)
             {

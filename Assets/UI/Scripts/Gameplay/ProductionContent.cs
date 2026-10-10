@@ -140,7 +140,7 @@ namespace NodeWar.UI
             }
 
             int working = RefreshDials(node.ownerID);
-            int cap = Balance.maxWorkersPerNode;
+            int cap = DistrictInfoFacts.WorkerCapacity(Balance);
 
             Show(gauges, working > 0);
             Show(idleCaption, working == 0);
@@ -161,7 +161,7 @@ namespace NodeWar.UI
             if (shownWorking != working)
             {
                 shownWorking = working;
-                SetResourceText(workingCaption, working + "/" + cap + " working · " + CycleFor(node.districtType));
+                SetResourceText(workingCaption, working + "/" + cap + " working · " + DistrictInfoFacts.ProductionCycleText(node.districtType));
             }
         }
 
@@ -223,15 +223,5 @@ namespace NodeWar.UI
             }
         }
 
-        private static string CycleFor(DistrictType district)
-        {
-            switch (district)
-            {
-                case DistrictType.Farm: return "+1 {food} each cycle";
-                case DistrictType.Mine: return "+1 {materials} each cycle";
-                case DistrictType.Market: return "alternates {food} and {materials}";
-                default: return "";
-            }
-        }
     }
 }

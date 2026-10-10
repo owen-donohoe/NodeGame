@@ -7,8 +7,6 @@ namespace NodeWar.Lobby
 {
     public enum SuitNodeState { Locked, Available, Owned, Equipped }
 
-    public enum StatTrend { Same, Better, Worse }
-
     public enum SuitNodeAction { None, Equip, Unlock }
 
     /// <summary>One suit variant as the tree draws it: the table's facts plus this player's state.</summary>
@@ -28,20 +26,6 @@ namespace NodeWar.Lobby
 
         public bool IsRoot => ParentVariant < 0;
         public bool CanEquip => Owned && Usable && State != SuitNodeState.Equipped;
-    }
-
-    /// <summary>One line of the info panel's stats table. Delta is against the parent when there is one.</summary>
-    public sealed class StatRow
-    {
-        public string Label;
-        public int Value;
-        public bool HasParent;
-        public int Delta;
-        public StatTrend Trend;
-        public string DeltaText;
-        /// <summary>Plain-words fragments for the role line.</summary>
-        internal string BetterPhrase;
-        internal string WorsePhrase;
     }
 
     public struct SuitNodeButton
@@ -223,77 +207,16 @@ namespace NodeWar.Lobby
 
         public static bool TrySuitType(string baseId, out SuitType suit)
         {
-            suit = SuitType.None;
-            if (string.IsNullOrEmpty(baseId) || !baseId.StartsWith("suit.", StringComparison.Ordinal)) return false;
-            return Enum.TryParse(baseId.Substring(5), true, out suit) && Enum.IsDefined(typeof(SuitType), suit);
+            return LoadoutInfoModel.TrySuitType(baseId, out suit);
         }
 
-        private struct StatDef
-        {
-            public string Label;
-            public bool HigherIsBetter;
-            public string Better;
-            public string Worse;
-            public Func<SuitStats, int> Read;
-        }
+        /// <summary>Compatibility API: tree rows still compare against their parent.</summary>
+        public static StatRow[] StatRows(GameBalanceData balance, string baseId, int variant, int parentVariant) =>
+            LoadoutInfoModel.Compare(balance, baseId, variant, parentVariant);
 
-        private static readonly StatDef[] Defs =
-        {
-            new StatDef { Label = "Bonus HP", HigherIsBetter = true, Better = "tougher", Worse = "frailer", Read = s => s.bonusHP },
-            new StatDef { Label = "Damage", HigherIsBetter = true, Better = "hits harder", Worse = "hits softer", Read = s => s.attackDamage },
-            new StatDef { Label = "Move time", HigherIsBetter = false, Better = "faster", Worse = "slower", Read = s => s.moveSpeedTicks },
-            new StatDef { Label = "Attack cooldown", HigherIsBetter = false, Better = "attacks faster", Worse = "attacks slower", Read = s => s.attackCooldownMax },
-            new StatDef { Label = "Food cost", HigherIsBetter = false, Better = "cheaper in food", Worse = "costs more food", Read = s => s.foodCost },
-            new StatDef { Label = "Material cost", HigherIsBetter = false, Better = "cheaper in materials", Worse = "costs more materials", Read = s => s.materialCost },
-            new StatDef { Label = "Fight priority", HigherIsBetter = true, Better = "wins ties", Worse = "loses ties", Read = s => s.fightPriority },
-        };
-
-        /// <summary>
-        /// The seven SuitStats fields for this variant (the era slot is the variant index),
-        /// each against the parent's when parentVariant is not negative.
-        /// </summary>
-        public static StatRow[] StatRows(GameBalanceData balance, string baseId, int variant, int parentVariant)
-        {
-            TrySuitType(baseId, out SuitType suit);
-            SuitStats own = balance.GetSuitStats(suit, variant);
-            bool hasParent = parentVariant >= 0;
-            SuitStats parent = hasParent ? balance.GetSuitStats(suit, parentVariant) : default;
-
-            var rows = new StatRow[Defs.Length];
-            for (int i = 0; i < Defs.Length; i++)
-            {
-                StatDef def = Defs[i];
-                int value = def.Read(own);
-                int delta = hasParent ? value - def.Read(parent) : 0;
-                StatTrend trend = delta == 0 ? StatTrend.Same
-                    : (delta > 0) == def.HigherIsBetter ? StatTrend.Better : StatTrend.Worse;
-                rows[i] = new StatRow
-                {
-                    Label = def.Label, Value = value, HasParent = hasParent, Delta = delta, Trend = trend,
-                    DeltaText = !hasParent ? "" : delta == 0 ? "same" : (delta > 0 ? "+" : "-") + Math.Abs(delta),
-                    BetterPhrase = def.Better, WorsePhrase = def.Worse
-                };
-            }
-            return rows;
-        }
-
-        /// <summary>One plain-words line. A root uses the suit's description; a variant says how it differs.</summary>
-        public static string RoleLine(StatRow[] rows, bool isRoot, string suitName, string description)
-        {
-            if (isRoot) return string.IsNullOrEmpty(description) ? "The standard " + suitName + "." : description;
-            var better = new List<string>();
-            var worse = new List<string>();
-            foreach (var row in rows)
-            {
-                if (row.Trend == StatTrend.Better) better.Add(row.BetterPhrase);
-                else if (row.Trend == StatTrend.Worse) worse.Add(row.WorsePhrase);
-            }
-            if (better.Count == 0 && worse.Count == 0) return "Plays like " + suitName + " for now.";
-            string line = better.Count > 0 ? Capitalise(string.Join(", ", better)) : Capitalise(string.Join(", ", worse));
-            if (better.Count > 0 && worse.Count > 0) line += ", but " + string.Join(", ", worse);
-            return line + ".";
-        }
-
+        /// <summary>Compatibility wording for the tree's parent-relative rows.</summary>
+        public static string RoleLine(StatRow[] rows, bool isRoot, string suitName, string description) =>
+            LoadoutInfoModel.RoleLine(rows, isRoot, suitName, description);
         /// <summary>
         /// The districts that accept the suit, asked of GameBalanceData.CanEquipSuitAtNode
         /// rather than restated, so a rule change there shows up here.
@@ -307,7 +230,5 @@ namespace NodeWar.Lobby
             return result;
         }
 
-        private static string Capitalise(string text) =>
-            text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text.Substring(1);
     }
 }
