@@ -132,6 +132,8 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 
+- { by: gpt-6, at: 2026-10-10T15:44:32Z }
+
 ## `.claude/skills/cs-review.md`
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }

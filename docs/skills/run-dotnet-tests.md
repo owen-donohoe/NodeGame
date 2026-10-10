@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T15:44:32Z }
-verified_at_commit: dae33286d113a26f4447a6073826ff35da86ce19
+  - { by: gpt-6, at: 2026-10-10T15:54:09Z }
+verified_at_commit: f74782c513c1958a70e84246655f7a35d9bd2437
 status: draft
 sources:
   - id: solution
@@ -101,6 +101,13 @@ arena-1 display locks at every rank. At `dae33286`, both the solution test comma
 stock compile check were blocked before compilation by MSBuild access denial to
 `C:\Users\owend\AppData\Local\Microsoft SDKs` (MSB4184). Re-run both outside that
 sandbox to obtain current pass counts; no new passing total is claimed here.
+
+P1.3 adds 19 lobby cases in `UnlockStateTests` and `LoadoutChoicesTests`, linked
+explicitly alongside the two pure sources. They cover parent/highest-arena acquisition,
+current-arena fieldability, exact ownership, skin unions/filtering, stable choice
+ordering, preview/display safety and no variants for districts or non-tree suits.
+Both required commands remain blocked before compilation by the same SDK access
+denial at this code commit; these additions are not a passing-test receipt.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
