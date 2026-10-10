@@ -44,6 +44,8 @@
     <Compile Include="LoadoutWireTests.cs" />
     <Compile Include="LoadoutRulesTests.cs" />
     <Compile Include="LoadoutMigrationTests.cs" />
+    <Compile Include="LoadoutCapacityTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs" Link="Backend/LoadoutCapacityPolicy.cs" />
     <Compile Include="NodeCommandWireTests.cs" />
     <Compile Include="LoadoutEraTests.cs" />
     <Compile Include="DraftLoadoutPacketTests.cs" />

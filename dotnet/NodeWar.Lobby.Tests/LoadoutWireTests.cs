@@ -8,41 +8,32 @@ namespace NodeWar.Lobby.Tests
     /// <summary>
     /// The loadout wire format: LoadoutData through DraftSerializer and back.
     ///
-    /// Every expectation derives from LoadoutData.SuitSlots and DistrictSlots rather
-    /// than hardcoding 3 and 2. That is the whole point of the array-backed
-    /// shape - how many suits and districts a player brings is an open balance
-    /// question, and moving it must not require editing a serializer, a save
-    /// migration, or this file. If a test here needs changing because a slot
-    /// count changed, the design has regressed.
+    /// Low-mode layout and encoding edge cases. LoadoutCapacityTests covers
+    /// both canonical modes, including blank slots and refused raw count pairs.
     /// </summary>
     [TestFixture]
     public class LoadoutWireTests
     {
         [Test]
-        public void LiteralOldThreeEntryPacket_KeepsFirstTwoChoices()
+        public void LiteralOldThreeEntryPacket_IsRefusedInProtocolSix()
         {
             // Old count-prefixed packet, ending before the optional equipment tables.
             byte[] packet = System.Text.Encoding.UTF8.GetBytes(
                 "\0\u0007\0\0\0\u0003\u000dsuit_guardian\u000asuit_scout\u000asuit_medic\u0002\u0009node_pier\u000enode_infirmary");
             packet[0] = (byte)PacketType.DraftLoadout;
-            Assert.IsTrue(DraftSerializer.TryDeserializeDraftLoadout(packet, out int player, out LoadoutData decoded));
-            Assert.AreEqual(7, player);
-            CollectionAssert.AreEqual(new[] { "suit_guardian", "suit_scout" }, decoded.suitIDs);
-            CollectionAssert.AreEqual(new[] { "node_pier", "node_infirmary" }, decoded.districtIDs);
-            var again = RoundTrip(decoded, player);
-            CollectionAssert.AreEqual(decoded.suitIDs, again.suitIDs);
-            CollectionAssert.AreEqual(decoded.districtIDs, again.districtIDs);
+            Assert.IsFalse(DraftSerializer.TryDeserializeDraftLoadout(packet, out _, out _));
+            Assert.Throws<System.FormatException>(() =>
+                DraftSerializer.DeserializeDraftLoadout(packet, out _, out _));
         }
 
-        private static int S => LoadoutData.SuitSlots;
-        private static int N => LoadoutData.DistrictSlots;
+        private static int S => LoadoutRules.ChosenSuitSlots(1);
+        private static int N => LoadoutRules.ChosenDistrictSlots(1);
 
-        /// <summary>An array of `length` slots: `head` entries first, then empty strings.</summary>
         private static string[] Slots(int length, params string[] head)
         {
             string[] result = new string[length];
             for (int i = 0; i < length; i++)
-                result[i] = (head != null && i < head.Length) ? head[i] : "";
+                result[i] = head != null && i < head.Length ? head[i] : "";
             return result;
         }
 

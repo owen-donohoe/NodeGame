@@ -93,7 +93,7 @@ namespace NodeWar.Lobby.Tests
             byte[] packet = DraftSerializer.SerializeDraftLoadout(1, source);
 
             // Cut after the node IDs: what a protocol-1 peer sends.
-            int cut = 1 + 4 + 1 + LoadoutData.SuitSlots + 1 + LoadoutData.DistrictSlots;
+            int cut = 1 + 4 + 1 + source.suitIDs.Length + 1 + source.districtIDs.Length;
             byte[] old = new byte[cut];
             Array.Copy(packet, old, cut);
             DraftSerializer.DeserializeDraftLoadout(old, out int _, out LoadoutData decoded);

@@ -7,6 +7,23 @@ namespace NodeWar.Lobby.Tests
 {
     public class LoadoutMigrationTests
     {
+        [TestCase(1)]
+        [TestCase(2)]
+        public void RecordAliasMigration_PreservesStoredCapacityAndBlankPositions(int arena)
+        {
+            var deck = LoadoutData.CreateEmpty(arena);
+            deck.suitIDs[0] = "suit_scout";
+            deck.districtIDs[deck.districtIDs.Length - 1] = "node_rampart";
+            var record = LoadoutRecord.From(deck);
+            // Startup reads stored mode without a speculative local rank fallback.
+            for (int i = 0; i < 3; i++)
+                record = LoadoutRecord.From(record.ToLoadout());
+            Assert.AreEqual(deck.suitIDs.Length, record.suitIDs.Length);
+            Assert.AreEqual(deck.districtIDs.Length, record.nodeIDs.Length);
+            Assert.AreEqual("", record.nodeIDs[0]);
+            Assert.AreEqual("node_fortress", record.nodeIDs[record.nodeIDs.Length - 1]);
+        }
+
         private static LoadoutData OldChoices()
         {
             var source = LoadoutData.CreateEmpty();

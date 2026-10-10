@@ -12,8 +12,7 @@ namespace NodeWar.Lobby
     /// expresses the same rules across five [SerializeField] slot displays and a
     /// visibility pass, where they cannot be tested at all.
     ///
-    /// Slot counts come from LoadoutData.SuitSlots / DistrictSlots, so answering the
-    /// open 2-vs-3 balance question stays an edit to those constants.
+    /// Slot counts come from the canonical source shape, or an explicit local arena.
     /// </summary>
     public class LoadoutEditor
     {
@@ -24,15 +23,19 @@ namespace NodeWar.Lobby
         private readonly string[] districtIDs;
 
         /// <summary>
-        /// Starts from an existing loadout, normalised - so a `default` struct,
-        /// a save written at different slot counts and a peer's loadout all
-        /// arrive here the same shape.
+        /// Starts from an existing loadout, preserving its canonical capacity.
+        /// Default and legacy saved shapes normalize to low mode.
         /// </summary>
         public LoadoutEditor(LoadoutData source)
         {
             LoadoutData normalized = LoadoutData.Normalized(source);
             suitIDs = normalized.suitIDs;
             districtIDs = normalized.districtIDs;
+        }
+
+        /// <summary>Explicit local editing after rank is known, or arena 1 for offline edits.</summary>
+        public LoadoutEditor(LoadoutData source, int arena) : this(LoadoutData.Normalized(source, arena))
+        {
         }
 
         public int SuitSlotCount { get { return suitIDs.Length; } }

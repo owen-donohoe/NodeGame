@@ -8,16 +8,14 @@ namespace NodeWar.Lobby.Tests
     {
         [TestCase(0)]
         [TestCase(1)]
-        [TestCase(2)]
-        [TestCase(100)]
         public void ArenaZeroAndOne_ThreeDistrictLocksAndWarrior(int arena)
         {
             CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_village" }, LoadoutRules.LockedDistricts(arena));
             CollectionAssert.AreEqual(new[] { "suit_warrior" }, LoadoutRules.LockedSuits(arena));
             Assert.AreEqual(5, LoadoutRules.DisplayDistrictSlots);
             Assert.AreEqual(3, LoadoutRules.DisplaySuitSlots);
-            Assert.AreEqual(5, LoadoutData.DistrictSlots + LoadoutRules.LockedDistricts(arena).Length);
-            Assert.AreEqual(3, LoadoutData.SuitSlots + LoadoutRules.LockedSuits(arena).Length);
+            Assert.AreEqual(5, LoadoutRules.ChosenDistrictSlots(arena) + LoadoutRules.LockedDistricts(arena).Length);
+            Assert.AreEqual(3, LoadoutRules.ChosenSuitSlots(arena) + LoadoutRules.LockedSuits(arena).Length);
         }
 
         [Test]

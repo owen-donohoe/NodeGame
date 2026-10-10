@@ -78,10 +78,10 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void DeckCounts_TwoChosenPerSide()
+        public void DeckCounts_MaximaAndEffectiveLowCapacity()
         {
-            Assert.AreEqual(2, LoadoutData.DistrictSlots);
-            Assert.AreEqual(2, LoadoutData.SuitSlots);
+            Assert.AreEqual(5, LoadoutData.DistrictSlots);
+            Assert.AreEqual(3, LoadoutData.SuitSlots);
             LoadoutData empty = LoadoutData.CreateEmpty();
             Assert.AreEqual(2, empty.districtIDs.Length);
             Assert.AreEqual(2, empty.suitIDs.Length);
