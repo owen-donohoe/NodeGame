@@ -257,7 +257,7 @@
         </engine:VisualElement>
 
         <!--
-            Selection counter: a circle on the controls side, in thumb reach,
+            Selection counter: a circle centred at the safe area's bottom,
             shown only while something is selected (and Selection counter is on
             in settings). It shows the selected count. On a pointer the number
             gives way to a red X on hover; while pressed it inverts (black circle,
@@ -266,11 +266,13 @@
             pointer on press, so the board never sees the touch. Touch has no
             hover, so a press shows the inverted X at once.
         -->
-        <engine:VisualElement name="hud-selbar" class="hud__selbar" picking-mode="Position">
-            <engine:Label name="hud-selbar-count" class="hud__selbar-count ui-w700" text="0" picking-mode="Ignore" />
-            <engine:VisualElement class="hud__selbar-x" picking-mode="Ignore">
-                <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--a" picking-mode="Ignore" />
-                <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--b" picking-mode="Ignore" />
+        <engine:VisualElement name="hud-selbar-dock" class="hud__selbar-dock" picking-mode="Ignore">
+            <engine:VisualElement name="hud-selbar" class="hud__selbar" picking-mode="Position">
+                <engine:Label name="hud-selbar-count" class="hud__selbar-count ui-w700" text="0" picking-mode="Ignore" />
+                <engine:VisualElement class="hud__selbar-x" picking-mode="Ignore">
+                    <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--a" picking-mode="Ignore" />
+                    <engine:VisualElement class="hud__selbar-bar hud__selbar-bar--b" picking-mode="Ignore" />
+                </engine:VisualElement>
             </engine:VisualElement>
         </engine:VisualElement>
 
