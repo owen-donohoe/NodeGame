@@ -198,6 +198,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `.claude/skills/cs-review.md`
 
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+
 - { by: gpt-6, at: 2026-10-10T16:59:03Z }
 
 - { by: gpt-6, at: 2026-10-10T16:44:21Z }

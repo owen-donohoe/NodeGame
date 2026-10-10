@@ -1,3 +1,12 @@
+---
+type: Reference
+title: UI rework P1.9 Editor acceptance
+description: Dated Editor acceptance evidence, layout repair and outstanding manual coverage.
+tags: [ui, editor, acceptance]
+generated: { by: gpt-6, at: 2026-10-10T22:45:37Z }
+status: stable
+---
+
 # UI rework P1.9 Editor acceptance — 2026-10-10
 
 Checkout: `feat/loadout-rework`, starting at `9d79c5e7`, Unity 6000.6.1f1.
