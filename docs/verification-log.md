@@ -80,6 +80,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/architecture.md`
 
+- { by: gpt-6, at: 2026-10-10T23:04:47Z }
+
 - { by: gpt-6, at: 2026-10-10T22:45:37Z }
 
 - { by: gpt-6, at: 2026-10-10T16:56:36Z }
@@ -199,6 +201,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6, at: 2026-10-10T15:54:09Z }
 
 ## `.claude/skills/cs-review.md`
+
+- { by: gpt-6, at: 2026-10-10T23:05:47Z }
 
 - { by: gpt-6, at: 2026-10-10T22:45:37Z }
 

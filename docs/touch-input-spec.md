@@ -4,6 +4,9 @@ title: Controls and input bindings
 description: Landed controls contracts, including swept paint selection, deferred node taps, settings v6 migration and the safe-area selection count.
 tags: [input, mobile, desktop, selection, settings, ux]
 generated: { by: claude-sonnet-5-5, at: 2026-10-04T00:00:00Z }
+verified:
+  - { by: gpt-6, at: 2026-10-10T23:25:20Z }
+verified_at_commit: db46340222335f6abee5534bd13b8d64d83d63c6
 status: draft
 # Runtime architecture lives in architecture.md; this document records the
 # controls contract and explicitly pending device checks.
@@ -183,7 +186,7 @@ loaded from Resources (`UI/PaintCoverage`); the separate armed pulse remains.
 | Selection | Tap on | Result |
 |---|---|---|
 | none | own villager | select it |
-| none | node | open node panel (unchanged) |
+| none | node single | after the node gap, open node panel |
 | none | empty | nothing |
 | any | own villager, not selected | add (or replace, per the Tap a villager choice) |
 | any | own villager, selected | remove |
@@ -193,7 +196,7 @@ loaded from Resources (`UI/PaintCoverage`); the separate armed pulse remains.
 | any | empty | clear selection and close panel (unchanged) |
 | any | enemy villager | falls through to the node beneath (unchanged) |
 
-**Selection commits on release, never on press.** A press that starts on a villager
+**Villager selection commits on release, never on press.** A press that starts on a villager
 and moves past the slop is not a tap, so the villager stays unselected, whatever
 the drag then does (pan, or nothing if Drag is off). The touch-down flash is
 feedback only and must not look like a selection. This is already how tap works
@@ -334,7 +337,7 @@ Rows whose input has one allowed action show it as plain text, not a cycler.
 | `Input/SelectionSystem.cs`, `SelectionRules.cs`, `TapRouter.cs` | add/remove, node residents, no-op fully-selected node, empty-paint preservation |
 | `Input/PaintGeometry.cs`, `LassoGeometry.cs`, `UI/Selection/SelectionLasso.cs`, `Resources/UI/PaintCoverage.shader` | shared open-capsule coverage and single-composite rendering |
 | `Input/CommandSystem.cs` | order-drag preview hook |
-| `Core/CameraController.cs` | recentre and fit/default zoom intents; middle-drag and scroll through the gesture source (issue #41, B1) |
+| `Core/CameraController.cs` | recentre and fit/default zoom intents; desktop middle-drag and scroll still read directly |
 | `UI/Scripts/Gameplay/GameplayHUDController.cs` | camera-button toggles; apply `hud--left`; selection bar |
 | `UI/Styles/HUD.uss`, `UI/Layouts/GameplayHUD.uxml` | camera mirroring; centred non-picking safe-area count dock |
 

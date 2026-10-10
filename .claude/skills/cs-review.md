@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T23:05:47Z }
-verified_at_commit: 53f631782ae54b2767628c5f54a5f66fc9d46cac
+  - { by: gpt-6, at: 2026-10-10T23:26:34Z }
+verified_at_commit: db46340222335f6abee5534bd13b8d64d83d63c6
 status: stable
 sources:
   - id: architecture

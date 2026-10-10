@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T23:04:47Z }
-verified_at_commit: df5dc05324fb446a21664947bff72294a950d69a
+  - { by: gpt-6, at: 2026-10-10T23:25:20Z }
+verified_at_commit: db46340222335f6abee5534bd13b8d64d83d63c6
 status: stable
 sources:
   - id: pointer-gestures
