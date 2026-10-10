@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T17:20:09Z }
-verified_at_commit: 9d3f8aa25314fe1e9072fbe78a70955fd41deece
+  - { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+verified_at_commit: f88a4321fdca1b12f82750e790b6558e092daa1b
 status: draft
 sources:
   - id: solution
