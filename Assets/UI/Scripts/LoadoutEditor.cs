@@ -22,6 +22,11 @@ namespace NodeWar.Lobby
         private readonly string[] suitIDs;
         private readonly string[] districtIDs;
 
+        // Type-indexed equipment and skins ride along untouched; only the chosen slots are edited.
+        private readonly int[] suitEras;
+        private readonly int[] districtEras;
+        private readonly string[] skinIDs;
+
         /// <summary>
         /// Starts from an existing loadout, preserving its canonical capacity.
         /// Default and legacy saved shapes normalize to low mode.
@@ -31,6 +36,9 @@ namespace NodeWar.Lobby
             LoadoutData normalized = LoadoutData.Normalized(source);
             suitIDs = normalized.suitIDs;
             districtIDs = normalized.districtIDs;
+            suitEras = normalized.suitEras;
+            districtEras = normalized.districtEras;
+            skinIDs = normalized.skinIDs;
         }
 
         /// <summary>Explicit local editing after rank is known, or arena 1 for offline edits.</summary>
@@ -162,7 +170,10 @@ namespace NodeWar.Lobby
             return LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = (string[])suitIDs.Clone(),
-                districtIDs = (string[])districtIDs.Clone()
+                districtIDs = (string[])districtIDs.Clone(),
+                suitEras = (int[])suitEras.Clone(),
+                districtEras = (int[])districtEras.Clone(),
+                skinIDs = (string[])skinIDs.Clone()
             });
         }
 
