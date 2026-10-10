@@ -141,33 +141,49 @@ namespace NodeWar.Lobby.Tests
             balance.suitStats = new[] { new SuitStats { suitType = SuitType.Warrior },
                 new SuitStats { suitType = SuitType.Guardian } };
             var board = PremadeMaps.Hourglass01();
-            MatchFactory.Configure(balance, board);
+            // Only commands need static balance; leave simulation/pathfinding globals alone.
+            var balanceField = typeof(CommandProcessor).GetField("bal",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var previousBalance = (GameBalanceData)balanceField.GetValue(null);
             var setups = new[] { new PlayerSetup { suits = LoadoutMatchSetup.DraftedSuits(High()) },
                 new PlayerSetup { suits = LoadoutMatchSetup.DraftedSuits(High()) } };
-            var state = MatchFactory.Build(balance, board, new[] {
+            var draft = new[] {
                 new DraftPlacement { playerID = seat, gridX = 2, gridZ = seat == 0 ? 5 : 1, districtType = DistrictType.Barracks }
-            }, setups);
+            };
+            var state = MatchFactory.Build(balance, board, draft, setups);
             int vid = Array.FindIndex(state.villagers, v => v.ownerID == seat);
-            int barracks = Array.FindIndex(state.nodes, n => n.ownerID == seat && n.districtType == DistrictType.Barracks);
+            int barracks = MatchFactory.CellToNode(board, draft)[draft[0].gridZ * board.gridCols + draft[0].gridX];
             Assert.GreaterOrEqual(vid, 0);
             Assert.GreaterOrEqual(barracks, 0);
+            // Drafted districts start neutral. Model a claimed Barracks before equipping.
+            Assert.AreEqual(-1, state.nodes[barracks].ownerID);
+            state.nodes[barracks].ownerID = seat;
+            state.nodes[barracks].claimBar = seat == 0 ? balance.claimThreshold : -balance.claimThreshold;
             state.villagers[vid].currentNodeID = barracks;
             state.villagers[vid].state = VillagerState.Idle;
             state.players[seat].food = 1000;
             state.players[seat].materials = 1000;
-            int hash = SimulationStateHasher.ComputeHash(state);
-            CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Equip,
-                playerID = seat, villagerID = vid, value = (int)SuitType.Warrior });
-            Assert.AreEqual(hash, SimulationStateHasher.ComputeHash(state));
-            CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Equip,
-                playerID = seat, villagerID = vid, value = (int)SuitType.Guardian });
-            Assert.AreEqual(SuitType.Guardian, state.villagers[vid].suit);
-            state.villagers[vid].state = VillagerState.Dead;
-            CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Respawn,
-                playerID = seat, villagerID = vid });
-            Assert.AreEqual(SuitType.None, state.villagers[vid].suit);
-            Assert.AreEqual(state.players[seat].coreNodeID, state.villagers[vid].currentNodeID);
-            Assert.AreEqual(1, state.players[seat].paidRespawns);
+            try
+            {
+                CommandProcessor.SetBalance(balance);
+                int hash = SimulationStateHasher.ComputeHash(state);
+                CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Equip,
+                    playerID = seat, villagerID = vid, value = (int)SuitType.Warrior });
+                Assert.AreEqual(hash, SimulationStateHasher.ComputeHash(state));
+                CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Equip,
+                    playerID = seat, villagerID = vid, value = (int)SuitType.Guardian });
+                Assert.AreEqual(SuitType.Guardian, state.villagers[vid].suit);
+                state.villagers[vid].state = VillagerState.Dead;
+                CommandProcessor.ProcessCommand(state, new GameCommand { type = CommandType.Respawn,
+                    playerID = seat, villagerID = vid });
+                Assert.AreEqual(SuitType.None, state.villagers[vid].suit);
+                Assert.AreEqual(state.players[seat].coreNodeID, state.villagers[vid].currentNodeID);
+                Assert.AreEqual(1, state.players[seat].paidRespawns);
+            }
+            finally
+            {
+                CommandProcessor.SetBalance(previousBalance);
+            }
         }
 
         [TestCase("shape")]
