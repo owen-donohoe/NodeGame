@@ -29,6 +29,8 @@
     <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
     <!-- Physical pointer classification and selection rules, with devices and raycasts left in Unity. -->
     <Compile Include="GestureClassifierTests.cs" />
+    <Compile Include="PaintGeometryTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/PaintGeometry.cs" Link="Input/PaintGeometry.cs" />
     <Compile Include="SelectionRulesTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/GestureClassifier.cs" Link="Input/GestureClassifier.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/SelectionRules.cs" Link="Input/SelectionRules.cs" />
