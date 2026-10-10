@@ -568,7 +568,7 @@ Workshop uses node actions for Forge Minion, showing its price, cooldown and ref
 reason from shared simulation helpers. `StructurePresentation` retains the pure
 layout and health-segment maths despite its historical class name.
 `NodeClaimBar` adds a code-built health segment at the owner's end, shown only below
-maximum on a district with health. `BankPips` shows nonempty Storehouse banks, with
+maximum on a district with health. `BankPips` shows nonempty Storehouse banks as a row centred above the node, with
 colour and shape per resource. There is no separate structure bar or minion badge.
 `VillagerView` renders mobile minions grey. Missing art uses Storehouse "S" and Workshop "W".
 Legacy code is kept compiling rather than commented out or deleted, so

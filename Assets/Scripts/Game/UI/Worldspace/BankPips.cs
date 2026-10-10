@@ -78,7 +78,7 @@ namespace NodeWar.UI
                 StructurePresentation.ResourceTint(resource, out float r, out float g, out float b);
                 pips[i].color = new Color(r, g, b);
                 pips[i].transform.localPosition = new Vector3(
-                    StructurePresentation.PipX(i, count) * nodeScale, StructurePresentation.PipY * nodeScale, 0f);
+                    StructurePresentation.PipX(i, count) * nodeScale, 0f, 0f);
             }
         }
 
@@ -88,10 +88,9 @@ namespace NodeWar.UI
             if (viewCamera == null) viewCamera = Camera.main;
             if (viewCamera == null) return;
             root.rotation = viewCamera.transform.rotation;
-            int side = ViewSide.FromYaw(viewCamera.transform.eulerAngles.y);
-            float horizontal = new Vector2(viewCamera.transform.up.x, viewCamera.transform.up.z).magnitude;
-            StructurePresentation.GroundOffset(side, viewCamera.transform.up.y, horizontal,
-                out float x, out float y, out float z);
+            // Centred over the node along camera-up, so both seats see it above the art.
+            Vector3 up = viewCamera.transform.up;
+            StructurePresentation.PipAnchor(up.x, up.y, up.z, out float x, out float y, out float z);
             root.position = transform.position + new Vector3(x, y, z) * nodeScale;
         }
     }

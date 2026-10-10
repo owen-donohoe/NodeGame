@@ -76,37 +76,6 @@ namespace NodeWar.View.Tests
             Assert.That(StructurePresentation.SuitLabel(SuitType.Minion),Is.EqualTo("Minion"));
         }
 
-        [TestCase(844)] [TestCase(600)] [TestCase(320)]
-        public void StorehouseSheetIsVerticallyCentredAndOtherSheetsStayDocked(int viewport)
-        {
-            int height=StructurePresentation.BankSheetHeight(DistrictType.Storehouse,false);
-            float bottom=StructurePresentation.SheetBottom(DistrictType.Storehouse,viewport,height);
-            Assert.That(bottom,Is.EqualTo(System.Math.Max(0,(viewport-height)*0.5f)));
-            if(viewport>=height) Assert.That(bottom+height*0.5f,Is.EqualTo(viewport*0.5f));
-            Assert.That(StructurePresentation.SheetBottom(DistrictType.Forge,viewport,height),Is.Zero);
-            foreach(float pivot in new[] {0f,0.5f,1f}) foreach(float anchorMax in new[] {0f,0.2f,1f})
-            {
-                float anchored=StructurePresentation.SheetAnchoredY(viewport,height,pivot,0f,anchorMax);
-                Assert.That(anchored+viewport*anchorMax*pivot-pivot*height,Is.EqualTo(bottom).Within(0.001f));
-            }
-        }
-        [TestCase(540, 1200, false)]
-        [TestCase(540, 1200, true)]
-        [TestCase(1200, 800, false)]
-        [TestCase(1200, 800, true)]
-        public void StorehouseCentreUsesTargetHeightAcrossResizeAndClaimTransitions(int width, int height, bool claim)
-        {
-            float viewport = height / StructurePresentation.HudScale(width, height, 390, 844);
-            int targetHeight = StructurePresentation.BankSheetHeight(DistrictType.Storehouse, claim);
-            float bottom = StructurePresentation.BankSheetBottom(DistrictType.Storehouse, viewport, claim);
-            Assert.That(bottom + targetHeight / 2f, Is.EqualTo(viewport / 2f).Within(0.001f));
-            Assert.That(StructurePresentation.BankSheetBottom(DistrictType.Workshop, viewport, claim), Is.Zero);
-            Assert.That(StructurePresentation.BankSheetBottom(DistrictType.Storehouse, 0, claim), Is.Zero);
-            Assert.That(StructurePresentation.BankSheetBottom(DistrictType.Storehouse, 200, claim), Is.Zero);
-            float otherBottom = StructurePresentation.BankSheetBottom(DistrictType.Storehouse, viewport, !claim);
-            Assert.That(bottom - otherBottom, Is.EqualTo(claim ? -22f : 22f).Within(0.001f));
-        }
-
         [Test] public void PassiveEffectsOnlyReturnAtFullHealthAndInfirmaryWorkersMatchRules()
         {
             var b=GameBalanceData.Default();
@@ -160,35 +129,30 @@ namespace NodeWar.View.Tests
                 Assert.That(order, Is.GreaterThan(TerrainPresentation.TintSortingOrder));
                 Assert.That(order, Is.Not.EqualTo(400)); Assert.That(order, Is.Not.EqualTo(401));
             }
-            StructurePresentation.Offset(0, out float x0, out float z0);
-            StructurePresentation.Offset(2, out float x2, out float z2);
-            Assert.That((x2,z2), Is.EqualTo((-x0,-z0)));
         }
-        [Test] public void BankSheetsLeaveRoomForReadoutsAndFixedControls()
+        [Test] public void BankPipsAreCentredAboveTheNode()
         {
-            foreach (var type in new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Storehouse, DistrictType.Forge })
+            foreach (int count in new[] { 1, 2, 3, 4, 5 })
             {
-                int actions = type == DistrictType.Forge ? 170 : 110;
-                int height = StructurePresentation.BankSheetHeight(type, false);
-                Assert.That(height - 80 - actions, Is.GreaterThanOrEqualTo(160), "Bank readout and production body must remain visible");
-                Assert.That(StructurePresentation.BankSheetHeight(type, true) - height, Is.EqualTo(44));
+                float sum = 0f;
+                for (int i = 0; i < count; i++) sum += StructurePresentation.PipX(i, count);
+                Assert.That(sum, Is.EqualTo(0f).Within(0.0001f), "the row is centred on the node");
             }
-            Assert.That(StructurePresentation.BankSheetHeight(DistrictType.Core, false), Is.Zero);
-            Assert.That(StructurePresentation.ForgeContentHeight * StructurePresentation.BankPanelHeight, Is.GreaterThanOrEqualTo(136));
-            Assert.That(StructurePresentation.ForgeContentHeight * (1-StructurePresentation.BankPanelHeight), Is.GreaterThanOrEqualTo(220));
+            // Camera-up for both seats' tilted views: always lifted, never pushed sideways.
+            foreach (var up in new[] { (0f, 0.6428f, 0.7660f), (0f, 0.6428f, -0.7660f), (0.7660f, 0.6428f, 0f) })
+            {
+                StructurePresentation.PipAnchor(up.Item1, up.Item2, up.Item3, out float x, out float y, out float z);
+                Assert.That(y, Is.GreaterThan(0f), "above the node, clear of the terrain");
+                Assert.That((x, y, z), Is.EqualTo((up.Item1 * StructurePresentation.PipLift,
+                    up.Item2 * StructurePresentation.PipLift, up.Item3 * StructurePresentation.PipLift)));
+            }
         }
-        [Test] public void HpOffsetIsAboveTerrainAndBelowNodeForBothSeats()
+        [Test] public void OnlyTheStorehouseSheetIsResized()
         {
-            foreach (int side in new[] { 0, 2 })
-            {
-                StructurePresentation.GroundOffset(side, 0.6428f, 0.7660f, out float x, out float y, out float z);
-                ViewSide.Forward(side, out float fx, out float fz);
-                Assert.That(y, Is.GreaterThan(0), "Opaque terrain must not occlude the bar");
-                Assert.That(y + (StructurePresentation.PipY - StructurePresentation.PipSize * 0.5f) * 0.6428f,
-                    Is.GreaterThan(0), "The lowest edge of the bank pips must also clear terrain");
-                float screenUp = y * 0.6428f + (x * fx + z * fz) * 0.7660f;
-                Assert.That(screenUp, Is.EqualTo(-StructurePresentation.OffsetDistance).Within(0.0001f));
-            }
+            Assert.That(StructurePresentation.BankSheetHeight(DistrictType.Storehouse, false), Is.EqualTo(360));
+            Assert.That(StructurePresentation.BankSheetHeight(DistrictType.Storehouse, true), Is.EqualTo(404));
+            foreach (var type in new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Forge, DistrictType.Workshop, DistrictType.Core })
+                Assert.That(StructurePresentation.BankSheetHeight(type, false), Is.Zero, type.ToString());
         }
         [TestCase(540, 1200)]
         [TestCase(1200, 800)]
@@ -197,8 +161,8 @@ namespace NodeWar.View.Tests
             float scale = StructurePresentation.HudScale(width, height, 390, 844);
             Assert.That(390 * scale, Is.LessThanOrEqualTo(width + 0.001f));
             Assert.That(844 * scale, Is.LessThanOrEqualTo(height + 0.001f));
-            Assert.That(height / scale - StructurePresentation.BankSheetHeight(DistrictType.Forge, true),
-                Is.GreaterThan(300), "The board must remain visible above a contested Forge sheet");
+            Assert.That(height / scale - StructurePresentation.BankSheetHeight(DistrictType.Storehouse, true),
+                Is.GreaterThan(300), "The board must remain visible above a contested Storehouse sheet");
             if (width < height) Assert.That(scale, Is.EqualTo(width / 390f), "Keep the portrait sizing");
         }
     }

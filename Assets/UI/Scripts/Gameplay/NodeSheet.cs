@@ -189,9 +189,6 @@ namespace NodeWar.UI
         public void UpdateSafeArea()
         {
             if (bottomInset != null) bottomInset.Update();
-            // Position outside the layout pass. Geometry callbacks that write bottom
-            // can recursively relayout the sheet while its height is transitioning.
-            RefreshSheetPosition();
         }
 
         /// <summary>
@@ -250,11 +247,7 @@ namespace NodeWar.UI
         {
             if (current != null) current.Unbind();
             nodeID = -1;
-            if (sheet != null)
-            {
-                sheet.RemoveFromClassList("ui-sheet--open");
-                sheet.style.bottom = 0f;
-            }
+            if (sheet != null) sheet.RemoveFromClassList("ui-sheet--open");
         }
 
         private void CloseByPlayer()
@@ -481,7 +474,6 @@ namespace NodeWar.UI
                 sheet.EnableInClassList("sheet--claim", !secure);
                 int bankHeight = NodeWar.View.StructurePresentation.BankSheetHeight(node.districtType, !secure);
                 sheet.style.height = bankHeight > 0 ? new StyleLength(bankHeight) : new StyleLength(StyleKeyword.Null);
-                RefreshSheetPosition();
             }
 
             if (secure || claimP0 == null || claimP1 == null) return;
@@ -506,19 +498,6 @@ namespace NodeWar.UI
                     : "";
                 claimNote.text = faster + "With both sides standing on it, a node holds still until the fight ends.";
             }
-        }
-
-        private void RefreshSheetPosition()
-        {
-            if (sheet == null || !IsOpen || state == null || nodeID >= state.nodes.Length) return;
-            var node = state.nodes[nodeID];
-            bool secure = balance.claimThreshold <= 0 ||
-                (node.ownerID == 0 && node.claimBar >= balance.claimThreshold) ||
-                (node.ownerID == 1 && node.claimBar <= -balance.claimThreshold);
-            float bottom = NodeWar.View.StructurePresentation.BankSheetBottom(
-                node.districtType, Root.resolvedStyle.height, !secure);
-            if (sheet.style.bottom.value.value != bottom)
-                sheet.style.bottom = bottom;
         }
 
         // ===== DRAG TO DISMISS =====

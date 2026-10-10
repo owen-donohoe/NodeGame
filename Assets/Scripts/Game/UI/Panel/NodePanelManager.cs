@@ -70,7 +70,7 @@ namespace NodeWar.UI
         private int currentNodeID = -1;
         private bool isOpen = false;
         private float panelWidth;
-        private float basePanelHeight, baseContentHeight;
+        private float basePanelHeight;
         private GameObject currentContent;
         private Tween slideTween;
 
@@ -96,7 +96,6 @@ namespace NodeWar.UI
 
             SetupSheetGeometry();
             basePanelHeight = panelRect.rect.height;
-            baseContentHeight = contentArea.rect.height;
 
             panelWidth = panelRect.sizeDelta.x;
             panelRect.anchoredPosition = HiddenPosition;
@@ -149,17 +148,8 @@ namespace NodeWar.UI
 
         private Vector2 OpenPosition =>
             useBottomSheet
-                ? new Vector2(0f, StorehouseOpenY())
+                ? new Vector2(0f, 0f)
                 : new Vector2(0f, panelRect.anchoredPosition.y);
-
-        private float StorehouseOpenY()
-        {
-            if (simState == null || currentNodeID < 0 || simState.nodes[currentNodeID].districtType != DistrictType.Storehouse)
-                return 0f;
-            var parent = panelRect.parent as RectTransform;
-            return parent == null ? 0f : StructurePresentation.SheetAnchoredY(parent.rect.height,
-                CurrentHeight, panelRect.pivot.y, panelRect.anchorMin.y, panelRect.anchorMax.y);
-        }
 
         /// <summary>
         /// Gone. Nothing left on screen.
@@ -574,9 +564,7 @@ namespace NodeWar.UI
         {
             if (currentNodeID == nodeID && isOpen) return;
 
-            float extra = simState.nodes[nodeID].districtType == DistrictType.Forge
-                ? Mathf.Max(0f, StructurePresentation.ForgeContentHeight - baseContentHeight) : 0f;
-            panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, basePanelHeight + extra);
+            panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, basePanelHeight);
             if (simState.nodes[nodeID].districtType == DistrictType.Storehouse)
                 panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,
                     StructurePresentation.BankSheetHeight(DistrictType.Storehouse, false));
@@ -785,19 +773,6 @@ namespace NodeWar.UI
             if (forgeContent != null)
             {
                 forgeContent.Initialize(simState, tickProvider, inputBuffer, currentNodeID, controlledPID, isOwned, balance);
-                var bankObject=new GameObject("Bank",typeof(RectTransform),typeof(NodeActionPanelContent));
-                bankObject.transform.SetParent(currentContent.transform,false);
-                var rect=bankObject.GetComponent<RectTransform>();
-                rect.anchorMin=new Vector2(0,0); rect.anchorMax=new Vector2(1,NodeWar.View.StructurePresentation.BankPanelHeight); rect.offsetMin=Vector2.zero; rect.offsetMax=Vector2.zero;
-                var forgeArea=new GameObject("Forge production",typeof(RectTransform)).GetComponent<RectTransform>();
-                forgeArea.SetParent(currentContent.transform,false); forgeArea.anchorMin=new Vector2(0,NodeWar.View.StructurePresentation.BankPanelHeight);
-                forgeArea.anchorMax=Vector2.one; forgeArea.offsetMin=Vector2.zero; forgeArea.offsetMax=Vector2.zero;
-                for(int i=currentContent.transform.childCount-1;i>=0;i--) {
-                    var child=currentContent.transform.GetChild(i);
-                    if(child!=bankObject.transform && child!=forgeArea) child.SetParent(forgeArea,false);
-                }
-                bankObject.GetComponent<NodeActionPanelContent>().Initialize(simState,inputBuffer,tickProvider,balance,currentNodeID,
-                    () => debugPlayerSwitch!=null ? debugPlayerSwitch.GetCurrentPlayerID() : 0);
                 return;
             }
 
@@ -830,7 +805,7 @@ namespace NodeWar.UI
         private static bool UsesNodeActions(DistrictType type) => type == DistrictType.Village ||
             type == DistrictType.Workshop ||
             type == DistrictType.Town || type == DistrictType.Infirmary || type == DistrictType.Fortress ||
-            type == DistrictType.Farm || type == DistrictType.Mine || type == DistrictType.Storehouse;
+            type == DistrictType.Storehouse;
 
         private GameObject GetContentPrefab(DistrictType type)
         {
