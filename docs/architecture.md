@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T19:59:12Z }
-verified_at_commit: 59f0c7df2c79265b8ba04b52fb4b58f80adec17c
+  - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
+verified_at_commit: 9006a5bdaf9227f014eb3eaacdffb98204364ea1
 status: stable
 sources:
   - id: sim-state
@@ -562,8 +562,9 @@ the HUD, sheet and text. `NodeSheetContent.SetResourceText` turns `{food}`,
 `{materials}` and `{metal}` templates into inline icons beside text spans.
 
 Storehouse sheets show bank contents, collection progress/status, district health,
-production and Collect/Cancel. Both stacks centre the Storehouse sheet vertically;
-Farm, Mine and Forge retain ordinary worker controls and no bank-install actions.
+production and Collect/Cancel. Both stacks dock it like every other sheet, only taller:
+`BankSheetHeight` is Storehouse-only, and Farm, Mine and Forge keep their ordinary sheet size,
+worker controls and no bank-install actions.
 Workshop uses node actions for Forge Minion, showing its price, cooldown and refusal
 reason from shared simulation helpers. `StructurePresentation` retains the pure
 layout and health-segment maths despite its historical class name.
@@ -949,7 +950,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   `BankActionModel` is its bank counterpart (UnityEngine-free, in `Assets/UI/Scripts/Gameplay/`, shared by both
   stacks): `Try*` only builds a `GameCommand` stamped with the current tick, and refuses a stale binding. Its uGUI counterpart is
   `NodeActionPanelContent`, built at runtime for Village, Workshop, Town, Infirmary,
-  Fortress, Farm, Mine and Storehouse. Forge retains its production panel.
+  Fortress and Storehouse. Forge, Farm and Mine have no bank actions; Forge retains its production panel.
   Names, monograms and descriptions come from `DistrictFallback`.
 - `DraftScreenController` — the draft screen, and the one place in this
   tree that owns an interaction end to end. The chrome and the placement
@@ -1001,7 +1002,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   (`GateBlocked`), derived from `targetNodeID` and so correct after a rollback.
 - `NodeClaimBar` / `BankPips` / `StructurePresentation` — district-health segment,
   nonempty Storehouse pips and UnityEngine-free layout/visibility maths.
-  The health segment is code-built and hidden at full health; pips are billboarded
+  The health segment is code-built and hidden at full health; pips are a row billboarded
   outside the district SortingGroup, on the Villagers layer at orders 402/403,
   apart from the Core breach bar's 400/401. No structure bar or minion badge remains.
 - `DistrictVisualTable` — per-district art shared with UI through the theme.
