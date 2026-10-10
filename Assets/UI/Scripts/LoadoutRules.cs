@@ -11,6 +11,17 @@ namespace NodeWar.Lobby
         public static int ChosenSuitSlots(int arena) => LoadoutCapacityPolicy.SuitCapacity(arena);
         public static int ChosenDistrictSlots(int arena) => LoadoutCapacityPolicy.DistrictCapacity(arena);
 
+        /// <summary>Every chosen slot at the local arena's capacity must be filled.</summary>
+        public static bool IsComplete(LoadoutData loadout, int arena)
+        {
+            loadout = LoadoutData.Normalized(loadout, arena);
+            for (int i = 0; i < loadout.suitIDs.Length; i++)
+                if (string.IsNullOrEmpty(loadout.suitIDs[i])) return false;
+            for (int i = 0; i < loadout.districtIDs.Length; i++)
+                if (string.IsNullOrEmpty(loadout.districtIDs[i])) return false;
+            return true;
+        }
+
         public static string[] LockedDistricts(int arena)
         {
             return LoadoutCapacityPolicy.GetsFreeGrants(arena)

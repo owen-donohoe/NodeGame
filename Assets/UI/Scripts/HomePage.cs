@@ -59,7 +59,7 @@ namespace NodeWar.Lobby
 
             Bind("home-battle", () =>
             {
-                if (!NodeWar.Backend.LoadoutCapacityPolicy.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena))
+                if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena))
                 {
                     Say("Fill your loadout");
                     LoadoutRequested?.Invoke();
@@ -171,7 +171,7 @@ namespace NodeWar.Lobby
             LoadoutEditor loadout = catalog.CurrentLoadout();
             bool nodesShort = !loadout.DistrictSlotsFull;
             bool suitsShort = !loadout.SuitSlotsFull;
-            bool complete = NodeWar.Backend.LoadoutCapacityPolicy.IsComplete(loadout.ToLoadout(), catalog.Arena);
+            bool complete = LoadoutRules.IsComplete(loadout.ToLoadout(), catalog.Arena);
             Button battle = Root.Q<Button>("home-battle");
             if (battle != null)
             {

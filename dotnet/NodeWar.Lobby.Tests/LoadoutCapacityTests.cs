@@ -38,7 +38,7 @@ namespace NodeWar.Lobby.Tests
             var editor = LoadoutRules.LocalEditor(LoadoutData.CreateEmpty(2), 2);
             var deck = editor.ToLoadout();
             Assert.IsTrue(LoadoutCapacityPolicy.IsHighShape(deck.suitIDs.Length, deck.districtIDs.Length));
-            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(deck, 2));
+            Assert.IsFalse(LoadoutRules.IsComplete(deck, 2));
             Assert.IsFalse(LoadoutMatchSetup.GetsFreeGrants(deck));
         }
 
@@ -51,9 +51,9 @@ namespace NodeWar.Lobby.Tests
             remote.suitEras[(int)SuitType.Guardian] = 2;
             remote.skinIDs = new[] { "skin.suit.guardian.default" };
             var low = LoadoutRules.LocalEditor(remote, 1).ToLoadout();
-            Assert.IsTrue(LoadoutCapacityPolicy.IsComplete(low, 1));
+            Assert.IsTrue(LoadoutRules.IsComplete(low, 1));
             var promoted = LoadoutRules.LocalEditor(low, 2).ToLoadout();
-            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(promoted, 2));
+            Assert.IsFalse(LoadoutRules.IsComplete(promoted, 2));
             Assert.AreEqual("", promoted.suitIDs[2]);
             Assert.AreEqual(2, promoted.suitEras[(int)SuitType.Guardian]);
             CollectionAssert.AreEqual(remote.skinIDs, promoted.skinIDs);
@@ -70,7 +70,7 @@ namespace NodeWar.Lobby.Tests
             var sanitized = LoadoutRules.LocalEditor(source, 1).ToLoadout();
             Assert.AreEqual("", sanitized.suitIDs[0]);
             Assert.AreEqual("", sanitized.districtIDs[0]);
-            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(sanitized, 1));
+            Assert.IsFalse(LoadoutRules.IsComplete(sanitized, 1));
             Assert.AreEqual("suit_warrior", source.suitIDs[0]);
         }
 
@@ -84,10 +84,10 @@ namespace NodeWar.Lobby.Tests
             var frozen = LoadoutTypes.WithEquipment(LoadoutRules.LocalEditor(source, 2).ToLoadout(), state);
             source.suitIDs[0] = "";
             state.Rank.Arena = 1;
-            Assert.IsTrue(LoadoutCapacityPolicy.IsComplete(frozen, 2));
+            Assert.IsTrue(LoadoutRules.IsComplete(frozen, 2));
             Assert.AreEqual("suit_scout", frozen.suitIDs[0]);
             Assert.AreEqual(5, frozen.districtIDs.Length);
-            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(LoadoutRules.LocalEditor(source, 2).ToLoadout(), 2));
+            Assert.IsFalse(LoadoutRules.IsComplete(LoadoutRules.LocalEditor(source, 2).ToLoadout(), 2));
         }
         [TestCase(0, 2, 2, true)]
         [TestCase(1, 2, 2, true)]
@@ -257,26 +257,26 @@ namespace NodeWar.Lobby.Tests
         [TestCase(100)]
         public void IsComplete_RequiresEveryEffectiveChosenSlot(int arena)
         {
-            Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(default, arena));
+            Assert.IsFalse(LoadoutRules.IsComplete(default, arena));
             var deck = LoadoutData.CreateEmpty(arena);
             for (int i = 0; i < deck.suitIDs.Length; i++) deck.suitIDs[i] = "s" + i;
             for (int i = 0; i < deck.districtIDs.Length; i++) deck.districtIDs[i] = "d" + i;
-            Assert.IsTrue(LoadoutCapacityPolicy.IsComplete(deck, arena));
+            Assert.IsTrue(LoadoutRules.IsComplete(deck, arena));
             for (int i = 0; i < deck.suitIDs.Length; i++)
             {
                 string saved = deck.suitIDs[i];
                 deck.suitIDs[i] = null;
-                Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(deck, arena));
+                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena));
                 deck.suitIDs[i] = saved;
             }
             for (int i = 0; i < deck.districtIDs.Length; i++)
             {
                 string saved = deck.districtIDs[i];
                 deck.districtIDs[i] = "";
-                Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(deck, arena));
+                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena));
                 deck.districtIDs[i] = saved;
             }
-            if (arena < 2) Assert.IsFalse(LoadoutCapacityPolicy.IsComplete(deck, 2));
+            if (arena < 2) Assert.IsFalse(LoadoutRules.IsComplete(deck, 2));
         }
     }
 }

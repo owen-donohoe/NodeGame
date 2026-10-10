@@ -124,7 +124,7 @@ namespace NodeWar.Lobby
             LoadoutData choices = catalog.CurrentLoadout(launchState).ToLoadout();
             PlayerProfile.Instance?.SetLoadout(choices);
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
-            if (!NodeWar.Backend.LoadoutCapacityPolicy.IsComplete(choices, arena))
+            if (!LoadoutRules.IsComplete(choices, arena))
             {
                 Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
                 return false;
@@ -142,7 +142,7 @@ namespace NodeWar.Lobby
                 return false;
             }
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
-            if (NodeWar.Backend.LoadoutCapacityPolicy.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena))
+            if (LoadoutRules.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena))
                 return true;
             Cleanup();
             Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
