@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:56:36Z }
-verified_at_commit: 9ba34e8cef15a13ce37f2cc122827603463455d7
+  - { by: gpt-6, at: 2026-10-10T22:45:37Z }
+verified_at_commit: 406403ca423d854863c3e5b04c84078ec82572f5
 status: stable
 sources:
   - id: sim-state
@@ -108,7 +108,13 @@ sources:
     last_modified: 2026-09-27T17:00:22-04:00
   - id: loadout-capacity
     resource: Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs
-    title: Arena capacities, canonical shapes and local completeness
+    title: Integer-only shared arena capacities and canonical shapes
+  - id: loadout-rules
+    resource: Assets/UI/Scripts/LoadoutRules.cs
+    title: Display locks and local chosen-loadout completeness
+  - id: workshop-style
+    resource: Assets/UI/Styles/Workshop.uss
+    title: Workshop layout, clipping and floating-navigation clearance
   - id: loadout-data
     resource: Assets/Scripts/Lobby/Data/LoadoutData.cs
     title: Shape-preserving normalization and explicit local resizing
@@ -387,7 +393,8 @@ use white tint; other sprites
 use the existing glyph tint. Images scale to fit, centred, with letterboxing.
 Missing entries keep the generated vectors; unknown kinds get a placeholder.
 
-Existing enum names and values are unchanged; semantic kinds are appended.
+Surviving enum names and values are unchanged; retired serialized values stay
+reserved and semantic kinds are appended.
 Every new kind shares its predecessor's drawing until its own art is assigned.
 Existing theme entries without a context deserialize to `Anywhere` (explicit
 enum value zero; the serialized field has no nonzero initializer). No asset
@@ -468,9 +475,8 @@ art keeps each screen's own fallback; Workshop locks remain visible. The UI
 does not consume the district accent colour.
 
 Gauge skins remain procedural. Set USS custom properties on matching elements
-or their ancestors: `--tree-edge-color`, `--tree-edge-owned-color`,
-`--tree-line-width`, `--tree-disc-size` on `.st-canvas`; `--res-thickness` and
-`--res-stop-0` through `--res-stop-5` on `.hud__res-ring` (including sheet
+or their ancestors: `--res-thickness` and `--res-stop-0` through `--res-stop-5`
+on `.hud__res-ring` (including sheet
 readouts); `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` on
 the progress dial. Geometry properties are unitless pixel numbers, bounded
 by the painter and its host; omitted properties retain today's defaults.
@@ -1014,7 +1020,9 @@ Three objects are carried across the Lobby → Gameplay scene load via
   the right. Tapping a card only previews it (`LoadoutScreenModel`); Use equips the
   first empty chosen slot or refuses a full deck, and tapping a filled chosen slot
   clears it. Variants and Skins open as bottom sheets inside `workshop-panel-host`
-  with a local scrim, so the header and loadout rows stay visible. Variants appear
+  with a local scrim, so the header and loadout rows stay visible. Workshop reserves
+  96px below its content so the actions and local sheets clear the floating lobby
+  navigation. Variants appear
   only for real tree suits (`SuitTree` sidegrades); districts and non-tree suits
   hide the button. The Skins sheet works for suits and districts, with a looping
   `SkinBand` (13 reusable tiles positioned by `SkinBandMath`) and a "Buy another box"
