@@ -54,6 +54,23 @@ namespace NodeWar.View
         private NodeWar.Core.ITickProvider tickProvider;
         private NodeWar.View.VillagerPositioner[] villagerPositioners;
 
+        /// <summary>Current world bounds of sprite art after facing; excludes health UI and breach lines.</summary>
+        public bool TryGetSpriteBounds(out Bounds bounds)
+        {
+            bounds = default;
+            bool found = false;
+            if (spriteRenderers == null) return false;
+            for (int i = 0; i < spriteRenderers.Length; i++)
+            {
+                SpriteRenderer sprite = spriteRenderers[i];
+                if (sprite == null || sprite.sprite == null || !sprite.enabled || !sprite.gameObject.activeInHierarchy) continue;
+                if (!found) bounds = sprite.bounds;
+                else bounds.Encapsulate(sprite.bounds);
+                found = true;
+            }
+            return found;
+        }
+
         public void Initialize(SimulationState state, int id)
         {
             simState = state;

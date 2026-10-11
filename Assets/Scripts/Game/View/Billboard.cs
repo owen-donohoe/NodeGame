@@ -18,6 +18,10 @@ namespace NodeWar.View
         public bool useCustomAngle = false;
         public Vector3 customEulerAngles;
 
+        [Tooltip("Use a fixed pitch from vertical for sprite art. Canvas billboards remain camera-facing.")]
+        public bool useUprightPitch = true;
+        [Range(0f, 89f)] public float uprightPitch = VillagerTiltMath.DefaultPitch;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
@@ -68,11 +72,7 @@ namespace NodeWar.View
 
         private void LateUpdate()
         {
-            // LateUpdate so it runs after any parent position changes
-            if (!useCustomAngle)
-            {
-                transform.rotation = sharedFacing;
-            }
+            ApplyFacing();
         }
 
         private void ApplyFacing()
@@ -83,7 +83,16 @@ namespace NodeWar.View
             }
             else
             {
-                transform.rotation = sharedFacing;
+                // UI is independent of the sprite pitch, even on older prefabs.
+                bool upright = useUprightPitch && GetComponent<Canvas>() == null;
+                Vector3 cameraEuler = sharedFacing.eulerAngles;
+                var facing = VillagerTiltMath.Facing(cameraEuler.x, cameraEuler.y,
+                    cameraEuler.z, upright, uprightPitch);
+                Quaternion rotation = upright
+                    ? Quaternion.Euler(facing.Pitch, facing.Yaw, facing.Roll)
+                    : sharedFacing;
+                SpriteOrientationOffset offset = GetComponent<SpriteOrientationOffset>();
+                transform.rotation = offset != null ? offset.Compose(rotation) : rotation;
             }
         }
     }

@@ -25,7 +25,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2288015694539348911}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.1736482, y: -0, z: -0, w: 0.9848078}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -47,6 +47,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.View.Billboard
   useCustomAngle: 0
   customEulerAngles: {x: 0, y: 0, z: 0}
+  useUprightPitch: 1
+  uprightPitch: 20
 --- !u!1 &2566691550446617631
 GameObject:
   m_ObjectHideFlags: 0
@@ -649,6 +651,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.View.Billboard
   useCustomAngle: 0
   customEulerAngles: {x: 0, y: 0, z: 0}
+  useUprightPitch: 0
+  uprightPitch: 20
 --- !u!1 &8879186660568526774
 GameObject:
   m_ObjectHideFlags: 0
