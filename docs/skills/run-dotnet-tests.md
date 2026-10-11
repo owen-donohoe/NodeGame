@@ -6,8 +6,8 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
-verified_at_commit: f88a4321fdca1b12f82750e790b6558e092daa1b
+  - { by: gpt-6, at: 2026-10-11T19:03:46Z }
+verified_at_commit: 912876a5731b374bdcc7ec7079f25931c3f31049
 status: draft
 sources:
   - id: solution
@@ -180,6 +180,13 @@ accepted drafted Guardian and unsuited paid Respawn. At `95da9bdd`, the solution
 test command and compile-check were each attempted once and blocked by MSB4184
 before compilation. The lead must run both, generate the new asset's metadata,
 and manually verify mixed-seat launches in Unity; no passing receipt is claimed.
+
+At `912876a5`, `LoadoutMatchSetupTests` replaces match-boundary rejection assertions
+with deterministic sanitized-output assertions, adds two partially null shape cases
+and a default-loadout low map-pool/Warrior case (three additional cases). The input
+arrays remain unchanged; canonical high blanks keep high mode. Completeness remains
+a player-side UI check. Both required commands stopped before compilation with
+MSB4184 SDK access denial; no new passing total or Unity launch verification is claimed.
 
 P1.2e adds 11 lobby cases in LoadoutCapacityTests: Warrior/high offers, low grant
 exclusions, incomplete high-mode retention, local-only promotion/demotion,
