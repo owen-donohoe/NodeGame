@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using NodeWar.Backend;
 using NodeWar.Simulation;
@@ -17,13 +16,13 @@ namespace NodeWar.Lobby
     {
         public static bool GetsFreeGrants(LoadoutData loadout)
         {
-            Validate(loadout);
+            loadout = Sanitize(loadout);
             return IsLow(loadout);
         }
 
         public static DraftPoolEntry[] DistrictPool(LoadoutData loadout, DistrictType[] mapBasePool)
         {
-            Validate(loadout);
+            loadout = Sanitize(loadout);
             var pool = new List<DraftPoolEntry>();
             if (IsLow(loadout) && mapBasePool != null)
                 for (int i = 0; i < mapBasePool.Length; i++)
@@ -38,7 +37,7 @@ namespace NodeWar.Lobby
 
         public static int[] DraftedSuits(LoadoutData loadout)
         {
-            Validate(loadout);
+            loadout = Sanitize(loadout);
             var suits = new List<int>();
             bool low = IsLow(loadout);
             if (low) suits.Add((int)SuitType.Warrior);
@@ -54,7 +53,7 @@ namespace NodeWar.Lobby
         /// <summary>Chosen types only; effective base pieces are represented by placements.</summary>
         public static int[] DraftedDistricts(LoadoutData loadout)
         {
-            Validate(loadout);
+            loadout = Sanitize(loadout);
             var districts = new List<int>();
             for (int i = 0; i < loadout.districtIDs.Length; i++)
                 if (!string.IsNullOrEmpty(loadout.districtIDs[i]))
@@ -65,23 +64,23 @@ namespace NodeWar.Lobby
         private static bool IsLow(LoadoutData loadout) =>
             LoadoutCapacityPolicy.IsLowShape(loadout.suitIDs.Length, loadout.districtIDs.Length);
 
-        private static void Validate(LoadoutData loadout)
+        // Normalize a detached copy, then keep only the first valid choice of each type.
+        // Slot order and canonical shape determine identical results on both peers.
+        private static LoadoutData Sanitize(LoadoutData loadout)
         {
-            int suits = loadout.suitIDs == null ? 0 : loadout.suitIDs.Length;
-            int districts = loadout.districtIDs == null ? 0 : loadout.districtIDs.Length;
-            if (!LoadoutCapacityPolicy.IsLowShape(suits, districts) &&
-                !LoadoutCapacityPolicy.IsHighShape(suits, districts))
-                throw new ArgumentException("Match loadout must have canonical 2/2 or 3/5 shape.", nameof(loadout));
+            loadout = LoadoutData.Normalized(loadout);
+            int suits = loadout.suitIDs.Length;
+            int districts = loadout.districtIDs.Length;
 
             for (int i = 0; i < suits; i++)
             {
                 if (string.IsNullOrEmpty(loadout.suitIDs[i])) continue;
                 SuitType type = LoadoutTypes.SuitForLobbyId(loadout.suitIDs[i]);
                 if (type == SuitType.None)
-                    throw new ArgumentException("Unknown chosen suit.", nameof(loadout));
+                    loadout.suitIDs[i] = "";
                 for (int j = 0; j < i; j++)
                     if (type == LoadoutTypes.SuitForLobbyId(loadout.suitIDs[j]))
-                        throw new ArgumentException("Duplicate chosen suit.", nameof(loadout));
+                        loadout.suitIDs[i] = "";
             }
             for (int i = 0; i < districts; i++)
             {
@@ -89,11 +88,12 @@ namespace NodeWar.Lobby
                 DistrictType type = LoadoutTypes.DistrictForLobbyId(loadout.districtIDs[i]);
                 DistrictType source = (DistrictType)DistrictMigration.SourceType(loadout.districtIDs[i]);
                 if (type == DistrictType.None || type == DistrictType.Core || !DistrictRoster.IsActive(source))
-                    throw new ArgumentException("Invalid chosen district.", nameof(loadout));
+                    loadout.districtIDs[i] = "";
                 for (int j = 0; j < i; j++)
                     if (type == LoadoutTypes.DistrictForLobbyId(loadout.districtIDs[j]))
-                        throw new ArgumentException("Duplicate chosen district.", nameof(loadout));
+                        loadout.districtIDs[i] = "";
             }
+            return loadout;
         }
     }
 }

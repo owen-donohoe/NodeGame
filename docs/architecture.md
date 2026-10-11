@@ -886,10 +886,13 @@ Three objects are carried across the Lobby → Gameplay scene load via
   beside `LoadoutData`; the policy stays integer-only for the Shared assembly
   and Cloud Code). Home dims Battle and
   shows "Fill your loadout" for any empty slot at every arena; tapping it toasts
-  that reason and opens Workshop. Launch preflight and the final connection
-  boundary re-check completeness, so a deck emptied mid-flow cannot launch.
-- `LoadoutMatchSetup` — validates canonical shapes, supported IDs and duplicate
-  choices at the match boundary, preserving chosen order and blank-slot mode.
+  that reason and opens Workshop. `MatchLauncher`/`PlayPopup` re-check completeness
+  during player-side launch flow, so a deck emptied mid-flow cannot launch there.
+  Dev launches, bots, the test harness and match setup do not require filled slots.
+- `LoadoutMatchSetup` — normalizes a detached copy through `LoadoutData.Normalized`
+  at the match boundary: default/null and noncanonical shapes become low 2/2;
+  unknown, retired, Core and duplicate choices become blanks. The first valid
+  choice of each type stays in slot order, and mode follows the canonical shape.
   Low loadouts receive the player's original map base pool plus chosen districts
   and Warrior plus chosen non-global suits. High loadouts receive only chosen
   districts and suits; Warrior may be absent or selected once. Resolved
@@ -1129,9 +1132,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
   differ from protocol 5, so old clients are refused; Cloud Code is redeployed by hand after
   merge). From arena 2 every slot is free: three suits and five districts, with no free base
   district pool and no Warrior grant, so a deck may omit Warrior and then no villager starts
-  armed. Below arena 2 the two-and-two layout keeps its grants. A deck with any empty chosen
-  slot cannot launch (`LoadoutRules.IsComplete`, rechecked by `MatchLauncher`); Home's
-  Battle button explains it and opens the Workshop.
+  armed. Below arena 2 the two-and-two layout keeps its grants. Player-side UI checks
+  block a deck with any empty chosen slot (`LoadoutRules.IsComplete`, rechecked by
+  `MatchLauncher`); Home's Battle button explains it and opens the Workshop.
+  Match setup sanitizes choices and never enforces completeness.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
   Its bottom-centre count/clear control keeps `hud-selbar`/`hud-selbar-count`
   under the non-picking `hud-selbar-dock`, inset to the safe rectangle. Empty

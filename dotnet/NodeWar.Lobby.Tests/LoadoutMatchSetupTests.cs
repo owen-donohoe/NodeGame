@@ -194,24 +194,91 @@ namespace NodeWar.Lobby.Tests
         [TestCase("core")]
         [TestCase("retiredDistrict")]
         [TestCase("nullShape")]
-        public void InvalidChoices_RejectAtMatchBoundary(string invalid)
+        [TestCase("nullSuits")]
+        [TestCase("nullDistricts")]
+        public void InvalidChoices_SanitizeAtMatchBoundary(string invalid)
         {
             var loadout = High();
+            var suits = new[] { (int)SuitType.Guardian, (int)SuitType.Medic, (int)SuitType.Scout };
+            var districts = new[] { (int)DistrictType.Barracks, (int)DistrictType.Forge,
+                (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Village };
+            bool low = false;
             switch (invalid)
             {
-                case "shape": loadout.districtIDs = new string[2]; break;
-                case "unknownSuit": loadout.suitIDs[0] = "suit_unknown"; break;
-                case "unknownDistrict": loadout.districtIDs[0] = "node_unknown"; break;
-                case "duplicateSuit": loadout.suitIDs[1] = "suit.guardian"; break;
-                case "duplicateDistrict": loadout.districtIDs[1] = "district.barracks"; break;
-                case "core": loadout.districtIDs[0] = "node_core"; break;
-                case "retiredDistrict": loadout.districtIDs[0] = "node_camp"; break;
-                case "nullShape": loadout = default; break;
+                case "shape":
+                    loadout.districtIDs = new string[2];
+                    low = true;
+                    suits = new[] { (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Medic };
+                    districts = Array.Empty<int>();
+                    break;
+                case "unknownSuit":
+                    loadout.suitIDs[0] = "suit_unknown";
+                    suits = suits.Skip(1).ToArray();
+                    break;
+                case "unknownDistrict":
+                    loadout.districtIDs[0] = "node_unknown";
+                    districts = districts.Skip(1).ToArray();
+                    break;
+                case "duplicateSuit":
+                    loadout.suitIDs[1] = "suit.guardian";
+                    suits = new[] { (int)SuitType.Guardian, (int)SuitType.Scout };
+                    break;
+                case "duplicateDistrict":
+                    loadout.districtIDs[1] = "district.barracks";
+                    districts = new[] { (int)DistrictType.Barracks, (int)DistrictType.Farm,
+                        (int)DistrictType.Mine, (int)DistrictType.Village };
+                    break;
+                case "core":
+                    loadout.districtIDs[0] = "node_core";
+                    districts = districts.Skip(1).ToArray();
+                    break;
+                case "retiredDistrict":
+                    loadout.districtIDs[0] = "node_camp";
+                    districts = districts.Skip(1).ToArray();
+                    break;
+                case "nullShape":
+                    loadout = default;
+                    low = true;
+                    suits = new[] { (int)SuitType.Warrior };
+                    districts = Array.Empty<int>();
+                    break;
+                case "nullSuits":
+                    loadout.suitIDs = null;
+                    low = true;
+                    suits = new[] { (int)SuitType.Warrior };
+                    districts = districts.Take(2).ToArray();
+                    break;
+                case "nullDistricts":
+                    loadout.districtIDs = null;
+                    low = true;
+                    suits = new[] { (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Medic };
+                    districts = Array.Empty<int>();
+                    break;
             }
-            Assert.Throws<ArgumentException>(() => LoadoutMatchSetup.GetsFreeGrants(loadout));
-            Assert.Throws<ArgumentException>(() => LoadoutMatchSetup.DistrictPool(loadout, null));
-            Assert.Throws<ArgumentException>(() => LoadoutMatchSetup.DraftedSuits(loadout));
-            Assert.Throws<ArgumentException>(() => LoadoutMatchSetup.DraftedDistricts(loadout));
+            var originalSuits = loadout.suitIDs?.ToArray();
+            var originalDistricts = loadout.districtIDs?.ToArray();
+            Assert.AreEqual(low, LoadoutMatchSetup.GetsFreeGrants(loadout));
+            var pool = LoadoutMatchSetup.DistrictPool(loadout, null);
+            CollectionAssert.AreEqual(districts, pool.Select(p => (int)p.DistrictType));
+            Assert.IsTrue(pool.All(p => p.IsFromLoadout));
+            CollectionAssert.AreEqual(suits, LoadoutMatchSetup.DraftedSuits(loadout));
+            CollectionAssert.AreEqual(districts, LoadoutMatchSetup.DraftedDistricts(loadout));
+            CollectionAssert.AreEqual(suits, LoadoutMatchSetup.DraftedSuits(loadout));
+            CollectionAssert.AreEqual(originalSuits, loadout.suitIDs);
+            CollectionAssert.AreEqual(originalDistricts, loadout.districtIDs);
+        }
+
+        [Test]
+        public void DefaultLoadout_LowMapPoolAndWarrior()
+        {
+            LoadoutData loadout = default;
+            var basePool = PremadeMaps.Hourglass01().baseDraftDistrictsP0;
+            var pool = LoadoutMatchSetup.DistrictPool(loadout, basePool);
+            Assert.IsTrue(LoadoutMatchSetup.GetsFreeGrants(loadout));
+            CollectionAssert.AreEqual(basePool, pool.Select(p => p.DistrictType));
+            Assert.IsTrue(pool.All(p => !p.IsFromLoadout));
+            CollectionAssert.AreEqual(new[] { (int)SuitType.Warrior }, LoadoutMatchSetup.DraftedSuits(loadout));
+            Assert.IsEmpty(LoadoutMatchSetup.DraftedDistricts(loadout));
         }
     }
 }
