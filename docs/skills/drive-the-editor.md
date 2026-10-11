@@ -87,6 +87,10 @@ entirely. A temporary GameObject carrying a `MatchConnection` with
 `isBotMatch = true`, added in Edit mode, is enough — its `Awake` runs before
 `GameManager` reads the singleton.
 
+Give it a loadout too: `loadout = NodeWar.Lobby.LoadoutData.CreateEmpty()`.
+Match setup accepts only the canonical 2/2 or 3/5 shapes, so a `default`
+loadout throws in the draft and the match stays in Drafting.
+
 Two things about that to know in advance, because both read as "my code is
 broken" when they happen:
 
