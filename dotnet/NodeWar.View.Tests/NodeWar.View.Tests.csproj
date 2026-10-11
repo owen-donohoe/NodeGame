@@ -24,6 +24,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="VillagerHealthMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/VillagerHealthMath.cs" Link="View/VillagerHealthMath.cs" />
     <Compile Include="VillagerTiltMathTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/VillagerTiltMath.cs" Link="View/VillagerTiltMath.cs" />
     <Compile Include="VillagerLayoutMathTests.cs" />

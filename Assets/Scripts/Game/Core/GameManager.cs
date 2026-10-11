@@ -1740,9 +1740,9 @@ namespace NodeWar.Core
                 ? gestureSource.Thresholds
                 : null);
 
-            VillagerHealthRing healthRing = villagerGO.GetComponentInChildren<VillagerHealthRing>();
-            if (healthRing != null)
-                healthRing.Initialize(state, index);
+            VillagerHealthBar healthBar = villagerGO.GetComponentInChildren<VillagerHealthBar>();
+            if (healthBar != null)
+                healthBar.Initialize(state, index, view);
         }
     }
 }
