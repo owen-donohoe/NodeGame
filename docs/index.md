@@ -37,6 +37,9 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [suit-tree-spec](suit-tree-spec.md) — draft: per-arena suit unlocks and branching variants
   mapped onto the existing era and catalog system, a content budget, and the lobby tree and
   info panel. Declares no sources: it describes work not yet done.
+* [lobby-mockup](lobby-mockup.md) — draft design input: the newer "Little Kingdoms" lobby wireframe
+  (Home, Loadout, Shop, Social, Profile). The target lobby combines it with the current lobby and
+  Unity 3D presentation. Import is incomplete; see the note at its top.
 * [ui-input-and-claim-rework](ui-input-and-claim-rework.md) — draft: a five-phase plan for the lobby
   loadout screen (T layout, variants and skins panels), paint and triple-tap selection, bigger
   and clearer villagers, ownership outlines and zoom dither, and a perimeter claim bar with a
