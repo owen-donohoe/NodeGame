@@ -11,6 +11,10 @@ namespace NodeWar.View
         [SerializeField] private float VillagerViewHeight = 0.1f;
         [SerializeField, Min(0.01f)] private float spriteSizeMultiplier = VillagerLayoutMath.DefaultSizeMultiplier;
 
+        [Header("Swing")]
+        [SerializeField, Range(0f, 0.3f)] private float swingScaleAmount = 0.08f;
+        [SerializeField, Min(0.05f)] private float swingDuration = 0.25f;
+
         [Header("Movement")]
         [SerializeField] private float slotLerpSpeed = 8f;
 
@@ -77,12 +81,22 @@ namespace NodeWar.View
             villagerID = id;
             initialized = true;
             lastObservation = default;
+            swingStartTime = float.NegativeInfinity;
 
             gfxTransform = transform.Find("GFX");
 
             if (gfxTransform != null)
             {
                 spriteRenderers = gfxTransform.GetComponentsInChildren<SpriteRenderer>();
+                if (swingTransform == null)
+                {
+                    Billboard facing = gfxTransform.GetComponentInChildren<Billboard>();
+                    if (facing != null)
+                    {
+                        swingTransform = facing.transform;
+                        swingBaseScale = swingTransform.localScale;
+                    }
+                }
                 if (!gfxScaleCached)
                 {
                     authoredGfxScale = gfxTransform.localScale;
@@ -129,9 +143,24 @@ namespace NodeWar.View
             public bool valid;
             public bool alive;
             public int hp;
+            public bool inCombat;
+            public int attackCooldownRemaining;
         }
 
         private TickObservation lastObservation;
+        private float swingStartTime = float.NegativeInfinity;
+        private Transform swingTransform;
+        private Vector3 swingBaseScale = Vector3.one;
+
+        // Pulses only the sprite Billboard child's scale. The root, the GFX
+        // baseline size, rotation, colliders, health canvas and breach ring stay.
+        private void ApplySwingScale()
+        {
+            if (swingTransform == null) return;
+            bool reduced = breachCues != null && breachCues.reducedMotion;
+            float pulse = reduced ? 0f : VillagerSwingMath.Pulse(Time.time - swingStartTime, swingDuration);
+            swingTransform.localScale = swingBaseScale * (1f + swingScaleAmount * pulse);
+        }
 
         private void OnTickSimulated(NodeWar.Simulation.TickEventLog log)
         {
@@ -145,6 +174,15 @@ namespace NodeWar.View
             VillagerData villager = simState.villagers[villagerID];
             bool alive = villager.state != VillagerState.Dead && !villager.isConsumed;
             bool sameLife = VillagerFlashMath.SameLife(lastObservation.valid, lastObservation.alive, alive);
+            bool inCombat = alive && villager.state == VillagerState.Fighting;
+
+            // The cooldown reset is the tick it hit or healed. Read only; one
+            // observation per tick keeps catch-up ticks from collapsing together.
+            if (VillagerSwingMath.ShouldSwing(lastObservation.valid, lastObservation.alive, lastObservation.inCombat,
+                    lastObservation.attackCooldownRemaining, alive, inCombat,
+                    villager.attackCooldownRemaining, villager.attackCooldownMax))
+                swingStartTime = Time.time;
+            if (!inCombat) swingStartTime = float.NegativeInfinity;
 
             // Flash is added by GameManager after Initialize, so resolve it here.
             VillagerFlash flash = GetComponent<VillagerFlash>();
@@ -160,6 +198,8 @@ namespace NodeWar.View
             lastObservation.valid = true;
             lastObservation.alive = alive;
             lastObservation.hp = villager.hp;
+            lastObservation.inCombat = inCombat;
+            lastObservation.attackCooldownRemaining = villager.attackCooldownRemaining;
         }
 
         public void SetVillagerPositioners(NodeWar.View.VillagerPositioner[] managers)
@@ -357,6 +397,7 @@ namespace NodeWar.View
             if (!initialized) return;
 
             UpdateVisuals();
+            ApplySwingScale();
         }
 
         private void UpdateVisuals()
