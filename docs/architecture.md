@@ -1226,8 +1226,24 @@ Three objects are carried across the Lobby → Gameplay scene load via
   slot, then the default; `BoardArtPlacer` applies offset, rotation and scale.
   Missing entries preserve existing board art. Board and flat UI art fall
   back independently.
-- `VillagerView` — villager visuals and movement interpolation.
-- `NodeClaimBar`, `VillagerHealthRing` — world-space status indicators.
+- `VillagerView` — villager visuals and movement interpolation. The sprite art
+  is the GFX child scaled to 1.35x its authored size (`VillagerLayoutMath`;
+  root, colliders and the breach radius are unchanged), faces through its
+  `Billboard` child, and `TryGetSpriteBounds` exposes the final sprite bounds
+  (no health UI, particles or breach lines). It also holds the one per-tick
+  observation of each villager, taken from `ITickProvider.TickSimulated` after
+  every tick, catch-up ticks included: an HP drop inside one life feeds the
+  damage flash, and a cooldown reset while fighting starts a swing. Both are
+  read-only against `SimulationState`.
+- `NodeClaimBar`, `VillagerHealthBar` — world-space status indicators. The
+  villager bar is a horizontal uGUI track and fill above the sprite bounds
+  (`VillagerHealthMath`), shown only while the villager is alive and damaged,
+  camera-facing independently of the sprite tilt. The next-breacher ring stays
+  a separate `VillagerView` line renderer.
+- `VillagerTiltMath` / `Billboard` / `NodePresentation` — every world-space
+  sprite (villager GFX and district art) defaults to a 20 degree pitch from
+  vertical, one shared constant (`VillagerTiltMath.DefaultPitch`), tunable per
+  component in the Inspector. Canvases and the floor-plane items do not tilt.
 - `CoreBreachBar` — runtime-added Core progress bar when the channel is
   enabled; `BreachCueSettings` is shared with villager highlighting and
   the HUD's accessibility flags.
@@ -1235,8 +1251,17 @@ Three objects are carried across the Lobby → Gameplay scene load via
   and, configured smaller, for the lasso-armed cue.
 - `VillagerTouchTarget` — constant-screen-size tap collider, built at
   runtime so the villager prefab needs no edit.
-- `VillagerFlash` — touch-down white flash amount, composed over the
-  per-state tint by `VillagerView`.
+- `VillagerFlash` / `VillagerFlashMath` — the white flash amount (linear
+  decay, one restart rule), composed over the per-state tint by
+  `VillagerView`. Touch-down, order feedback and damage all call `Flash()`.
+  Damage is observed as an HP decrease between ticks, so a hit cancelled by a
+  same-tick heal is invisible; there is no simulation damage event.
+- `VillagerSwingMath` — the swing pulse. A swing starts when a fighting
+  villager's `attackCooldownRemaining` was reset to its maximum since the
+  previous observation, which is the tick it hit or healed. The pulse scales
+  only the sprite `Billboard` child (default 8% over 0.25s, serialized on
+  `VillagerView`), is zero at rest and under reduced motion, and first
+  observation, respawn and entering or leaving combat never start one.
 - `PathCurve` — rounds a node path into the curve a route is drawn along and
   a villager walks. Corner rounding rather than Chaikin, because the
   waypoints are leg boundaries the sprite has to arrive on.

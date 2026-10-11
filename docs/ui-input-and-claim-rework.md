@@ -140,19 +140,18 @@ and `NodeWar.Lobby.Tests`. Device acceptance remains separate from tests and
 Editor compilation; a landed contract does not assert that every manual check
 has been performed. Claim visuals and the future phases below are unchanged.
 
-## 6. Phase 3 — Villager readability (view only)
+## 6. Phase 3 — Villager readability (landed)
 
-1. Bigger villagers (`VillagerView`, `VillagerPositioner`). Re-check spacing in crowded nodes
-   and `VillagerTouchTarget` sizes.
-2. Replace `VillagerHealthRing` with a conventional world-space health bar. Keep the breach
-   ring (`VillagerView.UpdateBreachRing`).
-3. White flash on damage via `VillagerFlash` / `HitFlashRouter`.
-4. Attacks on each villager's own clock. First read `TickEvents` and the combat step to see what
-   the simulation exposes. If there is no per-villager swing event, stagger the view animation
-   per villager ID. Never write sim state to do this.
-5. Tilt sprites more vertical so they read as 2D cut-outs (`SpriteOrientationOffset`,
-   `Billboard`). Expose the angle as a tunable.
+The runtime changes are landed. Current contracts live in
+[architecture's View layer](architecture.md#key-classes-per-layer): the `VillagerView`,
+`VillagerHealthBar`, `VillagerTiltMath`, `VillagerFlash` and `VillagerSwingMath`
+entries cover the 1.35x size, the shared 20 degree world-sprite tilt, the damaged-only
+HP bar, the damage flash and the swing on the real cooldown reset.
 
+Code entry points are `VillagerLayoutMath`, `VillagerTiltMath`, `VillagerHealthMath`,
+`VillagerFlashMath` and `VillagerSwingMath` (pure, with tests in `NodeWar.View.Tests`),
+and the `VillagerView` per-tick observation. A landed contract does not assert that
+device or phone-sized readability checks have been performed.
 ## 7. Phase 4 — Ownership readability (view only)
 
 Follows the 60-30-10 idea: 60% main colour, 30% secondary, 10% accent plus accent shape, where
