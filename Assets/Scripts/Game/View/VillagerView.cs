@@ -76,6 +76,7 @@ namespace NodeWar.View
             simState = state;
             villagerID = id;
             initialized = true;
+            lastObservation = default;
 
             gfxTransform = transform.Find("GFX");
 
@@ -109,7 +110,56 @@ namespace NodeWar.View
 
         public void SetTickProvider(NodeWar.Core.ITickProvider provider)
         {
+            if (ReferenceEquals(tickProvider, provider)) return;
+            if (tickProvider != null) tickProvider.TickSimulated -= OnTickSimulated;
             tickProvider = provider;
+            if (tickProvider != null) tickProvider.TickSimulated += OnTickSimulated;
+        }
+
+        private void OnDestroy()
+        {
+            if (tickProvider != null) tickProvider.TickSimulated -= OnTickSimulated;
+        }
+
+        // Per-villager observation taken once after every simulated tick, catch-up
+        // ticks included. Later cues (the swing) extend this struct and
+        // ObserveTick rather than adding a second subscription.
+        private struct TickObservation
+        {
+            public bool valid;
+            public bool alive;
+            public int hp;
+        }
+
+        private TickObservation lastObservation;
+
+        private void OnTickSimulated(NodeWar.Simulation.TickEventLog log)
+        {
+            ObserveTick();
+        }
+
+        private void ObserveTick()
+        {
+            if (!initialized || simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return;
+
+            VillagerData villager = simState.villagers[villagerID];
+            bool alive = villager.state != VillagerState.Dead && !villager.isConsumed;
+            bool sameLife = VillagerFlashMath.SameLife(lastObservation.valid, lastObservation.alive, alive);
+
+            // Flash is added by GameManager after Initialize, so resolve it here.
+            VillagerFlash flash = GetComponent<VillagerFlash>();
+            if (!alive)
+            {
+                if (flash != null) flash.Clear();
+            }
+            else if (VillagerFlashMath.TookDamage(lastObservation.hp, villager.hp, sameLife))
+            {
+                if (flash != null) flash.Flash();
+            }
+
+            lastObservation.valid = true;
+            lastObservation.alive = alive;
+            lastObservation.hp = villager.hp;
         }
 
         public void SetVillagerPositioners(NodeWar.View.VillagerPositioner[] managers)
