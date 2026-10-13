@@ -1,7 +1,7 @@
 ---
 type: Direction
 title: Loadout screen, selection, readability and perimeter claim bar — rework plan
-description: A five-phase plan for the lobby loadout screen (T layout, variants and skins panels), paint/triple-tap selection, bigger and clearer villagers, ownership outlines and zoom dither, and a claim bar drawn around the node edge with a view-only speed remap. Written to be executed by an agent. Presentation only; nothing here touches Simulation/.
+description: A plan for the lobby loadout screen (T layout, variants and skins panels), paint/triple-tap selection, clearer villagers, and a claim bar drawn around the node edge with a view-only speed remap. Written to be executed by an agent. Presentation only; nothing here touches Simulation/.
 tags: [ui, lobby, loadout, input, selection, readability, claim-bar, mobile, plan]
 generated: { by: claude-sonnet-5-5, at: 2026-10-10T00:00:00Z }
 status: draft
@@ -39,7 +39,7 @@ Direction must be easy in a fast game on a small phone, especially vertically. T
 |---|---|
 | Claim-speed visuals | **View-only remap** of the existing `claimBar`. `Simulation/` untouched. |
 | Auto-centering camera | **Dropped.** Camera stays manual. |
-| Order of work | **Lobby first**, then input, villagers, ownership, claim bar. |
+| Order of work | **Lobby first**, then input, villagers, claim bar. (Phase 4, ownership readability, was dropped on 2026-10-13.) |
 | Loadout shape | Superseded by section 4: two suits and two districts below arena 2 (the granted pieces show as locked tiles), three suits and five districts from arena 2. |
 | Locked in arena 1 | Districts: Farm, Mine, Village. Suit: Warrior. |
 | "Buy another box" | **Placeholder.** No box, store or currency exists. Visible, shows a "Coming soon" toast. |
@@ -145,27 +145,19 @@ has been performed. Claim visuals and the future phases below are unchanged.
 The runtime changes are landed. Current contracts live in
 [architecture's View layer](architecture.md#key-classes-per-layer): the `VillagerView`,
 `VillagerHealthBar`, `VillagerTiltMath`, `VillagerFlash` and `VillagerSwingMath`
-entries cover the 1.35x size, the shared 20 degree world-sprite tilt, the damaged-only
+entries cover the prefab-authored size, the shared 20 degree world-sprite tilt, the damaged-only
 HP bar, the damage flash and the swing on the real cooldown reset.
 
 Code entry points are `VillagerLayoutMath`, `VillagerTiltMath`, `VillagerHealthMath`,
 `VillagerFlashMath` and `VillagerSwingMath` (pure, with tests in `NodeWar.View.Tests`),
 and the `VillagerView` per-tick observation. A landed contract does not assert that
 device or phone-sized readability checks have been performed.
-## 7. Phase 4 — Ownership readability (view only)
+## 7. Phase 4 — Ownership readability (dropped)
 
-Follows the 60-30-10 idea: 60% main colour, 30% secondary, 10% accent plus accent shape, where
-the accent colour and shape belong to the owner. District palettes come with the art pass; this
-phase needs only the owner colour and shape from `PlayerColors`.
-
-1. **Territory outline:** a thin outline at each node edge in the owner's colour. Alpha is a
-   function of camera zoom: clearly visible zoomed out, nearly transparent zoomed in.
-2. **Enemy villager outline:** enemy villagers are outlined inside their node (`OutlineDriver`,
-   `OutlineStyle`; the numeric order of `OutlineStyle` is the priority order).
-3. **Zoom-out dither:** a dither texture in the owner's colour over the district art and *under*
-   villagers, fading out as the camera zooms in. Decide between a per-node decal and a URP
-   renderer feature after profiling on a phone-class device.
-4. Tests: the zoom-to-alpha curve as a pure function.
+Dropped on 2026-10-13. A thin owner-coloured territory edge and its zoom fade were built and
+then reverted: the edge read weakly over the owner-tinted ground and duplicated what the
+Phase 5 perimeter outline is for. The zoom dither was never built. Enemy villagers already
+carry an owner-tinted `Present` outline (`OutlineDriver`), which is unchanged.
 
 ## 8. Phase 5 — Perimeter claim bar
 
@@ -211,8 +203,8 @@ Replaces the half-and-half `NodeClaimBar`.
   ready instance exists; otherwise list the manual checks in the report):
   - **Lobby:** locks, header kept, card grouping and ordering, greyscale and navy states, the
     era notice, Variants and Skins sheets, the looping band, Home still shows two suit chips.
-  - **Match:** paint select, triple-tap, no ring, centred count button, outlines and dither
-    across zoom, health bars and flashes, the perimeter bar through a contested capture
+  - **Match:** paint select, triple-tap, no ring, centred count button,
+    health bars and flashes, the perimeter bar through a contested capture
     including a Fortress pulse.
 - Update `architecture.md` (icon-context table, input section, UI description) and
   `game-model.md` (claim visuals) where they change, and re-verify them at commit time.
