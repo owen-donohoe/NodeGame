@@ -1,577 +1,70 @@
-/*
-    Workshop, after lobby-prototype.html. This layout is the one wanted in
-    game, so values here are the prototype's; change them only on purpose.
-
-    Label rules that set margin or padding are written .lb-root .lb-x, so they
-    outrank the label reset in Lobby.uss.
-
-    Differences from the prototype, all USS limits:
-      - empty slots have a translucent solid border; USS has no dashed border;
-      - the gold ring round full slots is a child element, not box-shadow;
-      - card and button shadows are sibling blocks, the picker's soft shadow
-        a blurred one;
-      - the grid is a wrapping row whose cards get their right margin from
-        WorkshopPage (every third card has none), since USS has no gap and no
-        :nth-child.
-*/
-
+/* Workshop only: chrome remains owned by LobbyChrome. */
 :root {
-    --workshop-slot-empty: rgba(244, 233, 213, 0.5);
-    --workshop-slot-empty-edge: rgba(45, 35, 25, 0.45);
-    --workshop-ready-ring: rgba(245, 195, 60, 0.7);
     --workshop-fam-round: rgb(127, 175, 99);
     --workshop-fam-square: rgb(126, 140, 168);
     --workshop-fam-triangle: rgb(195, 112, 90);
     --workshop-fam-combat: rgb(201, 139, 94);
-    --workshop-veil: rgba(235, 220, 195, 0.55);
-    --workshop-pick-lip: rgba(90, 70, 40, 0.4);
 }
 
-.lb-workshop-details {
-    flex-shrink: 0;
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    padding-top: var(--space-2);
-}
-
-.lb-workshop-details__text, .lb-era-message {
-    white-space: normal;
-    font-size: var(--type-caption);
-    color: var(--ink-mute);
-}
-
-.lb-era-row {
-    flex-grow: 0;
-    flex-shrink: 0;
-    min-width: 0;
-    height: 72px;
-    margin-top: var(--space-1);
-}
-
-.lb-era-row .unity-scroll-view__content-container {
-    flex-direction: row;
-    flex-wrap: nowrap;
-}
-
-.lb-era-chip {
-    min-width: var(--target-min);
-    min-height: var(--target-min);
-    flex-shrink: 0;
-    margin-right: var(--space-1);
-    margin-bottom: var(--space-1);
-    padding-left: var(--space-2);
-    padding-right: var(--space-2);
-    border-radius: var(--corner-sm);
-    background-color: var(--surface-raised);
-    color: var(--ink);
-    font-size: var(--type-caption);
-    white-space: nowrap;
-}
-
-/* Equipped stays non-interactive, but is selected rather than faded. */
-.lb-root .lb-era-chip--equipped,
-.lb-root .lb-era-chip--equipped:disabled {
-    opacity: 1;
-    background-color: var(--action);
-    color: var(--action-ink);
-    border-left-width: var(--stroke-thin);
-    border-right-width: var(--stroke-thin);
-    border-top-width: var(--stroke-thin);
-    border-bottom-width: var(--stroke-thin);
-    border-left-color: var(--action-edge);
-    border-right-color: var(--action-edge);
-    border-top-color: var(--action-edge);
-    border-bottom-color: var(--action-edge);
-}
-
-.lb-root .lb-era-chip--locked,
-.lb-root .lb-era-chip--locked:disabled {
-    opacity: 0.5;
-    background-color: var(--surface-sunk);
-    color: var(--ink-mute);
-}
-
-.lb-workshop {
-    flex-grow: 1;
-}
-
-/* ---- segmented switcher ---- */
-
-.lb-wsbar {
-    padding-top: var(--space-4);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-}
-
-.lb-wsseg {
-    flex-direction: row;
-    background-color: var(--surface-sunk);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: 29px;
-    border-top-right-radius: 29px;
-    border-bottom-left-radius: 29px;
-    border-bottom-right-radius: 29px;
-    padding-left: 4px;
-    padding-right: 4px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-
-.lb-wsseg__btn {
-    flex-grow: 1;
-    flex-basis: 0;
-    height: 44px;
-    margin-right: 4px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    border-bottom-left-radius: 22px;
-    border-bottom-right-radius: 22px;
-    transition-property: background-color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-wsseg__btn--last {
-    margin-right: 0;
-}
-
-.lb-wsseg__btn > .lb-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 7px;
-    -unity-background-image-tint-color: var(--ink-mute);
-}
-
-.lb-root .lb-wsseg__text {
-    font-size: 17px;
-    color: var(--ink-mute);
-}
-
-/* The prototype's 0 2px 0 lift, as a bottom border. */
-.lb-wsseg__btn--on {
-    background-color: var(--surface-raised);
-    border-bottom-width: var(--stroke-thin);
-    border-bottom-color: var(--shadow-soft);
-}
-
-.lb-wsseg__btn--on > .lb-icon {
-    -unity-background-image-tint-color: var(--ink);
-}
-
-.lb-root .lb-wsseg__btn--on > .lb-wsseg__text {
-    color: var(--ink);
-}
-
-/* ---- slots ---- */
-
-.lb-slots {
-    flex-direction: row;
-    justify-content: center;
-    padding-top: var(--space-3);
-    padding-bottom: var(--space-2);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-}
-
-.lb-slot {
-    width: 72px;
-    height: 72px;
-    margin-right: var(--space-2);
-    align-items: center;
-    justify-content: center;
-    background-color: var(--workshop-slot-empty);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--workshop-slot-empty-edge);
-    border-right-color: var(--workshop-slot-empty-edge);
-    border-top-color: var(--workshop-slot-empty-edge);
-    border-bottom-color: var(--workshop-slot-empty-edge);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    white-space: normal;
-    transition-property: scale;
-    transition-duration: var(--motion-release);
-    transition-timing-function: ease-out-back;
-}
-
-.lb-slot--last {
-    margin-right: 0;
-}
-
-.lb-slot:active {
-    scale: 0.94 0.94;
-}
-
-.lb-slot--filled {
-    background-color: var(--surface-raised);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-}
-
-.lb-root .lb-slot__text {
-    font-size: 13px;
-    color: var(--ink-mute);
-    white-space: normal;
-    -unity-text-align: middle-center;
-}
-
-.lb-root .lb-slot--filled .lb-slot__text {
-    color: var(--ink);
-}
-
-.lb-root .lb-slot__letter {
-    font-size: 24px;
-    color: var(--ink);
-    margin-bottom: 1px;
-    -unity-text-align: middle-center;
-}
-
-/* The gold ring round a filled slot once every slot is full. */
-.lb-slot__ring {
-    position: absolute;
-    left: -6px;
-    top: -6px;
-    right: -6px;
-    bottom: -6px;
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--workshop-ready-ring);
-    border-right-color: var(--workshop-ready-ring);
-    border-top-color: var(--workshop-ready-ring);
-    border-bottom-color: var(--workshop-ready-ring);
-    border-top-left-radius: 19px;
-    border-top-right-radius: 19px;
-    border-bottom-left-radius: 19px;
-    border-bottom-right-radius: 19px;
-    display: none;
-}
-
-.lb-slotwrap--ready .lb-slot--filled > .lb-slot__ring {
-    display: flex;
-}
-
-.lb-root .lb-readytag {
-    height: 20px;
-    font-size: 16px;
-    color: var(--trophy-ink);
-    -unity-text-align: middle-center;
-    opacity: 0;
-    transition-property: opacity;
-    transition-duration: var(--motion-release);
-}
-
-.lb-root .lb-slotwrap--ready > .lb-readytag {
-    opacity: 1;
-}
-
-/* ---- card grid ---- */
-
-.lb-grid {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-height: 0;
-}
-
-.lb-grid .unity-scroll-view__content-container {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    padding-top: var(--space-3);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    padding-bottom: 160px;
-}
-
-.lb-gcard-wrap {
-    width: 31.33%;
-    margin-bottom: var(--space-3);
-    transition-property: opacity;
-    transition-duration: var(--motion-release);
-}
-
-.lb-gcard-wrap--gap {
-    margin-right: 3%;
-}
-
-.lb-gcard-wrap > .ui-sticker__shadow {
-    left: 2px;
-    top: 3px;
-    right: -2px;
-    bottom: -3px;
-    background-color: var(--shadow-soft);
-}
-
-.lb-gcard-wrap--used {
-    opacity: 0.38;
-}
-
-.lb-gcard-wrap--locked {
-    opacity: 0.55;
-}
-
-.lb-gcard {
-    align-items: center;
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-2);
-    padding-left: 3px;
-    padding-right: 3px;
-    background-color: var(--surface-raised);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    transition-property: scale, translate;
-    transition-duration: var(--motion-press);
-    transition-timing-function: ease-in;
-}
-
-.lb-gcard:active {
-    scale: 0.94 0.94;
-    translate: 0 2px;
-}
-
-.lb-gcard__art {
-    height: 48px;
-    align-self: stretch;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 4px;
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: var(--corner-sm);
-    border-top-right-radius: var(--corner-sm);
-    border-bottom-left-radius: var(--corner-sm);
-    border-bottom-right-radius: var(--corner-sm);
-}
-
-.lb-art--round { background-color: var(--workshop-fam-round); }
-.lb-art--square { background-color: var(--workshop-fam-square); }
-.lb-art--triangle { background-color: var(--workshop-fam-triangle); }
-.lb-art--combat { background-color: var(--workshop-fam-combat); }
-
-/* TODO(art): a monogram stands where the item's art goes. */
-.lb-root .lb-gcard__letter {
-    font-size: 22px;
-    color: var(--ink);
-    -unity-text-align: middle-center;
-}
-
-.lb-gcard__art > .lb-icon {
-    width: 14px;
-    height: 14px;
-    -unity-background-image-tint-color: var(--ink);
-}
-
-.lb-root .lb-gcard__name {
-    font-size: 14px;
-    color: var(--ink);
-    -unity-text-align: middle-center;
-    white-space: normal;
-}
-
-.lb-root .lb-gcard__note {
-    font-size: 12px;
-    color: var(--ink-mute);
-    -unity-text-align: middle-center;
-    white-space: normal;
-    padding-left: 2px;
-    padding-right: 2px;
-}
-
-/* ---- floating picker - draws OVER the cards ---- */
-
-.lb-pickveil {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: var(--workshop-veil);
-    opacity: 0;
-    transition-property: opacity;
-    transition-duration: var(--motion-release);
-}
-
-.lb-pickveil--on {
-    opacity: 1;
-}
-
-.lb-picker {
-    position: absolute;
-    right: var(--space-3);
-    bottom: 150px;
-    flex-direction: column-reverse;
-    align-items: flex-end;
-}
-
-.lb-pick-lip {
-    top: 4px;
-    bottom: -4px;
-    background-color: var(--workshop-pick-lip);
-}
-
-.lb-pickbtn-wrap {
-    position: relative;
-}
-
-.lb-pickbtn-wrap > .lb-pick-lip {
-    border-top-left-radius: 31px;
-    border-top-right-radius: 31px;
-    border-bottom-left-radius: 31px;
-    border-bottom-right-radius: 31px;
-}
-
-.lb-pickbtn {
-    width: 62px;
-    height: 62px;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--surface-raised);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: 31px;
-    border-top-right-radius: 31px;
-    border-bottom-left-radius: 31px;
-    border-bottom-right-radius: 31px;
-    transition-property: translate;
-    transition-duration: var(--motion-press);
-}
-
-.lb-pickbtn:active {
-    translate: 0 3px;
-}
-
-.lb-pickbtn > .lb-icon {
-    width: 22px;
-    height: 22px;
-    -unity-background-image-tint-color: var(--ink);
-}
-
-.lb-root .lb-pickbtn__label {
-    font-size: 10px;
-    color: var(--ink-mute);
-    letter-spacing: 0.4px;
-    -unity-text-align: middle-center;
-}
-
-.lb-pickopts {
-    align-items: flex-end;
-    margin-bottom: var(--space-2);
-    opacity: 0;
-    translate: 0 14px;
-    scale: 0.9 0.9;
-    transform-origin: right bottom;
-    transition-property: opacity, translate, scale;
-    transition-duration: 160ms, 220ms, 220ms;
-    transition-timing-function: ease-out, ease-out-back, ease-out-back;
-}
-
-.lb-picker--open > .lb-pickopts {
-    opacity: 1;
-    translate: 0 0;
-    scale: 1 1;
-}
-
-.lb-pickopt-wrap {
-    position: relative;
-    margin-bottom: var(--space-2);
-}
-
-.lb-pickopt-wrap > .lb-pick-lip {
-    border-top-left-radius: 28px;
-    border-top-right-radius: 28px;
-    border-bottom-left-radius: 28px;
-    border-bottom-right-radius: 28px;
-}
-
-.lb-pickopt {
-    height: 56px;
-    flex-direction: row;
-    align-items: center;
-    padding-left: var(--space-4);
-    padding-right: 20px;
-    background-color: var(--surface-raised);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: 28px;
-    border-top-right-radius: 28px;
-    border-bottom-left-radius: 28px;
-    border-bottom-right-radius: 28px;
-    transition-property: translate;
-    transition-duration: var(--motion-press);
-}
-
-.lb-pickopt:active {
-    translate: 0 3px;
-}
-
-.lb-pickopt > .lb-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 10px;
-    -unity-background-image-tint-color: var(--ink);
-}
-
-.lb-root .lb-pickopt__text {
-    font-size: 17px;
-    color: var(--ink);
-}
-
-.lb-pickopt--on {
-    background-color: var(--action);
-    border-left-color: var(--action-edge);
-    border-right-color: var(--action-edge);
-    border-top-color: var(--action-edge);
-    border-bottom-color: var(--action-edge);
-}
-
-.lb-root .lb-pickopt--on > .lb-pickopt__text {
-    color: var(--action-ink);
-}
-
-.lb-pickopt--on > .lb-icon {
-    -unity-background-image-tint-color: var(--action-ink);
-}
+/* The page is flush, but its actions and local sheets must clear the floating lobby tabs. */
+.lb-workshop { flex-grow: 1; min-height: 0; padding: 8px; padding-bottom: 96px; position: relative; }
+.lb-workshop .ws-heading { font-size: 12px; margin-top: 3px; margin-bottom: 3px; color: var(--ink); }
+.lb-workshop .ws-slots { flex-direction: row; flex-shrink: 0; }
+.lb-workshop .ws-slot { flex-grow: 1; flex-basis: 0; min-width: 0; margin: 2px; padding: 2px; background-color: var(--surface-raised); border-radius: 5px; }
+.lb-workshop .ws-slot:disabled { opacity: 0.55; }
+.lb-workshop .ws-slot .lb-icon { width: 12px; height: 12px; align-self: center; }
+.lb-workshop .ws-slot .ws-art-clip { height: 28px; }
+.lb-workshop .ws-slot .ws-art { height: 26px; }
+.lb-workshop .ws-slot .ws-monogram { font-size: 16px; }
+.lb-workshop .ws-name { font-size: 10px; white-space: normal; -unity-text-align: middle-center; color: var(--ink); }
+.lb-workshop .ws-lower { flex-direction: row; flex-grow: 1; min-height: 0; overflow: hidden; margin-top: 6px; }
+.lb-workshop .ws-info { width: 54%; flex-shrink: 0; min-width: 0; padding-right: 6px; }
+.lb-workshop .ws-info-scroll { flex-grow: 1; min-height: 0; }
+.lb-workshop .ws-browser { width: 46%; flex-shrink: 0; min-width: 0; }
+.lb-workshop .ws-tabs { flex-direction: row; flex-shrink: 0; }
+.lb-workshop .ws-tab { flex-grow: 1; flex-basis: 0; min-width: 0; height: 30px; font-size: 11px; background-color: var(--surface-raised); color: var(--ink); }
+.lb-workshop .ws-tab--on { background-color: var(--action); color: var(--action-ink); }
+.lb-workshop .ws-grid { flex-grow: 1; min-height: 0; }
+.lb-workshop .ws-cards { flex-direction: row; flex-wrap: wrap; }
+.lb-workshop .ws-card { width: 48%; flex-shrink: 0; margin: 1%; margin-top: 6px; padding: 2px; background-color: var(--surface-raised); border-width: 2px; border-color: var(--edge); border-radius: 5px; }
+.lb-workshop .ws-card--preview { border-color: var(--action); }
+.lb-workshop .ws-art-clip { height: 48px; overflow: hidden; padding-top: 5px; }
+.lb-workshop .ws-art { height: 44px; margin-top: -4px; justify-content: center; align-items: center; border-radius: 4px; }
+.lb-workshop .lb-art--round { background-color: var(--workshop-fam-round); }
+.lb-workshop .lb-art--square { background-color: var(--workshop-fam-square); }
+.lb-workshop .lb-art--triangle { background-color: var(--workshop-fam-triangle); }
+.lb-workshop .lb-art--combat { background-color: var(--workshop-fam-combat); }
+.lb-workshop .ws-art--neutral { background-color: #777d87; }
+.lb-workshop .ws-art--navy { background-color: #17243f; }
+.lb-workshop .ws-monogram { font-size: 22px; color: var(--ink); }
+.lb-workshop .ws-preview .ws-art-clip { height: 92px; }
+.lb-workshop .ws-preview .ws-art { height: 88px; }
+.lb-workshop .ws-title { font-size: 18px; white-space: normal; color: var(--ink); }
+.lb-workshop .ws-fact { font-size: 11px; white-space: normal; color: var(--ink); margin-bottom: 4px; }
+.lb-workshop .ws-primary { height: 38px; flex-shrink: 0; background-color: var(--action); color: var(--action-ink); border-radius: 5px; }
+.lb-workshop .ws-actions { flex-direction: row; flex-shrink: 0; margin-top: 4px; }
+.lb-workshop .ws-secondary { flex-grow: 1; flex-basis: 0; min-width: 0; height: 32px; font-size: 12px; background-color: var(--surface-raised); color: var(--ink); }
+.lb-workshop .ws-stat { margin-bottom: 6px; }
+.lb-workshop .ws-histogram { height: 8px; position: relative; background-color: var(--surface-raised); }
+.lb-workshop .ws-zero { position: absolute; left: 50%; width: 1px; top: 0; bottom: 0; background-color: var(--ink); }
+.lb-workshop .ws-bar { position: absolute; top: 1px; bottom: 1px; background-color: var(--action); }
+.lb-workshop .ws-bar--worse { background-color: #d57878; }
+.lb-workshop .ws-panel-host { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.lb-workshop .ws-scrim { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.45); }
+.lb-workshop .ws-sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 6px; padding: 6px; background-color: var(--surface); border-width: 2px; border-color: var(--edge); border-radius: 8px; }
+.lb-workshop .ws-sheet-body { flex-grow: 1; flex-shrink: 1; min-height: 0; }
+.lb-workshop .ws-sheet .ws-preview .ws-art-clip { height: 112px; }
+.lb-workshop .ws-sheet .ws-preview .ws-art { height: 108px; }
+.lb-workshop .ws-strip { flex-shrink: 0; height: 72px; margin-top: 4px; }
+.lb-workshop .ws-strip .unity-scroll-view__content-container { flex-direction: row; }
+.lb-workshop .ws-chip { width: 64px; flex-shrink: 0; margin-right: 4px; padding: 2px; background-color: var(--surface-raised); border-width: 2px; border-color: var(--edge); border-radius: 5px; }
+.lb-workshop .ws-chip .ws-art-clip { height: 36px; }
+.lb-workshop .ws-chip .ws-art { height: 32px; }
+.lb-workshop .ws-chip .ws-monogram { font-size: 14px; }
+.lb-workshop .ws-sheet-buttons { flex-direction: row; justify-content: space-between; flex-shrink: 0; margin-top: 6px; }
+.lb-workshop .ws-sheet-button { width: 40%; height: 46px; font-size: 14px; background-color: var(--surface-raised); color: var(--ink); border-radius: 5px; }
+.lb-workshop .ws-sheet-button.ws-primary { background-color: var(--action); color: var(--action-ink); }
+.lb-workshop .ws-band { flex-shrink: 0; height: 64px; margin-left: -6px; margin-right: -6px; margin-top: 4px; overflow: hidden; }
+.lb-workshop .ws-band-tile { background-color: var(--workshop-fam-combat); border-radius: 6px; border-width: 2px; border-color: transparent; justify-content: center; align-items: center; }
+.lb-workshop .ws-band-tile.ws-art--neutral { background-color: #777d87; }
+.lb-workshop .ws-band-tile--center { border-color: var(--action); }

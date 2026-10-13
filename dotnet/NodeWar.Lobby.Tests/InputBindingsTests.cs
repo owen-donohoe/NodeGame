@@ -44,8 +44,8 @@ namespace NodeWar.Lobby.Tests
         [Test]
         public void Table_CoversEverySlotAndAction()
         {
-            Assert.AreEqual(13, Enum.GetValues(typeof(InputSlot)).Length);
-            Assert.AreEqual(13, InputBindings.SlotCount);
+            Assert.AreEqual(15, Enum.GetValues(typeof(InputSlot)).Length);
+            Assert.AreEqual(15, InputBindings.SlotCount);
             Assert.AreEqual(12, Enum.GetValues(typeof(InputAction)).Length);
             foreach (InputAction action in Enum.GetValues(typeof(InputAction)))
             {
@@ -55,7 +55,7 @@ namespace NodeWar.Lobby.Tests
                 Assert.IsTrue(found, action.ToString());
             }
             Assert.IsFalse(InputBindings.IsAllowed((InputSlot)(-1), InputAction.Pan));
-            Assert.IsFalse(InputBindings.IsAllowed((InputSlot)13, InputAction.Pan));
+            Assert.IsFalse(InputBindings.IsAllowed((InputSlot)15, InputAction.Pan));
         }
 
         [TestCase(0)]
@@ -134,7 +134,7 @@ namespace NodeWar.Lobby.Tests
             GameSettingsData stored = GameSettingsData.CreateDefault();
             Array.Resize(ref stored.inputBindings, 20);
             GameSettingsData normalized = GameSettingsData.Normalized(stored);
-            Assert.AreEqual(13, normalized.inputBindings.Length);
+            Assert.AreEqual(15, normalized.inputBindings.Length);
             Assert.IsFalse(GameSettingsData.Differ(normalized, GameSettingsData.Normalized(normalized)));
         }
 
@@ -330,6 +330,62 @@ namespace NodeWar.Lobby.Tests
             settings.showCameraButton = false;
             settings.cameraButtonZoom = false;
             return settings;
+        }
+        [Test]
+        public void NodeSlotsAppendWithoutChangingPersistedIds()
+        {
+            var oldSlots = new[] { InputSlot.TapVillager, InputSlot.HoldDrag, InputSlot.Drag,
+                InputSlot.DragFromVillager, InputSlot.TwoFingerDrag, InputSlot.Pinch,
+                InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager, InputSlot.TwoFingerTap,
+                InputSlot.DoubleTapDrag, InputSlot.Hold, InputSlot.MiddleDrag, InputSlot.ScrollWheel };
+            for (int i = 0; i < oldSlots.Length; i++) Assert.AreEqual(i, (int)oldSlots[i]);
+            var actions = new[] { InputAction.AddRemove, InputAction.Replace, InputAction.LassoSelect,
+                InputAction.Pan, InputAction.Order, InputAction.Zoom, InputAction.ReturnToCore,
+                InputAction.SelectAllIdle, InputAction.ToggleFitDefaultZoom, InputAction.SelectAllOnNode,
+                InputAction.ClearSelection, InputAction.OpenInfo };
+            for (int i = 0; i < actions.Length; i++) Assert.AreEqual(i, (int)actions[i]);
+            Assert.AreEqual(13, (int)InputSlot.DoubleTapNode);
+            Assert.AreEqual(14, (int)InputSlot.TripleTapNode);
+            Assert.AreEqual(15, InputBindings.SlotCount);
+            foreach (InputSlot slot in new[] { InputSlot.DoubleTapNode, InputSlot.TripleTapNode })
+            {
+                InputAction action = slot == InputSlot.DoubleTapNode
+                    ? InputAction.SelectAllIdle : InputAction.SelectAllOnNode;
+                InputSlotDefinition definition = InputBindings.DefinitionFor(slot);
+                Assert.IsFalse(definition.Locked);
+                Assert.AreEqual(new InputBinding(true, action), InputBindings.DefaultFor(slot));
+                CollectionAssert.AreEqual(new[] { action }, definition.AllowedActions);
+                foreach (InputAction candidate in actions)
+                    Assert.AreEqual(candidate == action, InputBindings.IsAllowed(slot, candidate));
+            }
+        }
+
+        [Test]
+        public void V5PaddingRetainsDisabledAndCustomBindings()
+        {
+            var old = new InputBinding[13];
+            for (int i = 0; i < old.Length; i++)
+            {
+                var definition = InputBindings.DefinitionFor((InputSlot)i);
+                old[i] = new InputBinding(i == 0, definition.AllowedActions[definition.AllowedActions.Count - 1]);
+            }
+            var snapshot = (InputBinding[])old.Clone();
+            InputBinding[] padded = InputBindings.Normalized(old);
+            Assert.AreEqual(15, padded.Length);
+            Assert.AreNotSame(old, padded);
+            for (int i = 0; i < old.Length; i++) Assert.AreEqual(snapshot[i], padded[i], "slot " + i);
+            CollectionAssert.AreEqual(snapshot, old);
+            Assert.AreEqual(InputBindings.DefaultFor(InputSlot.DoubleTapNode), padded[13]);
+            Assert.AreEqual(InputBindings.DefaultFor(InputSlot.TripleTapNode), padded[14]);
+            InputBinding[] again = InputBindings.Normalized(padded);
+            CollectionAssert.AreEqual(padded, again);
+            Assert.AreNotSame(padded, again);
+            padded[13] = new InputBinding { enabled = false, action = 999 };
+            padded[14] = new InputBinding { enabled = false, action = -1 };
+            InputBinding[] repaired = InputBindings.Normalized(padded);
+            Assert.AreEqual(new InputBinding(false, InputAction.SelectAllIdle), repaired[13]);
+            Assert.AreEqual(new InputBinding(false, InputAction.SelectAllOnNode), repaired[14]);
+            for (int i = 0; i < old.Length; i++) Assert.AreEqual(snapshot[i], repaired[i]);
         }
     }
 }

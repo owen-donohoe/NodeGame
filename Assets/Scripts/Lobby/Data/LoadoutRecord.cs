@@ -20,6 +20,7 @@ namespace NodeWar.Lobby
 
         public static LoadoutRecord From(LoadoutData loadout)
         {
+            loadout = LoadoutData.Normalized(loadout);
             return new LoadoutRecord
             {
                 suitIDs = loadout.suitIDs,
@@ -46,14 +47,17 @@ namespace NodeWar.Lobby
 
         public LoadoutData ToLoadout()
         {
-            return new LoadoutData
+            // Decide from the stored pair before alias migration pads the district deck.
+            bool high = NodeWar.Backend.LoadoutCapacityPolicy.IsHighShape(
+                suitIDs == null ? 0 : suitIDs.Length, nodeIDs == null ? 0 : nodeIDs.Length);
+            return LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = suitIDs,
-                districtIDs = NodeWar.Backend.DistrictMigration.Deck(nodeIDs, LoadoutData.DistrictSlots),
+                districtIDs = NodeWar.Backend.DistrictMigration.Deck(nodeIDs, high ? 5 : 2),
                 suitEras = suitEras,
                 districtEras = MigrateDistrictEras(districtEras),
                 skinIDs = skinIDs
-            };
+            });
         }
     }
 }

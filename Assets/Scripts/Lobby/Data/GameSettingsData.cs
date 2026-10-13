@@ -41,8 +41,9 @@ namespace NodeWar.Lobby
         ///     is not read as that: <see cref="Normalized"/> gives it
         ///     <see cref="DefaultFrameCap"/>.
         /// 5 - adds input bindings and the controls preferences.
+        /// 6 - appends enabled node double/triple-tap bindings; existing entries are kept.
         /// </remarks>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         public const float DefaultHoldTime = 0.3f;
         public const float MinHoldTime = 0.15f;

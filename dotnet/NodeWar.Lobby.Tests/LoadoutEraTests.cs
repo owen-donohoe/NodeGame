@@ -15,6 +15,25 @@ namespace NodeWar.Lobby.Tests
     [TestFixture]
     public class LoadoutEraTests
     {
+        [Test]
+        public void WithEquipment_RetainsUnchosenEquipmentWithoutRevivingThirdSuit()
+        {
+            var profile = new LoadoutData { suitIDs = new[] { "suit_guardian", "suit_scout", "suit_medic" } };
+            var variants = new Dictionary<string, string>
+            {
+                ["suit.medic"] = "suit.medic.e2",
+                ["suit.warrior"] = "suit.warrior.e1"
+            };
+            var state = new PlayerState { Inventory = new InventoryRecord
+                { Equipped = new EquippedRecord { Variants = variants } } };
+            var result = LoadoutTypes.WithEquipment(profile, state);
+            CollectionAssert.AreEqual(new[] { "suit_guardian", "suit_scout" }, result.suitIDs);
+            Assert.AreEqual(2, result.suitEras[(int)SuitType.Medic]);
+            Assert.AreEqual(1, result.suitEras[(int)SuitType.Warrior]);
+            Assert.AreEqual("suit.medic.e2", variants["suit.medic"]);
+            Assert.AreEqual(3, profile.suitIDs.Length);
+        }
+
         private static LoadoutData RoundTrip(LoadoutData source)
         {
             byte[] packet = DraftSerializer.SerializeDraftLoadout(1, source);
@@ -74,7 +93,7 @@ namespace NodeWar.Lobby.Tests
             byte[] packet = DraftSerializer.SerializeDraftLoadout(1, source);
 
             // Cut after the node IDs: what a protocol-1 peer sends.
-            int cut = 1 + 4 + 1 + LoadoutData.SuitSlots + 1 + LoadoutData.DistrictSlots;
+            int cut = 1 + 4 + 1 + source.suitIDs.Length + 1 + source.districtIDs.Length;
             byte[] old = new byte[cut];
             Array.Copy(packet, old, cut);
             DraftSerializer.DeserializeDraftLoadout(old, out int _, out LoadoutData decoded);

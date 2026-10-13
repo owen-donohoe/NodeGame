@@ -627,16 +627,23 @@
 /* ===================================================================
    Selection counter and the controls side
 
-   The counter sits under the zoom handle on the same edge. It is
+   The counter sits centred at the safe area's bottom, independent of the
+   controls side. The dock ignores picking. The counter is
    display:none until something is selected, so it has no hit area and no
    bounds (the indicator layer skips an element with none) while empty.
    =================================================================== */
 
+.hud__selbar-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-bottom: 12px;
+    align-items: center;
+}
+
 .hud__selbar {
     display: none;
-    position: absolute;
-    right: 12px;
-    bottom: 28%;
     width: 56px;
     height: 56px;
     align-items: center;
@@ -723,8 +730,7 @@
 
 /* Controls side: Left. One class on the HUD root mirrors the thumb-placed
    controls; nothing here is per element in code. */
-.hud--left .hud__recentre-dock,
-.hud--left .hud__selbar {
+.hud--left .hud__recentre-dock {
     right: auto;
     left: 12px;
 }

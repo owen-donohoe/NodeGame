@@ -184,7 +184,10 @@ namespace NodeWar.Lobby
                 data = JsonUtility.FromJson<PlayerProfileData>(json);
 
                 bool migrated = TryMigrateLegacyLoadout(json, ref data.loadout);
+                // Rank is not confirmed at startup. Preserve a canonical saved high deck;
+                // arena-aware editing/launch will resize it once the local rank is known.
                 LoadoutData saved = LoadoutData.Normalized(data.loadout.ToLoadout());
+                migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.loadout.suitIDs, saved.suitIDs);
                 migrated |= !NodeWar.Backend.DistrictMigration.Equal(data.loadout.nodeIDs, saved.districtIDs);
                 int[] savedEras = data.loadout.districtEras;
                 if (savedEras == null || savedEras.Length != saved.districtEras.Length) migrated = true;
@@ -205,7 +208,7 @@ namespace NodeWar.Lobby
                 data.settings = GameSettingsData.Normalized(data.settings);
 
                 if (migrated)
-                    Debug.Log("[PlayerProfile] Migrated flat loadout fields to arrays.");
+                    Debug.Log("[PlayerProfile] Migrated saved loadout to the current choices and equipment.");
 
                 if (settingsAbsent)
                     Debug.Log("[PlayerProfile] Added default settings to an older save.");
@@ -290,7 +293,7 @@ namespace NodeWar.Lobby
                 username = "player_" + uuid,
                 uuid = uuid,
                 trophies = 0,
-                loadout = LoadoutRecord.From(LoadoutData.CreateEmpty()),
+                loadout = LoadoutRecord.From(LoadoutData.CreateEmpty(1)),
                 unlockedSuitIDs = new string[] { "suit_warrior", "suit_guardian" },
                 UnlockedDistrictIDs = new string[] { "node_watchtower", "node_market" },
                 selectedGameModeIndex = (int)GameMode.Bot,

@@ -10,6 +10,10 @@ namespace NodeWar.View
         [Header("View")]
         [SerializeField] private float VillagerViewHeight = 0.1f;
 
+        [Header("Swing")]
+        [SerializeField, Range(0f, 0.3f)] private float swingScaleAmount = 0.08f;
+        [SerializeField, Min(0.05f)] private float swingDuration = 0.25f;
+
         [Header("Movement")]
         [SerializeField] private float slotLerpSpeed = 8f;
 
@@ -45,21 +49,66 @@ namespace NodeWar.View
         // Cached references
         private SpriteRenderer[] spriteRenderers;
         private Transform gfxTransform;
+        private bool spriteWidthMeasured;
+        private float spriteWidth;
+        private VillagerFlash flash;
 
         private NodeWar.Core.ITickProvider tickProvider;
         private NodeWar.View.VillagerPositioner[] villagerPositioners;
+
+        /// <summary>Current world bounds of sprite art after facing; excludes health UI and breach lines.</summary>
+        public bool TryGetSpriteBounds(out Bounds bounds)
+        {
+            bounds = default;
+            bool found = false;
+            if (spriteRenderers == null) return false;
+            for (int i = 0; i < spriteRenderers.Length; i++)
+            {
+                SpriteRenderer sprite = spriteRenderers[i];
+                if (sprite == null || sprite.sprite == null || !sprite.enabled || !sprite.gameObject.activeInHierarchy) continue;
+                if (!found) bounds = sprite.bounds;
+                else bounds.Encapsulate(sprite.bounds);
+                found = true;
+            }
+            return found;
+        }
 
         public void Initialize(SimulationState state, int id)
         {
             simState = state;
             villagerID = id;
             initialized = true;
+            lastObservation = default;
+            swingStartTime = float.NegativeInfinity;
 
             gfxTransform = transform.Find("GFX");
 
             if (gfxTransform != null)
             {
                 spriteRenderers = gfxTransform.GetComponentsInChildren<SpriteRenderer>();
+                if (swingTransform == null)
+                {
+                    Billboard facing = gfxTransform.GetComponentInChildren<Billboard>();
+                    if (facing != null)
+                    {
+                        swingTransform = facing.transform;
+                        swingBaseScale = swingTransform.localScale;
+                    }
+                }
+                // Size is the prefab's. Measure the art as authored so crowd
+                // spacing follows whatever scale the prefab gives it.
+                if (!spriteWidthMeasured)
+                {
+                    for (int i = 0; i < spriteRenderers.Length; i++)
+                    {
+                        SpriteRenderer renderer = spriteRenderers[i];
+                        if (renderer.sprite != null)
+                            spriteWidth = Mathf.Max(spriteWidth,
+                                renderer.sprite.bounds.size.x * Mathf.Abs(renderer.transform.lossyScale.x));
+                    }
+                    spriteWidthMeasured = true;
+                }
+                ConfigureSpacing();
             }
             else
             {
@@ -71,12 +120,96 @@ namespace NodeWar.View
 
         public void SetTickProvider(NodeWar.Core.ITickProvider provider)
         {
+            if (ReferenceEquals(tickProvider, provider)) return;
+            if (tickProvider != null) tickProvider.TickSimulated -= OnTickSimulated;
             tickProvider = provider;
+            if (tickProvider != null) tickProvider.TickSimulated += OnTickSimulated;
+        }
+
+        private void OnDestroy()
+        {
+            if (tickProvider != null) tickProvider.TickSimulated -= OnTickSimulated;
+        }
+
+        // Per-villager observation taken once after every simulated tick, catch-up
+        // ticks included. Later cues (the swing) extend this struct and
+        // ObserveTick rather than adding a second subscription.
+        private struct TickObservation
+        {
+            public bool valid;
+            public bool alive;
+            public int hp;
+            public bool inCombat;
+            public int attackCooldownRemaining;
+        }
+
+        private TickObservation lastObservation;
+        private float swingStartTime = float.NegativeInfinity;
+        private Transform swingTransform;
+        private Vector3 swingBaseScale = Vector3.one;
+
+        // Pulses only the sprite Billboard child's scale. The root, the GFX
+        // baseline size, rotation, colliders, health canvas and breach ring stay.
+        private void ApplySwingScale()
+        {
+            if (swingTransform == null) return;
+            bool reduced = breachCues != null && breachCues.reducedMotion;
+            float pulse = reduced ? 0f : VillagerSwingMath.Pulse(Time.time - swingStartTime, swingDuration);
+            swingTransform.localScale = swingBaseScale * (1f + swingScaleAmount * pulse);
+        }
+
+        private void OnTickSimulated(NodeWar.Simulation.TickEventLog log)
+        {
+            ObserveTick();
+        }
+
+        private void ObserveTick()
+        {
+            if (!initialized || simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return;
+
+            VillagerData villager = simState.villagers[villagerID];
+            bool alive = villager.state != VillagerState.Dead && !villager.isConsumed;
+            bool sameLife = VillagerFlashMath.SameLife(lastObservation.valid, lastObservation.alive, alive);
+            bool inCombat = alive && villager.state == VillagerState.Fighting;
+
+            // The cooldown reset is the tick it hit or healed. Read only; one
+            // observation per tick keeps catch-up ticks from collapsing together.
+            if (VillagerSwingMath.ShouldSwing(lastObservation.valid, lastObservation.alive, lastObservation.inCombat,
+                    lastObservation.attackCooldownRemaining, alive, inCombat,
+                    villager.attackCooldownRemaining, villager.attackCooldownMax))
+                swingStartTime = Time.time;
+            if (!inCombat) swingStartTime = float.NegativeInfinity;
+
+            // Flash is added by GameManager after Initialize, so resolve it here.
+            if (flash == null) flash = GetComponent<VillagerFlash>();
+            if (!alive)
+            {
+                if (flash != null) flash.Clear();
+            }
+            else if (VillagerFlashMath.TookDamage(lastObservation.hp, villager.hp, sameLife))
+            {
+                if (flash != null) flash.Flash();
+            }
+
+            lastObservation.valid = true;
+            lastObservation.alive = alive;
+            lastObservation.hp = villager.hp;
+            lastObservation.inCombat = inCombat;
+            lastObservation.attackCooldownRemaining = villager.attackCooldownRemaining;
         }
 
         public void SetVillagerPositioners(NodeWar.View.VillagerPositioner[] managers)
         {
             villagerPositioners = managers;
+            ConfigureSpacing();
+        }
+
+        private void ConfigureSpacing()
+        {
+            if (villagerPositioners == null || spriteWidth <= 0f) return;
+            for (int i = 0; i < villagerPositioners.Length; i++)
+                if (villagerPositioners[i] != null)
+                    villagerPositioners[i].SetSpriteWidth(spriteWidth);
         }
 
         /// <summary>
@@ -260,6 +393,7 @@ namespace NodeWar.View
             if (!initialized) return;
 
             UpdateVisuals();
+            ApplySwingScale();
         }
 
         private void UpdateVisuals()

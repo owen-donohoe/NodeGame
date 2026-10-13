@@ -18,7 +18,9 @@ namespace NodeWar.Lobby
         DoubleTapDrag = 9,
         Hold = 10,
         MiddleDrag = 11,
-        ScrollWheel = 12
+        ScrollWheel = 12,
+        DoubleTapNode = 13,
+        TripleTapNode = 14
     }
 
     public enum InputAction
@@ -77,7 +79,7 @@ namespace NodeWar.Lobby
 
     public static class InputBindings
     {
-        public const int SlotCount = 13;
+        public const int SlotCount = 15;
 
         private static readonly InputSlotDefinition[] Slots =
         {
@@ -96,7 +98,9 @@ namespace NodeWar.Lobby
             new InputSlotDefinition(false, InputAction.Zoom, false, InputAction.Zoom),
             new InputSlotDefinition(false, InputAction.OpenInfo, false, InputAction.OpenInfo),
             new InputSlotDefinition(true, InputAction.Pan, false, InputAction.Pan),
-            new InputSlotDefinition(true, InputAction.Zoom, false, InputAction.Zoom)
+            new InputSlotDefinition(true, InputAction.Zoom, false, InputAction.Zoom),
+            new InputSlotDefinition(true, InputAction.SelectAllIdle, false, InputAction.SelectAllIdle),
+            new InputSlotDefinition(true, InputAction.SelectAllOnNode, false, InputAction.SelectAllOnNode)
         };
 
         public static InputSlotDefinition DefinitionFor(InputSlot slot)

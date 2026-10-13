@@ -59,6 +59,8 @@ namespace NodeWar.Input
 
         /// <summary>Two taps on the same villager.</summary>
         public event Action<GestureTarget> OnDoubleTapVillager;
+        public event Action<GestureTarget> OnDoubleTapNode;
+        public event Action<GestureTarget> OnTripleTapNode;
 
         /// <summary>
         /// An order drag from an already-selected villager began, is moving, or ended.
@@ -125,6 +127,9 @@ namespace NodeWar.Input
         public GestureState State => classifier != null ? classifier.State : GestureState.Idle;
         public GestureThresholds Thresholds => thresholds;
         public IReadOnlyList<Vector2> CurrentStroke => strokePoints;
+        /// <summary>Frozen at paint begin and retained through every completion subscriber.</summary>
+        public float CurrentPaintRadiusPx { get; private set; }
+        private float paintPixelsPerMm;
         public bool PanSuppressed => classifier != null && classifier.PanSuppressed;
         private System.Func<int, bool> villagerFilter;
 
@@ -187,6 +192,7 @@ namespace NodeWar.Input
                 thresholds.lassoDecimationMm, thresholds.maxLassoPoints, thresholds.pinchDeadZoneMm,
                 1f / ScreenMetrics.PixelsPerMm, GestureThresholds.HoldStillnessMm);
             classifier.DoubleTapTime = thresholds.doubleTapTime;
+            classifier.NodeTapGap = thresholds.nodeTapGap;
             classifier.DoubleTapRadiusMm = thresholds.doubleTapRadiusMm;
             classifier.TwoFingerTapTime = thresholds.twoFingerTapTime;
             classifier.OneHandZoomMmPerDoubling = thresholds.oneHandZoomMmPerDoubling;
@@ -242,6 +248,7 @@ namespace NodeWar.Input
                 }
             }
             classifier.ProcessFrame(samples);
+            classifier.AdvanceTime(now);
             hasFrameTarget = false;
             if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
         }
@@ -269,6 +276,9 @@ namespace NodeWar.Input
             return new Vector2(position.X * scale, position.Y * scale);
         }
 
+        private Vector2 ToPaintPixels(GesturePoint point) =>
+            new Vector2(point.X * paintPixelsPerMm, point.Y * paintPixelsPerMm);
+
         private void Publish(GestureEvent gesture)
         {
             Vector2 pos = ToPixels(gesture.Position);
@@ -283,7 +293,16 @@ namespace NodeWar.Input
                     if (classifier.CurrentStroke.Count == 0) strokePoints.Clear();
                     OnGestureCancelled?.Invoke();
                     break;
-                case GestureEventKind.Tap: OnTap?.Invoke(downTarget); break;
+                case GestureEventKind.Tap:
+                    OnTap?.Invoke(gesture.TargetClass == GestureTargetClass.Node
+                        ? new GestureTarget(GestureTargetKind.Node, gesture.TargetId) : downTarget);
+                    break;
+                case GestureEventKind.DoubleTapNode:
+                    OnDoubleTapNode?.Invoke(new GestureTarget(GestureTargetKind.Node, gesture.TargetId));
+                    break;
+                case GestureEventKind.TripleTapNode:
+                    OnTripleTapNode?.Invoke(new GestureTarget(GestureTargetKind.Node, gesture.TargetId));
+                    break;
                 case GestureEventKind.OrderBegin:
                     orderStartNode = NodeAt(pos);
                     OnOrderDragBegin?.Invoke(pos);
@@ -302,17 +321,21 @@ namespace NodeWar.Input
                 case GestureEventKind.PanUpdate: OnPanUpdate?.Invoke(pos); break;
                 case GestureEventKind.PanEnd: OnPanEnd?.Invoke(); break;
                 case GestureEventKind.LassoBegin:
+                    paintPixelsPerMm = ScreenMetrics.PixelsPerMm;
+                    CurrentPaintRadiusPx = thresholds.paintRadiusMm * paintPixelsPerMm;
+                    pos = ToPaintPixels(gesture.Position);
                     strokePoints.Clear();
                     strokePoints.Add(pos);
                     OnLassoBegin?.Invoke(pos);
                     break;
                 case GestureEventKind.LassoPoint:
+                    pos = ToPaintPixels(gesture.Position);
                     strokePoints.Add(pos);
                     OnLassoPoint?.Invoke(pos);
                     break;
                 case GestureEventKind.LassoComplete:
                     strokePoints.Clear();
-                    foreach (GesturePoint point in gesture.Points) strokePoints.Add(ToPixels(point));
+                    foreach (GesturePoint point in gesture.Points) strokePoints.Add(ToPaintPixels(point));
                     OnLassoComplete?.Invoke(strokePoints);
                     break;
                 case GestureEventKind.ZoomBegin: strokePoints.Clear(); OnZoomBegin?.Invoke(); break;

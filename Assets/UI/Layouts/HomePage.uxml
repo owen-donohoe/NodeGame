@@ -10,7 +10,7 @@
         Home, after lobby-prototype.html.
 
         Boxes left (one big, one small, count badge top-right of each). Loadout
-        preview right, five chips, deliberately quiet. Villager centre. BATTLE
+        preview right, four or eight chosen chips, deliberately quiet. Villager centre. BATTLE
         and the next-box meter at the bottom, above the floating tab bar.
 
         Everything is absolutely placed against the page, as in the prototype,
@@ -44,6 +44,9 @@
         <engine:Button name="home-loadout" class="ui-reset-button lb-loadcol">
             <engine:VisualElement name="home-loadout-node-0" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-node-1" class="lb-lpi" picking-mode="Ignore" />
+            <engine:VisualElement name="home-loadout-node-2" class="lb-lpi" picking-mode="Ignore" />
+            <engine:VisualElement name="home-loadout-node-3" class="lb-lpi" picking-mode="Ignore" />
+            <engine:VisualElement name="home-loadout-node-4" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-0" class="lb-lpi lb-lpi--gap" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-1" class="lb-lpi" picking-mode="Ignore" />
             <engine:VisualElement name="home-loadout-suit-2" class="lb-lpi" picking-mode="Ignore" />
@@ -66,6 +69,7 @@
                 <engine:VisualElement class="ui-lip__block lb-battle-lip" picking-mode="Ignore" />
                 <engine:Button name="home-battle" class="ui-reset-button lb-battle ui-w700" text="BATTLE" />
             </engine:VisualElement>
+            <engine:Label name="home-battle-reason" class="ui-w600" text="Fill your loadout" picking-mode="Ignore" />
             <engine:Button name="home-boxmeter" class="ui-reset-button lb-boxmeter">
                 <engine:Label class="lb-boxmeter__label ui-w500" text="Next box" picking-mode="Ignore" />
                 <engine:VisualElement class="lb-boxmeter__track" picking-mode="Ignore">

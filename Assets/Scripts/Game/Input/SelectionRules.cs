@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NodeWar.Lobby;
+using NodeWar.Simulation;
 
 namespace NodeWar.Input
 {
@@ -18,6 +19,40 @@ namespace NodeWar.Input
     /// <summary>Selection edits after the Unity owner has checked that the target is selectable.</summary>
     public static class SelectionRules
     {
+        public static bool IsValidNode(SimulationState state, int node) =>
+            state != null && state.nodes != null && node >= 0 && node < state.nodes.Length;
+
+        private static bool IsResident(VillagerData villager, int player, int node) =>
+            villager.ownerID == player && !villager.isConsumed &&
+            villager.state != VillagerState.Dead && villager.state != VillagerState.Moving &&
+            villager.currentNodeID == node;
+
+        public static void CollectOnNode(SimulationState state, int player, int node, bool idleOnly, List<int> result)
+        {
+            result.Clear();
+            if (!IsValidNode(state, node) || state.villagers == null) return;
+            // Simulation villager IDs are their array indices; traversal gives ascending IDs.
+            for (int id = 0; id < state.villagers.Length; id++)
+                if (IsResident(state.villagers[id], player, node) &&
+                    (!idleOnly || state.villagers[id].state == VillagerState.Idle)) result.Add(id);
+        }
+
+        public static bool AllResidentsSelected(SimulationState state, int player, int node, IReadOnlyList<int> selected)
+        {
+            if (!IsValidNode(state, node) || state.villagers == null) return false;
+            bool any = false;
+            for (int id = 0; id < state.villagers.Length; id++)
+            {
+                if (!IsResident(state.villagers[id], player, node)) continue;
+                any = true;
+                bool found = false;
+                for (int i = 0; i < selected.Count; i++)
+                    if (selected[i] == id) { found = true; break; }
+                if (!found) return false;
+            }
+            return any;
+        }
+
         public static void TapVillager(List<int> selected, int villagerId, InputAction action)
         {
             if (selected.Remove(villagerId)) return;

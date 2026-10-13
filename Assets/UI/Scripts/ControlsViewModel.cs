@@ -113,7 +113,8 @@ namespace NodeWar.Lobby
         /// <summary>Slots grouped by the kind of gesture, in the order the panel lists them.</summary>
         public static readonly IReadOnlyList<ControlsGroup> Groups = new[]
         {
-            new ControlsGroup("Tap", InputSlot.TapVillager, InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager),
+            new ControlsGroup("Tap", InputSlot.TapVillager, InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager,
+                InputSlot.DoubleTapNode, InputSlot.TripleTapNode),
             new ControlsGroup("Drag", InputSlot.Drag, InputSlot.HoldDrag, InputSlot.DragFromVillager,
                 InputSlot.DoubleTapDrag),
             new ControlsGroup("Hold", InputSlot.Hold),
@@ -150,6 +151,8 @@ namespace NodeWar.Lobby
                 case InputSlot.Pinch: return "Pinch";
                 case InputSlot.DoubleTapGround: return "Double-tap ground";
                 case InputSlot.DoubleTapVillager: return "Double-tap a villager";
+                case InputSlot.DoubleTapNode: return "Double-tap a node";
+                case InputSlot.TripleTapNode: return "Triple-tap a node";
                 case InputSlot.TwoFingerTap: return "Two-finger tap";
                 case InputSlot.DoubleTapDrag: return "Double-tap + drag";
                 case InputSlot.Hold: return "Hold (no drag)";
@@ -165,7 +168,7 @@ namespace NodeWar.Lobby
             {
                 case InputAction.AddRemove: return "Add / remove";
                 case InputAction.Replace: return "Replace";
-                case InputAction.LassoSelect: return "Lasso select";
+                case InputAction.LassoSelect: return "Paint select";
                 case InputAction.Pan: return "Pan camera";
                 case InputAction.Order: return "Order";
                 case InputAction.Zoom: return "Zoom";

@@ -57,7 +57,16 @@ namespace NodeWar.Lobby
             for (int i = 0; i < suitChips.Length; i++)
                 suitChips[i] = Root.Q<VisualElement>("home-loadout-suit-" + i);
 
-            Bind("home-battle", () => { if (PlayRequested != null) PlayRequested(); });
+            Bind("home-battle", () =>
+            {
+                if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena))
+                {
+                    Say("Fill your loadout");
+                    LoadoutRequested?.Invoke();
+                    return;
+                }
+                PlayRequested?.Invoke();
+            });
             Bind("home-loadout", () => { if (LoadoutRequested != null) LoadoutRequested(); });
 
             // TODO(boxes): nothing opens a box, and nothing writes boxProgress yet.
@@ -118,6 +127,7 @@ namespace NodeWar.Lobby
 
         public override void OnShow()
         {
+            NodeWar.Backend.BackendServices.StateChanged += Refresh;
             Refresh();
             accountLinkPrompt.Show();
 
@@ -135,6 +145,7 @@ namespace NodeWar.Lobby
 
         public override void OnHide()
         {
+            NodeWar.Backend.BackendServices.StateChanged -= Refresh;
             accountLinkPrompt.Hide();
             if (bob != null) bob.Pause();
         }
@@ -156,21 +167,31 @@ namespace NodeWar.Lobby
                 boxMeterFill.style.width = Length.Percent(progress * 100f);
             }
 
-            // A side whose empty slots the player could fill is flagged, so an
-            // unfinished loadout is visible before BATTLE. A side they cannot
-            // fill yet is left quiet.
+            // Every empty chosen slot blocks launch, regardless of ownership.
             LoadoutEditor loadout = catalog.CurrentLoadout();
-            bool nodesShort = loadout.IsDistrictSideShort(catalog.OwnedDistrictCount());
-            bool suitsShort = loadout.IsSuitSideShort(catalog.OwnedSuitCount());
+            bool nodesShort = !loadout.DistrictSlotsFull;
+            bool suitsShort = !loadout.SuitSlotsFull;
+            bool complete = LoadoutRules.IsComplete(loadout.ToLoadout(), catalog.Arena);
+            Button battle = Root.Q<Button>("home-battle");
+            if (battle != null)
+            {
+                // Keep the recovery tap active while presenting the disabled state.
+                battle.style.opacity = complete ? 1f : 0.5f;
+                battle.tooltip = complete ? "" : "Fill your loadout";
+            }
+            Label reason = Root.Q<Label>("home-battle-reason");
+            if (reason != null) reason.style.display = complete ? DisplayStyle.None : DisplayStyle.Flex;
 
             for (int i = 0; i < nodeChips.Length; i++)
             {
+                if (nodeChips[i] != null) nodeChips[i].style.display = i < loadout.DistrictSlotCount ? DisplayStyle.Flex : DisplayStyle.None;
                 string id = loadout.DistrictAt(i);
                 SetChip(nodeChips[i], id, catalog.DistrictName(id), nodesShort);
             }
 
             for (int i = 0; i < suitChips.Length; i++)
             {
+                if (suitChips[i] != null) suitChips[i].style.display = i < loadout.SuitSlotCount ? DisplayStyle.Flex : DisplayStyle.None;
                 string id = loadout.SuitAt(i);
                 SetChip(suitChips[i], id, catalog.SuitName(id), suitsShort);
             }

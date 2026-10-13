@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
-verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
+  - { by: claude-opus-5-5, at: 2026-10-13T16:34:59Z }
+verified_at_commit: f0a21c0d5c61571e9e99ebcef25e6ceb551ad606
 status: stable
 sources:
   - id: sim-loop
@@ -420,6 +420,12 @@ All resource gains and starting values clamp to a positive cap. Wasted
 ordinary-worker completions still cycle; a metal-capped Forge consumes no material.
 A full Storehouse bank pauses its production timer. The handshake therefore mitigates issue #59;
 it does not fix that omission.
+
+Lobby launch validation remains outside Simulation: MatchLauncher refreshes and
+freezes the local arena/loadout, refuses any empty effective chosen slot, and
+re-checks against that frozen arena before loading Gameplay. Remote canonical
+shapes are never resized by local rank. This changes setup eligibility, not tick
+rules, board identity, SimulationVersion or the pinned fingerprints.
 
 ## The starting board: `MatchFactory`
 

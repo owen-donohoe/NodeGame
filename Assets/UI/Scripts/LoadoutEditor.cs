@@ -12,8 +12,7 @@ namespace NodeWar.Lobby
     /// expresses the same rules across five [SerializeField] slot displays and a
     /// visibility pass, where they cannot be tested at all.
     ///
-    /// Slot counts come from LoadoutData.SuitSlots / DistrictSlots, so answering the
-    /// open 2-vs-3 balance question stays an edit to those constants.
+    /// Slot counts come from the canonical source shape, or an explicit local arena.
     /// </summary>
     public class LoadoutEditor
     {
@@ -23,16 +22,28 @@ namespace NodeWar.Lobby
         private readonly string[] suitIDs;
         private readonly string[] districtIDs;
 
+        // Type-indexed equipment and skins ride along untouched; only the chosen slots are edited.
+        private readonly int[] suitEras;
+        private readonly int[] districtEras;
+        private readonly string[] skinIDs;
+
         /// <summary>
-        /// Starts from an existing loadout, normalised - so a `default` struct,
-        /// a save written at different slot counts and a peer's loadout all
-        /// arrive here the same shape.
+        /// Starts from an existing loadout, preserving its canonical capacity.
+        /// Default and legacy saved shapes normalize to low mode.
         /// </summary>
         public LoadoutEditor(LoadoutData source)
         {
             LoadoutData normalized = LoadoutData.Normalized(source);
             suitIDs = normalized.suitIDs;
             districtIDs = normalized.districtIDs;
+            suitEras = normalized.suitEras;
+            districtEras = normalized.districtEras;
+            skinIDs = normalized.skinIDs;
+        }
+
+        /// <summary>Explicit local editing after rank is known, or arena 1 for offline edits.</summary>
+        public LoadoutEditor(LoadoutData source, int arena) : this(LoadoutData.Normalized(source, arena))
+        {
         }
 
         public int SuitSlotCount { get { return suitIDs.Length; } }
@@ -43,25 +54,6 @@ namespace NodeWar.Lobby
 
         public int FilledSuitCount { get { return CountFilled(suitIDs); } }
         public int FilledDistrictCount { get { return CountFilled(districtIDs); } }
-
-        /// <summary>
-        /// Whether the suit side is short: a slot is empty although the player
-        /// owns enough draftable suits to fill every slot. The lobby flags a
-        /// short side. A side the player cannot fill yet - too few unlocked -
-        /// is not short; nothing they could do would complete it.
-        /// </summary>
-        /// <param name="ownedSuits">Suits the player could put in a slot: unlocked, and not granted to everyone.</param>
-        public bool IsSuitSideShort(int ownedSuits)
-        {
-            return IsShort(suitIDs, ownedSuits);
-        }
-
-        /// <summary>The district side's counterpart to <see cref="IsSuitSideShort"/>.</summary>
-        /// <param name="ownedDistricts">Districts the player could put in a slot: unlocked, and ones the draft can use.</param>
-        public bool IsDistrictSideShort(int ownedDistricts)
-        {
-            return IsShort(districtIDs, ownedDistricts);
-        }
 
         /// <summary>The ID in a suit slot, or "" when empty. Out of range gives "".</summary>
         public string SuitAt(int slot)
@@ -136,7 +128,7 @@ namespace NodeWar.Lobby
         /// that the list has no row for. Both cases exist today: a profile can
         /// hold suit_warrior, which every player is granted regardless
         /// (GameManager.BuildDraftedSuits), and node_crossroads, which
-        /// MapDistrictID discards (inventory findings 8 and 4). Either is
+        /// LoadoutTypes.DistrictForLobbyId discards (inventory findings 8 and 4). Either is
         /// a slot already producing nothing; clearing it hands the slot back.
         /// </summary>
         public int DropUnavailable(System.Func<string, bool> suitOffered,
@@ -159,7 +151,10 @@ namespace NodeWar.Lobby
             return LoadoutData.Normalized(new LoadoutData
             {
                 suitIDs = (string[])suitIDs.Clone(),
-                districtIDs = (string[])districtIDs.Clone()
+                districtIDs = (string[])districtIDs.Clone(),
+                suitEras = (int[])suitEras.Clone(),
+                districtEras = (int[])districtEras.Clone(),
+                skinIDs = (string[])skinIDs.Clone()
             });
         }
 
@@ -212,11 +207,6 @@ namespace NodeWar.Lobby
                 if (!string.IsNullOrEmpty(slots[i])) filled++;
             }
             return filled;
-        }
-
-        private static bool IsShort(string[] slots, int owned)
-        {
-            return FirstEmpty(slots) != NoSlot && owned >= slots.Length;
         }
 
         private static int FirstEmpty(string[] slots)

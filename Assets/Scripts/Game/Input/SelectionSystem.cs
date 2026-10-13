@@ -134,11 +134,23 @@ namespace NodeWar.Input
         {
             if (simState == null || villagerID < 0 || villagerID >= simState.villagers.Length) return;
             int node = simState.villagers[villagerID].currentNodeID;
-            selectedVillagerIDs.Clear();
-            for (int i = 0; i < simState.villagers.Length; i++)
-                if (IsSelectable(i) && simState.villagers[i].currentNodeID == node)
-                    selectedVillagerIDs.Add(i);
+            SelectAllOnNode(node);
         }
+
+        public bool IsValidNode(int node) => SelectionRules.IsValidNode(simState, node);
+
+        public void SelectIdleOnNode(int node)
+        {
+            if (IsValidNode(node)) SelectionRules.CollectOnNode(simState, localPlayerID, node, true, selectedVillagerIDs);
+        }
+
+        public void SelectAllOnNode(int node)
+        {
+            if (IsValidNode(node)) SelectionRules.CollectOnNode(simState, localPlayerID, node, false, selectedVillagerIDs);
+        }
+
+        public bool AreAllResidentsSelected(int node) =>
+            SelectionRules.AllResidentsSelected(simState, localPlayerID, node, selectedVillagerIDs);
 
         private void Update()
         {
@@ -227,37 +239,17 @@ namespace NodeWar.Input
         }
 
         /// <summary>
-        /// Selects every owned villager whose screen position falls inside the
-        /// stroke. Replaces the radius circle: the component was named lasso
-        /// and drew one, but selected by distance from a centre point.
-        ///
-        /// The lasso always replaces. There is no additive path -- draw a
-        /// bigger lasso if you want a bigger selection -- which is what makes
-        /// LassoGeometry's nonzero winding rule load-bearing: a stroke that
-        /// loops back inside itself must add, never subtract.
-        ///
-        /// A stroke too small to be a shape, or capturing nobody, leaves the
-        /// selection untouched. A long press that goes nowhere is a no-op.
+        /// Replaces selection with eligible projected centers covered by the recorded
+        /// open brush stroke. An empty capture preserves the current selection.
+        /// Compatibility name retained for existing event wiring.
         /// </summary>
-        public void ApplyLasso(IReadOnlyList<Vector2> rawPoints)
+        public void ApplyLasso(IReadOnlyList<Vector2> points)
         {
             if (simState == null || mainCam == null) return;
-
-            // Smoothed before testing, with the same iteration count the
-            // renderer uses, so the shape the player saw is the shape that
-            // selects. Chaikin cuts corners inward -- testing the raw polyline
-            // against a smoothed drawing would select villagers sitting
-            // visibly outside the line.
-            LassoGeometry.Smooth(rawPoints, smoothedLasso,
-                thresholds.lassoSmoothingIterations, thresholds.MaxSmoothedPoints);
-
-            IReadOnlyList<Vector2> points = smoothedLasso;
-
-            if (!LassoGeometry.IsValid(points, thresholds.MinLassoAreaSqPx)) return;
-
-            // Cheap screen-space reject before the per-edge containment test.
-            Rect bounds = LassoGeometry.Bounds(points);
-
+            float radius = gestureSource != null ? gestureSource.CurrentPaintRadiusPx
+                : ScreenMetrics.MmToPixels(fallbackThresholds.paintRadiusMm);
+            if (!LassoGeometry.IsValid(points, radius)) return;
+            PaintBounds bounds = LassoGeometry.Bounds(points, radius);
             lassoSelection.Clear();
 
             for (int i = 0; i < simState.villagers.Length; i++)
@@ -272,7 +264,7 @@ namespace NodeWar.Input
                 {
                     worldPos = villagerTransforms[i].position;
                 }
-                else if (villagerPositioners != null && v.currentNodeID < villagerPositioners.Length &&
+                else if (villagerPositioners != null && v.currentNodeID >= 0 && v.currentNodeID < villagerPositioners.Length &&
                     villagerPositioners[v.currentNodeID] != null)
                 {
                     worldPos = villagerPositioners[v.currentNodeID].transform.position;
@@ -287,11 +279,11 @@ namespace NodeWar.Input
                 // Behind the camera projects with negative z and would otherwise
                 // land at a mirrored screen point, selecting villagers the
                 // player cannot see.
-                if (screenPos.z < 0) continue;
+                if (screenPos.z <= 0) continue;
 
                 Vector2 flat = new Vector2(screenPos.x, screenPos.y);
-                if (!bounds.Contains(flat)) continue;
-                if (!LassoGeometry.Contains(points, flat)) continue;
+                if (!bounds.Contains(new GesturePoint(flat.x, flat.y))) continue;
+                if (!LassoGeometry.Contains(points, flat, radius)) continue;
 
                 lassoSelection.Add(i);
             }
@@ -344,12 +336,7 @@ namespace NodeWar.Input
 
         private PointerGestureSource gestureSource;
 
-        /// <summary>Thresholds come from the gesture source so the area gate cannot disagree with the stroke that produced it.</summary>
-        private GestureThresholds thresholds =>
-            gestureSource != null ? gestureSource.Thresholds : fallbackThresholds;
-
         private readonly GestureThresholds fallbackThresholds = new GestureThresholds();
-        private readonly List<Vector2> smoothedLasso = new List<Vector2>();
         private readonly List<int> lassoSelection = new List<int>();
 
         private void OnDestroy()

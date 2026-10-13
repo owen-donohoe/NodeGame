@@ -36,7 +36,7 @@ namespace NodeWar.Lobby.Tests
             foreach (ControlsViewModel.ControlsGroup group in ControlsViewModel.Groups) titles.Add(group.Title);
             CollectionAssert.AreEqual(new[] { "Tap", "Drag", "Hold", "Two fingers", "Mouse" }, titles);
 
-            CollectionAssert.AreEqual(new[] { InputSlot.TapVillager, InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager },
+            CollectionAssert.AreEqual(new[] { InputSlot.TapVillager, InputSlot.DoubleTapGround, InputSlot.DoubleTapVillager, InputSlot.DoubleTapNode, InputSlot.TripleTapNode },
                 ControlsViewModel.Groups[0].Slots);
             CollectionAssert.AreEqual(new[] { InputSlot.Drag, InputSlot.HoldDrag, InputSlot.DragFromVillager,
                 InputSlot.DoubleTapDrag }, ControlsViewModel.Groups[1].Slots);
@@ -54,11 +54,11 @@ namespace NodeWar.Lobby.Tests
             ControlsRow[] rows = ControlsViewModel.Rows(Defaults());
             Assert.AreEqual(InputSlot.TapVillager, rows[0].Slot);
             Assert.AreEqual("Tap a villager", rows[0].Label);
-            Assert.AreEqual(InputSlot.Drag, rows[3].Slot);
-            Assert.AreEqual("Hold + drag", rows[4].Label);
-            Assert.AreEqual("Lasso select", rows[4].ActionLabel);
-            Assert.AreEqual("Drag from a villager", rows[5].Label);
-            Assert.IsFalse(rows[5].Enabled);
+            Assert.AreEqual(InputSlot.Drag, rows[5].Slot);
+            Assert.AreEqual("Hold + drag", rows[6].Label);
+            Assert.AreEqual("Paint select", rows[6].ActionLabel);
+            Assert.AreEqual("Drag from a villager", rows[7].Label);
+            Assert.IsFalse(rows[7].Enabled);
             Assert.AreEqual("Double-tap a villager", rows[2].Label);
         }
 
@@ -414,6 +414,38 @@ namespace NodeWar.Lobby.Tests
                 Assert.IsNotEmpty(ControlsViewModel.ActionLabel(action));
             foreach (InputBindingWarning warning in Enum.GetValues(typeof(InputBindingWarning)))
                 Assert.AreNotEqual(warning.ToString(), ControlsViewModel.WarningText(warning));
+        }
+        [Test]
+        public void NodeRowsAndPaintLabelsAreComplete()
+        {
+            CollectionAssert.AreEqual(new[] { InputSlot.TapVillager, InputSlot.DoubleTapGround,
+                InputSlot.DoubleTapVillager, InputSlot.DoubleTapNode, InputSlot.TripleTapNode },
+                ControlsViewModel.Groups[0].Slots);
+            var seen = new HashSet<InputSlot>();
+            foreach (ControlsRow row in ControlsViewModel.Rows(Defaults())) Assert.IsTrue(seen.Add(row.Slot));
+            CollectionAssert.AreEquivalent(System.Enum.GetValues(typeof(InputSlot)), seen);
+            Assert.AreEqual("Paint select", ControlsViewModel.ActionLabel(InputAction.LassoSelect));
+            Assert.AreEqual("Paint select", ControlsViewModel.RowFor(Defaults(), InputSlot.HoldDrag).ActionLabel);
+            foreach (InputSlot slot in new[] { InputSlot.DoubleTapNode, InputSlot.TripleTapNode })
+            {
+                GameSettingsData original = Defaults();
+                ControlsRow row = ControlsViewModel.RowFor(original, slot);
+                Assert.AreEqual(slot == InputSlot.DoubleTapNode ? "Double-tap a node" : "Triple-tap a node", row.Label);
+                Assert.AreEqual(slot == InputSlot.DoubleTapNode ? "Select all idle" : "Select all on node", row.ActionLabel);
+                Assert.IsTrue(row.Enabled);
+                Assert.IsFalse(row.Locked);
+                Assert.IsFalse(row.HasDropdown);
+                Assert.AreEqual(1, row.Options.Count);
+                Assert.IsFalse(GameSettingsData.Differ(original, ControlsViewModel.CycleAction(original, slot)));
+                GameSettingsData edited = ControlsViewModel.ToggleSlot(original, slot);
+                Assert.IsTrue(GameSettingsData.Differ(original, edited));
+                Assert.AreNotSame(original.inputBindings, edited.inputBindings);
+                Assert.IsTrue(original.inputBindings[(int)slot].enabled);
+                Assert.IsFalse(edited.inputBindings[(int)slot].enabled);
+                for (int i = 0; i < InputBindings.SlotCount; i++)
+                    if (i != (int)slot) Assert.AreEqual(original.inputBindings[i], edited.inputBindings[i]);
+                Assert.IsFalse(GameSettingsData.Differ(original, ControlsViewModel.ResetControls(edited)));
+            }
         }
     }
 }

@@ -25,6 +25,17 @@ namespace NodeWar.Cloud.Tests
         private MatchmakerAllocatorModule module;
         private const long Now = 1234567;
 
+        [Test]
+        public async Task Arena1And2_Accepted()
+        {
+            states["p0"].Rank.Arena = 1;
+            states["p1"].Rank.Arena = 2;
+            var result = await allocation.Allocate("mixed", Roster(), Now);
+            Assert.That(result.ok, Is.True, result.error);
+            var record = (await matches.ReadAsync("mixed")).Record;
+            Assert.That(record.players[0].Rank.Arena, Is.EqualTo(1));
+            Assert.That(record.players[1].Rank.Arena, Is.EqualTo(2));
+        }
         [SetUp]
         public void SetUp()
         {
@@ -51,6 +62,31 @@ namespace NodeWar.Cloud.Tests
 
             Assert.That(record.mapId, Is.EqualTo("hourglass-01"));
             Assert.That(record.boardHash, Is.EqualTo(NodeWar.Simulation.BoardHasher.Hash(NodeWar.Simulation.PremadeMaps.Hourglass01())));
+        }
+
+        [Test]
+        public async Task PreviousProtocol_IsRejected()
+        {
+            var roster = Roster();
+            foreach (var player in roster) player.Protocol = 5;
+
+            await AssertRefused(await allocation.Allocate("m", roster, Now), "Unsupported");
+            Assert.That(reads, Is.Empty);
+            Assert.That(states["p0"].ActiveMatch, Is.Null);
+            Assert.That(states["p1"].ActiveMatch, Is.Null);
+        }
+
+        [Test]
+        public async Task CurrentProtocol_IsAccepted()
+        {
+            var roster = Roster();
+            foreach (var player in roster) player.Protocol = 6;
+
+            var result = await allocation.Allocate("m", roster, Now);
+            Assert.That(result.ok, Is.True, result.error);
+            Assert.That((await matches.ReadAsync("m")).Record.protocol, Is.EqualTo(6));
+            Assert.That(matches.Writes, Is.EqualTo(1));
+            Assert.That(reads, Is.EqualTo(new[] { "p0", "p1" }));
         }
         [Test]
         public async Task AllocationStoresBothServerSnapshotsVersionsAndServerTime()

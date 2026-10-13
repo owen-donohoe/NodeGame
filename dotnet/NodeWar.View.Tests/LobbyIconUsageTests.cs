@@ -9,7 +9,8 @@ public class LobbyIconUsageTests
     {
         LobbyIconKind.Shop, LobbyIconKind.Spark, LobbyIconKind.Smile, LobbyIconKind.Envelope,
         LobbyIconKind.Flag, LobbyIconKind.Hat, LobbyIconKind.Diamond, LobbyIconKind.Pip,
-        LobbyIconKind.Alert, LobbyIconKind.Capture
+        LobbyIconKind.Alert, LobbyIconKind.Capture,
+        LobbyIconKind.SuitTreeAvailable, LobbyIconKind.SuitTreeOwned, LobbyIconKind.SuitTreeEquipped, LobbyIconKind.SuitTreeLocked
     };
 
     [Test]
@@ -25,7 +26,7 @@ public class LobbyIconUsageTests
     }
 
     [Test]
-    public void RetiredSetIsExactlyTheTenUnusedGenericKinds()
+    public void RetiredSetIsExactlyTheUnusedGenericAndTreeKinds()
     {
         var retired = LobbyIconUsage.All.Where(i => i.Retired).ToArray();
         CollectionAssert.AreEquivalent(Retired, retired.Select(i => i.Kind));

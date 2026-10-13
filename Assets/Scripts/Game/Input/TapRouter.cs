@@ -60,6 +60,8 @@ namespace NodeWar.Input
             source.OnTwoFingerTap += HandleTwoFingerTap;
             source.OnDoubleTapGround += HandleDoubleTapGround;
             source.OnDoubleTapVillager += HandleDoubleTapVillager;
+            source.OnDoubleTapNode += HandleDoubleTapNode;
+            source.OnTripleTapNode += HandleTripleTapNode;
             subscribed = true;
         }
 
@@ -71,6 +73,8 @@ namespace NodeWar.Input
             source.OnTwoFingerTap -= HandleTwoFingerTap;
             source.OnDoubleTapGround -= HandleDoubleTapGround;
             source.OnDoubleTapVillager -= HandleDoubleTapVillager;
+            source.OnDoubleTapNode -= HandleDoubleTapNode;
+            source.OnTripleTapNode -= HandleTripleTapNode;
             subscribed = false;
         }
 
@@ -111,6 +115,8 @@ namespace NodeWar.Input
                 //    selection exists.
                 case GestureTargetKind.Node:
                 {
+                    if (selection == null || !selection.IsValidNode(target.id)) return;
+                    if (selection.AreAllResidentsSelected(target.id)) return;
                     bool hasSelection = selection != null &&
                                         selection.SelectedVillagerIDs.Count > 0;
 
@@ -196,6 +202,20 @@ namespace NodeWar.Input
         private void SelectAllIdle()
         {
             if (selection != null) selection.SelectAllIdle();
+            if (panel != null) panel.ClosePanel();
+        }
+
+        private void HandleDoubleTapNode(GestureTarget target)
+        {
+            if (selection == null || !selection.IsValidNode(target.id)) return;
+            selection.SelectIdleOnNode(target.id);
+            if (panel != null) panel.ClosePanel();
+        }
+
+        private void HandleTripleTapNode(GestureTarget target)
+        {
+            if (selection == null || !selection.IsValidNode(target.id)) return;
+            selection.SelectAllOnNode(target.id);
             if (panel != null) panel.ClosePanel();
         }
 

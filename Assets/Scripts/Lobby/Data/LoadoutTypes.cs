@@ -82,7 +82,7 @@ namespace NodeWar.Lobby
         /// </summary>
         public static LoadoutData WithEquipment(LoadoutData loadout, PlayerState state)
         {
-            loadout = LoadoutData.Normalized(loadout);
+            loadout = LoadoutData.Normalized(loadout, state?.Rank == null ? 1 : state.Rank.Arena);
             EquippedRecord equipped = state?.Inventory?.Equipped;
             ErasFromEquipped(equipped, out loadout.suitEras, out loadout.districtEras);
 

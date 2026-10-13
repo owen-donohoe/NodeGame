@@ -11,6 +11,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="RigSmokeTests.cs" />
+    <Compile Include="BotSuitChoiceTests.cs" />
+    <Compile Include="ArenaLoadoutRigTests.cs" />
     <Compile Include="RigDiagnosticsTests.cs" />
     <Compile Include="TimelineMetricsTests.cs" />
     <Compile Include="RigSetupCompatibilityTests.cs" />

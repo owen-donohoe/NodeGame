@@ -24,6 +24,30 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `docs/adding-a-feature.md`
 
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:20:36Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:16:43Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:12:20Z }
+
+- { by: gpt-6, at: 2026-10-10T16:59:03Z }
+
+- { by: gpt-6, at: 2026-10-10T16:31:33Z }
+
+- { by: gpt-6, at: 2026-10-10T16:30:25Z }
+
+- { by: gpt-6, at: 2026-10-10T16:21:41Z }
+
+- { by: gpt-6, at: 2026-10-10T16:19:55Z }
+
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
+
+- { by: gpt-6, at: 2026-10-10T16:06:16Z }
+
+- { by: gpt-6, at: 2026-10-10T16:03:02Z }
+
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
 
@@ -50,7 +74,32 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
+
+- { by: gpt-6, at: 2026-10-10T15:45:30Z }
+
+- { by: gpt-6, at: 2026-10-10T15:55:03Z }
+- { by: gpt-6, at: 2026-10-11T19:05:40Z }
+
 ## `docs/architecture.md`
+
+- { by: gpt-6, at: 2026-10-10T23:25:20Z }
+
+- { by: gpt-6, at: 2026-10-10T23:04:47Z }
+
+- { by: gpt-6, at: 2026-10-10T22:45:37Z }
+
+- { by: gpt-6, at: 2026-10-10T16:56:36Z }
+
+- { by: gpt-6, at: 2026-10-10T16:42:51Z }
+
+- { by: gpt-6, at: 2026-10-10T16:30:25Z }
+
+- { by: gpt-6, at: 2026-10-10T16:20:27Z }
+
+- { by: gpt-6, at: 2026-10-10T16:06:16Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
@@ -79,8 +128,13 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T19:59:12Z }
+- { by: gpt-6, at: 2026-10-11T19:03:46Z }
 
 ## `docs/simulation-rules.md`
+
+- { by: gpt-6, at: 2026-10-10T16:30:25Z }
+
+- { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
@@ -100,8 +154,29 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+- { by: gpt-6, at: 2026-10-10T16:56:36Z }
 
 ## `docs/skills/run-dotnet-tests.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:20:09Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:16:17Z }
+
+- { by: gpt-6, at: 2026-10-10T17:08:56Z }
+
+- { by: gpt-6, at: 2026-10-10T16:56:36Z }
+
+- { by: gpt-6, at: 2026-10-10T16:30:25Z }
+
+- { by: gpt-6, at: 2026-10-10T16:20:27Z }
+
+- { by: gpt-6, at: 2026-10-10T16:18:52Z }
+
+- { by: gpt-6, at: 2026-10-10T16:06:16Z }
+
+- { by: gpt-6, at: 2026-10-10T16:01:45Z }
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-14T00:00:00Z }
@@ -128,7 +203,35 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
+- { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+
+- { by: gpt-6, at: 2026-10-10T15:44:32Z }
+
+- { by: gpt-6, at: 2026-10-10T15:54:09Z }
+
 ## `.claude/skills/cs-review.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-11T01:12:34Z }
+
+- { by: gpt-6, at: 2026-10-10T23:26:34Z }
+
+- { by: gpt-6, at: 2026-10-10T23:05:47Z }
+
+- { by: gpt-6, at: 2026-10-10T22:45:37Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+
+- { by: gpt-6, at: 2026-10-10T16:59:03Z }
+
+- { by: gpt-6, at: 2026-10-10T16:44:21Z }
+
+- { by: gpt-6, at: 2026-10-10T16:31:33Z }
+
+- { by: gpt-6, at: 2026-10-10T16:21:41Z }
+
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
@@ -153,8 +256,16 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
+- { by: gpt-6, at: 2026-10-11T19:03:46Z }
+- { by: claude-opus-5-5, at: 2026-10-13T15:23:12Z }
 
 ## `.claude/skills/determinism-guard.md`
+
+- { by: gpt-6, at: 2026-10-10T16:30:25Z }
+
+- { by: gpt-6, at: 2026-10-10T16:06:16Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
@@ -177,8 +288,29 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+- { by: gpt-6, at: 2026-10-10T16:59:03Z }
 
 ## `.claude/skills/write-sim-test.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:20:36Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:16:43Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:12:20Z }
+
+- { by: gpt-6, at: 2026-10-10T16:59:03Z }
+
+- { by: gpt-6, at: 2026-10-10T16:31:33Z }
+
+- { by: gpt-6, at: 2026-10-10T16:21:41Z }
+
+- { by: gpt-6, at: 2026-10-10T16:19:55Z }
+
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
+
+- { by: gpt-6, at: 2026-10-10T16:03:02Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5, at: 2026-09-02T00:00:00Z }
@@ -208,7 +340,15 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
+
+- { by: gpt-6, at: 2026-10-10T15:45:30Z }
+
+- { by: gpt-6, at: 2026-10-10T15:55:03Z }
+
 ## `docs/game-model.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
 
 - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
@@ -230,6 +370,26 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 
 ## `docs/computations/determinism-baseline.md`
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:25:37Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:20:36Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:16:43Z }
+
+- { by: claude-sonnet-5-5, at: 2026-10-10T17:12:20Z }
+
+- { by: gpt-6, at: 2026-10-10T16:59:03Z }
+
+- { by: gpt-6, at: 2026-10-10T16:31:33Z }
+
+- { by: gpt-6, at: 2026-10-10T16:21:41Z }
+
+- { by: gpt-6, at: 2026-10-10T16:19:55Z }
+
+- { by: gpt-6, at: 2026-10-10T16:07:31Z }
+
+- { by: gpt-6, at: 2026-10-10T16:03:02Z }
 
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
@@ -254,6 +414,12 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
 
+- { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
+
+- { by: gpt-6, at: 2026-10-10T15:45:30Z }
+
+- { by: gpt-6, at: 2026-10-10T15:55:03Z }
+
 ## `docs/skills/run-editmode-tests.md`
 
 - { by: claude-opus-5, at: 2026-09-13T00:00:00Z }
@@ -269,6 +435,8 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
 
 ## `docs/design-history/README.md`
+
+- { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 
 - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 - { by: claude-opus-5-5, at: 2026-09-29T18:00:00Z }
@@ -378,3 +546,7 @@ not an unread E1-E3 source backlog.
 The untracked main-checkout `pr-d.md` remains the lead's backlog. It was not copied
 or edited. Editor asset migration/fresh export, the explicit release-content gate,
 Unity visual/wiring checks and a Linux CI receipt were not performed by E4.
+
+## `docs/touch-input-spec.md`
+
+- { by: gpt-6, at: 2026-10-10T23:25:20Z }

@@ -6,8 +6,8 @@ tags: [skill, review, architecture, csharp]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
-verified_at_commit: 8901d8142c371e5d1efb569925696a976a8f3a27
+  - { by: claude-opus-5-5, at: 2026-10-13T16:37:13Z }
+verified_at_commit: 63701b282cb7b86fb0803210c193382b75a9e36a
 status: stable
 sources:
   - id: architecture
@@ -91,7 +91,7 @@ Read all files modified in this session, then check:
    - New CommandType has a CommandProcessor case (Recruit, SetAutoRecruit, ForgeMinion and Collect
      validate through NodeActionRules or BankRules, which presentation may call read-only)?
    - GameCommand struct and InputSerializer updated together?
-   - Wire layout changes (current protocol is 5) bump ProtocolVersion.Current in
+   - Wire layout or incompatible match-setup changes (current protocol is 6) bump ProtocolVersion.Current in
      Backend/Shared/ProtocolVersion.cs, which InputSerializer.ProtocolVersion aliases?
    - Simulation behavior changes bump SimulationVersion.Current, with
      balance-only edits tracked by the content hash?

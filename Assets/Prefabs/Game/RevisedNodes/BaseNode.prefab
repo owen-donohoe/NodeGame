@@ -241,6 +241,7 @@ MonoBehaviour:
   idleRadius: 1
   claimRadius: 1
   backupWorkSpacing: 1
+  spacingMultiplier: 1
 --- !u!114 &5630318977583625245
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -256,6 +257,8 @@ MonoBehaviour:
   gfxRoot: {fileID: 1202471538846096630}
   workPointsRoot: {fileID: 3298885307313581287}
   spriteRotation: {x: 55, y: 0, z: 0}
+  useUprightPitch: 1
+  uprightPitch: 20
   startupDuration: 0.5
   startupOvershoot: 1.6
   startupEase: 27

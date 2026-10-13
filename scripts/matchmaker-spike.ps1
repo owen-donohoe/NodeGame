@@ -10,8 +10,8 @@
 param(
     [string]$Environment = "development",
     [int]$Seconds = 60,
-    # PR D release identity: banks, district health, minions and Pier gates (sim 4).
-    [int]$Protocol = 5,
+    # Loadout rework release identity: protocol 6 (arena capacities), sim 4, PR D balance.
+    [int]$Protocol = 6,
     [int]$Sim = 4,
     [int]$Content = -1242191275,
     [switch]$EnsureRecords,

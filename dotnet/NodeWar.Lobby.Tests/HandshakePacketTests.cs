@@ -8,6 +8,18 @@ namespace NodeWar.Lobby.Tests
         private static readonly BuildIdentity Local = new BuildIdentity(1, 7, -123456789);
 
         [Test]
+        public void PreviousProtocol_IsRejected()
+        {
+            var current = new BuildIdentity(InputSerializer.ProtocolVersion, Local.sim, Local.content);
+            var previous = new BuildIdentity(5, Local.sim, Local.content);
+            Assert.That(InputSerializer.TryDeserializeHandshake(
+                InputSerializer.SerializeHandshake(previous), out BuildIdentity peer), Is.True);
+
+            Assert.That(InputSerializer.Compare(current, peer), Is.EqualTo(HandshakeVerdict.PeerOlder));
+            Assert.That(InputSerializer.Compare(peer, current), Is.EqualTo(HandshakeVerdict.PeerNewer));
+        }
+
+        [Test]
         public void Handshake_RoundTrips()
         {
             byte[] data = InputSerializer.SerializeHandshake(Local);

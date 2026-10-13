@@ -29,7 +29,7 @@ namespace NodeWar.Lobby
 
         public VisualElement Root { get; private set; }
 
-        private readonly MatchLauncher launcher = new MatchLauncher();
+        private readonly MatchLauncher launcher;
         private readonly LobbyManager lobbyManager;
         private readonly LobbyToast toast;
         private readonly LobbySheet sheet;
@@ -129,6 +129,7 @@ namespace NodeWar.Lobby
 
             Wire();
 
+            launcher = new MatchLauncher(this.catalog);
             launcher.Changed += RefreshStatus;
 
             // Whatever closes the sheet - scrim, handle or Cancel - a connection
@@ -270,9 +271,9 @@ namespace NodeWar.Lobby
                 LoadoutEditor loadout = catalog.CurrentLoadout();
 
                 SetCount(loadoutNodes, loadout.FilledDistrictCount, loadout.DistrictSlotCount, "districts",
-                         loadout.IsDistrictSideShort(catalog.OwnedDistrictCount()));
+                         !loadout.DistrictSlotsFull);
                 SetCount(loadoutSuits, loadout.FilledSuitCount, loadout.SuitSlotCount, "suits",
-                         loadout.IsSuitSideShort(catalog.OwnedSuitCount()));
+                         !loadout.SuitSlotsFull);
             }
 
             string text = testing
@@ -307,6 +308,7 @@ namespace NodeWar.Lobby
 
         private async System.Threading.Tasks.Task StartRankedQueueAsync()
         {
+
             ShowView(View.Ranked);
             rankedQueueView.ShowSearching(0);
 
@@ -314,6 +316,15 @@ namespace NodeWar.Lobby
             // it; otherwise the winner of that match would be offered a forfeit.
             await PendingRankedReports.RetryAsync();
             if (!IsOpen || currentView != View.Ranked) return;
+            if (!await launcher.PrepareAsync(true))
+            {
+                Say(launcher.FailureMessage);
+                RefreshNote();
+                ShowView(View.Find);
+                return;
+            }
+            if (!IsOpen) return;
+            if (currentView != View.Ranked) return;
 
             DisposeRankedPresenter();
 
@@ -354,7 +365,7 @@ namespace NodeWar.Lobby
             return Time.realtimeSinceStartupAsDouble;
         }
 
-        private void LaunchLocal(GameMode value)
+        private async void LaunchLocal(GameMode value)
         {
             if (lobbyManager == null)
             {
@@ -363,8 +374,11 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            lobbyManager.SetGameMode(value);
-            lobbyManager.LaunchMatch();
+            if (!await launcher.LaunchLocalAsync(value == GameMode.Bot))
+            {
+                Say(launcher.FailureMessage);
+                RefreshNote();
+            }
         }
 
         private void SetTransport(bool lan)

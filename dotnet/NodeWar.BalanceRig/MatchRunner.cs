@@ -195,6 +195,7 @@ namespace NodeWar.BalanceRig
                 mapId = source.mapId,
                 baseDraft = new[] { source.baseDraft[1], source.baseDraft[0] },
                 loadoutNodes = source.loadoutNodes,
+                effectiveDraftPools = source.effectiveDraftPools == null ? null : new[] { source.effectiveDraftPools[1], source.effectiveDraftPools[0] },
                 playerSetups = source.playerSetups == null ? null : new[] { source.playerSetups[1], source.playerSetups[0] },
                 mirror = source.mirror
             };
@@ -272,8 +273,8 @@ namespace NodeWar.BalanceRig
             var buffer = new InputBuffer();
             var bots = new[]
             {
-                new BotPlayer(state, buffer, 0, setup.board.defaultLinkWeight),
-                new BotPlayer(state, buffer, 1, setup.board.defaultLinkWeight)
+                new BotPlayer(state, buffer, 0, setup.board.defaultLinkWeight, setup.balance),
+                new BotPlayer(state, buffer, 1, setup.board.defaultLinkWeight, setup.balance)
             };
 
             // Commands held back by an input delay: applied at tick (issued + delay).
@@ -456,8 +457,10 @@ namespace NodeWar.BalanceRig
             var remaining = new List<DistrictType>[2];
             for (int p = 0; p < 2; p++)
             {
-                remaining[p] = new List<DistrictType>(setup.baseDraft[p]);
-                remaining[p].AddRange(setup.loadoutNodes);
+                remaining[p] = setup.effectiveDraftPools == null
+                    ? new List<DistrictType>(setup.baseDraft[p])
+                    : new List<DistrictType>(setup.effectiveDraftPools[p]);
+                if (setup.effectiveDraftPools == null) remaining[p].AddRange(setup.loadoutNodes);
             }
 
             var placements = new List<DraftPlacement>();

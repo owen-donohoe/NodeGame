@@ -8,6 +8,35 @@ namespace NodeWar.MatchLog
 {
     public class MatchLogFormatTests
     {
+        [Test]
+        public void ThreeChosenSuitHistory_RoundTripsWithoutTrimming()
+        {
+            var log = TestLogs.Full();
+            log.header.protocol = 5;
+            log.header.sim = SimulationVersion.Current;
+            log.setup = new MatchSetup(log.setup.MapId, log.setup.BoardHash,
+                SimulationVersion.Current, log.header.content);
+            for (int player = 0; player < 2; player++)
+            {
+                log.loadouts[player].suits = new[]
+                {
+                    (int)SuitType.Warrior, (int)SuitType.Guardian,
+                    (int)SuitType.Scout, (int)SuitType.Medic
+                };
+                log.loadouts[player].suitEras = new int[(int)SuitType.Minion + 1];
+                log.loadouts[player].suitEras[(int)SuitType.Warrior] = player;
+                log.loadouts[player].suitEras[(int)SuitType.Guardian] = 1;
+                log.loadouts[player].suitEras[(int)SuitType.Scout] = 2;
+                log.loadouts[player].suitEras[(int)SuitType.Medic] = 3;
+                log.loadouts[player].districtEras = new[] { 0, 1, 2, 3 };
+            }
+
+            byte[] bytes = MatchLogFormat.Write(log);
+            var decoded = TestLogs.Read(bytes);
+            TestLogs.Equal(log, decoded);
+            CollectionAssert.AreEqual(bytes, MatchLogFormat.Write(decoded));
+        }
+
         [TestCase(7)]
         [TestCase(11)]
         public void CurrentPacketsRejectRetiredTypes(int district)

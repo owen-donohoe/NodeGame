@@ -8,221 +8,107 @@ using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>
-    /// The Workshop: pick the districts and suits you bring into the draft.
-    /// The lobby-prototype.html layout, with inventory choices below the slots.
-    ///
-    /// One side at a time. A segmented pill at the top and a floating round
-    /// button bottom-right choose Districts or Suits; both call
-    /// <see cref="SetTab"/>, which owns the state and re-syncs both, so the
-    /// two controls can never disagree. The slots for that side sit under the
-    /// pill, "Ready" appears once they are all full, and a three-across grid of
-    /// cards scrolls beneath. Tap a card to take it, tap a filled slot to
-    /// give it back.
-    ///
-    /// The rules are unchanged from the previous Workshop, and still not
-    /// decided here:
-    ///   - slot counts come from LoadoutData.DistrictSlots and SuitSlots, and what
-    ///     may occupy a slot lives in LoadoutEditor, which has no UnityEngine
-    ///     reference and is covered by dotnet/NodeWar.Lobby.Tests;
-    ///   - every change is saved at once through PlayerProfile.SetLoadout - a
-    ///     phone can be killed at any moment, and there is no back to rely on;
-    ///   - the chosen side is remembered on PlayerProfile.WorkshopTabIndex,
-    ///     because the Lobby scene is rebuilt after every match;
-    ///   - locked cards ask PlayerProfile.IsSuitUnlocked / IsDistrictUnlocked, even
-    ///     though both return true today, so this is right when they are real.
-    ///
-    /// Two facts about the game shape the grid (docs/ui-migration-inventory.md):
-    ///   - suits flagged isGlobal (Warrior) are granted to everyone by
-    ///     GameManager.BuildDraftedSuits. They are shown as cards, in the
-    ///     prototype's grid, but say "Always granted" and refuse a slot, which
-    ///     would buy nothing;
-    ///   - Crossroads is excluded: GameManager cannot map it to a DistrictType,
-    ///     so a slot spent on it produces nothing.
-    ///
-    /// No art exists, so a card's art is its family colour with a monogram.
-    /// </summary>
+    /// <summary>Chosen slots with passive inspection and explicit Use.</summary>
     public class WorkshopPage : LobbyPage
     {
-        /// <summary>
-        /// Which side is shown. Districts is zero, so it is both the default
-        /// and what an older profile without the field deserialises to.
-        /// </summary>
-        private enum Tab
-        {
-            Districts = 0,
-            Suits = 1
-        }
-
-        private const int GridColumns = 3;
-
-        /// <summary>One item as a card: a district or a suit.</summary>
+        private enum Tab { Districts = 0, Suits = 1 }
         private class Item
         {
-            public string ID;
-            public string Name;
-            public string Description;
-            public string Note;
+            public string ID, Name, Description;
             public ItemFamily.Family Family;
             public bool Granted;
         }
-
         private readonly LoadoutCatalog catalog;
         private readonly LobbyToast toast;
         private readonly LobbyContextMenu menu;
-
-        private readonly List<Item> districts = new List<Item>();
-        private readonly List<Item> suits = new List<Item>();
-
-        private readonly Button segDistricts;
-        private readonly Button segSuits;
-        private readonly VisualElement slotWrap;
-        private readonly VisualElement slotHost;
+        private readonly List<Item> districts = new List<Item>(), suits = new List<Item>();
+        private readonly Button segDistricts, segSuits, primary, variants;
+        private readonly VisualElement districtSlots, suitSlots, unlocked, notUnlocked, preview, stats;
+        private readonly Label title, description, notice, eraMessage;
         private readonly ScrollView grid;
-        private readonly VisualElement veil;
-        private readonly VisualElement picker;
-        private readonly LobbyIcon pickIcon;
-        private readonly Label pickLabel;
-        private readonly Button pickDistricts;
-        private readonly Button pickSuits;
-        private readonly Label details;
-        private readonly VisualElement eraRow;
-        private readonly VisualElement skinRow;
-        private readonly Label eraMessage;
-        private readonly Button treeOpen;
-        private readonly SuitTreeView treeView;
-        private readonly LobbySheet lobbySheet;
-
         private PlayerState playerState;
         private Item inspectedItem;
-        private bool isOpen;
-        private int inventoryVisit;
-        private int selectionVisit;
-        private bool inventoryBusy;
+        private readonly WorkshopInventorySession session = new WorkshopInventorySession();
+        private readonly VisualElement panelHost;
+        private string panelBaseId, panelChoiceId;
+        private bool panelSkins;
+        private readonly Button skins;
+        private SkinBand activeBand;
+        private bool inventoryBusy => session.Busy;
         private string inventoryMessage = "";
         private Task inventoryIdle = Task.CompletedTask;
-
-        private LoadoutEditor loadout = new LoadoutEditor(LoadoutData.CreateEmpty());
-        private Tab activeTab = Tab.Districts;
-        private bool pickerOpen;
-
-        public WorkshopPage(VisualTreeAsset layout, LoadoutCatalog catalog, LobbyToast toast, LobbyContextMenu menu,
-            LobbySheet sheet = null)
+        private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
+        private Tab activeTab;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private UnlockStatus? debugUnlockStatus;
+        public void SetDebugUnlockStatus(UnlockStatus? status) { debugUnlockStatus = status; Render(); RenderInventory(); }
+#endif
+        private UnlockState DisplayUnlock(UnlockState state)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugUnlockStatus.HasValue) return state.WithDisplayStatus(debugUnlockStatus.Value);
+#endif
+            return state;
+        }
+        public WorkshopPage(VisualTreeAsset layout, LoadoutCatalog catalog, LobbyToast toast, LobbyContextMenu menu, LobbySheet sheet = null)
             : base(LobbyPageID.Workshop, Build(layout))
         {
             this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
-            this.toast = toast;
-            this.menu = menu;
-            lobbySheet = sheet;
-
-            segDistricts = Root.Q<Button>("workshop-seg-districts");
-            segSuits = Root.Q<Button>("workshop-seg-suits");
-            slotWrap = Root.Q<VisualElement>("workshop-slotwrap");
-            slotHost = Root.Q<VisualElement>("workshop-slots");
-            grid = Root.Q<ScrollView>("workshop-grid");
-            veil = Root.Q<VisualElement>("workshop-veil");
-            picker = Root.Q<VisualElement>("workshop-picker");
-            pickIcon = Root.Q<LobbyIcon>("workshop-pick-icon");
-            pickLabel = Root.Q<Label>("workshop-pick-label");
-            pickDistricts = Root.Q<Button>("workshop-pick-districts");
-            pickSuits = Root.Q<Button>("workshop-pick-suits");
-            details = Root.Q<Label>("workshop-details");
-            eraRow = Root.Q<VisualElement>("workshop-era-row");
-            skinRow = Root.Q<VisualElement>("workshop-skin-row");
+            this.toast = toast; this.menu = menu;
+            segDistricts = Root.Q<Button>("workshop-tab-districts");
+            segSuits = Root.Q<Button>("workshop-tab-suits");
+            primary = Root.Q<Button>("workshop-info-use");
+            variants = Root.Q<Button>("workshop-open-variants");
+            skins = Root.Q<Button>("workshop-open-skins");
+            districtSlots = Root.Q<VisualElement>("workshop-district-slots");
+            suitSlots = Root.Q<VisualElement>("workshop-suit-slots");
+            unlocked = Root.Q<VisualElement>("workshop-unlocked");
+            notUnlocked = Root.Q<VisualElement>("workshop-not-unlocked");
+            preview = Root.Q<VisualElement>("workshop-info-preview");
+            stats = Root.Q<VisualElement>("workshop-info-stats");
+            title = Root.Q<Label>("workshop-info-title");
+            description = Root.Q<Label>("workshop-info-description");
+            notice = Root.Q<Label>("workshop-info-unlock");
             eraMessage = Root.Q<Label>("workshop-era-message");
-            Root.RegisterCallback<DetachFromPanelEvent>(evt =>
-            {
-                if (evt.target == Root) CloseInventory();
-            });
-
+            grid = Root.Q<ScrollView>("workshop-grid");
+            panelHost = Root.Q<VisualElement>("workshop-panel-host");
             if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
-            if (pickDistricts != null) pickDistricts.clicked += () => SetTab(Tab.Districts);
-            if (pickSuits != null) pickSuits.clicked += () => SetTab(Tab.Suits);
-
-            Button pickButton = Root.Q<Button>("workshop-pickbtn");
-            if (pickButton != null) pickButton.clicked += () => SetPickerOpen(!pickerOpen);
-
-            if (veil != null)
-            {
-                veil.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    SetPickerOpen(false);
-                    evt.StopPropagation();
-                });
-            }
-
-            // The suit tree overlay. Without a sheet or without the overlay in the layout
-            // the Workshop simply has no tree button.
-            treeOpen = Root.Q<Button>("workshop-tree-open");
-            treeView = new SuitTreeView(Root, sheet, () => playerState, TreeBalance, DescribeSuit, EquipFromTreeAsync);
-            if (treeOpen != null) treeOpen.clicked += OpenTree;
-
+            if (primary != null) primary.clicked += UsePreview;
+            if (variants != null) variants.clicked += OpenVariants;
+            if (skins != null) skins.clicked += OpenSkins;
+            Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) CloseInventory(); });
             CollectItems();
-            SetPickerOpen(false);
         }
-
         private static VisualElement Build(VisualTreeAsset layout)
         {
-            VisualElement root = new VisualElement();
-            root.name = "page-workshop";
+            var root = new VisualElement { name = "page-workshop", pickingMode = PickingMode.Ignore };
             root.AddToClassList("lb-page-flush");
-            root.pickingMode = PickingMode.Ignore;
-
-            if (layout != null)
-            {
-                layout.CloneTree(root);
-            }
-            else
-            {
-                Label note = new Label("Workshop layout missing - assign WorkshopPage.uxml");
-                note.AddToClassList("lb-stub__body");
-                root.Add(note);
-            }
-
+            if (layout != null) layout.CloneTree(root);
+            else root.Add(new Label("Workshop layout missing - assign WorkshopPage.uxml"));
             return root;
         }
-
         public override void OnShow()
         {
-            isOpen = true;
-            int visit = ++inventoryVisit;
-            playerState = null;
-            LoadFromProfile();
-            Inspect(null);
-            Render();
+            int visit = session.BeginVisit();
+            CloseItemPanel();
+            playerState = BackendServices.LastKnownState;
+            CollectItems(); LoadFromProfile(); Inspect(null); Render();
             _ = LoadInventoryAsync(visit);
         }
-
-        /// <summary>
-        /// A second save on the way out. Every change already persists as it
-        /// happens; this only covers SetLoadout being made deferred later.
-        /// </summary>
-        public override void OnHide()
-        {
-            treeView.Close();
-            CloseInventory();
-            SetPickerOpen(false);
-            SaveToProfile();
-        }
-
-        // ===== DEFINITIONS =====
-
-        /// <summary>
-        /// Turns the definition assets into cards, once - they are serialized
-        /// fields and cannot change at runtime. Districts are ordered by family
-        /// (round, square, triangle, as the prototype lists them), keeping the
-        /// assets' own order within a family.
-        /// </summary>
+        public override void OnHide() { CloseInventory(); }
         private void CollectItems()
         {
+            districts.Clear();
+            suits.Clear();
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
             // The catalog never hands back a null array.
             DistrictDefinition[] allDistricts = catalog.Districts;
             for (int i = 0; i < allDistricts.Length; i++)
             {
                 DistrictDefinition node = allDistricts[i];
                 if (node == null || string.IsNullOrEmpty(node.districtID)) continue;
-                if (!catalog.IsDistrictOffered(node.districtID)) continue;
+                if (!catalog.IsDistrictOffered(node.districtID, 2)) continue;
 
                 ItemFamily.Family family = ItemFamily.ForDistrict(node.districtID);
                 districts.Add(new Item
@@ -230,8 +116,8 @@ namespace NodeWar.Lobby
                     ID = node.districtID,
                     Name = catalog.DistrictName(node.districtID),
                     Description = node.description,
-                    Note = ItemFamily.NoteFor(family),
-                    Family = family
+                    Family = family,
+                    Granted = !catalog.IsDistrictOffered(node.districtID, arena)
                 });
             }
 
@@ -248,30 +134,22 @@ namespace NodeWar.Lobby
                     ID = suit.suitID,
                     Name = catalog.SuitName(suit.suitID),
                     Description = suit.description,
-                    Note = suit.isGlobal ? "Always granted" : suit.description,
                     Family = ItemFamily.Family.Combat,
-                    Granted = suit.isGlobal
+                    Granted = !catalog.IsSuitOffered(suit.suitID, arena)
                 });
             }
         }
 
-        /// <summary>Stable insertion sort: the lists are a handful of items.</summary>
-        private static void SortByFamily(List<Item> items)
+        private void SortByFamily(List<Item> items)
         {
-            for (int i = 1; i < items.Count; i++)
+            items.Sort((a, b) =>
             {
-                Item current = items[i];
-                int key = ItemFamily.SortKey(current.Family);
-                int j = i - 1;
-
-                while (j >= 0 && ItemFamily.SortKey(items[j].Family) > key)
-                {
-                    items[j + 1] = items[j];
-                    j--;
-                }
-
-                items[j + 1] = current;
-            }
+                int order = DisplayUnlock(catalog.UnlockForBase(a.ID, playerState)).Status.CompareTo(
+                    DisplayUnlock(catalog.UnlockForBase(b.ID, playerState)).Status);
+                if (order == 0) order = ItemFamily.SortKey(a.Family).CompareTo(ItemFamily.SortKey(b.Family));
+                if (order == 0) order = StringComparer.Ordinal.Compare(a.Name, b.Name);
+                return order != 0 ? order : StringComparer.Ordinal.Compare(a.ID, b.ID);
+            });
         }
 
         private static Item Find(List<Item> items, string id)
@@ -288,335 +166,206 @@ namespace NodeWar.Lobby
         {
             PlayerProfile profile = PlayerProfile.Instance;
 
-            loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
+            string preview = loadout.PreviewId;
+            loadout = new LoadoutScreenModel(catalog.CurrentLoadout(playerState).ToLoadout());
+            loadout.Preview(preview);
             activeTab = profile != null && profile.WorkshopTabIndex == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
-
-            // A saved loadout can hold a suit that has since become globally
-            // granted, or Crossroads. Both are slots producing nothing; clearing
-            // them hands the slots back.
-            int cleared = loadout.DropUnavailable(catalog.IsSuitOffered, catalog.IsDistrictOffered);
-
-            if (cleared > 0)
-            {
-                Debug.Log("[Workshop] Cleared " + cleared + " loadout entr" +
-                          (cleared == 1 ? "y" : "ies") + " that the draft cannot use.");
-                SaveToProfile();
-            }
+            // Until rank is confirmed, fallback display must not trim a saved high deck.
+            if (playerState?.Rank != null) SaveToProfile();
         }
-
         private void SaveToProfile()
         {
             PlayerProfile profile = PlayerProfile.Instance;
-            if (profile != null) profile.SetLoadout(loadout.ToLoadout());
+            if (profile != null) profile.SetLoadout(loadout.ToData());
         }
 
-        // ===== STATE =====
-
-        /// <summary>
-        /// The one owner of which side is shown. Both switchers call this, and
-        /// it re-renders both, the slots and the grid, then closes the picker.
-        /// </summary>
         private void SetTab(Tab tab)
         {
-            if (tab != activeTab)
-            {
-                activeTab = tab;
-                Inspect(null);
-
-                PlayerProfile profile = PlayerProfile.Instance;
-                if (profile != null) profile.WorkshopTabIndex = (int)tab;
-
-                Render();
-                if (grid != null) grid.scrollOffset = Vector2.zero;
-            }
-
-            SetPickerOpen(false);
+            CloseItemPanel();
+            activeTab = tab;
+            var profile = PlayerProfile.Instance;
+            if (profile != null) profile.WorkshopTabIndex = (int)tab;
+            Render();
+            if (grid != null) grid.scrollOffset = Vector2.zero;
         }
-
-        private void SetPickerOpen(bool open)
-        {
-            pickerOpen = open;
-
-            if (picker != null) picker.EnableInClassList("lb-picker--open", open);
-
-            if (veil != null)
-            {
-                veil.EnableInClassList("lb-pickveil--on", open);
-                veil.pickingMode = open ? PickingMode.Position : PickingMode.Ignore;
-            }
-
-            // The options fade out rather than vanish, so they must also stop
-            // taking taps while closed.
-            SetPickable(pickDistricts, open);
-            SetPickable(pickSuits, open);
-        }
-
-        private static void SetPickable(VisualElement element, bool pickable)
-        {
-            if (element != null) element.pickingMode = pickable ? PickingMode.Position : PickingMode.Ignore;
-        }
-
-        // ===== RENDER =====
-
         private void Render()
         {
-            RenderSwitchers();
+            segDistricts?.EnableInClassList("ws-tab--on", activeTab == Tab.Districts);
+            segSuits?.EnableInClassList("ws-tab--on", activeTab == Tab.Suits);
+            var items = activeTab == Tab.Suits ? suits : districts;
+            SortByFamily(items);
+            Item item = Find(items, loadout.PreviewId);
+            Inspect(item ?? (items.Count > 0 ? items[0] : null));
             RenderSlots();
-            RenderGrid();
         }
-
-        private void RenderSwitchers()
+        private void RenderSlots() { RenderSlotRow(districtSlots, false); RenderSlotRow(suitSlots, true); }
+        private void RenderSlotRow(VisualElement host, bool isSuit)
         {
-            bool suitsOn = activeTab == Tab.Suits;
-
-            if (segDistricts != null) segDistricts.EnableInClassList("lb-wsseg__btn--on", !suitsOn);
-            if (segSuits != null) segSuits.EnableInClassList("lb-wsseg__btn--on", suitsOn);
-            if (pickDistricts != null) pickDistricts.EnableInClassList("lb-pickopt--on", !suitsOn);
-            if (pickSuits != null) pickSuits.EnableInClassList("lb-pickopt--on", suitsOn);
-
-            // The floating button's face always shows the current side.
-            if (pickIcon != null) pickIcon.Kind = suitsOn ? LobbyIconKind.Suit : LobbyIconKind.District;
-            if (pickLabel != null) pickLabel.text = suitsOn ? "SUITS" : "DIST";
-
-            if (treeOpen != null) treeOpen.EnableInClassList("st-open--on", suitsOn && treeView.IsWired && lobbySheet != null);
-        }
-
-        private void RenderSlots()
-        {
-            if (slotHost == null) return;
-
-            bool suitsOn = activeTab == Tab.Suits;
-            int count = suitsOn ? loadout.SuitSlotCount : loadout.DistrictSlotCount;
-
-            slotHost.Clear();
-
-            bool allFull = count > 0;
-
+            if (host == null) return;
+            host.Clear();
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            string[] locks = isSuit ? LoadoutRules.LockedSuits(arena) : LoadoutRules.LockedDistricts(arena);
+            var data = loadout.ToData();
+            string[] chosen = isSuit ? data.suitIDs : data.districtIDs;
+            int count = isSuit ? LoadoutRules.DisplaySuitSlots : LoadoutRules.DisplayDistrictSlots;
             for (int i = 0; i < count; i++)
             {
-                string id = suitsOn ? loadout.SuitAt(i) : loadout.DistrictAt(i);
-                Item item = Find(suitsOn ? suits : districts, id);
-                bool filled = !string.IsNullOrEmpty(id);
-                if (!filled) allFull = false;
-
-                int slot = i;
-                Button button = new Button();
-                button.AddToClassList("ui-reset-button");
-                button.AddToClassList("lb-slot");
-                if (i == count - 1) button.AddToClassList("lb-slot--last");
-                button.EnableInClassList("lb-slot--filled", filled);
-
-                VisualElement ring = new VisualElement();
-                ring.AddToClassList("lb-slot__ring");
-                ring.pickingMode = PickingMode.Ignore;
-                button.Add(ring);
-
-                if (filled)
+                bool locked = i < locks.Length;
+                int slot = i - locks.Length;
+                string id = locked ? locks[i] : chosen[slot];
+                Item item = Find(isSuit ? suits : districts, id);
+                var button = new Button();
+                button.AddToClassList("ui-reset-button"); button.AddToClassList("ws-slot");
+                button.Add(MakeArt(item, locked, false));
+                button.Add(MakeLabel(string.IsNullOrEmpty(id) ? "+" : item?.Name ?? id, "ws-name", "ui-w600"));
+                if (locked)
                 {
-                    string name = item != null ? item.Name : id;
-                    button.Add(MakeLabel(ItemTint.MonogramFor(name, id), "lb-slot__letter", "ui-w600"));
-                    button.Add(MakeLabel(name, "lb-slot__text", "ui-w600"));
+                    button.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
+                    button.SetEnabled(false);
                 }
-                else
-                {
-                    button.Add(MakeLabel("Slot\n" + (i + 1), "lb-slot__text", "ui-w500"));
-                }
-
-                button.clicked += () => OnSlotClicked(slot);
-
-                slotHost.Add(button);
+                else button.clicked += () => { if (loadout.ClearChosen(isSuit, slot)) { SaveToProfile(); Render(); } };
+                host.Add(button);
             }
-
-            if (slotWrap != null) slotWrap.EnableInClassList("lb-slotwrap--ready", allFull);
         }
-
-        private void RenderGrid()
+        private VisualElement MakeArt(Item item, bool neutral, bool navy)
         {
-            if (grid == null) return;
-
-            List<Item> items = activeTab == Tab.Suits ? suits : districts;
-
-            grid.Clear();
-
-            if (items.Count == 0)
-            {
-                // Only reachable when the definition arrays are unassigned, which
-                // means the Editor setup has not been re-run - so name the fix.
-                Label note = new Label("No " + (activeTab == Tab.Suits ? "suit" : "district") +
-                                       " definitions assigned.\nRun Tools > Node War > Set Up UI Toolkit Lobby.");
-                note.AddToClassList("lb-stub__body");
-                grid.Add(note);
-                return;
-            }
-
-            PlayerProfile profile = PlayerProfile.Instance;
-
-            for (int i = 0; i < items.Count; i++)
-            {
-                Item item = items[i];
-
-                bool locked = IsLocked(profile, item);
-                bool used = activeTab == Tab.Suits ? loadout.IsSuitEquipped(item.ID) : loadout.IsDistrictEquipped(item.ID);
-
-                VisualElement wrap = new VisualElement();
-                wrap.AddToClassList("ui-sticker");
-                wrap.AddToClassList("lb-gcard-wrap");
-                if (i % GridColumns != GridColumns - 1) wrap.AddToClassList("lb-gcard-wrap--gap");
-                wrap.EnableInClassList("lb-gcard-wrap--used", used);
-                wrap.EnableInClassList("lb-gcard-wrap--locked", locked);
-                wrap.pickingMode = PickingMode.Ignore;
-
-                VisualElement shadow = new VisualElement();
-                shadow.AddToClassList("ui-sticker__shadow");
-                shadow.pickingMode = PickingMode.Ignore;
-                wrap.Add(shadow);
-
-                Button card = new Button();
-                card.AddToClassList("ui-reset-button");
-                card.AddToClassList("lb-gcard");
-
-                VisualElement art = new VisualElement();
-                art.AddToClassList("lb-gcard__art");
-                art.AddToClassList(ItemFamily.ClassFor(item.Family));
-                art.pickingMode = PickingMode.Ignore;
-                Sprite districtIcon = null;
-                var theme = UIArt.Theme;
-                if (activeTab == Tab.Districts && item.ID.StartsWith("node_", StringComparison.Ordinal) &&
-                    Enum.TryParse(item.ID.Substring(5), true, out DistrictType district) &&
-                    theme != null && theme.districtVisuals != null)
-                {
-                    var visual = theme.districtVisuals.For(district);
-                    if (visual != null) districtIcon = visual.icon;
-                }
-                if (districtIcon != null)
-                {
-                    art.style.backgroundImage = new StyleBackground(districtIcon);
-                    art.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
-                }
-                else if (!locked)
-                    art.Add(MakeLabel(ItemTint.MonogramFor(item.Name, item.ID), "lb-gcard__letter", "ui-w600"));
-                if (locked) art.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
-                card.Add(art);
-
-                card.Add(MakeLabel(item.Name, "lb-gcard__name", "ui-w600"));
-                card.Add(MakeLabel(item.Note, "lb-gcard__note", "ui-w500"));
-
-                card.clicked += () => OnCardClicked(item);
-
-                if (menu != null)
-                {
-                    menu.Attach(card, () => new List<LobbyMenuItem>
-                    {
-                        new LobbyMenuItem("View details", () => Inspect(item)),
-                        new LobbyMenuItem("Add to loadout", () => OnCardClicked(item)),
-                        new LobbyMenuItem("Compare", () => Say("Comparing arrives in a later update")),
-                    });
-                }
-
-                wrap.Add(card);
-                grid.Add(wrap);
-            }
+            var clip = new VisualElement { pickingMode = PickingMode.Ignore };
+            clip.AddToClassList("ws-art-clip");
+            var art = new VisualElement { pickingMode = PickingMode.Ignore };
+            art.AddToClassList("ws-art");
+            if (item != null) art.AddToClassList(ItemFamily.ClassFor(item.Family));
+            art.EnableInClassList("ws-art--neutral", neutral); art.EnableInClassList("ws-art--navy", navy);
+            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "ui-w600"));
+            clip.Add(art); return clip;
         }
-
-        private bool IsLocked(PlayerProfile profile, Item item)
+        private void RenderCards()
         {
-            if (profile == null || item.Granted) return false;
-
-            return activeTab == Tab.Suits
-                ? !profile.IsSuitUnlocked(item.ID)
-                : !profile.IsDistrictUnlocked(item.ID);
+            if (unlocked == null || notUnlocked == null) return;
+            unlocked.Clear(); notUnlocked.Clear();
+            var items = activeTab == Tab.Suits ? suits : districts;
+            SortByFamily(items);
+            foreach (Item item in items)
+            {
+                var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
+                var card = new Button(() => PreviewItem(item.ID));
+                card.AddToClassList("ui-reset-button"); card.AddToClassList("ws-card");
+                card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
+                card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
+                card.Add(MakeLabel(item.Name, "ws-name", "ui-w600"));
+                if (item.Granted) card.Add(MakeLabel("Always granted", "ws-name", "ui-w500"));
+                if (menu != null) menu.Attach(card, () => new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) });
+                (state.Status == UnlockStatus.Owned ? unlocked : notUnlocked).Add(card);
+            }
         }
-
-        // ===== INTERACTION =====
-
-        /// <summary>
-        /// Tap a card to take the first free slot. Every refusal says why - the
-        /// cards stay tappable in every state so none of them is silently dead.
-        /// </summary>
-        private void OnCardClicked(Item item)
+        private void PreviewItem(string id) { Inspect(Find(activeTab == Tab.Suits ? suits : districts, id)); RenderCards(); }
+        private bool IsSelected(Item item)
         {
-            Inspect(item);
-            bool suitsOn = activeTab == Tab.Suits;
-
-            if (item.Granted)
-            {
-                Say(item.Name + " is always granted. It costs no slot");
-                return;
-            }
-
-            if (IsLocked(PlayerProfile.Instance, item))
-            {
-                Say(item.Name + " is locked");
-                return;
-            }
-
-            bool equipped = suitsOn ? loadout.IsSuitEquipped(item.ID) : loadout.IsDistrictEquipped(item.ID);
-            if (equipped)
-            {
-                Say("Already in your loadout");
-                return;
-            }
-
-            int slot = suitsOn ? loadout.EquipSuit(item.ID) : loadout.EquipDistrict(item.ID);
-            if (slot == LoadoutEditor.NoSlot)
-            {
-                Say("Loadout full. Tap a slot to clear it");
-                return;
-            }
-
-            SaveToProfile();
-            Render();
+            if (item == null) return false;
+            var data = loadout.ToData();
+            return item.Granted || Array.IndexOf(activeTab == Tab.Suits ? data.suitIDs : data.districtIDs, item.ID) >= 0;
         }
-
-        /// <summary>A filled slot gives its item back; an empty one says how to fill it.</summary>
-        private void OnSlotClicked(int slot)
+        private void UsePreview()
         {
-            string removed = activeTab == Tab.Suits ? loadout.ClearSuitSlot(slot) : loadout.ClearDistrictSlot(slot);
-
-            if (string.IsNullOrEmpty(removed))
-            {
-                Say("Tap a card below to fill this slot");
-                return;
-            }
-
-            Inspect(Find(activeTab == Tab.Suits ? suits : districts, removed));
-            SaveToProfile();
-            Render();
+            if (inspectedItem == null || IsSelected(inspectedItem) || inventoryBusy) return;
+            // Actual eligibility is independent of the debug display override.
+            if (!catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse || inspectedItem.Granted) return;
+            if (!loadout.UsePreview(true, activeTab == Tab.Suits)) { Say("Loadout full. Tap a slot to clear it"); return; }
+            SaveToProfile(); Render();
         }
-
+        private void RenderInfo()
+        {
+            if (preview == null) return;
+            preview.Clear(); stats?.Clear();
+            Item item = inspectedItem;
+            var state = item == null ? default : DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
+            preview.Add(MakeArt(item, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+            if (title != null) title.text = item?.Name ?? "Select a card";
+            string text = item?.Description ?? "";
+            string baseId = LoadoutTypes.CatalogBaseForLobbyId(item?.ID);
+            var data = loadout.ToData(); var balance = TreeBalance();
+            if (item != null && activeTab == Tab.Suits && Enum.TryParse(item.ID.Substring(5), true, out SuitType suit))
+            {
+                int type = (int)suit;
+                int era = type >= 0 && type < data.suitEras.Length ? data.suitEras[type] : 0;
+                AddStatRows(stats, LoadoutInfoModel.SuitStats(balance, baseId, era));
+            }
+            else if (item != null && Enum.TryParse(item.ID.Substring(5), true, out DistrictType district))
+            {
+                int type = (int)district;
+                int era = type >= 0 && type < data.districtEras.Length ? data.districtEras[type] : 0;
+                foreach (var fact in NodeWar.UI.DistrictInfoFacts.Describe(balance, district, era))
+                    stats?.Add(MakeLabel(fact.Label + ": " + fact.Value + " " + fact.Unit, "ws-fact", "ui-w500"));
+                text = NodeWar.View.DistrictFallback.Describe(district).Description;
+            }
+            if (description != null) description.text = text;
+            if (notice != null) notice.text = item != null && (state.Status == UnlockStatus.CannotUnlock || state.Status == UnlockStatus.Owned && !state.CanUse)
+                ? "! This is unlockable in era " + state.UnlockEra : "";
+            if (primary != null)
+            {
+                primary.text = item == null ? "Use" : IsSelected(item) ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned";
+                primary.SetEnabled(item != null && !inventoryBusy);
+            }
+            if (variants != null) variants.style.display = LoadoutChoices.Variants(baseId, playerState).Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            if (skins != null) skins.style.display = item != null && LoadoutChoices.Skins(baseId, null, playerState).Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+        private static void AddStatRows(VisualElement host, LoadoutStatRow[] rows)
+        {
+            if (host == null) return;
+            foreach (var row in rows)
+            {
+                var line = new VisualElement(); line.AddToClassList("ws-stat");
+                line.Add(MakeLabel(row.Label + " " + row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "ws-fact", "ui-w500"));
+                var track = new VisualElement(); track.AddToClassList("ws-histogram");
+                var zero = new VisualElement(); zero.AddToClassList("ws-zero"); track.Add(zero);
+                var bar = new VisualElement(); bar.AddToClassList("ws-bar"); bar.EnableInClassList("ws-bar--worse", row.Improvement < 0);
+                float width = Mathf.Abs(row.Improvement) / (float)Mathf.Max(1, Mathf.Abs(row.Value) + Mathf.Abs(row.Delta)) * 50f;
+                bar.style.width = Length.Percent(width); bar.style.left = Length.Percent(row.Improvement < 0 ? 50f - width : 50f);
+                track.Add(bar); line.Add(track); host.Add(line);
+            }
+        }
+        private void RenderInventory()
+        {
+            if (eraMessage != null) { eraMessage.text = inventoryMessage; eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex; }
+            RenderCards(); RenderInfo(); RenderItemPanel();
+        }
         private void CloseInventory()
         {
-            isOpen = false;
-            inventoryVisit++;
+            CloseItemPanel();
+            session.Close();
         }
 
-        private bool IsInventoryActive(int visit) => isOpen && inventoryVisit == visit;
+        private bool IsInventoryActive(int visit) => session.IsVisitCurrent(visit);
 
         private void Inspect(Item item)
         {
             if (inspectedItem != item)
             {
-                selectionVisit++;
                 inspectedItem = item;
                 if (!inventoryBusy && playerState != null) inventoryMessage = "";
             }
+            session.Select(item == null ? null : LoadoutTypes.CatalogBaseForLobbyId(item.ID));
+            if (panelBaseId != null && panelBaseId != session.SelectedBaseID) CloseItemPanel();
+            loadout.Preview(item?.ID);
             RenderInventory();
         }
 
         private async Task LoadInventoryAsync(int visit)
         {
-            inventoryBusy = true;
             inventoryMessage = "Loading inventory...";
+            RenderInventory();
+            // A reopened page must not fetch a snapshot before an earlier save finishes.
+            await inventoryIdle;
+            if (!IsInventoryActive(visit) || !session.TryBeginRequest(out InventoryRequestToken token)) return;
             RenderInventory();
             try
             {
-                // A reopened page must not fetch a snapshot before an earlier save finishes.
-                await inventoryIdle;
-                if (!IsInventoryActive(visit)) return;
                 PlayerState result = await BackendServices.PlayerState.GetAsync();
                 if (!IsInventoryActive(visit)) return;
                 if (result == null) throw new InvalidOperationException("Missing player state");
                 playerState = result;
+                CollectItems();
+                LoadFromProfile();
+                Render();
                 inventoryMessage = "";
             }
             catch (Exception)
@@ -625,28 +374,28 @@ namespace NodeWar.Lobby
             }
             finally
             {
-                if (IsInventoryActive(visit))
-                {
-                    inventoryBusy = false;
-                    RenderInventory();
-                }
+                session.EndRequest(token);
+                if (IsInventoryActive(visit)) RenderInventory();
             }
         }
 
-        private async Task EquipInventoryAsync(string baseId, string id, bool skin)
-        {
-            if (!isOpen || inventoryBusy || inspectedItem == null ||
-                LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID) != baseId) return;
-            EraChips.Chip[] chips = skin ? EraChips.SkinsForItem(playerState, baseId) : EraChips.ForItem(playerState, baseId);
-            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return;
+        private Task<bool> EquipVariantAsync(string baseId, string variantId) => EquipInventoryAsync(baseId, variantId, false);
+        private Task<bool> EquipSkinAsync(string baseId, string skinId) => EquipInventoryAsync(baseId, skinId, true);
 
-            int visit = inventoryVisit;
-            int selection = selectionVisit;
+        private async Task<bool> EquipInventoryAsync(string baseId, string id, bool skin)
+        {
+            if (!session.IsOpen || inspectedItem == null ||
+                LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID) != baseId) return false;
+            LoadoutChoice[] chips = skin ? LoadoutChoices.Skins(baseId, null, playerState) : LoadoutChoices.Variants(baseId, playerState);
+            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return false;
+            if (!session.TryBeginRequest(out InventoryRequestToken token)) return false;
+
+            int visit = token.Visit;
             var completion = new TaskCompletionSource<bool>();
             inventoryIdle = completion.Task;
-            inventoryBusy = true;
             inventoryMessage = "Saving...";
             RenderInventory();
+            bool applied = false;
             try
             {
                 var changes = new EquippedRecord();
@@ -654,23 +403,32 @@ namespace NodeWar.Lobby
                 if (skin) changes.Skins = map;
                 else changes.Variants = map;
                 PlayerState result = await BackendServices.Inventory.EquipAsync(changes);
-                if (!IsInventoryActive(visit) || selectionVisit != selection) return;
+                if (!session.IsCurrent(token)) return false;
                 if (result == null) throw new InvalidOperationException("Missing player state");
                 playerState = result;
+                CollectItems();
+                LoadFromProfile();
+                Render();
                 inventoryMessage = "";
+                applied = true;
             }
             catch (Exception)
             {
-                if (IsInventoryActive(visit) && selectionVisit == selection)
+                if (session.IsCurrent(token))
+                {
                     inventoryMessage = "Couldn't equip. Please try again.";
+                    Say(inventoryMessage);
+                }
             }
             finally
             {
+                bool visitCurrent = session.IsVisitCurrent(token);
+                bool current = session.IsCurrent(token);
+                session.EndRequest(token);
                 completion.TrySetResult(true);
-                if (IsInventoryActive(visit))
+                if (visitCurrent)
                 {
-                    inventoryBusy = false;
-                    if (selectionVisit != selection)
+                    if (!current)
                     {
                         // Discard the old selection's response and get a fresh snapshot.
                         playerState = null;
@@ -679,126 +437,181 @@ namespace NodeWar.Lobby
                     else RenderInventory();
                 }
             }
+            return applied;
         }
 
-        // ===== SUIT TREE =====
+        // ===== VARIANT SHEET =====
 
-        private void OpenTree()
+        private void OpenVariants()
         {
-            if (playerState == null)
-            {
-                Say(inventoryBusy ? "Inventory is still loading" : "Inventory isn't available right now");
-                return;
-            }
-
-            string baseId = inspectedItem == null ? null : LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID);
-            treeView.Open(baseId);
+            Item item = inspectedItem;
+            if (item == null || panelHost == null || inventoryBusy) return;
+            string baseId = LoadoutTypes.CatalogBaseForLobbyId(item.ID);
+            LoadoutChoice[] choices = LoadoutChoices.Variants(baseId, playerState);
+            if (choices.Length == 0) return;
+            CloseItemPanel();
+            panelBaseId = baseId;
+            panelChoiceId = choices[0].ID;
+            foreach (var choice in choices) if (choice.Equipped) { panelChoiceId = choice.ID; break; }
+            RenderItemPanel();
         }
 
-        /// <summary>The balance every match plays with, so the tree's numbers are the match's.</summary>
+        private void OpenSkins()
+        {
+            Item item = inspectedItem;
+            if (item == null || panelHost == null || inventoryBusy) return;
+            string baseId = LoadoutTypes.CatalogBaseForLobbyId(item.ID);
+            LoadoutChoice[] choices = LoadoutChoices.Skins(baseId, null, playerState);
+            if (choices.Length == 0) return;
+            CloseItemPanel();
+            panelBaseId = baseId; panelSkins = true;
+            panelChoiceId = choices[0].ID;
+            foreach (var choice in choices) if (choice.Equipped) { panelChoiceId = choice.ID; break; }
+            RenderItemPanel();
+        }
+
+        private void RenderSkinPanel()
+        {
+            activeBand?.Stop(); activeBand = null;
+            panelHost.Clear();
+            string baseId = panelBaseId;
+            LoadoutChoice[] choices = LoadoutChoices.Skins(baseId, null, playerState);
+            if (choices.Length == 0 || inspectedItem == null) { CloseItemPanel(); return; }
+            int centered = 0;
+            for (int i = 0; i < choices.Length; i++) if (choices[i].ID == panelChoiceId) centered = i;
+            panelChoiceId = choices[centered].ID;
+
+            panelHost.pickingMode = PickingMode.Position;
+            var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
+            panelHost.Add(scrim);
+            var sheet = new VisualElement(); sheet.AddToClassList("ws-sheet");
+            var body = new VisualElement { pickingMode = PickingMode.Ignore }; body.AddToClassList("ws-sheet-body");
+            var art = new VisualElement { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            body.Add(art);
+            Label title = MakeLabel("", "ws-title", "ui-w600");
+            Label status = MakeLabel("", "ws-fact", "ui-w500");
+            body.Add(title); body.Add(status);
+            var buy = new Button(() => Say("Coming soon")) { text = "Buy another box" };
+            buy.AddToClassList("ui-reset-button"); buy.AddToClassList("ws-secondary"); buy.AddToClassList("ui-w600");
+            body.Add(buy);
+            sheet.Add(body);
+
+            var band = new SkinBand();
+            activeBand = band;
+            band.SetChoices(choices, centered);
+            sheet.Add(band);
+
+            var buttons = new VisualElement(); buttons.AddToClassList("ws-sheet-buttons");
+            var back = new Button(CloseItemPanel) { text = "Back" };
+            back.AddToClassList("ui-reset-button"); back.AddToClassList("ws-sheet-button"); back.AddToClassList("ui-w600");
+            var use = new Button();
+            use.AddToClassList("ui-reset-button"); use.AddToClassList("ws-sheet-button"); use.AddToClassList("ws-primary"); use.AddToClassList("ui-w600");
+            use.SetEnabled(!inventoryBusy);
+            buttons.Add(back); buttons.Add(use);
+            sheet.Add(buttons);
+            panelHost.Add(sheet);
+
+            // Updates the centred skin's preview, status and Use label in place; the band is untouched.
+            void ShowCentered(int index)
+            {
+                LoadoutChoice choice = choices[Mathf.Clamp(index, 0, choices.Length - 1)];
+                panelChoiceId = choice.ID;
+                var state = DisplayUnlock(choice.UnlockState);
+                art.Clear();
+                art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+                title.text = inspectedItem.Name + ", " + choice.Label.ToLowerInvariant();
+                status.text = choice.Equipped ? "Equipped" : state.Status == UnlockStatus.Owned ? "Owned"
+                    : state.Status == UnlockStatus.CannotUnlock ? "Locked. ! This is unlockable in era " + state.UnlockEra : "Locked";
+                use.text = choice.Equipped ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned";
+            }
+            ShowCentered(centered);
+            band.CenterChanged += ShowCentered;
+            // Actual eligibility is independent of the debug display override.
+            use.clicked += () =>
+            {
+                LoadoutChoice choice = choices[Mathf.Clamp(band.CenteredIndex, 0, choices.Length - 1)];
+                if (choice.Selectable) _ = EquipSkinAsync(baseId, choice.ID);
+            };
+        }
+
+        private void CloseItemPanel()
+        {
+            activeBand?.Stop(); activeBand = null;
+            panelBaseId = null; panelChoiceId = null; panelSkins = false;
+            if (panelHost == null) return;
+            panelHost.Clear();
+            panelHost.pickingMode = PickingMode.Ignore;
+        }
+
+        private void RenderItemPanel()
+        {
+            if (panelHost == null || panelBaseId == null) return;
+            if (panelSkins) { RenderSkinPanel(); return; }
+            panelHost.Clear();
+            string baseId = panelBaseId;
+            LoadoutChoice[] choices = LoadoutChoices.Variants(baseId, playerState);
+            if (choices.Length == 0 || inspectedItem == null) { CloseItemPanel(); return; }
+            LoadoutChoice current = choices[0];
+            foreach (var choice in choices) if (choice.ID == panelChoiceId) current = choice;
+            panelChoiceId = current.ID;
+            var state = DisplayUnlock(current.UnlockState);
+
+            panelHost.pickingMode = PickingMode.Position;
+            var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
+            panelHost.Add(scrim);
+            var sheet = new VisualElement(); sheet.AddToClassList("ws-sheet");
+            var body = new ScrollView(ScrollViewMode.Vertical);
+            body.AddToClassList("ws-sheet-body");
+            body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            body.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            var art = new VisualElement { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+            body.Add(art);
+            body.Add(MakeLabel(inspectedItem.Name + ", " + current.Label.ToLowerInvariant(), "ws-title", "ui-w600"));
+            var rows = new VisualElement { pickingMode = PickingMode.Ignore };
+            AddStatRows(rows, LoadoutInfoModel.SuitStats(TreeBalance(), baseId, current.OrderKey));
+            body.Add(rows);
+            body.Add(MakeLabel(inspectedItem.Description ?? "", "ws-fact", "ui-w500"));
+            bool locked = state.Status == UnlockStatus.CannotUnlock || state.Status == UnlockStatus.Owned && !state.CanUse;
+            if (locked) body.Add(MakeLabel("! This is unlockable in era " + state.UnlockEra, "ws-fact", "ui-w500"));
+            if (!string.IsNullOrEmpty(inventoryMessage)) body.Add(MakeLabel(inventoryMessage, "ws-fact", "ui-w500"));
+            sheet.Add(body);
+
+            var strip = new ScrollView(ScrollViewMode.Horizontal);
+            strip.AddToClassList("ws-strip");
+            strip.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            strip.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            foreach (LoadoutChoice choice in choices)
+            {
+                string choiceId = choice.ID;
+                var chipState = DisplayUnlock(choice.UnlockState);
+                var chip = new Button(() => { panelChoiceId = choiceId; RenderItemPanel(); });
+                chip.AddToClassList("ui-reset-button"); chip.AddToClassList("ws-chip");
+                chip.EnableInClassList("ws-card--preview", choiceId == current.ID);
+                chip.Add(MakeArt(inspectedItem, chipState.Status != UnlockStatus.Owned, false));
+                chip.Add(MakeLabel(choice.Label, "ws-name", "ui-w600"));
+                strip.Add(chip);
+            }
+            sheet.Add(strip);
+
+            var buttons = new VisualElement(); buttons.AddToClassList("ws-sheet-buttons");
+            var back = new Button(CloseItemPanel) { text = "Back" };
+            back.AddToClassList("ui-reset-button"); back.AddToClassList("ws-sheet-button"); back.AddToClassList("ui-w600");
+            var use = new Button { text = current.Equipped ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned" };
+            use.AddToClassList("ui-reset-button"); use.AddToClassList("ws-sheet-button"); use.AddToClassList("ws-primary"); use.AddToClassList("ui-w600");
+            use.SetEnabled(!inventoryBusy);
+            string useId = current.ID;
+            // Actual eligibility is independent of the debug display override.
+            use.clicked += () => { if (current.Selectable) _ = EquipVariantAsync(baseId, useId); };
+            buttons.Add(back); buttons.Add(use);
+            sheet.Add(buttons);
+            panelHost.Add(sheet);
+        }
+
         private static GameBalanceData TreeBalance()
         {
             NodeWar.Config.GameBalance shared = NodeWar.Config.GameBalance.LoadShared();
             return shared != null ? shared.Data : GameBalanceData.Default();
-        }
-
-        private string DescribeSuit(string baseId)
-        {
-            SuitDefinition[] all = catalog.Suits;
-            for (int i = 0; i < all.Length; i++)
-                if (all[i] != null && LoadoutTypes.CatalogBaseForLobbyId(all[i].suitID) == baseId)
-                    return all[i].description;
-            return null;
-        }
-
-        /// <summary>
-        /// Equips a suit variant picked in the tree. The same server call and the same
-        /// busy, idle and visit bookkeeping as the era chips (EquipInventoryAsync), without
-        /// the inspected-item requirement: the tree is its own selection.
-        /// </summary>
-        private async Task<bool> EquipFromTreeAsync(string baseId, string id)
-        {
-            if (!isOpen || inventoryBusy || playerState == null) return false;
-            EraChips.Chip[] chips = EraChips.ForItem(playerState, baseId);
-            if (!Array.Exists(chips, chip => chip.ID == id && chip.Selectable)) return false;
-
-            int visit = inventoryVisit;
-            var completion = new TaskCompletionSource<bool>();
-            inventoryIdle = completion.Task;
-            inventoryBusy = true;
-            inventoryMessage = "Saving...";
-            RenderInventory();
-            try
-            {
-                var changes = new EquippedRecord { Variants = new Dictionary<string, string> { [baseId] = id } };
-                PlayerState result = await BackendServices.Inventory.EquipAsync(changes);
-                if (!IsInventoryActive(visit)) return false;
-                if (result == null) throw new InvalidOperationException("Missing player state");
-                playerState = result;
-                inventoryMessage = "";
-                return true;
-            }
-            catch (Exception)
-            {
-                if (IsInventoryActive(visit))
-                {
-                    inventoryMessage = "Couldn't equip. Please try again.";
-                    Say("Couldn't equip. Please try again.");
-                }
-                return false;
-            }
-            finally
-            {
-                completion.TrySetResult(true);
-                if (IsInventoryActive(visit))
-                {
-                    inventoryBusy = false;
-                    RenderInventory();
-                }
-            }
-        }
-
-        private void RenderInventory()
-        {
-            if (details != null) details.text = inspectedItem == null
-                ? "Select a card to inspect its eras" : DetailsOf(inspectedItem);
-            string baseId = inspectedItem == null ? null : LoadoutTypes.CatalogBaseForLobbyId(inspectedItem.ID);
-            RenderChips(eraRow, EraChips.ForItem(playerState, baseId), baseId, false);
-            RenderChips(skinRow, EraChips.SkinsForItem(playerState, baseId), baseId, true);
-            if (eraMessage != null)
-            {
-                eraMessage.text = inventoryMessage;
-                eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex;
-            }
-            if (treeView != null) treeView.Refresh();
-        }
-
-        private void RenderChips(VisualElement row, EraChips.Chip[] chips, string baseId, bool skin)
-        {
-            if (row == null) return;
-            row.Clear();
-            row.style.display = chips.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            row.SetEnabled(!inventoryBusy);
-            foreach (EraChips.Chip chip in chips)
-            {
-                string label = skin ? "Skin: " + chip.ID.Substring(chip.ID.LastIndexOf('.') + 1) : "Era " + chip.Era;
-                if (chip.Equipped) label += "\nEquipped";
-                if (!skin && !chip.Owned) label += "\nArena " + chip.Era;
-                else if (!skin && !chip.Usable) label += "\nNeeds arena " + chip.Era;
-                Button button = new Button { text = label };
-                button.AddToClassList("ui-reset-button");
-                button.AddToClassList("lb-era-chip");
-                button.EnableInClassList("lb-era-chip--locked", !chip.Owned || !chip.Usable);
-                button.EnableInClassList("lb-era-chip--equipped", chip.Equipped);
-                button.SetEnabled(chip.Selectable);
-                button.clicked += async () => await EquipInventoryAsync(baseId, chip.ID, skin);
-                row.Add(button);
-            }
-        }
-
-        private static string DetailsOf(Item item)
-        {
-            return string.IsNullOrEmpty(item.Description) ? item.Name : item.Name + ": " + item.Description;
         }
 
         private void Say(string message)

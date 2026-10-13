@@ -20,6 +20,7 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/BotPlayer.cs" Link="Input/BotPlayer.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/BotSuitChoice.cs" Link="Input/BotSuitChoice.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/InputBuffer.cs" Link="Input/InputBuffer.cs" />
   </ItemGroup>
 

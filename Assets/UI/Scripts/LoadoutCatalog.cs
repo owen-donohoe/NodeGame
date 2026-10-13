@@ -10,21 +10,15 @@ namespace NodeWar.Lobby
     /// "available" or "owned" means.
     ///
     /// The rules, from docs/ui-migration-inventory.md:
-    ///   - a suit flagged isGlobal (Warrior) is granted to everyone by
+    ///   - Warrior is granted in low arenas by
     ///     GameManager.BuildDraftedSuits, so a slot spent on it buys nothing;
     ///   - Crossroads cannot be mapped to a DistrictType by GameManager, so a
     ///     slot spent on it produces nothing.
-    /// Neither is "offered". "Owned" is offered and unlocked, asked of
+    /// Warrior becomes offered at arena 2; Crossroads is never offered. "Owned" is offered and unlocked, asked of
     /// PlayerProfile even though its unlock checks return true today.
     /// </summary>
     public class LoadoutCatalog
     {
-        /// <summary>
-        /// Districts no slot may hold. Only Crossroads (inventory finding 4).
-        /// When DistrictType gains a Crossroads member, this array empties.
-        /// </summary>
-        private static readonly string[] UnmappedDistrictIDs = { "node_crossroads" };
-
         public SuitDefinition[] Suits { get; private set; }
         public DistrictDefinition[] Districts { get; private set; }
 
@@ -70,56 +64,22 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        /// <summary>Whether a slot may hold this suit: it exists and is not granted to everyone.</summary>
-        public bool IsSuitOffered(string suitID)
-        {
-            SuitDefinition suit = FindSuit(suitID);
-            return suit != null && !suit.isGlobal;
-        }
+        public int Arena => LoadoutRules.ArenaOrFallback(NodeWar.Backend.BackendServices.LastKnownState?.Rank);
 
-        /// <summary>Whether a slot may hold this district: it exists and the draft can use it.</summary>
-        public bool IsDistrictOffered(string districtID)
-        {
-            return FindDistrict(districtID) != null && !IsUnmapped(districtID);
-        }
+        public bool IsSuitOffered(string suitID) => IsSuitOffered(suitID, Arena);
+        public bool IsSuitOffered(string suitID, int arena) =>
+            FindSuit(suitID) != null && LoadoutRules.IsSuitOffered(suitID, arena);
 
-        public static bool IsUnmapped(string districtID)
-        {
-            for (int i = 0; i < UnmappedDistrictIDs.Length; i++)
-                if (UnmappedDistrictIDs[i] == districtID) return true;
-            return !NodeWar.Simulation.PlacementLegality.IsDraftable((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID));
-        }
-
-        /// <summary>Suits the player could put in a slot: offered and unlocked.</summary>
-        public int OwnedSuitCount()
+        public bool IsDistrictOffered(string districtID) => IsDistrictOffered(districtID, Arena);
+        public bool IsDistrictOffered(string districtID, int arena) =>
+            FindDistrict(districtID) != null && LoadoutRules.IsDistrictOffered(districtID, arena);
+        /// <summary>Unity adapter: pure rules receive profile ownership and a server snapshot.</summary>
+        public UnlockState UnlockForBase(string lobbyId, NodeWar.Backend.PlayerState state)
         {
             PlayerProfile profile = PlayerProfile.Instance;
-            int owned = 0;
-
-            for (int i = 0; i < Suits.Length; i++)
-            {
-                SuitDefinition suit = Suits[i];
-                if (suit == null || !IsSuitOffered(suit.suitID)) continue;
-                if (profile == null || profile.IsSuitUnlocked(suit.suitID)) owned++;
-            }
-
-            return owned;
-        }
-
-        /// <summary>Districts the player could put in a slot: offered and unlocked.</summary>
-        public int OwnedDistrictCount()
-        {
-            PlayerProfile profile = PlayerProfile.Instance;
-            int owned = 0;
-
-            for (int i = 0; i < Districts.Length; i++)
-            {
-                DistrictDefinition node = Districts[i];
-                if (node == null || !IsDistrictOffered(node.districtID)) continue;
-                if (profile == null || profile.IsDistrictUnlocked(node.districtID)) owned++;
-            }
-
-            return owned;
+            bool owned = profile == null || (FindSuit(lobbyId) != null
+                ? profile.IsSuitUnlocked(lobbyId) : profile.IsDistrictUnlocked(lobbyId));
+            return UnlockStates.ForBase(lobbyId, owned, state);
         }
 
         /// <summary>A display name, falling back to the ID so a half-filled asset shows as itself.</summary>
@@ -140,15 +100,19 @@ namespace NodeWar.Lobby
         /// The player's saved loadout as an editor, or an empty one with no
         /// profile - with any entry no slot may hold already dropped, as the
         /// Workshop drops it on load. Without that, Home and the battle sheet
-        /// would count a saved Warrior or Crossroads as a filled slot the
+        /// would count an unavailable saved choice as a filled slot the
         /// Workshop shows as empty. Nothing is saved here; the Workshop owns that.
         /// </summary>
-        public LoadoutEditor CurrentLoadout()
+        public LoadoutEditor CurrentLoadout() => CurrentLoadout(NodeWar.Backend.BackendServices.LastKnownState);
+
+        public LoadoutEditor CurrentLoadout(NodeWar.Backend.PlayerState state)
         {
+            int arena = LoadoutRules.ArenaOrFallback(state?.Rank);
             PlayerProfile profile = PlayerProfile.Instance;
-            LoadoutEditor loadout = new LoadoutEditor(profile != null ? profile.Loadout : LoadoutData.CreateEmpty());
-            loadout.DropUnavailable(IsSuitOffered, IsDistrictOffered);
-            return loadout;
+            var editor = LoadoutRules.LocalEditor(profile != null ? profile.Loadout : default, arena);
+            editor.DropUnavailable(id => IsSuitOffered(id, arena) && UnlockForBase(id, state).CanUse,
+                id => IsDistrictOffered(id, arena) && UnlockForBase(id, state).CanUse);
+            return editor;
         }
     }
 }

@@ -21,7 +21,8 @@ namespace NodeWar.View
     {
         private VillagerView view;
         private float duration = 0.12f;
-        private float remaining;
+        private float elapsed;
+        private bool active;
 
         public void Initialize(VillagerView villagerView, float flashDuration)
         {
@@ -29,28 +30,37 @@ namespace NodeWar.View
             duration = Mathf.Max(0.01f, flashDuration);
         }
 
+        /// <summary>
+        /// Restarts the envelope at full white. Touch, order and damage all call
+        /// this, so overlapping sources share one restart rather than stacking.
+        /// </summary>
         public void Flash()
         {
-            remaining = duration;
+            elapsed = 0f;
+            active = true;
             Apply(1f);
+        }
+
+        /// <summary>Drops any flash in progress, e.g. when the villager dies.</summary>
+        public void Clear()
+        {
+            if (!active) return;
+            active = false;
+            elapsed = 0f;
+            Apply(0f);
         }
 
         private void Update()
         {
-            if (remaining <= 0f) return;
+            if (!active) return;
 
             // Unscaled: input feedback must not stall with the simulation or a
             // transition animation.
-            remaining -= Time.unscaledDeltaTime;
+            elapsed += Time.unscaledDeltaTime;
+            float amount = VillagerFlashMath.Amount(elapsed, duration);
 
-            if (remaining <= 0f)
-            {
-                remaining = 0f;
-                Apply(0f);
-                return;
-            }
-
-            Apply(remaining / duration);
+            if (amount <= 0f) active = false;
+            Apply(amount);
         }
 
         private void Apply(float amount)

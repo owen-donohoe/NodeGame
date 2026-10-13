@@ -24,11 +24,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="VillagerSwingMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/VillagerSwingMath.cs" Link="View/VillagerSwingMath.cs" />
+    <Compile Include="VillagerFlashMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/VillagerFlashMath.cs" Link="View/VillagerFlashMath.cs" />
+    <Compile Include="VillagerHealthMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/VillagerHealthMath.cs" Link="View/VillagerHealthMath.cs" />
+    <Compile Include="VillagerTiltMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/VillagerTiltMath.cs" Link="View/VillagerTiltMath.cs" />
+    <Compile Include="VillagerLayoutMathTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/VillagerLayoutMath.cs" Link="View/VillagerLayoutMath.cs" />
     <Compile Include="StructurePresentationTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
     <!-- Physical pointer classification and selection rules, with devices and raycasts left in Unity. -->
     <Compile Include="GestureClassifierTests.cs" />
+    <Compile Include="PaintGeometryTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Input/PaintGeometry.cs" Link="Input/PaintGeometry.cs" />
     <Compile Include="SelectionRulesTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/GestureClassifier.cs" Link="Input/GestureClassifier.cs" />
     <Compile Include="../../Assets/Scripts/Game/Input/SelectionRules.cs" Link="Input/SelectionRules.cs" />
@@ -82,6 +94,7 @@
     <Compile Include="UIArtLookupTests.cs" />
     <Compile Include="LobbyIconDrawerTests.cs" />
     <Compile Include="LobbyIconUsageTests.cs" />
+    <Compile Include="LobbyIconContextCompatibilityTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyIconUsage.cs" Link="UI/LobbyIconUsage.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyIconKind.cs" Link="UI/LobbyIconKind.cs" />
     <None Include="../../Assets/UI/Scripts/LobbyIcon.cs" Link="Sources/LobbyIcon.cs.txt" CopyToOutputDirectory="PreserveNewest" />

@@ -489,5 +489,61 @@ namespace NodeWar.Lobby.Tests
 
             Assert.Greater(checkedCount, 0, "no settable fields were exercised");
         }
+        [Test]
+        public void V4AndV5MigrateToV6WithoutResettingPreferences()
+        {
+            Assert.AreEqual(6, GameSettingsData.CurrentVersion);
+            GameSettingsData stored = GameSettingsData.CreateDefault();
+            stored.version = 5;
+            System.Array.Resize(ref stored.inputBindings, 13);
+            stored.inputBindings[(int)InputSlot.Drag] = new InputBinding(false, InputAction.LassoSelect);
+            stored.inputBindings[(int)InputSlot.TapVillager] = new InputBinding(true, InputAction.Replace);
+            stored.masterVolume = 0.17f;
+            stored.musicVolume = 0.23f;
+            stored.effectsVolume = 0.31f;
+            stored.holdTime = 0.7f;
+            stored.showCameraButton = false;
+            stored.cameraButtonZoom = false;
+            stored.controlsSide = 1;
+            stored.showSelectionBar = false;
+            stored.tooltips = false;
+            stored.cameraButtonTarget = 1;
+            GameSettingsData migrated = GameSettingsData.Normalized(stored);
+            Assert.AreEqual(6, migrated.version);
+            Assert.AreEqual(15, migrated.inputBindings.Length);
+            Assert.AreNotSame(stored.inputBindings, migrated.inputBindings);
+            for (int i = 0; i < 13; i++) Assert.AreEqual(stored.inputBindings[i], migrated.inputBindings[i]);
+            Assert.IsTrue(migrated.inputBindings[13].enabled);
+            Assert.IsTrue(migrated.inputBindings[14].enabled);
+            GameSettingsData expected = stored;
+            expected.inputBindings = migrated.inputBindings;
+            Assert.IsFalse(GameSettingsData.Differ(expected, migrated), "v5 keeps all scalar preferences");
+
+            stored.version = 4;
+            GameSettingsData v4 = GameSettingsData.Normalized(stored);
+            Assert.AreEqual(6, v4.version);
+            CollectionAssert.AreEqual(InputBindings.CreateDefault(), v4.inputBindings);
+            Assert.AreEqual(GameSettingsData.DefaultHoldTime, v4.holdTime);
+            Assert.IsTrue(v4.showCameraButton);
+            Assert.IsTrue(v4.cameraButtonZoom);
+            Assert.AreEqual(0, v4.controlsSide);
+            Assert.IsTrue(v4.showSelectionBar);
+            Assert.IsTrue(v4.tooltips);
+            Assert.AreEqual(0, v4.cameraButtonTarget);
+            Assert.AreEqual(stored.masterVolume, v4.masterVolume);
+            Assert.AreEqual(stored.musicVolume, v4.musicVolume);
+            Assert.AreEqual(stored.effectsVolume, v4.effectsVolume);
+            Assert.AreEqual(stored.frameCap, v4.frameCap);
+            Assert.AreEqual(stored.cameraSpeed, v4.cameraSpeed);
+            GameSettingsData absent = GameSettingsData.Normalized(default(GameSettingsData));
+            Assert.AreEqual(6, absent.version);
+            Assert.IsFalse(GameSettingsData.Differ(GameSettingsData.CreateDefault(), absent));
+            migrated.inputBindings[13].enabled = false;
+            migrated.inputBindings[14].enabled = false;
+            GameSettingsData v6 = GameSettingsData.Normalized(migrated);
+            Assert.IsFalse(v6.inputBindings[13].enabled);
+            Assert.IsFalse(v6.inputBindings[14].enabled);
+            Assert.IsFalse(GameSettingsData.Differ(migrated, v6));
+        }
     }
 }

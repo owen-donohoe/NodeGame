@@ -25,8 +25,11 @@ namespace NodeWar.View
         [SerializeField] private Transform workPointsRoot;
 
         [Header("Orientation")]
-        [Tooltip("Base euler rotation applied to all sprites. Should match camera viewing angle.")]
+        [Tooltip("Camera facing used when upright pitch is disabled; yaw always follows the POV.")]
         [SerializeField] private Vector3 spriteRotation = new Vector3(50f, 0f, 0f);
+        [Tooltip("Stand sprite art at a fixed pitch from vertical, independently of the camera pitch.")]
+        [SerializeField] private bool useUprightPitch = true;
+        [SerializeField, Range(0f, 89f)] private float uprightPitch = VillagerTiltMath.DefaultPitch;
 
         [Header("Startup Animation")]
         [Tooltip("Duration of the Y-scale spring from 0 to 1.")]
@@ -98,7 +101,9 @@ namespace NodeWar.View
         {
             if (sprites == null) return;
 
-            Quaternion baseRotation = Quaternion.Euler(spriteRotation);
+            var facing = VillagerTiltMath.Facing(spriteRotation.x, spriteRotation.y,
+                spriteRotation.z, useUprightPitch, uprightPitch);
+            Quaternion baseRotation = Quaternion.Euler(facing.Pitch, facing.Yaw, facing.Roll);
 
             for (int i = 0; i < sprites.Length; i++)
             {
@@ -107,7 +112,7 @@ namespace NodeWar.View
                 SpriteOrientationOffset perSpriteOffset = sprites[i].GetComponent<SpriteOrientationOffset>();
                 if (perSpriteOffset != null)
                 {
-                    sprites[i].rotation = Quaternion.Euler(spriteRotation + perSpriteOffset.offset);
+                    sprites[i].rotation = perSpriteOffset.Compose(baseRotation);
                 }
                 else
                 {

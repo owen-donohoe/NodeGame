@@ -85,6 +85,7 @@ namespace NodeWar.BalanceRig
             RigSetup setup = RigSetupLoader.Load(null, null, "none");
             BoardConfigData shipped = PremadeMaps.Hourglass01();
 
+            Assert.IsNull(setup.effectiveDraftPools, "Legacy loaders do not supply final pools.");
             Assert.AreEqual(PremadeMaps.Hourglass01Id, setup.mapId);
             Assert.AreEqual("catalog:hourglass-01", setup.boardSource, "The default board is the catalog's, not a parsed file.");
             Assert.AreEqual(BoardHasher.Hash(shipped), BoardHasher.Hash(setup.board));

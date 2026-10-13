@@ -21,13 +21,16 @@ public class LobbyIconDrawerTests
         return drawers;
     }
 
+    // Retired suit-tree glyphs keep their numeric values for saved themes but have no fallback drawing.
+    private static bool IsReservedTreeKind(LobbyIconKind kind) => kind.ToString().StartsWith("SuitTree", StringComparison.Ordinal);
+
     [Test]
     public void EveryKindHasExplicitDrawingOrIntentionalNone()
     {
         var drawers = Drawers();
         StringAssert.Contains("if (kind == LobbyIconKind.None) return null;", Source);
         foreach (LobbyIconKind kind in Enum.GetValues(typeof(LobbyIconKind)))
-            if (kind != LobbyIconKind.None)
+            if (kind != LobbyIconKind.None && !IsReservedTreeKind(kind))
             {
                 Assert.That(drawers.ContainsKey(kind.ToString()), Is.True, kind + " must not fall to the placeholder");
                 StringAssert.Contains("break;", drawers[kind.ToString()]);
@@ -53,10 +56,6 @@ public class LobbyIconDrawerTests
     [TestCase(LobbyIconKind.ShopBundle, LobbyIconKind.Envelope)]
     [TestCase(LobbyIconKind.GoldLeaf, LobbyIconKind.Diamond)]
     [TestCase(LobbyIconKind.MagicResource, LobbyIconKind.Spark)]
-    [TestCase(LobbyIconKind.SuitTreeAvailable, LobbyIconKind.Spark)]
-    [TestCase(LobbyIconKind.SuitTreeOwned, LobbyIconKind.Pip)]
-    [TestCase(LobbyIconKind.SuitTreeEquipped, LobbyIconKind.Diamond)]
-    [TestCase(LobbyIconKind.SuitTreeLocked, LobbyIconKind.Lock)]
     [TestCase(LobbyIconKind.ProfileYouAreHere, LobbyIconKind.Pip)]
     [TestCase(LobbyIconKind.IndicatorEffect, LobbyIconKind.Spark)]
     [TestCase(LobbyIconKind.IndicatorThreatToCore, LobbyIconKind.Alert)]

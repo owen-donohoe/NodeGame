@@ -101,6 +101,7 @@ namespace NodeWar.UI
 
         // Controls settings: the thumb-placed controls and what shows on them.
         private VisualElement recentreDock;
+        private VisualElement selectionBarDock;
         private VisualElement selectionBar;
         private Label selectionBarCount;
         private bool showSelectionBar = true;
@@ -109,7 +110,9 @@ namespace NodeWar.UI
         private bool handleZoomEnabled = true;
         private float insetLeft = -1f;
         private float insetRight = -1f;
+        private float insetBottom = -1f;
         private float insetPanelWidth = -1f;
+        private float insetPanelHeight = -1f;
 
         private VisualElement countdownRoot;
         private Label countdownStep;
@@ -437,6 +440,9 @@ namespace NodeWar.UI
             selectionDock = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelection, nameof(GameplayHUDController));
             selectionText = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelectionText, nameof(GameplayHUDController));
 
+            selectionBarDock = NodeWar.UI.UiRequired.Q<VisualElement>(root, "hud-selbar-dock", nameof(GameplayHUDController));
+            // A rebuilt tree needs its insets applied even if the screen has not changed.
+            insetLeft = insetRight = insetBottom = insetPanelWidth = insetPanelHeight = -1f;
             selectionBar = NodeWar.UI.UiRequired.Q<VisualElement>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelbar, nameof(GameplayHUDController));
             selectionBarCount = NodeWar.UI.UiRequired.Q<Label>(root, NodeWar.UI.UiRequiredNames.GameplayHud.HudSelbarCount, nameof(GameplayHUDController));
             BindSelectionCounter();
@@ -709,29 +715,40 @@ namespace NodeWar.UI
         }
 
         /// <summary>
-        /// Keeps the thumb-placed controls clear of a notch or rounded corner
-        /// on either edge. Margins rather than SafeAreaBinder's padding: these
-        /// are absolutely positioned, and padding on them would not move them.
+        /// Keeps the camera control clear of either edge and centres the selection
+        /// counter within the safe rectangle, above the home indicator. Insets
+        /// are converted from screen pixels to panel units before positioning docks.
         /// </summary>
         private void UpdateThumbInsets()
         {
-            if (hudRoot == null || Screen.width <= 0) return;
+            if (hudRoot == null || Screen.width <= 0 || Screen.height <= 0) return;
 
             float panelWidth = hudRoot.resolvedStyle.width;
-            if (float.IsNaN(panelWidth) || panelWidth <= 0f) return;
+            float panelHeight = hudRoot.resolvedStyle.height;
+            if (float.IsNaN(panelWidth) || panelWidth <= 0f ||
+                float.IsNaN(panelHeight) || panelHeight <= 0f) return;
 
             Rect safe = Screen.safeArea;
             float left = Mathf.Max(0f, safe.xMin) / Screen.width * panelWidth;
             float right = Mathf.Max(0f, Screen.width - safe.xMax) / Screen.width * panelWidth;
+            float bottom = Mathf.Max(0f, safe.yMin) / Screen.height * panelHeight;
             if (Mathf.Approximately(left, insetLeft) && Mathf.Approximately(right, insetRight) &&
-                Mathf.Approximately(panelWidth, insetPanelWidth)) return;
+                Mathf.Approximately(bottom, insetBottom) && Mathf.Approximately(panelWidth, insetPanelWidth) &&
+                Mathf.Approximately(panelHeight, insetPanelHeight)) return;
 
             insetLeft = left;
             insetRight = right;
+            insetBottom = bottom;
             insetPanelWidth = panelWidth;
+            insetPanelHeight = panelHeight;
 
             ApplyInset(recentreDock, left, right);
-            ApplyInset(selectionBar, left, right);
+            if (selectionBarDock != null)
+            {
+                selectionBarDock.style.left = left;
+                selectionBarDock.style.right = right;
+                selectionBarDock.style.bottom = bottom;
+            }
         }
 
         private static void ApplyInset(VisualElement element, float left, float right)

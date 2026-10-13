@@ -136,9 +136,8 @@ namespace NodeWar.Network
         /// each (there are six); skins are catalog IDs, cosmetic only.
         ///
         /// Variable length. String IDs are length-prefixed UTF8, and each array
-        /// is count-prefixed, so changing LoadoutData.SuitSlots or DistrictSlots
-        /// does not change this format. Both peers still have to be on the same
-        /// build — a count mismatch is a build mismatch, which desyncs anyway.
+        /// is count-prefixed. Protocol 6 accepts canonical (2,2) and (3,5) pairs,
+        /// including blanks, so each peer retains the opponent's capacity mode.
         ///
         /// One byte per length caps an ID at 255 bytes; IDs are short ASCII
         /// like "suit_warrior", and an over-long one is clamped rather than
@@ -178,6 +177,7 @@ namespace NodeWar.Network
         public static void DeserializeDraftLoadout(byte[] data,
             out int playerID, out NodeWar.Lobby.LoadoutData loadout)
         {
+            if (!HasValidLoadoutLayout(data)) throw new System.FormatException("Malformed draft loadout.");
             int offset = 1; // skip type byte
             playerID = ReadInt(data, ref offset);
 
@@ -196,7 +196,7 @@ namespace NodeWar.Network
                 if (source != 0 && !NodeWar.Simulation.DistrictRoster.IsActive((NodeWar.Simulation.DistrictType)source))
                     throw new System.FormatException("Inactive loadout district.");
             }
-            // Reconcile with this build's slot counts before anyone reads it.
+            // Preserve the validated opponent mode, regardless of the local rank.
             loadout = NodeWar.Lobby.LoadoutData.Normalized(loadout);
         }
 
@@ -212,20 +212,28 @@ namespace NodeWar.Network
         {
             playerID = -1;
             loadout = default;
-            if (data == null || data.Length < 7 || data[0] != (byte)PacketType.DraftLoadout) return false;
-
-            int offset = 5;
-            if (!SkipStringArray(data, ref offset)) return false;   // suits
-            if (!SkipStringArray(data, ref offset)) return false;   // districts
-            // Older builds end here; each later section is present or absent as a whole.
-            if (offset < data.Length && !SkipBytes(data, ref offset)) return false;         // suit eras
-            if (offset < data.Length && !SkipBytes(data, ref offset)) return false;         // district eras
-            if (offset < data.Length && !SkipStringArray(data, ref offset)) return false;   // skins
-            if (offset != data.Length) return false;
+            if (!HasValidLoadoutLayout(data)) return false;
 
             try { DeserializeDraftLoadout(data, out playerID, out loadout); }
             catch (System.FormatException) { playerID = -1; loadout = default; return false; }
             return true;
+        }
+
+        private static bool HasValidLoadoutLayout(byte[] data)
+        {
+            if (data == null || data.Length < 7 || data[0] != (byte)PacketType.DraftLoadout) return false;
+            int offset = 5;
+            int suits = data[offset];
+            if (!SkipStringArray(data, ref offset) || offset >= data.Length) return false;
+            int districts = data[offset];
+            // Protocol 6 mode comes from raw counts, including blanks. Save migration is never a wire rule.
+            if (!NodeWar.Backend.LoadoutCapacityPolicy.IsLowShape(suits, districts)
+                && !NodeWar.Backend.LoadoutCapacityPolicy.IsHighShape(suits, districts)) return false;
+            if (!SkipStringArray(data, ref offset)) return false;
+            if (offset < data.Length && !SkipBytes(data, ref offset)) return false;
+            if (offset < data.Length && !SkipBytes(data, ref offset)) return false;
+            if (offset < data.Length && !SkipStringArray(data, ref offset)) return false;
+            return offset == data.Length;
         }
 
         private static bool SkipStringArray(byte[] data, ref int offset)

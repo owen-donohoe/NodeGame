@@ -29,8 +29,8 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
 
-            Assert.AreEqual(LoadoutData.SuitSlots, editor.SuitSlotCount);
-            Assert.AreEqual(LoadoutData.DistrictSlots, editor.DistrictSlotCount);
+            Assert.AreEqual(2, editor.SuitSlotCount);
+            Assert.AreEqual(LoadoutRules.ChosenDistrictSlots(1), editor.DistrictSlotCount);
         }
 
         [Test]
@@ -40,7 +40,7 @@ namespace NodeWar.Lobby.Tests
             // without Normalized first would NullReference here.
             LoadoutEditor editor = new LoadoutEditor(new LoadoutData());
 
-            Assert.AreEqual(LoadoutData.SuitSlots, editor.SuitSlotCount);
+            Assert.AreEqual(2, editor.SuitSlotCount);
             Assert.AreEqual("", editor.SuitAt(0));
             Assert.IsFalse(editor.SuitSlotsFull);
         }
@@ -58,8 +58,8 @@ namespace NodeWar.Lobby.Tests
             LoadoutEditor editor = new LoadoutEditor(legacy);
 
             Assert.AreEqual("suit_scout", editor.SuitAt(0));
-            Assert.AreEqual("", editor.SuitAt(LoadoutData.SuitSlots - 1));
-            Assert.AreEqual(LoadoutData.DistrictSlots, editor.DistrictSlotCount);
+            Assert.AreEqual("", editor.SuitAt(LoadoutRules.ChosenSuitSlots(1) - 1));
+            Assert.AreEqual(LoadoutRules.ChosenDistrictSlots(1), editor.DistrictSlotCount);
         }
 
         [Test]
@@ -118,7 +118,7 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
 
-            for (int i = 0; i < LoadoutData.SuitSlots; i++)
+            for (int i = 0; i < LoadoutRules.ChosenSuitSlots(1); i++)
                 editor.EquipSuit("suit_" + i);
 
             Assert.IsTrue(editor.SuitSlotsFull);
@@ -143,7 +143,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(0, editor.EquipDistrict("node_market"));
             Assert.AreEqual(LoadoutEditor.NoSlot, editor.EquipDistrict("node_market"));
 
-            for (int i = 1; i < LoadoutData.DistrictSlots; i++)
+            for (int i = 1; i < LoadoutRules.ChosenDistrictSlots(1); i++)
                 editor.EquipDistrict("node_" + i);
 
             Assert.IsTrue(editor.DistrictSlotsFull);
@@ -181,7 +181,7 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData saved = new LoadoutData
             {
-                suitIDs = new[] { "suit_warrior", "suit_scout", "" },
+                suitIDs = new[] { "suit_warrior", "suit_scout" },
                 districtIDs = new[] { "node_crossroads", "node_market" }
             };
 
@@ -251,46 +251,5 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("", editor.SuitAt(0));
         }
 
-        // ===== SHORT SIDES =====
-        //
-        // A side is flagged in the lobby when a slot is empty that the player
-        // could fill. The flag must never nag someone who does not own enough to
-        // fill every slot.
-
-        [Test]
-        public void SuitSide_WithAnEmptySlotAndEnoughOwned_IsShort()
-        {
-            LoadoutEditor editor = Empty();
-            editor.EquipSuit("suit_scout");
-
-            Assert.IsTrue(editor.IsSuitSideShort(LoadoutData.SuitSlots));
-        }
-
-        [Test]
-        public void SuitSide_WithTooFewOwnedToFillIt_IsNotShort()
-        {
-            LoadoutEditor editor = Empty();
-            editor.EquipSuit("suit_scout");
-
-            Assert.IsFalse(editor.IsSuitSideShort(LoadoutData.SuitSlots - 1));
-        }
-
-        [Test]
-        public void FullSide_IsNeverShort()
-        {
-            LoadoutEditor editor = Empty();
-            for (int i = 0; i < LoadoutData.DistrictSlots; i++)
-                editor.EquipDistrict("node_" + i);
-
-            Assert.IsFalse(editor.IsDistrictSideShort(99));
-            Assert.AreEqual(LoadoutData.DistrictSlots, editor.FilledDistrictCount);
-        }
-
-        [Test]
-        public void EmptyNodeSide_WithEnoughOwned_IsShort()
-        {
-            Assert.IsTrue(Empty().IsDistrictSideShort(LoadoutData.DistrictSlots));
-            Assert.AreEqual(0, Empty().FilledDistrictCount);
-        }
     }
 }

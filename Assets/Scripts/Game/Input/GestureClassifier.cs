@@ -12,7 +12,7 @@ namespace NodeWar.Input
         PointerDown, Cancelled, Tap, SecondaryClick, PanBegin, PanUpdate, PanEnd,
         LassoBegin, LassoPoint, LassoComplete, ZoomBegin, ZoomUpdate, ZoomEnd,
         DoubleTapGround, DoubleTapVillager, TwoFingerTap, HoldInfo,
-        OrderBegin, OrderUpdate, OrderEnd, OrderCancel
+        OrderBegin, OrderUpdate, OrderEnd, OrderCancel, DoubleTapNode, TripleTapNode
     }
 
     /// <summary>What the adapter found under a press. Resolved once, on touch-down.</summary>
@@ -58,9 +58,13 @@ namespace NodeWar.Input
         public readonly GesturePoint Position;
         public readonly float Scale;
         public readonly IReadOnlyList<GesturePoint> Points;
-        public GestureEvent(GestureEventKind kind, GesturePoint position, float scale, IReadOnlyList<GesturePoint> points)
+        public readonly GestureTargetClass TargetClass;
+        public readonly int TargetId;
+        public GestureEvent(GestureEventKind kind, GesturePoint position, float scale, IReadOnlyList<GesturePoint> points,
+            GestureTargetClass targetClass = GestureTargetClass.None, int targetId = -1)
         {
             Kind = kind; Position = position; Scale = scale; Points = points;
+            TargetClass = targetClass; TargetId = targetId;
         }
     }
 
@@ -108,10 +112,16 @@ namespace NodeWar.Input
         private GesturePoint lastTapPos;
         private GestureTargetClass lastTapClass;
         private int lastTapId;
+        private int nodeTapCount;
+        private int nodeTapId;
+        private GesturePoint nodeTapPos;
+        private float nodeReleaseTime;
+        private bool nodeContinuation;
         private readonly List<GesturePoint> points = new List<GesturePoint>();
 
         /// <summary>Longest gap between the first tap's release and the second press.</summary>
         public float DoubleTapTime { get; set; } = 0.3f;
+        public float NodeTapGap { get; set; } = 0.22f;
         /// <summary>How far the second press may land from the first tap, in mm.</summary>
         public float DoubleTapRadiusMm { get; set; } = 8f;
         /// <summary>Longest a two-finger touch may last and still be a tap.</summary>
@@ -155,6 +165,8 @@ namespace NodeWar.Input
 
         private void Emit(GestureEventKind kind, GesturePoint position = default, float scale = 0f)
         {
+            if (kind == GestureEventKind.Cancelled || kind == GestureEventKind.HoldInfo)
+                ClearNodeChain();
             Published?.Invoke(new GestureEvent(kind, position, scale,
                 kind == GestureEventKind.LassoComplete ? points.ToArray() : null));
         }
@@ -183,8 +195,12 @@ namespace NodeWar.Input
             for (int i = 0; i < samples.Count; i++)
             {
                 PointerSample sample = samples[i];
-                if (sample.Button == PointerButton.Secondary && sample.Phase == PointerPhase.Began && !sample.OverUI)
-                    Emit(GestureEventKind.SecondaryClick, sample.Position);
+                if (sample.Button == PointerButton.Secondary && sample.Phase == PointerPhase.Began)
+                {
+                    if (State == GestureState.Pending && downClass == GestureTargetClass.Node) Cancel();
+                    ClearNodeChain();
+                    if (!sample.OverUI) Emit(GestureEventKind.SecondaryClick, sample.Position);
+                }
                 if (sample.Button == PointerButton.Primary) { primary = sample; hasPrimary = true; }
                 if (sample.Button != PointerButton.Touch ||
                     (sample.Phase != PointerPhase.Began && sample.Phase != PointerPhase.Held)) continue;
@@ -193,6 +209,7 @@ namespace NodeWar.Input
                 touches++;
             }
 
+            if (touches >= 2) ClearNodeChain();
             if (!hasPrimary) return;
             if (touches >= 2)
             {
@@ -297,6 +314,15 @@ namespace NodeWar.Input
             {
                 case PointerPhase.Began:
                     if (State != GestureState.Idle) Cancel();
+                    // Resolve the new press before the adapter advances the idle clock.
+                    // A changed target or slop abandons the old intent. A late press on
+                    // the same node lets its completed deadline resolve before starting anew.
+                    bool sameNode = nodeTapCount > 0 && !primary.OverUI &&
+                        primary.Target == GestureTargetClass.Node && primary.TargetId == nodeTapId &&
+                        GesturePoint.Distance(primary.Position, nodeTapPos) <= DoubleTapRadiusMm;
+                    if (sameNode) AdvanceTime(primary.Time);
+                    nodeContinuation = sameNode && nodeTapCount > 0 && primary.Time >= nodeReleaseTime;
+                    if (!nodeContinuation) ClearNodeChain();
                     downPos = primary.Position;
                     downTime = primary.Time;
                     primaryId = primary.PointerId;
@@ -453,6 +479,25 @@ namespace NodeWar.Input
         // and the action overwrites whatever tap two would have done.
         private void EmitTap(float time)
         {
+            if (downClass == GestureTargetClass.Node)
+            {
+                lastTapValid = false;
+                if (nodeTapCount == 0)
+                {
+                    nodeTapId = downId;
+                    nodeTapPos = downPos;
+                }
+                nodeTapCount++;
+                nodeReleaseTime = time;
+                nodeContinuation = false;
+                if (nodeTapCount == 3 && IsEnabled(InputSlot.TripleTapNode))
+                    EmitNodeIntent(GestureEventKind.TripleTapNode);
+                else if (nodeTapCount == 2 && !IsEnabled(InputSlot.TripleTapNode) && IsEnabled(InputSlot.DoubleTapNode))
+                    EmitNodeIntent(GestureEventKind.DoubleTapNode);
+                else if (!IsEnabled(InputSlot.DoubleTapNode) && !IsEnabled(InputSlot.TripleTapNode))
+                    EmitNodeIntent(GestureEventKind.Tap);
+                return;
+            }
             bool eligible = downClass == GestureTargetClass.None || IsVillager(downClass);
             InputSlot slot = IsVillager(downClass) ? InputSlot.DoubleTapVillager : InputSlot.DoubleTapGround;
             if (doubleCandidate && IsEnabled(slot))
@@ -490,6 +535,7 @@ namespace NodeWar.Input
 
         public void Cancel()
         {
+            ClearNodeChain();
             lastTapValid = false;
             if (State == GestureState.Idle) return;
             bool drawing = State == GestureState.LassoArmed || State == GestureState.Lassoing;
@@ -502,6 +548,27 @@ namespace NodeWar.Input
             Emit(GestureEventKind.Cancelled);
             if (drawing) Emit(GestureEventKind.LassoComplete);
             State = GestureState.Idle;
+        }
+
+        /// <summary>Called after this frame's presses, including frames with no pointer.</summary>
+        public void AdvanceTime(float now)
+        {
+            if (nodeTapCount == 0 || nodeContinuation || now <= nodeReleaseTime + NodeTapGap) return;
+            EmitNodeIntent(nodeTapCount == 2 && IsEnabled(InputSlot.DoubleTapNode)
+                ? GestureEventKind.DoubleTapNode : GestureEventKind.Tap);
+        }
+
+        private void EmitNodeIntent(GestureEventKind kind)
+        {
+            var intent = new GestureEvent(kind, nodeTapPos, 0f, null, GestureTargetClass.Node, nodeTapId);
+            ClearNodeChain();
+            Published?.Invoke(intent);
+        }
+
+        private void ClearNodeChain()
+        {
+            nodeTapCount = 0;
+            nodeContinuation = false;
         }
 
         private void EndPair(bool cancelled = false)

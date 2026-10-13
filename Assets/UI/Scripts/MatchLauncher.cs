@@ -73,6 +73,95 @@ namespace NodeWar.Lobby
         /// <summary>Raised whenever anything above changes, so the UI can redraw.</summary>
         public event Action Changed;
 
+        private readonly LoadoutCatalog catalog;
+        private LoadoutData frozenLoadout;
+        private NodeWar.Backend.PlayerState launchState;
+        private int preparationVersion;
+        private string launchPlayerId;
+
+        public MatchLauncher(LoadoutCatalog catalog = null)
+        {
+            this.catalog = catalog ?? new LoadoutCatalog(null, null);
+        }
+
+        /// <summary>Refresh rank before queue/connection, sanitize and freeze only the local deck.</summary>
+        public async System.Threading.Tasks.Task<bool> PrepareAsync(bool ranked)
+        {
+            int version = ++preparationVersion;
+            NodeWar.Backend.PlayerState state = null;
+            string playerId = NodeWar.Backend.BackendServices.Account.Current?.PlayerId;
+            try
+            {
+                state = await NodeWar.Backend.BackendServices.PlayerState.GetAsync();
+            }
+            catch (Exception)
+            {
+                // Offline/private play has an explicit low-arena fallback.
+            }
+            if (version != preparationVersion) return false;
+            if (playerId != null && playerId != NodeWar.Backend.BackendServices.Account.Current?.PlayerId)
+            {
+                Fail("Account changed.", "Try starting the match again.");
+                return false;
+            }
+            if (ranked && state?.Rank == null)
+            {
+                Fail("Couldn't confirm your arena.", "Reconnect and try again.");
+                return false;
+            }
+            // Missing rank is always low mode, never a speculative high snapshot.
+            launchPlayerId = NodeWar.Backend.BackendServices.Account.Current?.PlayerId;
+            launchState = state?.Rank == null ? null : new NodeWar.Backend.PlayerState
+            {
+                Rank = new NodeWar.Backend.RankRecord
+                {
+                    Arena = state.Rank.Arena,
+                    HighestArena = state.Rank.HighestArena,
+                    RR = state.Rank.RR
+                },
+                Inventory = state.Inventory
+            };
+            LoadoutData choices = catalog.CurrentLoadout(launchState).ToLoadout();
+            int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
+            if (!LoadoutRules.IsComplete(choices, arena))
+            {
+                Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
+                return false;
+            }
+            if (launchState?.Rank != null) PlayerProfile.Instance?.SetLoadout(choices);
+            frozenLoadout = LoadoutTypes.WithEquipment(choices, launchState);
+            return true;
+        }
+
+        private bool RecheckLoadout()
+        {
+            if (launchPlayerId != NodeWar.Backend.BackendServices.Account.Current?.PlayerId)
+            {
+                Cleanup();
+                Fail("Account changed.", "Try starting the match again.");
+                return false;
+            }
+            int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
+            if (LoadoutRules.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena))
+                return true;
+            Cleanup();
+            Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
+            return false;
+        }
+
+        public async System.Threading.Tasks.Task<bool> LaunchLocalAsync(bool bot)
+        {
+            if (!await PrepareAsync(false) || !RecheckLoadout()) return false;
+            GameObject matchGO = new GameObject("MatchConnection");
+            MatchConnection match = matchGO.AddComponent<MatchConnection>();
+            match.isNetworked = false;
+            match.isBotMatch = bot;
+            match.localPlayerID = 0;
+            match.loadout = frozenLoadout;
+            NodeWar.UI.SceneTransition.Load("Gameplay");
+            return true;
+        }
+
         private NetworkManager networkManager;
         private GameObject networkManagerGO;
         private int localPlayerID;
@@ -172,6 +261,7 @@ namespace NodeWar.Lobby
 
         public void Cancel()
         {
+            preparationVersion++;
             Cleanup();
             CurrentPhase = Phase.Idle;
             JoinCode = null;
@@ -181,10 +271,13 @@ namespace NodeWar.Lobby
 
         // ===== HOST =====
 
-        private void BeginHost(bool lan, string _)
+        private async void BeginHost(bool lan, string _)
         {
             Cleanup();
             ClearFailure();
+
+            EnterPhase(Phase.CreatingRoom);
+            if (!await PrepareAsync(rankedMatchId != null)) return;
 
             useLan = lan;
             localPlayerID = 0;
@@ -206,10 +299,13 @@ namespace NodeWar.Lobby
 
         // ===== JOIN =====
 
-        private void BeginJoin(bool lan, string address)
+        private async void BeginJoin(bool lan, string address)
         {
             Cleanup();
             ClearFailure();
+
+            EnterPhase(Phase.CreatingRoom);
+            if (!await PrepareAsync(rankedMatchId != null)) return;
 
             useLan = lan;
             localPlayerID = 1;
@@ -406,6 +502,7 @@ namespace NodeWar.Lobby
 
         private void Succeed()
         {
+            if (!RecheckLoadout()) return;
             CurrentPhase = Phase.Connected;
             Notify();
 
@@ -419,9 +516,7 @@ namespace NodeWar.Lobby
             match.matchId = rankedMatchId;
             match.playerIds = rankedPlayerIds;
 
-            if (PlayerProfile.Instance != null)
-                match.loadout = LoadoutTypes.WithEquipment(PlayerProfile.Instance.Loadout,
-                    NodeWar.Backend.BackendServices.LastKnownState);
+            match.loadout = frozenLoadout;
 
             // MatchConnection owns the NetworkManager from here, and is
             // DontDestroyOnLoad, so parenting is what carries the socket across
@@ -502,6 +597,7 @@ namespace NodeWar.Lobby
         /// <summary>Called when the owning UI goes away, so a socket is never orphaned.</summary>
         public void Dispose()
         {
+            preparationVersion++;
             Cleanup();
             CurrentPhase = Phase.Idle;
         }

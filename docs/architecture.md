@@ -6,10 +6,46 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
-verified_at_commit: 9006a5bdaf9227f014eb3eaacdffb98204364ea1
+  - { by: claude-opus-5-5, at: 2026-10-13T16:34:59Z }
+verified_at_commit: f0a21c0d5c61571e9e99ebcef25e6ceb551ad606
 status: stable
 sources:
+  - id: pointer-gestures
+    resource: Assets/Scripts/Game/Input/PointerGestureSource.cs
+    title: Paint capture and deferred gesture delivery
+  - id: gesture-classifier
+    resource: Assets/Scripts/Game/Input/GestureClassifier.cs
+    title: Pointer grammar and node-chain deadlines
+  - id: gesture-thresholds
+    resource: Assets/Scripts/Game/Input/GestureThresholds.cs
+    title: Physical brush radius and node gap
+  - id: paint-geometry
+    resource: Assets/Scripts/Game/Input/PaintGeometry.cs
+    title: Swept capsule membership
+  - id: lasso-adapter
+    resource: Assets/Scripts/Game/Input/LassoGeometry.cs
+    title: Recorded screen-point adapter
+  - id: tap-router
+    resource: Assets/Scripts/Game/Input/TapRouter.cs
+    title: Selection and order arbitration
+  - id: selection-system
+    resource: Assets/Scripts/Game/Input/SelectionSystem.cs
+    title: Projected centres and local selection
+  - id: selection-rules
+    resource: Assets/Scripts/Game/Input/SelectionRules.cs
+    title: Resident eligibility and selection preservation
+  - id: selection-paint-view
+    resource: Assets/Scripts/Game/UI/Selection/SelectionLasso.cs
+    title: Runtime union mask and brush boundary
+  - id: paint-shader
+    resource: Assets/Resources/UI/PaintCoverage.shader
+    title: Single tint composite and outer outline
+  - id: hud-layout
+    resource: Assets/UI/Layouts/GameplayHUD.uxml
+    title: Stable selection count dock names
+  - id: hud-style
+    resource: Assets/UI/Styles/HUD.uss
+    title: Safe-area centred count and visibility
   - id: sim-state
     resource: Assets/Scripts/Game/Simulation/SimulationState.cs
     title: SimulationState
@@ -106,6 +142,36 @@ sources:
     resource: Assets/Scripts/Lobby/Data/LoadoutTypes.cs
     title: LoadoutTypes, lobby IDs to sim types and catalog bases
     last_modified: 2026-09-27T17:00:22-04:00
+  - id: loadout-capacity
+    resource: Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs
+    title: Integer-only shared arena capacities and canonical shapes
+  - id: loadout-rules
+    resource: Assets/UI/Scripts/LoadoutRules.cs
+    title: Display locks and local chosen-loadout completeness
+  - id: workshop-style
+    resource: Assets/UI/Styles/Workshop.uss
+    title: Workshop layout, clipping and floating-navigation clearance
+  - id: loadout-data
+    resource: Assets/Scripts/Lobby/Data/LoadoutData.cs
+    title: Shape-preserving normalization and explicit local resizing
+  - id: loadout-record
+    resource: Assets/Scripts/Lobby/Data/LoadoutRecord.cs
+    title: Frozen save keys and capacity-preserving alias migration
+  - id: loadout-match-setup
+    resource: Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
+    title: Canonical per-player draft pools and resolved grants
+  - id: bot-player
+    resource: Assets/Scripts/Game/Input/BotPlayer.cs
+    title: Bot command generation and match-balance injection
+  - id: bot-suit-choice
+    resource: Assets/Scripts/Game/Input/BotSuitChoice.cs
+    title: Eligible affordable drafted suit selection
+  - id: rig-setup
+    resource: dotnet/NodeWar.BalanceRig/RigSetup.cs
+    title: Optional final per-player headless draft pools
+  - id: rig-match-runner
+    resource: dotnet/NodeWar.BalanceRig/MatchRunner.cs
+    title: Headless draft consumption, bot construction and seat swaps
   - id: input-serializer
     resource: Assets/Scripts/Game/Network/InputSerializer.cs
     title: InputSerializer, ProtocolVersion and the handshake
@@ -306,8 +372,8 @@ desyncs/disconnects.
 directly.
 
 `PointerGestureSource` is the single pointer reader for live selection and
-move orders. It resolves a primary press into a tap, a pan or a long-press
-lasso and publishes the target. Desktop right-clicks publish a node-only
+move orders. It resolves a primary press into a tap, a pan or hold-to-paint
+and publishes the target. Desktop right-clicks publish a node-only
 destination to `CommandSystem`, after a current-position UI raycast blocks
 both uGUI and UI Toolkit (including the HUD and node sheet). Consumers do
 not repeat the world raycast. `GameManager` enables gesture routing for
@@ -321,6 +387,41 @@ What counts as a tap target is asked, not assumed: an opponent's villager
 is not one, and the press falls through it to the node beneath. The rule
 lives with the selection owner rather than in the gesture source, so the
 input layer never learns game ownership.
+
+Paint uses an open union of discs/capsules, with a fixed 5 mm screen radius
+at every zoom (`GestureThresholds.paintRadiusMm`, 160 dpi fallback). The source
+snapshots pixels-per-mm and `CurrentPaintRadiusPx` when the hold arms and
+retains them through completion. Its decimated, capped recorded points drive
+both rendering and selection; there is no closing edge, polygon interior,
+area gate or independently smoothed tail. `SelectionSystem.ApplyLasso` keeps
+the compatibility name: it projects local, alive, unconsumed villager centres
+from their transforms (positioner fallback), rejects z <= 0, and applies
+inclusive expanded bounds and capsule membership. Empty capture preserves
+selection; a nonempty capture replaces it. Sprite and touch-target sizes do
+not affect membership. Zoom changes world reach through projection only.
+
+Node taps have their own deferred chain keyed by the original node ID and
+8 mm slop. `GestureClassifier.NodeTapGap` is 0.22 s, supplied by
+`GestureThresholds.nodeTapGap`; ordinary villager/ground doubles and double-drag
+retain 0.3 s. `AdvanceTime` runs after press processing even without a pointer:
+gap <= 0.22 qualifies, expiry is strictly after the deadline, and a matching
+pressed continuation suspends expiry until it resolves. With both node
+bindings enabled, single waits one gap, double waits another after its release
+and replaces selection with idle residents, and the third release immediately
+selects all eligible residents. Deferred `GestureEvent` payloads carry
+`TargetClass`/`TargetId`; the source publishes `OnDoubleTapNode` and
+`OnTripleTapNode` without a fresh raycast. Hold, drag, UI/target change, second
+finger, secondary click, cancellation/disable and changed binding/hold settings
+cancel unresolved orders. Villager and ground singles remain immediate.
+
+Residents are local, alive, unconsumed, on that node and non-Moving; idle-only
+requires `Idle`. `TapRouter` rejects stale node IDs at dispatch and treats a
+nonempty resident set already entirely selected as a selection-preserving no-op,
+even with extra selected villagers. It bypasses `IssueMoveTo`, so no command,
+highlight or `MoveIssued` fires. Partial coverage still moves, stamped with
+the issuing tick at dispatch. Right-click and order-drag keep their order path.
+Node binding toggle combinations and settings v6's append-only slots are in
+[the controls contract](touch-input-spec.md#4-how-overlaps-resolve).
 
 **6. UI/** — HUD, panels, menus during a match, in uGUI. Reads
 `SimulationState` to render; writes nothing to it. Being replaced by
@@ -363,7 +464,8 @@ use white tint; other sprites
 use the existing glyph tint. Images scale to fit, centred, with letterboxing.
 Missing entries keep the generated vectors; unknown kinds get a placeholder.
 
-Existing enum names and values are unchanged; semantic kinds are appended.
+Surviving enum names and values are unchanged; retired serialized values stay
+reserved and semantic kinds are appended.
 Every new kind shares its predecessor's drawing until its own art is assigned.
 Existing theme entries without a context deserialize to `Anywhere` (explicit
 enum value zero; the serialized field has no nonzero initializer). No asset
@@ -373,7 +475,10 @@ optional context, and either property can change independently.
 
 Contexts are `Anywhere` (default fallback), `TopBar`, `PageHeader`, `NavBar`,
 `HeadsUpDisplay`, `NodeSheet`, `InlineText`, `EmotePicker`, `EmoteBubble`,
-`OffScreenIndicator`, `ShopCard`, `SuitTree`, `Workshop`, `Profile`, and `Home`.
+`OffScreenIndicator`, `ShopCard`, `Workshop`, `Profile`, and `Home`. Value 11, the
+retired `SuitTree` context, is reserved: it keeps no name, is never reused, and
+`LobbyIconContextCompatibilityTests` pins the surviving values (Workshop 12, Profile 13,
+Home 14). Theme entries that still use it never match and can be removed in the Editor.
 The indicator layer tags both its pointer and event glyph `OffScreenIndicator`,
 including when that same indicator is projected over the board.
 
@@ -388,7 +493,7 @@ including when that same indicator is projected over the board.
 | Envelope | Legacy generic fallback drawer; no active use | — |
 | Mouth | Home villager face | Home |
 | Tv | History button and history page header | TopBar, PageHeader |
-| Back | Page back buttons, controls row, suit-tree back | PageHeader, InlineText, SuitTree |
+| Back | Page back buttons, controls row | PageHeader, InlineText |
 | Flag | Legacy generic fallback drawer; no active use | — |
 | Hat | Legacy generic fallback drawer; no active use | — |
 | Diamond | Legacy generic fallback drawer; no active use | — |
@@ -417,10 +522,10 @@ including when that same indicator is projected over the board.
 | ShopBundle | Shop bundle offers | ShopCard |
 | GoldLeaf | Shop gold-leaf offer | ShopCard |
 | MagicResource | HUD magic bar and sheet readout | HeadsUpDisplay, NodeSheet |
-| SuitTreeAvailable | Available suit-tree node | SuitTree |
-| SuitTreeOwned | Owned suit-tree node | SuitTree |
-| SuitTreeEquipped | Equipped suit-tree node | SuitTree |
-| SuitTreeLocked | Locked suit-tree node | SuitTree |
+| SuitTreeAvailable | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
+| SuitTreeOwned | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
+| SuitTreeEquipped | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
+| SuitTreeLocked | Retired with the tree UI; value reserved for saved themes; no drawing, no active use | — |
 | ProfileYouAreHere | Profile arena-track marker | Profile |
 | IndicatorEffect | Generic effect indicator | OffScreenIndicator |
 | IndicatorThreatToCore | Threat-to-core indicator | OffScreenIndicator |
@@ -441,9 +546,8 @@ art keeps each screen's own fallback; Workshop locks remain visible. The UI
 does not consume the district accent colour.
 
 Gauge skins remain procedural. Set USS custom properties on matching elements
-or their ancestors: `--tree-edge-color`, `--tree-edge-owned-color`,
-`--tree-line-width`, `--tree-disc-size` on `.st-canvas`; `--res-thickness` and
-`--res-stop-0` through `--res-stop-5` on `.hud__res-ring` (including sheet
+or their ancestors: `--res-thickness` and `--res-stop-0` through `--res-stop-5`
+on `.hud__res-ring` (including sheet
 readouts); `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` on
 the progress dial. Geometry properties are unitless pixel numbers, bounded
 by the painter and its host; omitted properties retain today's defaults.
@@ -532,6 +636,16 @@ The settings card drops down from beneath that button. The recentre/zoom
 handle defaults to the bottom right, with the emote dock at the bottom left;
 Controls settings can change the handle's side, visibility and zoom behaviour.
 
+The selection count/clear control stays bottom-centred regardless of controls
+side. Its non-picking `hud-selbar-dock` positions the existing `hud-selbar`
+and `hud-selbar-count` in flow, with a 12-panel-unit bottom gap. The controller
+converts safe left/right/bottom insets into panel units and refreshes them on
+safe-area, width or height changes, including a rebuilt visual tree. Empty or
+disabled counters use `display:none`; only the counter picks, captures the
+pointer and clears selection on an inside release. Count/X state classes and
+sheet layering are unchanged. Authored XML tests guard hierarchy and picking
+modes; visual centering and touch delivery require Editor/device checks.
+
 `GameplayHUDController` clones its authored `PanelSettings` at runtime and fits
 the reference resolution to both screen dimensions through
 `StructurePresentation.HudScale`. Portrait keeps its width-based sizing;
@@ -583,7 +697,7 @@ Pointer (mouse / touch)        or  BotPlayer
         │
         ▼
  PointerGestureSource                   (Input/)
-        │  one press -> tap | pan | lasso, resolved once
+        │  pointer trace -> tap chain | pan | paint, resolved once
         ▼
  TapRouter / SelectionSystem            (Input/)
         │  decides what the gesture meant; tracks selection
@@ -751,21 +865,56 @@ Three objects are carried across the Lobby → Gameplay scene load via
   era per suit and district type and their equipped skin IDs; those are
   stamped on at match launch from the server's equipped state
   (`LoadoutTypes.WithEquipment`), not chosen in the lobby's local data.
+  Chosen array lengths encode canonical low (2 suits/2 districts) or high (3/5)
+  mode, including blank slots; the slot constants are maxima. Normalization
+  preserves a canonical saved/remote shape, while default and legacy 3/2 saves
+  become low mode. Explicit arena-aware local resizing pads promotion slots or
+  trims demotion to the first two, without clearing type-indexed equipment.
+  `LoadoutRecord` retains the frozen `nodeIDs` key and determines mode before
+  district alias migration pads the array; profile startup preserves stored
+  mode until rank is confirmed.
 - `LoadoutTypes` — the one translation between lobby item IDs
   (`suit_warrior`), simulation types and catalog base IDs (`suit.warrior`). It
   resolves only complete, current IDs (no substring matching), and a retired district
   has no catalog base.
+  `WithEquipment` resizes local choices from the supplied server rank (arena 1
+  fallback when absent), then overlays equipped eras and sorted skins.
+- `LoadoutCapacityPolicy` — arena <2 uses 2/2 and free grants; arena >=2 uses
+  3/5 without grants. `LoadoutRules` forwards chosen capacities and returns
+  display-only locks at low arenas, empty lock lists at high arenas.
+  `LoadoutRules.IsComplete` checks every effective local chosen slot (it sits
+  beside `LoadoutData`; the policy stays integer-only for the Shared assembly
+  and Cloud Code). Home dims Battle and
+  shows "Fill your loadout" for any empty slot at every arena; tapping it toasts
+  that reason and opens Workshop. `MatchLauncher`/`PlayPopup` re-check completeness
+  during player-side launch flow, so a deck emptied mid-flow cannot launch there.
+  Dev launches, bots, the test harness and match setup do not require filled slots.
+- `LoadoutMatchSetup` — normalizes a detached copy through `LoadoutData.Normalized`
+  at the match boundary: default/null and noncanonical shapes become low 2/2;
+  unknown, retired, Core and duplicate choices become blanks. The first valid
+  choice of each type stays in slot order, and mode follows the canonical shape.
+  Low loadouts receive the player's original map base pool plus chosen districts
+  and Warrior plus chosen non-global suits. High loadouts receive only chosen
+  districts and suits; Warrior may be absent or selected once. Resolved
+  `draftedDistricts` lists chosen types only; placements represent effective pieces.
+  Authored base pools, fixed placements and board identity remain unchanged.
 
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
   PostDraft → Countdown → Playing`); builds `SimulationState` and spawns
   node/villager views.
+  Before destroying `DraftManager`, caches both loadouts and its actual local
+  simulation seat, including guest P1. Setup resolution uses `LoadoutMatchSetup`;
+  without a connection P1 does not inherit the local human's high deck.
 - `DraftManager` — runs the pre-match district-placement draft as its own
   turn-based phase machine (`WaitingForReady → InitialReveal →
   ActiveDraft → Complete`). Draws nothing itself: it drives an
   `IDraftPresenter`, and asks it one question back — whether a piece is
   parked but unconfirmed, so a turn that times out takes the cell the
   player already chose rather than a random one.
+  Human picks use their own loadout's effective pool. Configured bots keep the
+  legacy map base pool plus `boardConfig.botLoadoutDistricts`, independently of
+  the human's mode, and retain the low-mode Warrior grant.
 - `IDraftPresenter` / `ICountdownPresenter` — the two places a phase has
   to be drawn by whichever UI stack is on. Same shape for the same reason:
   the phase owns the rules, the presenter owns the pixels.
@@ -844,7 +993,12 @@ Three objects are carried across the Lobby → Gameplay scene load via
   versioned handshake. It refuses any `CommandType` that `CommandTypes.IsKnown` does not list. `InputSerializer.ProtocolVersion` aliases
   `NodeWar.Backend.ProtocolVersion.Current`, declared in
   `Assets/Scripts/Backend/Shared/ProtocolVersion.cs` and shared with Cloud
-  Code. It changes with any packet layout.
+  Code. It changes with packet layouts or incompatible match-setup semantics.
+  Current protocol 6 segregates clients for arena-dependent chosen capacities and
+  free grants; its packet layout is unchanged. Release it only after the capacity,
+  grant, server/bot and launch changes are integrated. Older clients normalize to
+  fixed capacities and always grant Warrior and the base districts, so count
+  prefixes alone cannot ensure identical setup.
 - `LocalBuildIdentity` — this build's `BuildIdentity` (protocol, simulation
   version, balance content hash). Peers compare it in the handshake and
   refuse a mismatch rather than desync.
@@ -856,20 +1010,36 @@ Three objects are carried across the Lobby → Gameplay scene load via
   length. The loadout carries eras and skins (protocol 2).
   `TryDeserializeDraftLoadout` checks the whole layout beside the writer,
   so the receive check cannot fall behind a new section again.
+  Both readers validate raw chosen counts as exactly (2,2) or (3,5) before
+  normalization; noncanonical pairs, including legacy wire (3,2), are refused.
+  Direct deserialization throws `FormatException`. Count prefixes include blanks
+  and preserve the opponent's mode independently of the local arena; no arena
+  or mode flag is added.
 
 **Input/**
 - `PointerGestureSource` — the shared pointer reader for selection and
-  commands; publishes taps, pans, lassos, pinches and right-click destinations.
+  commands; publishes tap chains, pans, paint (legacy Lasso event names),
+  pinches and right-click destinations with a frozen paint radius.
+- `GestureClassifier` — UnityEngine-free pointer traces and deferred node
+  deadlines; `PaintGeometry` — pure swept capsules, adapted by `LassoGeometry`.
 - `TapRouter` — the tap priority ladder: villager, then node-with-selection
-  (move), then node (panel), then empty (clear).
-- `SelectionSystem` — tracks selected villagers; applies lasso results.
+  (move unless all residents are selected), then node (panel), then empty
+  (clear); node doubles/triples replace idle/all resident selection.
+- `SelectionSystem` — tracks selected villagers; applies paint-centre coverage
+  and node-local resident selection through read-only `SelectionRules`.
 - `CommandSystem` — turns player actions into `GameCommand`s.
 - `InputBuffer` — queue of commands awaiting the next tick.
-- `BotPlayer` — generates commands for an AI-controlled side.
+- `BotPlayer` — generates commands for an AI-controlled side. GameManager and the
+  headless MatchRunner pass the actual match balance; the four-argument constructor
+  retains default-balance compatibility. `BotSuitChoice` prefers an eligible,
+  affordable drafted Warrior, otherwise the lowest-ID eligible combat suit,
+  using the player's current era and equip-node rule. No eligible suit means no
+  Equip command; commands retain their issuing tick.
 - `HitFlashRouter` — the single bridge from gesture events to renderers,
   so the input layer never touches a `SpriteRenderer` itself.
 - `LassoGeometry` / `ScreenMetrics` / `GestureThresholds` — pure helpers:
-  polygon containment and smoothing, millimetre-to-pixel conversion, and
+  capsule membership over the recorded points (an adapter onto `PaintGeometry`),
+  millimetre-to-pixel conversion, and
   the tunable thresholds.
 
 **UI/** (uGUI, `Assets/Scripts/Game/UI/`)
@@ -887,7 +1057,11 @@ Three objects are carried across the Lobby → Gameplay scene load via
   now, and mouse-only: it reads `Mouse.current` and cancels on right-click
   or Escape, neither of which a phone has.
 - `GameOverPanel` — end-of-match result display.
-- `SelectionLasso` — draws the in-progress lasso stroke.
+- `SelectionLasso` — existing component/event wiring renders the armed brush
+  disc and swept coverage. Opaque stamps form a bounded screen mask; the
+  Resources-loaded `UI/PaintCoverage` shader composites tint once with an outer
+  outline, so overlap never darkens. Resize rebuilds storage; disable/destroy
+  releases runtime mask/material resources. `LassoArmedCue` remains distinct.
 - `LassoArmedCue` — ring pulse confirming the long press armed.
 
 **`Assets/UI/`** (UI Toolkit)
@@ -904,23 +1078,70 @@ Three objects are carried across the Lobby → Gameplay scene load via
   the whole ranked attempt (see [Backend](#backend-match-logs-and-the-referee)).
   The sheet opens on Ranked; private modes stay one tap away.
 - `LoadoutCatalog` — what a loadout slot may hold and what the player owns
-  (not globally granted, not Crossroads, unlocked). The Workshop, Home and
+  (arena-specific chosen offers, mapped IDs and usable base ownership). The Workshop, Home and
   the battle sheet all ask it; the slot rules themselves are in the
   UnityEngine-free `LoadoutEditor`, which `dotnet/NodeWar.Lobby.Tests`
   covers.
+  Warrior and Farm/Mine/Village are chosen offers only at arena >=2, irrespective
+  of asset global flags. CurrentLoadout resizes and sanitizes only local choices
+  against the supplied rank (fallback arena 1). LoadoutEditor preserves canonical
+  source shape by default; its arena overload explicitly resizes local edits.
+  Fill, clear and availability checks operate on effective array lengths.
+- `HomePage` shows four low-arena or eight high-arena chosen chips. Workshop keeps
+  three suit/five district display positions, with disabled low-arena grant locks
+  followed by chosen slots. Confirmed resizing/sanitization persists; merely closing
+  an unconfirmed fallback Workshop view does not trim a saved high deck.
 - `MatchLauncher` — the lobby's route into a match. Private play hosts or
   joins by code with an open-ended host wait; `HostRanked`/`JoinRanked`
   add deadlines and carry the match ID and roster into `MatchConnection`.
   `MatchLauncherConnection` adapts it to the UnityEngine-free
-  `IRankedConnection` that `RankedRendezvous` drives.
+  `IRankedConnection` that `RankedRendezvous` drives. Before queuing or connecting,
+  PlayPopup/MatchLauncher refresh the local PlayerState through GetAsync. Ranked
+  launch requires a returned rank; private/offline launch falls back to arena 1.
+  MatchLauncher freezes local rank, normalized/sanitized choices and equipped
+  eras/skins, then hands that detached deck to MatchConnection on success. Its
+  final re-check uses the frozen arena; later lobby rank cannot resize this match,
+  and remote decks retain their exchanged shape. PlayPopup also routes bot and
+  testing launches through this validation; the legacy LobbyManager path remains.
 - `SettingsPage` account section and `AccountFlow` — guest / link / sign
   in / sign out, the conflict and warning sheets, and the one-time link
   prompt (`LinkPromptPolicy`: starter items are not progress).
-- `WorkshopPage` era and skin chips — per item, one chip per era from the
-  server's `PlayerState` (owned, usable at the current arena, equipped).
-  Equipping calls `IInventoryService` and shows what the server returns.
-  The chip rules are the UnityEngine-free `EraChips`.
+- `WorkshopPage` — the T layout: district and suit rows above (five and three
+  display tiles; low-arena grant locks first, then the chosen slots), the selected
+  item's info column on the left (preview, name, stat histogram against the base
+  villager or district facts, description, unlock notice, a Use button) and a
+  two-card grid of Unlocked and Not unlocked items with Districts and Suits tabs on
+  the right. Tapping a card only previews it (`LoadoutScreenModel`); Use equips the
+  first empty chosen slot or refuses a full deck, and tapping a filled chosen slot
+  clears it. Variants and Skins open as bottom sheets inside `workshop-panel-host`
+  with a local scrim, so the header and loadout rows stay visible. Workshop reserves
+  96px below its content so the actions and local sheets clear the floating lobby
+  navigation. Variants appear
+  only for real tree suits (`SuitTree` sidegrades); districts and non-tree suits
+  hide the button. The Skins sheet works for suits and districts, with a looping
+  `SkinBand` (13 reusable tiles positioned by `SkinBandMath`) and a "Buy another box"
+  placeholder that only shows a "Coming soon" toast. `WorkshopInventorySession`
+  holds the visit, selection and single-request gate so a stale response never
+  redraws another item. The old suit-tree view, model and stylesheet are gone;
+  `Backend/Shared/SuitTree.cs` and `InventoryClamp` stay because the server
+  enforces them.
+- `WorkshopPage` equipment: variant and skin choices use UnlockState/LoadoutChoices and the
+  server PlayerState. Variants appear only for real tree suits; districts and
+  non-tree suits hide them. Skins remain available for both kinds. Equipment
+  changes call IInventoryService and display the returned snapshot.
+- Loadout rules decided with the rework: `ProtocolVersion` is 6 (the chosen counts and grants
+  differ from protocol 5, so old clients are refused; Cloud Code is redeployed by hand after
+  merge). From arena 2 every slot is free: three suits and five districts, with no free base
+  district pool and no Warrior grant, so a deck may omit Warrior and then no villager starts
+  armed. Below arena 2 the two-and-two layout keeps its grants. Player-side UI checks
+  block a deck with any empty chosen slot (`LoadoutRules.IsComplete`, rechecked by
+  `MatchLauncher`); Home's Battle button explains it and opens the Workshop.
+  Match setup sanitizes choices and never enforces completeness.
 - `GameplayHUDController` — the in-match HUD, bound by `GameManager`.
+  Its bottom-centre count/clear control keeps `hud-selbar`/`hud-selbar-count`
+  under the non-picking `hud-selbar-dock`, inset to the safe rectangle. Empty
+  or disabled uses display:none and has no hit area; controls-side mirroring
+  applies to the camera control, while the count stays centred.
   It also carries the disconnect-hold overlay, the end card's ranked result
   block, and the ranked surrender row in `MatchSettingsPanel`.
 - `EmotePanel` — the emote button, sheet, bubbles, rate limit and mute. Its
@@ -1010,8 +1231,24 @@ Three objects are carried across the Lobby → Gameplay scene load via
   slot, then the default; `BoardArtPlacer` applies offset, rotation and scale.
   Missing entries preserve existing board art. Board and flat UI art fall
   back independently.
-- `VillagerView` — villager visuals and movement interpolation.
-- `NodeClaimBar`, `VillagerHealthRing` — world-space status indicators.
+- `VillagerView` — villager visuals and movement interpolation. The sprite art
+  is the GFX child at the prefab's authored size (no runtime scaling; crowd
+  spacing in `VillagerLayoutMath` follows the measured sprite width), faces through its
+  `Billboard` child, and `TryGetSpriteBounds` exposes the final sprite bounds
+  (no health UI, particles or breach lines). It also holds the one per-tick
+  observation of each villager, taken from `ITickProvider.TickSimulated` after
+  every tick, catch-up ticks included: an HP drop inside one life feeds the
+  damage flash, and a cooldown reset while fighting starts a swing. Both are
+  read-only against `SimulationState`.
+- `NodeClaimBar`, `VillagerHealthBar` — world-space status indicators. The
+  villager bar is a horizontal uGUI track and fill above the sprite bounds
+  (`VillagerHealthMath`), shown only while the villager is alive and damaged,
+  camera-facing independently of the sprite tilt. The next-breacher ring stays
+  a separate `VillagerView` line renderer.
+- `VillagerTiltMath` / `Billboard` / `NodePresentation` — every world-space
+  sprite (villager GFX and district art) defaults to a 20 degree pitch from
+  vertical, one shared constant (`VillagerTiltMath.DefaultPitch`), tunable per
+  component in the Inspector. Canvases and the floor-plane items do not tilt.
 - `CoreBreachBar` — runtime-added Core progress bar when the channel is
   enabled; `BreachCueSettings` is shared with villager highlighting and
   the HUD's accessibility flags.
@@ -1019,8 +1256,17 @@ Three objects are carried across the Lobby → Gameplay scene load via
   and, configured smaller, for the lasso-armed cue.
 - `VillagerTouchTarget` — constant-screen-size tap collider, built at
   runtime so the villager prefab needs no edit.
-- `VillagerFlash` — touch-down white flash amount, composed over the
-  per-state tint by `VillagerView`.
+- `VillagerFlash` / `VillagerFlashMath` — the white flash amount (linear
+  decay, one restart rule), composed over the per-state tint by
+  `VillagerView`. Touch-down, order feedback and damage all call `Flash()`.
+  Damage is observed as an HP decrease between ticks, so a hit cancelled by a
+  same-tick heal is invisible; there is no simulation damage event.
+- `VillagerSwingMath` — the swing pulse. A swing starts when a fighting
+  villager's `attackCooldownRemaining` was reset to its maximum since the
+  previous observation, which is the tick it hit or healed. The pulse scales
+  only the sprite `Billboard` child (default 8% over 0.25s, serialized on
+  `VillagerView`), is zero at rest and under reduced motion, and first
+  observation, respawn and entering or leaving combat never start one.
 - `PathCurve` — rounds a node path into the curve a route is drawn along and
   a villager walks. Corner rounding rather than Chaikin, because the
   waypoints are leg boundaries the sprite has to arrive on.
@@ -1335,6 +1581,12 @@ and must therefore arrive at identical results every tick.
   nothing yet, such as one still loading the scene (the draft shows a
   waiting cue until both are ready).
 
+
+The headless balance rig can supply two final `RigSetup.effectiveDraftPools`.
+RandomDraft consumes those pools exactly; null retains the legacy base-plus-loadout
+path and CLI. Explicit player setups bypass the Warrior fallback. Seat swaps
+trade effective pools and player setups together without changing the original
+board or its hash. Configured Unity bots still use the legacy low-grant setup.
 ## Backend, match logs and the referee
 
 Accounts, progression, inventory and ranked match records use Unity
@@ -1412,7 +1664,8 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   district slot mask and both base draft pools beside the BOARD fields) and SETUP, always
   together; older logs carry BOARD and no SETUP, and a log with both boards or a
   mismatched pair is refused. The header carries protocol, simulation version and
-  content hash.
+  content hash. Historical resolved suit arrays and type-indexed eras are preserved;
+  protocol-5 logs with Warrior plus three chosen suits round-trip without trimming.
 - **Referee.** `VerifyMatch` rebuilds the match with `MatchFactory`,
   replays the logged commands with `MatchReplay`, and checks every logged
   hash, the final hash and a declared winning result. For a current log it first
@@ -1428,7 +1681,13 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
   pre-match rating, rank and owned-variant snapshots. `ActiveMatchClaims`
   allows one active match per player, with expiring claims and conditional
   writes. `ReportMatch` checks membership and log eligibility against that
-  record, including that the log's SETUP and board are the record's map and that its loadouts and draft use only active districts, then runs the referee. Two accepted reports must agree on
+  record, including that the log's SETUP and board are the record's map and that its loadouts and draft use only active districts, then runs the referee. For protocol >=6, each snapshot arena sets the budget:
+  low arenas allow up to two chosen districts and three resolved suits including
+  the free Warrior; high arenas allow five chosen districts and three suits,
+  with Warrior optional. Duplicate or invalid choices are refused. Placements
+  consume the chosen district multiset, plus the authoritative catalog base pool
+  only for low arenas; fewer placements remain valid for unplaceable pieces.
+  Protocol <=5 retains historical eligibility. Two accepted reports must agree on
   winner, end tick and final hash before rating, RR, arena and inventory
   updates settle. Retries are idempotent; disputed or expired matches do
   not settle. `GetMatchHistory` reads the caller's history and stored match

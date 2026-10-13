@@ -1,12 +1,71 @@
 using System.Collections.Generic;
 using NodeWar.Input;
 using NodeWar.Lobby;
+using NodeWar.Simulation;
 using NUnit.Framework;
 
 namespace NodeWar.View.Tests
 {
     public class SelectionRulesTests
     {
+        private static SimulationState Residents()
+        {
+            var state = new SimulationState { nodes = new NodeData[2], villagers = new VillagerData[8] };
+            for (int i = 0; i < state.villagers.Length; i++)
+                state.villagers[i] = new VillagerData { villagerID = i, ownerID = 0, currentNodeID = 1 };
+            state.villagers[1].state = VillagerState.Working;
+            state.villagers[2].state = VillagerState.Fighting;
+            state.villagers[3].state = VillagerState.Moving;
+            state.villagers[3].targetNodeID = 1;
+            state.villagers[4].state = VillagerState.Dead;
+            state.villagers[5].isConsumed = true;
+            state.villagers[6].ownerID = 1;
+            state.villagers[7].currentNodeID = 0;
+            return state;
+        }
+
+        [Test]
+        public void NodeIdleAndAllRespectResidenceAndEligibility()
+        {
+            var state = Residents();
+            var before = (VillagerData[])state.villagers.Clone();
+            var result = new List<int> { 99 };
+            SelectionRules.CollectOnNode(state, 0, 1, true, result);
+            CollectionAssert.AreEqual(new[] { 0 }, result);
+            SelectionRules.CollectOnNode(state, 0, 1, false, result);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, result);
+            CollectionAssert.AreEqual(before, state.villagers);
+            SelectionRules.CollectOnNode(state, 0, -1, false, result);
+            Assert.IsEmpty(result);
+            SelectionRules.CollectOnNode(state, 0, 2, false, result);
+            Assert.IsEmpty(result);
+        }
+
+        [Test]
+        public void AllResidentsSelectedRequiresNonemptyCompleteCoverage()
+        {
+            var state = Residents();
+            var before = (VillagerData[])state.villagers.Clone();
+            Assert.IsFalse(SelectionRules.AllResidentsSelected(state, 0, 1, new[] { 0, 1 }));
+            Assert.IsTrue(SelectionRules.AllResidentsSelected(state, 0, 1, new[] { 0, 1, 2 }));
+            Assert.IsTrue(SelectionRules.AllResidentsSelected(state, 0, 1, new[] { 7, 2, 0, 1 }));
+            Assert.IsFalse(SelectionRules.AllResidentsSelected(state, 1, 0, new int[0]));
+            Assert.IsFalse(SelectionRules.AllResidentsSelected(state, 0, 2, new[] { 0, 1, 2 }));
+            CollectionAssert.AreEqual(before, state.villagers);
+        }
+
+        [Test]
+        public void EmptyPaintPreservesSelectionAndNonemptyPaintReplaces()
+        {
+            var selected = new List<int> { 1, 2 };
+            SelectionRules.ReplaceLassoIfAny(selected, new int[0]);
+            CollectionAssert.AreEqual(new[] { 1, 2 }, selected);
+            SelectionRules.ReplaceLassoIfAny(selected, new[] { 3, 4 });
+            CollectionAssert.AreEqual(new[] { 3, 4 }, selected);
+            SelectionRules.ReplaceLassoIfAny(selected, new int[0]);
+            CollectionAssert.AreEqual(new[] { 3, 4 }, selected);
+        }
+
         [Test]
         public void EmptyLassoLeavesExistingSelectionUntouched()
         {

@@ -101,6 +101,7 @@ namespace NodeWar.Core
         public System.Action OnDraftDisconnect;
 
         public DraftState State => draftState;
+        public int LocalPlayerID => localPlayerID;
 
         // ===== INITIALIZATION =====
 
@@ -117,7 +118,7 @@ namespace NodeWar.Core
             cameraController = camController;
             placementGridCellPrefab = gridCellPrefab;
             localLoadout = loadout;
-            remoteLoadout = new NodeWar.Lobby.LoadoutData();
+            remoteLoadout = NodeWar.Lobby.LoadoutData.CreateEmpty();
             remoteLoadoutReceived = false;
 
             float now = Time.time;
@@ -742,52 +743,37 @@ namespace NodeWar.Core
                 ? draftState.board.baseDraftDistrictsP0
                 : draftState.board.baseDraftDistrictsP1;
 
-            if (baseNodes != null)
+            bool bot = isBotMatch && playerID != localPlayerID;
+            if (!bot)
             {
+                // Resolve the human's own mode before considering any map grants.
+                var pool = NodeWar.Lobby.LoadoutMatchSetup.DistrictPool(GetLoadoutForPlayer(playerID), baseNodes);
+                for (int i = 0; i < pool.Length; i++)
+                    slots.Add(new DraftPick { districtType = pool[i].DistrictType,
+                        isConsumed = false, isFromLoadout = pool[i].IsFromLoadout });
+                return slots.ToArray();
+            }
+
+            // Configured bots retain their legacy base pool independently of the human's mode.
+            if (baseNodes != null)
                 for (int i = 0; i < baseNodes.Length; i++)
+                    if (baseNodes[i] != DistrictType.None)
+                        slots.Add(new DraftPick { districtType = baseNodes[i],
+                            isConsumed = false, isFromLoadout = false });
+            // Add the bot's configured loadout nodes.
+            if (boardConfig.botLoadoutDistricts != null)
+            {
+                for (int i = 0; i < boardConfig.botLoadoutDistricts.Length; i++)
                 {
-                    if (baseNodes[i] == DistrictType.None) continue;
+                    if (boardConfig.botLoadoutDistricts[i].districtType == DistrictType.None) continue;
                     slots.Add(new DraftPick
                     {
-                        districtType = baseNodes[i],
+                        districtType = boardConfig.botLoadoutDistricts[i].districtType,
                         isConsumed = false,
-                        isFromLoadout = false
+                        isFromLoadout = true
                     });
                 }
             }
-            else
-            {
-                Debug.LogWarning("[DraftManager] baseDraftNodes null for P" + playerID);
-            }
-
-            // Add loadout nodes
-            if (isBotMatch && playerID != localPlayerID)
-            {
-                // Bot player: use nodes configured directly in BoardConfig
-                if (boardConfig.botLoadoutDistricts != null)
-                {
-                    for (int i = 0; i < boardConfig.botLoadoutDistricts.Length; i++)
-                    {
-                        if (boardConfig.botLoadoutDistricts[i].districtType == DistrictType.None) continue;
-                        slots.Add(new DraftPick
-                        {
-                            districtType = boardConfig.botLoadoutDistricts[i].districtType,
-                            isConsumed = false,
-                            isFromLoadout = true
-                        });
-                    }
-                }
-            }
-            else
-            {
-                // Human player: use lobby loadout
-                NodeWar.Lobby.LoadoutData loadout =
-                    NodeWar.Lobby.LoadoutData.Normalized(GetLoadoutForPlayer(playerID));
-
-                for (int i = 0; i < loadout.districtIDs.Length; i++)
-                    AddLoadoutNode(slots, loadout.districtIDs[i]);
-            }
-
             return slots.ToArray();
         }
 
@@ -797,30 +783,6 @@ namespace NodeWar.Core
                 return localLoadout;
             else
                 return remoteLoadout;
-        }
-
-        private void AddLoadoutNode(List<DraftPick> slots, string districtID)
-        {
-            if (string.IsNullOrEmpty(districtID)) return;
-
-            DistrictType type = MapDistrictID(districtID);
-            if (type == DistrictType.None) return;
-
-            slots.Add(new DraftPick
-            {
-                districtType = type,
-                isConsumed = false,
-                isFromLoadout = true
-            });
-        }
-
-        /// <summary>
-        /// Convention: districtID format is "node_[lowercase district name]".
-        /// Informal string matching — a registry would be more robust long-term.
-        /// </summary>
-        internal static DistrictType MapDistrictID(string districtID)
-        {
-            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(districtID);
         }
 
         // ===== PUBLIC API FOR UI =====

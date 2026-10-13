@@ -33,9 +33,14 @@ namespace NodeWar.Input
 
         // Balance references (read once, used for cooldown calculation)
         private int defaultLinkWeight;
+        private readonly GameBalanceData balance;
 
         public BotPlayer(SimulationState state, InputBuffer buffer, int playerID, int defaultLinkWeight)
+            : this(state, buffer, playerID, defaultLinkWeight, GameBalanceData.Default()) { }
+
+        public BotPlayer(SimulationState state, InputBuffer buffer, int playerID, int defaultLinkWeight, GameBalanceData balance)
         {
+            this.balance = balance;
             this.state = state;
             this.inputBuffer = buffer;
             this.playerID = playerID;
@@ -348,8 +353,8 @@ namespace NodeWar.Input
                 if (state.nodes[nodeID].districtType != DistrictType.Barracks) continue;
                 if (state.nodes[nodeID].ownerID != playerID) continue;
 
-                if (state.players[playerID].food < 2 || state.players[playerID].materials < 1)
-                    break;
+                SuitType choice = BotSuitChoice.Choose(state, balance, playerID, nodeID);
+                if (choice == SuitType.None) continue;
 
                 GameCommand cmd = new GameCommand
                 {
@@ -357,7 +362,7 @@ namespace NodeWar.Input
                     playerID = playerID,
                     villagerID = i,
                     issuedOnTick = state.tickCount,
-                    value = (int)SuitType.Warrior
+                    value = (int)choice
                 };
                 inputBuffer.EnqueueCommand(cmd);
                 claimedThisTick[i] = true;

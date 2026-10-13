@@ -4,14 +4,13 @@ namespace NodeWar.Lobby
     /// A player's pre-match selection: which suits and which districts they
     /// bring into the draft.
     ///
-    /// Array-backed rather than five flat fields, so the slot counts are data.
-    /// How many of each a player gets is an open balance question, and moving
-    /// it should be an edit to <see cref="SuitSlots"/> / <see cref="DistrictSlots"/>
-    /// rather than an edit to six call sites and a wire format.
+    /// Array lengths encode low (2/2) or high (3/5) chosen capacity, including
+    /// blank slots. SuitSlots and DistrictSlots are maxima, not effective counts.
     ///
     /// This struct crosses the wire (DraftSerializer) and persists to disk
     /// (PlayerProfile, via JsonUtility). Both encode the arrays with an
-    /// explicit count, so neither needs touching when the counts change.
+    /// explicit count. Remote data preserves its own canonical mode; only local
+    /// arena-aware operations resize it.
     ///
     /// Because it is a struct, `new LoadoutData()` leaves both arrays null.
     /// Anything that reads the arrays should go through
@@ -20,11 +19,11 @@ namespace NodeWar.Lobby
     [System.Serializable]
     public struct LoadoutData
     {
-        /// <summary>Combat suits a player brings. Warrior is granted on top of these.</summary>
+        /// <summary>Maximum chosen suit capacity; low arenas use two slots plus free Warrior.</summary>
         public const int SuitSlots = 3;
 
-        /// <summary>Districts a player brings into the draft pool.</summary>
-        public const int DistrictSlots = 2;
+        /// <summary>Maximum chosen district capacity; low arenas use two slots plus free base pieces.</summary>
+        public const int DistrictSlots = 5;
 
         public string[] suitIDs;
         public string[] districtIDs;
@@ -51,31 +50,48 @@ namespace NodeWar.Lobby
         public string[] skinIDs;
 
         /// <summary>
-        /// A loadout with both arrays allocated at the current slot counts and
+        /// A low-arena loadout with both arrays allocated at two slots and
         /// every entry an empty string. This is what an unset loadout looks
         /// like; it is never null-armed.
         /// </summary>
         public static LoadoutData CreateEmpty()
         {
-            return Normalized(new LoadoutData());
+            return CreateEmpty(1);
+        }
+
+        public static LoadoutData CreateEmpty(int arena)
+        {
+            return Resize(default, NodeWar.Backend.LoadoutCapacityPolicy.SuitCapacity(arena),
+                NodeWar.Backend.LoadoutCapacityPolicy.DistrictCapacity(arena));
         }
 
         /// <summary>
-        /// A copy with both arrays non-null, exactly the declared slot count
-        /// long, and free of null entries. Missing entries become empty
-        /// strings; surplus entries are dropped.
-        ///
-        /// This is the one place that reconciles a loadout of some other shape
-        /// with the current slot counts — an older save, a peer on a build with
-        /// different counts, or a `default` struct. Call it at every boundary
-        /// rather than trusting the arrays.
+        /// A detached copy preserving canonical 2/2 or 3/5 shape. Null/default
+        /// and noncanonical saved shapes become low mode, retaining the first
+        /// two choices; null entries become empty strings. Wire readers validate
+        /// counts before calling this, so legacy save migration cannot mask a bad packet.
         /// </summary>
         public static LoadoutData Normalized(LoadoutData source)
         {
+            bool high = NodeWar.Backend.LoadoutCapacityPolicy.IsHighShape(
+                source.suitIDs == null ? 0 : source.suitIDs.Length,
+                source.districtIDs == null ? 0 : source.districtIDs.Length);
+            return Resize(source, high ? SuitSlots : 2, high ? DistrictSlots : 2);
+        }
+
+        /// <summary>Local resizing only. First migrate legacy shapes so their third suit stays dropped.</summary>
+        public static LoadoutData Normalized(LoadoutData source, int arena)
+        {
+            return Resize(Normalized(source), NodeWar.Backend.LoadoutCapacityPolicy.SuitCapacity(arena),
+                NodeWar.Backend.LoadoutCapacityPolicy.DistrictCapacity(arena));
+        }
+
+        private static LoadoutData Resize(LoadoutData source, int suits, int districts)
+        {
             return new LoadoutData
             {
-                suitIDs = NormalizeSlots(source.suitIDs, SuitSlots),
-                districtIDs = NormalizeSlots(source.districtIDs, DistrictSlots),
+                suitIDs = NormalizeSlots(source.suitIDs, suits),
+                districtIDs = NormalizeSlots(source.districtIDs, districts),
                 suitEras = NormalizeEras(source.suitEras, SuitEraSlots),
                 districtEras = NormalizeEras(source.districtEras, DistrictEraSlots),
                 skinIDs = NormalizeSkins(source.skinIDs)
