@@ -318,7 +318,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NodeWar.View.VillagerView
   VillagerViewHeight: 0.5
-  spriteSizeMultiplier: 1.35
+  swingScaleAmount: 0.08
+  swingDuration: 0.25
   slotLerpSpeed: 8
   p0BaseColor: {r: 0.3, g: 0.6, b: 1, a: 1}
   p0MovingColor: {r: 0.5, g: 0.75, b: 1, a: 1}
