@@ -253,6 +253,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
+- { by: gpt-6, at: 2026-10-11T19:03:46Z }
 
 ## `.claude/skills/determinism-guard.md`
 
