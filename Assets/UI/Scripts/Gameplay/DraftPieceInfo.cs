@@ -27,7 +27,7 @@ namespace NodeWar.UI
     public static class DraftPieceInfo
     {
         /// <summary>
-        /// The lobby ID DraftManager.MapDistrictID reads in the other
+        /// The lobby ID LoadoutTypes.DistrictForLobbyId reads in the other
         /// direction ("node_rampart"), from the explicit table rather than the
         /// enum member name.
         /// </summary>

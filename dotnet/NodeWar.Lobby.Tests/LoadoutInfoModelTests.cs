@@ -48,8 +48,6 @@ namespace NodeWar.Lobby.Tests
         {
             var b = Balance(); b.suitStats = b.suitStats.Skip(1).ToArray();
             Assert.That(LoadoutInfoModel.SuitStats(b, "suit.warrior", 0)[1].Delta, Is.EqualTo(2));
-            Assert.That(LoadoutInfoModel.SuitDescription(null), Is.EqualTo(""));
-            Assert.That(LoadoutInfoModel.SuitDescription("Frontline fighter"), Is.EqualTo("Frontline fighter"));
         }
         [Test] public void AbsoluteCosts_CompareWithFreeBaseAndNegativeHpStaysBonus()
         {

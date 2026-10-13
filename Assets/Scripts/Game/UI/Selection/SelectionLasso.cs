@@ -12,11 +12,7 @@ namespace NodeWar.UI
     [RequireComponent(typeof(LineRenderer))]
     public class SelectionLasso : MonoBehaviour
     {
-        // Retain serialized legacy fields without reinterpreting scene values.
-        [SerializeField] private float lineWidth = 0.004f;
         [SerializeField] private Color validColor = new Color(1f, 0.85f, 0.4f, 0.95f);
-        [SerializeField] private Color tooSmallColor = new Color(1f, 1f, 1f, 0.35f);
-        [SerializeField] private Material lineMaterial;
 
         private PointerGestureSource source;
         private Material coverageMaterial;

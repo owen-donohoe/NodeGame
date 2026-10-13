@@ -19,12 +19,6 @@ namespace NodeWar.Lobby
     /// </summary>
     public class LoadoutCatalog
     {
-        /// <summary>
-        /// Districts no slot may hold. Only Crossroads (inventory finding 4).
-        /// When DistrictType gains a Crossroads member, this array empties.
-        /// </summary>
-        private static readonly string[] UnmappedDistrictIDs = { "node_crossroads" };
-
         public SuitDefinition[] Suits { get; private set; }
         public DistrictDefinition[] Districts { get; private set; }
 
@@ -79,13 +73,6 @@ namespace NodeWar.Lobby
         public bool IsDistrictOffered(string districtID) => IsDistrictOffered(districtID, Arena);
         public bool IsDistrictOffered(string districtID, int arena) =>
             FindDistrict(districtID) != null && LoadoutRules.IsDistrictOffered(districtID, arena);
-        public static bool IsUnmapped(string districtID)
-        {
-            for (int i = 0; i < UnmappedDistrictIDs.Length; i++)
-                if (UnmappedDistrictIDs[i] == districtID) return true;
-            return !NodeWar.Simulation.PlacementLegality.IsDraftable((NodeWar.Simulation.DistrictType)NodeWar.Backend.DistrictMigration.SourceType(districtID));
-        }
-
         /// <summary>Unity adapter: pure rules receive profile ownership and a server snapshot.</summary>
         public UnlockState UnlockForBase(string lobbyId, NodeWar.Backend.PlayerState state)
         {
@@ -93,36 +80,6 @@ namespace NodeWar.Lobby
             bool owned = profile == null || (FindSuit(lobbyId) != null
                 ? profile.IsSuitUnlocked(lobbyId) : profile.IsDistrictUnlocked(lobbyId));
             return UnlockStates.ForBase(lobbyId, owned, state);
-        }
-
-        /// <summary>Suits the player could put in a slot: offered and unlocked.</summary>
-        public int OwnedSuitCount()
-        {
-            int owned = 0;
-
-            for (int i = 0; i < Suits.Length; i++)
-            {
-                SuitDefinition suit = Suits[i];
-                if (suit == null || !IsSuitOffered(suit.suitID)) continue;
-                if (UnlockForBase(suit.suitID, NodeWar.Backend.BackendServices.LastKnownState).CanUse) owned++;
-            }
-
-            return owned;
-        }
-
-        /// <summary>Districts the player could put in a slot: offered and unlocked.</summary>
-        public int OwnedDistrictCount()
-        {
-            int owned = 0;
-
-            for (int i = 0; i < Districts.Length; i++)
-            {
-                DistrictDefinition node = Districts[i];
-                if (node == null || !IsDistrictOffered(node.districtID)) continue;
-                if (UnlockForBase(node.districtID, NodeWar.Backend.BackendServices.LastKnownState).CanUse) owned++;
-            }
-
-            return owned;
         }
 
         /// <summary>A display name, falling back to the ID so a half-filled asset shows as itself.</summary>

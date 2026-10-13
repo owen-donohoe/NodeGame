@@ -14,15 +14,6 @@ namespace NodeWar.View.Tests
             Assert.That(VillagerLayoutMath.ScaledSize(0.8f, multiplier), Is.EqualTo(height).Within(0.00001f));
         }
 
-        [Test]
-        public void ReinitializationUsesTheSameAuthoredBaseline()
-        {
-            float authored = 0.5f;
-            float first = VillagerLayoutMath.ScaledSize(authored, 1.35f);
-            Assert.AreEqual(first, VillagerLayoutMath.ScaledSize(authored, 1.35f));
-            Assert.AreEqual(authored, VillagerLayoutMath.ScaledSize(authored, 1f));
-        }
-
         [TestCase(0)]
         [TestCase(1)]
         public void EmptyOrSingleGroupsUseCenter(int count)

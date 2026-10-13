@@ -14,7 +14,7 @@ namespace NodeWar.Lobby
         private enum Tab { Districts = 0, Suits = 1 }
         private class Item
         {
-            public string ID, Name, Description, Note;
+            public string ID, Name, Description;
             public ItemFamily.Family Family;
             public bool Granted;
         }
@@ -116,7 +116,6 @@ namespace NodeWar.Lobby
                     ID = node.districtID,
                     Name = catalog.DistrictName(node.districtID),
                     Description = node.description,
-                    Note = ItemFamily.NoteFor(family),
                     Family = family,
                     Granted = !catalog.IsDistrictOffered(node.districtID, arena)
                 });
@@ -135,7 +134,6 @@ namespace NodeWar.Lobby
                     ID = suit.suitID,
                     Name = catalog.SuitName(suit.suitID),
                     Description = suit.description,
-                    Note = !catalog.IsSuitOffered(suit.suitID, arena) ? "Always granted" : suit.description,
                     Family = ItemFamily.Family.Combat,
                     Granted = !catalog.IsSuitOffered(suit.suitID, arena)
                 });

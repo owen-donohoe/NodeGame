@@ -55,25 +55,6 @@ namespace NodeWar.Lobby
         public int FilledSuitCount { get { return CountFilled(suitIDs); } }
         public int FilledDistrictCount { get { return CountFilled(districtIDs); } }
 
-        /// <summary>
-        /// Whether the suit side is short: a slot is empty although the player
-        /// owns enough draftable suits to fill every slot. The lobby flags a
-        /// short side. A side the player cannot fill yet - too few unlocked -
-        /// is not short; nothing they could do would complete it.
-        /// </summary>
-        /// <param name="ownedSuits">Suits the player could put in a slot: unlocked, and not granted to everyone.</param>
-        public bool IsSuitSideShort(int ownedSuits)
-        {
-            return IsShort(suitIDs, ownedSuits);
-        }
-
-        /// <summary>The district side's counterpart to <see cref="IsSuitSideShort"/>.</summary>
-        /// <param name="ownedDistricts">Districts the player could put in a slot: unlocked, and ones the draft can use.</param>
-        public bool IsDistrictSideShort(int ownedDistricts)
-        {
-            return IsShort(districtIDs, ownedDistricts);
-        }
-
         /// <summary>The ID in a suit slot, or "" when empty. Out of range gives "".</summary>
         public string SuitAt(int slot)
         {
@@ -147,7 +128,7 @@ namespace NodeWar.Lobby
         /// that the list has no row for. Both cases exist today: a profile can
         /// hold suit_warrior, which every player is granted regardless
         /// (GameManager.BuildDraftedSuits), and node_crossroads, which
-        /// MapDistrictID discards (inventory findings 8 and 4). Either is
+        /// LoadoutTypes.DistrictForLobbyId discards (inventory findings 8 and 4). Either is
         /// a slot already producing nothing; clearing it hands the slot back.
         /// </summary>
         public int DropUnavailable(System.Func<string, bool> suitOffered,
@@ -226,11 +207,6 @@ namespace NodeWar.Lobby
                 if (!string.IsNullOrEmpty(slots[i])) filled++;
             }
             return filled;
-        }
-
-        private static bool IsShort(string[] slots, int owned)
-        {
-            return FirstEmpty(slots) != NoSlot && owned >= slots.Length;
         }
 
         private static int FirstEmpty(string[] slots)

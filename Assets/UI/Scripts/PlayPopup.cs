@@ -271,9 +271,9 @@ namespace NodeWar.Lobby
                 LoadoutEditor loadout = catalog.CurrentLoadout();
 
                 SetCount(loadoutNodes, loadout.FilledDistrictCount, loadout.DistrictSlotCount, "districts",
-                         loadout.IsDistrictSideShort(catalog.OwnedDistrictCount()));
+                         !loadout.DistrictSlotsFull);
                 SetCount(loadoutSuits, loadout.FilledSuitCount, loadout.SuitSlotCount, "suits",
-                         loadout.IsSuitSideShort(catalog.OwnedSuitCount()));
+                         !loadout.SuitSlotsFull);
             }
 
             string text = testing

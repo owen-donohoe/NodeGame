@@ -785,15 +785,6 @@ namespace NodeWar.Core
                 return remoteLoadout;
         }
 
-        /// <summary>
-        /// Convention: districtID format is "node_[lowercase district name]".
-        /// Informal string matching — a registry would be more robust long-term.
-        /// </summary>
-        internal static DistrictType MapDistrictID(string districtID)
-        {
-            return NodeWar.Lobby.LoadoutTypes.DistrictForLobbyId(districtID);
-        }
-
         // ===== PUBLIC API FOR UI =====
 
         public bool IsLocalPlayerTurn()
