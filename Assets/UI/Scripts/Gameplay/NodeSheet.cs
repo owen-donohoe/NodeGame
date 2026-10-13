@@ -55,6 +55,7 @@ namespace NodeWar.UI
         private readonly CoreContent core = new CoreContent();
         private readonly EquipContent equip = new EquipContent();
         private readonly ProductionContent production = new ProductionContent();
+        private readonly BankContent bank = new BankContent();
 
         // One chip per resource, pinned above the sheet's own top edge (see
         // NodeSheet.uss) so they ride its slide and resize for free rather
@@ -337,6 +338,7 @@ namespace NodeWar.UI
             switch (district)
             {
                 case DistrictType.Village:
+                case DistrictType.Workshop:
                 case DistrictType.Town:
                 case DistrictType.Infirmary:
                 case DistrictType.Fortress:
@@ -361,8 +363,9 @@ namespace NodeWar.UI
                 // opponent's node.
                 case DistrictType.Farm:
                 case DistrictType.Mine:
-                case DistrictType.Market:
                     return production;
+                case DistrictType.Storehouse:
+                    return bank;
 
                 default:
                     return null;
@@ -466,7 +469,12 @@ namespace NodeWar.UI
                           (node.ownerID == 1 && claim <= -threshold);
 
             if (claimStrip != null) claimStrip.EnableInClassList("sheet__claim--on", !secure);
-            if (sheet != null) sheet.EnableInClassList("sheet--claim", !secure);
+            if (sheet != null)
+            {
+                sheet.EnableInClassList("sheet--claim", !secure);
+                int bankHeight = NodeWar.View.StructurePresentation.BankSheetHeight(node.districtType, !secure);
+                sheet.style.height = bankHeight > 0 ? new StyleLength(bankHeight) : new StyleLength(StyleKeyword.Null);
+            }
 
             if (secure || claimP0 == null || claimP1 == null) return;
 

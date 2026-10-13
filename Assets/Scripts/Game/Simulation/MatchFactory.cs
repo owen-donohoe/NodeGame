@@ -174,6 +174,10 @@ namespace NodeWar.Simulation
                     ownerID = -1,
                     townPaidMask = 0,
                     fortressLevel = 0,
+                    districtHealth = 0,
+                    bankFood = 0, bankMaterials = 0, bankMetal = 0,
+                    collectProgress = 0, collectRequested = false,
+                    bankProductionRemaining = 0, storehouseNextResource = 0,
                     materialAllocation = 0,
                     recruitReadyTick = 0,
                     autoRecruit = false
@@ -331,6 +335,7 @@ namespace NodeWar.Simulation
                     movePath = new int[0],
                     movePathIndex = 0,
                     moveProgress = 0,
+                    moveLegDurationTicks = 0,
                     previousNodeID = coreNode,
                     state = VillagerState.Idle,
                     suit = SuitType.None,

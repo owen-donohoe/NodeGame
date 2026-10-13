@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using NodeWar.Simulation;
+using NodeWar.View;
 
 namespace NodeWar.UI
 {
@@ -37,14 +38,17 @@ namespace NodeWar.UI
         private float targetAlpha;
         private Canvas worldCanvas;
         private Camera viewCamera;
+        private GameBalanceData balance;
+        private Image healthTrack, healthFill;
 
         private int claimThreshold = 10000;
 
-        public void Initialize(SimulationState state, int id, int claimThreshold)
+        public void Initialize(SimulationState state, int id, GameBalanceData balance)
         {
             simState = state;
             nodeID = id;
-            this.claimThreshold = claimThreshold;
+            this.balance = balance;
+            this.claimThreshold = balance.claimThreshold;
             initialized = true;
 
             worldCanvas = GetComponentInParent<Canvas>();
@@ -88,6 +92,41 @@ namespace NodeWar.UI
                 canvasGroup.alpha = 0f;
 
             EnsureGradients();
+            BuildHealthSegment();
+        }
+
+        private static Image HealthImage(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<Image>();
+            image.raycastTarget = false;
+            image.rectTransform.anchorMin = image.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            return image;
+        }
+
+        private void BuildHealthSegment()
+        {
+            if (backgroundImage == null) return;
+            healthTrack = HealthImage("DistrictHealth", backgroundImage.transform);
+            healthTrack.color = new Color(0.05f, 0.05f, 0.08f, 0.9f);
+            healthFill = HealthImage("HealthFill", healthTrack.transform);
+            healthTrack.gameObject.SetActive(false);
+        }
+
+        private bool RefreshHealth(NodeData node)
+        {
+            if (healthTrack == null) return false;
+            Rect bar = backgroundImage.rectTransform.rect;
+            var layout = StructurePresentation.HealthSegment(node, balance, bar.width, bar.height);
+            healthTrack.gameObject.SetActive(layout.Visible);
+            if (!layout.Visible) return false;
+            healthTrack.rectTransform.anchoredPosition = new Vector2(layout.X, 0f);
+            healthTrack.rectTransform.sizeDelta = new Vector2(layout.Width, layout.Height);
+            healthFill.rectTransform.anchoredPosition = new Vector2(layout.FillX, 0f);
+            healthFill.rectTransform.sizeDelta = new Vector2(layout.FillWidth, layout.FillHeight);
+            healthFill.color = node.ownerID == 0 ? p0Gradient.Evaluate(1f) : p1Gradient.Evaluate(1f);
+            return true;
         }
 
         private void Update()
@@ -95,6 +134,7 @@ namespace NodeWar.UI
             if (!initialized) return;
 
             NodeData node = simState.nodes[nodeID];
+            bool damagedHealth = RefreshHealth(node);
 
             // Update fill amounts and colors
             if (node.claimBar > 0)
@@ -148,7 +188,7 @@ namespace NodeWar.UI
             if (canvasGroup != null)
             {
                 canvasGroup.alpha = Mathf.MoveTowards(
-                    canvasGroup.alpha, targetAlpha, fadeSpeed * Time.deltaTime);
+                    canvasGroup.alpha, damagedHealth ? 1f : targetAlpha, fadeSpeed * Time.deltaTime);
             }
         }
 

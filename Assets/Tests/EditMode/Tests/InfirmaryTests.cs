@@ -21,7 +21,7 @@ namespace NodeWar.Tests
         {
             var s = TestBoardFactory.BuildThreeNodeBoard(b);
             s.nodes[1].districtType = s.nodes[1].baseDistrictType = DistrictType.Infirmary;
-            s.nodes[1].ownerID = 0; s.nodes[1].claimBar = b.claimThreshold;
+            s.nodes[1].districtHealth = 3000; s.nodes[1].ownerID = 0; s.nodes[1].claimBar = b.claimThreshold;
             s.villagers = new VillagerData[bodies + 1];
             s.villagers[0] = TestBoardFactory.MakeIdleVillager(0, 0, 0, b);
             s.villagers[0].state = VillagerState.Dead; s.villagers[0].hp = 0; s.villagers[0].respawnTicksRemaining = 10;
@@ -81,7 +81,7 @@ namespace NodeWar.Tests
         [TestCase(false)] [TestCase(true, TestName = "{m}_Determinism{a}")]
         public void TwoInfirmaries_WorkerCapsArePerNode(bool determinism) => Repeat(() => {
             var b = Configure(); var s = Board(b, 6);
-            s.nodes[2].districtType = s.nodes[2].baseDistrictType = DistrictType.Infirmary; s.nodes[2].ownerID = 0;
+            s.nodes[2].districtType = s.nodes[2].baseDistrictType = DistrictType.Infirmary; s.nodes[2].ownerID = 0; s.nodes[2].districtHealth = 3000;
             for (int i = 4; i <= 6; i++) s.villagers[i].currentNodeID = 2;
             GameSimulation.SimulateTick(s); Assert.AreEqual(5, s.villagers[0].respawnTicksRemaining); return s;
         }, determinism);

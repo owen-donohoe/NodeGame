@@ -5,7 +5,7 @@ namespace NodeWar.View
     /// <summary>Small code-only letter stickers for missing flat art. No imported asset required.</summary>
     public static class DistrictFallbackArt
     {
-        private static readonly Sprite[] sprites=new Sprite[(int)DistrictType.Fortress+1];
+        private static readonly Sprite[] sprites=new Sprite[(int)DistrictType.Workshop+1];
         public static Sprite Sticker(DistrictType type)
         {
             if(!DistrictRoster.IsActive(type)) return null;
@@ -33,6 +33,7 @@ namespace NodeWar.View
             switch(letter)
             {
                 case 'V': return "10001100011000110001100010101000100";
+                case 'W': return "10001100011000110101101011101110001";
                 case 'T': return "11111001000010000100001000010000100";
                 case 'P': return "11110100011000111110100001000010000";
                 case 'B': return "11110100011000111110100011000111110";

@@ -19,6 +19,7 @@ namespace NodeWar.View
                 case DistrictType.Infirmary:
                     if(available(DistrictType.Shrine)) return DistrictType.Shrine;
                     if(available(DistrictType.Sanctuary)) return DistrictType.Sanctuary; break;
+                case DistrictType.Storehouse: if(available(DistrictType.Market)) return DistrictType.Market; break;
                 case DistrictType.Fortress: if(available(DistrictType.Rampart)) return DistrictType.Rampart; break;
             }
             return DistrictType.None;
@@ -33,8 +34,9 @@ namespace NodeWar.View
                 case DistrictType.Village: return new DistrictFallbackDescriptor("Recruit","V","Recruits villagers.","Village");
                 case DistrictType.Barracks: return new DistrictFallbackDescriptor("Barracks","B","Equips all drafted combat suits.","Barracks");
                 case DistrictType.Core: return new DistrictFallbackDescriptor("Core","C","Your home district.");
+                case DistrictType.Workshop: return new DistrictFallbackDescriptor("Workshop","W","Forges mobile minion collectors with metal.");
                 case DistrictType.Forge: return new DistrictFallbackDescriptor("Forge","Fo","Produces metal.");
-                case DistrictType.Market: return new DistrictFallbackDescriptor("Market","Ma","Produces food and materials.");
+                case DistrictType.Storehouse: return new DistrictFallbackDescriptor("Storehouse","S","Banks alternating food and materials; no workers.","Market");
                 case DistrictType.Pier: return new DistrictFallbackDescriptor("Pier","P","Connects districts across a lake.");
                 case DistrictType.Town: return new DistrictFallbackDescriptor("Town","T","Grants villagers once per player.","Village");
                 case DistrictType.Infirmary: return new DistrictFallbackDescriptor("Infirmary","I","Local healing and Core respawn assistance.","Shrine");

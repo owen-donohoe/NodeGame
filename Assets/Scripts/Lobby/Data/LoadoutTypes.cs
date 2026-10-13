@@ -44,8 +44,8 @@ namespace NodeWar.Lobby
             return null;
         }
 
-        public const int SuitTypeCount = (int)SuitType.Watcher + 1;
-        public const int DistrictTypeCount = (int)DistrictType.Fortress + 1;
+        public const int SuitTypeCount = (int)SuitType.Minion + 1;
+        public const int DistrictTypeCount = (int)DistrictType.Workshop + 1;
 
         public static string CatalogBaseForSuit(int type) => CatalogKeys.SuitBase(type);
 

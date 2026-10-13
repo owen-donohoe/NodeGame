@@ -96,10 +96,12 @@ namespace NodeWar.Tests
             var b = CoreRulesFixture.Balance(); var s = CoreRulesFixture.Board(b);
             s.nodes[0].ownerID = 0; s.nodes[0].districtType = DistrictType.Farm; s.nodes[0].claimBar = 700;
             s.villagers = new[] { CoreRulesFixture.Body(b, 0, 0, 0) }; s.villagers[0].targetNodeID = 2;
+            // Restores while the dangling target is held; resume then drops it (D48)
+            // and the villager starts work, producing nothing this tick.
             GameSimulation.SimulateTick(s); Assert.AreEqual(710, s.nodes[0].claimBar);
-            Assert.AreEqual(VillagerState.Idle, s.villagers[0].state); Assert.AreEqual(2, s.villagers[0].targetNodeID);
-            Assert.AreEqual(0, s.villagers[0].productionTicksMax); Assert.AreEqual(0, s.villagers[0].productionTicksRemaining);
-            Assert.AreEqual(SuitType.None, s.villagers[0].suit); Assert.AreEqual(0, s.players[0].food); return CoreRulesFixture.Fold(0, s);
+            Assert.AreEqual(-1, s.villagers[0].targetNodeID); Assert.AreEqual(VillagerState.Working, s.villagers[0].state);
+            Assert.AreEqual(s.villagers[0].productionTicksMax, s.villagers[0].productionTicksRemaining);
+            Assert.AreEqual(0, s.players[0].food); return CoreRulesFixture.Fold(0, s);
         }
         private static int Tempo()
         {
@@ -115,8 +117,8 @@ namespace NodeWar.Tests
         [Test] public void MixedPresenceAndCore_DoNotRestore_Determinism() => CoreRulesFixture.Determinism(Mixed);
         [Test] public void MovingDeadConsumed_DoNotRestore() => Excluded();
         [Test] public void MovingDeadConsumed_DoNotRestore_Determinism() => CoreRulesFixture.Determinism(Excluded);
-        [Test] public void IdleWithUnreachableDestination_RestoresWithoutWorking() => Pending();
-        [Test] public void IdleWithUnreachableDestination_RestoresWithoutWorking_Determinism() => CoreRulesFixture.Determinism(Pending);
+        [Test] public void DanglingUnreachableTarget_RestoresThenWorks() => Pending();
+        [Test] public void DanglingUnreachableTarget_RestoresThenWorks_Determinism() => CoreRulesFixture.Determinism(Pending);
         [Test] public void RestoreUsesTempoButNoFrontier() => Tempo();
         [Test] public void RestoreUsesTempoButNoFrontier_Determinism() => CoreRulesFixture.Determinism(Tempo);
     }

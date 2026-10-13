@@ -49,6 +49,7 @@ namespace NodeWar.UI
         [SerializeField] private VisualTreeAsset nodeSheetLayout;
 
         private UIDocument document;
+        private PanelSettings authoredPanel, runtimePanel;
         private SafeAreaBinder safeArea;
         private SafeAreaBinder resSheetInset;
         private NodeSheet nodeSheet;
@@ -186,6 +187,14 @@ namespace NodeWar.UI
                 return;
             }
 
+            // Width-only phone scaling makes a landscape sheet taller than the screen.
+            // Keep the shared asset intact and fit the match HUD to both dimensions.
+            authoredPanel = document.panelSettings;
+            runtimePanel = Instantiate(authoredPanel);
+            runtimePanel.scaleMode = PanelScaleMode.ConstantPixelSize;
+            FitRuntimePanel();
+            document.panelSettings = runtimePanel;
+
             VisualElement root = document.rootVisualElement;
             if (root == null) return;
 
@@ -210,6 +219,12 @@ namespace NodeWar.UI
 
         private void OnDisable()
         {
+            if (runtimePanel != null)
+            {
+                if (document != null) document.panelSettings = authoredPanel;
+                Destroy(runtimePanel);
+                runtimePanel = null;
+            }
             emotePanel.Detach();
 
             // The banner writes into a tree OnEnable rebuilds; Initialize
@@ -349,6 +364,7 @@ namespace NodeWar.UI
 
         private void Update()
         {
+            FitRuntimePanel();
             if (safeArea != null) safeArea.Update();
             if (resSheetInset != null) resSheetInset.Update();
             UpdateThumbInsets();
@@ -361,6 +377,13 @@ namespace NodeWar.UI
             Refresh();
 
             if (nodeSheet != null) nodeSheet.Update(CurrentPlayerID());
+        }
+
+        private void FitRuntimePanel()
+        {
+            if (runtimePanel == null) return;
+            var reference = runtimePanel.referenceResolution;
+            runtimePanel.scale = NodeWar.View.StructurePresentation.HudScale(Screen.width, Screen.height, reference.x, reference.y);
         }
 
         /// <summary>

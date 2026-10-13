@@ -31,6 +31,12 @@ namespace NodeWar.Simulation
                 case CommandType.Recruit:
                     ProcessRecruit(state, command);
                     break;
+                case CommandType.ForgeMinion:
+                    ProcessForgeMinion(state, command);
+                    break;
+                case CommandType.Collect:
+                    ProcessCollect(state, command);
+                    break;
                 case CommandType.UpgradeFortress:
                     ProcessUpgradeFortress(state, command);
                     break;
@@ -39,6 +45,15 @@ namespace NodeWar.Simulation
                     break;
             }
         }
+        private static void ProcessCollect(SimulationState state, GameCommand command)
+        {
+            if (!BankRules.CanCollect(state, command)) return;
+            int nodeID = command.targetNodeID;
+            state.nodes[nodeID].collectRequested = command.value == 1;
+            if (command.value == 0 && !BankRules.HasStationaryCollector(state, state.nodes[nodeID]))
+                state.nodes[nodeID].collectProgress = 0;
+        }
+
         /// <summary>
         /// Retargets a villager, honouring the edge it is already on.
         ///
@@ -78,6 +93,8 @@ namespace NodeWar.Simulation
             // Orders change intent during combat, never the attack clock or fight state.
             if (villager.state == VillagerState.Fighting)
             {
+                if (destination != villager.currentNodeID &&
+                    !HasRoute(state, villager, villager.currentNodeID, destination)) return;
                 state.villagers[vid].targetNodeID = destination == villager.currentNodeID ? -1 : destination;
                 return;
             }
@@ -98,7 +115,7 @@ namespace NodeWar.Simulation
             int anchor = villager.currentNodeID;
             int otherEnd = (legFrom == anchor) ? legTo : legFrom;
 
-            int legTicks = GetLegTicks(state, legFrom, legTo, villager.moveSpeedTicks);
+            int legTicks = GameSimulation.GetMoveLegDurationTicks(state, villager);
 
             // Ticks already spent getting away from the anchor. On a reversal leg
             // progress counts back toward the anchor, so it inverts.
@@ -117,28 +134,23 @@ namespace NodeWar.Simulation
             // villager order to its own node is.
             if (anchor == destination)
             {
-                int cancelTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+                int cancelTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, otherEnd, anchor, villager.moveSpeedTicks);
                 ApplyMove(state, vid, new int[] { otherEnd, anchor },
-                          cancelTicks - Rescale(covered, legTicks, cancelTicks), destination);
+                          cancelTicks - (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, cancelTicks)), destination);
                 return;
             }
 
-            int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination);
-            if (path.Length < 2)
-            {
-                // Pay the return crossing before waiting for an unreachable destination.
-                int backTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
-                ApplyMove(state, vid, new int[] { otherEnd, anchor },
-                          backTicks - Rescale(covered, legTicks, backTicks), destination);
-                return;
-            }
+            int[] path = Pathfinding.FindPath(state, villager.ownerID, anchor, destination, villager.moveSpeedTicks);
+            // No route: refuse the order and keep the current leg and target, as the
+            // order preview (PendingOrderView) already shows. Supersedes D13's retry.
+            if (path.Length < 2) return;
 
             if (path[1] == otherEnd)
             {
                 // The new route runs on through the node already being approached.
                 // Keep crossing; only what comes after it changes.
-                int aheadTicks = GetLegTicks(state, anchor, otherEnd, villager.moveSpeedTicks);
-                ApplyMove(state, vid, path, Rescale(covered, legTicks, aheadTicks), destination);
+                int aheadTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, anchor, otherEnd, villager.moveSpeedTicks);
+                ApplyMove(state, vid, path, (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, aheadTicks)), destination);
                 return;
             }
 
@@ -149,9 +161,9 @@ namespace NodeWar.Simulation
             reversed[0] = otherEnd;
             for (int i = 0; i < path.Length; i++) reversed[i + 1] = path[i];
 
-            int returnTicks = GetLegTicks(state, otherEnd, anchor, villager.moveSpeedTicks);
+            int returnTicks = villager.moveLegDurationTicks > 0 ? legTicks : GetLegTicks(state, villager.ownerID, otherEnd, anchor, villager.moveSpeedTicks);
             ApplyMove(state, vid, reversed,
-                      returnTicks - Rescale(covered, legTicks, returnTicks), destination);
+                      returnTicks - (villager.moveLegDurationTicks > 0 ? covered : Rescale(covered, legTicks, returnTicks)), destination);
         }
 
         /// <summary>
@@ -160,10 +172,12 @@ namespace NodeWar.Simulation
         private static void RepathFromNode(SimulationState state, int villagerIndex,
                                            int ownerID, int fromNode, int destination)
         {
+            // A destination with no route is refused before anything changes.
+            if (fromNode != destination && !HasRoute(state, state.villagers[villagerIndex], fromNode, destination)) return;
             state.villagers[villagerIndex].targetNodeID = fromNode == destination ? -1 : destination;
             state.villagers[villagerIndex].movePath = new int[0];
             state.villagers[villagerIndex].movePathIndex = 0;
-            state.villagers[villagerIndex].moveProgress = 0;
+            GameSimulation.ClearLeg(ref state.villagers[villagerIndex]);
             state.villagers[villagerIndex].combatTargetID = -1;
             state.villagers[villagerIndex].state = VillagerState.Idle;
             if (fromNode == destination)
@@ -172,19 +186,29 @@ namespace NodeWar.Simulation
                 return;
             }
 
-            int[] path = Pathfinding.FindPath(state, ownerID, fromNode, destination);
+            int[] path = Pathfinding.FindPath(state, ownerID, fromNode, destination, state.villagers[villagerIndex].moveSpeedTicks);
             if (path.Length < 2) return;
 
             ApplyMove(state, villagerIndex, path, 0, destination);
         }
 
+        // Same question the order preview asks: is there any route at all?
+        private static bool HasRoute(SimulationState state, VillagerData villager, int fromNode, int destination)
+        {
+            return Pathfinding.FindPath(state, villager.ownerID, fromNode, destination, villager.moveSpeedTicks).Length >= 2;
+        }
+
         private static void ApplyMove(SimulationState state, int villagerIndex,
                                       int[] path, int progress, int destination)
         {
+            state.villagers[villagerIndex].targetNodeID = destination;
+            if (PierGate.BlocksDeparture(state, state.villagers[villagerIndex], path[1])) return;
             state.villagers[villagerIndex].movePath = path;
             state.villagers[villagerIndex].movePathIndex = 0;
             state.villagers[villagerIndex].moveProgress = progress;
             state.villagers[villagerIndex].targetNodeID = destination;
+            if (state.villagers[villagerIndex].moveLegDurationTicks == 0)
+                GameSimulation.BeginLeg(state, ref state.villagers[villagerIndex]);
             state.villagers[villagerIndex].state = VillagerState.Moving;
             state.villagers[villagerIndex].combatTargetID = -1;
         }
@@ -193,10 +217,9 @@ namespace NodeWar.Simulation
         /// Ticks needed to cross a leg. Never zero -- progress against a zero-tick
         /// leg would be meaningless, and the division in Rescale would fault.
         /// </summary>
-        private static int GetLegTicks(SimulationState state, int fromNode, int toNode, int moveSpeedTicks)
+        private static int GetLegTicks(SimulationState state, int ownerID, int fromNode, int toNode, int moveSpeedTicks)
         {
-            int ticks = GameSimulation.GetLinkWeight(state, fromNode, toNode) * moveSpeedTicks;
-            return ticks < 1 ? 1 : ticks;
+            return GameSimulation.CalculateLegTicks(state, ownerID, fromNode, toNode, moveSpeedTicks);
         }
 
         /// <summary>
@@ -228,6 +251,17 @@ namespace NodeWar.Simulation
             if (command.value == 0) state.players[command.playerID].materials -= stats.fortressMaterialsCosts[next];
             else state.players[command.playerID].metal -= stats.fortressMetalCosts[next];
             state.nodes[command.targetNodeID].fortressLevel = next;
+
+        }
+
+        private static void ProcessForgeMinion(SimulationState state, GameCommand command)
+        {
+            if (command.villagerID != -1 || command.value != 0 ||
+                !NodeActionRules.CanForgeMinion(state, bal, command.playerID, command.targetNodeID, out _)) return;
+            if (!bal.TryForgeReadyTick(state.nodes[command.targetNodeID].districtEra, state.tickCount, out int readyTick)) return;
+            state.players[command.playerID].metal -= bal.minionMetalCost;
+            GameSimulation.SpawnBonusVillagers(state, command.targetNodeID, command.playerID, 1, SuitType.Minion);
+            state.nodes[command.targetNodeID].recruitReadyTick = readyTick;
         }
 
         private static void ProcessRecruit(SimulationState state, GameCommand command)
@@ -272,6 +306,7 @@ namespace NodeWar.Simulation
             if (vid < 0 || vid >= state.villagers.Length) return;
             VillagerData villager = state.villagers[vid];
             if (villager.ownerID != command.playerID) return;
+            if (!NodeActionRules.IsBody(villager)) return;
             if (villager.state == VillagerState.Dead) return;
             if (villager.isConsumed) return;
             if (villager.state != VillagerState.Idle) return;
@@ -317,6 +352,7 @@ namespace NodeWar.Simulation
             VillagerData villager = state.villagers[vid];
             if (villager.ownerID != command.playerID) return;
             if (villager.state != VillagerState.Dead) return;
+            if (!NodeActionRules.IsBody(villager)) return;
             if (villager.isConsumed) return;
             int finalCost = GetRespawnCost(state, command.playerID);
             if (state.players[command.playerID].food < finalCost) return;

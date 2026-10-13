@@ -143,14 +143,14 @@ namespace NodeWar.Cloud.Tests
             state.Rank.HighestArena = 3;
             state.Rank.Arena = 1;
             await service.GetAsync();
-            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(21 * 4));
-            Assert.That(state.Inventory.OwnedVariants.Distinct().Count(), Is.EqualTo(21 * 4));
+            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(22 * 4));
+            Assert.That(state.Inventory.OwnedVariants.Distinct().Count(), Is.EqualTo(22 * 4));
             Assert.That(state.Inventory.Equipped.Variants.Values, Has.All.EndsWith(".e0"));
             Assert.That(store.Writes, Has.Count.EqualTo(2));
             AssertInventoryOnly(store.Writes[1]);
             state.Rank.Arena = 0;
             await service.GetAsync();
-            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(21 * 4));
+            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(22 * 4));
             Assert.That(store.Writes, Has.Count.EqualTo(2));
         }
 
@@ -168,7 +168,7 @@ namespace NodeWar.Cloud.Tests
             var equipped = await inventory.EquipAsync(Variant("suit.warrior", "suit.warrior.e2"));
             Assert.That(equipped.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e2"));
             Assert.That(equipped.Inventory.Equipped.Variants["suit.miner"], Is.EqualTo("suit.miner.e0"));
-            Assert.That(equipped.Inventory.Equipped.Skins, Has.Count.EqualTo(21));
+            Assert.That(equipped.Inventory.Equipped.Skins, Has.Count.EqualTo(22));
             AssertInventoryOnly(store.Writes.Last());
             int writes = store.Writes.Count;
             await inventory.EquipAsync(Variant("suit.warrior", "suit.warrior.e2"));
@@ -388,10 +388,10 @@ namespace NodeWar.Cloud.Tests
             });
             var service = Server(store);
             var state = await service.GetAsync();
-            Assert.That(state.Inventory.Equipped.Variants, Has.Count.EqualTo(21));
-            Assert.That(state.Inventory.Equipped.Skins, Has.Count.EqualTo(21));
-            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(21));
-            Assert.That(state.Inventory.OwnedSkins, Has.Count.EqualTo(21));
+            Assert.That(state.Inventory.Equipped.Variants, Has.Count.EqualTo(22));
+            Assert.That(state.Inventory.Equipped.Skins, Has.Count.EqualTo(22));
+            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(22));
+            Assert.That(state.Inventory.OwnedSkins, Has.Count.EqualTo(22));
             Assert.That(JsonConvert.SerializeObject(state.Inventory), Does.Contain("\"EquippedSuitIDs\":[\"legacy\"]"));
             AssertInventoryOnly(store.Writes.Last());
             await service.GetAsync();

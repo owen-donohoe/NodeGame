@@ -271,7 +271,7 @@ namespace NodeWar.UI
             switch (refusal)
             {
                 case EquipRefusal.Busy: return "Unit is " + villager.state.ToString().ToLowerInvariant();
-                case EquipRefusal.AlreadySuited: return "Already wearing " + villager.suit;
+                case EquipRefusal.AlreadySuited: return "Already wearing " + NodeWar.View.StructurePresentation.SuitLabel(villager.suit);
                 case EquipRefusal.NotDrafted: return "Not drafted";
                 case EquipRefusal.CannotAfford: return "Need " + CostText(stats);
                 case EquipRefusal.DoesNotFit: return "Does not fit here";
@@ -298,7 +298,7 @@ namespace NodeWar.UI
                 button.AddToClassList("equip__card");
                 Root = button;
 
-                string name = suit.ToString();
+                string name = NodeWar.View.StructurePresentation.SuitLabel(suit);
 
                 VisualElement tile = Box("ui-tile", "equip__card-tile", ItemTint.ClassFor(NodeWar.Lobby.LoadoutTypes.LobbyIdForSuit(suit)));
                 tile.Add(Text(name.Substring(0, 1), "ui-tile__monogram", "equip__card-letter"));
@@ -370,7 +370,7 @@ namespace NodeWar.UI
                 if (shownState != stateValue)
                 {
                     shownState = stateValue;
-                    if (refusal == EquipRefusal.AlreadySuited) state.text = "has " + villager.suit;
+                if (refusal == EquipRefusal.AlreadySuited) state.text = "has " + NodeWar.View.StructurePresentation.SuitLabel(villager.suit);
                     else if (refusal == EquipRefusal.Busy) state.text = villager.state.ToString().ToLowerInvariant();
                     else state.text = "idle";
                 }

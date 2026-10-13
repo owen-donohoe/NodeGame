@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
-verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
+  - { by: claude-sonnet-5-5, at: 2026-10-10T15:27:17Z }
+verified_at_commit: 9006a5bdaf9227f014eb3eaacdffb98204364ea1
 status: stable
 sources:
   - id: sim-state
@@ -222,6 +222,15 @@ sources:
     resource: Assets/UI/Scripts/Gameplay/EmotePanel.cs
     title: Emote controls on the resource sheet
     last_modified: 2026-09-23T09:37:50-04:00
+  - id: health-bar
+    resource: Assets/Scripts/Game/UI/Worldspace/NodeClaimBar.cs
+    title: District health segment on the claim bar
+  - id: bank-pips
+    resource: Assets/Scripts/Game/UI/Worldspace/BankPips.cs
+    title: Runtime Storehouse bank pips
+  - id: structure-presentation
+    resource: Assets/Scripts/Game/View/StructurePresentation.cs
+    title: Pure health, bank and sheet layout helpers
 ---
 
 # Architecture
@@ -523,6 +532,12 @@ The settings card drops down from beneath that button. The recentre/zoom
 handle defaults to the bottom right, with the emote dock at the bottom left;
 Controls settings can change the handle's side, visibility and zoom behaviour.
 
+`GameplayHUDController` clones its authored `PanelSettings` at runtime and fits
+the reference resolution to both screen dimensions through
+`StructurePresentation.HudScale`. Portrait keeps its width-based sizing;
+landscape fits the height so the HUD and node sheet remain on screen. Disabling
+the controller restores the authored settings and destroys the runtime copy.
+
 Resources sit near the bottom of the safe area, above the control docks
 and emote stack. Food and materials use concentric segmented semicircles,
 flat side down, with a glyph and live count. Metal and display-only magic
@@ -546,6 +561,17 @@ the normal close path. `LobbyIcon` supplies shared resource glyphs for
 the HUD, sheet and text. `NodeSheetContent.SetResourceText` turns `{food}`,
 `{materials}` and `{metal}` templates into inline icons beside text spans.
 
+Storehouse sheets show bank contents, collection progress/status, district health,
+production and Collect/Cancel. Both stacks dock it like every other sheet, only taller:
+`BankSheetHeight` is Storehouse-only, and Farm, Mine and Forge keep their ordinary sheet size,
+worker controls and no bank-install actions.
+Workshop uses node actions for Forge Minion, showing its price, cooldown and refusal
+reason from shared simulation helpers. `StructurePresentation` retains the pure
+layout and health-segment maths despite its historical class name.
+`NodeClaimBar` adds a code-built health segment at the owner's end, shown only below
+maximum on a district with health. `BankPips` shows nonempty Storehouse banks as a row centred above the node, with
+colour and shape per resource. There is no separate structure bar or minion badge.
+`VillagerView` renders mobile minions grey. Missing art uses Storehouse "S" and Workshop "W".
 Legacy code is kept compiling rather than commented out or deleted, so
 that a break in it is a compiler error rather than a discovery made later.
 See `Assets/Legacy/README.md`.
@@ -579,8 +605,9 @@ Pointer (mouse / touch)        or  BotPlayer
         │
         ▼
  GameSimulation.SimulateTick            (Simulation/)
-        │  advances the tick: movement → combat → claiming (breach → claim) →
-        │  production → healing → respawns → win-check
+        │  advances the tick: movement → combat → claiming (breach → district health / claim) →
+        │  production (workers → Storehouse output → bank collection → auto-recruit) →
+        │  healing → respawns → win-check
         ▼
      SimulationState  (updated)
         │
@@ -607,7 +634,7 @@ node ID. Player `recruitCount` persists for the match; each Village's
 `recruitReadyTick` and `autoRecruit` reset on ownership loss. All three fields are
 hashed and copied. Village capture itself spawns nothing; a `Town` pays each player's first
 full claim of it once (`townPaidMask`, hashed and copied), limited by population room.
-The district roster is `DistrictRoster` (types 0–6 and 13–17); retired numbers stay
+The district roster is `DistrictRoster` (types 0–6 and 14–19); retired numbers stay
 reserved and `DistrictMigration` converts saved data once.
 
 A move order is sticky: `VillagerData.targetNodeID` keeps the destination through
@@ -616,6 +643,22 @@ current node once a tick, after every rule pass. Simulation version 3 adds terra
 `NodeData.terrain` and `SimulationState.boardHash` (the `BoardHasher` fingerprint of
 the board) are hashed, and the capture bonus, restore and the retired Watchtower and
 Rampart effects (Fortress resistance replaced the latter: `NodeData.fortressLevel`, the `UpgradeFortress` command validated through `NodeActionRules`) are described in `docs/game-model.md`.
+
+The unreleased simulation version 4 now uses district health for passive effects:
+Fortress resistance, Storehouse self-production and Infirmary effects are gated by
+`DistrictHealth.Healthy`. Enemy claiming drains health first; healing regenerates it
+only with a full owner-side bar. `OnOwnershipChanged` centralizes health, recruitment,
+Fortress and collection resets, and pays remaining capture stock once.
+Workshop (19) forges mobile minion units; `NodeActionRules.IsBody` distinguishes
+collectors from claimers, workers and economic enemy presence. Minions are combat
+targets with no attack damage and are consumed on death.
+`BankRules` owns lock, collection, Storehouse production and payout; `PierGate` owns
+enemy-Pier departure; `CalculateLegTicks` latches the owner highway in
+`moveLegDurationTicks`, with `Pathfinding` pricing the same physical ticks.
+ForgeMinion (8) and Collect (9) retain the six-int wire/log shape. Bank and health
+fields are hashed zero-neutral and copied with the node array. Storehouse (18)
+replaces retired Market (13) in saved-data migration. `docs/simulation-rules.md`
+defines the full contract.
 
 ### What a tick did
 
@@ -686,7 +729,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   Single mode while covered, then exits above after load completion and at
   least one destination frame (minimum cover time 0.25 s). The temporary
   `DontDestroyOnLoad` root and runtime `PanelSettings` are destroyed after
-  reveal. The panel matches HUD's 390×844 width-based scaling and uses sort
+  reveal. The panel uses 390×844 width-based scaling and uses sort
   order 32768, above the other panels and uGUI. Resources UXML and a TSS
   wrapper import the existing shared theme; no Editor setup is needed.
   A full-screen picking shield and consumption of control-device input
@@ -748,8 +791,11 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `Commands.cs` — `GameCommand` struct and `CommandType` enum.
 - `NodeActionRules` — read-only Village recruitment and repeat-toggle eligibility,
   population counting (dead included, consumed excluded), and enemy presence.
-- `Pathfinding` — Dijkstra over the node graph with ownership-based
-  integer cost multipliers.
+- `BankRules` / `DistrictHealth` / `PierGate` — shared stateless bank eligibility,
+  collection and payout, passive-effect health gating, and enemy-Pier departure.
+  `NodeActionRules` also validates Workshop forging and distinguishes minions from bodies.
+- `Pathfinding` — Dijkstra over the node graph, costed in the mover's physical leg ticks with
+  ownership-based integer cost multipliers and the expected cost of an enemy Pier gate.
 - `MatchFactory` — builds a match's tick-0 state from board, draft and
   per-player setup; `Configure` sets the simulation's statics separately
   from `Build`/`Fill`. Every path uses it, Testing mode included. It refuses an
@@ -833,7 +879,7 @@ Three objects are carried across the Lobby → Gameplay scene load via
   `NodeInspected` tracks every inspected node, independently of whether
   `NodeOpened`/`NodeClosed` show a panel.
 - `DistrictPanelPolicy` — decides which districts open a panel at all.
-  UI Toolkit uses `HasSheet`, including owned Farms, Mines and Markets;
+  UI Toolkit uses `HasSheet`, including owned Farms, Mines, Storehouses and Workshops;
   the uGUI path still uses the older `IsFunctional` rule.
 - `DraftUI` — draft-phase interface, with `DraftPlacementController`
   (drag/park/confirm state machine), `DraftPickUI` and
@@ -890,17 +936,22 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `NodeSheet` — the node panel as a bottom sheet. It does not decide when
   to open; `NodePanelManager` still owns that.
 - `NodeSheetContent` and its subclasses — `ForgeContent`, `CoreContent`, `EquipContent`
-  (Barracks) and `NodeActionContent` (Village, Town, Infirmary, Fortress);
-  `ProductionContent` shows an owner's Farm, Mine or Market without actions.
+  (Barracks) and `NodeActionContent` (Village, Workshop, Town, Infirmary, Fortress);
+  `ProductionContent` shows an owner's Farm or Mine workers, and `BankContent` serves
+  Storehouse: bank contents, collection progress, health/production and lock or
+  storage reason, with Collect start/cancel through `BankActionModel`.
   Each declares `InvolvedResources`; `Send` is the only path to the simulation.
 - `NodeActionModel` / `NodeActionContent` — the node actions in UI Toolkit: Recruit,
-  Repeat (an absolute toggle) and the Fortress upgrade in either currency (disabled at
+  Repeat (an absolute toggle), Forge Minion at Workshop and the Fortress upgrade in either currency (disabled at
   level 3), with enemy panels informational and Town showing its paid flags without actions.
   The model is UnityEngine-free and read-only: every eligibility and price comes from the
   simulation's shared helpers (`NodeActionRules`, `GameBalanceData`), and its binding to the state,
-  node array and tick is invalidated when a rollback replaces the node array, so it is rollback-safe. Its uGUI counterpart is
-  `NodeActionPanelContent`, which `NodePanelManager` builds at runtime for those four districts
-  (no prefab wiring). Names, monograms and descriptions come from `DistrictFallback`.
+  node array and tick is invalidated when a rollback replaces the node array, so it is rollback-safe.
+  `BankActionModel` is its bank counterpart (UnityEngine-free, in `Assets/UI/Scripts/Gameplay/`, shared by both
+  stacks): `Try*` only builds a `GameCommand` stamped with the current tick, and refuses a stale binding. Its uGUI counterpart is
+  `NodeActionPanelContent`, built at runtime for Village, Workshop, Town, Infirmary,
+  Fortress and Storehouse. Forge, Farm and Mine have no bank actions; Forge retains its production panel.
+  Names, monograms and descriptions come from `DistrictFallback`.
 - `DraftScreenController` — the draft screen, and the one place in this
   tree that owns an interaction end to end. The chrome and the placement
   cannot be separated here: a drag can begin on a UI Toolkit card or on
@@ -947,8 +998,13 @@ Three objects are carried across the Lobby → Gameplay scene load via
   fallback glyphs and a runtime Pier bridge, so a district with no art still reads on the board.
   `DistrictFallback` is UnityEngine-free.
 - `OrderPresentation` — read-only: which orders to draw and how, including the
-  amber dashed route of an order interrupted by a fight, derived from
-  `targetNodeID` and so correct after a rollback.
+  amber dashed route of an order interrupted by a fight or held at an enemy Pier gate
+  (`GateBlocked`), derived from `targetNodeID` and so correct after a rollback.
+- `NodeClaimBar` / `BankPips` / `StructurePresentation` — district-health segment,
+  nonempty Storehouse pips and UnityEngine-free layout/visibility maths.
+  The health segment is code-built and hidden at full health; pips are a row billboarded
+  outside the district SortingGroup, on the Villagers layer at orders 402/403,
+  apart from the Core breach bar's 400/401. No structure bar or minion badge remains.
 - `DistrictVisualTable` — per-district art shared with UI through the theme.
   `GameManager` selects board prefabs from the table, then its per-district
   slot, then the default; `BoardArtPlacer` applies offset, rotation and scale.
@@ -1120,7 +1176,7 @@ the layer line.
 A villager in transit has no position of its own. `currentNodeID` is the node
 it last stood on, and how far it has come is `moveProgress` counted in ticks
 along the leg `movePath[movePathIndex]` to `movePath[movePathIndex + 1]`,
-against `linkWeight * moveSpeedTicks`.
+against the leg's duration, latched in `moveLegDurationTicks` when the leg begins (`linkWeight * moveSpeedTicks`, halved by an own Pier).
 
 Normally `movePath[movePathIndex]` and `currentNodeID` are the same node. The
 one exception carries meaning: when they differ, the villager is **walking a
@@ -1339,7 +1395,7 @@ dotnet/NodeWarCloud/Matchmaker/  ranked.mmq, the deployed queue rules (the match
 - **Catalog and eras.** Arena N permits variants up to era N; ownership
   persists after demotion, while equipped variants are clamped to the
   current arena. Every suit and district type
-  is a catalog base (`suit.warrior`, `district.rampart`) with one variant
+  is a catalog base (`suit.warrior`, `district.storehouse`) with one variant
   per era (`suit.warrior.e3`) and skins (`skin.suit.warrior.default`).
   Item IDs are never renamed or reused: the export refuses a catalog that
   breaks `CatalogValidation.ValidateAgainstPrevious`. `Equip` checks

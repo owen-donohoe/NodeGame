@@ -25,7 +25,7 @@ namespace NodeWar.Cloud.Tests
             "suit.farmer", "suit.miner", "suit.warrior", "suit.smelter", "suit.guardian", "suit.scout",
             "suit.berserker", "suit.medic", "suit.merchant", "suit.acolyte", "suit.watcher",
             "district.farm", "district.mine", "district.village", "district.barracks", "district.forge",
-            "district.market", "district.pier", "district.town", "district.infirmary", "district.fortress"
+            "district.pier", "district.town", "district.infirmary", "district.fortress", "district.storehouse", "district.workshop"
         };
 
         private const string LegacyInventory = @"{
@@ -87,7 +87,7 @@ namespace NodeWar.Cloud.Tests
             DistrictMigration.Apply(expectedState);
             Assert.That(JObject.DeepEquals(JObject.FromObject(expectedState.Inventory), JObject.FromObject(written.Inventory)), Is.True,
                 JsonConvert.SerializeObject(written.Inventory));
-            Assert.That(result.Inventory.EquippedNodeIDs, Is.EqualTo(new[] { "node_fortress", "node_market" }));
+            Assert.That(result.Inventory.EquippedNodeIDs, Is.EqualTo(new[] { "node_fortress", "node_storehouse" }));
         }
 
         [Test]

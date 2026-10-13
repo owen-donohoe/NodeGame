@@ -4,7 +4,7 @@ namespace NodeWar.UI
     public struct NodeActionDescription
     {
         public int Price, ReadyTick, RemainingTicks, Level, MaterialsCost, MetalCost;
-        public bool AutoRecruit, CanRecruit, CanRepeat, CanMaterials, CanMetal;
+        public bool AutoRecruit, CanRecruit, CanForge, CanRepeat, CanMaterials, CanMetal;
         public string Refusal, Information;
     }
 
@@ -39,6 +39,13 @@ namespace NodeWar.UI
                 d.CanRepeat=NodeActionRules.CanSetAutoRecruit(s,player,node,n.autoRecruit?0:1);
                 d.Information="Recruit: "+d.Price+" food. Ready tick "+d.ReadyTick+" ("+d.RemainingTicks+" ticks remaining). "+d.Refusal;
             }
+            else if(n.districtType==DistrictType.Workshop)
+            {
+                d.Price=b.minionMetalCost;
+                d.CanForge=NodeActionRules.CanForgeMinion(s,b,player,node,out var refusal);
+                d.Refusal=refusal.ToString();
+                d.Information="Forge Minion: "+d.Price+" metal. Ready tick "+d.ReadyTick+" ("+d.RemainingTicks+" ticks remaining). "+d.Refusal;
+            }
             else if(n.districtType==DistrictType.Fortress)
             {
                 var stats=b.GetDistrictStats(n.districtType,n.districtEra);
@@ -47,7 +54,8 @@ namespace NodeWar.UI
                 d.CanMaterials=NodeActionRules.CanUpgradeFortress(s,b,player,node,0);
                 d.CanMetal=NodeActionRules.CanUpgradeFortress(s,b,player,node,1);
                 d.Refusal=d.CanMaterials || d.CanMetal ? "None" : "UpgradeUnavailable";
-                d.Information="Fortress level "+d.Level+" / 3. Next: "+d.MaterialsCost+" materials or "+d.MetalCost+" metal.";
+                d.Information="Fortress level "+d.Level+" / 3. Next: "+d.MaterialsCost+" materials or "+d.MetalCost+" metal. "+
+                    NodeWar.View.StructurePresentation.HealthInformation(n,b,"Resistance aura");
             }
             else if(n.districtType==DistrictType.Town)
             {
@@ -58,10 +66,11 @@ namespace NodeWar.UI
             else if(n.districtType==DistrictType.Infirmary)
             {
                 var stats=b.GetDistrictStats(n.districtType,n.districtEra);
-                int workers=GameSimulation.CountInfirmaryWorkers(s,node,n.ownerID);
+                int workers=NodeWar.View.StructurePresentation.ActiveInfirmaryWorkers(s,node,b);
                 d.Information="Local healing every "+stats.healIntervalTicks+" ticks. "+workers+
                     " Acolyte workers assist Core respawns: "+(workers*stats.respawnBoostPerWorker)+
-                    " extra timer ticks; "+(workers*stats.respawnCostReductionPercent)+"% food discount.";
+                    " extra timer ticks; "+(workers*stats.respawnCostReductionPercent)+"% food discount. "+
+                    NodeWar.View.StructurePresentation.HealthInformation(n,b,"Healing and respawn assistance");
             }
             return d;
         }
@@ -75,6 +84,11 @@ namespace NodeWar.UI
         {
             c=default; if(!Current(s,b,player,node) || !NodeActionRules.CanRecruit(s,b,player,node,out _)) return false;
             c=Command(s,player,node,CommandType.Recruit,0); return true;
+        }
+        public bool TryForgeMinion(SimulationState s,GameBalanceData b,int player,int node,out GameCommand c)
+        {
+            c=default; if(!Current(s,b,player,node) || !NodeActionRules.CanForgeMinion(s,b,player,node,out _)) return false;
+            c=Command(s,player,node,CommandType.ForgeMinion,0); return true;
         }
         public bool TrySetAutoRecruit(SimulationState s,GameBalanceData b,int player,int node,bool desired,out GameCommand c)
         {

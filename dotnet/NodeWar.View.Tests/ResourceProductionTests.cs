@@ -250,25 +250,25 @@ namespace NodeWar.View.Tests
         // ===== the market alternates, and says which half by its timer =====
 
         [Test]
-        public void A_market_on_its_food_half_counts_toward_food()
+        public void HistoricalMarket_food_timer_does_not_count()
         {
             SimulationState state = State();
             state.villagers = new[] { Worker(0, 0, 3, 20, MarketFoodTicks) };
 
             float[] into = new float[ResourceProduction.MaxInFlight];
-            Assert.AreEqual(1, ResourceProduction.InFlight(state, Balance(), 0, ResourceKind.Food, 0f, into));
+            Assert.AreEqual(0, ResourceProduction.InFlight(state, Balance(), 0, ResourceKind.Food, 0f, into));
             Assert.AreEqual(0, ResourceProduction.InFlight(state, Balance(), 0, ResourceKind.Materials, 0f, into));
         }
 
         [Test]
-        public void A_market_on_its_material_half_counts_toward_materials()
+        public void HistoricalMarket_material_timer_does_not_count()
         {
             SimulationState state = State();
             state.villagers = new[] { Worker(0, 0, 3, 20, MarketMaterialTicks) };
 
             float[] into = new float[ResourceProduction.MaxInFlight];
             Assert.AreEqual(0, ResourceProduction.InFlight(state, Balance(), 0, ResourceKind.Food, 0f, into));
-            Assert.AreEqual(1, ResourceProduction.InFlight(state, Balance(), 0, ResourceKind.Materials, 0f, into));
+            Assert.AreEqual(0, ResourceProduction.InFlight(state, Balance(), 0, ResourceKind.Materials, 0f, into));
         }
 
         // ===== the buffer is never overrun =====

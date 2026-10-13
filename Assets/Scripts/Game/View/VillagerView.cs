@@ -287,9 +287,7 @@ namespace NodeWar.View
                     ? villager.movePath[legIndex + 1]
                     : legFrom;
 
-                int edgeWeight = GameSimulation.GetLinkWeight(simState, legFrom, legTo);
-                int totalTicksForEdge = edgeWeight * villager.moveSpeedTicks;
-                if (totalTicksForEdge < 1) totalTicksForEdge = 1;
+                int totalTicksForEdge = GameSimulation.GetMoveLegDurationTicks(simState, villager);
 
                 float edgeProgress = (float)villager.moveProgress / (float)totalTicksForEdge;
                 float subTickAlpha = tickProvider.TickAlpha / (float)totalTicksForEdge;
@@ -437,6 +435,8 @@ namespace NodeWar.View
 
         private Color GetStateColor(VillagerData villager)
         {
+            if (StructurePresentation.TrySuitTint(villager.suit, out float r, out float g, out float b))
+                return new Color(r, g, b);
             if (villager.ownerID == 0)
             {
                 switch (villager.state)
@@ -477,7 +477,6 @@ namespace NodeWar.View
         {
             return villagerID;
         }
-
 
         /// <summary>
         /// Gets this villager's index among same-owner villagers in the same state on the same node.

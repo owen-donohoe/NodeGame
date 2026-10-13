@@ -20,6 +20,21 @@ namespace NodeWar.View
             v.targetNodeID >= 0 && !v.isConsumed && v.state != VillagerState.Dead &&
             v.state != VillagerState.Moving && v.state != VillagerState.Breaching;
 
+        public static bool GateBlocked(SimulationState state,VillagerData v)
+        {
+            if(v.targetNodeID<0 || v.isConsumed || v.hp<=0 || v.state==VillagerState.Dead || v.state==VillagerState.Moving ||
+                v.currentNodeID<0 || v.currentNodeID>=state.nodes.Length || !PierGate.IsEnemyPier(state,v)) return false;
+            int[] path=Pathfinding.FindPath(state,v.ownerID,v.currentNodeID,v.targetNodeID,v.moveSpeedTicks);
+            return path.Length>1 && PierGate.BlocksDeparture(state,v,path[1]);
+        }
+        public static bool InterruptedWithState(SimulationState state,VillagerData v) => Interrupted(v) || GateBlocked(state,v);
+        public static Appearance StyleWithState(SimulationState state,VillagerData v,float seconds,bool reducedMotion)
+        {
+            var result=Style(v,seconds,reducedMotion);
+            if(GateBlocked(state,v)) { result.amber=true; result.dashed=true; result.visible=true; }
+            return result;
+        }
+
         public static Appearance Style(VillagerData v, float interruptedSeconds, bool reducedMotion)
         {
             bool interrupted = Interrupted(v);
@@ -41,11 +56,11 @@ namespace NodeWar.View
                 index = v.movePathIndex;
                 if (path == null || index < 0 || index + 1 >= path.Length) return empty;
             }
-            else if (Interrupted(v))
+            else if (InterruptedWithState(state,v))
             {
                 if (v.currentNodeID == v.targetNodeID && v.currentNodeID == state.players[1 - v.ownerID].coreNodeID)
                     return mine ? new Route { nodes = new[] { v.currentNodeID }, intentMarker = true } : empty;
-                path = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID);
+                path = Pathfinding.FindPath(state, v.ownerID, v.currentNodeID, v.targetNodeID, v.moveSpeedTicks);
                 // At a contested destination retain the final approach, from replicated
                 // movement state, until arrival action begins. Never use a cached curve.
                 if (path.Length == 1 && v.movePath != null && v.movePathIndex > 0 &&

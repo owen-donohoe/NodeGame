@@ -376,67 +376,28 @@ namespace NodeWar.Tests
             Assert.IsFalse(PlacementLegality.CanPlace(noSlots, null, DistrictType.Farm, 1, 1));
         }
 
-        [Test]
-        public void Pier_BStageDoesNotBlockEnemy()
+        private static SimulationState EnemyPierTransit()
         {
             GameBalanceData balance = Balance();
-            GameSimulation.SetBalance(balance);
-            CommandProcessor.SetBalance(balance);
-
-            // P0's villager crosses a P1-owned Pier on its way to a far node.
-            // P1 has nobody to fight with, so nothing may stop it at the Pier.
-            int ArrivalTick(DistrictType middle)
-            {
-                SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-                state.nodes[1].districtType = state.nodes[1].baseDistrictType = middle;
-                state.nodes[1].ownerID = 1;
-                state.nodes[1].claimBar = -balance.claimThreshold;
-                state.villagers[1].state = VillagerState.Dead;
-                state.villagers[1].hp = 0;
-                state.villagers[1].respawnTicksRemaining = 100000;
-
-                CommandProcessor.ProcessCommand(state, new GameCommand
-                {
-                    type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 2
-                });
-                int moved = -1;
-                for (int i = 0; i < 40 && moved < 0; i++)
-                {
-                    GameSimulation.SimulateTick(state);
-                    if (state.villagers[0].currentNodeID == 2) moved = state.tickCount;
-                }
-                Assert.AreEqual(-balance.claimThreshold, state.nodes[1].claimBar, "The Pier's bar is unchanged.");
-                Assert.AreEqual(1, state.nodes[1].ownerID);
-                return moved;
-            }
-
-            int viaPier = ArrivalTick(DistrictType.Pier);
-            int viaNeutral = ArrivalTick(DistrictType.None);
-            Assert.AreEqual(2 * 1 * balance.baseMoveSpeedTicks, viaPier, "Two normal legs of weight 1.");
-            Assert.AreEqual(viaNeutral, viaPier, "A Pier moves the enemy exactly like an empty connector.");
+            MatchFactory.Configure(balance, PremadeMaps.Hourglass01());
+            SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
+            state.nodes[1].districtType = state.nodes[1].baseDistrictType = DistrictType.Pier;
+            state.nodes[1].ownerID = 1; state.nodes[1].claimBar = -balance.claimThreshold;
+            state.villagers[1].state = VillagerState.Dead; state.villagers[1].hp = 0;
+            state.villagers[1].respawnTicksRemaining = 100000;
+            CommandProcessor.ProcessCommand(state, new GameCommand
+            { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 2 });
+            for (int i = 0; i < 2 * balance.baseMoveSpeedTicks; i++) GameSimulation.SimulateTick(state);
+            Assert.AreEqual(1, state.villagers[0].currentNodeID);
+            Assert.AreEqual(VillagerState.Claiming, state.villagers[0].state);
+            Assert.AreEqual(2, state.villagers[0].targetNodeID);
+            Assert.Greater(state.nodes[1].claimBar, -balance.claimThreshold);
+            Assert.AreEqual(1, state.nodes[1].ownerID);
+            return state;
         }
-
-        [Test]
-        public void Pier_BStageDoesNotBlockEnemy_Determinism()
-        {
-            int Run()
-            {
-                GameBalanceData balance = Balance();
-                GameSimulation.SetBalance(balance);
-                CommandProcessor.SetBalance(balance);
-                SimulationState state = TestBoardFactory.BuildThreeNodeBoard(balance);
-                state.nodes[1].districtType = state.nodes[1].baseDistrictType = DistrictType.Pier;
-                state.nodes[1].ownerID = 1;
-                state.nodes[1].claimBar = -balance.claimThreshold;
-                CommandProcessor.ProcessCommand(state, new GameCommand
-                {
-                    type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = 2
-                });
-                for (int i = 0; i < 60; i++) GameSimulation.SimulateTick(state);
-                return SimulationStateHasher.ComputeHash(state);
-            }
-            Assert.AreEqual(Run(), Run());
-        }
+        [Test] public void Pier_DStageBlocksEnemyTransit() => EnemyPierTransit();
+        [Test] public void Pier_DStageBlocksEnemyTransit_Determinism() =>
+            Assert.AreEqual(SimulationStateHasher.ComputeHash(EnemyPierTransit()), SimulationStateHasher.ComputeHash(EnemyPierTransit()));
 
         // --- the board fingerprint ---
 
@@ -619,5 +580,39 @@ namespace NodeWar.Tests
             for (int v = 0; v < 6; v++)
                 Assert.AreEqual(state.players[v < 3 ? 0 : 1].coreNodeID, state.villagers[v].currentNodeID);
         }
+
+        // The left pockets reach the rest of the board only through a Core, and an
+        // enemy Core is never transit: without a Pier, (1,4) cannot reach (1,2), so
+        // the order is refused and changes nothing (D48). With the Pier it routes.
+        private static int AcrossTheLake(bool pier)
+        {
+            BoardConfigData board = PremadeMaps.Hourglass01();
+            DraftPlacement[] draft = pier ? new[] { PierAt13() } : new DraftPlacement[0];
+            SimulationState state = Build(board, draft);
+            int[] cells = MatchFactory.CellToNode(board, draft);
+            int from = cells[Cell(board, 1, 4)], to = cells[Cell(board, 1, 2)];
+            state.villagers[0].currentNodeID = from;
+            state.villagers[0].state = VillagerState.Idle;
+            int before = SimulationStateHasher.ComputeHash(state);
+            CommandProcessor.ProcessCommand(state, new GameCommand
+                { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = to });
+            if (pier)
+            {
+                Assert.AreEqual(to, state.villagers[0].targetNodeID);
+                Assert.AreEqual(VillagerState.Moving, state.villagers[0].state);
+            }
+            else
+            {
+                CollectionAssert.IsEmpty(Pathfinding.FindPath(state, 0, from, to, state.villagers[0].moveSpeedTicks));
+                Assert.AreEqual(before, SimulationStateHasher.ComputeHash(state));
+                Assert.AreEqual(-1, state.villagers[0].targetNodeID);
+            }
+            return SimulationStateHasher.ComputeHash(state);
+        }
+
+        [Test] public void Hourglass_NoPier_MoveAcrossTheLakeIsRefused() => AcrossTheLake(false);
+        [Test] public void Hourglass_NoPier_MoveAcrossTheLakeIsRefused_Determinism() => Assert.AreEqual(AcrossTheLake(false), AcrossTheLake(false));
+        [Test] public void Hourglass_WithPier_MoveAcrossTheLakeRoutes() => AcrossTheLake(true);
+        [Test] public void Hourglass_WithPier_MoveAcrossTheLakeRoutes_Determinism() => Assert.AreEqual(AcrossTheLake(true), AcrossTheLake(true));
     }
 }

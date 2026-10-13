@@ -150,6 +150,28 @@ namespace NodeWar.Simulation
                         hash = HashFortressArray(hash, d.fortressMetalCosts, 3009, i);
                         hash = HashFortressArray(hash, d.fortressResistancePercent, 3010, i);
                     }
+                if (b.bankCapacity != 0) { hash = hash * 31 + 3017; hash = hash * 31 + b.bankCapacity; }
+                if (b.collectProgressPerTick != 0) { hash = hash * 31 + 3019; hash = hash * 31 + b.collectProgressPerTick; }
+                if (b.collectProgressPerUnit != 0) { hash = hash * 31 + 3020; hash = hash * 31 + b.collectProgressPerUnit; }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                    {
+                        DistrictStats d = b.districtStats[i];
+                        if (d.healthMax != 0)
+                        { hash = hash * 31 + 3021; hash = hash * 31 + i; hash = hash * 31 + d.healthMax; }
+                        if (d.healthRegenPerTick != 0)
+                        { hash = hash * 31 + 3022; hash = hash * 31 + i; hash = hash * 31 + d.healthRegenPerTick; }
+                        if (d.pierTravelDivisor != 0)
+                        { hash = hash * 31 + 3018; hash = hash * 31 + i; hash = hash * 31 + d.pierTravelDivisor; }
+                    }
+                // E2 extensions: absent historical tuning is zero-neutral.
+                if (b.minionHP != 0) { hash = hash * 31 + 3023; hash = hash * 31 + b.minionHP; }
+                if (b.minionMetalCost != 0) { hash = hash * 31 + 3024; hash = hash * 31 + b.minionMetalCost; }
+                if (b.minionMoveSpeedTicks != 0) { hash = hash * 31 + 3025; hash = hash * 31 + b.minionMoveSpeedTicks; }
+                if (b.districtStats != null)
+                    for (int i = 0; i < b.districtStats.Length; i++)
+                        if (b.districtStats[i].forgeCooldownTicks != 0)
+                        { hash = hash * 31 + 3026; hash = hash * 31 + i; hash = hash * 31 + b.districtStats[i].forgeCooldownTicks; }
                 return hash;
             }
         }

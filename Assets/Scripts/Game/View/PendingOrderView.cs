@@ -172,7 +172,7 @@ namespace NodeWar.View
             int from = villager.currentNodeID;
             if (from == targetNode) return null;
 
-            int[] path = Pathfinding.FindPath(simState, villager.ownerID, from, targetNode);
+            int[] path = Pathfinding.FindPath(simState, villager.ownerID, from, targetNode, villager.moveSpeedTicks);
             if (path == null || path.Length < 2) return null;
 
             // Mid-edge, the crossing already covered is kept if the route runs on

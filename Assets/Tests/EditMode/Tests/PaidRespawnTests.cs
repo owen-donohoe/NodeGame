@@ -97,7 +97,7 @@ namespace NodeWar.Tests
         [Test]
         public void InfirmaryDiscountIsAppliedAfterEscalationWithFloorRounding()
         {
-            state.nodes[1].districtType = DistrictType.Infirmary;
+            state.nodes[1].districtType = DistrictType.Infirmary; state.nodes[1].districtHealth = 3000;
             state.nodes[1].ownerID = 0;
             state.villagers[0].currentNodeID = 1;
             state.villagers[0].state = VillagerState.Working; state.villagers[0].suit = SuitType.Acolyte;

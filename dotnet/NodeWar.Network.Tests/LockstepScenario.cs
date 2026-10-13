@@ -54,6 +54,8 @@ namespace NodeWar.Network.Tests
         public bool CaptureConfirmedTicks;
 
         public static GameBalanceData Balance;
+        /// <summary>Optional balance for scenarios that need more than the shipped defaults.</summary>
+        public Func<GameBalanceData> BalanceFactory;
 
         /// <summary>The board the match is played on. The default is the tiny 3x3 land fixture.</summary>
         public BoardConfigData Board = BoardFixtures.LandGrid3x3();
@@ -67,7 +69,7 @@ namespace NodeWar.Network.Tests
 
         public void Configure()
         {
-            Balance = GameBalanceData.Default();
+            Balance = BalanceFactory != null ? BalanceFactory() : GameBalanceData.Default();
             MatchFactory.Configure(Balance, Board);
         }
 

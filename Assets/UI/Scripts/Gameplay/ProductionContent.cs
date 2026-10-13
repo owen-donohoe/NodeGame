@@ -112,6 +112,7 @@ namespace NodeWar.UI
 
         public override void Refresh()
         {
+            RefreshBank();
             NodeData node = State.nodes[NodeID];
             bool yours = node.ownerID == ControlledPID;
 
@@ -139,7 +140,7 @@ namespace NodeWar.UI
             }
 
             int working = RefreshDials(node.ownerID);
-            int cap = dials.Length;
+            int cap = Balance.maxWorkersPerNode;
 
             Show(gauges, working > 0);
             Show(idleCaption, working == 0);

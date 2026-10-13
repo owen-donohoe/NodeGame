@@ -11,7 +11,7 @@ namespace NodeWar.Backend
             switch (type)
             {
                 case 0: case 1: case 2: case 3: case 4: case 5: case 6:
-                case 13: case 14: case 15: case 16: case 17: return true;
+                case 14: case 15: case 16: case 17: case 18: case 19: return true;
                 default: return false;
             }
         }
@@ -35,6 +35,7 @@ namespace NodeWar.Backend
                 case 8: case 10: return 16;
                 case 12: return 17;
                 case 11: return 0;
+                case 13: return 18;
                 default: return IsActive(source) ? source : 0;
             }
         }
@@ -97,11 +98,11 @@ namespace NodeWar.Backend
             }
 
             // Only groups with equipped historical sources are migrated. A second pass is a no-op.
-            foreach (int target in new[] { 4, 16, 17 })
+            foreach (int target in new[] { 4, 16, 17, 18 })
             {
                 string targetBase = CatalogKeys.DistrictBase(target);
                 bool hasSource = false;
-                for (int source = 7; source <= 12; source++)
+                for (int source = 7; source <= 13; source++)
                     if (CanonicalType(source) == target &&
                         (inventory.Equipped.Variants.ContainsKey(CatalogKeys.DistrictBase(source)) ||
                          inventory.Equipped.Skins.ContainsKey(CatalogKeys.DistrictBase(source)))) hasSource = true;

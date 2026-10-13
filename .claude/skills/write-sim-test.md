@@ -6,8 +6,8 @@ tags: [skill, testing, simulation]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
-verified_at_commit: d2b93d6674fc228a0c05600b9b49b89c8969b660
+  - { by: claude-sonnet-5-5, at: 2026-10-10T15:29:09Z }
+verified_at_commit: 8901d8142c371e5d1efb569925696a976a8f3a27
 status: stable
 sources:
   - id: tests
@@ -34,6 +34,21 @@ sources:
   - id: balance-tests
     resource: Assets/Tests/EditMode/Tests/BalanceHasherTests.cs
     title: Coverage of balance fields
+  - id: bank-rules
+    resource: Assets/Scripts/Game/Simulation/BankRules.cs
+    title: Shared bank lock, collection, Storehouse production and payout
+  - id: bank-tests
+    resource: Assets/Tests/EditMode/Tests/StorehouseBankTests.cs
+    title: Bank production, Storehouse and capture lifecycle scenarios
+  - id: collection-tests
+    resource: Assets/Tests/EditMode/Tests/BankCollectionTests.cs
+    title: Progressive collection, lock, raid and ownership lifecycle scenarios
+  - id: pier-gate
+    resource: Assets/Scripts/Game/Simulation/PierGate.cs
+    title: Shared position gate and lowest-ID claim slots
+  - id: pier-tests
+    resource: Assets/Tests/EditMode/Tests/PierGateTests.cs
+    title: Pier transit, retreat, highway, reversal and physical-tick routing
   - id: baseline-contract
     resource: docs/computations/determinism-baseline.md
     title: Pinned fingerprint and version policy
@@ -76,6 +91,12 @@ Step 2: Set up initial state
 - Initialize v2 player fields deliberately: breachBar and paidRespawns at 0,
   nextBreacherID at -1. Default balance enables the channel, tempo and caps;
   disable those explicitly when testing legacy behaviour
+- For banks, initialize bankFood/bankMaterials/bankMetal, bankProductionRemaining,
+  storehouseNextResource and collectProgress to 0, collectRequested to false, and
+  districtHealth to 0. Explicitly fill health when an effect should be active.
+  Supply positive bankCapacity and collection tuning; minion HP/cost/speed and
+  Workshop forgeCooldownTicks are validated separately. Passive district health
+  maximum/regeneration and Storehouse production duration belong to per-era stats.
 - Document what the starting state represents
 - For recruitment, initialize player recruitCount and node recruitReadyTick to 0,
   and autoRecruit to false. Use explicit positive recruit tuning; historical
@@ -95,9 +116,9 @@ Step 4: Advance ticks
 - For breaches, distinguish arrival, channel completion and order resume
   (TickOrderResume); test no loss on a threshold drop alone and
   simultaneous-loss cancellation
-- For sticky orders, assert targetNodeID survives a fight and an unreachable
-  destination, that an order given while Fighting leaves the attack clock alone,
-  and that work or claim begun at resume counts from the next tick
+- For sticky orders, assert targetNodeID survives a fight, that a move with no route is
+  refused with the hash unchanged, that an order given while Fighting leaves the attack
+  clock alone, and that work or claim begun at resume counts from the next tick
 - For claiming, assert against the tick-start owner snapshot: the capture bonus
   (clamped neighbour balance, tempo applied after) and restore must give the
   same result whatever order the nodes are processed in
@@ -109,15 +130,63 @@ Step 5: Assert expected state
 - One assertion per logical outcome -- do not bundle unrelated 
   assertions
 - For caps, assert wasted completions still cycle, Forge spends no material
-  at the metal cap, Market still alternates, and cap 0 remains uncapped
+  at the metal cap, and cap 0 remains uncapped for global resource pools. Storehouse
+  alternates bank food/materials every 80 production ticks; bank capacity is five total.
 - For paid respawns, assert only successful commands increment paidRespawns
   and the Infirmary (at most two counted workers, lowest villager ID, none under enemy presence) discounts the escalated cost with integer rounding/minimum 1
 - For an integration scenario over loss, duplication and reordering with replay and
   rollback, use `dotnet/CoreRulesFixture` (map `hourglass-01-acceptance`, a test-only copy that
-  never advertises its hash under the shipped map ID) rather than the shipped board.
+  never advertises its hash under the shipped map ID) rather than the shipped board. For banks,
+  gates, district health and mobile minions use `dotnet/BankRulesFixture` (map `hourglass-01-banks-acceptance`):
+  its witness asserts each rule actually fired, and its balance adds a Warrior suit entry, since
+  the default balance has no suit stats and Equip would otherwise refuse.
 - For the Fortress, assert level-by-level costs in either currency, refusal under enemy presence,
   non-stacking auras read from tick-start state, the divisor floor of 1 on claim and breach,
   and that ownership loss resets the level.
+- For district health, assert exact drain-before-bar arithmetic, no regeneration
+  below a full owner bar, linear/clamped recovery, reset on ownership transitions
+  and healthMax 0 always healthy. Test each passive effect and tick-start aura
+  timing; resistance returns only at full health. `DistrictHealthTests` covers these.
+- For minions, assert Workshop cost/cooldown/cap and refusal hash equality,
+  speed and movement, no claim/work/breach/equip/respawn, zero combat damage,
+  targetability and permanent consumption on death. They collect an owned bank
+  while stationary and do not block economic enemy-presence checks (`IsBody`).
+  `WorkshopMinionTests` supplies independent correctness/determinism runs.
+- For Storehouse, assert self-production at full health, alternating bank output,
+  capacity pause and timer overshoot; no worker or minion is required. Capture
+  pays remaining stock once, neutralisation preserves stock, and the old owner's
+  re-claim produces again after healing (`StorehouseBankTests`).
+  Collect=9 starts at value 1 and cancels at 0; invalid/empty/non-owner requests
+  are hash-neutral refusals. A locked owner's start is accepted and paused.
+  Collection follows Storehouse production and precedes auto-recruit. Its shared
+  dwell clock adds 5/tick by default and pays one at 16, preserving remainder;
+  five units drain on ticks 4,7,10,13,16 without tempo scaling. Full pools pause
+  progress; priority is food/materials/metal, skipping full pools. No collector
+  resets progress; empty resets progress/request; cancel preserves progress only
+  if a stationary collector remains. Use BankRules for lock/collector/status;
+  Restore completion unlocks cash-out in the same tick. Ownership changes clear
+  requests/progress. ForgeMinion=8 and Collect=9 retain the six-int wire/log shape.
+  Market=13 is saved-data history, migrates to Storehouse=18 and is refused on
+  current packets. Workshop=19 joins the active roster.
+- For Piers, initialize moveLegDurationTicks to 0 off-leg; BeginLeg latches it and
+  ClearLeg clears it on arrival, corrupt-path recovery, combat, death, breach and
+  respawn. Per-era pierTravelDivisor defaults to 2; historical zero tuning has
+  ordinary physical travel, and release content must supply a positive divisor.
+  Test enemy transit stopping with its final target, garrison combat first, and
+  neutralisation using the existing global decrementMultiplier (default 4).
+  The neutralisation tick stops at zero: transit resumes after win-check and
+  moves next tick, while a destination continues ordinary full capture.
+  The shared position gate blocks over-cap Idle villagers, combat survivors,
+  fresh Move commands and every-tick resume. Only previousNodeID retreat escapes;
+  blocked Move retains targetNodeID. Lowest IDs occupy maxClaimersPerNode slots;
+  excess Idle villagers never advance the bar. Owner travel uses ceiling/minimum
+  one and never rescales after mid-edge ownership changes. Continuing preserves
+  progress and duration; reversing an 8-tick latch at 3 returns in exactly 3.
+  Route in the unit's physical ticks with existing preferences; own Pier uses
+  preference 100 once. Gate delay is ceil(current opposing bar / lone ClaimRate)
+  with current frontier/resistance, never on the start node. Test gate36/detour32,
+  gate24/detour32, speed-dependent routes, lowest-ID ceiling ties, odd durations,
+  next-leg latching, copy/hash completeness and read-only amber intent.
 - For Town, assert each player is paid once on their first full claim (including a
   raider taking the enemy Town), the reward is capped by population room and still
   consumes the entitlement, and ownership changes never re-pay or reset `townPaidMask`.
@@ -139,10 +208,11 @@ Step 6: Add determinism variant (always, for simulation tests)
 - Adding era fields preserves era-0 hashes by hashing those fields only
   when non-zero. BalanceHasherTests checks balance-field coverage;
   balance itself is outside SimulationStateHasher
-- The current baseline pin is version 3 (647286254 and 357327383 after C7). The neutral
-  recruit fields retain those two fingerprints; the terrain addition re-pinned both,
-  because terrain and boardHash are always hashed.
-  Conditional hashing does not make older simulation-version logs replayable
+- Current pins are version 4, 2084609368 / -1780012649. E1 removed six
+  unconditional zero structure terms from the bare three-node fixtures while
+  retaining D4's leg-clock terms; health is zero-neutral. Unreleased v4 stayed
+  v4. E2/E3/E4 do not move the pins. Tagged balance extensions omit absent/zero
+  values; missing active Workshop tuning cannot enable free forging.
 - Name this test with _Determinism suffix
 
 Step 7: Run the tests

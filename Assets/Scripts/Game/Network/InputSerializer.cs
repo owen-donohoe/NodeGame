@@ -117,7 +117,7 @@ namespace NodeWar.Network
 
             for (int i = 0; i < commandCount; i++)
             {
-                // UpgradeFortress=7 uses the existing six-integer payload.
+                // ForgeMinion=8, Collect=9 and UpgradeFortress=7 keep the six-integer payload.
                 if (!CommandTypes.IsKnown(input.commands[i].type))
                     throw new System.ArgumentException("Unknown command type.", nameof(input));
                 WriteInt(data, ref offset, (int)input.commands[i].type);
@@ -171,7 +171,7 @@ namespace NodeWar.Network
             for (int i = 0; i < commandCount; i++)
             {
                 input.commands[i].type = (CommandType)ReadInt(data, ref offset);
-                // UpgradeFortress=7 uses the existing six-integer payload.
+                // ForgeMinion=8 and UpgradeFortress=7 use the existing six-integer payload.
                 if (!CommandTypes.IsKnown(input.commands[i].type)) { input = default; return false; }
                 input.commands[i].playerID = ReadInt(data, ref offset);
                 input.commands[i].villagerID = ReadInt(data, ref offset);

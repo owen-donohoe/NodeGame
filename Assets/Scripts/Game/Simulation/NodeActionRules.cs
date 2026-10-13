@@ -15,9 +15,35 @@ namespace NodeWar.Simulation
         PopulationCap
     }
 
+    public enum ForgeMinionRefusal
+    {
+        None, InvalidPlayer, InvalidNode, NotWorkshop, NotOwned, EnemyPresent,
+        Cooldown, InvalidCost, CostAboveMetalCap, InsufficientMetal, PopulationCap
+    }
+
     /// <summary>Read-only eligibility shared by node commands, automatic production and UI.</summary>
     public static class NodeActionRules
     {
+        // Minions participate in combat, but never in economic presence or labour.
+        public static bool IsBody(VillagerData villager) => villager.suit != SuitType.Minion;
+
+        public static bool CanForgeMinion(SimulationState state, GameBalanceData balance, int playerID, int nodeID,
+            out ForgeMinionRefusal refusal)
+        {
+            refusal = ForgeMinionRefusal.None;
+            if (playerID < 0 || playerID > 1 || playerID >= state.players.Length) refusal = ForgeMinionRefusal.InvalidPlayer;
+            else if (nodeID < 0 || nodeID >= state.nodes.Length) refusal = ForgeMinionRefusal.InvalidNode;
+            else if (state.nodes[nodeID].districtType != DistrictType.Workshop) refusal = ForgeMinionRefusal.NotWorkshop;
+            else if (state.nodes[nodeID].ownerID != playerID) refusal = ForgeMinionRefusal.NotOwned;
+            else if (HasLivingEnemyAtNode(state, playerID, nodeID)) refusal = ForgeMinionRefusal.EnemyPresent;
+            else if (state.nodes[nodeID].recruitReadyTick > state.tickCount) refusal = ForgeMinionRefusal.Cooldown;
+            else if (!balance.TryForgeReadyTick(state.nodes[nodeID].districtEra, state.tickCount, out _)) refusal = ForgeMinionRefusal.InvalidCost;
+            else if (balance.metalCap > 0 && balance.minionMetalCost > balance.metalCap) refusal = ForgeMinionRefusal.CostAboveMetalCap;
+            else if (state.players[playerID].metal < balance.minionMetalCost) refusal = ForgeMinionRefusal.InsufficientMetal;
+            else if (CountPopulation(state, playerID) >= balance.maxVillagersPerPlayer) refusal = ForgeMinionRefusal.PopulationCap;
+            return refusal == ForgeMinionRefusal.None;
+        }
+
         private static RecruitRefusal ValidateVillage(SimulationState state, int playerID, int nodeID)
         {
             if (playerID < 0 || playerID > 1 || playerID >= state.players.Length)
@@ -76,7 +102,7 @@ namespace NodeWar.Simulation
             {
                 VillagerData v = state.villagers[i];
                 if (v.ownerID == 1 - playerID && v.currentNodeID == nodeID &&
-                    v.state != VillagerState.Dead && !v.isConsumed) return true;
+                    v.state != VillagerState.Dead && !v.isConsumed && IsBody(v)) return true;
             }
             return false;
         }

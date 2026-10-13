@@ -37,6 +37,11 @@ directly. This index exists so the set can be traversed as a graph, and so
 * [suit-tree-spec](suit-tree-spec.md) — draft: per-arena suit unlocks and branching variants
   mapped onto the existing era and catalog system, a content budget, and the lobby tree and
   info panel. Declares no sources: it describes work not yet done.
+* [ui-input-and-claim-rework](ui-input-and-claim-rework.md) — draft: a five-phase plan for the lobby
+  loadout screen (T layout, variants and skins panels), paint and triple-tap selection, bigger
+  and clearer villagers, ownership outlines and zoom dither, and a perimeter claim bar with a
+  view-only speed remap. Supersedes the lobby-tree view in suit-tree-spec. Declares no sources:
+  it describes work not yet done.
 * [notion-workspace](notion-workspace.md) — identifiers and property schemas for the Notion
   workspace that owns future and current work. Declares no sources: its subject is not code in
   this repo, so no commit here can make it stale.

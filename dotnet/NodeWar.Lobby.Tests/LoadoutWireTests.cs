@@ -123,7 +123,7 @@ namespace NodeWar.Lobby.Tests
         public void FullLoadout_SurvivesRoundTrip()
         {
             string[] suitPool = { "suit_warrior", "suit_guardian", "suit_berserker", "suit_scout", "suit_medic" };
-            string[] nodePool = { "node_pier", "node_market", "node_infirmary", "node_barracks" };
+            string[] nodePool = { "node_pier", "node_storehouse", "node_infirmary", "node_barracks" };
 
             LoadoutData original = LoadoutData.Normalized(new LoadoutData
             {

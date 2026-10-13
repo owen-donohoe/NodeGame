@@ -51,7 +51,7 @@ namespace NodeWar.Tests
                 return state;
             }
 
-            state.nodes[MiddleNode].districtType = DistrictType.Infirmary;
+            state.nodes[MiddleNode].districtType = DistrictType.Infirmary; state.nodes[MiddleNode].districtHealth = 3000;
             state.nodes[MiddleNode].baseDistrictType = DistrictType.Infirmary;
             state.nodes[MiddleNode].ownerID = 0;
             state.nodes[MiddleNode].claimBar = balance.claimThreshold;

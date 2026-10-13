@@ -27,7 +27,9 @@ namespace NodeWar.Simulation
         Pier = 14,
         Town = 15,
         Infirmary = 16,
-        Fortress = 17
+        Fortress = 17,
+        Storehouse = 18,
+        Workshop = 19
     }
 
     /// <summary>
@@ -74,9 +76,10 @@ namespace NodeWar.Simulation
         Scout,
         Berserker,
         Medic,
-        Merchant, // auto-assigned: Market worker
+        Merchant, // Historical Market suit; never assigned by active production
         Acolyte, // auto-assigned: Sanctuary worker
-        Watcher // auto-assigned: Watchtower worker
+        Watcher, // auto-assigned: Watchtower worker
+        Minion = 12
     }
 
     // ===== DATA STRUCTS =====
@@ -92,6 +95,14 @@ namespace NodeWar.Simulation
         public int ownerID;
         public int townPaidMask;
         public int fortressLevel;
+        public int districtHealth;
+        public int bankFood;
+        public int bankMaterials;
+        public int bankMetal;
+        public int collectProgress;
+        public bool collectRequested;
+        public int bankProductionRemaining;
+        public int storehouseNextResource;
         public int materialAllocation;
         public int recruitReadyTick;
         public bool autoRecruit;
@@ -129,6 +140,7 @@ namespace NodeWar.Simulation
         public int[] movePath;
         public int movePathIndex;
         public int moveProgress;
+        public int moveLegDurationTicks; // Zero off leg; latched until arrival or interruption.
         public int previousNodeID;
         public VillagerState state;
         public SuitType suit;
@@ -232,11 +244,13 @@ namespace NodeWar.Simulation
             if (source == null) throw new System.ArgumentNullException(nameof(source));
             if (ReferenceEquals(source, this)) return;
 
+            // Value-type clone includes banks, collection, district health, bank timers and every node scalar.
             nodes = source.nodes == null ? null : (NodeData[])source.nodes.Clone();
 
             if (source.villagers == null) villagers = null;
             else
             {
+                // Scalar clone includes the latched movement clock.
                 villagers = (VillagerData[])source.villagers.Clone();
                 for (int i = 0; i < villagers.Length; i++)
                     villagers[i].movePath = CopyInts(villagers[i].movePath);

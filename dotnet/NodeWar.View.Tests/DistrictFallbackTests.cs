@@ -7,6 +7,7 @@ namespace NodeWar.View.Tests
 {
     public class DistrictFallbackTests
     {
+        [TestCase((DistrictType)19,"Workshop","W","Crossroads")]
         [TestCase(DistrictType.Village,"Recruit","V","Village")]
         [TestCase(DistrictType.Town,"Town","T","Village")]
         [TestCase(DistrictType.Pier,"Pier","P","Crossroads")]

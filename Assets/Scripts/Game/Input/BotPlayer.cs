@@ -753,7 +753,7 @@ namespace NodeWar.Input
         private int PathCost(int fromNode, int toNode)
         {
             if (fromNode == toNode) return 0;
-            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode);
+            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode, GameSimulation.BaseMoveSpeedTicks);
             if (path.Length < 2) return int.MaxValue;
 
             int cost = 0;
@@ -787,7 +787,7 @@ namespace NodeWar.Input
         private int PathLength(int fromNode, int toNode)
         {
             if (fromNode == toNode) return 0;
-            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode);
+            int[] path = Pathfinding.FindPath(state, playerID, fromNode, toNode, GameSimulation.BaseMoveSpeedTicks);
             if (path.Length < 2) return -1;
             return path.Length - 1;
         }

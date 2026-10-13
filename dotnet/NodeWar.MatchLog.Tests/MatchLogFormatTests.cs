@@ -23,6 +23,15 @@ namespace NodeWar.MatchLog
         }
 
         [TestCase(0)] [TestCase(1)]
+        public void Collect_RoundTripsStartCancelAllFields(int value)
+        {
+            Assert.AreEqual("Collect", Enum.GetName(typeof(CommandType), 9));
+            var command = new GameCommand { type = (CommandType)9, playerID = 1, villagerID = -1, targetNodeID = 18, issuedOnTick = 123, value = value };
+            var log = TestLogs.Full(); log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
+            byte[] bytes = MatchLogFormat.Write(log); Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2)); Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
+        }
+
+        [TestCase(0)] [TestCase(1)]
         public void UpgradeFortress_RoundTripsBothCurrencies(int currency)
         {
             Assert.AreEqual("UpgradeFortress", Enum.GetName(typeof(CommandType), 7));
@@ -30,11 +39,11 @@ namespace NodeWar.MatchLog
             var log = TestLogs.Full(); log.ticks.Clear(); log.ticks.Add(new LoggedTick { tick = 123, commands = new[] { command } });
             byte[] bytes = MatchLogFormat.Write(log); Assert.AreEqual(34, TestLogs.IntAt(bytes, TestLogs.Find(bytes, 5) + 2)); Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
         }
-        [TestCase(5, 0, 0)] [TestCase(5, 1, 0)]
+        [TestCase(8, 0, 0)] [TestCase(8, 1, 0)] [TestCase(5, 0, 0)] [TestCase(5, 1, 0)]
         [TestCase(6, 0, 0)] [TestCase(6, 0, 1)] [TestCase(6, 1, 0)] [TestCase(6, 1, 1)]
         public void RecruitAndSetAuto_RoundTripAllFields(int type, int player, int value)
         {
-            Assert.AreEqual(type == 5 ? "Recruit" : "SetAutoRecruit", Enum.GetName(typeof(CommandType), type));
+            Assert.AreEqual(type == 8 ? "ForgeMinion" : type == 5 ? "Recruit" : "SetAutoRecruit", Enum.GetName(typeof(CommandType), type));
             var log = TestLogs.Full();
             var command = new GameCommand { type = (CommandType)type, playerID = player, villagerID = -1,
                 targetNodeID = 17, issuedOnTick = 123, value = value };
@@ -44,7 +53,7 @@ namespace NodeWar.MatchLog
             Assert.AreEqual(command, TestLogs.Read(bytes).ticks[0].commands[0]);
         }
 
-        [TestCase(-1)] [TestCase(8)] [TestCase(int.MaxValue)]
+        [TestCase(-1)] [TestCase(10)] [TestCase(int.MaxValue)]
         public void UnknownCommandType_IsRefused(int type)
         {
             var log = TestLogs.Full();

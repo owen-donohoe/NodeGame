@@ -6,19 +6,20 @@ namespace NodeWar.UI
     {
         private readonly NodeActionModel model=new NodeActionModel();
         private Label information;
-        private Button recruit, materials, metal;
+        private Button recruit, forgeMinion, materials, metal;
         private Toggle repeat;
         protected override int LayoutKey => (int)State.nodes[NodeID].districtType;
         public override ResourceKind InvolvedResources => State.nodes[NodeID].districtType==DistrictType.Village
-            ? ResourceKind.Food : State.nodes[NodeID].districtType==DistrictType.Fortress ? ResourceKind.Materials | ResourceKind.Metal : ResourceKind.None;
+            ? ResourceKind.Food : State.nodes[NodeID].districtType==DistrictType.Workshop ? ResourceKind.Metal : State.nodes[NodeID].districtType==DistrictType.Fortress ? ResourceKind.Materials | ResourceKind.Metal : ResourceKind.None;
         protected override void OnBind()
         {
             information=Caption(""); Root.Add(information);
             recruit=PrimaryButton(() => { if(model.TryRecruit(State,Balance,ControlledPID,NodeID,out var c)) Send(c); Refresh(); });
+            forgeMinion=PrimaryButton(() => { if(model.TryForgeMinion(State,Balance,ControlledPID,NodeID,out var c)) Send(c); Refresh(); });
             repeat=new Toggle("Repeat");
             repeat.RegisterValueChangedCallback(e => { if(model.TrySetAutoRecruit(State,Balance,ControlledPID,NodeID,e.newValue,out var c)) Send(c); Refresh(); });
             materials=PrimaryButton(() => Upgrade(0)); metal=PrimaryButton(() => Upgrade(1));
-            Actions.Add(recruit); Actions.Add(repeat); Actions.Add(materials); Actions.Add(metal);
+            Actions.Add(recruit); Actions.Add(forgeMinion); Actions.Add(repeat); Actions.Add(materials); Actions.Add(metal);
         }
         private void Upgrade(int currency)
         { if(model.TryUpgradeFortress(State,Balance,ControlledPID,NodeID,currency,out var c)) Send(c); Refresh(); }
@@ -29,6 +30,8 @@ namespace NodeWar.UI
             bool yours=State.nodes[NodeID].ownerID==ControlledPID;
             bool village=State.nodes[NodeID].districtType==DistrictType.Village;
             bool fortress=State.nodes[NodeID].districtType==DistrictType.Fortress;
+            Show(forgeMinion,yours&&State.nodes[NodeID].districtType==DistrictType.Workshop);
+            forgeMinion.text="Forge Minion - "+d.Price+" metal"; forgeMinion.SetEnabled(d.CanForge);
             Show(recruit,yours&&village); Show(repeat,yours&&village); Show(materials,yours&&fortress); Show(metal,yours&&fortress);
             recruit.text="Recruit - "+d.Price+" food"; recruit.SetEnabled(d.CanRecruit);
             repeat.SetValueWithoutNotify(d.AutoRecruit); repeat.SetEnabled(d.CanRepeat);
