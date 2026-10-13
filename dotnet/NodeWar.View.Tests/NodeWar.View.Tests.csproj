@@ -24,10 +24,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="NodeFloorFootprintTests.cs" />
-    <Compile Include="../../Assets/Scripts/Game/View/NodeFloorFootprint.cs" Link="View/NodeFloorFootprint.cs" />
-    <Compile Include="OwnershipZoomMathTests.cs" />
-    <Compile Include="../../Assets/Scripts/Game/View/OwnershipZoomMath.cs" Link="View/OwnershipZoomMath.cs" />
     <Compile Include="VillagerSwingMathTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/VillagerSwingMath.cs" Link="View/VillagerSwingMath.cs" />
     <Compile Include="VillagerFlashMathTests.cs" />

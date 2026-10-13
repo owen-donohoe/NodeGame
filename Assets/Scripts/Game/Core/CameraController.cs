@@ -132,7 +132,6 @@ namespace NodeWar.Core
         // Zoom state
         private float targetZoomDistance;
         private float currentZoomDistance;
-        private float lastCurrentZoomNormalized = float.NaN;
 
         // Side memory, one slot per ViewSide
         private struct SideState
@@ -478,13 +477,6 @@ namespace NodeWar.Core
             // the camera's local position.
             Vector2 shake = SampleShake();
             cam.transform.localPosition = new Vector3(shake.x, shake.y, -currentZoomDistance);
-
-            float normalized = GetCurrentZoomNormalized();
-            if (normalized != lastCurrentZoomNormalized)
-            {
-                lastCurrentZoomNormalized = normalized;
-                CurrentZoomChanged?.Invoke(normalized);
-            }
         }
 
         // ===== BOUNDS =====
@@ -600,12 +592,6 @@ namespace NodeWar.Core
         public event System.Action<float> ZoomChanged;
 
         /// <summary>
-        /// Raised after the current distance is applied, only when its gameplay
-        /// normalized value changes. World fades follow the smoothing here.
-        /// </summary>
-        public event System.Action<float> CurrentZoomChanged;
-
-        /// <summary>
         /// Raised when a zoom gesture starts and ends. The readout shows itself
         /// on the first and schedules its own fade on the second, so it answers
         /// "am I in zoom mode" and then leaves.
@@ -654,10 +640,6 @@ namespace NodeWar.Core
 
             return Mathf.Clamp01((targetZoomDistance - zoomMinDistance) / range);
         }
-
-        /// <summary>The applied distance in gameplay range; draft distances clamp to 1.</summary>
-        public float GetCurrentZoomNormalized()
-            => OwnershipZoomMath.Normalize(currentZoomDistance, zoomMinDistance, zoomMaxDistance);
 
         private void HandleZoomUpdate(float scaleFromStart)
         {

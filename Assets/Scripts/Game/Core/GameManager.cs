@@ -1554,17 +1554,6 @@ namespace NodeWar.Core
         private void SpawnNodeViews()
         {
             nodeParent = new GameObject("NodeViews").transform;
-            // A sibling root shares NodeViews' scene lifetime, but none of its
-            // renderers can enter a node's outline group or mesh lookup.
-            GameObject floor = new GameObject("NodeFloor");
-            floor.transform.SetParent(nodeParent.parent, false);
-            var floorPositions = new Vector3[state.nodes.Length];
-            for (int i = 0; i < floorPositions.Length; i++)
-                floorPositions[i] = new Vector3(state.nodes[i].gridX * boardConfig.nodeScale,
-                    0f, state.nodes[i].gridZ * boardConfig.nodeScale);
-            floor.AddComponent<NodeWar.View.NodeOwnershipFloor>().Initialize(
-                state, floorPositions, boardConfig.nodeScale, cameraController);
-
             villagerPositioners = new NodeWar.View.VillagerPositioner[state.nodes.Length];
             nodePresentations = new NodeWar.View.NodePresentation[state.nodes.Length];
             nodeViews = new NodeWar.View.NodeView[state.nodes.Length];
