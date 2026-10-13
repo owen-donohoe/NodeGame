@@ -1,4 +1,11 @@
 /* Workshop only: chrome remains owned by LobbyChrome. */
+:root {
+    --workshop-fam-round: rgb(127, 175, 99);
+    --workshop-fam-square: rgb(126, 140, 168);
+    --workshop-fam-triangle: rgb(195, 112, 90);
+    --workshop-fam-combat: rgb(201, 139, 94);
+}
+
 /* The page is flush, but its actions and local sheets must clear the floating lobby tabs. */
 .lb-workshop { flex-grow: 1; min-height: 0; padding: 8px; padding-bottom: 96px; position: relative; }
 .lb-workshop .ws-heading { font-size: 12px; margin-top: 3px; margin-bottom: 3px; color: var(--ink); }

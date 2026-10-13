@@ -122,13 +122,13 @@ namespace NodeWar.Lobby
                 Inventory = state.Inventory
             };
             LoadoutData choices = catalog.CurrentLoadout(launchState).ToLoadout();
-            PlayerProfile.Instance?.SetLoadout(choices);
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
             if (!LoadoutRules.IsComplete(choices, arena))
             {
                 Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
                 return false;
             }
+            if (launchState?.Rank != null) PlayerProfile.Instance?.SetLoadout(choices);
             frozenLoadout = LoadoutTypes.WithEquipment(choices, launchState);
             return true;
         }
