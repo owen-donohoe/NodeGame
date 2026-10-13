@@ -22,6 +22,15 @@ namespace NodeWar.View
         public bool useUprightPitch = true;
         [Range(0f, 89f)] public float uprightPitch = VillagerTiltMath.DefaultPitch;
 
+        private bool hasCanvas;
+        private SpriteOrientationOffset orientationOffset;
+
+        private void Awake()
+        {
+            hasCanvas = GetComponent<Canvas>() != null;
+            orientationOffset = GetComponent<SpriteOrientationOffset>();
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnEnterPlayMode()
         {
@@ -84,15 +93,14 @@ namespace NodeWar.View
             else
             {
                 // UI is independent of the sprite pitch, even on older prefabs.
-                bool upright = useUprightPitch && GetComponent<Canvas>() == null;
+                bool upright = useUprightPitch && !hasCanvas;
                 Vector3 cameraEuler = sharedFacing.eulerAngles;
                 var facing = VillagerTiltMath.Facing(cameraEuler.x, cameraEuler.y,
                     cameraEuler.z, upright, uprightPitch);
                 Quaternion rotation = upright
                     ? Quaternion.Euler(facing.Pitch, facing.Yaw, facing.Roll)
                     : sharedFacing;
-                SpriteOrientationOffset offset = GetComponent<SpriteOrientationOffset>();
-                transform.rotation = offset != null ? offset.Compose(rotation) : rotation;
+                transform.rotation = orientationOffset != null ? orientationOffset.Compose(rotation) : rotation;
             }
         }
     }

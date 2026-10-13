@@ -198,7 +198,7 @@ namespace NodeWar.Lobby
             SortByFamily(items);
             Item item = Find(items, loadout.PreviewId);
             Inspect(item ?? (items.Count > 0 ? items[0] : null));
-            RenderSlots(); RenderCards(); RenderInfo();
+            RenderSlots();
         }
         private void RenderSlots() { RenderSlotRow(districtSlots, false); RenderSlotRow(suitSlots, true); }
         private void RenderSlotRow(VisualElement host, bool isSuit)

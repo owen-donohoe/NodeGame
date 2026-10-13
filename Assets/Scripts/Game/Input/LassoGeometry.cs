@@ -17,22 +17,29 @@ namespace NodeWar.Input
             return true;
         }
 
-        public static bool Contains(IReadOnlyList<Vector2> points, Vector2 p, float radiusPx) =>
-            PaintGeometry.Contains(new PointAdapter(points), new GesturePoint(p.x, p.y), radiusPx);
+        private static readonly PointAdapter adapter = new PointAdapter();
 
-        public static PaintBounds Bounds(IReadOnlyList<Vector2> points, float radiusPx) =>
-            PaintGeometry.Bounds(new PointAdapter(points), radiusPx);
+        public static bool Contains(IReadOnlyList<Vector2> points, Vector2 p, float radiusPx)
+        {
+            adapter.Points = points;
+            return PaintGeometry.Contains(adapter, new GesturePoint(p.x, p.y), radiusPx);
+        }
+
+        public static PaintBounds Bounds(IReadOnlyList<Vector2> points, float radiusPx)
+        {
+            adapter.Points = points;
+            return PaintGeometry.Bounds(adapter, radiusPx);
+        }
 
         public static bool IsValid(IReadOnlyList<Vector2> points, float radiusPx) =>
             Bounds(points, radiusPx).IsValid;
 
         // No copied or smoothed points: membership sees the capture verbatim.
-        private readonly struct PointAdapter : IReadOnlyList<GesturePoint>
+        private sealed class PointAdapter : IReadOnlyList<GesturePoint>
         {
-            private readonly IReadOnlyList<Vector2> points;
-            public PointAdapter(IReadOnlyList<Vector2> points) { this.points = points; }
-            public int Count => points == null ? 0 : points.Count;
-            public GesturePoint this[int index] => new GesturePoint(points[index].x, points[index].y);
+            public IReadOnlyList<Vector2> Points;
+            public int Count => Points == null ? 0 : Points.Count;
+            public GesturePoint this[int index] => new GesturePoint(Points[index].x, Points[index].y);
             public IEnumerator<GesturePoint> GetEnumerator()
             {
                 for (int i = 0; i < Count; i++) yield return this[i];

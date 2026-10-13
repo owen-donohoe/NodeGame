@@ -51,6 +51,7 @@ namespace NodeWar.View
         private Transform gfxTransform;
         private bool spriteWidthMeasured;
         private float spriteWidth;
+        private VillagerFlash flash;
 
         private NodeWar.Core.ITickProvider tickProvider;
         private NodeWar.View.VillagerPositioner[] villagerPositioners;
@@ -180,7 +181,7 @@ namespace NodeWar.View
             if (!inCombat) swingStartTime = float.NegativeInfinity;
 
             // Flash is added by GameManager after Initialize, so resolve it here.
-            VillagerFlash flash = GetComponent<VillagerFlash>();
+            if (flash == null) flash = GetComponent<VillagerFlash>();
             if (!alive)
             {
                 if (flash != null) flash.Clear();
