@@ -1231,8 +1231,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
   Missing entries preserve existing board art. Board and flat UI art fall
   back independently.
 - `VillagerView` — villager visuals and movement interpolation. The sprite art
-  is the GFX child scaled to 1.35x its authored size (`VillagerLayoutMath`;
-  root, colliders and the breach radius are unchanged), faces through its
+  is the GFX child at the prefab's authored size (no runtime scaling; crowd
+  spacing in `VillagerLayoutMath` follows the measured sprite width), faces through its
   `Billboard` child, and `TryGetSpriteBounds` exposes the final sprite bounds
   (no health UI, particles or breach lines). It also holds the one per-tick
   observation of each villager, taken from `ITickProvider.TickSimulated` after

@@ -5,8 +5,6 @@ namespace NodeWar.View
     /// <summary>Presentation-only size and bounded, index-stable crowd slots.</summary>
     public static class VillagerLayoutMath
     {
-        public const float DefaultSizeMultiplier = 1.35f;
-
         public readonly struct Position
         {
             public readonly float X, Z;

@@ -9,7 +9,6 @@ namespace NodeWar.View
     {
         [Header("View")]
         [SerializeField] private float VillagerViewHeight = 0.1f;
-        [SerializeField, Min(0.01f)] private float spriteSizeMultiplier = VillagerLayoutMath.DefaultSizeMultiplier;
 
         [Header("Swing")]
         [SerializeField, Range(0f, 0.3f)] private float swingScaleAmount = 0.08f;
@@ -50,9 +49,7 @@ namespace NodeWar.View
         // Cached references
         private SpriteRenderer[] spriteRenderers;
         private Transform gfxTransform;
-        private Vector3 authoredGfxScale;
-        private float authoredSpriteWidth;
-        private bool gfxScaleCached;
+        private bool spriteWidthMeasured;
         private float spriteWidth;
 
         private NodeWar.Core.ITickProvider tickProvider;
@@ -97,21 +94,19 @@ namespace NodeWar.View
                         swingBaseScale = swingTransform.localScale;
                     }
                 }
-                if (!gfxScaleCached)
+                // Size is the prefab's. Measure the art as authored so crowd
+                // spacing follows whatever scale the prefab gives it.
+                if (!spriteWidthMeasured)
                 {
-                    authoredGfxScale = gfxTransform.localScale;
                     for (int i = 0; i < spriteRenderers.Length; i++)
                     {
                         SpriteRenderer renderer = spriteRenderers[i];
                         if (renderer.sprite != null)
-                            authoredSpriteWidth = Mathf.Max(authoredSpriteWidth,
+                            spriteWidth = Mathf.Max(spriteWidth,
                                 renderer.sprite.bounds.size.x * Mathf.Abs(renderer.transform.lossyScale.x));
                     }
-                    gfxScaleCached = true;
+                    spriteWidthMeasured = true;
                 }
-                // Always scale the cached authored baseline, including reinitialize.
-                gfxTransform.localScale = authoredGfxScale * VillagerLayoutMath.ScaledSize(1f, spriteSizeMultiplier);
-                spriteWidth = VillagerLayoutMath.ScaledSize(authoredSpriteWidth, spriteSizeMultiplier);
                 ConfigureSpacing();
             }
             else
