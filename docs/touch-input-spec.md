@@ -5,8 +5,8 @@ description: Landed controls contracts, including swept paint selection, deferre
 tags: [input, mobile, desktop, selection, settings, ux]
 generated: { by: claude-sonnet-5-5, at: 2026-10-04T00:00:00Z }
 verified:
-  - { by: gpt-6, at: 2026-10-10T23:25:20Z }
-verified_at_commit: db46340222335f6abee5534bd13b8d64d83d63c6
+  - { by: claude-opus-5-5, at: 2026-10-13T16:34:59Z }
+verified_at_commit: f0a21c0d5c61571e9e99ebcef25e6ceb551ad606
 status: draft
 # Runtime architecture lives in architecture.md; this document records the
 # controls contract and explicitly pending device checks.

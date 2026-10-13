@@ -79,6 +79,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: gpt-6, at: 2026-10-10T15:45:30Z }
 
 - { by: gpt-6, at: 2026-10-10T15:55:03Z }
+- { by: gpt-6, at: 2026-10-11T19:05:40Z }
 
 ## `docs/architecture.md`
 
@@ -127,6 +128,7 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T19:59:12Z }
+- { by: gpt-6, at: 2026-10-11T19:03:46Z }
 
 ## `docs/simulation-rules.md`
 
@@ -152,6 +154,7 @@ and inventing one is the one thing this system exists to prevent.
 - { by: claude-sonnet-5-5, at: 2026-10-08T17:27:11Z }
 
 - { by: claude-sonnet-5-5, at: 2026-10-09T01:54:09Z }
+- { by: gpt-6, at: 2026-10-10T16:56:36Z }
 
 ## `docs/skills/run-dotnet-tests.md`
 
@@ -284,6 +287,7 @@ and inventing one is the one thing this system exists to prevent.
 
 - { by: claude-sonnet-5-5, at: 2026-10-09T17:14:09Z }
 - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
+- { by: gpt-6, at: 2026-10-10T16:59:03Z }
 
 ## `.claude/skills/write-sim-test.md`
 
@@ -541,3 +545,7 @@ not an unread E1-E3 source backlog.
 The untracked main-checkout `pr-d.md` remains the lead's backlog. It was not copied
 or edited. Editor asset migration/fresh export, the explicit release-content gate,
 Unity visual/wiring checks and a Linux CI receipt were not performed by E4.
+
+## `docs/touch-input-spec.md`
+
+- { by: gpt-6, at: 2026-10-10T23:25:20Z }

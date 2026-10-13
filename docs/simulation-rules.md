@@ -6,8 +6,8 @@ tags: [simulation, determinism, lockstep, desync]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-10T16:56:36Z }
-verified_at_commit: 9ba34e8cef15a13ce37f2cc122827603463455d7
+  - { by: claude-opus-5-5, at: 2026-10-13T16:34:59Z }
+verified_at_commit: f0a21c0d5c61571e9e99ebcef25e6ceb551ad606
 status: stable
 sources:
   - id: sim-loop

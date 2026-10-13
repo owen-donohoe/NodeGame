@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: gpt-6, at: 2026-10-11T19:03:46Z }
-verified_at_commit: 912876a5731b374bdcc7ec7079f25931c3f31049
+  - { by: claude-opus-5-5, at: 2026-10-13T16:34:59Z }
+verified_at_commit: f0a21c0d5c61571e9e99ebcef25e6ceb551ad606
 status: stable
 sources:
   - id: pointer-gestures
@@ -1038,7 +1038,8 @@ Three objects are carried across the Lobby → Gameplay scene load via
 - `HitFlashRouter` — the single bridge from gesture events to renderers,
   so the input layer never touches a `SpriteRenderer` itself.
 - `LassoGeometry` / `ScreenMetrics` / `GestureThresholds` — pure helpers:
-  polygon containment and smoothing, millimetre-to-pixel conversion, and
+  capsule membership over the recorded points (an adapter onto `PaintGeometry`),
+  millimetre-to-pixel conversion, and
   the tunable thresholds.
 
 **UI/** (uGUI, `Assets/Scripts/Game/UI/`)
