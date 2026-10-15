@@ -85,8 +85,21 @@ function Read-Frontmatter {
         # A non-indented key ends the sources block and starts a new top-level key.
         if ($line -match '^[A-Za-z_]') {
             $inSources = ($line -match '^sources:')
+            # Compact inline form: sources: [a/b.cs, c/]
+            if ($line -match '^sources:\s*\[(.*)\]\s*$') {
+                foreach ($s in ($Matches[1] -split ',')) {
+                    $t = $s.Trim().Trim('"', "'")
+                    if ($t) { $result.Sources += $t }
+                }
+                $inSources = $false
+            }
             if ($line -match '^verified_at_commit:\s*(\S+)') {
                 $result.VerifiedAtCommit = $Matches[1].Trim('"', "'")
+            }
+            # Compact cards stamp `verified: <sha>`. The older list form of
+            # `verified:` (actor entries) has no value on the key line.
+            elseif ($line -match '^verified:\s*([0-9a-fA-F]{7,40})\s*$') {
+                $result.VerifiedAtCommit = $Matches[1]
             }
             elseif ($line -match '^stale_after:\s*(\S+)') {
                 $result.StaleAfter = $Matches[1].Trim('"', "'")
@@ -95,6 +108,10 @@ function Read-Frontmatter {
         }
 
         if ($inSources -and $line -match '^\s+-?\s*resource:\s*(.+?)\s*$') {
+            $result.Sources += $Matches[1].Trim('"', "'")
+        }
+        # Compact list form: one repo-relative path (file or directory) per item.
+        elseif ($inSources -and $line -match '^\s+-\s+([^:\s][^:]*?)\s*$') {
             $result.Sources += $Matches[1].Trim('"', "'")
         }
     }
@@ -183,7 +200,10 @@ $DeclarationPattern = '^[+-]\s*(\[.*\]\s*)?((public|internal|protected|private|s
 function Test-SurfaceChanged {
     param([string]$FromCommit, [string]$RepoRelativePath)
 
-    if ($RepoRelativePath -notmatch '\.cs$') { return $true }
+    # A directory source is judged by the same declaration pattern over its
+    # whole diff; markup and data lines rarely carry access modifiers.
+    $isDir = Test-Path -LiteralPath (Join-Path $RepoRoot $RepoRelativePath) -PathType Container
+    if (-not $isDir -and $RepoRelativePath -notmatch '\.cs$') { return $true }
 
     Push-Location $RepoRoot
     try {
@@ -356,6 +376,11 @@ foreach ($dir in $SearchDirs) {
             }
 
             $pendingHere = $pending.ContainsKey($source)
+            if (-not $pendingHere -and $source.EndsWith('/')) {
+                foreach ($p in $pending.Keys) {
+                    if ($p.StartsWith($source)) { $pendingHere = $true; break }
+                }
+            }
 
             if ((-not $isAncestor) -or $pendingHere) {
                 $movedIn = $sourceCommit.Substring(0, 7)
