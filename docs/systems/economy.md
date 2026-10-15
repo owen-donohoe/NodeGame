@@ -2,14 +2,11 @@
 system: economy
 summary: Resource production, district effects, recruitment, minions and bank collection inside deterministic match rules.
 sources:
-  - Assets/Scripts/Game/Simulation/GameBalanceData.cs
-  - Assets/Scripts/Game/Simulation/GameSimulation.cs
   - Assets/Scripts/Game/Simulation/BankRules.cs
-  - Assets/Scripts/Game/Simulation/NodeActionRules.cs
   - Assets/Scripts/Game/Simulation/DistrictHealth.cs
+  - Assets/Scripts/Game/Simulation/GameBalanceData.cs
+  - Assets/Scripts/Game/Simulation/NodeActionRules.cs
   - Assets/Scripts/Game/Simulation/PierGate.cs
-  - Assets/Scripts/Game/Simulation/CommandProcessor.cs
-  - Assets/Scripts/Game/Simulation/SimulationState.cs
 verified: a1da5182
 ---
 
