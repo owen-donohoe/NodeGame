@@ -2,8 +2,34 @@
 system: backend-client
 summary: Provides account-scoped async services and ranked flow controllers for Unity UI and match lifecycle callers.
 sources:
-  - Assets/Scripts/Backend/
-  - Assets/Scripts/Game/Core/MatchConnection.cs
+  - Assets/Scripts/Backend/BackendServices.cs
+  - Assets/Scripts/Backend/GameServices.cs
+  - Assets/Scripts/Backend/PendingRankedReports.cs
+  - Assets/Scripts/Backend/Shared/AccountService.cs
+  - Assets/Scripts/Backend/Shared/DisconnectHold.cs
+  - Assets/Scripts/Backend/Shared/InventoryService.cs
+  - Assets/Scripts/Backend/Shared/MatchHistoryService.cs
+  - Assets/Scripts/Backend/Shared/MatchReportService.cs
+  - Assets/Scripts/Backend/Shared/MatchReportTypes.cs
+  - Assets/Scripts/Backend/Shared/NodeWar.Backend.Shared.asmdef
+  - Assets/Scripts/Backend/Shared/PlayerState.cs
+  - Assets/Scripts/Backend/Shared/PlayerStateLogic.cs
+  - Assets/Scripts/Backend/Shared/PlayerStateService.cs
+  - Assets/Scripts/Backend/Shared/PresenceHeartbeat.cs
+  - Assets/Scripts/Backend/Shared/ProtocolVersion.cs
+  - Assets/Scripts/Backend/Shared/RankedMatchTypes.cs
+  - Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs
+  - Assets/Scripts/Backend/Shared/RankedQueueService.cs
+  - Assets/Scripts/Backend/Shared/RankedRendezvous.cs
+  - Assets/Scripts/Backend/Shared/RankedResultTracker.cs
+  - Assets/Scripts/Backend/Shared/RememberGuard.cs
+  - Assets/Scripts/Backend/UgsAccountService.cs
+  - Assets/Scripts/Backend/UgsInventoryService.cs
+  - Assets/Scripts/Backend/UgsMatchHistoryService.cs
+  - Assets/Scripts/Backend/UgsMatchReportService.cs
+  - Assets/Scripts/Backend/UgsPlayerStateService.cs
+  - Assets/Scripts/Backend/UgsRankedMatchService.cs
+  - Assets/Scripts/Backend/UgsRankedQueueService.cs
 verified: a1da5182
 ---
 
@@ -16,6 +42,8 @@ Client code asks services for authoritative account, inventory and ranked state.
 `GameServices.InitializeAsync()` initializes UGS without requiring a player; account sign-in uses it. Data services await `EnsureReadyAsync()` for initialization plus sign-in. Editor environment follows Project Settings; Development Builds use `development`, releases `production`.
 
 `BackendServices` selects `Ugs*Service` or `Local*Service` implementations for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `LastKnownState` and `StateChanged` expose accepted current-account state. `RememberGuard` rejects results belonging to a previous account. Cloud module name is `NodeWarCloud`.
+
+Shared `ProtocolVersion.Current` is 6; the network serializer aliases this constant, and server allocation checks it alongside simulation/content identity.
 
 Service contracts in UnityEngine-free `Backend/Shared/`:
 - `IAccountService`: `Current`, `Changed`, `EnsureSignedInAsync`, `LinkAsync`, `SwitchToLinkedAccountAsync`, `SignInWithAccountAsync`, `SignOutAsync`. `AccountInfo` carries status, player ID and display name; `LinkResult` distinguishes conflict from success.
