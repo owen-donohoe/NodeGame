@@ -2,16 +2,17 @@
 system: match-flow
 summary: Match lifecycle, driver selection and the composition of state, presentation, recording and disconnect handling.
 sources:
+  - Assets/Scripts/Game/Core/EmoteRateLimiter.cs
+  - Assets/Scripts/Game/Core/EmoteType.cs
+  - Assets/Scripts/Game/Core/FrameRateCap.cs
   - Assets/Scripts/Game/Core/GameManager.cs
-  - Assets/Scripts/Game/Core/TickRunner.cs
+  - Assets/Scripts/Game/Core/ICountdownPresenter.cs
+  - Assets/Scripts/Game/Core/IEmoteChannel.cs
   - Assets/Scripts/Game/Core/ITickProvider.cs
+  - Assets/Scripts/Game/Core/LocalEmoteChannel.cs
   - Assets/Scripts/Game/Core/MatchConnection.cs
   - Assets/Scripts/Game/Core/MatchTransitionController.cs
-  - Assets/Scripts/Game/Core/ICountdownPresenter.cs
-  - Assets/Scripts/Game/Core/FrameRateCap.cs
-  - Assets/Scripts/Game/Core/IEmoteChannel.cs
-  - Assets/Scripts/Game/Core/LocalEmoteChannel.cs
-  - Assets/Scripts/Game/Core/EmoteRateLimiter.cs
+  - Assets/Scripts/Game/Core/TickRunner.cs
   - Assets/Scripts/Game/Debug/
 verified: a1da5182
 ---
@@ -33,6 +34,8 @@ Compose one playable match from setup, deterministic rules and Unity presentatio
 `MatchTransitionController.SetCountdownPresenter(ICountdownPresenter)` binds countdown visuals. `PlayPostDraftTransition(localPlayerID, placeholders, nodePresentations, state, BoardConfig)` handles reveal/handoff; `PlayNodeStartupWave` and `PlayNodeBreakdownWave` animate board presentation. `OnRequestPlayerSideSwitch(int)` and `OnStartupTransitionComplete` return control to the manager. `ICountdownPresenter.PlayCountdown(Action onComplete)` completes the phase without owning rules.
 
 `FrameRateCap.Apply(frameCap)` applies presentation frame-rate preferences. `IEmoteChannel.Send(EmoteType)` and `EmoteReceived(int playerID, EmoteType)` abstract local/network cosmetic messaging; `LocalEmoteChannel` supplies the local path and `EmoteRateLimiter` limits delivery.
+
+`EmoteType` is the shared cosmetic vocabulary; transport implementation belongs to `netcode`, draft presenter contract to `draft`, and screen implementations to `match-ui`.
 
 ## Connects to
 - `board`: `MatchFactory.Configure` and `Fill` provide the shared starting state from resolved setup.
