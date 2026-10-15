@@ -43,6 +43,9 @@ Make live peers, recorded replay and headless/referee runs start from the same l
 - `cloud`: referee checks map against its catalog and balance against a content-addressed export.
 - `progression`: selected suit/district variants become `PlayerSetup` era tables.
 - `tooling`: map validation, balance exports and content/hash tests guard shipped data.
+- `bots`: rig setup configures and builds the same catalog board through `MatchFactory`.
+- `input`: Core positions and dimensions supply camera anchors and bounds.
+- `world-view`: sparse cell/node mappings and terrain drive ground and district placement.
 
 ## Invariants
 There is one recorded-match tick-0 builder. IDs follow ascending cell order with water gaps removed; links join orthogonally adjacent node-bearing cells only. Land has nodes, Ocean never does, Lake only with a drafted Pier. Runtime/log/draft accept active district values only; reserved retired numbers never become aliases. Board data does not belong in mutable match state except its identity and constructed nodes.
