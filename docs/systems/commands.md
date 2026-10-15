@@ -48,6 +48,8 @@ Represent player actions identically for local play, network peers, bots and rep
 - `match-ui`: reads `CommandEligibility` and shared economic helpers; panels enqueue actions.
 - `bots`: emits the same `GameCommand` vocabulary as humans.
 - `match-log`: records/replays command batches; layout changes require coordinated log tags.
+- `world-view`: `MoveIssued` starts pending-order feedback; applied state replaces that preview.
+- `tooling`: serializer/log compatibility and refusal tests guard command evolution.
 
 ## Invariants
 Input, UI and views never mutate `SimulationState`. Validate ownership, state, tuning and cost before applying; an input preview cannot authorise an action. Node actions use the documented sentinel/value conventions. Enum numbers are persisted; keep wire and log acceptance coordinated. Buffer order and cross-player ordering are gameplay inputs.
