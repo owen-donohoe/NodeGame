@@ -12,7 +12,9 @@ engineer can implement without guessing, and keeps the docs and the Roadmap true
 ## 1. Load the slice
 
 1. The Roadmap item (Notion **Roadmap**, data source
-   `collection://9aa1895c-262d-4843-80a0-6bda9d3fcfbd`). Its `Systems` property names
+   `collection://9aa1895c-262d-4843-80a0-6bda9d3fcfbd`; list rows in view mode on
+   `view://d9127d3c-a1b0-445c-be79-e892b8d39580`, which has no quota, or fetch the
+   item's page directly). Its `Systems` property names
    the cards in scope; its body holds the decisions already made. Do not re-ask them.
 2. `docs/map.md`, whole.
 3. `powershell -File scripts/context.ps1 -Systems <the item's systems>`.

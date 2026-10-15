@@ -13,6 +13,11 @@ Identifiers: page **Node** `3cde745f-f2df-8139-8e3d-e93fac741de0`; database
 (properties: Item, Status Future/Now/Done, Area, Release, Systems, Order, Shipped).
 The Node page's first line records `Last update: <sha>`.
 
+Read rows with `notion-query-data-sources` in **view mode** on
+`view://d9127d3c-a1b0-445c-be79-e892b8d39580` (the Default view, all rows) and filter
+in your head. View mode has no plan quota; SQL mode shares a small workspace
+quota and has run out before.
+
 ## Read (stop when you have enough)
 
 1. The Node page's `Last update` sha.
