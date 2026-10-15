@@ -50,7 +50,6 @@ Pages:
 - `match-ui`: shared settings/Controls and scene transition support match entry/return.
 - `input`: persisted bindings select intents; settings do not change simulation rules.
 - `ui-art`: `LobbyIcon`, district art, family/tint fallbacks and shared theme style pages.
-- `match-log`: history offers results; replay-viewer work remains separate.
 - `bots`: accepted queue fallback launches an unranked local bot match.
 
 ## Invariants
