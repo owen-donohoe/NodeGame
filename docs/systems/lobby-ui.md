@@ -2,12 +2,68 @@
 system: lobby-ui
 summary: Presents account, loadout and ranked entry flows while keeping local preferences separate from server progression.
 sources:
-  - Assets/UI/Scripts/
-  - Assets/UI/Layouts/
-  - Assets/UI/Styles/
-  - Assets/UI/Editor/UIToolkitLobbySetup.cs
-  - Assets/Scripts/Lobby/
   - Assets/Legacy/
+  - Assets/Scripts/Lobby/Data/DistrictDefinition.cs
+  - Assets/Scripts/Lobby/Data/LoadoutData.cs
+  - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
+  - Assets/Scripts/Lobby/Data/LoadoutRecord.cs
+  - Assets/Scripts/Lobby/Data/LoadoutTypes.cs
+  - Assets/Scripts/Lobby/Data/PlayerProfileData.cs
+  - Assets/Scripts/Lobby/Data/SuitDefinition.cs
+  - Assets/Scripts/Lobby/LobbyManager.cs
+  - Assets/Scripts/Lobby/PlayerProfile.cs
+  - Assets/Scripts/Lobby/TrophyBarLogic.cs
+  - Assets/UI/Layouts/HomePage.uxml
+  - Assets/UI/Layouts/LobbyRoot.uxml
+  - Assets/UI/Layouts/MatchHistoryPage.uxml
+  - Assets/UI/Layouts/PlayPopup.uxml
+  - Assets/UI/Layouts/ProfilePage.uxml
+  - Assets/UI/Layouts/SettingsPage.uxml
+  - Assets/UI/Layouts/ShopPage.uxml
+  - Assets/UI/Layouts/SocialPage.uxml
+  - Assets/UI/Layouts/WorkshopPage.uxml
+  - Assets/UI/Scripts/AccountFlow.cs
+  - Assets/UI/Scripts/AccountLinkPrompt.cs
+  - Assets/UI/Scripts/ControlsPanel.cs
+  - Assets/UI/Scripts/ControlsViewModel.cs
+  - Assets/UI/Scripts/EraChips.cs
+  - Assets/UI/Scripts/HomePage.cs
+  - Assets/UI/Scripts/LoadoutCatalog.cs
+  - Assets/UI/Scripts/LoadoutChoices.cs
+  - Assets/UI/Scripts/LoadoutEditor.cs
+  - Assets/UI/Scripts/LoadoutInfoModel.cs
+  - Assets/UI/Scripts/LoadoutRules.cs
+  - Assets/UI/Scripts/LoadoutScreenModel.cs
+  - Assets/UI/Scripts/LobbyBackdrop.cs
+  - Assets/UI/Scripts/LobbyChrome.cs
+  - Assets/UI/Scripts/LobbyContextMenu.cs
+  - Assets/UI/Scripts/LobbyPage.cs
+  - Assets/UI/Scripts/LobbyPushPage.cs
+  - Assets/UI/Scripts/LobbySheet.cs
+  - Assets/UI/Scripts/LobbySwitch.cs
+  - Assets/UI/Scripts/LobbyToast.cs
+  - Assets/UI/Scripts/LobbyUIController.cs
+  - Assets/UI/Scripts/LongPressManipulator.cs
+  - Assets/UI/Scripts/MatchHistoryPage.cs
+  - Assets/UI/Scripts/MatchHistoryRow.cs
+  - Assets/UI/Scripts/MatchLauncher.cs
+  - Assets/UI/Scripts/MatchLauncherConnection.cs
+  - Assets/UI/Scripts/NavigationController.cs
+  - Assets/UI/Scripts/PlaceholderPage.cs
+  - Assets/UI/Scripts/PlayPopup.cs
+  - Assets/UI/Scripts/ProfilePage.cs
+  - Assets/UI/Scripts/RankDisplay.cs
+  - Assets/UI/Scripts/RankedQueueViewElement.cs
+  - Assets/UI/Scripts/SafeAreaBinder.cs
+  - Assets/UI/Scripts/SceneTransition.cs
+  - Assets/UI/Scripts/SettingsPage.cs
+  - Assets/UI/Scripts/ShopPage.cs
+  - Assets/UI/Scripts/SkinBand.cs
+  - Assets/UI/Scripts/SkinBandMath.cs
+  - Assets/UI/Scripts/SocialPage.cs
+  - Assets/UI/Scripts/UnlockState.cs
+  - Assets/UI/Scripts/WorkshopInventorySession.cs
+  - Assets/UI/Scripts/WorkshopPage.cs
 verified: a1da5182
 ---
 
