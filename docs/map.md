@@ -2,7 +2,7 @@
 summary: Every Node War system, every connector between them, the three flows, the cross-cutting versions and boundaries, and the top pressure points.
 sources:
   - docs/systems/
-verified: a1da5182
+verified: a35341b2
 ---
 
 # System map
@@ -26,23 +26,50 @@ client data; rating, ranked outcomes and inventory remain server-owned.
 | `economy` | `Game/Simulation/` | Resources, production, district behaviours, banks, recruiting, minions |
 | `commands` | `Game/Simulation/Commands.cs`, `CommandProcessor.cs`, `Game/Input/CommandSystem.cs`, `InputBuffer.cs`, UI `CommandEligibility.cs` | Command vocabulary, intent buffering and authoritative application |
 | `board` | `Simulation/MatchFactory`, `PremadeMaps`, `Game/Config/` | Maps, terrain, the tick-0 board, balance data, version hashes |
-| `draft` | `Simulation/DraftState`, `Core/DraftManager` | Pre-match placement turns |
+| `draft` | `Simulation/DraftState.cs`, `Core/DraftManager.cs`, `IDraftPresenter.cs`, `Network/DraftSerializer.cs` | Placement rules, turn orchestration and draft contract/wire data |
 | `match-flow` | `Game/Core/`, `Game/Debug/` | Lifecycle, local tick driver, persistent connection and shared presenter/channel contracts |
 | `netcode` | `Game/Network/` | Lockstep transport, input delay, speculation, holds, emotes |
 | `input` | `Game/Input/` gesture/selection routing, Core camera, Lobby settings data | Physical input, selection, camera and bindings; command application belongs to `commands` |
-| `world-view` | `Game/View/` | World presentation of the board, nodes, villagers, paths, indicators |
-| `match-ui` | `Assets/UI/Scripts/Gameplay/`, `Game/UI/` | In-match HUD, node sheet, draft screen, end card |
+| `world-view` | `Game/View/`, `Game/UI/Selection/`, `Game/UI/Worldspace/` | World art, units, paths, outlines, indicators and paint rendering |
+| `match-ui` | `Assets/UI/Scripts/Gameplay/` except command eligibility; `Game/UI/` panels/draft; match layouts/styles | HUD, node sheet, draft screen, end card and screen implementations |
 | `bots` | `Input/BotPlayer`, `dotnet/NodeWar.BalanceRig` | The scripted bot and the headless rig |
 | `match-log` | `Assets/Scripts/MatchLog/`, referee | Log format, recorder, replay, referee |
 | `backend-client` | `Assets/Scripts/Backend/` | Client services, fakes, ranked flow presenters |
 | `cloud` | `dotnet/NodeWarCloud/` | Cloud Code functions, records, settlement, matchmaking |
 | `progression` | `dotnet/NodeWar.Progression/`, Backend catalog and shared eligibility/ID policies | Pure rating/settlement, catalog, variants, arena and inventory policies |
-| `lobby-ui` | `Assets/UI/Scripts/`, `Assets/Scripts/Lobby/` | Lobby screens and their local data |
-| `ui-art` | `Assets/UI/` theme and icons | UI art theme, icon kinds, art lookup |
+| `lobby-ui` | `Assets/UI/Scripts/` lobby types, lobby layouts, `Assets/Scripts/Lobby/` except input settings, `Assets/Legacy/` | Pages, launch/account flows and local profile/loadout data |
+| `ui-art` | `Assets/UI/` theme/icon types, fonts, shared/page styles and theme drawer | Semantic art lookup, procedural fallback and theme authoring |
 | `tooling` | `dotnet/NodeWar.sln`, `Assets/Tests/`, `scripts/`, CI and shared Editor infrastructure | Verification procedures, guards, receipts and build/setup tooling |
 
 `Game/...` abbreviates `Assets/Scripts/Game/...`. Card `sources:` identify ownership;
 references to a neighbour's types describe consumption, not a second owner.
+
+## Connector index
+
+Each reciprocal card relationship appears once below. These are interface/data
+neighbours, not permission to mutate a neighbour's state. The explicit one-way
+dependency is `bots` → `cloud`: the rig reads exported balance files without
+calling Cloud Code.
+
+| System | Other neighbours (each pair listed once) |
+|---|---|
+| `backend-client` | `bots`, `cloud`, `lobby-ui`, `match-flow`, `match-log`, `match-ui`, `netcode`, `progression` |
+| `board` | `bots`, `cloud`, `draft`, `economy`, `input`, `match-flow`, `match-log`, `netcode`, `progression`, `simulation`, `tooling`, `world-view` |
+| `bots` | `commands`, `draft`, `economy`, `lobby-ui`, `match-flow`, `simulation`, `tooling` |
+| `cloud` | `draft`, `economy`, `match-log`, `netcode`, `progression`, `tooling` |
+| `commands` | `economy`, `input`, `match-flow`, `match-log`, `match-ui`, `netcode`, `simulation`, `tooling`, `world-view` |
+| `draft` | `economy`, `lobby-ui`, `match-flow`, `match-log`, `match-ui`, `netcode`, `progression`, `simulation`, `world-view` |
+| `economy` | `match-ui`, `progression`, `simulation`, `tooling` |
+| `input` | `lobby-ui`, `match-flow`, `match-ui`, `simulation`, `tooling`, `world-view` |
+| `lobby-ui` | `match-flow`, `match-ui`, `netcode`, `progression`, `ui-art` |
+| `match-flow` | `match-log`, `match-ui`, `netcode`, `simulation`, `world-view` |
+| `match-log` | `netcode`, `progression`, `simulation`, `tooling` |
+| `match-ui` | `netcode`, `simulation`, `tooling`, `ui-art`, `world-view` |
+| `netcode` | `simulation`, `tooling`, `world-view` |
+| `progression` | `simulation`, `tooling` |
+| `simulation` | `tooling`, `world-view` |
+| `tooling` | `ui-art`, `world-view` |
+| `ui-art` | `world-view` |
 
 ## Flow 1: a match starts
 
