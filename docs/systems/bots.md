@@ -33,8 +33,10 @@ CLI: `dotnet run --project dotnet/NodeWar.BalanceRig -- --matches 100 --seed 1 -
 - `board`: rig installs `MatchFactory.Configure` and builds with `MatchFactory.Build`, using catalog terrain/identity.
 - `draft`: rig generates legal placements; live bot draft orchestration remains with `DraftManager`.
 - `match-flow`: `TickRunner.SetBot` evaluates the local opponent before ticks.
-- `cloud`: exported balances are the same content-addressed inputs used by referee replay.
+- `cloud`: one-way content dependency: the rig reads exported balance files shipped with the referee; it makes no Cloud Code calls.
 - `tooling`: `NodeWar.BalanceRig.Tests` guards setup, repeatability and measurements.
+- `backend-client`: queue fallback offers an unranked bot match and cancels the ticket before acceptance handoff.
+- `lobby-ui`: `MatchLauncher` starts the accepted local bot match without a ranked record.
 
 ## Invariants
 Live and headless bot source is linked, not copied. Apply commands P0 then P1, preserving each player's issue order. Match cap is a capped outcome, never an invented winner. Runs execute sequentially because simulation configuration is process-global. Randomness in pre-match rig drafting does not become tick-time randomness.

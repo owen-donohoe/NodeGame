@@ -48,6 +48,8 @@ Shared `CatalogIds` builds/parses `suit.<base>`, `district.<base>`, `<baseId>.e<
 - `simulation`: variant indices select gameplay balance; skins never enter state or hashes.
 - `match-log`: eras and cosmetic skin IDs preserve the recorded loadout.
 - `tooling`: Editor exports catalog/balance data for server validation.
+- `board`: fielded variants become `PlayerSetup` era tables for tick-zero construction.
+- `economy`: era-indexed balance lookups consume eligible variant indices without reading inventory.
 
 ## Invariants
 Persisted IDs are never casually renamed/reused; domain enum names are not storage keys. Ownership survives demotion. Equipped eligibility uses current arena, grants use highest arena. Tree availability and generic era eligibility are different rules. Server-only rating doubles never enter simulation. Skins remain cosmetic.

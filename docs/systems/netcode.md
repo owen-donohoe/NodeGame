@@ -2,12 +2,13 @@
 system: netcode
 summary: Exchanges deterministic tick inputs, agrees match setup, and keeps peer play recoverable across packet loss.
 sources:
-  - Assets/Scripts/Game/Network/
-  - Assets/Scripts/Game/Core/MatchConnection.cs
-  - Assets/Scripts/Game/Core/IEmoteChannel.cs
-  - Assets/Scripts/Game/Core/LocalEmoteChannel.cs
-  - Assets/Scripts/Game/Core/EmoteRateLimiter.cs
-  - Assets/Scripts/Backend/Shared/ProtocolVersion.cs
+  - Assets/Scripts/Game/Network/InputDelayController.cs
+  - Assets/Scripts/Game/Network/InputSerializer.cs
+  - Assets/Scripts/Game/Network/LocalBuildIdentity.cs
+  - Assets/Scripts/Game/Network/LockstepCore.cs
+  - Assets/Scripts/Game/Network/NetworkManager.cs
+  - Assets/Scripts/Game/Network/NetworkManagerTransport.cs
+  - Assets/Scripts/Game/Network/SetupAgreement.cs
   - dotnet/NodeWar.Network.Tests/
 verified: a1da5182
 ---
@@ -28,9 +29,9 @@ Observers receive `LocalInputDue`, `TickSimulated(TickEventLog)`, `ConfirmedTick
 
 `BuildIdentity` is `{ ushort protocol, ushort sim, int content }`. `LocalBuildIdentity.Current` supplies it; `SetupFor(mapId)` supplies `MatchSetup` with map ID, board hash, simulation version and balance hash. `ProtocolVersion.Current` is 6, aliased by `InputSerializer`; simulation identity comes from `SimulationVersion.Current`, content from shared balance hashing. `SetupAgreement.Host/Guest`, `NextToSend`, `Receive`, `Agreed`, `Refused` and `AcceptsDraftPackets` gate draft delivery against the shipped board catalog.
 
-Persistent `Core/MatchConnection` carries `networkManager`, local slot, network/bot/spectator flags, loadout, ranked flag, server match ID and ordered player IDs across scenes. `Shutdown` clears the connection.
+The `match-flow`-owned persistent `Core/MatchConnection` carries transport, local slot, mode/loadout and ordered ranked identity across scenes. `Shutdown` clears the connection.
 
-`IEmoteChannel.Send(EmoteType)` and `EmoteReceived(int, EmoteType)` work through the core or `LocalEmoteChannel`. `EmoteRateLimiter.TryAccept(now)` and `NextAllowedTime(now)` support HUD send/receive limits.
+The `match-flow`-owned `IEmoteChannel.Send(EmoteType)` and `EmoteReceived(int, EmoteType)` work through the core or `LocalEmoteChannel`. `EmoteRateLimiter.TryAccept(now)` and `NextAllowedTime(now)` support HUD send/receive limits. The shared protocol constant belongs to `backend-client`; `DraftSerializer` belongs to `draft`.
 
 ## Connects to
 - `commands`: `InputBuffer` supplies local commands; sender-stamped commands enter `CommandProcessor` in slot order.
@@ -42,6 +43,9 @@ Persistent `Core/MatchConnection` carries `networkManager`, local slot, network/
 - `backend-client`: `DisconnectHold` and `PresenceHeartbeat` resolve ranked silence through server authority.
 - `world-view`: tick interpolation, tick cues and rollback cleanup follow core events.
 - `match-ui`: emotes, unstable-link banners and hold controls observe channels and status.
+- `cloud`: ticket/record checks enforce the protocol, simulation and content identity used by peers.
+- `lobby-ui`: `MatchLauncher` connects Relay/LAN peers and carries ranked roster order across scenes.
+- `tooling`: lossy-link reference scenarios verify confirmed results, rollback and adaptive delay.
 
 ## Invariants
 Apply all P0 commands before P1 commands; stamp command ownership from sender slot, never wire claims. Limit each player to 64 commands per tick and reject implausible tick numbers. DirectUDP reads only the connected endpoint. Identity mismatch refuses connection; setup disagreement refuses draft. Never record, hash or settle speculative state.

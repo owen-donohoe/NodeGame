@@ -23,7 +23,7 @@ Let each player choose district positions on a shared map before ticks begin. De
 
 `Core/DraftManager.Initialize` receives `BoardConfig`, `NetworkManager`, seat, network/bot flags, camera, cell prefab, local `LoadoutData` and terrain view. `SetDraftUI(IDraftPresenter)` binds presentation. UI calls `ConfirmLocalPlacement(slotIndex, x, z)`, `SetHighlightedPick`, `IsLocalPlayerTurn`, `GridToWorld` and `WorldToGrid`. Read `State`, `LocalPlayerID`, `GetLocalLoadout` and `GetRemoteLoadout`; `OnDraftComplete` is `Action<DraftResult>`, `OnDraftDisconnect` is `Action`.
 
-`IDraftPresenter` receives `Initialize(manager, localPlayerID)`, `ShowWaiting`, `ShowInitialReveal(initialPlacements)`, `SweepIn(state, seat)`, `SweepOut`, `UpdateTimer(remaining, total)`, `OnTurnChanged(state, seat)` and `OnPlacementConfirmed(placement)`. Its only query is `TryGetPendingPlacement(out slotIndex, out gridX, out gridZ)` for timeout choice. Screen implementation belongs to match UI.
+`IDraftPresenter` receives `Initialize(manager, localPlayerID)`, `ShowWaiting`, `ShowInitialReveal(initialPlacements)`, `SweepIn(state, seat)`, `SweepOut`, `UpdateTimer(remaining, total)`, `OnTurnChanged(state, seat)` and `OnPlacementConfirmed(placement)`. `TryGetPendingPlacement(out slotIndex, out gridX, out gridZ)` reports timeout choice; `GetPersistentPlacements()` returns world objects handed to match transitions. Screen implementation belongs to match UI.
 
 `DraftSerializer` encodes setup/setup-ack, ready, loadout and placement packets. `SerializeDraftPlacement(playerID, districtType, gridX, gridZ, wasTimeout)` sends district identity, not slot index; matching deserialisation returns those values. `TryDeserializeDraftLoadout` provides checked loadout decoding. `InputSerializer` carries draft acknowledgements with ready/loadout receipt and applied-placement count; the manager owns retries/progress.
 
@@ -36,6 +36,10 @@ Let each player choose district positions on a shared map before ticks begin. De
 - `bots`: configured bot pools use map base districts plus bot loadout districts and automatic picks.
 - `world-view`: camera, terrain and grid/world conversion support placement presentation.
 - `simulation`: drafted districts become Fixed, unowned nodes at the placer's era when the match is built.
+- `economy`: district types and placer's era select the starting economic stats.
+- `cloud`: ranked eligibility checks chosen capacities and placed district multisets against snapshots.
+- `lobby-ui`: normalized chosen `LoadoutData` supplies pieces and the applicable free grants.
+- `match-log`: resolved loadouts and ordered placements are recorded to rebuild tick-zero state.
 
 ## Invariants
 No placement before map/rules agreement. A valid cell is an empty district slot, never a Core: Land for ordinary districts, Lake for Pier, never Ocean. Inactive district values are refused without runtime aliases. A refused choice consumes nothing. A pick with no legal cell is unplayable rather than forced. Presentation cannot choose rule exceptions.

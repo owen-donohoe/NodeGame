@@ -11,12 +11,14 @@ sources:
   - Assets/Scripts/Game/Simulation/Commands.cs
   - Assets/Scripts/Game/Simulation/CommandProcessor.cs
   - Assets/Scripts/Game/Simulation/DraftState.cs
-  - docs/design-history/README.md
+  - Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs
+  - Assets/Scripts/Backend/Shared/SuitTree.cs
+  - dotnet/NodeWar.Progression/EraUnlocks.cs
   - Assets/Scripts/Game/Simulation/MatchFactory.cs
   - Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset
   - Assets/Scripts/Game/Simulation/DistrictHealth.cs
   - Assets/Scripts/Game/Simulation/NodeActionRules.cs
-verified: a1da5182
+verified: a35341b2
 ---
 
 # Node War
@@ -33,7 +35,7 @@ The shipped `hourglass-01` map is a mirrored 7×7 grid ringed by ocean. Cores si
 
 Each player begins with one owned Core and three villagers. Other districts begin neutral. A player may have at most 25 units; dead bodies still occupy population, permanently consumed units do not.
 
-Before play, both players agree to the same map and rules, then manually place districts in a turn-based draft. Both map base pools contain Farm, Mine and Village; loadout pieces add choices. P0 places first. Ordinary districts require empty Land slots; Pier requires an empty Lake slot; Cores and Ocean cannot receive picks. A piece with no legal cell is skipped. Draft ends when neither player has a playable piece.
+Before play, both players agree to the same map and rules, then manually place districts in a turn-based draft. Below arena index 2, each player chooses two suits and two districts and receives Warrior plus the map's Farm/Mine/Village base pool. From arena index 2, each chooses three suits and five districts without those grants; Warrior can be omitted. P0 places first. Ordinary districts require empty Land slots; Pier requires an empty Lake slot; Cores and Ocean cannot receive picks. A piece with no legal cell is skipped. Draft ends when neither player has a playable piece.
 
 On timeout, a still-legal parked piece is confirmed. Otherwise the lowest playable pick receives a legal fallback placement. Drafted districts use their placer's era and keep their type/era when captured. They do not transform into the capturing player's loadout choice. Rules also support upgrade-category slots whose full capture selects the claimer's drafted district, falling back to the base district.
 
@@ -113,7 +115,7 @@ Workshop forging costs 3 metal, with a 30-tick per-era cooldown, and never repea
 
 ## Combat suits, fighting and recovery
 
-Equipping a combat suit requires an Idle body without a combat suit, its owner's permitted district, a suit chosen in the player's loadout and enough food/materials. Missing suit stats prevent equipping. Warrior, Guardian, Scout and Berserker provide their balance-defined fighting/movement stats; Medic heals the most damaged friendly unit on its node instead of attacking. Combat-suited bodies never work.
+Equipping a combat suit requires an Idle body without a combat suit, its owner's permitted district, a suit in the player's resolved drafted suits and enough food/materials. This includes the free Warrior at low arenas. Missing suit stats prevent equipping. Warrior, Guardian, Scout and Berserker provide their balance-defined fighting/movement stats; Medic heals the most damaged friendly unit on its node instead of attacking. Combat-suited bodies never work.
 
 Opposing living units sharing a node enter combat. Attackers assign targets round-robin, with targets ordered by descending fight priority then unit ID. Attacks follow cooldowns; district ownership does not directly reduce damage. A Medic heals instead on its combat turn.
 
@@ -133,7 +135,7 @@ Tempo stages start at ticks 1200 and 1800 (two/three minutes). Claim rates becom
 
 ## Eras and skins
 
-Arena 0–5 corresponds to era 0–5. Reaching an arena grants its variants; fielding them requires remaining at or above that arena. The server grants/checks ownership and eligibility. Matchmaking keeps opponents within one arena because rating alone does not account for variant power.
+Arena indices run 0–5. Generic catalog grants retain ownership of variants through the highest arena reached; generic district equipment is clamped to the current arena. Tree suits instead use their branch's unlock arena: variant 0 is a root and variants 1/2 are sibling choices, so the variant number alone does not determine availability. The server checks ownership and the applicable eligibility rule. Matchmaking keeps opponents within one arena.
 
 Every district/suit has era-specific gameplay stats. Districts use the placer's era, or the claimer's era for category upgrades; base fallback/fixed board districts use era 0. Combat suits use their owner's fielded era; production and district effects use district era. Missing era stats fall back to era 0; missing district stats mean zero effects. The shipped eras 1–5 copy era 0 until tuned.
 

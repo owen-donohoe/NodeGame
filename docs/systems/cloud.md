@@ -2,10 +2,33 @@
 system: cloud
 summary: Owns ranked allocation, player records, verified outcomes, progression settlement and disconnect discipline in UGS.
 sources:
-  - dotnet/NodeWarCloud/NodeWarCloud/
   - dotnet/NodeWarCloud/Matchmaker/
-  - Assets/Scripts/Backend/Shared/
-  - dotnet/NodeWar.Progression/
+  - dotnet/NodeWarCloud/NodeWarCloud/Balances/
+  - dotnet/NodeWarCloud/NodeWarCloud/Catalog/
+  - dotnet/NodeWarCloud/NodeWarCloud/CloudSaveMatchRecordStore.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/InventoryPlayerStateService.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/InventoryRules.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchAllocation.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchDiscipline.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchEligibility.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchHistory.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchHistoryModule.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchHold.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchLogUpload.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchmakerAllocatorModule.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchRecord.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchRecordStore.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchRendezvous.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchReporting.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchReportingModule.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/ModuleSetup.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/NodeWarCloud.csproj
+  - dotnet/NodeWarCloud/NodeWarCloud/PlayerStateModule.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/Properties/
+  - dotnet/NodeWarCloud/NodeWarCloud/RankedMatchModule.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/ServerCatalog.cs
 verified: a1da5182
 ---
 
@@ -45,6 +68,7 @@ Deploy from repository root: `ugs deploy dotnet/NodeWarCloud -e development`; qu
 - `draft`: eligibility validates loadouts, chosen capacities and placed district multisets.
 - `netcode`: tickets/records enforce matching protocol, simulation and content identity.
 - `tooling`: catalog/balance exports and UGS deployment supply server-known content.
+- `economy`: content-addressed balance exports provide the same economic tuning to referee replay.
 
 ## Invariants
 Use server time. Stored field identities remain compatible. Conditional updates re-read and revalidate on conflict. Commit a forfeit decision under the match lock before player writes. One player holds one unexpired active claim. Client claims never choose roster, ratings, map or winner.

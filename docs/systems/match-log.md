@@ -40,7 +40,8 @@ Each `PlayerLoadout` has resolved `suits`, chosen `districts`, type-indexed `sui
 - `netcode`: confirmed input/hash events exclude speculation and preserve P0-before-P1 order.
 - `backend-client`: `PendingRankedReports` uploads finished ranked logs independently of local retention.
 - `cloud`: `ReportMatch` adds roster, snapshot ownership and agreement checks around the referee.
-- `bots`: headless matches consume the same factory and log/replay representation.
+- `progression`: recorded era tables and cosmetic IDs preserve each fielded loadout.
+- `tooling`: format/replay tests guard compatibility and confirmed recordings.
 
 ## Invariants
 Known chunk tags never change meaning. Framing compatibility does not imply simulation compatibility. Preserve historical resolved suit arrays and era tables, including protocol-5 Warrior-plus-three selections. Skins never affect state or hashes. No concurrent replay/configuration in a process while simulation configuration remains static.

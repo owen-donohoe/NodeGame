@@ -2,18 +2,18 @@
 system: tooling
 summary: Build checks, tests, deterministic receipts, documentation guards and editor tools used to verify changes.
 sources:
+  - .github/workflows/
+  - Assets/Scripts/Backend/Editor/
+  - Assets/Scripts/Editor/TestBridge.cs
+  - Assets/Scripts/Game/Simulation/NodeWar.Simulation.asmdef
+  - Assets/Tests/
+  - Assets/UI/Editor/UIToolkitDraftSetup.cs
+  - Assets/UI/Editor/UIToolkitHUDSetup.cs
+  - Assets/UI/Editor/UIToolkitLobbySetup.cs
+  - docs/attesters/
+  - docs/computations/
   - dotnet/NodeWar.sln
   - scripts/
-  - .github/workflows/
-  - docs/computations/
-  - docs/attesters/
-  - Assets/Scripts/Editor/TestBridge.cs
-  - Assets/Tests/
-  - Assets/Scripts/Game/Config/Editor/
-  - Assets/Scripts/Game/View/Editor/
-  - Assets/Scripts/Backend/Editor/
-  - Assets/Scripts/Backend/Catalog/Editor/
-  - Assets/UI/Editor/
 verified: a1da5182
 ---
 

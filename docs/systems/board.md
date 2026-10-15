@@ -2,16 +2,16 @@
 system: board
 summary: Agreed map identity, placement legality and the single builder for every match's starting state.
 sources:
-  - Assets/Scripts/Game/Simulation/MatchFactory.cs
-  - Assets/Scripts/Game/Simulation/MatchSetup.cs
-  - Assets/Scripts/Game/Simulation/PremadeMaps.cs
-  - Assets/Scripts/Game/Simulation/MapAuthoringRules.cs
-  - Assets/Scripts/Game/Simulation/PlacementLegality.cs
+  - Assets/Scripts/Game/Config/
+  - Assets/Scripts/Game/Simulation/BalanceHasher.cs
   - Assets/Scripts/Game/Simulation/BoardConfigData.cs
   - Assets/Scripts/Game/Simulation/BoardHasher.cs
-  - Assets/Scripts/Game/Simulation/BalanceHasher.cs
-  - Assets/Scripts/Game/Simulation/SimulationVersion.cs
-  - Assets/Scripts/Game/Config/
+  - Assets/Scripts/Game/Simulation/DistrictRoster.cs
+  - Assets/Scripts/Game/Simulation/MapAuthoringRules.cs
+  - Assets/Scripts/Game/Simulation/MatchFactory.cs
+  - Assets/Scripts/Game/Simulation/MatchSetup.cs
+  - Assets/Scripts/Game/Simulation/PlacementLegality.cs
+  - Assets/Scripts/Game/Simulation/PremadeMaps.cs
 verified: a1da5182
 ---
 
@@ -25,7 +25,7 @@ Make live peers, recorded replay and headless/referee runs start from the same l
 
 `Config/BoardConfig` is a Unity asset exposing `MapId` and plain `Data`, plus presentation/draft settings. `Config/GameBalance.LoadShared()` loads the shared balance asset; `Data` returns `GameBalanceData`. Assets remain outside Simulation. `PremadeMaps.Catalog` implements `IBoardCatalog`; the shipped map ID is `hourglass-01`.
 
-`MatchSetup` is immutable `{ MapId, BoardHash, SimulationVersion, BalanceHash }`. `ForShippedMap(mapId, balanceHash)` constructs the local identity; `Verify(received, catalog, localSimulationVersion, ...)` checks agreement against local content. `BoardHasher.Hash(board)` fingerprints map data; `BalanceHasher.Hash(balance)` fingerprints tuning, including ordered suit/district era entries. `SimulationVersion.Current` identifies rule semantics.
+`MatchSetup` is immutable `{ MapId, BoardHash, SimulationVersion, BalanceHash }`. `ForShippedMap(mapId, balanceHash)` constructs the local identity; `Verify(received, catalog, localSimulationVersion, ...)` checks agreement against local content. `BoardHasher.Hash(board)` fingerprints map data; `BalanceHasher.Hash(balance)` fingerprints tuning, including ordered suit/district era entries. The `simulation`-owned `SimulationVersion.Current` identifies rule semantics. `DistrictRoster.IsActive(type)` defines the runtime district acceptance set.
 
 `MatchFactory.Configure(balance, board)` installs static balance on `GameSimulation`/`CommandProcessor` and path multipliers. Call it before running a built match. `Build(balance, board, DraftPlacement[] draft, PlayerSetup[] players)` returns new state; `Fill(state, balance, board, draft, players)` populates an existing instance. Both use `RequireBuildable` before mutation. `PlayerSetup` carries drafted suit/district integer arrays plus enum-indexed suit/district era arrays.
 
@@ -43,6 +43,9 @@ Make live peers, recorded replay and headless/referee runs start from the same l
 - `cloud`: referee checks map against its catalog and balance against a content-addressed export.
 - `progression`: selected suit/district variants become `PlayerSetup` era tables.
 - `tooling`: map validation, balance exports and content/hash tests guard shipped data.
+- `bots`: rig setup configures and builds the same catalog board through `MatchFactory`.
+- `input`: Core positions and dimensions supply camera anchors and bounds.
+- `world-view`: sparse cell/node mappings and terrain drive ground and district placement.
 
 ## Invariants
 There is one recorded-match tick-0 builder. IDs follow ascending cell order with water gaps removed; links join orthogonally adjacent node-bearing cells only. Land has nodes, Ocean never does, Lake only with a drafted Pier. Runtime/log/draft accept active district values only; reserved retired numbers never become aliases. Board data does not belong in mutable match state except its identity and constructed nodes.

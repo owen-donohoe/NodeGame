@@ -40,6 +40,8 @@ Outline is assembly `NodeWar.View.Outline`: `OutlineGroup.Attach(root, renderers
 - `ui-art`: district icons/palettes come from shared visual/theme assets with independent board/UI fallbacks.
 - `board`: terrain and node mappings drive code-built ground and placements.
 - `tooling`: editor builders author visual assets; pure view and Outline suites guard maths/lifecycle.
+- `draft`: camera/terrain and grid-to-world placement support presenter ghosts and placed pieces.
+- `netcode`: tick interpolation/cues and rollback cleanup follow confirmed/speculative driver events.
 
 ## Invariants
 Rendering and effects never mutate simulation. Tick logs are reused output; retain copies only. Walking/routes share curve shape and leg boundaries. Interpolation anchors to `movePath[movePathIndex]`, including reversal, never a guessed sprite position. Hidden enemy route tails cannot influence visible grouping. Outline priority and ID lifecycle remain deterministic presentation contracts.
