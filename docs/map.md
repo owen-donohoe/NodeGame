@@ -2,7 +2,7 @@
 summary: Every Node War system, every connector between them, the three flows, the cross-cutting versions and boundaries, and the top pressure points.
 sources:
   - docs/systems/
-verified: a35341b2
+verified: d2b9ac06
 ---
 
 # System map
@@ -25,20 +25,20 @@ client data; rating, ranked outcomes and inventory remain server-owned.
 | `simulation` | `Game/Simulation/` | Match state, tick loop, movement, combat, claiming, win; state hash |
 | `economy` | `Game/Simulation/` | Resources, production, district behaviours, banks, recruiting, minions |
 | `commands` | `Game/Simulation/Commands.cs`, `CommandProcessor.cs`, `Game/Input/CommandSystem.cs`, `InputBuffer.cs`, UI `CommandEligibility.cs` | Command vocabulary, intent buffering and authoritative application |
-| `board` | `Simulation/MatchFactory`, `PremadeMaps`, `Game/Config/` | Maps, terrain, the tick-0 board, balance data, version hashes |
-| `draft` | `Simulation/DraftState.cs`, `Core/DraftManager.cs`, `IDraftPresenter.cs`, `Network/DraftSerializer.cs` | Placement rules, turn orchestration and draft contract/wire data |
-| `match-flow` | `Game/Core/`, `Game/Debug/` | Lifecycle, local tick driver, persistent connection and shared presenter/channel contracts |
-| `netcode` | `Game/Network/` | Lockstep transport, input delay, speculation, holds, emotes |
+| `board` | `Game/Simulation/` factory/map/hash types, `Game/Config/` | Terrain, tick-zero construction, balance assets and content fingerprints |
+| `draft` | `Game/Simulation/DraftState.cs`, `Game/Core/` draft manager/presenter, `Game/Network/DraftSerializer.cs` | Placement rules, turn orchestration and draft contract/wire data |
+| `match-flow` | `Game/Core/` lifecycle/driver/channel types, `Game/Debug/` | Lifecycle, local ticking, persistent connection and countdown/channel contracts |
+| `netcode` | `Game/Network/` except draft serializer | Lockstep transport, input delay, speculation, holds, emote delivery |
 | `input` | `Game/Input/` gesture/selection routing, Core camera, Lobby settings data | Physical input, selection, camera and bindings; command application belongs to `commands` |
 | `world-view` | `Game/View/`, `Game/UI/Selection/`, `Game/UI/Worldspace/` | World art, units, paths, outlines, indicators and paint rendering |
 | `match-ui` | `Assets/UI/Scripts/Gameplay/` except command eligibility; `Game/UI/` panels/draft; match layouts/styles | HUD, node sheet, draft screen, end card and screen implementations |
-| `bots` | `Input/BotPlayer`, `dotnet/NodeWar.BalanceRig` | The scripted bot and the headless rig |
-| `match-log` | `Assets/Scripts/MatchLog/`, referee | Log format, recorder, replay, referee |
-| `backend-client` | `Assets/Scripts/Backend/` | Client services, fakes, ranked flow presenters |
-| `cloud` | `dotnet/NodeWarCloud/` | Cloud Code functions, records, settlement, matchmaking |
+| `bots` | `Game/Input/BotPlayer.cs`, `BotSuitChoice.cs`, `dotnet/NodeWar.BalanceRig/` | Scripted opponent and headless diagnostics |
+| `match-log` | `Assets/Scripts/MatchLog/`, Backend local store, Cloud referee/balance catalog | Format, recorder, replay and consistency verification |
+| `backend-client` | `Assets/Scripts/Backend/` client services and shared contracts/presenters | Async services, fakes, account-scoped state and ranked controllers |
+| `cloud` | `dotnet/NodeWarCloud/` allocation/storage/settlement/module types and Matchmaker queue | Cloud functions, authoritative records, settlement and matchmaking; referee belongs to `match-log` |
 | `progression` | `dotnet/NodeWar.Progression/`, Backend catalog and shared eligibility/ID policies | Pure rating/settlement, catalog, variants, arena and inventory policies |
 | `lobby-ui` | `Assets/UI/Scripts/` lobby types, lobby layouts, `Assets/Scripts/Lobby/` except input settings, `Assets/Legacy/` | Pages, launch/account flows and local profile/loadout data |
-| `ui-art` | `Assets/UI/` theme/icon types, fonts, shared/page styles and theme drawer | Semantic art lookup, procedural fallback and theme authoring |
+| `ui-art` | `Assets/UI/` theme/icon types, fonts, shared/lobby styles and theme drawer | Semantic art lookup, procedural fallback and theme authoring |
 | `tooling` | `dotnet/NodeWar.sln`, `Assets/Tests/`, `scripts/`, CI and shared Editor infrastructure | Verification procedures, guards, receipts and build/setup tooling |
 
 `Game/...` abbreviates `Assets/Scripts/Game/...`. Card `sources:` identify ownership;
