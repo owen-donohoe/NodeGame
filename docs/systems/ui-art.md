@@ -2,22 +2,32 @@
 system: ui-art
 summary: Resolves shared UI icons, district thumbnails and procedural gauge styling from an Inspector-authored theme.
 sources:
-  - Assets/UI/Scripts/UIArtTheme.cs
-  - Assets/UI/Scripts/UIArtLookup.cs
-  - Assets/UI/Scripts/UiArtMath.cs
-  - Assets/UI/Scripts/LobbyIcon.cs
-  - Assets/UI/Scripts/LobbyIconKind.cs
-  - Assets/UI/Scripts/LobbyIconContext.cs
-  - Assets/UI/Scripts/LobbyIconUsage.cs
+  - Assets/UI/Editor/UIArtThemeIconEntryDrawer.cs
+  - Assets/UI/Fonts/
+  - Assets/UI/Resources/UIArtTheme.asset
   - Assets/UI/Scripts/ItemFamily.cs
   - Assets/UI/Scripts/ItemTint.cs
+  - Assets/UI/Scripts/LobbyIcon.cs
+  - Assets/UI/Scripts/LobbyIconContext.cs
+  - Assets/UI/Scripts/LobbyIconKind.cs
+  - Assets/UI/Scripts/LobbyIconUsage.cs
+  - Assets/UI/Scripts/UIArtLookup.cs
+  - Assets/UI/Scripts/UiArtMath.cs
+  - Assets/UI/Scripts/UIArtTheme.cs
   - Assets/UI/Scripts/UiRequired.cs
   - Assets/UI/Scripts/UiRequiredNames.cs
-  - Assets/UI/Editor/
-  - Assets/UI/Styles/
+  - Assets/UI/Styles/Components.uss
+  - Assets/UI/Styles/Home.uss
+  - Assets/UI/Styles/Lobby.uss
+  - Assets/UI/Styles/Profile.uss
+  - Assets/UI/Styles/RankedQueue.uss
+  - Assets/UI/Styles/SceneTransition.uss
+  - Assets/UI/Styles/Settings.uss
+  - Assets/UI/Styles/Shop.uss
+  - Assets/UI/Styles/Social.uss
+  - Assets/UI/Styles/Tokens.uss
+  - Assets/UI/Styles/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-  - Assets/UI/Resources/UIArtTheme.asset
-  - Assets/UI/Fonts/
 verified: a1da5182
 ---
 
