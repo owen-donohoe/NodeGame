@@ -46,6 +46,7 @@ Resolve each pointer trace once into selection, camera or order intent. Keep phy
 - `match-ui`: UI hits block board gestures; HUD camera handle/settings and node inspection consume intents.
 - `lobby-ui`: Controls edits/reset persist through settings; migration preserves unrelated preferences.
 - `board`: initial Core positions and dimensions establish camera anchors/bounds.
+- `tooling`: synthetic gesture traces and settings-migration tests guard input contracts.
 
 ## Invariants
 One action per slot. Locked tap/right-click/UI grammar stays reachable. Villagers select on release, never press; dragging an unselected villager cannot select/order it. IDs are append-only: LassoSelect=2 remains “Paint select”; node slots 13/14 make 15 slots. Settings version 6 is independent of network protocol. Camera/view changes never alter simulation results.
