@@ -2,11 +2,10 @@
 system: commands
 summary: The shared action vocabulary and validation path from player intent to deterministic state changes.
 sources:
-  - Assets/Scripts/Game/Simulation/Commands.cs
-  - Assets/Scripts/Game/Simulation/CommandProcessor.cs
   - Assets/Scripts/Game/Input/CommandSystem.cs
   - Assets/Scripts/Game/Input/InputBuffer.cs
-  - Assets/Scripts/Game/Network/InputSerializer.cs
+  - Assets/Scripts/Game/Simulation/CommandProcessor.cs
+  - Assets/Scripts/Game/Simulation/Commands.cs
   - Assets/UI/Scripts/Gameplay/CommandEligibility.cs
 verified: a1da5182
 ---
@@ -35,7 +34,7 @@ Represent player actions identically for local play, network peers, bots and rep
 
 `CommandSystem.Initialize(state, buffer, selection, playerID)` binds human input. `IssueMoveTo(targetNode)` queues selected-unit moves. `SetGestureRouted`/`SetGestureSource` integrate pointer routing. `OrderDragBegan`, `OrderDragHover`, `OrderDragEnded` expose gesture preview; `MoveIssued(targetNode, IReadOnlyList<int> ids)` acknowledges queued intent, not successful simulation application. It copies IDs before clearing selection.
 
-`InputSerializer.Serialize(TickInput)` / `TryDeserialize(bytes, out TickInput)` carry `forTick`, optional `stateHash`, delay negotiation bytes and `GameCommand[] commands`. `BuildIdentity { ushort protocol, ushort sim, int content }` is compared by `InputSerializer.Compare`; protocol aliases `Backend.ProtocolVersion.Current`.
+The `netcode`-owned `InputSerializer.Serialize(TickInput)` / `TryDeserialize(bytes, out TickInput)` carry `forTick`, optional `stateHash`, delay negotiation bytes and `GameCommand[] commands`. `BuildIdentity { ushort protocol, ushort sim, int content }` is compared by `InputSerializer.Compare`; protocol aliases `Backend.ProtocolVersion.Current`.
 
 `CommandEligibility` in gameplay UI provides `Equip`, `EquipVillager`, `EquipSuit`, `HasDrafted`, `RespawnCost`, `Respawn`, `RespawnTarget` and `Allocation`; refusal enums describe displayable reasons. These read state and tuning; the processor remains authoritative. Economic node actions use simulation helpers instead.
 
