@@ -5,7 +5,6 @@ description: How to run Assets/Tests/EditMode/ through the plain .NET projects i
 tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  # full history: docs/verification-log.md
   - { by: gpt-6, at: 2026-10-11T19:03:46Z }
 verified_at_commit: 912876a5731b374bdcc7ec7079f25931c3f31049
 status: draft

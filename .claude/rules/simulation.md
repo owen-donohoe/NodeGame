@@ -24,7 +24,7 @@ What is only here:
 - **A number belonging to one suit or district goes on its SuitStats /
   DistrictStats entry, per era**, never as a new global.
 
-Then: `docs/simulation-rules.md` for the full contract, and
+Then: `docs/contracts/determinism.md` for the full contract, and
 `.claude/skills/determinism-guard.md` for the checks `scripts/sim-guard.ps1`
 cannot make — sort tiebreakers, tick order, hasher registration,
 command/serializer pairing, the view boundary.

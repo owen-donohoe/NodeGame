@@ -24,7 +24,7 @@
 
         powershell -File scripts\okf-stale-hook.ps1
 
-    See docs/index.md for the bundle layout, and scripts/hooks/README.md for
+    See docs/README.md for the doc layout, and scripts/hooks/README.md for
     the git-side guard that runs the same check at commit time.
 #>
 
