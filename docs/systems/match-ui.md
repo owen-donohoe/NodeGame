@@ -55,6 +55,7 @@ Content implementations:
 - `backend-client`: `HoldStatus` and `RankedResultStatus` display server outcomes.
 - `lobby-ui`: shared Controls/settings and `SceneTransition` support preferences and return flow.
 - `ui-art`: theme icons, district visuals, tokens and gauge properties supply appearance.
+- `tooling`: compilation, pure presentation models and authored XML checks complement manual layout verification.
 
 ## Invariants
 UI never writes `SimulationState`. Reject detached/stale sheet bindings after capture, district change or rollback; models validate the bound node array/tick. Exactly one draft presenter exists. Hiding legacy HUD must preserve its arbitration root. Decorative layers cannot swallow board input.
