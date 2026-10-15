@@ -2,16 +2,49 @@
 system: match-ui
 summary: Presents draft, match status and node actions through UI Toolkit while preserving legacy tap arbitration and fallbacks.
 sources:
-  - Assets/UI/Scripts/Gameplay/
+  - Assets/Scripts/Game/UI/CountdownUI.cs
+  - Assets/Scripts/Game/UI/DraftConfirmPresenter.cs
+  - Assets/Scripts/Game/UI/DraftPickUI.cs
+  - Assets/Scripts/Game/UI/DraftPlacementController.cs
+  - Assets/Scripts/Game/UI/DraftPlacementPreview.cs
+  - Assets/Scripts/Game/UI/DraftUI.cs
+  - Assets/Scripts/Game/UI/GameOverPanel.cs
+  - Assets/Scripts/Game/UI/Panel/
+  - Assets/UI/Layouts/DraftScreen.uxml
   - Assets/UI/Layouts/GameplayHUD.uxml
   - Assets/UI/Layouts/NodeSheet.uxml
-  - Assets/UI/Layouts/DraftScreen.uxml
-  - Assets/UI/Editor/UIToolkitHUDSetup.cs
-  - Assets/UI/Editor/UIToolkitDraftSetup.cs
-  - Assets/Scripts/Game/UI/
-  - Assets/Scripts/Game/Core/IDraftPresenter.cs
-  - Assets/Scripts/Game/Core/ICountdownPresenter.cs
-  - Assets/Scripts/Game/Core/GameManager.cs
+  - Assets/UI/Scripts/Gameplay/BankActionModel.cs
+  - Assets/UI/Scripts/Gameplay/BankContent.cs
+  - Assets/UI/Scripts/Gameplay/CoreContent.cs
+  - Assets/UI/Scripts/Gameplay/DistrictInfoFacts.cs
+  - Assets/UI/Scripts/Gameplay/DraftHandover.cs
+  - Assets/UI/Scripts/Gameplay/DraftPieceInfo.cs
+  - Assets/UI/Scripts/Gameplay/DraftScreenController.cs
+  - Assets/UI/Scripts/Gameplay/EmotePanel.cs
+  - Assets/UI/Scripts/Gameplay/EquipContent.cs
+  - Assets/UI/Scripts/Gameplay/ForgeContent.cs
+  - Assets/UI/Scripts/Gameplay/GameplayHUDController.cs
+  - Assets/UI/Scripts/Gameplay/IndicatorLayer.cs
+  - Assets/UI/Scripts/Gameplay/MatchSettingsPanel.cs
+  - Assets/UI/Scripts/Gameplay/NodeActionContent.cs
+  - Assets/UI/Scripts/Gameplay/NodeActionModel.cs
+  - Assets/UI/Scripts/Gameplay/NodeSheet.cs
+  - Assets/UI/Scripts/Gameplay/NodeSheetContent.cs
+  - Assets/UI/Scripts/Gameplay/ProductionContent.cs
+  - Assets/UI/Scripts/Gameplay/ProgressDial.cs
+  - Assets/UI/Scripts/Gameplay/ResourceBar.cs
+  - Assets/UI/Scripts/Gameplay/ResourceHudMath.cs
+  - Assets/UI/Scripts/Gameplay/ResourceKind.cs
+  - Assets/UI/Scripts/Gameplay/ResourceProduction.cs
+  - Assets/UI/Scripts/Gameplay/ResourceRing.cs
+  - Assets/UI/Scripts/Gameplay/ResourceRingColors.cs
+  - Assets/UI/Scripts/Gameplay/ResourceRingMath.cs
+  - Assets/UI/Scripts/Gameplay/ResourceVisibility.cs
+  - Assets/UI/Scripts/Gameplay/SheetResourceMath.cs
+  - Assets/UI/Scripts/Gameplay/SheetResourceReadout.cs
+  - Assets/UI/Styles/Draft.uss
+  - Assets/UI/Styles/HUD.uss
+  - Assets/UI/Styles/NodeSheet.uss
 verified: a1da5182
 ---
 
@@ -44,7 +77,7 @@ Content implementations:
 `DraftScreenController` and uGUI `DraftUI` implement `IDraftPresenter`: `Initialize`, `ShowWaiting`, `ShowInitialReveal`, `SweepIn/Out`, `UpdateTimer`, `OnTurnChanged`, `OnPlacementConfirmed`, persistent-placement retrieval and pending-placement query. `DraftHandover.ProxyOpacity/GhostOpacity` crossfade the dragged UI proxy and world ghost; `DraftPieceInfo` supplies names/monograms/tints.
 
 ## Connects to
-- `match-flow`: owns presenters, initialization, countdown, holds, surrender and match-end requests.
+- `match-flow`: owns lifecycle/countdown/channel contracts, initialization, holds, surrender and match-end requests; this card owns their screen implementations.
 - `commands`: owns `CommandEligibility` despite its Gameplay path; content sends validated `GameCommand`s through `InputBuffer`.
 - `simulation`: read-only state/balance and shared action helpers supply prices and status.
 - `economy`: resource totals, production and Storehouse state feed gauges/content.
