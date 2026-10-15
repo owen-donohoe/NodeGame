@@ -38,6 +38,7 @@ Turn territory and living workers into resources, bodies and defensive effects. 
 - `progression`: supplies owned/loadout eras; simulation reads era tables, never inventory or cosmetics.
 - `cloud`: exported balance content must match the client's balance hash for referee replay.
 - `tooling`: balance validation, hash coverage and release-content checks guard tuning exports.
+- `bots`: policy reads affordability and worker tuning; rig population metrics distinguish bodies and minions.
 
 ## Invariants
 Food, materials and metal are the only simulation resources. Positive caps clamp starts and every gain; nonpositive caps mean uncapped. No UI copy of eligibility or prices. Ordinary worker capacity remains independent of minions. Every mutable economic field participates in state hashing/copying; tuning participates in `BalanceHasher`.
