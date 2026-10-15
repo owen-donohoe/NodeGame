@@ -35,6 +35,10 @@ Drivers apply ordered commands, then call `GameSimulation.SimulateTick(state, Ti
 - `world-view`: reads state and physical leg durations; consumes tick events.
 - `match-ui`: reads state and tempo/sudden-death events without mutation.
 - `bots`: planners read state and emit commands, never advance rules themselves.
+- `draft`: placements feed `MatchFactory` to initialise unowned districts at the placer's era.
+- `input`: selection and route eligibility read state without mutation.
+- `progression`: fielded variant indices select balance stats; inventory and skins stay outside state.
+- `tooling`: determinism guards, hash/copy tests and cross-platform baseline receipts verify rule changes.
 
 ## Invariants
 Follow [determinism](../contracts/determinism.md): integers, no Unity/time APIs, ordered arrays/lists and total-order sorts. Hash and copy every mutable field. Keep IDs stable when appending units; consumed bodies remain addressable. Event output never feeds rules and stays outside state/hash. Same-input behavior changes require a coordinated simulation-version/baseline review.
