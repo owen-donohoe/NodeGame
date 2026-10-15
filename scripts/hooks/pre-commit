@@ -39,6 +39,17 @@ if git diff --cached --name-only --diff-filter=ACM | grep -q '^Assets/Scripts/Ga
     fi
 fi
 
+# --- Blocking: doc budget ------------------------------------------------
+# Only when the commit touches docs or the entry files. Size and the ban on
+# history are mechanical, so they block here as they do in CI.
+if git diff --cached --name-only | grep -qE '^(docs/|CLAUDE.md|AGENTS.md)'; then
+    if ! $PS scripts/doc-budget.ps1; then
+        echo ""
+        echo "pre-commit: BLOCKED by the doc budget. Cut the docs, do not raise the budget."
+        exit 1
+    fi
+fi
+
 # --- Advisory: OKF document freshness -------------------------------------
 # Exit code ignored on purpose. See the note at the top.
 $PS scripts/okf-stale.ps1 || true

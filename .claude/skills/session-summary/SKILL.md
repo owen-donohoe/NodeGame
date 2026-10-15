@@ -1,13 +1,6 @@
 ---
-type: Skill
-title: session-summary
-description: End-of-session review of the working diff before committing.
-tags: [skill, process, git]
-generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
-verified:
-  - { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
-verified_at_commit: bc701d1
-status: stable
+name: session-summary
+description: End-of-session review of the working diff before committing. Use when wrapping up a session or before a commit that ends a piece of work.
 ---
 
 # session-summary
@@ -35,8 +28,10 @@ Step 3: Test results
 Step 4: Remaining issues
 - What is still broken or incomplete?
 - What follow-on work does this session create?
-- Does anything belong in Notion Tasks? Do not create it here —
-  Notion is written only during /update. Name it and let me decide.
+- Does anything belong on the Notion Roadmap? Do not create it here;
+  name it and let me decide.
+- Did a card's sources move (scripts/okf-stale.ps1)? Then the card is
+  re-read and stamped before the work counts as done.
   (This project does not track work in GitHub issues.)
 
 Step 5: Suggested commit message
@@ -45,9 +40,6 @@ Step 5: Suggested commit message
 - type: fix, feat, refactor, test, docs, chore, build, ci
 - description: present tense, under 72 characters
 - Body: two to three lines explaining what and why
-- If the change finishes a Notion task, add a `done: <task title>`
-  line. That trailer is what marks the task Done on the next
-  /update; without it the task moves to In Progress at most.
 - Example:
   feat: add elapsed tick counter to SimulationState
 

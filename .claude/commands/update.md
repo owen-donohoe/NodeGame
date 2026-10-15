@@ -1,48 +1,45 @@
 ---
-description: Reconcile Notion against new commits. The only time Notion is written.
+description: Reconcile the Notion Roadmap with git (Now and Done), and report doc freshness.
 ---
 
 # The Update procedure
 
-Runs when I invoke `/update` and at no other time. Writing to Notion happens only inside an Update.
+Notion holds three things only: **Future** (plans), **Now** (work with commits
+landing), **Done** (history, one row per shipped milestone). This keeps Now and Done
+true; it never rewrites Future plans.
 
-Read `docs/notion-workspace.md` first — it holds the database identifiers and the Phases/Tasks
-property schemas this procedure assumes.
+Identifiers: page **Node** `3cde745f-f2df-8139-8e3d-e93fac741de0`; database
+**Roadmap**, data source `collection://9aa1895c-262d-4843-80a0-6bda9d3fcfbd`
+(properties: Item, Status Future/Now/Done, Area, Release, Systems, Order, Shipped).
+The Node page's first line records `Last update: <sha>`.
 
-**Read, in this order, and stop as soon as you have enough:**
+## Read (stop when you have enough)
 
-1. Notion Phases where `Status` is `Active` or `Audit plan against code`. Nothing else.
-2. Notion Tasks · Open, for those phases, plus the Loose view.
-3. `git log --oneline <Last Reviewed Commit>..HEAD` — **subjects only.**
+1. The Node page's `Last update` sha.
+2. Roadmap rows with Status **Now**.
+3. `gh pr list --state merged --search "merged:>=<date of that sha>"` and
+   `git log --oneline <sha>..origin/main` (subjects only).
+4. Branches with commits not on `main`: `git branch -a --no-merged main`.
 
-**Escalate reluctantly.** These are hard rules, not guidance:
+Read no files and no diffs unless a specific row cannot be judged from PR titles
+and commit subjects; then `git show --stat` first.
 
-- Do not read any file unless a specific open task or a specific commit requires it.
-- A commit subject that plausibly relates to an open task earns `git show --stat <sha>` — file names,
-  no content. Nothing else earns it.
-- Only if `--stat` confirms the connection do you read the diff, and only for the files that matter.
-- Never diff a whole branch. Never walk the repo tree during an Update.
-- Never open a `Shipped` or `Parked` phase page.
-- If there are more than 20 new commits, report from subjects and stats alone and ask before reading
-  any diff.
+## Write
 
-**Then write:**
+- A merged PR that completes a **Now** row: set it **Done**, fill `Shipped`
+  (`#<pr> (<date>)`), keep the body.
+- A merged PR with no row: create a **Done** row (Item from the PR title, Area,
+  Systems, Shipped). Group PRs that are one milestone into one row.
+- An unmerged branch with recent commits and no **Now** row: create a **Now** row,
+  or move the matching **Future** row to **Now**.
+- A **Now** row with no commits for two weeks: report it; do not move it.
+- Update the Node page's `Last update: <sha>` to `origin/main`'s head.
 
-- Tasks with clear commit evidence → `In Progress`.
-- Tasks named in a `done:` trailer → `Done`.
-- **Never mark a task Done on file-touching evidence alone.** A commit that touches a system is not
-  work that finished. Report it as probably-done and let me confirm.
-- New work visible in commits but absent from Notion → create the task, attached to the active phase.
-  This is an ingestion gap, not a decision.
-- Work in Notion that the commits contradict → flag it. Do not delete, do not silently re-scope.
-- Update `Last Reviewed Commit` on the active phase to HEAD.
-- Run `powershell -File scripts/okf-stale.ps1` and report any newly-suspect documents. This is a
-  repo-side check and writes nothing to Notion.
+Never edit a **Future** row's plan, never delete rows, and never change anything the
+user edited by hand without asking.
 
-**Do not**, during an Update: create or restructure phases, edit a Shipped phase, rewrite a plan, or
-change anything I edited by hand. My edits are intentional; confirm before reverting any of them.
-Do not stamp `verified:` or bump `verified_at_commit` on any document — re-verification means
-reading the doc against its changed sources, which is a separate act from reconciling commits.
-Report what looks stale and let me decide.
+## Report
 
-**Report:** what moved, what is blocked, what needs me. If nothing needs me, say so in one line.
+Run `powershell -File scripts/okf-stale.ps1` and `powershell -File scripts/doc-budget.ps1`
+and include anything they flag (repo-side only; they write nothing to Notion). Then:
+what moved, what needs the user. If nothing needs the user, say so in one line.

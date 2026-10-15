@@ -11,7 +11,7 @@ paths:
 Applies to all three presentation trees, not just the layer named UI:
 `Assets/Scripts/Game/{View,UI}/` (uGUI and world-space), `Assets/UI/`
 (UI Toolkit), and `Assets/Legacy/` (retired uGUI, still compiled).
-See docs/architecture.md, "Where the UI lives".
+See the `match-ui`, `lobby-ui` and `ui-art` cards in docs/systems/ (which UI tree runs is a scene value).
 
 `CLAUDE.md` has the one-line version. Only here:
 

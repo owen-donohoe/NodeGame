@@ -31,7 +31,7 @@
 .USAGE
         powershell -File scripts\okf-stale.ps1
 
-    See docs/index.md for the bundle layout and the frontmatter conventions.
+    See docs/README.md and the system-docs skill for the frontmatter conventions.
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -41,7 +41,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 # The bundle root plus the three external member directories. The .claude files
 # cannot move into docs/ -- Claude Code loads the rules into every session and
 # addresses the skills and commands by path -- so the check reaches out to them
-# instead. See docs/index.md.
+# instead.
 $SearchDirs = @(
     "docs",
     ".claude\rules",

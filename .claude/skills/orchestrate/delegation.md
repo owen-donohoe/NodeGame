@@ -49,8 +49,7 @@ and verification commands named in the prompt (estimated 2.4M together):
 | Emotes end to end: packet, limiter, settings v3, HUD, 27 tests | **1.41M** |
 
 Both fall on the "bounded, files named" and "finds its own way" estimates
-below, and both needed a review pass: `done:` commit prefixes (which mark
-Notion tasks on `/update`), one UI overlap, and one per-poll allocation.
+below, and both needed a review pass: stray commit prefixes, one UI overlap, and one per-poll allocation.
 
 **Total 6.4M tokens in about 35 minutes. That took the Codex budget from 0% to
 100%.** The limit reset roughly five hours after the first call, so treat the

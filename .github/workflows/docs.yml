@@ -1,0 +1,20 @@
+name: docs
+
+# Keeps the docs small enough to load and free of history. Blocks on
+# scripts/doc-budget.ps1: word budgets, the system card template, no dates,
+# PR numbers or line numbers in cards, every card routed from docs/README.md and
+# named in docs/map.md, and one identical simulation boundary block in CLAUDE.md
+# and AGENTS.md.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Doc budget
+        shell: pwsh
+        run: ./scripts/doc-budget.ps1

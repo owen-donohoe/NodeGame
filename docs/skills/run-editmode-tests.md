@@ -5,7 +5,6 @@ description: The two ways to run Assets/Tests/EditMode/, when each applies, and 
 tags: [testing, executor, unity, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  # full history: docs/verification-log.md
   - { by: gpt-6.1-sol, at: 2026-10-09T19:20:20Z }
 verified_at_commit: 36c57c73087ced5dd842a653f676c83b51c83031
 status: stable

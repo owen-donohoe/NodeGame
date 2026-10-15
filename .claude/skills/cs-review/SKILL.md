@@ -1,23 +1,6 @@
 ---
-type: Skill
-title: cs-review
-description: Layer-compliance and convention review to run before committing any significant C# change.
-tags: [skill, review, architecture, csharp]
-generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
-verified:
-  # full history: docs/verification-log.md
-  - { by: claude-opus-5-5, at: 2026-10-13T16:37:13Z }
-verified_at_commit: 63701b282cb7b86fb0803210c193382b75a9e36a
-status: stable
-sources:
-  - id: architecture
-    resource: docs/architecture.md
-    title: The seven layers and adjacent backend and replay systems
-    last_modified: 2026-09-28T14:43:33-04:00
-  - id: contract
-    resource: docs/simulation-rules.md
-    title: Simulation Determinism Contract
-    last_modified: 2026-09-26T10:16:37-04:00
+name: cs-review
+description: Layer-compliance and convention review to run before committing any significant C# change. Use when reviewing a diff for boundary, layering and convention problems.
 ---
 
 # cs-review

@@ -14,7 +14,6 @@ attester:
   resource: docs/attesters/hash_baseline.ps1
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  # full history: docs/verification-log.md
   - { by: gpt-6, at: 2026-10-11T19:05:40Z }
 verified_at_commit: 5a19c091a6b65221323e476332242c68b61d49ba
 status: stable
@@ -36,7 +35,7 @@ sources:
     title: GameSimulation.SimulateTick
     last_modified: 2026-09-25T22:52:42-04:00
   - id: contract
-    resource: docs/simulation-rules.md
+    resource: docs/contracts/determinism.md
     title: Simulation Determinism Contract
     last_modified: 2026-09-28T14:44:08-04:00
   - id: build
@@ -219,7 +218,7 @@ that silently alters simulation output, desyncing two peers on different builds.
 `DeterminismBaselineTests` and pinned nothing.
 
 Naming the receipt and the verdict is what surfaced that. See
-[simulation-rules](../simulation-rules.md) for the contract these fingerprints protect, and
+[the determinism contract](../contracts/determinism.md) for the contract these fingerprints protect, and
 [../skills/run-editmode-tests](../skills/run-editmode-tests.md) for how to produce a receipt.
 
 ## Re-pinning
