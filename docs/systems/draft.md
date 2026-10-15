@@ -36,6 +36,10 @@ Let each player choose district positions on a shared map before ticks begin. De
 - `bots`: configured bot pools use map base districts plus bot loadout districts and automatic picks.
 - `world-view`: camera, terrain and grid/world conversion support placement presentation.
 - `simulation`: drafted districts become Fixed, unowned nodes at the placer's era when the match is built.
+- `economy`: district types and placer's era select the starting economic stats.
+- `cloud`: ranked eligibility checks chosen capacities and placed district multisets against snapshots.
+- `lobby-ui`: normalized chosen `LoadoutData` supplies pieces and the applicable free grants.
+- `match-log`: resolved loadouts and ordered placements are recorded to rebuild tick-zero state.
 
 ## Invariants
 No placement before map/rules agreement. A valid cell is an empty district slot, never a Core: Land for ordinary districts, Lake for Pier, never Ocean. Inactive district values are refused without runtime aliases. A refused choice consumes nothing. A pick with no legal cell is unplayable rather than forced. Presentation cannot choose rule exceptions.
