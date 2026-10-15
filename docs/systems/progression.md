@@ -48,7 +48,7 @@ Shared `CatalogIds` builds/parses `suit.<base>`, `district.<base>`, `<baseId>.e<
 - `simulation`: variant indices select gameplay balance; skins never enter state or hashes.
 - `match-log`: eras and cosmetic skin IDs preserve the recorded loadout.
 - `tooling`: Editor exports catalog/balance data for server validation.
-- `board`: fielded variants become `MatchFactory.PlayerSetup` era tables for tick-zero construction.
+- `board`: fielded variants become `PlayerSetup` era tables for tick-zero construction.
 - `economy`: era-indexed balance lookups consume eligible variant indices without reading inventory.
 
 ## Invariants
