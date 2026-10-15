@@ -42,6 +42,9 @@ Persistent `Core/MatchConnection` carries `networkManager`, local slot, network/
 - `backend-client`: `DisconnectHold` and `PresenceHeartbeat` resolve ranked silence through server authority.
 - `world-view`: tick interpolation, tick cues and rollback cleanup follow core events.
 - `match-ui`: emotes, unstable-link banners and hold controls observe channels and status.
+- `cloud`: ticket/record checks enforce the protocol, simulation and content identity used by peers.
+- `lobby-ui`: `MatchLauncher` connects Relay/LAN peers and carries ranked roster order across scenes.
+- `tooling`: lossy-link reference scenarios verify confirmed results, rollback and adaptive delay.
 
 ## Invariants
 Apply all P0 commands before P1 commands; stamp command ownership from sender slot, never wire claims. Limit each player to 64 commands per tick and reject implausible tick numbers. DirectUDP reads only the connected endpoint. Identity mismatch refuses connection; setup disagreement refuses draft. Never record, hash or settle speculative state.
