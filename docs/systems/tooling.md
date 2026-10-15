@@ -79,7 +79,7 @@ Editor menus under Tools > Node War build UI Toolkit Lobby/HUD/Draft wiring, cre
 - Project-only receipts prevent multiple loggers overwriting the same file.
 
 ## Pressure points
-No `.github/workflows/docs.yml` exists on this branch, so doc-budget has no dedicated CI workflow. Regex guards cannot prove sort totality, pass order, hash registration or boundary compliance. Live Editor tests can use stale assemblies. Attester freshness checks skip unavailable commit/source information rather than failing closed. Hook installation and explicit release gates remain operational dependencies.
+doc-budget blocks in CI (`docs.yml`) and in the pre-commit hook, but the hook is opt-in per clone (`git config core.hooksPath scripts/hooks`). Regex guards cannot prove sort totality, pass order, hash registration or boundary compliance. Live Editor tests can use stale assemblies. Attester freshness checks skip unavailable commit/source information rather than failing closed. Hook installation and explicit release gates remain operational dependencies.
 
 ## Change recipes
 - Change rules: run semantic determinism review, relevant/new tests, full solution and required baseline checks; coordinate version/pins when behavior changes.

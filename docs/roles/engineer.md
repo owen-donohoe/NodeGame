@@ -1,3 +1,6 @@
+---
+summary: How an engineer agent takes a brief, loads context, stays in scope, commits and reports.
+---
 # The engineer role
 
 You implement one bounded piece of work from a brief. You are usually dispatched

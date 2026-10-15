@@ -51,7 +51,7 @@ $SearchDirs = @(
 
 # Reserved OKF filenames. index.md is a navigation node and carries no signal
 # layer; log.md is chronological history. Neither describes code.
-$ReservedNames = @("index.md", "log.md")
+$ReservedNames = @("index.md", "log.md", "readme.md")
 
 # Parses the subset of YAML frontmatter this check needs: verified_at_commit,
 # stale_after, and the `resource:` of each entry under `sources:`.
@@ -319,6 +319,7 @@ foreach ($dir in $SearchDirs) {
     $files = Get-ChildItem -Path $full -Filter *.md -Recurse -File
     foreach ($file in $files) {
         if ($ReservedNames -contains $file.Name.ToLower()) { continue }
+        if ($file.Name.StartsWith("_")) { continue }
 
         $rel = $file.FullName.Substring($RepoRoot.Length + 1)
         $fm = Read-Frontmatter -Path $file.FullName
