@@ -217,6 +217,8 @@ and inventing one is the one thing this system exists to prevent.
 
 ## `.claude/skills/cs-review.md`
 
+- { by: claude-opus-5-5, at: 2026-10-13T16:37:13Z }
+
 - { by: claude-sonnet-5-5, at: 2026-10-11T01:12:34Z }
 
 - { by: gpt-6, at: 2026-10-10T23:26:34Z }
