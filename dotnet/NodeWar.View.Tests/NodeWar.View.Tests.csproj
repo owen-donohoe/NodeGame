@@ -24,6 +24,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="MatchStartupSequenceTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Core/MatchStartupSequence.cs" Link="Core/MatchStartupSequence.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/Tests/BoardFixtures.cs" Link="Fixtures/BoardFixtures.cs" />
     <Compile Include="VillagerSwingMathTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/VillagerSwingMath.cs" Link="View/VillagerSwingMath.cs" />
     <Compile Include="VillagerFlashMathTests.cs" />
