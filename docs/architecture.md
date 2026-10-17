@@ -6,8 +6,8 @@ tags: [architecture, layers, networking, lockstep, ui]
 generated: { by: human:DonohoeCUA, at: 2026-08-30T17:15:16-04:00 }
 verified:
   # full history: docs/verification-log.md
-  - { by: claude-opus-5-5, at: 2026-10-13T16:34:59Z }
-verified_at_commit: f0a21c0d5c61571e9e99ebcef25e6ceb551ad606
+  - { by: gpt-6.1-sol, at: 2026-10-17T04:18:32Z }
+verified_at_commit: b41188e08d5b00ebe08969ea4e010fe64520b8d0
 status: stable
 sources:
   - id: pointer-gestures
@@ -58,6 +58,9 @@ sources:
     resource: Assets/Scripts/Game/Core/GameManager.cs
     title: GameManager match lifecycle
     last_modified: 2026-09-28T15:12:16-04:00
+  - id: match-startup
+    resource: Assets/Scripts/Game/Core/MatchStartupSequence.cs
+    title: UnityEngine-free startup phases and one-time driver unpause
   - id: lockstep
     resource: Assets/Scripts/Game/Network/LockstepCore.cs
     title: LockstepCore
@@ -350,7 +353,8 @@ its uGUI panels moved to `Assets/Legacy/Lobby/` and its live presentation
 is `Assets/UI/`.
 
 **2. Core/** — Match lifecycle orchestration. Owns the top-level state
-machine (`GameManager`), the pre-match draft (`DraftManager`), local tick
+machine (`GameManager`, delegating startup decisions to `MatchStartupSequence`),
+the pre-match draft (`DraftManager`), local tick
 timing (`TickRunner`), and camera/transition control. This is the layer
 that starts a match and wires every other layer together. It builds the
 starting `SimulationState` for drafted matches through
@@ -902,7 +906,10 @@ Three objects are carried across the Lobby → Gameplay scene load via
 **Core/**
 - `GameManager` — match lifecycle state machine (`PreDraft → Drafting →
   PostDraft → Countdown → Playing`); builds `SimulationState` and spawns
-  node/villager views.
+  node/villager views. Its UnityEngine-free `MatchStartupSequence` owns startup
+  phases and unpauses the initialized driver once. Drafted matches wait for
+  transition completion, or start immediately without a controller; testing
+  mode starts after initialization and launching its animation-only wave.
   Before destroying `DraftManager`, caches both loadouts and its actual local
   simulation seat, including guest P1. Setup resolution uses `LoadoutMatchSetup`;
   without a connection P1 does not inherit the local human's high deck.
