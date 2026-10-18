@@ -36,12 +36,12 @@ verified: a1da5182
 # Backend client
 
 ## Purpose
-Client code asks services for authoritative account, inventory and ranked state. Shared presenters isolate asynchronous failure and connection orchestration from UI layouts, while permanent local fakes support offline work.
+Client code asks services for authoritative account, inventory and ranked state. Shared presenters isolate asynchronous failure and connection orchestration from UI layouts. Local fakes serve tests and offline Editor work.
 
 ## Interface
 `GameServices.InitializeAsync()` initializes UGS without requiring a player; account sign-in uses it. Data services await `EnsureReadyAsync()` for initialization plus sign-in. Editor environment follows Project Settings; Development Builds use `development`, releases `production`.
 
-`BackendServices` selects `Ugs*Service` or `Local*Service` implementations for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `LastKnownState` and `StateChanged` expose accepted current-account state. `RememberGuard` rejects results belonging to a previous account. Cloud module name is `NodeWarCloud`.
+`BackendServices` selects `Ugs*Service` or `Local*Service` implementations for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Tools > Node War > Backend > Admin` calls the admin grant functions in Play mode and shows the signed-in player ID. `LastKnownState` and `StateChanged` expose accepted current-account state. `RememberGuard` rejects results belonging to a previous account. Cloud module name is `NodeWarCloud`.
 
 Shared `ProtocolVersion.Current` is 6; the network serializer aliases this constant, and server allocation checks it alongside simulation/content identity.
 
@@ -53,7 +53,7 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 - `IRankedQueueService.EnqueueAsync()` returns ticket ID; `PollAsync(ticketId)` returns `RankedQueueResult` (Searching/Found/Failed/TimedOut/Cancelled, match ID, message); `CancelAsync(ticketId)` deletes it.
 - `IRankedMatchService`: `RendezvousAsync(matchId, joinCode)`, `ConfirmConnectedAsync(matchId)`, `LeaveAsync(matchId, forfeit)`, `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)` map to Cloud Code `Rendezvous`, `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`, `ResolveHold`.
 
-`PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs), `ActiveMatchRecord` (match ID, expiry), and `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`.
+`PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) and `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
 
 `RankedQueuePresenter.StartAsync(now)`, `Tick(now)`, `RequestCancelAsync()` and `Dispose()` drive `IRankedQueueView`; view events are `CancelRequested`, `ForfeitConfirmed`, `BotAccepted`. View methods show idle/search/found/failure/cancel/connecting/requeue/forfeit/waiting/bot-offer/blocked states. `MatchFound` and `BotMatchAccepted` hand off outcomes.
 
@@ -86,7 +86,7 @@ Presence runs every four seconds from draft onward, every second when urgent. Ho
 `PendingRankedReports.Add(playerId, matchId, log)` persists under `PendingReports`; `RetryAsync()` coalesces callers and sends only the signed-in player's files after match end, lobby load and queue preflight. Exceptions retain files; any server answer, including refusal, removes that pending upload.
 
 ## Decisions
-- Keep async UGS implementations and permanent fakes rather than local-first authority.
+- Keep async UGS implementations rather than local-first authority; fakes stay as test doubles and new features need not add one.
 - Use direct client tickets and private server rendezvous rather than a queue proxy or public lobby.
 - Offer explicit account switching rather than merge anonymous progress on link conflict.
 

@@ -13,7 +13,7 @@ sources:
   - Assets/Scripts/Game/Simulation/DraftState.cs
   - Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs
   - Assets/Scripts/Backend/Shared/SuitTree.cs
-  - dotnet/NodeWar.Progression/EraUnlocks.cs
+  - Assets/Scripts/Backend/Shared/ContentTable.cs
   - Assets/Scripts/Game/Simulation/MatchFactory.cs
   - Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset
   - Assets/Scripts/Game/Simulation/DistrictHealth.cs
@@ -135,7 +135,7 @@ Tempo stages start at ticks 1200 and 1800 (two/three minutes). Claim rates becom
 
 ## Eras and skins
 
-Arena indices run 0–5. Generic catalog grants retain ownership of variants through the highest arena reached; generic district equipment is clamped to the current arena. Tree suits instead use their branch's unlock arena: variant 0 is a root and variants 1/2 are sibling choices, so the variant number alone does not determine availability. The server checks ownership and the applicable eligibility rule. Matchmaking keeps opponents within one arena.
+Arena indices run 0–5. Every player owns the starter kit: Farm, Mine, Town, Barracks, Warrior and Guardian. Other districts and suits each have a debut era; reaching an era grants nothing directly. Ownership survives demotion; generic district equipment is clamped to the current arena. Tree suits instead use their branch's unlock arena: variant 0 is a root and variants 1/2 are sibling choices, so the variant number alone does not determine availability. The server checks ownership and the applicable eligibility rule. Matchmaking keeps opponents within one arena.
 
 Every district/suit has era-specific gameplay stats. Districts use the placer's era, or the claimer's era for category upgrades; base fallback/fixed board districts use era 0. Combat suits use their owner's fielded era; production and district effects use district era. Missing era stats fall back to era 0; missing district stats mean zero effects. The shipped eras 1–5 copy era 0 until tuned.
 

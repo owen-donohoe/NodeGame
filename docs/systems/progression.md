@@ -6,6 +6,7 @@ sources:
   - Assets/Scripts/Backend/Catalog/
   - Assets/Scripts/Backend/Shared/CatalogIds.cs
   - Assets/Scripts/Backend/Shared/CatalogKeys.cs
+  - Assets/Scripts/Backend/Shared/ContentTable.cs
   - Assets/Scripts/Backend/Shared/InventoryClamp.cs
   - Assets/Scripts/Backend/Shared/LoadoutCapacityPolicy.cs
   - Assets/Scripts/Backend/Shared/RankTable.cs
@@ -28,11 +29,13 @@ Hidden skill selects opponents while visible RR gives players an arena progressi
 
 `MatchSettlement.Settle(SettlementInput, SettlementConfig)` consumes exactly two `SettlementPlayer`s (rating, last-match time, rank), `Winner` in {0,1} and `NowUnixSeconds`. `SettlementOutcome.Players` returns updated ratings/times/ranks, signed RRDelta and Promoted/Demoted. Voids never call it. Catalog grants and equipment changes belong to the cloud settlement wrapper.
 
-`CatalogItem` has stable `Id`, `Kind` (Variant/Skin), `BaseId`, `Era`, `Retired`. `CatalogValidation.Validate(catalog, arenaCount)` checks shape/uniqueness; `ValidateAgainstPrevious(previous, next)` forbids deletion or identity reuse while allowing retirement changes. `EraUnlocks.GrantsFor(catalog, highestArena, owned)` returns sorted missing active variants through that era; `IsUsable(item, currentArena)` checks generic era eligibility independently of ownership/retirement.
+`CatalogItem` has stable `Id`, `Kind` (Variant/Skin), `BaseId`, `Era`, `Retired`. `CatalogValidation.Validate(catalog, arenaCount)` checks shape/uniqueness; `ValidateAgainstPrevious(previous, next)` forbids deletion or identity reuse while allowing retirement changes. `EraUnlocks.GrantsFor(catalog, highestArena, owned)` returns sorted missing active variants through that era (no longer called by the server); `IsUsable(item, currentArena)` checks generic era eligibility independently of ownership/retirement.
 
 Editor `CatalogDefinition` holds `CatalogEntry` rows. `CatalogTools.Generate` adds missing variants/default skins and retires inactive district bases; `Export` validates and writes `dotnet/NodeWarCloud/NodeWarCloud/Catalog/catalog.json`. Menus are `Tools > Node War > Backend > Generate Catalog` and `Export Catalog For Server`.
 
 Shared `CatalogIds` builds/parses `suit.<base>`, `district.<base>`, `<baseId>.e<n>` and `skin.<baseId>.default`; `EraCount` is six. `CatalogKeys` explicitly maps numeric types to persisted bases and lobby IDs (`suit_...`, `node_...`); historical keys remain decodable. `CatalogBases.All()` enumerates current exportable bases.
+
+Shared `ContentTable` holds placeholder content data: `DebutEra(baseId)` (the era a base becomes obtainable; `UnknownEra` otherwise), `Starters`/`IsStarter` (owned from first sign-in: Farm, Mine, Town, Barracks, Warrior, Guardian and the production suits) and `Debuting(era)`. Owning a base means owning its era-0 variant.
 
 `SuitTree.Nodes`, `TryGet`, `Root`, `IsAvailable`, `CanOwn`, `OwnershipProblems` describe suit branches. `SuitTreeNode` carries BaseId, Variant, ParentVariant, Arena, Unlock (Cost/DropOnly), Cost, derived Id/ParentId. Current tree suits have variant 0 roots and sibling variants 1/2; availability uses the node's unlock arena, not its variant number. `CanOwn` additionally requires the reached arena and parent ownership. This table does not itself charge currency or grant purchases.
 
@@ -52,14 +55,14 @@ Shared `CatalogIds` builds/parses `suit.<base>`, `district.<base>`, `<baseId>.e<
 - `economy`: era-indexed balance lookups consume eligible variant indices without reading inventory.
 
 ## Invariants
-Persisted IDs are never casually renamed/reused; domain enum names are not storage keys. Ownership survives demotion. Equipped eligibility uses current arena, grants use highest arena. Tree availability and generic era eligibility are different rules. Server-only rating doubles never enter simulation. Skins remain cosmetic.
+Persisted IDs are never casually renamed/reused; domain enum names are not storage keys. Ownership survives demotion. Equipped eligibility uses current arena; automatic grants give only the starter kit, never era content. Tree availability and generic era eligibility are different rules. Server-only rating doubles never enter simulation. Skins remain cosmetic.
 
 ## How it works
 Settlement decays both pre-match ratings for complete inactive periods (default one week, skipping new players), then updates each against the other's decayed pre-match rating. Each match is one rating period.
 
 RR derives from hidden rating after the match versus implied rating `1000 + 0.5 * RR`: base gain 20 plus divergence 0.04, win/loss mirrored, magnitude clamped 8–40 and rounded away from zero. Arena application floors RR at zero and retains HighestArena; there is no boundary protection or placement-match phase.
 
-Generic grants still enumerate catalog eras. Suit equip/referee checks use `SuitTree`, so grant ownership alone does not imply equip availability. Generic demotion clamp selects the highest owned eligible era, granting era 0 if necessary. Tree clamp falls back to its root, even before the root's debut arena; equip validation may still refuse that root.
+Grants add the starter bases' era-0 variants and default skins; other content awaits crates or admin grants. Suit equip/referee checks use `SuitTree`, so ownership alone does not imply equip availability. Generic demotion clamp selects the highest owned eligible era, granting era 0 if necessary. Tree clamp falls back to its root, even before the root's debut arena; equip validation may still refuse that root.
 
 Below arena index 2, choose two suits and two districts, receiving free Warrior/base-district grants. Higher arenas choose three suits and five districts without those grants. Count-pair helpers recognize only low (2,2) and high (3,5) shapes.
 
@@ -72,7 +75,7 @@ District migration remaps retired IDs, removes duplicate deck choices, preserves
 - Keep explicit persisted keys and retirement rather than regenerate identity from renamed types.
 
 ## Pressure points
-Variants are being redesigned as side-variants whose era only gates unlock; IDs `suit.<base>.e<n>` may be renamed before the first production deploy. Current catalog generation/grants still use six generic eras while suit eligibility uses a three-node tree. Ownership checks do not implement a purchase/unlock economy. Export validation is duplicated between Editor and server. Balance and RR constants need calibration; arena names/themes remain placeholders.
+Variants are being redesigned as side-variants whose era only gates unlock; IDs `suit.<base>.e<n>` may be renamed before the first production deploy. Catalog generation still uses six generic eras while suit eligibility uses a three-node tree, and `ContentTable` debut eras gate neither equip nor draft yet. Nothing grants non-starter content to players until crates exist. Export validation is duplicated between Editor and server. Balance and RR constants need calibration; arena names/themes remain placeholders.
 
 ## Change recipes
 - Change rank tuning: update shared thresholds/server config together, test boundary behavior and simultaneous settlement.
