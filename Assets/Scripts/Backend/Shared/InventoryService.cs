@@ -73,15 +73,13 @@ namespace NodeWar.Backend
             {
                 if (baseId.StartsWith("district.", StringComparison.Ordinal) &&
                     (DistrictMigration.SourceType(baseId) == 0 || !DistrictMigration.IsActive(DistrictMigration.SourceType(baseId)))) continue;
-                for (int era = 0; era < CatalogIds.EraCount && era <= state.Rank.HighestArena; era++)
-                {
-                    string id = CatalogIds.Variant(baseId, era);
-                    if (!inventory.OwnedVariants.Contains(id)) { inventory.OwnedVariants.Add(id); changed = true; }
-                }
+                string root = CatalogIds.Variant(baseId, 0);
+                if (ContentTable.IsStarter(baseId) && !inventory.OwnedVariants.Contains(root))
+                { inventory.OwnedVariants.Add(root); changed = true; }
                 string skin = CatalogIds.DefaultSkin(baseId);
                 if (!inventory.OwnedSkins.Contains(skin)) { inventory.OwnedSkins.Add(skin); changed = true; }
-                if (!inventory.Equipped.Variants.ContainsKey(baseId))
-                { inventory.Equipped.Variants.Add(baseId, CatalogIds.Variant(baseId, 0)); changed = true; }
+                if (inventory.OwnedVariants.Contains(root) && !inventory.Equipped.Variants.ContainsKey(baseId))
+                { inventory.Equipped.Variants.Add(baseId, root); changed = true; }
                 if (!inventory.Equipped.Skins.ContainsKey(baseId))
                 { inventory.Equipped.Skins.Add(baseId, skin); changed = true; }
             }

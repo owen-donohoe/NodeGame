@@ -45,6 +45,51 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase(0)]
         [TestCase(1)]
+        public void LowArenaBasePoolVillageNeedsNoOwnershipButStillChecksEra(int lowSeat)
+        {
+            var (record, log) = Current(1 - lowSeat);
+            var pool = lowSeat == 0 ? log.board.baseDraftDistrictsP0 : log.board.baseDraftDistrictsP1;
+            Assert.That(pool, Does.Contain(DistrictType.Village));
+            record.players[lowSeat].OwnedVariants.Remove("district.village.e0");
+            log.header.kind = MatchKind.Ranked;
+            log.draft = new[] { new DraftPlacement { playerID = lowSeat, districtType = DistrictType.Village } };
+            Assert.That(MatchEligibility.Check(record, log), Is.Null);
+
+            log.loadouts[lowSeat].districtEras = new int[NodeWar.Lobby.LoadoutTypes.DistrictTypeCount];
+            log.loadouts[lowSeat].districtEras[(int)DistrictType.Village] = record.players[lowSeat].Rank.Arena + 1;
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("snapshot arena"));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HighArenaUnownedVillageIsRefused(int highSeat)
+        {
+            var (record, log) = Current(highSeat);
+            record.players[highSeat].OwnedVariants.Remove("district.village.e0");
+            log.header.kind = MatchKind.Ranked;
+            log.loadouts[highSeat].districts[0] = (int)DistrictType.Village;
+            log.draft = new[] { new DraftPlacement { playerID = highSeat, districtType = DistrictType.Village } };
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("not owned"));
+
+            // Legacy logs have no budget gate: the draft check itself must still require ownership.
+            record.protocol = log.header.protocol = 5;
+            log.loadouts[highSeat].districts = Array.Empty<int>();
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("not owned"));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void LowArenaChosenVillageStillNeedsOwnership(int lowSeat)
+        {
+            var (record, log) = Current(1 - lowSeat);
+            record.players[lowSeat].OwnedVariants.Remove("district.village.e0");
+            log.loadouts[lowSeat].districts[0] = (int)DistrictType.Village;
+            log.draft = new[] { new DraftPlacement { playerID = lowSeat, districtType = DistrictType.Village } };
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("not owned"));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
         public void MixedArena1And2_HighNoWarriorAccepted(int highSeat)
         {
             var (record, log) = Current(highSeat);

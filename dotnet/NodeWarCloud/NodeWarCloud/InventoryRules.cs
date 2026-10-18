@@ -24,8 +24,10 @@ namespace NodeWar.Cloud
         {
             var inventory = state.Inventory;
             bool changed = PlayerStateLogic.NormalizeInventory(inventory) | DistrictMigration.Apply(state);
-            var grants = EraUnlocks.GrantsFor(catalog, state.Rank.HighestArena, inventory.OwnedVariants);
-            if (grants.Count > 0) { inventory.OwnedVariants.AddRange(grants); changed = true; }
+            foreach (var item in catalog)
+                if (!item.Retired && item.Kind == CatalogItemKind.Variant && item.Era == 0 &&
+                    ContentTable.IsStarter(item.BaseId) && !inventory.OwnedVariants.Contains(item.Id))
+                { inventory.OwnedVariants.Add(item.Id); changed = true; }
             foreach (var item in catalog)
             {
                 if (item.Retired) continue;
