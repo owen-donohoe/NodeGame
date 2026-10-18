@@ -91,6 +91,7 @@
     <Compile Include="DistrictMigrationTests.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/InventoryService.cs" Link="Backend/InventoryService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/InventoryClamp.cs" Link="Backend/InventoryClamp.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/ContentTable.cs" Link="Backend/ContentTable.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/DistrictMigration.cs" Link="Backend/DistrictMigration.cs" />
     <Compile Include="MatchSetupPacketTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/EmoteType.cs"
