@@ -28,6 +28,25 @@ namespace NodeWar.Backend
         public ActiveMatchRecord ActiveMatch;
         public DisciplineRecord Discipline;
         public WalletRecord Wallet;
+        public ProfileRecord Profile;
+    }
+
+    /// <summary>
+    /// The player's public identity, shown as Name#TAG. Uniqueness is on
+    /// (NameNorm, Tag) and is reserved in the server's handle registry; this
+    /// record is the source of truth for who holds a handle.
+    /// </summary>
+    public sealed class ProfileRecord
+    {
+        public int Version = 1;
+        /// <summary>As the player typed it: 3-16 of A-Z a-z 0-9 - _.</summary>
+        public string Name;
+        /// <summary>1-4 of A-Z 0-9, upper case.</summary>
+        public string Tag;
+        /// <summary>Name lowercased; the uniqueness key with Tag.</summary>
+        public string NameNorm;
+        /// <summary>Server time of the last free rename, Unix seconds. 0 means never.</summary>
+        public long LastFreeRenameUnixSeconds;
     }
 
     /// <summary>Hidden Glicko-2 rating. Never shown to the player.</summary>
@@ -138,6 +157,7 @@ namespace NodeWar.Backend
         public const string History = "history";
         public const string ActiveMatch = "activeMatch";
         public const string Wallet = "wallet";
+        public const string Profile = "profile";
         public const string Discipline = "discipline";
 
         // The four state records; claims are independent of settlement writes.

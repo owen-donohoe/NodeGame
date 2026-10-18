@@ -146,6 +146,21 @@ namespace NodeWar.Cloud
             string[] itemIds, bool allActive) =>
             Service(context).GrantItemsAsync(context.PlayerId, targetPlayerId, itemIds, allActive);
 
+        [CloudCodeFunction("AdminSetHandle")]
+        public Task<PlayerState> AdminSetHandle(IExecutionContext context, string targetPlayerId, string name, string tag) =>
+            Handles(context).SetHandleAsync(context.PlayerId, targetPlayerId, name, tag, () => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+        /// <summary>Admin only; run once before enabling handle writes.</summary>
+        [CloudCodeFunction("AdminInitHandleRegistry")]
+        public Task<int> AdminInitHandleRegistry(IExecutionContext context) => Handles(context).InitRegistryAsync(context.PlayerId);
+
+        private AdminHandleService Handles(IExecutionContext context)
+        {
+            var registry = new CloudSaveHandleRegistryStore(api, context);
+            var handles = new HandleService(registry, target => new CloudSavePlayerRecordStore(api, context, target), EmbeddedBlockedNames.Names);
+            return new AdminHandleService(new EmbeddedAdminDirectory(), handles, registry);
+        }
+
         private AdminService Service(IExecutionContext context) => new AdminService(new EmbeddedAdminDirectory(),
             target => new CloudSavePlayerRecordStore(api, context, target),
             () => DateTimeOffset.UtcNow.ToUnixTimeSeconds(),

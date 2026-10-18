@@ -3,6 +3,32 @@ using System.Threading.Tasks;
 
 namespace NodeWar.Backend
 {
+    public interface IHandleService
+    {
+        Task<PlayerState> SetHandleAsync(string name, string tag, string requestId);
+    }
+
+    /// <summary>Pure handle presentation and migration from the local username.</summary>
+    public static class HandleDisplay
+    {
+        public static string Display(ProfileRecord profile, string fallback) =>
+            profile != null ? profile.Name + "#" + profile.Tag : fallback;
+
+        public static string FirstRunName(string localName)
+        {
+            var name = new System.Text.StringBuilder();
+            foreach (char c in localName ?? "")
+            {
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                    (c >= '0' && c <= '9') || c == '_' || c == '-')
+                    name.Append(c);
+                if (name.Length == 16) break;
+            }
+            if (name.Length < 3) name.Append("Player");
+            return name.ToString();
+        }
+    }
+
     /// <summary>
     /// The client's view of its own server-side state. Every call can fail
     /// (offline, not signed in, server refused), and callers show what comes
@@ -59,7 +85,8 @@ namespace NodeWar.Backend
                 Inventory = records.Inventory,
                 History = records.History,
                 Discipline = records.Discipline,
-                Wallet = records.Wallet
+                Wallet = records.Wallet,
+                Profile = records.Profile
             });
         }
 
@@ -72,6 +99,7 @@ namespace NodeWar.Backend
             if (written.History != null) records.History = written.History;
             if (written.Discipline != null) records.Discipline = written.Discipline;
             if (written.Wallet != null) records.Wallet = written.Wallet;
+            if (written.Profile != null) records.Profile = written.Profile;
             return Task.CompletedTask;
         }
     }

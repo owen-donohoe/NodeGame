@@ -14,7 +14,7 @@ sources:
   - docs/computations/
   - dotnet/NodeWar.sln
   - scripts/
-verified: e9255fad
+verified: 435ea894
 ---
 
 # Tooling
