@@ -9,8 +9,7 @@ namespace NodeWar.Lobby
     /// strip when the player name is pressed. Not a tab page - it covers the
     /// whole lobby, chrome included, and closes back into the strip.
     ///
-    /// Real: the username, server rank, and Rename, which validates with
-    /// PlayerProfile.ValidateUsername and saves through SetUsername.
+    /// Real: the server handle, server rank, and Rename through SetHandle.
     ///
     /// The stats record remains em-dashes pending its backend integration.
     /// Match history lives on its own page, from the TV button.
@@ -41,7 +40,9 @@ namespace NodeWar.Lobby
         private readonly VisualElement railFill;
         private readonly VisualElement renameContent;
         private readonly TextField nameField;
+        private readonly TextField tagField;
         private readonly Label nameNote;
+        private bool renamePending;
 
         private VisualElement youMarker;
         private VisualElement sourceRect;
@@ -83,6 +84,7 @@ namespace NodeWar.Lobby
             Root.style.display = DisplayStyle.None;
 
             usernameLabel = Root.Q<Label>("profile-username");
+            if (usernameLabel != null) usernameLabel.enableRichText = false;
             subtitleLabel = Root.Q<Label>("profile-subtitle");
             road = Root.Q<ScrollView>("profile-road");
             roadInner = Root.Q<VisualElement>("profile-road-inner");
@@ -94,7 +96,11 @@ namespace NodeWar.Lobby
 
             renameContent = LobbySheet.Lift(holder, "profile-rename");
             nameField = renameContent != null ? renameContent.Q<TextField>("profile-name-field") : null;
+            tagField = renameContent != null ? renameContent.Q<TextField>("profile-tag-field") : null;
             nameNote = renameContent != null ? renameContent.Q<Label>("profile-name-note") : null;
+            if (nameNote != null) nameNote.enableRichText = false;
+            DisableFieldRichText(nameField);
+            DisableFieldRichText(tagField);
 
             Bind(Root, "profile-back", Close);
             Bind(Root, "profile-rename", BeginRename);
@@ -105,6 +111,8 @@ namespace NodeWar.Lobby
             // phone keyboard.
             if (nameField != null)
                 nameField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
+            if (tagField != null)
+                tagField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
 
             BuildRecord(Root.Q<ScrollView>("profile-record"));
             BuildRoad();
@@ -118,6 +126,12 @@ namespace NodeWar.Lobby
             });
             if (roadInner != null)
                 roadInner.RegisterCallback<GeometryChangedEvent>(evt => PlaceMarkers());
+        }
+
+        private static void DisableFieldRichText(TextField field)
+        {
+            if (field == null) return;
+            field.Query<TextElement>().ForEach(element => element.enableRichText = false);
         }
 
         private static void Bind(VisualElement scope, string name, System.Action action)
@@ -215,7 +229,8 @@ namespace NodeWar.Lobby
             RankDisplay display = new RankDisplay(rank?.RR ?? 0);
 
             if (usernameLabel != null)
-                usernameLabel.text = profile != null ? profile.Username : "player";
+                usernameLabel.text = HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
+                    profile != null ? profile.Username : "player");
 
             if (subtitleLabel != null)
                 subtitleLabel.text = rank != null ? display.Name + " · " + display.RR + " RR" : "Arena " + Dash;
@@ -348,7 +363,10 @@ namespace NodeWar.Lobby
 
             PlayerProfile profile = PlayerProfile.Instance;
             if (nameField != null)
-                nameField.SetValueWithoutNotify(profile != null ? profile.Username : "");
+                nameField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Name ??
+                    (profile != null ? profile.Username : ""));
+            if (tagField != null)
+                tagField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Tag ?? "");
 
             ShowNote(null);
             sheet.Open(renameContent);
@@ -359,33 +377,43 @@ namespace NodeWar.Lobby
                 nameField.schedule.Execute(() => { nameField.Focus(); nameField.SelectAll(); });
         }
 
-        private void CommitRename()
+        private async void CommitRename()
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-
-            if (profile == null)
+            if (renamePending) return;
+            string candidate = nameField != null ? nameField.value : "";
+            string tag = tagField != null ? tagField.value : "";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(candidate, @"\A[A-Za-z0-9_-]{3,16}\z"))
             {
-                ShowNote("No player profile loaded.");
+                ShowNote("3 to 16 characters: letters, numbers, underscores or hyphens.");
                 return;
             }
-
-            // Trimmed before validating: ValidateUsername accepts spaces, so a
-            // name of nothing but spaces would otherwise pass and then be
-            // impossible to tell from an empty one on screen.
-            string candidate = (nameField != null ? nameField.value : "").Trim();
-
-            if (!PlayerProfile.ValidateUsername(candidate))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(tag, @"\A[A-Z0-9]{0,4}\z"))
             {
-                ShowNote("1 to 16 characters: letters, numbers, spaces or underscores.");
+                ShowNote("Tag: 1 to 4 uppercase letters or numbers, or leave empty.");
                 return;
             }
-
-            profile.SetUsername(candidate);
-
-            if (sheet != null) sheet.Close();
-            Refresh();
-            if (toast != null) toast.Show("Name changed");
-            if (Renamed != null) Renamed();
+            renamePending = true;
+            if (nameField != null) nameField.SetEnabled(false);
+            if (tagField != null) tagField.SetEnabled(false);
+            try
+            {
+                await BackendServices.Handles.SetHandleAsync(candidate, tag, System.Guid.NewGuid().ToString());
+                if (sheet != null) sheet.Close();
+                Refresh();
+                if (toast != null) toast.Show("Name changed");
+                if (Renamed != null) Renamed();
+            }
+            catch (System.Exception ex)
+            {
+                ShowNote(ex.Message);
+                if (toast != null) toast.Show(ex.Message);
+            }
+            finally
+            {
+                renamePending = false;
+                if (nameField != null) nameField.SetEnabled(true);
+                if (tagField != null) tagField.SetEnabled(true);
+            }
         }
 
         private void OnNameFieldKeyDown(KeyDownEvent evt)
@@ -402,8 +430,18 @@ namespace NodeWar.Lobby
             if (nameNote == null) return;
 
             bool isError = !string.IsNullOrEmpty(error);
-            nameNote.text = isError ? error : "Up to 16 characters. Visible to opponents.";
+            nameNote.text = isError ? error : RenameCostHint();
             nameNote.EnableInClassList("ui-sheet__note--error", isError);
+        }
+
+        private static string RenameCostHint()
+        {
+            ProfileRecord profile = BackendServices.LastKnownState?.Profile;
+            if (profile == null || profile.LastFreeRenameUnixSeconds == 0) return "Free";
+            System.DateTimeOffset nextFree = System.DateTimeOffset.FromUnixTimeSeconds(
+                profile.LastFreeRenameUnixSeconds).AddDays(30);
+            return System.DateTimeOffset.UtcNow >= nextFree ? "Free" :
+                "50 laurels, free again on " + nextFree.ToLocalTime().ToString("yyyy-MM-dd");
         }
     }
 }
