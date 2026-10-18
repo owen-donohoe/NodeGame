@@ -38,7 +38,7 @@ Separate evidence about rules, compilation and Unity wiring so a passing check i
 
 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/compile-check.ps1` type-checks Unity-facing source against real Unity assemblies without running the Editor. A fresh worktree needs its ignored Library junction first: from its root, `cmd /c mklink /J Library C:\Dev\NodeGame\Library`. It resolves project/version/source paths relative to the script; stale Unity-generated assemblies can still affect references.
 
-`scripts/sim-guard.ps1 [-Path ...]` returns 0/1 for mechanical determinism violations. `scripts/okf-stale.ps1` reads source/stamp ancestry and staged changes, classifying REVIEW declarations, touched implementation and expired documents. `okf-stale-hook.ps1` exposes session-start warnings. `scripts/hooks/pre-commit`, installed via `core.hooksPath`, blocks simulation violations for staged Simulation C# changes and reports freshness advisories without blocking.
+`scripts/sim-guard.ps1 [-Path ...]` returns 0/1 for mechanical determinism violations. `scripts/okf-stale.ps1` reads source/stamp ancestry and staged changes, classifying REVIEW declarations, touched implementation and expired documents. `okf-stale-hook.ps1` exposes session-start warnings and the committing agent's review/stamp obligation. The checker includes the Obsidian vault and exports findings with `-JsonPath`. `scripts/hooks/pre-commit`, installed via `core.hooksPath`, blocks simulation violations for staged Simulation C# changes and reports freshness advisories without blocking.
 
 `scripts/doc-budget.ps1 [-Only name,...]` checks card frontmatter, ordered headings, body budget and history exclusions; global mode also checks routing/listing and shared boundary text. `scripts/context.ps1 -Systems name,... [-Out path]` emits full requested cards, neighbours' Purpose/Interface and the determinism contract for simulation systems; `-List` inventories cards.
 
@@ -72,6 +72,8 @@ Unity and .NET link the same simulation tests recursively. Other projects explic
 Editor menus under Tools > Node War build UI Toolkit Lobby/HUD/Draft wiring, create District Visuals, migrate BoardConfig data and generate/export backend catalog/balance. Use these through Unity. Export content-addressed server data and check client/catalog parity before shipping.
 
 [drive-the-editor](../skills/drive-the-editor.md) and [run-editmode-tests](../skills/run-editmode-tests.md) define Unity CLI/test procedures. Start with `unity status`; only a ready Editor is usable. Specify project path when ambiguous. If unavailable, continue with .NET/compile checks and flag wiring as manual; Safe Mode requires fixing compilation, never YAML fallback.
+
+`merged-docs.yml` runs after PR merges to main or manual dispatch. `merge-doc-review.ps1` updates `notes/Merge review.md` from freshness findings; CI commits the dashboard and maintains one tracking issue. Neither changes explanatory prose or stamps; the committing agent reviews sources and updates cards/notes, preserving personal sections.
 
 ## Decisions
 - Two OS legs test exact output, not merely successful execution.

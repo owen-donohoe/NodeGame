@@ -34,6 +34,7 @@
     See docs/README.md and the system-docs skill for the frontmatter conventions.
 #>
 
+param([string]$JsonPath)
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -42,8 +43,12 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 # cannot move into docs/ -- Claude Code loads the rules into every session and
 # addresses the skills and commands by path -- so the check reaches out to them
 # instead.
+#
+# notes/ is the human learning vault (Obsidian). Its notes stamp `sources:` and
+# `verified:` like cards, so they surface here when the code they explain moves.
 $SearchDirs = @(
     "docs",
+    "notes",
     ".claude\rules",
     ".claude\skills",
     ".claude\commands"
@@ -51,7 +56,7 @@ $SearchDirs = @(
 
 # Reserved OKF filenames. index.md is a navigation node and carries no signal
 # layer; log.md is chronological history. Neither describes code.
-$ReservedNames = @("index.md", "log.md", "readme.md")
+$ReservedNames = @("index.md", "log.md", "readme.md", "merge review.md")
 
 # Parses the subset of YAML frontmatter this check needs: verified_at_commit,
 # stale_after, and the `resource:` of each entry under `sources:`.
@@ -414,6 +419,16 @@ Write-Host ""
 
 $review  = @($suspect | Where-Object { $_.Surface })
 $touched = @($suspect | Where-Object { -not $_.Surface })
+
+# Machine-readable companion to the unchanged advisory console contract.
+if ($JsonPath) {
+    @{
+        review = @($review)
+        touched = @($touched)
+        stale = @($stale)
+        warnings = @($warnings)
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $JsonPath -Encoding UTF8
+}
 
 if ($review.Count -gt 0) {
     Write-Host "REVIEW -- a declaration changed in a source, so a claim may now be false:"

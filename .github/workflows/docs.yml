@@ -18,3 +18,10 @@ jobs:
       - name: Doc budget
         shell: pwsh
         run: ./scripts/doc-budget.ps1
+  merge-hook:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Documentation merge hook regression checks
+        shell: pwsh
+        run: ./scripts/test-merge-doc-review.ps1

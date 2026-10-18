@@ -16,6 +16,7 @@ caps this file's size in CI.
 | How each system works, why, and how it connects | `docs/systems/<system>.md` (one card per system) |
 | How the systems fit together | `docs/map.md` |
 | What the game is | `docs/game.md` |
+| Human learning explanations | Obsidian vault `notes/` (open `notes/Home.md`) |
 | Future, now, done | Notion **Roadmap** (written by `/update` and `/orchestrate`) |
 
 Nothing is mirrored. Docs say what is true now; history is git and Notion.
@@ -83,6 +84,9 @@ The full contract is `docs/contracts/determinism.md`.
   (`scripts/okf-stale.ps1`, also shown at session start), re-read that card against
   the diff, fix what drifted, and stamp `verified: <sha>` in a follow-up
   `docs: reverify <card> against <sha>` commit on the same branch.
+- The merged-PR workflow updates `notes/Merge review.md` and a tracking issue for
+  system-card and vault source drift. Follow its review queue; never auto-stamp.
+  Preserve vault notes below **My understanding**.
 - **Size is a build failure.** `scripts/doc-budget.ps1` blocks in CI: word budgets,
   the card template, no dates, PR numbers or line numbers in cards. Cut detail the
   code already says rather than raising a budget.

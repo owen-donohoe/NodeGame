@@ -42,6 +42,10 @@ Around the match:
 - [systems/ui-art.md](systems/ui-art.md): the UI art theme and icon pipeline.
 - [systems/tooling.md](systems/tooling.md): tests, CI, guards, scripts, editor tooling.
 
+## Human learning
+- [Obsidian vault](../notes/Home.md): explanations, concepts and patterns; open `notes/` as a vault.
+- [Merge review](../notes/Merge%20review.md): generated card and vault review queue after PR merges.
+
 ## Procedures
 - `docs/skills/`: how to run things (tests, the Editor CLI).
 - `docs/computations/`, `docs/attesters/`: the determinism baseline CI runs.

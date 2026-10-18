@@ -10,11 +10,12 @@ sources:
   - Assets/Scripts/Game/Core/IEmoteChannel.cs
   - Assets/Scripts/Game/Core/ITickProvider.cs
   - Assets/Scripts/Game/Core/LocalEmoteChannel.cs
+  - Assets/Scripts/Game/Core/MatchStartupSequence.cs
   - Assets/Scripts/Game/Core/MatchConnection.cs
   - Assets/Scripts/Game/Core/MatchTransitionController.cs
   - Assets/Scripts/Game/Core/TickRunner.cs
   - Assets/Scripts/Game/Debug/
-verified: a1da5182
+verified: 20bb7952
 ---
 
 # Match flow
@@ -23,7 +24,7 @@ verified: a1da5182
 Compose one playable match from setup, deterministic rules and Unity presentation. Own lifecycle and teardown so neither a transition nor a lost connection leaves ticking, recording or input attached to the wrong phase.
 
 ## Interface
-`GameManager` is the Gameplay composition root; its public `SimulationState state` is observable match state, not permission for external writes. `Awake` reads `MatchConnection.Instance`; the private phase machine is PreDraft → Drafting → PostDraft → Countdown → Playing. Scene-configured UI toggles choose presenters/HUD stacks.
+`GameManager` is the Gameplay composition root; its public `SimulationState state` is observable match state, not permission for external writes. `Awake` reads `MatchConnection.Instance`; `MatchStartupSequence` owns the phase machine PreDraft → Drafting → PostDraft → Countdown → Playing. Scene-configured UI toggles choose presenters/HUD stacks.
 
 `MatchConnection` persists `networkManager`, `localPlayerID`, `isNetworked`, `isBotMatch`, `isSpectator`, `LoadoutData loadout`, ranked flag, server `matchId` and ordered `playerIds` across scene loading. `Shutdown()` releases the connection when returning to lobby. Server player slot 0 corresponds to simulation seat 0.
 
@@ -71,7 +72,7 @@ Local Editor/development debug uses `DebugPlayerSwitch`: Tab switches local seat
 - Persistent connection carries launch configuration rather than reconstructing network ownership after loading.
 
 ## Pressure points
-`GameManager` combines lifecycle, UI composition, recording and backend endings in one large class. Multiple startup paths and asynchronous callbacks make unpause/cleanup correctness fragile. Hold behavior differs by UI stack. Public state is mechanically writable despite the architectural boundary. A lifecycle seam independent of MonoBehaviour/DOTween would make startup and termination testable.
+`GameManager` combines lifecycle, UI composition, recording and backend endings in one large class. Startup decisions and idempotent unpause live in a UnityEngine-free seam; asynchronous presentation wiring and cleanup still need Unity checks. Hold behavior differs by UI stack. Public state is mechanically writable despite the architectural boundary. Termination remains coupled to MonoBehaviour/DOTween.
 
 ## Change recipes
 - Add a phase: define driver/input gating and completion callback; wire both relevant presenter stacks and every startup path.
@@ -80,4 +81,4 @@ Local Editor/development debug uses `DebugPlayerSwitch`: Tab switches local seat
 - Add debug controls: keep development/local guards and modified tuning outside state writes.
 
 ## Tests
-View tests cover pure playtest/framing/handover maths; match-log/network/backend suites cover their components through `dotnet/NodeWar.sln`. Compile-check covers orchestration types. Manual Unity checks remain necessary for draft/testing unpause, transitions, both presenter stacks, return/background flow and scene wiring.
+Eight startup-sequence tests cover draft transition/fallback, skip-draft with/without wave, paused phases and repeated completion over real simulation ticks. View tests also cover playtest/framing/handover maths; match-log/network/backend suites cover their components through `dotnet/NodeWar.sln`. Compile-check covers orchestration types. Manual Unity checks remain necessary for draft/testing unpause, transitions, both presenter stacks, return/background flow and scene wiring.
