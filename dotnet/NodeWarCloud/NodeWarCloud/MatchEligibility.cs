@@ -48,7 +48,9 @@ namespace NodeWar.Cloud
                     if (p != 0 && p != 1) return "Invalid draft player.";
                     if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
-                    var basePool = p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
+                    // Only the server catalog's board may waive ownership, never the log's own claim.
+                    var basePool = record.protocol < 6 ? null
+                        : p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
                     bool free = LoadoutCapacityPolicy.GetsFreeGrants(record.players[p].Rank.Arena) &&
                         basePool != null && System.Array.IndexOf(basePool, placement.districtType) >= 0;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
