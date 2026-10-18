@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NodeWar.Backend;
+using NodeWar.Progression;
 using NUnit.Framework;
 
 namespace NodeWar.Cloud.Tests
