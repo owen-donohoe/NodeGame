@@ -41,6 +41,7 @@
     <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs" Link="View/ViewSide.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />
     <!-- The tests themselves. -->
+    <Compile Include="HandleDisplayTests.cs" />
     <Compile Include="LoadoutWireTests.cs" />
     <Compile Include="LoadoutRulesTests.cs" />
     <Compile Include="LoadoutMigrationTests.cs" />
