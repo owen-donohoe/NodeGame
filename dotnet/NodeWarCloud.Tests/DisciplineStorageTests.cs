@@ -52,12 +52,50 @@ namespace NodeWar.Cloud.Tests
             Assert.That(result.Discipline.Level, Is.Zero);
             Assert.That(result.Discipline.NonReports, Is.Empty);
             Assert.That(result.Discipline.StruckMatchIds, Is.Empty);
-            Assert.That(batches, Has.Count.EqualTo(2));
+            Assert.That(batches, Has.Count.EqualTo(3));
             Assert.That(batches[0].Select(i => i.Key), Is.EquivalentTo(PlayerStateKeys.All));
             Assert.That(batches[1].Select(i => i.Key), Is.EquivalentTo(new[] { "discipline", "rating" }));
             Assert.That(batches[1].Single(i => i.Key == "rating").WriteLock, Is.Not.Null.And.Not.Empty);
+            Assert.That(batches[2].Select(i => i.Key), Is.EquivalentTo(new[] { "wallet", "rating" }));
+            Assert.That(batches[2].Single(i => i.Key == "rating").WriteLock, Is.Not.Null.And.Not.Empty);
+            Assert.That(result.Wallet.Coins, Is.EqualTo(WalletLedger.StartingCoins));
             await module.GetPlayerState(context);
-            Assert.That(batches, Has.Count.EqualTo(2));
+            Assert.That(batches, Has.Count.EqualTo(3));
+        }
+
+        [Test]
+        public async Task ConcurrentFirstGrantCannotBeOverwrittenByDefaultWalletCreation()
+        {
+            await new PlayerStateModule(api).GetPlayerState(context);
+            values.Remove(PlayerStateKeys.Wallet);
+            versions.Remove(PlayerStateKeys.Wallet);
+            batches.Clear();
+            BeforeWrite = () =>
+            {
+                // Another call created the wallet and was granted coins first, advancing rating's lock.
+                Put(PlayerStateKeys.Wallet, new WalletRecord { Coins = 99999 });
+                Put(PlayerStateKeys.Rating, values[PlayerStateKeys.Rating]);
+            };
+            var result = await new PlayerStateModule(api).GetPlayerState(context);
+            Assert.That(result.Wallet.Coins, Is.EqualTo(99999));
+            Assert.That(values[PlayerStateKeys.Wallet]["Coins"].Value<long>(), Is.EqualTo(99999));
+            Assert.That(batches, Is.Empty);
+        }
+
+        [Test]
+        public async Task WalletWritesUseOnlyTheWalletKey_AndAStaleLockConflicts()
+        {
+            await new PlayerStateModule(api).GetPlayerState(context);
+            batches.Clear();
+            var first = await store.ReadWalletLockedAsync();
+            var second = await store.ReadWalletLockedAsync();
+            first.Wallet.Coins = 1;
+            await store.WriteWalletLockedAsync(first.Wallet, first.WriteLock);
+            Assert.That(batches.Single().Select(i => i.Key), Is.EqualTo(new[] { "wallet" }));
+            Assert.That(batches.Single().Single().WriteLock, Is.Not.Null.And.Not.Empty);
+            Assert.ThrowsAsync<RecordConflictException>(() => store.WriteWalletLockedAsync(second.Wallet, second.WriteLock));
+            Assert.ThrowsAsync<InvalidOperationException>(() => store.WriteWalletLockedAsync(second.Wallet, null));
+            Assert.That((await store.ReadAsync()).Wallet.Coins, Is.EqualTo(1));
         }
 
         [Test]

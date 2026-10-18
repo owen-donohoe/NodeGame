@@ -29,10 +29,22 @@ namespace NodeWar.Cloud
     }
 
     /// <summary>
+    /// The wallet alone, with its write lock. Grants and spends read and write
+    /// only this key, so they never contend with settlement or equip.
+    /// </summary>
+    public interface IWalletStore
+    {
+        /// <summary>Null wallet when the player's records were never initialized.</summary>
+        Task<(WalletRecord Wallet, string WriteLock)> ReadWalletLockedAsync();
+        Task WriteWalletLockedAsync(WalletRecord wallet, string expectedWriteLock);
+    }
+
+    /// <summary>
     /// Player records in Cloud Save's protected access class: the player can
     /// read them, and only a service token (this module) can write them.
     /// </summary>
-    public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore, ILockedPlayerRecordStore, IDisciplinePlayerStore
+    public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore, ILockedPlayerRecordStore,
+        IDisciplinePlayerStore, IWalletStore
     {
         private readonly IGameApiClient api;
         private readonly IExecutionContext context;
@@ -47,11 +59,15 @@ namespace NodeWar.Cloud
 
         public async Task<PlayerState> ReadAsync()
         {
-            return (await ReadForSettlementAsync()).State;
+            return (await ReadWholeStateAsync()).State;
         }
 
         public Task<LockedPlayerState> ReadForSettlementAsync() => ReadLockedAsync(
             PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline }).ToList());
+
+        // Everything the client is shown: settlement's records plus the wallet.
+        private Task<LockedPlayerState> ReadWholeStateAsync() => ReadLockedAsync(
+            PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline, PlayerStateKeys.Wallet }).ToList());
 
         public Task<LockedPlayerState> ReadDisciplineAsync() => ReadLockedAsync(
             new List<string> { PlayerStateKeys.Discipline, PlayerStateKeys.Rating });
@@ -75,6 +91,7 @@ namespace NodeWar.Cloud
                     case PlayerStateKeys.History: state.History = Convert<HistoryRecord>(item.Value); break;
                     case PlayerStateKeys.ActiveMatch: state.ActiveMatch = Convert<ActiveMatchRecord>(item.Value); break;
                     case PlayerStateKeys.Discipline: state.Discipline = Convert<DisciplineRecord>(item.Value); break;
+                    case PlayerStateKeys.Wallet: state.Wallet = Convert<WalletRecord>(item.Value); break;
                 }
             }
             return new LockedPlayerState(state, locks);
@@ -105,6 +122,7 @@ namespace NodeWar.Cloud
         {
             await WriteAsync(records, null);
             await WriteDisciplineDefault(records);
+            await WriteWalletDefault(records);
         }
 
         public async Task WriteDisciplineAsync(DisciplineRecord discipline, LockedPlayerState read)
@@ -145,9 +163,69 @@ namespace NodeWar.Cloud
             }
         }
 
+        // Created like discipline: fenced by the rating lock, so two first-time
+        // calls cannot both create it and the later one cannot overwrite a grant.
+        private async Task WriteWalletDefault(PlayerState records)
+        {
+            if (records.Wallet == null) return;
+            for (int attempt = 0; ; attempt++)
+            {
+                var read = await ReadLockedAsync(new List<string> { PlayerStateKeys.Wallet, PlayerStateKeys.Rating });
+                if (read.State.Wallet != null)
+                {
+                    records.Wallet = read.State.Wallet;
+                    return;
+                }
+                try { await CreateWalletAsync(records.Wallet, read); return; }
+                catch (RecordConflictException) when (attempt + 1 < 3) { }
+            }
+        }
+
+        private async Task CreateWalletAsync(WalletRecord wallet, LockedPlayerState read)
+        {
+            if (read.State.Rating == null || !read.WriteLocks.TryGetValue(PlayerStateKeys.Rating, out string ratingLock) ||
+                string.IsNullOrEmpty(ratingLock))
+                throw new InvalidOperationException("Initialize player records before creating a wallet.");
+            try
+            {
+                await api.CloudSaveData.SetProtectedItemBatchAsync(context, context.ServiceToken,
+                    context.ProjectId, playerId, new SetItemBatchBody(new List<SetItemBody>
+                    {
+                        new SetItemBody(PlayerStateKeys.Rating, read.State.Rating, ratingLock),
+                        new SetItemBody(PlayerStateKeys.Wallet, wallet, null)
+                    }));
+            }
+            catch (ApiException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
+            { throw new RecordConflictException("Wallet created concurrently.", ex); }
+        }
+
+        public async Task<(WalletRecord Wallet, string WriteLock)> ReadWalletLockedAsync()
+        {
+            var read = await ReadLockedAsync(new List<string> { PlayerStateKeys.Wallet });
+            read.WriteLocks.TryGetValue(PlayerStateKeys.Wallet, out string walletLock);
+            return (read.State.Wallet, walletLock);
+        }
+
+        public async Task WriteWalletLockedAsync(WalletRecord wallet, string expectedWriteLock)
+        {
+            // A null lock would bypass the check and could overwrite a concurrent change.
+            if (string.IsNullOrEmpty(expectedWriteLock))
+                throw new InvalidOperationException("A wallet write needs the lock from its read.");
+            try
+            {
+                await api.CloudSaveData.SetProtectedItemBatchAsync(context, context.ServiceToken,
+                    context.ProjectId, playerId, new SetItemBatchBody(new List<SetItemBody>
+                    {
+                        new SetItemBody(PlayerStateKeys.Wallet, wallet, expectedWriteLock)
+                    }));
+            }
+            catch (ApiException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
+            { throw new RecordConflictException("Wallet changed.", ex); }
+        }
+
         public async Task<(PlayerState State, string InventoryWriteLock)> ReadInventoryLockedAsync()
         {
-            var read = await ReadForSettlementAsync();
+            var read = await ReadWholeStateAsync();
             read.WriteLocks.TryGetValue(PlayerStateKeys.Inventory, out string inventoryLock);
             return (read.State, inventoryLock);
         }
@@ -159,6 +237,7 @@ namespace NodeWar.Cloud
             await WriteAsync(records, PlayerStateKeys.All.ToDictionary(key => key,
                 key => key == PlayerStateKeys.Inventory ? inventoryWriteLock : null));
             await WriteDisciplineDefault(records);
+            await WriteWalletDefault(records);
         }
 
         // Writes Inventory alone, using only the Inventory write lock: a stale

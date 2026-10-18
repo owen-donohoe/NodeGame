@@ -28,12 +28,14 @@ namespace NodeWar.Cloud
                 // Shared defaults migrate saved inventory before canonical grants and clamp.
                 var changed = PlayerStateLogic.ApplyDefaults(state, rules.GrantDefaults);
                 if (changed.Rating == null && changed.Rank == null && changed.Inventory == null && changed.History == null &&
-                    changed.Discipline == null)
+                    changed.Discipline == null && changed.Wallet == null)
                     return state;
                 try
                 {
                     await store.WriteDefaultsLockedAsync(changed, inventoryLock);
+                    // Separately created records may have been created by a concurrent call; keep the stored one.
                     if (changed.Discipline != null) state.Discipline = changed.Discipline;
+                    if (changed.Wallet != null) state.Wallet = changed.Wallet;
                     return state;
                 }
                 // Re-read and re-apply: a settlement may have granted items or

@@ -34,8 +34,8 @@ namespace NodeWar.Backend
         {
             PlayerState stored = await store.ReadAsync() ?? new PlayerState();
             var created = ApplyDefaults(stored, updateInventory);
-            if (created.Rating != null || created.Rank != null
-                || created.Inventory != null || created.History != null || created.Discipline != null)
+            if (created.Rating != null || created.Rank != null || created.Inventory != null
+                || created.History != null || created.Discipline != null || created.Wallet != null)
                 await store.WriteAsync(created);
             return stored;
         }
@@ -50,6 +50,7 @@ namespace NodeWar.Backend
             if (stored.Inventory == null) stored.Inventory = created.Inventory = PlayerStateDefaults.Inventory();
             if (stored.History == null) stored.History = created.History = PlayerStateDefaults.History();
             if (stored.Discipline == null) stored.Discipline = created.Discipline = new DisciplineRecord();
+            if (stored.Wallet == null) stored.Wallet = created.Wallet = WalletLedger.Starting();
 
             if (NormalizeInventory(stored.Inventory) | DistrictMigration.Apply(stored)) created.Inventory = stored.Inventory;
             if (updateInventory != null && updateInventory(stored)) created.Inventory = stored.Inventory;
@@ -69,6 +70,65 @@ namespace NodeWar.Backend
             if (inventory.Equipped.Skins == null)
             { inventory.Equipped.Skins = new Dictionary<string, string>(StringComparer.Ordinal); changed = true; }
             return changed;
+        }
+    }
+
+    public enum WalletApplyResult { Applied, Duplicate, Insufficient }
+
+    /// <summary>
+    /// The only way a wallet changes. Pure: the server reads the wallet with its
+    /// write lock, applies here and writes back with that lock, so a concurrent
+    /// change conflicts instead of being lost.
+    /// </summary>
+    public static class WalletLedger
+    {
+        public const int CurrentVersion = 1;
+
+        // Placeholders until the economy is tuned: a high coin start so early
+        // progress feels fast, a low premium start so premium stays a saving goal.
+        public const long StartingCoins = 5000;
+        public const long StartingPremium = 25;
+
+        /// <summary>
+        /// How many transactions are kept. A request ID repeated after it has been
+        /// evicted would apply again, so callers retry within minutes, not weeks.
+        /// </summary>
+        public const int RecentLimit = 50;
+
+        public static WalletRecord Starting()
+        {
+            return new WalletRecord { Coins = StartingCoins, Premium = StartingPremium };
+        }
+
+        /// <summary>
+        /// Applies the transaction unless its ID was already applied or it would take
+        /// either balance below zero. Refusals leave the wallet unchanged.
+        /// </summary>
+        public static WalletApplyResult Apply(WalletRecord wallet, WalletTransaction transaction)
+        {
+            if (wallet == null) throw new ArgumentNullException(nameof(wallet));
+            if (transaction == null) throw new ArgumentNullException(nameof(transaction));
+            if (string.IsNullOrEmpty(transaction.Id)) throw new ArgumentException("A transaction needs a request ID.", nameof(transaction));
+            if (string.IsNullOrEmpty(transaction.Reason)) throw new ArgumentException("A transaction needs a reason.", nameof(transaction));
+            if (wallet.Recent == null) wallet.Recent = new List<WalletTransaction>();
+
+            foreach (WalletTransaction applied in wallet.Recent)
+                if (applied.Id == transaction.Id) return WalletApplyResult.Duplicate;
+
+            long coins, premium;
+            try
+            {
+                coins = checked(wallet.Coins + transaction.Coins);
+                premium = checked(wallet.Premium + transaction.Premium);
+            }
+            catch (OverflowException) { return WalletApplyResult.Insufficient; }
+            if (coins < 0 || premium < 0) return WalletApplyResult.Insufficient;
+
+            wallet.Coins = coins;
+            wallet.Premium = premium;
+            wallet.Recent.Add(transaction);
+            if (wallet.Recent.Count > RecentLimit) wallet.Recent.RemoveRange(0, wallet.Recent.Count - RecentLimit);
+            return WalletApplyResult.Applied;
         }
     }
 

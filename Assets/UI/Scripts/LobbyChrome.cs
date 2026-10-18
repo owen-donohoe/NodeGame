@@ -21,6 +21,8 @@ namespace NodeWar.Lobby
         private readonly Label trophyMax;
         private readonly VisualElement trophyFill;
         private readonly Label arenaText;
+        private readonly Label coinValue;
+        private readonly Label premiumValue;
 
         /// <summary>Raised when the player name is pressed.</summary>
         public event System.Action ProfileRequested;
@@ -38,12 +40,14 @@ namespace NodeWar.Lobby
             trophyMax = root.Q<Label>("trophy-max");
             trophyFill = root.Q<VisualElement>("trophy-fill");
             arenaText = root.Q<Label>("arena-text");
+            coinValue = root.Q<Label>("purse-coin-value");
+            premiumValue = root.Q<Label>("purse-leaf-value");
 
             Bind(root, "name-button", () => { if (ProfileRequested != null) ProfileRequested(); });
 
-            // TODO(economy): coins and gold leaf do not exist in PlayerProfile yet.
-            Bind(root, "purse-coin", () => toast.Show("Coins arrive in a later update"));
-            Bind(root, "purse-leaf", () => toast.Show("Gold leaf arrives in a later update"));
+            // TODO(economy): the purses open the shop once it exists.
+            Bind(root, "purse-coin", () => toast.Show("The shop arrives in a later update"));
+            Bind(root, "purse-leaf", () => toast.Show("The shop arrives in a later update"));
 
             Bind(root, "gear", () => { if (SettingsRequested != null) SettingsRequested(); });
             Bind(root, "history", () => { if (HistoryRequested != null) HistoryRequested(); });
@@ -79,6 +83,11 @@ namespace NodeWar.Lobby
             if (nameText != null)
                 nameText.text = profile != null ? profile.Username : "player";
 
+            // The server's balances only; the purse never shows a guessed amount.
+            WalletRecord wallet = BackendServices.LastKnownState?.Wallet;
+            if (coinValue != null) coinValue.text = wallet != null ? FormatAmount(wallet.Coins) : Dash;
+            if (premiumValue != null) premiumValue.text = wallet != null ? FormatAmount(wallet.Premium) : Dash;
+
             RankRecord rank = BackendServices.LastKnownState?.Rank;
             RankDisplay display = new RankDisplay(rank?.RR ?? 0);
             if (trophyCount != null) trophyCount.text = rank != null ? display.RR.ToString() : Dash;
@@ -90,5 +99,8 @@ namespace NodeWar.Lobby
                     ? " · " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
                     : " · Top arena");
         }
+
+        private static string FormatAmount(long amount) =>
+            amount.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
     }
 }
