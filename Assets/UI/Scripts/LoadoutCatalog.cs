@@ -14,8 +14,8 @@ namespace NodeWar.Lobby
     ///     GameManager.BuildDraftedSuits, so a slot spent on it buys nothing;
     ///   - Crossroads cannot be mapped to a DistrictType by GameManager, so a
     ///     slot spent on it produces nothing.
-    /// Warrior becomes offered at arena 2; Crossroads is never offered. "Owned" is offered and unlocked, asked of
-    /// PlayerProfile even though its unlock checks return true today.
+    /// Warrior becomes offered at arena 2; Crossroads is never offered. Base ownership
+    /// comes from server inventory, with starter ownership before state arrives.
     /// </summary>
     public class LoadoutCatalog
     {
@@ -73,14 +73,9 @@ namespace NodeWar.Lobby
         public bool IsDistrictOffered(string districtID) => IsDistrictOffered(districtID, Arena);
         public bool IsDistrictOffered(string districtID, int arena) =>
             FindDistrict(districtID) != null && LoadoutRules.IsDistrictOffered(districtID, arena);
-        /// <summary>Unity adapter: pure rules receive profile ownership and a server snapshot.</summary>
-        public UnlockState UnlockForBase(string lobbyId, NodeWar.Backend.PlayerState state)
-        {
-            PlayerProfile profile = PlayerProfile.Instance;
-            bool owned = profile == null || (FindSuit(lobbyId) != null
-                ? profile.IsSuitUnlocked(lobbyId) : profile.IsDistrictUnlocked(lobbyId));
-            return UnlockStates.ForBase(lobbyId, owned, state);
-        }
+        /// <summary>Resolve base ownership from a server snapshot.</summary>
+        public UnlockState UnlockForBase(string lobbyId, NodeWar.Backend.PlayerState state) =>
+            UnlockStates.ForBase(lobbyId, state);
 
         /// <summary>A display name, falling back to the ID so a half-filled asset shows as itself.</summary>
         public string SuitName(string suitID)

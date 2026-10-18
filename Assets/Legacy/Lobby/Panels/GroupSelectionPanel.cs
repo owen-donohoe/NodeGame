@@ -128,13 +128,13 @@ namespace NodeWar.Lobby
 
         private void BuildAllItems()
         {
-            PlayerProfile profile = PlayerProfile.Instance;
+            var state = NodeWar.Backend.BackendServices.LastKnownState;
 
             // Build suit items
             for (int i = 0; i < allSuits.Length; i++)
             {
                 SuitDefinition def = allSuits[i];
-                bool locked = (profile != null) ? !profile.IsSuitUnlocked(def.suitID) : true;
+                bool locked = !UnlockStates.ForBase(def.suitID, state).CanUse;
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
                 SelectableItemDisplay display = go.GetComponent<SelectableItemDisplay>();
@@ -150,7 +150,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < allDistricts.Length; i++)
             {
                 DistrictDefinition def = allDistricts[i]; 
-                bool locked = (profile != null) ? !profile.IsDistrictUnlocked(def.districtID) : true;
+                bool locked = !UnlockStates.ForBase(def.districtID, state).CanUse;
 
                 GameObject go = Instantiate(selectableItemPrefab, itemGridContent);
                 SelectableItemDisplay display = go.GetComponent<SelectableItemDisplay>();

@@ -2,7 +2,7 @@
 summary: Every Node War system, every connector between them, the three flows, the cross-cutting versions and boundaries, and the top pressure points.
 sources:
   - docs/systems/
-verified: d2dc8d35
+verified: 2e83aeb3
 ---
 
 # System map
@@ -156,8 +156,9 @@ Each card lists its own; these are the ones that shape what can be built next.
   idempotency; first-record creation, account deletion and retention remain pressure points.
 - **Three UI trees coexist** (UI Toolkit, legacy uGUI in-match, retired uGUI lobby);
   every presentation change must know which one runs.
-- **Catalog and suit eligibility differ.** Generic six-era grants coexist with
-  three-node suit trees. IDs, migrations, equip/referee checks and balance exports
-  must stay coordinated; ownership alone does not prove current equip availability.
+- **Catalog and suit eligibility differ.** Generic six-era catalog variants coexist
+  with three-node suit trees and `ContentTable` debut eras, which gate nothing yet.
+  IDs, migrations, equip/referee checks and balance exports must stay coordinated;
+  ownership alone does not prove current equip availability.
 - **Bots have limited action coverage.** The policy omits recruitment, upgrades,
   minion forging and remote collection, constraining strategic balance conclusions.

@@ -216,6 +216,7 @@ namespace NodeWar.Cloud.Tests
             state.Rank = new RankRecord { Arena = 0, HighestArena = 5 };
             state.Inventory = PlayerStateDefaults.Inventory();
             fake.GrantDefaults(state);
+            state.Inventory.OwnedVariants.Add("suit.warrior.e1");
             await store.WriteAsync(state);
             var changes = new EquippedRecord { Variants = new Dictionary<string, string> { { "suit.warrior", "suit.warrior.e1" } } };
             Assert.ThrowsAsync<InventoryValidationException>(async () => await fake.EquipAsync(changes));
