@@ -10,7 +10,7 @@ sources:
   - scripts/doc-budget.ps1
   - scripts/hooks/pre-commit
   - .github/workflows/docs.yml
-verified: ce9fb6bf
+verified: c727e9ad
 ---
 
 # doc-budget.ps1

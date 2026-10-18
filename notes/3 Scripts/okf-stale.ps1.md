@@ -10,7 +10,7 @@ sources:
   - scripts/okf-stale.ps1
   - scripts/okf-stale-hook.ps1
   - scripts/hooks/pre-commit
-verified: 41a0df69
+verified: c727e9ad
 ---
 
 # okf-stale.ps1
@@ -29,7 +29,7 @@ A read-only git/frontmatter freshness checker. `$SearchDirs` includes `docs`, `n
 ## Read it in this order
 
 1. **`Read-Frontmatter`.** Understand the supported YAML subset: compact `verified`, older `verified_at_commit`, source lists and resource entries. It is hand-parsed because Windows PowerShell 5.1 does not ship a YAML module.
-2. **`Get-LastCommit` and `Test-BodyChanged`.** For Markdown sources, skip commits changing only frontmatter, searching up to 50 commits. Otherwise stamping one document could endlessly stale other documents citing it.
+2. **`Get-LastCommit` and `Test-BodyChanged`.** For Markdown sources, including files inside directory sources, skip commits changing only frontmatter, searching up to 50 commits. Otherwise stamping one document could endlessly stale other documents citing it.
 3. **`Test-IsAncestor`.** A source's last substantive commit must be an ancestor of, or equal to, the verification commit. Unknown git answers become warnings rather than proof.
 4. **`Get-PendingChangedPaths`.** Read both staged and unstaged tracked diffs. Uncommitted source changes cannot be discovered through `git log` alone.
 5. **`Test-SurfaceChanged`.** Committed C# diffs escalate declaration-shaped lines; implementation-only changes become Touched. Non-C# files escalate. Directory sources are checked using that same declaration pattern over the directory diff.

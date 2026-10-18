@@ -22,7 +22,7 @@ sources:
   - .github/workflows/determinism.yml
   - .github/workflows/docs.yml
   - docs/attesters/hash_baseline.ps1
-verified: 41a0df69
+verified: c727e9ad
 ---
 
 # Tooling
