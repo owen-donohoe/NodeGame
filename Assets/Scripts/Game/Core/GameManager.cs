@@ -9,6 +9,7 @@ using NodeWar.Network;
 using NodeWar.View.Outline;
 using System.Collections.Generic;
 using DG.Tweening;
+using MatchPhase = NodeWar.Core.MatchStartupSequence.MatchPhase;
 
 namespace NodeWar.Core
 {
@@ -155,13 +156,14 @@ namespace NodeWar.Core
         private NodeWar.View.BoardTerrainView terrainView;
         private DraftResult? pendingDraftResult;
 
-        private enum MatchPhase { PreDraft, Drafting, PostDraft, Countdown, Playing }
-        private MatchPhase matchPhase = MatchPhase.PreDraft;
+        private MatchStartupSequence startup;
+        private MatchPhase matchPhase => startup != null ? startup.Phase : MatchPhase.PreDraft;
 
         // ===== INITIALIZATION =====
 
         private void Awake()
         {
+            startup = new MatchStartupSequence(UnpauseTickDriver);
             Application.runInBackground = true;
 
             state = new SimulationState();
@@ -210,7 +212,7 @@ namespace NodeWar.Core
 
         private void StartDraftPhase(MatchConnection match)
         {
-            matchPhase = MatchPhase.Drafting;
+            startup.StartDraft();
 
             GameObject draftGO = new GameObject("DraftManager");
             draftManager = draftGO.AddComponent<DraftManager>();
@@ -322,7 +324,7 @@ namespace NodeWar.Core
         private void OnDraftComplete(DraftResult result)
         {
             pendingDraftResult = result;
-            matchPhase = MatchPhase.PostDraft;
+            startup.CompleteDraft();
 
             // Capture loadouts before destroying DraftManager
             if (draftManager != null)
@@ -401,36 +403,33 @@ namespace NodeWar.Core
 
         private void BeginPostDraftTransition(MatchConnection match)
         {
-            matchPhase = MatchPhase.Countdown;
-
-            if (cameraController != null)
-                cameraController.SetDraftMode(false);
-
-            // Gather placeholders from whichever draft surface drew them, before
-            // it becomes irrelevant. They outlive it: the transition dissolves
-            // them as the real nodes arrive.
-            List<GameObject> placeholders =
-                draftPresenter != null ? draftPresenter.GetPersistentPlacements() : null;
-
-            int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
-
-            if (transitionController != null)
+            startup.BeginPostDraftTransition(transitionController != null, () =>
             {
-                transitionController.PlayPostDraftTransition(
-                    localPID, placeholders, nodePresentations, state, boardConfig);
-            }
-            else
-            {
-                // Fallback if no controller assigned — just start immediately
-                OnPlayerSideChanged(localPID);
-                OnTransitionComplete();
-            }
+                if (cameraController != null)
+                    cameraController.SetDraftMode(false);
+
+                // Placeholders outlive the draft surface: the transition dissolves
+                // them as the real nodes arrive.
+                List<GameObject> placeholders =
+                    draftPresenter != null ? draftPresenter.GetPersistentPlacements() : null;
+
+                int localPID = (match != null && match.isNetworked) ? match.localPlayerID : 0;
+
+                if (transitionController != null)
+                    transitionController.PlayPostDraftTransition(
+                        localPID, placeholders, nodePresentations, state, boardConfig);
+                else
+                    OnPlayerSideChanged(localPID);
+            });
         }
 
         private void OnTransitionComplete()
         {
-            matchPhase = MatchPhase.Playing;
+            startup.CompleteTransition();
+        }
 
+        private void UnpauseTickDriver()
+        {
             TickRunner tickRunner = GetComponent<TickRunner>();
             if (tickRunner != null) tickRunner.Unpause();
 
@@ -441,8 +440,11 @@ namespace NodeWar.Core
 
         private void SkipDraftAndInitialize()
         {
-            matchPhase = MatchPhase.Playing;
+            startup.SkipDraftAndInitialize(InitializeTestingMatch);
+        }
 
+        private void InitializeTestingMatch()
+        {
             DraftPlacement[] placements = DraftPlanner.TestingPlacements(boardConfig.Data);
             MatchFactory.Fill(state, balance.Data, boardConfig.Data, placements, BuildPlayerSetups());
             terrainView.ShowMatch(placements);
@@ -467,21 +469,6 @@ namespace NodeWar.Core
             // Just play the startup animation, no countdown sequence
             if (transitionController != null)
                 transitionController.PlayNodeStartupWave(nodePresentations, state, boardConfig);
-
-            // PlayNodeStartupWave is animation only -- it deliberately raises no
-            // events, so OnStartupTransitionComplete never fires on this path and
-            // nothing else would ever unpause the runner. Without this the tick
-            // loop stays paused forever: commands enqueue and are never drained,
-            // and the whole simulation is frozen. The draft path gets here via
-            // PostDraftSequence instead.
-            //
-            // TODO: no test covers this. Both entry paths need to end with an
-            // unpaused runner, and only the draft one is exercised today -- which
-            // is why this went unnoticed. A test that drives each path and asserts
-            // tickCount advances would have caught it. Needs a seam first: Unpause()
-            // is reached through a MonoBehaviour and a DOTween animation, neither of
-            // which the EditMode suite can drive.
-            OnTransitionComplete();
         }
 
         // ===== UPDATE =====
