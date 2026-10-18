@@ -26,6 +26,7 @@ namespace NodeWar.Backend
         public static bool SimulatedOffline { get; set; }
 
         private static IPlayerStateService playerState;
+        private static IHandleService handles;
         private static IAccountService account;
         private static IInventoryService inventory;
         private static IMatchReportService matchReports;
@@ -74,6 +75,7 @@ namespace NodeWar.Backend
         private static void ResetOnEnterPlayMode()
         {
             playerState = null;
+            handles = null;
             account = null;
             inventory = null;
             matchReports = null;
@@ -98,6 +100,19 @@ namespace NodeWar.Backend
             }
         }
 
+        public static IHandleService Handles
+        {
+            get
+            {
+                if (handles == null)
+                {
+                    if (UseLocalFakes) CreateLocalServices();
+                    else handles = new RememberingHandleService(new UgsHandleService());
+                }
+                return handles;
+            }
+        }
+
         public static IInventoryService Inventory
         {
             get
@@ -114,6 +129,7 @@ namespace NodeWar.Backend
         private static void CreateLocalServices()
         {
             var store = new InMemoryPlayerRecordStore();
+            handles = new LocalHandleService();
             var localInventory = new LocalInventoryService(store, CatalogBases.All());
             inventory = new RememberingInventoryService(localInventory);
             playerState = new RememberingPlayerStateService(new LocalPlayerStateService(store, localInventory.GrantDefaults));
@@ -214,6 +230,28 @@ namespace NodeWar.Backend
 
 namespace NodeWar.Backend
 {
+    internal sealed class LocalHandleService : IHandleService
+    {
+        public System.Threading.Tasks.Task<PlayerState> SetHandleAsync(string name, string tag, string requestId)
+        {
+            throw new System.InvalidOperationException("Handles need the server");
+        }
+    }
+
+    internal sealed class RememberingHandleService : IHandleService
+    {
+        private readonly IHandleService inner;
+        public RememberingHandleService(IHandleService inner) { this.inner = inner; }
+
+        public async System.Threading.Tasks.Task<PlayerState> SetHandleAsync(string name, string tag, string requestId)
+        {
+            string requestedFor = BackendServices.Account.Current?.PlayerId;
+            PlayerState state = await inner.SetHandleAsync(name, tag, requestId);
+            BackendServices.Remember(state, requestedFor);
+            return state;
+        }
+    }
+
     /// <summary>Passes calls through and remembers what came back (BackendServices.LastKnownState).</summary>
     internal sealed class RememberingPlayerStateService : IPlayerStateService
     {
