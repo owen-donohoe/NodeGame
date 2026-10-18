@@ -126,32 +126,6 @@ namespace NodeWar.Lobby
             Save();
         }
 
-        // Unlock gating has not shipped: every caller is deliberately told "yes".
-        // Before setting this to false, ensure profile creation seeds the starter
-        // set in unlockedSuitIDs/UnlockedDistrictIDs (CreateDefaults already seeds a
-        // small set), and migrate existing saves to preserve intended access.
-        // static readonly rather than const on purpose: a const true folds the
-        // lookup away at compile time, and every call site then compiles with an
-        // unreachable-expression warning. This way the gate reads the same and
-        // flipping it is still a one-line change.
-        private static readonly bool AllContentUnlocked = true;
-
-        public bool IsSuitUnlocked(string suitID) =>
-            AllContentUnlocked || ContainsUnlockedID(data.unlockedSuitIDs, suitID);
-
-        public bool IsDistrictUnlocked(string districtID) =>
-            AllContentUnlocked || ContainsUnlockedID(data.UnlockedDistrictIDs, districtID);
-
-        private static bool ContainsUnlockedID(string[] unlockedIDs, string contentID)
-        {
-            if (unlockedIDs == null) return false;
-            for (int i = 0; i < unlockedIDs.Length; i++)
-            {
-                if (unlockedIDs[i] == contentID) return true;
-            }
-            return false;
-        }
-
         // ===== VALIDATION =====
 
         public static bool ValidateUsername(string name)

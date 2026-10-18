@@ -21,21 +21,24 @@ namespace NodeWar.Lobby
         public UnlockState WithDisplayStatus(UnlockStatus status) => new UnlockState(status, UnlockEra, CanUse);
     }
 
-    /// <summary>Profile base ownership and exact server inventory are independent.</summary>
+    /// <summary>Base ownership and equipment eligibility come from server inventory.</summary>
     public static class UnlockStates
     {
         private static UnlockState Invalid => new UnlockState(UnlockStatus.CannotUnlock, 0, false);
         private static int Arena(PlayerState state) => state?.Rank?.Arena ?? 1;
         private static int HighestArena(PlayerState state) => state?.Rank?.HighestArena ?? 1;
 
-        public static UnlockState ForBase(string lobbyId, bool profileOwned, PlayerState state)
+        public static UnlockState ForBase(string lobbyId, PlayerState state)
         {
             string baseId = LoadoutTypes.CatalogBaseForLobbyId(lobbyId);
             if (baseId == null) return Invalid;
-            int gate = SuitTree.Root(baseId)?.Arena ?? 0;
-            return new UnlockState(profileOwned ? UnlockStatus.Owned :
+            int gate = ContentTable.DebutEra(baseId);
+            if (gate == ContentTable.UnknownEra) return Invalid;
+            var variants = state?.Inventory?.OwnedVariants;
+            bool owned = variants != null ? variants.Contains(CatalogIds.Variant(baseId, 0)) : ContentTable.IsStarter(baseId);
+            return new UnlockState(owned ? UnlockStatus.Owned :
                 HighestArena(state) >= gate ? UnlockStatus.CanUnlock : UnlockStatus.CannotUnlock,
-                gate, profileOwned && Arena(state) >= gate);
+                gate, owned);
         }
 
         public static UnlockState ForVariant(string baseId, string variantId, PlayerState state)
