@@ -40,10 +40,67 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void ProfileUnlocked_DoesNotGrantServerVariant()
+        public void UnownedBase_DoesNotGrantServerVariant()
         {
-            Assert.IsTrue(UnlockStates.ForBase("suit_scout", true, State()).CanUse);
+            Assert.IsFalse(UnlockStates.ForBase("suit_scout", State()).CanUse);
             Assert.IsFalse(UnlockStates.ForVariant("suit.scout", "suit.scout.e0", State()).CanUse);
+        }
+
+        [TestCase("suit_scout", "suit.scout")]
+        [TestCase("node_village", "district.village")]
+        public void OwnedBase_CanUseBelowDebut(string lobbyId, string baseId)
+        {
+            var state = State();
+            state.Rank.Arena = 0;
+            state.Rank.HighestArena = 0;
+            state.Inventory.OwnedVariants.Add(CatalogIds.Variant(baseId, 0));
+            var result = UnlockStates.ForBase(lobbyId, state);
+            Assert.AreEqual(UnlockStatus.Owned, result.Status);
+            Assert.AreEqual(ContentTable.DebutEra(baseId), result.UnlockEra);
+            Assert.IsTrue(result.CanUse);
+        }
+
+        [TestCase(1, UnlockStatus.CanUnlock)]
+        [TestCase(0, UnlockStatus.CannotUnlock)]
+        public void UnownedBase_UsesDebutAndHighestArena(int highestArena, UnlockStatus status)
+        {
+            var state = State();
+            state.Rank.HighestArena = highestArena;
+            state.Rank.Arena = 0;
+            var result = UnlockStates.ForBase("node_village", state);
+            Assert.AreEqual(status, result.Status);
+            Assert.AreEqual(ContentTable.DebutEra("district.village"), result.UnlockEra);
+            Assert.IsFalse(result.CanUse);
+        }
+
+        [TestCase("suit_warrior")]
+        [TestCase("suit_guardian")]
+        [TestCase("node_farm")]
+        [TestCase("node_mine")]
+        [TestCase("node_town")]
+        [TestCase("node_barracks")]
+        public void NullState_StarterBaseIsOwned(string lobbyId)
+        {
+            var result = UnlockStates.ForBase(lobbyId, null);
+            Assert.AreEqual(UnlockStatus.Owned, result.Status);
+            Assert.IsTrue(result.CanUse);
+        }
+
+        [Test]
+        public void NullState_VillageIsNotOwned()
+        {
+            var result = UnlockStates.ForBase("node_village", null);
+            Assert.AreEqual(UnlockStatus.CanUnlock, result.Status);
+            Assert.IsFalse(result.CanUse);
+        }
+
+        [Test]
+        public void UnknownLobbyId_IsInvalid()
+        {
+            var result = UnlockStates.ForBase("bad", State());
+            Assert.AreEqual(UnlockStatus.CannotUnlock, result.Status);
+            Assert.AreEqual(0, result.UnlockEra);
+            Assert.IsFalse(result.CanUse);
         }
 
         [Test]
@@ -73,7 +130,7 @@ namespace NodeWar.Lobby.Tests
             state.Inventory.OwnedSkins.Add("skin.suit.scout.gold");
             Assert.IsFalse(UnlockStates.ForVariant("suit.scout", "suit.scout.e5", state).CanUse);
             Assert.IsFalse(UnlockStates.ForSkin("suit.medic", "skin.suit.scout.gold", state).CanUse);
-            Assert.IsFalse(UnlockStates.ForBase("bad", true, state).CanUse);
+            Assert.IsFalse(UnlockStates.ForBase("bad", state).CanUse);
         }
 
         [Test]
