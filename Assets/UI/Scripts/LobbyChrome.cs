@@ -15,6 +15,10 @@ namespace NodeWar.Lobby
     public class LobbyChrome
     {
         private const string Dash = "—";
+        private static bool firstHandleAttempted;
+
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetHandleAttempt() => firstHandleAttempted = false;
 
         private readonly Label nameText;
         private readonly Label trophyCount;
@@ -36,6 +40,7 @@ namespace NodeWar.Lobby
         public LobbyChrome(VisualElement root, LobbyToast toast)
         {
             nameText = root.Q<Label>("name-text");
+            if (nameText != null) nameText.enableRichText = false;
             trophyCount = root.Q<Label>("trophy-count");
             trophyMax = root.Q<Label>("trophy-max");
             trophyFill = root.Q<VisualElement>("trophy-fill");
@@ -81,7 +86,15 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
 
             if (nameText != null)
-                nameText.text = profile != null ? profile.Username : "player";
+                nameText.text = HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
+                    profile != null ? profile.Username : "player");
+
+            if (!firstHandleAttempted && BackendServices.LastKnownState != null &&
+                BackendServices.LastKnownState.Profile == null)
+            {
+                firstHandleAttempted = true;
+                CreateFirstHandle(profile != null ? profile.Username : "");
+            }
 
             // The server's balances only; the purse never shows a guessed amount.
             WalletRecord wallet = BackendServices.LastKnownState?.Wallet;
@@ -98,6 +111,19 @@ namespace NodeWar.Lobby
                 arenaText.text = rank == null ? "Arena " + Dash : display.Name + (display.Span.HasValue
                     ? " · " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
                     : " · Top arena");
+        }
+
+        private static async void CreateFirstHandle(string localName)
+        {
+            try
+            {
+                await BackendServices.Handles.SetHandleAsync(HandleDisplay.FirstRunName(localName), "",
+                    System.Guid.NewGuid().ToString());
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning("Could not create the first handle: " + ex.Message);
+            }
         }
 
         private static string FormatAmount(long amount) =>
