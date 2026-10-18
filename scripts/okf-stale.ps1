@@ -275,9 +275,25 @@ function Get-LastCommit {
     $shas = @($shas | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($shas.Count -eq 0) { return $null }
 
-    if ($RepoRelativePath -notmatch '\.md$') { return $shas[0].Trim() }
+    $isDirectory = Test-Path -LiteralPath (Join-Path $RepoRoot $RepoRelativePath) -PathType Container
+    if (-not $isDirectory -and $RepoRelativePath -notmatch '\.md$') { return $shas[0].Trim() }
 
     foreach ($sha in $shas) {
+        if ($isDirectory) {
+            # A card directory must reach the same fixed point as a single
+            # Markdown source: follow-up verification stamps are not drift.
+            $paths = @(& git -C $RepoRoot diff-tree --root --no-commit-id --name-only -r $sha -- $RepoRelativePath)
+            if ($LASTEXITCODE -ne 0 -or $paths.Count -eq 0) { return $sha.Trim() }
+            $substantive = $false
+            foreach ($path in $paths) {
+                if ($path -notmatch '\.md$' -or (Test-BodyChanged -Sha $sha.Trim() -RepoRelativePath $path)) {
+                    $substantive = $true
+                    break
+                }
+            }
+            if ($substantive) { return $sha.Trim() }
+            continue
+        }
         if (Test-BodyChanged -Sha $sha.Trim() -RepoRelativePath $RepoRelativePath) {
             return $sha.Trim()
         }
