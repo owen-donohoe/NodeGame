@@ -195,6 +195,16 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
+        public async Task AdminList_ParsesIds_AndTheEmbeddedListLoads()
+        {
+            var ids = EmbeddedAdminDirectory.Parse("[\"abc\", \"\", \" \", \"def\"]");
+            Assert.That(ids, Is.EquivalentTo(new[] { "abc", "def" }));
+            Assert.Throws<System.IO.InvalidDataException>(() => EmbeddedAdminDirectory.Parse("null"));
+            Assert.That(await new EmbeddedAdminDirectory().IsAdminAsync(""), Is.False);
+            Assert.That(await new EmbeddedAdminDirectory().IsAdminAsync("not-an-admin"), Is.False);
+        }
+
+        [Test]
         public async Task Admin_GrantsToTarget_OrSelf_AndRecordsWhoDidIt()
         {
             var stores = new Dictionary<string, WalletStore>

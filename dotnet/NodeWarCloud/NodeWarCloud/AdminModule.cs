@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -16,30 +17,30 @@ namespace NodeWar.Cloud
     }
 
     /// <summary>
-    /// Admins are player IDs listed in the Private custom item "admin", key
-    /// "players" (a JSON array of strings), edited by hand in the UGS dashboard
-    /// (Cloud Save, Custom Items). A missing item means nobody is an admin.
+    /// Admins are the player IDs in Admin/admins.json, embedded in the module. Adding
+    /// one is a commit plus a deploy, so the list is reviewed and versioned. Player
+    /// IDs are not secrets; the server still checks the authenticated caller.
     /// </summary>
-    public sealed class CloudSaveAdminDirectory : IAdminDirectory
+    public sealed class EmbeddedAdminDirectory : IAdminDirectory
     {
-        public const string ItemId = "admin";
-        public const string PlayersKey = "players";
+        private static readonly Lazy<HashSet<string>> players = new Lazy<HashSet<string>>(Load);
 
-        private readonly IGameApiClient api;
-        private readonly IExecutionContext context;
-
-        public CloudSaveAdminDirectory(IGameApiClient api, IExecutionContext context)
-        { this.api = api; this.context = context; }
-
-        public async Task<bool> IsAdminAsync(string playerId)
+        public static HashSet<string> Parse(string json)
         {
-            if (string.IsNullOrEmpty(playerId)) return false;
-            var response = await api.CloudSaveData.GetPrivateCustomItemsAsync(context, context.ServiceToken,
-                context.ProjectId, ItemId, new List<string> { PlayersKey });
-            var item = response.Data.Results.SingleOrDefault(i => i.Key == PlayersKey);
-            if (item == null) return false;
-            var players = JsonConvert.DeserializeObject<List<string>>(JsonConvert.SerializeObject(item.Value));
-            return players != null && players.Contains(playerId, StringComparer.Ordinal);
+            var ids = JsonConvert.DeserializeObject<List<string>>(json)
+                ?? throw new InvalidDataException("The admin list must be a JSON array of player IDs.");
+            return new HashSet<string>(ids.Where(id => !string.IsNullOrWhiteSpace(id)), StringComparer.Ordinal);
+        }
+
+        public Task<bool> IsAdminAsync(string playerId) =>
+            Task.FromResult(!string.IsNullOrEmpty(playerId) && players.Value.Contains(playerId));
+
+        private static HashSet<string> Load()
+        {
+            using var stream = typeof(EmbeddedAdminDirectory).Assembly.GetManifestResourceStream("NodeWarCloud.Admin.admins.json")
+                ?? throw new InvalidDataException("Embedded admin list is missing.");
+            using var reader = new StreamReader(stream);
+            return Parse(reader.ReadToEnd());
         }
     }
 
@@ -87,7 +88,7 @@ namespace NodeWar.Cloud
         public Task<WalletRecord> AdminGrantCurrency(IExecutionContext context, string targetPlayerId,
             long coins, long premium, string reason, string requestId)
         {
-            var service = new AdminService(new CloudSaveAdminDirectory(api, context),
+            var service = new AdminService(new EmbeddedAdminDirectory(),
                 target => new CloudSavePlayerRecordStore(api, context, target),
                 () => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
             return service.GrantCurrencyAsync(context.PlayerId, targetPlayerId, coins, premium, reason, requestId);
