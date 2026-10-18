@@ -18,7 +18,7 @@ sources:
   - Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset
   - Assets/Scripts/Game/Simulation/DistrictHealth.cs
   - Assets/Scripts/Game/Simulation/NodeActionRules.cs
-verified: a35341b2
+verified: e9255fad
 ---
 
 # Node War
