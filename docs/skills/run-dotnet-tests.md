@@ -6,7 +6,7 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: gpt-6, at: 2026-10-11T19:03:46Z }
-verified_at_commit: 435ea894
+verified_at_commit: cee1a628
 status: draft
 sources:
   - id: solution
@@ -243,7 +243,7 @@ release-content gate with a freshly migrated client balance/export before shippi
 | `NodeWar.Network.Tests` | 128 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario the 1,500-tick core-rules acceptance on `hourglass-01-acceptance` and the bank-rules acceptance (Workshop forging, minion collection/death, Storehouse drain/lock/Restore/capture payout, Fortress health/aura recovery, remote Collect start/cancel, Pier gate, Recruit/Town) on `hourglass-01-banks-acceptance`, each over a lossy link with rollback |
 | `NodeWar.Progression.Tests` | 149 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
 | `NodeWar.BalanceRig.Tests` | 53 | the headless balance rig, scenario validation, repeatable execution against an exported JSON balance, its diagnostics and timeline metrics (including banks/gates and minions excluded from idle-body and Barracks-stall metrics, while living minions remain in final population totals), and setup compatibility with the shared map |
-| `NodeWarCloud.Tests` | 558 | the Cloud Code module: player state, handles and the handle registry, the wallet ledger and its storage, admin grants, the content table, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, `ReleaseContentTests` (a fresh balance export against the client balance and catalog, and v4 content: active types, Storehouse eras, sim-3 records and the refused sim-3 allocation), district migration of stored inventory including Market13 to Storehouse18 retirement and ownership/era preservation, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
+| `NodeWarCloud.Tests` | 560 | the Cloud Code module: player state, handles and the handle registry, the wallet ledger and its storage, admin grants, the content table, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, `ReleaseContentTests` (a fresh balance export against the client balance and catalog, and v4 content: active types, Storehouse eras, sim-3 records and the refused sim-3 allocation), district migration of stored inventory including Market13 to Storehouse18 retirement and ownership/era preservation, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## E4 acceptance evidence
 
