@@ -10,7 +10,7 @@ tags: [shell/2, realm/lobby, realm/match, system/lobby-ui, system/match-ui]
 sources:
   - Assets/Scripts/Lobby/LobbyManager.cs
   - Assets/Scripts/Game/Core/GameManager.cs
-verified: ce9fb6bf
+verified: 41a0df69
 ---
 
 # Three UI stacks

@@ -10,7 +10,7 @@ sources:
   - scripts/okf-stale.ps1
   - scripts/okf-stale-hook.ps1
   - scripts/hooks/pre-commit
-verified: ce9fb6bf
+verified: 41a0df69
 ---
 
 # okf-stale.ps1

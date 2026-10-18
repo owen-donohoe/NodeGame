@@ -18,7 +18,7 @@ sources:
   - scripts/hooks/pre-commit
   - .github/workflows/docs.yml
   - CLAUDE.md
-verified: ce9fb6bf
+verified: 41a0df69
 ---
 
 # Documentation guardrails
