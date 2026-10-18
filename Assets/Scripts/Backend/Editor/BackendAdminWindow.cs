@@ -62,6 +62,12 @@ namespace NodeWar.Backend.Editor
                 itemIds = EditorGUILayout.TextField("Item IDs (comma separated)", itemIds);
                 if (GUILayout.Button("Grant items")) GrantItems(false);
                 if (GUILayout.Button("Grant all content")) GrantItems(true);
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Handles", EditorStyles.boldLabel);
+                if (GUILayout.Button("Initialize handle registry (once per environment)"))
+                    Grant<int>("AdminInitHandleRegistry", new Dictionary<string, object>(),
+                        created => $"Created {created} registry shards.");
             }
             if (busy) EditorGUILayout.LabelField("Grant in progress...");
             if (!string.IsNullOrEmpty(message))
@@ -80,7 +86,7 @@ namespace NodeWar.Backend.Editor
         {
             string caller = SignedInPlayerId();
             if (busy || caller == null) return;
-            string target = (string)args["targetPlayerId"];
+            string target = args.TryGetValue("targetPlayerId", out object value) ? (string)value : "";
             busy = true;
             failed = false;
             message = "";
