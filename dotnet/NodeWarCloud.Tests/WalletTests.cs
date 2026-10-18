@@ -188,7 +188,7 @@ namespace NodeWar.Cloud.Tests
         public void Admin_RefusesNonAdmins_WithoutTouchingAnyWallet()
         {
             var store = new WalletStore { Stored = WalletLedger.Starting() };
-            var admin = new AdminService(new Admins("boss"), _ => store, () => 1);
+            var admin = new AdminService(new Admins("boss"), _ => store, () => 1, _ => null, ServerCatalog.Items);
             Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 admin.GrantCurrencyAsync("player", null, 100, 100, "free money", "r1"));
             Assert.That(store.Writes, Is.Zero);
@@ -212,7 +212,7 @@ namespace NodeWar.Cloud.Tests
                 ["boss"] = new WalletStore { Stored = WalletLedger.Starting() },
                 ["player"] = new WalletStore { Stored = WalletLedger.Starting() }
             };
-            var admin = new AdminService(new Admins("boss"), id => stores[id], () => 1);
+            var admin = new AdminService(new Admins("boss"), id => stores[id], () => 1, _ => null, ServerCatalog.Items);
 
             await admin.GrantCurrencyAsync("boss", "player", 0, 100, "testing crates", "r1");
             await admin.GrantCurrencyAsync("boss", "", 50, 0, "self", "r2");

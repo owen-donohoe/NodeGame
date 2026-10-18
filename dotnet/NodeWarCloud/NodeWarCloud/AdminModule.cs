@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NodeWar.Backend;
+using NodeWar.Progression;
 using Unity.Services.CloudCode.Apis;
 using Unity.Services.CloudCode.Core;
 
@@ -50,12 +51,60 @@ namespace NodeWar.Cloud
         private readonly IAdminDirectory admins;
         private readonly Func<string, IWalletStore> walletStoreFor;
         private readonly Func<long> nowUnixSeconds;
+        private readonly Func<string, ILockedPlayerRecordStore> inventoryStoreFor;
+        private readonly IReadOnlyList<CatalogItem> catalog;
 
-        public AdminService(IAdminDirectory admins, Func<string, IWalletStore> walletStoreFor, Func<long> nowUnixSeconds)
+        public AdminService(IAdminDirectory admins, Func<string, IWalletStore> walletStoreFor, Func<long> nowUnixSeconds,
+            Func<string, ILockedPlayerRecordStore> inventoryStoreFor, IReadOnlyList<CatalogItem> catalog)
         {
             this.admins = admins;
             this.walletStoreFor = walletStoreFor;
             this.nowUnixSeconds = nowUnixSeconds;
+            this.inventoryStoreFor = inventoryStoreFor;
+            this.catalog = catalog;
+        }
+
+        public async Task<InventoryRecord> GrantItemsAsync(string callerId, string targetPlayerId,
+            string[] itemIds, bool allActive)
+        {
+            if (!await admins.IsAdminAsync(callerId))
+                throw new UnauthorizedAccessException("Admin only.");
+            var grants = new List<CatalogItem>();
+            if (allActive) grants.AddRange(catalog.Where(item => !item.Retired));
+            else
+            {
+                if (itemIds == null) throw new ArgumentNullException(nameof(itemIds));
+                foreach (string id in itemIds)
+                {
+                    var item = catalog.FirstOrDefault(candidate => candidate.Id == id && !candidate.Retired);
+                    if (item == null) throw new ArgumentException($"Unknown or retired item '{id ?? "<null>"}'.", nameof(itemIds));
+                    grants.Add(item);
+                }
+            }
+            string target = string.IsNullOrEmpty(targetPlayerId) ? callerId : targetPlayerId;
+            var store = inventoryStoreFor(target);
+            for (int attempt = 0; ; attempt++)
+            {
+                var (state, inventoryLock) = await store.ReadInventoryLockedAsync();
+                var inventory = state?.Inventory
+                    ?? throw new InvalidOperationException("Player must sign in once first.");
+                PlayerStateLogic.NormalizeInventory(inventory);
+                bool changed = false;
+                foreach (var item in grants)
+                {
+                    var owned = item.Kind == CatalogItemKind.Variant ? inventory.OwnedVariants : inventory.OwnedSkins;
+                    if (owned.Contains(item.Id)) continue;
+                    owned.Add(item.Id);
+                    changed = true;
+                }
+                if (!changed) return inventory;
+                try
+                {
+                    await store.WriteInventoryLockedAsync(inventory, inventoryLock);
+                    return inventory;
+                }
+                catch (RecordConflictException) when (attempt + 1 < 3) { }
+            }
         }
 
         /// <summary>Grants (or, with negative amounts, removes) currency. The target defaults to the caller.</summary>
@@ -88,10 +137,18 @@ namespace NodeWar.Cloud
         public Task<WalletRecord> AdminGrantCurrency(IExecutionContext context, string targetPlayerId,
             long coins, long premium, string reason, string requestId)
         {
-            var service = new AdminService(new EmbeddedAdminDirectory(),
-                target => new CloudSavePlayerRecordStore(api, context, target),
-                () => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var service = Service(context);
             return service.GrantCurrencyAsync(context.PlayerId, targetPlayerId, coins, premium, reason, requestId);
         }
+
+        [CloudCodeFunction("AdminGrantItems")]
+        public Task<InventoryRecord> AdminGrantItems(IExecutionContext context, string targetPlayerId,
+            string[] itemIds, bool allActive) =>
+            Service(context).GrantItemsAsync(context.PlayerId, targetPlayerId, itemIds, allActive);
+
+        private AdminService Service(IExecutionContext context) => new AdminService(new EmbeddedAdminDirectory(),
+            target => new CloudSavePlayerRecordStore(api, context, target),
+            () => DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            target => new CloudSavePlayerRecordStore(api, context, target), ServerCatalog.Items);
     }
 }
