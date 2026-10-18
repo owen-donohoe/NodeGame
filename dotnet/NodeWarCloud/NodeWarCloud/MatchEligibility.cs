@@ -18,9 +18,10 @@ namespace NodeWar.Cloud
             string mapError = CheckMap(record, log);
             if (mapError != null) return mapError;
             if (log.loadouts == null || log.loadouts.Length != 2) return "Log needs two loadouts.";
+            var board = log.board;
             if (record.protocol >= 6)
             {
-                string budgetError = CheckBudgets(record, log);
+                string budgetError = CheckBudgets(record, log, out board);
                 if (budgetError != null) return budgetError;
             }
             for (int p = 0; p < 2; p++)
@@ -47,8 +48,11 @@ namespace NodeWar.Cloud
                     if (p != 0 && p != 1) return "Invalid draft player.";
                     if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
+                    var basePool = p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
+                    bool free = LoadoutCapacityPolicy.GetsFreeGrants(record.players[p].Rank.Arena) &&
+                        basePool != null && System.Array.IndexOf(basePool, placement.districtType) >= 0;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
-                        type, log.loadouts[p].districtEras);
+                        type, log.loadouts[p].districtEras, requireOwnership: !free);
                     if (error != null) return error;
                 }
             return null;
@@ -73,9 +77,9 @@ namespace NodeWar.Cloud
             return null;
         }
 
-        private static string CheckBudgets(MatchRecord record, Log log)
+        private static string CheckBudgets(MatchRecord record, Log log, out BoardConfigData board)
         {
-            if (!PremadeMaps.Catalog.TryGet(record.mapId, out BoardConfigData board) ||
+            if (!PremadeMaps.Catalog.TryGet(record.mapId, out board) ||
                 BoardHasher.Hash(board) != record.boardHash)
                 return "Unknown server map or board hash.";
             var budgets = new int[2][];
@@ -133,7 +137,8 @@ namespace NodeWar.Cloud
                 }
             return null;
         }
-        private static string CheckVariant(MatchPlayerSnapshot player, string baseId, int type, int[] eras)
+        private static string CheckVariant(MatchPlayerSnapshot player, string baseId, int type, int[] eras,
+            bool requireOwnership = true)
         {
             if (baseId == null) return "Unknown drafted type.";
             // ERAS encodes a null table as an empty array when another table is present.
@@ -144,7 +149,7 @@ namespace NodeWar.Cloud
                     ? !SuitTree.IsAvailable(CatalogIds.Variant(baseId, era), player.Rank.Arena)
                     : era > player.Rank.Arena))
                 return "Drafted era exceeds the snapshot arena.";
-            if (!player.OwnedVariants.Contains(CatalogIds.Variant(baseId, era)))
+            if (requireOwnership && !player.OwnedVariants.Contains(CatalogIds.Variant(baseId, era)))
                 return "Drafted variant was not owned in the snapshot.";
             return null;
         }
