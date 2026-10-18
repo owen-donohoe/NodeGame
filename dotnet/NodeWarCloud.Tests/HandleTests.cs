@@ -199,6 +199,28 @@ namespace NodeWar.Cloud.Tests
             Assert.That(registry.Writes, Is.EqualTo(writes));
         }
 
+        [TestCase("Player")]
+        [TestCase("PLAYER")]
+        public async Task AutomaticTagKeepsCurrentTagForSameNameWithoutChargeOrRegistryWrite(string name)
+        {
+            int calls = 0;
+            var auto = new HandleService(registry, id => players[id], EmbeddedBlockedNames.Names,
+                () => ++calls == 1 ? "AUTO" : "NEXT");
+            var first = await auto.SetHandleAsync("p1", "Player", "", "r1", () => 100);
+            int writes = registry.Writes;
+            string wallet = JsonConvert.SerializeObject(first.Wallet);
+
+            var state = await auto.SetHandleAsync("p1", name, "", "r2", () => 200);
+
+            Assert.That(state.Profile.Name, Is.EqualTo(name));
+            Assert.That(state.Profile.Tag, Is.EqualTo(first.Profile.Tag));
+            Assert.That(state.Profile.LastFreeRenameUnixSeconds, Is.Zero);
+            Assert.That(JsonConvert.SerializeObject(state.Wallet), Is.EqualTo(wallet));
+            Assert.That(players["p1"].WalletWrites, Is.Zero);
+            Assert.That(registry.Writes, Is.EqualTo(writes));
+            Assert.That(registry.Owner("player", first.Profile.Tag), Is.EqualTo("p1"));
+        }
+
         [Test]
         public async Task FreeRenameThenPaidRenameAndCooldownExpiry()
         {
@@ -307,9 +329,10 @@ namespace NodeWar.Cloud.Tests
             var state = await auto.SetHandleAsync("p1", "Player", "", "r2", () => 100);
             Assert.That(state.Profile.Tag, Is.EqualTo("FREE"));
             Assert.That(calls, Is.EqualTo(10));
+            await handles.SetHandleAsync("p2", "Taken", "A", "r3", () => 100);
             calls = 0;
             auto = new HandleService(registry, id => players[id], EmbeddedBlockedNames.Names, () => { calls++; return "A"; });
-            Assert.ThrowsAsync<HandleRefusedException>(() => auto.SetHandleAsync("p1", "Player", null, "r3", () => 100));
+            Assert.ThrowsAsync<HandleRefusedException>(() => auto.SetHandleAsync("p1", "Taken", null, "r4", () => 100));
             Assert.That(calls, Is.EqualTo(10));
         }
 

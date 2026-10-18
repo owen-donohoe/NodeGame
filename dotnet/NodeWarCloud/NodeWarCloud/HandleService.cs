@@ -71,13 +71,14 @@ namespace NodeWar.Cloud
             var store = storeFor(playerId);
             for (int candidate = 0; candidate < (automatic ? 10 : 1); candidate++)
             {
-                string chosenTag = automatic ? randomTag() : tag;
-                if (!HandleRules.IsValidTag(chosenTag)) throw new InvalidOperationException("Invalid generated tag.");
+                string candidateTag = automatic ? randomTag() : tag;
+                if (!HandleRules.IsValidTag(candidateTag)) throw new InvalidOperationException("Invalid generated tag.");
                 for (int attempt = 0; attempt < 3; attempt++)
                 {
                     var read = await store.ReadProfileWalletLockedAsync();
                     long now = clock();
                     var old = read.Profile;
+                    string chosenTag = automatic && old != null && old.NameNorm == norm ? old.Tag : candidateTag;
                     string key = HandleRegistry.Key(norm, chosenTag);
                     string oldKey = old == null ? null : HandleRegistry.Key(old.NameNorm, old.Tag);
                     bool casingOnly = key == oldKey;
