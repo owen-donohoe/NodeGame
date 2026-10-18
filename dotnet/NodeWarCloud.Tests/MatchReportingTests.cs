@@ -362,7 +362,7 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task PromotionToArenaThreeGrantsNoVariants()
         {
-            Initialize(899, 900);
+            Initialize(1195, 1200);
             var owned = (await State(0)).Inventory.OwnedVariants.ToArray();
             await Report(0);
             await Report(1);

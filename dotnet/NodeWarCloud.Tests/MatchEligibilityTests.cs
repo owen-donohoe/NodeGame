@@ -51,7 +51,7 @@ namespace NodeWar.Cloud.Tests
             var pool = lowSeat == 0 ? log.board.baseDraftDistrictsP0 : log.board.baseDraftDistrictsP1;
             Assert.That(pool, Does.Contain(DistrictType.Village));
             record.players[lowSeat].OwnedVariants.Remove("district.village.e0");
-            log.header.kind = MatchKind.Ranked;
+            log.header.kind = MatchKind.Networked;
             log.draft = new[] { new DraftPlacement { playerID = lowSeat, districtType = DistrictType.Village } };
             Assert.That(MatchEligibility.Check(record, log), Is.Null);
 
@@ -66,7 +66,7 @@ namespace NodeWar.Cloud.Tests
         {
             var (record, log) = Current(highSeat);
             record.players[highSeat].OwnedVariants.Remove("district.village.e0");
-            log.header.kind = MatchKind.Ranked;
+            log.header.kind = MatchKind.Networked;
             log.loadouts[highSeat].districts[0] = (int)DistrictType.Village;
             log.draft = new[] { new DraftPlacement { playerID = highSeat, districtType = DistrictType.Village } };
             Assert.That(MatchEligibility.Check(record, log), Does.Contain("not owned"));
