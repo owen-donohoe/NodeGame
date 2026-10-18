@@ -2,7 +2,7 @@
 summary: Every Node War system, every connector between them, the three flows, the cross-cutting versions and boundaries, and the top pressure points.
 sources:
   - docs/systems/
-verified: 41a0df69
+verified: d2dc8d35
 ---
 
 # System map
