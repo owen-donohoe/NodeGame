@@ -73,6 +73,58 @@ namespace NodeWar.Backend
         }
     }
 
+    /// <summary>Shared handle format and moderation rules; the server supplies its blocklist.</summary>
+    public static class HandleRules
+    {
+        public const int PaidRenamePremium = 50;
+        public const long FreeRenameIntervalSeconds = 30L * 24 * 60 * 60;
+
+        public static bool IsValidName(string name)
+        {
+            if (name == null || name.Length < 3 || name.Length > 16) return false;
+            foreach (char c in name)
+                if (!IsAsciiLetterOrDigit(c) && c != '-' && c != '_') return false;
+            return true;
+        }
+
+        public static bool IsValidTag(string tag)
+        {
+            if (tag == null || tag.Length < 1 || tag.Length > 4) return false;
+            foreach (char c in tag)
+                if (!(c >= 'A' && c <= 'Z') && !(c >= '0' && c <= '9')) return false;
+            return true;
+        }
+
+        private static bool IsAsciiLetterOrDigit(char c) =>
+            (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+
+        public static string NormalizeName(string name) => name.ToLowerInvariant();
+        public static string NormalizeTag(string tag) => tag == null ? null : tag.ToUpperInvariant();
+        public static string Display(ProfileRecord profile) => profile.Name + "#" + profile.Tag;
+
+        public static bool IsBlocked(string nameNorm, IEnumerable<string> blockedNames)
+        {
+            var folded = new System.Text.StringBuilder();
+            foreach (char c in nameNorm)
+            {
+                switch (c)
+                {
+                    case '-': case '_': break;
+                    case '0': folded.Append('o'); break;
+                    case '1': folded.Append('i'); break;
+                    case '3': folded.Append('e'); break;
+                    case '4': folded.Append('a'); break;
+                    case '5': folded.Append('s'); break;
+                    case '7': folded.Append('t'); break;
+                    default: folded.Append(c); break;
+                }
+            }
+            string candidate = folded.ToString();
+            foreach (string blocked in blockedNames)
+                if (!string.IsNullOrEmpty(blocked) && candidate.IndexOf(blocked, StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+    }
     public enum WalletApplyResult { Applied, Duplicate, Insufficient }
 
     /// <summary>

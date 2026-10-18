@@ -1,0 +1,6 @@
+# Reserved names. Curate additional blocked substrings here.
+admin
+moderator
+nodewar
+official
+support
