@@ -116,13 +116,16 @@ namespace NodeWar.Cloud.Tests
             IPlayerStateService service = local ? new LocalPlayerStateService(store, fake.GrantDefaults) : Server(store);
             var state = await service.GetAsync();
             var bases = CatalogTests.ExpectedBases().ToList();
-            Assert.That(state.Inventory.OwnedVariants, Is.EquivalentTo(bases.Select(b => CatalogIds.Variant(b, 0))));
+            Assert.That(state.Inventory.OwnedVariants, Is.EquivalentTo(ContentTable.Starters.Select(b => CatalogIds.Variant(b, 0))));
             Assert.That(state.Inventory.OwnedSkins, Is.EquivalentTo(bases.Select(CatalogIds.DefaultSkin)));
-            Assert.That(state.Inventory.Equipped.Variants, Has.Count.EqualTo(bases.Count));
+            Assert.That(state.Inventory.Equipped.Variants, Has.Count.EqualTo(ContentTable.Starters.Count));
             Assert.That(state.Inventory.Equipped.Skins, Has.Count.EqualTo(bases.Count));
             foreach (string baseId in bases)
             {
-                Assert.That(state.Inventory.Equipped.Variants[baseId], Is.EqualTo(CatalogIds.Variant(baseId, 0)));
+                if (ContentTable.IsStarter(baseId))
+                    Assert.That(state.Inventory.Equipped.Variants[baseId], Is.EqualTo(CatalogIds.Variant(baseId, 0)));
+                else
+                    Assert.That(state.Inventory.Equipped.Variants.ContainsKey(baseId), Is.False);
                 Assert.That(state.Inventory.Equipped.Skins[baseId], Is.EqualTo(CatalogIds.DefaultSkin(baseId)));
             }
             await service.GetAsync();
@@ -134,24 +137,39 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public async Task HighestArena_GrantsAllReachedEras_KeepsEquippedAndOwnershipOnDemotion(bool local)
+        public async Task OwnedNonStarterRoot_IsEquippedWithoutGrantingOtherVariants(bool local)
         {
             var store = new RecordingStore();
             var fake = new LocalInventoryService(store, CatalogTests.ExpectedBases());
             IPlayerStateService service = local ? new LocalPlayerStateService(store, fake.GrantDefaults) : Server(store);
             var state = await service.GetAsync();
+            state.Inventory.OwnedVariants.Add("district.village.e0");
+            await service.GetAsync();
+            Assert.That(state.Inventory.Equipped.Variants["district.village"], Is.EqualTo("district.village.e0"));
+            Assert.That(state.Inventory.OwnedVariants, Is.EquivalentTo(
+                ContentTable.Starters.Select(b => CatalogIds.Variant(b, 0)).Append("district.village.e0")));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task HighestArena_GrantsNothing_KeepsExplicitOwnershipOnDemotion(bool local)
+        {
+            var store = new RecordingStore();
+            var fake = new LocalInventoryService(store, CatalogTests.ExpectedBases());
+            IPlayerStateService service = local ? new LocalPlayerStateService(store, fake.GrantDefaults) : Server(store);
+            var state = await service.GetAsync();
+            state.Inventory.OwnedVariants.Add("suit.warrior.e2");
+            var owned = state.Inventory.OwnedVariants.ToArray();
             state.Rank.HighestArena = 3;
             state.Rank.Arena = 1;
             await service.GetAsync();
-            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(22 * 4));
-            Assert.That(state.Inventory.OwnedVariants.Distinct().Count(), Is.EqualTo(22 * 4));
+            Assert.That(state.Inventory.OwnedVariants, Is.EqualTo(owned));
             Assert.That(state.Inventory.Equipped.Variants.Values, Has.All.EndsWith(".e0"));
-            Assert.That(store.Writes, Has.Count.EqualTo(2));
-            AssertInventoryOnly(store.Writes[1]);
+            Assert.That(store.Writes, Has.Count.EqualTo(1));
             state.Rank.Arena = 0;
             await service.GetAsync();
-            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(22 * 4));
-            Assert.That(store.Writes, Has.Count.EqualTo(2));
+            Assert.That(state.Inventory.OwnedVariants, Is.EqualTo(owned));
+            Assert.That(store.Writes, Has.Count.EqualTo(1));
         }
 
         [TestCase(false)]
@@ -164,6 +182,7 @@ namespace NodeWar.Cloud.Tests
             IInventoryService inventory = local ? fake : Server(store);
             var state = await states.GetAsync();
             state.Rank.Arena = state.Rank.HighestArena = 2;
+            state.Inventory.OwnedVariants.Add("suit.warrior.e2");
             await states.GetAsync();
             var equipped = await inventory.EquipAsync(Variant("suit.warrior", "suit.warrior.e2"));
             Assert.That(equipped.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e2"));
@@ -189,7 +208,8 @@ namespace NodeWar.Cloud.Tests
             var state = await service.GetAsync();
             state.Rank.HighestArena = 1;
             state.Rank.Arena = 1;
-            await service.GetAsync(); // grants era-1 variants at the current arena
+            state.Inventory.OwnedVariants.Add("suit.warrior.e1");
+            await service.GetAsync();
 
             // Simulate a settlement landing between this Equip's read and its
             // write: it demotes the arena and clamps the equipped suit back to
@@ -220,6 +240,7 @@ namespace NodeWar.Cloud.Tests
             state.Rank.Arena = state.Rank.HighestArena = 1;
             await service.GetAsync();
             state = await store.ReadAsync();
+            state.Inventory.OwnedVariants.Add("suit.warrior.e1");
             state.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e1";
             if (normalize) state.Inventory.Equipped.Skins = null;
             else state.Inventory.OwnedVariants.Remove("suit.miner.e0");
@@ -228,6 +249,7 @@ namespace NodeWar.Cloud.Tests
             {
                 state.Rank.Arena = 0;
                 state.Rank.HighestArena = 2;
+                state.Inventory.OwnedVariants.Add("suit.warrior.e2");
                 state.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e0";
                 state.Inventory.OwnedSkins.Add("concurrent-skin");
                 store.WriteAsync(new PlayerState { Rank = state.Rank, Inventory = state.Inventory }).GetAwaiter().GetResult();
@@ -341,6 +363,7 @@ namespace NodeWar.Cloud.Tests
             state.Rank.Arena = 1;
             state.Rank.HighestArena = 2;
             await states.GetAsync();
+            state.Inventory.OwnedVariants.AddRange(new[] { "suit.warrior.e1", "suit.miner.e1", "suit.miner.e2" });
             // A valid change is deliberately first: a later invalid item must not apply it.
             var changes = Variant("suit.warrior", "suit.warrior.e1");
             string key = "suit.miner", id = "suit.miner.e1";
@@ -388,9 +411,9 @@ namespace NodeWar.Cloud.Tests
             });
             var service = Server(store);
             var state = await service.GetAsync();
-            Assert.That(state.Inventory.Equipped.Variants, Has.Count.EqualTo(22));
+            Assert.That(state.Inventory.Equipped.Variants, Has.Count.EqualTo(ContentTable.Starters.Count));
             Assert.That(state.Inventory.Equipped.Skins, Has.Count.EqualTo(22));
-            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(22));
+            Assert.That(state.Inventory.OwnedVariants, Has.Count.EqualTo(ContentTable.Starters.Count));
             Assert.That(state.Inventory.OwnedSkins, Has.Count.EqualTo(22));
             Assert.That(JsonConvert.SerializeObject(state.Inventory), Does.Contain("\"EquippedSuitIDs\":[\"legacy\"]"));
             AssertInventoryOnly(store.Writes.Last());

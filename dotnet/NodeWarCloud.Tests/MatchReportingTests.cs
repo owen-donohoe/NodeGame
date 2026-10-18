@@ -337,21 +337,39 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task PromotionGrantsNewEraVariantsAndDemotionClampsEquipped()
+        public async Task PromotionGrantsNoVariantsAndDemotionClampsEquipped()
         {
             Initialize(299, 300);
-            players[1].Mutate(s => s.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e1");
+            var owned = (await State(0)).Inventory.OwnedVariants.ToArray();
+            players[1].Mutate(s =>
+            {
+                s.Inventory.OwnedVariants.Add("suit.warrior.e1");
+                s.Inventory.Equipped.Variants["suit.warrior"] = "suit.warrior.e1";
+            });
             await Report(0);
             await Report(1);
             var winner = await State(0);
             var loser = await State(1);
             Assert.That(winner.Rank.Arena, Is.EqualTo(1));
             Assert.That(winner.Rank.HighestArena, Is.EqualTo(1));
-            Assert.That(winner.Inventory.OwnedVariants.Count(id => id.EndsWith(".e1")), Is.EqualTo(22));
+            Assert.That(winner.Inventory.OwnedVariants, Is.EqualTo(owned));
             Assert.That(loser.Rank.Arena, Is.Zero);
             Assert.That(loser.Rank.HighestArena, Is.EqualTo(1));
             Assert.That(loser.Inventory.OwnedVariants, Does.Contain("suit.warrior.e1"));
             Assert.That(loser.Inventory.Equipped.Variants["suit.warrior"], Is.EqualTo("suit.warrior.e0"));
+        }
+
+        [Test]
+        public async Task PromotionToArenaThreeGrantsNoVariants()
+        {
+            Initialize(899, 900);
+            var owned = (await State(0)).Inventory.OwnedVariants.ToArray();
+            await Report(0);
+            await Report(1);
+            var winner = await State(0);
+            Assert.That(winner.Rank.Arena, Is.EqualTo(3));
+            Assert.That(winner.Rank.HighestArena, Is.EqualTo(3));
+            Assert.That(winner.Inventory.OwnedVariants, Is.EqualTo(owned));
         }
 
         [Test]
@@ -545,6 +563,8 @@ namespace NodeWar.Cloud.Tests
             int arena = Arenas.ArenaForRR(rr, new ArenaConfig());
             state.Rank = new RankRecord { RR = rr, Arena = arena, HighestArena = arena };
             new InventoryRules(ServerCatalog.Items).GrantDefaults(state);
+            // The legacy fixture drafts Village even at arenas without free grants.
+            state.Inventory.OwnedVariants.Add("district.village.e0");
             return state;
         }
 
