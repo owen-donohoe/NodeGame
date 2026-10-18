@@ -120,9 +120,16 @@ namespace NodeWar.Lobby
                 await BackendServices.Handles.SetHandleAsync(HandleDisplay.FirstRunName(localName), "",
                     System.Guid.NewGuid().ToString());
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-                UnityEngine.Debug.LogWarning("Could not create the first handle: " + ex.Message);
+                try
+                {
+                    await BackendServices.Handles.SetHandleAsync("Player", "", System.Guid.NewGuid().ToString());
+                }
+                catch (System.Exception ex)
+                {
+                    UnityEngine.Debug.LogWarning("Could not create the first handle: " + ex.Message);
+                }
             }
         }
 
