@@ -85,7 +85,8 @@ namespace NodeWar.Backend
                 Inventory = records.Inventory,
                 History = records.History,
                 Discipline = records.Discipline,
-                Wallet = records.Wallet
+                Wallet = records.Wallet,
+                Profile = records.Profile
             });
         }
 
@@ -98,6 +99,7 @@ namespace NodeWar.Backend
             if (written.History != null) records.History = written.History;
             if (written.Discipline != null) records.Discipline = written.Discipline;
             if (written.Wallet != null) records.Wallet = written.Wallet;
+            if (written.Profile != null) records.Profile = written.Profile;
             return Task.CompletedTask;
         }
     }
