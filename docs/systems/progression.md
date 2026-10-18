@@ -12,7 +12,7 @@ sources:
   - Assets/Scripts/Backend/Shared/RankTable.cs
   - Assets/Scripts/Backend/Shared/SuitTree.cs
   - Assets/Scripts/Backend/Shared/DistrictMigration.cs
-verified: e9255fad
+verified: 435ea894
 ---
 
 # Progression
