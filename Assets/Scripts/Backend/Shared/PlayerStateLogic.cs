@@ -77,6 +77,7 @@ namespace NodeWar.Backend
     public static class HandleRules
     {
         public const int PaidRenamePremium = 50;
+        public const long ReservationGraceSeconds = 300;
         public const long FreeRenameIntervalSeconds = 30L * 24 * 60 * 60;
 
         public static bool IsValidName(string name)

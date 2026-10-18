@@ -105,18 +105,18 @@ namespace NodeWar.Cloud.Tests
 
         private sealed class Registry : IHandleRegistryStore
         {
-            public readonly Dictionary<string, Dictionary<string, string>> Shards = new Dictionary<string, Dictionary<string, string>>();
+            public readonly Dictionary<string, Dictionary<string, HandleReservation>> Shards = new Dictionary<string, Dictionary<string, HandleReservation>>();
             private readonly Dictionary<string, int> versions = new Dictionary<string, int>();
             public int Writes;
             public Func<Task> BeforeWrite;
             public bool FailWrites;
 
-            public Task<(Dictionary<string, string> Entries, string WriteLock)> ReadShardAsync(string shard) =>
+            public Task<(Dictionary<string, HandleReservation> Entries, string WriteLock)> ReadShardAsync(string shard) =>
                 Task.FromResult(Shards.TryGetValue(shard, out var entries)
-                    ? (new Dictionary<string, string>(entries), versions[shard].ToString())
-                    : ((Dictionary<string, string>)null, (string)null));
+                    ? (Copy(entries), versions[shard].ToString())
+                    : ((Dictionary<string, HandleReservation>)null, (string)null));
 
-            public async Task WriteShardAsync(string shard, Dictionary<string, string> entries, string expectedWriteLock)
+            public async Task WriteShardAsync(string shard, Dictionary<string, HandleReservation> entries, string expectedWriteLock)
             {
                 if (string.IsNullOrEmpty(expectedWriteLock)) throw new InvalidOperationException("Lock required.");
                 var hook = BeforeWrite;
@@ -124,7 +124,7 @@ namespace NodeWar.Cloud.Tests
                 if (hook != null) await hook();
                 if (FailWrites || !versions.TryGetValue(shard, out int version) || version.ToString() != expectedWriteLock)
                     throw new RecordConflictException("Shard changed.");
-                Shards[shard] = new Dictionary<string, string>(entries);
+                Shards[shard] = Copy(entries);
                 versions[shard]++;
                 Writes++;
             }
@@ -136,7 +136,7 @@ namespace NodeWar.Cloud.Tests
                 {
                     string shard = i.ToString("x2");
                     if (Shards.ContainsKey(shard)) continue;
-                    Shards[shard] = new Dictionary<string, string>();
+                    Shards[shard] = new Dictionary<string, HandleReservation>();
                     versions[shard] = 1;
                     count++;
                 }
@@ -144,7 +144,7 @@ namespace NodeWar.Cloud.Tests
             }
 
             public string Owner(string name, string tag = "A") => Shards[HandleRegistry.Shard(name)].TryGetValue(
-                HandleRegistry.Key(name, tag), out var owner) ? owner : null;
+                HandleRegistry.Key(name, tag), out var owner) ? owner.PlayerId : null;
         }
 
         private sealed class Admins : IAdminDirectory
@@ -170,7 +170,7 @@ namespace NodeWar.Cloud.Tests
         public async Task FirstHandleIsFreeAndPublicProfileHidesPrivateFields()
         {
             Assert.That(await handles.GetPublicProfileAsync("p1"), Is.Null);
-            var state = await handles.SetHandleAsync("p1", "Player", "a", "r1", 100);
+            var state = await handles.SetHandleAsync("p1", "Player", "a", "r1", () => 100);
             Assert.That(state.Profile.NameNorm, Is.EqualTo("player"));
             Assert.That(state.Profile.Tag, Is.EqualTo("A"));
             Assert.That(state.Profile.LastFreeRenameUnixSeconds, Is.Zero);
@@ -188,10 +188,10 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task CasingOnlyIsFreeWithoutRegistryWrites()
         {
-            await handles.SetHandleAsync("p1", "Player", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "Player", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
             int writes = registry.Writes;
-            var state = await handles.SetHandleAsync("p1", "SECOND", "a", "r3", 201);
+            var state = await handles.SetHandleAsync("p1", "SECOND", "a", "r3", () => 201);
             Assert.That(state.Profile.Name, Is.EqualTo("SECOND"));
             Assert.That(state.Profile.LastFreeRenameUnixSeconds, Is.EqualTo(200));
             Assert.That(state.Wallet.Premium, Is.EqualTo(100));
@@ -202,14 +202,14 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task FreeRenameThenPaidRenameAndCooldownExpiry()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
-            var paid = await handles.SetHandleAsync("p1", "Third", "A", "r3", 201);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
+            var paid = await handles.SetHandleAsync("p1", "Third", "A", "r3", () => 201);
             Assert.That(paid.Wallet.Premium, Is.EqualTo(50));
             Assert.That(paid.Wallet.Recent.Single().Reason, Is.EqualTo("rename"));
             Assert.That(paid.Wallet.Recent.Single().Id, Is.EqualTo("r3"));
             Assert.That(paid.Profile.LastFreeRenameUnixSeconds, Is.EqualTo(200));
-            var free = await handles.SetHandleAsync("p1", "Fourth", "A", "r4", 200 + HandleRules.FreeRenameIntervalSeconds);
+            var free = await handles.SetHandleAsync("p1", "Fourth", "A", "r4", () => 200 + HandleRules.FreeRenameIntervalSeconds);
             Assert.That(free.Wallet.Premium, Is.EqualTo(50));
             Assert.That(free.Profile.LastFreeRenameUnixSeconds, Is.EqualTo(200 + HandleRules.FreeRenameIntervalSeconds));
         }
@@ -217,11 +217,11 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task InsufficientPremiumWritesNothing()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
             players["p1"].Wallet.Premium = 49;
             int writes = players["p1"].Writes, registryWrites = registry.Writes;
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Third", "A", "r3", 201));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Third", "A", "r3", () => 201));
             Assert.That(players["p1"].Writes, Is.EqualTo(writes));
             Assert.That(registry.Writes, Is.EqualTo(registryWrites));
             Assert.That(players["p1"].Wallet.Recent, Is.Empty);
@@ -231,8 +231,8 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task RegistryCasRaceHasExactlyOneWinner()
         {
-            registry.BeforeWrite = async () => { await handles.SetHandleAsync("p2", "Player", "A", "r2", 100); };
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Player", "A", "r1", 100));
+            registry.BeforeWrite = async () => { await handles.SetHandleAsync("p2", "Player", "A", "r2", () => 100); };
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Player", "A", "r1", () => 100));
             Assert.That(players["p1"].Profile, Is.Null);
             Assert.That(players["p2"].Profile.Name, Is.EqualTo("Player"));
             Assert.That(registry.Owner("player"), Is.EqualTo("p2"));
@@ -242,9 +242,9 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task StaleReservationIsReclaimedAndOldKeyReleased()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            registry.Shards[HandleRegistry.Shard("second")]["second#A"] = "p2";
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            registry.Shards[HandleRegistry.Shard("second")]["second#A"] = new HandleReservation { PlayerId = "p2", ReservedAtUnixSeconds = 100 };
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 401);
             Assert.That(registry.Owner("second"), Is.EqualTo("p1"));
             Assert.That(registry.Owner("first"), Is.Null);
         }
@@ -253,7 +253,7 @@ namespace NodeWar.Cloud.Tests
         public void UninitializedRegistryRefusesWithoutWritingProfile()
         {
             var missing = new HandleService(new Registry(), id => players[id], EmbeddedBlockedNames.Names);
-            var error = Assert.ThrowsAsync<HandleRefusedException>(() => missing.SetHandleAsync("p1", "Player", "A", "r1", 100));
+            var error = Assert.ThrowsAsync<HandleRefusedException>(() => missing.SetHandleAsync("p1", "Player", "A", "r1", () => 100));
             Assert.That(error.Message, Does.Contain("registry not initialized"));
             Assert.That(players["p1"].Writes, Is.Zero);
         }
@@ -261,10 +261,10 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task ProfileWalletConflictRollsBackReservationAndRetriesFreshWallet()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
             players["p1"].BeforeWrite = () => players["p1"].ConcurrentGrant();
-            var state = await handles.SetHandleAsync("p1", "Third", "A", "r3", 201);
+            var state = await handles.SetHandleAsync("p1", "Third", "A", "r3", () => 201);
             Assert.That(state.Wallet.Premium, Is.EqualTo(60));
             Assert.That(state.Wallet.Recent, Has.Count.EqualTo(1));
             Assert.That(registry.Owner("third"), Is.EqualTo("p1"));
@@ -274,12 +274,12 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task ExhaustedProfileConflictsReleaseReservationAndLeaveOldProfile()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
             Action conflict = null;
             conflict = () => { players["p1"].ConcurrentGrant(); players["p1"].BeforeWrite = conflict; };
             players["p1"].BeforeWrite = conflict;
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Third", "A", "r3", 201));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Third", "A", "r3", () => 201));
             Assert.That(registry.Owner("third"), Is.Null);
             Assert.That(players["p1"].Profile.Name, Is.EqualTo("Second"));
             Assert.That(players["p1"].Wallet.Recent, Is.Empty);
@@ -288,49 +288,49 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task FailedOldKeyCleanupLeavesReclaimableEntry()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
             players["p1"].BeforeWrite = () => registry.FailWrites = true;
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
             Assert.That(registry.Owner("first"), Is.EqualTo("p1"));
             registry.FailWrites = false;
-            await handles.SetHandleAsync("p2", "First", "A", "r3", 201);
+            await handles.SetHandleAsync("p2", "First", "A", "r3", () => 401);
             Assert.That(registry.Owner("first"), Is.EqualTo("p2"));
         }
 
         [Test]
         public async Task AutomaticTagsRetryTakenCandidatesUpToTenTimes()
         {
-            await handles.SetHandleAsync("p2", "Player", "A", "r1", 100);
+            await handles.SetHandleAsync("p2", "Player", "A", "r1", () => 100);
             int calls = 0;
             var auto = new HandleService(registry, id => players[id], EmbeddedBlockedNames.Names,
                 () => ++calls < 10 ? "A" : "FREE");
-            var state = await auto.SetHandleAsync("p1", "Player", "", "r2", 100);
+            var state = await auto.SetHandleAsync("p1", "Player", "", "r2", () => 100);
             Assert.That(state.Profile.Tag, Is.EqualTo("FREE"));
             Assert.That(calls, Is.EqualTo(10));
             calls = 0;
             auto = new HandleService(registry, id => players[id], EmbeddedBlockedNames.Names, () => { calls++; return "A"; });
-            Assert.ThrowsAsync<HandleRefusedException>(() => auto.SetHandleAsync("p1", "Player", null, "r3", 100));
+            Assert.ThrowsAsync<HandleRefusedException>(() => auto.SetHandleAsync("p1", "Player", null, "r3", () => 100));
             Assert.That(calls, Is.EqualTo(10));
         }
 
         [Test]
         public async Task PaidRequestCannotBeReusedForAnotherRename()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
-            await handles.SetHandleAsync("p1", "Third", "A", "r3", 201);
-            var repeat = await handles.SetHandleAsync("p1", "Third", "A", "r3", 201);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
+            await handles.SetHandleAsync("p1", "Third", "A", "r3", () => 201);
+            var repeat = await handles.SetHandleAsync("p1", "Third", "A", "r3", () => 201);
             Assert.That(repeat.Wallet.Premium, Is.EqualTo(50));
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Fourth", "A", "r3", 202));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Fourth", "A", "r3", () => 202));
         }
 
         [Test]
         public void InvalidAndBlockedInputsWriteNothing()
         {
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "ab", "A", "r", 100));
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Player", "A_B", "r", 100));
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "4d_m1n", "A", "r", 100));
-            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Player", "A", "", 100));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "ab", "A", "r", () => 100));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Player", "A_B", "r", () => 100));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "4d_m1n", "A", "r", () => 100));
+            Assert.ThrowsAsync<HandleRefusedException>(() => handles.SetHandleAsync("p1", "Player", "A", "", () => 100));
             Assert.That(players["p1"].Writes, Is.Zero);
             Assert.That(registry.Writes, Is.Zero);
         }
@@ -338,16 +338,16 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task AdminSetIsFreeBypassesBlocklistAndPreservesCooldownButValidatesFormat()
         {
-            await handles.SetHandleAsync("p1", "First", "A", "r1", 100);
-            await handles.SetHandleAsync("p1", "Second", "A", "r2", 200);
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
             var admin = new AdminHandleService(new Admins(), handles, registry);
-            var state = await admin.SetHandleAsync("boss", "p1", "Admin", "a", 201);
+            var state = await admin.SetHandleAsync("boss", "p1", "Admin", "a", () => 201);
             Assert.That(state.Profile.Name, Is.EqualTo("Admin"));
             Assert.That(state.Profile.LastFreeRenameUnixSeconds, Is.EqualTo(200));
             Assert.That(state.Wallet.Premium, Is.EqualTo(100));
-            Assert.ThrowsAsync<HandleRefusedException>(() => admin.SetHandleAsync("boss", "p1", "ab", "A", 202));
-            Assert.ThrowsAsync<HandleRefusedException>(() => admin.SetHandleAsync("boss", "p1", "Player", "*", 202));
-            Assert.ThrowsAsync<HandleRefusedException>(() => admin.SetHandleAsync("boss", "", "Player", "A", 202));
+            Assert.ThrowsAsync<HandleRefusedException>(() => admin.SetHandleAsync("boss", "p1", "ab", "A", () => 202));
+            Assert.ThrowsAsync<HandleRefusedException>(() => admin.SetHandleAsync("boss", "p1", "Player", "*", () => 202));
+            Assert.ThrowsAsync<HandleRefusedException>(() => admin.SetHandleAsync("boss", "", "Player", "A", () => 202));
         }
 
         [Test]
@@ -358,13 +358,13 @@ namespace NodeWar.Cloud.Tests
             Assert.ThrowsAsync<UnauthorizedAccessException>(() => admin.InitRegistryAsync("p1"));
             Assert.That(empty.Shards, Is.Empty);
             Assert.That(await admin.InitRegistryAsync("boss"), Is.EqualTo(64));
-            empty.Shards["00"]["held#A"] = "p1";
+            empty.Shards["00"]["held#A"] = new HandleReservation { PlayerId = "p1", ReservedAtUnixSeconds = 100 };
             Assert.That(await admin.InitRegistryAsync("boss"), Is.Zero);
-            Assert.That(empty.Shards["00"]["held#A"], Is.EqualTo("p1"));
+            Assert.That(empty.Shards["00"]["held#A"].PlayerId, Is.EqualTo("p1"));
             empty.Shards.Remove("01");
             Assert.That(await admin.InitRegistryAsync("boss"), Is.EqualTo(1));
-            Assert.That(empty.Shards["00"]["held#A"], Is.EqualTo("p1"));
-            Assert.ThrowsAsync<UnauthorizedAccessException>(() => admin.SetHandleAsync("p1", "p2", "Admin", "A", 100));
+            Assert.That(empty.Shards["00"]["held#A"].PlayerId, Is.EqualTo("p1"));
+            Assert.ThrowsAsync<UnauthorizedAccessException>(() => admin.SetHandleAsync("p1", "p2", "Admin", "A", () => 100));
             Assert.That(players["p2"].Writes, Is.Zero);
         }
 
@@ -380,8 +380,8 @@ namespace NodeWar.Cloud.Tests
         public void CloudRegistryRejectsMissingLocksBeforeAnyIo()
         {
             var cloud = new CloudSaveHandleRegistryStore(null, null);
-            Assert.ThrowsAsync<InvalidOperationException>(() => cloud.WriteShardAsync("00", new Dictionary<string, string>(), null));
-            Assert.ThrowsAsync<InvalidOperationException>(() => cloud.WriteShardAsync("00", new Dictionary<string, string>(), ""));
+            Assert.ThrowsAsync<InvalidOperationException>(() => cloud.WriteShardAsync("00", new Dictionary<string, HandleReservation>(), null));
+            Assert.ThrowsAsync<InvalidOperationException>(() => cloud.WriteShardAsync("00", new Dictionary<string, HandleReservation>(), ""));
         }
 
         [Test]
@@ -397,21 +397,73 @@ namespace NodeWar.Cloud.Tests
         [Test]
         public async Task ChangingOnlyTagReleasesOldKeyWithinSameShard()
         {
-            await handles.SetHandleAsync("p1", "Player", "A", "r1", 100);
-            var state = await handles.SetHandleAsync("p1", "Player", "B", "r2", 200);
+            await handles.SetHandleAsync("p1", "Player", "A", "r1", () => 100);
+            var state = await handles.SetHandleAsync("p1", "Player", "B", "r2", () => 200);
             Assert.That(state.Profile.LastFreeRenameUnixSeconds, Is.EqualTo(200));
             Assert.That(registry.Owner("player", "A"), Is.Null);
             Assert.That(registry.Owner("player", "B"), Is.EqualTo("p1"));
         }
-        [Test, Explicit("Known cross-item protocol gap: stale reclaim can steal an in-flight reservation.")]
+
+        [TestCase(299, false)]
+        [TestCase(300, false)]
+        [TestCase(301, true)]
+        public async Task UnheldReservationIsReclaimedOnlyAfterGrace(long age, bool reclaim)
+        {
+            registry.Shards[HandleRegistry.Shard("player")]["player#A"] = new HandleReservation
+                { PlayerId = "p2", ReservedAtUnixSeconds = 100 };
+            if (reclaim)
+            {
+                await handles.SetHandleAsync("p1", "Player", "A", "r1", () => 100 + age);
+                Assert.That(registry.Owner("player"), Is.EqualTo("p1"));
+                Assert.That(players["p1"].Profile.Name, Is.EqualTo("Player"));
+            }
+            else
+            {
+                var error = Assert.ThrowsAsync<HandleRefusedException>(() =>
+                    handles.SetHandleAsync("p1", "Player", "A", "r1", () => 100 + age));
+                Assert.That(error.Message, Does.Contain("taken"));
+                Assert.That(registry.Owner("player"), Is.EqualTo("p2"));
+                Assert.That(players["p1"].Writes, Is.Zero);
+            }
+        }
+
+        [Test]
+        public async Task HoldingProfilePreventsReclaimEvenAfterGrace()
+        {
+            await handles.SetHandleAsync("p2", "Player", "A", "r1", () => 100);
+            Assert.ThrowsAsync<HandleRefusedException>(() =>
+                handles.SetHandleAsync("p1", "Player", "A", "r2", () => 1000));
+            Assert.That(registry.Owner("player"), Is.EqualTo("p2"));
+            Assert.That(players["p1"].Writes, Is.Zero);
+        }
+
+        [TestCase(150, false)]
+        [TestCase(151, true)]
+        public async Task SlowReservationRetriesBeforeCommitWithoutDoubleCharging(long delay, bool retry)
+        {
+            await handles.SetHandleAsync("p1", "First", "A", "r1", () => 100);
+            await handles.SetHandleAsync("p1", "Second", "A", "r2", () => 200);
+            long now = 201;
+            registry.BeforeWrite = () => { now += delay; return Task.CompletedTask; };
+            var state = await handles.SetHandleAsync("p1", "Third", "A", "r3", () => now);
+            var reservation = registry.Shards[HandleRegistry.Shard("third")]["third#A"];
+            Assert.That(reservation.ReservedAtUnixSeconds, Is.EqualTo(retry ? now : 201));
+            Assert.That(state.Wallet.Premium, Is.EqualTo(50));
+            Assert.That(players["p1"].WalletWrites, Is.EqualTo(1));
+            Assert.That(players["p1"].Writes, Is.EqualTo(3));
+            Assert.That(state.Wallet.Recent.Single().AtUnixSeconds, Is.EqualTo(retry ? now : 201));
+            Assert.That(registry.Owner("second"), Is.Null);
+        }
+
+        [Test]
         public async Task PendingReservationMustNotBeReclaimedBeforeProfileCommit()
         {
-            // p1 reserves; p2 sees no committed p1 profile and reclaims; both profile CAS writes succeed.
+            // p1 reserves; p2 sees no committed p1 profile but must respect its fresh reservation.
             // The synchronous profile hook launches p2 to completion while p1 is pending.
             Task<PlayerState> second = null;
-            players["p1"].BeforeWrite = () => second = handles.SetHandleAsync("p2", "Player", "A", "r2", 100);
-            await handles.SetHandleAsync("p1", "Player", "A", "r1", 100);
-            await second;
+            players["p1"].BeforeWrite = () => second = handles.SetHandleAsync("p2", "Player", "A", "r2", () => 100);
+            await handles.SetHandleAsync("p1", "Player", "A", "r1", () => 100);
+            Assert.ThrowsAsync<HandleRefusedException>(() => second);
             Assert.That(players.Values.Count(p => p.Profile?.NameNorm == "player" && p.Profile.Tag == "A"), Is.EqualTo(1));
         }
     }

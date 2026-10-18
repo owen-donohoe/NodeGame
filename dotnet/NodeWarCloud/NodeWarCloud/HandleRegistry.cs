@@ -13,10 +13,16 @@ using Unity.Services.CloudSave.Model;
 
 namespace NodeWar.Cloud
 {
+    public sealed class HandleReservation
+    {
+        public string PlayerId;
+        public long ReservedAtUnixSeconds;
+    }
+
     public interface IHandleRegistryStore
     {
-        Task<(Dictionary<string, string> Entries, string WriteLock)> ReadShardAsync(string shard);
-        Task WriteShardAsync(string shard, Dictionary<string, string> entries, string expectedWriteLock);
+        Task<(Dictionary<string, HandleReservation> Entries, string WriteLock)> ReadShardAsync(string shard);
+        Task WriteShardAsync(string shard, Dictionary<string, HandleReservation> entries, string expectedWriteLock);
         Task<int> CreateEmptyShardsAsync();
     }
 
@@ -69,23 +75,23 @@ namespace NodeWar.Cloud
             return "handles-" + shard;
         }
 
-        public async Task<(Dictionary<string, string> Entries, string WriteLock)> ReadShardAsync(string shard)
+        public async Task<(Dictionary<string, HandleReservation> Entries, string WriteLock)> ReadShardAsync(string shard)
         {
             var response = await api.CloudSaveData.GetPrivateCustomItemsAsync(context, context.ServiceToken,
                 context.ProjectId, ItemId(shard), new List<string> { "entries" });
             var item = response.Data.Results.SingleOrDefault(i => i.Key == "entries");
-            return (item == null ? null : JsonConvert.DeserializeObject<Dictionary<string, string>>(
+            return (item == null ? null : JsonConvert.DeserializeObject<Dictionary<string, HandleReservation>>(
                 JsonConvert.SerializeObject(item.Value)), item?.WriteLock);
         }
 
-        public async Task WriteShardAsync(string shard, Dictionary<string, string> entries, string expectedWriteLock)
+        public async Task WriteShardAsync(string shard, Dictionary<string, HandleReservation> entries, string expectedWriteLock)
         {
             if (string.IsNullOrEmpty(expectedWriteLock))
                 throw new InvalidOperationException("A handle shard write needs the lock from its read.");
             await WriteAsync(shard, entries, expectedWriteLock);
         }
 
-        private async Task WriteAsync(string shard, Dictionary<string, string> entries, string writeLock)
+        private async Task WriteAsync(string shard, Dictionary<string, HandleReservation> entries, string writeLock)
         {
             try
             {
@@ -105,7 +111,7 @@ namespace NodeWar.Cloud
             {
                 string shard = i.ToString("x2");
                 if ((await ReadShardAsync(shard)).Entries != null) continue;
-                await WriteAsync(shard, new Dictionary<string, string>(StringComparer.Ordinal), null);
+                await WriteAsync(shard, new Dictionary<string, HandleReservation>(StringComparer.Ordinal), null);
                 created++;
             }
             return created;

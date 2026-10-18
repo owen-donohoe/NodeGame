@@ -41,12 +41,12 @@ namespace NodeWar.Cloud
             return new string(chars);
         }
 
-        public Task<PlayerState> SetHandleAsync(string callerId, string name, string tag, string requestId, long now) =>
-            SetAsync(callerId, name, tag, requestId, now, false);
+        public Task<PlayerState> SetHandleAsync(string callerId, string name, string tag, string requestId, Func<long> clock) =>
+            SetAsync(callerId, name, tag, requestId, clock, false);
 
         // Called only after AdminHandleService authenticates the operator.
-        internal Task<PlayerState> AdminSetHandleAsync(string targetPlayerId, string name, string tag, long now) =>
-            SetAsync(targetPlayerId, name, tag, null, now, true);
+        internal Task<PlayerState> AdminSetHandleAsync(string targetPlayerId, string name, string tag, Func<long> clock) =>
+            SetAsync(targetPlayerId, name, tag, null, clock, true);
 
         public async Task<ProfileRecord> GetPublicProfileAsync(string playerId)
         {
@@ -54,7 +54,7 @@ namespace NodeWar.Cloud
             return profile == null ? null : new ProfileRecord { Name = profile.Name, Tag = profile.Tag };
         }
 
-        private async Task<PlayerState> SetAsync(string playerId, string name, string tag, string requestId, long now, bool admin)
+        private async Task<PlayerState> SetAsync(string playerId, string name, string tag, string requestId, Func<long> clock, bool admin)
         {
             if (string.IsNullOrWhiteSpace(playerId)) throw new HandleRefusedException("Sign in before choosing a handle.");
             if (!HandleRules.IsValidName(name))
@@ -76,6 +76,7 @@ namespace NodeWar.Cloud
                 for (int attempt = 0; attempt < 3; attempt++)
                 {
                     var read = await store.ReadProfileWalletLockedAsync();
+                    long now = clock();
                     var old = read.Profile;
                     string key = HandleRegistry.Key(norm, chosenTag);
                     string oldKey = old == null ? null : HandleRegistry.Key(old.NameNorm, old.Tag);
@@ -102,25 +103,34 @@ namespace NodeWar.Cloud
                             if (result == WalletApplyResult.Duplicate) throw new HandleRefusedException("That rename request was already used.");
                         }
                     }
-                    bool reserved = false;
+                    HandleReservation reservation = null;
                     try
                     {
                         if (!casingOnly)
                         {
-                            if (!await ReserveAsync(playerId, norm, key)) break;
-                            reserved = true;
+                            reservation = await ReserveAsync(playerId, norm, key, clock);
+                            if (reservation == null) break;
+                            long commitNow = clock();
+                            if (commitNow < reservation.ReservedAtUnixSeconds ||
+                                commitNow - reservation.ReservedAtUnixSeconds > HandleRules.ReservationGraceSeconds / 2)
+                            {
+                                await ReleaseBestEffortAsync(playerId, norm, key);
+                                reservation = null;
+                                if (attempt + 1 == 3) throw new HandleRefusedException("Your handle reservation expired. Please try again.");
+                                continue;
+                            }
                         }
                         await store.WriteProfileWalletLockedAsync(profile, read.ProfileLock, paidWallet, read.WalletLock);
                     }
                     catch (RecordConflictException)
                     {
-                        if (reserved) await ReleaseBestEffortAsync(playerId, norm, key);
+                        if (reservation != null) await ReleaseBestEffortAsync(playerId, norm, key);
                         if (attempt + 1 == 3) throw new HandleRefusedException("Your handle changed. Please try again.");
                         continue;
                     }
                     catch
                     {
-                        if (reserved) await ReleaseBestEffortAsync(playerId, norm, key);
+                        if (reservation != null) await ReleaseBestEffortAsync(playerId, norm, key);
                         throw;
                     }
                     if (!casingOnly && old != null) await ReleaseBestEffortAsync(playerId, old.NameNorm, oldKey);
@@ -131,21 +141,23 @@ namespace NodeWar.Cloud
             throw new HandleRefusedException("No free tag found. Please try again.");
         }
 
-        private async Task<bool> ReserveAsync(string playerId, string norm, string key)
+        private async Task<HandleReservation> ReserveAsync(string playerId, string norm, string key, Func<long> clock)
         {
             string shard = HandleRegistry.Shard(norm);
             var read = await registry.ReadShardAsync(shard);
             if (read.Entries == null) throw new HandleRefusedException("Handle registry not initialized.");
-            if (read.Entries.TryGetValue(key, out string owner) && owner != playerId)
+            if (read.Entries.TryGetValue(key, out HandleReservation owner) && owner.PlayerId != playerId)
             {
-                var held = (await storeFor(owner).ReadProfileWalletLockedAsync()).Profile;
-                // The profile is authoritative. This reclaims completed stale reservations;
-                // the cross-item pending-reservation race requires a stronger storage protocol.
-                if (held != null && HandleRegistry.Key(held.NameNorm, held.Tag) == key) return false;
+                var held = (await storeFor(owner.PlayerId).ReadProfileWalletLockedAsync()).Profile;
+                // A missing profile may mean the owner has not committed yet. Only
+                // reclaim an unheld reservation after its entire grace period.
+                if ((held != null && HandleRegistry.Key(held.NameNorm, held.Tag) == key) ||
+                    clock() - owner.ReservedAtUnixSeconds <= HandleRules.ReservationGraceSeconds) return null;
             }
-            read.Entries[key] = playerId;
+            var reservation = new HandleReservation { PlayerId = playerId, ReservedAtUnixSeconds = clock() };
+            read.Entries[key] = reservation;
             await registry.WriteShardAsync(shard, read.Entries, read.WriteLock);
-            return true;
+            return reservation;
         }
 
         private async Task ReleaseBestEffortAsync(string playerId, string norm, string key)
@@ -159,7 +171,7 @@ namespace NodeWar.Cloud
                     if (held != null && HandleRegistry.Key(held.NameNorm, held.Tag) == key) return;
                     string shard = HandleRegistry.Shard(norm);
                     var read = await registry.ReadShardAsync(shard);
-                    if (read.Entries == null || !read.Entries.TryGetValue(key, out string owner) || owner != playerId) return;
+                    if (read.Entries == null || !read.Entries.TryGetValue(key, out HandleReservation owner) || owner.PlayerId != playerId) return;
                     read.Entries.Remove(key);
                     try { await registry.WriteShardAsync(shard, read.Entries, read.WriteLock); return; }
                     catch (RecordConflictException) when (attempt + 1 < 3) { }
@@ -178,11 +190,11 @@ namespace NodeWar.Cloud
         public AdminHandleService(IAdminDirectory admins, HandleService handles, IHandleRegistryStore registry)
         { this.admins = admins; this.handles = handles; this.registry = registry; }
 
-        public async Task<PlayerState> SetHandleAsync(string callerId, string targetPlayerId, string name, string tag, long now)
+        public async Task<PlayerState> SetHandleAsync(string callerId, string targetPlayerId, string name, string tag, Func<long> clock)
         {
             if (!await admins.IsAdminAsync(callerId)) throw new UnauthorizedAccessException("Admin only.");
             if (string.IsNullOrWhiteSpace(targetPlayerId)) throw new HandleRefusedException("Choose a target player.");
-            return await handles.AdminSetHandleAsync(targetPlayerId, name, tag, now);
+            return await handles.AdminSetHandleAsync(targetPlayerId, name, tag, clock);
         }
 
         public async Task<int> InitRegistryAsync(string callerId)

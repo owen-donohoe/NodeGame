@@ -13,7 +13,7 @@ namespace NodeWar.Cloud
 
         [CloudCodeFunction("SetHandle")]
         public Task<PlayerState> SetHandle(IExecutionContext context, string name, string tag, string requestId) =>
-            Service(context).SetHandleAsync(context.PlayerId, name, tag, requestId, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            Service(context).SetHandleAsync(context.PlayerId, name, tag, requestId, () => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
         [CloudCodeFunction("GetPublicProfile")]
         public Task<ProfileRecord> GetPublicProfile(IExecutionContext context, string playerId) =>

@@ -148,8 +148,9 @@ namespace NodeWar.Cloud
 
         [CloudCodeFunction("AdminSetHandle")]
         public Task<PlayerState> AdminSetHandle(IExecutionContext context, string targetPlayerId, string name, string tag) =>
-            Handles(context).SetHandleAsync(context.PlayerId, targetPlayerId, name, tag, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            Handles(context).SetHandleAsync(context.PlayerId, targetPlayerId, name, tag, () => DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
+        /// <summary>Admin only; run once before enabling handle writes.</summary>
         [CloudCodeFunction("AdminInitHandleRegistry")]
         public Task<int> AdminInitHandleRegistry(IExecutionContext context) => Handles(context).InitRegistryAsync(context.PlayerId);
 
