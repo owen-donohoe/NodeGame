@@ -1,0 +1,74 @@
+name: Merged PR documentation review
+
+on:
+  # Run only trusted main-branch code, including for a merged fork PR.
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: merged-documentation-review
+  cancel-in-progress: false
+
+jobs:
+  track:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Update system and vault review dashboard
+        shell: pwsh
+        run: ./scripts/merge-doc-review.ps1
+      - name: Publish dashboard
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'notes/Merge review.md'
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m 'docs: update system and vault review dashboard'
+          if ($LASTEXITCODE -ne 0) { throw 'Dashboard commit failed' }
+          # Retry against a concurrently merged PR without losing its changes.
+          foreach ($attempt in 1..3) {
+            git pull --rebase origin main
+            if ($LASTEXITCODE -ne 0) { throw 'Dashboard rebase failed' }
+            git push origin HEAD:main
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+          }
+          throw 'Dashboard push failed'
+      - name: Track outstanding reviews
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $report = Get-Content TestResults/doc-review.json -Raw | ConvertFrom-Json
+          $title = 'System cards and Obsidian vault: outstanding source reviews'
+          $issues = gh issue list --state open --search "$title in:title" --json number,title | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Issue lookup failed' }
+          $issue = $issues | Where-Object title -eq $title | Select-Object -First 1
+          $pending = @($report.review).Count + @($report.touched).Count + @($report.stale).Count + @($report.warnings).Count
+          $body = Get-Content 'notes/Merge review.md' -Raw
+          $prefix = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/blob/main/"
+          $body.Replace('](../', "]($prefix") | Set-Content TestResults/review-issue.md -Encoding utf8
+          if ($pending -gt 0) {
+            if ($issue) { gh issue edit $issue.number --body-file TestResults/review-issue.md }
+            else { gh issue create --title $title --body-file TestResults/review-issue.md }
+          } elseif ($issue) { gh issue close $issue.number }
+          if ($LASTEXITCODE -ne 0) { throw 'Review issue update failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: documentation-review
+          path: |
+            TestResults/doc-review.json
+            notes/Merge review.md

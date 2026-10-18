@@ -24,7 +24,7 @@
 
         powershell -File scripts\okf-stale-hook.ps1
 
-    See docs/index.md for the bundle layout, and scripts/hooks/README.md for
+    See docs/README.md for the doc layout, and scripts/hooks/README.md for
     the git-side guard that runs the same check at commit time.
 #>
 
@@ -51,9 +51,13 @@ sources have changed since they were last verified. Treat these documents as
 SUSPECT: read them against their current sources before relying on any claim
 they make.
 
-Re-verification is a human act. Do not stamp ``verified:`` or bump
-``verified_at_commit`` on the user's behalf -- report what drifted and let them
-decide.
+Re-verify at commit time, as required by CLAUDE.md: the agent that changes a
+source re-reads each REVIEW card or vault note against the diff, corrects what
+drifted, and stamps ``verified: <source commit sha>`` (or the legacy
+``verified_at_commit`` field) in a follow-up ``docs: reverify <doc> against <sha>``
+commit on the same branch. Stamp only material you actually reviewed. Never
+claim a human review for an agent review. Preserve each vault note's personal
+``My understanding`` section.
 
 $report
 "@

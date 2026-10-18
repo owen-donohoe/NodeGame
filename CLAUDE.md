@@ -1,183 +1,107 @@
 # Node War — Claude Instructions
 
-1v1 real-time strategy game on a node graph. Unity 6, namespace `NodeWar`,
-lockstep P2P networking migrating to a server-authoritative hybrid.
+1v1 real-time strategy on a node graph (2v2 and free-for-all planned). Unity 6,
+namespace `NodeWar`. Deterministic lockstep peer-to-peer matches, with a Unity
+Gaming Services backend: Cloud Code referee and settlement, Cloud Save, Matchmaker.
 
-This file is read every turn. It holds only what is true every turn: the
-boundary that must never be crossed, and where to find everything else. If a
-thing is needed on some turns and not others, it belongs in a document this
-file points at. Do not restate those documents here.
+This file is read every turn, so it holds only what every agent needs on every
+turn. Everything else is loaded by role and by system. `scripts/doc-budget.ps1`
+caps this file's size in CI.
 
-## Ownership — nothing is mirrored
+## Where truth lives
 
-| Owns | Where |
+| What | Where |
 |---|---|
-| Current behaviour | the code |
-| Current architecture | `docs/` |
-| Future work | Notion **Phases** |
-| Current work | Notion **Tasks** |
+| Behaviour | the code |
+| How each system works, why, and how it connects | `docs/systems/<system>.md` (one card per system) |
+| How the systems fit together | `docs/map.md` |
+| What the game is | `docs/game.md` |
+| Human learning explanations | Obsidian vault `notes/` (open `notes/Home.md`) |
+| Future, now, done | Notion **Roadmap** (written by `/update` and `/orchestrate`) |
 
-Live state is never cached into markdown. Notion content is never copied into
-the repo. Notion is written only during `/update`.
+Nothing is mirrored. Docs say what is true now; history is git and Notion.
+
+## Loading context: load your slice, not the project
+
+- **Planning, splitting or delegating work:** use the `orchestrate` skill. It
+  starts from `docs/map.md`, which shows every connector without the code.
+- **Working on a system:** `powershell -File scripts/context.ps1 -Systems <a>,<b>`
+  prints those cards in full and their neighbours by interface only. That is the
+  whole context for the task. If you need something outside it, ask rather than
+  explore. `-List` shows every system.
+- **Changing a card, or adding a system:** use the `system-docs` skill.
 
 ## Simulation Boundary — Non-Negotiable
 
-Both peers run identical simulation from identical inputs. Any violation
-desyncs. This stays here rather than behind a pointer because it governs the
-decision to touch `Simulation/` at all, which happens before any reading.
-Full contract in `docs/simulation-rules.md`.
+Both peers run identical simulation from identical inputs; any violation desyncs.
+This stays here because it governs the decision to touch `Simulation/` at all.
+The full contract is `docs/contracts/determinism.md`.
 
+<!-- boundary:start -->
 - No UnityEngine references anywhere in `Simulation/`
 - Integer-only math — no float, double, decimal
 - No `DateTime`, `Time.deltaTime`, or any frame/wall-clock API
-- No `UnityEngine.Random`. `SimulationState` holds no RNG today; derive a seed
-  from replicated state, and if one is ever stored it lives on
-  `SimulationState` and advances only inside `SimulateTick`
+- No `UnityEngine.Random`. Derive a seed from replicated state; a stored RNG lives
+  on `SimulationState` and advances only inside `SimulateTick`
 - Arrays or `List<T>` only — no Dictionary/HashSet iteration
 - All sorts need total-order comparators with ID tiebreakers
-- Tick order is canonical, never reordered:
-  movement → combat → claiming → production → healing → respawns → win-check
-  (Tick-start ownership and Fortress-resistance snapshots are read before
-  movement. `TickBreach` precedes `TickClaiming` inside claiming;
-  `TickAutoRecruit` follows `TickProduction`; order resume (`TickOrderResume`)
-  follows win-check, then the derived `nextBreacherID` refresh runs last.)
+- Tick order is canonical, never reordered: movement → combat → claiming →
+  production → healing → respawns → win-check (sub-steps in the contract)
 - View and UI never write `SimulationState`. All changes go through:
   `GameCommand` → `InputBuffer` → `CommandProcessor` → `SimulateTick`
 - Every new `SimulationState` field must be added to `SimulationStateHasher`
-- New `GameCommand` types need a `CommandProcessor` case, and `InputSerializer`
+- New `GameCommand` types need a `CommandProcessor` case and `InputSerializer`
   changes in the same commit
+- Never hand-edit `.unity` scenes, prefabs or `.meta` files; change them through a
+  connected editor, and only with instruction
+<!-- boundary:end -->
 
-## Key Entry Points
+## How to work
 
-- `GameSimulation.SimulateTick()` — deterministic tick loop, 10Hz
-- `CommandProcessor` — applies `GameCommand`s to `SimulationState`
-- `GameManager` — match lifecycle (PreDraft → Drafting → PostDraft → Countdown → Playing)
-- `MatchFactory` — the one tick-0 board: live matches, the referee and headless runs
-- `LockstepCore` / `TickRunner` — tick timing, shared via `ITickProvider`
-- `SimulationStateHasher` — desync fingerprint, checked every 50 ticks
-
-## Which doc to read for what
-
-Read the file. Do not ask me to summarise it here.
-
-- `docs/architecture.md` — the seven layers, information flow, scene structure,
-  persistent objects, key classes per layer, networking model, and the backend,
-  match logs and referee beside them. **Start here.**
-  Its *Where the UI lives* section is required reading before touching any UI:
-  presentation spans three trees and which one runs is a scene value.
-- `docs/game-model.md` — what the game *is*: districts, suits, resources, the
-  win condition. Read this before any gameplay or balance question; the code
-  will tell you what happens, not what it is for.
-- `docs/simulation-rules.md` — the full determinism contract.
-- `docs/direction.md` — where the architecture is going next: the feel layer,
-  desktop/mobile as one input vocabulary and two layouts, and the headless
-  match environment. Read before starting art, feel, platform or RL work.
-- `docs/adding-a-feature.md` — 11-step checklist for any new feature.
-- `docs/notion-workspace.md` — Notion identifiers and the Phases/Tasks
-  schemas. Needed by `/update` and `/audit`, and by nothing else.
-- `docs/index.md` — OKF bundle root. The doc graph, and the full account of
-  how the freshness and determinism guards are wired.
-- `docs/design-history/` — the v2.1 design document. Historical. Notion is
-  authoritative for future work.
-- `.claude/rules/{simulation,network,view-ui}.md` — boundary rules per layer.
-  Path-scoped via `paths:`, so they load themselves when you touch those
-  paths. If all three ever appear in context at session start, the scoping
-  has stopped working and they are loading unconditionally — check with
-  `/context` after any change to their frontmatter.
+- Read the card before the code. Use plan mode for anything touching `Simulation/`,
+  and flag which tests to run afterwards.
+- Prefer the smallest change that satisfies the goal.
+- When uncertain about intent: ask once, clearly, then proceed.
+- Do not spawn a subagent for work that would use two or fewer of them (managed
+  skills that fan out internally are exempt). Fan-out goes through the
+  `orchestrate` skill, which carries the budget rules.
+- Keep `[SerializeField]` fields in the same file as their MonoBehaviour; do not
+  split a class across files without a strong reason.
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — 3583 cases in eight projects: `Simulation/`,
-  the lobby and wire formats, the UnityEngine-free view maths, the match log,
-  the progression rules, the lockstep core under a simulated lossy link, the balance rig, and
-  the Cloud Code module. Per-project counts are in
-  the doc below. A lobby, view-maths, match-log or backend change has real tests; run them rather than settling
-  for a type-check. Details and the receipt rules: `docs/skills/run-dotnet-tests.md`.
-- `scripts/compile-check.ps1` — type-checks everything else (HUD, network,
-  view, `Assets/UI/`) against the real Unity assemblies. Catches syntax,
-  missing usings, wrong API names, broken call sites. Unity need not be
-  running and an open editor need not be closed. It cannot see prefab or scene
-  wiring, and it is not a test run. Run it after any edit you could not
-  otherwise compile.
-- `docs/skills/drive-the-editor.md` — if `unity status` reports a ready
-  instance, the Unity CLI can drive it and close that prefab-and-scene blind
-  spot. Read that file before using it. If `unity status` reports nothing,
-  this option does not exist and that is normal — never a precondition for
-  finishing work.
-- `docs/skills/run-editmode-tests.md` — the suite through Unity, for when the
-  question is whether it works *in the Editor*.
+- `dotnet test dotnet/NodeWar.sln`: the simulation, lobby and wire formats, view
+  maths, match log, progression, lockstep core, balance rig and Cloud Code module.
+  Details and receipt rules: `docs/skills/run-dotnet-tests.md`.
+- `scripts/compile-check.ps1`: type-checks everything else against the real Unity
+  assemblies. It cannot see prefab or scene wiring and is not a test run.
+- If `unity status` reports a ready Editor, `docs/skills/drive-the-editor.md` closes
+  the scene-wiring gap. No Editor is normal, never a precondition for finishing.
 
-## How to Work
+## Keeping the docs true
 
-- Read relevant files before proposing anything
-- For anything touching `Simulation/`: use plan mode first
-- Prefer the smallest change that satisfies the goal
-- Never hand-edit `.unity` scenes, prefabs, or `.meta` files. Editing that YAML
-  corrupts GUIDs and merge state. Change them through a connected editor, and
-  only with instruction — the ban is on the text, the permission is on the file
-- When uncertain about intent: ask once, clearly, then proceed
-- After `Simulation/` changes: flag which tests should be run
-- Do not spawn a subagent for work that would use 2 or fewer of them. Managed
-  skills that fan out internally (`/code-review`, `/security-review`) are exempt
-- Before any fan-out through Paseo: `.claude/skills/delegation.md`. Two agents
-  in flight at most, in waves, and the cost estimated against the remaining
-  window first. Five at once emptied the whole GPT budget in 35 minutes on
-  2026-09-20. The goal is both budgets approaching full use, not one at 100%
+- **Re-verify at commit time.** When your commit moves a card's sources into REVIEW
+  (`scripts/okf-stale.ps1`, also shown at session start), re-read that card against
+  the diff, fix what drifted, and stamp `verified: <sha>` in a follow-up
+  `docs: reverify <card> against <sha>` commit on the same branch.
+- The merged-PR workflow updates `notes/Merge review.md` and a tracking issue for
+  system-card and vault source drift. Follow its review queue; never auto-stamp.
+  Preserve vault notes below **My understanding**.
+- **Size is a build failure.** `scripts/doc-budget.ps1` blocks in CI: word budgets,
+  the card template, no dates, PR numbers or line numbers in cards. Cut detail the
+  code already says rather than raising a budget.
+- **A hash that differs between CI legs is a finding about the simulation, not a CI
+  problem. Never re-pin a baseline to make it green.**
+- `scripts/sim-guard.ps1` is only the mechanical subset of the `determinism-guard`
+  skill; tiebreakers, tick order, hasher registration, command/serializer pairing
+  and the view boundary still need the checklist.
 
-## C# Conventions
+## Commit convention
 
-- Keep `[SerializeField]` fields in the same file as their MonoBehaviour
-- Do not split a class across files without a strong reason
-- Follow `SpawnBonusVillagers` when adding array-backed state needing view objects
+Conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`). Roadmap
+items move to Done when their pull request merges; `/update` reads that from git.
 
-## Automatic Guards
-
-Three checks run without being asked, and none replaces the reading they point
-at. **SessionStart** injects the list of documents whose sources moved since
-they were last verified. **pre-commit** blocks on `scripts/sim-guard.ps1` when
-the commit touches `Simulation/`, and reports staleness without blocking.
-**CI** (`.github/workflows/determinism.yml`) blocks on the simulation suite and
-the pinned hash baselines across Linux and Windows. How all of it is wired:
-`docs/index.md`.
-
-Two rules those guards cannot enforce on themselves:
-
-- **Re-verify at commit time, not at PR time.** After a commit whose code
-  sources leave a document in REVIEW (`scripts/okf-stale.ps1`), the agent that
-  made it re-reads that document against the commit's diff, corrects what
-  drifted, and stamps it in a follow-up `docs: reverify <doc> against <sha>`
-  commit on the same branch: `verified_at_commit: <that sha>` and a single
-  agent-tier `verified:` entry (`{ by: <model-id>, at: <UTC> }`), the old
-  entry moved to `docs/verification-log.md`. Stamp only what was actually
-  re-read; a `human:` entry is still mine alone. Reconciling commits
-  (`/update`) is not re-verification and never stamps.
-- **A hash that differs between CI legs is a finding about the simulation, not
-  a CI problem. Never re-pin a baseline to make it green.**
-
-`sim-guard.ps1` is only the mechanical subset of `.claude/skills/determinism-guard.md`.
-Sort tiebreakers, tick order, hasher registration, command/serializer pairing
-and the view boundary are not in it and still need the checklist.
-
-## Commit Convention
-
-`done: <task title>` in a commit message marks that task **Done** on the next
-`/update`. Without it, tasks move to **In Progress** at most — a commit that
-touches a system is not work that finished.
-
-## Commands and Skills
-
-- `/update` — reconcile Notion against new commits. The only time Notion is written.
-- `/audit` — re-check a chapter's plan against the code before it goes Active.
-
-`.claude/skills/*.md` are review procedures with no invocation syntax — read
-the file by path and follow it: `determinism-guard.md` · `write-sim-test.md` ·
-`cs-review.md` · `session-summary.md` · `delegation.md` · `phase-plan.md`
-(largely superseded by Notion Phases). `docs/skills/*.md` are a different
-thing: executor
-instructions for running something, listed above.
-
-## Response Style
+## Response style
 
 No trailing additions: "one more thing", "also worth noting", "before I finish",
 or similar. If something is important, say it once in the right place.
-Nothing enforces this mechanically — treat it as strict anyway.

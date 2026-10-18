@@ -31,9 +31,10 @@
 .USAGE
         powershell -File scripts\okf-stale.ps1
 
-    See docs/index.md for the bundle layout and the frontmatter conventions.
+    See docs/README.md and the system-docs skill for the frontmatter conventions.
 #>
 
+param([string]$JsonPath)
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -41,9 +42,13 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 # The bundle root plus the three external member directories. The .claude files
 # cannot move into docs/ -- Claude Code loads the rules into every session and
 # addresses the skills and commands by path -- so the check reaches out to them
-# instead. See docs/index.md.
+# instead.
+#
+# notes/ is the human learning vault (Obsidian). Its notes stamp `sources:` and
+# `verified:` like cards, so they surface here when the code they explain moves.
 $SearchDirs = @(
     "docs",
+    "notes",
     ".claude\rules",
     ".claude\skills",
     ".claude\commands"
@@ -51,7 +56,7 @@ $SearchDirs = @(
 
 # Reserved OKF filenames. index.md is a navigation node and carries no signal
 # layer; log.md is chronological history. Neither describes code.
-$ReservedNames = @("index.md", "log.md")
+$ReservedNames = @("index.md", "log.md", "readme.md", "merge review.md")
 
 # Parses the subset of YAML frontmatter this check needs: verified_at_commit,
 # stale_after, and the `resource:` of each entry under `sources:`.
@@ -85,8 +90,21 @@ function Read-Frontmatter {
         # A non-indented key ends the sources block and starts a new top-level key.
         if ($line -match '^[A-Za-z_]') {
             $inSources = ($line -match '^sources:')
+            # Compact inline form: sources: [a/b.cs, c/]
+            if ($line -match '^sources:\s*\[(.*)\]\s*$') {
+                foreach ($s in ($Matches[1] -split ',')) {
+                    $t = $s.Trim().Trim('"', "'")
+                    if ($t) { $result.Sources += $t }
+                }
+                $inSources = $false
+            }
             if ($line -match '^verified_at_commit:\s*(\S+)') {
                 $result.VerifiedAtCommit = $Matches[1].Trim('"', "'")
+            }
+            # Compact cards stamp `verified: <sha>`. The older list form of
+            # `verified:` (actor entries) has no value on the key line.
+            elseif ($line -match '^verified:\s*([0-9a-fA-F]{7,40})\s*$') {
+                $result.VerifiedAtCommit = $Matches[1]
             }
             elseif ($line -match '^stale_after:\s*(\S+)') {
                 $result.StaleAfter = $Matches[1].Trim('"', "'")
@@ -95,6 +113,10 @@ function Read-Frontmatter {
         }
 
         if ($inSources -and $line -match '^\s+-?\s*resource:\s*(.+?)\s*$') {
+            $result.Sources += $Matches[1].Trim('"', "'")
+        }
+        # Compact list form: one repo-relative path (file or directory) per item.
+        elseif ($inSources -and $line -match '^\s+-\s+([^:\s][^:]*?)\s*$') {
             $result.Sources += $Matches[1].Trim('"', "'")
         }
     }
@@ -183,7 +205,10 @@ $DeclarationPattern = '^[+-]\s*(\[.*\]\s*)?((public|internal|protected|private|s
 function Test-SurfaceChanged {
     param([string]$FromCommit, [string]$RepoRelativePath)
 
-    if ($RepoRelativePath -notmatch '\.cs$') { return $true }
+    # A directory source is judged by the same declaration pattern over its
+    # whole diff; markup and data lines rarely carry access modifiers.
+    $isDir = Test-Path -LiteralPath (Join-Path $RepoRoot $RepoRelativePath) -PathType Container
+    if (-not $isDir -and $RepoRelativePath -notmatch '\.cs$') { return $true }
 
     Push-Location $RepoRoot
     try {
@@ -250,9 +275,25 @@ function Get-LastCommit {
     $shas = @($shas | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($shas.Count -eq 0) { return $null }
 
-    if ($RepoRelativePath -notmatch '\.md$') { return $shas[0].Trim() }
+    $isDirectory = Test-Path -LiteralPath (Join-Path $RepoRoot $RepoRelativePath) -PathType Container
+    if (-not $isDirectory -and $RepoRelativePath -notmatch '\.md$') { return $shas[0].Trim() }
 
     foreach ($sha in $shas) {
+        if ($isDirectory) {
+            # A card directory must reach the same fixed point as a single
+            # Markdown source: follow-up verification stamps are not drift.
+            $paths = @(& git -C $RepoRoot diff-tree --root --no-commit-id --name-only -r $sha -- $RepoRelativePath)
+            if ($LASTEXITCODE -ne 0 -or $paths.Count -eq 0) { return $sha.Trim() }
+            $substantive = $false
+            foreach ($path in $paths) {
+                if ($path -notmatch '\.md$' -or (Test-BodyChanged -Sha $sha.Trim() -RepoRelativePath $path)) {
+                    $substantive = $true
+                    break
+                }
+            }
+            if ($substantive) { return $sha.Trim() }
+            continue
+        }
         if (Test-BodyChanged -Sha $sha.Trim() -RepoRelativePath $RepoRelativePath) {
             return $sha.Trim()
         }
@@ -299,6 +340,7 @@ foreach ($dir in $SearchDirs) {
     $files = Get-ChildItem -Path $full -Filter *.md -Recurse -File
     foreach ($file in $files) {
         if ($ReservedNames -contains $file.Name.ToLower()) { continue }
+        if ($file.Name.StartsWith("_")) { continue }
 
         $rel = $file.FullName.Substring($RepoRoot.Length + 1)
         $fm = Read-Frontmatter -Path $file.FullName
@@ -356,6 +398,11 @@ foreach ($dir in $SearchDirs) {
             }
 
             $pendingHere = $pending.ContainsKey($source)
+            if (-not $pendingHere -and $source.EndsWith('/')) {
+                foreach ($p in $pending.Keys) {
+                    if ($p.StartsWith($source)) { $pendingHere = $true; break }
+                }
+            }
 
             if ((-not $isAncestor) -or $pendingHere) {
                 $movedIn = $sourceCommit.Substring(0, 7)
@@ -388,6 +435,16 @@ Write-Host ""
 
 $review  = @($suspect | Where-Object { $_.Surface })
 $touched = @($suspect | Where-Object { -not $_.Surface })
+
+# Machine-readable companion to the unchanged advisory console contract.
+if ($JsonPath) {
+    @{
+        review = @($review)
+        touched = @($touched)
+        stale = @($stale)
+        warnings = @($warnings)
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $JsonPath -Encoding UTF8
+}
 
 if ($review.Count -gt 0) {
     Write-Host "REVIEW -- a declaration changed in a source, so a claim may now be false:"

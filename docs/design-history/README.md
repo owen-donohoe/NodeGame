@@ -5,7 +5,6 @@ description: Banner and reconciliation for the v2.1 master design PDF — histor
 tags: [design, history, reconciliation]
 generated: { by: human:DonohoeCUA, at: 2026-08-31T08:58:49-04:00 }
 verified:
-  # full history: docs/verification-log.md
   - { by: gpt-6, at: 2026-10-10T16:42:51Z }
 verified_at_commit: dec3292bcfb29a80970d84188969047b83a5d956
 status: stable
@@ -88,5 +87,4 @@ of its points have moved since:
   Arena-tier *eras* are now unlocked by rank on the server; the lobby's
   suit and district unlocks are still stubbed open (`AllContentUnlocked`).
 
-Full reconciliation and all current planning live in Notion. Identifiers are
-in `docs/notion-workspace.md`.
+All current planning lives in the Notion Roadmap (see the `update` command).

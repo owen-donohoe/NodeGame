@@ -1,0 +1,4 @@
+# Per-device Obsidian state: open tabs, pane layout, caches.
+.obsidian/workspace*.json
+.obsidian/cache
+.trash/

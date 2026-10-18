@@ -32,7 +32,7 @@
     Run automatically by the pre-commit hook in scripts/hooks/, but only for
     commits that actually touch the simulation layer.
 
-    See docs/simulation-rules.md for the contract, and
+    See docs/contracts/determinism.md for the contract, and
     .claude/skills/determinism-guard.md for the full review checklist.
 #>
 
@@ -213,5 +213,5 @@ foreach ($v in $violations) {
     Write-Host ""
 }
 
-Write-Host "$($violations.Count) violation(s). See docs/simulation-rules.md."
+Write-Host "$($violations.Count) violation(s). See docs/contracts/determinism.md."
 exit 1

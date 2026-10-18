@@ -26,15 +26,16 @@ To uninstall: `git config --unset core.hooksPath`.
 | Hook | Check | Severity |
 |---|---|---|
 | `pre-commit` | `scripts/sim-guard.ps1` | **Blocks**, and only when the commit touches `Assets/Scripts/Game/Simulation/` |
+| `pre-commit` | `scripts/doc-budget.ps1` | **Blocks**, and only when the commit touches `docs/`, `CLAUDE.md` or `AGENTS.md` |
 | `pre-commit` | `scripts/okf-stale.ps1` | Advisory — reports and lets the commit through |
 
 The severity split is the point. A `float` in the simulation layer is an
 objective violation of a contract with no legitimate reading, so it blocks. A
-document whose sources moved needs a human to re-read it against the code,
+document whose sources moved needs the committing agent to re-read it against the code,
 which is not work a commit can be compelled to contain — blocking on it would
 mean every code change drags a documentation review behind it, and the
 predictable outcome is that the hook gets bypassed and stops meaning anything.
 
 `git commit --no-verify` skips both. The guard is the mechanical subset of
-`.claude/skills/determinism-guard.md`, not the whole of it, and a regex can be
+the `determinism-guard` skill, not the whole of it, and a regex can be
 wrong in ways a reader is not.

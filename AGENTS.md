@@ -1,87 +1,62 @@
 # Node War — Agent Instructions (Codex)
 
-1v1 real-time strategy game on a node graph. Unity 6, namespace `NodeWar`,
-lockstep P2P networking migrating to a server-authoritative hybrid.
+1v1 real-time strategy on a node graph. Unity 6, namespace `NodeWar`.
+Deterministic lockstep peer-to-peer matches with a Unity Gaming Services backend.
 
-This file is the Codex-facing counterpart to `CLAUDE.md`. Both files must
-describe the same project; if they ever disagree, `CLAUDE.md` is the source
-of truth and this file is stale — fix this file, don't follow it over that
-one. Full architecture, docs, and skills are not duplicated here: read
-`CLAUDE.md` first, then follow its pointers into `docs/` and `.claude/`.
+`CLAUDE.md` is the source of truth for project-wide rules; this file carries the
+part a Codex agent needs on every turn. If the two disagree, follow `CLAUDE.md`
+and report the difference.
+
+## You are usually an engineer
+
+Read `docs/roles/engineer.md` once at the start of a task. It says how to use a
+brief, how to stay in scope, how to commit, and what to report.
+
+## Loading context
+
+- Your brief names the systems in scope. Get their context with
+  `powershell -File scripts/context.ps1 -Systems <a>,<b>`: full cards for those
+  systems, their neighbours by interface only. That is the whole context.
+- Need something outside it? Say so in your report instead of exploring. Cost is
+  turns times context.
+- `docs/map.md` shows how all systems connect; you rarely need it.
 
 ## Simulation Boundary — Non-Negotiable
 
-Both peers run identical simulation from identical inputs. Any violation
-desyncs. Full contract in `docs/simulation-rules.md`.
+Both peers run identical simulation from identical inputs; any violation desyncs.
+Full contract: `docs/contracts/determinism.md`.
 
+<!-- boundary:start -->
 - No UnityEngine references anywhere in `Simulation/`
 - Integer-only math — no float, double, decimal
 - No `DateTime`, `Time.deltaTime`, or any frame/wall-clock API
-- No `UnityEngine.Random`
+- No `UnityEngine.Random`. Derive a seed from replicated state; a stored RNG lives
+  on `SimulationState` and advances only inside `SimulateTick`
 - Arrays or `List<T>` only — no Dictionary/HashSet iteration
 - All sorts need total-order comparators with ID tiebreakers
-- Tick order is canonical, never reordered:
-  movement → combat → claiming → production → healing → respawns → win-check
+- Tick order is canonical, never reordered: movement → combat → claiming →
+  production → healing → respawns → win-check (sub-steps in the contract)
 - View and UI never write `SimulationState`. All changes go through:
   `GameCommand` → `InputBuffer` → `CommandProcessor` → `SimulateTick`
 - Every new `SimulationState` field must be added to `SimulationStateHasher`
-- New `GameCommand` types need a `CommandProcessor` case, and `InputSerializer`
+- New `GameCommand` types need a `CommandProcessor` case and `InputSerializer`
   changes in the same commit
-- Never hand-edit `.unity` scenes, prefabs, or `.meta` files — that YAML
-  corrupts GUIDs and merge state. Change them through a connected editor.
-
-## How to Work
-
-- Read `CLAUDE.md`, then the relevant `docs/*.md` before proposing anything
-- For anything touching `Simulation/`: plan before editing
-- Prefer the smallest change that satisfies the goal; no unrelated refactors
-- Work in an isolated git worktree/branch, not directly on `main`
-- Do not merge into `main` automatically — leave that for review
-- After `Simulation/` changes: flag which tests should be run
-- Re-verify at commit time: if your commit leaves a document in REVIEW
-  (`scripts/okf-stale.ps1`), re-read it against your diff, fix what drifted,
-  and stamp it in a follow-up `docs: reverify <doc> against <sha>` commit —
-  see `CLAUDE.md`, "Automatic Guards", for the exact stamp
-
-## When you are a delegated agent
-
-You are usually dispatched by the Claude orchestrator with a bounded task and
-no one watching. That changes four things:
-
-- **Commit each step as you finish it.** You can be killed mid-edit by a
-  provider usage limit, without warning and without a chance to save. It has
-  happened: on 2026-09-20 five agents died at once and one lost an uncommitted
-  change that had to be salvaged from its worktree by hand. Committed work
-  survives; work in your editor buffer does not.
-- **Do not spawn sub-agents.** Delegation is the orchestrator's decision,
-  because it is the only place the remaining budget across both providers is
-  known. See `.claude/skills/delegation.md` for what that budget looks like.
-- **Stay inside the scope you were given.** Findings outside it go in your
-  report with `file:line` and the smallest fix you would make — not into the
-  diff. A branch that fixes more than it was asked to cannot be reviewed
-  against its brief.
-- **Keep your turn count down.** Cost is turns times context, not lines
-  written, and roughly 99% of it is input. Batch your reads, do not re-read
-  what you have already read, and do not explore what the prompt already told
-  you.
-
-Say what you did **not** do, and why. Silence reads as coverage.
+- Never hand-edit `.unity` scenes, prefabs or `.meta` files; change them through a
+  connected editor, and only with instruction
+<!-- boundary:end -->
 
 ## Checking your work
 
-- `dotnet test dotnet/NodeWar.sln` — Simulation, Lobby, UnityEngine-free
-  view maths, the match log, the progression rules and the Cloud Code module.
-  Per-project counts: `docs/skills/run-dotnet-tests.md`
-- `scripts/compile-check.ps1` — type-checks everything else against the real
-  Unity assemblies (HUD, network, view, `Assets/UI/`). In a fresh worktree it
-  needs the Unity assemblies first: `cmd /c mklink /J Library C:\Dev\NodeGame\Library`
-  from the worktree root, once. `Library` is gitignored, so the junction never
-  reaches a commit
-- Neither of these replaces manual Unity verification for scene/prefab
-  wiring — flag that as a manual step rather than claiming it's covered
+- `dotnet test dotnet/NodeWar.sln`. Per-project counts: `docs/skills/run-dotnet-tests.md`.
+- `scripts/compile-check.ps1` type-checks Unity-side code. In a fresh worktree it
+  needs the Unity assemblies first, once, from the worktree root:
+  `cmd /c mklink /J Library C:\Dev\NodeGame\Library` (gitignored).
+- Neither covers scene or prefab wiring; flag that as a manual step.
+- `scripts/doc-budget.ps1` if you touched docs.
 
-## Commit Convention
+## Commit convention
 
-`done: <task title>` in a commit message marks the matching Notion task done
-on the next `/update` (a Claude-side command — Codex doesn't run it, but
-should still use the same commit convention so history stays consistent).
+Conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`), one
+commit per finished step. If your commit moves a card into REVIEW
+(`scripts/okf-stale.ps1`), re-read that card against your diff and stamp it in a
+follow-up `docs: reverify <card> against <sha>` commit.
