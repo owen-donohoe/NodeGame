@@ -18,9 +18,9 @@ namespace NodeWar.Lobby
             root = new VisualElement { name = "game-mode-sheet" };
             root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker"));
             root.Add(GuildViews.Text("Game mode", "mk-h2"));
-            var grid = new VisualElement { name = "mode-grid" }; grid.AddToClassList("g2-mode-grid"); root.Add(grid);
+            var grid = ModeGrid("mode-grid"); root.Add(grid);
             foreach (var mode in new[] { LobbyMode.Ranked1v1, LobbyMode.Team2v2, LobbyMode.FreeForAll4 }) Add(grid, mode);
-            var local = new VisualElement { name = "mode-local" }; local.AddToClassList("g2-mode-grid"); root.Add(local);
+            var local = ModeGrid("mode-local"); root.Add(local);
             Add(local, LobbyMode.Bot); Add(local, LobbyMode.Lan);
             privateToggle = new Toggle("Private (1v1)") { name = "mode-private" };
             privateToggle.AddToClassList("g2-private"); root.Add(privateToggle);
@@ -38,6 +38,16 @@ namespace NodeWar.Lobby
                 Selected?.Invoke(selection); sheet.Close();
             });
             card.userData = mode; host.Add(card);
+        }
+        internal static VisualElement ModeGrid(string name)
+        {
+            var grid = new VisualElement { name = name }; grid.AddToClassList("g2-mode-grid");
+            grid.RegisterCallback<GeometryChangedEvent>(evt =>
+            {
+                if (evt.newRect.width <= 16) return;
+                for (int i = 0; i < grid.childCount; i++) grid[i].style.width = (evt.newRect.width - 16f) / 2f;
+            });
+            return grid;
         }
         internal static Button ModeCard(LobbyModeSelection mode, Action selected)
         {

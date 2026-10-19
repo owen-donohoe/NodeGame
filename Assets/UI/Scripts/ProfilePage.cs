@@ -88,6 +88,7 @@ namespace NodeWar.Lobby
             playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null; shownCard = null;
             if (changed) { state = new AsyncState(); stateView.Content.Clear(); }
             Root.EnableInClassList("g2-profile--self", viewingSelf);
+            Root.EnableInClassList("g2-profile--player", !viewingSelf);
             Root.AddToClassList("g2-profile--expanded");
             own.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
             if (viewingSelf) { panel.Close(); own.Add(stateView); }

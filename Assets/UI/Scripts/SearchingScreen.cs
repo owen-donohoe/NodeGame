@@ -22,7 +22,7 @@ namespace NodeWar.Lobby
         private int version;
         private bool searching;
         private Action extraAction;
-        public VisualElement Root { get; } = new VisualElement { name = "searching-screen", pickingMode = PickingMode.Ignore };
+        public VisualElement Root { get; } = new VisualElement { name = "searching-screen", pickingMode = PickingMode.Position };
         public bool IsOpen { get; private set; }
         public event Action InviteRequested;
         public event Action CancelRequested;
@@ -51,7 +51,7 @@ namespace NodeWar.Lobby
         public void Open(LobbyModeSelection selection)
         {
             if (IsOpen) Close();
-            mode = selection; navigation.Show(LobbyPageID.Home); IsOpen = true;
+            mode = selection; navigation.Show(LobbyPageID.Home); router.CloseAll(); IsOpen = true;
             Root.style.display = DisplayStyle.Flex; Root.BringToFront(); RefreshRating(); SetChrome(true);
             invite.style.display = selection.IsPrivate || selection.Mode == LobbyMode.Team2v2 || selection.Mode == LobbyMode.FreeForAll4 ? DisplayStyle.Flex : DisplayStyle.None;
             router.Open(new LobbyOverlay("searching", OverlayKind.Panel, true), Close);

@@ -111,6 +111,7 @@ namespace NodeWar.Lobby
         private LobbyModeSelection selectedMode;
         private LobbyPlayFlow playFlow;
         private SearchingScreen searchingScreen;
+        private MultiplayerSheet multiplayerSheet;
         private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
@@ -193,7 +194,7 @@ namespace NodeWar.Lobby
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             homePage?.OnHide();
             homePage = null;
-            searchingScreen?.Dispose(); searchingScreen = null;
+            searchingScreen?.Dispose(); searchingScreen = null; multiplayerSheet = null;
             playFlow?.Dispose();
             playFlow = null;
             workshopStage?.Dispose();
@@ -605,6 +606,9 @@ namespace NodeWar.Lobby
             (root.Q("page-shop")?.userData as ShopPage)?.BindStage(stage);
             shell.Add(claimPanel.Root);
             profilePage.BindPanels(router, shell);
+            multiplayerSheet = new MultiplayerSheet(shell, router, searchingScreen.Open);
+            profilePage.InviteRequested += target => multiplayerSheet.Open(target);
+            searchingScreen.InviteRequested += () => multiplayerSheet.Open();
             burgerPanel = new LobbyOverlayPanel("Menu");
             bellPanel = new LobbyOverlayPanel("Notifications");
             shell.Add(burgerPanel.Root);
