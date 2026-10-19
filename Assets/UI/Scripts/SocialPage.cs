@@ -156,11 +156,8 @@ namespace NodeWar.Lobby
             foreach (var entry in entries)
             {
                 if (entry == null) continue;
-                PlayerCard opponent;
-                try { opponent = (await profiles.GetAsync(entry.opponentPlayerId))?.Card; }
-                catch (Exception) { opponent = null; }
-                rows.Add(new PreviousMatch { Entry = entry, Opponent = opponent ??
-                    new PlayerCard { PlayerId = entry.opponentPlayerId, Name = entry.opponentPlayerId } });
+                rows.Add(new PreviousMatch { Entry = entry, Opponent = new PlayerCard
+                    { PlayerId = entry.opponentPlayerId, Name = entry.OpponentName, Tag = entry.OpponentTag } });
             }
             return rows;
         }

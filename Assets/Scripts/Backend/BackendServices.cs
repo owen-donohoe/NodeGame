@@ -8,8 +8,7 @@ namespace NodeWar.Backend
 {
     /// <summary>
     /// The one place a caller gets a backend service. Established services use
-    /// UGS in builds; the Editor can select local fakes. Social and public profiles
-    /// stay local until their UGS implementations exist.
+    /// UGS in builds; the Editor can select local fakes. Social stays local.
     /// </summary>
     public static class BackendServices
     {
@@ -46,13 +45,13 @@ namespace NodeWar.Backend
         }));
         public static GuildBrowseCache GuildBrowse => guildBrowse ?? (guildBrowse = new GuildBrowseCache());
 
-        // No UGS implementation exists yet: these two services stay local in every build.
+        // Social stays local until its UGS implementation exists.
         public static ISocialService Social => social ?? (social = new LocalSocialService());
-        public static IProfileService Profiles => profiles ?? (profiles = new LocalProfileService(
+        public static IProfileService Profiles => profiles ?? (profiles = UseLocalFakes ? (IProfileService)new LocalProfileService(
             () => Account.Current?.PlayerId, () => LastKnownState, MatchHistory,
             // Chosen slots are local; accepted handle and rank come from LastKnownState.
             () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.suitIDs,
-            () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.districtIDs));
+            () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.districtIDs) : new UgsProfileService());
 
         /// <summary>
         /// The last player state any backend call returned this session, or null

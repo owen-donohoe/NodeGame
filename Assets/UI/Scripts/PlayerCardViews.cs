@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
     internal static class PlayerCardViews
     {
         public static string Handle(PlayerCard card) => card == null ? "Unknown player" :
-            (card.Name ?? card.PlayerId ?? "Unknown player") + (string.IsNullOrEmpty(card.Tag) ? "" : "#" + card.Tag);
+            HandleDisplay.Display(card.Name, card.Tag, card.PlayerId ?? "Unknown player");
 
         public static VisualElement Card(PlayerCard card, Action open, bool spectate)
         {

@@ -19,5 +19,17 @@ namespace NodeWar.Lobby
             }
             return opponents.ToArray();
         }
+
+        public static string[] HandlesFrom(IEnumerable<MatchHistoryEntry> history)
+        {
+            var entries = history == null ? new List<MatchHistoryEntry>() : new List<MatchHistoryEntry>(history);
+            var result = new List<string>();
+            foreach (string id in From(entries))
+            {
+                var entry = entries.Find(item => item?.opponentPlayerId == id);
+                result.Add(HandleDisplay.Display(entry.OpponentName, entry.OpponentTag, id));
+            }
+            return result.ToArray();
+        }
     }
 }

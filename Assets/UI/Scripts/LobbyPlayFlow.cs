@@ -156,7 +156,7 @@ namespace NodeWar.Lobby
             recent.Render(recentState, Now());
             try
             {
-                string[] opponents = RecentOpponentList.From(await history.GetAsync());
+                string[] opponents = RecentOpponentList.HandlesFrom(await history.GetAsync());
                 if (!IsSearchCurrent(version, playerId)) return;
                 recent.Content.Clear();
                 foreach (string opponent in opponents) recent.Content.Add(new Label(opponent) { enableRichText = false });
