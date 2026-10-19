@@ -11,9 +11,10 @@ namespace NodeWar.Lobby
     {
         private const float ShotDuration = 0.35f;
         private const float MarketX = -13f;
-        private const float MarketSpacing = 6f;
+        public const float ShopStallSpacing = 6f;
         private const float MarketZ = 9f;
         public Camera ShopCamera => stageCamera;
+        public float ShopReferenceDistance => Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.05f * 0.05f);
         private const int StageLayer = 2; // Ignore Raycast; scenery never handles pointer input.
         private static readonly Color Sea = new Color(0.22f, 0.48f, 0.58f);
 
@@ -120,21 +121,21 @@ namespace NodeWar.Lobby
             market.transform.SetParent(transform, false);
             market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
             Primitive("Market ground", PrimitiveType.Cube, market.transform,
-                new Vector3(0f, -0.1f, -12f), new Vector3(6f, 0.2f, 30f),
+                new Vector3(0f, -0.1f, -12f), new Vector3(3.6f, 0.2f, 30f),
                 new Color(0.56f, 0.61f, 0.43f));
             string[] names = { "Daily", "Crates", "Weekly skins", "Bundle", "Bank" };
             for (int i = 0; i < names.Length; i++)
             {
                 var stall = new GameObject(names[i] + " stall");
                 stall.transform.SetParent(market.transform, false);
-                stall.transform.localPosition = new Vector3(1.1f, 0f, -i * MarketSpacing);
+                stall.transform.localPosition = new Vector3(-0.55f, 0f, -i * ShopStallSpacing);
                 Primitive("Counter", PrimitiveType.Cube, stall.transform,
-                    new Vector3(0f, 0.45f, 0f), new Vector3(1.3f, 0.9f, 0.8f), Tints[i]);
+                    new Vector3(0f, 0.45f, 0f), new Vector3(1f, 0.9f, 0.8f), Tints[i]);
                 Primitive("Canopy", PrimitiveType.Cube, stall.transform,
-                    new Vector3(0f, 1.9f, 0f), new Vector3(1.65f, 0.18f, 1.3f), Tints[(i + 3) % Tints.Length]);
+                    new Vector3(0f, 1.9f, 0f), new Vector3(1.2f, 0.18f, 1.3f), Tints[(i + 3) % Tints.Length]);
                 for (int side = -1; side <= 1; side += 2)
                     Primitive("Canopy post", PrimitiveType.Cube, stall.transform,
-                        new Vector3(side * 0.6f, 1.2f, 0.25f), new Vector3(0.07f, 1.4f, 0.07f), Tints[1]);
+                        new Vector3(side * 0.45f, 1.2f, 0.25f), new Vector3(0.07f, 1.4f, 0.07f), Tints[1]);
                 Primitive("Marketman", PrimitiveType.Capsule, stall.transform,
                     new Vector3(0f, 1f, 0.55f), new Vector3(0.48f, 0.5f, 0.48f), Tints[(i + 1) % Tints.Length]);
                 Primitive("Head", PrimitiveType.Sphere, stall.transform,
@@ -162,15 +163,15 @@ namespace NodeWar.Lobby
         public void SetShopScroll(float position)
         {
             GetShot(StageShot.Market, out shotPosition, out shotRotation);
-            shotPosition.z -= Mathf.Clamp(position, 0f, 4f) * MarketSpacing;
+            shotPosition.z -= Mathf.Clamp(position, 0f, 4f) * ShopStallSpacing;
             shotElapsed = ShotDuration;
             stageCamera.transform.localPosition = shotPosition;
             stageCamera.transform.localRotation = shotRotation;
         }
 
-        /// <summary>Right of the counter as seen from the market camera, looking down -Z.</summary>
+        /// <summary>Right of the counter as seen from the market camera, looking down +Z.</summary>
         public Vector3 ShopAnchor(int stall) => transform.TransformPoint(
-            new Vector3(MarketX - 0.65f, 1f, MarketZ - Mathf.Clamp(stall, 0, 4) * MarketSpacing));
+            new Vector3(MarketX + 0.05f, 1f, MarketZ - Mathf.Clamp(stall, 0, 4) * ShopStallSpacing));
         private static void GetShot(StageShot shot, out Vector3 position, out Quaternion rotation)
         {
             Vector3 target;
@@ -178,7 +179,7 @@ namespace NodeWar.Lobby
             {
                 case StageShot.Market:
                     target = new Vector3(MarketX, 1f, MarketZ);
-                    position = target + new Vector3(0f, 1.5f, 5.5f);
+                    position = target + new Vector3(0f, 1.5f, -5.5f);
                     break;
                 case StageShot.Social:
                     target = new Vector3(8f, 0f, 0f);
@@ -357,4 +358,3 @@ namespace NodeWar.Lobby
         }
     }
 }
-

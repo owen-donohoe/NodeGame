@@ -4,6 +4,18 @@ namespace NodeWar.Lobby.Tests
 {
     public class ShopWalkTests
     {
+        [TestCase("daily", 0)]
+        [TestCase("crates", 1)]
+        [TestCase("weekly", 2)]
+        [TestCase("bundle", 3)]
+        [TestCase("coins", 4)]
+        [TestCase("laurels", 4)]
+        [TestCase("BANK", 4)]
+        [TestCase(null, -1)]
+        [TestCase("missing", -1)]
+        public void DeepLink_ResolvesStallsAndBankAliases(string name, int expected)
+            => Assert.AreEqual(expected, ShopSnap.StallIndex(name));
+
         [TestCase(1.2f, 1, 2)]
         [TestCase(1.8f, -1, 1)]
         [TestCase(1.8f, 0, 2)]
@@ -71,9 +83,9 @@ namespace NodeWar.Lobby.Tests
         }
 
         [TestCase(0, 1, true)]
-        [TestCase(1, 1, true)]
-        [TestCase(1.01f, 1, false)]
-        [TestCase(-0.1f, 1, false)]
+        [TestCase(-1, 1, true)]
+        [TestCase(-1.01f, 1, false)]
+        [TestCase(0.1f, 1, false)]
         [TestCase(0, -1, false)]
         public void Projection_CullsPassedStallsDistantStallsAndBehindCamera(float stall, float depth, bool visible)
             => Assert.AreEqual(visible, ShopProjection.Project(100, 200, depth, 5, 5, stall, 0, 100, 0.5f).Visible);
@@ -82,11 +94,13 @@ namespace NodeWar.Lobby.Tests
         public void Projection_PerspectiveRecessionAndVerticalAnchor()
         {
             var daily = ShopProjection.Project(100, 200, 1, 5, 5, 0, 0, 100, 0);
-            var next = ShopProjection.Project(100, 200, 1, 10, 5, 1, 0, 100, 0.5f);
+            var next = ShopProjection.Project(100, 200, 1, 10, 5, -1, 0, 100, 0.5f);
             Assert.AreEqual(1, daily.Scale);
             Assert.AreEqual(200, daily.Y);
             Assert.AreEqual(0.3f, next.Scale, 0.0001f);
             Assert.AreEqual(185, next.Y, 0.0001f);
+            var offset = ShopProjection.Project(100, 200, 1, 5, 5, 0, 0, 100, 0.5f, 200, 400);
+            Assert.AreEqual(350, offset.Y);
             Assert.IsFalse(ShopProjection.Changed(1, 1.0001f, 0.001f));
             Assert.IsTrue(ShopProjection.Changed(float.NaN, 1, 0.001f));
         }

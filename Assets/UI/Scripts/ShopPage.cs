@@ -14,7 +14,7 @@ namespace NodeWar.Lobby
             public bool FreeDaily;
         }
 
-        private static readonly string[] StallNames = { "daily", "crates", "weekly", "bundle", "coins", "laurels" };
+        private static readonly string[] StallNames = { "daily", "crates", "weekly", "bundle", "bank" };
         private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Bank" };
         private static readonly string[] Odds =
         {
@@ -28,6 +28,7 @@ namespace NodeWar.Lobby
         private readonly Label[] countdowns = new Label[5];
         private readonly DateTime[] resets = new DateTime[5];
         private readonly ShopPanelPose[] poses = new ShopPanelPose[5];
+        private readonly bool[] poseReady = new bool[5];
         private readonly IVisualElementScheduledItem motion;
         private readonly IVisualElementScheduledItem clock;
         private readonly ShopSnap walk = new ShopSnap();
@@ -36,6 +37,7 @@ namespace NodeWar.Lobby
         private BadgeBoard badges;
         private Offer pending;
         private Offer dailyGift;
+        private LobbyBadgeDot dailyBadge;
         private DateTime dailyDate;
         private DateTime bundleStart;
         private bool dailyClaimed;
@@ -114,6 +116,9 @@ namespace NodeWar.Lobby
             if (claims != null) { claims.Confirmed -= OnConfirmed; claims.Cancelled -= OnCancelled; }
             claims = panel;
             badges = board;
+            dailyBadge?.RemoveFromHierarchy();
+            dailyBadge = new LobbyBadgeDot(board, "shop.daily");
+            dailyGift.Tile.Add(dailyBadge);
             claims.Confirmed += OnConfirmed;
             claims.Cancelled += OnCancelled;
             RefreshDailyBadge();
@@ -121,7 +126,7 @@ namespace NodeWar.Lobby
 
         private void BuildStall(int index)
         {
-            var stall = new VisualElement { name = "stall-" + (index == 4 ? "bank" : StallNames[index]) };
+            var stall = new VisualElement { name = "stall-" + StallNames[index] };
             stall.AddToClassList("lb-market-stall");
             if (index == 4) stall.AddToClassList("lb-market-stall--bank");
             var title = new Label(Titles[index]);
@@ -186,9 +191,21 @@ namespace NodeWar.Lobby
             var glyph = new LobbyIcon(icon, LobbyIconContext.ShopCard) { pickingMode = PickingMode.Ignore };
             glyph.AddToClassList("lb-market-icon");
             tile.Add(glyph);
-            tile.Add(new Label(title) { pickingMode = PickingMode.Ignore, enableRichText = false });
-            tile.Add(new Label(action.PrimaryLabel()) { pickingMode = PickingMode.Ignore, enableRichText = false });
-            offers[stall].Add(tile);
+            var name = new Label(title) { pickingMode = PickingMode.Ignore, enableRichText = false };
+            name.AddToClassList("ui-w600");
+            name.AddToClassList("lb-market-name");
+            tile.Add(name);
+            var price = new Label(action.PrimaryLabel()) { pickingMode = PickingMode.Ignore, enableRichText = false };
+            price.AddToClassList("ui-w700");
+            price.AddToClassList("lb-market-price");
+            tile.Add(price);
+            if (disclosure != null)
+            {
+                var hint = new Label("Reward odds under i") { pickingMode = PickingMode.Ignore };
+                hint.AddToClassList("lb-market-disclosure");
+                tile.Add(hint);
+            }
+            offers[stall].Add(sticker);
             return offer;
         }
 
@@ -256,11 +273,10 @@ namespace NodeWar.Lobby
 
         public void ScrollTo(string stall)
         {
-            int index = Array.IndexOf(StallNames, stall?.ToLowerInvariant());
-            if (stall == "bank") index = 4;
+            int index = ShopSnap.StallIndex(stall);
             if (index < 0) return;
             CancelPointer();
-            walk.ScrollTo(Math.Min(4, index));
+            walk.ScrollTo(index);
         }
 
         private void BeginPointer(PointerDownEvent evt)
@@ -299,7 +315,11 @@ namespace NodeWar.Lobby
         {
             if (evt.pointerId != pointer) return;
             bool vertical = axis == SwipeAxis.Vertical;
-            if (vertical) walk.Release();
+            if (vertical)
+            {
+                if (evt.timestamp - dragTime > 100) walk.Drag(0f, 0.1f);
+                walk.Release();
+            }
             int released = pointer;
             pointer = -1;
             if (Root.HasPointerCapture(released)) Root.ReleasePointer(released);
@@ -332,15 +352,15 @@ namespace NodeWar.Lobby
                 // vertical origin to its declared screen anchor in the usable page.
                 Vector3 restAnchor = stage.ShopAnchor(0);
                 Vector3 restScreen = camera.WorldToScreenPoint(restAnchor +
-                    Vector3.back * walk.Position * 6f);
+                    Vector3.back * walk.Position * LobbyStage.ShopStallSpacing);
                 Vector2 restPoint = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
                     new Vector2(restScreen.x, Screen.height - restScreen.y)));
                 float vertical = ShopSnap.ScreenAnchor(i);
                 float desiredY = i == 0 ? 8f : host.layout.height * vertical;
-                ShopPanelPose pose = ShopProjection.Project(point.x, point.y + desiredY - restPoint.y,
+                ShopPanelPose pose = ShopProjection.Project(point.x, point.y,
                     screen.z, Vector3.Distance(camera.transform.position, anchor),
-                    Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.65f * 0.65f),
-                    i, walk.Position, stalls[i].layout.height, vertical);
+                    stage.ShopReferenceDistance,
+                    i, walk.Position, stalls[i].layout.height, vertical, restPoint.y, desiredY);
                 ApplyPose(i, pose);
             }
         }
@@ -349,8 +369,14 @@ namespace NodeWar.Lobby
         {
             VisualElement panel = stalls[index];
             ShopPanelPose previous = poses[index];
-            if (pose.Visible != previous.Visible || float.IsNaN(previous.X))
+            if (!poseReady[index] || pose.Visible != previous.Visible)
                 panel.style.visibility = pose.Visible ? Visibility.Visible : Visibility.Hidden;
+            poseReady[index] = true;
+            if (!pose.Visible)
+            {
+                poses[index] = new ShopPanelPose(previous.X, previous.Y, previous.Scale, false);
+                return;
+            }
             if (ShopProjection.Changed(previous.X, pose.X, 0.25f)) panel.style.left = pose.X;
             if (ShopProjection.Changed(previous.Y, pose.Y, 0.25f)) panel.style.top = pose.Y;
             if (ShopProjection.Changed(previous.Scale, pose.Scale, 0.001f))
@@ -364,5 +390,3 @@ namespace NodeWar.Lobby
         }
     }
 }
-
-

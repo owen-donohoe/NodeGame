@@ -15,6 +15,21 @@ namespace NodeWar.Lobby
         private float direction;
         private float target;
 
+        public static int StallIndex(string name)
+        {
+            switch (name?.ToLowerInvariant())
+            {
+                case "daily": return 0;
+                case "crates": return 1;
+                case "weekly": return 2;
+                case "bundle": return 3;
+                case "bank":
+                case "coins":
+                case "laurels": return 4;
+                default: return -1;
+            }
+        }
+
         public static float ScreenAnchor(int stall) => stall == 0 ? 0f : 0.5f;
         public static float Target(float position, float direction)
         {

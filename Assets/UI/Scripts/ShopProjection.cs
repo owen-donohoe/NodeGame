@@ -16,13 +16,14 @@ namespace NodeWar.Lobby
     public static class ShopProjection
     {
         public static ShopPanelPose Project(float x, float y, float depth, float distance,
-            float referenceDistance, float stall, float position, float panelHeight, float screenAnchor)
+            float referenceDistance, float stall, float position, float panelHeight, float screenAnchor,
+            float restY = 0f, float targetY = 0f)
         {
-            float behind = stall - position;
+            float behind = position - stall;
             bool visible = depth > 0f && behind >= -0.001f && behind <= 1f;
             float recession = 1f - 0.4f * Math.Max(0f, Math.Min(1f, behind));
             float scale = referenceDistance / Math.Max(0.001f, distance) * recession;
-            return new ShopPanelPose(x, y - panelHeight * scale * screenAnchor, scale, visible);
+            return new ShopPanelPose(x, y + targetY - restY - panelHeight * scale * screenAnchor, scale, visible);
         }
 
         public static bool Changed(float previous, float current, float epsilon)
