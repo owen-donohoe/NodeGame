@@ -211,7 +211,9 @@ namespace NodeWar.Lobby
         private void ShowUnrecordedLoadout()
         {
             var content = new VisualElement();
-            content.Add(PlayerCardViews.Text("Loadout from this match isn't recorded yet"));
+            var note = PlayerCardViews.Text("Loadout from this match isn't recorded yet");
+            note.AddToClassList("ui-sheet__note");
+            content.Add(note);
             sheet?.Open(content);
         }
     }

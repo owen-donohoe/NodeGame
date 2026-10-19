@@ -334,8 +334,14 @@ namespace NodeWar.Lobby
         /// </summary>
         private void BuildOverlays(VisualElement overlayHost)
         {
-            profilePage = new ProfilePage(profilePageLayout, sheet, toast);
+            var socialService = NodeWar.Backend.BackendServices.Social;
+            var profileService = NodeWar.Backend.BackendServices.Profiles;
+            profilePage = new ProfilePage(profilePageLayout, sheet, toast, profileService);
             overlayHost.Add(profilePage.Root);
+            // Pages register after this block; bind Social once the shell reaches its panel.
+            overlayHost.schedule.Execute(() =>
+                (overlayHost.panel?.visualTree.Q("page-social")?.userData as SocialPage)?.Bind(
+                    socialService, profileService, NodeWar.Backend.BackendServices.MatchHistory, profilePage.OpenFor, sheet));
 
             settingsPage = new SettingsPage(settingsPageLayout, accountFlow);
             overlayHost.Add(settingsPage.Root);
@@ -510,6 +516,7 @@ namespace NodeWar.Lobby
                 string target = route.Target == "loadout" ? "Workshop" : route.Target;
                 if (System.Enum.TryParse(target, true, out LobbyPageID page)) navigation.Show(page);
             }
+            else if (route.Kind == LobbyRouteKind.Profile) profilePage.OpenFor(route.Target);
             else Debug.Log("[LobbyUI] Route: " + route.Kind + " " + route.Target);
         }
     }

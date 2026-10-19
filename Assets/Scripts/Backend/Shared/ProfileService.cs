@@ -58,7 +58,7 @@ namespace NodeWar.Backend
         public async Task<PublicProfileView> GetAsync(string playerId)
         {
             string account = selfId();
-            if (playerId == account || playerId == "self" && string.IsNullOrEmpty(account))
+            if ((!string.IsNullOrEmpty(account) && playerId == account) || (playerId == "self" && string.IsNullOrEmpty(account)))
             {
                 PlayerState snapshot = state();
                 var profile = new PublicProfileView
@@ -90,7 +90,7 @@ namespace NodeWar.Backend
                 SuitIds = sample ? new[] { "suit_guardian", "suit_warrior" } : Array.Empty<string>(),
                 DistrictIds = sample ? new[] { "district_farm", "district_barracks" } : Array.Empty<string>(),
                 Recent = sample ? new List<MatchSummary> { new MatchSummary { MatchId = "sample-history-1",
-                    Opponent = LocalSocialService.Sample("sample-cedar"), Won = true, RRDelta = 12,
+                    Opponent = LocalSocialService.Sample(playerId == "sample-cedar" ? "sample-ash" : "sample-cedar"), Won = true, RRDelta = 12,
                     Arena = card.Arena, CreatedUnix = 1792281600 } } : new List<MatchSummary>()
             };
         }

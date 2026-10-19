@@ -7,9 +7,9 @@ using UnityEditor;
 namespace NodeWar.Backend
 {
     /// <summary>
-    /// The one place a caller gets a backend service. Each service has a UGS
-    /// implementation and a local fake; builds always use UGS, and the Editor
-    /// can switch to the fakes (Tools > Node War > Backend) to work offline.
+    /// The one place a caller gets a backend service. Established services use
+    /// UGS in builds; the Editor can select local fakes. Social and public profiles
+    /// stay local until their UGS implementations exist.
     /// </summary>
     public static class BackendServices
     {
@@ -40,7 +40,7 @@ namespace NodeWar.Backend
         public static ISocialService Social => social ?? (social = new LocalSocialService());
         public static IProfileService Profiles => profiles ?? (profiles = new LocalProfileService(
             () => Account.Current?.PlayerId, () => LastKnownState, MatchHistory,
-            // Chosen slots are local; accepted handle, rank and equipment live in LastKnownState.
+            // Chosen slots are local; accepted handle and rank come from LastKnownState.
             () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.suitIDs,
             () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.districtIDs));
 

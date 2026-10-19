@@ -97,6 +97,15 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public async Task MissingPlayerId_WhileSignedOut_DoesNotReadSelfHistory()
+        {
+            var service = new LocalProfileService(() => null, () => null, new ThrowingHistory());
+            var unknown = await service.GetAsync(null);
+            Assert.IsNull(unknown.Stats);
+            Assert.IsEmpty(unknown.Recent);
+        }
+
+        [Test]
         public void SelfHistory_FromAReplacedAccount_IsRejected()
         {
             string account = "old";

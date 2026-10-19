@@ -45,10 +45,10 @@ namespace NodeWar.Backend
         {
             switch (id)
             {
-                case "sample-ash": return new PlayerCard { PlayerId = id, Name = "Ash", Tag = "ASH", Arena = 1, RR = 240, Presence = PlayerPresence.InBattle };
-                case "sample-brook": return new PlayerCard { PlayerId = id, Name = "Brook", Tag = "BRK", Arena = 1, RR = 200, Presence = PlayerPresence.Online };
+                case "sample-ash": return new PlayerCard { PlayerId = id, Name = "Ash", Tag = "ASH", Arena = 0, RR = 240, Presence = PlayerPresence.InBattle };
+                case "sample-brook": return new PlayerCard { PlayerId = id, Name = "Brook", Tag = "BRK", Arena = 0, RR = 200, Presence = PlayerPresence.Online };
                 case "sample-cedar": return new PlayerCard { PlayerId = id, Name = "Cedar", Tag = "CDR", Arena = 0, RR = 80, Presence = PlayerPresence.Offline };
-                case "sample-dune": return new PlayerCard { PlayerId = id, Name = "Dune", Tag = "DNE", Arena = 1, RR = 220, Presence = PlayerPresence.InBattle };
+                case "sample-dune": return new PlayerCard { PlayerId = id, Name = "Dune", Tag = "DNE", Arena = 0, RR = 220, Presence = PlayerPresence.InBattle };
                 default: return null;
             }
         }
