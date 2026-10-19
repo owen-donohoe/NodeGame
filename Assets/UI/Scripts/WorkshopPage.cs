@@ -292,6 +292,16 @@ namespace NodeWar.Lobby
             }
             if (unlocked.childCount == 0) unlocked.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "ui-w500"));
         }
+        public void InspectStageItem(bool suit, int stageIndex)
+        {
+            if (!session.IsOpen || Replacing) return;
+            var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+            int slot = StageSlotMap.ToChosen(chosen, stageIndex);
+            if (slot < 0) return;
+            SetTab(suit ? Tab.Suits : Tab.Districts);
+            PreviewItem(chosen[slot]);
+        }
+
         private void PreviewItem(string id)
         {
             Inspect(Find(activeTab == Tab.Suits ? suits : districts, id));
@@ -704,6 +714,7 @@ namespace NodeWar.Lobby
         }
     }
 }
+
 
 
 

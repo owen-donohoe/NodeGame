@@ -15,6 +15,10 @@ namespace NodeWar.Lobby
         private readonly IVisualElementScheduledItem framing;
         private Rect lastWindow;
         private Vector2 lastScreen;
+        private int pointer = -1;
+        private Vector2 pointerStart;
+        private long pointerStartedAt;
+        private bool dragged;
 
         public WorkshopStageBinding(WorkshopPage page, LobbyStage stage, LobbyOverlayRouter router,
             VisualElement shell, Action refresh)
@@ -29,7 +33,10 @@ namespace NodeWar.Lobby
             page.LoadoutChanged += refresh;
             stage.DistrictUsed += Used;
             router.Stack.Changed += StackChanged;
-            shell.RegisterCallback<PointerDownEvent>(Tap, TrickleDown.TrickleDown);
+            page.StageWindow.RegisterCallback<PointerDownEvent>(PointerDown);
+            page.StageWindow.RegisterCallback<PointerMoveEvent>(PointerMove);
+            page.StageWindow.RegisterCallback<PointerUpEvent>(PointerUp);
+            page.StageWindow.RegisterCallback<PointerCancelEvent>(PointerCancel);
         }
 
         private Vector2 ScreenPoint(Vector2 panelPoint)
@@ -53,6 +60,7 @@ namespace NodeWar.Lobby
         }
         private void Hide()
         {
+            ResetPointer();
             lastWindow = default;
             stage.ClearFocusRect();
         }
@@ -102,14 +110,43 @@ namespace NodeWar.Lobby
         {
             if (page.Replacing && router.Stack.Top?.ID != ReplaceRoute) page.CancelReplacement();
         }
-        private void Tap(PointerDownEvent evt)
+        private void PointerDown(PointerDownEvent evt)
         {
-            if (!page.Replacing) return;
-            for (var target = evt.target as VisualElement; target != null; target = target.parent)
+            if (pointer != -1 || evt.button != 0 || !page.IsOpen ||
+                router.Stack.Top != null && router.Stack.Top.ID != ReplaceRoute) return;
+            pointer = evt.pointerId;
+            pointerStart = ScreenPoint(evt.position);
+            pointerStartedAt = evt.timestamp;
+            dragged = false;
+            page.StageWindow.CapturePointer(pointer);
+            evt.StopPropagation();
+        }
+        private void PointerMove(PointerMoveEvent evt)
+        {
+            if (evt.pointerId == pointer && (ScreenPoint(evt.position) - pointerStart).sqrMagnitude > 100f) dragged = true;
+        }
+        private void PointerUp(PointerUpEvent evt)
+        {
+            if (evt.pointerId != pointer) return;
+            bool tap = !dragged && evt.timestamp - pointerStartedAt <= 500 &&
+                (ScreenPoint(evt.position) - pointerStart).sqrMagnitude <= 100f &&
+                page.StageWindow.worldBound.Contains(evt.position);
+            ResetPointer();
+            evt.StopPropagation();
+            if (!tap || !page.IsOpen || router.Stack.Top != null && router.Stack.Top.ID != ReplaceRoute ||
+                !stage.TryPick(ScreenPoint(evt.position), out StagePick pick)) return;
+            if (page.Replacing)
             {
-                if (target.ClassListContains("ws-district-slot") || target.name == "workshop-info-use") return;
+                if (!pick.IsSuit) stage.PickReplace(pick.Index);
+                return;
             }
-            page.CancelReplacement();
+            page.InspectStageItem(pick.IsSuit, pick.Index);
+        }
+        private void PointerCancel(PointerCancelEvent evt) => ResetPointer();
+        private void ResetPointer()
+        {
+            if (pointer >= 0) page.StageWindow.ReleasePointer(pointer);
+            pointer = -1;
         }
         public void Dispose()
         {
@@ -120,8 +157,12 @@ namespace NodeWar.Lobby
             page.ItemViewed -= View; page.DistrictUseRequested -= Begin; page.DistrictSlotPicked -= Pick;
             page.ReplacementChanged -= ReplacementChanged; page.LoadoutChanged -= refresh;
             stage.DistrictUsed -= Used; router.Stack.Changed -= StackChanged;
-            shell.UnregisterCallback<PointerDownEvent>(Tap, TrickleDown.TrickleDown);
+            page.StageWindow.UnregisterCallback<PointerDownEvent>(PointerDown);
+            page.StageWindow.UnregisterCallback<PointerMoveEvent>(PointerMove);
+            page.StageWindow.UnregisterCallback<PointerUpEvent>(PointerUp);
+            page.StageWindow.UnregisterCallback<PointerCancelEvent>(PointerCancel);
         }
     }
 }
+
 

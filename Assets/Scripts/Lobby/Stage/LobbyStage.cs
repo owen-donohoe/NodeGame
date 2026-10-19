@@ -10,7 +10,7 @@ namespace NodeWar.Lobby
     public sealed class LobbyStage : MonoBehaviour
     {
         private const float ShotDuration = 0.35f;
-        private const int StageLayer = 2; // Ignore Raycast; scenery never handles pointer input.
+        private const int StageLayer = 2; // Picking explicitly includes Ignore Raycast.
         private static readonly Color Sea = new Color(0.22f, 0.48f, 0.58f);
 
         // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
@@ -238,6 +238,21 @@ namespace NodeWar.Lobby
             }
         }
 
+        public bool TryPick(Vector2 screenPoint, out StagePick pick)
+        {
+            pick = default;
+            if (!stageCamera.isActiveAndEnabled) return false;
+            Physics.SyncTransforms();
+            Ray ray = stageCamera.ScreenPointToRay(screenPoint);
+            if (!Physics.Raycast(ray, out RaycastHit hit, stageCamera.farClipPlane,
+                1 << StageLayer, QueryTriggerInteraction.Ignore)) return false;
+            for (int i = 0; i < suits.Length; i++)
+                if (hit.transform == suits[i]) { pick = new StagePick(true, i); return true; }
+            for (int i = 0; i < plots.Length; i++)
+                if (hit.transform.IsChildOf(plots[i])) { pick = new StagePick(false, i); return true; }
+            return false;
+        }
+
         public void SelectDistrict(int slot) => cluster.Select(slot);
         public void Deselect() => cluster.Deselect();
         public void SetDistrictCapacity(int capacity) => districtCapacity = Mathf.Clamp(capacity, 0, StageSlots.Count);
@@ -333,6 +348,7 @@ namespace NodeWar.Lobby
             return MaterialFor(Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
         }
 
+        // All stage materials are created here; the future dither shader has one entry point.
         private Material MaterialFor(Color colour)
         {
             for (int i = 0; i < materials.Count; i++)
@@ -352,8 +368,9 @@ namespace NodeWar.Lobby
             obj.transform.localPosition = position;
             obj.transform.localScale = scale;
             var collider = obj.GetComponent<Collider>();
-            collider.enabled = false;
-            Destroy(collider);
+            bool pickable = objectName == "Unclaimed ground" || objectName == "District" || objectName.StartsWith("Suit ", StringComparison.Ordinal);
+            collider.enabled = pickable;
+            if (!pickable) Destroy(collider);
             var renderer = obj.GetComponent<Renderer>();
             renderer.sharedMaterial = MaterialFor(colour);
             renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -367,4 +384,6 @@ namespace NodeWar.Lobby
         }
     }
 }
+
+
 
