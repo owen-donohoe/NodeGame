@@ -86,7 +86,7 @@ namespace NodeWar.Lobby
             {
                 LobbyMenuItem item = items[i];
 
-                Button row = new Button();
+                Button row = new PaperButton();
                 row.text = item.Label;
                 row.AddToClassList("ui-reset-button");
                 row.AddToClassList("lb-menu__row");

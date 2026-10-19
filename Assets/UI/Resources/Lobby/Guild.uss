@@ -1,17 +1,17 @@
 #page-guild, #page-guild > TemplateContainer { flex-grow: 1; min-height: 0; }
-.lb-guild-scroll { flex-grow: 1; padding: 12px; background-color: rgba(235, 225, 205, 0.96); }
+.lb-guild-scroll { flex-grow: 1; padding: 12px; background-color: var(--paper-dark); }
 .lb-guild-title { font-size: 26px; white-space: normal; margin-bottom: 12px; }
 .lb-guild-search { flex-direction: row; flex-wrap: wrap; align-items: center; }
 .lb-guild-search TextField { flex-grow: 1; min-width: 120px; }
 .lb-guild-row { padding: 12px; margin-bottom: 8px; align-items: flex-start; }
 .lb-guild-row Label { white-space: normal; }
-.lb-guild-chip { border-radius: 10px; background-color: rgba(70, 110, 80, 0.2); padding: 4px; margin-top: 4px; }
+.lb-guild-chip { border-radius: 10px; background-color: var(--confirm); padding: 4px; margin-top: 4px; }
 .lb-guild-header { margin-bottom: 16px; }
 .lb-guild-header Label { white-space: normal; font-size: 20px; }
-.lb-guild-post { margin-bottom: 10px; padding: 10px; background-color: rgba(70, 80, 90, 0.1); }
+.lb-guild-post { margin-bottom: 10px; padding: 10px; background-color: var(--paper-dark); }
 .lb-guild-post Label { white-space: normal; }
-.lb-guild-red { background-color: rgb(185, 45, 45); color: white; min-height: 40px; }
-.lb-guild-chat { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgb(235, 225, 205); }
+.lb-guild-red { background-color: var(--paper-urgent); color: var(--ink); min-height: 40px; }
+.lb-guild-chat { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--paper-light); }
 .lb-guild-chat > TemplateContainer { flex-grow: 1; min-height: 0; }
 .lb-guild-chat-safe { flex-grow: 1; padding: 16px; min-height: 0; }
 .lb-guild-chat-list { flex-grow: 1; min-height: 0; }

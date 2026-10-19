@@ -115,7 +115,7 @@ namespace NodeWar.Lobby
         {
             choice.Content.Clear();
             foreach (var option in options)
-                choice.Content.Add(new Button(() => { choice.Close(); option.Action(); }) { text = option.Label });
+                choice.Content.Add(new PaperButton(() => { choice.Close(); option.Action(); }) { text = option.Label });
             choice.Open();
         }
 

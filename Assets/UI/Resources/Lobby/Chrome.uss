@@ -18,3 +18,4 @@
 .lb-era-badge { flex-grow: 1; padding-right: 4px; }
 .lb-header-progress { height: 5px; background-color: var(--paper-dark); border-width: 1px; border-color: var(--ink); border-radius: var(--corner-sm); margin-top: 3px; overflow: hidden; }
 .lb-header-progress-fill { height: 100%; background-color: var(--ink); }
+.lb-era-chip { flex-grow: 1; min-height: 24px; justify-content: center; padding: 2px 6px; margin-right: 6px; }

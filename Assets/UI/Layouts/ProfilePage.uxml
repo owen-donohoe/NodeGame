@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<engine:UXML
-    xmlns:engine="UnityEngine.UIElements"
-    xmlns:editor="UnityEditor.UIElements"
-    xmlns:lobby="NodeWar.Lobby"
-    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" xmlns:lobby="NodeWar.Lobby" xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
         Profile, after the prototype's stats and arena view. It is not a tab:
@@ -36,16 +31,16 @@
         <engine:VisualElement name="push-safe-area" class="lb-arena__inner" picking-mode="Ignore">
 
             <engine:VisualElement class="lb-arena__head">
-                <engine:Button name="profile-back" class="ui-reset-button lb-back">
+                <lobby:PaperButton name="profile-back" class="ui-reset-button lb-back">
                     <lobby:LobbyIcon context="PageHeader" kind="Back" class="lb-icon" picking-mode="Ignore" />
-                </engine:Button>
+                </lobby:PaperButton>
                 <engine:VisualElement class="lb-arena__name" picking-mode="Ignore">
                     <engine:Label name="profile-username" class="lb-arena__name-text ui-w600" text="player" />
                     <engine:Label name="profile-subtitle" class="lb-arena__name-sub ui-w500" text="Arena — · 0 trophies" />
                 </engine:VisualElement>
                 <engine:VisualElement class="ui-lip lb-rename-wrap" picking-mode="Ignore">
                     <engine:VisualElement class="ui-lip__block lb-rename-lip" picking-mode="Ignore" />
-                    <engine:Button name="profile-rename" class="ui-reset-button lb-rename ui-w600" text="Rename" />
+                    <lobby:PaperButton name="profile-rename" class="ui-reset-button lb-rename ui-w600" text="Rename" />
                 </engine:VisualElement>
             </engine:VisualElement>
 
@@ -70,11 +65,11 @@
         <engine:Label name="profile-name-note" class="ui-sheet__note ui-w500" text="Up to 16 characters. Visible to opponents." />
         <engine:VisualElement class="ui-lip ui-button-wrap" picking-mode="Ignore">
             <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
-            <engine:Button name="profile-name-save" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Save" />
+            <lobby:PaperButton name="profile-name-save" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Save" />
         </engine:VisualElement>
         <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
-            <engine:Button name="profile-name-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
+            <lobby:PaperButton name="profile-name-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
         </engine:VisualElement>
     </engine:VisualElement>
 
-</engine:UXML>
+<engine:Style src="../Resources/Lobby/PaperLobby.uss" /></engine:UXML>

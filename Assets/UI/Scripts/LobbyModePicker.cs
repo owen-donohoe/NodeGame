@@ -32,22 +32,24 @@ namespace NodeWar.Lobby
         private void AddCard(string host, LobbyMode mode)
         {
             var display = new HomeModeDisplay(new LobbyModeSelection(mode));
-            var card = new Button(() =>
+            var card = new PaperButton(() =>
             {
                 selection = new LobbyModeSelection(mode, privateToggle?.value == true);
                 Selected?.Invoke(selection);
                 sheet.Close();
             });
+            card.userData = mode;
             card.AddToClassList("lb-mode-card");
             card.Add(new LobbyIcon(display.Icon, LobbyIconContext.Home));
             card.Add(new Label(display.Name) { pickingMode = PickingMode.Ignore });
-            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour)) card.style.backgroundColor = colour;
             root.Q<VisualElement>(host)?.Add(card);
         }
 
         public void Open(LobbyModeSelection current)
         {
             selection = current;
+            root.Query<PaperButton>(className: "lb-mode-card").ForEach(card =>
+                card.EnableInClassList("lb-mode-card--on", card.userData is LobbyMode mode && mode == current.Mode));
             privateToggle?.SetValueWithoutNotify(current.Private);
             sheet.Open(root, true);
         }

@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<engine:UXML
-    xmlns:engine="UnityEngine.UIElements"
-    xmlns:editor="UnityEditor.UIElements"
-    xmlns:lobby="NodeWar.Lobby"
-    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" xmlns:lobby="NodeWar.Lobby" xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
         The lobby shell, after lobby-prototype.html.
@@ -61,33 +56,33 @@
         <engine:VisualElement name="safe-area" class="lb-safe-area" picking-mode="Ignore">
 
             <engine:VisualElement name="top-bar" class="lb-topbar" picking-mode="Ignore">
-                <engine:Button name="purse-coin" class="ui-reset-button lb-purse">
+                <lobby:PaperButton name="purse-coin" class="ui-reset-button lb-purse">
                     <engine:VisualElement class="lb-coin" picking-mode="Ignore">
                         <engine:VisualElement class="lb-coin__hole" picking-mode="Ignore" />
                     </engine:VisualElement>
                     <engine:Label name="purse-coin-value" class="lb-purse__value ui-w600" text="—" picking-mode="Ignore" />
-                </engine:Button>
-                <engine:Button name="purse-leaf" class="ui-reset-button lb-purse">
+                </lobby:PaperButton>
+                <lobby:PaperButton name="purse-leaf" class="ui-reset-button lb-purse">
                     <engine:VisualElement class="lb-leaf" picking-mode="Ignore" />
                     <engine:Label name="purse-leaf-value" class="lb-purse__value ui-w600" text="—" picking-mode="Ignore" />
-                </engine:Button>
+                </lobby:PaperButton>
                 <engine:VisualElement class="lb-spacer" picking-mode="Ignore" />
-                <engine:Button name="history" class="ui-reset-button lb-gear lb-gear--history" tooltip="Match history">
+                <lobby:PaperButton name="history" class="ui-reset-button lb-gear lb-gear--history" tooltip="Match history">
                     <lobby:LobbyIcon context="TopBar" kind="Tv" class="lb-icon" picking-mode="Ignore" />
-                </engine:Button>
-                <engine:Button name="gear" class="ui-reset-button lb-gear" tooltip="Settings">
+                </lobby:PaperButton>
+                <lobby:PaperButton name="gear" class="ui-reset-button lb-gear" tooltip="Settings">
                     <lobby:LobbyIcon context="TopBar" kind="Gear" class="lb-icon" picking-mode="Ignore" />
-                </engine:Button>
+                </lobby:PaperButton>
             </engine:VisualElement>
 
             <engine:VisualElement name="strip-wrap" class="ui-sticker lb-strip-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
                 <engine:VisualElement name="trophy-strip" class="lb-strip">
                     <engine:VisualElement class="lb-strip__row" picking-mode="Ignore">
-                        <engine:Button name="name-button" class="ui-reset-button lb-name-btn">
+                        <lobby:PaperButton name="name-button" class="ui-reset-button lb-name-btn">
                             <engine:Label name="name-text" class="lb-name-btn__text ui-w600" text="player" picking-mode="Ignore" />
                             <engine:Label class="lb-name-btn__chev ui-w600" text="›" picking-mode="Ignore" />
-                        </engine:Button>
+                        </lobby:PaperButton>
                         <engine:VisualElement class="lb-trophy" picking-mode="Ignore">
                             <engine:Label name="trophy-count" class="lb-trophy__count ui-w700" text="0" picking-mode="Ignore" />
                             <engine:Label name="trophy-max" class="lb-trophy__max ui-w500" text=" /—" picking-mode="Ignore" />
@@ -133,17 +128,17 @@
 
         <engine:VisualElement name="sheet-layer" class="lb-sheet-layer" picking-mode="Ignore">
             <engine:VisualElement name="sheet-scrim" class="ui-scrim" picking-mode="Ignore" />
-            <engine:VisualElement name="sheet" class="ui-sheet lb-sheet">
+            <lobby:PaperCard name="sheet" class="ui-sheet lb-sheet">
                 <engine:VisualElement name="sheet-handle" class="ui-handle-hit">
                     <engine:VisualElement class="ui-handle" picking-mode="Ignore" />
                 </engine:VisualElement>
                 <engine:VisualElement name="sheet-body" picking-mode="Ignore" />
-            </engine:VisualElement>
+            </lobby:PaperCard>
         </engine:VisualElement>
 
         <engine:VisualElement name="menu-layer" class="lb-menu-layer" picking-mode="Ignore">
             <engine:VisualElement name="menu-scrim" class="ui-scrim" picking-mode="Ignore" />
-            <engine:VisualElement name="menu" class="lb-menu" picking-mode="Ignore" />
+            <lobby:PaperCard name="menu" class="lb-menu" picking-mode="Ignore" />
         </engine:VisualElement>
 
         <engine:VisualElement name="toast-dock" class="lb-toast-dock" picking-mode="Ignore">
@@ -153,4 +148,4 @@
     </engine:VisualElement>
 
     <engine:Style src="../Resources/Lobby/PaperLobby.uss" />
-</engine:UXML>
+<engine:Style src="../Resources/Lobby/PaperLobby.uss" /></engine:UXML>

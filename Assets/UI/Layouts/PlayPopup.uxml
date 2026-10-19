@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<engine:UXML
-    xmlns:engine="UnityEngine.UIElements"
-    xmlns:editor="UnityEditor.UIElements"
-    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:lobby="NodeWar.Lobby">
 
     <engine:Style src="project://database/Assets/UI/Styles/RankedQueue.uss" />
 
@@ -36,15 +32,15 @@
             <engine:Label class="ui-sheet__title ui-w600" text="Find a match" />
 
             <engine:VisualElement class="lb-seg" picking-mode="Ignore">
-                <engine:Button name="play-mode-locked" class="ui-reset-button lb-seg__btn ui-w600" text="Ranked" />
-                <engine:Button name="play-mode-1v1" class="ui-reset-button lb-seg__btn ui-w600" text="1 vs 1" />
-                <engine:Button name="play-mode-bot" class="ui-reset-button lb-seg__btn ui-w600" text="Bot" />
-                <engine:Button name="play-mode-testing" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Testing" />
+                <lobby:PaperButton name="play-mode-locked" class="ui-reset-button lb-seg__btn ui-w600" text="Ranked" />
+                <lobby:PaperButton name="play-mode-1v1" class="ui-reset-button lb-seg__btn ui-w600" text="1 vs 1" />
+                <lobby:PaperButton name="play-mode-bot" class="ui-reset-button lb-seg__btn ui-w600" text="Bot" />
+                <lobby:PaperButton name="play-mode-testing" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Testing" />
             </engine:VisualElement>
 
             <engine:VisualElement name="play-transport" class="lb-seg" picking-mode="Ignore">
-                <engine:Button name="play-transport-relay" class="ui-reset-button lb-seg__btn ui-w600" text="Online" />
-                <engine:Button name="play-transport-lan" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Local network" />
+                <lobby:PaperButton name="play-transport-relay" class="ui-reset-button lb-seg__btn ui-w600" text="Online" />
+                <lobby:PaperButton name="play-transport-lan" class="ui-reset-button lb-seg__btn lb-seg__btn--last ui-w600" text="Local network" />
             </engine:VisualElement>
 
             <!-- Loadout counts, each side its own label so only a short side turns orange. -->
@@ -59,15 +55,15 @@
 
             <engine:VisualElement name="play-host-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-host" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Host" />
+                <lobby:PaperButton name="play-host" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Host" />
             </engine:VisualElement>
             <engine:VisualElement name="play-join-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-lip__block ui-lip__block--green" picking-mode="Ignore" />
-                <engine:Button name="play-join-open" class="ui-reset-button ui-button ui-button--green ui-w700" text="Join with a code" />
+                <lobby:PaperButton name="play-join-open" class="ui-reset-button ui-button ui-button--green ui-w700" text="Join with a code" />
             </engine:VisualElement>
             <engine:VisualElement name="play-start-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-start" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Play" />
+                <lobby:PaperButton name="play-start" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Play" />
             </engine:VisualElement>
         </engine:VisualElement>
 
@@ -78,10 +74,10 @@
             <engine:Label name="play-join-hint" class="ui-sheet__note ui-w500" text="Four letters from your opponent" />
             <engine:VisualElement class="ui-lip ui-button-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-join-go" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Join" />
+                <lobby:PaperButton name="play-join-go" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Join" />
             </engine:VisualElement>
             <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
-                <engine:Button name="play-join-back" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Back" />
+                <lobby:PaperButton name="play-join-back" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Back" />
             </engine:VisualElement>
         </engine:VisualElement>
 
@@ -98,14 +94,14 @@
 
             <engine:VisualElement name="play-copy-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-lip__block ui-lip__block--green" picking-mode="Ignore" />
-                <engine:Button name="play-copy" class="ui-reset-button ui-button ui-button--green ui-w700" text="Copy code" />
+                <lobby:PaperButton name="play-copy" class="ui-reset-button ui-button ui-button--green ui-w700" text="Copy code" />
             </engine:VisualElement>
             <engine:VisualElement name="play-retry-wrap" class="ui-lip ui-button-wrap" picking-mode="Ignore">
                 <engine:VisualElement class="ui-lip__block ui-lip__block--gold" picking-mode="Ignore" />
-                <engine:Button name="play-retry" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Try again" />
+                <lobby:PaperButton name="play-retry" class="ui-reset-button ui-button ui-button--gold ui-w700" text="Try again" />
             </engine:VisualElement>
             <engine:VisualElement class="ui-button-wrap" picking-mode="Ignore">
-                <engine:Button name="play-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
+                <lobby:PaperButton name="play-cancel" class="ui-reset-button ui-button ui-button--quiet ui-w700" text="Cancel" />
             </engine:VisualElement>
         </engine:VisualElement>
 
@@ -117,4 +113,4 @@
 
     </engine:VisualElement>
 
-</engine:UXML>
+<engine:Style src="../Resources/Lobby/PaperLobby.uss" /></engine:UXML>

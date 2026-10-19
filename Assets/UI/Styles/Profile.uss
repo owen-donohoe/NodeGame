@@ -13,16 +13,16 @@
 */
 
 :root {
-    --arena-sorcery: rgb(43, 33, 56);
-    --arena-sorcery-ink: rgb(237, 227, 200);
-    --arena-sorcery-edge: rgb(15, 10, 22);
-    --arena-steam: rgb(221, 230, 240);
-    --arena-bronze: rgb(228, 210, 172);
-    --arena-ancient: rgb(185, 172, 151);
-    --arena-chip-got: rgba(255, 255, 255, 0.4);
+    --arena-sorcery: var(--paper-dark);
+    --arena-sorcery-ink: var(--ink);
+    --arena-sorcery-edge: var(--ink);
+    --arena-steam: var(--paper-light);
+    --arena-bronze: var(--paper-light);
+    --arena-ancient: var(--paper-dark);
+    --arena-chip-got: var(--paper-dark);
 
     /* A shade heavier than the shared --shadow-soft, as the prototype drew it. */
-    --arena-shadow: rgba(90, 70, 40, 0.28);
+    --arena-shadow: var(--scrim);
 }
 
 .lb-arena {
@@ -318,7 +318,7 @@
 .lb-road__you > .lb-icon {
     width: 13px;
     height: 13px;
-    -unity-background-image-tint-color: var(--ink-white);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-era {

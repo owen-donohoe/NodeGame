@@ -1,8 +1,7 @@
 /*
     Node War - lobby stylesheet.
 
-    The lobby's look, translated from lobby-prototype.html (v3.2). That file is
-    the spec: sizes, colours and timings below are its values, not new ones.
+    Lobby shell geometry. Visual roles follow docs/style-guide.md.
 
     Lobby only. Colour, spacing, shape, motion and type come from the shared
     theme (Tokens.uss, through the panel's UnityDefaultRuntimeTheme.tss); the
@@ -26,24 +25,24 @@
 
 :root {
     /* ---- stand-in scenery (CSS fakery in the prototype too). LobbyBackdrop
-       reads the sky and ground through customStyle, so these hold literals. ---- */
-    --backdrop-sky-0: rgb(247, 238, 219);
-    --backdrop-sky-1: rgb(231, 213, 182);
-    --backdrop-sky-2: rgb(210, 187, 149);
-    --backdrop-ground-top: rgb(207, 184, 143);
-    --backdrop-ground-bottom: rgb(188, 161, 115);
-    --backdrop-prop-a: rgb(198, 168, 111);
-    --backdrop-prop-b: rgb(185, 156, 107);
-    --backdrop-prop-c: rgb(203, 177, 131);
-    --backdrop-prop-d: rgb(194, 166, 114);
-    --backdrop-prop-shadow: rgba(90, 70, 40, 0.28);
+       uses these roles when the runtime stage is unavailable. ---- */
+    --backdrop-sky-0: var(--paper-light);
+    --backdrop-sky-1: var(--paper-light);
+    --backdrop-sky-2: var(--paper-light);
+    --backdrop-ground-top: var(--paper-dark);
+    --backdrop-ground-bottom: var(--paper-dark);
+    --backdrop-prop-a: var(--paper-dark);
+    --backdrop-prop-b: var(--paper-dark);
+    --backdrop-prop-c: var(--paper-dark);
+    --backdrop-prop-d: var(--paper-dark);
+    --backdrop-prop-shadow: var(--scrim);
 
     /* ---- the tab bar's resting icon ink ---- */
-    --tab-ink: rgb(169, 151, 124);
+    --tab-ink: var(--ink);
 
     /* ---- placeholder screens ---- */
-    --placeholder-ink: rgb(90, 50, 140);
-    --placeholder-fill: rgba(90, 50, 140, 0.12);
+    --placeholder-ink: var(--ink);
+    --placeholder-fill: var(--paper-dark);
 }
 
 /* ===================================================================
@@ -200,13 +199,13 @@
     padding-left: 8px;
     padding-right: 14px;
     margin-right: var(--space-2);
-    color: var(--ink-inverse);
+    color: var(--ink);
     font-size: 19px;
 }
 
 .lb-root .lb-purse__value {
     margin-left: 6px;
-    color: var(--ink-inverse);
+    color: var(--ink);
     font-size: 19px;
 }
 
@@ -281,7 +280,7 @@
 .lb-gear > .lb-icon {
     width: 20px;
     height: 20px;
-    -unity-background-image-tint-color: var(--ink-inverse);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 /* ---- trophy strip ---- */
@@ -367,7 +366,7 @@
 
 .lb-root .lb-trophy__count {
     font-size: 26px;
-    color: var(--trophy-ink);
+    color: var(--ink);
 }
 
 .lb-root .lb-trophy__max {
@@ -717,7 +716,7 @@
 .lb-stub__icon > .lb-icon {
     width: 40px;
     height: 40px;
-    -unity-background-image-tint-color: var(--ink-mute);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-stub__title {

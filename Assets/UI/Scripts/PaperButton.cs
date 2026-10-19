@@ -29,7 +29,11 @@ namespace NodeWar.Lobby
             caption = new Label(captionText) { pickingMode = PickingMode.Ignore };
             caption.AddToClassList("ui-paper-button__caption");
             hierarchy.Add(caption);
-            RegisterCallback<AttachToPanelEvent>(_ => paper.Seed = string.IsNullOrEmpty(name) ? text : name);
+            RegisterCallback<AttachToPanelEvent>(_ =>
+            {
+                if (string.IsNullOrEmpty(name)) name = "paper-button-" + text + "-" + (parent?.IndexOf(this) ?? 0);
+                paper.Seed = name;
+            });
             RegisterCallback<PointerDownEvent>(_ => paper.Pressed = true);
             RegisterCallback<PointerUpEvent>(_ => paper.Pressed = false);
             RegisterCallback<PointerCancelEvent>(_ => paper.Pressed = false);

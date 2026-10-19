@@ -7,7 +7,7 @@
 }
 .ui-root PaperButton.ui-paper-button { min-width: 48px; min-height: 48px; overflow: visible; }
 .ui-root .lb-icon { -unity-background-image-tint-color: var(--ink); }
-.ui-root .ui-paper-button__caption { font-size: inherit; color: var(--ink); }
+.ui-root .ui-paper-button__caption { color: var(--ink); }
 .ui-root .ui-sticker__shadow, .ui-root .ui-soft-shadow, .ui-root .ui-lip__block { display: none; }
 .ui-root .unity-text-field__input, .ui-root .unity-integer-field__input, .ui-root .unity-float-field__input {
     background-color: var(--paper-light); color: var(--ink); border-width: var(--paper-ink-width); border-color: var(--ink);
@@ -23,3 +23,42 @@
 .ui-root ScrollView { background-color: var(--clear); }
 
 .ui-root .ui-paper.ui-tile, .ui-root .ui-paper .ui-tile__monogram { color: var(--ink); background-color: var(--clear); }
+
+.ui-root .lb-social-square, .ui-root .lb-claim-info { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
+.ui-root .lb-social-red, .ui-root .lb-guild-red { --paper-card-fill: var(--paper-urgent); color: var(--ink); }
+.ui-root .lb-claim-primary, .ui-root .lb-crate-accept { --paper-card-fill: var(--paper-gold); }
+.ui-root .lb-public-stat { padding: 10px; }
+.ui-root .lb-public-stat Label { font-size: 20px; }
+.ui-root .lb-public-safe { top: 8%; bottom: 8%; }
+.ui-root .lb-guild-header { padding: 12px; }
+.ui-root .lb-group { overflow: visible; border-width: 0; }
+.ui-root .lb-mode-card { --paper-card-fill: var(--paper-light); }
+.ui-root .lb-mode-card--on { --paper-card-fill: var(--paper-gold); }
+.ui-root .lb-social-player, .ui-root .lb-guild-post, .ui-root .lb-public-recent { margin-bottom: 12px; }
+.ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { background-color: var(--paper); }
+.ui-root .lb-crate-screen { background-color: var(--paper); color: var(--ink); }
+.ui-root .lb-crate-box { --paper-card-fill: var(--paper-dark); }
+.ui-root .lb-crate-reward { --paper-card-fill: var(--paper-gold); }
+.ui-root .lb-reveal-district, .ui-root .lb-reveal-suit, .ui-root .lb-reveal-skin { --paper-card-fill: var(--paper-light); color: var(--ink); }
+.ui-root .lb-switch { background-color: var(--paper-dark); border-width: 2px; border-color: var(--ink); }
+.ui-root .lb-switch--on { background-color: var(--paper-gold); }
+.ui-root .lb-switch__knob { background-color: var(--paper-light); border-width: 2px; border-color: var(--ink); }
+.ui-root .cp-check, .ui-root .cp-check--on { border-color: var(--ink); background-color: var(--paper-light); }
+.ui-root .cp-check--on { background-color: var(--paper-gold); }
+.ui-root .unity-foldout__toggle { min-height: 48px; background-color: var(--paper-dark); border-radius: var(--corner-sm); padding: 8px; }
+
+.ui-root .lb-home-play > .ui-paper-button__caption { font-size: 42px; }
+.ui-root .ws-tab--on > .ui-paper, .ui-root .ws-primary > .ui-paper, .ui-root .ws-preset.ui-chip--action > .ui-paper,
+.ui-root .lb-mode-card--on > .ui-paper, .ui-root .lb-market-tile--free > .ui-paper { --paper-card-fill: var(--paper-gold); }
+.ui-root .lb-public-chip { background-color: var(--paper-dark); color: var(--ink); border-width: 1px; border-color: var(--ink); }
+.ui-root .lb-social-square > .ui-paper { --paper-card-fill: var(--paper-light); }
+.ui-root .lb-page-paper { flex-grow: 1; min-height: 0; --paper-card-fill: var(--paper); padding: 4px; }
+.ui-root .lb-page-paper ScrollView { background-color: var(--clear); }
+.ui-root .lb-guild-chat-safe, .ui-root .lb-crate-screen { --paper-card-fill: var(--paper); }
+.ui-root .lb-public-chip, .ui-root .lb-guild-chip, .ui-root .lb-party-slot { --paper-card-fill: var(--paper-dark); }
+.ui-root .lb-claim-panel { padding-top: 72px; }
+.ui-root .unity-popup-field__input { background-color: var(--paper-light); color: var(--ink); min-height: 48px; border-width: var(--paper-ink-width); border-color: var(--ink); border-radius: var(--corner-sm); padding: 8px; }
+.ui-root .unity-progress-bar { min-height: 24px; margin: 8px 0; }
+.ui-root .unity-progress-bar__background { background-color: var(--paper-dark); border-width: 2px; border-color: var(--ink); border-radius: var(--corner-sm); }
+.ui-root .unity-progress-bar__progress { background-color: var(--paper-gold); border-radius: var(--corner-sm); }
+.ui-root .unity-progress-bar__title { color: var(--ink); -unity-font-definition: var(--font-medium); }

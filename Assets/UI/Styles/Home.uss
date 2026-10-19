@@ -9,10 +9,10 @@
 */
 
 :root {
-    --home-chip: rgba(150, 128, 95, 0.2);
-    --home-hat: rgb(201, 168, 95);
-    --home-meter-bg: rgba(45, 35, 25, 0.8);
-    --home-meter-track: rgb(74, 59, 42);
+    --home-chip: var(--paper-dark);
+    --home-hat: var(--paper-dark);
+    --home-meter-bg: var(--paper-dark);
+    --home-meter-track: var(--paper-dark);
 }
 
 /* ===================================================================
@@ -78,7 +78,7 @@
 .lb-box .lb-icon {
     width: 38px;
     height: 38px;
-    -unity-background-image-tint-color: var(--ink-mute);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-box-wrap--small .lb-icon {
@@ -114,7 +114,7 @@
     border-right-color: var(--badge-edge);
     border-top-color: var(--badge-edge);
     border-bottom-color: var(--badge-edge);
-    color: var(--ink-white);
+    color: var(--ink);
     font-size: 16px;
     -unity-text-align: middle-center;
 }
@@ -269,7 +269,7 @@
     top: 17px;
     width: 26px;
     height: 26px;
-    -unity-background-image-tint-color: var(--edge);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 /* ---- call to action ---- */
@@ -298,7 +298,7 @@
     border-bottom-right-radius: var(--corner-lg);
     font-size: 30px;
     letter-spacing: 0.5px;
-    color: var(--action-ink);
+    color: var(--ink);
     transition-property: translate;
     transition-duration: var(--motion-press);
     transition-timing-function: ease-in;
@@ -333,7 +333,7 @@
 
 .lb-root .lb-boxmeter__label {
     font-size: 15px;
-    color: var(--ink-inverse);
+    color: var(--ink);
     margin-right: var(--space-3);
     flex-shrink: 0;
 }

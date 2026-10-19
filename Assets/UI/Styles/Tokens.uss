@@ -125,14 +125,14 @@
     --pal-ring-rich: rgb(28, 110, 112);
 
     /* monogram tiles - ItemTint picks one by hashing the item's ID */
-    --pal-tile-0: rgb(58, 110, 108);
-    --pal-tile-1: rgb(160, 82, 45);
-    --pal-tile-2: rgb(72, 82, 140);
-    --pal-tile-3: rgb(104, 112, 52);
-    --pal-tile-4: rgb(112, 64, 112);
-    --pal-tile-5: rgb(78, 92, 104);
-    --pal-tile-6: rgb(158, 122, 40);
-    --pal-tile-7: rgb(140, 62, 62);
+    --pal-tile-0: rgb(129, 147, 103);
+    --pal-tile-1: rgb(167, 115, 77);
+    --pal-tile-2: rgb(181, 155, 113);
+    --pal-tile-3: rgb(127, 136, 81);
+    --pal-tile-4: rgb(153, 114, 94);
+    --pal-tile-5: rgb(147, 132, 110);
+    --pal-tile-6: rgb(175, 140, 72);
+    --pal-tile-7: rgb(156, 100, 76);
 
     /* ================= MEANING ================= */
 

@@ -128,7 +128,7 @@ namespace NodeWar.Lobby
             AddConnector(targetRow, first: false, last: true, acrossWidth: 40f);
             targetRow.Add(Spacer());
             targetRow.Add(NameWithNote("Camera button target", out targetNote));
-            targetButton = new Button(OpenTargetPopup);
+            targetButton = new PaperButton(OpenTargetPopup);
             targetButton.AddToClassList("ui-reset-button");
             targetButton.AddToClassList("cp-action");
             targetValue = new Label();
@@ -152,7 +152,7 @@ namespace NodeWar.Lobby
             sideRow = NewRow();
             sideRow.Add(Spacer());
             sideRow.Add(NameLabel("Controls side"));
-            sideButton = new Button(() => edit(ControlsViewModel.CycleControlsSide));
+            sideButton = new PaperButton(() => edit(ControlsViewModel.CycleControlsSide));
             sideButton.AddToClassList("ui-reset-button");
             sideButton.AddToClassList("cp-action");
             sideValue = new Label();
@@ -190,7 +190,7 @@ namespace NodeWar.Lobby
             warnings.pickingMode = PickingMode.Ignore;
             content.Add(warnings);
 
-            Button reset = new Button(() => edit(ControlsViewModel.ResetControls));
+            Button reset = new PaperButton(() => edit(ControlsViewModel.ResetControls));
             reset.AddToClassList("ui-reset-button");
             reset.AddToClassList("cp-reset");
             Label resetText = new Label("Reset controls to default");
@@ -215,7 +215,7 @@ namespace NodeWar.Lobby
             shadow.AddToClassList("ui-sticker__shadow");
             shadow.pickingMode = PickingMode.Ignore;
             wrap.Add(shadow);
-            VisualElement card = new VisualElement();
+            VisualElement card = new PaperCard();
             card.AddToClassList("lb-group");
             wrap.Add(card);
             content.Add(wrap);
@@ -249,7 +249,7 @@ namespace NodeWar.Lobby
         /// <summary>The square on the far left: filled when on, an empty outline when off.</summary>
         private static Button NewCheck(out VisualElement square)
         {
-            Button hit = new Button();
+            Button hit = new PaperButton();
             hit.AddToClassList("ui-reset-button");
             hit.AddToClassList("cp-checkhit");
             square = new VisualElement();
@@ -352,7 +352,7 @@ namespace NodeWar.Lobby
             view.name = NameLabel(ControlsViewModel.SlotLabel(slot));
             view.row.Add(view.name);
 
-            view.action = new Button();
+            view.action = new PaperButton();
             view.action.AddToClassList("ui-reset-button");
             view.action.AddToClassList("cp-action");
             view.actionText = new Label();
@@ -450,7 +450,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < labels.Count; i++)
             {
                 int index = i;
-                Button item = new Button(() =>
+                Button item = new PaperButton(() =>
                 {
                     ClosePopup();
                     pick(index);

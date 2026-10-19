@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<engine:UXML
-    xmlns:engine="UnityEngine.UIElements"
-    xmlns:editor="UnityEditor.UIElements"
-    xmlns:lobby="NodeWar.Lobby"
-    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" xmlns:lobby="NodeWar.Lobby" xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
         Match history: a full page pushed in from the right, opened from the TV
@@ -21,9 +16,9 @@
 
     <engine:VisualElement name="push-safe-area" class="lb-push__safe" picking-mode="Ignore">
         <engine:VisualElement class="lb-push__header" picking-mode="Ignore">
-            <engine:Button name="push-back" class="ui-reset-button lb-back">
+            <lobby:PaperButton name="push-back" class="ui-reset-button lb-back">
                 <lobby:LobbyIcon context="PageHeader" kind="Back" class="lb-icon" picking-mode="Ignore" />
-            </engine:Button>
+            </lobby:PaperButton>
             <engine:Label class="lb-push__title ui-w600" text="Match history" />
         </engine:VisualElement>
 
@@ -38,4 +33,4 @@
         </engine:VisualElement>
     </engine:VisualElement>
 
-</engine:UXML>
+<engine:Style src="../Resources/Lobby/PaperLobby.uss" /></engine:UXML>

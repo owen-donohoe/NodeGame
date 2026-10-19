@@ -1,4 +1,4 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="ModePicker.uss" />
     <ui:VisualElement class="lb-mode-picker">
         <ui:Label text="Choose a mode" class="lb-mode-heading" />
@@ -8,4 +8,4 @@
         </ui:ScrollView>
         <ui:Toggle name="mode-private" text="Private (1v1)" class="lb-mode-private" />
     </ui:VisualElement>
-</ui:UXML>
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

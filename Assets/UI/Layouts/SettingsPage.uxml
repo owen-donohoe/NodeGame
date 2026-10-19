@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<engine:UXML
-    xmlns:engine="UnityEngine.UIElements"
-    xmlns:editor="UnityEditor.UIElements"
-    xmlns:lobby="NodeWar.Lobby"
-    xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" xmlns:lobby="NodeWar.Lobby" xsi:noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <!--
         Settings, after lobby-prototype.html: a full page pushed in from the
@@ -32,29 +27,29 @@
         <engine:ScrollView name="settings-scroll" class="lb-push__scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
 
             <engine:VisualElement class="lb-push__header" picking-mode="Ignore">
-                <engine:Button name="push-back" class="ui-reset-button lb-back">
+                <lobby:PaperButton name="push-back" class="ui-reset-button lb-back">
                     <lobby:LobbyIcon context="PageHeader" kind="Back" class="lb-icon" picking-mode="Ignore" />
-                </engine:Button>
+                </lobby:PaperButton>
                 <engine:Label class="lb-push__title ui-w600" text="Settings" />
             </engine:VisualElement>
 
             <engine:Label class="lb-group-label lb-group-label--first ui-w600" text="Account" />
             <engine:VisualElement name="settings-account" class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-group">
+                <lobby:PaperCard class="lb-group" name="paper-lb-group-0">
                     <engine:Label name="settings-account-status" class="lb-account-status ui-w500" />
-                    <engine:Button name="settings-account-link" class="ui-reset-button lb-grow lb-account-action ui-w500" text="Link account" />
-                    <engine:Button name="settings-account-sign-in" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Sign in" />
-                    <engine:Button name="settings-account-sign-out" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Sign out" />
-                    <engine:Button name="settings-account-guest" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Continue as guest" />
+                    <lobby:PaperButton name="settings-account-link" class="ui-reset-button lb-grow lb-account-action ui-w500" text="Link account" />
+                    <lobby:PaperButton name="settings-account-sign-in" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Sign in" />
+                    <lobby:PaperButton name="settings-account-sign-out" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Sign out" />
+                    <lobby:PaperButton name="settings-account-guest" class="ui-reset-button lb-grow lb-grow--last lb-account-action ui-w500" text="Continue as guest" />
                     <engine:Label name="settings-account-message" class="lb-account-message ui-w500" />
-                </engine:VisualElement>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
             <engine:Label class="lb-group-label ui-w600" text="Audio" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-group">
+                <lobby:PaperCard class="lb-group" name="paper-lb-group-1">
                     <engine:VisualElement class="lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Master" />
                         <engine:Slider name="settings-master" class="lb-slider" low-value="0" high-value="1" value="0.64" />
@@ -67,41 +62,41 @@
                         <engine:Label class="lb-grow__label ui-w500" text="Effects" />
                         <engine:Slider name="settings-effects" class="lb-slider" low-value="0" high-value="1" value="0.78" />
                     </engine:VisualElement>
-                </engine:VisualElement>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
             <engine:Label class="lb-group-label ui-w600" text="Accessibility" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-group">
-                    <engine:Button name="settings-row-colourblind" class="ui-reset-button lb-grow">
+                <lobby:PaperCard class="lb-group" name="paper-lb-group-2">
+                    <lobby:PaperButton name="settings-row-colourblind" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Colourblind marks" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-colourblind" value="true" />
-                    </engine:Button>
-                    <engine:Button name="settings-row-motion" class="ui-reset-button lb-grow">
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="settings-row-motion" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Reduced motion" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-motion" value="false" />
-                    </engine:Button>
-                    <engine:Button name="settings-row-size" class="ui-reset-button lb-grow lb-grow--last">
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="settings-row-size" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Interface size" picking-mode="Ignore" />
                         <engine:Label name="settings-size" class="lb-grow__value ui-w500" text="Default" picking-mode="Ignore" />
-                    </engine:Button>
-                </engine:VisualElement>
+                    </lobby:PaperButton>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
             <engine:Label class="lb-group-label ui-w600" text="Gameplay" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-group">
+                <lobby:PaperCard class="lb-group" name="paper-lb-group-3">
                     <engine:VisualElement class="lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Camera speed" />
                         <engine:Slider name="settings-camera" class="lb-slider" low-value="0" high-value="1" value="0.52" />
                     </engine:VisualElement>
-                    <engine:Button name="settings-row-confirm" class="ui-reset-button lb-grow lb-grow--last">
+                    <lobby:PaperButton name="settings-row-confirm" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Confirm each command" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-confirm" value="false" />
-                    </engine:Button>
-                </engine:VisualElement>
+                    </lobby:PaperButton>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
             <!--
@@ -111,31 +106,31 @@
             <engine:Label class="lb-group-label ui-w600" text="Controls" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-group">
-                    <engine:Button name="settings-row-controls" class="ui-reset-button lb-grow lb-grow--last">
+                <lobby:PaperCard class="lb-group" name="paper-lb-group-4">
+                    <lobby:PaperButton name="settings-row-controls" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Configure controls" picking-mode="Ignore" />
                         <engine:Label class="lb-grow__value ui-w500" text="›" picking-mode="Ignore" />
-                    </engine:Button>
-                </engine:VisualElement>
+                    </lobby:PaperButton>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
             <engine:Label class="lb-group-label ui-w600" text="Mobile" />
             <engine:VisualElement class="lb-group-wrap ui-sticker" picking-mode="Ignore">
                 <engine:VisualElement class="ui-sticker__shadow" picking-mode="Ignore" />
-                <engine:VisualElement class="lb-group">
-                    <engine:Button name="settings-row-haptics" class="ui-reset-button lb-grow">
+                <lobby:PaperCard class="lb-group" name="paper-lb-group-5">
+                    <lobby:PaperButton name="settings-row-haptics" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Haptics" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-haptics" value="true" />
-                    </engine:Button>
-                    <engine:Button name="settings-row-framecap" class="ui-reset-button lb-grow">
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="settings-row-framecap" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Frame rate cap" picking-mode="Ignore" />
                         <engine:Label name="settings-framecap" class="lb-grow__value ui-w500" text="60" picking-mode="Ignore" />
-                    </engine:Button>
-                    <engine:Button name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />
                         <lobby:LobbySwitch name="settings-battery" value="false" />
-                    </engine:Button>
-                </engine:VisualElement>
+                    </lobby:PaperButton>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
             <!-- TODO(settings): narrow as each system lands; delete the label when none are left. -->
@@ -150,16 +145,16 @@
         -->
         <engine:VisualElement name="controls-panel" class="cp-page" picking-mode="Position">
             <engine:VisualElement class="cp-header-bar" picking-mode="Ignore">
-                <engine:Button name="controls-back" class="ui-reset-button lb-back">
+                <lobby:PaperButton name="controls-back" class="ui-reset-button lb-back">
                     <lobby:LobbyIcon context="InlineText" kind="Back" class="lb-icon" picking-mode="Ignore" />
-                </engine:Button>
+                </lobby:PaperButton>
                 <engine:Label class="cp-title ui-w600" text="Configure controls" picking-mode="Ignore" />
             </engine:VisualElement>
             <engine:ScrollView name="controls-scroll" class="cp-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
             <engine:VisualElement name="controls-popup-scrim" class="cp-scrim" picking-mode="Position">
-                <engine:VisualElement name="controls-popup" class="cp-popup" picking-mode="Position" />
+                <lobby:PaperCard name="controls-popup" class="cp-popup" picking-mode="Position" />
             </engine:VisualElement>
         </engine:VisualElement>
     </engine:VisualElement>
 
-</engine:UXML>
+<engine:Style src="../Resources/Lobby/PaperLobby.uss" /></engine:UXML>

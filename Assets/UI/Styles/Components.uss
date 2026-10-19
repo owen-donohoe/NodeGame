@@ -535,3 +535,11 @@
 .ui-paper-button--urgent > .ui-paper { --paper-card-fill: var(--paper-urgent); }
 .ui-paper-button__caption { -unity-text-align: middle-center; white-space: normal; flex-shrink: 1; }
 .ui-paper-button:active { translate: 0 3px; }
+.ui-paper__swatch {
+    position: absolute; width: 0; height: 0; visibility: hidden;
+    background-color: var(--paper-card-fill); color: var(--paper-card-ink);
+    border-left-color: var(--paper-card-shadow);
+    border-left-width: var(--paper-card-width); border-right-width: var(--paper-card-shadow-x);
+    border-bottom-width: var(--paper-card-shadow-y); border-top-width: var(--paper-card-wobble);
+    opacity: var(--paper-card-grain);
+}

@@ -27,7 +27,7 @@ namespace NodeWar.Lobby
         public CrateScreen(LobbyOverlayRouter router)
         {
             this.router = router ?? throw new ArgumentNullException(nameof(router));
-            Root = new VisualElement { name = "crate-screen" };
+            Root = new PaperCard { name = "crate-screen", RotatePaper = false };
             Resources.Load<VisualTreeAsset>("Lobby/CrateScreen").CloneTree(Root);
             Root.AddToClassList("lb-crate-screen");
             Root.AddToClassList("lb-no-swipe");

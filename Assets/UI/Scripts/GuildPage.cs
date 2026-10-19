@@ -151,7 +151,7 @@ namespace NodeWar.Lobby
                 mine.Content.Add(feed);
                 _ = feed.Load(() => Task.FromResult(guild.Feed), rows => RenderPosts(feed.Content, rows),
                     rows => rows != null && rows.Count > 0, "No guild posts yet.");
-                var openChat = new Button(() => _ = OpenChatAsync()) { text = "Chat" };
+                var openChat = new PaperButton(() => _ = OpenChatAsync()) { text = "Chat" };
                 GuildViews.Icon(openChat, LobbyIconKind.Chat);
                 mine.Content.Add(openChat);
             }
@@ -162,15 +162,15 @@ namespace NodeWar.Lobby
             foreach (var post in posts)
             {
                 if (post == null) continue;
-                var row = new VisualElement();
+                var row = new PaperCard();
                 row.AddToClassList("lb-guild-post");
                 if (post.Player != null) row.Add(PlayerCardViews.Text(PlayerCardViews.Handle(post.Player)));
                 row.Add(PlayerCardViews.Text(post.Text));
                 if (post.Kind == GuildPostKind.Invite)
-                    row.Add(new Button(() => Debug.Log("[Guild] join invite " + post.PostId)) { text = "Join" });
+                    row.Add(new PaperButton(() => Debug.Log("[Guild] join invite " + post.PostId)) { text = "Join" });
                 else if (post.Kind == GuildPostKind.InBattle)
                 {
-                    var spectate = new Button(() => Debug.Log("[Guild] spectate " + post.Player?.PlayerId)) { text = "Spectate" };
+                    var spectate = new PaperButton(() => Debug.Log("[Guild] spectate " + post.Player?.PlayerId)) { text = "Spectate" };
                     spectate.AddToClassList("lb-guild-red"); row.Add(spectate);
                 }
                 host.Add(row);
@@ -203,12 +203,13 @@ namespace NodeWar.Lobby
         {
             foreach (var guild in guilds)
             {
-                var row = new Button(() => OpenPreview(guild));
+                var row = new PaperButton(() => OpenPreview(guild));
                 row.AddToClassList("lb-guild-row");
                 GuildViews.Icon(row, LobbyIconKind.Guild);
                 row.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
                 row.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity));
-                var chip = PlayerCardViews.Text(guild.Joinable && guild.Members < guild.Capacity ? "Joinable" : "Closed");
+                var chip = new PaperCard { name = "guild-status-" + guild.GuildId, pickingMode = PickingMode.Ignore };
+                chip.Add(PlayerCardViews.Text(guild.Joinable && guild.Members < guild.Capacity ? "Joinable" : "Closed"));
                 chip.AddToClassList("lb-guild-chip");
                 row.Add(chip);
                 host.Add(row);
@@ -220,7 +221,7 @@ namespace NodeWar.Lobby
             preview.Content.Clear();
             preview.Content.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
             preview.Content.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity + " members · Minimum " + guild.MinRR + " RR"));
-            var join = new Button(() => Debug.Log("[Guild] join " + guild.GuildId)) { text = "Join" };
+            var join = new PaperButton(() => Debug.Log("[Guild] join " + guild.GuildId)) { text = "Join" };
             join.SetEnabled(guild.Joinable && guild.Members < guild.Capacity);
             preview.Content.Add(join);
             preview.Open();
@@ -233,7 +234,7 @@ namespace NodeWar.Lobby
             var rr = new IntegerField("Min RR") { value = filter.MinRR };
             var members = new IntegerField("Min members") { value = filter.MinMembers };
             filters.Content.Add(joinable); filters.Content.Add(rr); filters.Content.Add(members);
-            filters.Content.Add(new Button(() =>
+            filters.Content.Add(new PaperButton(() =>
             {
                 filter = new GuildFilter { JoinableOnly = joinable.value, MinRR = Math.Max(0, rr.value), MinMembers = Math.Max(0, members.value) };
                 filters.Close(); Search();

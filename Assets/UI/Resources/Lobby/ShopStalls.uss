@@ -3,9 +3,9 @@
 .lb-market-page > TemplateContainer { flex-grow: 1; min-height: 0; }
 .lb-market-projections { flex-grow: 1; }
 .lb-market-stall { position: absolute; width: 174px; transform-origin: 0 0; visibility: hidden; }
-.lb-market-title { font-size: var(--type-heading); color: var(--ink-inverse); white-space: normal; }
-.lb-market-countdown { color: var(--ink-inverse); margin-bottom: var(--space-3); font-size: var(--type-min); }
-.lb-market-shelf-title { color: var(--ink-inverse); font-size: var(--type-caption); margin-top: var(--space-2); margin-bottom: var(--space-2); }
+.lb-market-title { font-size: var(--type-heading); color: var(--ink); white-space: normal; }
+.lb-market-countdown { color: var(--ink); margin-bottom: var(--space-3); font-size: var(--type-min); }
+.lb-market-shelf-title { color: var(--ink); font-size: var(--type-caption); margin-top: var(--space-2); margin-bottom: var(--space-2); }
 .lb-market-offers { flex-direction: column; }
 .lb-market-card { margin-bottom: var(--space-3); }
 .lb-market-tile {
@@ -19,13 +19,13 @@
 }
 .lb-market-tile:active { background-color: var(--surface-sunk); }
 .lb-market-tile:disabled { background-color: var(--surface-sunk); }
-.lb-market-tile--free { background-color: var(--action); color: var(--action-ink); }
+.lb-market-tile--free { background-color: var(--action); color: var(--ink); }
 .lb-market-tile Label { font-size: var(--type-min); white-space: normal; -unity-text-align: middle-center; }
 .lb-market-price { color: var(--ink-mute); margin-top: 2px; }
-.lb-market-tile--free .lb-market-price { color: var(--action-ink); }
+.lb-market-tile--free .lb-market-price { color: var(--ink); }
 .lb-market-ribbon {
     position: absolute; top: -5px; right: 6px; padding: 2px 8px;
-    border-radius: var(--corner-sm); background-color: var(--confirm); color: var(--confirm-ink);
+    border-radius: var(--corner-sm); background-color: var(--confirm); color: var(--ink);
 }
 .lb-market-disclosure { color: var(--ink-mute); margin-top: 4px; }
 .lb-market-icon { width: 46px; height: 46px; margin-bottom: 4px; }
