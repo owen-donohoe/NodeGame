@@ -11,15 +11,18 @@ namespace NodeWar.Lobby
         private readonly LobbyStage stage;
         private readonly LobbyOverlayRouter router;
         private readonly Action refresh;
+        private readonly NavigationController navigation;
         private int pointer = -1;
         private Vector2 pointerStart;
         private long pointerStartedAt;
         private bool dragged;
 
         public WorkshopStageBinding(WorkshopPage page, LobbyStage stage, LobbyOverlayRouter router,
-            VisualElement shell, Action refresh)
+            VisualElement shell, Action refresh, NavigationController navigation = null)
         {
             this.page = page; this.stage = stage; this.router = router; this.refresh = refresh;
+            this.navigation = navigation;
+            if (navigation != null) navigation.PageShown += PageShown;
             page.Hidden += Hide;
             page.ItemViewed += View;
             page.ViewChanged += ShowView;
@@ -29,10 +32,10 @@ namespace NodeWar.Lobby
             page.LoadoutChanged += refresh;
             stage.DistrictUsed += Used;
             router.Stack.Changed += StackChanged;
-            page.StageWindow.RegisterCallback<PointerDownEvent>(PointerDown);
-            page.StageWindow.RegisterCallback<PointerMoveEvent>(PointerMove);
-            page.StageWindow.RegisterCallback<PointerUpEvent>(PointerUp);
-            page.StageWindow.RegisterCallback<PointerCancelEvent>(PointerCancel);
+            page.Root.RegisterCallback<PointerDownEvent>(PointerDown, TrickleDown.TrickleDown);
+            page.Root.RegisterCallback<PointerMoveEvent>(PointerMove, TrickleDown.TrickleDown);
+            page.Root.RegisterCallback<PointerUpEvent>(PointerUp, TrickleDown.TrickleDown);
+            page.Root.RegisterCallback<PointerCancelEvent>(PointerCancel, TrickleDown.TrickleDown);
         }
 
         private Vector2 ScreenPoint(Vector2 panelPoint)
@@ -43,7 +46,12 @@ namespace NodeWar.Lobby
         }
         private void Hide()
         {
-            ResetPointer();
+            ResetPointer(); stage.Deselect(); stage.ClearFocus();
+        }
+
+        private void PageShown(LobbyPageID id)
+        {
+            if (id == LobbyPageID.Workshop) ShowView(page.ViewingSuit);
         }
 
         private void ShowView(bool suits) => stage.ShowShot(suits ? StageShot.Suits : StageShot.Districts);
@@ -98,14 +106,12 @@ namespace NodeWar.Lobby
         }
         private void PointerDown(PointerDownEvent evt)
         {
-            if (pointer != -1 || evt.button != 0 || !page.IsOpen ||
+            if (evt.target != page.StageWindow || pointer != -1 || evt.button != 0 || !page.IsOpen ||
                 router.Stack.Top != null && router.Stack.Top.ID != ReplaceRoute) return;
             pointer = evt.pointerId;
             pointerStart = ScreenPoint(evt.position);
             pointerStartedAt = evt.timestamp;
             dragged = false;
-            page.StageWindow.CapturePointer(pointer);
-            evt.StopPropagation();
         }
         private void PointerMove(PointerMoveEvent evt)
         {
@@ -118,7 +124,6 @@ namespace NodeWar.Lobby
                 (ScreenPoint(evt.position) - pointerStart).sqrMagnitude <= 100f &&
                 page.StageWindow.worldBound.Contains(evt.position);
             ResetPointer();
-            evt.StopPropagation();
             if (!tap || !page.IsOpen || router.Stack.Top != null && router.Stack.Top.ID != ReplaceRoute ||
                 !stage.TryPick(ScreenPoint(evt.position), out StagePick pick)) return;
             if (page.Replacing)
@@ -135,22 +140,22 @@ namespace NodeWar.Lobby
         private void PointerCancel(PointerCancelEvent evt) => ResetPointer();
         private void ResetPointer()
         {
-            if (pointer >= 0) page.StageWindow.ReleasePointer(pointer);
             pointer = -1;
         }
         public void Dispose()
         {
             page.Hidden -= Hide;
+            if (navigation != null) navigation.PageShown -= PageShown;
             Hide();
             page.CancelReplacement(); stage.Deselect(); stage.ClearFocus();
             page.ViewChanged -= ShowView;
             page.ItemViewed -= View; page.DistrictUseRequested -= Begin; page.DistrictSlotPicked -= Pick;
             page.ReplacementChanged -= ReplacementChanged; page.LoadoutChanged -= refresh;
             stage.DistrictUsed -= Used; router.Stack.Changed -= StackChanged;
-            page.StageWindow.UnregisterCallback<PointerDownEvent>(PointerDown);
-            page.StageWindow.UnregisterCallback<PointerMoveEvent>(PointerMove);
-            page.StageWindow.UnregisterCallback<PointerUpEvent>(PointerUp);
-            page.StageWindow.UnregisterCallback<PointerCancelEvent>(PointerCancel);
+            page.Root.UnregisterCallback<PointerDownEvent>(PointerDown, TrickleDown.TrickleDown);
+            page.Root.UnregisterCallback<PointerMoveEvent>(PointerMove, TrickleDown.TrickleDown);
+            page.Root.UnregisterCallback<PointerUpEvent>(PointerUp, TrickleDown.TrickleDown);
+            page.Root.UnregisterCallback<PointerCancelEvent>(PointerCancel, TrickleDown.TrickleDown);
         }
     }
 }
