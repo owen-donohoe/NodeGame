@@ -9,6 +9,8 @@ sources:
   - Assets/Scripts/Backend/Shared/DisconnectHold.cs
   - Assets/Scripts/Backend/Shared/InventoryService.cs
   - Assets/Scripts/Backend/Shared/MatchHistoryService.cs
+  - Assets/Scripts/Backend/Shared/SocialService.cs
+  - Assets/Scripts/Backend/Shared/ProfileService.cs
   - Assets/Scripts/Backend/Shared/MatchReportService.cs
   - Assets/Scripts/Backend/Shared/MatchReportTypes.cs
   - Assets/Scripts/Backend/Shared/NodeWar.Backend.Shared.asmdef
@@ -30,7 +32,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: 435ea894
+verified: 234f6583
 ---
 
 # Backend client
@@ -41,7 +43,7 @@ Client code asks services for authoritative account, inventory and ranked state.
 ## Interface
 `GameServices.InitializeAsync()` initializes UGS without requiring a player; account sign-in uses it. Data services await `EnsureReadyAsync()` for initialization plus sign-in. Editor environment follows Project Settings; Development Builds use `development`, releases `production`.
 
-`BackendServices` selects `Ugs*Service` or `Local*Service` implementations for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Tools > Node War > Backend > Admin` calls the admin grant functions in Play mode and shows the signed-in player ID. `LastKnownState` and `StateChanged` expose accepted current-account state. `RememberGuard` rejects results belonging to a previous account. Cloud module name is `NodeWarCloud`.
+`BackendServices` selects `Ugs*Service` or `Local*Service` for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Social` and `Profiles` are local in every build; neither has a UGS adapter. `Tools > Node War > Backend > Admin` calls admin grants in Play mode. `LastKnownState`/`StateChanged` expose accepted current-account state; `RememberGuard` rejects previous-account results. Cloud module: `NodeWarCloud`.
 
 Shared `ProtocolVersion.Current` is 6; the network serializer aliases this constant, and server allocation checks it alongside simulation/content identity.
 
@@ -50,6 +52,7 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 - `IPlayerStateService.GetAsync()` returns `PlayerState`; `IInventoryService.EquipAsync(EquippedRecord changes)` and `IHandleService.SetHandleAsync(name, tag, requestId)` (`BackendServices.Handles`; server only) return accepted state.
 - `IMatchReportService.ReportAsync(matchId, byte[] log)` returns `MatchReportingResult` with nullable `state`, `message`, `playerState`; UGS sends base64 to `ReportMatch`.
 - `IMatchHistoryService.GetAsync()` returns `List<MatchHistoryEntry>`: ID, opponent, record state, creation time, optional win/RR delta/arena.
+- `ISocialService.GetLiveMatchesAsync/GetFriendsAsync` return `LiveMatch`/`PlayerCard` lists with presence. `IProfileService.GetAsync(playerId)` returns `PublicProfileView`: card, nullable stats, loadout IDs and recent summaries. Self uses accepted handle/rank, current local chosen slots and `IMatchHistoryService`; stats remain unknown. Local samples are deterministic.
 - `IRankedQueueService.EnqueueAsync()` returns ticket ID; `PollAsync(ticketId)` returns `RankedQueueResult` (Searching/Found/Failed/TimedOut/Cancelled, match ID, message); `CancelAsync(ticketId)` deletes it.
 - `IRankedMatchService`: `RendezvousAsync(matchId, joinCode)`, `ConfirmConnectedAsync(matchId)`, `LeaveAsync(matchId, forfeit)`, `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)` map to Cloud Code `Rendezvous`, `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`, `ResolveHold`.
 
@@ -86,7 +89,7 @@ Presence runs every four seconds from draft onward, every second when urgent. Ho
 `PendingRankedReports.Add(playerId, matchId, log)` persists under `PendingReports`; `RetryAsync()` coalesces callers and sends only the signed-in player's files after match end, lobby load and queue preflight. Exceptions retain files; any server answer, including refusal, removes that pending upload.
 
 ## Decisions
-- Keep async UGS implementations rather than local-first authority; fakes stay as test doubles and new features need not add one.
+- Keep authoritative services behind async UGS adapters rather than local authority; Social/Profiles supply only placeholder local data.
 - Use direct client tickets and private server rendezvous rather than a queue proxy or public lobby.
 - Offer explicit account switching rather than merge anonymous progress on link conflict.
 

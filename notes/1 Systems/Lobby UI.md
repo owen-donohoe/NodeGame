@@ -14,7 +14,7 @@ sources:
   - Assets/UI/Scripts/LobbyUIController.cs
   - Assets/UI/Scripts/MatchLauncher.cs
   - Assets/Scripts/Lobby/PlayerProfile.cs
-verified: b9daca49
+verified: 234f6583
 ---
 
 # Lobby UI
@@ -51,6 +51,7 @@ flowchart TB
 | `LobbyUIController` | Builds the shell; "reads no simulation state and writes none" (there is none yet) |
 | `NavigationController` | Pages side by side in one track; changing tab *slides* it. Every page stays in the tree, so scroll position survives for free |
 | `ShopPage` / `CrateScreen` | Shop stalls share claim panels; held crates open fullscreen and reveal each returned reward before Accept. Purchases only log |
+| `SocialPage` / `ProfilePage` | Independent async TV/history/friends sections open public profile panels. Profiles keep unknown stats as dashes; social actions log. Self keeps server Rename |
 | `LoadoutEditor` | Pure slot rules (fill first empty, refuse duplicates, clear), testable in `NodeWar.Lobby.Tests` |
 | `PlayerProfile` | Local JSON at `persistentDataPath/player_profile.json`, with migration of old save shapes |
 | `MatchLauncher` | Refresh rank → sanitise and freeze the loadout → host/join (Relay, LAN, ranked) or start local ([[Match launch]]) |
