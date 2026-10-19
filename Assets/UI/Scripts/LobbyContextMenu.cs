@@ -38,22 +38,17 @@ namespace NodeWar.Lobby
         private readonly VisualElement layer;
         private readonly VisualElement scrim;
         private readonly VisualElement menu;
+        private readonly MkSheet sheet;
         private VisualElement lifted;
 
         public LobbyContextMenu(VisualElement root)
         {
             layer = root.Q<VisualElement>("menu-layer");
-            scrim = root.Q<VisualElement>("menu-scrim");
-            menu = root.Q<VisualElement>("menu");
-
-            if (scrim != null)
-            {
-                scrim.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    Close();
-                    evt.StopPropagation();
-                });
-            }
+            layer.Clear();
+            sheet = new MkSheet { name = "menu" };
+            layer.Add(sheet);
+            menu = sheet.Body;
+            sheet.Closed += Close;
         }
 
         public bool IsOpen { get; private set; }
@@ -86,9 +81,9 @@ namespace NodeWar.Lobby
             {
                 LobbyMenuItem item = items[i];
 
-                Button row = new PaperButton();
+                Button row = new Button();
                 row.text = item.Label;
-                row.AddToClassList("ui-reset-button");
+                row.AddToClassList("mk-btn");
                 row.AddToClassList("lb-menu__row");
                 row.AddToClassList("ui-w500");
                 if (i == items.Count - 1) row.AddToClassList("lb-menu__row--last");
@@ -102,27 +97,7 @@ namespace NodeWar.Lobby
                 menu.Add(row);
             }
 
-            Vector2 local = layer.WorldToLocal(panelPosition);
-            float width = layer.layout.width;
-            float height = layer.layout.height;
-            float menuHeight = items.Count * RowHeight;
-
-            float left = Mathf.Clamp(local.x - MenuWidth * 0.5f, Edge, Mathf.Max(Edge, width - MenuWidth - Edge));
-            float top = local.y + BelowFinger;
-            if (top + menuHeight > height - 196f) top = local.y - menuHeight - 30f;
-            top = Mathf.Max(Edge, top);
-
-            menu.style.left = left;
-            menu.style.top = top;
-            menu.style.width = MenuWidth;
-            menu.pickingMode = PickingMode.Position;
-            menu.AddToClassList("lb-menu--on");
-
-            if (scrim != null)
-            {
-                scrim.AddToClassList("ui-scrim--on");
-                scrim.pickingMode = PickingMode.Position;
-            }
+            sheet.Open();
 
             lifted = source;
             if (lifted != null) lifted.AddToClassList("lb-lifted");
@@ -139,6 +114,7 @@ namespace NodeWar.Lobby
             if (!IsOpen) return;
 
             IsOpen = false;
+            sheet.Close();
 
             if (menu != null)
             {

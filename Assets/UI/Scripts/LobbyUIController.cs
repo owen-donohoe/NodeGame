@@ -601,13 +601,13 @@ namespace NodeWar.Lobby
             sheet.Opened += content =>
             {
                 promote(root.Q<VisualElement>("sheet-layer"));
-                router.Open(new LobbyOverlay("sheet", OverlayKind.Sheet), sheet.Close);
+                router.Open(new LobbyOverlay("sheet", OverlayKind.Sheet, true), sheet.Close);
             };
             sheet.Closed += content => router.Closed("sheet");
             menu.Opened += () =>
             {
                 promote(root.Q<VisualElement>("menu-layer"));
-                router.Open(new LobbyOverlay("menu", OverlayKind.Menu), menu.Close);
+                router.Open(new LobbyOverlay("menu", OverlayKind.Sheet, true), menu.Close);
             };
             menu.Closed += () => router.Closed("menu");
             profilePage.Opened += () =>
@@ -622,7 +622,7 @@ namespace NodeWar.Lobby
             claimPanel.Opened += () =>
             {
                 promote(claimPanel.Root);
-                router.Open(new LobbyOverlay("claim", OverlayKind.Panel), claimPanel.Cancel);
+                router.Open(new LobbyOverlay("claim", OverlayKind.Sheet, true), claimPanel.Cancel);
             };
             claimPanel.Closed += () => router.Closed("claim");
             claimPanel.Cancelled += () => confirmingExit = false;
@@ -652,7 +652,7 @@ namespace NodeWar.Lobby
             panel.Opened += () =>
             {
                 promote(panel.Root);
-                router.Open(new LobbyOverlay(id, OverlayKind.Panel), panel.Close);
+                router.Open(new LobbyOverlay(id, OverlayKind.Sheet, true), panel.Close);
             };
             panel.Closed += () => router.Closed(id);
         }

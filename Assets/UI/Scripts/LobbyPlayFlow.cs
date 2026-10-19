@@ -68,7 +68,7 @@ namespace NodeWar.Lobby
             {
                 panel.Root.BringToFront();
                 shell.Q<VisualElement>("toast-dock")?.BringToFront();
-                router.Open(new LobbyOverlay(id, OverlayKind.Panel), panel.Close);
+                router.Open(new LobbyOverlay(id, OverlayKind.Sheet, true), panel.Close);
             };
             panel.Closed += () => router.Closed(id);
             return panel;
