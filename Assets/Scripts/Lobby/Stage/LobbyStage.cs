@@ -1,0 +1,249 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
+using NodeWar.View;
+
+namespace NodeWar.Lobby
+{
+    /// <summary>Runtime-only lobby scenery. Its owner supplies loadouts and page changes.</summary>
+    public sealed class LobbyStage : MonoBehaviour
+    {
+        private const float ShotDuration = 0.35f;
+        private const int StageLayer = 2; // Ignore Raycast; scenery never handles pointer input.
+        private static readonly Color Sea = new Color(0.22f, 0.48f, 0.58f);
+
+        // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
+        private static readonly Color32[] Tints =
+        {
+            new Color32(58, 110, 108, 255), new Color32(160, 82, 45, 255),
+            new Color32(72, 82, 140, 255), new Color32(104, 112, 52, 255),
+            new Color32(112, 64, 112, 255), new Color32(78, 92, 104, 255),
+            new Color32(158, 122, 40, 255), new Color32(140, 62, 62, 255)
+        };
+
+        private readonly List<Material> materials = new List<Material>();
+        private readonly Transform[] plots = new Transform[StageSlots.Count];
+        private readonly GameObject[] districts = new GameObject[StageSlots.Count];
+        private readonly Vector3[] slotPositions = new Vector3[StageSlots.Count];
+        private Transform[] suits = Array.Empty<Transform>();
+        private Camera stageCamera;
+        private Shader shader;
+        private DistrictCluster cluster = new DistrictCluster(0);
+        private int equipped;
+        private Vector3 shotStartPosition;
+        private Quaternion shotStartRotation;
+        private Vector3 shotPosition;
+        private Quaternion shotRotation;
+        private float shotElapsed = ShotDuration;
+
+        /// <summary>
+        /// FillEmpty/ Replaced asks the owner to apply its chosen type, then call SetLoadout.
+        /// This preview never writes inventory. FillEmpty's Slot is the first empty slot.
+        /// </summary>
+        public event Action<DistrictClusterResult> DistrictUsed;
+
+        public static LobbyStage Create()
+        {
+            var root = new GameObject("Lobby Stage");
+            // Keep the stage away from the scene camera and other scene geometry.
+            root.transform.position = new Vector3(0f, -10000f, 0f);
+            var stage = root.AddComponent<LobbyStage>();
+            stage.Build();
+            return stage;
+        }
+
+        private void Build()
+        {
+            shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            var cameraObject = new GameObject("Stage Camera");
+            cameraObject.transform.SetParent(transform, false);
+            stageCamera = cameraObject.AddComponent<Camera>();
+            // Lobby.unity's base camera has depth -1. Screen-space UI Toolkit renders
+            // after cameras; LobbyPanelSettings clears depth, but does not clear colour.
+            float depth = 0f;
+            foreach (Camera other in Camera.allCameras)
+                if (other != stageCamera && other.targetTexture == null)
+                    depth = Mathf.Max(depth, other.depth + 1f);
+            stageCamera.depth = depth;
+            stageCamera.clearFlags = CameraClearFlags.SolidColor;
+            stageCamera.backgroundColor = Sea;
+            stageCamera.cullingMask = 1 << StageLayer;
+            stageCamera.nearClipPlane = 0.1f;
+            stageCamera.farClipPlane = 120f;
+            stageCamera.fieldOfView = 42f;
+            stageCamera.allowHDR = false;
+            stageCamera.allowMSAA = false;
+            // TODO: add the URP Volume depth-of-field hook during the visual pass.
+
+            Primitive("Ocean (unplaceable edge)", PrimitiveType.Plane, transform,
+                new Vector3(0f, -0.18f, 0f), new Vector3(12f, 1f, 12f), Sea);
+            Primitive("Land", PrimitiveType.Cube, transform, new Vector3(0f, -0.1f, 0f),
+                new Vector3(32f, 0.2f, 10f), new Color(0.56f, 0.61f, 0.43f));
+
+            var slots = StageSlots.Layout(0);
+            for (int i = 0; i < slots.Length; i++)
+            {
+                StageSlot slot = slots[i];
+                slotPositions[i] = new Vector3((slot.Column - (slot.Row == 0 ? 1f : 0.5f)) * 2.8f,
+                    0f, slot.Row == 0 ? 1.4f : -1.4f);
+                var plot = new GameObject("Plot " + i);
+                plot.transform.SetParent(transform, false);
+                plot.transform.localPosition = slotPositions[i];
+                plots[i] = plot.transform;
+                Primitive("Unclaimed ground", PrimitiveType.Cube, plots[i], new Vector3(0f, 0.12f, 0f),
+                    new Vector3(2.78f, 0.24f, 2.78f), PlayerColors.Neutral);
+                districts[i] = Primitive("District", PrimitiveType.Cube, plots[i],
+                    new Vector3(0f, 0.65f, 0.5f), new Vector3(1.5f, 0.8f, 1.2f), Tints[0]);
+                districts[i].SetActive(false);
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                Primitive("Market stall " + i, PrimitiveType.Cube, transform,
+                    new Vector3(-10f, 0.5f, (i - 1) * 2f), new Vector3(1.8f, 1f, 1.4f), Tints[i]);
+                Primitive("Market canopy " + i, PrimitiveType.Cube, transform,
+                    new Vector3(-10f, 1.2f, (i - 1) * 2f), new Vector3(2f, 0.2f, 1.6f), Tints[i + 3]);
+            }
+            var reserved = new GameObject("Reserved ground - Social and Guild");
+            reserved.transform.SetParent(transform, false);
+            reserved.transform.localPosition = new Vector3(10f, 0f, 0f);
+
+            GetShot(StageShot.Home, out shotPosition, out shotRotation);
+            stageCamera.transform.localPosition = shotPosition;
+            stageCamera.transform.localRotation = shotRotation;
+        }
+
+        public void ShowShot(StageShot shot)
+        {
+            shotStartPosition = stageCamera.transform.localPosition;
+            shotStartRotation = stageCamera.transform.localRotation;
+            GetShot(shot, out shotPosition, out shotRotation);
+            shotElapsed = 0f;
+        }
+
+        private static void GetShot(StageShot shot, out Vector3 position, out Quaternion rotation)
+        {
+            Vector3 target;
+            switch (shot)
+            {
+                case StageShot.Market:
+                    target = new Vector3(-10f, 0.7f, 0f);
+                    position = target + new Vector3(0f, 2f, -4.2f);
+                    break;
+                case StageShot.Social:
+                    target = new Vector3(8f, 0f, 0f);
+                    position = target + new Vector3(0f, 9f, -12f);
+                    break;
+                case StageShot.Guild:
+                    target = new Vector3(12f, 0f, 0f);
+                    position = target + new Vector3(0f, 9f, -12f);
+                    break;
+                default:
+                    target = new Vector3(0f, 0f, 0f);
+                    position = new Vector3(0f, shot == StageShot.Loadout ? 10.5f : 11f, -15.5f);
+                    break;
+            }
+            rotation = Quaternion.LookRotation(target - position, Vector3.up);
+        }
+
+        public void SetLoadout(int[] districtTypes, int[] suitTypes)
+        {
+            equipped = Mathf.Min(districtTypes == null ? 0 : districtTypes.Length, StageSlots.Count);
+            cluster = new DistrictCluster(equipped);
+            for (int i = 0; i < districts.Length; i++)
+            {
+                districts[i].SetActive(i < equipped);
+                if (i < equipped)
+                    districts[i].GetComponent<Renderer>().sharedMaterial = Tint(districtTypes[i], "district_");
+            }
+            for (int i = 0; i < suits.Length; i++)
+            {
+                suits[i].gameObject.SetActive(false);
+                Destroy(suits[i].gameObject);
+            }
+            suits = new Transform[suitTypes == null ? 0 : suitTypes.Length];
+            for (int i = 0; i < suits.Length; i++)
+            {
+                var suit = Primitive("Suit " + i, PrimitiveType.Capsule, plots[1],
+                    new Vector3((i % 3 - 1) * 0.5f, 0.58f, -0.55f), new Vector3(0.3f, 0.34f, 0.3f), Color.white);
+                suit.GetComponent<Renderer>().sharedMaterial = Tint(suitTypes[i], "suit_");
+                suits[i] = suit.transform;
+            }
+        }
+
+        public void SelectDistrict(int slot) => cluster.Select(slot);
+        public void Deselect() => cluster.Deselect();
+
+        /// <summary>False means Use requested filling the first empty slot, without replacement mode.</summary>
+        public bool BeginReplace()
+        {
+            DistrictClusterResult result = cluster.Use(equipped < StageSlots.Count);
+            if (result.Action == DistrictClusterAction.FillEmpty)
+                DistrictUsed?.Invoke(new DistrictClusterResult(result.Action, equipped));
+            return cluster.State == DistrictClusterState.Replacing;
+        }
+
+        public void PickReplace(int slot)
+        {
+            DistrictClusterResult result = cluster.Pick(slot);
+            if (result.Action != DistrictClusterAction.None) DistrictUsed?.Invoke(result);
+        }
+
+        public void CancelReplace() => cluster.Cancel();
+
+        public void SetVisible(bool visible)
+        {
+            stageCamera.enabled = visible;
+            gameObject.SetActive(visible);
+        }
+
+        private void Update()
+        {
+            if (shotElapsed >= ShotDuration) return;
+            shotElapsed = Mathf.Min(ShotDuration, shotElapsed + Time.unscaledDeltaTime);
+            float t = 1f - Mathf.Pow(1f - shotElapsed / ShotDuration, 3f);
+            stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
+            stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
+        }
+
+        private Material Tint(int type, string prefix)
+        {
+            return MaterialFor(Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
+        }
+
+        private Material MaterialFor(Color colour)
+        {
+            for (int i = 0; i < materials.Count; i++)
+                if (materials[i].color == colour) return materials[i];
+            var material = new Material(shader) { color = colour };
+            materials.Add(material);
+            return material;
+        }
+
+        private GameObject Primitive(string objectName, PrimitiveType type, Transform parent,
+            Vector3 position, Vector3 scale, Color colour)
+        {
+            var obj = GameObject.CreatePrimitive(type);
+            obj.name = objectName;
+            obj.layer = StageLayer;
+            obj.transform.SetParent(parent, false);
+            obj.transform.localPosition = position;
+            obj.transform.localScale = scale;
+            var collider = obj.GetComponent<Collider>();
+            collider.enabled = false;
+            Destroy(collider);
+            var renderer = obj.GetComponent<Renderer>();
+            renderer.sharedMaterial = MaterialFor(colour);
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            return obj;
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < materials.Count; i++) Destroy(materials[i]);
+        }
+    }
+}
