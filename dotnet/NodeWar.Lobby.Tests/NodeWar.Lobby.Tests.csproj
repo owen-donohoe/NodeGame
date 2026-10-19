@@ -37,6 +37,8 @@
 
   <ItemGroup>
     <Compile Include="StageSlotsTests.cs" />
+    <Compile Include="StageLoadoutTypesTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/StageLoadoutTypes.cs" Link="Lobby/StageLoadoutTypes.cs" />
     <Compile Include="DistrictClusterTests.cs" />
     <Compile Include="StageShotsTests.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Stage/StageSlots.cs" Link="Lobby/Stage/StageSlots.cs" />

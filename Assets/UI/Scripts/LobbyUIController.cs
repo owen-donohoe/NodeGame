@@ -95,6 +95,11 @@ namespace NodeWar.Lobby
         private LobbyOverlayRouter router;
         private ClaimPanel claimPanel;
         private bool confirmingExit;
+        private LobbyStage stage;
+        private string[] stageDistrictIds;
+        private string[] stageSuitIds;
+        private int[] stageDistrictTypes;
+        private int[] stageSuitTypes;
 
         public LobbyRouteStack Routes => router?.Stack;
         public ClaimPanel Claims => claimPanel;
@@ -170,8 +175,17 @@ namespace NodeWar.Lobby
 
         private void OnDisable()
         {
+            NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             Application.deepLinkActivated -= HandleDeepLink;
             router?.CloseAll();
+            if (stage != null)
+            {
+                stage.SetVisible(false);
+                Destroy(stage.gameObject);
+            }
+            stage = null;
+            stageDistrictIds = stageSuitIds = null;
+            stageDistrictTypes = stageSuitTypes = null;
             // Dispose before dropping the reference: the popup may own a live
             // socket, and leaving one open would collide with the next attempt.
             if (playPopup != null) playPopup.Dispose();
@@ -219,6 +233,7 @@ namespace NodeWar.Lobby
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
+            WatchStageLoadout();
             if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true)
                 HandleBack();
         }
@@ -246,6 +261,7 @@ namespace NodeWar.Lobby
             // The catalog is the one answer to what the loadout may hold and what
             // the player owns - Workshop, Home and the battle sheet all ask it.
             catalog = new LoadoutCatalog(allSuits, allDistricts);
+            BuildStage(root);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
             accountFlow = new AccountFlow(sheet);
@@ -287,6 +303,54 @@ namespace NodeWar.Lobby
             chrome.HistoryRequested += () => { if (matchHistoryPage != null) matchHistoryPage.Open(); };
 
             if (profilePage != null) profilePage.Renamed += chrome.Refresh;
+        }
+
+        private void BuildStage(VisualElement root)
+        {
+            stage = LobbyStage.Create();
+            root.style.backgroundColor = Color.clear;
+            VisualElement shell = root.Q<VisualElement>("lobby-root");
+            shell.style.backgroundColor = Color.clear;
+            shell.AddToClassList("lb-stage");
+            var presentation = Resources.Load<StyleSheet>("Lobby/LobbyPresentation");
+            if (presentation != null) shell.styleSheets.Add(presentation);
+            VisualElement backdrop = root.Q<VisualElement>("backdrop");
+            if (backdrop != null) backdrop.style.display = DisplayStyle.None;
+            navigation.PageShown += id =>
+            {
+                stage.ShowShot(StageShots.ForPage(id.ToString()));
+                RefreshStageLoadout();
+            };
+            router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
+            NodeWar.Backend.BackendServices.StateChanged += RefreshStageLoadout;
+            RefreshStageLoadout();
+        }
+
+        private void WatchStageLoadout()
+        {
+            if (stage == null) return;
+            PlayerProfile profile = PlayerProfile.Instance;
+            string[] districts = profile != null ? profile.data.loadout.nodeIDs : null;
+            string[] suits = profile != null ? profile.data.loadout.suitIDs : null;
+            if (!StageLoadoutTypes.Same(districts, stageDistrictIds) || !StageLoadoutTypes.Same(suits, stageSuitIds))
+                RefreshStageLoadout();
+        }
+
+        private void RefreshStageLoadout()
+        {
+            if (stage == null || catalog == null) return;
+            var loadout = catalog.CurrentLoadout().ToLoadout();
+            int[] districts = StageLoadoutTypes.Districts(loadout.districtIDs);
+            int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
+            if (!StageLoadoutTypes.Same(districts, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
+            {
+                stage.SetLoadout(districts, suits);
+                stageDistrictTypes = districts;
+                stageSuitTypes = suits;
+            }
+            PlayerProfile profile = PlayerProfile.Instance;
+            stageDistrictIds = profile?.data.loadout.nodeIDs == null ? null : (string[])profile.data.loadout.nodeIDs.Clone();
+            stageSuitIds = profile?.data.loadout.suitIDs == null ? null : (string[])profile.data.loadout.suitIDs.Clone();
         }
 
         /// <summary>
