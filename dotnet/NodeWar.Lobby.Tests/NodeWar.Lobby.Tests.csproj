@@ -37,6 +37,10 @@
 
   <ItemGroup>
     <Compile Include="BankActionTests.cs" />
+    <Compile Include="LobbyRouteTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyPageID.cs" Link="Lobby/LobbyPageID.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyRouteStack.cs" Link="Lobby/LobbyRouteStack.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyDeepLink.cs" Link="Lobby/LobbyDeepLink.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs" Link="View/ViewSide.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />

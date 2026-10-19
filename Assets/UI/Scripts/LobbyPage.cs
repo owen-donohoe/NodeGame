@@ -12,14 +12,6 @@ namespace NodeWar.Lobby
     /// until S5, so they keep their own vocabularies rather than one pretending
     /// to be the other.
     /// </summary>
-    public enum LobbyPageID
-    {
-        Home,
-        Workshop,
-        Shop,
-        Social
-    }
-
     /// <summary>
     /// One page of the lobby. The UI Toolkit counterpart to LobbyPanel: it owns
     /// a subtree and gets told when it becomes visible.
