@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace NodeWar.Lobby
 {
@@ -7,6 +7,75 @@ namespace NodeWar.Lobby
     /// <summary>Bottom-up masks: 0 transparent, 1 parchment, 2 ink. No Unity dependency.</summary>
     public static class PaperRasterizer
     {
+        public const int MaxTextureSize = 1024;
+
+        // Conservative longest projected sides for the largest Home/Loadout/Market shot.
+        // Capture the device size once; changing shots never regenerates textures.
+        public static int TextureSize(PaperKind kind, int screenHeight)
+        {
+            float fraction = kind == PaperKind.Stall ? 0.30f
+                : kind == PaperKind.Marketman ? 0.26f
+                : kind == PaperKind.Villager ? 0.10f
+                : kind == PaperKind.Canopy ? 0.30f : 0.16f;
+            int target = (int)Math.Ceiling(Math.Max(1, screenHeight) * fraction * 2f);
+            return Math.Max(256, Math.Min(MaxTextureSize, ((target + 63) / 64) * 64));
+        }
+
+        /// <summary>Four subpixel samples per texel; alpha coverage is preserved by blending.</summary>
+        public static byte[] RasterizeCoverage(PaperKind kind, int size, out byte[] alpha)
+        {
+            if (size < 16 || size > MaxTextureSize) throw new ArgumentOutOfRangeException(nameof(size));
+            var mask = new byte[size * size];
+            alpha = new byte[mask.Length];
+            var distance = new float[mask.Length];
+            for (int y = 0; y < size; y++)
+            {
+                float y0 = (y + 0.25f) * 100f / size, y1 = (y + 0.75f) * 100f / size;
+                float wobble0 = (float)Math.Sin(y0 * 0.43f + (int)kind) * 0.5f;
+                float wobble1 = (float)Math.Sin(y1 * 0.43f + (int)kind) * 0.5f;
+                for (int x = 0; x < size; x++)
+                {
+                    float x0 = (x + 0.25f) * 100f / size, x1 = (x + 0.75f) * 100f / size;
+                    int samples = (Contains(kind, x0 + wobble0, y0) ? 1 : 0)
+                        + (Contains(kind, x1 + wobble0, y0) ? 1 : 0)
+                        + (Contains(kind, x0 + wobble1, y1) ? 1 : 0)
+                        + (Contains(kind, x1 + wobble1, y1) ? 1 : 0);
+                    int index = y * size + x;
+                    alpha[index] = (byte)((samples * 255 + 2) / 4);
+                    mask[index] = samples == 0 ? (byte)0 : (byte)1;
+                    distance[index] = samples < 4 ? 0f : size;
+                }
+            }
+            // Two-pass chamfer distances keep high-resolution ink generation O(pixels),
+            // rather than scanning a large stroke-radius neighbourhood per pixel.
+            for (int y = 1; y < size; y++)
+                for (int x = 1; x < size - 1; x++)
+                {
+                    int i = y * size + x;
+                    distance[i] = Math.Min(distance[i], Math.Min(
+                        Math.Min(distance[i - 1], distance[i - size]) + 1f,
+                        Math.Min(distance[i - size - 1], distance[i - size + 1]) + 1.414214f));
+                }
+            for (int y = size - 2; y >= 0; y--)
+                for (int x = size - 2; x > 0; x--)
+                {
+                    int i = y * size + x;
+                    distance[i] = Math.Min(distance[i], Math.Min(
+                        Math.Min(distance[i + 1], distance[i + size]) + 1f,
+                        Math.Min(distance[i + size - 1], distance[i + size + 1]) + 1.414214f));
+                }
+            float stroke = size * (3f / 128f);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int i = y * size + x;
+                    if (mask[i] != 0 && (distance[i] <= stroke ||
+                        Detail(kind, (x + 0.5f) * 100f / size, (y + 0.5f) * 100f / size)))
+                        mask[i] = 2;
+                }
+            return mask;
+        }
+
         public static byte[] Rasterize(PaperKind kind, int width, int height, int stroke = 3)
         {
             if (width < 16 || height < 16) throw new ArgumentOutOfRangeException(nameof(width));

@@ -1,10 +1,48 @@
-﻿using System;
+using System;
 using NUnit.Framework;
 
 namespace NodeWar.Lobby.Tests
 {
     public class PaperRasterizerTests
     {
+        [TestCase(PaperKind.Stall, 844, 512)]
+        [TestCase(PaperKind.Canopy, 844, 512)]
+        [TestCase(PaperKind.Villager, 844, 256)]
+        [TestCase(PaperKind.Villager, 2400, 512)]
+        [TestCase(PaperKind.Stall, 2400, 1024)]
+        [TestCase(PaperKind.House, 10000, 1024)]
+        public void Resolution_IsTwiceProjectedSize_WithDeviceCap(PaperKind kind, int screenHeight, int expected)
+            => Assert.AreEqual(expected, PaperRasterizer.TextureSize(kind, screenHeight));
+
+        [TestCase(PaperKind.House)]
+        [TestCase(PaperKind.Tower)]
+        [TestCase(PaperKind.Workshop)]
+        [TestCase(PaperKind.Villager)]
+        [TestCase(PaperKind.Marketman)]
+        [TestCase(PaperKind.Stall)]
+        [TestCase(PaperKind.Canopy)]
+        public void Coverage_HasSoftInkEdgesOpaqueInteriorsAndClearPadding(PaperKind kind)
+        {
+            const int size = 256;
+            byte[] mask = PaperRasterizer.RasterizeCoverage(kind, size, out byte[] alpha);
+            int partial = 0, fill = 0;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int i = y * size + x;
+                    if (alpha[i] > 0 && alpha[i] < 255)
+                    {
+                        partial++;
+                        Assert.AreEqual(2, mask[i], "The coverage edge must remain ink-coloured.");
+                    }
+                    if (mask[i] == 1 && alpha[i] == 255) fill++;
+                    if (x == 0 || y == 0 || x == size - 1 || y == size - 1) Assert.AreEqual(0, alpha[i]);
+                    if (alpha[i] == 0) Assert.AreEqual(0, mask[i]);
+                }
+            Assert.Greater(partial, 50);
+            Assert.Greater(fill, 100);
+        }
+
         [TestCase(PaperKind.House)]
         [TestCase(PaperKind.Tower)]
         [TestCase(PaperKind.Workshop)]
