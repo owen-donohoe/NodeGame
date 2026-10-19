@@ -81,8 +81,7 @@ namespace NodeWar.Lobby
         public static VisualElement History(List<MatchSummary> summaries)
         {
             var strip = new VisualElement { name = "public-profile-recent" }; strip.AddToClassList("g2-win-history");
-            var sorted = summaries == null ? new List<MatchSummary>() : summaries.FindAll(row => row != null);
-            sorted.Sort((a, b) => { int value = b.CreatedUnix.CompareTo(a.CreatedUnix); return value != 0 ? value : StringComparer.Ordinal.Compare(a.MatchId, b.MatchId); });
+            var sorted = PlayerPanelPolicy.LastTen(summaries);
             for (int i = 0; i < Math.Min(10, sorted.Count); i++)
             {
                 var cell = GuildViews.Text(sorted[i].Won ? "W" : "L"); cell.AddToClassList("g2-result"); cell.AddToClassList(sorted[i].Won ? "g2-gain" : "g2-loss"); strip.Add(cell);

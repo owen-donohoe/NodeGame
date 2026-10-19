@@ -41,3 +41,11 @@
 .ui-root .g2-result { width: 24px; height: 24px; margin-right: 3px; border-width: 1px; border-color: var(--mk-ink); -unity-text-align: middle-center; }
 .g2-gain { background-color: var(--mk-tap); color: var(--mk-sheet); }
 .g2-loss { background-color: var(--mk-urgent); color: var(--mk-sheet); }
+
+.g2-player-actions { flex-direction: row; align-items: center; }
+.g2-player-actions > Button { margin-left: 4px; }
+.g2-player-actions > #public-profile-add { width: 44px; padding: 0; }
+.g2-player-footer { flex-direction: row; margin-top: 12px; }
+.g2-player-footer > Button { flex-grow: 1; margin-right: 4px; }
+.ui-root .g2-urgent { background-color: var(--mk-urgent); color: var(--mk-sheet); }
+.g2-profile:not(.g2-profile--self) .g2-profile-header { padding: 0 0 8px; }

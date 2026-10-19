@@ -10,6 +10,14 @@ namespace NodeWar.Lobby
     public class ProfilePage
     {
         private readonly IProfileService profiles;
+        private readonly IGuildService guild = BackendServices.Guild;
+        private readonly MkSheet confirmation = new MkSheet();
+        private GuildReportScreen report;
+        private GuildView ownGuild;
+        private PlayerCard shownCard;
+        private VisualElement footer;
+        private readonly AsyncStateView moderation = new AsyncStateView();
+        public event Action<string> InviteRequested;
         private readonly MkSheet panel = new MkSheet();
         private readonly MkCard own = new MkCard { name = "own-profile" };
         private readonly AsyncStateView stateView = new AsyncStateView();
@@ -51,6 +59,13 @@ namespace NodeWar.Lobby
             own.RegisterCallback<PointerCancelEvent>(_ => pointer = -1);
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) Close(); });
         }
+        public void BindPanels(LobbyOverlayRouter router, VisualElement host)
+        {
+            confirmation.BindRouter(router, "player-kick"); host.Add(confirmation);
+            confirmation.Opened += () => confirmation.BringToFront();
+            report = new GuildReportScreen(router, host, "player-report");
+            moderation.RetryRequested += () => { if (IsOpen && !viewingSelf) _ = LoadModerationAsync(generation, playerId, SelfId); };
+        }
         public void Update() { if (IsOpen && viewingSelf) safeArea.Update(); }
         public void Open(VisualElement source)
         {
@@ -70,7 +85,7 @@ namespace NodeWar.Lobby
             if (string.IsNullOrEmpty(id)) return;
             hideLater?.Pause();
             bool changed = playerId != id || account != SelfId;
-            playerId = id; account = SelfId; viewingSelf = id == SelfId;
+            playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null; shownCard = null;
             if (changed) { state = new AsyncState(); stateView.Content.Clear(); }
             Root.EnableInClassList("g2-profile--self", viewingSelf);
             Root.AddToClassList("g2-profile--expanded");
@@ -87,7 +102,7 @@ namespace NodeWar.Lobby
         public void Close()
         {
             if (!IsOpen) return;
-            IsOpen = false; generation++; pointer = -1;
+            IsOpen = false; generation++; pointer = -1; confirmation.Close();
             BackendServices.StateChanged -= StateChanged; BackendServices.Account.Changed -= AccountChanged;
             Root.RemoveFromClassList("g2-profile--expanded");
             if (viewingSelf && sourceRect != null)
@@ -118,7 +133,8 @@ namespace NodeWar.Lobby
                 if (!Active(request, id, requestedFor)) return;
                 stateView.Content.Clear();
                 if (profile?.Card == null) { state = state.Reduce(AsyncResult.Empty, Now); stateView.Render(state, Now, "This profile is unavailable."); return; }
-                Render(profile);
+                shownCard = profile.Card; Render(profile);
+                if (!viewingSelf) _ = LoadModerationAsync(request, id, requestedFor);
                 state = state.Reduce(AsyncResult.Ready, Now); stateView.Render(state, Now);
             }
             catch (Exception)
@@ -128,6 +144,49 @@ namespace NodeWar.Lobby
             }
         }
         private bool Active(int request, string id, string requestedFor) => IsOpen && generation == request && playerId == id && SelfId == requestedFor;
+        private async Task LoadModerationAsync(int request, string id, string requestedFor)
+        {
+            moderation.Render(new AsyncState(Now), Now);
+            try
+            {
+                var result = await guild.GetMineAsync();
+                if (!Active(request, id, requestedFor)) return;
+                ownGuild = result; RenderFooter();
+                moderation.Render(new AsyncState().Reduce(AsyncResult.Ready, Now), Now);
+            }
+            catch (Exception)
+            {
+                if (!Active(request, id, requestedFor)) return;
+                ownGuild = null; RenderFooter();
+                moderation.Render(new AsyncState().Reduce(AsyncResult.Offline, Now), Now, "Couldn't check guild permissions.");
+            }
+        }
+        private void RenderFooter()
+        {
+            if (footer == null || shownCard == null) return;
+            footer.Clear();
+            var target = shownCard;
+            footer.Add(GuildViews.Button("Block", () => Debug.Log("[Stub] Block player " + target.PlayerId)));
+            footer.Add(GuildViews.Button("Report", () => report?.Open(target, PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null)));
+            if (PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null)
+            {
+                var kick = GuildViews.Button("Kick", () => ConfirmKick(target)); kick.AddToClassList("g2-urgent"); footer.Add(kick);
+            }
+        }
+        private void ConfirmKick(PlayerCard target)
+        {
+            if (!IsOpen || PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) == null) return;
+            confirmation.Body.Clear();
+            confirmation.Body.Add(GuildViews.Text("Remove from guild?", "mk-h2"));
+            confirmation.Body.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(target) + " from " + ownGuild.Summary.Name + "?"));
+            confirmation.Body.Add(GuildViews.Button("Cancel", confirmation.Close));
+            confirmation.Body.Add(GuildViews.Button("Kick", () =>
+            {
+                if (IsOpen && PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null) Debug.Log("[Stub] Guild kick " + target.PlayerId);
+                confirmation.Close();
+            }));
+            confirmation.Open();
+        }
         private void Render(PublicProfileView profile)
         {
             var header = new VisualElement { name = "public-profile-header" }; header.AddToClassList("g2-profile-header");
@@ -137,9 +196,25 @@ namespace NodeWar.Lobby
             var rankRow = new VisualElement(); rankRow.AddToClassList("mk-row");
             var era = GuildViews.Text(rank.Name, "mk-chip"); era.AddToClassList("g2-era-badge"); rankRow.Add(era);
             rankRow.Add(GuildViews.Text(rank.RR + " RR", "mk-trophy")); identity.Add(rankRow); header.Add(identity);
-            header.Add(GuildViews.Button("Back", Close));
+            if (viewingSelf) header.Add(GuildViews.Button("Back", Close));
+            else
+            {
+                var actions = new VisualElement(); actions.AddToClassList("g2-player-actions");
+                var add = GuildViews.Button("+", () => Debug.Log("[Stub] Add friend " + profile.Card.PlayerId)); add.name = "public-profile-add"; add.tooltip = "Add friend";
+                actions.Add(add);
+                var invite = GuildViews.Button("Invite", () => InviteRequested?.Invoke(profile.Card.PlayerId)); invite.name = "public-profile-invite"; actions.Add(invite);
+                header.Add(actions);
+            }
             if (viewingSelf) header.RegisterCallback<ClickEvent>(_ => Close());
             stateView.Content.Add(header);
+            if (!viewingSelf)
+            {
+                stateView.Content.Add(ProfileViews.StatsGrid(profile.Stats));
+                stateView.Content.Add(ProfileViews.Loadout(profile));
+                stateView.Content.Add(ProfileViews.History(profile.Recent));
+                footer = new VisualElement(); footer.AddToClassList("g2-player-footer"); stateView.Content.Add(footer);
+                RenderFooter(); stateView.Content.Add(moderation); return;
+            }
             var columns = new VisualElement(); columns.AddToClassList("g2-profile-columns"); stateView.Content.Add(columns);
             var left = new ScrollView(); left.AddToClassList("g2-profile-left"); LobbyScrollbars.Hide(left);
             left.Add(ProfileViews.StatsGrid(profile.Stats)); left.Add(ProfileViews.Loadout(profile)); columns.Add(left);

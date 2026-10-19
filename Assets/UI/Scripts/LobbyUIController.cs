@@ -604,6 +604,7 @@ namespace NodeWar.Lobby
             (root.Q("page-shop")?.userData as ShopPage)?.Bind(claimPanel, Badges);
             (root.Q("page-shop")?.userData as ShopPage)?.BindStage(stage);
             shell.Add(claimPanel.Root);
+            profilePage.BindPanels(router, shell);
             burgerPanel = new LobbyOverlayPanel("Menu");
             bellPanel = new LobbyOverlayPanel("Notifications");
             shell.Add(burgerPanel.Root);
