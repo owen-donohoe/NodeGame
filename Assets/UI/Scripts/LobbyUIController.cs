@@ -100,6 +100,9 @@ namespace NodeWar.Lobby
         private string[] stageSuitIds;
         private int[] stageDistrictTypes;
         private int[] stageSuitTypes;
+        private LobbyOverlayPanel burgerPanel;
+        private LobbyOverlayPanel bellPanel;
+        private readonly string[] notifications = System.Array.Empty<string>();
 
         public LobbyRouteStack Routes => router?.Stack;
         public ClaimPanel Claims => claimPanel;
@@ -178,6 +181,7 @@ namespace NodeWar.Lobby
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             Application.deepLinkActivated -= HandleDeepLink;
             router?.CloseAll();
+            burgerPanel = bellPanel = null;
             if (stage != null)
             {
                 stage.SetVisible(false);
@@ -233,6 +237,8 @@ namespace NodeWar.Lobby
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
+            burgerPanel?.Update();
+            bellPanel?.Update();
             WatchStageLoadout();
             if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true)
                 HandleBack();
@@ -309,8 +315,8 @@ namespace NodeWar.Lobby
 
             VisualElement strip = root.Q<VisualElement>("strip-wrap");
             chrome.ProfileRequested += () => { if (profilePage != null) profilePage.Open(strip); };
-            chrome.SettingsRequested += () => { if (settingsPage != null) settingsPage.Open(); };
-            chrome.HistoryRequested += () => { if (matchHistoryPage != null) matchHistoryPage.Open(); };
+            chrome.SettingsRequested += () => burgerPanel?.Open();
+            chrome.HistoryRequested += OpenBell;
 
             if (profilePage != null) profilePage.Renamed += chrome.Refresh;
         }
@@ -484,12 +490,19 @@ namespace NodeWar.Lobby
             VisualElement shell = root.Q<VisualElement>("lobby-root");
             claimPanel = new ClaimPanel();
             shell.Add(claimPanel.Root);
+            burgerPanel = new LobbyOverlayPanel("Menu");
+            bellPanel = new LobbyOverlayPanel("Notifications");
+            shell.Add(burgerPanel.Root);
+            shell.Add(bellPanel.Root);
             VisualElement toastLayer = root.Q<VisualElement>("toast-dock");
             System.Action<VisualElement> promote = element =>
             {
                 element?.BringToFront();
                 toastLayer?.BringToFront();
             };
+            WirePanel(burgerPanel, "burger", promote);
+            WirePanel(bellPanel, "bell", promote);
+            BuildBurger();
 
             // PlayPopup already opens/closes this sheet. One entry preserves its
             // Closed callback, which cancels matchmaking and live connections.
@@ -542,6 +555,56 @@ namespace NodeWar.Lobby
             page.Closed += () => router.Closed(id);
         }
 
+        private void WirePanel(LobbyOverlayPanel panel, string id, System.Action<VisualElement> promote)
+        {
+            panel.Opened += () =>
+            {
+                promote(panel.Root);
+                router.Open(new LobbyOverlay(id, OverlayKind.Panel), panel.Close);
+            };
+            panel.Closed += () => router.Closed(id);
+        }
+
+        private void BuildBurger()
+        {
+            AddBurgerItem("Settings", () => settingsPage.Open());
+            AddBurgerItem("Account", () => settingsPage.Open());
+            AddBurgerItem("Privacy");
+            AddBurgerItem("Notifications", OpenBell);
+            AddBurgerItem("Support");
+            AddBurgerItem("Restore Purchases");
+            AddBurgerItem("Legal");
+            AddBurgerItem("Credits");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AddBurgerItem("Testing", () => playPopup?.Show(GameMode.Testing));
+#endif
+        }
+
+        private void AddBurgerItem(string label, System.Action destination = null)
+        {
+            var button = new Button(() =>
+            {
+                burgerPanel.Close();
+                if (destination != null) destination();
+                else Debug.Log("[LobbyUI] Menu: " + label);
+            }) { text = label };
+            button.AddToClassList("lb-menu-destination");
+            burgerPanel.Content.Add(button);
+        }
+
+        private void OpenBell()
+        {
+            if (bellPanel == null) return;
+            bellPanel.Content.Clear();
+            var view = new AsyncStateView();
+            foreach (string message in notifications) view.Content.Add(new Label(message) { enableRichText = false });
+            view.Render(new AsyncState().Reduce(notifications.Length == 0 ? AsyncResult.Empty : AsyncResult.Ready, 0),
+                0, "No notifications");
+            bellPanel.Content.Add(view);
+            Badges.Clear("bell");
+            bellPanel.Open();
+        }
+
         private void RefreshChromeVisibility(VisualElement root)
         {
             LobbyOverlay top = Routes?.Top;
@@ -580,6 +643,7 @@ namespace NodeWar.Lobby
                 string target = route.Target == "loadout" ? "Workshop" : route.Target;
                 if (System.Enum.TryParse(target, true, out LobbyPageID page)) navigation.Show(page);
             }
+            else if (route.Kind == LobbyRouteKind.Bell) OpenBell();
             else Debug.Log("[LobbyUI] Route: " + route.Kind + " " + route.Target);
         }
     }
