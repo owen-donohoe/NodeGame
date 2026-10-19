@@ -1,19 +1,18 @@
-.lb-home-stage { position: relative; flex-grow: 1; }
-.lb-home-controls { position: absolute; left: 12px; right: 12px; bottom: 104px; align-items: flex-end; }
-.lb-home-mode { min-height: 48px; padding: 4px 10px; margin-bottom: 8px; flex-direction: row; align-items: center; justify-content: flex-end; --paper-card-fill: var(--paper-light); }
-.lb-home-mode .lb-icon { width: 24px; height: 24px; margin: 4px; }
-.lb-home-mode .lb-home-swap { width: 18px; height: 18px; }
-.lb-home-mode Label { font-size: 18px; color: var(--ink); }
-.lb-home-reason { flex-direction: row; align-items: center; margin-bottom: 8px; padding: 2px 10px; --paper-card-fill: var(--paper-light); }
-.lb-home-reason .lb-icon { width: 16px; height: 16px; margin-right: 4px; }
-.lb-home-reason Label { color: var(--ink); font-size: 15px; }
-.lb-home-action-row { flex-direction: row; align-items: flex-end; justify-content: flex-end; width: 100%; }
-.lb-home-crate { position: relative; width: 56px; height: 72px; margin-right: 10px; margin-bottom: 28px; align-items: center; justify-content: center; --paper-card-fill: var(--paper-light); }
-.lb-home-crate .lb-icon { width: 38px; height: 38px; }
-.lb-held-crate-count { position: absolute; top: 4px; left: 4px; min-width: 22px; -unity-text-align: middle-center; color: var(--ink); background-color: var(--paper-gold); border-radius: var(--corner-sm); border-width: 2px; border-color: var(--ink); font-size: 18px; }
-.lb-home-play-column { flex-grow: 1; max-width: 190px; min-width: 120px; }
-.lb-home-play { height: 100px; font-size: 42px; --paper-card-fill: var(--paper-gold); }
-.lb-next-crate { flex-direction: row; align-items: center; margin-top: 6px; }
-.lb-next-crate-track { height: 12px; flex-grow: 1; background-color: var(--ink); border-width: 2px; border-color: var(--ink); border-radius: var(--corner-sm); overflow: hidden; }
-.lb-next-crate-fill { height: 100%; width: 0; background-color: var(--paper-light); }
-.lb-next-crate .lb-icon { width: 24px; height: 24px; margin-left: 6px; }
+.g2-home { flex-grow: 1; position: relative; }
+.g2-home-bottom { position: absolute; bottom: 90px; left: 10px; right: 10px; flex-direction: row; justify-content: flex-end; align-items: flex-end; }
+.g2-crates { flex-direction: row; margin-right: 8px; margin-bottom: 26px; }
+.g2-crates > .mk-crate { margin-right: 8px; }
+.g2-crates > #home-crate-small { margin-right: 0; }
+.g2-crate-icon { width: 46px; height: 46px; }
+.ui-root .g2-crate-label { position: absolute; bottom: 3px; font-size: 10px; letter-spacing: 0.6px; color: var(--mk-muted); }
+.g2-home-actions { width: 200px; flex-shrink: 0; align-items: stretch; }
+.ui-root .g2-home-mode { flex-direction: row; align-items: center; justify-content: center; background-color: var(--mk-sheet); margin-bottom: 8px; padding: 4px 8px; }
+.ui-root .g2-home-mode Label { font-size: 12px; margin-right: 5px; }
+.g2-mode-icon { width: 20px; height: 20px; margin-right: 5px; }
+.g2-mode-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 5px; background-color: var(--mk-action); }
+.g2-swap { width: 16px; height: 16px; }
+.ui-root .g2-fill-tag { background-color: var(--mk-sheet); margin-bottom: 6px; }
+.g2-next-crate { flex-direction: row; align-items: center; height: 26px; }
+.g2-next-crate > .mk-meter { flex-grow: 1; background-color: var(--mk-ink); }
+.g2-next-crate #home-boxmeter-fill { background-color: var(--ink-white); }
+.g2-next-icon { width: 24px; height: 24px; margin-left: 6px; }

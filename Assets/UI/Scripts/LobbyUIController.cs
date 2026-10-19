@@ -384,7 +384,7 @@ namespace NodeWar.Lobby
             if (backdrop != null) backdrop.style.display = DisplayStyle.None;
             navigation.PageShown += id =>
             {
-                stage.ShowShot(StageShots.ForPage(id.ToString()));
+                stage.ShowShot(id == LobbyPageID.Home ? StageShot.Home : StageShots.ForPage(id.ToString()));
                 RefreshStageLoadout();
             };
             router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
