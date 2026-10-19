@@ -38,6 +38,9 @@
   <ItemGroup>
     <Compile Include="BankActionTests.cs" />
     <Compile Include="LobbyRouteTests.cs" />
+    <Compile Include="LobbyStateTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/BadgeBoard.cs" Link="Lobby/BadgeBoard.cs" />
+    <Compile Include="../../Assets/UI/Scripts/AsyncState.cs" Link="Lobby/AsyncState.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyPageID.cs" Link="Lobby/LobbyPageID.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyRouteStack.cs" Link="Lobby/LobbyRouteStack.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyDeepLink.cs" Link="Lobby/LobbyDeepLink.cs" />
