@@ -14,6 +14,7 @@ Load a slice, not the set. Each line says when to read the file.
 - [map.md](map.md): every system and connector, the three flows, versions and
   boundaries, the top pressure points. Read before planning.
 - [game.md](game.md): what the game is. Read before a gameplay or balance question.
+- [style-guide.md](style-guide.md): how the menus look. Read before any UI layout or styling change.
 - [contracts/determinism.md](contracts/determinism.md): the simulation contract.
   `context.ps1` includes it automatically for simulation systems.
 
