@@ -8,6 +8,18 @@ namespace NodeWar.Cloud.Tests
     public class MatchHistoryTests
     {
         [Test]
+        public async Task OpponentHandleComesFromSummarySnapshot()
+        {
+            var matches = new InMemoryMatchRecordStore(Settled("m1", "p0", "p1", 0, new[] { 20, -20 }, new[] { 0, 0 }));
+            var store = HistoryStore("m1");
+            (await store.ReadAsync()).History.Summaries.Add(new HistorySummary
+                { MatchId = "m1", OpponentId = "p1", OpponentName = "Snapshot", OpponentTag = "TAG" });
+            var entries = await MatchHistory.ForPlayer("p0", matches, store);
+            Assert.That(entries[0].OpponentName, Is.EqualTo("Snapshot"));
+            Assert.That(entries[0].OpponentTag, Is.EqualTo("TAG"));
+        }
+
+        [Test]
         public async Task SettledMatchGivesCorrectPerPlayerOutcomesForWinnerAndLoser()
         {
             var matches = new InMemoryMatchRecordStore(Settled("m1", "p0", "p1",
