@@ -61,9 +61,14 @@ public class LobbyIconDrawerTests
             Assert.AreEqual(kinds[i], Enum.GetName(typeof(LobbyIconKind), i + 30));
     }
 
-    [TestCase(LobbyIconKind.NavBarHome, LobbyIconKind.Spark)]
-    [TestCase(LobbyIconKind.NavBarSocial, LobbyIconKind.Smile)]
-    [TestCase(LobbyIconKind.NavBarShop, LobbyIconKind.Shop)]
+    [TestCase(LobbyIconKind.NavBarHome, "DrawShop(p); break;")]
+    [TestCase(LobbyIconKind.NavBarSocial, "DrawSocial(p); break;")]
+    [TestCase(LobbyIconKind.NavBarShop, "DrawMarket(p); break;")]
+    public void NavigationHasDedicatedSemanticDrawing(LobbyIconKind kind, string drawing)
+    {
+        Assert.AreEqual(drawing, Drawers()[kind.ToString()]);
+    }
+
     [TestCase(LobbyIconKind.DailyBox, LobbyIconKind.Spark)]
     [TestCase(LobbyIconKind.VictoryBox, LobbyIconKind.Envelope)]
     [TestCase(LobbyIconKind.ShopBundle, LobbyIconKind.Envelope)]

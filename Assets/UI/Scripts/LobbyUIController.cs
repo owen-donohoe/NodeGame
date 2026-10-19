@@ -105,7 +105,8 @@ namespace NodeWar.Lobby
         private readonly string[] notifications = System.Array.Empty<string>();
         private LocalCrateInventory crateInventory;
         private HomePage homePage;
-        private SafeAreaBinder bottomSafeArea;
+        private VisualElement safeAreaRoot;
+        private VisualElement pillDock;
         public NodeWar.Backend.ICrateInventory Crates => crateInventory;
 
         public LobbyRouteStack Routes => router?.Stack;
@@ -187,7 +188,7 @@ namespace NodeWar.Lobby
             homePage = null;
             if (crateInventory != null) crateInventory.Changed -= RefreshCrateBadges;
             crateInventory = null;
-            bottomSafeArea = null;
+            safeAreaRoot = pillDock = null;
             Application.deepLinkActivated -= HandleDeepLink;
             router?.CloseAll();
             burgerPanel = bellPanel = null;
@@ -240,7 +241,9 @@ namespace NodeWar.Lobby
             // Cheap: each returns immediately unless the safe area, the screen
             // or the panel size actually changed.
             if (safeArea != null) safeArea.Update();
-            bottomSafeArea?.Update();
+            // The absolute dock needs the full safe area's inset in its anchor.
+            if (pillDock != null && safeAreaRoot != null)
+                pillDock.style.bottom = 26f + safeAreaRoot.resolvedStyle.paddingBottom;
             crateInventory?.Refresh();
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();
@@ -269,7 +272,8 @@ namespace NodeWar.Lobby
             }
 
             safeArea = new SafeAreaBinder(safeAreaElement);
-            bottomSafeArea = new SafeAreaBinder(root.Q<VisualElement>("tabbar-dock"), SafeAreaBinder.Edges.Bottom);
+            safeAreaRoot = safeAreaElement;
+            pillDock = root.Q<VisualElement>("tabbar-dock");
             router = new LobbyOverlayRouter();
             Badges = new BadgeBoard();
             crateInventory = new LocalCrateInventory(
@@ -327,13 +331,14 @@ namespace NodeWar.Lobby
             {
                 root.Q<VisualElement>("top-bar")?.RemoveFromHierarchy();
                 root.Q<VisualElement>("strip-wrap")?.RemoveFromHierarchy();
-                var header = new VisualElement();
+                var header = new VisualElement { name = "lobby-chrome" };
+                header.style.flexShrink = 0;
                 layout.CloneTree(header);
                 root.Q<VisualElement>("safe-area").Insert(0, header);
             }
             // The chrome is outside every page, so it is bound once, and it
             // refreshes whenever a page shows or the player is renamed.
-            chrome = new LobbyChrome(root, toast, Badges);
+            chrome = new LobbyChrome(root.Q<VisualElement>("lobby-chrome") ?? root, toast, Badges);
             chrome.CurrencyRequested += HandleDeepLink;
             navigation.PageShown += id => chrome.Refresh();
 
@@ -515,6 +520,8 @@ namespace NodeWar.Lobby
             }
 
             navigation.BindNavButton(id, button);
+            string badge = id == LobbyPageID.Shop ? "shop" : id == LobbyPageID.Social ? "social" : id == LobbyPageID.Guild ? "guild" : null;
+            if (badge != null) button.Add(new LobbyBadgeDot(Badges, badge));
         }
 
         private void RefreshCrateBadges()

@@ -92,7 +92,7 @@ public class LobbyIconUsageTests
 
     [TestCase(LobbyIconKind.NavBarHome)]
     [TestCase(LobbyIconKind.Gear)]
-    [TestCase(LobbyIconKind.Swords)]
+    [TestCase(LobbyIconKind.Sleep)]
     public void SingleLocationKindsOfferOnlyAnywhere(LobbyIconKind kind)
     {
         var choices = LobbyIconUsage.WhereChoices(kind);
@@ -101,6 +101,15 @@ public class LobbyIconUsageTests
         Assert.AreEqual("Anywhere", choices[0].Label);
         Assert.That(LobbyIconUsage.IsValidThemePair(kind, LobbyIconUsage.For(kind).Locations[0].Context), Is.True,
             "Previously saved specific overrides remain valid");
+    }
+
+    [TestCase(LobbyIconKind.Swords)]
+    [TestCase(LobbyIconKind.Invite)]
+    [TestCase(LobbyIconKind.Suit)]
+    [TestCase(LobbyIconKind.Tools)]
+    public void HomeModeKindsHaveListedHomeContexts(LobbyIconKind kind)
+    {
+        Assert.IsTrue(LobbyIconUsage.IsUsed(kind, LobbyIconContext.Home));
     }
 
     [Test]
