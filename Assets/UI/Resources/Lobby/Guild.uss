@@ -1,14 +1,20 @@
 #page-guild, #page-guild > TemplateContainer { flex-grow: 1; min-height: 0; }
 .lb-guild-scroll { flex-grow: 1; padding: 12px; background-color: var(--paper-dark); }
 .lb-guild-title { font-size: 26px; white-space: normal; margin-bottom: 12px; }
-.lb-guild-search { flex-direction: row; flex-wrap: wrap; align-items: center; }
-.lb-guild-search TextField { flex-grow: 1; min-width: 120px; }
-.lb-guild-row { padding: 12px; margin-bottom: 8px; align-items: flex-start; }
+.lb-guild-search { flex-direction: row; align-items: center; margin: 0 12px 8px; }
+.lb-guild-search TextField { flex-grow: 1; min-width: 0; margin: 0 6px 0 0; }
+.lb-guild-search .lb-guild-searchbtn { width: 48px; margin-right: 6px; align-items: center; justify-content: center; --paper-card-fill: var(--paper-gold); }
+.lb-guild-search .lb-guild-filterbtn { flex-direction: row; align-items: center; padding: 0 12px; --paper-card-fill: var(--paper-dark); }
+.lb-guild-filterbtn Label { font-size: 15px; color: var(--ink); margin-left: 4px; }
+.lb-guild-search .unity-base-field__label { display: none; }
+.lb-guild-row { flex-direction: row; align-items: center; padding: 10px 12px; margin: 0 12px 8px; --paper-card-fill: var(--paper-light); }
+.lb-guild-row-text { flex-grow: 1; flex-shrink: 1; min-width: 0; margin: 0 10px; }
+.lb-guild-row-text Label { white-space: normal; }
 .lb-guild-row Label { white-space: normal; }
-.lb-guild-chip { border-radius: 10px; background-color: var(--confirm); padding: 4px; margin-top: 4px; }
+.lb-guild-chip { flex-shrink: 0; padding: 2px 10px; --paper-card-fill: var(--paper-gold); }
 .lb-guild-header { margin-bottom: 16px; }
 .lb-guild-header Label { white-space: normal; font-size: 20px; }
-.lb-guild-post { margin-bottom: 10px; padding: 10px; background-color: var(--paper-dark); }
+.lb-guild-post { margin-bottom: 10px; padding: 10px; --paper-card-fill: var(--paper-light); }
 .lb-guild-post Label { white-space: normal; }
 .lb-guild-red { background-color: var(--paper-urgent); color: var(--ink); min-height: 40px; }
 .lb-guild-chat { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--paper-light); }

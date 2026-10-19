@@ -4,11 +4,13 @@
 .lb-home-mode .lb-icon { width: 24px; height: 24px; margin: 4px; }
 .lb-home-mode .lb-home-swap { width: 18px; height: 18px; }
 .lb-home-mode Label { font-size: 18px; color: var(--ink); }
-.lb-home-reason { color: var(--ink); font-size: 15px; margin-bottom: 6px; background-color: var(--paper-light); padding: 4px; }
+.lb-home-reason { flex-direction: row; align-items: center; margin-bottom: 8px; padding: 2px 10px; --paper-card-fill: var(--paper-light); }
+.lb-home-reason .lb-icon { width: 16px; height: 16px; margin-right: 4px; }
+.lb-home-reason Label { color: var(--ink); font-size: 15px; }
 .lb-home-action-row { flex-direction: row; align-items: flex-end; justify-content: flex-end; width: 100%; }
-.lb-home-crate { position: relative; width: 56px; height: 72px; margin-right: 10px; margin-bottom: 28px; align-items: center; justify-content: center; }
+.lb-home-crate { position: relative; width: 56px; height: 72px; margin-right: 10px; margin-bottom: 28px; align-items: center; justify-content: center; --paper-card-fill: var(--paper-light); }
 .lb-home-crate .lb-icon { width: 38px; height: 38px; }
-.lb-held-crate-count { position: absolute; top: -4px; left: -4px; min-width: 24px; -unity-text-align: middle-center; color: var(--ink); background-color: var(--paper-gold); border-radius: var(--corner-sm); border-width: 2px; border-color: var(--ink); font-size: 20px; }
+.lb-held-crate-count { position: absolute; top: 4px; left: 4px; min-width: 22px; -unity-text-align: middle-center; color: var(--ink); background-color: var(--paper-gold); border-radius: var(--corner-sm); border-width: 2px; border-color: var(--ink); font-size: 18px; }
 .lb-home-play-column { flex-grow: 1; max-width: 190px; min-width: 120px; }
 .lb-home-play { height: 100px; font-size: 42px; --paper-card-fill: var(--paper-gold); }
 .lb-next-crate { flex-direction: row; align-items: center; margin-top: 6px; }

@@ -122,10 +122,10 @@ namespace NodeWar.Lobby
             var play = Root.Q<Button>("home-battle");
             if (play != null)
             {
-                play.style.opacity = complete ? 1f : 0.5f;
+                play.EnableInClassList("lb-home-play--locked", !complete);
                 play.tooltip = complete ? "Play" : "Fill your loadout";
             }
-            var reason = Root.Q<Label>("home-battle-reason");
+            var reason = Root.Q("home-battle-reason-tag");
             if (reason != null) reason.style.display = complete ? DisplayStyle.None : DisplayStyle.Flex;
         }
     }

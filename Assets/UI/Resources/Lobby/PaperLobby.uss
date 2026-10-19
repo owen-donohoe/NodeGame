@@ -62,3 +62,9 @@
 .ui-root .unity-progress-bar__background { background-color: var(--paper-dark); border-width: 2px; border-color: var(--ink); border-radius: var(--corner-sm); }
 .ui-root .unity-progress-bar__progress { background-color: var(--paper-gold); border-radius: var(--corner-sm); }
 .ui-root .unity-progress-bar__title { color: var(--ink); -unity-font-definition: var(--font-medium); }
+.ui-root .lb-home-play--locked > .ui-paper { --paper-card-fill: var(--surface-track); }
+.ui-root .lb-home-play--locked > .ui-paper-button__caption { color: var(--ink-mute); }
+.ui-root .lb-home-crate > .ui-paper-button__caption { display: none; }
+.ui-root .lb-social-red > .ui-paper-button__caption, .ui-root .lb-guild-red > .ui-paper-button__caption { color: var(--ink-white); }
+.ui-root .lb-live-row > .lb-social-player > .lb-player-open { --paper-card-fill: var(--paper); }
+.ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { padding: 10px; }
