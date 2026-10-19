@@ -69,10 +69,12 @@ namespace NodeWar.Lobby
             IsOpen = true;
             Root.style.display = DisplayStyle.Flex;
             Root.BringToFront();
+            var band = Root.parent.Q("lobby-chrome");
+            if (band != null) Root.style.top = band.worldBound.yMax - Root.parent.worldBound.y;
             safeArea.Update();
             BackendServices.Account.Changed -= AccountChanged;
             BackendServices.Account.Changed += AccountChanged;
-            router.Open(new LobbyOverlay("guild-chat", OverlayKind.Fullscreen, true, true), Close);
+            router.Open(new LobbyOverlay("guild-chat", OverlayKind.Panel, true), Close);
             renderedCount = -1; stick = true;
             _ = LoadAsync(); poll.Resume();
         }

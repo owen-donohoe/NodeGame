@@ -9,7 +9,7 @@ namespace NodeWar.Lobby
     /// <summary>Runtime-only lobby scenery. Its owner supplies loadouts and page changes.</summary>
     public sealed class LobbyStage : MonoBehaviour
     {
-        private const float ShotDuration = 0.35f;
+        private const float ShotDuration = 0.45f;
         private const float MarketX = -13f;
         public const float ShopStallSpacing = 6f;
         private const float MarketZ = 9f;
@@ -53,6 +53,8 @@ namespace NodeWar.Lobby
         private Vector3 shotPosition;
         private Quaternion shotRotation;
         private float shotElapsed = ShotDuration;
+        private StageShot currentShot = StageShot.Home;
+        private float shopScroll;
 
         /// <summary>
         /// FillEmpty/ Replaced asks the owner to apply its chosen type, then call SetLoadout.
@@ -105,7 +107,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < slots.Length; i++)
             {
                 StageSlot slot = slots[i];
-                slotPositions[i] = new Vector3((slot.Column - (slot.Row == 0 ? 1f : 0.5f)) * 2.8f,
+                slotPositions[i] = new Vector3((slot.Column - (slot.Row == 1 ? 1f : 0.5f)) * 2.8f,
                     0f, slot.Row == 0 ? 1.4f : -1.4f);
                 slotDirections[i] = slotPositions[i].normalized;
                 var plot = new GameObject("Plot " + i);
@@ -158,27 +160,11 @@ namespace NodeWar.Lobby
             stageCamera.transform.localRotation = shotRotation;
         }
 
-        private Rect focusRect;
-
-        /// <summary>Screen pixels, bottom-left origin. The camera still renders the full screen.</summary>
-        public void SetFocusRect(Rect screenRect)
-        {
-            focusRect = screenRect;
-            UpdateFocusProjection();
-        }
-
-        public void ClearFocusRect()
-        {
-            focusRect = default;
-            stageCamera.ResetProjectionMatrix();
-        }
-
         private void LateUpdate()
         {
             UpdateMarketVisibility();
             BillboardFigures(suits);
             BillboardFigures(marketmen);
-            UpdateFocusProjection();
         }
 
         private void UpdateMarketVisibility()
@@ -207,49 +193,24 @@ namespace NodeWar.Lobby
             }
         }
 
-        private void UpdateFocusProjection()
-        {
-            stageCamera.ResetProjectionMatrix();
-            if (focusRect.width <= 0f || focusRect.height <= 0f || Screen.width <= 0 || Screen.height <= 0) return;
-            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
-            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
-            for (int i = 0; i < slotPositions.Length; i++)
-                for (int corner = 0; corner < 8; corner++)
-                {
-                    // Reserve the separated state too, so selection never changes the zoom.
-                    Vector3 offset = new Vector3((corner & 1) == 0 ? -2.1f : 2.1f,
-                        (corner & 2) == 0 ? 0f : 1.6f, (corner & 4) == 0 ? -2.1f : 2.1f);
-                    Vector3 point = stageCamera.WorldToViewportPoint(transform.TransformPoint(slotPositions[i] + offset));
-                    min = Vector2.Min(min, point);
-                    max = Vector2.Max(max, point);
-                }
-            Vector2 size = max - min;
-            float scale = Mathf.Min(focusRect.width / Screen.width / Mathf.Max(0.001f, size.x),
-                focusRect.height / Screen.height / Mathf.Max(0.001f, size.y)) * 0.9f;
-            Vector2 desired = new Vector2(focusRect.center.x / Screen.width, focusRect.center.y / Screen.height);
-            Matrix4x4 projection = stageCamera.projectionMatrix;
-            projection.m00 *= scale;
-            projection.m11 *= scale;
-            projection.m02 += (min.x + max.x - 1f) * scale - (desired.x * 2f - 1f);
-            projection.m12 += (min.y + max.y - 1f) * scale - (desired.y * 2f - 1f);
-            stageCamera.projectionMatrix = projection;
-        }
-
         public void ShowShot(StageShot shot)
         {
-            if (shot == StageShot.Market) { SetShopScroll(0f); return; }
+            currentShot = shot;
             shotStartPosition = stageCamera.transform.localPosition;
             shotStartRotation = stageCamera.transform.localRotation;
             GetShot(shot, out shotPosition, out shotRotation);
+            if (shot == StageShot.Market) shotPosition.z -= shopScroll * ShopStallSpacing;
             shotElapsed = 0f;
         }
 
         /// <summary>Continuous stall units. Applies exactly, without a camera tween.</summary>
         public void SetShopScroll(float position)
         {
+            shopScroll = Mathf.Clamp(position, 0f, 4f);
+            if (currentShot != StageShot.Market) return;
             GetShot(StageShot.Market, out shotPosition, out shotRotation);
-            shotPosition.z -= Mathf.Clamp(position, 0f, 4f) * ShopStallSpacing;
-            shotElapsed = ShotDuration;
+            shotPosition.z -= shopScroll * ShopStallSpacing;
+            if (shotElapsed < ShotDuration) return;
             stageCamera.transform.localPosition = shotPosition;
             stageCamera.transform.localRotation = shotRotation;
         }
@@ -277,18 +238,18 @@ namespace NodeWar.Lobby
                     target = new Vector3(MarketX + frame.CameraX, 1f, MarketZ);
                     position = target + new Vector3(0f, ShopMarketFraming.CameraRise, -frame.CameraBack);
                     break;
-                case StageShot.Social:
-                    target = new Vector3(8f, 0f, 0f);
+                case StageShot.Ocean:
+                    target = new Vector3(18f, 0f, 0f);
                     position = target + new Vector3(0f, 9f, -12f);
                     break;
-                case StageShot.Guild:
-                    target = new Vector3(12f, 0f, 0f);
-                    position = target + new Vector3(0f, 9f, -12f);
+                case StageShot.Suits:
+                    target = slotPositions[1] + new Vector3(0f, 0.7f, -0.55f);
+                    position = target + new Vector3(0f, 3f, -5f);
                     break;
                 default:
-                    target = new Vector3(0f, 0f, 0f);
+                    target = new Vector3(0f, -1.5f, 0f);
                     // Leave room for the separated cluster at the lobby's 390:844 portrait aspect.
-                    position = new Vector3(0f, shot == StageShot.Loadout ? 17.5f : 18f, -26f);
+                    position = new Vector3(0f, 18f, -26f);
                     break;
             }
             rotation = Quaternion.LookRotation(target - position, Vector3.up);
@@ -387,7 +348,8 @@ namespace NodeWar.Lobby
             if (shotElapsed < ShotDuration)
             {
                 shotElapsed = Mathf.Min(ShotDuration, shotElapsed + delta);
-                float t = 1f - Mathf.Pow(1f - shotElapsed / ShotDuration, 3f);
+                float progress = shotElapsed / ShotDuration;
+                float t = progress * progress * (3f - 2f * progress);
                 stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
                 stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
             }
@@ -428,7 +390,7 @@ namespace NodeWar.Lobby
                 {
                     suitWaits[i] -= delta;
                     if (suitWaits[i] > 0f) continue;
-                    // Walk on the front of the middle-top plot, clear of the filler building.
+                    // Walk on the front of the front-middle plot, clear of the filler building.
                     suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), position.y,
                         UnityEngine.Random.Range(-1f, -0.3f));
                     suitWaits[i] = UnityEngine.Random.Range(0.5f, 2f);

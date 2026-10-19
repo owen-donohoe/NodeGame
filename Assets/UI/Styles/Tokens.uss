@@ -42,23 +42,35 @@
 
 :root {
     /* ================= PALETTE ================= */
+    --pal-tap: #1f7a6d;
+    --pal-coin: #d9a441;
+    --pal-tap-soft: rgba(31,122,109,0.14);
+    --pal-umber-70: rgba(45,35,25,0.70);
+    --pal-umber-45: rgba(45,35,25,0.45);
+    --pal-umber-15: rgba(45,35,25,0.15);
+    --pal-umber-50: rgba(45,35,25,0.50);
+    --pal-era-1: #8aa06a;
+    --pal-era-2: #7d8fa3;
+    --pal-era-3: #b8734a;
+    --pal-era-4: #8a6bb0;
+    --pal-era-5: #c25b9a;
 
     /* paper, lightest to darkest */
-    --pal-paper-50: rgb(246, 232, 199);
-    --pal-paper-100: rgb(234, 214, 174);
-    --pal-paper-200: rgb(215, 189, 144);
+    --pal-paper-50: #f4e9d5;
+    --pal-paper-100: #ebdcc3;
+    --pal-paper-200: #d7c3a5;
     --pal-paper-300: rgb(195, 170, 133);
     --pal-paper-500: rgb(150, 128, 95);
     --pal-paper-500-a22: rgba(150, 128, 95, 0.22);
     --pal-paper-500-a30: rgba(150, 128, 95, 0.3);
 
     /* umber: the ink, and the dark glass drawn over scenery */
-    --pal-umber-900: rgb(58, 39, 27);
+    --pal-umber-900: #2d2319;
     --pal-umber-900-a55: rgba(30, 22, 15, 0.55);
     --pal-umber-900-a82: rgba(45, 35, 25, 0.82);
     --pal-umber-900-a92: rgba(45, 35, 25, 0.92);
     --pal-umber-900-a94: rgba(45, 35, 25, 0.94);
-    --pal-umber-500: rgb(58, 39, 27);
+    --pal-umber-500: #2d2319;
     --pal-shadow-a25: rgba(90, 70, 40, 0.25);
     --pal-shadow-a30: rgba(90, 70, 40, 0.3);
     --pal-black-a35: rgba(0, 0, 0, 0.35);
@@ -68,10 +80,10 @@
     --pal-clear: rgba(0, 0, 0, 0);
 
     /* gold */
-    --pal-gold-400: rgb(226, 173, 61);
-    --pal-gold-500: rgb(208, 151, 46);
+    --pal-gold-400: #e0a526;
+    --pal-gold-500: #e0a526;
     --pal-gold-700: rgb(168, 128, 28);
-    --pal-gold-800: rgb(138, 106, 18);
+    --pal-gold-800: #8a6a14;
     --pal-gold-950: rgb(58, 42, 8);
 
     /* green */
@@ -84,7 +96,7 @@
     --pal-leaf-800: rgb(126, 100, 19);
 
     /* signal red and its edge */
-    --pal-red-500: rgb(177, 56, 40);
+    --pal-red-500: #d2452f;
     --pal-red-800: rgb(125, 33, 26);
 
     /* stone - off and disabled */
@@ -93,7 +105,7 @@
 
     /* navy and orange - loadout state */
     --pal-navy-600: rgb(111, 128, 77);
-    --pal-navy-50: rgb(246, 232, 199);
+    --pal-navy-50: #f4e9d5;
     --pal-orange-500: rgb(179, 124, 66);
     --pal-orange-700: rgb(178, 84, 32);
 
@@ -158,7 +170,7 @@
     --edge: var(--pal-umber-900);
     --rule: var(--pal-paper-500-a30);
     --press-tint: var(--pal-paper-500-a22);
-    --scrim: var(--pal-umber-900-a55);
+    --scrim: var(--pal-umber-50);
     --glass: var(--pal-umber-900-a82);
     --glass-strong: var(--pal-umber-900-a92);
     --glass-toast: var(--pal-umber-900-a94);
@@ -168,7 +180,7 @@
 
     /* ---- ink ---- */
     --ink: var(--pal-umber-900);
-    --ink-mute: var(--pal-umber-500);
+    --ink-mute: var(--pal-umber-70);
     --ink-inverse: var(--pal-cream);
     --ink-white: var(--pal-white);
     --clear: var(--pal-clear);
@@ -178,7 +190,7 @@
     --action-press: var(--pal-gold-500);
     --action-edge: var(--pal-umber-900);
     --action-ink: var(--pal-umber-900);
-    --confirm: var(--pal-green-400);
+    --confirm: var(--pal-tap);
     --confirm-edge: var(--pal-umber-900);
     --confirm-ink: var(--pal-umber-900);
     --off: var(--pal-stone-400);
@@ -280,13 +292,35 @@
     /* Nothing is set smaller than --type-min. The prototypes go to 7px, which
        at a 390-wide reference is unreadable on a phone. */
     --type-min: 11px;
-    --type-caption: 13px;
-    --type-body: 17px;
-    --type-number: 18px;
-    --type-heading: 21px;
-    --type-title: 27px;
+    --type-caption: 12px;
+    --type-body: 14px;
+    --type-number: 19.55px;
+    --type-heading: 18.4px;
+    --type-title: 25.3px;
 
     /* Minimum touch target. The panels scale to a 390-wide reference, so a
        unit is about one point on a phone. */
-    --target-min: 48px;
+    --target-min: 44px;
+    --mk-sheet: var(--pal-paper-50);
+    --mk-card: var(--pal-paper-100);
+    --mk-pressed: var(--pal-paper-200);
+    --mk-track: var(--pal-paper-300);
+    --mk-ink: var(--pal-umber-900);
+    --mk-muted: var(--pal-umber-70);
+    --mk-disabled: var(--pal-umber-45);
+    --mk-hairline: var(--pal-umber-15);
+    --mk-dark: var(--pal-umber-900-a92);
+    --mk-scrim: var(--pal-umber-50);
+    --mk-tap: var(--pal-tap);
+    --mk-tap-soft: var(--pal-tap-soft);
+    --mk-action: var(--pal-gold-500);
+    --mk-urgent: var(--pal-red-500);
+    --mk-trophy: var(--pal-gold-800);
+    --mk-coin: var(--pal-coin);
+    --mk-leaf: var(--pal-leaf-500);
+    --era-1: var(--pal-era-1);
+    --era-2: var(--pal-era-2);
+    --era-3: var(--pal-era-3);
+    --era-4: var(--pal-era-4);
+    --era-5: var(--pal-era-5);
 }

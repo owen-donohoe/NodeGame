@@ -188,7 +188,7 @@ namespace NodeWar.Lobby
             foreach (KeyValuePair<LobbyPageID, Button> entry in navButtons)
             {
                 bool active = currentPage != null && entry.Key == currentPage.ID;
-                entry.Value.EnableInClassList("lb-tab--on", active);
+                entry.Value.EnableInClassList("mk-tab--on", active);
             }
         }
 

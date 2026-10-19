@@ -1,20 +1,5 @@
-.lb-currency-bar { flex-direction: row; justify-content: flex-end; padding: 2px 8px; flex-shrink: 0; }
-.lb-currency { flex-direction: row; align-items: center; height: 48px; margin-left: 6px; padding: 2px 8px; --paper-card-fill: var(--paper-dark); }
-.lb-currency Label { font-size: 16px; margin-left: 4px; color: var(--ink); }
-.lb-currency #purse-coin-value, .lb-currency #purse-leaf-value { font-size: 23px; }
-.lb-currency .lb-icon { width: 20px; height: 20px; }
-.lb-currency-plus { font-size: 26px; margin-left: 8px; }
-.lb-player-header { flex-direction: row; align-items: center; margin: 2px 8px 8px; padding: 8px; flex-shrink: 0; }
-.lb-header-avatar { width: 48px; height: 48px; border-radius: 24px; align-items: center; justify-content: center; --paper-card-fill: var(--paper-dark); }
-.lb-header-avatar Label { font-size: 28px; color: var(--ink); }
-.lb-chrome-action { width: 48px; height: 48px; align-items: center; justify-content: center; border-radius: 24px; margin-left: 4px; }
-.lb-chrome-action .ui-paper { border-radius: 24px; }
-.lb-chrome-action .lb-icon { width: 24px; height: 24px; }
-.lb-header-rank { flex-grow: 1; flex-shrink: 1; min-width: 0; margin: 0 6px; }
-.lb-handle { min-height: 48px; align-items: flex-start; justify-content: center; --paper-card-fill: var(--clear); --paper-card-shadow: var(--clear); --paper-card-width: 0px; --paper-card-grain: 0; }
-.lb-handle Label { font-size: 22px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
-.lb-header-rank-row { flex-direction: row; flex-wrap: wrap; align-items: center; }
-.lb-header-rank-row Label { font-size: 13px; color: var(--ink); }
-.lb-era-badge { margin-right: 8px; }
-.lb-header-progress { height: 6px; background-color: var(--surface-track); border-radius: var(--corner-sm); margin-top: 3px; overflow: hidden; }
-.lb-header-progress-fill { height: 100%; background-color: var(--ink); }
+#lobby-chrome { flex-shrink: 0; }
+.mk-purse Label { font-size: 14px; }
+.mk-trophy Label { color: var(--mk-trophy); font-size: 19.55px; }
+.mk-namelink Label { color: var(--mk-ink); font-size: 19.55px; }
+.ui-root .mk-cap { margin-top: 3px; }

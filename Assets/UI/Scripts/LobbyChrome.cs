@@ -47,12 +47,27 @@ namespace NodeWar.Lobby
             var premiumPurse = root.Q<Button>("purse-leaf");
             if (premiumPurse != null) premiumPurse.tooltip = "Buy " + LobbyCurrencyNames.Premium;
 
-            Bind(root, "name-button", () => { if (ProfileRequested != null) ProfileRequested(); });
+            var strip = root.Q("strip-wrap");
+            if (strip != null) strip.focusable = true;
+            var nameButton = root.Q<Button>("name-button");
+            if (nameButton != null) { nameButton.focusable = false; nameButton.pickingMode = PickingMode.Ignore; }
+            strip?.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode == UnityEngine.KeyCode.Return || evt.keyCode == UnityEngine.KeyCode.Space)
+                {
+                    if (root.Q("trophy-strip")?.resolvedStyle.display != DisplayStyle.None) ProfileRequested?.Invoke();
+                    evt.StopPropagation();
+                }
+            });
+            strip?.RegisterCallback<ClickEvent>(_ =>
+            {
+                if (root.Q("trophy-strip")?.resolvedStyle.display != DisplayStyle.None) ProfileRequested?.Invoke();
+            });
 
             Bind(root, "purse-coin", () => CurrencyRequested?.Invoke("nodewar://shop/coins"));
             Bind(root, "purse-leaf", () => CurrencyRequested?.Invoke("nodewar://shop/laurels"));
             root.Q<Button>("history")?.Add(new LobbyBadgeDot(badges, "bell"));
-            root.Q<Button>("gear")?.Add(new LobbyBadgeDot(badges, "bell"));
+
 
             Bind(root, "gear", () => { if (SettingsRequested != null) SettingsRequested(); });
             Bind(root, "history", () => { if (HistoryRequested != null) HistoryRequested(); });
@@ -104,12 +119,14 @@ namespace NodeWar.Lobby
             RankRecord rank = BackendServices.LastKnownState?.Rank;
             RankDisplay display = new RankDisplay(rank?.RR ?? 0);
             if (trophyCount != null) trophyCount.text = rank == null ? Dash :
-                (display.Span.HasValue ? display.RRIntoArena : display.RR).ToString();
-            if (trophyMax != null) trophyMax.text = rank == null ? "" : display.Span.HasValue ? " / " + display.Span.Value + " RR" : " RR";
+                display.RR.ToString();
+            if (trophyMax != null) trophyMax.text = rank == null ? "" : " RR";
             if (trophyFill != null)
                 trophyFill.style.width = Length.Percent(rank != null ? display.Fill * 100f : 0f);
             if (arenaText != null)
-                arenaText.text = rank == null ? "Era " + Dash : display.Name;
+                arenaText.text = rank == null ? "Era " + Dash : display.Name + (display.Span.HasValue
+                    ? " \u00b7 " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
+                    : " \u00b7 Top era");
         }
 
         private static async void CreateFirstHandle(string localName)

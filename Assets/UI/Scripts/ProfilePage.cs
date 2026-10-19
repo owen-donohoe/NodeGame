@@ -10,6 +10,9 @@ namespace NodeWar.Lobby
     public class ProfilePage
     {
         private static readonly string[] StatNames = { "Matches", "Wins", "Losses", "Win rate", "Streak", "Best" };
+        private readonly MkSheet panel;
+        private VisualElement sourceRect;
+        private IVisualElementScheduledItem hideLater;
         private readonly IProfileService profiles;
         private readonly LobbySheet sheet;
         private readonly LobbyToast toast;
@@ -53,7 +56,17 @@ namespace NodeWar.Lobby
             Root.AddToClassList("lb-public-overlay");
             Root.AddToClassList("lb-no-swipe");
             Root.style.display = DisplayStyle.None;
-            safeArea = new SafeAreaBinder(Root.Q("public-profile-safe"));
+            var oldPanel = Root.Q("public-profile-safe");
+            panel = new MkSheet();
+            var profileContent = new VisualElement();
+            foreach (var child in new System.Collections.Generic.List<VisualElement>(oldPanel.Children())) profileContent.Add(child);
+            oldPanel.RemoveFromHierarchy();
+            Root.Q("public-profile-scrim")?.RemoveFromHierarchy();
+            panel.Surface.name = "public-profile-safe";
+            panel.Body.Add(profileContent);
+            Root.Add(panel);
+            panel.Closed += Close;
+            safeArea = new SafeAreaBinder(profileContent);
             stateView = new AsyncStateView();
             var body = Root.Q("public-profile-body");
             body.RemoveFromHierarchy();
@@ -62,6 +75,7 @@ namespace NodeWar.Lobby
             stateView.RetryRequested += Reload;
             handle = Root.Q<Label>("public-profile-handle");
             handle.enableRichText = false;
+            handle.RegisterCallback<ClickEvent>(_ => { if (viewingSelf) Close(); });
             rank = Root.Q<Label>("public-profile-rank");
             stats = Root.Q("public-profile-stats");
             loadout = Root.Q("public-profile-loadout");
@@ -76,7 +90,7 @@ namespace NodeWar.Lobby
             invite.clicked += () => Debug.Log("[Profile] invite to mode " + playerId);
             spectate.clicked += () => Debug.Log("[Profile] spectate " + playerId);
             Root.Q<Button>("public-profile-close").clicked += Close;
-            Root.Q("public-profile-scrim").RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
+
             rename.clicked += BeginRename;
             renameContent = LobbySheet.Lift(Root, "profile-rename");
             nameField = renameContent.Q<TextField>("profile-name-field");
@@ -93,7 +107,30 @@ namespace NodeWar.Lobby
         }
 
         public void Update() { if (IsOpen) safeArea.Update(); }
-        public void Open(VisualElement source) => OpenFor(SelfId);
+        public bool ViewingSelf => viewingSelf;
+        public void Open(VisualElement source)
+        {
+            if (IsOpen) return;
+            sourceRect = source;
+            OpenFor(SelfId);
+            Root.AddToClassList("mk-profile--instant");
+            SnapTo(source);
+            Root.schedule.Execute(() =>
+            {
+                if (!IsOpen) return;
+                Root.RemoveFromClassList("mk-profile--instant");
+                Root.style.translate = new Translate(0, 0);
+                Root.style.scale = new Scale(Vector2.one);
+            }).ExecuteLater(16);
+        }
+        private void SnapTo(VisualElement source)
+        {
+            if (source == null || Root.parent == null) return;
+            Rect full = Root.parent.worldBound, from = source.worldBound;
+            if (full.width <= 0 || full.height <= 0) return;
+            Root.style.translate = new Translate(from.x - full.x, from.y - full.y);
+            Root.style.scale = new Scale(new Vector2(from.width / full.width, from.height / full.height));
+        }
 
         public void OpenFor(string requestedPlayerId)
         {
@@ -107,6 +144,15 @@ namespace NodeWar.Lobby
             playerId = requestedPlayerId;
             viewingSelf = playerId == SelfId;
             shownAccount = SelfId;
+            hideLater?.Pause();
+            Root.EnableInClassList("mk-profile--self", viewingSelf);
+            if (!viewingSelf)
+            {
+                sourceRect = null;
+                Root.style.translate = new Translate(0, 0);
+                Root.style.scale = new Scale(Vector2.one);
+            }
+            panel.Open(true);
             BackendServices.StateChanged -= StateChanged;
             BackendServices.StateChanged += StateChanged;
             BackendServices.Account.Changed -= AccountChanged;
@@ -129,7 +175,13 @@ namespace NodeWar.Lobby
             BackendServices.StateChanged -= StateChanged;
             BackendServices.Account.Changed -= AccountChanged;
             stateView.Render(state.Reduce(state.HasContent ? AsyncResult.Ready : AsyncResult.Empty, Now), Now);
-            Root.style.display = DisplayStyle.None;
+            if (viewingSelf && sourceRect != null)
+            {
+                SnapTo(sourceRect);
+                hideLater = Root.schedule.Execute(() => { panel.Close(); Root.style.display = DisplayStyle.None; });
+                hideLater.ExecuteLater(340);
+            }
+            else { panel.Close(); Root.style.display = DisplayStyle.None; }
             Closed?.Invoke();
         }
 

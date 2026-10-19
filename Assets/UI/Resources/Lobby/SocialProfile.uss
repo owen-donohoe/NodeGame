@@ -1,6 +1,6 @@
 #page-social { flex-grow: 1; min-height: 0; }
 #page-social > TemplateContainer { flex-grow: 1; min-height: 0; }
-.lb-social-scroll { flex-grow: 1; background-color: var(--paper-dark); padding: 10px; }
+.lb-social-scroll { flex-grow: 1; background-color: var(--clear); padding: 10px; }
 .lb-social-title { font-size: 24px; margin-top: 12px; margin-bottom: 6px; white-space: normal; }
 .lb-live-row, .lb-previous-row { flex-direction: row; align-items: center; margin-bottom: 8px; padding: 6px; --paper-card-fill: var(--paper-light); }
 .lb-social-player { flex-grow: 1; min-width: 0; padding: 2px; margin-bottom: 6px; }
@@ -28,3 +28,12 @@
 .lb-public-chip { border-radius: 12px; padding: 8px; margin: 3px; background-color: var(--paper-dark); white-space: normal; }
 .lb-public-recent { margin-bottom: 12px; padding: 8px; background-color: var(--paper-dark); }
 .lb-public-recent Label { white-space: normal; }
+
+.lb-public-overlay { transform-origin: 0 0; transition-property: translate, scale; transition-duration: 340ms; transition-timing-function: ease-out-cubic; }
+.mk-profile--instant { transition-duration: 0ms; }
+.mk-profile--self .mk-sheet { top: 0; height: 100%; max-height: 100%; border-radius: 0; }
+.mk-profile--self .mk-sheet > ScrollView { flex-grow: 1; }
+.mk-profile--self .mk-handle-hit { display: none; }
+.mk-profile--self .mk-scrim { display: none; }
+
+.mk-profile--self .mk-sheet { translate: 0 0; transition-duration: 0ms; }

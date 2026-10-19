@@ -12,15 +12,26 @@ namespace NodeWar.Lobby
         public event Action Closed;
         public event Action Confirmed;
         public event Action Cancelled;
+        private readonly MkSheet sheet;
         private readonly Label title;
         private readonly VisualElement details;
         private readonly Button primary;
 
         public ClaimPanel()
         {
-            Root = new VisualElement { name = "claim-overlay" };
+            sheet = new MkSheet { name = "claim-overlay" };
+            Root = sheet;
             var layout = Resources.Load<VisualTreeAsset>("Lobby/ClaimPanel");
-            if (layout != null) layout.CloneTree(Root);
+            if (layout != null)
+            {
+                var content = layout.CloneTree();
+                var panel = content.Q("paper-lb-claim-panel-0");
+                var body = new VisualElement();
+                foreach (var child in new System.Collections.Generic.List<VisualElement>(panel.Children())) body.Add(child);
+                for (int i = 0; i < content.styleSheets.count; i++) body.styleSheets.Add(content.styleSheets[i]);
+                sheet.Body.Add(body);
+            }
+            sheet.Closed += () => { if (IsOpen) Cancel(); };
             Root.style.position = Position.Absolute;
             Root.style.left = Root.style.right = Root.style.top = Root.style.bottom = 0;
             title = Root.Q<Label>("claim-title");
@@ -61,7 +72,7 @@ namespace NodeWar.Lobby
                 details.style.display = DisplayStyle.None;
             }
             IsOpen = true;
-            Root.style.display = DisplayStyle.Flex;
+            sheet.Open();
             Opened?.Invoke();
         }
 
@@ -75,7 +86,7 @@ namespace NodeWar.Lobby
         private void Close()
         {
             IsOpen = false;
-            Root.style.display = DisplayStyle.None;
+            sheet.Close();
             Closed?.Invoke();
         }
     }

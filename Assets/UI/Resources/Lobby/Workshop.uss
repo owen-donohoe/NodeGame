@@ -40,8 +40,6 @@
 .ws-bar { position: absolute; top: 1px; bottom: 1px; background-color: var(--confirm); }
 .ws-bar--worse { background-color: var(--status-short); }
 .ws-panel-host { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
-.ws-scrim { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--scrim); }
-.ws-sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 0; padding: 12px; background-color: var(--surface-raised); border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-md); }
 .ws-sheet-body { flex-grow: 1; flex-shrink: 1; min-height: 0; }
 .ws-strip { flex-shrink: 0; height: 84px; margin-top: 6px; }
 .ws-strip .unity-scroll-view__content-container { flex-direction: row; }

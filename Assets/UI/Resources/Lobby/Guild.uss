@@ -1,5 +1,5 @@
 #page-guild, #page-guild > TemplateContainer { flex-grow: 1; min-height: 0; }
-.lb-guild-scroll { flex-grow: 1; padding: 12px; background-color: var(--paper-dark); }
+.lb-guild-scroll { flex-grow: 1; padding: 12px; background-color: var(--clear); }
 .lb-guild-title { font-size: 26px; white-space: normal; margin-bottom: 12px; }
 .lb-guild-search { flex-direction: row; align-items: center; margin: 0 12px 8px; }
 .lb-guild-search TextField { flex-grow: 1; min-width: 0; margin: 0 6px 0 0; }

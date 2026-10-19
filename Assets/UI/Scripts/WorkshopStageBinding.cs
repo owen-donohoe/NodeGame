@@ -10,11 +10,8 @@ namespace NodeWar.Lobby
         private readonly WorkshopPage page;
         private readonly LobbyStage stage;
         private readonly LobbyOverlayRouter router;
-        private readonly VisualElement shell;
         private readonly Action refresh;
-        private readonly IVisualElementScheduledItem framing;
-        private Rect lastWindow;
-        private Vector2 lastScreen;
+        private readonly IVisualElementScheduledItem windowSizing;
         private int pointer = -1;
         private Vector2 pointerStart;
         private long pointerStartedAt;
@@ -23,10 +20,11 @@ namespace NodeWar.Lobby
         public WorkshopStageBinding(WorkshopPage page, LobbyStage stage, LobbyOverlayRouter router,
             VisualElement shell, Action refresh)
         {
-            this.page = page; this.stage = stage; this.router = router; this.shell = shell; this.refresh = refresh;
+            this.page = page; this.stage = stage; this.router = router; this.refresh = refresh;
             page.Hidden += Hide;
-            framing = page.Root.schedule.Execute(FrameWindow).Every(16);
+            windowSizing = page.Root.schedule.Execute(SizeWindow).Every(16);
             page.ItemViewed += View;
+            page.ViewChanged += ShowView;
             page.DistrictUseRequested += Begin;
             page.DistrictSlotPicked += Pick;
             page.ReplacementChanged += ReplacementChanged;
@@ -45,25 +43,19 @@ namespace NodeWar.Lobby
             return new Vector2(panelPoint.x * Screen.width / panel.width,
                 Screen.height - panelPoint.y * Screen.height / panel.height);
         }
-        private void FrameWindow()
+        private void SizeWindow()
         {
             if (!page.IsOpen || page.StageWindow?.panel == null) return;
             var window = page.StageWindow;
             float height = page.Root.panel.visualTree.worldBound.height * 0.4f;
             if (!Mathf.Approximately(window.resolvedStyle.height, height)) window.style.height = height;
-            Rect bounds = window.worldBound;
-            Vector2 screen = new Vector2(Screen.width, Screen.height);
-            if (bounds == lastWindow && screen == lastScreen) return;
-            lastWindow = bounds; lastScreen = screen;
-            stage.SetFocusRect(Rect.MinMaxRect(ScreenPoint(bounds.min).x, ScreenPoint(bounds.max).y,
-                ScreenPoint(bounds.max).x, ScreenPoint(bounds.min).y));
         }
         private void Hide()
         {
             ResetPointer();
-            lastWindow = default;
-            stage.ClearFocusRect();
         }
+
+        private void ShowView(bool suits) => stage.ShowShot(suits ? StageShot.Suits : StageShot.Districts);
 
         public void RefreshInspection() => View(page.ViewingSuit, page.ViewedId);
         public void LoadoutReset() => page.CancelReplacement();
@@ -157,10 +149,11 @@ namespace NodeWar.Lobby
         }
         public void Dispose()
         {
-            framing.Pause();
+            windowSizing.Pause();
             page.Hidden -= Hide;
             Hide();
             page.CancelReplacement(); stage.Deselect(); stage.ClearFocus();
+            page.ViewChanged -= ShowView;
             page.ItemViewed -= View; page.DistrictUseRequested -= Begin; page.DistrictSlotPicked -= Pick;
             page.ReplacementChanged -= ReplacementChanged; page.LoadoutChanged -= refresh;
             stage.DistrictUsed -= Used; router.Stack.Changed -= StackChanged;

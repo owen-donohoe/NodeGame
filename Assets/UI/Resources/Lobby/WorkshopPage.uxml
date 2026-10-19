@@ -8,7 +8,7 @@
             <lobby:PaperButton name="workshop-preset-2" text="3" class="ui-reset-button ui-chip ws-preset" />
             <engine:Label name="workshop-preset-label" class="ws-eyebrow ui-w700" picking-mode="Ignore" />
         </engine:VisualElement>
-        <lobby:PaperCard name="workshop-window" class="ws-window lb-no-swipe" />
+        <engine:VisualElement name="workshop-window" class="ws-window lb-no-swipe" />
         <lobby:PaperCard class="ws-tabs" picking-mode="Ignore" name="paper-ws-tabs-0">
             <lobby:PaperButton name="workshop-tab-districts" text="Districts" class="ui-reset-button ui-button ui-button--quiet ws-tab ui-w700" />
             <lobby:PaperButton name="workshop-tab-suits" text="Suits" class="ui-reset-button ui-button ui-button--quiet ws-tab ui-w700" />
