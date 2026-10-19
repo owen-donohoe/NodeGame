@@ -15,7 +15,7 @@ namespace NodeWar.Lobby
         }
 
         private static readonly string[] StallNames = { "daily", "crates", "weekly", "bundle", "coins", "laurels" };
-        private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Coins", LobbyCurrencyNames.Premium };
+        private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Bank" };
         private static readonly string[] Odds =
         {
             "Placeholder odds per reward kind; illustrative only.",
@@ -62,6 +62,14 @@ namespace NodeWar.Lobby
             // Bank contains two shelves, but is a single camera stop.
             offers[5] = new VisualElement();
             offers[5].AddToClassList("lb-market-offers");
+            var coinsTitle = new Label("Coins");
+            coinsTitle.AddToClassList("lb-market-shelf-title");
+            coinsTitle.AddToClassList("ui-w600");
+            stalls[4].Insert(2, coinsTitle);
+            var laurelsTitle = new Label(LobbyCurrencyNames.Premium);
+            laurelsTitle.AddToClassList("lb-market-shelf-title");
+            laurelsTitle.AddToClassList("ui-w600");
+            stalls[4].Add(laurelsTitle);
             stalls[4].Add(offers[5]);
             BuildOffers();
             RefreshCountdowns();
@@ -69,15 +77,20 @@ namespace NodeWar.Lobby
             Root.RegisterCallback<PointerMoveEvent>(MovePointer, TrickleDown.TrickleDown);
             Root.RegisterCallback<PointerUpEvent>(EndPointer, TrickleDown.TrickleDown);
             Root.RegisterCallback<PointerCancelEvent>(_ => CancelPointer());
-            Root.RegisterCallback<PointerCaptureOutEvent>(_ => CancelPointer());
+            Root.RegisterCallback<PointerCaptureOutEvent>(evt =>
+            {
+                if (evt.target == Root && evt.pointerId == pointer) CancelPointer();
+            });
             Root.RegisterCallback<WheelEvent>(evt =>
             {
                 if (Mathf.Abs(evt.delta.x) >= Mathf.Abs(evt.delta.y)) return;
                 walk.ScrollTo(ShopSnap.Target(walk.Position + Mathf.Sign(evt.delta.y) * 0.01f, evt.delta.y));
                 evt.StopPropagation();
-            });            motion = Root.schedule.Execute(Animate).Every(16);
+            });
+            motion = Root.schedule.Execute(Animate).Every(16);
             motion.Pause();
             clock = Root.schedule.Execute(RefreshCountdowns).Every(1000);
+            clock.Pause();
             Root.RegisterCallback<DetachFromPanelEvent>(evt =>
             {
                 motion.Pause(); clock.Pause();
@@ -108,9 +121,10 @@ namespace NodeWar.Lobby
 
         private void BuildStall(int index)
         {
-            var stall = new VisualElement { name = "stall-" + StallNames[index] };
+            var stall = new VisualElement { name = "stall-" + (index == 4 ? "bank" : StallNames[index]) };
             stall.AddToClassList("lb-market-stall");
-            var title = new Label(index == 4 ? "Bank" : Titles[index]);
+            if (index == 4) stall.AddToClassList("lb-market-stall--bank");
+            var title = new Label(Titles[index]);
             title.AddToClassList("lb-market-title");
             title.AddToClassList("ui-w700");
             stall.Add(title);
@@ -152,7 +166,23 @@ namespace NodeWar.Lobby
             var offer = new Offer { Request = new ClaimRequest(title, description, action, disclosure), FreeDaily = freeDaily };
             var tile = new Button(() => OpenOffer(offer));
             offer.Tile = tile;
+            var sticker = new VisualElement();
+            sticker.AddToClassList("ui-sticker");
+            sticker.AddToClassList("lb-market-card");
+            var shadow = new VisualElement { pickingMode = PickingMode.Ignore };
+            shadow.AddToClassList("ui-sticker__shadow");
+            sticker.Add(shadow);
+            sticker.Add(tile);
+            tile.AddToClassList("ui-reset-button");
             tile.AddToClassList("lb-market-tile");
+            if (freeDaily || title == "Free ad gift")
+            {
+                tile.AddToClassList("lb-market-tile--free");
+                var ribbon = new Label("FREE") { pickingMode = PickingMode.Ignore };
+                ribbon.AddToClassList("ui-w700");
+                ribbon.AddToClassList("lb-market-ribbon");
+                tile.Add(ribbon);
+            }
             var glyph = new LobbyIcon(icon, LobbyIconContext.ShopCard) { pickingMode = PickingMode.Ignore };
             glyph.AddToClassList("lb-market-icon");
             tile.Add(glyph);
@@ -334,3 +364,5 @@ namespace NodeWar.Lobby
         }
     }
 }
+
+
