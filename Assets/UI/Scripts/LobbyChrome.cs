@@ -4,13 +4,7 @@ using UnityEngine.UIElements;
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// The persistent top of the lobby: currency purses, match history, the
-    /// gear, and the trophy strip. It sits outside the page host, so it is bound once here
-    /// rather than once per page.
-    ///
-    /// Only the player name is a link (to Profile); the rest of the strip is
-    /// information. Values the game does not track yet are shown as an em-dash
-    /// rather than a made-up number.
+    /// Persistent currency purses and player header, outside the page track.
     /// </summary>
     public class LobbyChrome
     {
@@ -31,13 +25,14 @@ namespace NodeWar.Lobby
         /// <summary>Raised when the player name is pressed.</summary>
         public event System.Action ProfileRequested;
 
-        /// <summary>Raised when the gear is pressed.</summary>
+        /// <summary>Raised when the burger is pressed; name retained for shell callers.</summary>
         public event System.Action SettingsRequested;
 
-        /// <summary>Raised when the TV button beside the gear is pressed.</summary>
+        /// <summary>Raised when the bell is pressed; name retained for shell callers.</summary>
         public event System.Action HistoryRequested;
+        public event System.Action<string> CurrencyRequested;
 
-        public LobbyChrome(VisualElement root, LobbyToast toast)
+        public LobbyChrome(VisualElement root, LobbyToast toast, BadgeBoard badges = null)
         {
             nameText = root.Q<Label>("name-text");
             if (nameText != null) nameText.enableRichText = false;
@@ -50,9 +45,10 @@ namespace NodeWar.Lobby
 
             Bind(root, "name-button", () => { if (ProfileRequested != null) ProfileRequested(); });
 
-            // TODO(economy): the purses open the shop once it exists.
-            Bind(root, "purse-coin", () => toast.Show("The shop arrives in a later update"));
-            Bind(root, "purse-leaf", () => toast.Show("The shop arrives in a later update"));
+            Bind(root, "purse-coin", () => CurrencyRequested?.Invoke("nodewar://shop/coins"));
+            Bind(root, "purse-leaf", () => CurrencyRequested?.Invoke("nodewar://shop/laurels"));
+            root.Q<Button>("history")?.Add(new LobbyBadgeDot(badges, "bell"));
+            root.Q<Button>("gear")?.Add(new LobbyBadgeDot(badges, "bell"));
 
             Bind(root, "gear", () => { if (SettingsRequested != null) SettingsRequested(); });
             Bind(root, "history", () => { if (HistoryRequested != null) HistoryRequested(); });
@@ -103,14 +99,13 @@ namespace NodeWar.Lobby
 
             RankRecord rank = BackendServices.LastKnownState?.Rank;
             RankDisplay display = new RankDisplay(rank?.RR ?? 0);
-            if (trophyCount != null) trophyCount.text = rank != null ? display.RR.ToString() : Dash;
-            if (trophyMax != null) trophyMax.text = rank != null ? " RR" : "";
+            if (trophyCount != null) trophyCount.text = rank == null ? Dash :
+                (display.Span.HasValue ? display.RRIntoArena : display.RR).ToString();
+            if (trophyMax != null) trophyMax.text = rank == null ? "" : display.Span.HasValue ? " / " + display.Span.Value + " RR" : " RR";
             if (trophyFill != null)
                 trophyFill.style.width = Length.Percent(rank != null ? display.Fill * 100f : 0f);
             if (arenaText != null)
-                arenaText.text = rank == null ? "Arena " + Dash : display.Name + (display.Span.HasValue
-                    ? " · " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
-                    : " · Top arena");
+                arenaText.text = rank == null ? "Era " + Dash : display.Name;
         }
 
         private static async void CreateFirstHandle(string localName)

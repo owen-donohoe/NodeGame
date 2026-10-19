@@ -1,0 +1,17 @@
+.lb-currency-bar { flex-direction: row; justify-content: flex-end; padding: 8px; background-color: rgba(18, 27, 34, 0.3); }
+.lb-currency { flex-direction: row; align-items: center; min-height: 48px; min-width: 48px; margin-left: 4px; padding: 6px; background-color: rgba(255, 255, 255, 0.85); border-radius: 12px; }
+.lb-currency Label { font-size: 13px; margin-left: 4px; }
+.lb-currency .lb-icon { width: 20px; height: 20px; }
+.lb-currency-plus { font-size: 24px; margin-left: 8px; }
+.lb-player-header { flex-direction: row; align-items: center; margin: 8px; padding: 8px; background-color: rgba(18, 27, 34, 0.3); border-radius: 12px; }
+.lb-chrome-action { position: relative; min-width: 48px; min-height: 48px; align-items: center; justify-content: center; }
+.lb-chrome-action .lb-icon { width: 24px; height: 24px; -unity-background-image-tint-color: white; }
+.lb-header-rank { flex-grow: 1; flex-shrink: 1; min-width: 0; margin: 0 8px; }
+.lb-handle { min-height: 48px; align-items: flex-start; }
+.lb-handle Label { font-size: 20px; color: white; overflow: hidden; text-overflow: ellipsis; }
+.lb-header-rank-row { flex-direction: row; flex-wrap: wrap; }
+.lb-header-rank-row Label { font-size: 12px; color: white; }
+.lb-header-rank-row #arena-text { flex-grow: 1; }
+.lb-header-progress { height: 6px; background-color: rgba(0, 0, 0, 0.6); margin-top: 4px; }
+.lb-header-progress-fill { height: 100%; background-color: white; }
+.lb-badge-dot { position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: 5px; background-color: rgb(214, 55, 62); }

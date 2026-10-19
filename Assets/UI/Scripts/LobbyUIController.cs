@@ -292,9 +292,19 @@ namespace NodeWar.Lobby
 
         private void BuildChrome(VisualElement root)
         {
+            var layout = Resources.Load<VisualTreeAsset>("Lobby/Chrome");
+            if (layout != null)
+            {
+                root.Q<VisualElement>("top-bar")?.RemoveFromHierarchy();
+                root.Q<VisualElement>("strip-wrap")?.RemoveFromHierarchy();
+                var header = new VisualElement();
+                layout.CloneTree(header);
+                root.Q<VisualElement>("safe-area").Insert(0, header);
+            }
             // The chrome is outside every page, so it is bound once, and it
             // refreshes whenever a page shows or the player is renamed.
-            chrome = new LobbyChrome(root, toast);
+            chrome = new LobbyChrome(root, toast, Badges);
+            chrome.CurrencyRequested += HandleDeepLink;
             navigation.PageShown += id => chrome.Refresh();
 
             VisualElement strip = root.Q<VisualElement>("strip-wrap");
