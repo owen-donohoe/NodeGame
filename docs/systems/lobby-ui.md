@@ -109,7 +109,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: f774c1f3
+verified: 380d53b3
 ---
 
 # Lobby UI
@@ -156,7 +156,7 @@ Pages:
 - `bots`: accepted queue fallback launches an unranked local bot match.
 
 ## Invariants
-Rated rank/inventory belongs to backend state, not local trophies/unlock arrays. Local changes never resize an opponent's deck. Preserve frozen `LoadoutRecord.nodeIDs` storage identity. Previews never equip. Delayed equipment/account responses cannot redraw a different selection/account. Missing slots block player-side launch; simulation setup itself does not enforce completeness.
+Rank/inventory is server-authoritative; local edits never resize opponents. Preserve frozen `LoadoutRecord.nodeIDs` storage identity. Previews never equip. Delayed equipment/account responses cannot redraw a different selection/account. Missing slots block player-side launch; simulation setup itself does not enforce completeness.
 
 ## How it works
 `LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
