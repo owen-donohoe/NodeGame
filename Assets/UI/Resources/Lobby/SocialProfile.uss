@@ -1,6 +1,6 @@
 #page-social { flex-grow: 1; min-height: 0; }
 #page-social > TemplateContainer { flex-grow: 1; min-height: 0; }
-.lb-social-scroll { flex-grow: 1; background-color: var(--paper-dark); padding: 10px; }
+.lb-social-scroll { flex-grow: 1; background-color: var(--clear); padding: 10px; }
 .lb-social-title { font-size: 24px; margin-top: 12px; margin-bottom: 6px; white-space: normal; }
 .lb-live-row, .lb-previous-row { flex-direction: row; align-items: center; margin-bottom: 8px; padding: 6px; --paper-card-fill: var(--paper-light); }
 .lb-social-player { flex-grow: 1; min-width: 0; padding: 2px; margin-bottom: 6px; }

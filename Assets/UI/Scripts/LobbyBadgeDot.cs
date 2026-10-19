@@ -12,6 +12,7 @@ namespace NodeWar.Lobby
             this.board = board;
             this.key = key;
             AddToClassList("lb-badge-dot");
+            AddToClassList("mk-tab__badge");
             pickingMode = PickingMode.Ignore;
             RegisterCallback<AttachToPanelEvent>(_ =>
             {
