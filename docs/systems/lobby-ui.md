@@ -106,7 +106,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 9904ed0f
+verified: cf7d30de
 ---
 
 # Lobby UI
@@ -115,7 +115,7 @@ verified: 9904ed0f
 The lobby edits loadouts, manages account/settings and enters matches. Server progression stays separate from preferences, commerce stubs and private play.
 
 ## Interface
-`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims`, `Badges` and `Crates`; Home crate taps open `CrateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)` opens self; `OpenFor(playerId)/Close` operates a Panel overlay; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory. `LobbyStage.SetFocusRect/ClearFocusRect` frames screen pixels through projection offsets; `TryPick` returns compact slot/suit `StagePick` indices on layer 2. Materials share one factory. Fullscreen overlays hide it.
+`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims`, `Badges` and `Crates`; Home crate taps open `CrateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)` opens self; `OpenFor(playerId)/Close` operates a Panel overlay; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory. `LobbyStage.SetFocusRect/ClearFocusRect` frames screen pixels through projection offsets; `TryPick` returns compact slot/suit `StagePick` indices on layer 2. Paper flats share one factory; figures billboard around Y. Fullscreen overlays hide it.
 
 `LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels, remaining targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
 
@@ -124,7 +124,7 @@ The lobby edits loadouts, manages account/settings and enters matches. Server pr
 Pages:
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested(CrateSize)`, `SetMode`, `Refresh`; incomplete PLAY opens Workshop. `LocalCrateInventory` backs Small crates/progress with profile data, returns fixed placeholder rewards, and exposes no Medium stock.
 - `WorkshopPage` loads `Resources/Lobby/WorkshopPage`: presets, stage window, filtered/sorted tiles. `WorkshopStageBinding` frames bounds, maps taps to storage, selects districts/freezes suits and opens sheets. `LoadoutScreenModel`/`WorkshopInventorySession` gate edits. Replacement uses a banner and Cancel/Back, rechecking eligibility/busy state. Tile menus remove choices.
-- `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/`shop.daily`; `BindStage(LobbyStage)` projects panels. `ScrollTo(stall)` animates stops; coins/laurels alias bank. `ShopSnap/ShopProjection` govern motion/placement. Daily anchors below header; others centre. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` support projection.
+- `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` govern motion/culling/order. Daily anchors below header, others centrally. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet)` supplies independent TV/history/friends `AsyncStateView`s. Cards open profiles; watch/replay/spectate log. Friends sort by presence, handle and ID. Late responses cannot cross visits or accounts.
 - `ProfilePage` shows handle, era/RR, six stats, loadout chips and recent matches. Null stats display dashes. Other-player Add friend/Invite and in-battle Spectate log; self renames through `BackendServices.Handles`, retaining cost hints.
 - `GuildPage` searches/filters and caches collapsed public browse results for the session. Members see guild header, weekly progress, pinned posts and feed. `OpenChatAsync` verifies membership; `guild/chat` falls back to the tab without membership. `GuildChatScreen` is fullscreen, sends trimmed 200-character plain text and polls messages. Join/Spectate log; Testing toggles sample membership.
@@ -179,4 +179,4 @@ Legacy progression coexists with authoritative data. Shop/social/guild lack prod
 - Change loadouts: update pure editor/rules, shared capacity/ownership, persistence migration and frozen-launch tests together.
 
 ## Tests
-`NodeWar.Lobby.Tests` guards loadouts, settings, presenters, route/state/claim/swipe models, crate sequences and shop time/snap models. Compile-check covers Unity pages/launchers. Sign-in, transitions, layouts, device Back, swipe feel and OS deep links require Editor/device verification.
+`NodeWar.Lobby.Tests` guards loadouts, settings, presenters, route/state/claim/swipe models, crate sequences, paper masks and motion/projection. Compile-check covers Unity pages/launchers. Sign-in, transitions, layouts, device Back, swipe feel and OS deep links require Editor/device verification.

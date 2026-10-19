@@ -4,6 +4,50 @@ namespace NodeWar.Lobby.Tests
 {
     public class ShopWalkTests
     {
+        [Test]
+        public void Panels_AreOrderedFarToNear_AndOnlySignalChanges()
+        {
+            var distances = new[] { 20f, 10f, 5f, 10f, 30f };
+            var order = new[] { 0, 1, 2, 3, 4 };
+            Assert.IsTrue(ShopProjection.OrderByDistance(distances, order));
+            CollectionAssert.AreEqual(new[] { 4, 0, 1, 3, 2 }, order);
+            Assert.IsFalse(ShopProjection.OrderByDistance(distances, order));
+            distances[0] = 1;
+            Assert.IsTrue(ShopProjection.OrderByDistance(distances, order));
+            Assert.AreEqual(0, order[4]);
+        }
+
+        [TestCase(0, 2, false)] // Daily must be absent at Weekly.
+        [TestCase(1, 2, true)]  // Only the immediately previous stall remains.
+        [TestCase(2, 2, true)]
+        [TestCase(3, 2, false)]
+        [TestCase(0, 1.001f, false)]
+        public void Panels_HideBeyondOneStallBehind(float stall, float position, bool visible)
+            => Assert.AreEqual(visible, ShopProjection.IsVisible(stall, position, 10));
+
+        [TestCase(390f / 844f)]
+        [TestCase(360f / 900f)]
+        [TestCase(9f / 16f)]
+        public void MarketFrame_FitsPaperSceneryLeftAndOffersRight(float aspect)
+        {
+            ShopMarketFrame frame = ShopMarketFraming.ForAspect(aspect);
+            float norm = (float)System.Math.Sqrt(frame.CameraBack * frame.CameraBack +
+                ShopMarketFraming.CameraRise * ShopMarketFraming.CameraRise);
+            // Project the widest opaque canopy edges, including its highest point.
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float x = ShopMarketFraming.StallX + ((corner & 1) == 0 ? -0.66f : 0.66f);
+                float y = (corner & 2) == 0 ? 1.49f : 2f;
+                float depth = (frame.CameraBack * frame.CameraBack +
+                    (1f + ShopMarketFraming.CameraRise - y) * ShopMarketFraming.CameraRise) / norm;
+                float halfWidth = depth * (float)System.Math.Tan(ShopMarketFraming.FieldOfView * System.Math.PI / 360) * aspect;
+                float screenX = 0.5f + (x - frame.CameraX) / (2f * halfWidth);
+                Assert.That(screenX, Is.InRange(0.01f, 0.46f));
+            }
+            float anchorHalfWidth = norm * (float)System.Math.Tan(ShopMarketFraming.FieldOfView * System.Math.PI / 360) * aspect;
+            Assert.AreEqual(0.54f, 0.5f + (frame.AnchorX - frame.CameraX) / (2f * anchorHalfWidth), 0.0001f);
+        }
+
         [TestCase("daily", 0)]
         [TestCase("crates", 1)]
         [TestCase("weekly", 2)]

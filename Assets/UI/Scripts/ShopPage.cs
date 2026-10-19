@@ -29,6 +29,10 @@ namespace NodeWar.Lobby
         private readonly DateTime[] resets = new DateTime[5];
         private readonly ShopPanelPose[] poses = new ShopPanelPose[5];
         private readonly bool[] poseReady = new bool[5];
+        private readonly float[] panelDistances = new float[5];
+        private readonly float[] panelHeights = new float[5];
+        private readonly int[] panelOrder = { 0, 1, 2, 3, 4 };
+        private bool orderReady;
         private readonly IVisualElementScheduledItem motion;
         private readonly IVisualElementScheduledItem clock;
         private readonly ShopSnap walk = new ShopSnap();
@@ -349,6 +353,9 @@ namespace NodeWar.Lobby
             {
                 Vector3 anchor = stage.ShopAnchor(i);
                 Vector3 screen = camera.WorldToScreenPoint(anchor);
+                panelDistances[i] = Vector3.Distance(camera.transform.position, anchor);
+                float measuredHeight = stalls[i].layout.height;
+                if (measuredHeight > 0f) panelHeights[i] = measuredHeight;
                 Vector2 point = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
                     new Vector2(screen.x, Screen.height - screen.y)));
                 // At rest all anchors project to the same point. Offset each panel's
@@ -361,10 +368,17 @@ namespace NodeWar.Lobby
                 float vertical = ShopSnap.ScreenAnchor(i);
                 float desiredY = i == 0 ? 8f : host.layout.height * vertical;
                 ShopPanelPose pose = ShopProjection.Project(point.x, point.y,
-                    screen.z, Vector3.Distance(camera.transform.position, anchor),
+                    screen.z, panelDistances[i],
                     stage.ShopReferenceDistance,
-                    i, walk.Position, stalls[i].layout.height, vertical, restPoint.y, desiredY);
+                    i, walk.Position, panelHeights[i], vertical, restPoint.y, desiredY);
                 ApplyPose(i, pose);
+            }
+            bool changed = ShopProjection.OrderByDistance(panelDistances, panelOrder);
+            if (!orderReady || changed)
+            {
+                // UI Toolkit draws later siblings on top. Do not reorder unless needed.
+                for (int i = 0; i < panelOrder.Length; i++) stalls[panelOrder[i]].BringToFront();
+                orderReady = true;
             }
         }
 
@@ -373,7 +387,12 @@ namespace NodeWar.Lobby
             VisualElement panel = stalls[index];
             ShopPanelPose previous = poses[index];
             if (!poseReady[index] || pose.Visible != previous.Visible)
+            {
+                // Display also hides descendants with explicit visibility rules.
+                // Keep the last measured height for the next centred projection.
+                panel.style.display = pose.Visible ? DisplayStyle.Flex : DisplayStyle.None;
                 panel.style.visibility = pose.Visible ? Visibility.Visible : Visibility.Hidden;
+            }
             poseReady[index] = true;
             if (!pose.Visible)
             {
