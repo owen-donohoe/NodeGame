@@ -15,7 +15,7 @@ namespace NodeWar.Lobby
     ///
     /// What it builds, in the layer order of LobbyRoot.uxml:
     ///   - the persistent chrome (LobbyChrome) and the tab track
-    ///     (NavigationController) with Shop, Home, Workshop and Social;
+    ///     (NavigationController) with Shop, Loadout, Home, Social and Guild;
     ///   - the overlays above the chrome: Profile, which expands from the
     ///     trophy strip, and the push pages, Settings and Match history;
     ///   - the shared machinery every page is handed rather than builds for
@@ -92,6 +92,13 @@ namespace NodeWar.Lobby
         private AccountFlow accountFlow;
         private VisualElement lobbyRoot;
         private MatchHistoryPage matchHistoryPage;
+        private LobbyOverlayRouter router;
+        private ClaimPanel claimPanel;
+        private bool confirmingExit;
+
+        public LobbyRouteStack Routes => router?.Stack;
+        public ClaimPanel Claims => claimPanel;
+        public BadgeBoard Badges { get; private set; }
 
         /// <summary>
         /// Page switching, for pages to navigate between themselves. Null until
@@ -163,6 +170,8 @@ namespace NodeWar.Lobby
 
         private void OnDisable()
         {
+            Application.deepLinkActivated -= HandleDeepLink;
+            router?.CloseAll();
             // Dispose before dropping the reference: the popup may own a live
             // socket, and leaving one open would collide with the next attempt.
             if (playPopup != null) playPopup.Dispose();
@@ -193,6 +202,10 @@ namespace NodeWar.Lobby
             chrome = null;
             navigation = null;
             safeArea = null;
+            router = null;
+            claimPanel = null;
+            Badges = null;
+            confirmingExit = false;
         }
 
         private void Update()
@@ -206,6 +219,8 @@ namespace NodeWar.Lobby
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
+            if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true)
+                HandleBack();
         }
 
         private void BuildShell(VisualElement root)
@@ -222,6 +237,8 @@ namespace NodeWar.Lobby
             }
 
             safeArea = new SafeAreaBinder(safeAreaElement);
+            router = new LobbyOverlayRouter();
+            Badges = new BadgeBoard();
             navigation = new NavigationController(pageHost);
 
             // Shared machinery, built before any page so every page gets the same.
@@ -245,8 +262,11 @@ namespace NodeWar.Lobby
 
             BuildPlayPopup();
             RegisterPages();
+            WireOverlays(root);
 
             navigation.Show(LobbyPageID.Home);
+            Application.deepLinkActivated += HandleDeepLink;
+            HandleDeepLink(Application.absoluteURL);
 
             if (verboseLogging)
                 Debug.Log("[LobbyUI] Shell built. Current page: " + navigation.CurrentPageID);
@@ -355,8 +375,7 @@ namespace NodeWar.Lobby
             {
                 HomePage home = new HomePage(homePageLayout, toast, menu, catalog, accountFlow,
                     () => isActiveAndEnabled && lobbyRoot != null
-                        && !settingsPage.IsOpen && !profilePage.IsOpen && !matchHistoryPage.IsOpen
-                        && !menu.IsOpen);
+                        && Routes != null && Routes.Count == 0);
                 home.PlayRequested += OnPlayRequested;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
@@ -381,6 +400,110 @@ namespace NodeWar.Lobby
             }
 
             navigation.BindNavButton(id, button);
+        }
+
+        private void WireOverlays(VisualElement root)
+        {
+            VisualElement shell = root.Q<VisualElement>("lobby-root");
+            claimPanel = new ClaimPanel();
+            shell.Add(claimPanel.Root);
+            VisualElement toastLayer = root.Q<VisualElement>("toast-dock");
+            System.Action<VisualElement> promote = element =>
+            {
+                element?.BringToFront();
+                toastLayer?.BringToFront();
+            };
+
+            // PlayPopup already opens/closes this sheet. One entry preserves its
+            // Closed callback, which cancels matchmaking and live connections.
+            sheet.Opened += content =>
+            {
+                promote(root.Q<VisualElement>("sheet-layer"));
+                router.Open(new LobbyOverlay("sheet", OverlayKind.Sheet), sheet.Close);
+            };
+            sheet.Closed += content => router.Closed("sheet");
+            menu.Opened += () =>
+            {
+                promote(root.Q<VisualElement>("menu-layer"));
+                router.Open(new LobbyOverlay("menu", OverlayKind.Menu), menu.Close);
+            };
+            menu.Closed += () => router.Closed("menu");
+            profilePage.Opened += () =>
+            {
+                profilePage.Root.BringToFront();
+                promote(profilePage.Root.parent);
+                router.Open(new LobbyOverlay("profile", OverlayKind.Panel, true, true), profilePage.Close);
+            };
+            profilePage.Closed += () => router.Closed("profile");
+            WirePushPage(settingsPage, "settings", promote);
+            WirePushPage(matchHistoryPage, "history", promote);
+            claimPanel.Opened += () =>
+            {
+                promote(claimPanel.Root);
+                router.Open(new LobbyOverlay("claim", OverlayKind.Panel), claimPanel.Cancel);
+            };
+            claimPanel.Closed += () => router.Closed("claim");
+            claimPanel.Cancelled += () => confirmingExit = false;
+            claimPanel.Confirmed += () =>
+            {
+                if (!confirmingExit) return;
+                confirmingExit = false;
+                Application.Quit();
+            };
+            router.Stack.Changed += () => RefreshChromeVisibility(root);
+            navigation.PageShown += id => RefreshChromeVisibility(root);
+        }
+
+        private void WirePushPage(LobbyPushPage page, string id, System.Action<VisualElement> promote)
+        {
+            page.Opened += () =>
+            {
+                page.Root.BringToFront();
+                promote(page.Root.parent);
+                router.Open(new LobbyOverlay(id, OverlayKind.Fullscreen, true, true), page.Close);
+            };
+            page.Closed += () => router.Closed(id);
+        }
+
+        private void RefreshChromeVisibility(VisualElement root)
+        {
+            LobbyOverlay top = Routes?.Top;
+            VisualElement pills = root.Q<VisualElement>("tabbar-dock");
+            VisualElement header = root.Q<VisualElement>("strip-wrap");
+            VisualElement currencies = root.Q<VisualElement>("top-bar");
+            if (pills != null) pills.style.display = top != null && top.HidesPills ? DisplayStyle.None : DisplayStyle.Flex;
+            if (header != null) header.style.display = top != null && top.HidesHeader ? DisplayStyle.None : DisplayStyle.Flex;
+            if (currencies != null) currencies.style.display = top != null && top.HidesHeader ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        private void HandleBack()
+        {
+            if (router == null || navigation == null) return;
+            BackAction action = Routes.Back(navigation.CurrentPageID ?? LobbyPageID.Home);
+            if (action.Kind == BackActionKind.CloseTop) router.Close(action.ID);
+            else if (action.Kind == BackActionKind.GoHome) navigation.Show(LobbyPageID.Home);
+            else
+            {
+                claimPanel.Open(new ClaimRequest("Quit Node War?", "Close the game?", ClaimAction.Ok));
+                confirmingExit = true;
+            }
+        }
+
+        public void HandleDeepLink(string url)
+        {
+            if (router == null || navigation == null || !LobbyDeepLink.TryParse(url, out LobbyRoute route)) return;
+            router.CloseAll();
+            if (route.Kind == LobbyRouteKind.ShopStall)
+            {
+                navigation.Show(LobbyPageID.Shop);
+                Debug.Log("[LobbyUI] Shop stall: " + route.Target);
+            }
+            else if (route.Kind == LobbyRouteKind.Page)
+            {
+                string target = route.Target == "loadout" ? "Workshop" : route.Target;
+                if (System.Enum.TryParse(target, true, out LobbyPageID page)) navigation.Show(page);
+            }
+            else Debug.Log("[LobbyUI] Route: " + route.Kind + " " + route.Target);
         }
     }
 }

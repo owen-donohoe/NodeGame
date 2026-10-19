@@ -57,6 +57,8 @@ namespace NodeWar.Lobby
         }
 
         public bool IsOpen { get; private set; }
+        public event System.Action Opened;
+        public event System.Action Closed;
 
         /// <summary>
         /// Gives an element a long-press menu. The rows are asked for when the
@@ -129,6 +131,7 @@ namespace NodeWar.Lobby
             // Haptics setting. Settings are not saved yet, so there is no flag.
 
             IsOpen = true;
+            Opened?.Invoke();
         }
 
         public void Close()
@@ -154,6 +157,7 @@ namespace NodeWar.Lobby
 
             if (lifted != null) lifted.RemoveFromClassList("lb-lifted");
             lifted = null;
+            Closed?.Invoke();
         }
     }
 }

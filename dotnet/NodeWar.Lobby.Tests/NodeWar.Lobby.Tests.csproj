@@ -38,6 +38,8 @@
   <ItemGroup>
     <Compile Include="BankActionTests.cs" />
     <Compile Include="LobbyRouteTests.cs" />
+    <Compile Include="LobbyOverlayRouterTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyOverlayRouter.cs" Link="Lobby/LobbyOverlayRouter.cs" />
     <Compile Include="LobbyStateTests.cs" />
     <Compile Include="ClaimRequestTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/ClaimRequest.cs" Link="Lobby/ClaimRequest.cs" />

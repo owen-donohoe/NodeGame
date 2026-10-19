@@ -3,16 +3,6 @@ using UnityEngine.UIElements;
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// Which tab page the lobby is showing. Profile is not here: it is an
-    /// overlay that expands from the trophy strip, not a page in the track.
-    ///
-    /// Deliberately not the same set as NodeWar.Lobby.PanelType, which the uGUI
-    /// lobby uses. That enum has GameMode as a page; here mode selection lives
-    /// in the play popup, and Social is new. The two stacks run side by side
-    /// until S5, so they keep their own vocabularies rather than one pretending
-    /// to be the other.
-    /// </summary>
-    /// <summary>
     /// One page of the lobby. The UI Toolkit counterpart to LobbyPanel: it owns
     /// a subtree and gets told when it becomes visible.
     ///

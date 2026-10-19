@@ -17,6 +17,8 @@ namespace NodeWar.Lobby
         public VisualElement Root { get; private set; }
 
         public bool IsOpen { get; private set; }
+        public event System.Action Opened;
+        public event System.Action Closed;
 
         protected LobbyPushPage(string name, VisualTreeAsset layout, string missingNote)
         {
@@ -50,6 +52,7 @@ namespace NodeWar.Lobby
             IsOpen = true;
             Root.AddToClassList("lb-push--open");
             OnOpen();
+            Opened?.Invoke();
         }
 
         public void Close()
@@ -59,6 +62,7 @@ namespace NodeWar.Lobby
             IsOpen = false;
             Root.RemoveFromClassList("lb-push--open");
             OnClose();
+            Closed?.Invoke();
         }
 
         /// <summary>Called every frame by the shell; cheap unless the screen changed.</summary>
