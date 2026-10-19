@@ -7,7 +7,10 @@
                 <ui:Label name="home-mode-name" text="1v1 Ranked" picking-mode="Ignore" />
                 <lobby:LobbyIcon kind="Swap" context="Home" class="lb-home-swap" picking-mode="Ignore" />
             </lobby:PaperButton>
-            <ui:Label name="home-battle-reason" text="Fill your loadout" class="lb-home-reason" picking-mode="Ignore" />
+            <lobby:PaperCard name="home-battle-reason-tag" class="lb-home-reason" rotate-paper="false" picking-mode="Ignore">
+                <lobby:LobbyIcon kind="Lock" context="Home" picking-mode="Ignore" />
+                <ui:Label name="home-battle-reason" text="Fill your loadout" picking-mode="Ignore" />
+            </lobby:PaperCard>
             <ui:VisualElement class="lb-home-action-row" picking-mode="Ignore">
                 <lobby:PaperButton name="home-crate-small" class="ui-reset-button lb-home-crate" tooltip="Open Small crate">
                     <lobby:LobbyIcon kind="CrateSmall" context="Home" picking-mode="Ignore" />

@@ -23,7 +23,7 @@
                 <ui:Label name="name-text" text="player" enable-rich-text="false" picking-mode="Ignore" />
             </lobby:PaperButton>
             <ui:VisualElement class="lb-header-rank-row" picking-mode="Ignore">
-                <lobby:PaperCard name="era-badge" class="lb-era-chip ui-paper--chip" rotate-paper="false" picking-mode="Ignore"><ui:Label name="arena-text" text="Era" class="lb-era-badge" picking-mode="Ignore" /></lobby:PaperCard>
+                <ui:Label name="arena-text" text="Era" class="lb-era-badge ui-w700" picking-mode="Ignore" />
                 <ui:Label name="trophy-count" text="—" picking-mode="Ignore" />
                 <ui:Label name="trophy-max" picking-mode="Ignore" />
             </ui:VisualElement>
