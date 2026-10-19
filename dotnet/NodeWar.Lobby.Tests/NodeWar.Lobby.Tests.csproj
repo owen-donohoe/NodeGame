@@ -72,6 +72,7 @@
     <Compile Include="../../Assets/UI/Scripts/LobbyOverlayRouter.cs" Link="Lobby/LobbyOverlayRouter.cs" />
     <Compile Include="LobbyStateTests.cs" />
     <Compile Include="ClaimRequestTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyCurrencyNames.cs" Link="Lobby/LobbyCurrencyNames.cs" />
     <Compile Include="SwipeDecisionTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/SwipeDecision.cs" Link="Lobby/SwipeDecision.cs" />
     <Compile Include="../../Assets/UI/Scripts/ClaimRequest.cs" Link="Lobby/ClaimRequest.cs" />

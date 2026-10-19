@@ -42,6 +42,10 @@ namespace NodeWar.Lobby
             arenaText = root.Q<Label>("arena-text");
             coinValue = root.Q<Label>("purse-coin-value");
             premiumValue = root.Q<Label>("purse-leaf-value");
+            var premiumName = root.Q<Label>("purse-premium-name");
+            if (premiumName != null) premiumName.text = LobbyCurrencyNames.Premium;
+            var premiumPurse = root.Q<Button>("purse-leaf");
+            if (premiumPurse != null) premiumPurse.tooltip = "Buy " + LobbyCurrencyNames.Premium;
 
             Bind(root, "name-button", () => { if (ProfileRequested != null) ProfileRequested(); });
 
