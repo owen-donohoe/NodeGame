@@ -16,7 +16,7 @@ namespace NodeWar.Lobby
         public Camera ShopCamera => stageCamera;
         public float ShopReferenceDistance => Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.05f * 0.05f);
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
-        private static readonly Color Sea = new Color(0.22f, 0.48f, 0.58f);
+        private static readonly Color Sea = new Color(0.63f, 0.70f, 0.67f);
 
         // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
         private static readonly Color32[] Tints =
@@ -27,6 +27,7 @@ namespace NodeWar.Lobby
             new Color32(158, 122, 40, 255), new Color32(140, 62, 62, 255)
         };
 
+        private readonly StagePaperArt paper = new StagePaperArt();
         private readonly List<Material> materials = new List<Material>();
         private readonly Transform[] plots = new Transform[StageSlots.Count];
         private readonly GameObject[] districts = new GameObject[StageSlots.Count];
@@ -91,8 +92,8 @@ namespace NodeWar.Lobby
 
             Primitive("Ocean (unplaceable edge)", PrimitiveType.Plane, transform,
                 new Vector3(0f, -0.18f, 0f), new Vector3(12f, 1f, 12f), Sea);
-            Primitive("Land", PrimitiveType.Cube, transform, new Vector3(0f, -0.1f, 0f),
-                new Vector3(10f, 0.2f, 7f), new Color(0.56f, 0.61f, 0.43f));
+            Primitive("Land", PrimitiveType.Plane, transform, new Vector3(0f, -0.01f, 0f),
+                new Vector3(1f, 1f, 0.7f), new Color(0.77f, 0.70f, 0.55f));
 
             var slots = StageSlots.Layout(0);
             for (int i = 0; i < slots.Length; i++)
@@ -105,15 +106,14 @@ namespace NodeWar.Lobby
                 plot.transform.SetParent(transform, false);
                 plot.transform.localPosition = slotPositions[i];
                 plots[i] = plot.transform;
-                // An unlit rim under the ground tile outlines the whole district footprint.
-                outlines[i] = Primitive("Selection rim", PrimitiveType.Cube, plots[i],
-                    new Vector3(0f, 0.06f, 0f), new Vector3(2.94f, 0.1f, 2.94f),
-                    new Color(1f, 0.87f, 0.36f));
+                var ground = Primitive("Unclaimed ground", PrimitiveType.Quad, plots[i],
+                    new Vector3(0f, 0.02f, 0f), new Vector3(2.78f, 2.78f, 1f), PlayerColors.Neutral);
+                ground.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                outlines[i] = Cutout("Selection ink", plots[i], PaperKind.House,
+                    new Vector3(0f, 0.03f, 0.38f), new Vector2(2.06f, 1.79f), Color.white, true);
                 outlines[i].SetActive(false);
-                Primitive("Unclaimed ground", PrimitiveType.Cube, plots[i], new Vector3(0f, 0.12f, 0f),
-                    new Vector3(2.78f, 0.24f, 2.78f), PlayerColors.Neutral);
-                districts[i] = Primitive("District", PrimitiveType.Cube, plots[i],
-                    new Vector3(0f, 0.65f, 0.5f), new Vector3(1.5f, 0.8f, 1.2f), Tints[0]);
+                districts[i] = Cutout("District", plots[i], PaperKind.House,
+                    new Vector3(0f, 0.03f, 0.35f), new Vector2(1.9f, 1.65f), Tints[0]);
                 districts[i].SetActive(false);
             }
 
@@ -252,7 +252,12 @@ namespace NodeWar.Lobby
                 outlines[i].SetActive(false);
                 districts[i].SetActive(i < equipped);
                 if (i < equipped)
-                    districts[i].GetComponent<Renderer>().sharedMaterial = Tint(districtTypes[i], "district_");
+                {
+                    PaperKind kind = DistrictPaper(districtTypes[i]);
+                    Color tint = TypeTint(districtTypes[i], "district_");
+                    districts[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, tint), Color.white);
+                    outlines[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, Color.white, true), StagePaperArt.Ink);
+                }
             }
             for (int i = 0; i < suits.Length; i++)
             {
@@ -352,7 +357,7 @@ namespace NodeWar.Lobby
                     position += new Vector3(jitter.x, 0f, jitter.y);
                 }
                 plots[i].localPosition = position;
-                bool outlined = target != 0;
+                bool outlined = target != 0 && i < equipped;
                 if (outlines[i].activeSelf != outlined) outlines[i].SetActive(outlined);
             }
         }
@@ -386,16 +391,46 @@ namespace NodeWar.Lobby
             return MaterialFor(Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
         }
 
+        private static PaperKind DistrictPaper(int type)
+            => (PaperKind)((type % 3 + 3) % 3);
+
+        private static Color TypeTint(int type, string prefix)
+            => Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))];
+
         // All stage materials are created here; the future dither shader has one entry point.
-        private Material MaterialFor(Color colour)
+        private Material MaterialFor(Color colour) => MaterialFor(null, colour);
+
+        private Material MaterialFor(Texture2D texture, Color colour)
         {
             for (int i = 0; i < materials.Count; i++)
-                if (materials[i].color == colour) return materials[i];
-            var material = new Material(shader) { color = colour };
+                if (materials[i].mainTexture == texture && materials[i].color == colour) return materials[i];
+            var material = new Material(shader) { color = colour, mainTexture = texture };
+            material.SetFloat("_Cull", 0f); // Paper has two sides; silhouettes are baked in.
+            material.SetShaderPassEnabled("ShadowCaster", false);
+            if (texture != null)
+            {
+                material.SetFloat("_AlphaClip", 1f);
+                material.SetFloat("_Cutoff", 0.5f);
+                material.SetFloat("_Surface", 0f);
+                material.SetFloat("_ZWrite", 1f);
+                material.EnableKeyword("_ALPHATEST_ON");
+                material.SetOverrideTag("RenderType", "TransparentCutout");
+                material.renderQueue = (int)RenderQueue.AlphaTest;
+            }
             materials.Add(material);
             return material;
         }
 
+        // Position is at the paper's feet. The art reserves 8% transparent bottom padding.
+        private GameObject Cutout(string objectName, Transform parent, PaperKind kind,
+            Vector3 position, Vector2 size, Color tint, bool silhouette = false)
+        {
+            var obj = Primitive(objectName, PrimitiveType.Quad, parent,
+                position + Vector3.up * (size.y * 0.42f), new Vector3(size.x, size.y, 1f), Color.white);
+            obj.GetComponent<Renderer>().sharedMaterial = MaterialFor(
+                paper.TextureFor(kind, tint, silhouette), silhouette ? StagePaperArt.Ink : Color.white);
+            return obj;
+        }
         private GameObject Primitive(string objectName, PrimitiveType type, Transform parent,
             Vector3 position, Vector3 scale, Color colour)
         {
@@ -409,6 +444,15 @@ namespace NodeWar.Lobby
             bool pickable = objectName == "Unclaimed ground" || objectName == "District" || objectName.StartsWith("Suit ", StringComparison.Ordinal);
             collider.enabled = pickable;
             if (!pickable) Destroy(collider);
+            else if (type == PrimitiveType.Quad)
+            {
+                collider.enabled = false;
+                Destroy(collider);
+                // Keep picking on the same transform as the old district/suit.
+                var box = obj.AddComponent<BoxCollider>();
+                box.size = objectName == "Unclaimed ground" ? new Vector3(1f, 1f, 0.02f)
+                    : new Vector3(0.86f, 0.9f, 0.06f);
+            }
             var renderer = obj.GetComponent<Renderer>();
             renderer.sharedMaterial = MaterialFor(colour);
             renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -419,6 +463,7 @@ namespace NodeWar.Lobby
         private void OnDestroy()
         {
             for (int i = 0; i < materials.Count; i++) Destroy(materials[i]);
+            paper.Dispose();
         }
     }
 }
