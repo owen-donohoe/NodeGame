@@ -63,7 +63,8 @@ namespace NodeWar.Cloud
         }
 
         public Task<LockedPlayerState> ReadForSettlementAsync() => ReadLockedAsync(
-            PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline }).ToList());
+            PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline, PlayerStateKeys.Profile }).ToList());
+
 
         // Everything the client is shown: settlement records, wallet and profile.
         private Task<LockedPlayerState> ReadWholeStateAsync() => ReadLockedAsync(
