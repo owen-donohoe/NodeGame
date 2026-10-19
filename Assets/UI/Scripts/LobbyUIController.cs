@@ -108,6 +108,7 @@ namespace NodeWar.Lobby
         private HomePage homePage;
         private LobbyModePicker modePicker;
         private LobbyModeSelection selectedMode;
+        private LobbyPlayFlow playFlow;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
         public NodeWar.Backend.ICrateInventory Crates => crateInventory;
@@ -189,6 +190,8 @@ namespace NodeWar.Lobby
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             homePage?.OnHide();
             homePage = null;
+            playFlow?.Dispose();
+            playFlow = null;
             if (crateInventory != null) crateInventory.Changed -= RefreshCrateBadges;
             crateInventory = null;
             safeAreaRoot = pillDock = null;
@@ -255,6 +258,7 @@ namespace NodeWar.Lobby
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
+            playFlow?.Update();
             burgerPanel?.Update();
             bellPanel?.Update();
             WatchStageLoadout();
@@ -318,6 +322,7 @@ namespace NodeWar.Lobby
 
             BuildPlayPopup();
             BuildModePicker();
+            playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
             RegisterPages();
             WireOverlays(root);
 
@@ -473,10 +478,7 @@ namespace NodeWar.Lobby
 
         private void OnPlayRequested()
         {
-            if (playPopup != null)
-                playPopup.Show(homePage?.SelectedMode ?? GameMode.Locked);
-            else if (toast != null)
-                toast.Show("Cannot open the battle sheet: its layout is not assigned");
+            playFlow?.Play(selectedMode);
         }
 
         private void BuildModePicker()

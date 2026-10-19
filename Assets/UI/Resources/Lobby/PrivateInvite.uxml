@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="PlayEntry.uss" />
+    <ui:VisualElement class="lb-invite-tabs">
+        <ui:Button name="invite-friends" text="Friends" />
+        <ui:Button name="invite-guild" text="Guild" />
+        <ui:Button name="invite-search" text="Search" />
+    </ui:VisualElement>
+    <ui:VisualElement name="invite-results" />
+    <ui:Button name="invite-code" text="Use a join code instead" />
+</ui:UXML>
