@@ -248,6 +248,11 @@ namespace NodeWar.Lobby
             _ = details.Load(() => service.GetAsync(id), guild =>
             {
                 details.Content.Add(GuildViews.Header(guild));
+                details.Content.Add(PlayerCardViews.Text(guild.Summary.Description));
+                var list = new ScrollView { verticalScrollerVisibility = ScrollerVisibility.Hidden }; list.AddToClassList("lb-guild-panel-members");
+                foreach (var member in GuildMembers.Sorted(guild.Members, GuildMemberOrder.OnlineByRR))
+                    list.Add(GuildViews.Member(member, () => { CloseSheet(); openProfile(member.Player.PlayerId); }));
+                details.Content.Add(list);
                 if (!HasGuild)
                 {
                     var join = GuildViews.Button("Join", () => Debug.Log("[Stub] Guild join " + id), "mk-btn--primary");
