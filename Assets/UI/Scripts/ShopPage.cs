@@ -49,6 +49,8 @@ namespace NodeWar.Lobby
         private float dragStartY;
         private float direction;
         private double previousTime;
+        private int pendingStall = -1;
+        private bool geometryReady;
 
         // Keep the shell's construction signature; the shared claim panel is bound after pages register.
         public ShopPage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast, LobbyContextMenu menu)
@@ -227,6 +229,16 @@ namespace NodeWar.Lobby
             scroll.scrollDecelerationRate = deceleration;
         }
 
+        public void ScrollTo(string stall)
+        {
+            int index = Array.IndexOf(StallNames, stall?.ToLowerInvariant());
+            if (index < 0) return;
+            pendingStall = index;
+            dragging = snapping = needsSnap = false;
+            scroll.scrollDecelerationRate = 0f;
+            CacheGeometry();
+        }
+
         private void EndDrag()
         {
             if (!dragging) return;
@@ -236,13 +248,23 @@ namespace NodeWar.Lobby
 
         private void CacheGeometry()
         {
+            geometryReady = false;
             for (int i = 0; i < stalls.Length; i++)
             {
                 tops[i] = host.layout.y + stalls[i].layout.y;
                 heights[i] = stalls[i].layout.height;
+                if (heights[i] <= 0f || float.IsNaN(heights[i]) || float.IsNaN(tops[i])) return;
             }
+            geometryReady = true;
             float padding = Mathf.Max(0f, scroll.contentViewport.layout.height - heights[heights.Length - 1]);
             if (!Mathf.Approximately(tail.resolvedStyle.height, padding)) tail.style.height = padding;
+            if (pendingStall < 0 || heights[pendingStall] <= 0f || float.IsNaN(heights[pendingStall])) return;
+            // Wait for layout after Show(Shop), including any tail padding needed by the last stall.
+            if (scroll.verticalScroller.highValue + 1f < tops[pendingStall]) return;
+            scroll.scrollOffset = new Vector2(0f, tops[pendingStall]);
+            previousY = scroll.scrollOffset.y;
+            pendingStall = -1;
+            scroll.scrollDecelerationRate = deceleration;
         }
 
         private void Animate()
@@ -251,6 +273,8 @@ namespace NodeWar.Lobby
             float delta = (float)(now - previousTime);
             previousTime = now;
             if (delta <= 0f) return;
+            if (pendingStall >= 0) CacheGeometry();
+            if (!geometryReady) return;
             float y = scroll.scrollOffset.y;
             float velocity = (y - previousY) / delta;
             if (Mathf.Abs(velocity) > 0.1f) direction = Mathf.Sign(velocity);

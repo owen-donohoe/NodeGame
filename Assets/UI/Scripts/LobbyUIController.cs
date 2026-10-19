@@ -94,6 +94,7 @@ namespace NodeWar.Lobby
         private MatchHistoryPage matchHistoryPage;
         private LobbyOverlayRouter router;
         private ClaimPanel claimPanel;
+        public CrateScreen crateScreen;
         private bool confirmingExit;
 
         public LobbyRouteStack Routes => router?.Stack;
@@ -409,6 +410,9 @@ namespace NodeWar.Lobby
         {
             VisualElement shell = root.Q<VisualElement>("lobby-root");
             claimPanel = new ClaimPanel();
+            crateScreen = new CrateScreen(router);
+            shell.Add(crateScreen.Root);
+            (root.Q("page-shop")?.userData as ShopPage)?.Bind(claimPanel, Badges);
             shell.Add(claimPanel.Root);
             VisualElement toastLayer = root.Q<VisualElement>("toast-dock");
             System.Action<VisualElement> promote = element =>
@@ -499,7 +503,7 @@ namespace NodeWar.Lobby
             if (route.Kind == LobbyRouteKind.ShopStall)
             {
                 navigation.Show(LobbyPageID.Shop);
-                Debug.Log("[LobbyUI] Shop stall: " + route.Target);
+                (lobbyRoot.Q("page-shop")?.userData as ShopPage)?.ScrollTo(route.Target);
             }
             else if (route.Kind == LobbyRouteKind.Page)
             {
