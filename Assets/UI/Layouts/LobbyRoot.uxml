@@ -103,26 +103,28 @@
             <engine:VisualElement name="page-host" class="lb-page-host" picking-mode="Ignore" />
 
             <engine:VisualElement name="tabbar-dock" class="lb-tabbar-dock" picking-mode="Ignore">
-                <engine:VisualElement class="lb-tabbar-wrap" picking-mode="Ignore">
-                    <engine:VisualElement class="ui-soft-shadow" picking-mode="Ignore" />
-                    <engine:VisualElement name="tabbar" class="lb-tabbar">
-                        <engine:Button name="nav-shop" class="ui-reset-button lb-tab" tooltip="Shop">
-                            <lobby:LobbyIcon context="NavBar" kind="NavBarShop" class="lb-icon" picking-mode="Ignore" />
-                        </engine:Button>
-                        <engine:Button name="nav-workshop" class="ui-reset-button lb-tab" tooltip="Loadout">
-                            <lobby:LobbyIcon context="NavBar" kind="Tools" class="lb-icon" picking-mode="Ignore" />
-                        </engine:Button>
-                        <engine:Button name="nav-home" class="ui-reset-button lb-tab" tooltip="Home">
-                            <lobby:LobbyIcon context="NavBar" kind="NavBarHome" class="lb-icon" picking-mode="Ignore" />
-                        </engine:Button>
-                        <engine:Button name="nav-social" class="ui-reset-button lb-tab" tooltip="Social">
-                            <lobby:LobbyIcon context="NavBar" kind="NavBarSocial" class="lb-icon" picking-mode="Ignore" />
-                        </engine:Button>
-                        <engine:Button name="nav-guild" class="ui-reset-button lb-tab lb-tab--last" tooltip="Guild">
-                            <lobby:LobbyIcon context="NavBar" kind="Guild" class="lb-icon" picking-mode="Ignore" />
-                        </engine:Button>
-                    </engine:VisualElement>
-                </engine:VisualElement>
+                <lobby:PaperCard name="tabbar" class="lb-tabbar" rotate-paper="false">
+                    <lobby:PaperButton name="nav-shop" class="ui-reset-button lb-tab" tooltip="Shop">
+                        <lobby:LobbyIcon context="NavBar" kind="NavBarShop" class="lb-icon" picking-mode="Ignore" />
+                        <engine:Label text="Shop" class="lb-tab-label" picking-mode="Ignore" />
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="nav-workshop" class="ui-reset-button lb-tab" tooltip="Loadout">
+                        <lobby:LobbyIcon context="NavBar" kind="Tools" class="lb-icon" picking-mode="Ignore" />
+                        <engine:Label text="Loadout" class="lb-tab-label" picking-mode="Ignore" />
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="nav-home" class="ui-reset-button lb-tab" tooltip="Home">
+                        <lobby:LobbyIcon context="NavBar" kind="NavBarHome" class="lb-icon" picking-mode="Ignore" />
+                        <engine:Label text="Home" class="lb-tab-label" picking-mode="Ignore" />
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="nav-social" class="ui-reset-button lb-tab" tooltip="Social">
+                        <lobby:LobbyIcon context="NavBar" kind="NavBarSocial" class="lb-icon" picking-mode="Ignore" />
+                        <engine:Label text="Social" class="lb-tab-label" picking-mode="Ignore" />
+                    </lobby:PaperButton>
+                    <lobby:PaperButton name="nav-guild" class="ui-reset-button lb-tab" tooltip="Guild">
+                        <lobby:LobbyIcon context="NavBar" kind="Guild" class="lb-icon" picking-mode="Ignore" />
+                        <engine:Label text="Guild" class="lb-tab-label" picking-mode="Ignore" />
+                    </lobby:PaperButton>
+                </lobby:PaperCard>
             </engine:VisualElement>
 
         </engine:VisualElement>
@@ -150,4 +152,5 @@
 
     </engine:VisualElement>
 
+    <engine:Style src="../Resources/Lobby/PaperLobby.uss" />
 </engine:UXML>

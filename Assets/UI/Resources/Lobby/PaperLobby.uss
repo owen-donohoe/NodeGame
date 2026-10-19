@@ -1,0 +1,23 @@
+/* Imported after page geometry. PaperCard owns fill, grain, shadow and outline. */
+.ui-root PaperCard.ui-paper, .ui-root PaperButton.ui-paper-button {
+    background-color: var(--clear);
+    border-color: var(--clear);
+    color: var(--ink);
+    -unity-font-definition: var(--font-medium);
+}
+.ui-root PaperButton.ui-paper-button { min-width: 48px; min-height: 48px; overflow: visible; }
+.ui-root .lb-icon { -unity-background-image-tint-color: var(--ink); }
+.ui-root .ui-paper-button__caption { font-size: inherit; color: var(--ink); }
+.ui-root .ui-sticker__shadow, .ui-root .ui-soft-shadow, .ui-root .ui-lip__block { display: none; }
+.ui-root .unity-text-field__input, .ui-root .unity-integer-field__input, .ui-root .unity-float-field__input {
+    background-color: var(--paper-light); color: var(--ink); border-width: var(--paper-ink-width); border-color: var(--ink);
+    border-radius: var(--corner-sm); padding: 8px; min-height: 48px; -unity-font-definition: var(--font-medium); font-size: 18px;
+}
+.ui-root .unity-base-field__label { color: var(--ink); font-size: 17px; }
+.ui-root .unity-toggle { min-height: 48px; align-items: center; }
+.ui-root .unity-toggle__input { min-height: 48px; }
+.ui-root .unity-toggle__checkmark { width: 26px; height: 26px; border-width: var(--paper-ink-width); border-color: var(--ink); border-radius: var(--corner-sm); background-color: var(--paper-light); -unity-background-image-tint-color: var(--ink); }
+.ui-root .unity-toggle:checked .unity-toggle__checkmark { background-color: var(--paper-gold); }
+.ui-root .unity-base-slider__tracker { height: 6px; background-color: var(--paper-dark); border-width: 1px; border-color: var(--ink); }
+.ui-root .unity-base-slider__dragger { width: 24px; height: 24px; background-color: var(--paper-gold); border-width: var(--paper-ink-width); border-color: var(--ink); border-radius: 12px; }
+.ui-root ScrollView { background-color: var(--clear); }

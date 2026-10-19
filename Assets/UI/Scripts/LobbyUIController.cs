@@ -254,7 +254,7 @@ namespace NodeWar.Lobby
             if (safeArea != null) safeArea.Update();
             // The absolute dock needs the full safe area's inset in its anchor.
             if (pillDock != null && safeAreaRoot != null)
-                pillDock.style.bottom = 26f + safeAreaRoot.resolvedStyle.paddingBottom;
+                pillDock.style.bottom = safeAreaRoot.resolvedStyle.paddingBottom;
             crateInventory?.Refresh();
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();

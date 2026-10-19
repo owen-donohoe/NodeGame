@@ -511,7 +511,7 @@
 
 
 /* Paper geometry is retained by PaperCard; native fills must not cover its edge. */
-.ui-paper {
+.ui-root {
     --paper-card-fill: var(--paper-light);
     --paper-card-ink: var(--paper-ink);
     --paper-card-width: var(--paper-ink-width);
@@ -520,6 +520,8 @@
     --paper-card-shadow-y: var(--paper-shadow-y);
     --paper-card-wobble: var(--paper-wobble);
     --paper-card-grain: var(--paper-grain-opacity);
+}
+.ui-paper {
     background-color: var(--clear);
     border-color: var(--clear);
     border-radius: var(--corner-md);

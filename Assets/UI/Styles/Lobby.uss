@@ -47,7 +47,7 @@
 }
 
 /* ===================================================================
-   Root. Fredoka, the label reset, the weights (.ui-w500/600/700), the
+   Root. Patrick Hand, the label reset, the weights (.ui-w500/600/700), the
    reset button, shadows (.ui-sticker__shadow, .ui-soft-shadow), lip
    buttons (.ui-button), the sheet, the bar and the toast are shared
    components in Components.uss. The lobby adds only its own ground.
@@ -388,75 +388,15 @@
     color: var(--ink-mute);
 }
 
-/* ---- tab bar: thin floating capsule, icons only ---- */
-
-.lb-tabbar-dock {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 26px;
-    align-items: center;
-}
-
-.lb-tabbar-wrap {
-    position: relative;
-}
-
-.lb-tabbar-wrap > .ui-soft-shadow {
-    border-top-left-radius: 27px;
-    border-top-right-radius: 27px;
-    border-bottom-left-radius: 27px;
-    border-bottom-right-radius: 27px;
-}
-
-.lb-tabbar {
-    flex-direction: row;
-    background-color: var(--glass-strong);
-    border-top-left-radius: 27px;
-    border-top-right-radius: 27px;
-    border-bottom-left-radius: 27px;
-    border-bottom-right-radius: 27px;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-}
-
-.lb-tab {
-    width: 44px;
-    height: 44px;
-    margin-right: 4px;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    border-bottom-left-radius: 22px;
-    border-bottom-right-radius: 22px;
-    align-items: center;
-    justify-content: center;
-    transition-property: background-color, scale;
-    transition-duration: var(--motion-release);
-}
-
-.lb-tab--last {
-    margin-right: 0;
-}
-
-.lb-tab > .lb-icon {
-    width: 19px;
-    height: 19px;
-    -unity-background-image-tint-color: var(--tab-ink);
-    transition-property: -unity-background-image-tint-color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-tab--on {
-    background-color: var(--action);
-    scale: 1.06 1.06;
-}
-
-.lb-tab--on > .lb-icon {
-    -unity-background-image-tint-color: var(--action-ink);
-}
-
+/* Full-width paper tabs; the active destination rises above the bar. */
+.lb-tabbar-dock { position: absolute; left: 0; right: 0; bottom: 0; }
+.lb-tabbar { flex-direction: row; width: 100%; height: 76px; padding: 4px 6px; --paper-card-fill: var(--paper-dark); }
+.lb-tab { flex-grow: 1; flex-basis: 0; min-width: 48px; height: 60px; margin: 0 2px; align-items: center; justify-content: center; }
+.lb-tab > .lb-icon { width: 28px; height: 28px; -unity-background-image-tint-color: var(--ink); }
+.lb-tab-label { display: none; font-size: 15px; color: var(--ink); }
+.lb-tab--on { flex-grow: 1.5; height: 78px; translate: 0 -14px; --paper-card-fill: var(--paper-light); }
+.lb-tab--on > .lb-icon { width: 36px; height: 36px; }
+.lb-tab--on > .lb-tab-label { display: flex; }
 /* ===================================================================
    Icons. Vector images drawn by LobbyIcon; colour is the tint, so it
    transitions like any other style property.

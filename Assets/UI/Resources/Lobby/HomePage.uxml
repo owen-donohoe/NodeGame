@@ -2,23 +2,23 @@
     <ui:Style src="HomePage.uss" />
     <ui:VisualElement name="home-page" class="lb-home-stage" picking-mode="Ignore">
         <ui:VisualElement class="lb-home-controls" picking-mode="Ignore">
-            <ui:Button name="home-mode" class="ui-reset-button lb-home-mode" tooltip="Change game mode">
+            <lobby:PaperButton name="home-mode" class="ui-reset-button lb-home-mode" tooltip="Change game mode">
                 <lobby:LobbyIcon name="home-mode-icon" kind="Swords" context="Home" picking-mode="Ignore" />
                 <ui:Label name="home-mode-name" text="1v1 Ranked" picking-mode="Ignore" />
                 <lobby:LobbyIcon kind="Swap" context="Home" class="lb-home-swap" picking-mode="Ignore" />
-            </ui:Button>
+            </lobby:PaperButton>
             <ui:Label name="home-battle-reason" text="Fill your loadout" class="lb-home-reason" picking-mode="Ignore" />
             <ui:VisualElement class="lb-home-action-row" picking-mode="Ignore">
-                <ui:Button name="home-crate-small" class="ui-reset-button lb-home-crate" tooltip="Open Small crate">
+                <lobby:PaperButton name="home-crate-small" class="ui-reset-button lb-home-crate" tooltip="Open Small crate">
                     <lobby:LobbyIcon kind="CrateSmall" context="Home" picking-mode="Ignore" />
                     <ui:Label name="home-crate-small-count" text="0" class="lb-held-crate-count" picking-mode="Ignore" />
-                </ui:Button>
-                <ui:Button name="home-crate-medium" class="ui-reset-button lb-home-crate" tooltip="Open Medium crate">
+                </lobby:PaperButton>
+                <lobby:PaperButton name="home-crate-medium" class="ui-reset-button lb-home-crate" tooltip="Open Medium crate">
                     <lobby:LobbyIcon kind="CrateMedium" context="Home" picking-mode="Ignore" />
                     <ui:Label name="home-crate-medium-count" text="0" class="lb-held-crate-count" picking-mode="Ignore" />
-                </ui:Button>
+                </lobby:PaperButton>
                 <ui:VisualElement class="lb-home-play-column" picking-mode="Ignore">
-                    <ui:Button name="home-battle" text="PLAY" class="ui-reset-button lb-home-play" />
+                    <lobby:PaperButton name="home-battle" text="PLAY" class="ui-reset-button lb-home-play ui-paper-button--gold" />
                     <ui:VisualElement class="lb-next-crate" picking-mode="Ignore">
                         <ui:VisualElement name="home-boxmeter" class="lb-next-crate-track" picking-mode="Ignore">
                             <ui:VisualElement name="home-boxmeter-fill" class="lb-next-crate-fill" picking-mode="Ignore" />
@@ -29,4 +29,5 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
+    <ui:Style src="PaperLobby.uss" />
 </ui:UXML>
