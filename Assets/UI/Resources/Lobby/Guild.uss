@@ -12,6 +12,7 @@
 .lb-guild-post Label { white-space: normal; }
 .lb-guild-red { background-color: rgb(185, 45, 45); color: white; min-height: 40px; }
 .lb-guild-chat { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgb(235, 225, 205); }
+.lb-guild-chat > TemplateContainer { flex-grow: 1; min-height: 0; }
 .lb-guild-chat-safe { flex-grow: 1; padding: 16px; min-height: 0; }
 .lb-guild-chat-list { flex-grow: 1; min-height: 0; }
 .lb-guild-chat-list Label { white-space: normal; margin-bottom: 12px; }

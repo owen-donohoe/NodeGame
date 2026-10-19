@@ -19,6 +19,9 @@ namespace NodeWar.Lobby
         private readonly Foldout browseFold;
         private readonly LobbyOverlayPanel filters;
         private readonly LobbyOverlayPanel preview;
+        private readonly GuildChatScreen chat;
+        private readonly GuildDataView pinned = new GuildDataView();
+        private readonly GuildDataView feed = new GuildDataView();
         private GuildFilter filter = new GuildFilter();
         private GuildView current;
         private bool visible;
@@ -28,6 +31,7 @@ namespace NodeWar.Lobby
             : base(LobbyPageID.Guild, Build())
         {
             this.service = service; this.cache = cache;
+            chat = new GuildChatScreen(service, router, overlays);
             Root.userData = this;
             visitor = Root.Q("guild-visitor");
             visitor.RemoveFromHierarchy();
@@ -52,6 +56,10 @@ namespace NodeWar.Lobby
             WirePanel(filters, "guild-filter", router, overlays);
             WirePanel(preview, "guild-preview", router, overlays);
             visitor.Q<Button>("guild-filter").clicked += OpenFilter;
+            GuildViews.Icon(visitor.Q<Button>("guild-filter"), LobbyIconKind.Funnel);
+            GuildViews.Icon(visitor.Q<Button>("guild-search"), LobbyIconKind.Search);
+            GuildViews.Icon(visitor.Q<Button>("guild-refresh"), LobbyIconKind.Refresh);
+            pinned.RetryRequested += Refresh; feed.RetryRequested += Refresh;
             Root.RegisterCallback<AttachToPanelEvent>(evt =>
             {
                 if (evt.target == Root) BackendServices.Account.Changed += AccountChanged;
@@ -62,6 +70,7 @@ namespace NodeWar.Lobby
                 BackendServices.Account.Changed -= AccountChanged;
                 OnHide();
                 filters.Root.RemoveFromHierarchy(); preview.Root.RemoveFromHierarchy();
+                chat.Root.RemoveFromHierarchy();
             });
         }
 
@@ -85,6 +94,7 @@ namespace NodeWar.Lobby
             visible = false; visit++;
             mine.Invalidate(); search.Invalidate(); browse.Invalidate();
             filters.Close(); preview.Close();
+            pinned.Invalidate(); feed.Invalidate(); chat.Close();
         }
 
         private void AccountChanged(AccountInfo info)
@@ -92,14 +102,27 @@ namespace NodeWar.Lobby
             current = null; visit++;
             mine.Invalidate(true); search.Invalidate(true); browse.Invalidate(true);
             filters.Close(); preview.Close();
+            pinned.Invalidate(true); feed.Invalidate(true); chat.Close();
             if (visible) Refresh();
         }
 
         public void Refresh() { if (visible) _ = RefreshAsync(); }
 
+        public async Task OpenChatAsync()
+        {
+            if (!visible) return;
+            Task refresh = RefreshAsync();
+            int token = visit;
+            string account = BackendServices.Account.Current?.PlayerId;
+            await refresh;
+            if (visible && visit == token && account == BackendServices.Account.Current?.PlayerId && current?.Summary != null)
+                chat.Open(current);
+        }
+
         private Task RefreshAsync()
         {
             visit++;
+            chat.Close();
             search.Invalidate(); browse.Invalidate();
             current = null;
             return mine.Load(service.GetMineAsync, RenderMembership, _ => true, "You're not in a guild.");
@@ -114,7 +137,44 @@ namespace NodeWar.Lobby
                 Search();
                 if (browseFold.value) LoadBrowse(false);
             }
-            else mine.Content.Add(PlayerCardViews.Text(guild.Summary.Name));
+            else
+            {
+                mine.Content.Add(GuildViews.Header(guild));
+                var weekly = new ProgressBar { title = "Weekly task: " + guild.WeeklyProgress + "/" + guild.WeeklyGoal,
+                    value = guild.WeeklyGoal > 0 ? Mathf.Clamp01((float)guild.WeeklyProgress / guild.WeeklyGoal) * 100f : 0f };
+                mine.Content.Add(weekly);
+                mine.Content.Add(PlayerCardViews.Text("Pinned announcements"));
+                mine.Content.Add(pinned);
+                _ = pinned.Load(() => Task.FromResult(guild.Pinned), rows => RenderPosts(pinned.Content, rows),
+                    rows => rows != null && rows.Count > 0, "No pinned announcements.");
+                mine.Content.Add(PlayerCardViews.Text("Guild feed"));
+                mine.Content.Add(feed);
+                _ = feed.Load(() => Task.FromResult(guild.Feed), rows => RenderPosts(feed.Content, rows),
+                    rows => rows != null && rows.Count > 0, "No guild posts yet.");
+                var openChat = new Button(() => _ = OpenChatAsync()) { text = "Chat" };
+                GuildViews.Icon(openChat, LobbyIconKind.Chat);
+                mine.Content.Add(openChat);
+            }
+        }
+
+        private static void RenderPosts(VisualElement host, List<GuildPost> posts)
+        {
+            foreach (var post in posts)
+            {
+                if (post == null) continue;
+                var row = new VisualElement();
+                row.AddToClassList("lb-guild-post");
+                if (post.Player != null) row.Add(PlayerCardViews.Text(PlayerCardViews.Handle(post.Player)));
+                row.Add(PlayerCardViews.Text(post.Text));
+                if (post.Kind == GuildPostKind.Invite)
+                    row.Add(new Button(() => Debug.Log("[Guild] join invite " + post.PostId)) { text = "Join" });
+                else if (post.Kind == GuildPostKind.InBattle)
+                {
+                    var spectate = new Button(() => Debug.Log("[Guild] spectate " + post.Player?.PlayerId)) { text = "Spectate" };
+                    spectate.AddToClassList("lb-guild-red"); row.Add(spectate);
+                }
+                host.Add(row);
+            }
         }
 
         private void Search()
