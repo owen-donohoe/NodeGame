@@ -35,7 +35,7 @@
 .ui-root .lb-mode-card { --paper-card-fill: var(--paper-light); }
 .ui-root .lb-mode-card--on { --paper-card-fill: var(--paper-gold); }
 .ui-root .lb-social-player, .ui-root .lb-guild-post, .ui-root .lb-public-recent { margin-bottom: 12px; }
-.ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { background-color: var(--paper); }
+.ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { background-color: var(--clear); }
 .ui-root .lb-crate-screen { background-color: var(--paper); color: var(--ink); }
 .ui-root .lb-crate-box { --paper-card-fill: var(--paper-dark); }
 .ui-root .lb-crate-reward { --paper-card-fill: var(--paper-gold); }
@@ -52,7 +52,7 @@
 .ui-root .lb-mode-card--on > .ui-paper, .ui-root .lb-market-tile--free > .ui-paper { --paper-card-fill: var(--paper-gold); }
 .ui-root .lb-public-chip { background-color: var(--paper-dark); color: var(--ink); border-width: 1px; border-color: var(--ink); }
 .ui-root .lb-social-square > .ui-paper { --paper-card-fill: var(--paper-light); }
-.ui-root .lb-page-paper { flex-grow: 1; min-height: 0; --paper-card-fill: var(--paper); padding: 4px; }
+.ui-root .lb-page-paper { flex-grow: 1; min-height: 0; background-color: var(--clear); padding: 4px; }
 .ui-root .lb-page-paper ScrollView { background-color: var(--clear); }
 .ui-root .lb-guild-chat-safe, .ui-root .lb-crate-screen { --paper-card-fill: var(--paper); }
 .ui-root .lb-public-chip, .ui-root .lb-guild-chip, .ui-root .lb-party-slot { --paper-card-fill: var(--paper-dark); }

@@ -1,9 +1,9 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="Guild.uss" />
-    <lobby:PaperCard class="lb-page-paper" name="paper-GuildPage" rotate-paper="false"><ui:ScrollView class="lb-guild-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
+    <ui:VisualElement class="lb-page-paper" name="paper-GuildPage" rotate-paper="false"><ui:ScrollView class="lb-guild-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
         <ui:Label text="Guild" class="lb-guild-title" />
         <ui:VisualElement name="guild-state" />
-    </ui:ScrollView></lobby:PaperCard>
+    </ui:ScrollView></ui:VisualElement>
     <ui:VisualElement name="guild-visitor">
         <ui:VisualElement class="lb-guild-search">
             <ui:TextField name="guild-query" tooltip="Guild name" />

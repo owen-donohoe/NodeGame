@@ -97,6 +97,7 @@ namespace NodeWar.Lobby
                 menu.Add(row);
             }
 
+            menu.pickingMode = PickingMode.Position;
             sheet.Open();
 
             lifted = source;

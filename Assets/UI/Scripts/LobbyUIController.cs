@@ -713,7 +713,7 @@ namespace NodeWar.Lobby
             VisualElement header = root.Q<VisualElement>("strip-wrap");
             VisualElement currencies = root.Q<VisualElement>("top-bar");
             if (pills != null) pills.style.display = top != null && top.HidesPills ? DisplayStyle.None : DisplayStyle.Flex;
-            if (header != null) header.style.display = (top != null && top.HidesHeader) || navigation.CurrentPageID == LobbyPageID.Guild ? DisplayStyle.None : DisplayStyle.Flex;
+            if (header != null) header.style.display = (top != null && top.HidesHeader) ? DisplayStyle.None : DisplayStyle.Flex;
             if (currencies != null) currencies.style.display = (top != null && top.HidesHeader) || navigation.CurrentPageID == LobbyPageID.Guild ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
