@@ -1,4 +1,4 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="ShopStalls.uss" />
     <ui:VisualElement name="shop-stalls" class="lb-market-projections" />
-</ui:UXML>
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

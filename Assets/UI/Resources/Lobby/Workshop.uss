@@ -61,3 +61,18 @@
 .ws-banner-title { font-size: 16px; color: var(--ink); margin-bottom: 4px; }
 .ws-actionbar { display: none; position: absolute; left: 14px; right: 14px; bottom: 96px; background-color: var(--surface); padding: 10px 0; }
 .ws-cancel { height: 46px; font-size: 16px; }
+
+/* Paper roles; the stage window keeps a transparent interior. */
+.ws-window { --paper-card-fill: var(--clear); --paper-card-shadow: var(--clear); --paper-card-grain: 0; }
+.ws-tabs { overflow: visible; border-width: 0; padding: 3px; }
+.ws-tab, .ws-filter, .ws-preset, .ws-primary, .ws-secondary, .ws-cancel { min-height: 48px; }
+.ws-preset { width: 48px; }
+.ws-tab--on, .ws-primary, .ws-sheet-button.ws-primary, .ws-preset.ui-chip--action { --paper-card-fill: var(--paper-gold); }
+.ws-card { border-width: 0; padding: 10px 5px; }
+.ws-card--locked { --paper-card-fill: var(--paper-dark); }
+.ws-grid { background-color: var(--clear); }
+.ws-mark { background-color: var(--paper-dark); color: var(--ink); font-size: 11px; border-width: 1px; border-color: var(--ink); }
+.ws-monogram { color: var(--ink); }
+.ws-art { --paper-card-fill: var(--paper-dark); }
+.ws-card--preview { --paper-card-fill: var(--paper-gold); }
+.ws-band-tile { --paper-card-fill: var(--paper-dark); }

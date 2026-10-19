@@ -21,3 +21,5 @@
 .ui-root .unity-base-slider__tracker { height: 6px; background-color: var(--paper-dark); border-width: 1px; border-color: var(--ink); }
 .ui-root .unity-base-slider__dragger { width: 24px; height: 24px; background-color: var(--paper-gold); border-width: var(--paper-ink-width); border-color: var(--ink); border-radius: 12px; }
 .ui-root ScrollView { background-color: var(--clear); }
+
+.ui-root .ui-paper.ui-tile, .ui-root .ui-paper .ui-tile__monogram { color: var(--ink); background-color: var(--clear); }

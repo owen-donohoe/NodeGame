@@ -105,6 +105,7 @@ namespace NodeWar.Lobby
             itemInfo = Root.Q<VisualElement>("workshop-info");
             itemInfo.RemoveFromHierarchy();
             itemInfo.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
+            itemInfo.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/PaperLobby"));
             if (sheet != null) sheet.Closed += SheetClosed;
             Root.Q<Button>("workshop-replace-cancel").clicked += CancelReplacement;
             RenderReplacement();
@@ -262,7 +263,7 @@ namespace NodeWar.Lobby
         {
             var clip = new VisualElement { pickingMode = PickingMode.Ignore };
             clip.AddToClassList("ws-art-clip");
-            var art = new VisualElement { pickingMode = PickingMode.Ignore };
+            var art = new PaperCard { pickingMode = PickingMode.Ignore };
             art.AddToClassList("ws-art");
             art.AddToClassList("ui-tile");
             if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
@@ -283,7 +284,7 @@ namespace NodeWar.Lobby
             {
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
                 if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
-                var card = new Button(() => PreviewItem(item.ID));
+                var card = new PaperButton(() => PreviewItem(item.ID));
                 card.AddToClassList("ui-reset-button"); card.AddToClassList("ws-card");
                 card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
                 card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
@@ -615,14 +616,14 @@ namespace NodeWar.Lobby
             panelHost.pickingMode = PickingMode.Position;
             var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
             panelHost.Add(scrim);
-            var sheet = new VisualElement(); sheet.AddToClassList("ws-sheet");
+            var sheet = new PaperCard(); sheet.AddToClassList("ws-sheet");
             var body = new VisualElement { pickingMode = PickingMode.Ignore }; body.AddToClassList("ws-sheet-body");
-            var art = new VisualElement { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            var art = new PaperCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
             body.Add(art);
             Label title = MakeLabel("", "ws-title", "ui-w600");
             Label status = MakeLabel("", "ws-fact", "ui-w500");
             body.Add(title); body.Add(status);
-            var buy = new Button(() => Say("Coming soon")) { text = "Buy another box" };
+            var buy = new PaperButton(() => Say("Coming soon")) { text = "Buy another box" };
             buy.AddToClassList("ui-reset-button"); buy.AddToClassList("ws-secondary"); buy.AddToClassList("ui-w600");
             body.Add(buy);
             sheet.Add(body);
@@ -633,9 +634,9 @@ namespace NodeWar.Lobby
             sheet.Add(band);
 
             var buttons = new VisualElement(); buttons.AddToClassList("ws-sheet-buttons");
-            var back = new Button(CloseItemPanel) { text = "Back" };
+            var back = new PaperButton(CloseItemPanel) { text = "Back" };
             back.AddToClassList("ui-reset-button"); back.AddToClassList("ws-sheet-button"); back.AddToClassList("ui-w600");
-            var use = new Button();
+            var use = new PaperButton();
             use.AddToClassList("ui-reset-button"); use.AddToClassList("ws-sheet-button"); use.AddToClassList("ws-primary"); use.AddToClassList("ui-w600");
             use.SetEnabled(!inventoryBusy);
             buttons.Add(back); buttons.Add(use);
@@ -690,12 +691,12 @@ namespace NodeWar.Lobby
             panelHost.pickingMode = PickingMode.Position;
             var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
             panelHost.Add(scrim);
-            var sheet = new VisualElement(); sheet.AddToClassList("ws-sheet");
+            var sheet = new PaperCard(); sheet.AddToClassList("ws-sheet");
             var body = new ScrollView(ScrollViewMode.Vertical);
             body.AddToClassList("ws-sheet-body");
             body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             body.verticalScrollerVisibility = ScrollerVisibility.Hidden;
-            var art = new VisualElement { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            var art = new PaperCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
             art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
             body.Add(art);
             body.Add(MakeLabel(inspectedItem.Name + ", " + current.Label.ToLowerInvariant(), "ws-title", "ui-w600"));
@@ -716,7 +717,7 @@ namespace NodeWar.Lobby
             {
                 string choiceId = choice.ID;
                 var chipState = DisplayUnlock(choice.UnlockState);
-                var chip = new Button(() => { panelChoiceId = choiceId; RenderItemPanel(); });
+                var chip = new PaperButton(() => { panelChoiceId = choiceId; RenderItemPanel(); });
                 chip.AddToClassList("ui-reset-button"); chip.AddToClassList("ws-chip");
                 chip.EnableInClassList("ws-card--preview", choiceId == current.ID);
                 chip.Add(MakeArt(inspectedItem, chipState.Status != UnlockStatus.Owned, false));
@@ -726,9 +727,9 @@ namespace NodeWar.Lobby
             sheet.Add(strip);
 
             var buttons = new VisualElement(); buttons.AddToClassList("ws-sheet-buttons");
-            var back = new Button(CloseItemPanel) { text = "Back" };
+            var back = new PaperButton(CloseItemPanel) { text = "Back" };
             back.AddToClassList("ui-reset-button"); back.AddToClassList("ws-sheet-button"); back.AddToClassList("ui-w600");
-            var use = new Button { text = current.Equipped ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned" };
+            var use = new PaperButton { text = current.Equipped ? "Selected" : state.Status == UnlockStatus.Owned ? "Use" : "Not owned" };
             use.AddToClassList("ui-reset-button"); use.AddToClassList("ws-sheet-button"); use.AddToClassList("ws-primary"); use.AddToClassList("ui-w600");
             use.SetEnabled(!inventoryBusy);
             string useId = current.ID;

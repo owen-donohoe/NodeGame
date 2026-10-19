@@ -126,7 +126,7 @@ namespace NodeWar.Lobby
 
         private void BuildStall(int index)
         {
-            var stall = new VisualElement { name = "stall-" + StallNames[index] };
+            var stall = new PaperCard { name = "stall-" + StallNames[index] };
             stall.AddToClassList("lb-market-stall");
             if (index == 4) stall.AddToClassList("lb-market-stall--bank");
             var title = new Label(Titles[index]);
@@ -169,7 +169,7 @@ namespace NodeWar.Lobby
             LobbyIconKind icon, string[] disclosure = null, bool freeDaily = false)
         {
             var offer = new Offer { Request = new ClaimRequest(title, description, action, disclosure), FreeDaily = freeDaily };
-            var tile = new Button(() => OpenOffer(offer));
+            var tile = new PaperButton(() => OpenOffer(offer));
             offer.Tile = tile;
             var sticker = new VisualElement();
             sticker.AddToClassList("ui-sticker");

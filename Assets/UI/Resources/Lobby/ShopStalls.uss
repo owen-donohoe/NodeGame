@@ -34,3 +34,11 @@
 .lb-market-stall--bank .lb-market-tile { min-height: 102px; padding: 3px; }
 .lb-market-stall--bank .lb-market-icon { width: 32px; height: 32px; }
 .lb-market-stall--bank .lb-market-ribbon { right: 0; padding: 1px 4px; }
+
+/* Stalls are paper cut-outs; placement and depth remain owned by projection. */
+.lb-market-stall { padding: 12px; --paper-card-fill: var(--paper); }
+.lb-market-title, .lb-market-countdown, .lb-market-shelf-title { color: var(--ink); }
+.lb-market-title { font-size: 24px; }
+.lb-market-tile--free { --paper-card-fill: var(--paper-gold); }
+.lb-market-ribbon { background-color: var(--paper-gold); color: var(--ink); border-width: 1px; border-color: var(--ink); }
+.lb-market-tile Label { font-size: 14px; color: var(--ink); }
