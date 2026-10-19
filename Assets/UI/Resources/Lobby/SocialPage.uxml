@@ -1,11 +1,17 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
-    <ui:Style src="SocialProfile.uss" />
-    <ui:VisualElement class="lb-page-paper" name="paper-SocialPage" rotate-paper="false"><ui:ScrollView class="lb-social-scroll" mode="Vertical">
-        <ui:Label text="TV" class="lb-social-title" />
-        <ui:VisualElement name="social-tv" />
-        <ui:Label text="Previous matches" class="lb-social-title" />
-        <ui:VisualElement name="social-previous" />
-        <ui:Label text="Friends" class="lb-social-title" />
-        <ui:VisualElement name="social-friends" />
-    </ui:ScrollView></ui:VisualElement>
-<ui:Style src="PaperLobby.uss" /></ui:UXML>
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+ <ui:Style src="SocialScreen.uss" />
+ <ui:ScrollView name="social-scroll" class="g2-social-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
+  <lobby:MkCard class="g2-social-card">
+   <ui:Label text="LIVE" class="mk-eyebrow" />
+   <ui:VisualElement name="social-tv" />
+  </lobby:MkCard>
+  <lobby:MkCard class="g2-social-card">
+   <ui:Label text="ONLINE" class="mk-eyebrow" />
+   <ui:VisualElement name="social-friends" />
+  </lobby:MkCard>
+  <lobby:MkCard class="g2-social-card">
+   <ui:Label text="BATTLE HISTORY" class="mk-eyebrow" />
+   <ui:VisualElement name="social-previous" />
+  </lobby:MkCard>
+ </ui:ScrollView>
+</ui:UXML>
