@@ -34,6 +34,10 @@ sources:
   - Assets/UI/Scripts/ShopCountdown.cs
   - Assets/UI/Scripts/ShopSnap.cs
   - Assets/UI/Scripts/GuildPage.cs
+  - Assets/UI/Scripts/GuildChatScreen.cs
+  - Assets/UI/Scripts/GuildDataView.cs
+  - Assets/UI/Scripts/GuildViews.cs
+  - Assets/UI/Scripts/LobbyScrollbars.cs
   - Assets/UI/Scripts/LobbyDeepLink.cs
   - Assets/UI/Scripts/LobbyOverlayRouter.cs
   - Assets/UI/Scripts/LobbyPageID.cs
@@ -99,7 +103,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 6c33402d
+verified: f576d156
 ---
 
 # Lobby UI
@@ -120,6 +124,7 @@ Pages:
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims and sets `shop.daily`; `ScrollTo(stall)` targets daily, crates, weekly, bundle, coins or laurels. Stalls snap/shrink offers; countdowns refresh each second. Confirmations log; daily claims are visit-local.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet)` supplies independent TV/history/friends `AsyncStateView`s. Cards open profiles; watch/replay/spectate log. Friends sort by presence, handle and ID. Late responses cannot cross visits or accounts.
 - `ProfilePage` shows handle, era/RR, six stats, loadout chips and recent matches. Null stats display dashes. Other-player Add friend/Invite and in-battle Spectate log; self renames through `BackendServices.Handles`, retaining cost hints.
+- `GuildPage` searches/filters and caches collapsed public browse results for the session. Members see guild header, weekly progress, pinned posts and feed. `OpenChatAsync` verifies membership; `guild/chat` falls back to the tab without membership. `GuildChatScreen` is fullscreen, sends trimmed 200-character plain text and polls messages. Join/Spectate log; Testing toggles sample membership.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
@@ -135,7 +140,9 @@ Pages:
 
 `SceneTransition.Load(sceneName)` guards duplicate scene transitions.
 
-`CrateScreen.Open(CrateSize, ICrateInventory)` calls `TryOpen` and shows a fullscreen overlay only for a held crate. `CrateOpeningSequence` lands, waits for Tap, opens, reveals every returned reward, then requires Accept. Back acts as Tap or accepts Summary; no fake rewards appear.
+`LobbyScrollbars.Hide` hides desktop scrollers at shell construction and shared overlay opening; touch scroll remains enabled.
+
+`CrateScreen.Open(size, inventory)` consumes held crates through `TryOpen`. Sequence: landing, Tap, opening, every returned reward, Summary/Accept. Back taps or accepts; no fake rewards.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
@@ -152,11 +159,11 @@ Pages:
 Rated rank/inventory belongs to backend state, not local trophies/unlock arrays. Local changes never resize an opponent's deck. Preserve frozen `LoadoutRecord.nodeIDs` storage identity. A preview click does not equip. Delayed equipment/account responses cannot redraw a different selection/account. Missing slots block player-side launch; simulation setup itself does not enforce completeness.
 
 ## How it works
-`LobbyManager` bootstraps profile and selects stacks through scene value `useUIToolkitLobby`; an unassigned Toolkit root warns and falls back. `UIToolkitLobbySetup.SetUp`, menu `Tools > Node War > Set Up UI Toolkit Lobby`, creates/wires Lobby root, layouts and separate LobbyPanelSettings through the Editor. `Assets/Legacy/` retains compiled, scene-referenced uGUI lobby panels; disabling the toggle can restore them.
+`LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
 
-Low arenas choose two suits/two districts with display-only grant locks; arena index 2 onward chooses three/five without grants. Workshop keeps three/five display positions. Use fills the first empty slot or starts replacement at chosen capacity; slot taps inspect. Variants are real tree suits; skins cover both item kinds. Home's controls sit over the stage; crate taps open `CrateScreen`.
+Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five without grants. Workshop displays three/five slots. Use fills or replaces; taps inspect. Variants are tree suits; skins cover both kinds.
 
-Launch refreshes PlayerState; ranked requires returned rank, private/offline falls back to arena 1. It freezes rank, sanitized choices and equipment before connecting, then rechecks completeness against that frozen arena. Ranked rendezvous carries record ID/slot order; private host wait is open-ended. Confirmed local resizing persists; merely closing an unconfirmed fallback Workshop view cannot trim a saved high deck.
+Launch refreshes state, freezes rank/choices/equipment, then rechecks completeness. Ranked requires returned rank; private/offline uses arena 1. Rendezvous carries record ID/slot order. Confirmed resizing persists; closing an unconfirmed fallback cannot trim saved high decks.
 
 ## Decisions
 - Use shared navigation/sheet/menu instances rather than independent modal stacks per page.
@@ -164,7 +171,7 @@ Launch refreshes PlayerState; ranked requires returned rank, private/offline fal
 - Keep legacy code compiling behind a scene toggle rather than delete the fallback during migration.
 
 ## Pressure points
-Local profile still carries legacy progression fields beside authoritative backend data. Shop, social, detailed statistics and box actions lack production backing. Runtime and legacy launch paths coexist. Placeholder item art, narrow layouts and long Controls lists need manual verification; hidden legacy dependencies prevent casual deletion.
+Legacy progression fields and launch paths coexist with authoritative data. Shop/social/guild flows lack production backing. Placeholder art, layouts and legacy dependencies require manual verification.
 
 ## Change recipes
 - Add a page: implement lifecycle and register with navigation; overlays register close callbacks with the shared router. New layouts load from Resources/Lobby.
