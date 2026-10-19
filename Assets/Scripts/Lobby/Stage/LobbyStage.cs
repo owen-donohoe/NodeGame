@@ -18,7 +18,7 @@ namespace NodeWar.Lobby
         private ShopMarketFrame marketFrame;
         private float marketAspect;
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
-        private static readonly Color Sea = new Color(0.63f, 0.70f, 0.67f);
+        private static readonly Color Sea = new Color(0.42f, 0.61f, 0.72f);
 
         // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
         private static readonly Color32[] Tints =
