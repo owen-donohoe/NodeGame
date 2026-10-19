@@ -103,6 +103,10 @@ namespace NodeWar.Lobby
         private LobbyOverlayPanel burgerPanel;
         private LobbyOverlayPanel bellPanel;
         private readonly string[] notifications = System.Array.Empty<string>();
+        private LocalCrateInventory crateInventory;
+        private HomePage homePage;
+        private SafeAreaBinder bottomSafeArea;
+        public NodeWar.Backend.ICrateInventory Crates => crateInventory;
 
         public LobbyRouteStack Routes => router?.Stack;
         public ClaimPanel Claims => claimPanel;
@@ -179,6 +183,11 @@ namespace NodeWar.Lobby
         private void OnDisable()
         {
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
+            homePage?.OnHide();
+            homePage = null;
+            if (crateInventory != null) crateInventory.Changed -= RefreshCrateBadges;
+            crateInventory = null;
+            bottomSafeArea = null;
             Application.deepLinkActivated -= HandleDeepLink;
             router?.CloseAll();
             burgerPanel = bellPanel = null;
@@ -231,6 +240,8 @@ namespace NodeWar.Lobby
             // Cheap: each returns immediately unless the safe area, the screen
             // or the panel size actually changed.
             if (safeArea != null) safeArea.Update();
+            bottomSafeArea?.Update();
+            crateInventory?.Refresh();
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();
             if (matchHistoryPage != null) matchHistoryPage.Update();
@@ -258,8 +269,21 @@ namespace NodeWar.Lobby
             }
 
             safeArea = new SafeAreaBinder(safeAreaElement);
+            bottomSafeArea = new SafeAreaBinder(root.Q<VisualElement>("tabbar-dock"), SafeAreaBinder.Edges.Bottom);
             router = new LobbyOverlayRouter();
             Badges = new BadgeBoard();
+            crateInventory = new LocalCrateInventory(
+                () => PlayerProfile.Instance != null ? PlayerProfile.Instance.BoxesAvailable : 0,
+                () => PlayerProfile.Instance != null ? PlayerProfile.Instance.BoxProgress : 0f,
+                count =>
+                {
+                    var profile = PlayerProfile.Instance;
+                    if (profile == null) return;
+                    profile.data.boxesAvailable = count;
+                    profile.Save();
+                });
+            crateInventory.Changed += RefreshCrateBadges;
+            RefreshCrateBadges();
             navigation = new NavigationController(pageHost);
             navigation.BindSwipes(() => Routes != null && Routes.Count > 0);
 
@@ -440,7 +464,7 @@ namespace NodeWar.Lobby
         private void OnPlayRequested()
         {
             if (playPopup != null)
-                playPopup.Show();
+                playPopup.Show(homePage?.SelectedMode ?? GameMode.Locked);
             else if (toast != null)
                 toast.Show("Cannot open the battle sheet: its layout is not assigned");
         }
@@ -454,12 +478,20 @@ namespace NodeWar.Lobby
             navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
             navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
 
-            if (homePageLayout != null)
+            if (homePageLayout != null || Resources.Load<VisualTreeAsset>("Lobby/HomePage") != null)
             {
                 HomePage home = new HomePage(homePageLayout, toast, menu, catalog, accountFlow,
                     () => isActiveAndEnabled && lobbyRoot != null
-                        && Routes != null && Routes.Count == 0);
+                        && Routes != null && Routes.Count == 0, crateInventory);
+                homePage = home;
                 home.PlayRequested += OnPlayRequested;
+                home.ModeRequested += OnPlayRequested;
+                home.CrateRequested += size =>
+                {
+                    // lead: wire to CrateScreen.Open
+                    Debug.Log("[LobbyUI] Open crate: " + size);
+                };
+                if (playPopup != null) playPopup.ModeChanged += home.SetMode;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }
@@ -483,6 +515,13 @@ namespace NodeWar.Lobby
             }
 
             navigation.BindNavButton(id, button);
+        }
+
+        private void RefreshCrateBadges()
+        {
+            if (crateInventory == null || Badges == null) return;
+            Badges.Set("crates", crateInventory.Count(NodeWar.Backend.CrateSize.Small)
+                + crateInventory.Count(NodeWar.Backend.CrateSize.Medium));
         }
 
         private void WireOverlays(VisualElement root)

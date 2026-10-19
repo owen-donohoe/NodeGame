@@ -38,6 +38,12 @@
   <ItemGroup>
     <Compile Include="StageSlotsTests.cs" />
     <Compile Include="StageLoadoutTypesTests.cs" />
+    <Compile Include="LocalCrateInventoryTests.cs" />
+    <Compile Include="HomeModeDisplayTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LocalCrateInventory.cs" Link="Lobby/LocalCrateInventory.cs" />
+    <Compile Include="../../Assets/UI/Scripts/HomeModeDisplay.cs" Link="Lobby/HomeModeDisplay.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyIconKind.cs" Link="Lobby/LobbyIconKind.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/CrateInventory.cs" Link="Backend/CrateInventory.cs" />
     <Compile Include="../../Assets/UI/Scripts/StageLoadoutTypes.cs" Link="Lobby/StageLoadoutTypes.cs" />
     <Compile Include="DistrictClusterTests.cs" />
     <Compile Include="StageShotsTests.cs" />
