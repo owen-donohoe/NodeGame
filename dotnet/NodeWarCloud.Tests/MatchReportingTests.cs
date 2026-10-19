@@ -45,6 +45,8 @@ namespace NodeWar.Cloud.Tests
         private void Initialize(int firstRR, int secondRR)
         {
             var states = new[] { Player(firstRR), Player(secondRR) };
+            states[0].Profile = new ProfileRecord { Name = "First", Tag = "ONE" };
+            states[1].Profile = new ProfileRecord { Name = "Second", Tag = "TWO" };
             foreach (var state in states) state.ActiveMatch = new ActiveMatchRecord
                 { matchId = MatchId, expiresUnixSeconds = 1 + ActiveMatchClaims.LifetimeSeconds };
             players = states.Select(s => new FakeSettlementPlayerStore(s)).ToArray();
@@ -54,6 +56,48 @@ namespace NodeWar.Cloud.Tests
             matches = new HookMatchStore(new InMemoryMatchRecordStore(record));
             reporting = new MatchReporting(matches, id => players[id == "p0" ? 0 : 1],
                 RefereeTests.NewReferee(RefereeTests.Catalog(balance)), new InventoryRules(ServerCatalog.Items));
+        }
+
+        [Test]
+        public async Task MissingOpponentProfileStillSettlesWithEmptyHandle()
+        {
+            players[1].Mutate(s => s.Profile = null);
+            await Report(0);
+            Assert.That((await Report(1)).state, Is.EqualTo(MatchRecordState.Settled));
+            var summary = (await State(0)).History.Summaries.Single();
+            Assert.That(summary.OpponentName, Is.Empty);
+            Assert.That(summary.OpponentTag, Is.Empty);
+        }
+
+        [Test]
+        public async Task PartialSettlementRetryCountsEachPlayerOnce()
+        {
+            await Report(0);
+            players[1].BeforeWrite = () => throw new IOException("interrupted after first player");
+            Assert.ThrowsAsync<IOException>(() => Report(1));
+            Assert.That((await State(0)).History.Stats.Matches, Is.EqualTo(1));
+            Assert.That((await State(1)).History.Stats.Matches, Is.Zero);
+            players[1].BeforeWrite = null;
+            await Report(1);
+            await Report(0);
+            for (int i = 0; i < 2; i++)
+            {
+                var state = await State(i);
+                Assert.That(state.History.Stats.Matches, Is.EqualTo(1));
+                Assert.That(state.History.Summaries, Has.Count.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public async Task VoidDoesNotCount()
+        {
+            await Report(0);
+            Assert.That((await Report(1, now: 701)).state, Is.EqualTo(MatchRecordState.Void));
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That((await State(i)).History.Stats.Matches, Is.Zero);
+                Assert.That((await State(i)).History.Summaries, Is.Empty);
+            }
         }
 
         [Test]
@@ -81,6 +125,13 @@ namespace NodeWar.Cloud.Tests
                 Assert.That(player.Rating.LastMatchUnixSeconds, Is.EqualTo(110));
             }
             Assert.That(players.Select(p => p.WriteCount), Is.EqualTo(new[] { 1, 1 }));
+            Assert.That(winner.History.Stats.Matches, Is.EqualTo(1));
+            Assert.That(winner.History.Stats.Wins, Is.EqualTo(1));
+            Assert.That(winner.History.Stats.BestRR, Is.EqualTo(winner.Rank.RR));
+            Assert.That(loser.History.Stats.Losses, Is.EqualTo(1));
+            Assert.That(loser.History.Stats.Streak, Is.Zero);
+            Assert.That(winner.History.Summaries.Single().OpponentName, Is.EqualTo("Second"));
+            Assert.That(loser.History.Summaries.Single().OpponentTag, Is.EqualTo("ONE"));
             Assert.That(matches.Inner.ReadLog(MatchId, 0), Is.EqualTo(Convert.ToBase64String(winningBytes)));
             Assert.That(matches.Inner.ReadLog(MatchId, 1), Is.EqualTo(Convert.ToBase64String(MatchLogFormat.Write(secondLog))));
             Assert.That((await Record()).reports.All(r => r.pendingLogBase64 == null), Is.True);

@@ -27,6 +27,8 @@ namespace NodeWar.Backend
     {
         public string matchId;
         public string opponentPlayerId;
+        public string OpponentName;
+        public string OpponentTag;
         public MatchRecordState state;
         public long createdUnixSeconds;
         public bool? won;

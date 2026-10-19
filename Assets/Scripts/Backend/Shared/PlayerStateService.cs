@@ -14,6 +14,9 @@ namespace NodeWar.Backend
         public static string Display(ProfileRecord profile, string fallback) =>
             profile != null ? profile.Name + "#" + profile.Tag : fallback;
 
+        public static string Display(string name, string tag, string fallback) =>
+            string.IsNullOrEmpty(name) ? fallback : name + (string.IsNullOrEmpty(tag) ? "" : "#" + tag);
+
         public static string FirstRunName(string localName)
         {
             var name = new System.Text.StringBuilder();

@@ -44,7 +44,7 @@ namespace NodeWar.Cloud
     /// read them, and only a service token (this module) can write them.
     /// </summary>
     public sealed class CloudSavePlayerRecordStore : IPlayerRecordStore, ISettlementPlayerStore, ILockedPlayerRecordStore,
-        IDisciplinePlayerStore, IWalletStore, IProfileStore
+        IDisciplinePlayerStore, IWalletStore, IProfileStore, IProfileViewStore
     {
         private readonly IGameApiClient api;
         private readonly IExecutionContext context;
@@ -63,7 +63,11 @@ namespace NodeWar.Cloud
         }
 
         public Task<LockedPlayerState> ReadForSettlementAsync() => ReadLockedAsync(
-            PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline }).ToList());
+            PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline, PlayerStateKeys.Profile }).ToList());
+
+        public async Task<PlayerState> ReadProfileViewAsync() => (await ReadLockedAsync(new List<string>
+            { PlayerStateKeys.Profile, PlayerStateKeys.Rank, PlayerStateKeys.History, PlayerStateKeys.Inventory })).State;
+
 
         // Everything the client is shown: settlement records, wallet and profile.
         private Task<LockedPlayerState> ReadWholeStateAsync() => ReadLockedAsync(

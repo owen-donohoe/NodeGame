@@ -82,12 +82,18 @@ namespace NodeWar.Cloud
                 };
             }
 
+            // Capture both handles in the reads settlement already needs, before
+            // writing either player. Conflicts refresh only the player's write state.
+            var stores = record.playerIds.Select(players).ToArray();
+            var initial = await Task.WhenAll(stores.Select(s => s.ReadForSettlementAsync()));
+            var profiles = initial.Select(r => r.State?.Profile).ToArray();
+
             for (int p = 0; p < 2; p++)
             {
-                var store = players(record.playerIds[p]);
+                var store = stores[p];
                 for (int attempt = 0; attempt < RetryLimit; attempt++)
                 {
-                    var read = await store.ReadForSettlementAsync();
+                    var read = attempt == 0 ? initial[p] : await store.ReadForSettlementAsync();
                     var state = read.State;
                     if (state?.History?.MatchIds == null || state.Inventory == null || state.Rating == null)
                         throw new InvalidOperationException("Match players must have initialized server records.");
@@ -111,9 +117,15 @@ namespace NodeWar.Cloud
                         HighestArena = settled.Rank.HighestArena };
                     inventory.GrantDefaults(state);
                     InventoryClamp.ClampToArena(state.Inventory, state.Rank.Arena);
-                    state.History.MatchIds.Insert(0, record.matchId);
-                    if (state.History.MatchIds.Count > 20)
-                        state.History.MatchIds.RemoveRange(20, state.History.MatchIds.Count - 20);
+                    if (state.History.Stats == null) state.History.Stats = new PlayerStats();
+                    PlayerStatsRules.Apply(state.History.Stats, winner == p, state.Rank.RR);
+                    HistorySummaryRules.Prepend(state.History, new HistorySummary
+                    {
+                        MatchId = record.matchId, OpponentId = record.playerIds[1 - p],
+                        OpponentName = profiles[1 - p]?.Name ?? "", OpponentTag = profiles[1 - p]?.Tag ?? "",
+                        Won = winner == p, RRDelta = settled.RRDelta, Arena = state.Rank.Arena,
+                        CreatedUnix = record.createdUnixSeconds
+                    });
                     try
                     {
                         await store.WriteForSettlementAsync(state, read.WriteLocks);

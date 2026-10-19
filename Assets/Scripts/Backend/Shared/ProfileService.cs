@@ -11,6 +11,7 @@ namespace NodeWar.Backend
         public int Losses;
         public int Streak;
         public int Best;
+        public int BestRR;
     }
 
     public sealed class MatchSummary
@@ -66,7 +67,7 @@ namespace NodeWar.Backend
                     Card = new PlayerCard { PlayerId = account ?? "self", Name = snapshot?.Profile?.Name ?? "Player",
                         Tag = snapshot?.Profile?.Tag ?? "", Arena = snapshot?.Rank?.Arena ?? 0,
                         RR = snapshot?.Rank?.RR ?? 0, Presence = PlayerPresence.Online },
-                    Stats = null, SuitIds = Copy(suits?.Invoke()), DistrictIds = Copy(districts?.Invoke())
+                    Stats = snapshot?.History?.Stats, SuitIds = Copy(suits?.Invoke()), DistrictIds = Copy(districts?.Invoke())
                 };
                 var entries = await history.GetAsync();
                 if (!string.Equals(account, selfId(), StringComparison.Ordinal))
@@ -86,7 +87,7 @@ namespace NodeWar.Backend
             return new PublicProfileView
             {
                 Card = card,
-                Stats = sample ? new PlayerStats { Matches = 10, Wins = 6, Losses = 4, Streak = 2, Best = 4 } : null,
+                Stats = sample ? new PlayerStats { Matches = 10, Wins = 6, Losses = 4, Streak = 2, BestRR = 240 } : null,
                 SuitIds = sample ? new[] { "suit_guardian", "suit_warrior" } : Array.Empty<string>(),
                 DistrictIds = sample ? new[] { "district_farm", "district_barracks" } : Array.Empty<string>(),
                 Recent = sample ? new List<MatchSummary> { new MatchSummary { MatchId = "sample-history-1",

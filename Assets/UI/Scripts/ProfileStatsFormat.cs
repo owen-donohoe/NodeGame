@@ -19,7 +19,7 @@ namespace NodeWar.Lobby
 
         public static string[] Values(PlayerStats stats) => stats == null
             ? new[] { Unknown, Unknown, Unknown, Unknown, Unknown, Unknown }
-            : new[] { Number(stats.Matches), Number(stats.Wins), Number(stats.Losses), WinRate(stats), Number(stats.Streak), Number(stats.Best) };
+            : new[] { Number(stats.Matches), Number(stats.Wins), Number(stats.Losses), WinRate(stats), Number(stats.Streak), Number(stats.BestRR) };
 
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
     }

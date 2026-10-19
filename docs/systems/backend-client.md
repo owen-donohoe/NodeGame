@@ -11,6 +11,8 @@ sources:
   - Assets/Scripts/Backend/Shared/MatchHistoryService.cs
   - Assets/Scripts/Backend/Shared/SocialService.cs
   - Assets/Scripts/Backend/Shared/ProfileService.cs
+  - Assets/Scripts/Backend/Shared/PlayerStatsRules.cs
+  - Assets/Scripts/Backend/UgsProfileService.cs
   - Assets/Scripts/Backend/Shared/GuildService.cs
   - Assets/Scripts/Backend/Shared/GuildPolicies.cs
   - Assets/Scripts/Backend/Shared/MatchReportService.cs
@@ -34,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: f576d156
+verified: 29ad7b26
 ---
 
 # Backend client
@@ -45,7 +47,7 @@ Client code asks services for authoritative account, inventory and ranked state.
 ## Interface
 `GameServices.InitializeAsync()` initializes UGS without requiring a player; account sign-in uses it. Data services await `EnsureReadyAsync()` for initialization plus sign-in. Editor environment follows Project Settings; Development Builds use `development`, releases `production`.
 
-`BackendServices` selects `Ugs*Service` or `Local*Service` for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Social`, `Profiles` and `Guild` are local in every build; no UGS adapters exist. `Tools > Node War > Backend > Admin` calls admin grants in Play mode. `LastKnownState`/`StateChanged` expose accepted current-account state; `RememberGuard` rejects previous-account results. Cloud module: `NodeWarCloud`.
+`BackendServices` selects `Ugs*Service` or `Local*Service` for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `Profiles`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Social` and `Guild` remain local. `Tools > Node War > Backend > Admin` calls admin grants in Play mode. `LastKnownState`/`StateChanged` expose accepted current-account state; `RememberGuard` rejects previous-account results. Cloud module: `NodeWarCloud`.
 
 Shared `ProtocolVersion.Current` is 6; the network serializer aliases this constant, and server allocation checks it alongside simulation/content identity.
 
@@ -53,13 +55,13 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 - `IAccountService`: `Current`, `Changed`, `EnsureSignedInAsync`, `LinkAsync`, `SwitchToLinkedAccountAsync`, `SignInWithAccountAsync`, `SignOutAsync`. `AccountInfo` carries status, player ID and display name; `LinkResult` distinguishes conflict from success.
 - `IPlayerStateService.GetAsync()` returns `PlayerState`; `IInventoryService.EquipAsync(EquippedRecord changes)` and `IHandleService.SetHandleAsync(name, tag, requestId)` (`BackendServices.Handles`; server only) return accepted state.
 - `IMatchReportService.ReportAsync(matchId, byte[] log)` returns `MatchReportingResult` with nullable `state`, `message`, `playerState`; UGS sends base64 to `ReportMatch`.
-- `IMatchHistoryService.GetAsync()` returns `List<MatchHistoryEntry>`: ID, opponent, record state, creation time, optional win/RR delta/arena.
+- `IMatchHistoryService.GetAsync()` returns `List<MatchHistoryEntry>`: ID, opponent ID and snapshotted `OpponentName`/`OpponentTag`, state, creation time, optional win/RR delta/arena.
 - `IGuildService.GetMineAsync/SearchAsync/BrowseAsync/GetChatAsync/SendChatAsync` supplies membership, filtered summaries, public browse and chat. `LocalGuildService.InGuild` switches sample membership. `GuildFilters`, `GuildChatText` and session-scoped `GuildBrowseCache` guard filtering, 200-character messages and load-once/explicit-refresh browse policy.
-- `ISocialService.GetLiveMatchesAsync/GetFriendsAsync` return `LiveMatch`/`PlayerCard` lists with presence. `IProfileService.GetAsync(playerId)` returns `PublicProfileView`: card, nullable stats, loadout IDs and recent summaries. Self uses accepted handle/rank, current local chosen slots and `IMatchHistoryService`; stats remain unknown. Local samples are deterministic.
+- `ISocialService.GetLiveMatchesAsync/GetFriendsAsync` return `LiveMatch`/`PlayerCard` lists. `IProfileService.GetAsync(playerId)` returns `PublicProfileView`: card, nullable stats, lobby loadout IDs and recent summaries. `UgsProfileService` calls `GetProfileView`, rejects account changes, and supports empty ID for self. Server presence is Offline; stats are Matches/Wins/Losses/Streak/BestRR. Local profiles use accepted self state/local slots/history or deterministic samples.
 - `IRankedQueueService.EnqueueAsync()` returns ticket ID; `PollAsync(ticketId)` returns `RankedQueueResult` (Searching/Found/Failed/TimedOut/Cancelled, match ID, message); `CancelAsync(ticketId)` deletes it.
 - `IRankedMatchService`: `RendezvousAsync(matchId, joinCode)`, `ConfirmConnectedAsync(matchId)`, `LeaveAsync(matchId, forfeit)`, `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)` map to Cloud Code `Rendezvous`, `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`, `ResolveHold`.
 
-`PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s) and `ProfileRecord` (`Name`, `Tag`, `NameNorm`, last free rename). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile`. `HandleRules` (validation, normalisation, rename cost) and `HandleDisplay` (Name#TAG, first-run name) are shared. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
+`PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs, stats, twenty retained summaries), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s) and `ProfileRecord` (`Name`, `Tag`, `NameNorm`, last free rename). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile`. `HandleRules` (validation, normalisation, rename cost) and `HandleDisplay` (Name#TAG, first-run name) are shared. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
 
 `RankedQueuePresenter.StartAsync(now)`, `Tick(now)`, `RequestCancelAsync()` and `Dispose()` drive `IRankedQueueView`; view events are `CancelRequested`, `ForfeitConfirmed`, `BotAccepted`. View methods show idle/search/found/failure/cancel/connecting/requeue/forfeit/waiting/bot-offer/blocked states. `MatchFound` and `BotMatchAccepted` hand off outcomes.
 
@@ -92,7 +94,7 @@ Presence runs every four seconds from draft onward, every second when urgent. Ho
 `PendingRankedReports.Add(playerId, matchId, log)` persists under `PendingReports`; `RetryAsync()` coalesces callers and sends only the signed-in player's files after match end, lobby load and queue preflight. Exceptions retain files; any server answer, including refusal, removes that pending upload.
 
 ## Decisions
-- Keep authoritative services behind async UGS adapters rather than local authority; Social/Profiles supply only placeholder local data.
+- Keep authoritative services behind async UGS adapters rather than local authority; Social/Guild supply placeholder local data.
 - Use direct client tickets and private server rendezvous rather than a queue proxy or public lobby.
 - Offer explicit account switching rather than merge anonymous progress on link conflict.
 

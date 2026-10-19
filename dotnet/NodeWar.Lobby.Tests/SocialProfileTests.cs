@@ -26,7 +26,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("—", ProfileStatsFormat.WinRate(null));
             CollectionAssert.AreEqual(new[] { "—", "—", "—", "—", "—", "—" }, ProfileStatsFormat.Values(null));
             CollectionAssert.AreEqual(new[] { "10", "6", "4", "60%", "2", "5" },
-                ProfileStatsFormat.Values(new PlayerStats { Matches = 10, Wins = 6, Losses = 4, Streak = 2, Best = 5 }));
+                ProfileStatsFormat.Values(new PlayerStats { Matches = 10, Wins = 6, Losses = 4, Streak = 2, Best = 99, BestRR = 5 }));
         }
 
         [Test]
