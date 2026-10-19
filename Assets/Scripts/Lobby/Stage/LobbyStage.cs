@@ -142,7 +142,7 @@ namespace NodeWar.Lobby
             {
                 case StageShot.Market:
                     target = new Vector3(-10f, 0.7f, 0f);
-                    position = target + new Vector3(0f, 2f, -4.2f);
+                    position = target + new Vector3(0f, 2.5f, -5.7f);
                     break;
                 case StageShot.Social:
                     target = new Vector3(8f, 0f, 0f);
@@ -154,7 +154,8 @@ namespace NodeWar.Lobby
                     break;
                 default:
                     target = new Vector3(0f, 0f, 0f);
-                    position = new Vector3(0f, shot == StageShot.Loadout ? 10.5f : 11f, -15.5f);
+                    // Leave room for the separated cluster at the lobby's 390:844 portrait aspect.
+                    position = new Vector3(0f, shot == StageShot.Loadout ? 17.5f : 18f, -26f);
                     break;
             }
             rotation = Quaternion.LookRotation(target - position, Vector3.up);
@@ -166,8 +167,6 @@ namespace NodeWar.Lobby
             cluster = new DistrictCluster(equipped);
             for (int i = 0; i < districts.Length; i++)
             {
-                separations[i] = 0f;
-                plots[i].localPosition = slotPositions[i];
                 outlines[i].SetActive(false);
                 districts[i].SetActive(i < equipped);
                 if (i < equipped)
