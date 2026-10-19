@@ -106,6 +106,8 @@ namespace NodeWar.Lobby
         private readonly string[] notifications = System.Array.Empty<string>();
         private LocalCrateInventory crateInventory;
         private HomePage homePage;
+        private LobbyModePicker modePicker;
+        private LobbyModeSelection selectedMode;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
         public NodeWar.Backend.ICrateInventory Crates => crateInventory;
@@ -206,6 +208,7 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Dispose();
 
             playPopup = null;
+            modePicker = null;
             profilePage = null;
 
             // Before dropping it: a slider moved without the page being closed
@@ -314,6 +317,7 @@ namespace NodeWar.Lobby
             BindNav(root, "nav-guild", LobbyPageID.Guild);
 
             BuildPlayPopup();
+            BuildModePicker();
             RegisterPages();
             WireOverlays(root);
 
@@ -475,6 +479,19 @@ namespace NodeWar.Lobby
                 toast.Show("Cannot open the battle sheet: its layout is not assigned");
         }
 
+        private void BuildModePicker()
+        {
+            selectedMode = LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default);
+            modePicker = new LobbyModePicker(sheet);
+            modePicker.Selected += selection =>
+            {
+                selectedMode = selection;
+                var profile = PlayerProfile.Instance;
+                if (profile != null) { selection.Store(ref profile.data); profile.Save(); }
+                homePage?.SetMode(selection);
+            };
+        }
+
         /// <summary>
         /// The tab pages, registered in track order - left to right is the
         /// order the tab bar shows them.
@@ -491,10 +508,9 @@ namespace NodeWar.Lobby
                         && Routes != null && Routes.Count == 0, crateInventory);
                 homePage = home;
                 home.PlayRequested += OnPlayRequested;
-                home.ModeRequested += OnPlayRequested;
+                home.ModeRequested += () => modePicker.Open(selectedMode);
                 home.CrateRequested += size =>
                 crateScreen?.Open(size, crateInventory);
-                if (playPopup != null) playPopup.ModeChanged += home.SetMode;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }

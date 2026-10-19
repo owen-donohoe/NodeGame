@@ -175,7 +175,7 @@ namespace NodeWar.Lobby.Tests
             {
                 "username", "uuid", "trophies", "loadout", "unlockedSuitIDs", "unlockedNodeIDs",
                 "selectedGameModeIndex", "boxesAvailable", "boxProgress", "workshopTabIndex",
-                "accountLinkPromptShown", "settings"
+                "accountLinkPromptShown", "settings", "lobbyModeVersion", "selectedLobbyModeIndex", "privateLobbyMode"
             };
             CollectionAssert.AreEquivalent(keys, typeof(PlayerProfileData).GetFields().Select(f => f.Name));
 

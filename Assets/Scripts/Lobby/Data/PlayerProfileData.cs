@@ -17,6 +17,9 @@ namespace NodeWar.Lobby
         // Code reads and writes them through UnlockedDistrictIDs.
         public string[] unlockedNodeIDs;
         public int selectedGameModeIndex; // cast to GameMode
+        public int lobbyModeVersion;
+        public int selectedLobbyModeIndex;
+        public bool privateLobbyMode;
         public int boxesAvailable;
         public float boxProgress;
 
