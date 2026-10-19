@@ -45,4 +45,3 @@ namespace NodeWar.Lobby.Tests
 
     }
 }
-
