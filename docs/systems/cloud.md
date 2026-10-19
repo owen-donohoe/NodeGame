@@ -46,7 +46,7 @@ verified: 29ad7b26
 UGS Cloud Code and Cloud Save hold authority over ranked identity, results and progression while peers run gameplay. The server refuses client-proposed authority and settles only eligible outcomes.
 
 ## Interface
-Module `NodeWarCloud` exposes these Cloud Code functions; player calls use authenticated `context.PlayerId`, not a supplied player ID:
+Module `NodeWarCloud` exposes these Cloud Code functions; authority comes from authenticated `context.PlayerId`:
 - `GetPlayerState()` → `PlayerState`; initializes protected records including the wallet, grants the `ContentTable` starter kit and normalizes inventory.
 - `Equip(EquippedRecord changes)` → `PlayerState`; validates base, ownership and current-arena eligibility under an inventory write lock.
 - `VerifyMatch(string logBase64)` → `RefereeVerdict`; consistency verification only, without ranked settlement.
