@@ -36,6 +36,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="SocialProfileTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/SocialService.cs" Link="Backend/SocialService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/ProfileService.cs" Link="Backend/ProfileService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/MatchHistoryService.cs" Link="Backend/MatchHistoryService.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ProfileStatsFormat.cs" Link="Lobby/ProfileStatsFormat.cs" />
+    <Compile Include="../../Assets/UI/Scripts/FriendPresenceOrder.cs" Link="Lobby/FriendPresenceOrder.cs" />
     <Compile Include="CrateOpeningSequenceTests.cs" />
     <Compile Include="OverlayBackHandlerTests.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/CrateInventory.cs" Link="Backend/CrateInventory.cs" />

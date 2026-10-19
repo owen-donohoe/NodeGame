@@ -33,6 +33,16 @@ namespace NodeWar.Backend
         private static IMatchHistoryService matchHistory;
         private static IRankedQueueService rankedQueue;
         private static IRankedMatchService rankedMatch;
+        private static ISocialService social;
+        private static IProfileService profiles;
+
+        // No UGS implementation exists yet: these two services stay local in every build.
+        public static ISocialService Social => social ?? (social = new LocalSocialService());
+        public static IProfileService Profiles => profiles ?? (profiles = new LocalProfileService(
+            () => Account.Current?.PlayerId, () => LastKnownState, MatchHistory,
+            // Chosen slots are local; accepted handle, rank and equipment live in LastKnownState.
+            () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.suitIDs,
+            () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.districtIDs));
 
         /// <summary>
         /// The last player state any backend call returned this session, or null
@@ -82,6 +92,8 @@ namespace NodeWar.Backend
             matchHistory = null;
             rankedQueue = null;
             rankedMatch = null;
+            social = null;
+            profiles = null;
             lastKnown = null;
             lastKnownFor = null;
             StateChanged = null;
