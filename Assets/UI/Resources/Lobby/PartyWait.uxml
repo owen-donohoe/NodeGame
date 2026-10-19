@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="PartyWait.uss" />
+    <ui:VisualElement name="party-safe-area" class="lb-party-safe">
+        <ui:VisualElement class="lb-party-body">
+            <ui:Label text="Waiting for your party" class="lb-party-title" />
+            <ui:VisualElement class="lb-party-presence-row">
+                <ui:VisualElement class="lb-party-presence" />
+                <ui:Label name="party-invitee" enable-rich-text="false" />
+            </ui:VisualElement>
+            <ui:Label text="Guild online: —" />
+            <ui:VisualElement name="party-slots" class="lb-party-slots" />
+            <ui:Button name="party-invite" text="Invite" />
+            <ui:Button name="party-random" text="Queue randomly" />
+            <ui:Button name="party-cancel" text="Cancel" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

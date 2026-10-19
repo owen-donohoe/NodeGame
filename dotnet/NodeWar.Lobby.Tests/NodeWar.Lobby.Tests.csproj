@@ -49,6 +49,8 @@
     <Compile Include="LocalCrateInventoryTests.cs" />
     <Compile Include="HomeModeDisplayTests.cs" />
     <Compile Include="LobbyModeTests.cs" />
+    <Compile Include="PartyWaitModelTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/PartyWaitModel.cs" Link="Lobby/PartyWaitModel.cs" />
     <Compile Include="RecentOpponentListTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/RecentOpponentList.cs" Link="Lobby/RecentOpponentList.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyMode.cs" Link="Lobby/LobbyMode.cs" />

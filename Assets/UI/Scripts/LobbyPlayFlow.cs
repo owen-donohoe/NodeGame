@@ -19,6 +19,7 @@ namespace NodeWar.Lobby
         private readonly VisualElement searchRoot = new VisualElement();
         private readonly AsyncStateView recent = new AsyncStateView();
         private readonly AsyncStateView loading = new AsyncStateView();
+        private readonly PartyWaitScreen party;
         private AsyncState recentState = new AsyncState();
         private int searchVersion;
         private string recentPlayerId;
@@ -30,6 +31,13 @@ namespace NodeWar.Lobby
         {
             this.router = router; this.legacy = legacy; this.toast = toast; this.history = history;
             local = new MatchLauncher(catalog);
+            party = new PartyWaitScreen(shell, router);
+            PartyRequested += (mode, player) => party.Open(mode, player);
+            party.InviteRequested += () =>
+            {
+                Debug.Log("[Party] Invite placeholder member (not implemented)");
+                party.SetFilled(party.Filled + 1);
+            };
             invite = Panel(shell, "Invite to 1v1", "private-invite");
             search = Panel(shell, "Search players", "invite-search");
             choice = Panel(shell, "Party", "party-choice");
@@ -180,7 +188,7 @@ namespace NodeWar.Lobby
 
         public void Update()
         {
-            invite.Update(); search.Update(); choice.Update(); starting.Update(); local.Update();
+            invite.Update(); search.Update(); choice.Update(); starting.Update(); local.Update(); party.Update();
         }
 
         private bool IsSearchCurrent(int version, string playerId) => !disposed && version == searchVersion && search.IsOpen
@@ -189,6 +197,7 @@ namespace NodeWar.Lobby
         public void Dispose()
         {
             disposed = true; searchVersion++;
+            party.Dispose();
             if (legacy != null) legacy.BotRequested -= StartBot;
             invite.Close(); search.Close(); choice.Close(); starting.Close();
             local.Dispose();
