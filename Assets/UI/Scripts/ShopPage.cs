@@ -22,18 +22,16 @@ namespace NodeWar.Lobby
             "Coins: 40%", LobbyCurrencyNames.Premium + ": 20%", "District: 15%", "Suit: 15%", "Skin: 10%"
         };
 
-        private readonly ScrollView scroll;
         private readonly VisualElement host;
-        private readonly VisualElement tail;
-        private readonly VisualElement[] stalls = new VisualElement[6];
+        private readonly VisualElement[] stalls = new VisualElement[5];
         private readonly VisualElement[] offers = new VisualElement[6];
-        private readonly Label[] countdowns = new Label[6];
-        private readonly float[] tops = new float[6];
-        private readonly float[] heights = new float[6];
-        private readonly DateTime[] resets = new DateTime[6];
+        private readonly Label[] countdowns = new Label[5];
+        private readonly DateTime[] resets = new DateTime[5];
+        private readonly ShopPanelPose[] poses = new ShopPanelPose[5];
         private readonly IVisualElementScheduledItem motion;
         private readonly IVisualElementScheduledItem clock;
-        private readonly float deceleration;
+        private readonly ShopSnap walk = new ShopSnap();
+        private LobbyStage stage;
         private ClaimPanel claims;
         private BadgeBoard badges;
         private Offer pending;
@@ -41,48 +39,43 @@ namespace NodeWar.Lobby
         private DateTime dailyDate;
         private DateTime bundleStart;
         private bool dailyClaimed;
-        private bool dragging;
-        private bool needsSnap;
-        private bool snapping;
-        private float snapTarget;
-        private float previousY;
-        private float dragStartY;
-        private float direction;
         private double previousTime;
-        private int pendingStall = -1;
-        private bool geometryReady;
-
+        private int pointer = -1;
+        private Vector2 dragStart;
+        private Vector2 dragPrevious;
+        private long dragTime;
+        private SwipeAxis axis;
+        private bool shown;
         // Keep the shell's construction signature; the shared claim panel is bound after pages register.
         public ShopPage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast, LobbyContextMenu menu)
             : base(LobbyPageID.Shop, Build())
         {
             Root.userData = this;
-            scroll = Root.Q<ScrollView>("shop-scroll");
-            deceleration = scroll.scrollDecelerationRate;
             host = Root.Q("shop-stalls");
-            tail = Root.Q("shop-tail");
             dailyDate = DateTime.Now.Date;
             bundleStart = DateTime.Now;
-            for (int i = 0; i < stalls.Length; i++) BuildStall(i);
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                BuildStall(i);
+                poses[i] = new ShopPanelPose(float.NaN, float.NaN, float.NaN, false);
+            }
+            // Bank contains two shelves, but is a single camera stop.
+            offers[5] = new VisualElement();
+            offers[5].AddToClassList("lb-market-offers");
+            stalls[4].Add(offers[5]);
             BuildOffers();
             RefreshCountdowns();
-            scroll.RegisterCallback<PointerDownEvent>(evt =>
+            Root.RegisterCallback<PointerDownEvent>(BeginPointer, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerMoveEvent>(MovePointer, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerUpEvent>(EndPointer, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerCancelEvent>(_ => CancelPointer());
+            Root.RegisterCallback<PointerCaptureOutEvent>(_ => CancelPointer());
+            Root.RegisterCallback<WheelEvent>(evt =>
             {
-                if (evt.button != 0) return;
-                dragging = true; snapping = needsSnap = false;
-                scroll.scrollDecelerationRate = deceleration;
-                direction = 0f; dragStartY = scroll.scrollOffset.y;
-            }, TrickleDown.TrickleDown);
-            scroll.RegisterCallback<PointerUpEvent>(evt => EndDrag(), TrickleDown.TrickleDown);
-            scroll.RegisterCallback<PointerCancelEvent>(evt => EndDrag(), TrickleDown.TrickleDown);
-            scroll.RegisterCallback<WheelEvent>(evt =>
-            {
-                snapping = false; needsSnap = true;
-                scroll.scrollDecelerationRate = deceleration;
-            }, TrickleDown.TrickleDown);
-            scroll.contentContainer.RegisterCallback<GeometryChangedEvent>(evt => CacheGeometry());
-            scroll.contentViewport.RegisterCallback<GeometryChangedEvent>(evt => CacheGeometry());
-            motion = Root.schedule.Execute(Animate).Every(16);
+                if (Mathf.Abs(evt.delta.x) >= Mathf.Abs(evt.delta.y)) return;
+                walk.ScrollTo(ShopSnap.Target(walk.Position + Mathf.Sign(evt.delta.y) * 0.01f, evt.delta.y));
+                evt.StopPropagation();
+            });            motion = Root.schedule.Execute(Animate).Every(16);
             motion.Pause();
             clock = Root.schedule.Execute(RefreshCountdowns).Every(1000);
             Root.RegisterCallback<DetachFromPanelEvent>(evt =>
@@ -117,11 +110,9 @@ namespace NodeWar.Lobby
         {
             var stall = new VisualElement { name = "stall-" + StallNames[index] };
             stall.AddToClassList("lb-market-stall");
-            var keeper = new Label("M") { tooltip = "Marketeer placeholder", pickingMode = PickingMode.Ignore };
-            keeper.AddToClassList("lb-marketeer");
-            stall.Add(keeper);
-            var title = new Label(Titles[index]);
+            var title = new Label(index == 4 ? "Bank" : Titles[index]);
             title.AddToClassList("lb-market-title");
+            title.AddToClassList("ui-w700");
             stall.Add(title);
             countdowns[index] = new Label();
             countdowns[index].AddToClassList("lb-market-countdown");
@@ -213,94 +204,133 @@ namespace NodeWar.Lobby
             }
         }
 
+        public void BindStage(LobbyStage value) => stage = value;
+
         public override void OnShow()
         {
+            shown = true;
             previousTime = Time.unscaledTimeAsDouble;
-            previousY = scroll.scrollOffset.y;
             RefreshCountdowns();
-            CacheGeometry();
+            clock.Resume();
             motion.Resume();
         }
 
         public override void OnHide()
         {
+            shown = false;
             motion.Pause();
-            dragging = snapping = needsSnap = false;
-            scroll.scrollDecelerationRate = deceleration;
+            clock.Pause();
+            CancelPointer();
+            walk.Stop();
         }
 
         public void ScrollTo(string stall)
         {
             int index = Array.IndexOf(StallNames, stall?.ToLowerInvariant());
+            if (stall == "bank") index = 4;
             if (index < 0) return;
-            pendingStall = index;
-            dragging = snapping = needsSnap = false;
-            scroll.scrollDecelerationRate = 0f;
-            CacheGeometry();
+            CancelPointer();
+            walk.ScrollTo(Math.Min(4, index));
         }
 
-        private void EndDrag()
+        private void BeginPointer(PointerDownEvent evt)
         {
-            if (!dragging) return;
-            dragging = false;
-            needsSnap = Mathf.Abs(scroll.scrollOffset.y - dragStartY) > 4f;
+            if (evt.button != 0 || pointer >= 0) return;
+            pointer = evt.pointerId;
+            dragStart = dragPrevious = evt.position;
+            dragTime = evt.timestamp;
+            axis = SwipeAxis.Pending;
         }
 
-        private void CacheGeometry()
+        private void MovePointer(PointerMoveEvent evt)
         {
-            geometryReady = false;
-            for (int i = 0; i < stalls.Length; i++)
+            if (evt.pointerId != pointer) return;
+            Vector2 point = evt.position;
+            Vector2 delta = point - dragStart;
+            if (axis == SwipeAxis.Pending)
             {
-                tops[i] = host.layout.y + stalls[i].layout.y;
-                heights[i] = stalls[i].layout.height;
-                if (heights[i] <= 0f || float.IsNaN(heights[i]) || float.IsNaN(tops[i])) return;
+                axis = SwipeDecision.Lock(delta.x, delta.y);
+                if (axis == SwipeAxis.Vertical)
+                {
+                    walk.BeginDrag();
+                    Root.CapturePointer(pointer);
+                }
             }
-            geometryReady = true;
-            float padding = Mathf.Max(0f, scroll.contentViewport.layout.height - heights[heights.Length - 1]);
-            if (!Mathf.Approximately(tail.resolvedStyle.height, padding)) tail.style.height = padding;
-            if (pendingStall < 0 || heights[pendingStall] <= 0f || float.IsNaN(heights[pendingStall])) return;
-            // Wait for layout after Show(Shop), including any tail padding needed by the last stall.
-            if (scroll.verticalScroller.highValue + 1f < tops[pendingStall]) return;
-            scroll.scrollOffset = new Vector2(0f, tops[pendingStall]);
-            previousY = scroll.scrollOffset.y;
-            pendingStall = -1;
-            scroll.scrollDecelerationRate = deceleration;
+            if (axis != SwipeAxis.Vertical) return;
+            float pixelsPerStall = Mathf.Max(200f, Root.layout.height * 0.65f);
+            walk.Drag(-(point.y - dragPrevious.y) / pixelsPerStall,
+                Mathf.Max(0.001f, (evt.timestamp - dragTime) / 1000f));
+            dragPrevious = point;
+            dragTime = evt.timestamp;
+            evt.StopPropagation();
+        }
+
+        private void EndPointer(PointerUpEvent evt)
+        {
+            if (evt.pointerId != pointer) return;
+            bool vertical = axis == SwipeAxis.Vertical;
+            if (vertical) walk.Release();
+            int released = pointer;
+            pointer = -1;
+            if (Root.HasPointerCapture(released)) Root.ReleasePointer(released);
+            if (vertical) evt.StopPropagation();
+        }
+
+        private void CancelPointer()
+        {
+            int released = pointer;
+            pointer = -1;
+            if (walk.Dragging) walk.Release();
+            if (released >= 0 && Root.HasPointerCapture(released)) Root.ReleasePointer(released);
         }
 
         private void Animate()
         {
+            if (!shown || stage == null || Root.panel == null || Root.layout.height <= 0f) return;
             double now = Time.unscaledTimeAsDouble;
-            float delta = (float)(now - previousTime);
+            walk.Step(Mathf.Min(0.05f, (float)(now - previousTime)));
             previousTime = now;
-            if (delta <= 0f) return;
-            if (pendingStall >= 0) CacheGeometry();
-            if (!geometryReady) return;
-            float y = scroll.scrollOffset.y;
-            float velocity = (y - previousY) / delta;
-            if (Mathf.Abs(velocity) > 0.1f) direction = Mathf.Sign(velocity);
-            previousY = y;
-            if (!dragging && needsSnap && !snapping)
+            stage.SetShopScroll(walk.Position);
+            Camera camera = stage.ShopCamera;
+            for (int i = 0; i < stalls.Length; i++)
             {
-                float? target = ShopSnap.Target(y, velocity == 0f ? direction * 0.01f : velocity, tops);
-                if (target.HasValue)
-                {
-                    snapTarget = Mathf.Clamp(target.Value, scroll.verticalScroller.lowValue, scroll.verticalScroller.highValue);
-                    scroll.scrollDecelerationRate = 0f;
-                    snapping = true; needsSnap = false;
-                }
+                Vector3 anchor = stage.ShopAnchor(i);
+                Vector3 screen = camera.WorldToScreenPoint(anchor);
+                Vector2 point = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
+                    new Vector2(screen.x, Screen.height - screen.y)));
+                // At rest all anchors project to the same point. Offset each panel's
+                // vertical origin to its declared screen anchor in the usable page.
+                Vector3 restAnchor = stage.ShopAnchor(0);
+                Vector3 restScreen = camera.WorldToScreenPoint(restAnchor +
+                    Vector3.back * walk.Position * 6f);
+                Vector2 restPoint = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
+                    new Vector2(restScreen.x, Screen.height - restScreen.y)));
+                float vertical = ShopSnap.ScreenAnchor(i);
+                float desiredY = i == 0 ? 8f : host.layout.height * vertical;
+                ShopPanelPose pose = ShopProjection.Project(point.x, point.y + desiredY - restPoint.y,
+                    screen.z, Vector3.Distance(camera.transform.position, anchor),
+                    Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.65f * 0.65f),
+                    i, walk.Position, stalls[i].layout.height, vertical);
+                ApplyPose(i, pose);
             }
-            if (snapping)
-            {
-                y = Mathf.MoveTowards(y, snapTarget, delta * 1200f);
-                scroll.scrollOffset = new Vector2(0f, y);
-                if (Mathf.Abs(y - snapTarget) < 0.5f)
-                {
-                    snapping = false;
-                    scroll.scrollDecelerationRate = deceleration;
-                }
-            }
-            for (int i = 0; i < offers.Length; i++)
-                offers[i].style.scale = new Scale(Vector3.one * ShopSnap.Shrink(y, tops[i], heights[i]));
+        }
+
+        private void ApplyPose(int index, ShopPanelPose pose)
+        {
+            VisualElement panel = stalls[index];
+            ShopPanelPose previous = poses[index];
+            if (pose.Visible != previous.Visible || float.IsNaN(previous.X))
+                panel.style.visibility = pose.Visible ? Visibility.Visible : Visibility.Hidden;
+            if (ShopProjection.Changed(previous.X, pose.X, 0.25f)) panel.style.left = pose.X;
+            if (ShopProjection.Changed(previous.Y, pose.Y, 0.25f)) panel.style.top = pose.Y;
+            if (ShopProjection.Changed(previous.Scale, pose.Scale, 0.001f))
+                panel.style.scale = new Scale(new Vector3(pose.Scale, pose.Scale, 1f));
+            // Cache the values actually written, so sub-epsilon motion accumulates.
+            poses[index] = new ShopPanelPose(
+                ShopProjection.Changed(previous.X, pose.X, 0.25f) ? pose.X : previous.X,
+                ShopProjection.Changed(previous.Y, pose.Y, 0.25f) ? pose.Y : previous.Y,
+                ShopProjection.Changed(previous.Scale, pose.Scale, 0.001f) ? pose.Scale : previous.Scale,
+                pose.Visible);
         }
     }
 }
