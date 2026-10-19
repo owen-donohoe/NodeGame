@@ -509,3 +509,27 @@
     translate: 21px 0;
 }
 
+
+/* Paper geometry is retained by PaperCard; native fills must not cover its edge. */
+.ui-paper {
+    --paper-card-fill: var(--paper-light);
+    --paper-card-ink: var(--paper-ink);
+    --paper-card-width: var(--paper-ink-width);
+    --paper-card-shadow: var(--paper-shadow);
+    --paper-card-shadow-x: var(--paper-shadow-x);
+    --paper-card-shadow-y: var(--paper-shadow-y);
+    --paper-card-wobble: var(--paper-wobble);
+    --paper-card-grain: var(--paper-grain-opacity);
+    background-color: var(--clear);
+    border-color: var(--clear);
+    border-radius: var(--corner-md);
+}
+.ui-paper--gold { --paper-card-fill: var(--paper-gold); }
+.ui-paper--chip { --paper-card-fill: var(--paper-dark); border-radius: var(--corner-sm); }
+.ui-paper--button:active { translate: 0 3px; --paper-card-shadow-y: 0px; }
+.ui-paper-button { min-width: var(--target-min); min-height: var(--target-min); color: var(--ink); }
+.ui-paper__underlay { position: absolute; left: -3px; right: -3px; top: -3px; bottom: -3px; }
+.ui-paper-button--gold > .ui-paper { --paper-card-fill: var(--paper-gold); }
+.ui-paper-button--urgent > .ui-paper { --paper-card-fill: var(--paper-urgent); }
+.ui-paper-button__caption { -unity-text-align: middle-center; white-space: normal; flex-shrink: 1; }
+.ui-paper-button:active { translate: 0 3px; }
