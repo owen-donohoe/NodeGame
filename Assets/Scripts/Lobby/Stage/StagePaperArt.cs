@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace NodeWar.Lobby
@@ -18,6 +18,10 @@ namespace NodeWar.Lobby
         private static readonly Color Parchment = new Color32(244, 233, 213, 255);
         private readonly List<Entry> textures = new List<Entry>();
 
+        private readonly int screenHeight;
+
+        public StagePaperArt(int screenHeight) { this.screenHeight = screenHeight; }
+
         public Texture2D TextureFor(PaperKind kind, Color tint, bool silhouette = false)
         {
             // Selection backings only need the alpha mask, independent of item tint.
@@ -29,8 +33,8 @@ namespace NodeWar.Lobby
                     return entry.Texture;
             }
 
-            const int size = 128;
-            byte[] mask = PaperRasterizer.Rasterize(kind, size, size);
+            int size = PaperRasterizer.TextureSize(kind, screenHeight);
+            byte[] mask = PaperRasterizer.RasterizeCoverage(kind, size, out byte[] alpha);
             var pixels = new Color32[mask.Length];
             Color paper = Color.Lerp(Parchment, tint, 0.32f);
             for (int y = 0; y < size; y++)
@@ -41,7 +45,7 @@ namespace NodeWar.Lobby
                     if (silhouette) colour = Color.white;
                     else if (mask[index] == 1) colour = paper * PaperRasterizer.Grain(x, y);
                     else colour = Ink;
-                    colour.a = mask[index] == 0 ? 0f : 1f;
+                    colour.a = alpha[index] / 255f;
                     pixels[index] = colour;
                 }
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, true)

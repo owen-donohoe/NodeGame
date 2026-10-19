@@ -18,7 +18,7 @@ namespace NodeWar.Lobby
         private ShopMarketFrame marketFrame;
         private float marketAspect;
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
-        private static readonly Color Sea = new Color(0.63f, 0.70f, 0.67f);
+        private static readonly Color Sea = new Color(0.42f, 0.61f, 0.72f);
 
         // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
         private static readonly Color32[] Tints =
@@ -29,7 +29,7 @@ namespace NodeWar.Lobby
             new Color32(158, 122, 40, 255), new Color32(140, 62, 62, 255)
         };
 
-        private readonly StagePaperArt paper = new StagePaperArt();
+        private StagePaperArt paper;
         private readonly List<Material> materials = new List<Material>();
         private readonly Transform[] plots = new Transform[StageSlots.Count];
         private readonly GameObject[] districts = new GameObject[StageSlots.Count];
@@ -38,6 +38,7 @@ namespace NodeWar.Lobby
         private readonly GameObject[] outlines = new GameObject[StageSlots.Count];
         private readonly float[] separations = new float[StageSlots.Count];
         private readonly Transform[] marketmen = new Transform[5];
+        private readonly GameObject[] marketStalls = new GameObject[5];
         private Transform[] suits = Array.Empty<Transform>();
         private Vector3[] suitTargets = Array.Empty<Vector3>();
         private float[] suitWaits = Array.Empty<float>();
@@ -71,6 +72,7 @@ namespace NodeWar.Lobby
 
         private void Build()
         {
+            paper = new StagePaperArt(Mathf.Max(Screen.width, Screen.height));
             shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null) shader = Shader.Find("Unlit/Color");
             var cameraObject = new GameObject("Stage Camera");
@@ -91,6 +93,7 @@ namespace NodeWar.Lobby
             stageCamera.fieldOfView = ShopMarketFraming.FieldOfView;
             stageCamera.allowHDR = false;
             stageCamera.allowMSAA = false;
+            stageCamera.transparencySortMode = TransparencySortMode.Perspective;
             // TODO: add the URP Volume depth-of-field hook during the visual pass.
 
             Primitive("Ocean (unplaceable edge)", PrimitiveType.Plane, transform,
@@ -117,6 +120,11 @@ namespace NodeWar.Lobby
                 outlines[i].SetActive(false);
                 districts[i] = Cutout("District", plots[i], PaperKind.House,
                     new Vector3(0f, 0.03f, 0.35f), new Vector2(1.9f, 1.65f), Tints[0]);
+                // Match centres so the enlarged backing stays farther away in the
+                // transparent queue, even when the camera looks down at the facade.
+                Vector3 backing = outlines[i].transform.localPosition;
+                backing.y = districts[i].transform.localPosition.y;
+                outlines[i].transform.localPosition = backing;
                 districts[i].SetActive(false);
             }
 
@@ -130,6 +138,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < names.Length; i++)
             {
                 var stall = new GameObject(names[i] + " stall");
+                marketStalls[i] = stall;
                 stall.transform.SetParent(market.transform, false);
                 stall.transform.localPosition = new Vector3(ShopMarketFraming.StallX, 0f, -i * ShopStallSpacing);
                 Cutout("Stall facade", stall.transform, PaperKind.Stall,
@@ -166,9 +175,22 @@ namespace NodeWar.Lobby
 
         private void LateUpdate()
         {
+            UpdateMarketVisibility();
             BillboardFigures(suits);
             BillboardFigures(marketmen);
             UpdateFocusProjection();
+        }
+
+        private void UpdateMarketVisibility()
+        {
+            Vector3 cameraPosition = stageCamera.transform.position;
+            for (int i = 0; i < marketStalls.Length; i++)
+            {
+                GameObject stall = marketStalls[i];
+                Vector3 centre = stall.transform.position + Vector3.up;
+                bool visible = ShopMarketFraming.ShouldRenderStall((centre - cameraPosition).sqrMagnitude);
+                if (stall.activeSelf != visible) stall.SetActive(visible);
+            }
         }
 
         private void BillboardFigures(Transform[] figures)
@@ -176,7 +198,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < figures.Length; i++)
             {
                 Transform figure = figures[i];
-                if (figure == null) continue;
+                if (figure == null || !figure.gameObject.activeInHierarchy) continue;
                 // Keep feet on the ground. Camera pitch never tips a paper figure.
                 Vector3 forward = figure.position - stageCamera.transform.position;
                 forward.y = 0f;
@@ -432,13 +454,21 @@ private static PaperKind DistrictPaper(int type)
             material.SetShaderPassEnabled("ShadowCaster", false);
             if (texture != null)
             {
-                material.SetFloat("_AlphaClip", 1f);
-                material.SetFloat("_Cutoff", 0.5f);
-                material.SetFloat("_Surface", 0f);
-                material.SetFloat("_ZWrite", 1f);
-                material.EnableKeyword("_ALPHATEST_ON");
-                material.SetOverrideTag("RenderType", "TransparentCutout");
-                material.renderQueue = (int)RenderQueue.AlphaTest;
+                // A binary clip discards subpixel coverage. Straight-alpha blending
+                // retains it; Unity's transparent queue sorts these separate flats back to front.
+                material.SetFloat("_AlphaClip", 0f);
+                material.DisableKeyword("_ALPHATEST_ON");
+                material.SetFloat("_Surface", 1f);
+                material.SetFloat("_Blend", 0f);
+                material.SetFloat("_ZWrite", 0f);
+                material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+                material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+                material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.renderQueue = (int)RenderQueue.Transparent;
             }
             materials.Add(material);
             return material;
@@ -486,7 +516,7 @@ private static PaperKind DistrictPaper(int type)
         private void OnDestroy()
         {
             for (int i = 0; i < materials.Count; i++) Destroy(materials[i]);
-            paper.Dispose();
+            paper?.Dispose();
         }
     }
 }
