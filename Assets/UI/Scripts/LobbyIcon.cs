@@ -144,16 +144,16 @@ namespace NodeWar.Lobby
 
             switch (kind)
             {
-                case LobbyIconKind.NavBarShop:
+                case LobbyIconKind.NavBarShop: DrawMarket(p); break;
                 case LobbyIconKind.CosmeticTinRoof:
                 case LobbyIconKind.Shop: DrawShop(p); break;
-                case LobbyIconKind.NavBarHome:
+                case LobbyIconKind.NavBarHome: DrawShop(p); break;
                 case LobbyIconKind.DailyBox:
                 case LobbyIconKind.MagicResource:
                 case LobbyIconKind.IndicatorEffect:
                 case LobbyIconKind.Spark: DrawSpark(p); break;
                 case LobbyIconKind.Tools: DrawTools(p); break;
-                case LobbyIconKind.NavBarSocial:
+                case LobbyIconKind.NavBarSocial: DrawSocial(p); break;
                 case LobbyIconKind.EmoteHappy:
                 case LobbyIconKind.Smile: DrawSmile(p); break;
                 case LobbyIconKind.Gear: DrawGear(p); break;
@@ -239,6 +239,24 @@ namespace NodeWar.Lobby
             Line(p, 4, 6, 20, 6);
             Line(p, 4, 12, 20, 12);
             Line(p, 4, 18, 20, 18);
+        }
+
+        private static void DrawMarket(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(3, 10)); p.LineTo(new Vector2(6, 3));
+            p.LineTo(new Vector2(18, 3)); p.LineTo(new Vector2(21, 10)); p.ClosePath(); p.Stroke();
+            Line(p, 5, 10, 5, 21); Line(p, 19, 10, 19, 21); Line(p, 5, 21, 19, 21);
+            Line(p, 9, 4, 8, 10); Line(p, 15, 4, 16, 10); Line(p, 8, 16, 16, 16);
+        }
+
+        private static void DrawSocial(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(8, 7), 3, 0, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(17, 8), 2.5f, 0, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(8, 21), 6, 180, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(17, 21), 4.5f, 220, 360); p.Stroke();
         }
 
         private static void DrawBell(Painter2D p)

@@ -94,8 +94,21 @@ namespace NodeWar.Lobby
         private MatchHistoryPage matchHistoryPage;
         private LobbyOverlayRouter router;
         private ClaimPanel claimPanel;
-        public CrateScreen crateScreen;
+        private CrateScreen crateScreen;
         private bool confirmingExit;
+        private LobbyStage stage;
+        private string[] stageDistrictIds;
+        private string[] stageSuitIds;
+        private int[] stageDistrictTypes;
+        private int[] stageSuitTypes;
+        private LobbyOverlayPanel burgerPanel;
+        private LobbyOverlayPanel bellPanel;
+        private readonly string[] notifications = System.Array.Empty<string>();
+        private LocalCrateInventory crateInventory;
+        private HomePage homePage;
+        private VisualElement safeAreaRoot;
+        private VisualElement pillDock;
+        public NodeWar.Backend.ICrateInventory Crates => crateInventory;
 
         public LobbyRouteStack Routes => router?.Stack;
         public ClaimPanel Claims => claimPanel;
@@ -171,8 +184,23 @@ namespace NodeWar.Lobby
 
         private void OnDisable()
         {
+            NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
+            homePage?.OnHide();
+            homePage = null;
+            if (crateInventory != null) crateInventory.Changed -= RefreshCrateBadges;
+            crateInventory = null;
+            safeAreaRoot = pillDock = null;
             Application.deepLinkActivated -= HandleDeepLink;
             router?.CloseAll();
+            burgerPanel = bellPanel = null;
+            if (stage != null)
+            {
+                stage.SetVisible(false);
+                Destroy(stage.gameObject);
+            }
+            stage = null;
+            stageDistrictIds = stageSuitIds = null;
+            stageDistrictTypes = stageSuitTypes = null;
             // Dispose before dropping the reference: the popup may own a live
             // socket, and leaving one open would collide with the next attempt.
             if (playPopup != null) playPopup.Dispose();
@@ -214,12 +242,19 @@ namespace NodeWar.Lobby
             // Cheap: each returns immediately unless the safe area, the screen
             // or the panel size actually changed.
             if (safeArea != null) safeArea.Update();
+            // The absolute dock needs the full safe area's inset in its anchor.
+            if (pillDock != null && safeAreaRoot != null)
+                pillDock.style.bottom = 26f + safeAreaRoot.resolvedStyle.paddingBottom;
+            crateInventory?.Refresh();
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();
             if (matchHistoryPage != null) matchHistoryPage.Update();
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
+            burgerPanel?.Update();
+            bellPanel?.Update();
+            WatchStageLoadout();
             if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true)
                 HandleBack();
         }
@@ -238,8 +273,22 @@ namespace NodeWar.Lobby
             }
 
             safeArea = new SafeAreaBinder(safeAreaElement);
+            safeAreaRoot = safeAreaElement;
+            pillDock = root.Q<VisualElement>("tabbar-dock");
             router = new LobbyOverlayRouter();
             Badges = new BadgeBoard();
+            crateInventory = new LocalCrateInventory(
+                () => PlayerProfile.Instance != null ? PlayerProfile.Instance.BoxesAvailable : 0,
+                () => PlayerProfile.Instance != null ? PlayerProfile.Instance.BoxProgress : 0f,
+                count =>
+                {
+                    var profile = PlayerProfile.Instance;
+                    if (profile == null) return;
+                    profile.data.boxesAvailable = count;
+                    profile.Save();
+                });
+            crateInventory.Changed += RefreshCrateBadges;
+            RefreshCrateBadges();
             navigation = new NavigationController(pageHost);
             navigation.BindSwipes(() => Routes != null && Routes.Count > 0);
 
@@ -247,6 +296,7 @@ namespace NodeWar.Lobby
             // The catalog is the one answer to what the loadout may hold and what
             // the player owns - Workshop, Home and the battle sheet all ask it.
             catalog = new LoadoutCatalog(allSuits, allDistricts);
+            BuildStage(root);
             toast = new LobbyToast(root.Q<Label>("toast"));
             sheet = new LobbySheet(root);
             accountFlow = new AccountFlow(sheet);
@@ -277,17 +327,76 @@ namespace NodeWar.Lobby
 
         private void BuildChrome(VisualElement root)
         {
+            var layout = Resources.Load<VisualTreeAsset>("Lobby/Chrome");
+            if (layout != null)
+            {
+                root.Q<VisualElement>("top-bar")?.RemoveFromHierarchy();
+                root.Q<VisualElement>("strip-wrap")?.RemoveFromHierarchy();
+                var header = new VisualElement { name = "lobby-chrome" };
+                header.style.flexShrink = 0;
+                layout.CloneTree(header);
+                root.Q<VisualElement>("safe-area").Insert(0, header);
+            }
             // The chrome is outside every page, so it is bound once, and it
             // refreshes whenever a page shows or the player is renamed.
-            chrome = new LobbyChrome(root, toast);
+            chrome = new LobbyChrome(root.Q<VisualElement>("lobby-chrome") ?? root, toast, Badges);
+            chrome.CurrencyRequested += HandleDeepLink;
             navigation.PageShown += id => chrome.Refresh();
 
             VisualElement strip = root.Q<VisualElement>("strip-wrap");
             chrome.ProfileRequested += () => { if (profilePage != null) profilePage.Open(strip); };
-            chrome.SettingsRequested += () => { if (settingsPage != null) settingsPage.Open(); };
-            chrome.HistoryRequested += () => { if (matchHistoryPage != null) matchHistoryPage.Open(); };
+            chrome.SettingsRequested += () => burgerPanel?.Open();
+            chrome.HistoryRequested += OpenBell;
 
             if (profilePage != null) profilePage.Renamed += chrome.Refresh;
+        }
+
+        private void BuildStage(VisualElement root)
+        {
+            stage = LobbyStage.Create();
+            root.style.backgroundColor = Color.clear;
+            VisualElement shell = root.Q<VisualElement>("lobby-root");
+            shell.style.backgroundColor = Color.clear;
+            shell.AddToClassList("lb-stage");
+            var presentation = Resources.Load<StyleSheet>("Lobby/LobbyPresentation");
+            if (presentation != null) shell.styleSheets.Add(presentation);
+            VisualElement backdrop = root.Q<VisualElement>("backdrop");
+            if (backdrop != null) backdrop.style.display = DisplayStyle.None;
+            navigation.PageShown += id =>
+            {
+                stage.ShowShot(StageShots.ForPage(id.ToString()));
+                RefreshStageLoadout();
+            };
+            router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
+            NodeWar.Backend.BackendServices.StateChanged += RefreshStageLoadout;
+            RefreshStageLoadout();
+        }
+
+        private void WatchStageLoadout()
+        {
+            if (stage == null) return;
+            PlayerProfile profile = PlayerProfile.Instance;
+            string[] districts = profile != null ? profile.data.loadout.nodeIDs : null;
+            string[] suits = profile != null ? profile.data.loadout.suitIDs : null;
+            if (!StageLoadoutTypes.Same(districts, stageDistrictIds) || !StageLoadoutTypes.Same(suits, stageSuitIds))
+                RefreshStageLoadout();
+        }
+
+        private void RefreshStageLoadout()
+        {
+            if (stage == null || catalog == null) return;
+            var loadout = catalog.CurrentLoadout().ToLoadout();
+            int[] districts = StageLoadoutTypes.Districts(loadout.districtIDs);
+            int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
+            if (!StageLoadoutTypes.Same(districts, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
+            {
+                stage.SetLoadout(districts, suits);
+                stageDistrictTypes = districts;
+                stageSuitTypes = suits;
+            }
+            PlayerProfile profile = PlayerProfile.Instance;
+            stageDistrictIds = profile?.data.loadout.nodeIDs == null ? null : (string[])profile.data.loadout.nodeIDs.Clone();
+            stageSuitIds = profile?.data.loadout.suitIDs == null ? null : (string[])profile.data.loadout.suitIDs.Clone();
         }
 
         /// <summary>
@@ -361,7 +470,7 @@ namespace NodeWar.Lobby
         private void OnPlayRequested()
         {
             if (playPopup != null)
-                playPopup.Show();
+                playPopup.Show(homePage?.SelectedMode ?? GameMode.Locked);
             else if (toast != null)
                 toast.Show("Cannot open the battle sheet: its layout is not assigned");
         }
@@ -375,12 +484,17 @@ namespace NodeWar.Lobby
             navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
             navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
 
-            if (homePageLayout != null)
+            if (homePageLayout != null || Resources.Load<VisualTreeAsset>("Lobby/HomePage") != null)
             {
                 HomePage home = new HomePage(homePageLayout, toast, menu, catalog, accountFlow,
                     () => isActiveAndEnabled && lobbyRoot != null
-                        && Routes != null && Routes.Count == 0);
+                        && Routes != null && Routes.Count == 0, crateInventory);
+                homePage = home;
                 home.PlayRequested += OnPlayRequested;
+                home.ModeRequested += OnPlayRequested;
+                home.CrateRequested += size =>
+                crateScreen?.Open(size, crateInventory);
+                if (playPopup != null) playPopup.ModeChanged += home.SetMode;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }
@@ -404,6 +518,15 @@ namespace NodeWar.Lobby
             }
 
             navigation.BindNavButton(id, button);
+            string badge = id == LobbyPageID.Shop ? "shop" : id == LobbyPageID.Social ? "social" : id == LobbyPageID.Guild ? "guild" : null;
+            if (badge != null) button.Add(new LobbyBadgeDot(Badges, badge));
+        }
+
+        private void RefreshCrateBadges()
+        {
+            if (crateInventory == null || Badges == null) return;
+            Badges.Set("crates", crateInventory.Count(NodeWar.Backend.CrateSize.Small)
+                + crateInventory.Count(NodeWar.Backend.CrateSize.Medium));
         }
 
         private void WireOverlays(VisualElement root)
@@ -414,12 +537,19 @@ namespace NodeWar.Lobby
             shell.Add(crateScreen.Root);
             (root.Q("page-shop")?.userData as ShopPage)?.Bind(claimPanel, Badges);
             shell.Add(claimPanel.Root);
+            burgerPanel = new LobbyOverlayPanel("Menu");
+            bellPanel = new LobbyOverlayPanel("Notifications");
+            shell.Add(burgerPanel.Root);
+            shell.Add(bellPanel.Root);
             VisualElement toastLayer = root.Q<VisualElement>("toast-dock");
             System.Action<VisualElement> promote = element =>
             {
                 element?.BringToFront();
                 toastLayer?.BringToFront();
             };
+            WirePanel(burgerPanel, "burger", promote);
+            WirePanel(bellPanel, "bell", promote);
+            BuildBurger();
 
             // PlayPopup already opens/closes this sheet. One entry preserves its
             // Closed callback, which cancels matchmaking and live connections.
@@ -472,6 +602,56 @@ namespace NodeWar.Lobby
             page.Closed += () => router.Closed(id);
         }
 
+        private void WirePanel(LobbyOverlayPanel panel, string id, System.Action<VisualElement> promote)
+        {
+            panel.Opened += () =>
+            {
+                promote(panel.Root);
+                router.Open(new LobbyOverlay(id, OverlayKind.Panel), panel.Close);
+            };
+            panel.Closed += () => router.Closed(id);
+        }
+
+        private void BuildBurger()
+        {
+            AddBurgerItem("Settings", () => settingsPage.Open());
+            AddBurgerItem("Account", () => settingsPage.Open());
+            AddBurgerItem("Privacy");
+            AddBurgerItem("Notifications", OpenBell);
+            AddBurgerItem("Support");
+            AddBurgerItem("Restore Purchases");
+            AddBurgerItem("Legal");
+            AddBurgerItem("Credits");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AddBurgerItem("Testing", () => playPopup?.Show(GameMode.Testing));
+#endif
+        }
+
+        private void AddBurgerItem(string label, System.Action destination = null)
+        {
+            var button = new Button(() =>
+            {
+                burgerPanel.Close();
+                if (destination != null) destination();
+                else Debug.Log("[LobbyUI] Menu: " + label);
+            }) { text = label };
+            button.AddToClassList("lb-menu-destination");
+            burgerPanel.Content.Add(button);
+        }
+
+        private void OpenBell()
+        {
+            if (bellPanel == null) return;
+            bellPanel.Content.Clear();
+            var view = new AsyncStateView();
+            foreach (string message in notifications) view.Content.Add(new Label(message) { enableRichText = false });
+            view.Render(new AsyncState().Reduce(notifications.Length == 0 ? AsyncResult.Empty : AsyncResult.Ready, 0),
+                0, "No notifications");
+            bellPanel.Content.Add(view);
+            Badges.Clear("bell");
+            bellPanel.Open();
+        }
+
         private void RefreshChromeVisibility(VisualElement root)
         {
             LobbyOverlay top = Routes?.Top;
@@ -510,6 +690,7 @@ namespace NodeWar.Lobby
                 string target = route.Target == "loadout" ? "Workshop" : route.Target;
                 if (System.Enum.TryParse(target, true, out LobbyPageID page)) navigation.Show(page);
             }
+            else if (route.Kind == LobbyRouteKind.Bell) OpenBell();
             else Debug.Log("[LobbyUI] Route: " + route.Kind + " " + route.Target);
         }
     }

@@ -45,6 +45,12 @@ sources:
   - Assets/UI/Scripts/ControlsViewModel.cs
   - Assets/UI/Scripts/EraChips.cs
   - Assets/UI/Scripts/HomePage.cs
+  - Assets/UI/Scripts/HomeModeDisplay.cs
+  - Assets/UI/Scripts/LobbyBadgeDot.cs
+  - Assets/UI/Scripts/LobbyOverlayPanel.cs
+  - Assets/UI/Scripts/LocalCrateInventory.cs
+  - Assets/UI/Scripts/StageLoadoutTypes.cs
+  - Assets/Scripts/Lobby/Stage/
   - Assets/UI/Scripts/LoadoutCatalog.cs
   - Assets/UI/Scripts/LoadoutChoices.cs
   - Assets/UI/Scripts/LoadoutEditor.cs
@@ -81,7 +87,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: b9daca49
+verified: da870622
 ---
 
 # Lobby UI
@@ -90,27 +96,27 @@ verified: b9daca49
 The lobby lets players understand/edit their loadout, manage account/settings and enter matches. It presents server state without confusing local profile persistence, placeholder commerce or private play with authoritative ranked progression.
 
 ## Interface
-`LobbyUIController` exposes `Navigation`, `Routes`, `Claims`, `Badges` and `crateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the sliding track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)/Close` expands above chrome; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory.
+`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims`, `Badges` and `Crates`; Home crate taps open `CrateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)/Close` expands above chrome; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory. `LobbyStage` follows page shots and equipped types, hiding during fullscreen overlays.
 
-`LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or confirms exit. `CloseAll` forces cleanup. `LobbyDeepLink.TryParse` accepts nodewar routes; page links navigate, ShopStall links navigate and scroll, other targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
+`LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, remaining targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
 
 `LobbySheet.Open(content, large)/Close`, `IsShowing`, `Closed` and `Lift(pageRoot, contentName)` serve shared bottom-sheet content. `LobbyContextMenu.Attach/Show/Close` displays `LobbyMenuItem(label, action)` rows; `LobbyToast.Show(message)` supplies transient feedback. Pages receive the shell's shared instances. `SafeAreaBinder` applies screen-safe insets.
 
 Pages:
-- `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `Refresh`; chosen chips follow rank, and incomplete Battle opens Workshop with a reason.
+- `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested(CrateSize)`, `SetMode`, `Refresh`; incomplete PLAY opens Workshop. `LocalCrateInventory` backs Small crates/progress with profile data, returns fixed placeholder rewards, and exposes no Medium stock.
 - `WorkshopPage` previews through `LoadoutScreenModel`, shows `LoadoutInfoModel`/`DistrictInfoFacts`, and uses `WorkshopInventorySession` to gate equipment requests against visit/selection changes.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims and sets `shop.daily`; `ScrollTo(stall)` targets daily, crates, weekly, bundle, coins or laurels. Stalls snap and shrink offers; countdowns refresh each second. Confirmations only log; daily claim state is visit-local. `SocialPage` has no live backend.
 - `ProfilePage` renames through `BackendServices.Handles`, showing Name#TAG and the rename cost, plus server-backed arena progression; detailed match statistics remain placeholders.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
-`PlayPopup.Show/Hide/Update/Dispose` hosts Ranked, private Relay/LAN, bot and testing entry. `RankedQueueViewElement` implements `IRankedQueueView`; `RankedQueuePresenter` owns queue attempts. `MatchLauncher.PrepareAsync(ranked)`, `LaunchLocalAsync(bot)`, `HostRelay/HostLan`, `JoinRelay/JoinLan`, `HostRanked/JoinRanked`, `Update/Cancel/Dispose` expose phase, join code, failure/recovery and `Changed`. `MatchLauncherConnection` adapts these to `IRankedConnection` for `RankedRendezvous`.
+`PlayPopup.Show(GameMode)/Hide/Update/Dispose` hosts Ranked, private Relay/LAN and bot; `ModeChanged` updates Home. The burger opens Testing in development builds. `RankedQueueViewElement` implements `IRankedQueueView`; `RankedQueuePresenter` owns queue attempts. `MatchLauncher.PrepareAsync(ranked)`, `LaunchLocalAsync(bot)`, `HostRelay/HostLan`, `JoinRelay/JoinLan`, `HostRanked/JoinRanked`, `Update/Cancel/Dispose` expose phase, join code, failure/recovery and `Changed`. `MatchLauncherConnection` adapts these to `IRankedConnection` for `RankedRendezvous`.
 
 `AccountFlow.EnsureAsync`, `LinkAsync(isActive)`, `SignInAsync(isActive)`, `SignOutAsync`, `CheckLinkPromptAsync(profile, isActive)`, `CloseDialog`, `Busy/BusyText/Message` and `Changed` coordinate account sheets. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 
 `LoadoutCatalog` resolves definitions, arena-specific offers, usable base ownership and `CurrentLoadout(PlayerState)`. `LoadoutRules` supplies chosen/display counts, grant locks, completeness, offer checks and fallback rank. Pure `LoadoutEditor` owns slot fill/clear, duplicate/availability handling and `ToLoadout`; its default constructor preserves canonical source shape, arena overload explicitly resizes local edits.
 
-`LoadoutChoices.Variants/Skins` returns sorted `LoadoutChoice[]` with ID/base/label, unlock state, equipped/preview flags and Selectable. `UnlockStates.ForBase/ForVariant/ForSkin` supplies Owned/CanUnlock/CannotUnlock, unlock arena and CanUse; `ForBase(lobbyId, state)` reads server ownership of the base's era-0 variant (the starter kit before state arrives) and `ContentTable` debut eras. `LobbyChrome` shows the server handle (local username until a profile exists, requesting a first handle once per load) and the server wallet in the purses. Player-name labels disable rich text. `SkinBand.SetChoices/Stop`, `CenteredIndex` and `CenterChanged(int)` render a looping thirteen-tile strip through `SkinBandMath`.
+`LoadoutChoices.Variants/Skins` returns sorted choices. `UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel`s; Testing is development-only and bell clears its badge. `LobbyBadgeDot` observes dotted-key counts. The player header hides on Guild. `SkinBand.SetChoices/Stop`, `CenteredIndex` and `CenterChanged(int)` render the looping strip through `SkinBandMath`.
 
 `PlayerProfile.Instance` persists local loadout/settings. `LoadoutData.CreateEmpty/Normalized` have shape-preserving and explicit-arena forms; `LoadoutTypes.WithEquipment` overlays server equipment. Arena displays use `RankDisplay`/`RankTable`.
 
@@ -135,7 +141,7 @@ Rated rank/inventory belongs to backend state, not local trophies/unlock arrays.
 ## How it works
 `LobbyManager` bootstraps profile and selects stacks through scene value `useUIToolkitLobby`; an unassigned Toolkit root warns and falls back. `UIToolkitLobbySetup.SetUp`, menu `Tools > Node War > Set Up UI Toolkit Lobby`, creates/wires Lobby root, layouts and separate LobbyPanelSettings through the Editor. `Assets/Legacy/` retains compiled, scene-referenced uGUI lobby panels; disabling the toggle can restore them.
 
-Low arenas choose two suits/two districts with display-only grant locks; arena index 2 onward chooses three/five without grants. Workshop keeps three/five display positions while Home shows four/eight chosen chips. Use fills the first empty slot; filled slots clear. Variants are only real tree suits; skins work for both item kinds. Local inventory sheets stay below the header/loadout rows.
+Low arenas choose two suits/two districts with display-only grant locks; arena index 2 onward chooses three/five without grants. Workshop keeps three/five display positions. Use fills the first empty slot; filled slots clear. Variants are real tree suits; skins cover both item kinds. Home's mode, PLAY, held crates and progress sit over the stage; crate taps log for the screen caller.
 
 Launch refreshes PlayerState; ranked requires returned rank, private/offline falls back to arena 1. It freezes rank, sanitized choices and equipment before connecting, then rechecks completeness against that frozen arena. Ranked rendezvous carries record ID/slot order; private host wait is open-ended. Confirmed local resizing persists; merely closing an unconfirmed fallback Workshop view cannot trim a saved high deck.
 

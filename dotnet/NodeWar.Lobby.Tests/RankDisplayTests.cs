@@ -4,6 +4,17 @@ namespace NodeWar.Lobby.Tests
 {
     public class RankDisplayTests
     {
+        [TestCase(150, 0.5f)]
+        [TestCase(500, 0.5f)]
+        [TestCase(950, 0.5f)]
+        [TestCase(1500, 0.5f)]
+        [TestCase(2150, 0.5f)]
+        [TestCase(2500, 1f)]
+        public void HeaderFillMeasuresProgressInsideTheCurrentEra(int rr, float expected)
+        {
+            Assert.That(new RankDisplay(rr).Fill, Is.EqualTo(expected).Within(0.000001f));
+        }
+
         [TestCase(0, 0, 0, 300)]
         [TestCase(-1, 0, 0, 300)]
         [TestCase(int.MinValue, 0, 0, 300)]

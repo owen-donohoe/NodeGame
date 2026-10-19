@@ -77,6 +77,7 @@ namespace NodeWar.Lobby
 
         private GameMode mode = GameMode.OneVsOne;
         private bool useLan;
+        public event System.Action<GameMode> ModeChanged;
 
         public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast, LobbySheet sheet,
                          LoadoutCatalog catalog)
@@ -102,6 +103,8 @@ namespace NodeWar.Lobby
             modeOnline = Root.Q<Button>("play-mode-1v1");
             modeBot = Root.Q<Button>("play-mode-bot");
             modeTesting = Root.Q<Button>("play-mode-testing");
+            // Testing is reached through the development-only burger destination.
+            modeTesting?.RemoveFromHierarchy();
             modeLocked = Root.Q<Button>("play-mode-locked");
             transportRow = Root.Q<VisualElement>("play-transport");
             relayTabButton = Root.Q<Button>("play-transport-relay");
@@ -187,7 +190,15 @@ namespace NodeWar.Lobby
         {
             // Ranked is the default play (D14). Private modes stay one tap away
             // until the Social tab takes them over.
-            mode = GameMode.Locked;
+            Show(GameMode.Locked);
+        }
+
+        public void Show(GameMode selectedMode)
+        {
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+            if (selectedMode == GameMode.Testing) selectedMode = GameMode.Locked;
+#endif
+            mode = selectedMode;
 
             SetTransport(useLan);
             SetMode(mode);
@@ -248,6 +259,7 @@ namespace NodeWar.Lobby
             }
 
             RefreshNote();
+            ModeChanged?.Invoke(mode);
         }
 
         private static void SetOn(Button button, bool on)
