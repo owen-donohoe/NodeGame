@@ -35,6 +35,7 @@ namespace NodeWar.Lobby
         private readonly Vector3[] slotDirections = new Vector3[StageSlots.Count];
         private readonly GameObject[] outlines = new GameObject[StageSlots.Count];
         private readonly float[] separations = new float[StageSlots.Count];
+        private readonly Transform[] marketmen = new Transform[5];
         private Transform[] suits = Array.Empty<Transform>();
         private Vector3[] suitTargets = Array.Empty<Vector3>();
         private float[] suitWaits = Array.Empty<float>();
@@ -120,26 +121,22 @@ namespace NodeWar.Lobby
             var market = new GameObject("Market node");
             market.transform.SetParent(transform, false);
             market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
-            Primitive("Market ground", PrimitiveType.Cube, market.transform,
-                new Vector3(0f, -0.1f, -12f), new Vector3(3.6f, 0.2f, 30f),
-                new Color(0.56f, 0.61f, 0.43f));
+            Primitive("Market ground", PrimitiveType.Plane, market.transform,
+                new Vector3(0f, -0.01f, -12f), new Vector3(0.36f, 1f, 3f),
+                new Color(0.77f, 0.70f, 0.55f));
             string[] names = { "Daily", "Crates", "Weekly skins", "Bundle", "Bank" };
             for (int i = 0; i < names.Length; i++)
             {
                 var stall = new GameObject(names[i] + " stall");
                 stall.transform.SetParent(market.transform, false);
                 stall.transform.localPosition = new Vector3(-0.55f, 0f, -i * ShopStallSpacing);
-                Primitive("Counter", PrimitiveType.Cube, stall.transform,
-                    new Vector3(0f, 0.45f, 0f), new Vector3(1f, 0.9f, 0.8f), Tints[i]);
-                Primitive("Canopy", PrimitiveType.Cube, stall.transform,
-                    new Vector3(0f, 1.9f, 0f), new Vector3(1.2f, 0.18f, 1.3f), Tints[(i + 3) % Tints.Length]);
-                for (int side = -1; side <= 1; side += 2)
-                    Primitive("Canopy post", PrimitiveType.Cube, stall.transform,
-                        new Vector3(side * 0.45f, 1.2f, 0.25f), new Vector3(0.07f, 1.4f, 0.07f), Tints[1]);
-                Primitive("Marketman", PrimitiveType.Capsule, stall.transform,
-                    new Vector3(0f, 1f, 0.55f), new Vector3(0.48f, 0.5f, 0.48f), Tints[(i + 1) % Tints.Length]);
-                Primitive("Head", PrimitiveType.Sphere, stall.transform,
-                    new Vector3(0f, 1.6f, 0.55f), Vector3.one * 0.4f, new Color(0.92f, 0.78f, 0.6f));
+                Cutout("Stall facade", stall.transform, PaperKind.Stall,
+                    new Vector3(0f, 0.02f, 0f), new Vector2(1.35f, 1.9f), Tints[i]);
+                Cutout("Canopy", stall.transform, PaperKind.Canopy,
+                    new Vector3(0f, 1.4f, -0.03f), new Vector2(1.5f, 0.75f), Tints[(i + 3) % Tints.Length]);
+                marketmen[i] = Cutout("Marketman", stall.transform, PaperKind.Marketman,
+                    new Vector3(0f, 0.02f, 0.08f), new Vector2(0.9f, 1.65f),
+                    Tints[(i + 1) % Tints.Length]).transform;
             }
             var reserved = new GameObject("Reserved ground - Social and Guild");
             reserved.transform.SetParent(transform, false);
@@ -165,7 +162,26 @@ namespace NodeWar.Lobby
             stageCamera.ResetProjectionMatrix();
         }
 
-        private void LateUpdate() => UpdateFocusProjection();
+        private void LateUpdate()
+        {
+            BillboardFigures(suits);
+            BillboardFigures(marketmen);
+            UpdateFocusProjection();
+        }
+
+        private void BillboardFigures(Transform[] figures)
+        {
+            for (int i = 0; i < figures.Length; i++)
+            {
+                Transform figure = figures[i];
+                if (figure == null) continue;
+                // Keep feet on the ground. Camera pitch never tips a paper figure.
+                Vector3 forward = figure.position - stageCamera.transform.position;
+                forward.y = 0f;
+                if (forward.sqrMagnitude > 0.0001f)
+                    figure.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            }
+        }
 
         private void UpdateFocusProjection()
         {
@@ -270,9 +286,9 @@ namespace NodeWar.Lobby
             focusedSuit = -1;
             for (int i = 0; i < suits.Length; i++)
             {
-                var suit = Primitive("Suit " + i, PrimitiveType.Capsule, plots[1],
-                    new Vector3((i % 3 - 1) * 0.5f, 0.58f, -0.55f), new Vector3(0.3f, 0.34f, 0.3f), Color.white);
-                suit.GetComponent<Renderer>().sharedMaterial = Tint(suitTypes[i], "suit_");
+                var suit = Cutout("Suit " + i, plots[1], PaperKind.Villager,
+                    new Vector3((i % 3 - 1) * 0.5f, 0.03f, -0.55f),
+                    new Vector2(0.7f, 1.1f), TypeTint(suitTypes[i], "suit_"));
                 suits[i] = suit.transform;
                 suitTargets[i] = suit.transform.localPosition;
                 suitWaits[i] = UnityEngine.Random.Range(0.2f, 1.5f);
@@ -372,26 +388,21 @@ namespace NodeWar.Lobby
                 if (direction.sqrMagnitude > 0.0001f)
                 {
                     suits[i].localPosition = Vector3.MoveTowards(position, suitTargets[i], delta * 0.35f);
-                    suits[i].localRotation = Quaternion.LookRotation(direction, Vector3.up);
+
                 }
                 else
                 {
                     suitWaits[i] -= delta;
                     if (suitWaits[i] > 0f) continue;
                     // Walk on the front of the middle-top plot, clear of the filler building.
-                    suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), 0.58f,
+                    suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), position.y,
                         UnityEngine.Random.Range(-1f, -0.3f));
                     suitWaits[i] = UnityEngine.Random.Range(0.5f, 2f);
                 }
             }
         }
 
-        private Material Tint(int type, string prefix)
-        {
-            return MaterialFor(Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
-        }
-
-        private static PaperKind DistrictPaper(int type)
+private static PaperKind DistrictPaper(int type)
             => (PaperKind)((type % 3 + 3) % 3);
 
         private static Color TypeTint(int type, string prefix)
