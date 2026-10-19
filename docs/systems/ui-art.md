@@ -9,6 +9,9 @@ sources:
   - Assets/UI/Scripts/ItemTint.cs
   - docs/style-guide.md
   - Assets/UI/Resources/Lobby/
+  - Assets/UI/Scripts/MkCard.cs
+  - Assets/UI/Scripts/MkSheet.cs
+  - Assets/UI/Scripts/MkPlayerRow.cs
   - Assets/UI/Scripts/PaperCard.cs
   - Assets/UI/Scripts/PaperButton.cs
   - Assets/UI/Scripts/PaperMath.cs
@@ -35,7 +38,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: a9edd816
+verified: f774c1f3
 ---
 
 # UI art
@@ -57,6 +60,8 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 `ItemFamily.ForDistrict/NoteFor/ClassFor/SortKey` maps district IDs to Round/Square/Triangle/Combat grouping and fallback shapes; unknown districts use Square. `ItemTint.IndexFor/ClassFor/MonogramFor` provides stable eight-color item placeholders independent of list order. These are presentation identities, not ownership or catalog authority.
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
+
+`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns all modal sheet surfaces. `Components.uss` exposes the mockup `mk-` classes; `Tokens.uss` keeps raw `--pal-*` values separate from meaning tokens. Lobby pages are transparent; cards carry content.
 
 `PaperCard : VisualElement` (`[UxmlElement]`) draws parchment, cached grain, offset shadows and seeded wobbling ink. `Seed`/`RotatePaper` control identity/rotation; `--paper-card-*` properties read meaning tokens. Geometry/style events rebuild it; presses drop the shadow. `PaperButton : Button` preserves binding contracts, drawing paper behind its caption. `PaperMath` is UnityEngine-free.
 
@@ -84,7 +89,7 @@ Every font token references `PatrickHand-Regular-SDF` in `Assets/UI/Fonts/`; siz
 - Resolve semantic kind/context overrides rather than replace sprites independently at every call site.
 - Preserve procedural glyph/gauge fallbacks rather than require a complete art pack to run.
 - Share a runtime theme with separate panels rather than duplicate tokens or couple panel tuning.
-- Use Patrick Hand and paper/ink components rather than synthetic weights and native control styling.
+- Use Patrick Hand, parchment/umber meaning tokens and outlined mockup components across the lobby.
 
 ## Pressure points
 The current icon theme has no assigned sprite entries; much UI remains procedural/monogram art. Workshop still needs district-sprite consumption. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge sprite skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment, not historical asset counts.
