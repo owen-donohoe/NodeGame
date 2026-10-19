@@ -44,21 +44,21 @@
     /* ================= PALETTE ================= */
 
     /* paper, lightest to darkest */
-    --pal-paper-50: rgb(244, 233, 213);
-    --pal-paper-100: rgb(235, 220, 195);
-    --pal-paper-200: rgb(215, 195, 165);
+    --pal-paper-50: rgb(246, 232, 199);
+    --pal-paper-100: rgb(234, 214, 174);
+    --pal-paper-200: rgb(215, 189, 144);
     --pal-paper-300: rgb(195, 170, 133);
     --pal-paper-500: rgb(150, 128, 95);
     --pal-paper-500-a22: rgba(150, 128, 95, 0.22);
     --pal-paper-500-a30: rgba(150, 128, 95, 0.3);
 
     /* umber: the ink, and the dark glass drawn over scenery */
-    --pal-umber-900: rgb(45, 35, 25);
+    --pal-umber-900: rgb(58, 39, 27);
     --pal-umber-900-a55: rgba(30, 22, 15, 0.55);
     --pal-umber-900-a82: rgba(45, 35, 25, 0.82);
     --pal-umber-900-a92: rgba(45, 35, 25, 0.92);
     --pal-umber-900-a94: rgba(45, 35, 25, 0.94);
-    --pal-umber-500: rgb(115, 100, 79);
+    --pal-umber-500: rgb(58, 39, 27);
     --pal-shadow-a25: rgba(90, 70, 40, 0.25);
     --pal-shadow-a30: rgba(90, 70, 40, 0.3);
     --pal-black-a35: rgba(0, 0, 0, 0.35);
@@ -68,15 +68,15 @@
     --pal-clear: rgba(0, 0, 0, 0);
 
     /* gold */
-    --pal-gold-400: rgb(245, 195, 60);
-    --pal-gold-500: rgb(222, 172, 42);
+    --pal-gold-400: rgb(226, 173, 61);
+    --pal-gold-500: rgb(208, 151, 46);
     --pal-gold-700: rgb(168, 128, 28);
     --pal-gold-800: rgb(138, 106, 18);
     --pal-gold-950: rgb(58, 42, 8);
 
     /* green */
-    --pal-green-400: rgb(95, 185, 95);
-    --pal-green-500: rgb(76, 160, 76);
+    --pal-green-400: rgb(128, 147, 91);
+    --pal-green-500: rgb(96, 117, 66);
     --pal-green-950: rgb(18, 51, 18);
 
     /* leaf - the second currency */
@@ -84,7 +84,7 @@
     --pal-leaf-800: rgb(126, 100, 19);
 
     /* signal red and its edge */
-    --pal-red-500: rgb(205, 60, 50);
+    --pal-red-500: rgb(177, 56, 40);
     --pal-red-800: rgb(125, 33, 26);
 
     /* stone - off and disabled */
@@ -92,9 +92,9 @@
     --pal-stone-600: rgb(110, 101, 87);
 
     /* navy and orange - loadout state */
-    --pal-navy-600: rgb(52, 80, 146);
-    --pal-navy-50: rgb(236, 240, 250);
-    --pal-orange-500: rgb(222, 110, 48);
+    --pal-navy-600: rgb(111, 128, 77);
+    --pal-navy-50: rgb(246, 232, 199);
+    --pal-orange-500: rgb(179, 124, 66);
     --pal-orange-700: rgb(178, 84, 32);
 
     /* players - copied from the board, see the header */
@@ -136,12 +136,26 @@
 
     /* ================= MEANING ================= */
 
+    /* ---- paper drawing roles, shared by Painter2D and USS ---- */
+    --paper-light: var(--pal-paper-50);
+    --paper: var(--pal-paper-100);
+    --paper-dark: var(--pal-paper-200);
+    --paper-ink: var(--pal-umber-900);
+    --paper-ink-width: 3px;
+    --paper-shadow: var(--pal-shadow-a25);
+    --paper-shadow-x: 2px;
+    --paper-shadow-y: 4px;
+    --paper-gold: var(--pal-gold-400);
+    --paper-urgent: var(--pal-red-500);
+    --paper-grain-opacity: 0.045;
+    --paper-wobble: 0.8px;
+
     /* ---- surfaces ---- */
     --surface: var(--pal-paper-100);
     --surface-raised: var(--pal-paper-50);
     --surface-sunk: var(--pal-paper-200);
     --surface-track: var(--pal-paper-300);
-    --edge: var(--pal-paper-500);
+    --edge: var(--pal-umber-900);
     --rule: var(--pal-paper-500-a30);
     --press-tint: var(--pal-paper-500-a22);
     --scrim: var(--pal-umber-900-a55);
@@ -162,28 +176,28 @@
     /* ---- actions ---- */
     --action: var(--pal-gold-400);
     --action-press: var(--pal-gold-500);
-    --action-edge: var(--pal-gold-700);
-    --action-ink: var(--pal-gold-950);
+    --action-edge: var(--pal-umber-900);
+    --action-ink: var(--pal-umber-900);
     --confirm: var(--pal-green-400);
-    --confirm-edge: var(--pal-green-500);
-    --confirm-ink: var(--pal-green-950);
+    --confirm-edge: var(--pal-umber-900);
+    --confirm-ink: var(--pal-umber-900);
     --off: var(--pal-stone-400);
-    --off-edge: var(--pal-stone-600);
+    --off-edge: var(--pal-umber-900);
 
     /* ---- currency and progress ---- */
-    --trophy-ink: var(--pal-gold-800);
+    --trophy-ink: var(--pal-umber-900);
     --leaf: var(--pal-leaf-500);
-    --leaf-edge: var(--pal-leaf-800);
+    --leaf-edge: var(--pal-umber-900);
 
     /* ---- notification. NOT a player colour. ---- */
     --badge: var(--pal-red-500);
-    --badge-edge: var(--pal-red-800);
+    --badge-edge: var(--pal-umber-900);
 
     /* ---- status: a filled loadout slot, and one that could be filled but is not ---- */
     --status-ready: var(--pal-navy-600);
     --status-ready-ink: var(--pal-navy-50);
     --status-short: var(--pal-orange-500);
-    --status-short-ink: var(--pal-orange-700);
+    --status-short-ink: var(--pal-umber-900);
 
     /* ---- players ---- */
     --p0: var(--pal-player-0);
@@ -258,11 +272,10 @@
     --motion-sheet: 320ms;
     --motion-bob: 1700ms;
 
-    /* ---- type. Fredoka only; each weight is its own font asset, because
-       -unity-font-style: bold would synthesise rather than use the real cut. ---- */
-    --font-medium: url("project://database/Assets/UI/Fonts/Fredoka-Medium-SDF.asset");
-    --font-semibold: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
-    --font-bold: url("project://database/Assets/UI/Fonts/Fredoka-Bold-SDF.asset");
+    /* ---- type. Patrick Hand throughout; hierarchy comes from size. ---- */
+    --font-medium: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
+    --font-semibold: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
+    --font-bold: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
 
     /* Nothing is set smaller than --type-min. The prototypes go to 7px, which
        at a 390-wide reference is unreadable on a phone. */
@@ -275,5 +288,5 @@
 
     /* Minimum touch target. The panels scale to a 390-wide reference, so a
        unit is about one point on a phone. */
-    --target-min: 44px;
+    --target-min: 48px;
 }
