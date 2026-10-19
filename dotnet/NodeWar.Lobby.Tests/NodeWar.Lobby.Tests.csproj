@@ -42,6 +42,8 @@
     <Compile Include="../../Assets/UI/Scripts/LobbyOverlayRouter.cs" Link="Lobby/LobbyOverlayRouter.cs" />
     <Compile Include="LobbyStateTests.cs" />
     <Compile Include="ClaimRequestTests.cs" />
+    <Compile Include="SwipeDecisionTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/SwipeDecision.cs" Link="Lobby/SwipeDecision.cs" />
     <Compile Include="../../Assets/UI/Scripts/ClaimRequest.cs" Link="Lobby/ClaimRequest.cs" />
     <Compile Include="../../Assets/UI/Scripts/BadgeBoard.cs" Link="Lobby/BadgeBoard.cs" />
     <Compile Include="../../Assets/UI/Scripts/AsyncState.cs" Link="Lobby/AsyncState.cs" />

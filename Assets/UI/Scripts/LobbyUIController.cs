@@ -240,6 +240,7 @@ namespace NodeWar.Lobby
             router = new LobbyOverlayRouter();
             Badges = new BadgeBoard();
             navigation = new NavigationController(pageHost);
+            navigation.BindSwipes(() => Routes != null && Routes.Count > 0);
 
             // Shared machinery, built before any page so every page gets the same.
             // The catalog is the one answer to what the loadout may hold and what
@@ -254,11 +255,12 @@ namespace NodeWar.Lobby
             BuildChrome(root);
             BindLobbySettings(root);
 
-            // Four tabs, in track order. Profile is reached from the player name.
+            // Five tabs, in track order. Profile is reached from the player name.
             BindNav(root, "nav-shop", LobbyPageID.Shop);
-            BindNav(root, "nav-home", LobbyPageID.Home);
             BindNav(root, "nav-workshop", LobbyPageID.Workshop);
+            BindNav(root, "nav-home", LobbyPageID.Home);
             BindNav(root, "nav-social", LobbyPageID.Social);
+            BindNav(root, "nav-guild", LobbyPageID.Guild);
 
             BuildPlayPopup();
             RegisterPages();
@@ -370,6 +372,7 @@ namespace NodeWar.Lobby
         private void RegisterPages()
         {
             navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
+            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
 
             if (homePageLayout != null)
             {
@@ -385,8 +388,8 @@ namespace NodeWar.Lobby
                 navigation.Register(new PlaceholderPage(LobbyPageID.Home, "HomePage.uxml not assigned"));
             }
 
-            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
             navigation.Register(new SocialPage(socialPageLayout));
+            navigation.Register(new GuildPage());
         }
 
         private void BindNav(VisualElement root, string elementName, LobbyPageID id)
@@ -472,7 +475,7 @@ namespace NodeWar.Lobby
             VisualElement header = root.Q<VisualElement>("strip-wrap");
             VisualElement currencies = root.Q<VisualElement>("top-bar");
             if (pills != null) pills.style.display = top != null && top.HidesPills ? DisplayStyle.None : DisplayStyle.Flex;
-            if (header != null) header.style.display = top != null && top.HidesHeader ? DisplayStyle.None : DisplayStyle.Flex;
+            if (header != null) header.style.display = (top != null && top.HidesHeader) || navigation.CurrentPageID == LobbyPageID.Guild ? DisplayStyle.None : DisplayStyle.Flex;
             if (currencies != null) currencies.style.display = top != null && top.HidesHeader ? DisplayStyle.None : DisplayStyle.Flex;
         }
 

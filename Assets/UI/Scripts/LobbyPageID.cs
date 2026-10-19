@@ -6,6 +6,7 @@ namespace NodeWar.Lobby
         Home,
         Workshop,
         Shop,
-        Social
+        Social,
+        Guild
     }
 }
