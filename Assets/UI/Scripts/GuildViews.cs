@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
     {
         public static VisualElement Header(GuildView guild)
         {
-            var header = new VisualElement();
+            var header = new PaperCard();
             header.AddToClassList("lb-guild-header");
             var icon = new LobbyIcon(LobbyIconKind.Guild) { tooltip = guild.Summary.IconId, pickingMode = PickingMode.Ignore };
             icon.style.width = icon.style.height = 32f;

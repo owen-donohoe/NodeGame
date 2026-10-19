@@ -7,6 +7,12 @@ sources:
   - Assets/UI/Resources/UIArtTheme.asset
   - Assets/UI/Scripts/ItemFamily.cs
   - Assets/UI/Scripts/ItemTint.cs
+  - docs/style-guide.md
+  - Assets/UI/Resources/Lobby/
+  - Assets/UI/Scripts/PaperCard.cs
+  - Assets/UI/Scripts/PaperButton.cs
+  - Assets/UI/Scripts/PaperMath.cs
+  - Assets/UI/Scripts/InkPen.cs
   - Assets/UI/Scripts/LobbyIcon.cs
   - Assets/UI/Scripts/LobbyIconContext.cs
   - Assets/UI/Scripts/LobbyIconKind.cs
@@ -29,7 +35,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 9904ed0f
+verified: a9edd816
 ---
 
 # UI art
@@ -40,9 +46,9 @@ Art can replace placeholder glyphs and district thumbnails without changing scre
 ## Interface
 Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets/UI/Resources/UIArtTheme.asset`. `UIArt.Theme` loads `Resources.Load<UIArtTheme>("UIArtTheme")` once per play session; restart Play Mode after reference/entry changes.
 
-`UIArtTheme.icons` is an ordered `IconEntry[]` of `{ LobbyIconKind kind, LobbyIconContext context, Sprite sprite, bool keepOriginalColours }`. `TryIcon(kind, context, out entry)` uses pure `UIArtLookup.SpriteIndex(entries, kind, context, kindOf, contextOf, hasSprite)` to resolve overrides. `districtVisuals` references `DistrictVisualTable`; its per-type `DistrictVisual.icon` supplies node-sheet art and `StickerOrIcon` supplies draft art before fallback mappings. Workshop uses shared `ui-tile` monograms with `ItemTint` meaning tokens rather than those sprites.
+`UIArtTheme.icons` is an ordered `IconEntry[]` of `{ LobbyIconKind kind, LobbyIconContext context, Sprite sprite, bool keepOriginalColours }`. `TryIcon(kind, context, out entry)` uses pure `UIArtLookup.SpriteIndex(entries, kind, context, kindOf, contextOf, hasSprite)` to resolve overrides. `districtVisuals` references `DistrictVisualTable`; its per-type `DistrictVisual.icon` supplies node-sheet art and `StickerOrIcon` supplies draft art before fallback mappings. Workshop uses ink monograms on paper rather than those sprites.
 
-`LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. It resolves themed sprites or cached generated `VectorImage` glyphs drawn with Painter2D in a 24×24 design box.
+`LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. It resolves themed sprites or cached `VectorImage` glyphs drawn by seeded `InkPen`/`PaperMath` with Painter2D in a 24×24 design box.
 
 `LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this table rather than the obsolete generic icon inventory.
 
@@ -51,6 +57,8 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 `ItemFamily.ForDistrict/NoteFor/ClassFor/SortKey` maps district IDs to Round/Square/Triangle/Combat grouping and fallback shapes; unknown districts use Square. `ItemTint.IndexFor/ClassFor/MonogramFor` provides stable eight-color item placeholders independent of list order. These are presentation identities, not ownership or catalog authority.
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
+
+`PaperCard : VisualElement` (`[UxmlElement]`) draws parchment, cached grain, offset shadows and seeded wobbling ink. `Seed`/`RotatePaper` control identity/rotation; `--paper-card-*` properties read meaning tokens. Geometry/style events rebuild it; presses drop the shadow. `PaperButton : Button` preserves binding contracts, drawing paper behind its caption. `PaperMath` is UnityEngine-free.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
@@ -70,13 +78,13 @@ Lookup tries exact kind/context, then the same kind/Anywhere, then generated gly
 
 `UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
 
-Fredoka Medium/SemiBold/Bold TTF and SDF assets live in `Assets/UI/Fonts/`; Tokens references each actual weight. The font lacks prototype symbols, so icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+Every font token references `PatrickHand-Regular-SDF` in `Assets/UI/Fonts/`; size carries hierarchy. Fredoka assets remain available but unreferenced. Icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
 
 ## Decisions
 - Resolve semantic kind/context overrides rather than replace sprites independently at every call site.
 - Preserve procedural glyph/gauge fallbacks rather than require a complete art pack to run.
 - Share a runtime theme with separate panels rather than duplicate tokens or couple panel tuning.
-- Use real Fredoka weights and icon art rather than synthetic bold and symbol fallback fonts.
+- Use Patrick Hand and paper/ink components rather than synthetic weights and native control styling.
 
 ## Pressure points
 The current icon theme has no assigned sprite entries; much UI remains procedural/monogram art. Workshop still needs district-sprite consumption. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge sprite skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment, not historical asset counts.

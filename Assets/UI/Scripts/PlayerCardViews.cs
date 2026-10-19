@@ -13,7 +13,7 @@ namespace NodeWar.Lobby
         {
             var root = new VisualElement();
             root.AddToClassList("lb-social-player");
-            var button = new Button(open);
+            var button = new PaperButton(open);
             button.AddToClassList("lb-player-open");
             var dot = new VisualElement { tooltip = (card?.Presence ?? PlayerPresence.Offline).ToString(), pickingMode = PickingMode.Ignore };
             dot.AddToClassList("lb-presence");
@@ -27,7 +27,7 @@ namespace NodeWar.Lobby
             root.Add(button);
             if (spectate && card?.Presence == PlayerPresence.InBattle)
             {
-                var watch = new Button(() => UnityEngine.Debug.Log("[Social] spectate " + card.PlayerId)) { text = "Spectate" };
+                var watch = new PaperButton(() => UnityEngine.Debug.Log("[Social] spectate " + card.PlayerId)) { text = "Spectate" };
                 watch.AddToClassList("lb-social-red");
                 root.Add(watch);
             }
@@ -36,7 +36,7 @@ namespace NodeWar.Lobby
 
         public static Button IconButton(LobbyIconKind icon, string label, Action clicked)
         {
-            var button = new Button(clicked) { tooltip = label };
+            var button = new PaperButton(clicked) { tooltip = label };
             button.AddToClassList("lb-social-square");
             var glyph = new LobbyIcon(icon) { pickingMode = PickingMode.Ignore };
             glyph.style.width = glyph.style.height = 22f;

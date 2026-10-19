@@ -6,7 +6,7 @@
 .ws-window { height: 40%; flex-shrink: 0; background-color: var(--clear); border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-md); margin-bottom: 12px; }
 .ws-tabs { flex-direction: row; flex-shrink: 0; border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-sm); overflow: hidden; margin-bottom: 8px; }
 .ws-tab { flex-grow: 1; flex-basis: 0; min-width: 0; height: 42px; border-width: 0; border-radius: 0; font-size: 16px; }
-.ws-tab--on { background-color: var(--action); color: var(--action-ink); }
+.ws-tab--on { background-color: var(--action); color: var(--ink); }
 .ws-toolbar { flex-direction: row; align-items: center; flex-shrink: 0; margin-top: 6px; margin-bottom: 8px; }
 .ws-browser-title { flex-grow: 1; font-size: 16px; color: var(--ink); }
 .ws-filter { height: 34px; font-size: 12px; margin-left: 6px; padding-left: 10px; padding-right: 10px; }
@@ -17,7 +17,7 @@
 .ws-card--locked { background-color: var(--surface-sunk); border-color: var(--off-edge); }
 .ws-card--locked .ws-art-clip { opacity: 0.4; }
 .ws-name { font-size: 12px; white-space: normal; -unity-text-align: middle-center; color: var(--ink); }
-.ws-mark { position: absolute; top: -6px; right: -4px; height: 18px; font-size: 9px; padding-left: 6px; padding-right: 6px; border-radius: var(--corner-sm); background-color: var(--glass-strong); color: var(--ink-inverse); -unity-text-align: middle-center; }
+.ws-mark { position: absolute; top: -6px; right: -4px; height: 18px; font-size: 9px; padding-left: 6px; padding-right: 6px; border-radius: var(--corner-sm); background-color: var(--glass-strong); color: var(--ink); -unity-text-align: middle-center; }
 .ws-mark--arena { background-color: var(--off); color: var(--ink); }
 .ws-empty { width: 100%; padding: 12px; color: var(--ink-mute); }
 .ws-art-clip { width: 72%; height: 64px; align-items: stretch; justify-content: center; }
@@ -51,7 +51,7 @@
 .ws-chip .ws-monogram { font-size: 16px; }
 .ws-sheet-buttons { flex-direction: row; justify-content: space-between; flex-shrink: 0; margin-top: 8px; }
 .ws-sheet-button { width: 45%; height: 46px; font-size: 14px; background-color: var(--surface-sunk); color: var(--ink); border-radius: var(--corner-sm); }
-.ws-sheet-button.ws-primary { background-color: var(--action); color: var(--action-ink); }
+.ws-sheet-button.ws-primary { background-color: var(--action); color: var(--ink); }
 .ws-band { flex-shrink: 0; height: 64px; margin-top: 6px; overflow: hidden; }
 .ws-band-tile { background-color: var(--tile-tint-0); border-radius: var(--corner-sm); border-width: var(--stroke); border-color: var(--clear); justify-content: center; align-items: center; }
 .ws-band-tile.ws-art--neutral { background-color: var(--off); }
@@ -61,3 +61,18 @@
 .ws-banner-title { font-size: 16px; color: var(--ink); margin-bottom: 4px; }
 .ws-actionbar { display: none; position: absolute; left: 14px; right: 14px; bottom: 96px; background-color: var(--surface); padding: 10px 0; }
 .ws-cancel { height: 46px; font-size: 16px; }
+
+/* Paper roles; the stage window keeps a transparent interior. */
+.ws-window { --paper-card-fill: var(--clear); --paper-card-shadow: var(--clear); --paper-card-grain: 0; }
+.ws-tabs { overflow: visible; border-width: 0; padding: 3px; }
+.ws-tab, .ws-filter, .ws-preset, .ws-primary, .ws-secondary, .ws-cancel { min-height: 48px; }
+.ws-preset { width: 48px; }
+.ws-tab--on, .ws-primary, .ws-sheet-button.ws-primary, .ws-preset.ui-chip--action { --paper-card-fill: var(--paper-gold); }
+.ws-card { border-width: 0; padding: 10px 5px; }
+.ws-card--locked { --paper-card-fill: var(--paper-dark); }
+.ws-grid { background-color: var(--clear); }
+.ws-mark { background-color: var(--paper-dark); color: var(--ink); font-size: 11px; border-width: 1px; border-color: var(--ink); }
+.ws-monogram { color: var(--ink); }
+.ws-art { --paper-card-fill: var(--paper-dark); }
+.ws-card--preview { --paper-card-fill: var(--paper-gold); }
+.ws-band-tile { --paper-card-fill: var(--paper-dark); }

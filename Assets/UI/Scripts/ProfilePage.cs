@@ -200,7 +200,7 @@ namespace NodeWar.Lobby
             string[] values = ProfileStatsFormat.Values(profile.Stats);
             for (int i = 0; i < values.Length; i++)
             {
-                var cell = new VisualElement();
+                var cell = new PaperCard();
                 cell.AddToClassList("lb-public-stat");
                 cell.Add(PlayerCardViews.Text(StatNames[i]));
                 cell.Add(PlayerCardViews.Text(values[i]));
@@ -215,7 +215,7 @@ namespace NodeWar.Lobby
                 foreach (var match in profile.Recent)
                 {
                     if (match == null) continue;
-                    var row = new VisualElement();
+                    var row = new PaperCard();
                     row.AddToClassList("lb-public-recent");
                     row.Add(PlayerCardViews.Text(PlayerCardViews.Handle(match.Opponent)));
                     row.Add(PlayerCardViews.Text((match.Won ? "Won" : "Lost") + " · " +
@@ -231,7 +231,8 @@ namespace NodeWar.Lobby
             foreach (string id in ids)
             {
                 if (string.IsNullOrEmpty(id)) continue;
-                var chip = PlayerCardViews.Text(kind + ": " + id);
+                var chip = new PaperCard { name = "profile-chip-" + id, pickingMode = PickingMode.Ignore };
+                chip.Add(PlayerCardViews.Text(kind + ": " + id));
                 chip.AddToClassList("lb-public-chip");
                 loadout.Add(chip);
             }

@@ -1,29 +1,29 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="Chrome.uss" />
     <ui:VisualElement name="top-bar" class="lb-currency-bar" picking-mode="Ignore">
-        <ui:Button name="purse-coin" class="ui-reset-button lb-currency" tooltip="Buy Coins">
+        <lobby:PaperButton name="purse-coin" class="ui-reset-button lb-currency" tooltip="Buy Coins">
             <ui:VisualElement class="lb-coin" picking-mode="Ignore"><ui:VisualElement class="lb-coin__hole" picking-mode="Ignore" /></ui:VisualElement>
             <ui:Label text="Coins" picking-mode="Ignore" />
             <ui:Label name="purse-coin-value" text="—" picking-mode="Ignore" />
             <ui:Label text="+" class="lb-currency-plus" picking-mode="Ignore" />
-        </ui:Button>
-        <ui:Button name="purse-leaf" class="ui-reset-button lb-currency">
+        </lobby:PaperButton>
+        <lobby:PaperButton name="purse-leaf" class="ui-reset-button lb-currency">
             <lobby:LobbyIcon kind="Laurel" context="TopBar" picking-mode="Ignore" />
             <ui:Label name="purse-premium-name" picking-mode="Ignore" />
             <ui:Label name="purse-leaf-value" text="—" picking-mode="Ignore" />
             <ui:Label text="+" class="lb-currency-plus" picking-mode="Ignore" />
-        </ui:Button>
+        </lobby:PaperButton>
     </ui:VisualElement>
-    <ui:VisualElement name="strip-wrap" class="lb-player-header" picking-mode="Ignore">
-        <ui:Button name="gear" class="ui-reset-button lb-chrome-action" tooltip="Menu">
-            <lobby:LobbyIcon kind="Burger" context="TopBar" picking-mode="Ignore" />
-        </ui:Button>
+    <lobby:PaperCard name="strip-wrap" class="lb-player-header" rotate-paper="false" picking-mode="Ignore">
+        <lobby:PaperCard class="lb-header-avatar" name="header-avatar" rotate-paper="false" picking-mode="Ignore">
+            <ui:Label text="N" picking-mode="Ignore" />
+        </lobby:PaperCard>
         <ui:VisualElement name="trophy-strip" class="lb-header-rank" picking-mode="Ignore">
-            <ui:Button name="name-button" class="ui-reset-button lb-handle" tooltip="Profile">
+            <lobby:PaperButton name="name-button" class="ui-reset-button lb-handle" tooltip="Profile">
                 <ui:Label name="name-text" text="player" enable-rich-text="false" picking-mode="Ignore" />
-            </ui:Button>
+            </lobby:PaperButton>
             <ui:VisualElement class="lb-header-rank-row" picking-mode="Ignore">
-                <ui:Label name="arena-text" text="Era —" picking-mode="Ignore" />
+                <lobby:PaperCard name="era-badge" class="lb-era-chip ui-paper--chip" rotate-paper="false" picking-mode="Ignore"><ui:Label name="arena-text" text="Era" class="lb-era-badge" picking-mode="Ignore" /></lobby:PaperCard>
                 <ui:Label name="trophy-count" text="—" picking-mode="Ignore" />
                 <ui:Label name="trophy-max" picking-mode="Ignore" />
             </ui:VisualElement>
@@ -31,8 +31,12 @@
                 <ui:VisualElement name="trophy-fill" class="lb-header-progress-fill" picking-mode="Ignore" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:Button name="history" class="ui-reset-button lb-chrome-action" tooltip="Notifications">
+        <lobby:PaperButton name="gear" class="ui-reset-button lb-chrome-action" tooltip="Menu">
+            <lobby:LobbyIcon kind="Burger" context="TopBar" picking-mode="Ignore" />
+        </lobby:PaperButton>
+        <lobby:PaperButton name="history" class="ui-reset-button lb-chrome-action" tooltip="Notifications">
             <lobby:LobbyIcon kind="Bell" context="TopBar" picking-mode="Ignore" />
-        </ui:Button>
-    </ui:VisualElement>
+        </lobby:PaperButton>
+    </lobby:PaperCard>
+    <ui:Style src="PaperLobby.uss" />
 </ui:UXML>

@@ -57,9 +57,9 @@ namespace NodeWar.Lobby
                 state.Status == AsyncStatus.Offline ? "You're offline" : "Something went wrong")) { enableRichText = false });
             if (state.Status == AsyncStatus.Empty)
             {
-                if (action != null && !string.IsNullOrEmpty(actionLabel)) status.Add(new Button(action) { text = actionLabel });
+                if (action != null && !string.IsNullOrEmpty(actionLabel)) status.Add(new PaperButton(action) { text = actionLabel });
             }
-            else status.Add(new Button(() => RetryRequested?.Invoke()) { text = "Retry" });
+            else status.Add(new PaperButton(() => RetryRequested?.Invoke()) { text = "Retry" });
         }
     }
 }

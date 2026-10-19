@@ -46,12 +46,12 @@ namespace NodeWar.Lobby
             timerLabel.AddToClassList("lb-ranked__timer");
             Add(timerLabel);
 
-            primaryButton = new Button(() => primaryAction?.Invoke());
+            primaryButton = new PaperButton(() => primaryAction?.Invoke());
             primaryButton.AddToClassList("ui-reset-button");
             primaryButton.AddToClassList("lb-ranked__cancel");
             Add(primaryButton);
 
-            cancelButton = new Button(() => CancelRequested?.Invoke());
+            cancelButton = new PaperButton(() => CancelRequested?.Invoke());
             cancelButton.AddToClassList("ui-reset-button");
             cancelButton.AddToClassList("lb-ranked__cancel");
             Add(cancelButton);

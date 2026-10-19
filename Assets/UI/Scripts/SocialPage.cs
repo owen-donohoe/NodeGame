@@ -167,10 +167,10 @@ namespace NodeWar.Lobby
             foreach (var match in matches)
             {
                 if (match == null) continue;
-                var row = new VisualElement();
+                var row = new PaperCard();
                 row.AddToClassList("lb-live-row");
                 row.Add(PlayerCardViews.Card(match.A, () => openProfile(match.A?.PlayerId), false));
-                var vs = new Button(() => Debug.Log("[Social] watch " + match.MatchId)) { text = "VS" };
+                var vs = new PaperButton(() => Debug.Log("[Social] watch " + match.MatchId)) { text = "VS" };
                 vs.AddToClassList("lb-social-red");
                 row.Add(vs);
                 row.Add(PlayerCardViews.Card(match.B, () => openProfile(match.B?.PlayerId), false));
@@ -191,16 +191,16 @@ namespace NodeWar.Lobby
         {
             foreach (var match in matches)
             {
-                var row = new VisualElement();
+                var row = new PaperCard();
                 row.AddToClassList("lb-previous-row");
                 row.Add(PlayerCardViews.IconButton(LobbyIconKind.ProfileYouAreHere, "Your loadout", ShowUnrecordedLoadout));
                 var info = new VisualElement();
                 info.style.flexGrow = 1;
-                info.Add(new Button(() => openProfile(match.Opponent.PlayerId))
+                info.Add(new PaperButton(() => openProfile(match.Opponent.PlayerId))
                     { text = PlayerCardViews.Handle(match.Opponent), enableRichText = false });
                 info.Add(PlayerCardViews.Text(match.Entry.won.HasValue ? match.Entry.won.Value ? "Won" : "Lost" : match.Entry.state.ToString()));
                 row.Add(info);
-                row.Add(new Button(() => Debug.Log("[Social] replay " + match.Entry.matchId)) { text = "Replay" });
+                row.Add(new PaperButton(() => Debug.Log("[Social] replay " + match.Entry.matchId)) { text = "Replay" });
                 previous.View.Content.Add(row);
             }
         }

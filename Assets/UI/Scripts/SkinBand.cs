@@ -43,7 +43,7 @@ namespace NodeWar.Lobby
             style.overflow = Overflow.Hidden;
             for (int i = 0; i < tiles.Length; i++)
             {
-                var tile = new VisualElement { pickingMode = PickingMode.Ignore };
+                var tile = new PaperCard { pickingMode = PickingMode.Ignore };
                 tile.AddToClassList("ws-band-tile");
                 var label = new Label { pickingMode = PickingMode.Ignore };
                 label.AddToClassList("ws-monogram"); label.AddToClassList("ui-w600");

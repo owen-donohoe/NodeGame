@@ -11,13 +11,13 @@
 */
 
 :root {
-    --shop-awning-red: rgb(200, 106, 92);
-    --shop-awning-cream: rgb(242, 230, 210);
-    --shop-stall-wood: rgb(156, 108, 60);
-    --shop-stall-counter: rgb(181, 129, 74);
+    --shop-awning-red: var(--paper-dark);
+    --shop-awning-cream: var(--paper-light);
+    --shop-stall-wood: var(--paper-dark);
+    --shop-stall-counter: var(--paper-dark);
 
     /* A shade heavier than the shared --shadow-soft, as the prototype drew it. */
-    --shop-shadow: rgba(90, 70, 40, 0.28);
+    --shop-shadow: var(--scrim);
 }
 
 .lb-shop {
@@ -353,7 +353,7 @@
     border-bottom-left-radius: 22px;
     border-bottom-right-radius: 22px;
     font-size: 17px;
-    color: var(--confirm-ink);
+    color: var(--ink);
 }
 
 .lb-pill:active {

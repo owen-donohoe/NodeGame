@@ -1,8 +1,7 @@
 /*
     Node War - lobby stylesheet.
 
-    The lobby's look, translated from lobby-prototype.html (v3.2). That file is
-    the spec: sizes, colours and timings below are its values, not new ones.
+    Lobby shell geometry. Visual roles follow docs/style-guide.md.
 
     Lobby only. Colour, spacing, shape, motion and type come from the shared
     theme (Tokens.uss, through the panel's UnityDefaultRuntimeTheme.tss); the
@@ -26,28 +25,28 @@
 
 :root {
     /* ---- stand-in scenery (CSS fakery in the prototype too). LobbyBackdrop
-       reads the sky and ground through customStyle, so these hold literals. ---- */
-    --backdrop-sky-0: rgb(247, 238, 219);
-    --backdrop-sky-1: rgb(231, 213, 182);
-    --backdrop-sky-2: rgb(210, 187, 149);
-    --backdrop-ground-top: rgb(207, 184, 143);
-    --backdrop-ground-bottom: rgb(188, 161, 115);
-    --backdrop-prop-a: rgb(198, 168, 111);
-    --backdrop-prop-b: rgb(185, 156, 107);
-    --backdrop-prop-c: rgb(203, 177, 131);
-    --backdrop-prop-d: rgb(194, 166, 114);
-    --backdrop-prop-shadow: rgba(90, 70, 40, 0.28);
+       uses these roles when the runtime stage is unavailable. ---- */
+    --backdrop-sky-0: var(--paper-light);
+    --backdrop-sky-1: var(--paper-light);
+    --backdrop-sky-2: var(--paper-light);
+    --backdrop-ground-top: var(--paper-dark);
+    --backdrop-ground-bottom: var(--paper-dark);
+    --backdrop-prop-a: var(--paper-dark);
+    --backdrop-prop-b: var(--paper-dark);
+    --backdrop-prop-c: var(--paper-dark);
+    --backdrop-prop-d: var(--paper-dark);
+    --backdrop-prop-shadow: var(--scrim);
 
     /* ---- the tab bar's resting icon ink ---- */
-    --tab-ink: rgb(169, 151, 124);
+    --tab-ink: var(--ink);
 
     /* ---- placeholder screens ---- */
-    --placeholder-ink: rgb(90, 50, 140);
-    --placeholder-fill: rgba(90, 50, 140, 0.12);
+    --placeholder-ink: var(--ink);
+    --placeholder-fill: var(--paper-dark);
 }
 
 /* ===================================================================
-   Root. Fredoka, the label reset, the weights (.ui-w500/600/700), the
+   Root. Patrick Hand, the label reset, the weights (.ui-w500/600/700), the
    reset button, shadows (.ui-sticker__shadow, .ui-soft-shadow), lip
    buttons (.ui-button), the sheet, the bar and the toast are shared
    components in Components.uss. The lobby adds only its own ground.
@@ -200,13 +199,13 @@
     padding-left: 8px;
     padding-right: 14px;
     margin-right: var(--space-2);
-    color: var(--ink-inverse);
+    color: var(--ink);
     font-size: 19px;
 }
 
 .lb-root .lb-purse__value {
     margin-left: 6px;
-    color: var(--ink-inverse);
+    color: var(--ink);
     font-size: 19px;
 }
 
@@ -281,7 +280,7 @@
 .lb-gear > .lb-icon {
     width: 20px;
     height: 20px;
-    -unity-background-image-tint-color: var(--ink-inverse);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 /* ---- trophy strip ---- */
@@ -367,7 +366,7 @@
 
 .lb-root .lb-trophy__count {
     font-size: 26px;
-    color: var(--trophy-ink);
+    color: var(--ink);
 }
 
 .lb-root .lb-trophy__max {
@@ -388,75 +387,15 @@
     color: var(--ink-mute);
 }
 
-/* ---- tab bar: thin floating capsule, icons only ---- */
-
-.lb-tabbar-dock {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 26px;
-    align-items: center;
-}
-
-.lb-tabbar-wrap {
-    position: relative;
-}
-
-.lb-tabbar-wrap > .ui-soft-shadow {
-    border-top-left-radius: 27px;
-    border-top-right-radius: 27px;
-    border-bottom-left-radius: 27px;
-    border-bottom-right-radius: 27px;
-}
-
-.lb-tabbar {
-    flex-direction: row;
-    background-color: var(--glass-strong);
-    border-top-left-radius: 27px;
-    border-top-right-radius: 27px;
-    border-bottom-left-radius: 27px;
-    border-bottom-right-radius: 27px;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-}
-
-.lb-tab {
-    width: 44px;
-    height: 44px;
-    margin-right: 4px;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    border-bottom-left-radius: 22px;
-    border-bottom-right-radius: 22px;
-    align-items: center;
-    justify-content: center;
-    transition-property: background-color, scale;
-    transition-duration: var(--motion-release);
-}
-
-.lb-tab--last {
-    margin-right: 0;
-}
-
-.lb-tab > .lb-icon {
-    width: 19px;
-    height: 19px;
-    -unity-background-image-tint-color: var(--tab-ink);
-    transition-property: -unity-background-image-tint-color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-tab--on {
-    background-color: var(--action);
-    scale: 1.06 1.06;
-}
-
-.lb-tab--on > .lb-icon {
-    -unity-background-image-tint-color: var(--action-ink);
-}
-
+/* Full-width paper tabs; the active destination rises above the bar. */
+.lb-tabbar-dock { position: absolute; left: 0; right: 0; bottom: 0; }
+.lb-tabbar { flex-direction: row; width: 100%; height: 76px; padding: 4px 6px; --paper-card-fill: var(--paper-dark); }
+.lb-tab { flex-grow: 1; flex-basis: 0; min-width: 48px; height: 60px; margin: 0 2px; align-items: center; justify-content: center; }
+.lb-tab > .lb-icon { width: 28px; height: 28px; -unity-background-image-tint-color: var(--ink); }
+.lb-tab-label { display: none; font-size: 15px; color: var(--ink); }
+.lb-tab--on { flex-grow: 1.5; height: 78px; translate: 0 -14px; --paper-card-fill: var(--paper-light); }
+.lb-tab--on > .lb-icon { width: 36px; height: 36px; }
+.lb-tab--on > .lb-tab-label { display: flex; }
 /* ===================================================================
    Icons. Vector images drawn by LobbyIcon; colour is the tint, so it
    transitions like any other style property.
@@ -777,7 +716,7 @@
 .lb-stub__icon > .lb-icon {
     width: 40px;
     height: 40px;
-    -unity-background-image-tint-color: var(--ink-mute);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-stub__title {

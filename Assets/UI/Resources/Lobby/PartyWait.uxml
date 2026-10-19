@@ -1,7 +1,7 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="PartyWait.uss" />
     <ui:VisualElement name="party-safe-area" class="lb-party-safe">
-        <ui:VisualElement class="lb-party-body">
+        <lobby:PaperCard class="lb-party-body" name="paper-lb-party-body-0">
             <ui:Label text="Waiting for your party" class="lb-party-title" />
             <ui:VisualElement class="lb-party-presence-row">
                 <ui:VisualElement class="lb-party-presence" />
@@ -9,9 +9,9 @@
             </ui:VisualElement>
             <ui:Label text="Guild online: —" />
             <ui:VisualElement name="party-slots" class="lb-party-slots" />
-            <ui:Button name="party-invite" text="Invite" />
-            <ui:Button name="party-random" text="Queue randomly" />
-            <ui:Button name="party-cancel" text="Cancel" />
-        </ui:VisualElement>
+            <lobby:PaperButton name="party-invite" text="Invite" />
+            <lobby:PaperButton name="party-random" text="Queue randomly" />
+            <lobby:PaperButton name="party-cancel" text="Cancel" />
+        </lobby:PaperCard>
     </ui:VisualElement>
-</ui:UXML>
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

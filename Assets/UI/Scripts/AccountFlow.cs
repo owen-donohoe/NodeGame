@@ -190,7 +190,7 @@ namespace NodeWar.Lobby
 
         private static Button DialogButton(string name, string text, string style)
         {
-            Button button = new Button { name = name };
+            Button button = new PaperButton { name = name };
             button.AddToClassList("ui-reset-button");
             button.AddToClassList("ui-button");
             button.AddToClassList(style);

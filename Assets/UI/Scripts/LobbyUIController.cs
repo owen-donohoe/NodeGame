@@ -254,7 +254,11 @@ namespace NodeWar.Lobby
             if (safeArea != null) safeArea.Update();
             // The absolute dock needs the full safe area's inset in its anchor.
             if (pillDock != null && safeAreaRoot != null)
-                pillDock.style.bottom = 26f + safeAreaRoot.resolvedStyle.paddingBottom;
+            {
+                pillDock.style.bottom = safeAreaRoot.resolvedStyle.paddingBottom;
+                pillDock.style.left = safeAreaRoot.resolvedStyle.paddingLeft;
+                pillDock.style.right = safeAreaRoot.resolvedStyle.paddingRight;
+            }
             crateInventory?.Refresh();
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();
@@ -679,7 +683,7 @@ namespace NodeWar.Lobby
 
         private void AddBurgerItem(string label, System.Action destination = null)
         {
-            var button = new Button(() =>
+            var button = new PaperButton(() =>
             {
                 burgerPanel.Close();
                 if (destination != null) destination();
@@ -710,7 +714,7 @@ namespace NodeWar.Lobby
             VisualElement currencies = root.Q<VisualElement>("top-bar");
             if (pills != null) pills.style.display = top != null && top.HidesPills ? DisplayStyle.None : DisplayStyle.Flex;
             if (header != null) header.style.display = (top != null && top.HidesHeader) || navigation.CurrentPageID == LobbyPageID.Guild ? DisplayStyle.None : DisplayStyle.Flex;
-            if (currencies != null) currencies.style.display = top != null && top.HidesHeader ? DisplayStyle.None : DisplayStyle.Flex;
+            if (currencies != null) currencies.style.display = (top != null && top.HidesHeader) || navigation.CurrentPageID == LobbyPageID.Guild ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void HandleBack()

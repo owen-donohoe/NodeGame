@@ -1,17 +1,17 @@
 .lb-home-stage { position: relative; flex-grow: 1; }
-.lb-home-controls { position: absolute; left: 8px; right: 8px; bottom: 96px; padding: 12px; align-items: flex-end; background-color: rgba(18, 27, 34, 0.35); border-radius: 12px; }
-.lb-home-mode { min-width: 48px; min-height: 48px; flex-direction: row; align-items: center; justify-content: flex-end; }
+.lb-home-controls { position: absolute; left: 12px; right: 12px; bottom: 104px; align-items: flex-end; }
+.lb-home-mode { min-height: 48px; padding: 4px 10px; margin-bottom: 8px; flex-direction: row; align-items: center; justify-content: flex-end; --paper-card-fill: var(--paper-light); }
 .lb-home-mode .lb-icon { width: 24px; height: 24px; margin: 4px; }
-.lb-home-mode .lb-home-swap { width: 14px; height: 14px; opacity: 0.6; -unity-background-image-tint-color: white; }
-.lb-home-mode Label { font-size: 18px; }
-.lb-home-reason { color: white; font-size: 13px; margin-bottom: 4px; }
+.lb-home-mode .lb-home-swap { width: 18px; height: 18px; }
+.lb-home-mode Label { font-size: 18px; color: var(--ink); }
+.lb-home-reason { color: var(--ink); font-size: 15px; margin-bottom: 6px; background-color: var(--paper-light); padding: 4px; }
 .lb-home-action-row { flex-direction: row; align-items: flex-end; justify-content: flex-end; width: 100%; }
-.lb-home-crate { position: relative; width: 52px; height: 64px; min-width: 48px; min-height: 48px; margin-right: 8px; margin-bottom: 28px; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; }
-.lb-home-crate .lb-icon { width: 32px; height: 32px; }
-.lb-held-crate-count { position: absolute; top: 0; left: 0; min-width: 20px; -unity-text-align: middle-center; color: white; background-color: rgb(36, 40, 47); border-radius: 10px; }
-.lb-home-play-column { width: 152px; flex-shrink: 1; min-width: 120px; }
-.lb-home-play { height: 96px; min-height: 48px; min-width: 48px; background-color: var(--action); color: var(--action-ink); font-size: 30px; border-radius: 14px; }
-.lb-next-crate { flex-direction: row; align-items: center; margin-top: 4px; }
-.lb-next-crate-track { height: 12px; flex-grow: 1; background-color: black; }
-.lb-next-crate-fill { height: 100%; width: 0; background-color: white; }
-.lb-next-crate .lb-icon { width: 24px; height: 24px; margin-left: 4px; -unity-background-image-tint-color: white; }
+.lb-home-crate { position: relative; width: 56px; height: 72px; margin-right: 10px; margin-bottom: 28px; align-items: center; justify-content: center; }
+.lb-home-crate .lb-icon { width: 38px; height: 38px; }
+.lb-held-crate-count { position: absolute; top: -4px; left: -4px; min-width: 24px; -unity-text-align: middle-center; color: var(--ink); background-color: var(--paper-gold); border-radius: var(--corner-sm); border-width: 2px; border-color: var(--ink); font-size: 20px; }
+.lb-home-play-column { flex-grow: 1; max-width: 190px; min-width: 120px; }
+.lb-home-play { height: 100px; font-size: 42px; --paper-card-fill: var(--paper-gold); }
+.lb-next-crate { flex-direction: row; align-items: center; margin-top: 6px; }
+.lb-next-crate-track { height: 12px; flex-grow: 1; background-color: var(--ink); border-width: 2px; border-color: var(--ink); border-radius: var(--corner-sm); overflow: hidden; }
+.lb-next-crate-fill { height: 100%; width: 0; background-color: var(--paper-light); }
+.lb-next-crate .lb-icon { width: 24px; height: 24px; margin-left: 6px; }

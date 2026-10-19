@@ -6,7 +6,7 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: gpt-6, at: 2026-10-11T19:03:46Z }
-verified_at_commit: cf7d30de
+verified_at_commit: a9edd816
 status: draft
 sources:
   - id: solution
@@ -21,6 +21,9 @@ sources:
   - id: shared-props
     resource: dotnet/Directory.Build.props
     title: Shared LangVersion and compile-item settings
+  - id: paper-math-tests
+    resource: dotnet/NodeWar.Lobby.Tests/PaperMathTests.cs
+    title: Stable paper seeds, closed paths and bounded wobble/rotation
   - id: lobby-test-project
     resource: dotnet/NodeWar.Lobby.Tests/NodeWar.Lobby.Tests.csproj
     title: Lobby test project, linked sources
@@ -231,6 +234,8 @@ cases) and adds `LobbyIconContextCompatibilityTests` (2 View cases) pinning the 
 to the Retired group in `LobbyIconUsage` and lose their fallback drawing. At 89553ac3 the
 full solution passed 3948 cases (Lobby 742, View 1578) and compile-check reported clean.
 
+At `a9edd816`, the standard solution passes 4525 cases (Lobby 1045, Cloud 574). Seven paper-math cases cover stable seeds/paths, bounded drift/rotation and closure. Unity compile-check passes with its scratch output redirected into the worktree; the stock output collided with another process using the shared Library. Editor visual verification remains with the lead.
+
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
 release-content gate with a freshly migrated client balance/export before shipping.
@@ -238,7 +243,7 @@ release-content gate with a freshly migrated client balance/export before shippi
 | Project | Cases | Covers |
 |---|---|---|
 | `NodeWar.Simulation.Tests` | 720 | `Assets/Tests/EditMode/Tests/`: the version-4 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, Barracks equipping, Infirmary healing and workers, Fortress resistance and district-health drain/regeneration/passive gating, Workshop forging and mobile minion lifecycle, Storehouse self-production/re-claim, progressive collection and lock/Restore lifecycle, remaining-bank capture loot paid once, Pier gates and retreat, latched leg clocks and asymmetric reversal, owner highway, physical-tick routing and current gate estimates, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
-| `NodeWar.Lobby.Tests` | 1058 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, lobby routing/back/deep links, stats/streak/BestRR rules, retained summary ordering/cap, opponent handle fallbacks, stage mapping/cluster/shots, paper masks/ink strokes, shop depth ordering/culling/framing, crate consumption/progress, mode save migration/PLAY mapping, party wait timing/slots/cancel, Workshop replacement gates/mapping, mode labels, badges, async refresh states, claim requests, swipe decisions, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including ForgeMinion=8, Collect=9 start/cancel and current Market packet refusal, and the bank action model (collection only queues commands; Workshop forging uses shared node-action eligibility; lock and storage reasons match the simulation) |
+| `NodeWar.Lobby.Tests` | 1065 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, lobby routing/back/deep links, stats/streak/BestRR rules, retained summary ordering/cap, opponent handle fallbacks, stage mapping/cluster/shots, crate consumption/progress, mode save migration/PLAY mapping, party wait timing/slots/cancel, Workshop replacement gates/mapping, mode labels, badges, async refresh states, claim requests, swipe decisions, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including ForgeMinion=8, Collect=9 start/cancel and current Market packet refusal, and the bank action model (collection only queues commands; Workshop forging uses shared node-action eligibility; lock and storage reasons match the simulation) |
 | `NodeWar.View.Tests` | 1753 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation (including amber Pier intent and read-only latched interpolation), the district fallback descriptors and art keys, district-health segment visibility/layout, Storehouse bank pips (a row centred above the node along camera-up), grey minion tint, Storehouse-only bank sheet height and Workshop/Storehouse fallback art, icon/context resolution and usage, required UXML names, draft handover and eight startup-sequence cases (draft/fallback, skip-draft with/without wave, paused phases and idempotent unpause) |
 | `NodeWar.MatchLog.Tests` | 103 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay, the core-rules and bank-rules replays: the version-4 script replays every command, a version-3 log and tampered hashes are refused, a midpoint copy replays identically), node-command round trips (including ForgeMinion=8 and Collect=9 start/cancel) and unknown-command refusal |
 | `NodeWar.Network.Tests` | 128 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario the 1,500-tick core-rules acceptance on `hourglass-01-acceptance` and the bank-rules acceptance (Workshop forging, minion collection/death, Storehouse drain/lock/Restore/capture payout, Fortress health/aura recovery, remote Collect start/cancel, Pier gate, Recruit/Town) on `hourglass-01-banks-acceptance`, each over a lossy link with rollback |

@@ -86,12 +86,7 @@ namespace NodeWar.Lobby
             var display = new HomeModeDisplay(SelectedMode);
             if (modeName != null) modeName.text = display.Name;
             if (modeIcon != null) modeIcon.Kind = display.Icon;
-            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour))
-            {
-                if (modeName != null) modeName.style.color = colour;
-                modeIcon?.SetResourceTint(colour);
-            }
-        }
+}
 
         public void SetMode(LobbyModeSelection selection)
         {
@@ -99,12 +94,7 @@ namespace NodeWar.Lobby
             var display = new HomeModeDisplay(selection);
             if (modeName != null) modeName.text = display.Name;
             if (modeIcon != null) modeIcon.Kind = display.Icon;
-            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour))
-            {
-                if (modeName != null) modeName.style.color = colour;
-                modeIcon?.SetResourceTint(colour);
-            }
-        }
+}
 
         public override void OnShow()
         {

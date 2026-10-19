@@ -1,19 +1,19 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="Guild.uss" />
-    <ui:ScrollView class="lb-guild-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
+    <lobby:PaperCard class="lb-page-paper" name="paper-GuildPage" rotate-paper="false"><ui:ScrollView class="lb-guild-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
         <ui:Label text="Guild" class="lb-guild-title" />
         <ui:VisualElement name="guild-state" />
-    </ui:ScrollView>
+    </ui:ScrollView></lobby:PaperCard>
     <ui:VisualElement name="guild-visitor">
         <ui:VisualElement class="lb-guild-search">
             <ui:TextField name="guild-query" label="Guild name" />
-            <ui:Button name="guild-search" text="Search" />
-            <ui:Button name="guild-filter" tooltip="Filter guilds"><ui:Label text="Filter" /></ui:Button>
+            <lobby:PaperButton name="guild-search" text="Search" />
+            <lobby:PaperButton name="guild-filter" tooltip="Filter guilds"><ui:Label text="Filter" /></lobby:PaperButton>
         </ui:VisualElement>
         <ui:VisualElement name="guild-search-results" />
         <ui:Foldout name="guild-browse" text="Browse public guilds" value="false">
-            <ui:Button name="guild-refresh" text="Refresh" />
+            <lobby:PaperButton name="guild-refresh" text="Refresh" />
             <ui:VisualElement name="guild-browse-results" />
         </ui:Foldout>
     </ui:VisualElement>
-</ui:UXML>
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

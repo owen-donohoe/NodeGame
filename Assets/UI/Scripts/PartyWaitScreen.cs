@@ -74,7 +74,8 @@ namespace NodeWar.Lobby
             slots?.Clear();
             for (int i = 0; i < model.Capacity; i++)
             {
-                var slot = new Label(i == 0 ? "You" : i < model.Filled ? "Player" : "Waiting");
+                var slot = new PaperCard { name = "party-slot-" + i, pickingMode = PickingMode.Ignore };
+                slot.Add(new Label(i == 0 ? "You" : i < model.Filled ? "Player" : "Waiting"));
                 slot.AddToClassList("lb-party-slot");
                 slot.EnableInClassList("lb-party-slot-filled", i < model.Filled);
                 slots?.Add(slot);
