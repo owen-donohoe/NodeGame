@@ -8,18 +8,6 @@
 .ws-panel2 { margin: 10px 12px 0; flex-shrink: 0; }
 .ws-roles-scroll { flex-shrink: 0; }
 /* Workshop owns layout; shared components own buttons, chips and placeholder art. */
-.ws-card { width: 30.6%; flex-shrink: 0; margin: 1.3%; margin-top: 8px; padding: 6px 4px 5px; align-items: center; border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-sm); background-color: var(--surface-raised); }
-.ws-card--preview { border-color: var(--action-edge); }
-.ws-card--locked { background-color: var(--surface-sunk); border-color: var(--off-edge); }
-.ws-card--locked .ws-art-clip { opacity: 0.4; }
-.ws-name { font-size: 12px; white-space: normal; -unity-text-align: middle-center; color: var(--ink); }
-.ws-mark { position: absolute; top: -6px; right: -4px; height: 18px; font-size: 9px; padding-left: 6px; padding-right: 6px; border-radius: var(--corner-sm); background-color: var(--glass-strong); color: var(--ink); -unity-text-align: middle-center; }
-.ws-mark--arena { background-color: var(--off); color: var(--ink); }
-.ws-empty { width: 100%; padding: 12px; color: var(--ink-mute); }
-.ws-art-clip { width: 72%; height: 64px; align-items: stretch; justify-content: center; }
-.ws-art { height: 58px; }
-.ws-art--neutral { opacity: 0.55; }
-.ws-monogram { font-size: 24px; }
 .ws-preview { align-items: center; }
 .ws-preview .ws-art-clip { width: 120px; height: 116px; }
 .ws-preview .ws-art { height: 108px; }
@@ -54,12 +42,6 @@
 
 /* Paper roles; the stage window keeps a transparent interior. */
 .ws-tab, .ws-filter, .ws-preset, .ws-primary, .ws-secondary, .ws-cancel { min-height: 48px; }
-.ws-card { border-width: 0; padding: 10px 5px; }
-.ws-card--locked { --paper-card-fill: var(--paper-dark); }
-.ws-mark { background-color: var(--paper-dark); color: var(--ink); font-size: 11px; border-width: 1px; border-color: var(--ink); }
-.ws-monogram { color: var(--ink); }
-.ws-art { --paper-card-fill: var(--paper-dark); }
-.ws-card--preview { --paper-card-fill: var(--paper-gold); }
 .ws-band-tile { --paper-card-fill: var(--paper-dark); }
 
 /* Window frame: the stage shows through, but the ink border is always drawn. */
@@ -74,3 +56,10 @@
 .ws-actionbar { margin-top: 10px; }
 
 .ws-preset-face { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 16px; -unity-text-align: middle-center; }
+
+#page-workshop .ws-cards > .mk-tile { flex-grow: 0; flex-shrink: 0; min-height: 112px; }
+.ws-art-clip { height: 64px; align-items: stretch; justify-content: center; }
+.ws-art { flex-grow: 1; align-items: center; justify-content: center; }
+.ws-name { white-space: normal; -unity-text-align: middle-center; }
+.ws-empty { width: 100%; padding: 12px; }
+.ws-presets .ws-preset-tabs { flex-shrink: 0; }

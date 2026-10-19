@@ -33,6 +33,7 @@ namespace NodeWar.Lobby
         private readonly Label presetLabel, browserTitle;
         private bool closingForUse;
         private bool showAll;
+        private string roleFilter;
         private LoadoutSort sort;
         private PlayerState playerState;
         private Item inspectedItem;
@@ -84,6 +85,7 @@ namespace NodeWar.Lobby
             variants = Root.Q<Button>("workshop-open-variants");
             skins = Root.Q<Button>("workshop-open-skins");
             unlocked = Root.Q<VisualElement>("workshop-unlocked");
+            unlocked.RegisterCallback<GeometryChangedEvent>(_ => SizeCards());
             preview = Root.Q<VisualElement>("workshop-info-preview");
             stats = Root.Q<VisualElement>("workshop-info-stats");
             title = Root.Q<Label>("workshop-info-title");
@@ -252,7 +254,7 @@ namespace NodeWar.Lobby
             CancelReplacement();
             if (sheet != null && sheet.IsShowing(itemInfo)) sheet.Close();
             CloseItemPanel();
-            activeTab = tab;
+            activeTab = tab; roleFilter = null;
             ViewChanged?.Invoke(tab == Tab.Suits);
             var profile = PlayerProfile.Instance;
             if (profile != null) profile.WorkshopTabIndex = (int)tab;
@@ -281,13 +283,13 @@ namespace NodeWar.Lobby
         private VisualElement MakeArt(Item item, bool neutral, bool navy)
         {
             var clip = new VisualElement { pickingMode = PickingMode.Ignore };
-            clip.AddToClassList("ws-art-clip");
-            var art = new PaperCard { pickingMode = PickingMode.Ignore };
+            clip.AddToClassList("ws-art-clip"); clip.AddToClassList("mk-art");
+            var art = new MkCard { pickingMode = PickingMode.Ignore };
             art.AddToClassList("ws-art");
-            art.AddToClassList("ui-tile");
+
             if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
             art.EnableInClassList("ws-art--neutral", neutral); art.EnableInClassList("ws-art--navy", navy);
-            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "ui-tile__monogram"));
+            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "mk-h2"));
             clip.Add(art); return clip;
         }
         private void RenderCards()
@@ -295,22 +297,24 @@ namespace NodeWar.Lobby
             if (unlocked == null) return;
             unlocked.Clear();
             ownedFilter.text = showAll ? "All" : "Owned";
-            sortFilter.text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Owned first" : sort == LoadoutSort.Name ? "Name" : "Role");
+            sortFilter.text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role");
             browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
+            RenderRoles(items);
             foreach (Item item in items)
             {
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
-                if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
-                var card = new PaperButton(() => PreviewItem(item.ID));
-                card.AddToClassList("ui-reset-button"); card.AddToClassList("ws-card");
+                if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned) ||
+                    roleFilter != null && roleFilter != item.Family.ToString()) continue;
+                var card = new Button(() => PreviewItem(item.ID));
+                card.AddToClassList("mk-tile"); card.AddToClassList("ws-card");
                 card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
                 card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
-                card.Add(MakeLabel(item.Name, "ws-name", "ui-w600"));
-                card.EnableInClassList("ws-card--locked", state.Status != UnlockStatus.Owned);
-                if (IsSelected(item)) card.Add(MakeLabel("In hand", "ws-mark", "ui-w700"));
-                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "ws-mark", "ws-mark--arena"));
+                card.Add(MakeLabel(item.Name, "ws-name", "mk-h3"));
+                card.EnableInClassList("mk-tile--locked", state.Status != UnlockStatus.Owned);
+                if (IsSelected(item)) card.Add(MakeLabel("In hand", "mk-mark", "ws-mark"));
+                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era"));
                 if (menu != null) menu.Attach(card, () =>
                 {
                     var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) };
@@ -327,7 +331,32 @@ namespace NodeWar.Lobby
                 });
                 unlocked.Add(card);
             }
-            if (unlocked.childCount == 0) unlocked.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "ui-w500"));
+            if (unlocked.childCount == 0) unlocked.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "mk-muted"));
+            SizeCards();
+        }
+        private void SizeCards()
+        {
+            if (unlocked.contentRect.width <= 24) return;
+            float width = (unlocked.contentRect.width - 24) / 3f;
+            unlocked.Query<Button>(className: "mk-tile").ForEach(card => card.style.width = width);
+        }
+
+        private void RenderRoles(List<Item> items)
+        {
+            var host = Root.Q("workshop-role-chips"); host.Clear();
+            var roles = new List<string>();
+            foreach (var item in items)
+                if (!roles.Contains(item.Family.ToString())) roles.Add(item.Family.ToString());
+            roles.Sort(StringComparer.Ordinal);
+            if (roleFilter != null && !roles.Contains(roleFilter)) roleFilter = null;
+            void Add(string role, string label)
+            {
+                var chip = new Button(() => { roleFilter = role; RenderCards(); }) { text = label };
+                chip.AddToClassList("mk-chip"); chip.AddToClassList("mk-chip--tap");
+                chip.EnableInClassList("mk-chip--on", role == roleFilter); host.Add(chip);
+            }
+            Add(null, "All");
+            foreach (var role in roles) Add(role, ItemFamily.NoteFor((ItemFamily.Family)Enum.Parse(typeof(ItemFamily.Family), role)));
         }
         public void InspectStageItem(bool suit, int stageIndex)
         {
@@ -410,6 +439,7 @@ namespace NodeWar.Lobby
             Root.Q<VisualElement>("workshop-replace-banner").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
             Root.Q<VisualElement>("workshop-replace-actions").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
             var pending = ReplacingSuit ? Find(suits, loadout.PendingSuitId) : Find(districts, loadout.PendingDistrictId);
+            if (Replacing) grid.scrollOffset = Vector2.zero;
             Root.Q<Label>("workshop-replace-message").text = "Tap a wiggling slot to swap in " + (pending?.Name ?? "") + ".";
         }
         private void RenderInfo()
@@ -646,7 +676,7 @@ namespace NodeWar.Lobby
             panelHost.pickingMode = PickingMode.Position;
             var sheet = new VisualElement();
             var body = new VisualElement { pickingMode = PickingMode.Ignore }; body.AddToClassList("ws-sheet-body");
-            var art = new PaperCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            var art = new MkCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
             body.Add(art);
             Label title = MakeLabel("", "ws-title", "ui-w600");
             Label status = MakeLabel("", "ws-fact", "ui-w500");
@@ -724,7 +754,7 @@ namespace NodeWar.Lobby
             body.AddToClassList("ws-sheet-body");
             body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             body.verticalScrollerVisibility = ScrollerVisibility.Hidden;
-            var art = new PaperCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
+            var art = new MkCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
             art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
             body.Add(art);
             body.Add(MakeLabel(inspectedItem.Name + ", " + current.Label.ToLowerInvariant(), "ws-title", "ui-w600"));
@@ -749,7 +779,7 @@ namespace NodeWar.Lobby
                 chip.AddToClassList("ui-reset-button"); chip.AddToClassList("ws-chip");
                 chip.EnableInClassList("ws-card--preview", choiceId == current.ID);
                 chip.Add(MakeArt(inspectedItem, chipState.Status != UnlockStatus.Owned, false));
-                chip.Add(MakeLabel(choice.Label, "ws-name", "ui-w600"));
+                chip.Add(MakeLabel(choice.Label, "ws-name", "mk-h3"));
                 strip.Add(chip);
             }
             sheet.Add(strip);
