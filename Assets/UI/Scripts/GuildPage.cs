@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.UIElements.Experimental;
 
 namespace NodeWar.Lobby
 {
@@ -14,52 +15,66 @@ namespace NodeWar.Lobby
         private readonly GuildDataView mine = new GuildDataView();
         private readonly GuildDataView search = new GuildDataView();
         private readonly GuildDataView browse = new GuildDataView();
+        private readonly GuildDataView details = new GuildDataView();
         private readonly VisualElement visitor;
+        private readonly VisualElement home;
+        private readonly VisualElement browseCard;
+        private readonly VisualElement results;
         private readonly TextField query;
-        private readonly Foldout browseFold;
-        private readonly LobbyOverlayPanel filters;
-        private readonly LobbyOverlayPanel preview;
+        private readonly Button browseToggle;
+        private readonly Button chatButton;
+        private readonly GuildSheetHost sheet;
+        private readonly Action<string> openProfile;
         private readonly GuildChatScreen chat;
-        private readonly GuildDataView pinned = new GuildDataView();
-        private readonly GuildDataView feed = new GuildDataView();
         private GuildFilter filter = new GuildFilter();
         private GuildView current;
         private bool visible;
+        private bool browsing;
+        private bool searched;
         private int visit;
 
-        public GuildPage(IGuildService service, GuildBrowseCache cache, LobbyOverlayRouter router, VisualElement overlays)
-            : base(LobbyPageID.Guild, Build())
+        public bool HasGuild => current?.Summary != null;
+        public event Action MembershipChanged;
+
+        public GuildPage(IGuildService service, GuildBrowseCache cache, LobbyOverlayRouter router, VisualElement overlays,
+            LobbySheet sheet, Action<string> openProfile) : base(LobbyPageID.Guild, Build())
         {
-            this.service = service; this.cache = cache;
+            this.service = service; this.cache = cache; this.sheet = new GuildSheetHost(sheet); this.openProfile = openProfile;
             chat = new GuildChatScreen(service, router, overlays);
             Root.userData = this;
-            visitor = Root.Q("guild-visitor");
-            visitor.RemoveFromHierarchy();
+            visitor = Root.Q("guild-visitor"); visitor.RemoveFromHierarchy();
+            visitor.RegisterCallback<GeometryChangedEvent>(_ => PlaceSearch(false));
+            home = Root.Q("guild-home"); home.RemoveFromHierarchy();
+            mine.AddToClassList("lb-guild-membership"); mine.Content.AddToClassList("lb-guild-membership-content");
             Root.Q("guild-state").Add(mine);
             query = visitor.Q<TextField>("guild-query");
+            query.Query<TextElement>().ForEach(element => element.enableRichText = false);
             visitor.Q("guild-search-results").Add(search);
             visitor.Q("guild-browse-results").Add(browse);
-            browseFold = visitor.Q<Foldout>("guild-browse");
-            browseFold.value = false;
-            browseFold.RegisterValueChangedCallback(evt => { if (evt.newValue && visible) LoadBrowse(false); });
+            browseCard = visitor.Q("guild-browse-card");
+            results = visitor.Q("guild-results-scroll");
+            browseToggle = visitor.Q<Button>("guild-browse-toggle");
+            browseToggle.clicked += () =>
+            {
+                browsing = !browsing; UpdateVisitor();
+                if (browsing) LoadBrowse(false);
+            };
             visitor.Q<Button>("guild-search").clicked += Search;
             query.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter) { Search(); evt.StopPropagation(); }
             });
             visitor.Q<Button>("guild-refresh").clicked += () => LoadBrowse(true);
-            mine.RetryRequested += Refresh;
-            search.RetryRequested += Search;
-            browse.RetryRequested += () => LoadBrowse(true);
-            filters = new LobbyOverlayPanel("Filter guilds");
-            preview = new LobbyOverlayPanel("Guild preview");
-            WirePanel(filters, "guild-filter", router, overlays);
-            WirePanel(preview, "guild-preview", router, overlays);
             visitor.Q<Button>("guild-filter").clicked += OpenFilter;
             GuildViews.Icon(visitor.Q<Button>("guild-filter"), LobbyIconKind.Funnel);
             GuildViews.Icon(visitor.Q<Button>("guild-search"), LobbyIconKind.Search);
-            GuildViews.Icon(visitor.Q<Button>("guild-refresh"), LobbyIconKind.Refresh);
-            pinned.RetryRequested += Refresh; feed.RetryRequested += Refresh;
+            chatButton = Root.Q<Button>("guild-chat-button");
+            chatButton.clicked += () => _ = OpenChatAsync();
+            GuildViews.Icon(chatButton, LobbyIconKind.Chat);
+            chatButton.style.display = DisplayStyle.None;
+            mine.RetryRequested += Refresh;
+            search.RetryRequested += Search;
+            browse.RetryRequested += () => LoadBrowse(true);
             Root.RegisterCallback<AttachToPanelEvent>(evt =>
             {
                 if (evt.target == Root) BackendServices.Account.Changed += AccountChanged;
@@ -68,9 +83,7 @@ namespace NodeWar.Lobby
             {
                 if (evt.target != Root) return;
                 BackendServices.Account.Changed -= AccountChanged;
-                OnHide();
-                filters.Root.RemoveFromHierarchy(); preview.Root.RemoveFromHierarchy();
-                chat.Root.RemoveFromHierarchy();
+                OnHide(); chat.Root.RemoveFromHierarchy();
             });
         }
 
@@ -81,28 +94,21 @@ namespace NodeWar.Lobby
             return root;
         }
 
-        private static void WirePanel(LobbyOverlayPanel panel, string id, LobbyOverlayRouter router, VisualElement host)
-        {
-            host.Add(panel.Root);
-            panel.Opened += () => { panel.Root.BringToFront(); router.Open(new LobbyOverlay(id, OverlayKind.Panel), panel.Close); };
-            panel.Closed += () => router.Closed(id);
-        }
-
         public override void OnShow() { visible = true; Refresh(); }
         public override void OnHide()
         {
             visible = false; visit++;
-            mine.Invalidate(); search.Invalidate(); browse.Invalidate();
-            filters.Close(); preview.Close();
-            pinned.Invalidate(); feed.Invalidate(); chat.Close();
+            mine.Invalidate(); search.Invalidate(); browse.Invalidate(); details.Invalidate(true);
+            CloseSheet(); chat.Close();
         }
 
         private void AccountChanged(AccountInfo info)
         {
-            current = null; visit++;
-            mine.Invalidate(true); search.Invalidate(true); browse.Invalidate(true);
-            filters.Close(); preview.Close();
-            pinned.Invalidate(true); feed.Invalidate(true); chat.Close();
+            current = null; visit++; searched = browsing = false;
+            mine.Invalidate(true); search.Invalidate(true); browse.Invalidate(true); details.Invalidate(true);
+            CloseSheet(); chat.Close();
+            chatButton.style.display = DisplayStyle.None;
+            MembershipChanged?.Invoke();
             if (visible) Refresh();
         }
 
@@ -115,71 +121,74 @@ namespace NodeWar.Lobby
             int token = visit;
             string account = BackendServices.Account.Current?.PlayerId;
             await refresh;
-            if (visible && visit == token && account == BackendServices.Account.Current?.PlayerId && current?.Summary != null)
+            if (visible && visit == token && account == BackendServices.Account.Current?.PlayerId && HasGuild)
                 chat.Open(current);
         }
 
         private Task RefreshAsync()
         {
             visit++;
-            chat.Close();
+            chat.Close(); CloseSheet(); details.Invalidate(true);
             search.Invalidate(); browse.Invalidate();
-            current = null;
             return mine.Load(service.GetMineAsync, RenderMembership, _ => true, "You're not in a guild.");
         }
 
         private void RenderMembership(GuildView guild)
         {
             current = guild;
-            if (guild == null)
+            chatButton.style.display = HasGuild ? DisplayStyle.Flex : DisplayStyle.None;
+            MembershipChanged?.Invoke();
+            if (!HasGuild)
             {
-                mine.Content.Add(visitor);
-                Search();
-                if (browseFold.value) LoadBrowse(false);
+                mine.Content.Add(visitor); UpdateVisitor();
+                if (searched) Search();
+                if (browsing) LoadBrowse(false);
+                return;
             }
-            else
-            {
-                mine.Content.Add(GuildViews.Header(guild));
-                var weekly = new ProgressBar { title = "Weekly task: " + guild.WeeklyProgress + "/" + guild.WeeklyGoal,
-                    value = guild.WeeklyGoal > 0 ? Mathf.Clamp01((float)guild.WeeklyProgress / guild.WeeklyGoal) * 100f : 0f };
-                mine.Content.Add(weekly);
-                mine.Content.Add(PlayerCardViews.Text("Pinned announcements"));
-                mine.Content.Add(pinned);
-                _ = pinned.Load(() => Task.FromResult(guild.Pinned), rows => RenderPosts(pinned.Content, rows),
-                    rows => rows != null && rows.Count > 0, "No pinned announcements.");
-                mine.Content.Add(PlayerCardViews.Text("Guild feed"));
-                mine.Content.Add(feed);
-                _ = feed.Load(() => Task.FromResult(guild.Feed), rows => RenderPosts(feed.Content, rows),
-                    rows => rows != null && rows.Count > 0, "No guild posts yet.");
-                var openChat = new PaperButton(() => _ = OpenChatAsync()) { text = "Chat" };
-                GuildViews.Icon(openChat, LobbyIconKind.Chat);
-                mine.Content.Add(openChat);
-            }
+            mine.Content.Add(home);
+            var header = home.Q("guild-home-header"); header.Clear(); header.Add(GuildViews.Header(guild));
+            var scroll = home.Q<ScrollView>("guild-home-scroll"); scroll.Clear();
+            var announcements = GuildViews.Card("Announcements");
+            RenderPosts(announcements, guild.Pinned, true); RenderPosts(announcements, guild.Feed, false);
+            scroll.Add(announcements);
         }
-
-        private static void RenderPosts(VisualElement host, List<GuildPost> posts)
+        private static void RenderPosts(VisualElement host, List<GuildPost> posts, bool pinned)
         {
+            if (posts == null) return;
             foreach (var post in posts)
             {
                 if (post == null) continue;
-                var row = new PaperCard();
-                row.AddToClassList("lb-guild-post");
-                if (post.Player != null) row.Add(PlayerCardViews.Text(PlayerCardViews.Handle(post.Player)));
-                row.Add(PlayerCardViews.Text(post.Text));
+                var row = GuildViews.Post(post, pinned);
                 if (post.Kind == GuildPostKind.Invite)
-                    row.Add(new PaperButton(() => Debug.Log("[Guild] join invite " + post.PostId)) { text = "Join" });
+                    row.Add(GuildViews.Button("Join", () => Debug.Log("[Stub] Guild join invite " + post.PostId)));
                 else if (post.Kind == GuildPostKind.InBattle)
-                {
-                    var spectate = new PaperButton(() => Debug.Log("[Guild] spectate " + post.Player?.PlayerId)) { text = "Spectate" };
-                    spectate.AddToClassList("lb-guild-red"); row.Add(spectate);
-                }
+                    row.Add(GuildViews.Button("Spectate", () => Debug.Log("[Stub] Guild spectate " + post.Player?.PlayerId)));
                 host.Add(row);
             }
         }
 
+        private void PlaceSearch(bool animate)
+        {
+            var anchor = visitor.Q("guild-search-anchor");
+            float top = searched ? 8 : Mathf.Max(8, visitor.layout.height * 0.38f - 50);
+            if (float.IsNaN(top)) return;
+            if (animate) anchor.experimental.animation.Start(new StyleValues { marginTop = top }, 250);
+            else anchor.style.marginTop = top;
+        }
+        private void UpdateVisitor()
+        {
+            visitor.EnableInClassList("lb-guild-visitor--searched", searched);
+            browseCard.style.display = browsing && !searched ? DisplayStyle.Flex : DisplayStyle.None;
+            search.style.display = searched ? DisplayStyle.Flex : DisplayStyle.None;
+            results.style.display = browsing || searched ? DisplayStyle.Flex : DisplayStyle.None;
+            browseToggle.text = browsing ? "⌃" : "⌄";
+            browseToggle.style.display = searched ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
         private void Search()
         {
-            if (!visible || current != null) return;
+            if (!visible || HasGuild) return;
+            bool animate = !searched; searched = true; UpdateVisitor(); PlaceSearch(animate);
             string text = query.value;
             GuildFilter selected = SnapshotFilter();
             _ = search.Load(() => service.SearchAsync(text, selected), rows => RenderRows(search.Content, rows),
@@ -188,8 +197,8 @@ namespace NodeWar.Lobby
 
         private void LoadBrowse(bool refresh)
         {
-            if (!visible || current != null) return;
-            GuildFilter selected = SnapshotFilter();
+            if (!visible || HasGuild) return;
+            GuildFilter selected = SnapshotFilter(); selected.JoinableOnly = true;
             _ = browse.Load(async () =>
             {
                 var all = await cache.GetAsync(service, refresh);
@@ -202,48 +211,69 @@ namespace NodeWar.Lobby
         private void RenderRows(VisualElement host, List<GuildSummary> guilds)
         {
             foreach (var guild in guilds)
-            {
-                var row = new PaperButton(() => OpenPreview(guild));
-                row.AddToClassList("lb-guild-row");
-                GuildViews.Icon(row, LobbyIconKind.Guild);
-                var text = new VisualElement { pickingMode = PickingMode.Ignore };
-                text.AddToClassList("lb-guild-row-text");
-                text.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
-                text.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity + " members"));
-                row.Add(text);
-                var chip = new PaperCard { name = "guild-status-" + guild.GuildId, pickingMode = PickingMode.Ignore };
-                chip.Add(PlayerCardViews.Text(guild.Joinable && guild.Members < guild.Capacity ? "Joinable" : "Closed"));
-                chip.AddToClassList("lb-guild-chip");
-                row.Add(chip);
-                host.Add(row);
-            }
+                if (guild != null) host.Add(GuildViews.GuildRow(guild, () => OpenPreview(guild)));
+        }
+        private VisualElement SheetContent(string title)
+        {
+            var content = new VisualElement(); content.AddToClassList("lb-guild-sheet");
+            content.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Guild"));
+            var heading = PlayerCardViews.Text(title); heading.AddToClassList("mk-h2"); content.Add(heading);
+            return content;
         }
 
-        private void OpenPreview(GuildSummary guild)
+        private void ShowSheet(VisualElement content, bool large = false)
         {
-            preview.Content.Clear();
-            preview.Content.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
-            preview.Content.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity + " members · Minimum " + guild.MinRR + " RR"));
-            var join = new PaperButton(() => Debug.Log("[Guild] join " + guild.GuildId)) { text = "Join" };
-            join.SetEnabled(guild.Joinable && guild.Members < guild.Capacity);
-            preview.Content.Add(join);
-            preview.Open();
+            sheet.Open(content, large);
+        }
+
+        private void CloseSheet()
+        {
+            sheet.Close();
+        }
+
+        private void OpenPreview(GuildSummary summary)
+        {
+            details.Invalidate(true);
+            var content = SheetContent("Guild"); content.Add(details);
+            details.RetryRequested -= RetryPreview;
+            previewId = summary.GuildId; details.RetryRequested += RetryPreview;
+            ShowSheet(content, true); LoadPreview();
+        }
+
+        private string previewId;
+        private void RetryPreview() { if (sheet.IsShowing) LoadPreview(); }
+        private void LoadPreview()
+        {
+            string id = previewId;
+            _ = details.Load(() => service.GetAsync(id), guild =>
+            {
+                details.Content.Add(GuildViews.Header(guild));
+                if (!HasGuild)
+                {
+                    var join = GuildViews.Button("Join", () => Debug.Log("[Stub] Guild join " + id), "mk-btn--primary");
+                    join.SetEnabled(guild.Summary.Joinable && guild.Summary.Members < guild.Summary.Capacity);
+                    details.Content.Add(join);
+                }
+            }, guild => guild?.Summary != null, "This guild is unavailable.");
         }
 
         private void OpenFilter()
         {
-            filters.Content.Clear();
+            var content = SheetContent("Filter guilds");
             var joinable = new Toggle("Joinable only") { value = filter.JoinableOnly };
-            var rr = new IntegerField("Min RR") { value = filter.MinRR };
-            var members = new IntegerField("Min members") { value = filter.MinMembers };
-            filters.Content.Add(joinable); filters.Content.Add(rr); filters.Content.Add(members);
-            filters.Content.Add(new PaperButton(() =>
+            var rr = new IntegerField("Min RR") { value = filter.MinRR }; rr.AddToClassList("mk-card");
+            var members = new IntegerField("Min members") { value = filter.MinMembers }; members.AddToClassList("mk-card");
+            content.Add(joinable); content.Add(rr); content.Add(members);
+            content.Add(GuildViews.Button("Apply", () =>
             {
                 filter = new GuildFilter { JoinableOnly = joinable.value, MinRR = Math.Max(0, rr.value), MinMembers = Math.Max(0, members.value) };
-                filters.Close(); Search();
-                if (browseFold.value) LoadBrowse(false);
-            }) { text = "Apply" });
-            filters.Open();
+                CloseSheet();
+                if (searched) Search();
+                if (browsing) LoadBrowse(false);
+            }));
+            ShowSheet(content);
         }
+
+        private void OpenMember(GuildMember member) => openProfile(member.Player.PlayerId);
     }
 }

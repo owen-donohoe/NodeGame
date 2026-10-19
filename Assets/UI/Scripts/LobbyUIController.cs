@@ -547,7 +547,21 @@ namespace NodeWar.Lobby
             }
 
             navigation.Register(new SocialPage(socialPageLayout));
-            guildPage = new GuildPage(NodeWar.Backend.BackendServices.Guild, NodeWar.Backend.BackendServices.GuildBrowse, router, lobbyRoot);
+            // Guild-specific binding stays here so the shared chrome can replace it at merge.
+            guildPage = new GuildPage(NodeWar.Backend.BackendServices.Guild, NodeWar.Backend.BackendServices.GuildBrowse,
+                router, lobbyRoot, sheet, playerId => profilePage.OpenFor(playerId));
+            System.Action guildChrome = () => lobbyRoot.schedule.Execute(() =>
+            {
+                if (navigation.CurrentPageID != LobbyPageID.Guild) return;
+                bool hide = router.Stack.Top?.HidesHeader == true;
+                var playerBand = lobbyRoot.Q("strip-wrap");
+                var resources = lobbyRoot.Q("top-bar");
+                if (playerBand != null) playerBand.style.display = hide || guildPage.HasGuild ? DisplayStyle.None : DisplayStyle.Flex;
+                if (resources != null) resources.style.display = hide ? DisplayStyle.None : DisplayStyle.Flex;
+            });
+            guildPage.MembershipChanged += guildChrome;
+            navigation.PageShown += _ => guildChrome();
+            router.Stack.Changed += guildChrome;
             navigation.Register(guildPage);
         }
 
