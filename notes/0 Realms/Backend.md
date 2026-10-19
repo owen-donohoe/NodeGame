@@ -13,7 +13,7 @@ tags: [shell/0, realm/backend]
 sources:
   - docs/systems/cloud.md
   - docs/systems/backend-client.md
-verified: ce9fb6bf
+verified: 700e3ff8
 ---
 
 # Backend
@@ -45,6 +45,7 @@ This is the map to keep coming back to:
 | Data | Lives in | Format | Who writes | Who reads |
 |---|---|---|---|---|
 | Settings, local profile, loadout choices | Device: `player_profile.json` in `persistentDataPath` | JSON | The client | The client |
+| Social cards and public profile samples | `LocalSocialService` / `LocalProfileService` | DTOs in memory | Client placeholders | Lobby UI |
 | Last 20 match logs | Device: `MatchLogs/*.nwml` | Binary ([[Match log]] format) | The client | The client (future replays) |
 | Unsent ranked logs | Device: `PendingReports/` | Binary | The client | `PendingRankedReports` retries until the server answers |
 | Rating, rank, inventory, history, active match, discipline | Cloud Save, **Protected** player data: keys `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline` | JSON per key | **Only Cloud Code** | The player (own records), Cloud Code |

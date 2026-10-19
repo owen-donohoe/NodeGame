@@ -11,7 +11,7 @@ tags: [shell/0, realm/lobby]
 sources:
   - docs/systems/lobby-ui.md
   - docs/systems/match-flow.md
-verified: a6d4d615
+verified: 700e3ff8
 ---
 
 # Lobby

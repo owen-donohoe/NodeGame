@@ -1,391 +1,258 @@
+using System;
+using System.Threading.Tasks;
 using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>
-    /// Profile: the stats and arena view that expands in place from the trophy
-    /// strip when the player name is pressed. Not a tab page - it covers the
-    /// whole lobby, chrome included, and closes back into the strip.
-    ///
-    /// Real: the server handle, server rank, and Rename through SetHandle.
-    ///
-    /// The stats record remains em-dashes pending its backend integration.
-    /// Match history lives on its own page, from the TV button.
-    /// </summary>
+    /// <summary>A public profile panel. The shell routes Opened/Closed through its overlay stack.</summary>
     public class ProfilePage
     {
-        private const string Dash = "—";
-
-        private readonly Label[] arenaRanges = new Label[RankTable.Thresholds.Count];
-        private readonly Label[] arenaProgress = new Label[RankTable.Thresholds.Count];
-        private readonly VisualElement[] waypoints = new VisualElement[RankTable.Thresholds.Count - 1];
-
-        // TODO(stats): no match result is recorded, so every value is a dash.
-        private static readonly string[] StatNames = { "MATCHES", "WINS", "LOSSES", "WIN RATE", "STREAK", "BEST" };
-
-        // The prototype's collapse and grow take 340ms.
-        private const long CollapseMs = 340;
-
+        private static readonly string[] StatNames = { "Matches", "Wins", "Losses", "Win rate", "Streak", "Best" };
+        private readonly IProfileService profiles;
         private readonly LobbySheet sheet;
         private readonly LobbyToast toast;
         private readonly SafeAreaBinder safeArea;
-
-        private readonly Label usernameLabel;
-        private readonly Label subtitleLabel;
-        private readonly ScrollView road;
-        private readonly VisualElement roadInner;
-        private readonly VisualElement rail;
-        private readonly VisualElement railFill;
+        private readonly AsyncStateView stateView;
+        private readonly Label handle;
+        private readonly Label rank;
+        private readonly Button addFriend;
+        private readonly Button invite;
+        private readonly Button rename;
+        private readonly Button spectate;
+        private readonly VisualElement stats;
+        private readonly VisualElement loadout;
+        private readonly VisualElement recent;
         private readonly VisualElement renameContent;
         private readonly TextField nameField;
         private readonly TextField tagField;
         private readonly Label nameNote;
+        private AsyncState state = new AsyncState();
+        private string playerId;
+        private string shownAccount;
+        private bool viewingSelf;
+        private int generation;
+        private int renameSession;
         private bool renamePending;
-
-        private VisualElement youMarker;
-        private VisualElement sourceRect;
-        private IVisualElementScheduledItem hideLater;
-
-        /// <summary>The view added to the shell's overlay host.</summary>
-        public VisualElement Root { get; private set; }
-
+        private static long Now => (long)(Time.realtimeSinceStartupAsDouble * 1000);
+        private static string SelfId => BackendServices.Account.Current?.PlayerId ?? "self";
+        public VisualElement Root { get; }
         public bool IsOpen { get; private set; }
-        public event System.Action Opened;
-        public event System.Action Closed;
+        public event Action Opened;
+        public event Action Closed;
+        public event Action Renamed;
 
-        /// <summary>Raised after a rename is saved, so the chrome can redraw.</summary>
-        public event System.Action Renamed;
-
-        public ProfilePage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast)
+        public ProfilePage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast, IProfileService profiles = null)
         {
+            this.profiles = profiles ?? BackendServices.Profiles;
             this.sheet = sheet;
             this.toast = toast;
-
-            VisualElement holder = new VisualElement();
-            if (layout != null) layout.CloneTree(holder);
-
-            Root = holder.Q<VisualElement>("profile-arena");
-            if (Root == null)
-            {
-                // Same degradation as every page: labelled, never an exception.
-                Root = new VisualElement();
-                Root.AddToClassList("lb-arena");
-                Root.Add(new Label("Profile layout missing - assign ProfilePage.uxml"));
-            }
-            else
-            {
-                // The page's stylesheet was attached to the holder by CloneTree;
-                // carry it over, since the holder is discarded.
-                for (int i = 0; i < holder.styleSheets.count; i++)
-                    Root.styleSheets.Add(holder.styleSheets[i]);
-            }
-
-            Root.RemoveFromHierarchy();
+            Root = new VisualElement { name = "public-profile", userData = this };
+            Resources.Load<VisualTreeAsset>("Lobby/PublicProfile").CloneTree(Root);
+            Root.AddToClassList("lb-public-overlay");
+            Root.AddToClassList("lb-no-swipe");
             Root.style.display = DisplayStyle.None;
+            safeArea = new SafeAreaBinder(Root.Q("public-profile-safe"));
+            stateView = new AsyncStateView();
+            var body = Root.Q("public-profile-body");
+            body.RemoveFromHierarchy();
+            stateView.Content.Add(body);
+            Root.Q("public-profile-scroll").Add(stateView);
+            stateView.RetryRequested += Reload;
+            handle = Root.Q<Label>("public-profile-handle");
+            handle.enableRichText = false;
+            rank = Root.Q<Label>("public-profile-rank");
+            stats = Root.Q("public-profile-stats");
+            loadout = Root.Q("public-profile-loadout");
+            recent = Root.Q("public-profile-recent");
+            addFriend = Root.Q<Button>("public-profile-add");
+            invite = Root.Q<Button>("public-profile-invite");
+            rename = Root.Q<Button>("public-profile-rename");
+            spectate = Root.Q<Button>("public-profile-spectate");
+            addFriend.Add(new LobbyIcon(LobbyIconKind.AddFriend) { pickingMode = PickingMode.Ignore });
+            invite.Add(new LobbyIcon(LobbyIconKind.Invite) { pickingMode = PickingMode.Ignore });
+            addFriend.clicked += () => Debug.Log("[Profile] add friend " + playerId);
+            invite.clicked += () => Debug.Log("[Profile] invite to mode " + playerId);
+            spectate.clicked += () => Debug.Log("[Profile] spectate " + playerId);
+            Root.Q<Button>("public-profile-close").clicked += Close;
+            Root.Q("public-profile-scrim").RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
+            rename.clicked += BeginRename;
+            renameContent = LobbySheet.Lift(Root, "profile-rename");
+            nameField = renameContent.Q<TextField>("profile-name-field");
+            tagField = renameContent.Q<TextField>("profile-tag-field");
+            nameNote = renameContent.Q<Label>("profile-name-note");
+            nameNote.enableRichText = false;
+            nameField.Query<TextElement>().ForEach(element => element.enableRichText = false);
+            tagField.Query<TextElement>().ForEach(element => element.enableRichText = false);
+            renameContent.Q<Button>("profile-name-save").clicked += CommitRename;
+            renameContent.Q<Button>("profile-name-cancel").clicked += () => sheet?.Close();
+            nameField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
+            tagField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
+            Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) Close(); });
+        }
 
-            usernameLabel = Root.Q<Label>("profile-username");
-            if (usernameLabel != null) usernameLabel.enableRichText = false;
-            subtitleLabel = Root.Q<Label>("profile-subtitle");
-            road = Root.Q<ScrollView>("profile-road");
-            roadInner = Root.Q<VisualElement>("profile-road-inner");
-            rail = Root.Q<VisualElement>("profile-rail");
-            railFill = Root.Q<VisualElement>("profile-rail-fill");
+        public void Update() { if (IsOpen) safeArea.Update(); }
+        public void Open(VisualElement source) => OpenFor(SelfId);
 
-            VisualElement inner = Root.Q<VisualElement>("push-safe-area");
-            safeArea = new SafeAreaBinder(inner != null ? inner : Root);
-
-            renameContent = LobbySheet.Lift(holder, "profile-rename");
-            nameField = renameContent != null ? renameContent.Q<TextField>("profile-name-field") : null;
-            tagField = renameContent != null ? renameContent.Q<TextField>("profile-tag-field") : null;
-            nameNote = renameContent != null ? renameContent.Q<Label>("profile-name-note") : null;
-            if (nameNote != null) nameNote.enableRichText = false;
-            DisableFieldRichText(nameField);
-            DisableFieldRichText(tagField);
-
-            Bind(Root, "profile-back", Close);
-            Bind(Root, "profile-rename", BeginRename);
-            Bind(renameContent, "profile-name-save", CommitRename);
-            Bind(renameContent, "profile-name-cancel", () => { if (sheet != null) sheet.Close(); });
-
-            // Enter commits, which is what a one-field form should do on a
-            // phone keyboard.
-            if (nameField != null)
-                nameField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
-            if (tagField != null)
-                tagField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
-
-            BuildRecord(Root.Q<ScrollView>("profile-record"));
-            BuildRoad();
-            Root.RegisterCallback<DetachFromPanelEvent>(evt =>
+        public void OpenFor(string requestedPlayerId)
+        {
+            if (string.IsNullOrEmpty(requestedPlayerId)) return;
+            bool changed = playerId != requestedPlayerId || shownAccount != SelfId;
+            if (changed)
             {
-                if (evt.target == Root) BackendServices.StateChanged -= Refresh;
-            });
-            Root.RegisterCallback<AttachToPanelEvent>(evt =>
+                state = new AsyncState();
+                CancelRename();
+            }
+            playerId = requestedPlayerId;
+            viewingSelf = playerId == SelfId;
+            shownAccount = SelfId;
+            BackendServices.StateChanged -= StateChanged;
+            BackendServices.StateChanged += StateChanged;
+            BackendServices.Account.Changed -= AccountChanged;
+            BackendServices.Account.Changed += AccountChanged;
+            if (!IsOpen)
             {
-                if (evt.target == Root && IsOpen) ObserveState();
-            });
-            if (roadInner != null)
-                roadInner.RegisterCallback<GeometryChangedEvent>(evt => PlaceMarkers());
-        }
-
-        private static void DisableFieldRichText(TextField field)
-        {
-            if (field == null) return;
-            field.Query<TextElement>().ForEach(element => element.enableRichText = false);
-        }
-
-        private static void Bind(VisualElement scope, string name, System.Action action)
-        {
-            if (scope == null) return;
-            Button button = scope.Q<Button>(name);
-            if (button != null) button.clicked += action;
-        }
-
-        public void Update()
-        {
-            if (IsOpen) safeArea.Update();
-        }
-
-        // ===== OPEN / CLOSE =====
-
-        /// <summary>
-        /// Expands from <paramref name="source"/> (the trophy strip): snap the
-        /// full-size view onto the source's rect, then let it transition back to
-        /// full size on the next frame.
-        /// </summary>
-        public void Open(VisualElement source)
-        {
-            if (IsOpen) return;
-
-            IsOpen = true;
-            Opened?.Invoke();
-            sourceRect = source;
-            if (hideLater != null) hideLater.Pause();
-
-            ObserveState();
-
-            Root.style.display = DisplayStyle.Flex;
-            Root.AddToClassList("lb-arena--instant");
-            SnapTo(source);
-
-            Root.schedule.Execute(() =>
-            {
-                Root.RemoveFromClassList("lb-arena--instant");
-                Root.style.translate = new Translate(0, 0);
-                Root.style.scale = new Scale(Vector2.one);
-                Root.AddToClassList("lb-arena--open");
-
-                // The road opens at the bottom, so you travel upward, and the
-                // rail fills once the view has grown.
-                Root.schedule.Execute(() =>
-                {
-                    if (road != null) road.scrollOffset = new Vector2(0, float.MaxValue);
-                    PlaceMarkers();
-                }).ExecuteLater(CollapseMs);
-            }).ExecuteLater(16);
+                IsOpen = true;
+                Root.style.display = DisplayStyle.Flex;
+                Opened?.Invoke();
+            }
+            Reload();
         }
 
         public void Close()
         {
             if (!IsOpen) return;
-
             IsOpen = false;
+            generation++;
+            CancelRename();
+            BackendServices.StateChanged -= StateChanged;
+            BackendServices.Account.Changed -= AccountChanged;
+            stateView.Render(state.Reduce(state.HasContent ? AsyncResult.Ready : AsyncResult.Empty, Now), Now);
+            Root.style.display = DisplayStyle.None;
             Closed?.Invoke();
-            BackendServices.StateChanged -= Refresh;
+        }
+
+        private void CancelRename()
+        {
+            renameSession++;
             if (sheet != null && sheet.IsShowing(renameContent)) sheet.Close();
-
-            if (railFill != null) railFill.style.height = Length.Percent(0);
-
-            Root.RemoveFromClassList("lb-arena--open");
-            SnapTo(sourceRect);
-
-            hideLater = Root.schedule.Execute(() => Root.style.display = DisplayStyle.None);
-            hideLater.ExecuteLater(CollapseMs);
         }
 
-        private void SnapTo(VisualElement source)
+        private void StateChanged() { if (IsOpen && viewingSelf) Reload(); }
+
+        private void AccountChanged(AccountInfo info)
         {
-            if (source == null || Root.parent == null) return;
-
-            Rect full = Root.parent.worldBound;
-            Rect from = source.worldBound;
-            if (full.width <= 0f || full.height <= 0f) return;
-
-            Root.style.translate = new Translate(from.x - full.x, from.y - full.y);
-            Root.style.scale = new Scale(new Vector2(from.width / full.width, from.height / full.height));
+            if (!IsOpen) return;
+            CancelRename();
+            if (viewingSelf) playerId = SelfId;
+            viewingSelf = playerId == SelfId;
+            shownAccount = SelfId;
+            state = new AsyncState();
+            Reload();
         }
 
-        // ===== CONTENT =====
-
-        private void ObserveState()
+        private void Reload()
         {
-            BackendServices.StateChanged -= Refresh;
-            BackendServices.StateChanged += Refresh;
-            Refresh();
+            if (!IsOpen) return;
+            _ = LoadAsync(++generation, playerId, SelfId);
         }
 
-        private void Refresh()
+        private async Task LoadAsync(int request, string id, string requestedFor)
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-            RankRecord rank = BackendServices.LastKnownState?.Rank;
-            RankDisplay display = new RankDisplay(rank?.RR ?? 0);
-
-            if (usernameLabel != null)
-                usernameLabel.text = HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
-                    profile != null ? profile.Username : "player");
-
-            if (subtitleLabel != null)
-                subtitleLabel.text = rank != null ? display.Name + " · " + display.RR + " RR" : "Arena " + Dash;
-
-            for (int i = 0; i < arenaRanges.Length; i++)
+            state = state.Reduce(AsyncResult.Loading, Now);
+            stateView.Render(state, Now);
+            try
             {
-                bool here = rank != null && display.Arena == i;
-                string range = i + 1 < arenaRanges.Length
-                    ? RankTable.Thresholds[i] + " – " + (RankTable.Thresholds[i + 1] - 1)
-                    : RankTable.Thresholds[i] + "+";
-                if (arenaRanges[i] != null)
-                    arenaRanges[i].text = range + " RR" + (here ? " · you are here" : "");
-                if (arenaProgress[i] != null)
-                    arenaProgress[i].text = !here ? "" : display.Span.HasValue
-                        ? display.RRIntoArena + " / " + display.Span.Value + " RR to " + RankTable.Names[i + 1]
-                        : "Top arena";
-            }
-            PlaceMarkers();
-        }
-
-        /// <summary>The record, one stat per row: label above, the value alone in its panel.</summary>
-        private static void BuildRecord(ScrollView record)
-        {
-            if (record == null) return;
-
-            for (int i = 0; i < StatNames.Length; i++)
-            {
-                Label label = new Label(StatNames[i]);
-                label.AddToClassList("lb-stat__label");
-                label.AddToClassList("ui-w600");
-                record.Add(label);
-
-                VisualElement wrap = new VisualElement();
-                wrap.AddToClassList("ui-sticker");
-                wrap.AddToClassList("lb-stat__wrap");
-                wrap.pickingMode = PickingMode.Ignore;
-
-                VisualElement shadow = new VisualElement();
-                shadow.AddToClassList("ui-sticker__shadow");
-                shadow.pickingMode = PickingMode.Ignore;
-
-                Label value = new Label(Dash);
-                value.AddToClassList("lb-stat__panel");
-                value.AddToClassList("ui-w700");
-
-                wrap.Add(shadow);
-                wrap.Add(value);
-                record.Add(wrap);
-            }
-        }
-
-        private void BuildRoad()
-        {
-            if (roadInner == null) return;
-
-            for (int i = RankTable.Thresholds.Count - 1; i >= 0; i--)
-            {
-                VisualElement box = new VisualElement();
-                box.AddToClassList("lb-era");
-                box.AddToClassList("lb-era--ancient");
-                if (i == 0) box.AddToClassList("lb-era--last");
-                box.pickingMode = PickingMode.Ignore;
-
-                box.Add(MakeLabel(RankTable.Names[i], "lb-era__name", "ui-w600"));
-                arenaRanges[i] = MakeLabel("", "lb-era__range", "ui-w500");
-                arenaProgress[i] = MakeLabel("", "lb-era__foot", "ui-w500");
-                box.Add(arenaRanges[i]);
-                box.Add(arenaProgress[i]);
-                roadInner.Add(box);
-            }
-            Refresh();
-        }
-
-        private static Label MakeLabel(string text, string styleClass, string weightClass)
-        {
-            Label label = new Label(text);
-            label.AddToClassList(styleClass);
-            label.AddToClassList(weightClass);
-            label.pickingMode = PickingMode.Ignore;
-            return label;
-        }
-
-        /// <summary>
-        /// The "you" marker and arena boundaries, placed along the rail by
-        /// arena progress from the bottom, and the rail filled to you.
-        /// Done after layout, because the rail's height is the road's.
-        /// </summary>
-        private void PlaceMarkers()
-        {
-            if (rail == null || roadInner == null) return;
-
-            float railHeight = rail.layout.height;
-            if (float.IsNaN(railHeight) || railHeight <= 0f) return;
-
-            float railBottom = rail.layout.yMax;
-            RankRecord rank = BackendServices.LastKnownState?.Rank;
-            RankDisplay display = new RankDisplay(rank?.RR ?? 0);
-            float progress = rank != null ? (display.Arena + display.Fill) / RankTable.Thresholds.Count : 0f;
-
-            if (youMarker == null)
-            {
-                for (int i = 0; i < waypoints.Length; i++)
+                var profile = await profiles.GetAsync(id);
+                if (!Active(request, id, requestedFor)) return;
+                if (profile?.Card == null)
                 {
-                    VisualElement node = new VisualElement();
-                    node.AddToClassList("lb-road__node");
-                    node.pickingMode = PickingMode.Ignore;
-                    waypoints[i] = node;
-                    roadInner.Add(node);
+                    state = state.Reduce(AsyncResult.Empty, Now);
+                    stateView.Render(state, Now, "This player profile isn't available.", LobbyIconKind.Smile);
+                    return;
                 }
-
-                youMarker = new VisualElement();
-                youMarker.AddToClassList("lb-road__you");
-                youMarker.pickingMode = PickingMode.Ignore;
-                youMarker.Add(new LobbyIcon(LobbyIconKind.ProfileYouAreHere, LobbyIconContext.Profile));
-                roadInner.Add(youMarker);
+                Render(profile);
+                state = state.Reduce(AsyncResult.Ready, Now);
+                stateView.Render(state, Now);
             }
-
-            for (int i = 0; i < waypoints.Length; i++)
-                waypoints[i].style.top = railBottom - railHeight * (i + 1f) / RankTable.Thresholds.Count - 11f;
-            youMarker.style.display = rank != null ? DisplayStyle.Flex : DisplayStyle.None;
-            youMarker.style.top = railBottom - railHeight * progress - 15f;
-            if (railFill != null) railFill.style.height = Length.Percent(progress * 100f);
+            catch (Exception)
+            {
+                if (!Active(request, id, requestedFor)) return;
+                bool offline = BackendServices.SimulatedOffline || Application.internetReachability == NetworkReachability.NotReachable;
+                state = state.Reduce(offline ? AsyncResult.Offline : AsyncResult.Error, Now);
+                stateView.Render(state, Now, offline ? "You're offline. Connect to load this profile." : "Couldn't load this profile. Try again.");
+            }
         }
 
-        // ===== RENAME =====
+        private bool Active(int request, string id, string account) => IsOpen && generation == request &&
+            playerId == id && SelfId == account;
+
+        private void Render(PublicProfileView profile)
+        {
+            handle.text = PlayerCardViews.Handle(profile.Card);
+            var display = new RankDisplay(profile.Card.RR);
+            rank.text = display.Name + " · " + display.RR + " RR";
+            addFriend.style.display = invite.style.display = viewingSelf ? DisplayStyle.None : DisplayStyle.Flex;
+            rename.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
+            spectate.style.display = profile.Card.Presence == PlayerPresence.InBattle ? DisplayStyle.Flex : DisplayStyle.None;
+            stats.Clear();
+            string[] values = ProfileStatsFormat.Values(profile.Stats);
+            for (int i = 0; i < values.Length; i++)
+            {
+                var cell = new VisualElement();
+                cell.AddToClassList("lb-public-stat");
+                cell.Add(PlayerCardViews.Text(StatNames[i]));
+                cell.Add(PlayerCardViews.Text(values[i]));
+                stats.Add(cell);
+            }
+            loadout.Clear();
+            AddChips(profile.SuitIds, "Suit");
+            AddChips(profile.DistrictIds, "District");
+            if (loadout.childCount == 0) loadout.Add(PlayerCardViews.Text("No loadout shared."));
+            recent.Clear();
+            if (profile.Recent != null)
+                foreach (var match in profile.Recent)
+                {
+                    if (match == null) continue;
+                    var row = new VisualElement();
+                    row.AddToClassList("lb-public-recent");
+                    row.Add(PlayerCardViews.Text(PlayerCardViews.Handle(match.Opponent)));
+                    row.Add(PlayerCardViews.Text((match.Won ? "Won" : "Lost") + " · " +
+                        (match.RRDelta >= 0 ? "+" : "") + match.RRDelta + " RR"));
+                    recent.Add(row);
+                }
+            if (recent.childCount == 0) recent.Add(PlayerCardViews.Text("No recent matches shared."));
+        }
+
+        private void AddChips(string[] ids, string kind)
+        {
+            if (ids == null) return;
+            foreach (string id in ids)
+            {
+                if (string.IsNullOrEmpty(id)) continue;
+                var chip = PlayerCardViews.Text(kind + ": " + id);
+                chip.AddToClassList("lb-public-chip");
+                loadout.Add(chip);
+            }
+        }
 
         private void BeginRename()
         {
-            if (renameContent == null || sheet == null) return;
-
-            PlayerProfile profile = PlayerProfile.Instance;
-            if (nameField != null)
-                nameField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Name ??
-                    (profile != null ? profile.Username : ""));
-            if (tagField != null)
-                tagField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Tag ?? "");
-
+            if (!viewingSelf || renamePending || sheet == null) return;
+            renameSession++;
+            nameField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Name ?? PlayerProfile.Instance?.Username ?? "");
+            tagField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Tag ?? "");
             ShowNote(null);
             sheet.Open(renameContent);
-
-            // The field was not in a panel a moment ago, so it cannot take
-            // focus until layout has run.
-            if (nameField != null)
-                nameField.schedule.Execute(() => { nameField.Focus(); nameField.SelectAll(); });
+            nameField.schedule.Execute(() => { if (sheet.IsShowing(renameContent)) { nameField.Focus(); nameField.SelectAll(); } });
         }
 
         private async void CommitRename()
         {
-            if (renamePending) return;
-            string candidate = nameField != null ? nameField.value : "";
-            string tag = tagField != null ? tagField.value : "";
+            if (renamePending || !IsOpen || !viewingSelf || sheet == null || !sheet.IsShowing(renameContent)) return;
+            string candidate = nameField.value;
+            string tag = tagField.value;
             if (!System.Text.RegularExpressions.Regex.IsMatch(candidate, @"\A[A-Za-z0-9_-]{3,16}\z"))
             {
                 ShowNote("3 to 16 characters: letters, numbers, underscores or hyphens.");
@@ -396,56 +263,54 @@ namespace NodeWar.Lobby
                 ShowNote("Tag: 1 to 4 uppercase letters or numbers, or leave empty.");
                 return;
             }
+            int session = renameSession;
+            string account = SelfId;
             renamePending = true;
-            if (nameField != null) nameField.SetEnabled(false);
-            if (tagField != null) tagField.SetEnabled(false);
+            nameField.SetEnabled(false); tagField.SetEnabled(false);
             try
             {
-                await BackendServices.Handles.SetHandleAsync(candidate, tag, System.Guid.NewGuid().ToString());
-                if (sheet != null) sheet.Close();
-                Refresh();
-                if (toast != null) toast.Show("Name changed");
-                if (Renamed != null) Renamed();
+                await BackendServices.Handles.SetHandleAsync(candidate, tag, Guid.NewGuid().ToString());
+                if (account != SelfId) return;
+                Renamed?.Invoke();
+                if (session != renameSession || !IsOpen || !viewingSelf) return;
+                if (sheet.IsShowing(renameContent)) sheet.Close();
+                Reload();
+                toast?.Show("Name changed");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                ShowNote(ex.Message);
-                if (toast != null) toast.Show(ex.Message);
+                if (account == SelfId && session == renameSession && IsOpen && viewingSelf)
+                {
+                    ShowNote(ex.Message);
+                    toast?.Show(ex.Message);
+                }
             }
             finally
             {
                 renamePending = false;
-                if (nameField != null) nameField.SetEnabled(true);
-                if (tagField != null) tagField.SetEnabled(true);
+                nameField.SetEnabled(true); tagField.SetEnabled(true);
             }
         }
 
         private void OnNameFieldKeyDown(KeyDownEvent evt)
         {
             if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
-
             CommitRename();
             evt.StopPropagation();
         }
 
-        /// <summary>The note under the field doubles as the error line.</summary>
         private void ShowNote(string error)
         {
-            if (nameNote == null) return;
-
-            bool isError = !string.IsNullOrEmpty(error);
-            nameNote.text = isError ? error : RenameCostHint();
-            nameNote.EnableInClassList("ui-sheet__note--error", isError);
+            nameNote.text = string.IsNullOrEmpty(error) ? RenameCostHint() : error;
+            nameNote.EnableInClassList("ui-sheet__note--error", !string.IsNullOrEmpty(error));
         }
 
         private static string RenameCostHint()
         {
             ProfileRecord profile = BackendServices.LastKnownState?.Profile;
             if (profile == null || profile.LastFreeRenameUnixSeconds == 0) return "Free";
-            System.DateTimeOffset nextFree = System.DateTimeOffset.FromUnixTimeSeconds(
-                profile.LastFreeRenameUnixSeconds).AddDays(30);
-            return System.DateTimeOffset.UtcNow >= nextFree ? "Free" :
-                "50 laurels, free again on " + nextFree.ToLocalTime().ToString("yyyy-MM-dd");
+            DateTimeOffset nextFree = DateTimeOffset.FromUnixTimeSeconds(profile.LastFreeRenameUnixSeconds).AddDays(30);
+            return DateTimeOffset.UtcNow >= nextFree ? "Free" : "50 laurels, free again on " + nextFree.ToLocalTime().ToString("yyyy-MM-dd");
         }
     }
 }

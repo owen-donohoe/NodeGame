@@ -1,0 +1,32 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="SocialProfile.uss" />
+    <ui:VisualElement name="public-profile-scrim" class="lb-public-scrim" />
+    <ui:VisualElement name="public-profile-safe" class="lb-public-safe">
+        <ui:Button name="public-profile-close" text="Close" />
+        <ui:ScrollView name="public-profile-scroll" class="lb-public-scroll" mode="Vertical">
+            <ui:VisualElement name="public-profile-body">
+                <ui:VisualElement class="lb-public-header">
+                    <ui:Label name="public-profile-handle" class="lb-public-handle" />
+                    <ui:Button name="public-profile-add" tooltip="Add friend" class="lb-social-square" />
+                    <ui:Button name="public-profile-invite" tooltip="Invite" class="lb-social-square" />
+                </ui:VisualElement>
+                <ui:Label name="public-profile-rank" />
+                <ui:Button name="public-profile-rename" text="Rename" />
+                <ui:VisualElement name="public-profile-stats" class="lb-public-stats" />
+                <ui:Label text="Loadout" class="lb-social-title" />
+                <ui:VisualElement name="public-profile-loadout" class="lb-public-chips" />
+                <ui:Label text="Recent matches" class="lb-social-title" />
+                <ui:VisualElement name="public-profile-recent" />
+                <ui:Button name="public-profile-spectate" text="Spectate" class="lb-social-red" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+    <ui:VisualElement name="profile-rename">
+        <ui:Label text="Rename" class="ui-sheet__title" />
+        <ui:TextField name="profile-name-field" label="Name" max-length="16" />
+        <ui:TextField name="profile-tag-field" label="Tag" max-length="4" />
+        <ui:Label name="profile-name-note" class="ui-sheet__note" />
+        <ui:Button name="profile-name-save" text="Save" />
+        <ui:Button name="profile-name-cancel" text="Cancel" />
+    </ui:VisualElement>
+</ui:UXML>
