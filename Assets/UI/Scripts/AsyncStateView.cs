@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -15,6 +16,8 @@ namespace NodeWar.Lobby
         public AsyncStateView()
         {
             AddToClassList("lb-async");
+            var styles = Resources.Load<StyleSheet>("Lobby/LobbyBlocks");
+            if (styles != null) styleSheets.Add(styles);
             banner.enableRichText = false;
             Add(banner);
             Add(content);
@@ -33,10 +36,11 @@ namespace NodeWar.Lobby
             {
                 Action show = () =>
                 {
-                    var spinner = new ProgressBar { title = "Loading…" };
+                    var spinner = new VisualElement { tooltip = "Loading" };
+                    spinner.AddToClassList("lb-spinner");
                     status.Add(spinner);
-                    int progress = 0;
-                    spinner.schedule.Execute(() => spinner.value = progress = (progress + 10) % 110).Every(80);
+                    int degrees = 0;
+                    spinner.schedule.Execute(() => spinner.style.rotate = new Rotate(new Angle(degrees = (degrees + 30) % 360))).Every(80);
                 };
                 if (state.ShowLoading(now)) show();
                 else

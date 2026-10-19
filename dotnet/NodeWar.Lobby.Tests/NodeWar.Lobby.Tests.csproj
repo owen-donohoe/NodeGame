@@ -39,6 +39,8 @@
     <Compile Include="BankActionTests.cs" />
     <Compile Include="LobbyRouteTests.cs" />
     <Compile Include="LobbyStateTests.cs" />
+    <Compile Include="ClaimRequestTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ClaimRequest.cs" Link="Lobby/ClaimRequest.cs" />
     <Compile Include="../../Assets/UI/Scripts/BadgeBoard.cs" Link="Lobby/BadgeBoard.cs" />
     <Compile Include="../../Assets/UI/Scripts/AsyncState.cs" Link="Lobby/AsyncState.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyPageID.cs" Link="Lobby/LobbyPageID.cs" />
