@@ -1,4 +1,4 @@
-/* Workshop owns layout; the mockup skin lives in Components.uss. */
+﻿/* Layout only. Components.uss supplies the mockup skin. */
 #page-workshop, #page-workshop > TemplateContainer, .lb-workshop { flex-grow: 1; min-height: 0; }
 .ws-scroll { flex-grow: 1; min-height: 0; }
 .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 112px; }
@@ -6,60 +6,31 @@
 .ws-panel1-space { height: 136px; flex-shrink: 0; }
 .ws-panel1 { position: absolute; left: 12px; right: 12px; flex-shrink: 0; }
 .ws-panel2 { margin: 10px 12px 0; flex-shrink: 0; }
-.ws-roles-scroll { flex-shrink: 0; }
-/* Workshop owns layout; shared components own buttons, chips and placeholder art. */
-.ws-preview { align-items: center; }
-.ws-preview .ws-art-clip { width: 120px; height: 116px; }
-.ws-preview .ws-art { height: 108px; }
-.ws-title { font-size: 24px; white-space: normal; color: var(--ink); -unity-text-align: middle-center; margin-bottom: 8px; }
-.ws-fact { font-size: 12px; white-space: normal; color: var(--ink-mute); margin-bottom: 4px; }
-.ws-info { flex-grow: 1; min-height: 0; position: relative; }
-.ws-info-scroll { flex-grow: 1; min-height: 0; }
-.ws-primary { height: 46px; flex-shrink: 0; font-size: 16px; }
-.ws-actions { flex-direction: row; flex-shrink: 0; margin-top: 6px; }
-.ws-secondary { flex-grow: 1; flex-basis: 0; min-width: 0; height: 38px; font-size: 12px; margin: 3px; }
-.ws-stat { margin-bottom: 6px; }
-.ws-histogram { height: 8px; position: relative; background-color: var(--surface-sunk); }
-.ws-zero { position: absolute; left: 50%; width: 1px; top: 0; bottom: 0; background-color: var(--ink); }
-.ws-bar { position: absolute; top: 1px; bottom: 1px; background-color: var(--confirm); }
-.ws-bar--worse { background-color: var(--status-short); }
-.ws-panel-host { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
-.ws-sheet-body { flex-grow: 1; flex-shrink: 1; min-height: 0; }
-.ws-strip { flex-shrink: 0; height: 84px; margin-top: 6px; }
-.ws-strip .unity-scroll-view__content-container { flex-direction: row; }
-.ws-chip { width: 72px; flex-shrink: 0; margin-right: 6px; padding: 4px; background-color: var(--surface); border-width: var(--stroke); border-color: var(--edge); border-radius: var(--corner-sm); }
-.ws-chip .ws-art-clip { width: 100%; height: 42px; }
-.ws-chip .ws-art { height: 38px; }
-.ws-chip .ws-monogram { font-size: 16px; }
-.ws-sheet-buttons { flex-direction: row; justify-content: space-between; flex-shrink: 0; margin-top: 8px; }
-.ws-sheet-button { width: 45%; height: 46px; font-size: 14px; background-color: var(--surface-sunk); color: var(--ink); border-radius: var(--corner-sm); }
-.ws-sheet-button.ws-primary { background-color: var(--action); color: var(--ink); }
-.ws-band { flex-shrink: 0; height: 64px; margin-top: 6px; overflow: hidden; }
-.ws-band-tile { background-color: var(--tile-tint-0); border-radius: var(--corner-sm); border-width: var(--stroke); border-color: var(--clear); justify-content: center; align-items: center; }
-.ws-band-tile.ws-art--neutral { background-color: var(--off); }
-.ws-band-tile--center { border-color: var(--action); }
-
-
-/* Paper roles; the stage window keeps a transparent interior. */
-.ws-tab, .ws-filter, .ws-preset, .ws-primary, .ws-secondary, .ws-cancel { min-height: 48px; }
-.ws-band-tile { --paper-card-fill: var(--paper-dark); }
-
-/* Window frame: the stage shows through, but the ink border is always drawn. */
-/* Seg switch: two separate cut-outs rather than one clipped slab. */
-/* Preset tabs and filter chips: paper unselected, gold selected. */
-.ws-preset, .ws-filter { --paper-card-fill: var(--paper-light); }
-
 .ws-presets { margin-bottom: 10px; }
+.ws-presets .ws-preset-tabs { flex-shrink: 0; }
 .ws-preset { width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; }
+.ws-preset-face { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 16px; -unity-text-align: middle-center; }
 .ws-eyebrow { flex-grow: 1; flex-shrink: 1; min-width: 0; -unity-text-align: middle-right; white-space: normal; }
 .ws-browser-title { flex-grow: 1; }
+.ws-roles-scroll { flex-shrink: 0; }
 .ws-actionbar { margin-top: 10px; }
-
-.ws-preset-face { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 16px; -unity-text-align: middle-center; }
-
 #page-workshop .ws-cards > .mk-tile { flex-grow: 0; flex-shrink: 0; min-height: 112px; }
 .ws-art-clip { height: 64px; align-items: stretch; justify-content: center; }
 .ws-art { flex-grow: 1; align-items: center; justify-content: center; }
 .ws-name { white-space: normal; -unity-text-align: middle-center; }
 .ws-empty { width: 100%; padding: 12px; }
-.ws-presets .ws-preset-tabs { flex-shrink: 0; }
+.ws-item-title { white-space: normal; }
+.ws-item-content > * { margin-bottom: 10px; }
+.ws-item-art { height: 150px; flex-shrink: 0; align-items: center; justify-content: center; }
+.ws-artbox { width: 180px; height: 150px; flex-shrink: 0; }
+.ws-artbox .ws-art-clip { width: 100%; height: 100%; }
+.ws-arr-prev { left: 0; }
+.ws-arr-next { right: 0; }
+.ws-variant-dot { -unity-text-align: middle-center; }
+.ws-stat-label { white-space: normal; }
+.ws-description { max-height: 40px; overflow: hidden; white-space: normal; }
+.ws-item-status { white-space: normal; }
+.ws-skin-scroll { flex-shrink: 0; min-height: 78px; }
+.ws-skin-name { white-space: normal; -unity-text-align: middle-center; }
+.ws-sheet-actions { flex-direction: row; justify-content: space-between; flex-shrink: 0; }
+.ws-sheet-actions > Button { width: 45%; }
