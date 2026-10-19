@@ -26,7 +26,13 @@ namespace NodeWar.Lobby
         private readonly Transform[] plots = new Transform[StageSlots.Count];
         private readonly GameObject[] districts = new GameObject[StageSlots.Count];
         private readonly Vector3[] slotPositions = new Vector3[StageSlots.Count];
+        private readonly Vector3[] slotDirections = new Vector3[StageSlots.Count];
+        private readonly GameObject[] outlines = new GameObject[StageSlots.Count];
+        private readonly float[] separations = new float[StageSlots.Count];
         private Transform[] suits = Array.Empty<Transform>();
+        private Vector3[] suitTargets = Array.Empty<Vector3>();
+        private float[] suitWaits = Array.Empty<float>();
+        private int focusedSuit = -1;
         private Camera stageCamera;
         private Shader shader;
         private DistrictCluster cluster = new DistrictCluster(0);
@@ -88,10 +94,16 @@ namespace NodeWar.Lobby
                 StageSlot slot = slots[i];
                 slotPositions[i] = new Vector3((slot.Column - (slot.Row == 0 ? 1f : 0.5f)) * 2.8f,
                     0f, slot.Row == 0 ? 1.4f : -1.4f);
+                slotDirections[i] = slotPositions[i].normalized;
                 var plot = new GameObject("Plot " + i);
                 plot.transform.SetParent(transform, false);
                 plot.transform.localPosition = slotPositions[i];
                 plots[i] = plot.transform;
+                // An unlit rim under the ground tile outlines the whole district footprint.
+                outlines[i] = Primitive("Selection rim", PrimitiveType.Cube, plots[i],
+                    new Vector3(0f, 0.06f, 0f), new Vector3(2.94f, 0.1f, 2.94f),
+                    new Color(1f, 0.87f, 0.36f));
+                outlines[i].SetActive(false);
                 Primitive("Unclaimed ground", PrimitiveType.Cube, plots[i], new Vector3(0f, 0.12f, 0f),
                     new Vector3(2.78f, 0.24f, 2.78f), PlayerColors.Neutral);
                 districts[i] = Primitive("District", PrimitiveType.Cube, plots[i],
@@ -154,6 +166,9 @@ namespace NodeWar.Lobby
             cluster = new DistrictCluster(equipped);
             for (int i = 0; i < districts.Length; i++)
             {
+                separations[i] = 0f;
+                plots[i].localPosition = slotPositions[i];
+                outlines[i].SetActive(false);
                 districts[i].SetActive(i < equipped);
                 if (i < equipped)
                     districts[i].GetComponent<Renderer>().sharedMaterial = Tint(districtTypes[i], "district_");
@@ -164,12 +179,17 @@ namespace NodeWar.Lobby
                 Destroy(suits[i].gameObject);
             }
             suits = new Transform[suitTypes == null ? 0 : suitTypes.Length];
+            suitTargets = new Vector3[suits.Length];
+            suitWaits = new float[suits.Length];
+            focusedSuit = -1;
             for (int i = 0; i < suits.Length; i++)
             {
                 var suit = Primitive("Suit " + i, PrimitiveType.Capsule, plots[1],
                     new Vector3((i % 3 - 1) * 0.5f, 0.58f, -0.55f), new Vector3(0.3f, 0.34f, 0.3f), Color.white);
                 suit.GetComponent<Renderer>().sharedMaterial = Tint(suitTypes[i], "suit_");
                 suits[i] = suit.transform;
+                suitTargets[i] = suit.transform.localPosition;
+                suitWaits[i] = UnityEngine.Random.Range(0.2f, 1.5f);
             }
         }
 
@@ -193,6 +213,13 @@ namespace NodeWar.Lobby
 
         public void CancelReplace() => cluster.Cancel();
 
+        public void FocusSuit(int index)
+        {
+            if (index >= 0 && index < suits.Length) focusedSuit = index;
+        }
+
+        public void ClearFocus() => focusedSuit = -1;
+
         public void SetVisible(bool visible)
         {
             stageCamera.enabled = visible;
@@ -201,11 +228,58 @@ namespace NodeWar.Lobby
 
         private void Update()
         {
-            if (shotElapsed >= ShotDuration) return;
-            shotElapsed = Mathf.Min(ShotDuration, shotElapsed + Time.unscaledDeltaTime);
-            float t = 1f - Mathf.Pow(1f - shotElapsed / ShotDuration, 3f);
-            stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
-            stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
+            float delta = Time.unscaledDeltaTime;
+            if (shotElapsed < ShotDuration)
+            {
+                shotElapsed = Mathf.Min(ShotDuration, shotElapsed + delta);
+                float t = 1f - Mathf.Pow(1f - shotElapsed / ShotDuration, 3f);
+                stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
+                stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
+            }
+            AnimateCluster(delta);
+            AnimateSuits(delta);
+        }
+
+        private void AnimateCluster(float delta)
+        {
+            for (int i = 0; i < plots.Length; i++)
+            {
+                int target = cluster.TargetSeparation(i);
+                separations[i] = Mathf.MoveTowards(separations[i], target, delta * 4f);
+                Vector3 position = slotPositions[i] + slotDirections[i] * (separations[i] * 0.65f);
+                if (cluster.Shaking)
+                {
+                    Vector2 jitter = UnityEngine.Random.insideUnitCircle * 0.025f;
+                    position += new Vector3(jitter.x, 0f, jitter.y);
+                }
+                plots[i].localPosition = position;
+                bool outlined = target != 0;
+                if (outlines[i].activeSelf != outlined) outlines[i].SetActive(outlined);
+            }
+        }
+
+        private void AnimateSuits(float delta)
+        {
+            for (int i = 0; i < suits.Length; i++)
+            {
+                if (i == focusedSuit) continue;
+                Vector3 position = suits[i].localPosition;
+                Vector3 direction = suitTargets[i] - position;
+                if (direction.sqrMagnitude > 0.0001f)
+                {
+                    suits[i].localPosition = Vector3.MoveTowards(position, suitTargets[i], delta * 0.35f);
+                    suits[i].localRotation = Quaternion.LookRotation(direction, Vector3.up);
+                }
+                else
+                {
+                    suitWaits[i] -= delta;
+                    if (suitWaits[i] > 0f) continue;
+                    // Walk on the front of the middle-top plot, clear of the filler building.
+                    suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), 0.58f,
+                        UnityEngine.Random.Range(-1f, -0.3f));
+                    suitWaits[i] = UnityEngine.Random.Range(0.5f, 2f);
+                }
+            }
         }
 
         private Material Tint(int type, string prefix)
