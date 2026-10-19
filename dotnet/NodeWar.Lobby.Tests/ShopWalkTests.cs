@@ -4,6 +4,28 @@ namespace NodeWar.Lobby.Tests
 {
     public class ShopWalkTests
     {
+        [TestCase(0f, false)]
+        [TestCase(48.99f, false)]
+        [TestCase(49f, true)]
+        [TestCase(81f, true)]
+        public void MarketStalls_HideInsideNearThreshold(float distanceSquared, bool visible)
+            => Assert.AreEqual(visible, ShopMarketFraming.ShouldRenderStall(distanceSquared));
+
+        [TestCase(390f / 844f)]
+        [TestCase(360f / 900f)]
+        [TestCase(9f / 16f)]
+        public void MarketStalls_CurrentIsVisible_NextForegroundStallIsHidden(float aspect)
+        {
+            ShopMarketFrame frame = ShopMarketFraming.ForAspect(aspect);
+            float dx = ShopMarketFraming.StallX - frame.CameraX;
+            float vertical = ShopMarketFraming.CameraRise * ShopMarketFraming.CameraRise;
+            float current = dx * dx + vertical + frame.CameraBack * frame.CameraBack;
+            float nextZ = frame.CameraBack - 6f;
+            float next = dx * dx + vertical + nextZ * nextZ;
+            Assert.IsTrue(ShopMarketFraming.ShouldRenderStall(current));
+            Assert.IsFalse(ShopMarketFraming.ShouldRenderStall(next));
+        }
+
         [Test]
         public void Panels_AreOrderedFarToNear_AndOnlySignalChanges()
         {

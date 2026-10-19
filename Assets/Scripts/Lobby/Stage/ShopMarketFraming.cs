@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace NodeWar.Lobby
 {
@@ -17,6 +17,12 @@ namespace NodeWar.Lobby
         public const float FieldOfView = 42f;
         public const float CameraRise = 2.5f;
         public const float StallX = -0.82f;
+        public const float StallNearDistance = 7f;
+
+        // Until dither is available, suppress the whole foreground stall.
+        // Measure to its visual centre (one world unit above the ground).
+        public static bool ShouldRenderStall(float distanceSquared)
+            => distanceSquared >= StallNearDistance * StallNearDistance;
 
         public static ShopMarketFrame ForAspect(float aspect)
         {

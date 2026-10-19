@@ -38,6 +38,7 @@ namespace NodeWar.Lobby
         private readonly GameObject[] outlines = new GameObject[StageSlots.Count];
         private readonly float[] separations = new float[StageSlots.Count];
         private readonly Transform[] marketmen = new Transform[5];
+        private readonly GameObject[] marketStalls = new GameObject[5];
         private Transform[] suits = Array.Empty<Transform>();
         private Vector3[] suitTargets = Array.Empty<Vector3>();
         private float[] suitWaits = Array.Empty<float>();
@@ -137,6 +138,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < names.Length; i++)
             {
                 var stall = new GameObject(names[i] + " stall");
+                marketStalls[i] = stall;
                 stall.transform.SetParent(market.transform, false);
                 stall.transform.localPosition = new Vector3(ShopMarketFraming.StallX, 0f, -i * ShopStallSpacing);
                 Cutout("Stall facade", stall.transform, PaperKind.Stall,
@@ -173,9 +175,22 @@ namespace NodeWar.Lobby
 
         private void LateUpdate()
         {
+            UpdateMarketVisibility();
             BillboardFigures(suits);
             BillboardFigures(marketmen);
             UpdateFocusProjection();
+        }
+
+        private void UpdateMarketVisibility()
+        {
+            Vector3 cameraPosition = stageCamera.transform.position;
+            for (int i = 0; i < marketStalls.Length; i++)
+            {
+                GameObject stall = marketStalls[i];
+                Vector3 centre = stall.transform.position + Vector3.up;
+                bool visible = ShopMarketFraming.ShouldRenderStall((centre - cameraPosition).sqrMagnitude);
+                if (stall.activeSelf != visible) stall.SetActive(visible);
+            }
         }
 
         private void BillboardFigures(Transform[] figures)
@@ -183,7 +198,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < figures.Length; i++)
             {
                 Transform figure = figures[i];
-                if (figure == null) continue;
+                if (figure == null || !figure.gameObject.activeInHierarchy) continue;
                 // Keep feet on the ground. Camera pitch never tips a paper figure.
                 Vector3 forward = figure.position - stageCamera.transform.position;
                 forward.y = 0f;
