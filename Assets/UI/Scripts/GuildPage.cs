@@ -26,6 +26,7 @@ namespace NodeWar.Lobby
         private readonly GuildSheetHost sheet;
         private readonly Action<string> openProfile;
         private readonly GuildChatScreen chat;
+        private readonly GuildReportScreen report;
         private GuildFilter filter = new GuildFilter();
         private GuildView current;
         private bool visible;
@@ -41,6 +42,7 @@ namespace NodeWar.Lobby
         {
             this.service = service; this.cache = cache; this.sheet = new GuildSheetHost(sheet); this.openProfile = openProfile;
             chat = new GuildChatScreen(service, router, overlays);
+            report = new GuildReportScreen(router, overlays);
             Root.userData = this;
             visitor = Root.Q("guild-visitor"); visitor.RemoveFromHierarchy();
             visitor.RegisterCallback<GeometryChangedEvent>(_ => PlaceSearch(false));
@@ -83,7 +85,7 @@ namespace NodeWar.Lobby
             {
                 if (evt.target != Root) return;
                 BackendServices.Account.Changed -= AccountChanged;
-                OnHide(); chat.Root.RemoveFromHierarchy();
+                OnHide(); chat.Root.RemoveFromHierarchy(); report.Root.RemoveFromHierarchy();
             });
         }
 
@@ -99,14 +101,14 @@ namespace NodeWar.Lobby
         {
             visible = false; visit++;
             mine.Invalidate(); search.Invalidate(); browse.Invalidate(); details.Invalidate(true);
-            CloseSheet(); chat.Close();
+            report.Close(); CloseSheet(); chat.Close();
         }
 
         private void AccountChanged(AccountInfo info)
         {
             current = null; visit++; searched = browsing = false;
             mine.Invalidate(true); search.Invalidate(true); browse.Invalidate(true); details.Invalidate(true);
-            CloseSheet(); chat.Close();
+            report.Close(); CloseSheet(); chat.Close();
             chatButton.style.display = DisplayStyle.None;
             MembershipChanged?.Invoke();
             if (visible) Refresh();
@@ -304,6 +306,26 @@ namespace NodeWar.Lobby
             ShowSheet(content);
         }
 
-        private void OpenMember(GuildMember member) => openProfile(member.Player.PlayerId);
+        private void ConfirmKick(GuildMember member)
+        {
+            var content = SheetContent("Remove from guild?");
+            content.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(member.Player) + " from " + current.Summary.Name + "?"));
+            content.Add(GuildViews.Button("Cancel", CloseSheet));
+            content.Add(GuildViews.Button("Kick", () =>
+            {
+                Debug.Log("[Stub] Guild kick " + member.Player.PlayerId); CloseSheet();
+            }));
+            ShowSheet(content);
+        }
+
+        private void OpenMember(GuildMember member)
+        {
+            if (!GuildMembers.IsOfficer(current.OwnRole)) { openProfile(member.Player.PlayerId); return; }
+            var content = SheetContent(PlayerCardViews.Handle(member.Player));
+            content.Add(GuildViews.Button("View player", () => { CloseSheet(); openProfile(member.Player.PlayerId); }));
+            content.Add(GuildViews.Button("Kick", () => ConfirmKick(member)));
+            content.Add(GuildViews.Button("Report", () => report.Open(member, true)));
+            ShowSheet(content);
+        }
     }
 }
