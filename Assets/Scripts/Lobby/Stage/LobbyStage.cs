@@ -15,7 +15,7 @@ namespace NodeWar.Lobby
         private const float MarketZ = 9f;
         public Camera ShopCamera => stageCamera;
         public float ShopReferenceDistance => Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.05f * 0.05f);
-        private const int StageLayer = 2; // Ignore Raycast; scenery never handles pointer input.
+        private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
         private static readonly Color Sea = new Color(0.22f, 0.48f, 0.58f);
 
         // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
@@ -150,6 +150,51 @@ namespace NodeWar.Lobby
             stageCamera.transform.localRotation = shotRotation;
         }
 
+        private Rect focusRect;
+
+        /// <summary>Screen pixels, bottom-left origin. The camera still renders the full screen.</summary>
+        public void SetFocusRect(Rect screenRect)
+        {
+            focusRect = screenRect;
+            UpdateFocusProjection();
+        }
+
+        public void ClearFocusRect()
+        {
+            focusRect = default;
+            stageCamera.ResetProjectionMatrix();
+        }
+
+        private void LateUpdate() => UpdateFocusProjection();
+
+        private void UpdateFocusProjection()
+        {
+            stageCamera.ResetProjectionMatrix();
+            if (focusRect.width <= 0f || focusRect.height <= 0f || Screen.width <= 0 || Screen.height <= 0) return;
+            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (int i = 0; i < slotPositions.Length; i++)
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    // Reserve the separated state too, so selection never changes the zoom.
+                    Vector3 offset = new Vector3((corner & 1) == 0 ? -2.1f : 2.1f,
+                        (corner & 2) == 0 ? 0f : 1.6f, (corner & 4) == 0 ? -2.1f : 2.1f);
+                    Vector3 point = stageCamera.WorldToViewportPoint(transform.TransformPoint(slotPositions[i] + offset));
+                    min = Vector2.Min(min, point);
+                    max = Vector2.Max(max, point);
+                }
+            Vector2 size = max - min;
+            float scale = Mathf.Min(focusRect.width / Screen.width / Mathf.Max(0.001f, size.x),
+                focusRect.height / Screen.height / Mathf.Max(0.001f, size.y)) * 0.9f;
+            Vector2 desired = new Vector2(focusRect.center.x / Screen.width, focusRect.center.y / Screen.height);
+            Matrix4x4 projection = stageCamera.projectionMatrix;
+            projection.m00 *= scale;
+            projection.m11 *= scale;
+            projection.m02 += (min.x + max.x - 1f) * scale - (desired.x * 2f - 1f);
+            projection.m12 += (min.y + max.y - 1f) * scale - (desired.y * 2f - 1f);
+            stageCamera.projectionMatrix = projection;
+        }
+
         public void ShowShot(StageShot shot)
         {
             if (shot == StageShot.Market) { SetShopScroll(0f); return; }
@@ -227,6 +272,23 @@ namespace NodeWar.Lobby
                 suitTargets[i] = suit.transform.localPosition;
                 suitWaits[i] = UnityEngine.Random.Range(0.2f, 1.5f);
             }
+        }
+
+        public void BeginSuitReplace() => cluster.Use(false);
+
+        public bool TryPick(Vector2 screenPoint, out StagePick pick)
+        {
+            pick = default;
+            if (!stageCamera.isActiveAndEnabled) return false;
+            Physics.SyncTransforms();
+            Ray ray = stageCamera.ScreenPointToRay(screenPoint);
+            if (!Physics.Raycast(ray, out RaycastHit hit, stageCamera.farClipPlane,
+                1 << StageLayer, QueryTriggerInteraction.Ignore)) return false;
+            for (int i = 0; i < suits.Length; i++)
+                if (hit.transform == suits[i]) { pick = new StagePick(true, i); return true; }
+            for (int i = 0; i < plots.Length; i++)
+                if (hit.transform.IsChildOf(plots[i])) { pick = new StagePick(false, i); return true; }
+            return false;
         }
 
         public void SelectDistrict(int slot) => cluster.Select(slot);
@@ -324,6 +386,7 @@ namespace NodeWar.Lobby
             return MaterialFor(Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
         }
 
+        // All stage materials are created here; the future dither shader has one entry point.
         private Material MaterialFor(Color colour)
         {
             for (int i = 0; i < materials.Count; i++)
@@ -343,8 +406,9 @@ namespace NodeWar.Lobby
             obj.transform.localPosition = position;
             obj.transform.localScale = scale;
             var collider = obj.GetComponent<Collider>();
-            collider.enabled = false;
-            Destroy(collider);
+            bool pickable = objectName == "Unclaimed ground" || objectName == "District" || objectName.StartsWith("Suit ", StringComparison.Ordinal);
+            collider.enabled = pickable;
+            if (!pickable) Destroy(collider);
             var renderer = obj.GetComponent<Renderer>();
             renderer.sharedMaterial = MaterialFor(colour);
             renderer.shadowCastingMode = ShadowCastingMode.Off;

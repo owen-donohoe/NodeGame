@@ -1,0 +1,63 @@
+/* Workshop owns layout; shared components own buttons, chips and placeholder art. */
+.lb-workshop { flex-grow: 1; min-height: 0; padding: 10px 14px 96px; }
+.ws-presets { flex-direction: row; align-items: center; flex-shrink: 0; margin-bottom: 10px; }
+.ws-preset { width: 40px; padding-left: 0; padding-right: 0; justify-content: center; margin-right: 6px; }
+.ws-eyebrow { flex-grow: 1; flex-shrink: 1; white-space: normal; font-size: 11px; color: var(--ink-mute); -unity-text-align: middle-right; }
+.ws-window { height: 40%; flex-shrink: 0; background-color: var(--clear); border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-md); margin-bottom: 12px; }
+.ws-tabs { flex-direction: row; flex-shrink: 0; border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-sm); overflow: hidden; margin-bottom: 8px; }
+.ws-tab { flex-grow: 1; flex-basis: 0; min-width: 0; height: 42px; border-width: 0; border-radius: 0; font-size: 16px; }
+.ws-tab--on { background-color: var(--action); color: var(--action-ink); }
+.ws-toolbar { flex-direction: row; align-items: center; flex-shrink: 0; margin-top: 6px; margin-bottom: 8px; }
+.ws-browser-title { flex-grow: 1; font-size: 16px; color: var(--ink); }
+.ws-filter { height: 34px; font-size: 12px; margin-left: 6px; padding-left: 10px; padding-right: 10px; }
+.ws-grid { flex-grow: 1; min-height: 0; background-color: var(--surface); border-radius: var(--corner-sm); }
+.ws-cards { flex-direction: row; flex-wrap: wrap; padding: 4px; }
+.ws-card { width: 30.6%; flex-shrink: 0; margin: 1.3%; margin-top: 8px; padding: 6px 4px 5px; align-items: center; border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-sm); background-color: var(--surface-raised); }
+.ws-card--preview { border-color: var(--action-edge); }
+.ws-card--locked { background-color: var(--surface-sunk); border-color: var(--off-edge); }
+.ws-card--locked .ws-art-clip { opacity: 0.4; }
+.ws-name { font-size: 12px; white-space: normal; -unity-text-align: middle-center; color: var(--ink); }
+.ws-mark { position: absolute; top: -6px; right: -4px; height: 18px; font-size: 9px; padding-left: 6px; padding-right: 6px; border-radius: var(--corner-sm); background-color: var(--glass-strong); color: var(--ink-inverse); -unity-text-align: middle-center; }
+.ws-mark--arena { background-color: var(--off); color: var(--ink); }
+.ws-empty { width: 100%; padding: 12px; color: var(--ink-mute); }
+.ws-art-clip { width: 72%; height: 64px; align-items: stretch; justify-content: center; }
+.ws-art { height: 58px; }
+.ws-art--neutral { opacity: 0.55; }
+.ws-monogram { font-size: 24px; }
+.ws-preview { align-items: center; }
+.ws-preview .ws-art-clip { width: 120px; height: 116px; }
+.ws-preview .ws-art { height: 108px; }
+.ws-title { font-size: 24px; white-space: normal; color: var(--ink); -unity-text-align: middle-center; margin-bottom: 8px; }
+.ws-fact { font-size: 12px; white-space: normal; color: var(--ink-mute); margin-bottom: 4px; }
+.ws-info { flex-grow: 1; min-height: 0; position: relative; }
+.ws-info-scroll { flex-grow: 1; min-height: 0; }
+.ws-primary { height: 46px; flex-shrink: 0; font-size: 16px; }
+.ws-actions { flex-direction: row; flex-shrink: 0; margin-top: 6px; }
+.ws-secondary { flex-grow: 1; flex-basis: 0; min-width: 0; height: 38px; font-size: 12px; margin: 3px; }
+.ws-stat { margin-bottom: 6px; }
+.ws-histogram { height: 8px; position: relative; background-color: var(--surface-sunk); }
+.ws-zero { position: absolute; left: 50%; width: 1px; top: 0; bottom: 0; background-color: var(--ink); }
+.ws-bar { position: absolute; top: 1px; bottom: 1px; background-color: var(--confirm); }
+.ws-bar--worse { background-color: var(--status-short); }
+.ws-panel-host { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.ws-scrim { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--scrim); }
+.ws-sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 0; padding: 12px; background-color: var(--surface-raised); border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-md); }
+.ws-sheet-body { flex-grow: 1; flex-shrink: 1; min-height: 0; }
+.ws-strip { flex-shrink: 0; height: 84px; margin-top: 6px; }
+.ws-strip .unity-scroll-view__content-container { flex-direction: row; }
+.ws-chip { width: 72px; flex-shrink: 0; margin-right: 6px; padding: 4px; background-color: var(--surface); border-width: var(--stroke); border-color: var(--edge); border-radius: var(--corner-sm); }
+.ws-chip .ws-art-clip { width: 100%; height: 42px; }
+.ws-chip .ws-art { height: 38px; }
+.ws-chip .ws-monogram { font-size: 16px; }
+.ws-sheet-buttons { flex-direction: row; justify-content: space-between; flex-shrink: 0; margin-top: 8px; }
+.ws-sheet-button { width: 45%; height: 46px; font-size: 14px; background-color: var(--surface-sunk); color: var(--ink); border-radius: var(--corner-sm); }
+.ws-sheet-button.ws-primary { background-color: var(--action); color: var(--action-ink); }
+.ws-band { flex-shrink: 0; height: 64px; margin-top: 6px; overflow: hidden; }
+.ws-band-tile { background-color: var(--tile-tint-0); border-radius: var(--corner-sm); border-width: var(--stroke); border-color: var(--clear); justify-content: center; align-items: center; }
+.ws-band-tile.ws-art--neutral { background-color: var(--off); }
+.ws-band-tile--center { border-color: var(--action); }
+
+.ws-banner { display: none; border-width: var(--stroke); border-color: var(--action-edge); background-color: var(--surface-raised); border-radius: var(--corner-sm); padding: 10px 12px; margin-top: 12px; }
+.ws-banner-title { font-size: 16px; color: var(--ink); margin-bottom: 4px; }
+.ws-actionbar { display: none; position: absolute; left: 14px; right: 14px; bottom: 96px; background-color: var(--surface); padding: 10px 0; }
+.ws-cancel { height: 46px; font-size: 16px; }

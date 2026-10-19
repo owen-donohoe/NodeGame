@@ -36,6 +36,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="LoadoutPresetBrowseTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LoadoutPresets.cs" Link="Lobby/LoadoutPresets.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LoadoutBrowse.cs" Link="Lobby/LoadoutBrowse.cs" />
     <Compile Include="GuildTests.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildService.cs" Link="Backend/GuildService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildPolicies.cs" Link="Backend/GuildPolicies.cs" />
@@ -266,3 +269,4 @@
   </ItemGroup>
 
 </Project>
+

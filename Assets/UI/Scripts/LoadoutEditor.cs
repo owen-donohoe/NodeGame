@@ -107,6 +107,14 @@ namespace NodeWar.Lobby
             return Equip(districtIDs, districtID);
         }
 
+        public bool ReplaceSuitSlot(int slot, string suitID)
+        {
+            if (!InRange(suitIDs, slot) || string.IsNullOrEmpty(suitIDs[slot]) ||
+                string.IsNullOrEmpty(suitID) || IsSuitEquipped(suitID)) return false;
+            suitIDs[slot] = suitID;
+            return true;
+        }
+
         public bool ReplaceDistrictSlot(int slot, string districtID)
         {
             if (!InRange(districtIDs, slot) || string.IsNullOrEmpty(districtIDs[slot]) ||

@@ -23,9 +23,17 @@ namespace NodeWar.Lobby
         private readonly LobbyContextMenu menu;
         private readonly List<Item> districts = new List<Item>(), suits = new List<Item>();
         private readonly Button segDistricts, segSuits, primary, variants;
-        private readonly VisualElement districtSlots, suitSlots, unlocked, notUnlocked, preview, stats;
+        private readonly VisualElement unlocked, preview, stats;
         private readonly Label title, description, notice, eraMessage;
         private readonly ScrollView grid;
+        private readonly LobbySheet sheet;
+        private readonly VisualElement itemInfo;
+        private readonly Button ownedFilter, sortFilter;
+        private readonly Button[] presets = new Button[LoadoutPresets.Count];
+        private readonly Label presetLabel, browserTitle;
+        private bool closingForUse;
+        private bool showAll;
+        private LoadoutSort sort;
         private PlayerState playerState;
         private Item inspectedItem;
         private readonly WorkshopInventorySession session = new WorkshopInventorySession();
@@ -39,6 +47,10 @@ namespace NodeWar.Lobby
         private Task inventoryIdle = Task.CompletedTask;
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
         private Tab activeTab;
+        public bool IsOpen => session.IsOpen;
+        public VisualElement StageWindow => Root.Q<VisualElement>("workshop-window");
+        public event Action Hidden;
+        public bool ReplacingSuit => loadout.ReplacingSuit;
         public bool Replacing => loadout.Replacing;
         public LoadoutData StageLoadout => loadout.ToData();
         public bool ViewingSuit => activeTab == Tab.Suits;
@@ -63,16 +75,13 @@ namespace NodeWar.Lobby
             : base(LobbyPageID.Workshop, Build(layout))
         {
             this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
-            this.toast = toast; this.menu = menu;
+            this.toast = toast; this.menu = menu; this.sheet = sheet;
             segDistricts = Root.Q<Button>("workshop-tab-districts");
             segSuits = Root.Q<Button>("workshop-tab-suits");
             primary = Root.Q<Button>("workshop-info-use");
             variants = Root.Q<Button>("workshop-open-variants");
             skins = Root.Q<Button>("workshop-open-skins");
-            districtSlots = Root.Q<VisualElement>("workshop-district-slots");
-            suitSlots = Root.Q<VisualElement>("workshop-suit-slots");
             unlocked = Root.Q<VisualElement>("workshop-unlocked");
-            notUnlocked = Root.Q<VisualElement>("workshop-not-unlocked");
             preview = Root.Q<VisualElement>("workshop-info-preview");
             stats = Root.Q<VisualElement>("workshop-info-stats");
             title = Root.Q<Label>("workshop-info-title");
@@ -81,6 +90,24 @@ namespace NodeWar.Lobby
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
             panelHost = Root.Q<VisualElement>("workshop-panel-host");
+            ownedFilter = Root.Q<Button>("workshop-owned");
+            sortFilter = Root.Q<Button>("workshop-sort");
+            presetLabel = Root.Q<Label>("workshop-preset-label");
+            browserTitle = Root.Q<Label>("workshop-browser-title");
+            ownedFilter.clicked += () => { showAll = !showAll; RenderCards(); };
+            sortFilter.clicked += () => { sort = (LoadoutSort)(((int)sort + 1) % 3); RenderCards(); };
+            for (int i = 0; i < presets.Length; i++)
+            {
+                int index = i;
+                presets[i] = Root.Q<Button>("workshop-preset-" + i);
+                presets[i].clicked += () => SwitchPreset(index);
+            }
+            itemInfo = Root.Q<VisualElement>("workshop-info");
+            itemInfo.RemoveFromHierarchy();
+            itemInfo.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
+            if (sheet != null) sheet.Closed += SheetClosed;
+            Root.Q<Button>("workshop-replace-cancel").clicked += CancelReplacement;
+            RenderReplacement();
             if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
             if (primary != null) primary.clicked += UsePreview;
@@ -93,6 +120,7 @@ namespace NodeWar.Lobby
         {
             var root = new VisualElement { name = "page-workshop", pickingMode = PickingMode.Ignore };
             root.AddToClassList("lb-page-flush");
+            layout = Resources.Load<VisualTreeAsset>("Lobby/WorkshopPage") ?? layout;
             if (layout != null) layout.CloneTree(root);
             else root.Add(new Label("Workshop layout missing - assign WorkshopPage.uxml"));
             return root;
@@ -105,7 +133,7 @@ namespace NodeWar.Lobby
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
             _ = LoadInventoryAsync(visit);
         }
-        public override void OnHide() { CloseInventory(); }
+        public override void OnHide() { CloseInventory(); Hidden?.Invoke(); }
         private void CollectItems()
         {
             districts.Clear();
@@ -149,18 +177,12 @@ namespace NodeWar.Lobby
             }
         }
 
-        private void SortByFamily(List<Item> items)
+        private LoadoutTileOrder Order(Item item)
         {
-            items.Sort((a, b) =>
-            {
-                int order = DisplayUnlock(catalog.UnlockForBase(a.ID, playerState)).Status.CompareTo(
-                    DisplayUnlock(catalog.UnlockForBase(b.ID, playerState)).Status);
-                if (order == 0) order = ItemFamily.SortKey(a.Family).CompareTo(ItemFamily.SortKey(b.Family));
-                if (order == 0) order = StringComparer.Ordinal.Compare(a.Name, b.Name);
-                return order != 0 ? order : StringComparer.Ordinal.Compare(a.ID, b.ID);
-            });
+            var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
+            return new LoadoutTileOrder(item.ID, item.Name, item.Family.ToString(), state.Status == UnlockStatus.Owned, state.UnlockEra);
         }
-
+        private void SortByFamily(List<Item> items) => items.Sort((a, b) => LoadoutBrowse.Compare(Order(a), Order(b), sort));
         private static Item Find(List<Item> items, string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
@@ -183,6 +205,22 @@ namespace NodeWar.Lobby
             // Until rank is confirmed, fallback display must not trim a saved high deck.
             if (playerState?.Rank != null) SaveToProfile();
         }
+        private void SwitchPreset(int index)
+        {
+            if (!session.IsOpen || inventoryBusy) return;
+            var profile = PlayerProfile.Instance;
+            if (profile == null || profile.data.activeLoadoutPreset == index) return;
+            CancelReplacement();
+            CloseItemPanel();
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            var chosen = LoadoutPresets.Switch(ref profile.data, index, arena,
+                id => catalog.IsSuitOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse,
+                id => catalog.IsDistrictOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse);
+            loadout = new LoadoutScreenModel(chosen);
+            profile.Save();
+            LoadoutChanged?.Invoke();
+            Render();
+        }
         private void SaveToProfile()
         {
             PlayerProfile profile = PlayerProfile.Instance;
@@ -193,6 +231,7 @@ namespace NodeWar.Lobby
         private void SetTab(Tab tab)
         {
             CancelReplacement();
+            if (sheet != null && sheet.IsShowing(itemInfo)) sheet.Close();
             CloseItemPanel();
             activeTab = tab;
             var profile = PlayerProfile.Instance;
@@ -207,61 +246,17 @@ namespace NodeWar.Lobby
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             Item item = Find(items, loadout.PreviewId);
-            Inspect(item ?? (items.Count > 0 ? items[0] : null));
-            RenderSlots();
-        }
-        private void RenderSlots() { RenderSlotRow(districtSlots, false); RenderSlotRow(suitSlots, true); }
-        private void RenderSlotRow(VisualElement host, bool isSuit)
-        {
-            if (host == null) return;
-            host.Clear();
-            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
-            string[] locks = isSuit ? LoadoutRules.LockedSuits(arena) : LoadoutRules.LockedDistricts(arena);
-            var data = loadout.ToData();
-            string[] chosen = isSuit ? data.suitIDs : data.districtIDs;
-            int count = isSuit ? LoadoutRules.DisplaySuitSlots : LoadoutRules.DisplayDistrictSlots;
-            for (int i = 0; i < count; i++)
+            Inspect(item);
+            RenderCards();
+            var profile = PlayerProfile.Instance;
+            int selected = profile != null ? profile.data.activeLoadoutPreset : 0;
+            for (int i = 0; i < presets.Length; i++)
             {
-                bool locked = i < locks.Length;
-                int slot = i - locks.Length;
-                string id = locked ? locks[i] : chosen[slot];
-                Item item = Find(isSuit ? suits : districts, id);
-                var button = new Button();
-                button.AddToClassList("ui-reset-button"); button.AddToClassList("ws-slot");
-                button.Add(MakeArt(item, locked, false));
-                button.Add(MakeLabel(string.IsNullOrEmpty(id) ? "+" : item?.Name ?? id, "ws-name", "ui-w600"));
-                if (locked)
-                {
-                    button.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
-                    button.SetEnabled(false);
-                }
-                else
-                {
-                    if (!isSuit) button.AddToClassList("ws-district-slot");
-                    button.clicked += () =>
-                    {
-                        if (Replacing && !isSuit) { DistrictSlotPicked?.Invoke(slot); return; }
-                        CancelReplacement();
-                        if (string.IsNullOrEmpty(id)) return;
-                        activeTab = isSuit ? Tab.Suits : Tab.Districts;
-                        var profile = PlayerProfile.Instance;
-                        if (profile != null) profile.WorkshopTabIndex = (int)activeTab;
-                        segDistricts?.EnableInClassList("ws-tab--on", !isSuit);
-                        segSuits?.EnableInClassList("ws-tab--on", isSuit);
-                        Inspect(inspectedItem?.ID == id ? null : item);
-                        RenderCards();
-                    };
-                    menu?.Attach(button, () => new List<LobbyMenuItem>
-                    {
-                        new LobbyMenuItem("Remove from loadout", () =>
-                        {
-                            CancelReplacement();
-                            if (!inventoryBusy && loadout.ClearChosen(isSuit, slot)) { SaveToProfile(); Render(); }
-                        })
-                    });
-                }
-                host.Add(button);
+                presets[i].EnableInClassList("ui-chip--action", selected == i);
+                presets[i].SetEnabled(!inventoryBusy);
             }
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            if (presetLabel != null) presetLabel.text = "Loadout " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
         }
         private VisualElement MakeArt(Item item, bool neutral, bool navy)
         {
@@ -269,31 +264,73 @@ namespace NodeWar.Lobby
             clip.AddToClassList("ws-art-clip");
             var art = new VisualElement { pickingMode = PickingMode.Ignore };
             art.AddToClassList("ws-art");
-            if (item != null) art.AddToClassList(ItemFamily.ClassFor(item.Family));
+            art.AddToClassList("ui-tile");
+            if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
             art.EnableInClassList("ws-art--neutral", neutral); art.EnableInClassList("ws-art--navy", navy);
-            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "ui-w600"));
+            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "ui-tile__monogram"));
             clip.Add(art); return clip;
         }
         private void RenderCards()
         {
-            if (unlocked == null || notUnlocked == null) return;
-            unlocked.Clear(); notUnlocked.Clear();
+            if (unlocked == null) return;
+            unlocked.Clear();
+            ownedFilter.text = showAll ? "All" : "Owned";
+            sortFilter.text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Owned first" : sort == LoadoutSort.Name ? "Name" : "Role");
+            browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             foreach (Item item in items)
             {
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
+                if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
                 var card = new Button(() => PreviewItem(item.ID));
                 card.AddToClassList("ui-reset-button"); card.AddToClassList("ws-card");
                 card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
                 card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
                 card.Add(MakeLabel(item.Name, "ws-name", "ui-w600"));
-                if (item.Granted) card.Add(MakeLabel("Always granted", "ws-name", "ui-w500"));
-                if (menu != null) menu.Attach(card, () => new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) });
-                (state.Status == UnlockStatus.Owned ? unlocked : notUnlocked).Add(card);
+                card.EnableInClassList("ws-card--locked", state.Status != UnlockStatus.Owned);
+                if (IsSelected(item)) card.Add(MakeLabel("In hand", "ws-mark", "ui-w700"));
+                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "ws-mark", "ws-mark--arena"));
+                if (menu != null) menu.Attach(card, () =>
+                {
+                    var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) };
+                    if (IsSelected(item) && !item.Granted)
+                        actions.Add(new LobbyMenuItem("Remove from loadout", () =>
+                        {
+                            if (inventoryBusy || !session.IsOpen) return;
+                            CancelReplacement();
+                            bool suit = activeTab == Tab.Suits;
+                            var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+                            if (loadout.ClearChosen(suit, Array.IndexOf(chosen, item.ID))) { SaveToProfile(); Render(); }
+                        }));
+                    return actions;
+                });
+                unlocked.Add(card);
             }
+            if (unlocked.childCount == 0) unlocked.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "ui-w500"));
         }
-        private void PreviewItem(string id) { Inspect(Find(activeTab == Tab.Suits ? suits : districts, id)); RenderCards(); }
+        public void InspectStageItem(bool suit, int stageIndex)
+        {
+            if (!session.IsOpen || Replacing) return;
+            var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+            int slot = StageSlotMap.ToChosen(chosen, stageIndex);
+            if (slot < 0) return;
+            SetTab(suit ? Tab.Suits : Tab.Districts);
+            PreviewItem(chosen[slot]);
+        }
+
+        private void PreviewItem(string id)
+        {
+            Inspect(Find(activeTab == Tab.Suits ? suits : districts, id));
+            RenderCards();
+            if (inspectedItem != null) sheet?.Open(itemInfo, true);
+        }
+        private void SheetClosed(VisualElement content)
+        {
+            if (content != itemInfo) return;
+            CloseItemPanel();
+            if (!Replacing && !closingForUse) { Inspect(null); RenderCards(); }
+        }
         private bool IsSelected(Item item)
         {
             if (item == null) return false;
@@ -305,13 +342,21 @@ namespace NodeWar.Lobby
             if (inspectedItem == null || IsSelected(inspectedItem) || inventoryBusy || Replacing) return;
             // Actual eligibility is independent of the debug display override.
             if (!catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse || inspectedItem.Granted) return;
+            closingForUse = true;
+            if (sheet != null && sheet.IsShowing(itemInfo)) sheet.Close();
+            closingForUse = false;
             if (activeTab == Tab.Districts && DistrictUseRequested?.Invoke() == true)
             {
-                if (loadout.BeginReplace(true, inventoryBusy)) ReplacementChanged?.Invoke();
+                if (loadout.BeginReplace(true, inventoryBusy)) { RenderReplacement(); ReplacementChanged?.Invoke(); }
                 else CancelReplacement();
                 return;
             }
-            if (!loadout.UsePreview(true, activeTab == Tab.Suits)) { Say("Loadout full. Tap a slot to clear it"); return; }
+            if (!loadout.UsePreview(true, activeTab == Tab.Suits))
+            {
+                if (activeTab == Tab.Suits && loadout.BeginSuitReplace(true, inventoryBusy))
+                { RenderReplacement(); ReplacementChanged?.Invoke(); }
+                return;
+            }
             SaveToProfile(); Render();
         }
 
@@ -319,6 +364,16 @@ namespace NodeWar.Lobby
         {
             bool canUse = catalog.UnlockForBase(loadout.PendingDistrictId, playerState).CanUse;
             bool replaced = loadout.CompleteReplace(slot, canUse, inventoryBusy || !session.IsOpen);
+            RenderReplacement();
+            ReplacementChanged?.Invoke();
+            if (replaced) { SaveToProfile(); Render(); }
+        }
+
+        public void CompleteSuitReplacement(int slot)
+        {
+            bool canUse = catalog.UnlockForBase(loadout.PendingSuitId, playerState).CanUse;
+            bool replaced = loadout.CompleteSuitReplace(slot, canUse, inventoryBusy || !session.IsOpen);
+            RenderReplacement();
             ReplacementChanged?.Invoke();
             if (replaced) { SaveToProfile(); Render(); }
         }
@@ -326,7 +381,17 @@ namespace NodeWar.Lobby
         public void CancelReplacement()
         {
             loadout.CancelReplace();
+            RenderReplacement();
             ReplacementChanged?.Invoke();
+        }
+        private void RenderReplacement()
+        {
+            Root.Q<VisualElement>("workshop-toolbar").style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
+            grid.style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
+            Root.Q<VisualElement>("workshop-replace-banner").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
+            Root.Q<VisualElement>("workshop-replace-actions").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
+            var pending = ReplacingSuit ? Find(suits, loadout.PendingSuitId) : Find(districts, loadout.PendingDistrictId);
+            Root.Q<Label>("workshop-replace-message").text = "Tap a wiggling slot to swap in " + (pending?.Name ?? "") + ".";
         }
         private void RenderInfo()
         {
@@ -381,6 +446,7 @@ namespace NodeWar.Lobby
         }
         private void RenderInventory()
         {
+            for (int i = 0; i < presets.Length; i++) presets[i].SetEnabled(!inventoryBusy);
             if (eraMessage != null) { eraMessage.text = inventoryMessage; eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex; }
             RenderCards(); RenderInfo(); RenderItemPanel();
         }
@@ -390,6 +456,7 @@ namespace NodeWar.Lobby
             ItemViewed?.Invoke(false, null);
             CloseItemPanel();
             session.Close();
+            if (sheet != null && sheet.IsShowing(itemInfo)) sheet.Close();
         }
 
         private bool IsInventoryActive(int visit) => session.IsVisitCurrent(visit);
