@@ -17,6 +17,7 @@ namespace NodeWar.Lobby
         private float startY;
         private LobbyOverlayRouter router;
         private string route;
+        private IVisualElementScheduledItem hideLater;
 
         public MkSheet()
         {
@@ -28,6 +29,8 @@ namespace NodeWar.Lobby
             Handle.AddToClassList("mk-handle-hit"); Surface.Add(Handle);
             var grip = new VisualElement(); grip.AddToClassList("mk-handle"); Handle.Add(grip);
             Body.style.minHeight = 0; Body.style.flexShrink = 1; Surface.Add(Body);
+            RegisterCallback<PointerDownEvent>(evt => { if (!IsOpen) evt.StopImmediatePropagation(); }, TrickleDown.TrickleDown);
+            RegisterCallback<ClickEvent>(evt => { if (!IsOpen) evt.StopImmediatePropagation(); }, TrickleDown.TrickleDown);
             Scrim.RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
             Handle.RegisterCallback<PointerDownEvent>(evt =>
             {
@@ -47,7 +50,11 @@ namespace NodeWar.Lobby
         {
             Surface.EnableInClassList("mk-bigsheet", large);
             LobbyScrollbars.Hide(Body);
+            hideLater?.Pause();
             style.display = DisplayStyle.Flex;
+            pickingMode = PickingMode.Position;
+            Surface.pickingMode = Scrim.pickingMode = PickingMode.Position;
+            schedule.Execute(() => { if (IsOpen) Surface.AddToClassList("mk-sheet--open"); }).ExecuteLater(16);
             if (IsOpen) return;
             IsOpen = true;
             if (router != null) router.Open(new LobbyOverlay(route, OverlayKind.Sheet, true), Close);
@@ -56,7 +63,11 @@ namespace NodeWar.Lobby
         public void Close()
         {
             if (!IsOpen) return;
-            Release(); IsOpen = false; style.display = DisplayStyle.None;
+            Release(); IsOpen = false;
+            Surface.RemoveFromClassList("mk-sheet--open");
+            pickingMode = Surface.pickingMode = Scrim.pickingMode = PickingMode.Ignore;
+            hideLater = schedule.Execute(() => style.display = DisplayStyle.None);
+            hideLater.ExecuteLater(280);
             if (router != null) router.Closed(route);
             Closed?.Invoke();
         }

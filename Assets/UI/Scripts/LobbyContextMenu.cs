@@ -18,8 +18,8 @@ namespace NodeWar.Lobby
     }
 
     /// <summary>
-    /// The menu a long press opens: a scrim, the pressed element lifted, and a
-    /// short list anchored where the finger was.
+    /// The menu a long press opens: a shared sheet, the pressed element lifted, and a
+    /// short list of actions.
     ///
     /// One instance for the whole lobby. Pages attach it with
     /// <see cref="Attach"/>, which adds a <see cref="LongPressManipulator"/>
@@ -28,15 +28,7 @@ namespace NodeWar.Lobby
     /// </summary>
     public class LobbyContextMenu
     {
-        // Menu geometry from the prototype: 52px rows, kept 12px from any edge,
-        // opened below the finger unless that would run off the bottom.
-        private const float RowHeight = 52f;
-        private const float Edge = 12f;
-        private const float BelowFinger = 18f;
-        private const float MenuWidth = 212f;
-
         private readonly VisualElement layer;
-        private readonly VisualElement scrim;
         private readonly VisualElement menu;
         private readonly MkSheet sheet;
         private VisualElement lifted;
@@ -84,9 +76,7 @@ namespace NodeWar.Lobby
                 Button row = new Button();
                 row.text = item.Label;
                 row.AddToClassList("mk-btn");
-                row.AddToClassList("lb-menu__row");
                 row.AddToClassList("ui-w500");
-                if (i == items.Count - 1) row.AddToClassList("lb-menu__row--last");
 
                 row.clicked += () =>
                 {
@@ -121,15 +111,8 @@ namespace NodeWar.Lobby
             {
                 // The rows stay in place so the menu can fade out, but a faded
                 // row must not keep catching taps meant for the page beneath.
-                menu.RemoveFromClassList("lb-menu--on");
                 menu.pickingMode = PickingMode.Ignore;
                 foreach (VisualElement row in menu.Children()) row.pickingMode = PickingMode.Ignore;
-            }
-
-            if (scrim != null)
-            {
-                scrim.RemoveFromClassList("ui-scrim--on");
-                scrim.pickingMode = PickingMode.Ignore;
             }
 
             if (lifted != null) lifted.RemoveFromClassList("lb-lifted");

@@ -86,7 +86,7 @@ namespace NodeWar.Lobby
         private void Close()
         {
             IsOpen = false;
-            Root.style.display = DisplayStyle.None;
+            sheet.Close();
             Closed?.Invoke();
         }
     }

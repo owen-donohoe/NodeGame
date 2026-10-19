@@ -369,6 +369,8 @@ namespace NodeWar.Lobby
             if (profilePage != null) profilePage.Renamed += chrome.Refresh;
         }
 
+        public void ShowShot(StageShot shot) => stage?.ShowShot(shot);
+
         private void BuildStage(VisualElement root)
         {
             stage = LobbyStage.Create();
@@ -526,6 +528,7 @@ namespace NodeWar.Lobby
             navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
             var workshop = new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet);
             navigation.Register(workshop);
+            workshop.BindOverlayRouter(router, lobbyRoot);
             workshopStage = new WorkshopStageBinding(workshop, stage, router, lobbyRoot, RefreshWorkshopStage);
 
             if (homePageLayout != null || Resources.Load<VisualTreeAsset>("Lobby/HomePage") != null)
@@ -549,6 +552,7 @@ namespace NodeWar.Lobby
             navigation.Register(new SocialPage(socialPageLayout));
             guildPage = new GuildPage(NodeWar.Backend.BackendServices.Guild, NodeWar.Backend.BackendServices.GuildBrowse, router, lobbyRoot);
             navigation.Register(guildPage);
+            guildPage.GuildChanged += () => RefreshChromeVisibility(lobbyRoot);
         }
 
         private void BindNav(VisualElement root, string elementName, LobbyPageID id)
@@ -612,11 +616,16 @@ namespace NodeWar.Lobby
             menu.Closed += () => router.Closed("menu");
             profilePage.Opened += () =>
             {
+                if (profilePage.ViewingSelf) stage.ShowShot(StageShot.Ocean);
                 profilePage.Root.BringToFront();
                 promote(profilePage.Root.parent);
-                router.Open(new LobbyOverlay("profile", OverlayKind.Panel, true, true), profilePage.Close);
+                router.Open(new LobbyOverlay("profile", profilePage.ViewingSelf ? OverlayKind.Panel : OverlayKind.Sheet, true, profilePage.ViewingSelf), profilePage.Close);
             };
-            profilePage.Closed += () => router.Closed("profile");
+            profilePage.Closed += () =>
+            {
+                router.Closed("profile");
+                stage.ShowShot(StageShots.ForPage(navigation.CurrentPageID.ToString()));
+            };
             WirePushPage(settingsPage, "settings", promote);
             WirePushPage(matchHistoryPage, "history", promote);
             claimPanel.Opened += () =>
@@ -669,15 +678,6 @@ namespace NodeWar.Lobby
             AddBurgerItem("Credits");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             AddBurgerItem("Testing", () => playPopup?.Show(GameMode.Testing));
-            AddBurgerItem("Toggle sample guild", () =>
-            {
-                if (NodeWar.Backend.BackendServices.Guild is NodeWar.Backend.LocalGuildService sample)
-                {
-                    sample.InGuild = !sample.InGuild;
-                    navigation.Show(LobbyPageID.Guild);
-                    guildPage.Refresh();
-                }
-            });
 #endif
         }
 
@@ -712,9 +712,28 @@ namespace NodeWar.Lobby
             VisualElement pills = root.Q<VisualElement>("tabbar-dock");
             VisualElement header = root.Q<VisualElement>("strip-wrap");
             VisualElement currencies = root.Q<VisualElement>("top-bar");
-            if (pills != null) pills.style.display = top != null && top.HidesPills ? DisplayStyle.None : DisplayStyle.Flex;
+            var playerCard = root.Q("trophy-strip");
+            var guildCard = root.Q("guild-chrome-card");
+            bool showGuild = (navigation.CurrentPageID == LobbyPageID.Guild || top?.ID == "guild-chat") && guildPage?.CurrentGuild != null;
+            if (guildCard == null && header != null)
+            {
+                guildCard = new VisualElement { name = "guild-chrome-card" };
+                header.Add(guildCard);
+            }
+            if (guildCard != null)
+            {
+                guildCard.style.display = showGuild ? DisplayStyle.Flex : DisplayStyle.None;
+                if (showGuild && guildCard.userData != guildPage.CurrentGuild)
+                {
+                    guildCard.Clear();
+                    guildCard.Add(GuildViews.Header(guildPage.CurrentGuild));
+                    guildCard.userData = guildPage.CurrentGuild;
+                }
+            }
+            if (playerCard != null) playerCard.style.display = showGuild ? DisplayStyle.None : DisplayStyle.Flex;
+            if (pills != null) pills.style.display = (Routes.IsSheetOpen || top != null && top.HidesPills) ? DisplayStyle.None : DisplayStyle.Flex;
             if (header != null) header.style.display = (top != null && top.HidesHeader) ? DisplayStyle.None : DisplayStyle.Flex;
-            if (currencies != null) currencies.style.display = (top != null && top.HidesHeader) || navigation.CurrentPageID == LobbyPageID.Guild ? DisplayStyle.None : DisplayStyle.Flex;
+            if (currencies != null) currencies.style.display = (top != null && top.HidesHeader) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void HandleBack()

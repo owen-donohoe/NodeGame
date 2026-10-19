@@ -38,6 +38,7 @@ namespace NodeWar.Lobby
         private Item inspectedItem;
         private readonly WorkshopInventorySession session = new WorkshopInventorySession();
         private readonly VisualElement panelHost;
+        private readonly MkSheet inventorySheet = new MkSheet();
         private string panelBaseId, panelChoiceId;
         private bool panelSkins;
         private readonly Button skins;
@@ -50,6 +51,7 @@ namespace NodeWar.Lobby
         public bool IsOpen => session.IsOpen;
         public VisualElement StageWindow => Root.Q<VisualElement>("workshop-window");
         public event Action Hidden;
+        public event Action<bool> ViewChanged;
         public bool ReplacingSuit => loadout.ReplacingSuit;
         public bool Replacing => loadout.Replacing;
         public LoadoutData StageLoadout => loadout.ToData();
@@ -235,6 +237,7 @@ namespace NodeWar.Lobby
             if (sheet != null && sheet.IsShowing(itemInfo)) sheet.Close();
             CloseItemPanel();
             activeTab = tab;
+            ViewChanged?.Invoke(tab == Tab.Suits);
             var profile = PlayerProfile.Instance;
             if (profile != null) profile.WorkshopTabIndex = (int)tab;
             Render();
@@ -572,6 +575,18 @@ namespace NodeWar.Lobby
 
         // ===== VARIANT SHEET =====
 
+        public void BindOverlayRouter(LobbyOverlayRouter router, VisualElement shell)
+        {
+            inventorySheet.BindRouter(router, "workshop-choices");
+            shell.Add(inventorySheet);
+            inventorySheet.Opened += () =>
+            {
+                inventorySheet.BringToFront();
+                shell.Q("toast-dock")?.BringToFront();
+            };
+            inventorySheet.Closed += CloseItemPanel;
+        }
+
         private void OpenVariants()
         {
             CancelReplacement();
@@ -605,7 +620,7 @@ namespace NodeWar.Lobby
         private void RenderSkinPanel()
         {
             activeBand?.Stop(); activeBand = null;
-            panelHost.Clear();
+            inventorySheet.Body.Clear();
             string baseId = panelBaseId;
             LoadoutChoice[] choices = LoadoutChoices.Skins(baseId, null, playerState);
             if (choices.Length == 0 || inspectedItem == null) { CloseItemPanel(); return; }
@@ -614,9 +629,7 @@ namespace NodeWar.Lobby
             panelChoiceId = choices[centered].ID;
 
             panelHost.pickingMode = PickingMode.Position;
-            var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
-            panelHost.Add(scrim);
-            var sheet = new PaperCard(); sheet.AddToClassList("ws-sheet");
+            var sheet = new VisualElement();
             var body = new VisualElement { pickingMode = PickingMode.Ignore }; body.AddToClassList("ws-sheet-body");
             var art = new PaperCard { pickingMode = PickingMode.Ignore }; art.AddToClassList("ws-preview");
             body.Add(art);
@@ -641,7 +654,8 @@ namespace NodeWar.Lobby
             use.SetEnabled(!inventoryBusy);
             buttons.Add(back); buttons.Add(use);
             sheet.Add(buttons);
-            panelHost.Add(sheet);
+            inventorySheet.Body.Add(sheet);
+            inventorySheet.Open(true);
 
             // Updates the centred skin's preview, status and Use label in place; the band is untouched.
             void ShowCentered(int index)
@@ -670,8 +684,9 @@ namespace NodeWar.Lobby
         {
             activeBand?.Stop(); activeBand = null;
             panelBaseId = null; panelChoiceId = null; panelSkins = false;
+            inventorySheet.Close();
             if (panelHost == null) return;
-            panelHost.Clear();
+            inventorySheet.Body.Clear();
             panelHost.pickingMode = PickingMode.Ignore;
         }
 
@@ -679,7 +694,7 @@ namespace NodeWar.Lobby
         {
             if (panelHost == null || panelBaseId == null) return;
             if (panelSkins) { RenderSkinPanel(); return; }
-            panelHost.Clear();
+            inventorySheet.Body.Clear();
             string baseId = panelBaseId;
             LoadoutChoice[] choices = LoadoutChoices.Variants(baseId, playerState);
             if (choices.Length == 0 || inspectedItem == null) { CloseItemPanel(); return; }
@@ -689,9 +704,7 @@ namespace NodeWar.Lobby
             var state = DisplayUnlock(current.UnlockState);
 
             panelHost.pickingMode = PickingMode.Position;
-            var scrim = new VisualElement(); scrim.AddToClassList("ws-scrim");
-            panelHost.Add(scrim);
-            var sheet = new PaperCard(); sheet.AddToClassList("ws-sheet");
+            var sheet = new VisualElement();
             var body = new ScrollView(ScrollViewMode.Vertical);
             body.AddToClassList("ws-sheet-body");
             body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
@@ -737,7 +750,8 @@ namespace NodeWar.Lobby
             use.clicked += () => { if (current.Selectable) _ = EquipVariantAsync(baseId, useId); };
             buttons.Add(back); buttons.Add(use);
             sheet.Add(buttons);
-            panelHost.Add(sheet);
+            inventorySheet.Body.Add(sheet);
+            inventorySheet.Open(true);
         }
 
         private static GameBalanceData TreeBalance()

@@ -29,9 +29,11 @@
 .lb-public-recent { margin-bottom: 12px; padding: 8px; background-color: var(--paper-dark); }
 .lb-public-recent Label { white-space: normal; }
 
-.lb-public-overlay { transform-origin: 0 0; transition-property: translate, scale; transition-duration: 340ms; transition-timing-function: ease; }
+.lb-public-overlay { transform-origin: 0 0; transition-property: translate, scale; transition-duration: 340ms; transition-timing-function: ease-out-cubic; }
 .mk-profile--instant { transition-duration: 0ms; }
 .mk-profile--self .mk-sheet { top: 0; height: 100%; max-height: 100%; border-radius: 0; }
 .mk-profile--self .mk-sheet > ScrollView { flex-grow: 1; }
 .mk-profile--self .mk-handle-hit { display: none; }
 .mk-profile--self .mk-scrim { display: none; }
+
+.mk-profile--self .mk-sheet { translate: 0 0; transition-duration: 0ms; }

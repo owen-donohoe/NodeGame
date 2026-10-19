@@ -43,6 +43,7 @@
 :root {
     /* ================= PALETTE ================= */
     --pal-tap: #1f7a6d;
+    --pal-coin: #d9a441;
     --pal-tap-soft: rgba(31,122,109,0.14);
     --pal-umber-70: rgba(45,35,25,0.70);
     --pal-umber-45: rgba(45,35,25,0.45);
@@ -79,10 +80,10 @@
     --pal-clear: rgba(0, 0, 0, 0);
 
     /* gold */
-    --pal-gold-400: rgb(226, 173, 61);
+    --pal-gold-400: #e0a526;
     --pal-gold-500: #e0a526;
     --pal-gold-700: rgb(168, 128, 28);
-    --pal-gold-800: rgb(138, 106, 18);
+    --pal-gold-800: #8a6a14;
     --pal-gold-950: rgb(58, 42, 8);
 
     /* green */
@@ -169,7 +170,7 @@
     --edge: var(--pal-umber-900);
     --rule: var(--pal-paper-500-a30);
     --press-tint: var(--pal-paper-500-a22);
-    --scrim: var(--pal-umber-900-a55);
+    --scrim: var(--pal-umber-50);
     --glass: var(--pal-umber-900-a82);
     --glass-strong: var(--pal-umber-900-a92);
     --glass-toast: var(--pal-umber-900-a94);
@@ -179,7 +180,7 @@
 
     /* ---- ink ---- */
     --ink: var(--pal-umber-900);
-    --ink-mute: var(--pal-umber-500);
+    --ink-mute: var(--pal-umber-70);
     --ink-inverse: var(--pal-cream);
     --ink-white: var(--pal-white);
     --clear: var(--pal-clear);
@@ -189,7 +190,7 @@
     --action-press: var(--pal-gold-500);
     --action-edge: var(--pal-umber-900);
     --action-ink: var(--pal-umber-900);
-    --confirm: var(--pal-green-400);
+    --confirm: var(--pal-tap);
     --confirm-edge: var(--pal-umber-900);
     --confirm-ink: var(--pal-umber-900);
     --off: var(--pal-stone-400);
@@ -315,7 +316,7 @@
     --mk-action: var(--pal-gold-500);
     --mk-urgent: var(--pal-red-500);
     --mk-trophy: var(--pal-gold-800);
-    --mk-coin: var(--pal-gold-400);
+    --mk-coin: var(--pal-coin);
     --mk-leaf: var(--pal-leaf-500);
     --era-1: var(--pal-era-1);
     --era-2: var(--pal-era-2);

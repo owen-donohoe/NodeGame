@@ -2,4 +2,4 @@
 .mk-purse Label { font-size: 14px; }
 .mk-trophy Label { color: var(--mk-trophy); font-size: 19.55px; }
 .mk-namelink Label { color: var(--mk-ink); font-size: 19.55px; }
-.mk-cap { margin-top: 3px; }
+.ui-root .mk-cap { margin-top: 3px; }

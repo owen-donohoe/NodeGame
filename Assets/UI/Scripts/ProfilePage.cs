@@ -66,7 +66,7 @@ namespace NodeWar.Lobby
             panel.Body.Add(profileContent);
             Root.Add(panel);
             panel.Closed += Close;
-            safeArea = new SafeAreaBinder(panel.Surface);
+            safeArea = new SafeAreaBinder(profileContent);
             stateView = new AsyncStateView();
             var body = Root.Q("public-profile-body");
             body.RemoveFromHierarchy();
@@ -75,6 +75,7 @@ namespace NodeWar.Lobby
             stateView.RetryRequested += Reload;
             handle = Root.Q<Label>("public-profile-handle");
             handle.enableRichText = false;
+            handle.RegisterCallback<ClickEvent>(_ => { if (viewingSelf) Close(); });
             rank = Root.Q<Label>("public-profile-rank");
             stats = Root.Q("public-profile-stats");
             loadout = Root.Q("public-profile-loadout");
@@ -174,7 +175,13 @@ namespace NodeWar.Lobby
             BackendServices.StateChanged -= StateChanged;
             BackendServices.Account.Changed -= AccountChanged;
             stateView.Render(state.Reduce(state.HasContent ? AsyncResult.Ready : AsyncResult.Empty, Now), Now);
-            Root.style.display = DisplayStyle.None;
+            if (viewingSelf && sourceRect != null)
+            {
+                SnapTo(sourceRect);
+                hideLater = Root.schedule.Execute(() => { panel.Close(); Root.style.display = DisplayStyle.None; });
+                hideLater.ExecuteLater(340);
+            }
+            else { panel.Close(); Root.style.display = DisplayStyle.None; }
             Closed?.Invoke();
         }
 

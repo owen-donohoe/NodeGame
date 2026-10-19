@@ -125,20 +125,8 @@
         </engine:VisualElement>
         <engine:VisualElement name="overlay-host" class="lb-sheet-layer" picking-mode="Ignore" />
 
-        <engine:VisualElement name="sheet-layer" class="lb-sheet-layer" picking-mode="Ignore">
-            <engine:VisualElement name="sheet-scrim" class="ui-scrim" picking-mode="Ignore" />
-            <lobby:PaperCard name="sheet" class="ui-sheet lb-sheet">
-                <engine:VisualElement name="sheet-handle" class="ui-handle-hit">
-                    <engine:VisualElement class="ui-handle" picking-mode="Ignore" />
-                </engine:VisualElement>
-                <engine:VisualElement name="sheet-body" picking-mode="Ignore" />
-            </lobby:PaperCard>
-        </engine:VisualElement>
-
-        <engine:VisualElement name="menu-layer" class="lb-menu-layer" picking-mode="Ignore">
-            <engine:VisualElement name="menu-scrim" class="ui-scrim" picking-mode="Ignore" />
-            <lobby:PaperCard name="menu" class="lb-menu" picking-mode="Ignore" />
-        </engine:VisualElement>
+        <engine:VisualElement name="sheet-layer" class="lb-sheet-layer" picking-mode="Ignore" />
+        <engine:VisualElement name="menu-layer" class="lb-menu-layer" picking-mode="Ignore" />
 
         <engine:VisualElement name="toast-dock" class="lb-toast-dock" picking-mode="Ignore">
             <engine:Label name="toast" class="ui-toast ui-w500" text="" picking-mode="Ignore" />

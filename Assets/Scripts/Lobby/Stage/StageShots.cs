@@ -1,6 +1,6 @@
 namespace NodeWar.Lobby
 {
-    public enum StageShot { Market, Loadout, Home, Social, Guild }
+    public enum StageShot { Home, Districts, Suits, Ocean, Market }
 
     public static class StageShots
     {
@@ -11,9 +11,10 @@ namespace NodeWar.Lobby
                 case "Shop":
                 case "Market": return StageShot.Market;
                 case "Workshop":
-                case "Loadout": return StageShot.Loadout;
-                case "Social": return StageShot.Social;
-                case "Guild": return StageShot.Guild;
+                case "Loadout": return StageShot.Districts;
+                case "Social": return StageShot.Ocean;
+                case "Guild": return StageShot.Ocean;
+                case "Home": return StageShot.Districts;
                 default: return StageShot.Home;
             }
         }

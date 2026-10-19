@@ -24,7 +24,7 @@ namespace NodeWar.Lobby
             int count = equipped < 0 ? 0 : equipped > Count ? Count : equipped;
             var slots = new StageSlot[Count];
             for (int i = 0; i < Count; i++)
-                slots[i] = new StageSlot(i < 3 ? 0 : 1, i < 3 ? i : i - 3, i < count);
+                slots[i] = new StageSlot(i < 3 ? 1 : 0, i < 3 ? i : i - 3, i < count);
             return slots;
         }
     }

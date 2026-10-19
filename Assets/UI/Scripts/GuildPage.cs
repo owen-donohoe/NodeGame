@@ -24,6 +24,8 @@ namespace NodeWar.Lobby
         private readonly GuildDataView feed = new GuildDataView();
         private GuildFilter filter = new GuildFilter();
         private GuildView current;
+        public GuildView CurrentGuild => current;
+        public event Action GuildChanged;
         private bool visible;
         private int visit;
 
@@ -84,7 +86,7 @@ namespace NodeWar.Lobby
         private static void WirePanel(LobbyOverlayPanel panel, string id, LobbyOverlayRouter router, VisualElement host)
         {
             host.Add(panel.Root);
-            panel.Opened += () => { panel.Root.BringToFront(); router.Open(new LobbyOverlay(id, OverlayKind.Panel), panel.Close); };
+            panel.Opened += () => { panel.Root.BringToFront(); router.Open(new LobbyOverlay(id, OverlayKind.Sheet, true), panel.Close); };
             panel.Closed += () => router.Closed(id);
         }
 
@@ -99,7 +101,8 @@ namespace NodeWar.Lobby
 
         private void AccountChanged(AccountInfo info)
         {
-            current = null; visit++;
+            current = null;
+            GuildChanged?.Invoke(); visit++;
             mine.Invalidate(true); search.Invalidate(true); browse.Invalidate(true);
             filters.Close(); preview.Close();
             pinned.Invalidate(true); feed.Invalidate(true); chat.Close();
@@ -125,12 +128,14 @@ namespace NodeWar.Lobby
             chat.Close();
             search.Invalidate(); browse.Invalidate();
             current = null;
+            GuildChanged?.Invoke();
             return mine.Load(service.GetMineAsync, RenderMembership, _ => true, "You're not in a guild.");
         }
 
         private void RenderMembership(GuildView guild)
         {
             current = guild;
+            GuildChanged?.Invoke();
             if (guild == null)
             {
                 mine.Content.Add(visitor);
