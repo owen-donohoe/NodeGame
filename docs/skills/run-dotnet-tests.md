@@ -6,7 +6,7 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: gpt-6, at: 2026-10-11T19:03:46Z }
-verified_at_commit: cee1a628
+verified_at_commit: b99f56d3
 status: draft
 sources:
   - id: solution
