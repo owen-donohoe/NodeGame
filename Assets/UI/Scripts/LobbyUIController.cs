@@ -109,6 +109,7 @@ namespace NodeWar.Lobby
         private LobbyModePicker modePicker;
         private LobbyModeSelection selectedMode;
         private LobbyPlayFlow playFlow;
+        private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
         public NodeWar.Backend.ICrateInventory Crates => crateInventory;
@@ -192,6 +193,8 @@ namespace NodeWar.Lobby
             homePage = null;
             playFlow?.Dispose();
             playFlow = null;
+            workshopStage?.Dispose();
+            workshopStage = null;
             if (crateInventory != null) crateInventory.Changed -= RefreshCrateBadges;
             crateInventory = null;
             safeAreaRoot = pillDock = null;
@@ -399,6 +402,7 @@ namespace NodeWar.Lobby
             int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
             if (!StageLoadoutTypes.Same(districts, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
             {
+                workshopStage?.LoadoutReset();
                 stage.SetLoadout(districts, suits);
                 stageDistrictTypes = districts;
                 stageSuitTypes = suits;
@@ -406,6 +410,13 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
             stageDistrictIds = profile?.data.loadout.nodeIDs == null ? null : (string[])profile.data.loadout.nodeIDs.Clone();
             stageSuitIds = profile?.data.loadout.suitIDs == null ? null : (string[])profile.data.loadout.suitIDs.Clone();
+        }
+
+        private void RefreshWorkshopStage()
+        {
+            stageDistrictTypes = stageSuitTypes = null;
+            RefreshStageLoadout();
+            if (navigation?.CurrentPageID == LobbyPageID.Workshop) workshopStage?.RefreshInspection();
         }
 
         /// <summary>
@@ -501,7 +512,9 @@ namespace NodeWar.Lobby
         private void RegisterPages()
         {
             navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
-            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
+            var workshop = new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet);
+            navigation.Register(workshop);
+            workshopStage = new WorkshopStageBinding(workshop, stage, router, lobbyRoot, RefreshWorkshopStage);
 
             if (homePageLayout != null || Resources.Load<VisualTreeAsset>("Lobby/HomePage") != null)
             {

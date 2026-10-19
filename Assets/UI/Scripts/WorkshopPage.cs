@@ -39,6 +39,15 @@ namespace NodeWar.Lobby
         private Task inventoryIdle = Task.CompletedTask;
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
         private Tab activeTab;
+        public bool Replacing => loadout.Replacing;
+        public LoadoutData StageLoadout => loadout.ToData();
+        public bool ViewingSuit => activeTab == Tab.Suits;
+        public string ViewedId => inspectedItem?.ID;
+        public event Action<bool, string> ItemViewed;
+        public event Action LoadoutChanged;
+        public event Func<bool> DistrictUseRequested;
+        public event Action<int> DistrictSlotPicked;
+        public event Action ReplacementChanged;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private UnlockStatus? debugUnlockStatus;
         public void SetDebugUnlockStatus(UnlockStatus? status) { debugUnlockStatus = status; Render(); RenderInventory(); }
@@ -164,6 +173,7 @@ namespace NodeWar.Lobby
 
         private void LoadFromProfile()
         {
+            CancelReplacement();
             PlayerProfile profile = PlayerProfile.Instance;
 
             string preview = loadout.PreviewId;
@@ -177,10 +187,12 @@ namespace NodeWar.Lobby
         {
             PlayerProfile profile = PlayerProfile.Instance;
             if (profile != null) profile.SetLoadout(loadout.ToData());
+            LoadoutChanged?.Invoke();
         }
 
         private void SetTab(Tab tab)
         {
+            CancelReplacement();
             CloseItemPanel();
             activeTab = tab;
             var profile = PlayerProfile.Instance;
@@ -223,7 +235,31 @@ namespace NodeWar.Lobby
                     button.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
                     button.SetEnabled(false);
                 }
-                else button.clicked += () => { if (loadout.ClearChosen(isSuit, slot)) { SaveToProfile(); Render(); } };
+                else
+                {
+                    if (!isSuit) button.AddToClassList("ws-district-slot");
+                    button.clicked += () =>
+                    {
+                        if (Replacing && !isSuit) { DistrictSlotPicked?.Invoke(slot); return; }
+                        CancelReplacement();
+                        if (string.IsNullOrEmpty(id)) return;
+                        activeTab = isSuit ? Tab.Suits : Tab.Districts;
+                        var profile = PlayerProfile.Instance;
+                        if (profile != null) profile.WorkshopTabIndex = (int)activeTab;
+                        segDistricts?.EnableInClassList("ws-tab--on", !isSuit);
+                        segSuits?.EnableInClassList("ws-tab--on", isSuit);
+                        Inspect(inspectedItem?.ID == id ? null : item);
+                        RenderCards();
+                    };
+                    menu?.Attach(button, () => new List<LobbyMenuItem>
+                    {
+                        new LobbyMenuItem("Remove from loadout", () =>
+                        {
+                            CancelReplacement();
+                            if (!inventoryBusy && loadout.ClearChosen(isSuit, slot)) { SaveToProfile(); Render(); }
+                        })
+                    });
+                }
                 host.Add(button);
             }
         }
@@ -266,11 +302,31 @@ namespace NodeWar.Lobby
         }
         private void UsePreview()
         {
-            if (inspectedItem == null || IsSelected(inspectedItem) || inventoryBusy) return;
+            if (inspectedItem == null || IsSelected(inspectedItem) || inventoryBusy || Replacing) return;
             // Actual eligibility is independent of the debug display override.
             if (!catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse || inspectedItem.Granted) return;
+            if (activeTab == Tab.Districts && DistrictUseRequested?.Invoke() == true)
+            {
+                if (loadout.BeginReplace(true, inventoryBusy)) ReplacementChanged?.Invoke();
+                else CancelReplacement();
+                return;
+            }
             if (!loadout.UsePreview(true, activeTab == Tab.Suits)) { Say("Loadout full. Tap a slot to clear it"); return; }
             SaveToProfile(); Render();
+        }
+
+        public void CompleteReplacement(int slot)
+        {
+            bool canUse = catalog.UnlockForBase(loadout.PendingDistrictId, playerState).CanUse;
+            bool replaced = loadout.CompleteReplace(slot, canUse, inventoryBusy || !session.IsOpen);
+            ReplacementChanged?.Invoke();
+            if (replaced) { SaveToProfile(); Render(); }
+        }
+
+        public void CancelReplacement()
+        {
+            loadout.CancelReplace();
+            ReplacementChanged?.Invoke();
         }
         private void RenderInfo()
         {
@@ -330,6 +386,8 @@ namespace NodeWar.Lobby
         }
         private void CloseInventory()
         {
+            CancelReplacement();
+            ItemViewed?.Invoke(false, null);
             CloseItemPanel();
             session.Close();
         }
@@ -338,6 +396,7 @@ namespace NodeWar.Lobby
 
         private void Inspect(Item item)
         {
+            if (inspectedItem?.ID != item?.ID) CancelReplacement();
             if (inspectedItem != item)
             {
                 inspectedItem = item;
@@ -347,10 +406,12 @@ namespace NodeWar.Lobby
             if (panelBaseId != null && panelBaseId != session.SelectedBaseID) CloseItemPanel();
             loadout.Preview(item?.ID);
             RenderInventory();
+            ItemViewed?.Invoke(activeTab == Tab.Suits, item?.ID);
         }
 
         private async Task LoadInventoryAsync(int visit)
         {
+            CancelReplacement();
             inventoryMessage = "Loading inventory...";
             RenderInventory();
             // A reopened page must not fetch a snapshot before an earlier save finishes.
@@ -411,6 +472,7 @@ namespace NodeWar.Lobby
                 Render();
                 inventoryMessage = "";
                 applied = true;
+                LoadoutChanged?.Invoke();
             }
             catch (Exception)
             {
@@ -444,6 +506,7 @@ namespace NodeWar.Lobby
 
         private void OpenVariants()
         {
+            CancelReplacement();
             Item item = inspectedItem;
             if (item == null || panelHost == null || inventoryBusy) return;
             string baseId = LoadoutTypes.CatalogBaseForLobbyId(item.ID);
@@ -458,6 +521,7 @@ namespace NodeWar.Lobby
 
         private void OpenSkins()
         {
+            CancelReplacement();
             Item item = inspectedItem;
             if (item == null || panelHost == null || inventoryBusy) return;
             string baseId = LoadoutTypes.CatalogBaseForLobbyId(item.ID);
