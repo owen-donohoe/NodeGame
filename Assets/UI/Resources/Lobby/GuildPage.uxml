@@ -6,9 +6,9 @@
     </ui:ScrollView></lobby:PaperCard>
     <ui:VisualElement name="guild-visitor">
         <ui:VisualElement class="lb-guild-search">
-            <ui:TextField name="guild-query" label="Guild name" />
-            <lobby:PaperButton name="guild-search" text="Search" />
-            <lobby:PaperButton name="guild-filter" tooltip="Filter guilds"><ui:Label text="Filter" /></lobby:PaperButton>
+            <ui:TextField name="guild-query" tooltip="Guild name" />
+            <lobby:PaperButton name="guild-search" class="lb-guild-searchbtn" tooltip="Search guilds" />
+            <lobby:PaperButton name="guild-filter" class="lb-guild-filterbtn" tooltip="Filter guilds"><ui:Label text="Filter" /></lobby:PaperButton>
         </ui:VisualElement>
         <ui:VisualElement name="guild-search-results" />
         <ui:Foldout name="guild-browse" text="Browse public guilds" value="false">

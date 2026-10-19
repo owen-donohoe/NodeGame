@@ -206,8 +206,11 @@ namespace NodeWar.Lobby
                 var row = new PaperButton(() => OpenPreview(guild));
                 row.AddToClassList("lb-guild-row");
                 GuildViews.Icon(row, LobbyIconKind.Guild);
-                row.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
-                row.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity));
+                var text = new VisualElement { pickingMode = PickingMode.Ignore };
+                text.AddToClassList("lb-guild-row-text");
+                text.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
+                text.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity + " members"));
+                row.Add(text);
                 var chip = new PaperCard { name = "guild-status-" + guild.GuildId, pickingMode = PickingMode.Ignore };
                 chip.Add(PlayerCardViews.Text(guild.Joinable && guild.Members < guild.Capacity ? "Joinable" : "Closed"));
                 chip.AddToClassList("lb-guild-chip");

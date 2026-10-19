@@ -42,3 +42,13 @@
 .lb-market-tile--free { --paper-card-fill: var(--paper-gold); }
 .lb-market-ribbon { background-color: var(--paper-gold); color: var(--ink); border-width: 1px; border-color: var(--ink); }
 .lb-market-tile Label { font-size: 14px; color: var(--ink); }
+
+/* Offer tiles are separate cut-out cards inside the stall; the paper underlay draws them. */
+.lb-market-tile, .lb-market-tile:active, .lb-market-tile:disabled, .lb-market-tile--free { background-color: var(--clear); border-color: var(--clear); border-width: 0; }
+.lb-market-tile { --paper-card-fill: var(--paper-light); }
+.lb-market-tile:disabled { --paper-card-fill: var(--paper-dark); }
+.lb-market-tile--free { --paper-card-fill: var(--paper-gold); }
+.lb-market-tile > .ui-paper-button__caption { display: none; }
+.lb-market-card { margin: 0 4px var(--space-3); }
+.lb-market-card > .ui-sticker__shadow { display: none; }
+.lb-market-stall--bank .lb-market-card { margin-right: 3%; }
