@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="SocialProfile.uss" />
+    <ui:ScrollView class="lb-social-scroll" mode="Vertical">
+        <ui:Label text="TV" class="lb-social-title" />
+        <ui:VisualElement name="social-tv" />
+        <ui:Label text="Previous matches" class="lb-social-title" />
+        <ui:VisualElement name="social-previous" />
+        <ui:Label text="Friends" class="lb-social-title" />
+        <ui:VisualElement name="social-friends" />
+    </ui:ScrollView>
+</ui:UXML>
