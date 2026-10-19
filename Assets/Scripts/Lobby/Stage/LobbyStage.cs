@@ -238,6 +238,8 @@ namespace NodeWar.Lobby
             }
         }
 
+        public void BeginSuitReplace() => cluster.Use(false);
+
         public bool TryPick(Vector2 screenPoint, out StagePick pick)
         {
             pick = default;
@@ -384,6 +386,3 @@ namespace NodeWar.Lobby
         }
     }
 }
-
-
-

@@ -31,6 +31,7 @@ namespace NodeWar.Lobby
         private readonly Button ownedFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
         private readonly Label presetLabel, browserTitle;
+        private bool closingForUse;
         private bool showAll;
         private LoadoutSort sort;
         private PlayerState playerState;
@@ -49,6 +50,7 @@ namespace NodeWar.Lobby
         public bool IsOpen => session.IsOpen;
         public VisualElement StageWindow => Root.Q<VisualElement>("workshop-window");
         public event Action Hidden;
+        public bool ReplacingSuit => loadout.ReplacingSuit;
         public bool Replacing => loadout.Replacing;
         public LoadoutData StageLoadout => loadout.ToData();
         public bool ViewingSuit => activeTab == Tab.Suits;
@@ -104,6 +106,8 @@ namespace NodeWar.Lobby
             itemInfo.RemoveFromHierarchy();
             itemInfo.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
             if (sheet != null) sheet.Closed += SheetClosed;
+            Root.Q<Button>("workshop-replace-cancel").clicked += CancelReplacement;
+            RenderReplacement();
             if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
             if (primary != null) primary.clicked += UsePreview;
@@ -252,7 +256,7 @@ namespace NodeWar.Lobby
                 presets[i].SetEnabled(!inventoryBusy);
             }
             int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
-            if (presetLabel != null) presetLabel.text = "Loadout " + (selected + 1) + " · " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
+            if (presetLabel != null) presetLabel.text = "Loadout " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
         }
         private VisualElement MakeArt(Item item, bool neutral, bool navy)
         {
@@ -287,7 +291,20 @@ namespace NodeWar.Lobby
                 card.EnableInClassList("ws-card--locked", state.Status != UnlockStatus.Owned);
                 if (IsSelected(item)) card.Add(MakeLabel("In hand", "ws-mark", "ui-w700"));
                 else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "ws-mark", "ws-mark--arena"));
-                if (menu != null) menu.Attach(card, () => new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) });
+                if (menu != null) menu.Attach(card, () =>
+                {
+                    var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) };
+                    if (IsSelected(item) && !item.Granted)
+                        actions.Add(new LobbyMenuItem("Remove from loadout", () =>
+                        {
+                            if (inventoryBusy || !session.IsOpen) return;
+                            CancelReplacement();
+                            bool suit = activeTab == Tab.Suits;
+                            var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+                            if (loadout.ClearChosen(suit, Array.IndexOf(chosen, item.ID))) { SaveToProfile(); Render(); }
+                        }));
+                    return actions;
+                });
                 unlocked.Add(card);
             }
             if (unlocked.childCount == 0) unlocked.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "ui-w500"));
@@ -312,7 +329,7 @@ namespace NodeWar.Lobby
         {
             if (content != itemInfo) return;
             CloseItemPanel();
-            if (!Replacing) { Inspect(null); RenderCards(); }
+            if (!Replacing && !closingForUse) { Inspect(null); RenderCards(); }
         }
         private bool IsSelected(Item item)
         {
@@ -325,13 +342,21 @@ namespace NodeWar.Lobby
             if (inspectedItem == null || IsSelected(inspectedItem) || inventoryBusy || Replacing) return;
             // Actual eligibility is independent of the debug display override.
             if (!catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse || inspectedItem.Granted) return;
+            closingForUse = true;
+            if (sheet != null && sheet.IsShowing(itemInfo)) sheet.Close();
+            closingForUse = false;
             if (activeTab == Tab.Districts && DistrictUseRequested?.Invoke() == true)
             {
-                if (loadout.BeginReplace(true, inventoryBusy)) ReplacementChanged?.Invoke();
+                if (loadout.BeginReplace(true, inventoryBusy)) { RenderReplacement(); ReplacementChanged?.Invoke(); }
                 else CancelReplacement();
                 return;
             }
-            if (!loadout.UsePreview(true, activeTab == Tab.Suits)) { Say("Loadout full. Tap a slot to clear it"); return; }
+            if (!loadout.UsePreview(true, activeTab == Tab.Suits))
+            {
+                if (activeTab == Tab.Suits && loadout.BeginSuitReplace(true, inventoryBusy))
+                { RenderReplacement(); ReplacementChanged?.Invoke(); }
+                return;
+            }
             SaveToProfile(); Render();
         }
 
@@ -339,6 +364,16 @@ namespace NodeWar.Lobby
         {
             bool canUse = catalog.UnlockForBase(loadout.PendingDistrictId, playerState).CanUse;
             bool replaced = loadout.CompleteReplace(slot, canUse, inventoryBusy || !session.IsOpen);
+            RenderReplacement();
+            ReplacementChanged?.Invoke();
+            if (replaced) { SaveToProfile(); Render(); }
+        }
+
+        public void CompleteSuitReplacement(int slot)
+        {
+            bool canUse = catalog.UnlockForBase(loadout.PendingSuitId, playerState).CanUse;
+            bool replaced = loadout.CompleteSuitReplace(slot, canUse, inventoryBusy || !session.IsOpen);
+            RenderReplacement();
             ReplacementChanged?.Invoke();
             if (replaced) { SaveToProfile(); Render(); }
         }
@@ -346,7 +381,17 @@ namespace NodeWar.Lobby
         public void CancelReplacement()
         {
             loadout.CancelReplace();
+            RenderReplacement();
             ReplacementChanged?.Invoke();
+        }
+        private void RenderReplacement()
+        {
+            Root.Q<VisualElement>("workshop-toolbar").style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
+            grid.style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
+            Root.Q<VisualElement>("workshop-replace-banner").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
+            Root.Q<VisualElement>("workshop-replace-actions").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
+            var pending = ReplacingSuit ? Find(suits, loadout.PendingSuitId) : Find(districts, loadout.PendingDistrictId);
+            Root.Q<Label>("workshop-replace-message").text = "Tap a wiggling slot to swap in " + (pending?.Name ?? "") + ".";
         }
         private void RenderInfo()
         {
@@ -401,6 +446,7 @@ namespace NodeWar.Lobby
         }
         private void RenderInventory()
         {
+            for (int i = 0; i < presets.Length; i++) presets[i].SetEnabled(!inventoryBusy);
             if (eraMessage != null) { eraMessage.text = inventoryMessage; eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex; }
             RenderCards(); RenderInfo(); RenderItemPanel();
         }
@@ -714,7 +760,3 @@ namespace NodeWar.Lobby
         }
     }
 }
-
-
-
-

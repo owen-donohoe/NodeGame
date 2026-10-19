@@ -57,3 +57,7 @@
 .ws-band-tile.ws-art--neutral { background-color: var(--off); }
 .ws-band-tile--center { border-color: var(--action); }
 
+.ws-banner { display: none; border-width: var(--stroke); border-color: var(--action-edge); background-color: var(--surface-raised); border-radius: var(--corner-sm); padding: 10px 12px; margin-top: 12px; }
+.ws-banner-title { font-size: 16px; color: var(--ink); margin-bottom: 4px; }
+.ws-actionbar { display: none; position: absolute; left: 14px; right: 14px; bottom: 96px; background-color: var(--surface); padding: 10px 0; }
+.ws-cancel { height: 46px; font-size: 16px; }

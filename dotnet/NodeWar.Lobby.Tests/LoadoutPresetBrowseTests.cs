@@ -62,6 +62,41 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("node_infirmary", applied.districtIDs[1]);
         }
 
+        [TestCase(false, false, true)]
+        [TestCase(true, false, false)]
+        [TestCase(false, true, false)]
+        public void SuitReplacementRechecksGates(bool busy, bool denied, bool expected)
+        {
+            var chosen = LoadoutData.CreateEmpty(1);
+            chosen.suitIDs[0] = "suit_scout";
+            chosen.suitIDs[1] = "suit_medic";
+            var model = new LoadoutScreenModel(chosen);
+            model.Preview("suit_guardian");
+            Assert.IsTrue(model.BeginSuitReplace(true, false));
+            Assert.IsTrue(model.ReplacingSuit);
+            Assert.AreEqual(expected, model.CompleteSuitReplace(1, !denied, busy));
+            Assert.IsFalse(model.Replacing);
+            Assert.AreEqual(expected ? "suit_guardian" : "suit_medic", model.ToData().suitIDs[1]);
+        }
+
+        [Test]
+        public void SuitReplacementCancelAndChangedPreviewCannotEquip()
+        {
+            var chosen = LoadoutData.CreateEmpty(1);
+            chosen.suitIDs[0] = "suit_scout";
+            chosen.suitIDs[1] = "suit_medic";
+            var model = new LoadoutScreenModel(chosen);
+            model.Preview("suit_guardian");
+            Assert.IsFalse(model.BeginSuitReplace(true, true));
+            Assert.IsTrue(model.BeginSuitReplace(true, false));
+            model.CancelReplace();
+            Assert.IsFalse(model.CompleteSuitReplace(0, true, false));
+            Assert.IsTrue(model.BeginSuitReplace(true, false));
+            model.Preview("suit_scout");
+            Assert.IsFalse(model.CompleteSuitReplace(0, true, false));
+            Assert.IsFalse(model.BeginSuitReplace(true, false));
+        }
+
         private static LoadoutTileOrder Tile(string id, string name = "A", string role = "A", bool owned = true, int era = 1)
             => new LoadoutTileOrder(id, name, role, owned, era);
 

@@ -18,6 +18,13 @@
             <engine:Button name="workshop-owned" text="Owned" class="ui-reset-button ui-chip ws-filter ui-w600" />
             <engine:Button name="workshop-sort" text="Sort: Owned first" class="ui-reset-button ui-chip ws-filter ui-w600" />
         </engine:VisualElement>
+        <engine:VisualElement name="workshop-replace-banner" class="ws-banner" picking-mode="Ignore">
+            <engine:Label text="Replace which one?" class="ws-banner-title ui-w700" picking-mode="Ignore" />
+            <engine:Label name="workshop-replace-message" class="ws-fact" picking-mode="Ignore" />
+        </engine:VisualElement>
+        <engine:VisualElement name="workshop-replace-actions" class="ws-actionbar" picking-mode="Ignore">
+            <engine:Button name="workshop-replace-cancel" text="Cancel" class="ui-reset-button ui-button ui-button--quiet ws-cancel ui-w700" />
+        </engine:VisualElement>
         <engine:Label name="workshop-era-message" class="ws-fact" picking-mode="Ignore" />
         <engine:ScrollView name="workshop-grid" class="ws-grid" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
             <engine:VisualElement name="workshop-unlocked" class="ws-cards" picking-mode="Ignore" />

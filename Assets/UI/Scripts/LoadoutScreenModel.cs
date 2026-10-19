@@ -6,7 +6,9 @@ namespace NodeWar.Lobby
         private readonly LoadoutEditor editor;
         public string PreviewId { get; private set; } = "";
         public string PendingDistrictId { get; private set; } = "";
-        public bool Replacing => PendingDistrictId.Length > 0;
+        public string PendingSuitId { get; private set; } = "";
+        public bool ReplacingSuit => PendingSuitId.Length > 0;
+        public bool Replacing => PendingDistrictId.Length > 0 || ReplacingSuit;
 
         public LoadoutScreenModel(LoadoutData chosen) { editor = new LoadoutEditor(chosen); }
         public void Preview(string lobbyId)
@@ -38,6 +40,20 @@ namespace NodeWar.Lobby
             return !busy && canUse && id.Length > 0 && PreviewId == id && editor.ReplaceDistrictSlot(slot, id);
         }
 
-        public void CancelReplace() { PendingDistrictId = ""; }
+        public bool BeginSuitReplace(bool canUse, bool busy)
+        {
+            if (!canUse || busy || string.IsNullOrEmpty(PreviewId) || editor.IsSuitEquipped(PreviewId) || !editor.SuitSlotsFull) return false;
+            PendingSuitId = PreviewId;
+            return true;
+        }
+
+        public bool CompleteSuitReplace(int slot, bool canUse, bool busy)
+        {
+            string id = PendingSuitId;
+            CancelReplace();
+            return !busy && canUse && id.Length > 0 && PreviewId == id && editor.ReplaceSuitSlot(slot, id);
+        }
+
+        public void CancelReplace() { PendingDistrictId = ""; PendingSuitId = ""; }
     }
 }

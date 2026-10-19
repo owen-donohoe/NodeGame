@@ -96,10 +96,13 @@ namespace NodeWar.Lobby
         private void ReplacementChanged()
         {
             if (page.Replacing)
+            {
+                if (page.ReplacingSuit) stage.BeginSuitReplace();
                 router.Open(new LobbyOverlay(ReplaceRoute, OverlayKind.Menu, backHandler: () =>
                 {
                     page.CancelReplacement(); return true;
                 }), page.CancelReplacement);
+            }
             else
             {
                 stage.CancelReplace();
@@ -137,7 +140,11 @@ namespace NodeWar.Lobby
                 !stage.TryPick(ScreenPoint(evt.position), out StagePick pick)) return;
             if (page.Replacing)
             {
-                if (!pick.IsSuit) stage.PickReplace(pick.Index);
+                if (page.ReplacingSuit)
+                {
+                    if (pick.IsSuit) page.CompleteSuitReplacement(StageSlotMap.ToChosen(page.StageLoadout.suitIDs, pick.Index));
+                }
+                else if (!pick.IsSuit) stage.PickReplace(pick.Index);
                 return;
             }
             page.InspectStageItem(pick.IsSuit, pick.Index);
@@ -164,5 +171,3 @@ namespace NodeWar.Lobby
         }
     }
 }
-
-
