@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NodeWar.Backend;
+using NodeWar.Lobby;
 using Unity.Services.CloudCode.Apis;
 using Unity.Services.CloudCode.Core;
 
@@ -32,14 +33,14 @@ namespace NodeWar.Cloud
             if (string.IsNullOrWhiteSpace(callerId)) throw new UnauthorizedAccessException("An authenticated player is required.");
             string target = string.IsNullOrEmpty(playerId) ? callerId : playerId;
             var state = await stores(target).ReadProfileViewAsync();
-            var equipped = state?.Inventory?.Equipped?.Variants;
             var profile = new PublicProfileView
             {
                 Card = new PlayerCard { PlayerId = target, Name = state?.Profile?.Name ?? "",
                     Tag = state?.Profile?.Tag ?? "", RR = state?.Rank?.RR ?? 0,
                     Arena = state?.Rank?.Arena ?? 0, Presence = PlayerPresence.Offline },
                 Stats = state?.History?.Stats ?? new PlayerStats(),
-                SuitIds = LobbyIds(equipped, true), DistrictIds = LobbyIds(equipped, false)
+                SuitIds = LobbyIds(state?.Inventory?.EquippedSuitIDs, true),
+                DistrictIds = LobbyIds(state?.Inventory?.EquippedNodeIDs, false)
             };
             var history = state?.History;
             if (history?.MatchIds != null)
@@ -55,16 +56,16 @@ namespace NodeWar.Cloud
             return profile;
         }
 
-        private static string[] LobbyIds(Dictionary<string, string> equipped, bool suits)
+        private static string[] LobbyIds(string[] slots, bool suits)
         {
-            if (equipped == null) return Array.Empty<string>();
+            if (slots == null) return Array.Empty<string>();
             var ids = new List<string>();
-            int length = suits ? CatalogKeys.SuitTableLength : CatalogKeys.DistrictTableLength;
-            for (int type = 1; type < length; type++)
+            foreach (string slot in slots)
             {
-                string baseId = suits ? CatalogKeys.SuitBase(type) : CatalogKeys.DistrictBase(type);
-                if (baseId != null && equipped.ContainsKey(baseId))
-                    ids.Add(suits ? CatalogKeys.SuitLobbyId(type) : CatalogKeys.DistrictLobbyId(type));
+                if (string.IsNullOrWhiteSpace(slot)) continue;
+                int type = suits ? (int)LoadoutTypes.SuitForLobbyId(slot) : (int)LoadoutTypes.DistrictForLobbyId(slot);
+                string id = suits ? CatalogKeys.SuitLobbyId(type) : CatalogKeys.DistrictLobbyId(type);
+                if (id != null) ids.Add(id);
             }
             return ids.ToArray();
         }

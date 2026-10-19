@@ -17,6 +17,7 @@ namespace NodeWar.Cloud.Tests
         private readonly Dictionary<string, JToken> values = new Dictionary<string, JToken>();
         private readonly Dictionary<string, int> versions = new Dictionary<string, int>();
         private readonly List<SetItemBody[]> batches = new List<SetItemBody[]>();
+        private readonly List<string[]> reads = new List<string[]>();
         private Action BeforeWrite;
         private IGameApiClient api;
         private IExecutionContext context;
@@ -28,6 +29,7 @@ namespace NodeWar.Cloud.Tests
             values.Clear();
             versions.Clear();
             batches.Clear();
+            reads.Clear();
             BeforeWrite = null;
             context = Proxy<IExecutionContext>((method, _) => method.ReturnType == typeof(string) ? "test" : null);
             object cloudSave = null;
@@ -42,6 +44,15 @@ namespace NodeWar.Cloud.Tests
                 return cloudSave;
             });
             store = new CloudSavePlayerRecordStore(api, context);
+        }
+
+        [Test]
+        public async Task ProfileViewReadsOnlyItsFourPublicSourceKeysInOneBatch()
+        {
+            await new ProfileViewModule(api).GetProfileView(context, "target");
+            Assert.That(reads, Has.Count.EqualTo(1));
+            Assert.That(reads[0], Is.EqualTo(new[] { "profile", "rank", "history", "inventory" }));
+            Assert.That(batches, Is.Empty);
         }
 
         [Test]
@@ -169,6 +180,7 @@ namespace NodeWar.Cloud.Tests
             if (method.Name == "GetProtectedItemsAsync")
             {
                 var keys = args.OfType<List<string>>().Single();
+                reads.Add(keys.ToArray());
                 Type dataType = method.ReturnType.GetGenericArguments().Single().GetProperty("Data").PropertyType;
                 data = Activator.CreateInstance(dataType, true);
                 dataType.GetProperty("Results").SetValue(data, keys.Where(values.ContainsKey)

@@ -36,6 +36,8 @@ namespace NodeWar.Cloud.Tests
             state.Rank = new RankRecord { RR = 800, Arena = 2 };
             state.Inventory.Equipped = new EquippedRecord { Variants = new Dictionary<string, string>
                 { ["suit.guardian"] = "suit.guardian.e0", ["district.farm"] = "district.farm.e0" } };
+            state.Inventory.EquippedSuitIDs = new[] { "suit_guardian" };
+            state.Inventory.EquippedNodeIDs = new[] { "node_farm" };
             state.History.Stats = new PlayerStats { Matches = 1, Wins = 1, Streak = 1, BestRR = 800 };
             HistorySummaryRules.Prepend(state.History, new HistorySummary { MatchId = "match", OpponentId = "rival",
                 OpponentName = "Rival", OpponentTag = "R", Won = true, RRDelta = 20, Arena = 2, CreatedUnix = 123 });
@@ -60,6 +62,32 @@ namespace NodeWar.Cloud.Tests
                     Assert.That(field.Name.ToLowerInvariant(), Is.Not.EqualTo("rating").And.Not.EqualTo("r")
                         .And.Not.EqualTo("rd").And.Not.EqualTo("sigma").And.Not.EqualTo("wallet")
                         .And.Not.EqualTo("discipline").And.Not.EqualTo("activematch").And.Not.EqualTo("namenorm"));
+        }
+
+        [Test]
+        public async Task LoadoutContainsOnlyChosenSlotsInOrderWithoutVariantInformation()
+        {
+            var inventory = PlayerStateDefaults.Inventory();
+            foreach (string baseId in new[] { "suit.farmer", "suit.warrior", "suit.guardian",
+                "district.farm", "district.mine", "district.barracks" })
+            {
+                string variant = CatalogIds.Variant(baseId, 1);
+                inventory.OwnedVariants.Add(variant);
+                inventory.Equipped.Variants.Add(baseId, variant);
+            }
+            inventory.EquippedSuitIDs = new[] { "suit.guardian", "", null, "suit_warrior" };
+            inventory.EquippedNodeIDs = new[] { "node_barracks", null, " ", "district.farm" };
+            var view = await ProfileViews.GetAsync("caller", "target", _ => new Store
+                { State = new PlayerState { Inventory = inventory } });
+            Assert.That(view.SuitIds, Is.EqualTo(new[] { "suit_guardian", "suit_warrior" }));
+            Assert.That(view.DistrictIds, Is.EqualTo(new[] { "node_barracks", "node_farm" }));
+
+            inventory.EquippedSuitIDs = Array.Empty<string>();
+            inventory.EquippedNodeIDs = null;
+            view = await ProfileViews.GetAsync("caller", "target", _ => new Store
+                { State = new PlayerState { Inventory = inventory } });
+            Assert.That(view.SuitIds, Is.Empty);
+            Assert.That(view.DistrictIds, Is.Empty);
         }
 
         [Test]
