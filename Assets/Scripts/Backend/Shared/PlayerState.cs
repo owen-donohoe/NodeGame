@@ -100,6 +100,20 @@ namespace NodeWar.Backend
     public sealed class HistoryRecord
     {
         public List<string> MatchIds;
+        public PlayerStats Stats = new PlayerStats();
+        public List<HistorySummary> Summaries = new List<HistorySummary>();
+    }
+
+    public sealed class HistorySummary
+    {
+        public string MatchId;
+        public string OpponentId;
+        public string OpponentName;
+        public string OpponentTag;
+        public bool Won;
+        public int RRDelta;
+        public int Arena;
+        public long CreatedUnix;
     }
 
     public sealed class ActiveMatchRecord

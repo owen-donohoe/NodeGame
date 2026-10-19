@@ -11,6 +11,7 @@ namespace NodeWar.Backend
         public int Losses;
         public int Streak;
         public int Best;
+        public int BestRR;
     }
 
     public sealed class MatchSummary

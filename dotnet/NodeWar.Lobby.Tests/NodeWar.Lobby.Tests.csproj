@@ -40,6 +40,8 @@
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildService.cs" Link="Backend/GuildService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildPolicies.cs" Link="Backend/GuildPolicies.cs" />
     <Compile Include="SocialProfileTests.cs" />
+    <Compile Include="PlayerStatsRulesTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerStatsRules.cs" Link="Backend/PlayerStatsRules.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/SocialService.cs" Link="Backend/SocialService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/ProfileService.cs" Link="Backend/ProfileService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/MatchHistoryService.cs" Link="Backend/MatchHistoryService.cs" />
