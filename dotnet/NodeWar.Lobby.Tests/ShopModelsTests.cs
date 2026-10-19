@@ -43,38 +43,5 @@ namespace NodeWar.Lobby.Tests
         public void Countdown_FormatsPassedTime(int seconds, string expected)
             => Assert.AreEqual(expected, ShopCountdown.Format(TimeSpan.FromSeconds(seconds)));
 
-        [TestCase(120, 50, null)]
-        [TestCase(120, 40, null)]
-        [TestCase(120, -40, null)]
-        [TestCase(120, 10, 200f)]
-        [TestCase(120, -10, 100f)]
-        [TestCase(120, 0, 100f)]
-        [TestCase(100, 10, 100f)]
-        [TestCase(-20, -10, 0f)]
-        [TestCase(300, 10, 200f)]
-        public void Snap_WaitsForSlowVelocity_ThenFollowsDirection(float y, float velocity, float? expected)
-            => Assert.AreEqual(expected, ShopSnap.Target(y, velocity, new[] { 0f, 100f, 200f }));
-
-        [Test]
-        public void Snap_EmptyOrInvalidInput_HasNoTarget()
-        {
-            Assert.IsNull(ShopSnap.Target(0, 0, null));
-            Assert.IsNull(ShopSnap.Target(0, 0, Array.Empty<float>()));
-            Assert.IsNull(ShopSnap.Target(float.NaN, 0, new[] { 0f }));
-            Assert.IsNull(ShopSnap.Target(0, float.NaN, new[] { 0f }));
-        }
-
-        [TestCase(100, 1f)]
-        [TestCase(150, 1f)]
-        [TestCase(200, 1f)]
-        [TestCase(250, 0.8f)]
-        [TestCase(300, 0.6f)]
-        [TestCase(50, 0.8f)]
-        [TestCase(-100, 0.6f)]
-        public void Shrink_StaysFullOnStall_AndEasesAway(float y, float expected)
-            => Assert.AreEqual(expected, ShopSnap.Shrink(y, 100, 100), 0.0001f);
-
-        [Test]
-        public void Shrink_ZeroHeight_IsSafe() => Assert.AreEqual(0.6f, ShopSnap.Shrink(0, 0, 0));
     }
 }

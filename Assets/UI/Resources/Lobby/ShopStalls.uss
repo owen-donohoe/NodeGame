@@ -1,12 +1,36 @@
-.lb-market-page { flex-grow: 1; }
+/* World panels have no backing. Only the offer cards use paper surfaces. */
+.lb-market-page { flex-grow: 1; background-color: var(--clear); overflow: hidden; }
 .lb-market-page > TemplateContainer { flex-grow: 1; min-height: 0; }
-.lb-market-scroll { flex-grow: 1; background-color: rgba(38, 70, 78, 0.8); }
-.lb-market-land { position: absolute; left: 0; top: 0; bottom: 0; width: 52px; background-color: rgb(120, 135, 90); }
-.lb-market-stall { min-height: 340px; padding: 20px; padding-left: 64px; border-bottom-width: 2px; border-bottom-color: rgba(230, 220, 180, 0.4); }
-.lb-marketeer { position: absolute; left: 8px; top: 28px; width: 34px; height: 50px; border-radius: 16px; background-color: rgb(160, 120, 72); color: white; -unity-text-align: middle-center; }
-.lb-market-title { font-size: 24px; color: white; white-space: normal; }
-.lb-market-countdown { color: rgb(220, 220, 195); margin-bottom: 16px; }
-.lb-market-offers { flex-direction: row; flex-wrap: wrap; transform-origin: 50% 50%; }
-.lb-market-tile { width: 31%; min-width: 0; min-height: 132px; margin: 1%; padding: 6px; align-items: center; justify-content: center; background-color: rgb(225, 210, 174); border-radius: 12px; }
-.lb-market-tile Label { font-size: 14px; white-space: normal; -unity-text-align: middle-center; }
-.lb-market-icon { width: 40px; height: 40px; margin-bottom: 8px; }
+.lb-market-projections { flex-grow: 1; }
+.lb-market-stall { position: absolute; width: 174px; transform-origin: 0 0; visibility: hidden; }
+.lb-market-title { font-size: var(--type-heading); color: var(--ink-inverse); white-space: normal; }
+.lb-market-countdown { color: var(--ink-inverse); margin-bottom: var(--space-3); font-size: var(--type-min); }
+.lb-market-shelf-title { color: var(--ink-inverse); font-size: var(--type-caption); margin-top: var(--space-2); margin-bottom: var(--space-2); }
+.lb-market-offers { flex-direction: column; }
+.lb-market-card { margin-bottom: var(--space-3); }
+.lb-market-tile {
+    min-height: 94px;
+    padding: var(--space-2);
+    align-items: center;
+    justify-content: center;
+    background-color: var(--surface-raised);
+    border-radius: var(--corner-md);
+    color: var(--ink);
+}
+.lb-market-tile:active { background-color: var(--surface-sunk); }
+.lb-market-tile:disabled { background-color: var(--surface-sunk); }
+.lb-market-tile--free { background-color: var(--action); color: var(--action-ink); }
+.lb-market-tile Label { font-size: var(--type-min); white-space: normal; -unity-text-align: middle-center; }
+.lb-market-price { color: var(--ink-mute); margin-top: 2px; }
+.lb-market-tile--free .lb-market-price { color: var(--action-ink); }
+.lb-market-ribbon {
+    position: absolute; top: -5px; right: 6px; padding: 2px 8px;
+    border-radius: var(--corner-sm); background-color: var(--confirm); color: var(--confirm-ink);
+}
+.lb-market-disclosure { color: var(--ink-mute); margin-top: 4px; }
+.lb-market-icon { width: 46px; height: 46px; margin-bottom: 4px; }
+.lb-market-stall--bank .lb-market-offers { flex-direction: row; flex-wrap: wrap; }
+.lb-market-stall--bank .lb-market-card { width: 30%; margin-right: 3%; }
+.lb-market-stall--bank .lb-market-tile { min-height: 102px; padding: 3px; }
+.lb-market-stall--bank .lb-market-icon { width: 32px; height: 32px; }
+.lb-market-stall--bank .lb-market-ribbon { right: 0; padding: 1px 4px; }

@@ -10,6 +10,11 @@ namespace NodeWar.Lobby
     public sealed class LobbyStage : MonoBehaviour
     {
         private const float ShotDuration = 0.35f;
+        private const float MarketX = -13f;
+        public const float ShopStallSpacing = 6f;
+        private const float MarketZ = 9f;
+        public Camera ShopCamera => stageCamera;
+        public float ShopReferenceDistance => Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.05f * 0.05f);
         private const int StageLayer = 2; // Ignore Raycast; scenery never handles pointer input.
         private static readonly Color Sea = new Color(0.22f, 0.48f, 0.58f);
 
@@ -87,7 +92,7 @@ namespace NodeWar.Lobby
             Primitive("Ocean (unplaceable edge)", PrimitiveType.Plane, transform,
                 new Vector3(0f, -0.18f, 0f), new Vector3(12f, 1f, 12f), Sea);
             Primitive("Land", PrimitiveType.Cube, transform, new Vector3(0f, -0.1f, 0f),
-                new Vector3(32f, 0.2f, 10f), new Color(0.56f, 0.61f, 0.43f));
+                new Vector3(10f, 0.2f, 7f), new Color(0.56f, 0.61f, 0.43f));
 
             var slots = StageSlots.Layout(0);
             for (int i = 0; i < slots.Length; i++)
@@ -112,12 +117,29 @@ namespace NodeWar.Lobby
                 districts[i].SetActive(false);
             }
 
-            for (int i = 0; i < 3; i++)
+            var market = new GameObject("Market node");
+            market.transform.SetParent(transform, false);
+            market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
+            Primitive("Market ground", PrimitiveType.Cube, market.transform,
+                new Vector3(0f, -0.1f, -12f), new Vector3(3.6f, 0.2f, 30f),
+                new Color(0.56f, 0.61f, 0.43f));
+            string[] names = { "Daily", "Crates", "Weekly skins", "Bundle", "Bank" };
+            for (int i = 0; i < names.Length; i++)
             {
-                Primitive("Market stall " + i, PrimitiveType.Cube, transform,
-                    new Vector3(-10f, 0.5f, (i - 1) * 2f), new Vector3(1.8f, 1f, 1.4f), Tints[i]);
-                Primitive("Market canopy " + i, PrimitiveType.Cube, transform,
-                    new Vector3(-10f, 1.2f, (i - 1) * 2f), new Vector3(2f, 0.2f, 1.6f), Tints[i + 3]);
+                var stall = new GameObject(names[i] + " stall");
+                stall.transform.SetParent(market.transform, false);
+                stall.transform.localPosition = new Vector3(-0.55f, 0f, -i * ShopStallSpacing);
+                Primitive("Counter", PrimitiveType.Cube, stall.transform,
+                    new Vector3(0f, 0.45f, 0f), new Vector3(1f, 0.9f, 0.8f), Tints[i]);
+                Primitive("Canopy", PrimitiveType.Cube, stall.transform,
+                    new Vector3(0f, 1.9f, 0f), new Vector3(1.2f, 0.18f, 1.3f), Tints[(i + 3) % Tints.Length]);
+                for (int side = -1; side <= 1; side += 2)
+                    Primitive("Canopy post", PrimitiveType.Cube, stall.transform,
+                        new Vector3(side * 0.45f, 1.2f, 0.25f), new Vector3(0.07f, 1.4f, 0.07f), Tints[1]);
+                Primitive("Marketman", PrimitiveType.Capsule, stall.transform,
+                    new Vector3(0f, 1f, 0.55f), new Vector3(0.48f, 0.5f, 0.48f), Tints[(i + 1) % Tints.Length]);
+                Primitive("Head", PrimitiveType.Sphere, stall.transform,
+                    new Vector3(0f, 1.6f, 0.55f), Vector3.one * 0.4f, new Color(0.92f, 0.78f, 0.6f));
             }
             var reserved = new GameObject("Reserved ground - Social and Guild");
             reserved.transform.SetParent(transform, false);
@@ -130,20 +152,34 @@ namespace NodeWar.Lobby
 
         public void ShowShot(StageShot shot)
         {
+            if (shot == StageShot.Market) { SetShopScroll(0f); return; }
             shotStartPosition = stageCamera.transform.localPosition;
             shotStartRotation = stageCamera.transform.localRotation;
             GetShot(shot, out shotPosition, out shotRotation);
             shotElapsed = 0f;
         }
 
+        /// <summary>Continuous stall units. Applies exactly, without a camera tween.</summary>
+        public void SetShopScroll(float position)
+        {
+            GetShot(StageShot.Market, out shotPosition, out shotRotation);
+            shotPosition.z -= Mathf.Clamp(position, 0f, 4f) * ShopStallSpacing;
+            shotElapsed = ShotDuration;
+            stageCamera.transform.localPosition = shotPosition;
+            stageCamera.transform.localRotation = shotRotation;
+        }
+
+        /// <summary>Right of the counter as seen from the market camera, looking down +Z.</summary>
+        public Vector3 ShopAnchor(int stall) => transform.TransformPoint(
+            new Vector3(MarketX + 0.05f, 1f, MarketZ - Mathf.Clamp(stall, 0, 4) * ShopStallSpacing));
         private static void GetShot(StageShot shot, out Vector3 position, out Quaternion rotation)
         {
             Vector3 target;
             switch (shot)
             {
                 case StageShot.Market:
-                    target = new Vector3(-10f, 0.7f, 0f);
-                    position = target + new Vector3(0f, 2.5f, -5.7f);
+                    target = new Vector3(MarketX, 1f, MarketZ);
+                    position = target + new Vector3(0f, 1.5f, -5.5f);
                     break;
                 case StageShot.Social:
                     target = new Vector3(8f, 0f, 0f);

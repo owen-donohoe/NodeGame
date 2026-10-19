@@ -576,6 +576,7 @@ namespace NodeWar.Lobby
             crateScreen = new CrateScreen(router);
             shell.Add(crateScreen.Root);
             (root.Q("page-shop")?.userData as ShopPage)?.Bind(claimPanel, Badges);
+            (root.Q("page-shop")?.userData as ShopPage)?.BindStage(stage);
             shell.Add(claimPanel.Root);
             burgerPanel = new LobbyOverlayPanel("Menu");
             bellPanel = new LobbyOverlayPanel("Notifications");

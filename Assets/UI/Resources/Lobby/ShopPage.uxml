@@ -1,8 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <ui:Style src="ShopStalls.uss" />
-    <ui:ScrollView name="shop-scroll" class="lb-market-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
-        <ui:VisualElement class="lb-market-land" picking-mode="Ignore" />
-        <ui:VisualElement name="shop-stalls" />
-        <ui:VisualElement name="shop-tail" picking-mode="Ignore" />
-    </ui:ScrollView>
+    <ui:VisualElement name="shop-stalls" class="lb-market-projections" />
 </ui:UXML>

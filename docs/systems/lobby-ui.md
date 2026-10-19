@@ -33,6 +33,7 @@ sources:
   - Assets/UI/Scripts/ShopResets.cs
   - Assets/UI/Scripts/ShopCountdown.cs
   - Assets/UI/Scripts/ShopSnap.cs
+  - Assets/UI/Scripts/ShopProjection.cs
   - Assets/UI/Scripts/GuildPage.cs
   - Assets/UI/Scripts/GuildChatScreen.cs
   - Assets/UI/Scripts/GuildDataView.cs
@@ -103,7 +104,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 29ad7b26
+verified: 5f1f4bd7
 ---
 
 # Lobby UI
@@ -121,14 +122,14 @@ The lobby lets players understand/edit their loadout, manage account/settings an
 Pages:
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested(CrateSize)`, `SetMode`, `Refresh`; incomplete PLAY opens Workshop. `LocalCrateInventory` backs Small crates/progress with profile data, returns fixed placeholder rewards, and exposes no Medium stock.
 - `WorkshopPage` previews through `LoadoutScreenModel` and keeps `WorkshopInventorySession` gating. `WorkshopStageBinding` maps compact stage slots to chosen storage, focuses equipped suits, and consumes Back while replacing. Replacement rechecks eligibility/busy state; removal uses the slot context menu.
-- `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims and sets `shop.daily`; `ScrollTo(stall)` targets daily, crates, weekly, bundle, coins or laurels. Stalls snap/shrink offers; countdowns refresh each second. Confirmations log; daily claims are visit-local.
+- `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/`shop.daily`; `BindStage(LobbyStage)` projects panels. `ScrollTo(stall)` animates stops; coins/laurels alias bank. `ShopSnap/ShopProjection` govern motion/placement. Daily anchors below header; others centre. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` support projection. Claims log; daily claims are visit-local.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet)` supplies independent TV/history/friends `AsyncStateView`s. Cards open profiles; watch/replay/spectate log. Friends sort by presence, handle and ID. Late responses cannot cross visits or accounts.
-- `ProfilePage` shows handle, era/RR, Matches/Wins/Losses/Win rate/Streak/BestRR, loadout and recent summaries through `Profiles`; null stats display dashes. Add friend/Invite/Spectate log; self renames through `Handles`. Previous matches/recent opponents use snapshotted `HandleDisplay` names, falling back to IDs.
+- `ProfilePage` shows handle, era/RR, six stats, loadout chips and recent matches. Null stats display dashes. Other-player Add friend/Invite and in-battle Spectate log; self renames through `BackendServices.Handles`, retaining cost hints.
 - `GuildPage` searches/filters and caches collapsed public browse results for the session. Members see guild header, weekly progress, pinned posts and feed. `OpenChatAsync` verifies membership; `guild/chat` falls back to the tab without membership. `GuildChatScreen` is fullscreen, sends trimmed 200-character plain text and polls messages. Join/Spectate log; Testing toggles sample membership.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
-`LobbyModePicker.Open(selection)` supplies mode cards and a pinned Private toggle. `LobbyModeSelection.FromProfile/Store` preserves legacy GameMode values; Private affects only 1v1. `LobbyPlayFlow.Play` routes ranked/Bot/LAN or stub invite/party panels. Search reads recent opponent handles through `IMatchHistoryService`. `PartyWaitModel` accepts elapsed milliseconds, gates random queue at 15 seconds and tracks slots/cancel. `PartyWaitScreen` is fullscreen; party actions log. `PlayPopup.OpenRankedFlow/OpenJoinCode` retains queue/transport views; Testing stays development-only. `MatchLauncher` retains preflight, launch, host/join and cleanup; `RankedQueuePresenter`/`RankedRendezvous` own ranked attempts.
+`LobbyModePicker.Open(selection)` supplies mode cards and a pinned Private toggle. `LobbyModeSelection.FromProfile/Store` preserves legacy GameMode values; Private affects only 1v1. `LobbyPlayFlow.Play` routes ranked/Bot/LAN or stub invite/party panels. Search reads recent opponent IDs through `IMatchHistoryService`. `PartyWaitModel` accepts elapsed milliseconds, gates random queue at 15 seconds and tracks slots/cancel. `PartyWaitScreen` is fullscreen; party actions log. `PlayPopup.OpenRankedFlow/OpenJoinCode` retains queue/transport views; Testing stays development-only. `MatchLauncher` retains preflight, launch, host/join and cleanup; `RankedQueuePresenter`/`RankedRendezvous` own ranked attempts.
 
 `AccountFlow` coordinates account sheets, busy/result state and change notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 
@@ -138,7 +139,7 @@ Pages:
 
 `PlayerProfile.Instance` persists local loadout/settings/mode. `LoadoutData.CreateEmpty/Normalized` preserve source shape or use an explicit arena; `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay`/`RankTable` supply era progress. `LobbyCurrencyNames.Premium` labels Premium as Laurels in purses and purchase text.
 
-`SceneTransition.Load(sceneName)` guards duplicate transitions.
+`SceneTransition.Load(sceneName)` guards duplicate scene transitions.
 
 `LobbyScrollbars.Hide` hides desktop scrollers at shell construction and shared overlay opening; touch scroll remains enabled.
 
