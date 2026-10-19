@@ -92,6 +92,7 @@ namespace NodeWar.Lobby
         private AccountFlow accountFlow;
         private VisualElement lobbyRoot;
         private MatchHistoryPage matchHistoryPage;
+        private GuildPage guildPage;
         private LobbyOverlayRouter router;
         private ClaimPanel claimPanel;
         private CrateScreen crateScreen;
@@ -541,7 +542,8 @@ namespace NodeWar.Lobby
             }
 
             navigation.Register(new SocialPage(socialPageLayout));
-            navigation.Register(new GuildPage());
+            guildPage = new GuildPage(NodeWar.Backend.BackendServices.Guild, NodeWar.Backend.BackendServices.GuildBrowse, router, lobbyRoot);
+            navigation.Register(guildPage);
         }
 
         private void BindNav(VisualElement root, string elementName, LobbyPageID id)

@@ -1,6 +1,19 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <ui:VisualElement name="guild-page" style="flex-grow: 1; padding: 24px;">
-        <ui:Label name="guild-header" text="Guild" style="font-size: 28px;" />
+    <ui:Style src="Guild.uss" />
+    <ui:ScrollView class="lb-guild-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
+        <ui:Label text="Guild" class="lb-guild-title" />
         <ui:VisualElement name="guild-state" />
+    </ui:ScrollView>
+    <ui:VisualElement name="guild-visitor">
+        <ui:VisualElement class="lb-guild-search">
+            <ui:TextField name="guild-query" label="Guild name" />
+            <ui:Button name="guild-search" text="Search" />
+            <ui:Button name="guild-filter" tooltip="Filter guilds"><ui:Label text="Filter" /></ui:Button>
+        </ui:VisualElement>
+        <ui:VisualElement name="guild-search-results" />
+        <ui:Foldout name="guild-browse" text="Browse public guilds" value="false">
+            <ui:Button name="guild-refresh" text="Refresh" />
+            <ui:VisualElement name="guild-browse-results" />
+        </ui:Foldout>
     </ui:VisualElement>
 </ui:UXML>
