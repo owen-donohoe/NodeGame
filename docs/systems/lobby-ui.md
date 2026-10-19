@@ -28,6 +28,11 @@ sources:
   - Assets/UI/Scripts/BadgeBoard.cs
   - Assets/UI/Scripts/ClaimPanel.cs
   - Assets/UI/Scripts/ClaimRequest.cs
+  - Assets/UI/Scripts/CrateOpeningSequence.cs
+  - Assets/UI/Scripts/CrateScreen.cs
+  - Assets/UI/Scripts/ShopResets.cs
+  - Assets/UI/Scripts/ShopCountdown.cs
+  - Assets/UI/Scripts/ShopSnap.cs
   - Assets/UI/Scripts/GuildPage.cs
   - Assets/UI/Scripts/LobbyDeepLink.cs
   - Assets/UI/Scripts/LobbyOverlayRouter.cs
@@ -76,7 +81,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: e66eeef4
+verified: b9daca49
 ---
 
 # Lobby UI
@@ -85,16 +90,16 @@ verified: e66eeef4
 The lobby lets players understand/edit their loadout, manage account/settings and enter matches. It presents server state without confusing local profile persistence, placeholder commerce or private play with authoritative ranked progression.
 
 ## Interface
-`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims` and `Badges`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the sliding track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)/Close` expands above chrome; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory.
+`LobbyUIController` exposes `Navigation`, `Routes`, `Claims`, `Badges` and `crateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the sliding track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)/Close` expands above chrome; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory.
 
-`LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. Back closes its top, goes Home, or opens quit confirmation. `LobbyDeepLink.TryParse` accepts nodewar routes; page links navigate, other targets log. Overlays declare chrome visibility. `SwipeDecision` gates adjacent navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
+`LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or confirms exit. `CloseAll` forces cleanup. `LobbyDeepLink.TryParse` accepts nodewar routes; page links navigate, ShopStall links navigate and scroll, other targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
 
 `LobbySheet.Open(content, large)/Close`, `IsShowing`, `Closed` and `Lift(pageRoot, contentName)` serve shared bottom-sheet content. `LobbyContextMenu.Attach/Show/Close` displays `LobbyMenuItem(label, action)` rows; `LobbyToast.Show(message)` supplies transient feedback. Pages receive the shell's shared instances. `SafeAreaBinder` applies screen-safe insets.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `Refresh`; chosen chips follow rank, and incomplete Battle opens Workshop with a reason.
 - `WorkshopPage` previews through `LoadoutScreenModel`, shows `LoadoutInfoModel`/`DistrictInfoFacts`, and uses `WorkshopInventorySession` to gate equipment requests against visit/selection changes.
-- `ShopPage` shows illustrative offers/details and placeholder box/commerce interactions; `SocialPage` presents the social surface without a live social backend.
+- `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims and sets `shop.daily`; `ScrollTo(stall)` targets daily, crates, weekly, bundle, coins or laurels. Stalls snap and shrink offers; countdowns refresh each second. Confirmations only log; daily claim state is visit-local. `SocialPage` has no live backend.
 - `ProfilePage` renames through `BackendServices.Handles`, showing Name#TAG and the rename cost, plus server-backed arena progression; detailed match statistics remain placeholders.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
@@ -110,6 +115,8 @@ Pages:
 `PlayerProfile.Instance` persists local loadout/settings. `LoadoutData.CreateEmpty/Normalized` have shape-preserving and explicit-arena forms; `LoadoutTypes.WithEquipment` overlays server equipment. Arena displays use `RankDisplay`/`RankTable`.
 
 `SceneTransition.Load(sceneName)` guards duplicate requests and shows loading during scene changes.
+
+`CrateScreen.Open(CrateSize, ICrateInventory)` calls `TryOpen` and shows a fullscreen overlay only for a held crate. `CrateOpeningSequence` lands, waits for Tap, opens, reveals every returned reward, then requires Accept. Back acts as Tap or accepts Summary; no fake rewards appear.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
@@ -128,7 +135,7 @@ Rated rank/inventory belongs to backend state, not local trophies/unlock arrays.
 ## How it works
 `LobbyManager` bootstraps profile and selects stacks through scene value `useUIToolkitLobby`; an unassigned Toolkit root warns and falls back. `UIToolkitLobbySetup.SetUp`, menu `Tools > Node War > Set Up UI Toolkit Lobby`, creates/wires Lobby root, layouts and separate LobbyPanelSettings through the Editor. `Assets/Legacy/` retains compiled, scene-referenced uGUI lobby panels; disabling the toggle can restore them.
 
-Low arenas choose two suits/two districts with display-only grant locks; arena index 2 onward chooses three/five without grants. Workshop keeps three/five display positions while Home shows four/eight chosen chips. Use fills the first empty slot; filled slots clear. Variants are only real tree suits; skins work for both item kinds. Local inventory sheets stay below the header/loadout rows; box purchase only toasts.
+Low arenas choose two suits/two districts with display-only grant locks; arena index 2 onward chooses three/five without grants. Workshop keeps three/five display positions while Home shows four/eight chosen chips. Use fills the first empty slot; filled slots clear. Variants are only real tree suits; skins work for both item kinds. Local inventory sheets stay below the header/loadout rows.
 
 Launch refreshes PlayerState; ranked requires returned rank, private/offline falls back to arena 1. It freezes rank, sanitized choices and equipment before connecting, then rechecks completeness against that frozen arena. Ranked rendezvous carries record ID/slot order; private host wait is open-ended. Confirmed local resizing persists; merely closing an unconfirmed fallback Workshop view cannot trim a saved high deck.
 
@@ -145,4 +152,4 @@ Local profile still carries legacy progression fields beside authoritative backe
 - Change loadouts: update pure editor/rules, shared capacity/ownership, persistence migration and frozen-launch tests together.
 
 ## Tests
-`NodeWar.Lobby.Tests` guards loadouts, settings, ranked presenters and pure route/state/claim/swipe models. Compile-check covers Unity pages/launchers. Sign-in, transitions, layouts, device Back, swipe feel and OS deep links require Editor/device verification.
+`NodeWar.Lobby.Tests` guards loadouts, settings, presenters, route/state/claim/swipe models, crate sequences and shop time/snap models. Compile-check covers Unity pages/launchers. Sign-in, transitions, layouts, device Back, swipe feel and OS deep links require Editor/device verification.

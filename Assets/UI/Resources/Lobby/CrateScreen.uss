@@ -1,0 +1,14 @@
+.lb-crate-screen { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgb(30, 44, 55); color: white; }
+.lb-crate-screen > TemplateContainer { flex-grow: 1; }
+.lb-crate-prompt { position: absolute; top: 12%; left: 24px; right: 24px; font-size: 24px; -unity-text-align: middle-center; }
+.lb-crate-content { position: absolute; left: 0; right: 0; top: 45%; height: 150px; align-items: center; }
+.lb-crate-box { width: 120px; height: 100px; background-color: rgb(160, 112, 58); border-width: 4px; border-color: rgb(225, 190, 120); align-items: center; justify-content: center; }
+.lb-crate-reward { position: absolute; top: 0; width: 160px; min-height: 100px; padding: 12px; align-items: center; justify-content: center; }
+.lb-crate-reward Label { white-space: normal; -unity-text-align: middle-center; }
+.lb-reveal-card { background-color: rgb(160, 130, 45); border-radius: 8px; }
+.lb-reveal-district { background-color: rgb(58, 110, 108); border-width: 5px; border-color: rgb(110, 180, 150); }
+.lb-reveal-suit { background-color: rgb(72, 82, 140); border-radius: 48px; }
+.lb-reveal-skin { background-color: rgb(112, 64, 112); border-radius: 16px; rotate: -6deg; }
+.lb-crate-summary { position: absolute; top: 24%; bottom: 130px; left: 24px; right: 24px; }
+.lb-crate-summary Label { white-space: normal; margin-bottom: 16px; font-size: 22px; }
+.lb-crate-accept { position: absolute; bottom: 48px; left: 40px; right: 40px; height: 56px; font-size: 24px; }

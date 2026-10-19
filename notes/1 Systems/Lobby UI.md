@@ -14,7 +14,7 @@ sources:
   - Assets/UI/Scripts/LobbyUIController.cs
   - Assets/UI/Scripts/MatchLauncher.cs
   - Assets/Scripts/Lobby/PlayerProfile.cs
-verified: ce9fb6bf
+verified: b9daca49
 ---
 
 # Lobby UI
@@ -36,8 +36,8 @@ The lobby mixes two kinds of data that look alike on screen: things the player o
 
 ```mermaid
 flowchart TB
-    LUC["LobbyUIController<br/>(UIDocument root)"] --> NAV["NavigationController<br/>Shop · Home · Workshop · Social (sliding tabs)"]
-    LUC --> OV["Overlays: Profile, Settings, Match history"]
+    LUC["LobbyUIController<br/>(UIDocument root)"] --> NAV["NavigationController<br/>Shop · Loadout · Home · Social · Guild (sliding tabs)"]
+    LUC --> OV["Overlays: Profile, Settings, Match history, Crate screen"]
     LUC --> SH["Shared: one LobbySheet, one context menu, one toast"]
     NAV --> HOME[HomePage → PlayPopup]
     NAV --> WS["WorkshopPage → LoadoutEditor (pure)"]
@@ -50,6 +50,7 @@ flowchart TB
 |---|---|
 | `LobbyUIController` | Builds the shell; "reads no simulation state and writes none" (there is none yet) |
 | `NavigationController` | Pages side by side in one track; changing tab *slides* it. Every page stays in the tree, so scroll position survives for free |
+| `ShopPage` / `CrateScreen` | Shop stalls share claim panels; held crates open fullscreen and reveal each returned reward before Accept. Purchases only log |
 | `LoadoutEditor` | Pure slot rules (fill first empty, refuse duplicates, clear), testable in `NodeWar.Lobby.Tests` |
 | `PlayerProfile` | Local JSON at `persistentDataPath/player_profile.json`, with migration of old save shapes |
 | `MatchLauncher` | Refresh rank → sanitise and freeze the loadout → host/join (Relay, LAN, ranked) or start local ([[Match launch]]) |

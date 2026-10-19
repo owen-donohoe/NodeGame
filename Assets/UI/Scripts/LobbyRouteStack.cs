@@ -19,11 +19,14 @@ namespace NodeWar.Lobby
         public OverlayKind Kind { get; }
         public bool HidesPills { get; }
         public bool HidesHeader { get; }
+        public Func<bool> BackHandler { get; }
 
-        public LobbyOverlay(string id, OverlayKind kind, bool hidesPills = false, bool hidesHeader = false)
+        public LobbyOverlay(string id, OverlayKind kind, bool hidesPills = false, bool hidesHeader = false,
+            Func<bool> backHandler = null)
         {
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("Overlay needs an id", nameof(id));
             ID = id; Kind = kind; HidesPills = hidesPills; HidesHeader = hidesHeader;
+            BackHandler = backHandler;
         }
     }
 
@@ -56,5 +59,7 @@ namespace NodeWar.Lobby
             if (Top != null) return new BackAction(BackActionKind.CloseTop, Top.ID);
             return new BackAction(currentPage == LobbyPageID.Home ? BackActionKind.ConfirmExit : BackActionKind.GoHome);
         }
+
+        public bool TryHandleBack(string id) => Top != null && Top.ID == id && Top.BackHandler?.Invoke() == true;
     }
 }

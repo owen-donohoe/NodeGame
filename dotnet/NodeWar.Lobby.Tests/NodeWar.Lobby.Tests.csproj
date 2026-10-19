@@ -36,6 +36,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CrateOpeningSequenceTests.cs" />
+    <Compile Include="OverlayBackHandlerTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/CrateInventory.cs" Link="Backend/CrateInventory.cs" />
+    <Compile Include="ShopModelsTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/CrateOpeningSequence.cs" Link="Lobby/CrateOpeningSequence.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopResets.cs" Link="Lobby/ShopResets.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopCountdown.cs" Link="Lobby/ShopCountdown.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopSnap.cs" Link="Lobby/ShopSnap.cs" />
     <Compile Include="StageSlotsTests.cs" />
     <Compile Include="DistrictClusterTests.cs" />
     <Compile Include="StageShotsTests.cs" />
