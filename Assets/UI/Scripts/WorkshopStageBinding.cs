@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -11,11 +12,16 @@ namespace NodeWar.Lobby
         private readonly LobbyOverlayRouter router;
         private readonly VisualElement shell;
         private readonly Action refresh;
+        private readonly IVisualElementScheduledItem framing;
+        private Rect lastWindow;
+        private Vector2 lastScreen;
 
         public WorkshopStageBinding(WorkshopPage page, LobbyStage stage, LobbyOverlayRouter router,
             VisualElement shell, Action refresh)
         {
             this.page = page; this.stage = stage; this.router = router; this.shell = shell; this.refresh = refresh;
+            page.Hidden += Hide;
+            framing = page.Root.schedule.Execute(FrameWindow).Every(16);
             page.ItemViewed += View;
             page.DistrictUseRequested += Begin;
             page.DistrictSlotPicked += Pick;
@@ -24,6 +30,31 @@ namespace NodeWar.Lobby
             stage.DistrictUsed += Used;
             router.Stack.Changed += StackChanged;
             shell.RegisterCallback<PointerDownEvent>(Tap, TrickleDown.TrickleDown);
+        }
+
+        private Vector2 ScreenPoint(Vector2 panelPoint)
+        {
+            Rect panel = page.Root.panel.visualTree.worldBound;
+            return new Vector2(panelPoint.x * Screen.width / panel.width,
+                Screen.height - panelPoint.y * Screen.height / panel.height);
+        }
+        private void FrameWindow()
+        {
+            if (!page.IsOpen || page.StageWindow?.panel == null) return;
+            var window = page.StageWindow;
+            float height = page.Root.panel.visualTree.worldBound.height * 0.4f;
+            if (!Mathf.Approximately(window.resolvedStyle.height, height)) window.style.height = height;
+            Rect bounds = window.worldBound;
+            Vector2 screen = new Vector2(Screen.width, Screen.height);
+            if (bounds == lastWindow && screen == lastScreen) return;
+            lastWindow = bounds; lastScreen = screen;
+            stage.SetFocusRect(Rect.MinMaxRect(ScreenPoint(bounds.min).x, ScreenPoint(bounds.max).y,
+                ScreenPoint(bounds.max).x, ScreenPoint(bounds.min).y));
+        }
+        private void Hide()
+        {
+            lastWindow = default;
+            stage.ClearFocusRect();
         }
 
         public void RefreshInspection() => View(page.ViewingSuit, page.ViewedId);
@@ -82,6 +113,9 @@ namespace NodeWar.Lobby
         }
         public void Dispose()
         {
+            framing.Pause();
+            page.Hidden -= Hide;
+            Hide();
             page.CancelReplacement(); stage.Deselect(); stage.ClearFocus();
             page.ItemViewed -= View; page.DistrictUseRequested -= Begin; page.DistrictSlotPicked -= Pick;
             page.ReplacementChanged -= ReplacementChanged; page.LoadoutChanged -= refresh;
@@ -90,3 +124,4 @@ namespace NodeWar.Lobby
         }
     }
 }
+

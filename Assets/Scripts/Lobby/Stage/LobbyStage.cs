@@ -128,6 +128,51 @@ namespace NodeWar.Lobby
             stageCamera.transform.localRotation = shotRotation;
         }
 
+        private Rect focusRect;
+
+        /// <summary>Screen pixels, bottom-left origin. The camera still renders the full screen.</summary>
+        public void SetFocusRect(Rect screenRect)
+        {
+            focusRect = screenRect;
+            UpdateFocusProjection();
+        }
+
+        public void ClearFocusRect()
+        {
+            focusRect = default;
+            stageCamera.ResetProjectionMatrix();
+        }
+
+        private void LateUpdate() => UpdateFocusProjection();
+
+        private void UpdateFocusProjection()
+        {
+            stageCamera.ResetProjectionMatrix();
+            if (focusRect.width <= 0f || focusRect.height <= 0f || Screen.width <= 0 || Screen.height <= 0) return;
+            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (int i = 0; i < slotPositions.Length; i++)
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    // Reserve the separated state too, so selection never changes the zoom.
+                    Vector3 offset = new Vector3((corner & 1) == 0 ? -2.1f : 2.1f,
+                        (corner & 2) == 0 ? 0f : 1.6f, (corner & 4) == 0 ? -2.1f : 2.1f);
+                    Vector3 point = stageCamera.WorldToViewportPoint(transform.TransformPoint(slotPositions[i] + offset));
+                    min = Vector2.Min(min, point);
+                    max = Vector2.Max(max, point);
+                }
+            Vector2 size = max - min;
+            float scale = Mathf.Min(focusRect.width / Screen.width / Mathf.Max(0.001f, size.x),
+                focusRect.height / Screen.height / Mathf.Max(0.001f, size.y)) * 0.9f;
+            Vector2 desired = new Vector2(focusRect.center.x / Screen.width, focusRect.center.y / Screen.height);
+            Matrix4x4 projection = stageCamera.projectionMatrix;
+            projection.m00 *= scale;
+            projection.m11 *= scale;
+            projection.m02 += (min.x + max.x - 1f) * scale - (desired.x * 2f - 1f);
+            projection.m12 += (min.y + max.y - 1f) * scale - (desired.y * 2f - 1f);
+            stageCamera.projectionMatrix = projection;
+        }
+
         public void ShowShot(StageShot shot)
         {
             shotStartPosition = stageCamera.transform.localPosition;
@@ -322,3 +367,4 @@ namespace NodeWar.Lobby
         }
     }
 }
+

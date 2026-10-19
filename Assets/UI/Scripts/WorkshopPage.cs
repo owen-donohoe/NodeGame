@@ -46,6 +46,9 @@ namespace NodeWar.Lobby
         private Task inventoryIdle = Task.CompletedTask;
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
         private Tab activeTab;
+        public bool IsOpen => session.IsOpen;
+        public VisualElement StageWindow => Root.Q<VisualElement>("workshop-window");
+        public event Action Hidden;
         public bool Replacing => loadout.Replacing;
         public LoadoutData StageLoadout => loadout.ToData();
         public bool ViewingSuit => activeTab == Tab.Suits;
@@ -126,7 +129,7 @@ namespace NodeWar.Lobby
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
             _ = LoadInventoryAsync(visit);
         }
-        public override void OnHide() { CloseInventory(); }
+        public override void OnHide() { CloseInventory(); Hidden?.Invoke(); }
         private void CollectItems()
         {
             districts.Clear();
@@ -701,5 +704,6 @@ namespace NodeWar.Lobby
         }
     }
 }
+
 
 
