@@ -23,6 +23,12 @@ namespace NodeWar.Lobby
 
         public void Close(string id)
         {
+            if (Stack.TryHandleBack(id)) return;
+            CloseDirect(id);
+        }
+
+        private void CloseDirect(string id)
+        {
             if (id == null) return;
             if (dismiss.TryGetValue(id, out Action close)) close?.Invoke();
             Closed(id);
@@ -30,7 +36,7 @@ namespace NodeWar.Lobby
 
         public void CloseAll()
         {
-            while (Stack.Top != null) Close(Stack.Top.ID);
+            while (Stack.Top != null) CloseDirect(Stack.Top.ID);
         }
     }
 }
