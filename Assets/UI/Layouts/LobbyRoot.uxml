@@ -28,7 +28,7 @@
         why it does not move when the track slides, and why the trophy bar is
         one element bound once.
 
-        Four tabs. Profile is reached from the player name, not a tab.
+        Five tabs. Profile is reached from the player name, not a tab.
 
         Tokens and shared components arrive through the panel theme
         (UnityDefaultRuntimeTheme.tss); only the lobby's own sheet is imported here.
@@ -109,14 +109,17 @@
                         <engine:Button name="nav-shop" class="ui-reset-button lb-tab" tooltip="Shop">
                             <lobby:LobbyIcon context="NavBar" kind="NavBarShop" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
+                        <engine:Button name="nav-workshop" class="ui-reset-button lb-tab" tooltip="Loadout">
+                            <lobby:LobbyIcon context="NavBar" kind="Tools" class="lb-icon" picking-mode="Ignore" />
+                        </engine:Button>
                         <engine:Button name="nav-home" class="ui-reset-button lb-tab" tooltip="Home">
                             <lobby:LobbyIcon context="NavBar" kind="NavBarHome" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
-                        <engine:Button name="nav-workshop" class="ui-reset-button lb-tab" tooltip="Workshop">
-                            <lobby:LobbyIcon context="NavBar" kind="Tools" class="lb-icon" picking-mode="Ignore" />
-                        </engine:Button>
-                        <engine:Button name="nav-social" class="ui-reset-button lb-tab lb-tab--last" tooltip="Social">
+                        <engine:Button name="nav-social" class="ui-reset-button lb-tab" tooltip="Social">
                             <lobby:LobbyIcon context="NavBar" kind="NavBarSocial" class="lb-icon" picking-mode="Ignore" />
+                        </engine:Button>
+                        <engine:Button name="nav-guild" class="ui-reset-button lb-tab lb-tab--last" tooltip="Guild">
+                            <lobby:LobbyIcon context="NavBar" kind="Guild" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
                     </engine:VisualElement>
                 </engine:VisualElement>

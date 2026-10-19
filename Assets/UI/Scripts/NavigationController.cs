@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -27,6 +28,11 @@ namespace NodeWar.Lobby
             new Dictionary<LobbyPageID, Button>();
 
         private LobbyPage currentPage;
+        private System.Func<bool> overlayOpen;
+        private int swipePointer = -1;
+        private Vector2 swipeStart;
+        private long swipeStartedAt;
+        private SwipeAxis swipeAxis;
 
         /// <summary>Raised after a page becomes the current one.</summary>
         public event System.Action<LobbyPageID> PageShown;
@@ -39,6 +45,8 @@ namespace NodeWar.Lobby
         public NavigationController(VisualElement pageHost)
         {
             this.pageHost = pageHost;
+            // Empty page space must receive gestures too; Home's art ignores picking.
+            pageHost.pickingMode = PickingMode.Position;
 
             track = new VisualElement();
             track.name = "page-track";
@@ -47,6 +55,59 @@ namespace NodeWar.Lobby
             pageHost.Add(track);
 
             pageHost.RegisterCallback<GeometryChangedEvent>(evt => Layout(false));
+            pageHost.RegisterCallback<PointerDownEvent>(OnSwipeStart, TrickleDown.TrickleDown);
+            pageHost.RegisterCallback<PointerMoveEvent>(OnSwipeMove, TrickleDown.TrickleDown);
+            pageHost.RegisterCallback<PointerUpEvent>(OnSwipeEnd, TrickleDown.TrickleDown);
+            pageHost.RegisterCallback<PointerCancelEvent>(evt => CancelSwipe());
+            pageHost.RegisterCallback<PointerCaptureOutEvent>(evt => swipePointer = -1);
+        }
+
+        public void BindSwipes(System.Func<bool> anyOverlayOpen) { overlayOpen = anyOverlayOpen; }
+
+        private void OnSwipeStart(PointerDownEvent evt)
+        {
+            if (swipePointer != -1 || evt.button != 0 || overlayOpen?.Invoke() == true) return;
+            for (VisualElement target = evt.target as VisualElement; target != null; target = target.parent)
+            {
+                if (target.ClassListContains("lb-no-swipe")) return;
+                if (target == pageHost) break;
+            }
+            swipePointer = evt.pointerId;
+            swipeStart = evt.position;
+            swipeStartedAt = evt.timestamp;
+            swipeAxis = SwipeAxis.Pending;
+        }
+
+        private void OnSwipeMove(PointerMoveEvent evt)
+        {
+            if (evt.pointerId != swipePointer) return;
+            if (overlayOpen?.Invoke() == true) { CancelSwipe(); return; }
+            Vector2 delta = (Vector2)evt.position - swipeStart;
+            if (swipeAxis == SwipeAxis.Pending) swipeAxis = SwipeDecision.Lock(delta.x, delta.y);
+            if (swipeAxis != SwipeAxis.Horizontal) return;
+            pageHost.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+
+        private void OnSwipeEnd(PointerUpEvent evt)
+        {
+            if (evt.pointerId != swipePointer) return;
+            Vector2 delta = (Vector2)evt.position - swipeStart;
+            int offset = SwipeDecision.Decide(delta.x, delta.y, evt.timestamp - swipeStartedAt,
+                overlayOpen?.Invoke() == true, false, swipeAxis);
+            bool horizontal = swipeAxis == SwipeAxis.Horizontal;
+            CancelSwipe();
+            if (horizontal) evt.StopPropagation();
+            int index = currentPage != null ? pages.IndexOf(currentPage) : -1;
+            if (offset != 0 && index >= 0 && index + offset >= 0 && index + offset < pages.Count)
+                Show(pages[index + offset].ID);
+        }
+
+        private void CancelSwipe()
+        {
+            int pointer = swipePointer;
+            swipePointer = -1;
+            if (pointer >= 0 && pageHost.HasPointerCapture(pointer)) pageHost.ReleasePointer(pointer);
         }
 
         /// <summary>

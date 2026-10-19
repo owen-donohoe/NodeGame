@@ -32,6 +32,7 @@ namespace NodeWar.Lobby
         /// whatever closed the sheet - the scrim, the handle, or a button.
         /// </summary>
         public event System.Action<VisualElement> Closed;
+        public event System.Action<VisualElement> Opened;
 
         public LobbySheet(VisualElement root)
         {
@@ -97,6 +98,7 @@ namespace NodeWar.Lobby
             content = newContent;
             if (sheet != null) sheet.EnableInClassList("lb-sheet--large", large);
             SetOpen(true);
+            Opened?.Invoke(content);
         }
 
         public void Close()

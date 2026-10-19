@@ -22,6 +22,18 @@ sources:
   - Assets/UI/Layouts/ShopPage.uxml
   - Assets/UI/Layouts/SocialPage.uxml
   - Assets/UI/Layouts/WorkshopPage.uxml
+  - Assets/UI/Resources/Lobby/
+  - Assets/UI/Scripts/AsyncState.cs
+  - Assets/UI/Scripts/AsyncStateView.cs
+  - Assets/UI/Scripts/BadgeBoard.cs
+  - Assets/UI/Scripts/ClaimPanel.cs
+  - Assets/UI/Scripts/ClaimRequest.cs
+  - Assets/UI/Scripts/GuildPage.cs
+  - Assets/UI/Scripts/LobbyDeepLink.cs
+  - Assets/UI/Scripts/LobbyOverlayRouter.cs
+  - Assets/UI/Scripts/LobbyPageID.cs
+  - Assets/UI/Scripts/LobbyRouteStack.cs
+  - Assets/UI/Scripts/SwipeDecision.cs
   - Assets/UI/Scripts/AccountFlow.cs
   - Assets/UI/Scripts/AccountLinkPrompt.cs
   - Assets/UI/Scripts/ControlsPanel.cs
@@ -64,7 +76,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: cee1a628
+verified: e66eeef4
 ---
 
 # Lobby UI
@@ -73,7 +85,9 @@ verified: cee1a628
 The lobby lets players understand/edit their loadout, manage account/settings and enter matches. It presents server state without confusing local profile persistence, placeholder commerce or private play with authoritative ranked progression.
 
 ## Interface
-`LobbyUIController` binds its `UIDocument` and serialized layouts/catalog assets, creates shared services/pages and exposes `Navigation`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the sliding tab track. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. Shop, Home, Workshop and Social are tabs; `ProfilePage.Open(source)/Close` expands above chrome. `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory overlays.
+`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims` and `Badges`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the sliding track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)/Close` expands above chrome; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory.
+
+`LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. Back closes its top, goes Home, or opens quit confirmation. `LobbyDeepLink.TryParse` accepts nodewar routes; page links navigate, other targets log. Overlays declare chrome visibility. `SwipeDecision` gates adjacent navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
 
 `LobbySheet.Open(content, large)/Close`, `IsShowing`, `Closed` and `Lift(pageRoot, contentName)` serve shared bottom-sheet content. `LobbyContextMenu.Attach/Show/Close` displays `LobbyMenuItem(label, action)` rows; `LobbyToast.Show(message)` supplies transient feedback. Pages receive the shell's shared instances. `SafeAreaBinder` applies screen-safe insets.
 
@@ -93,9 +107,9 @@ Pages:
 
 `LoadoutChoices.Variants/Skins` returns sorted `LoadoutChoice[]` with ID/base/label, unlock state, equipped/preview flags and Selectable. `UnlockStates.ForBase/ForVariant/ForSkin` supplies Owned/CanUnlock/CannotUnlock, unlock arena and CanUse; `ForBase(lobbyId, state)` reads server ownership of the base's era-0 variant (the starter kit before state arrives) and `ContentTable` debut eras. `LobbyChrome` shows the server handle (local username until a profile exists, requesting a first handle once per load) and the server wallet in the purses. Player-name labels disable rich text. `SkinBand.SetChoices/Stop`, `CenteredIndex` and `CenterChanged(int)` render a looping thirteen-tile strip through `SkinBandMath`.
 
-`PlayerProfile.Instance` stores `player_profile.json` under `Application.persistentDataPath`; `SetLoadout`, `SetSettings`, `Save/Load`, username and account-link prompt fields serve local persistence. `LoadoutData` has `suitIDs`, `districtIDs`, type-indexed `suitEras`/`districtEras`, `skinIDs`; `CreateEmpty/Normalized` have shape-preserving and explicit-arena forms. `LoadoutTypes.WithEquipment` overlays returned server equipment. `TrophyBarLogic` retains legacy sliding-window fill maths; arena displays use `RankDisplay`/`RankTable`.
+`PlayerProfile.Instance` persists local loadout/settings. `LoadoutData.CreateEmpty/Normalized` have shape-preserving and explicit-arena forms; `LoadoutTypes.WithEquipment` overlays server equipment. Arena displays use `RankDisplay`/`RankTable`.
 
-`SceneTransition.Load(sceneName)` guards duplicate requests and owns a persistent loading overlay through asynchronous scene loading, using `Resources/SceneTransition/LoadingSheet` and `Theme`.
+`SceneTransition.Load(sceneName)` guards duplicate requests and shows loading during scene changes.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
@@ -127,8 +141,8 @@ Launch refreshes PlayerState; ranked requires returned rank, private/offline fal
 Local profile still carries legacy progression fields beside authoritative backend data. Shop, social, detailed statistics and box actions lack production backing. Runtime and legacy launch paths coexist. Placeholder item art, narrow layouts and long Controls lists need manual verification; hidden legacy dependencies prevent casual deletion.
 
 ## Change recipes
-- Add a page: implement lifecycle, register with navigation or overlay host, wire layout through Editor setup and preserve shared dismiss behavior.
+- Add a page: implement lifecycle and register with navigation; overlays register close callbacks with the shared router. New layouts load from Resources/Lobby.
 - Change loadouts: update pure editor/rules, shared capacity/ownership, persistence migration and frozen-launch tests together.
 
 ## Tests
-`NodeWar.Lobby.Tests` guards loadout shapes/editor, unlock/choice ordering, settings migration and ranked presenters. Compile-check covers Unity pages/launchers. Real sign-in, transitions, phone layouts and serialized stack wiring require Editor/device verification.
+`NodeWar.Lobby.Tests` guards loadouts, settings, ranked presenters and pure route/state/claim/swipe models. Compile-check covers Unity pages/launchers. Sign-in, transitions, layouts, device Back, swipe feel and OS deep links require Editor/device verification.

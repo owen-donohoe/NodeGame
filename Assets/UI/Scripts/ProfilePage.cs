@@ -52,6 +52,8 @@ namespace NodeWar.Lobby
         public VisualElement Root { get; private set; }
 
         public bool IsOpen { get; private set; }
+        public event System.Action Opened;
+        public event System.Action Closed;
 
         /// <summary>Raised after a rename is saved, so the chrome can redraw.</summary>
         public event System.Action Renamed;
@@ -158,6 +160,7 @@ namespace NodeWar.Lobby
             if (IsOpen) return;
 
             IsOpen = true;
+            Opened?.Invoke();
             sourceRect = source;
             if (hideLater != null) hideLater.Pause();
 
@@ -189,6 +192,7 @@ namespace NodeWar.Lobby
             if (!IsOpen) return;
 
             IsOpen = false;
+            Closed?.Invoke();
             BackendServices.StateChanged -= Refresh;
             if (sheet != null && sheet.IsShowing(renameContent)) sheet.Close();
 

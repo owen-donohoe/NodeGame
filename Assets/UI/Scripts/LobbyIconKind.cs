@@ -64,6 +64,21 @@ namespace NodeWar.Lobby
         CosmeticTinRoof,
         CosmeticPaperBanner,
         CosmeticStrawHat,
+        Burger,
+        Bell,
+        Funnel,
+        Swap,
+        CrateSmall,
+        CrateMedium,
+        Info,
+        Spectate,
+        Chat,
+        Guild,
+        Refresh,
+        AddFriend,
+        Invite,
+        Search,
+        Laurel,
     }
 
 }
