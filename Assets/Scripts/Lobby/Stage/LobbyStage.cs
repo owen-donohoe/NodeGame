@@ -14,7 +14,9 @@ namespace NodeWar.Lobby
         public const float ShopStallSpacing = 6f;
         private const float MarketZ = 9f;
         public Camera ShopCamera => stageCamera;
-        public float ShopReferenceDistance => Mathf.Sqrt(5.5f * 5.5f + 1.5f * 1.5f + 0.05f * 0.05f);
+        public float ShopReferenceDistance => MarketFrame().ReferenceDistance;
+        private ShopMarketFrame marketFrame;
+        private float marketAspect;
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
         private static readonly Color Sea = new Color(0.63f, 0.70f, 0.67f);
 
@@ -86,7 +88,7 @@ namespace NodeWar.Lobby
             stageCamera.cullingMask = 1 << StageLayer;
             stageCamera.nearClipPlane = 0.1f;
             stageCamera.farClipPlane = 120f;
-            stageCamera.fieldOfView = 42f;
+            stageCamera.fieldOfView = ShopMarketFraming.FieldOfView;
             stageCamera.allowHDR = false;
             stageCamera.allowMSAA = false;
             // TODO: add the URP Volume depth-of-field hook during the visual pass.
@@ -129,13 +131,13 @@ namespace NodeWar.Lobby
             {
                 var stall = new GameObject(names[i] + " stall");
                 stall.transform.SetParent(market.transform, false);
-                stall.transform.localPosition = new Vector3(-0.55f, 0f, -i * ShopStallSpacing);
+                stall.transform.localPosition = new Vector3(ShopMarketFraming.StallX, 0f, -i * ShopStallSpacing);
                 Cutout("Stall facade", stall.transform, PaperKind.Stall,
                     new Vector3(0f, 0.02f, 0f), new Vector2(1.35f, 1.9f), Tints[i]);
                 Cutout("Canopy", stall.transform, PaperKind.Canopy,
                     new Vector3(0f, 1.4f, -0.03f), new Vector2(1.5f, 0.75f), Tints[(i + 3) % Tints.Length]);
                 marketmen[i] = Cutout("Marketman", stall.transform, PaperKind.Marketman,
-                    new Vector3(0f, 0.02f, 0.08f), new Vector2(0.9f, 1.65f),
+                    new Vector3(-0.25f, 0.02f, -0.08f), new Vector2(0.9f, 1.65f),
                     Tints[(i + 1) % Tints.Length]).transform;
             }
             var reserved = new GameObject("Reserved ground - Social and Guild");
@@ -232,15 +234,26 @@ namespace NodeWar.Lobby
 
         /// <summary>Right of the counter as seen from the market camera, looking down +Z.</summary>
         public Vector3 ShopAnchor(int stall) => transform.TransformPoint(
-            new Vector3(MarketX + 0.05f, 1f, MarketZ - Mathf.Clamp(stall, 0, 4) * ShopStallSpacing));
-        private static void GetShot(StageShot shot, out Vector3 position, out Quaternion rotation)
+            new Vector3(MarketX + MarketFrame().AnchorX, 1f, MarketZ - Mathf.Clamp(stall, 0, 4) * ShopStallSpacing));
+        private ShopMarketFrame MarketFrame()
+        {
+            if (!Mathf.Approximately(marketAspect, stageCamera.aspect))
+            {
+                marketAspect = stageCamera.aspect;
+                marketFrame = ShopMarketFraming.ForAspect(marketAspect);
+            }
+            return marketFrame;
+        }
+
+        private void GetShot(StageShot shot, out Vector3 position, out Quaternion rotation)
         {
             Vector3 target;
             switch (shot)
             {
                 case StageShot.Market:
-                    target = new Vector3(MarketX, 1f, MarketZ);
-                    position = target + new Vector3(0f, 1.5f, -5.5f);
+                    ShopMarketFrame frame = MarketFrame();
+                    target = new Vector3(MarketX + frame.CameraX, 1f, MarketZ);
+                    position = target + new Vector3(0f, ShopMarketFraming.CameraRise, -frame.CameraBack);
                     break;
                 case StageShot.Social:
                     target = new Vector3(8f, 0f, 0f);
@@ -388,7 +401,6 @@ namespace NodeWar.Lobby
                 if (direction.sqrMagnitude > 0.0001f)
                 {
                     suits[i].localPosition = Vector3.MoveTowards(position, suitTargets[i], delta * 0.35f);
-
                 }
                 else
                 {

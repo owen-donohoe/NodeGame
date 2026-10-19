@@ -55,6 +55,7 @@
     <Compile Include="../../Assets/Scripts/Backend/Shared/CrateInventory.cs" Link="Backend/CrateInventory.cs" />
     <Compile Include="ShopModelsTests.cs" />
     <Compile Include="ShopWalkTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/ShopMarketFraming.cs" Link="Lobby/Stage/ShopMarketFraming.cs" />
     <Compile Include="PaperRasterizerTests.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Stage/PaperRasterizer.cs" Link="Lobby/Stage/PaperRasterizer.cs" />
     <Compile Include="../../Assets/UI/Scripts/ShopProjection.cs" Link="Lobby/ShopProjection.cs" />
