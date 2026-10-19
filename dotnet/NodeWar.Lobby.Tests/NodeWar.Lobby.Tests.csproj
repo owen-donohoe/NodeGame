@@ -36,6 +36,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="StageSlotsTests.cs" />
+    <Compile Include="DistrictClusterTests.cs" />
+    <Compile Include="StageShotsTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StageSlots.cs" Link="Lobby/Stage/StageSlots.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/DistrictCluster.cs" Link="Lobby/Stage/DistrictCluster.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StageShots.cs" Link="Lobby/Stage/StageShots.cs" />
     <Compile Include="BankActionTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs" Link="View/ViewSide.cs" />
