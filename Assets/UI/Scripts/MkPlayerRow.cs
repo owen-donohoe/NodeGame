@@ -24,6 +24,7 @@ namespace NodeWar.Lobby
         }
 
         public MkPlayerRow(string handle, string status) : this() { SetPlayer(handle, status); }
+        public void SetPlayer(string playerName, string tag, string status) => SetPlayer(playerName + "#" + tag, status);
         public void SetPlayer(string handle, string status)
         {
             NameLabel.text = handle ?? "";

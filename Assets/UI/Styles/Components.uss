@@ -620,7 +620,7 @@
 .ui-root .mk-friend > *{ margin-right: 10px; }
 .ui-root .mk-friend__avatar{ width: 34px; height: 34px; border-radius: 8px; border-width: 2px; border-color: var(--mk-ink); background-color: var(--p0); font-size: 17.25px; -unity-font-style: bold; -unity-text-align: middle-center; }
 .ui-root .mk-friend__body{ flex-grow: 1; min-width: 0; }
-.ui-root .mk-friend__name{ font-size: 17.25px; -unity-font-style: bold; }
+.ui-root .mk-friend__name{ font-size: 14px; -unity-font-style: bold; }
 .ui-root .mk-friend__status{ flex-direction: row; align-items: center; color: var(--mk-muted); font-size: 12px; }
 .ui-root .mk-friend__dot{ width: 8px; height: 8px; border-radius: 4px; background-color: var(--mk-tap); margin-right: 5px; }
 .ui-root .mk-friend__trailing{ flex-direction: row; align-items: center; }

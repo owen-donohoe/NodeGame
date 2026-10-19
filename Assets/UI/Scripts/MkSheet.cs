@@ -7,6 +7,7 @@ namespace NodeWar.Lobby
     public partial class MkSheet : VisualElement
     {
         public VisualElement Body { get; } = new ScrollView();
+        public override VisualElement contentContainer => Body.contentContainer;
         public VisualElement Surface { get; } = new VisualElement();
         public VisualElement Scrim { get; } = new VisualElement();
         public VisualElement Handle { get; } = new VisualElement();
