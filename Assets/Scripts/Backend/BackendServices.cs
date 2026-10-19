@@ -35,6 +35,16 @@ namespace NodeWar.Backend
         private static IRankedMatchService rankedMatch;
         private static ISocialService social;
         private static IProfileService profiles;
+        private static IGuildService guild;
+        private static GuildBrowseCache guildBrowse;
+        // No UGS guild implementation exists yet; use the local stub in every build.
+        public static IGuildService Guild => guild ?? (guild = new LocalGuildService(() => new PlayerCard
+        {
+            PlayerId = Account.Current?.PlayerId ?? "self", Name = LastKnownState?.Profile?.Name ?? "Player",
+            Tag = LastKnownState?.Profile?.Tag ?? "", RR = LastKnownState?.Rank?.RR ?? 0,
+            Arena = LastKnownState?.Rank?.Arena ?? 0, Presence = PlayerPresence.Online
+        }));
+        public static GuildBrowseCache GuildBrowse => guildBrowse ?? (guildBrowse = new GuildBrowseCache());
 
         // No UGS implementation exists yet: these two services stay local in every build.
         public static ISocialService Social => social ?? (social = new LocalSocialService());
@@ -94,6 +104,8 @@ namespace NodeWar.Backend
             rankedMatch = null;
             social = null;
             profiles = null;
+            guild = null;
+            guildBrowse = null;
             lastKnown = null;
             lastKnownFor = null;
             StateChanged = null;
