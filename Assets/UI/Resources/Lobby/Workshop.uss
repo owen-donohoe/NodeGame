@@ -1,17 +1,13 @@
+/* Workshop owns layout; the mockup skin lives in Components.uss. */
+#page-workshop, #page-workshop > TemplateContainer, .lb-workshop { flex-grow: 1; min-height: 0; }
+.ws-scroll { flex-grow: 1; min-height: 0; }
+.ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 112px; }
+.ws-stage-spacer { height: 220px; flex-shrink: 0; }
+.ws-panel1-space { height: 136px; flex-shrink: 0; }
+.ws-panel1 { position: absolute; left: 12px; right: 12px; flex-shrink: 0; }
+.ws-panel2 { margin: 10px 12px 0; flex-shrink: 0; }
+.ws-roles-scroll { flex-shrink: 0; }
 /* Workshop owns layout; shared components own buttons, chips and placeholder art. */
-.lb-workshop { flex-grow: 1; min-height: 0; padding: 10px 14px 112px; }
-.ws-presets { flex-direction: row; align-items: center; flex-shrink: 0; margin-bottom: 10px; }
-.ws-preset { width: 40px; padding-left: 0; padding-right: 0; justify-content: center; margin-right: 6px; }
-.ws-eyebrow { flex-grow: 1; flex-shrink: 1; white-space: normal; font-size: 11px; color: var(--ink-mute); -unity-text-align: middle-right; }
-.ws-window { height: 34%; flex-shrink: 0; background-color: var(--clear); border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-md); margin-bottom: 12px; }
-.ws-tabs { flex-direction: row; flex-shrink: 0; border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-sm); overflow: hidden; margin-bottom: 8px; }
-.ws-tab { flex-grow: 1; flex-basis: 0; min-width: 0; height: 42px; border-width: 0; border-radius: 0; font-size: 16px; }
-.ws-tab--on { background-color: var(--action); color: var(--ink); }
-.ws-toolbar { flex-direction: row; align-items: center; flex-shrink: 0; margin-top: 6px; margin-bottom: 8px; }
-.ws-browser-title { flex-grow: 1; font-size: 16px; color: var(--ink); }
-.ws-filter { height: 34px; font-size: 12px; margin-left: 6px; padding-left: 10px; padding-right: 10px; }
-.ws-grid { flex-grow: 1; min-height: 0; background-color: var(--surface); border-radius: var(--corner-sm); }
-.ws-cards { flex-direction: row; flex-wrap: wrap; padding: 4px 4px 16px; }
 .ws-card { width: 30.6%; flex-shrink: 0; margin: 1.3%; margin-top: 8px; padding: 6px 4px 5px; align-items: center; border-width: var(--stroke); border-color: var(--ink); border-radius: var(--corner-sm); background-color: var(--surface-raised); }
 .ws-card--preview { border-color: var(--action-edge); }
 .ws-card--locked { background-color: var(--surface-sunk); border-color: var(--off-edge); }
@@ -55,20 +51,11 @@
 .ws-band-tile.ws-art--neutral { background-color: var(--off); }
 .ws-band-tile--center { border-color: var(--action); }
 
-.ws-banner { display: none; border-width: var(--stroke); border-color: var(--action-edge); background-color: var(--surface-raised); border-radius: var(--corner-sm); padding: 10px 12px; margin-top: 12px; }
-.ws-banner-title { font-size: 16px; color: var(--ink); margin-bottom: 4px; }
-.ws-actionbar { display: none; position: absolute; left: 14px; right: 14px; bottom: 112px; background-color: var(--surface); padding: 10px 0; }
-.ws-cancel { height: 46px; font-size: 16px; }
 
 /* Paper roles; the stage window keeps a transparent interior. */
-.ws-window { --paper-card-fill: var(--clear); --paper-card-shadow: var(--clear); --paper-card-grain: 0; }
-.ws-tabs { overflow: visible; border-width: 0; padding: 3px; }
 .ws-tab, .ws-filter, .ws-preset, .ws-primary, .ws-secondary, .ws-cancel { min-height: 48px; }
-.ws-preset { width: 48px; }
-.ws-tab--on, .ws-primary, .ws-sheet-button.ws-primary, .ws-preset.ui-chip--action { --paper-card-fill: var(--paper-gold); }
 .ws-card { border-width: 0; padding: 10px 5px; }
 .ws-card--locked { --paper-card-fill: var(--paper-dark); }
-.ws-grid { background-color: var(--clear); }
 .ws-mark { background-color: var(--paper-dark); color: var(--ink); font-size: 11px; border-width: 1px; border-color: var(--ink); }
 .ws-monogram { color: var(--ink); }
 .ws-art { --paper-card-fill: var(--paper-dark); }
@@ -76,9 +63,14 @@
 .ws-band-tile { --paper-card-fill: var(--paper-dark); }
 
 /* Window frame: the stage shows through, but the ink border is always drawn. */
-.ws-window { border-width: var(--paper-ink-width); border-color: var(--ink); }
 /* Seg switch: two separate cut-outs rather than one clipped slab. */
-.ws-tabs { --paper-card-fill: var(--clear); --paper-card-shadow: var(--clear); --paper-card-width: 0px; --paper-card-grain: 0; }
-.ws-tab { margin: 0 4px; --paper-card-fill: var(--paper-light); }
 /* Preset tabs and filter chips: paper unselected, gold selected. */
 .ws-preset, .ws-filter { --paper-card-fill: var(--paper-light); }
+
+.ws-presets { margin-bottom: 10px; }
+.ws-preset { width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; }
+.ws-eyebrow { flex-grow: 1; flex-shrink: 1; min-width: 0; -unity-text-align: middle-right; white-space: normal; }
+.ws-browser-title { flex-grow: 1; }
+.ws-actionbar { margin-top: 10px; }
+
+.ws-preset-face { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 16px; -unity-text-align: middle-center; }

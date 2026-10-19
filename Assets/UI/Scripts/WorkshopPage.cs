@@ -91,6 +91,11 @@ namespace NodeWar.Lobby
             notice = Root.Q<Label>("workshop-info-unlock");
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
+            // Render the sticky first card last, above the scrolling second card.
+            Root.Q("workshop-panel1").BringToFront();
+            Root.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
+            Root.Q("workshop-panel1").RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
+            grid.verticalScroller.valueChanged += _ => UpdateScrollLayout();
             panelHost = Root.Q<VisualElement>("workshop-panel-host");
             ownedFilter = Root.Q<Button>("workshop-owned");
             sortFilter = Root.Q<Button>("workshop-sort");
@@ -137,6 +142,17 @@ namespace NodeWar.Lobby
             _ = LoadInventoryAsync(visit);
         }
         public override void OnHide() { CloseInventory(); Hidden?.Invoke(); }
+        private void UpdateScrollLayout()
+        {
+            if (grid?.panel == null) return;
+            var first = Root.Q("workshop-panel1");
+            float screenHeight = Root.panel.visualTree.worldBound.height;
+            float band = Mathf.Max(0, screenHeight * 0.46f - grid.contentViewport.worldBound.y);
+            if (!Mathf.Approximately(StageWindow.layout.height, band)) StageWindow.style.height = band;
+            var space = Root.Q("workshop-panel1-space");
+            if (!Mathf.Approximately(space.layout.height, first.layout.height)) space.style.height = first.layout.height;
+            first.style.top = Mathf.Max(band, grid.scrollOffset.y);
+        }
         private void CollectItems()
         {
             districts.Clear();
@@ -245,8 +261,8 @@ namespace NodeWar.Lobby
         }
         private void Render()
         {
-            segDistricts?.EnableInClassList("ws-tab--on", activeTab == Tab.Districts);
-            segSuits?.EnableInClassList("ws-tab--on", activeTab == Tab.Suits);
+            segDistricts?.EnableInClassList("mk-seg2__btn--on", activeTab == Tab.Districts);
+            segSuits?.EnableInClassList("mk-seg2__btn--on", activeTab == Tab.Suits);
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             Item item = Find(items, loadout.PreviewId);
@@ -256,11 +272,11 @@ namespace NodeWar.Lobby
             int selected = profile != null ? profile.data.activeLoadoutPreset : 0;
             for (int i = 0; i < presets.Length; i++)
             {
-                presets[i].EnableInClassList("ui-chip--action", selected == i);
+                presets[i].Q<Label>().EnableInClassList("mk-chip--on", selected == i);
                 presets[i].SetEnabled(!inventoryBusy);
             }
             int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
-            if (presetLabel != null) presetLabel.text = "Loadout " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
+            if (presetLabel != null) presetLabel.text = "LOADOUT " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
         }
         private VisualElement MakeArt(Item item, bool neutral, bool navy)
         {
@@ -390,8 +406,7 @@ namespace NodeWar.Lobby
         }
         private void RenderReplacement()
         {
-            Root.Q<VisualElement>("workshop-toolbar").style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
-            grid.style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
+            Root.Q("workshop-browser").style.display = Replacing ? DisplayStyle.None : DisplayStyle.Flex;
             Root.Q<VisualElement>("workshop-replace-banner").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
             Root.Q<VisualElement>("workshop-replace-actions").style.display = Replacing ? DisplayStyle.Flex : DisplayStyle.None;
             var pending = ReplacingSuit ? Find(suits, loadout.PendingSuitId) : Find(districts, loadout.PendingDistrictId);

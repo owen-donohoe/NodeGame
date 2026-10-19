@@ -11,7 +11,6 @@ namespace NodeWar.Lobby
         private readonly LobbyStage stage;
         private readonly LobbyOverlayRouter router;
         private readonly Action refresh;
-        private readonly IVisualElementScheduledItem windowSizing;
         private int pointer = -1;
         private Vector2 pointerStart;
         private long pointerStartedAt;
@@ -22,7 +21,6 @@ namespace NodeWar.Lobby
         {
             this.page = page; this.stage = stage; this.router = router; this.refresh = refresh;
             page.Hidden += Hide;
-            windowSizing = page.Root.schedule.Execute(SizeWindow).Every(16);
             page.ItemViewed += View;
             page.ViewChanged += ShowView;
             page.DistrictUseRequested += Begin;
@@ -42,13 +40,6 @@ namespace NodeWar.Lobby
             Rect panel = page.Root.panel.visualTree.worldBound;
             return new Vector2(panelPoint.x * Screen.width / panel.width,
                 Screen.height - panelPoint.y * Screen.height / panel.height);
-        }
-        private void SizeWindow()
-        {
-            if (!page.IsOpen || page.StageWindow?.panel == null) return;
-            var window = page.StageWindow;
-            float height = page.Root.panel.visualTree.worldBound.height * 0.4f;
-            if (!Mathf.Approximately(window.resolvedStyle.height, height)) window.style.height = height;
         }
         private void Hide()
         {
@@ -149,7 +140,6 @@ namespace NodeWar.Lobby
         }
         public void Dispose()
         {
-            windowSizing.Pause();
             page.Hidden -= Hide;
             Hide();
             page.CancelReplacement(); stage.Deselect(); stage.ClearFocus();
