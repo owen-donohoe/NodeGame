@@ -70,6 +70,8 @@ sources:
   - Assets/UI/Scripts/LoadoutInfoModel.cs
   - Assets/UI/Scripts/LoadoutRules.cs
   - Assets/UI/Scripts/LoadoutScreenModel.cs
+  - Assets/UI/Scripts/LoadoutPresets.cs
+  - Assets/UI/Scripts/LoadoutBrowse.cs
   - Assets/UI/Scripts/LobbyBackdrop.cs
   - Assets/UI/Scripts/LobbyChrome.cs
   - Assets/UI/Scripts/LobbyContextMenu.cs
@@ -103,16 +105,16 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: f576d156
+verified: 9904ed0f
 ---
 
 # Lobby UI
 
 ## Purpose
-The lobby lets players understand/edit their loadout, manage account/settings and enter matches. It presents server state without confusing local profile persistence, placeholder commerce or private play with authoritative ranked progression.
+The lobby edits loadouts, manages account/settings and enters matches. Server progression stays separate from preferences, commerce stubs and private play.
 
 ## Interface
-`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims`, `Badges` and `Crates`; Home crate taps open `CrateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)` opens self; `OpenFor(playerId)/Close` operates a Panel overlay; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory. `LobbyStage` follows page shots and equipped types, hiding during fullscreen overlays.
+`LobbyUIController` creates shared services/pages and exposes `Navigation`, `Routes`, `Claims`, `Badges` and `Crates`; Home crate taps open `CrateScreen`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the track: Shop, Workshop (Loadout), Home, Social, Guild. Home opens first. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. `ProfilePage.Open(source)` opens self; `OpenFor(playerId)/Close` operates a Panel overlay; `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory. `LobbyStage.SetFocusRect/ClearFocusRect` frames screen pixels through projection offsets; `TryPick` returns compact slot/suit `StagePick` indices on layer 2. Materials share one factory. Fullscreen overlays hide it.
 
 `LobbyOverlayRouter` registers close callbacks on one `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels, remaining targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `AsyncState.Reduce` retains stale content; `AsyncStateView.Render` delays loading by 300ms. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled and shows plain-text disclosures.
 
@@ -120,7 +122,7 @@ The lobby lets players understand/edit their loadout, manage account/settings an
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested(CrateSize)`, `SetMode`, `Refresh`; incomplete PLAY opens Workshop. `LocalCrateInventory` backs Small crates/progress with profile data, returns fixed placeholder rewards, and exposes no Medium stock.
-- `WorkshopPage` previews through `LoadoutScreenModel` and keeps `WorkshopInventorySession` gating. `WorkshopStageBinding` maps compact stage slots to chosen storage, focuses equipped suits, and consumes Back while replacing. Replacement rechecks eligibility/busy state; removal uses the slot context menu.
+- `WorkshopPage` loads `Resources/Lobby/WorkshopPage`: presets, stage window, filtered/sorted tiles. `WorkshopStageBinding` frames bounds, maps taps to storage, selects districts/freezes suits and opens sheets. `LoadoutScreenModel`/`WorkshopInventorySession` gate edits. Replacement uses a banner and Cancel/Back, rechecking eligibility/busy state. Tile menus remove choices.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims and sets `shop.daily`; `ScrollTo(stall)` targets daily, crates, weekly, bundle, coins or laurels. Stalls snap/shrink offers; countdowns refresh each second. Confirmations log; daily claims are visit-local.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet)` supplies independent TV/history/friends `AsyncStateView`s. Cards open profiles; watch/replay/spectate log. Friends sort by presence, handle and ID. Late responses cannot cross visits or accounts.
 - `ProfilePage` shows handle, era/RR, six stats, loadout chips and recent matches. Null stats display dashes. Other-player Add friend/Invite and in-battle Spectate log; self renames through `BackendServices.Handles`, retaining cost hints.
@@ -136,13 +138,11 @@ Pages:
 
 `LoadoutChoices.Variants/Skins` returns sorted choices. `UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel`s; Testing is development-only and bell clears its badge. `LobbyBadgeDot` observes dotted-key counts. The player header hides on Guild. `SkinBand.SetChoices/Stop`, `CenteredIndex` and `CenterChanged(int)` render the looping strip through `SkinBandMath`.
 
-`PlayerProfile.Instance` persists local loadout/settings/mode. `LoadoutData.CreateEmpty/Normalized` preserve source shape or use an explicit arena; `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay`/`RankTable` supply era progress. `LobbyCurrencyNames.Premium` labels Premium as Laurels in purses and purchase text.
+`PlayerProfile.Instance` persists local loadout/settings/mode. `LoadoutPresets` migrates current choices into preset 1; switches sanitize through `LoadoutEditor`, edits store the active preset. `LoadoutBrowse` filters ownership and sorts owned-first/era/name, name or role with ID ties. `LoadoutData.CreateEmpty/Normalized` preserve source shape or use an explicit arena; `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay`/`RankTable` supply era progress. `LobbyCurrencyNames.Premium` labels Premium as Laurels in purses and purchase text.
 
 `SceneTransition.Load(sceneName)` guards duplicate scene transitions.
 
 `LobbyScrollbars.Hide` hides desktop scrollers at shell construction and shared overlay opening; touch scroll remains enabled.
-
-`CrateScreen.Open(size, inventory)` consumes held crates through `TryOpen`. Sequence: landing, Tap, opening, every returned reward, Summary/Accept. Back taps or accepts; no fake rewards.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
@@ -161,7 +161,7 @@ Rated rank/inventory belongs to backend state, not local trophies/unlock arrays.
 ## How it works
 `LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
 
-Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five without grants. Workshop displays three/five slots. Use fills or replaces; taps inspect. Variants are tree suits; skins cover both kinds.
+Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five without grants. Workshop shows five stage nodes. Use fills or replaces; taps inspect. Variants are tree suits; skins cover both kinds.
 
 Launch refreshes state, freezes rank/choices/equipment, then rechecks completeness. Ranked requires returned rank; private/offline uses arena 1. Rendezvous carries record ID/slot order. Confirmed resizing persists; closing an unconfirmed fallback cannot trim saved high decks.
 
@@ -171,7 +171,7 @@ Launch refreshes state, freezes rank/choices/equipment, then rechecks completene
 - Keep legacy code compiling behind a scene toggle rather than delete the fallback during migration.
 
 ## Pressure points
-Legacy progression fields and launch paths coexist with authoritative data. Shop/social/guild flows lack production backing. Placeholder art, layouts and legacy dependencies require manual verification.
+Legacy progression coexists with authoritative data. Shop/social/guild lack production backends. Placeholder art/layouts require manual verification.
 
 ## Change recipes
 - Add a page: implement lifecycle and register with navigation; overlays register close callbacks with the shared router. New layouts load from Resources/Lobby.
