@@ -329,6 +329,7 @@ namespace NodeWar.Lobby
             playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
             RegisterPages();
             WireOverlays(root);
+            LobbyScrollbars.Hide(root);
 
             navigation.Show(LobbyPageID.Home);
             Application.deepLinkActivated += HandleDeepLink;
@@ -663,6 +664,15 @@ namespace NodeWar.Lobby
             AddBurgerItem("Credits");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             AddBurgerItem("Testing", () => playPopup?.Show(GameMode.Testing));
+            AddBurgerItem("Toggle sample guild", () =>
+            {
+                if (NodeWar.Backend.BackendServices.Guild is NodeWar.Backend.LocalGuildService sample)
+                {
+                    sample.InGuild = !sample.InGuild;
+                    navigation.Show(LobbyPageID.Guild);
+                    guildPage.Refresh();
+                }
+            });
 #endif
         }
 
@@ -731,6 +741,11 @@ namespace NodeWar.Lobby
             }
             else if (route.Kind == LobbyRouteKind.Bell) OpenBell();
             else if (route.Kind == LobbyRouteKind.Profile) profilePage.OpenFor(route.Target);
+            else if (route.Kind == LobbyRouteKind.GuildChat)
+            {
+                navigation.Show(LobbyPageID.Guild);
+                _ = guildPage.OpenChatAsync();
+            }
             else Debug.Log("[LobbyUI] Route: " + route.Kind + " " + route.Target);
         }
     }

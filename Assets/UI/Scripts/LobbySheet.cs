@@ -85,6 +85,7 @@ namespace NodeWar.Lobby
 
         public void Open(VisualElement newContent, bool large = false)
         {
+            LobbyScrollbars.Hide(newContent);
             if (body == null || newContent == null) return;
 
             if (IsOpen && content != newContent) Close();

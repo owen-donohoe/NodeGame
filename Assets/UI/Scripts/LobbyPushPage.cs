@@ -52,6 +52,7 @@ namespace NodeWar.Lobby
             IsOpen = true;
             Root.AddToClassList("lb-push--open");
             OnOpen();
+            LobbyScrollbars.Hide(Root);
             Opened?.Invoke();
         }
 

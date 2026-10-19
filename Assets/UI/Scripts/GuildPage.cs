@@ -205,6 +205,7 @@ namespace NodeWar.Lobby
             {
                 var row = new Button(() => OpenPreview(guild));
                 row.AddToClassList("lb-guild-row");
+                GuildViews.Icon(row, LobbyIconKind.Guild);
                 row.Add(PlayerCardViews.Text("[" + guild.IconId + "] " + guild.Name));
                 row.Add(PlayerCardViews.Text(guild.Members + "/" + guild.Capacity));
                 var chip = PlayerCardViews.Text(guild.Joinable && guild.Members < guild.Capacity ? "Joinable" : "Closed");

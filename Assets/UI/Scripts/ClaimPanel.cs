@@ -47,6 +47,7 @@ namespace NodeWar.Lobby
 
         public void Open(ClaimRequest request)
         {
+            LobbyScrollbars.Hide(Root);
             if (request == null) throw new ArgumentNullException(nameof(request));
             if (IsOpen) Cancel();
             if (title != null) { title.text = request.Title; title.enableRichText = false; }

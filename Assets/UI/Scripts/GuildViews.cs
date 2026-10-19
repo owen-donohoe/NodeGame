@@ -9,6 +9,9 @@ namespace NodeWar.Lobby
         {
             var header = new VisualElement();
             header.AddToClassList("lb-guild-header");
+            var icon = new LobbyIcon(LobbyIconKind.Guild) { tooltip = guild.Summary.IconId, pickingMode = PickingMode.Ignore };
+            icon.style.width = icon.style.height = 32f;
+            header.Add(icon);
             header.Add(PlayerCardViews.Text("[" + guild.Summary.IconId + "] " + guild.Summary.Name));
             header.Add(PlayerCardViews.Text(guild.Summary.Members + "/" + guild.Summary.Capacity + " members · " + guild.OnlineCount + " online"));
             return header;

@@ -36,6 +36,7 @@ namespace NodeWar.Lobby
 
         public void Open()
         {
+            LobbyScrollbars.Hide(Root);
             if (IsOpen) return;
             IsOpen = true;
             Root.style.display = DisplayStyle.Flex;
