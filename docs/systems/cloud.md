@@ -37,7 +37,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/RankedMatchModule.cs
   - dotnet/NodeWarCloud/NodeWarCloud/ServerCatalog.cs
   - dotnet/NodeWarCloud/NodeWarCloud/WalletService.cs
-verified: 29ad7b26
+verified: b85047ad
 ---
 
 # Cloud
@@ -52,7 +52,7 @@ Module `NodeWarCloud` exposes these Cloud Code functions; authority comes from a
 - `VerifyMatch(string logBase64)` → `RefereeVerdict`; consistency verification only, without ranked settlement.
 - `ReportMatch(string matchId, string logBase64)` → `MatchReportingResult` (`state`, `message`, `playerState`).
 - `GetMatchHistory()` → `List<MatchHistoryEntry>` from caller history/outcomes, with snapshotted `OpponentName`/`OpponentTag`.
-- `GetProfileView(playerId)` → `PublicProfileView`: card (handle, arena, RR, Offline presence), stats, equipped lobby IDs and recent summaries. Any authenticated player may read any target; empty target means self. One batch reads profile/rank/history/inventory; rating, wallet, discipline and active claim are excluded.
+- `GetProfileView(playerId)` → `PublicProfileView`: card (handle, arena, RR, Offline presence), stats, chosen-slot lobby IDs and recent summaries. Loadout arrays preserve slot order, skip empty slots and exclude variant information. Any authenticated player may read any target; empty target means self. One batch reads only profile/rank/history/inventory.
 - `Rendezvous(string matchId, string joinCode)` → `RendezvousResult` (roster, slot, code, connection state, map ID/hash); only slot 0 publishes a code.
 - `ConfirmConnected(string matchId)` → completion; both confirmations establish connection time.
 - `LeaveMatch(string matchId, bool forfeit)` → `LeaveMatchResult` (outcome, message, seconds left, player state).
