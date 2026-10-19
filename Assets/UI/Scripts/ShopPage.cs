@@ -281,7 +281,10 @@ namespace NodeWar.Lobby
 
         private void BeginPointer(PointerDownEvent evt)
         {
-            if (evt.button != 0 || pointer >= 0) return;
+            if (evt.button != 0 || !evt.isPrimary) return;
+            // The shell can capture a horizontal swipe and consume its release.
+            // A fresh primary press must clear that gesture before starting another.
+            CancelPointer();
             pointer = evt.pointerId;
             dragStart = dragPrevious = evt.position;
             dragTime = evt.timestamp;
