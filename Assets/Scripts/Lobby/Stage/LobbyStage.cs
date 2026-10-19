@@ -37,6 +37,7 @@ namespace NodeWar.Lobby
         private Shader shader;
         private DistrictCluster cluster = new DistrictCluster(0);
         private int equipped;
+        private int districtCapacity = StageSlots.Count;
         private Vector3 shotStartPosition;
         private Quaternion shotStartRotation;
         private Vector3 shotPosition;
@@ -194,11 +195,12 @@ namespace NodeWar.Lobby
 
         public void SelectDistrict(int slot) => cluster.Select(slot);
         public void Deselect() => cluster.Deselect();
+        public void SetDistrictCapacity(int capacity) => districtCapacity = Mathf.Clamp(capacity, 0, StageSlots.Count);
 
         /// <summary>False means Use requested filling the first empty slot, without replacement mode.</summary>
         public bool BeginReplace()
         {
-            DistrictClusterResult result = cluster.Use(equipped < StageSlots.Count);
+            DistrictClusterResult result = cluster.Use(StageSlots.HasEmpty(equipped, districtCapacity));
             if (result.Action == DistrictClusterAction.FillEmpty)
                 DistrictUsed?.Invoke(new DistrictClusterResult(result.Action, equipped));
             return cluster.State == DistrictClusterState.Replacing;

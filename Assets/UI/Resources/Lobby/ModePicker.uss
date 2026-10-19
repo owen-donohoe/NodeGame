@@ -1,0 +1,9 @@
+.lb-mode-picker { max-height: 560px; }
+.lb-mode-heading { font-size: 24px; margin: 8px; }
+.lb-mode-scroll { flex-shrink: 1; min-height: 0; }
+.lb-mode-grid, .lb-mode-local { flex-direction: row; flex-wrap: wrap; }
+.lb-mode-card { width: 46%; min-height: 96px; margin: 2%; padding: 8px; align-items: center; justify-content: center; border-radius: 12px; }
+.lb-mode-card .lb-icon { width: 28px; height: 28px; margin-bottom: 8px; }
+.lb-mode-local .lb-mode-card { min-height: 56px; flex-direction: row; }
+.lb-mode-local .lb-icon { width: 20px; height: 20px; margin-right: 8px; margin-bottom: 0; }
+.lb-mode-private { flex-shrink: 0; min-height: 48px; padding: 12px; margin-top: 8px; }

@@ -17,6 +17,7 @@ namespace NodeWar.Lobby
     public static class StageSlots
     {
         public const int Count = 5;
+        public static bool HasEmpty(int equipped, int capacity) => System.Math.Max(0, equipped) < System.Math.Max(0, System.Math.Min(Count, capacity));
 
         public static StageSlot[] Layout(int equipped)
         {

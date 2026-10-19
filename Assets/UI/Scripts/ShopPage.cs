@@ -15,11 +15,11 @@ namespace NodeWar.Lobby
         }
 
         private static readonly string[] StallNames = { "daily", "crates", "weekly", "bundle", "coins", "laurels" };
-        private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Coins", "Laurels" };
+        private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Coins", LobbyCurrencyNames.Premium };
         private static readonly string[] Odds =
         {
             "Placeholder odds per reward kind; illustrative only.",
-            "Coins: 40%", "Premium (Laurels): 20%", "District: 15%", "Suit: 15%", "Skin: 10%"
+            "Coins: 40%", LobbyCurrencyNames.Premium + ": 20%", "District: 15%", "Suit: 15%", "Skin: 10%"
         };
 
         private readonly ScrollView scroll;
@@ -151,7 +151,7 @@ namespace NodeWar.Lobby
                 AddOffer(5, "Free ad gift", "Ad reward placeholder. No ad is played in this build.", ClaimAction.Claim, LobbyIconKind.Laurel);
             int paid = Application.isMobilePlatform ? 5 : 6;
             for (int i = 0; i < paid; i++)
-                AddOffer(5, ((i + 1) * 100) + " Laurels", "Placeholder price in USD cents. No payment is made.",
+                AddOffer(5, ((i + 1) * 100) + " " + LobbyCurrencyNames.Premium, "Placeholder price in USD cents. No payment is made.",
                     ClaimAction.Price("USD cents", (i + 1) * 199), LobbyIconKind.Laurel);
         }
 

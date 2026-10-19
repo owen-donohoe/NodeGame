@@ -4,6 +4,19 @@ using NUnit.Framework;
 
 public class ClaimRequestTests
 {
+    [TestCase("Premium", "50 Laurels")]
+    [TestCase("premium", "50 Laurels")]
+    [TestCase("Laurels", "50 Laurels")]
+    [TestCase("Coins", "50 Coins")]
+    [TestCase("USD cents", "50 USD cents")]
+    public void PricesUseTheSharedCurrencyLabelWithoutChangingTheIdentifier(string kind, string label)
+    {
+        var action = ClaimAction.Price(kind, 50);
+        Assert.AreEqual(label, action.PrimaryLabel());
+        Assert.AreEqual(kind, action.CurrencyKind);
+        Assert.AreEqual("Laurels", LobbyCurrencyNames.Premium);
+    }
+
     [Test]
     public void LabelsAndOptionalDisclosure()
     {

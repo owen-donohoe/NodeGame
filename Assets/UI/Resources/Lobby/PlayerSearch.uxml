@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="PlayEntry.uss" />
+    <ui:Label text="Recent opponents" class="lb-entry-heading" />
+    <ui:VisualElement name="recent-opponents" />
+    <ui:TextField name="player-search" label="Name#TAG" max-length="32" class="lb-no-swipe" />
+    <ui:Button name="player-search-go" text="Search" />
+    <ui:Button name="search-code" text="Use a join code instead" />
+</ui:UXML>

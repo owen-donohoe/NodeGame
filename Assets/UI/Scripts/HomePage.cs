@@ -57,7 +57,7 @@ namespace NodeWar.Lobby
                 if (track != null) track.style.height = evt.newRect.height / 8f;
             });
             Root.RegisterCallback<DetachFromPanelEvent>(_ => OnHide());
-            SetMode(PlayerProfile.Instance != null ? PlayerProfile.Instance.SelectedGameMode : GameMode.Locked);
+            SetMode(LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default));
         }
 
         private static VisualElement Build(VisualTreeAsset fallback)
@@ -84,6 +84,19 @@ namespace NodeWar.Lobby
 #endif
             SelectedMode = Enum.IsDefined(typeof(GameMode), mode) ? mode : GameMode.Locked;
             var display = new HomeModeDisplay(SelectedMode);
+            if (modeName != null) modeName.text = display.Name;
+            if (modeIcon != null) modeIcon.Kind = display.Icon;
+            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour))
+            {
+                if (modeName != null) modeName.style.color = colour;
+                modeIcon?.SetResourceTint(colour);
+            }
+        }
+
+        public void SetMode(LobbyModeSelection selection)
+        {
+            SelectedMode = selection.LegacyMode;
+            var display = new HomeModeDisplay(selection);
             if (modeName != null) modeName.text = display.Name;
             if (modeIcon != null) modeIcon.Kind = display.Icon;
             if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour))

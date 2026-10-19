@@ -7,9 +7,9 @@
             <ui:Label name="purse-coin-value" text="—" picking-mode="Ignore" />
             <ui:Label text="+" class="lb-currency-plus" picking-mode="Ignore" />
         </ui:Button>
-        <ui:Button name="purse-leaf" class="ui-reset-button lb-currency" tooltip="Buy Laurels">
+        <ui:Button name="purse-leaf" class="ui-reset-button lb-currency">
             <lobby:LobbyIcon kind="Laurel" context="TopBar" picking-mode="Ignore" />
-            <ui:Label text="Laurels" picking-mode="Ignore" />
+            <ui:Label name="purse-premium-name" picking-mode="Ignore" />
             <ui:Label name="purse-leaf-value" text="—" picking-mode="Ignore" />
             <ui:Label text="+" class="lb-currency-plus" picking-mode="Ignore" />
         </ui:Button>

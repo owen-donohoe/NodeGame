@@ -106,6 +106,10 @@ namespace NodeWar.Lobby
         private readonly string[] notifications = System.Array.Empty<string>();
         private LocalCrateInventory crateInventory;
         private HomePage homePage;
+        private LobbyModePicker modePicker;
+        private LobbyModeSelection selectedMode;
+        private LobbyPlayFlow playFlow;
+        private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
         public NodeWar.Backend.ICrateInventory Crates => crateInventory;
@@ -187,6 +191,10 @@ namespace NodeWar.Lobby
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             homePage?.OnHide();
             homePage = null;
+            playFlow?.Dispose();
+            playFlow = null;
+            workshopStage?.Dispose();
+            workshopStage = null;
             if (crateInventory != null) crateInventory.Changed -= RefreshCrateBadges;
             crateInventory = null;
             safeAreaRoot = pillDock = null;
@@ -206,6 +214,7 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Dispose();
 
             playPopup = null;
+            modePicker = null;
             profilePage = null;
 
             // Before dropping it: a slider moved without the page being closed
@@ -252,6 +261,7 @@ namespace NodeWar.Lobby
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
+            playFlow?.Update();
             burgerPanel?.Update();
             bellPanel?.Update();
             WatchStageLoadout();
@@ -314,6 +324,8 @@ namespace NodeWar.Lobby
             BindNav(root, "nav-guild", LobbyPageID.Guild);
 
             BuildPlayPopup();
+            BuildModePicker();
+            playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
             RegisterPages();
             WireOverlays(root);
 
@@ -390,6 +402,7 @@ namespace NodeWar.Lobby
             int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
             if (!StageLoadoutTypes.Same(districts, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
             {
+                workshopStage?.LoadoutReset();
                 stage.SetLoadout(districts, suits);
                 stageDistrictTypes = districts;
                 stageSuitTypes = suits;
@@ -397,6 +410,13 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
             stageDistrictIds = profile?.data.loadout.nodeIDs == null ? null : (string[])profile.data.loadout.nodeIDs.Clone();
             stageSuitIds = profile?.data.loadout.suitIDs == null ? null : (string[])profile.data.loadout.suitIDs.Clone();
+        }
+
+        private void RefreshWorkshopStage()
+        {
+            stageDistrictTypes = stageSuitTypes = null;
+            RefreshStageLoadout();
+            if (navigation?.CurrentPageID == LobbyPageID.Workshop) workshopStage?.RefreshInspection();
         }
 
         /// <summary>
@@ -475,10 +495,20 @@ namespace NodeWar.Lobby
 
         private void OnPlayRequested()
         {
-            if (playPopup != null)
-                playPopup.Show(homePage?.SelectedMode ?? GameMode.Locked);
-            else if (toast != null)
-                toast.Show("Cannot open the battle sheet: its layout is not assigned");
+            playFlow?.Play(selectedMode);
+        }
+
+        private void BuildModePicker()
+        {
+            selectedMode = LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default);
+            modePicker = new LobbyModePicker(sheet);
+            modePicker.Selected += selection =>
+            {
+                selectedMode = selection;
+                var profile = PlayerProfile.Instance;
+                if (profile != null) { selection.Store(ref profile.data); profile.Save(); }
+                homePage?.SetMode(selection);
+            };
         }
 
         /// <summary>
@@ -488,7 +518,9 @@ namespace NodeWar.Lobby
         private void RegisterPages()
         {
             navigation.Register(new ShopPage(shopPageLayout, sheet, toast, menu));
-            navigation.Register(new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet));
+            var workshop = new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet);
+            navigation.Register(workshop);
+            workshopStage = new WorkshopStageBinding(workshop, stage, router, lobbyRoot, RefreshWorkshopStage);
 
             if (homePageLayout != null || Resources.Load<VisualTreeAsset>("Lobby/HomePage") != null)
             {
@@ -497,10 +529,9 @@ namespace NodeWar.Lobby
                         && Routes != null && Routes.Count == 0, crateInventory);
                 homePage = home;
                 home.PlayRequested += OnPlayRequested;
-                home.ModeRequested += OnPlayRequested;
+                home.ModeRequested += () => modePicker.Open(selectedMode);
                 home.CrateRequested += size =>
                 crateScreen?.Open(size, crateInventory);
-                if (playPopup != null) playPopup.ModeChanged += home.SetMode;
                 home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }

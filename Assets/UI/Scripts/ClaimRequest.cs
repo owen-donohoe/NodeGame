@@ -24,7 +24,7 @@ namespace NodeWar.Lobby
             return new ClaimAction(ClaimActionKind.Price, currencyKind, amount);
         }
         public string PrimaryLabel() => Kind == ClaimActionKind.Ok ? "OK" : Kind == ClaimActionKind.Claim ? "Claim" :
-            Amount.ToString(CultureInfo.InvariantCulture) + " " + CurrencyKind;
+            Amount.ToString(CultureInfo.InvariantCulture) + " " + LobbyCurrencyNames.Display(CurrencyKind);
     }
 
     public sealed class ClaimRequest
