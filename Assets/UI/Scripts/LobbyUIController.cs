@@ -619,7 +619,7 @@ namespace NodeWar.Lobby
                 if (profilePage.ViewingSelf) stage.ShowShot(StageShot.Ocean);
                 profilePage.Root.BringToFront();
                 promote(profilePage.Root.parent);
-                router.Open(new LobbyOverlay("profile", profilePage.ViewingSelf ? OverlayKind.Panel : OverlayKind.Sheet, true, profilePage.ViewingSelf), profilePage.Close);
+                router.Open(new LobbyOverlay("profile", profilePage.ViewingSelf ? OverlayKind.Panel : OverlayKind.Sheet, true), profilePage.Close);
             };
             profilePage.Closed += () =>
             {
