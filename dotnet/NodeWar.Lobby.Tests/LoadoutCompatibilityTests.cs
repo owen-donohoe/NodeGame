@@ -175,7 +175,8 @@ namespace NodeWar.Lobby.Tests
             {
                 "username", "uuid", "trophies", "loadout", "unlockedSuitIDs", "unlockedNodeIDs",
                 "selectedGameModeIndex", "boxesAvailable", "boxProgress", "workshopTabIndex",
-                "accountLinkPromptShown", "settings", "lobbyModeVersion", "selectedLobbyModeIndex", "privateLobbyMode"
+                "accountLinkPromptShown", "settings", "lobbyModeVersion", "selectedLobbyModeIndex", "privateLobbyMode",
+                "loadoutPresets", "activeLoadoutPreset"
             };
             CollectionAssert.AreEquivalent(keys, typeof(PlayerProfileData).GetFields().Select(f => f.Name));
 
@@ -208,3 +209,4 @@ namespace NodeWar.Lobby.Tests
         }
     }
 }
+

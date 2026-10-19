@@ -183,6 +183,22 @@ namespace NodeWar.Lobby
             // Until rank is confirmed, fallback display must not trim a saved high deck.
             if (playerState?.Rank != null) SaveToProfile();
         }
+        private void SwitchPreset(int index)
+        {
+            if (!session.IsOpen || inventoryBusy) return;
+            var profile = PlayerProfile.Instance;
+            if (profile == null || profile.data.activeLoadoutPreset == index) return;
+            CancelReplacement();
+            CloseItemPanel();
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            var chosen = LoadoutPresets.Switch(ref profile.data, index, arena,
+                id => catalog.IsSuitOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse,
+                id => catalog.IsDistrictOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse);
+            loadout = new LoadoutScreenModel(chosen);
+            profile.Save();
+            LoadoutChanged?.Invoke();
+            Render();
+        }
         private void SaveToProfile()
         {
             PlayerProfile profile = PlayerProfile.Instance;
@@ -693,3 +709,4 @@ namespace NodeWar.Lobby
         }
     }
 }
+

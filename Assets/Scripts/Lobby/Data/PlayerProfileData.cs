@@ -28,6 +28,9 @@ namespace NodeWar.Lobby
         // requested default costs no migration.
         public int workshopTabIndex;
 
+        public LoadoutRecord[] loadoutPresets;
+        public int activeLoadoutPreset;
+
         // Older saves omit this field and start false: the reminder has
         // not been shown on this device yet.
         public bool accountLinkPromptShown;
@@ -47,3 +50,4 @@ namespace NodeWar.Lobby
         }
     }
 }
+
