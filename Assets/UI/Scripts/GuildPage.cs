@@ -150,8 +150,33 @@ namespace NodeWar.Lobby
             var scroll = home.Q<ScrollView>("guild-home-scroll"); scroll.Clear();
             var announcements = GuildViews.Card("Announcements");
             RenderPosts(announcements, guild.Pinned, true); RenderPosts(announcements, guild.Feed, false);
+            if ((guild.Pinned?.Count ?? 0) + (guild.Feed?.Count ?? 0) == 0)
+                announcements.Add(PlayerCardViews.Text("No announcements yet."));
             scroll.Add(announcements);
+            var members = GuildViews.Card(null);
+            var heading = new VisualElement(); heading.AddToClassList("mk-spread");
+            var title = PlayerCardViews.Text("Members"); title.AddToClassList("mk-h3"); title.AddToClassList("lb-guild-row-text");
+            heading.Add(title);
+            var order = GuildMemberOrder.OnlineByRR;
+            var roster = new VisualElement();
+            Action render = () =>
+            {
+                roster.Clear();
+                foreach (var member in GuildMembers.Sorted(guild.Members, order))
+                    roster.Add(GuildViews.Member(member, () => OpenMember(member)));
+                if (roster.childCount == 0) roster.Add(PlayerCardViews.Text("No members to show."));
+            };
+            var sort = new Button { text = "Online · RR" };
+            sort.AddToClassList("lb-guild-sort"); sort.AddToClassList("mk-chip");
+            sort.clicked += () =>
+            {
+                order = (GuildMemberOrder)(((int)order + 1) % 3);
+                sort.text = order == GuildMemberOrder.OnlineByRR ? "Online · RR" : order == GuildMemberOrder.Seniority ? "Seniority" : "All · RR";
+                render();
+            };
+            heading.Add(sort); members.Add(heading); members.Add(roster); render(); scroll.Add(members);
         }
+
         private static void RenderPosts(VisualElement host, List<GuildPost> posts, bool pinned)
         {
             if (posts == null) return;
