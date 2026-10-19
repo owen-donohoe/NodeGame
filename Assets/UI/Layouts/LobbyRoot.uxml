@@ -119,7 +119,7 @@
                             <lobby:LobbyIcon context="NavBar" kind="NavBarSocial" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
                         <engine:Button name="nav-guild" class="ui-reset-button lb-tab lb-tab--last" tooltip="Guild">
-                            <lobby:LobbyIcon context="NavBar" kind="NavBarSocial" class="lb-icon" picking-mode="Ignore" />
+                            <lobby:LobbyIcon context="NavBar" kind="Guild" class="lb-icon" picking-mode="Ignore" />
                         </engine:Button>
                     </engine:VisualElement>
                 </engine:VisualElement>

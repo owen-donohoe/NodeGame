@@ -192,6 +192,21 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Food: DrawFood(p); break;
                 case LobbyIconKind.Materials: DrawMaterials(p); break;
                 case LobbyIconKind.Metal: DrawMetal(p); break;
+                case LobbyIconKind.Burger: DrawBurger(p); break;
+                case LobbyIconKind.Bell: DrawBell(p); break;
+                case LobbyIconKind.Funnel: DrawFunnel(p); break;
+                case LobbyIconKind.Swap: DrawSwap(p); break;
+                case LobbyIconKind.CrateSmall: DrawCrate(p, false); break;
+                case LobbyIconKind.CrateMedium: DrawCrate(p, true); break;
+                case LobbyIconKind.Info: DrawInfo(p); break;
+                case LobbyIconKind.Spectate: DrawSpectate(p); break;
+                case LobbyIconKind.Chat: DrawChat(p); break;
+                case LobbyIconKind.Guild: DrawGuild(p); break;
+                case LobbyIconKind.Refresh: DrawRespawn(p); break;
+                case LobbyIconKind.AddFriend: DrawAddFriend(p); break;
+                case LobbyIconKind.Invite: DrawInvite(p); break;
+                case LobbyIconKind.Search: DrawSearch(p); break;
+                case LobbyIconKind.Laurel: DrawLaurel(p); break;
                 default:
                     RoundedRect(p, 3f, 3f, 18f, 18f, 4f);
                     p.Stroke();
@@ -208,6 +223,136 @@ namespace NodeWar.Lobby
 
             cache[kind] = image;
             return image;
+        }
+
+        private static void Line(Painter2D p, float x1, float y1, float x2, float y2)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(x1, y1));
+            p.LineTo(new Vector2(x2, y2));
+            p.Stroke();
+        }
+
+        private static void DrawBurger(Painter2D p)
+        {
+            p.lineWidth = 2.2f;
+            Line(p, 4, 6, 20, 6);
+            Line(p, 4, 12, 20, 12);
+            Line(p, 4, 18, 20, 18);
+        }
+
+        private static void DrawBell(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath();
+            p.MoveTo(new Vector2(4, 17));
+            p.LineTo(new Vector2(6, 14));
+            p.LineTo(new Vector2(6, 9));
+            p.Arc(new Vector2(12, 9), 6, 180, 360);
+            p.LineTo(new Vector2(18, 14));
+            p.LineTo(new Vector2(20, 17));
+            p.ClosePath(); p.Stroke();
+            Line(p, 10, 21, 14, 21);
+            Line(p, 12, 1, 12, 3);
+        }
+
+        private static void DrawFunnel(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath();
+            p.MoveTo(new Vector2(3, 4)); p.LineTo(new Vector2(21, 4));
+            p.LineTo(new Vector2(14, 12)); p.LineTo(new Vector2(14, 20));
+            p.LineTo(new Vector2(10, 18)); p.LineTo(new Vector2(10, 12));
+            p.ClosePath(); p.Stroke();
+        }
+
+        private static void DrawSwap(Painter2D p)
+        {
+            p.lineWidth = 2;
+            Line(p, 4, 7, 20, 7); Line(p, 16, 3, 20, 7); Line(p, 16, 11, 20, 7);
+            Line(p, 4, 17, 20, 17); Line(p, 4, 17, 8, 13); Line(p, 4, 17, 8, 21);
+        }
+
+        private static void DrawCrate(Painter2D p, bool medium)
+        {
+            p.lineWidth = 2;
+            RoundedRect(p, medium ? 2 : 5, medium ? 5 : 8, medium ? 20 : 14, medium ? 16 : 13, 2);
+            p.Stroke();
+            Line(p, medium ? 2 : 5, 12, medium ? 22 : 19, 12);
+            Line(p, 10, medium ? 5 : 8, 10, 21);
+            Line(p, 14, medium ? 5 : 8, 14, 21);
+        }
+
+        private static void DrawInfo(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(12, 12), 9, 0, 360); p.Stroke();
+            Line(p, 12, 11, 12, 17);
+            p.BeginPath(); p.Arc(new Vector2(12, 7), 1, 0, 360); p.Fill();
+        }
+
+        private static void DrawSpectate(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(2, 12));
+            p.QuadraticCurveTo(new Vector2(12, -2), new Vector2(22, 12));
+            p.QuadraticCurveTo(new Vector2(12, 26), new Vector2(2, 12));
+            p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(12, 12), 3, 0, 360); p.Fill();
+        }
+
+        private static void DrawChat(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(3, 4)); p.LineTo(new Vector2(21, 4));
+            p.LineTo(new Vector2(21, 17)); p.LineTo(new Vector2(10, 17));
+            p.LineTo(new Vector2(5, 21)); p.LineTo(new Vector2(5, 17));
+            p.LineTo(new Vector2(3, 17)); p.ClosePath(); p.Stroke();
+            Line(p, 7, 9, 17, 9); Line(p, 7, 13, 14, 13);
+        }
+
+        private static void DrawGuild(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(12, 2)); p.LineTo(new Vector2(21, 6));
+            p.LineTo(new Vector2(19, 16)); p.LineTo(new Vector2(12, 22));
+            p.LineTo(new Vector2(5, 16)); p.LineTo(new Vector2(3, 6)); p.ClosePath(); p.Stroke();
+            Line(p, 8, 9, 16, 9); Line(p, 12, 9, 12, 17);
+        }
+
+        private static void DrawAddFriend(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(9, 7), 4, 0, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(9, 21), 7, 180, 360); p.Stroke();
+            Line(p, 16, 11, 22, 11); Line(p, 19, 8, 19, 14);
+        }
+
+        private static void DrawInvite(Painter2D p)
+        {
+            p.lineWidth = 2;
+            RoundedRect(p, 2, 4, 18, 13, 2); p.Stroke();
+            Line(p, 3, 5, 11, 11); Line(p, 11, 11, 19, 5);
+            Line(p, 15, 20, 23, 20); Line(p, 19, 16, 19, 24);
+        }
+
+        private static void DrawSearch(Painter2D p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(10, 10), 7, 0, 360); p.Stroke();
+            Line(p, 15, 15, 22, 22);
+        }
+
+        private static void DrawLaurel(Painter2D p)
+        {
+            p.lineWidth = 1.8f;
+            p.BeginPath(); p.Arc(new Vector2(12, 10), 9, 20, 160); p.Stroke();
+            for (int i = 0; i < 3; i++)
+            {
+                float y = 6 + i * 4;
+                Line(p, 4, y, 7, y + 3); Line(p, 2, y + 2, 5, y + 4);
+                Line(p, 20, y, 17, y + 3); Line(p, 22, y + 2, 19, y + 4);
+            }
         }
 
         // ⌂ - a house outline.

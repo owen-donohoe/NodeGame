@@ -5,6 +5,27 @@ using NUnit.Framework;
 
 public class LobbyIconUsageTests
 {
+    [TestCase(LobbyIconKind.Burger, LobbyIconContext.TopBar)]
+    [TestCase(LobbyIconKind.Bell, LobbyIconContext.TopBar)]
+    [TestCase(LobbyIconKind.Funnel, LobbyIconContext.PageHeader)]
+    [TestCase(LobbyIconKind.Swap, LobbyIconContext.Home)]
+    [TestCase(LobbyIconKind.CrateSmall, LobbyIconContext.Home)]
+    [TestCase(LobbyIconKind.CrateMedium, LobbyIconContext.ShopCard)]
+    [TestCase(LobbyIconKind.Info, LobbyIconContext.PageHeader)]
+    [TestCase(LobbyIconKind.Spectate, LobbyIconContext.Profile)]
+    [TestCase(LobbyIconKind.Chat, LobbyIconContext.PageHeader)]
+    [TestCase(LobbyIconKind.Guild, LobbyIconContext.NavBar)]
+    [TestCase(LobbyIconKind.Refresh, LobbyIconContext.PageHeader)]
+    [TestCase(LobbyIconKind.AddFriend, LobbyIconContext.Profile)]
+    [TestCase(LobbyIconKind.Invite, LobbyIconContext.Home)]
+    [TestCase(LobbyIconKind.Search, LobbyIconContext.PageHeader)]
+    [TestCase(LobbyIconKind.Laurel, LobbyIconContext.TopBar)]
+    public void RedesignKindsHaveSemanticLocations(LobbyIconKind kind, LobbyIconContext context)
+    {
+        Assert.IsTrue(LobbyIconUsage.IsUsed(kind, context));
+        Assert.IsFalse(LobbyIconUsage.For(kind).Retired);
+    }
+
     private static readonly LobbyIconKind[] Retired =
     {
         LobbyIconKind.Shop, LobbyIconKind.Spark, LobbyIconKind.Smile, LobbyIconKind.Envelope,
