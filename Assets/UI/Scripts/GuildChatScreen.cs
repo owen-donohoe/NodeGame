@@ -112,7 +112,7 @@ namespace NodeWar.Lobby
             foreach (var row in rows)
             {
                 if (row == null) continue;
-                messages.Content.Add(PlayerCardViews.Text(PlayerCardViews.Handle(row.Sender) + ": " + row.Text));
+                messages.Content.Add(GuildViews.Message(row));
             }
             if (stick) list.schedule.Execute(StickToBottom);
         }

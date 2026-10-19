@@ -1,19 +1,30 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <ui:Style src="Guild.uss" />
-    <ui:VisualElement class="lb-page-paper" name="paper-GuildPage" rotate-paper="false"><ui:ScrollView class="lb-guild-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
-        <ui:Label text="Guild" class="lb-guild-title" />
-        <ui:VisualElement name="guild-state" />
-    </ui:ScrollView></ui:VisualElement>
-    <ui:VisualElement name="guild-visitor">
-        <ui:VisualElement class="lb-guild-search">
-            <ui:TextField name="guild-query" tooltip="Guild name" />
-            <lobby:PaperButton name="guild-search" class="lb-guild-searchbtn" tooltip="Search guilds" />
-            <lobby:PaperButton name="guild-filter" class="lb-guild-filterbtn" tooltip="Filter guilds"><ui:Label text="Filter" /></lobby:PaperButton>
+    <ui:VisualElement name="guild-state" class="lb-guild-state" />
+    <ui:VisualElement name="guild-visitor" class="lb-guild-visitor">
+        <ui:VisualElement name="guild-search-anchor" class="lb-guild-search-anchor">
+            <ui:Label text="GUILDS" class="mk-card mk-eyebrow lb-guild-title" />
+            <ui:VisualElement class="lb-guild-search">
+                <ui:TextField name="guild-query" class="mk-card" tooltip="Guild name · press Enter to search" />
+                <ui:Button name="guild-search" class="mk-btn lb-guild-searchbtn" tooltip="Search guilds" />
+                <ui:Button name="guild-filter" class="mk-btn lb-guild-filterbtn" tooltip="Filter guilds" />
+            </ui:VisualElement>
+            <ui:Button name="guild-browse-toggle" text="⌄" class="mk-btn lb-guild-browse-toggle" tooltip="Browse public guilds" />
         </ui:VisualElement>
-        <ui:VisualElement name="guild-search-results" />
-        <ui:Foldout name="guild-browse" text="Browse public guilds" value="false">
-            <lobby:PaperButton name="guild-refresh" text="Refresh" />
-            <ui:VisualElement name="guild-browse-results" />
-        </ui:Foldout>
+        <ui:ScrollView name="guild-results-scroll" class="lb-guild-results" mode="Vertical" vertical-scroller-visibility="Hidden">
+            <ui:VisualElement name="guild-search-results" />
+            <ui:VisualElement name="guild-browse-card" class="mk-card lb-guild-card">
+                <ui:VisualElement class="lb-guild-line">
+                    <ui:Label text="Public guilds" class="mk-eyebrow lb-guild-row-text" />
+                    <ui:Button name="guild-refresh" class="mk-btn mk-btn--sm" text="Refresh" />
+                </ui:VisualElement>
+                <ui:VisualElement name="guild-browse-results" />
+            </ui:VisualElement>
+        </ui:ScrollView>
     </ui:VisualElement>
-<ui:Style src="PaperLobby.uss" /></ui:UXML>
+    <ui:VisualElement name="guild-home" class="lb-guild-home">
+        <ui:VisualElement name="guild-home-header" />
+        <ui:ScrollView name="guild-home-scroll" class="lb-guild-home-scroll" mode="Vertical" vertical-scroller-visibility="Hidden" />
+    </ui:VisualElement>
+    <ui:Button name="guild-chat-button" text="Chat" class="mk-btn mk-btn--gold lb-guild-chat-button" />
+</ui:UXML>

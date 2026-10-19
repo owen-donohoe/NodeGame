@@ -9,6 +9,7 @@ namespace NodeWar.Backend
         public string GuildId;
         public string Name;
         public string IconId;
+        public string Description;
         public int Members;
         public int Capacity = 25;
         public bool Joinable;
@@ -22,7 +23,17 @@ namespace NodeWar.Backend
         public int MinMembers;
     }
 
-    public enum GuildPostKind { Announcement, Achievement, Invite, InBattle }
+    public enum GuildPostKind { Announcement, Achievement, Invite, InBattle, ChatAnnouncement, DistrictUnlocked, SuitUnlocked, TournamentWon, EraReached }
+    public enum GuildRole { Member, CoLeader, Leader }
+
+    public sealed class GuildMember
+    {
+        public PlayerCard Player;
+        public GuildRole Role;
+        public long JoinedUnix;
+        public bool Online;
+        public int RR;
+    }
 
     public sealed class GuildPost
     {
@@ -36,6 +47,9 @@ namespace NodeWar.Backend
     public sealed class GuildView
     {
         public GuildSummary Summary;
+        public string WeeklyReward;
+        public GuildRole OwnRole;
+        public List<GuildMember> Members = new List<GuildMember>();
         public int WeeklyProgress;
         public int WeeklyGoal;
         public List<GuildPost> Pinned = new List<GuildPost>();
@@ -54,6 +68,7 @@ namespace NodeWar.Backend
     public interface IGuildService
     {
         Task<GuildView> GetMineAsync();
+        Task<GuildView> GetAsync(string guildId);
         Task<List<GuildSummary>> SearchAsync(string query, GuildFilter filter);
         Task<List<GuildSummary>> BrowseAsync();
         Task<List<ChatMessage>> GetChatAsync();
@@ -65,7 +80,7 @@ namespace NodeWar.Backend
         private readonly Func<PlayerCard> sender;
         private readonly List<ChatMessage> chat = new List<ChatMessage>
         {
-            new ChatMessage { MessageId = "sample-chat-1", Sender = LocalSocialService.Sample("sample-brook"), Text = "Welcome to the Grove! 🌿", CreatedUnix = 1792281600 },
+            new ChatMessage { MessageId = "sample-chat-1", Sender = LocalSocialService.Sample("sample-brook"), Text = "Welcome to the Grove! \U0001F33F", CreatedUnix = 1792281600 },
             new ChatMessage { MessageId = "sample-chat-2", Sender = LocalSocialService.Sample("sample-ash"), Text = "Ready for a match?", CreatedUnix = 1792281601 }
         };
         public bool InGuild { get; set; }
@@ -75,19 +90,37 @@ namespace NodeWar.Backend
         public Task<GuildView> GetMineAsync()
         {
             if (!InGuild) return Task.FromResult<GuildView>(null);
+            return GetAsync("sample-grove");
+        }
+
+        public Task<GuildView> GetAsync(string guildId)
+        {
+            var summary = Samples().Find(guild => guild.GuildId == guildId);
+            if (summary == null) return Task.FromResult<GuildView>(null);
+            var members = new List<GuildMember>();
+            for (int i = 0; i < summary.Members; i++)
+            {
+                string[] ids = { "sample-brook", "sample-ash", "sample-cedar", "sample-dune" };
+                var player = LocalSocialService.Sample(ids[i % ids.Length]);
+                if (i >= ids.Length) player = new PlayerCard { PlayerId = guildId + "-member-" + i, Name = "Sailor " + (i + 1), Tag = "SEA", RR = 300 - i * 7 };
+                members.Add(new GuildMember { Player = player, Role = i == 0 ? GuildRole.Leader : i == 1 ? GuildRole.CoLeader : GuildRole.Member,
+                    JoinedUnix = 1792200000 + i * 3600, Online = i < 3, RR = player.RR });
+            }
             return Task.FromResult(new GuildView
             {
-                Summary = Samples()[0], WeeklyProgress = 7, WeeklyGoal = 20, OnlineCount = 3,
-                Pinned = new List<GuildPost> { Post("pin", GuildPostKind.Announcement, "Welcome! Weekly goal: play together.", null) },
+                Summary = summary, WeeklyProgress = 7, WeeklyGoal = 20, WeeklyReward = "a guild reward crate",
+                OwnRole = GuildRole.CoLeader, Members = members, OnlineCount = 3,
+                Pinned = new List<GuildPost> { Post("pin", GuildPostKind.Announcement, "Welcome! Play together to fill our weekly crate.", null) },
                 Feed = new List<GuildPost>
                 {
-                    Post("achievement", GuildPostKind.Achievement, "Brook reached a new era.", LocalSocialService.Sample("sample-brook")),
-                    Post("invite", GuildPostKind.Invite, "Join a friendly match.", LocalSocialService.Sample("sample-brook")),
-                    Post("battle", GuildPostKind.InBattle, "Ash is in battle.", LocalSocialService.Sample("sample-ash"))
+                    Post("chat", GuildPostKind.ChatAnnouncement, "Brook: Tournament practice tonight!", LocalSocialService.Sample("sample-brook")),
+                    Post("district", GuildPostKind.DistrictUnlocked, "Ash unlocked a new district.", LocalSocialService.Sample("sample-ash")),
+                    Post("suit", GuildPostKind.SuitUnlocked, "Cedar unlocked a new suit.", LocalSocialService.Sample("sample-cedar")),
+                    Post("tournament", GuildPostKind.TournamentWon, "Brook won a tournament!", LocalSocialService.Sample("sample-brook")),
+                    Post("era", GuildPostKind.EraReached, "Ash reached a new era.", LocalSocialService.Sample("sample-ash"))
                 }
             });
         }
-
         public Task<List<GuildSummary>> SearchAsync(string query, GuildFilter filter)
         {
             var results = new List<GuildSummary>();
@@ -124,9 +157,9 @@ namespace NodeWar.Backend
 
         private static List<GuildSummary> Samples() => new List<GuildSummary>
         {
-            new GuildSummary { GuildId = "sample-grove", Name = "The Grove", IconId = "grove", Members = 18, Joinable = true },
-            new GuildSummary { GuildId = "sample-spire", Name = "Spire", IconId = "spire", Members = 25, MinRR = 700, Joinable = false },
-            new GuildSummary { GuildId = "sample-tide", Name = "Tide", IconId = "tide", Members = 8, MinRR = 300, Joinable = true }
+            new GuildSummary { GuildId = "sample-grove", Name = "The Grove", IconId = "grove", Description = "Grow together. Friendly matches, weekly rewards and a place for every captain.", Members = 18, Joinable = true },
+            new GuildSummary { GuildId = "sample-spire", Name = "Spire", IconId = "spire", Description = "Climb higher with us. A competitive crew for the next era.", Members = 25, MinRR = 700, Joinable = false },
+            new GuildSummary { GuildId = "sample-tide", Name = "Tide", IconId = "tide", Description = "Follow the tide. New captains welcome; sail and learn together.", Members = 8, MinRR = 300, Joinable = true }
         };
     }
 }

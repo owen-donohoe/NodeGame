@@ -36,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: 29ad7b26
+verified: 52b19ade
 ---
 
 # Backend client
@@ -56,7 +56,7 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 - `IPlayerStateService.GetAsync()` returns `PlayerState`; `IInventoryService.EquipAsync(EquippedRecord changes)` and `IHandleService.SetHandleAsync(name, tag, requestId)` (`BackendServices.Handles`; server only) return accepted state.
 - `IMatchReportService.ReportAsync(matchId, byte[] log)` returns `MatchReportingResult` with nullable `state`, `message`, `playerState`; UGS sends base64 to `ReportMatch`.
 - `IMatchHistoryService.GetAsync()` returns `List<MatchHistoryEntry>`: ID, opponent ID and snapshotted `OpponentName`/`OpponentTag`, state, creation time, optional win/RR delta/arena.
-- `IGuildService.GetMineAsync/SearchAsync/BrowseAsync/GetChatAsync/SendChatAsync` supplies membership, filtered summaries, public browse and chat. `LocalGuildService.InGuild` switches sample membership. `GuildFilters`, `GuildChatText` and session-scoped `GuildBrowseCache` guard filtering, 200-character messages and load-once/explicit-refresh browse policy.
+- `IGuildService.GetMineAsync/GetAsync/SearchAsync/BrowseAsync/GetChatAsync/SendChatAsync` supplies membership, details, search, browse and chat. Views include descriptions, member roles/seniority/online/RR, own role, announcements and weekly rewards. `GuildMembers.Sorted` copies with ID ties; `IsOfficer` gates moderation. `LocalGuildService.InGuild` switches sample membership. `GuildFilters`, `GuildChatText` and `GuildBrowseCache` guard filters, 200-character messages and session browse caching.
 - `ISocialService.GetLiveMatchesAsync/GetFriendsAsync` return `LiveMatch`/`PlayerCard` lists. `IProfileService.GetAsync(playerId)` returns `PublicProfileView`: card, nullable stats, lobby loadout IDs and recent summaries. `UgsProfileService` calls `GetProfileView`, rejects account changes, and supports empty ID for self. Server presence is Offline; stats are Matches/Wins/Losses/Streak/BestRR. Local profiles use accepted self state/local slots/history or deterministic samples.
 - `IRankedQueueService.EnqueueAsync()` returns ticket ID; `PollAsync(ticketId)` returns `RankedQueueResult` (Searching/Found/Failed/TimedOut/Cancelled, match ID, message); `CancelAsync(ticketId)` deletes it.
 - `IRankedMatchService`: `RendezvousAsync(matchId, joinCode)`, `ConfirmConnectedAsync(matchId)`, `LeaveAsync(matchId, forfeit)`, `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)` map to Cloud Code `Rendezvous`, `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`, `ResolveHold`.

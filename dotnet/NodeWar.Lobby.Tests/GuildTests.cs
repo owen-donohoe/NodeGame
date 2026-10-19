@@ -96,6 +96,42 @@ namespace NodeWar.Lobby.Tests
             Assert.ThrowsAsync<ArgumentException>(() => service.SendChatAsync(" "));
         }
 
+        [TestCase(GuildMemberOrder.OnlineByRR, "c,a,b")]
+        [TestCase(GuildMemberOrder.Seniority, "a,b,c")]
+        [TestCase(GuildMemberOrder.AllByRR, "b,c,a")]
+        public void Members_SortCopyWithStableIdTies(GuildMemberOrder order, string expected)
+        {
+            var members = new List<GuildMember>
+            {
+                new GuildMember { Player = new PlayerCard { PlayerId = "c" }, Online = true, RR = 200, JoinedUnix = 3 },
+                new GuildMember { Player = new PlayerCard { PlayerId = "b" }, Online = false, RR = 200, JoinedUnix = 1 },
+                new GuildMember { Player = new PlayerCard { PlayerId = "a" }, Online = true, RR = 100, JoinedUnix = 1 }
+            };
+            Assert.AreEqual(expected, string.Join(",", GuildMembers.Sorted(members, order).ConvertAll(m => m.Player.PlayerId)));
+            Assert.AreEqual("c", members[0].Player.PlayerId);
+            members.Reverse();
+            Assert.AreEqual(expected, string.Join(",", GuildMembers.Sorted(members, order).ConvertAll(m => m.Player.PlayerId)));
+        }
+
+        [Test]
+        public async Task Details_IncludeRosterRolesAndAnnouncementKinds()
+        {
+            var service = new LocalGuildService { InGuild = true };
+            var guild = await service.GetMineAsync();
+            Assert.IsNotEmpty(guild.Summary.Description);
+            Assert.IsNotEmpty(guild.WeeklyReward);
+            Assert.AreEqual(guild.Summary.Members, guild.Members.Count);
+            Assert.AreEqual(guild.OnlineCount, guild.Members.FindAll(m => m.Online).Count);
+            Assert.IsTrue(GuildMembers.IsOfficer(guild.OwnRole));
+            Assert.IsFalse(GuildMembers.IsOfficer(GuildRole.Member));
+            Assert.AreEqual(GuildRole.Leader, guild.Members[0].Role);
+            Assert.AreEqual(GuildRole.CoLeader, guild.Members[1].Role);
+            Assert.AreEqual(GuildRole.Member, guild.Members[2].Role);
+            Assert.AreEqual(5, guild.Feed.Count);
+            Assert.IsNull(await service.GetAsync("missing"));
+            Assert.AreEqual("Tide", (await service.GetAsync("sample-tide")).Summary.Name);
+            Assert.IsEmpty(GuildMembers.Sorted(null, GuildMemberOrder.OnlineByRR));
+        }
         private sealed class StubGuild : IGuildService
         {
             public int Calls;
@@ -107,6 +143,7 @@ namespace NodeWar.Lobby.Tests
                 if (Fail) throw new InvalidOperationException();
                 return Pending?.Task ?? Task.FromResult(new List<GuildSummary>());
             }
+            public Task<GuildView> GetAsync(string guildId) => Task.FromResult<GuildView>(null);
             public Task<GuildView> GetMineAsync() => Task.FromResult<GuildView>(null);
             public Task<List<GuildSummary>> SearchAsync(string query, GuildFilter filter) => BrowseAsync();
             public Task<List<ChatMessage>> GetChatAsync() => Task.FromResult(new List<ChatMessage>());
