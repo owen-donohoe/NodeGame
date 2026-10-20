@@ -36,6 +36,10 @@ namespace NodeWar.Lobby
         private readonly Vector3[] slotPositions = new Vector3[StageSlots.Count];
         private readonly Vector3[] slotDirections = new Vector3[StageSlots.Count];
         private readonly GameObject[] outlines = new GameObject[StageSlots.Count];
+        private readonly Renderer[] clusterRenderers = new Renderer[StageSlots.Count * 3];
+        private Renderer[] suitRenderers = Array.Empty<Renderer>();
+        private Bounds clusterEnvelope;
+        private float workshopTop = 0.21f, workshopBottom = 0.55f, workshopAspect;
         private readonly float[] separations = new float[StageSlots.Count];
         private readonly Transform[] marketmen = new Transform[5];
         private readonly GameObject[] marketStalls = new GameObject[5];
@@ -125,8 +129,13 @@ namespace NodeWar.Lobby
                 Vector3 backing = outlines[i].transform.localPosition;
                 backing.y = districts[i].transform.localPosition.y;
                 outlines[i].transform.localPosition = backing;
+                clusterRenderers[i * 3] = ground.GetComponent<Renderer>();
+                clusterRenderers[i * 3 + 1] = districts[i].GetComponent<Renderer>();
+                clusterRenderers[i * 3 + 2] = outlines[i].GetComponent<Renderer>();
                 districts[i].SetActive(false);
             }
+
+            CacheClusterEnvelope();
 
             var market = new GameObject("Market node");
             market.transform.SetParent(transform, false);
@@ -240,10 +249,14 @@ namespace NodeWar.Lobby
                     target = new Vector3(18f, 0f, 0f);
                     position = target + new Vector3(0f, 9f, -12f);
                     break;
+                case StageShot.Districts:
                 case StageShot.Suits:
-                    target = slotPositions[1] + new Vector3(0f, 0.7f, -0.55f);
-                    position = target + new Vector3(0f, 3f, -5f);
-                    break;
+                    var half = clusterEnvelope.extents;
+                    var fit = StageClusterFraming.Fit(stageCamera.aspect, workshopTop, workshopBottom,
+                        shot == StageShot.Suits, half.x, half.y, half.z);
+                    rotation = Quaternion.Euler(fit.Pitch, 0f, 0f);
+                    position = clusterEnvelope.center - rotation * Vector3.forward * fit.Distance - rotation * Vector3.up * fit.UpOffset;
+                    return;
                 default:
                     target = new Vector3(0f, -1.5f, 0f);
                     // Leave room for the separated cluster at the lobby's 390:844 portrait aspect.
@@ -253,6 +266,54 @@ namespace NodeWar.Lobby
             rotation = Quaternion.LookRotation(target - position, Vector3.up);
         }
 
+        private static Vector3 Corner(Bounds bounds, int index) => new Vector3(
+            (index & 1) == 0 ? bounds.min.x : bounds.max.x,
+            (index & 2) == 0 ? bounds.min.y : bounds.max.y,
+            (index & 4) == 0 ? bounds.min.z : bounds.max.z);
+
+        private void CacheClusterEnvelope()
+        {
+            bool first = true;
+            foreach (var renderer in clusterRenderers)
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 point = transform.InverseTransformPoint(renderer.transform.TransformPoint(Corner(renderer.localBounds, i)));
+                    if (first) { clusterEnvelope = new Bounds(point, Vector3.zero); first = false; }
+                    else clusterEnvelope.Encapsulate(point);
+                }
+            // Selection separates plots by 0.65 and replacement jitters by at most 0.025.
+            clusterEnvelope.Expand(new Vector3(1.4f, 0f, 1.4f));
+        }
+
+        public void SetWorkshopBand(float top, float bottom)
+        {
+            if (Mathf.Approximately(top, workshopTop) && Mathf.Approximately(bottom, workshopBottom) &&
+                Mathf.Approximately(stageCamera.aspect, workshopAspect)) return;
+            workshopTop = top; workshopBottom = bottom; workshopAspect = stageCamera.aspect;
+            if (currentShot == StageShot.Districts || currentShot == StageShot.Suits) ShowShot(currentShot);
+        }
+
+        /// <summary>Current cluster bounds in bottom-origin viewport coordinates, including empty plots and suits.</summary>
+        public bool TryGetClusterViewportBounds(out Rect bounds)
+        {
+            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            bool valid = true;
+            void Include(Renderer renderer)
+            {
+                if (!renderer.gameObject.activeInHierarchy) return;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 point = stageCamera.WorldToViewportPoint(Corner(renderer.bounds, i));
+                    if (point.z <= stageCamera.nearClipPlane) { valid = false; continue; }
+                    min = Vector2.Min(min, point); max = Vector2.Max(max, point);
+                }
+            }
+            foreach (var renderer in clusterRenderers) Include(renderer);
+            foreach (var renderer in suitRenderers) Include(renderer);
+            bounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            return valid && !float.IsInfinity(min.y);
+        }
         public void SetLoadout(int[] districtTypes, int[] suitTypes)
         {
             equipped = Mathf.Min(districtTypes == null ? 0 : districtTypes.Length, StageSlots.Count);
@@ -275,6 +336,7 @@ namespace NodeWar.Lobby
                 Destroy(suits[i].gameObject);
             }
             suits = new Transform[suitTypes == null ? 0 : suitTypes.Length];
+            suitRenderers = new Renderer[suits.Length];
             suitTargets = new Vector3[suits.Length];
             suitWaits = new float[suits.Length];
             focusedSuit = -1;
@@ -283,7 +345,7 @@ namespace NodeWar.Lobby
                 var suit = Cutout("Suit " + i, plots[1], PaperKind.Villager,
                     new Vector3((i % 3 - 1) * 0.5f, 0.03f, -0.55f),
                     new Vector2(0.7f, 1.1f), TypeTint(suitTypes[i], "suit_"));
-                suits[i] = suit.transform;
+                suits[i] = suit.transform; suitRenderers[i] = suit.GetComponent<Renderer>();
                 suitTargets[i] = suit.transform.localPosition;
                 suitWaits[i] = UnityEngine.Random.Range(0.2f, 1.5f);
             }

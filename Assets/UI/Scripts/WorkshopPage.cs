@@ -26,6 +26,8 @@ namespace NodeWar.Lobby
         private readonly VisualElement unlocked;
         private readonly Label eraMessage;
         private readonly ScrollView grid;
+        private readonly VisualElement firstPanel, panelSpace, stageWindow;
+        private float stageBandHeight = 220f;
 
         private readonly Button ownedFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
@@ -49,7 +51,8 @@ namespace NodeWar.Lobby
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
         private Tab activeTab;
         public bool IsOpen => session.IsOpen;
-        public VisualElement StageWindow => Root.Q<VisualElement>("workshop-window");
+        public VisualElement StageWindow => stageWindow;
+        public float StageViewportTop => grid.contentViewport.worldBound.y;
         public event Action Hidden;
         public event Action<bool> ViewChanged;
         public bool ReplacingSuit => loadout.ReplacingSuit;
@@ -84,10 +87,13 @@ namespace NodeWar.Lobby
             unlocked.RegisterCallback<GeometryChangedEvent>(_ => SizeCards());
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
+            grid.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            firstPanel = Root.Q("workshop-panel1"); panelSpace = Root.Q("workshop-panel1-space");
+            stageWindow = Root.Q("workshop-window");
             // Render the sticky first card last, above the scrolling second card.
-            Root.Q("workshop-panel1").BringToFront();
+            firstPanel.BringToFront();
             Root.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
-            Root.Q("workshop-panel1").RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
+            firstPanel.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
             grid.verticalScroller.valueChanged += _ => UpdateScrollLayout();
             ownedFilter = Root.Q<Button>("workshop-owned");
             sortFilter = Root.Q<Button>("workshop-sort");
@@ -126,16 +132,22 @@ namespace NodeWar.Lobby
             _ = LoadInventoryAsync(visit);
         }
         public override void OnHide() { CloseInventory(); Hidden?.Invoke(); }
+        public void SetStageViewportBottom(float bottom)
+        {
+            if (grid.panel == null) return;
+            var panel = Root.panel.visualTree.worldBound;
+            float height = Mathf.Max(0, panel.y + bottom * panel.height + 12f - StageViewportTop);
+            if (!Mathf.Approximately(height, stageBandHeight)) stageBandHeight = height;
+            UpdateScrollLayout();
+        }
+
         private void UpdateScrollLayout()
         {
             if (grid?.panel == null) return;
-            var first = Root.Q("workshop-panel1");
-            float screenHeight = Root.panel.visualTree.worldBound.height;
-            float band = Mathf.Max(0, screenHeight * 0.46f - grid.contentViewport.worldBound.y);
-            if (!Mathf.Approximately(StageWindow.layout.height, band)) StageWindow.style.height = band;
-            var space = Root.Q("workshop-panel1-space");
-            if (!Mathf.Approximately(space.layout.height, first.layout.height)) space.style.height = first.layout.height;
-            first.style.top = Mathf.Max(band, grid.scrollOffset.y);
+            if (Replacing && grid.scrollOffset != Vector2.zero) grid.scrollOffset = Vector2.zero;
+            if (!Mathf.Approximately(stageWindow.layout.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
+            if (!Mathf.Approximately(panelSpace.layout.height, firstPanel.layout.height)) panelSpace.style.height = firstPanel.layout.height;
+            firstPanel.style.top = Mathf.Max(stageBandHeight, grid.scrollOffset.y);
         }
         private void CollectItems()
         {
