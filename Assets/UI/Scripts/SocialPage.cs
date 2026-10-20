@@ -125,7 +125,7 @@ namespace NodeWar.Lobby
         private Button MiniPlayer(PlayerCard player, string colour)
         {
             var button = new Button(() => openProfile?.Invoke(player?.PlayerId)); button.AddToClassList("mk-card"); button.AddToClassList("g2-live-player"); button.AddToClassList(colour);
-            button.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "g2-player-name"));
+            button.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "mk-ellipsis"));
             button.Add(GuildViews.Text(player == null ? "\u2014" : new RankDisplay(player.RR).Name + " \u00b7 " + player.RR + " RR", "mk-cap"));
             button.SetEnabled(player != null); return button;
         }
@@ -167,7 +167,7 @@ namespace NodeWar.Lobby
                 var opponent = new PlayerCard { PlayerId = match.opponentPlayerId, Name = match.OpponentName, Tag = match.OpponentTag };
                 var name = GuildViews.Button(PlayerCardViews.Handle(opponent), () => openProfile?.Invoke(opponent.PlayerId)); name.AddToClassList("g2-history-name"); row.Add(name);
                 var delta = GuildViews.Text(match.rrDelta.HasValue ? (match.rrDelta.Value >= 0 ? "+" : "") + match.rrDelta.Value + " RR" : "\u2014");
-                delta.AddToClassList("g2-rr-delta"); delta.AddToClassList(match.rrDelta.GetValueOrDefault() >= 0 ? "g2-positive" : "g2-negative"); row.Add(delta);
+                delta.AddToClassList("g2-rr-delta"); delta.AddToClassList("mk-number"); delta.AddToClassList(match.rrDelta.GetValueOrDefault() >= 0 ? "g2-positive" : "g2-negative"); row.Add(delta);
                 previous.View.Content.Add(row);
             }
         }

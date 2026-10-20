@@ -5,4 +5,4 @@
 .lb-panel-heading Label { flex-grow: 1; }
 .lb-panel-body PaperButton { min-width: 48px; min-height: 48px; }
 .lb-panel-body #panel-content { flex-shrink: 1; }
-.lb-menu-destination { -unity-text-align: middle-left; margin-bottom: 4px; }
+.lb-menu-destination { -unity-text-align: middle-left; margin-bottom: 8px; }

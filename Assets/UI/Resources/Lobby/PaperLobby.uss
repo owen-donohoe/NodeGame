@@ -27,7 +27,7 @@
 .ui-root .lb-social-square, .ui-root .lb-claim-info { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
 .ui-root .lb-social-red, .ui-root .lb-guild-red { --paper-card-fill: var(--paper-urgent); color: var(--ink); --mk-text-ink: var(--ink); }
 .ui-root .lb-claim-primary, .ui-root .lb-crate-accept { --paper-card-fill: var(--paper-gold); }
-.ui-root .lb-public-stat { padding: 10px; }
+.ui-root .lb-public-stat { padding: 8px; }
 .ui-root .lb-public-stat Label { font-size: var(--type-heading); }
 .ui-root .lb-public-safe { top: 8%; bottom: 8%; }
 .ui-root .lb-guild-header { padding: 12px; }
@@ -67,4 +67,4 @@
 .ui-root .lb-home-crate > .ui-paper-button__caption { display: none; }
 .ui-root .lb-social-red > .ui-paper-button__caption, .ui-root .lb-guild-red > .ui-paper-button__caption { color: var(--ink-white); --mk-text-ink: var(--ink-white); }
 .ui-root .lb-live-row > .lb-social-player > .lb-player-open { --paper-card-fill: var(--paper); }
-.ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { padding: 10px; }
+.ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { padding: 8px; }

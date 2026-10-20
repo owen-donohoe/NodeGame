@@ -25,7 +25,7 @@
 }
 
 .lb-root .lb-group-label--first {
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
 .lb-group-wrap {

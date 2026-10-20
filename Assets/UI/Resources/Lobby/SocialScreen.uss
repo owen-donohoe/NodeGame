@@ -1,13 +1,13 @@
-.g2-social-scroll { flex-grow: 1; min-height: 0; background-color: var(--clear); padding: 12px 12px 90px; }
+.g2-social-scroll { flex-grow: 1; min-height: 0; background-color: var(--clear); padding: 12px 12px 96px; }
 .ui-root .g2-social-card { margin-bottom: 12px; }
 .ui-root .g2-social-card > .mk-eyebrow { margin-bottom: 8px; }
 .g2-live-row { flex-direction: row; align-items: center; margin-bottom: 8px; }
-.ui-root .g2-live-player { flex-grow: 1; flex-basis: 0; min-width: 0; min-height: 56px; padding: 6px; }
+.ui-root .g2-live-player { flex-grow: 1; flex-basis: 0; min-width: 0; min-height: 56px; padding: 12px; }
 .g2-live-player Label { white-space: normal; }
 .g2-player--p0 { border-left-color: var(--p0); border-left-width: 4px; }
 .g2-player--p1 { border-left-color: var(--p1); border-left-width: 4px; }
 .g2-player-name { }
-.ui-root .g2-vs { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 22px; margin: 0 4px; background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
+.ui-root .g2-vs { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 22px; margin: 0 8px; background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
 .g2-online-player { min-height: 60px; }
 .g2-online-player .mk-friend__body { flex-shrink: 1; }
 .g2-online-player .mk-friend__name { white-space: normal; }
@@ -15,7 +15,7 @@
 .g2-offline .g2-online-dot, .g2-offline .mk-friend__dot { background-color: var(--mk-disabled); }
 .ui-root .g2-urgent { background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
 .g2-history-row { flex-direction: row; align-items: center; margin-top: 8px; }
-.ui-root .g2-result-badge { width: 24px; height: 24px; margin-right: 5px; border-radius: 6px; border-width: 1px; border-color: var(--mk-ink); -unity-text-align: middle-center; }
+.ui-root .g2-result-badge { width: 24px; height: 24px; margin-right: 4px; border-radius: 6px; border-width: 1px; border-color: var(--mk-ink); -unity-text-align: middle-center; }
 .g2-gain { background-color: var(--mk-tap); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
 .g2-loss { background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
 .ui-root .g2-history-name { flex-grow: 1; flex-shrink: 1; min-width: 0; border-width: 0; padding: 0; background-color: var(--clear); -unity-text-align: middle-left; overflow: hidden; text-overflow: ellipsis; }

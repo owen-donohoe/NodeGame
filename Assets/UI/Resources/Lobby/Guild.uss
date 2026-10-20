@@ -8,7 +8,7 @@
 .lb-guild-search TextField { flex-grow: 1; min-width: 0; margin-right: 8px; }
 .lb-guild-search .unity-base-field__label { display: none; }
 .lb-guild-searchbtn, .lb-guild-filterbtn { width: 44px; height: 44px; align-items: center; justify-content: center; flex-shrink: 0; }
-.lb-guild-filterbtn { margin-left: 4px; }
+.lb-guild-filterbtn { margin-left: 8px; }
 .lb-guild-browse-toggle { width: 44px; min-height: 44px; align-self: center; margin-top: 8px; }
 .lb-guild-results { flex-grow: 1; min-height: 0; padding: 12px; }
 .lb-guild-card { margin-bottom: 12px; }
@@ -20,7 +20,7 @@
 .lb-guild-header .mk-meter { margin-top: 8px; margin-bottom: 4px; }
 .lb-guild-header .mk-meter__fill { height: 100%; }
 .lb-guild-home { flex-grow: 1; min-height: 0; padding: 12px; }
-.lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: 76px; }
+.lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: 96px; }
 .lb-guild-post { padding-top: 8px; padding-bottom: 8px; }
 .lb-guild-sort { min-height: 44px; }
 .lb-guild-chat-button { position: absolute; right: 16px; bottom: 16px; min-width: 96px; min-height: 56px; flex-direction: row; align-items: center; justify-content: center; }
