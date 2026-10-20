@@ -58,16 +58,25 @@ namespace NodeWar.Lobby
             for (int i = 0; i < suit.Length; i++)
             {
                 var own = suit[i];
+                if (own.Label != "Bonus HP" && own.Label != "Damage" && own.Label != "Move time" &&
+                    own.Label != "Attack cooldown" && own.Label != "Food cost" && own.Label != "Material cost") continue;
                 var parent = baseSuit != null && i < baseSuit.Length ? baseSuit[i] : own;
                 int villager = own.Value - own.Delta;
+                if (own.Value == 0 && parent.Value == 0 && villager == 0) continue;
                 long peak = Math.Max(Math.Abs((long)own.Value), Math.Max(Math.Abs((long)parent.Value), Math.Abs((long)villager)));
                 peak = Math.Max(peak, Math.Max(Math.Abs((long)own.Value - parent.Value), Math.Abs((long)own.Value - villager)));
                 int unit = NiceUnit(peak);
-                rows.Add(Row(own.Label + " vs base suit", parent.Value, own.Value, own.HigherIsBetter, unit));
+                rows.Add(Row(own.Label + " vs base", parent.Value, own.Value, own.HigherIsBetter, unit));
                 rows.Add(Row(own.Label + " vs villager", villager, own.Value, own.HigherIsBetter, unit));
             }
             return rows.ToArray();
         }
+
+        // Describe already selects the district's own production, ability and durability facts.
+        // Shared collection/population rules and the costs of other items obscure that comparison.
+        private static bool RelevantDistrictFact(string label) =>
+            !label.StartsWith("Equip ", StringComparison.Ordinal) && label != "Population capacity" &&
+            label != "Collection per unit" && label != "Collection rate";
 
         public static HistogramRow[] DistrictRows(GameBalanceData balance, DistrictType type, int variant)
         {
@@ -75,11 +84,13 @@ namespace NodeWar.Lobby
             var baseline = DistrictInfoFacts.Describe(balance, type, 0);
             foreach (var fact in DistrictInfoFacts.Describe(balance, type, variant))
             {
+                if (!RelevantDistrictFact(fact.Label)) continue;
                 if (!int.TryParse(fact.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)) continue;
                 int reference = 0;
                 foreach (var parent in baseline)
                     if (parent.Label == fact.Label && parent.Unit == fact.Unit)
                         int.TryParse(parent.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out reference);
+                if (value == 0 && reference == 0) continue;
                 string label = fact.Label;
                 bool lower = label.IndexOf("cost", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     label.IndexOf("cooldown", StringComparison.OrdinalIgnoreCase) >= 0 ||

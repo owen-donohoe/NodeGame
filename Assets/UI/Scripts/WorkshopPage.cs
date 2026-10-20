@@ -28,6 +28,7 @@ namespace NodeWar.Lobby
         private readonly ScrollView grid;
         private readonly VisualElement firstPanel, panelSpace, stageWindow, secondPanel, secondSpace, secondClip;
         private float stageBandHeight = 220f;
+        private VisualElement nav;
 
         private readonly Button ownedFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
@@ -88,6 +89,7 @@ namespace NodeWar.Lobby
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
             grid.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            Root.Q<ScrollView>("workshop-roles").touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             firstPanel = Root.Q("workshop-panel1"); panelSpace = Root.Q("workshop-panel1-space");
             stageWindow = Root.Q("workshop-window");
             secondPanel = Root.Q("workshop-panel2"); secondSpace = Root.Q("workshop-panel2-space");
@@ -147,6 +149,8 @@ namespace NodeWar.Lobby
         private void UpdateScrollLayout()
         {
             if (grid?.panel == null) return;
+            float navHeight = nav?.resolvedStyle.height ?? 0;
+            grid.contentContainer.style.paddingBottom = (float.IsNaN(navHeight) ? 0 : navHeight) + 12f;
             if (Replacing && grid.scrollOffset != Vector2.zero) grid.scrollOffset = Vector2.zero;
             if (!Mathf.Approximately(stageWindow.layout.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
             if (!Mathf.Approximately(panelSpace.layout.height, firstPanel.layout.height)) panelSpace.style.height = firstPanel.layout.height;
@@ -314,7 +318,7 @@ namespace NodeWar.Lobby
                 card.Add(MakeLabel(item.Name, "ws-name", "mk-h3"));
                 card.EnableInClassList("mk-tile--locked", state.Status != UnlockStatus.Owned);
                 if (IsSelected(item)) card.Add(MakeLabel("In hand", "mk-mark", "ws-mark"));
-                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era"));
+                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era", "ws-mark"));
                 if (menu != null) menu.Attach(card, () =>
                 {
                     var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) };
@@ -571,10 +575,12 @@ namespace NodeWar.Lobby
 
         public void BindOverlayRouter(LobbyOverlayRouter router, VisualElement shell)
         {
+            nav = shell.Q("tabbar-dock");
             inventorySheet.BindRouter(router, "workshop-item");
             inventorySheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
             inventorySheet.Surface.AddToClassList("ws-item-sheet");
             inventorySheet.Body.style.flexGrow = 1;
+            ((ScrollView)inventorySheet.Body).touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             itemActions.AddToClassList("ws-sheet-actions"); inventorySheet.Surface.Add(itemActions);
             shell.Add(inventorySheet);
             inventorySheet.Opened += () =>
@@ -674,6 +680,7 @@ namespace NodeWar.Lobby
             var skins = LoadoutChoices.Skins(baseId, null, playerState);
             if (!Array.Exists(skins, choice => choice.ID == panelSkinId)) panelSkinId = EquippedChoice(skins);
             var skinScroll = new ScrollView(ScrollViewMode.Horizontal);
+            skinScroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             skinScroll.AddToClassList("ws-skin-scroll"); skinScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             skinScroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             var skinRow = new VisualElement(); skinRow.AddToClassList("mk-skins");
@@ -712,8 +719,12 @@ namespace NodeWar.Lobby
         private static VisualElement HistogramLine(HistogramRow row)
         {
             var line = new VisualElement { tooltip = "1 cell = " + row.Unit };
-            line.AddToClassList("mk-hrow"); line.Add(MakeLabel(row.Label, "mk-eyebrow", "ws-stat-label"));
-            var cells = new VisualElement(); cells.AddToClassList("mk-cells");
+            line.AddToClassList("mk-hrow"); line.AddToClassList("ws-stat-row");
+            var heading = new VisualElement(); heading.AddToClassList("ws-stat-heading");
+            heading.Add(MakeLabel(row.Label, "ws-stat-label"));
+            heading.Add(MakeLabel(row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "mk-value", "ws-stat-value"));
+            line.Add(heading);
+            var cells = new VisualElement(); cells.AddToClassList("mk-cells"); cells.AddToClassList("ws-stat-cells");
             for (int i = 0; i < StatHistogram.MaxCells; i++)
             {
                 bool lost = i >= row.Filled && i < row.Filled + row.Loss;
@@ -724,7 +735,6 @@ namespace NodeWar.Lobby
                 cells.Add(cell);
             }
             line.Add(cells);
-            line.Add(MakeLabel(row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "mk-value", "ws-stat-value"));
             return line;
         }
 
@@ -763,11 +773,10 @@ namespace NodeWar.Lobby
             if (toast != null) toast.Show(message);
         }
 
-        private static Label MakeLabel(string text, string styleClass, string weightClass)
+        private static Label MakeLabel(string text, params string[] classes)
         {
             Label label = new Label(text) { enableRichText = false };
-            label.AddToClassList(styleClass);
-            label.AddToClassList(weightClass);
+            foreach (var styleClass in classes) label.AddToClassList(styleClass);
             label.pickingMode = PickingMode.Ignore;
             return label;
         }
