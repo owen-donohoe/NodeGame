@@ -19,7 +19,7 @@ namespace NodeWar.Lobby
                 for (int col = 0; col < 2; col++)
                 {
                     int i = row * 2 + col; var cell = new MkCard(); cell.AddToClassList("g2-stat");
-                    cell.Add(GuildViews.Text(Stats[i], "mk-eyebrow")); cell.Add(GuildViews.Text(values[i], "g2-stat-value")); line.Add(cell);
+                    cell.Add(GuildViews.Text(Stats[i], "mk-eyebrow")); cell.Add(GuildViews.Text(values[i], "mk-number")); line.Add(cell);
                 }
             }
             return grid;
@@ -43,7 +43,7 @@ namespace NodeWar.Lobby
             else
             {
                 var icon = new LobbyIcon(suit ? LobbyIconKind.Suit : LobbyIconKind.District, LobbyIconContext.Profile); mini.Add(icon);
-                mini.Add(GuildViews.Text(ItemTint.MonogramFor(id.Substring(id.IndexOf('_') + 1), id), "g2-mini-letter"));
+                mini.Add(GuildViews.Text(ItemTint.MonogramFor(id.Substring(id.IndexOf('_') + 1), id), "mk-caption"));
             }
             return mini;
         }

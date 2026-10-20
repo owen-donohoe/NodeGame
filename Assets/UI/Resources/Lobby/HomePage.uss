@@ -4,10 +4,10 @@
 .g2-crates > .mk-crate { margin-right: 8px; }
 .g2-crates > #home-crate-small { margin-right: 0; }
 .g2-crate-icon { width: 46px; height: 46px; }
-.ui-root .g2-crate-label { position: absolute; bottom: 3px; font-size: 10px; letter-spacing: 0.6px; color: var(--mk-muted); }
+.ui-root .g2-crate-label { position: absolute; bottom: 3px; letter-spacing: 0.6px; color: var(--mk-muted); --mk-text-ink: var(--mk-muted); }
 .g2-home-actions { width: 200px; flex-shrink: 0; align-items: stretch; }
 .ui-root .g2-home-mode { flex-direction: row; align-items: center; justify-content: center; background-color: var(--mk-sheet); margin-bottom: 8px; padding: 4px 8px; }
-.ui-root .g2-home-mode Label { font-size: 12px; margin-right: 5px; }
+.ui-root .g2-home-mode Label { margin-right: 5px; }
 .g2-mode-icon { width: 20px; height: 20px; margin-right: 5px; }
 .g2-mode-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 5px; background-color: var(--mk-action); }
 .g2-swap { width: 16px; height: 16px; }

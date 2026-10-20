@@ -2,7 +2,7 @@
 .lb-panel-safe-area { position: absolute; left: 0; right: 0; top: 0; bottom: 0; justify-content: center; }
 .lb-panel-body { margin: 24px; padding: 16px; max-height: 85%; background-color: var(--surface); border-radius: 16px; }
 .lb-panel-heading { flex-direction: row; align-items: center; margin-bottom: 8px; }
-.lb-panel-heading Label { flex-grow: 1; font-size: 24px; }
+.lb-panel-heading Label { flex-grow: 1; }
 .lb-panel-body PaperButton { min-width: 48px; min-height: 48px; }
 .lb-panel-body #panel-content { flex-shrink: 1; }
 .lb-menu-destination { -unity-text-align: middle-left; margin-bottom: 4px; }

@@ -1,6 +1,6 @@
 .lb-party-safe { flex-grow: 1; background-color: var(--surface); justify-content: center; }
 .lb-party-body { margin: 24px; }
-.lb-party-title { font-size: 26px; white-space: normal; margin-bottom: 16px; }
+.lb-party-title { font-size: var(--type-title); white-space: normal; margin-bottom: 16px; }
 .lb-party-presence-row { flex-direction: row; align-items: center; }
 .lb-party-presence { width: 10px; height: 10px; border-radius: 5px; background-color: var(--paper-dark); margin-right: 8px; }
 .lb-party-slots { flex-direction: row; margin: 16px 0; }

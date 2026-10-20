@@ -247,8 +247,8 @@
 }
 
 .lb-root .lb-push__title {
-    font-size: 30px;
-    color: var(--ink);
+    font-size: var(--type-title);
+    color: var(--ink); --mk-text-ink: var(--ink);
     margin-left: var(--space-3);
 }
 
@@ -296,8 +296,8 @@
 }
 
 .lb-placeholder__label {
-    font-size: 13px;
-    color: var(--placeholder-ink);
+    font-size: var(--type-caption);
+    color: var(--placeholder-ink); --mk-text-ink: var(--placeholder-ink);
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     white-space: normal;
@@ -344,15 +344,15 @@
 }
 
 .lb-root .lb-stub__title {
-    font-size: 26px;
-    color: var(--ink);
+    font-size: var(--type-title);
+    color: var(--ink); --mk-text-ink: var(--ink);
     margin-bottom: var(--space-2);
     -unity-text-align: middle-center;
 }
 
 .lb-root .lb-stub__body {
-    font-size: 17px;
-    color: var(--ink-mute);
+    font-size: var(--type-body);
+    color: var(--ink-mute); --mk-text-ink: var(--ink-mute);
     white-space: normal;
     -unity-text-align: middle-center;
 }
@@ -453,13 +453,13 @@
 }
 
 .lb-root .lb-loadout-line__part {
-    font-size: 17px;
-    color: var(--ink-mute);
+    font-size: var(--type-body);
+    color: var(--ink-mute); --mk-text-ink: var(--ink-mute);
     margin-right: 5px;
 }
 
 .lb-root .lb-loadout-line__part--short {
-    color: var(--status-short-ink);
+    color: var(--status-short-ink); --mk-text-ink: var(--status-short-ink);
 }
 
 /* ===================================================================

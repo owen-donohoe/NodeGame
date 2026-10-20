@@ -1,7 +1,7 @@
 .lb-claim-scrim { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--scrim); }
 .lb-claim-panel { position: absolute; left: 24px; right: 24px; top: 25%; max-height: 65%; padding: 20px; padding-top: 52px; background-color: var(--paper-dark); border-radius: 16px; }
 .lb-claim-info { position: absolute; left: 12px; top: 12px; width: 32px; height: 32px; }
-.lb-claim-title { font-size: 26px; white-space: normal; margin-bottom: 16px; }
+.lb-claim-title { font-size: var(--type-title); white-space: normal; margin-bottom: 16px; }
 .lb-claim-details { flex-shrink: 1; margin-bottom: 16px; }
 .lb-claim-details Label { white-space: normal; }
 .lb-claim-primary { min-height: 48px; }

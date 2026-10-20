@@ -1,6 +1,6 @@
 .lb-crate-screen { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--paper-dark); color: var(--ink); }
 .lb-crate-screen > TemplateContainer { flex-grow: 1; }
-.lb-crate-prompt { position: absolute; top: 12%; left: 24px; right: 24px; font-size: 24px; -unity-text-align: middle-center; }
+.lb-crate-prompt { position: absolute; top: 12%; left: 24px; right: 24px; font-size: var(--type-title); -unity-text-align: middle-center; }
 .lb-crate-content { position: absolute; left: 0; right: 0; top: 45%; height: 150px; align-items: center; }
 .lb-crate-box { width: 120px; height: 100px; background-color: var(--paper-dark); border-width: 4px; border-color: var(--ink); align-items: center; justify-content: center; }
 .lb-crate-reward { position: absolute; top: 0; width: 160px; min-height: 100px; padding: 12px; align-items: center; justify-content: center; }
@@ -10,5 +10,5 @@
 .lb-reveal-suit { background-color: var(--paper-dark); border-radius: 48px; }
 .lb-reveal-skin { background-color: var(--paper-dark); border-radius: 16px; rotate: -6deg; }
 .lb-crate-summary { position: absolute; top: 24%; bottom: 130px; left: 24px; right: 24px; }
-.lb-crate-summary Label { white-space: normal; margin-bottom: 16px; font-size: 22px; }
-.lb-crate-accept { position: absolute; bottom: 48px; left: 40px; right: 40px; height: 56px; font-size: 24px; }
+.lb-crate-summary Label { white-space: normal; margin-bottom: 16px; font-size: var(--type-title); }
+.lb-crate-accept { position: absolute; bottom: 48px; left: 40px; right: 40px; height: 56px; font-size: var(--type-title); }

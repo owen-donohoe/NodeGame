@@ -291,12 +291,16 @@
 
     /* Nothing is set smaller than --type-min. The prototypes go to 7px, which
        at a 390-wide reference is unreadable on a phone. */
-    --type-min: 11px;
-    --type-caption: 12px;
-    --type-body: 14px;
-    --type-number: 19.55px;
-    --type-heading: 18.4px;
-    --type-title: 25.3px;
+    --type-min: 13px;
+    --type-caption: 13px;
+    --type-secondary: 14px;
+    --type-body: 16px;
+    --type-number: 22px;
+    --type-heading: 22px;
+    --type-title: 26px;
+    --type-battle: 32px;
+    --text-outline: 0.4px;
+    --text-outline-strong: 0.6px;
 
     /* Minimum touch target. The panels scale to a 390-wide reference, so a
        unit is about one point on a phone. */
