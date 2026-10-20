@@ -9,7 +9,6 @@ namespace NodeWar.Lobby
     /// <summary>Runtime-only lobby scenery. Its owner supplies loadouts and page changes.</summary>
     public sealed class LobbyStage : MonoBehaviour
     {
-        private const float ShotDuration = 0.45f;
         private const float MarketX = -13f;
         public const float ShopStallSpacing = 6f;
         private const float MarketZ = 9f;
@@ -56,7 +55,8 @@ namespace NodeWar.Lobby
         private Quaternion shotStartRotation;
         private Vector3 shotPosition;
         private Quaternion shotRotation;
-        private float shotElapsed = ShotDuration;
+        private double shotStarted = double.NegativeInfinity;
+        public bool IsPanning => Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PageSeconds;
         private StageShot currentShot = StageShot.Home;
         private float shopScroll;
 
@@ -207,7 +207,7 @@ namespace NodeWar.Lobby
             shotStartRotation = stageCamera.transform.localRotation;
             GetShot(shot, out shotPosition, out shotRotation);
             if (shot == StageShot.Market) shotPosition.z -= shopScroll * ShopStallSpacing;
-            shotElapsed = 0f;
+            shotStarted = Time.unscaledTimeAsDouble;
         }
 
         /// <summary>Continuous stall units. Applies exactly, without a camera tween.</summary>
@@ -217,7 +217,7 @@ namespace NodeWar.Lobby
             if (currentShot != StageShot.Market) return;
             GetShot(StageShot.Market, out shotPosition, out shotRotation);
             shotPosition.z -= shopScroll * ShopStallSpacing;
-            if (shotElapsed < ShotDuration) return;
+            if (IsPanning) return;
             stageCamera.transform.localPosition = shotPosition;
             stageCamera.transform.localRotation = shotRotation;
         }
@@ -251,11 +251,14 @@ namespace NodeWar.Lobby
                     break;
                 case StageShot.Districts:
                 case StageShot.Suits:
-                    var half = clusterEnvelope.extents;
-                    var fit = StageClusterFraming.Fit(stageCamera.aspect, workshopTop, workshopBottom,
+                    var envelope = shot == StageShot.Suits ? SuitEnvelope() : clusterEnvelope;
+                    var half = envelope.extents;
+                    var fit = StageClusterFraming.Fit(stageCamera.aspect,
+                        shot == StageShot.Suits ? StageClusterFraming.SuitTop(workshopTop, workshopBottom) : workshopTop,
+                        shot == StageShot.Suits ? StageClusterFraming.SuitBottom(workshopTop, workshopBottom) : workshopBottom,
                         shot == StageShot.Suits, half.x, half.y, half.z);
                     rotation = Quaternion.Euler(fit.Pitch, 0f, 0f);
-                    position = clusterEnvelope.center - rotation * Vector3.forward * fit.Distance - rotation * Vector3.up * fit.UpOffset;
+                    position = envelope.center - rotation * Vector3.forward * fit.Distance - rotation * Vector3.up * fit.UpOffset;
                     return;
                 default:
                     target = new Vector3(0f, -1.5f, 0f);
@@ -270,6 +273,25 @@ namespace NodeWar.Lobby
             (index & 1) == 0 ? bounds.min.x : bounds.max.x,
             (index & 2) == 0 ? bounds.min.y : bounds.max.y,
             (index & 4) == 0 ? bounds.min.z : bounds.max.z);
+
+        private Bounds SuitEnvelope()
+        {
+            if (suitRenderers.Length == 0) return new Bounds(plots[1].localPosition + Vector3.up, Vector3.one);
+            bool first = true;
+            var bounds = new Bounds();
+            for (int i = 0; i < suitRenderers.Length; i++)
+            {
+                if (focusedSuit >= 0 && i != focusedSuit) continue;
+                var renderer = suitRenderers[i];
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var point = transform.InverseTransformPoint(renderer.transform.TransformPoint(Corner(renderer.localBounds, corner)));
+                    if (first) { bounds = new Bounds(point, Vector3.zero); first = false; }
+                    else bounds.Encapsulate(point);
+                }
+            }
+            return bounds;
+        }
 
         private void CacheClusterEnvelope()
         {
@@ -290,7 +312,11 @@ namespace NodeWar.Lobby
             if (Mathf.Approximately(top, workshopTop) && Mathf.Approximately(bottom, workshopBottom) &&
                 Mathf.Approximately(stageCamera.aspect, workshopAspect)) return;
             workshopTop = top; workshopBottom = bottom; workshopAspect = stageCamera.aspect;
-            if (currentShot == StageShot.Districts || currentShot == StageShot.Suits) ShowShot(currentShot);
+            if (currentShot == StageShot.Districts || currentShot == StageShot.Suits)
+            {
+                if (IsPanning) GetShot(currentShot, out shotPosition, out shotRotation);
+                else ShowShot(currentShot);
+            }
         }
 
         /// <summary>Current cluster bounds in bottom-origin viewport coordinates, including empty plots and suits.</summary>
@@ -391,7 +417,9 @@ namespace NodeWar.Lobby
 
         public void FocusSuit(int index)
         {
-            if (index >= 0 && index < suits.Length) focusedSuit = index;
+            if (index < 0 || index >= suits.Length) return;
+            focusedSuit = index;
+            ShowShot(StageShot.Suits);
         }
 
         public void ClearFocus() => focusedSuit = -1;
@@ -405,11 +433,10 @@ namespace NodeWar.Lobby
         private void Update()
         {
             float delta = Time.unscaledDeltaTime;
-            if (shotElapsed < ShotDuration)
+            if (IsPanning || stageCamera.transform.localPosition != shotPosition)
             {
-                shotElapsed = Mathf.Min(ShotDuration, shotElapsed + delta);
-                float progress = shotElapsed / ShotDuration;
-                float t = progress * progress * (3f - 2f * progress);
+                float progress = (float)(Time.unscaledTimeAsDouble - shotStarted) / LobbyMotion.PageSeconds;
+                float t = LobbyMotion.OutCubic(progress);
                 stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
                 stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
             }

@@ -14,6 +14,11 @@ namespace NodeWar.Lobby
     {
         public const float FieldOfView = 42f;
         public const float HorizontalInset = 0.04f;
+        public const float SuitHeightFraction = 0.60f;
+        public static float SuitTop(float top, float bottom) =>
+            (top + bottom) * 0.5f - (bottom - top) * SuitHeightFraction * 0.5f;
+        public static float SuitBottom(float top, float bottom) =>
+            (top + bottom) * 0.5f + (bottom - top) * SuitHeightFraction * 0.5f;
 
         public static StageClusterFrame Fit(float aspect, float top, float bottom, bool suits,
             float halfWidth, float halfHeight, float halfDepth)

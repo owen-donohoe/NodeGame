@@ -5,6 +5,28 @@ namespace NodeWar.Lobby.Tests
 {
     public class StageClusterFramingTests
     {
+        [TestCase(390f / 844f)]
+        [TestCase(540f / 1200f)]
+        [TestCase(16f / 9f)]
+        public void SelectedSuitFillsSixtyPercentOfStageBandAndIsCentred(float aspect)
+        {
+            const float top = 0.20f, bottom = 0.55f;
+            float suitTop = StageClusterFraming.SuitTop(top, bottom);
+            float suitBottom = StageClusterFraming.SuitBottom(top, bottom);
+            var frame = StageClusterFraming.Fit(aspect, suitTop, suitBottom, true, 0.35f, 0.55f, 0f);
+            double sin = Math.Sin(frame.Pitch * Math.PI / 180), cos = Math.Cos(frame.Pitch * Math.PI / 180);
+            double tan = Math.Tan(StageClusterFraming.FieldOfView * Math.PI / 360);
+            double min = 1, max = 0;
+            foreach (double y in new[] { -0.55, 0.55 })
+            {
+                double depth = frame.Distance - y * sin;
+                double screen = 0.5 - (y * cos + frame.UpOffset) / (2 * depth * tan);
+                min = Math.Min(min, screen); max = Math.Max(max, screen);
+            }
+            Assert.That((max - min) / (bottom - top), Is.InRange(0.54, 0.601));
+            Assert.That((min + max) / 2, Is.EqualTo((top + bottom) / 2).Within(0.015));
+        }
+
         [TestCase(390, 844, false)]
         [TestCase(390, 844, true)]
         [TestCase(540, 1200, false)]
