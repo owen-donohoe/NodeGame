@@ -330,7 +330,7 @@ namespace NodeWar.Lobby
         {
             public Tab Tab;
             public string ID;
-            public VisualElement Cell, Art;
+            public VisualElement Cell, Art, Starter;
             public Button Card;
             public Label Name, Meta, Mark;
         }
@@ -368,6 +368,14 @@ namespace NodeWar.Lobby
             tile.Name = MakeLabel(item.Name, "ws-name", "mk-h3");
             tile.Meta = MakeLabel("", "mk-caption", "ws-tile-meta");
             tile.Mark = MakeLabel("", "mk-mark", "ws-mark");
+            TrackedText.Track(tile.Mark);
+            tile.Starter = new VisualElement { pickingMode = PickingMode.Ignore };
+            tile.Starter.AddToClassList("ws-starter-tag");
+            tile.Starter.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
+            var starterText = MakeLabel("Starter", "ws-starter-text");
+            TrackedText.Track(starterText);
+            tile.Starter.Add(starterText);
+            tile.Card.Add(tile.Starter);
             tile.Card.Add(tile.Name); tile.Card.Add(tile.Meta); tile.Card.Add(tile.Mark);
             if (menu != null) menu.Attach(tile.Card, () =>
             {
@@ -394,7 +402,14 @@ namespace NodeWar.Lobby
             EnsureTiles();
             ownership.Select(showAll ? 1 : 0);
             sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Era" : sort == LoadoutSort.Name ? "Name" : "Role");
-            browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
+            bool suitTab = activeTab == Tab.Suits;
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            int capacity = suitTab ? LoadoutRules.ChosenSuitSlots(arena) : LoadoutRules.ChosenDistrictSlots(arena);
+            var chosen = suitTab ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+            int count = Array.FindAll(chosen, id => !string.IsNullOrEmpty(id)).Length;
+            int starters = StageGrants(suitTab).Length;
+            browserTitle.text = (suitTab ? "Suits " : "Districts ") + count + " of " + capacity + " chosen" +
+                (starters > 0 ? " · " + starters + " starter" : "");
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             var wanted = new List<VisualElement>();
@@ -415,8 +430,10 @@ namespace NodeWar.Lobby
                 string meta = "Era " + state.UnlockEra;
                 if (tile.Meta.text != meta) tile.Meta.text = meta;
                 bool inHand = IsSelected(item);
-                string mark = inHand ? "In hand" : !owned ? "Arena " + state.UnlockEra : "";
-                if (tile.Mark.text != mark) tile.Mark.text = mark;
+                bool fixedStarter = IsFixedStarter(item);
+                tile.Starter.style.display = fixedStarter ? DisplayStyle.Flex : DisplayStyle.None;
+                string mark = fixedStarter ? "" : inHand ? "In hand" : !owned ? "Arena " + state.UnlockEra : "";
+                if (tile.Mark.text != mark) TrackedText.SetText(tile.Mark, mark);
                 tile.Mark.EnableInClassList("mk-mark--era", !inHand && !owned);
                 tile.Mark.style.display = mark.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
                 wanted.Add(tile.Cell);
@@ -691,6 +708,19 @@ namespace NodeWar.Lobby
             var content = new VisualElement(); content.AddToClassList("ws-item-content");
             string name = inspectedItem.Name + (index >= 0 && choices[index].OrderKey != 0 ? " · " + choices[index].Label : "");
             content.Add(MakeLabel(name, "mk-h2", "ws-item-title"));
+            bool fixedStarter = IsFixedStarter(inspectedItem);
+            if (fixedStarter)
+            {
+                int firstEditable = 0;
+                while (firstEditable < RankTable.Names.Count - 1 && LoadoutCapacityPolicy.GetsFreeGrants(firstEditable)) firstEditable++;
+                string era = new RankDisplay(RankTable.Thresholds[firstEditable]).Name;
+                string note = "Fixed starter until " + era + ".";
+                if (!inspectedItem.IsSuit)
+                    note += " Choose your other " + LoadoutRules.ChosenDistrictSlots(LoadoutRules.ArenaOrFallback(playerState?.Rank)) + " districts below.";
+                var starterNote = MakeLabel(note, "ws-starter-note");
+                starterNote.tooltip = note;
+                content.Add(starterNote);
+            }
             var artRow = new VisualElement(); artRow.AddToClassList("ws-item-art");
             var art = new VisualElement(); art.AddToClassList("ws-artbox");
             art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock, variant));
@@ -766,15 +796,17 @@ namespace NodeWar.Lobby
             if (!string.IsNullOrEmpty(inventoryMessage)) content.Add(MakeLabel(inventoryMessage, "mk-muted", "ws-item-status"));
             inventorySheet.Body.Add(content);
             itemActions.Add(SheetButton("BACK", CloseItemPanel));
-            var use = SheetButton("USE", () => _ = UseItemAsync(), "mk-btn--primary");
+            var use = SheetButton(fixedStarter ? "Fixed" : "USE", () => _ = UseItemAsync(), "mk-btn--primary");
             bool canUse = catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse &&
                 (index < 0 || choices[index].Equipped || choices[index].Selectable);
             bool skinValid = LoadoutScreenModel.ValidChoice(skins, panelSkinId);
             bool changes = !IsSelected(inspectedItem) || index >= 0 && !choices[index].Equipped ||
                 Array.Exists(skins, choice => choice.ID == panelSkinId && !choice.Equipped);
             use.tooltip = !canUse ? "Locked - own this item and reach its required arena to use it." : !skinValid ? "Selected skin is locked." : "";
-            use.SetEnabled(!inventoryBusy && canUse && skinValid && changes); itemActions.Add(use);
+            use.SetEnabled(!fixedStarter && !inventoryBusy && canUse && skinValid && changes); itemActions.Add(use);
         }
+
+        private bool IsFixedStarter(Item item) => Array.IndexOf(StageGrants(item.IsSuit), item.ID) >= 0;
 
         private int CurrentEra(Item item)
         {

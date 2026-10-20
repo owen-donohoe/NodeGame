@@ -941,3 +941,8 @@
 .lb-root .ws-panel1 { height: 119px; }
 .lb-root .ws-panel1-space { height: 119px; }
 .lb-root .ws-art { -unity-background-scale-mode: scale-to-fit; }
+
+.lb-root #page-workshop .ws-starter-tag { position: absolute; top: 4px; left: 4px; flex-direction: row; align-items: center; padding: 0 4px; border-radius: 8px; background-color: var(--mk-ink); color: var(--mk-sheet); }
+.lb-root #page-workshop .ws-starter-tag .lb-icon { width: 14px; height: 14px; margin-right: 4px; -unity-background-image-tint-color: var(--mk-sheet); }
+.lb-root #page-workshop .ws-starter-text { font-size: 13px; margin: 0; padding: 0; flex-shrink: 0; }
+.lb-root .ws-starter-note { font-size: 13px; color: var(--mk-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0; }
