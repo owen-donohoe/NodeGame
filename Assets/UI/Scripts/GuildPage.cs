@@ -32,6 +32,7 @@ namespace NodeWar.Lobby
         private readonly VisualElement filterBubble = new VisualElement();
         private ScrollView filterContent;
         private VisualElement outsideTapRoot;
+        private VisualElement searchTapRoot;
         private ValueAnimation<StyleValues> searchMotion, resultsMotion;
         private IVisualElementScheduledItem querySearch;
         private int minMembers = 1, maxMembers = 25;
@@ -84,10 +85,13 @@ namespace NodeWar.Lobby
                 ExpandSearch();
             };
             query.RegisterCallback<FocusInEvent>(_ => ExpandSearch());
+            query.RegisterCallback<FocusOutEvent>(_ =>
+            {
+                if (searched && string.IsNullOrEmpty(query.value)) CollapseSearch();
+            });
             query.RegisterValueChangedCallback(evt =>
             {
                 querySearch?.Pause();
-                if (string.IsNullOrEmpty(evt.newValue)) { CollapseSearch(); return; }
                 ExpandSearch();
                 querySearch = Root.schedule.Execute(Search).StartingIn(180);
             });
@@ -108,11 +112,18 @@ namespace NodeWar.Lobby
             Root.RegisterCallback<AttachToPanelEvent>(evt =>
             {
                 if (evt.target == Root) BackendServices.Account.Changed += AccountChanged;
+                if (evt.target == Root)
+                {
+                    searchTapRoot = Root.panel.visualTree;
+                    searchTapRoot.RegisterCallback<PointerDownEvent>(SearchOutsideTap, TrickleDown.TrickleDown);
+                }
             });
             Root.RegisterCallback<DetachFromPanelEvent>(evt =>
             {
                 if (evt.target != Root) return;
                 BackendServices.Account.Changed -= AccountChanged;
+                searchTapRoot?.UnregisterCallback<PointerDownEvent>(SearchOutsideTap, TrickleDown.TrickleDown);
+                searchTapRoot = null;
                 OnHide(); chat.Root.RemoveFromHierarchy(); report.Root.RemoveFromHierarchy();
             });
         }
@@ -201,15 +212,11 @@ namespace NodeWar.Lobby
                     roster.Add(GuildViews.Member(member, () => OpenMember(member)));
                 if (roster.childCount == 0) roster.Add(PlayerCardViews.Text("No members to show."));
             };
-            var sort = new Button { text = "Online · RR" };
-            sort.AddToClassList("lb-guild-sort"); sort.AddToClassList("mk-chip");
-            sort.clicked += () =>
-            {
-                order = (GuildMemberOrder)(((int)order + 1) % 3);
-                sort.text = order == GuildMemberOrder.OnlineByRR ? "Online · RR" : order == GuildMemberOrder.Seniority ? "Seniority" : "All · RR";
-                render();
-            };
-            heading.Add(sort); members.Add(heading); members.Add(roster); render(); scroll.Add(members);
+            var sort = new SegmentedSwitch(new Button { text = "Online", tooltip = "Online · RR" },
+                new Button { text = "Seniority" }, new Button { text = "All", tooltip = "All · RR" });
+            sort.AddToClassList("lb-guild-member-filter");
+            sort.Changed += index => { order = (GuildMemberOrder)index; render(); };
+            members.Add(heading); members.Add(sort); members.Add(roster); render(); scroll.Add(members);
         }
 
         private static void RenderPosts(VisualElement host, List<GuildPost> posts, bool pinned)
@@ -367,30 +374,42 @@ namespace NodeWar.Lobby
             var tail = new VisualElement(); tail.AddToClassList("ui-filter-tail"); filterBubble.Add(tail);
             filterContent = new ScrollView { horizontalScrollerVisibility = ScrollerVisibility.Hidden, verticalScrollerVisibility = ScrollerVisibility.Hidden };
             filterContent.AddToClassList("ui-filter-content"); filterBubble.Add(filterContent);
-            filterContent.Add(GuildViews.Text("Filter guilds", "mk-h3"));
-            var joinable = new Toggle("Joinable only") { value = filter.JoinableOnly };
-            var rrLabel = GuildViews.Text("Min RR: " + filter.MinRR);
+            var joinable = new LobbySwitch { Value = filter.JoinableOnly };
+            var toggleRow = new Button(() => joinable.Flip()); toggleRow.AddToClassList("ui-filter-toggle");
+            toggleRow.Add(GuildViews.Text("Joinable only")); toggleRow.Add(joinable);
+            var rrLabel = GuildViews.Text(filter.MinRR.ToString(), "ui-filter-value");
             var rr = new SliderInt(0, 5000) { value = filter.MinRR };
             rr.showInputField = false;
-            rr.RegisterValueChangedCallback(evt => rrLabel.text = "Min RR: " + evt.newValue);
-            var membersLabel = GuildViews.Text("Members: " + minMembers + "\u2013" + maxMembers);
+            var fill = new VisualElement { pickingMode = PickingMode.Ignore }; fill.AddToClassList("ui-filter-fill");
+            rr.Q(className: "unity-base-slider__tracker").Add(fill);
+            fill.style.width = Length.Percent(rr.value / 50f);
+            rr.RegisterValueChangedCallback(evt => { rrLabel.text = evt.newValue.ToString(); fill.style.width = Length.Percent(evt.newValue / 50f); });
+            var membersLabel = GuildViews.Text(minMembers + " to " + maxMembers, "ui-filter-value");
             var members = new MinMaxSlider(minMembers, maxMembers, 1, 25);
-            members.RegisterValueChangedCallback(evt => membersLabel.text = "Members: " + Mathf.RoundToInt(evt.newValue.x) + "\u2013" + Mathf.RoundToInt(evt.newValue.y));
-            filterContent.Add(rrLabel); filterContent.Add(rr); filterContent.Add(membersLabel); filterContent.Add(members); filterContent.Add(joinable);
+            members.RegisterValueChangedCallback(evt => membersLabel.text = Mathf.RoundToInt(evt.newValue.x) + " to " + Mathf.RoundToInt(evt.newValue.y));
+            filterContent.Add(FilterSliderRow("Min RR", rrLabel, rr));
+            filterContent.Add(FilterSliderRow("Members", membersLabel, members)); filterContent.Add(toggleRow);
             var actions = new VisualElement(); actions.AddToClassList("ui-filter-actions");
-            actions.Add(GuildViews.Button("Reset", () => { rr.value = 0; members.value = new Vector2(1, 25); joinable.value = false; }));
+            actions.Add(GuildViews.Button("Reset", () => { rr.value = 0; members.value = new Vector2(1, 25); joinable.Value = false; }));
             actions.Add(GuildViews.Button("Apply", () =>
             {
                 minMembers = Mathf.RoundToInt(members.value.x); maxMembers = Mathf.RoundToInt(members.value.y);
-                filter = new GuildFilter { JoinableOnly = joinable.value, MinRR = rr.value, MinMembers = minMembers };
+                filter = new GuildFilter { JoinableOnly = joinable.Value, MinRR = rr.value, MinMembers = minMembers };
                 CloseFilter(); Search();
-            }));
+            }, "mk-btn--primary"));
             filterContent.Add(actions);
             filterLayer.style.display = DisplayStyle.Flex; filterLayer.BringToFront(); PositionFilter();
             outsideTapRoot = Root.panel?.visualTree;
             outsideTapRoot?.RegisterCallback<PointerDownEvent>(FilterOutsideTap, TrickleDown.TrickleDown);
             filterBubble.RegisterCallback<GeometryChangedEvent>(PositionFilterChanged);
             router.Open(new LobbyOverlay("guild-filter-bubble", OverlayKind.Menu), CloseFilter);
+        }
+
+        private static VisualElement FilterSliderRow(string title, Label value, VisualElement slider)
+        {
+            var row = new VisualElement(); row.AddToClassList("ui-filter-slider-row");
+            var labels = new VisualElement(); labels.AddToClassList("ui-filter-labels");
+            labels.Add(GuildViews.Text(title)); labels.Add(value); row.Add(labels); row.Add(slider); return row;
         }
 
         private void PositionFilterChanged(GeometryChangedEvent evt) => PositionFilter();
@@ -402,6 +421,8 @@ namespace NodeWar.Lobby
             filterBubble.style.width = width;
             filterBubble.style.left = Mathf.Clamp(bounds.x + button.layout.width - width, 16, Mathf.Max(16, Root.layout.width - width - 16));
             filterBubble.style.top = bounds.y + button.layout.height + 8;
+            float bubbleLeft = Mathf.Clamp(bounds.x + button.layout.width - width, 16, Mathf.Max(16, Root.layout.width - width - 16));
+            filterBubble.Q(className: "ui-filter-tail").style.left = bounds.x + button.layout.width / 2 - bubbleLeft - 6;
             // Keep controls reachable on short portrait viewports and with a software keyboard.
             filterContent.style.maxHeight = Mathf.Max(44, Root.layout.height - bounds.y - button.layout.height - 8 - 16 - 28);
         }
@@ -418,6 +439,13 @@ namespace NodeWar.Lobby
             if (evt.target is VisualElement target && (target == filterBubble || filterBubble.Contains(target) ||
                 target == visitor.Q("guild-filter") || visitor.Q("guild-filter").Contains(target))) return;
             CloseFilter(); evt.StopPropagation();
+        }
+
+        private void SearchOutsideTap(PointerDownEvent evt)
+        {
+            if (!visible || !searched || !string.IsNullOrEmpty(query.value)) return;
+            if (evt.target is VisualElement target && (target == query || query.Contains(target))) return;
+            query.Blur();
         }
 
         private void ConfirmKick(GuildMember member)
