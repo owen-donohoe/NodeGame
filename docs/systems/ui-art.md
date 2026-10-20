@@ -42,7 +42,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 8891d096
+verified: 45194826
 ---
 
 # UI art
@@ -67,7 +67,7 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
 
-`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals with scrim, close and router Back. Both use `LobbyMotion` scale/fade timing, including scrims, and hide after closing; no USS tween competes. `Components.uss` exposes `mk-` classes; `Tokens.uss` separates raw `--pal-*` values from meaning tokens. Pages are transparent; cards carry content.
+`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals with scrim, close and router Back. Both use `LobbyMotion` pop springs, 120ms scrim/surface fades and 140ms closes; sheets rise, panels scale; no USS tween competes. `Components.uss` exposes `mk-` classes; `Tokens.uss` separates raw `--pal-*` values from meaning tokens. Pages are transparent; cards carry content.
 
 `PaperCard : VisualElement` (`[UxmlElement]`) draws parchment, cached grain, offset shadows and seeded wobbling ink. `Seed`/`RotatePaper` control identity/rotation; `--paper-card-*` properties read meaning tokens. Geometry/style events rebuild it; presses drop the shadow. `PaperButton : Button` preserves binding contracts, drawing paper behind its caption. `PaperMath` is UnityEngine-free.
 
@@ -90,6 +90,8 @@ Lookup tries exact kind/context, then the same kind/Anywhere, then generated gly
 `UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
 
 `--font-display` resolves Lilita One for titles, numbers, buttons and tabs; `--font-label` resolves Kalam Bold for labels/chips/row names; `--font-body` resolves Kalam Regular. Type tokens are body 16, secondary 14, caption 13, title 24 and number 22. Outline tokens are zero; real faces carry weight. Kalam line boxes allow its tall ascenders. Icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+
+World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen offsets and distance scale clamped to 0.85 to 1. Safe-area margins are 16px; panels clear the top band and pill nav. Depth uses position/parallax/scale, never blur.
 
 Workshop, its item sheet, Social and Guild use `--font-hand` (Patrick Hand) with ink outlines. Shared components provide 4/8-scale spacing, 16px screen insets, 8px grid gaps, 36px chip faces within 44px targets, 64px match rows and rectangular VS faces. Their runtime resource styles delegate to `Components.uss`.
 
