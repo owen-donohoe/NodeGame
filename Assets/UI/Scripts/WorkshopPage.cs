@@ -354,7 +354,7 @@ namespace NodeWar.Lobby
                 card.style.flexBasis = StyleKeyword.Auto;
                 card.style.width = card.style.maxWidth = width;
                 card.style.minWidth = card.style.minHeight = 0;
-                card.style.height = 144;
+                card.style.height = 152;
                 card.style.marginRight = index++ % 2 == 1 ? 0 : WorkshopLayout.TileGap;
                 card.style.marginBottom = WorkshopLayout.TileGap;
                 card.Q(className: "ws-art-clip").style.height = 78;
