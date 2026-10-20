@@ -41,6 +41,8 @@ sources:
   - Assets/UI/Scripts/GuildSheetHost.cs
   - Assets/UI/Scripts/GuildReportScreen.cs
   - Assets/UI/Scripts/LobbyScrollbars.cs
+  - Assets/UI/Scripts/LobbyMouseDrag.cs
+  - Assets/UI/Scripts/LobbyDragMath.cs
   - Assets/UI/Scripts/LobbyDeepLink.cs
   - Assets/UI/Scripts/LobbyOverlayRouter.cs
   - Assets/UI/Scripts/LobbyPageID.cs
@@ -115,7 +117,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 70600df1
+verified: be2216b2
 ---
 
 # Lobby UI
@@ -128,11 +130,11 @@ Loadouts, accounts/settings and match entry.
 
 `LobbyOverlayRouter` registers close callbacks on `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels, remaining targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled in a centered `MkPanel`, including shop purchases.
 
-`LobbyMotion` supplies exact damped springs. `NavigationController.Tick/MotionChanged` shares one coordinate with stage/pills: physical slides, finger tracking, rubber-band edges, velocity-preserving retargets; long jumps travel one width. Only travel-range pages display. Surfaces pop/fade open and ease closed. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `LobbyContextMenu.Attach/Show/Close` displays actions; `LobbyToast.Show(message)` supplies feedback. `SafeAreaBinder` applies insets.
+`LobbyMotion` supplies springs. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills: slides, tracking, rubber-band edges and velocity-preserving retargets; long jumps travel one width. `LobbyMouseDrag` supplies elastic mouse scrolling and pager/shop click cancellation at 8px; wheels stay native. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `LobbyContextMenu.Attach/Show/Close` displays actions; `LobbyToast.Show(message)` supplies feedback. `SafeAreaBinder` applies insets.
 
 Pages:
 - `WorkshopPage` scrolls two-column grids via `LoadoutBrowse`. `WorkshopStageBinding` maps taps; measured suit bounds retain 8% window margins. `LoadoutScreenModel` gates equipment/replacement; `WorkshopInventorySession` gates requests. Its 78% MkSheet shows preview-inset variant dots, data-bound skins with inert locked previews, and ten-cell `StatHistogram` comparisons.
-- `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a Workshop tag. Big/Small open crates. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
+- `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a note below. Big/Small open crates; zero stock hides count badges. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show prebuilt settled offers with spring/stagger entrances and drag exits. LateUpdate projects after the camera; hidden panels retain layout. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history `AsyncStateView`s. TV/Online/history share ledgers; TV lists 0-4 games plus an empty-state line. Friends precede online guild members; offline friends expand behind a toggle. History uses settled outcomes and signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Players have stats, loadout, newest-ten W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
@@ -167,7 +169,7 @@ Rated rank/inventory belongs to backend state, not local trophies/unlock arrays.
 ## How it works
 `LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
 
-Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five. Workshop has five stage nodes. Suit state survives refreshes; replacement lifts/bobs, swaps, then lowers. Cancel lowers unchanged. Tree suits have variants; both kinds have skins.
+Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five. Suit state survives refreshes; replacement lifts/bobs, swaps, then lowers. Cancel lowers unchanged. Tree suits have variants; both kinds have skins.
 
 Launch freezes refreshed rank/choices/equipment and rechecks completeness. Ranked requires returned rank; private/offline uses arena 1. Rendezvous carries record ID/slot order. Only confirmed resizing persists.
 
