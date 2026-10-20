@@ -36,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: 52b19ade
+verified: e7dbc7de
 ---
 
 # Backend client
@@ -59,6 +59,7 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 - `IGuildService.GetMineAsync/GetAsync/SearchAsync/BrowseAsync/GetChatAsync/SendChatAsync` supplies membership, details, search, browse and chat. Views include descriptions, member roles/seniority/online/RR, own role, announcements and weekly rewards. `GuildMembers.Sorted` copies with ID ties; `IsOfficer` gates moderation. `LocalGuildService.InGuild` switches sample membership. `GuildFilters`, `GuildChatText` and `GuildBrowseCache` guard filters, 200-character messages and session browse caching.
 - `ISocialService.GetLiveMatchesAsync/GetFriendsAsync` return `LiveMatch`/`PlayerCard` lists. `IProfileService.GetAsync(playerId)` returns `PublicProfileView`: card, nullable stats, lobby loadout IDs and recent summaries. `UgsProfileService` calls `GetProfileView`, rejects account changes, and supports empty ID for self. Server presence is Offline; stats are Matches/Wins/Losses/Streak/BestRR. Local profiles use accepted self state/local slots/history or deterministic samples.
 - `IRankedQueueService.EnqueueAsync()` returns ticket ID; `PollAsync(ticketId)` returns `RankedQueueResult` (Searching/Found/Failed/TimedOut/Cancelled, match ID, message); `CancelAsync(ticketId)` deletes it.
+- `UgsRankedQueueService(rated: false)` reuses ticketing with `noRR: true` in isolated `unranked-1v1`; default is `ranked`. Backend configuration must match by authoritative RR and support unrated allocation/rendezvous with no progression settlement.
 - `IRankedMatchService`: `RendezvousAsync(matchId, joinCode)`, `ConfirmConnectedAsync(matchId)`, `LeaveAsync(matchId, forfeit)`, `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)` map to Cloud Code `Rendezvous`, `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`, `ResolveHold`.
 
 `PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs, stats, twenty retained summaries), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s) and `ProfileRecord` (`Name`, `Tag`, `NameNorm`, last free rename). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile`. `HandleRules` (validation, normalisation, rename cost) and `HandleDisplay` (Name#TAG, first-run name) are shared. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
@@ -85,7 +86,7 @@ Services are async and can refuse or throw. UI displays returned state rather th
 ## How it works
 Anonymous authentication is the initial identity. UPA linking preserves its UGS Player ID; a conflict offers explicit account switching without merging. Sign-out clears cached credentials. `LinkPromptPolicy` prompts once progress matters; Steam linking is unbuilt.
 
-Queue preflight retries pending reports, fetches state and clears or offers forfeiting an active match. It displays discipline blocks before enqueueing. UGS initializes player records before creating tickets containing only protocol/sim/content. Polling runs every two seconds; failures recheck active claims instead of parsing ticket messages and allow three automatic requeues. After ninety seconds a bot offer leaves the ticket live until accepted.
+Queue preflight retries pending reports, fetches state and clears or offers forfeiting an active match. It displays discipline blocks before enqueueing. UGS initializes player records before creating tickets containing protocol/sim/content/noRR. Polling runs every two seconds; failures recheck active claims instead of parsing ticket messages and allow three automatic requeues. After ninety seconds a bot offer leaves the ticket live until accepted.
 
 Rendezvous exchanges a Relay code through the record, without UGS Lobby. Guest code wait is fifteen seconds; host guest wait is twenty-two after publication. Failure leaves the record and cancels the connection. Both sides confirm connection before draft handoff.
 

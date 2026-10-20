@@ -329,6 +329,7 @@
     --mk-tap-soft: var(--pal-tap-soft);
     --mk-action: var(--pal-gold-500);
     --mk-urgent: var(--pal-red-500);
+    --mk-private: #74509b;
     --mk-trophy: var(--pal-gold-800);
     --mk-coin: var(--pal-coin);
     --mk-leaf: var(--pal-leaf-500);

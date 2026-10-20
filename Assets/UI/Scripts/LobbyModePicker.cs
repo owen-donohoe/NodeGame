@@ -4,89 +4,95 @@ using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>
-    /// The game mode page: a full-screen push page holding a horizontal pager of Ranked, Unranked and Other.
-    /// The category switch and horizontal swipes drive one spring; the Private 1v1 toggle is pinned below.
-    /// </summary>
+    /// <summary>One elastic strip of two-row column groups, with a spring snap after scrolling rests.</summary>
     public sealed class LobbyModePicker : LobbyPushPage
     {
+        private const float Gap = 12, GroupGap = 24;
         private readonly LobbyToggle privateToggle = new LobbyToggle();
-        private readonly SegmentedSwitch tabs;
-        private readonly VisualElement viewport = new VisualElement { name = "mode-pager" };
-        private readonly VisualElement[] pages = new VisualElement[3];
-        private LobbyMotion.Spring position;
+        private readonly ScrollView strip = new ScrollView(ScrollViewMode.Horizontal);
+        private readonly VisualElement[] groups = new VisualElement[3];
         private LobbyModeSelection selection;
-        private int current, pointer = -1;
-        private bool dragging;
-        private Vector2 start;
-        private long startedAt;
-        private float startPosition;
-        private double lastTime;
+        private LobbyMotion.Spring snap;
+        private float columnWidth, previousOffset;
+        private double lastTime, idleSince;
+        private bool held, snapping, placing;
         public event Action<LobbyModeSelection> Selected;
 
         public LobbyModePicker(VisualElement host, LobbyOverlayRouter router)
             : base("game-mode-page", null, "")
         {
-            Root.Clear();
-            Root.AddToClassList("lb-modepage"); Root.AddToClassList("lb-no-swipe");
-            Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker"));
-            host.Add(Root);
-
+            Root.Clear(); Root.AddToClassList("lb-modepage"); Root.AddToClassList("lb-no-swipe");
+            Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker")); host.Add(Root);
             var header = new VisualElement(); header.AddToClassList("lb-push__header");
             var back = new Button(Close) { name = "push-back", tooltip = "Back" };
             back.AddToClassList("ui-reset-button"); back.AddToClassList("lb-back");
             back.Add(new LobbyIcon(LobbyIconKind.Back, LobbyIconContext.PageHeader) { pickingMode = PickingMode.Ignore });
             header.Add(back); header.Add(GuildViews.Text("Game mode", "lb-push__title")); Root.Add(header);
 
-            var faces = new Button[3];
-            for (int i = 0; i < faces.Length; i++) faces[i] = new Button { text = LobbyModeCategories.Title(LobbyModeCategories.All[i]) };
-            tabs = new SegmentedSwitch(faces); tabs.AddToClassList("lb-modepage__tabs"); tabs.Changed += index => GoTo(index, true);
-            Root.Add(tabs);
-
-            viewport.AddToClassList("lb-modepage__pager"); Root.Add(viewport);
-            for (int i = 0; i < pages.Length; i++)
+            var middle = new VisualElement(); middle.AddToClassList("lb-modepage__middle"); Root.Add(middle);
+            strip.name = "mode-strip"; strip.AddToClassList("lb-modepage__strip");
+            strip.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            strip.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            strip.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            strip.contentContainer.style.flexDirection = FlexDirection.Row;
+            middle.Add(strip);
+            for (int i = 0; i < groups.Length; i++)
             {
-                pages[i] = new VisualElement(); pages[i].AddToClassList("lb-modepage__page");
-                var grid = ModeGrid("mode-grid-" + i); pages[i].Add(grid);
-                foreach (var mode in LobbyModeCategories.ModesIn(LobbyModeCategories.All[i]))
-                    AddCard(grid, mode);
-                viewport.Add(pages[i]);
+                var category = LobbyModeCategories.All[i];
+                var modes = LobbyModeCategories.ModesIn(category);
+                var group = new VisualElement(); group.AddToClassList("lb-modepage__group");
+                groups[i] = group; strip.Add(group);
+                group.Add(GuildViews.Text(LobbyModeCategories.Title(category), "lb-modepage__group-title"));
+                var columns = new VisualElement(); columns.AddToClassList("lb-modepage__columns"); group.Add(columns);
+                for (int c = 0; c < LobbyModeLayout.Columns(modes.Length); c++)
+                {
+                    var column = new VisualElement(); column.AddToClassList("lb-modepage__column"); columns.Add(column);
+                    for (int r = 0; r < LobbyModeLayout.Rows; r++)
+                    {
+                        if (LobbyModeLayout.IsEmpty(modes.Length, c, r))
+                        {
+                            var empty = new VisualElement { pickingMode = PickingMode.Ignore };
+                            empty.AddToClassList("g2-mode-card"); empty.AddToClassList("g2-mode-card--empty"); column.Add(empty);
+                        }
+                        else AddCard(column, modes[LobbyModeLayout.ModeIndex(c, r)]);
+                    }
+                }
             }
-            viewport.RegisterCallback<GeometryChangedEvent>(_ => Apply());
-            viewport.RegisterCallback<PointerDownEvent>(Down);
-            viewport.RegisterCallback<PointerMoveEvent>(Move);
-            viewport.RegisterCallback<PointerUpEvent>(Up);
-            viewport.RegisterCallback<PointerCancelEvent>(_ => Release(0, 0, 0));
-
+            strip.contentViewport.RegisterCallback<GeometryChangedEvent>(_ => LayoutGroups());
+            Root.RegisterCallback<PointerDownEvent>(evt => { held = evt.pointerType != UnityEngine.UIElements.PointerType.mouse; snapping = false; }, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerUpEvent>(_ => { held = false; idleSince = Time.realtimeSinceStartupAsDouble; }, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerCancelEvent>(_ => held = false, TrickleDown.TrickleDown);
+            Root.RegisterCallback<WheelEvent>(_ => { snapping = false; idleSince = Time.realtimeSinceStartupAsDouble; }, TrickleDown.TrickleDown);
             var row = new Button(privateToggle.Flip) { name = "mode-private" };
             row.AddToClassList("ui-reset-button"); row.AddToClassList("lb-modepage__private");
-            row.Add(GuildViews.Text("Private 1v1")); row.Add(privateToggle); Root.Add(row);
+            row.Add(GuildViews.Text("Private")); row.Add(privateToggle); Root.Add(row);
             privateToggle.Changed += value =>
             {
                 selection = new LobbyModeSelection(selection.Mode, value);
-                Selected?.Invoke(selection);
+                RefreshCards(); Selected?.Invoke(selection);
             };
-
             Opened += () =>
             {
-                Root.BringToFront();
-                router.Open(new LobbyOverlay("game-mode", OverlayKind.Fullscreen, true, true), Close);
+                Root.BringToFront(); router.Open(new LobbyOverlay("game-mode", OverlayKind.Fullscreen, true, true), Close);
             };
-            Closed += () => router.Closed("game-mode");
-            Root.RegisterCallback<AttachToPanelEvent>(_ => lastTime = Time.realtimeSinceStartupAsDouble);
+            Closed += () => { held = snapping = false; router.Closed("game-mode"); };
             Root.schedule.Execute(Tick).Every(16);
         }
 
-        private void AddCard(VisualElement grid, LobbyMode mode)
+        private void AddCard(VisualElement column, LobbyMode mode)
         {
             var card = ModeCard(new LobbyModeSelection(mode), () =>
             {
+                if (privateToggle.Value && mode == LobbyMode.Ranked1v1) return;
                 selection = new LobbyModeSelection(mode, privateToggle.Value);
                 Selected?.Invoke(selection); Close();
             });
-            card.userData = mode; grid.Add(card);
+            card.userData = mode;
+            var meta = GuildViews.Text("Off in private", "lb-modepage__private-meta"); card.Add(meta);
+            column.Add(card);
         }
 
+        // Shared with the existing Multiplayer panel.
         internal static VisualElement ModeGrid(string name)
         {
             var grid = new VisualElement { name = name }; grid.AddToClassList("g2-mode-grid");
@@ -97,88 +103,72 @@ namespace NodeWar.Lobby
             });
             return grid;
         }
-
         internal static Button ModeCard(LobbyModeSelection mode, Action selected)
         {
             var display = new HomeModeDisplay(mode);
-            var card = new Button(selected); card.AddToClassList("mk-btn"); card.AddToClassList("g2-mode-card");
-            var bar = new VisualElement(); bar.AddToClassList("g2-mode-colour");
-            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour)) bar.style.backgroundColor = colour;
-            card.Add(bar); card.Add(new LobbyIcon(display.Icon, LobbyIconContext.Home));
+            var card = new Button(selected); card.AddToClassList("ui-reset-button"); card.AddToClassList("mk-btn"); card.AddToClassList("g2-mode-card");
+            card.Add(new LobbyIcon(display.Icon, LobbyIconContext.Home));
             card.Add(GuildViews.Text(display.Name, "mk-h3")); return card;
         }
-
+        private void RefreshCards()
+        {
+            Root.Query<Button>(className: "g2-mode-card").ForEach(card =>
+            {
+                if (!(card.userData is LobbyMode mode)) return;
+                bool off = selection.Private && mode == LobbyMode.Ranked1v1;
+                card.SetEnabled(!off); card.EnableInClassList("g2-mode-card--on", mode == selection.Mode);
+                card.Q(className: "lb-modepage__private-meta").style.display = off ? DisplayStyle.Flex : DisplayStyle.None;
+            });
+        }
         public void Open(LobbyModeSelection chosen)
         {
-            selection = chosen;
-            Root.Query<Button>(className: "g2-mode-card").ForEach(card => card.EnableInClassList("g2-mode-card--on", card.userData is LobbyMode mode && mode == chosen.Mode));
-            privateToggle.SetValueWithoutNotify(chosen.Private);
-            GoTo(LobbyModeCategories.IndexOf(LobbyModeCategories.Of(chosen)), false);
-            Open();
+            selection = chosen; privateToggle.SetValueWithoutNotify(chosen.Private); RefreshCards();
+            held = snapping = false; placing = true; Open(); LayoutGroups();
         }
-
-        private void GoTo(int index, bool animate)
+        private void LayoutGroups()
         {
-            current = Mathf.Clamp(index, 0, pages.Length - 1);
-            tabs.Select(current);
-            position.Target = current;
-            if (!animate) { position = new LobbyMotion.Spring(current); Apply(); }
+            float width = strip.contentViewport.layout.width;
+            if (float.IsNaN(width) || width <= 0) return;
+            columnWidth = Mathf.Clamp(width * 0.43f, 136, 224);
+            // Ranked sits just left of centre; the next group peeks in immediately.
+            float inset = Mathf.Max(12, width * 0.38f - columnWidth / 2);
+            strip.contentContainer.style.paddingLeft = inset;
+            strip.contentContainer.style.paddingRight = Mathf.Max(12, width - inset - columnWidth);
+            for (int i = 0; i < groups.Length; i++)
+            {
+                groups[i].style.width = LobbyModeLayout.GroupWidth(LobbyModeCategories.ModesIn(LobbyModeCategories.All[i]).Length, columnWidth, Gap);
+                groups[i].Query(className: "lb-modepage__column").ForEach(c => c.style.width = columnWidth);
+            }
+            if (placing)
+            {
+                // Wait for content widths to reach Yoga before assigning scroll offset.
+                Root.schedule.Execute(() =>
+                {
+                    strip.scrollOffset = Vector2.zero;
+                    previousOffset = strip.scrollOffset.x; idleSince = Time.realtimeSinceStartupAsDouble; placing = false;
+                });
+            }
         }
-
         private void Tick()
         {
             double now = Time.realtimeSinceStartupAsDouble;
             float dt = (float)(now - lastTime); lastTime = now;
-            if (dragging || position.Settled) return;
-            position.Step(dt); Apply();
-        }
-
-        private void Apply()
-        {
-            float width = viewport.layout.width;
-            if (float.IsNaN(width) || width <= 0) return;
-            for (int i = 0; i < pages.Length; i++) pages[i].style.translate = new Translate((i - position.Position) * width, 0);
-        }
-
-        private void Down(PointerDownEvent evt)
-        {
-            if (!evt.isPrimary || (evt.pointerType == UnityEngine.UIElements.PointerType.mouse && evt.button != 0)) return;
-            pointer = evt.pointerId; start = evt.position; startedAt = evt.timestamp; startPosition = position.Position;
-            dragging = false;
-        }
-
-        private void Move(PointerMoveEvent evt)
-        {
-            if (evt.pointerId != pointer) return;
-            Vector2 delta = (Vector2)evt.position - start;
-            if (!dragging)
+            if (!IsOpen || held || placing || columnWidth <= 0) return;
+            if (LobbyMouseDrag.IsScrolling(strip)) { snapping = false; idleSince = now; previousOffset = strip.scrollOffset.x; return; }
+            float offset = strip.scrollOffset.x;
+            if (snapping)
             {
-                var axis = SwipeDecision.Lock(delta.x, delta.y);
-                if (axis == SwipeAxis.Pending) return;
-                if (axis == SwipeAxis.Vertical) { pointer = -1; return; }
-                dragging = true; LobbyMouseDrag.Capture(viewport, pointer);
+                snap.Step(dt, 1f); strip.scrollOffset = new Vector2(snap.Position, 0);
+                if (snap.Settled) { strip.scrollOffset = new Vector2(snap.Target, 0); snapping = false; }
+                previousOffset = strip.scrollOffset.x; idleSince = now; return;
             }
-            float raw = startPosition - delta.x / Mathf.Max(1f, viewport.layout.width);
-            float bounded = Mathf.Clamp(raw, 0f, pages.Length - 1);
-            position.Position = bounded + (raw - bounded) * 0.35f; position.Velocity = 0f;
-            Apply(); evt.StopPropagation();
-        }
-
-        private void Up(PointerUpEvent evt)
-        {
-            if (evt.pointerId != pointer) return;
-            Vector2 delta = (Vector2)evt.position - start;
-            Release(delta.x, delta.y, evt.timestamp - startedAt);
-        }
-
-        private void Release(float dx, float dy, long elapsed)
-        {
-            int id = pointer; pointer = -1;
-            if (id >= 0 && viewport.HasPointerCapture(id)) viewport.ReleasePointer(id);
-            if (!dragging) return;
-            dragging = false;
-            int offset = SwipeDecision.Decide(dx, dy, elapsed, false, false, SwipeAxis.Horizontal);
-            GoTo(current + offset, true);
+            // Let native touch inertia and LobbyMouseDrag finish before owning the offset.
+            if (Mathf.Abs(offset - previousOffset) > 0.01f) { previousOffset = offset; idleSince = now; return; }
+            if (now - idleSince < 0.2) return;
+            float destination = LobbyModeLayout.GroupStart(LobbyModeLayout.NearestGroup(offset, columnWidth, Gap, GroupGap), columnWidth, Gap, GroupGap);
+            destination = Mathf.Clamp(destination, 0, strip.horizontalScroller.highValue);
+            if (Mathf.Abs(destination - offset) < 0.5f) return;
+            snap = new LobbyMotion.Spring(offset) { Target = destination }; snapping = true;
         }
     }
 }

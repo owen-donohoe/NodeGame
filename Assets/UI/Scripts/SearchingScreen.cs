@@ -52,6 +52,7 @@ namespace NodeWar.Lobby
         public void Open(LobbyModeSelection selection)
         {
             if (IsOpen) Close();
+            if (selection.IsPrivate) { router.CloseAll(); PrivateLobbyPanel.Open(selection); return; }
             mode = selection; navigation.Show(LobbyPageID.Home); router.CloseAll(); IsOpen = true;
             Root.style.display = DisplayStyle.Flex; Root.BringToFront(); RefreshRating(); SetChrome(true);
             invite.style.display = selection.IsPrivate || selection.Mode == LobbyMode.Team2v2 || selection.Mode == LobbyMode.FreeForAll4 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -78,8 +79,10 @@ namespace NodeWar.Lobby
                 if (!IsOpen || request != version) return;
                 if (!await launcher.PrepareAsync(true)) { if (IsOpen && request == version) ShowFailed(launcher.FailureMessage); return; }
                 if (!IsOpen || request != version) return;
-                presenter = new RankedQueuePresenter(BackendServices.RankedQueue, this, BackendServices.RankedMatch,
-                    BackendServices.PlayerState, () => new MatchLauncherConnection(launcher));
+                bool rated = mode.Mode == LobbyMode.Ranked1v1;
+                IRankedQueueService queue = rated ? BackendServices.RankedQueue : new UgsRankedQueueService(false);
+                presenter = new RankedQueuePresenter(queue, this, BackendServices.RankedMatch,
+                    BackendServices.PlayerState, () => new MatchLauncherConnection(launcher, rated));
                 presenter.BotMatchAccepted += () => { if (IsOpen) _ = PlayBotAsync(); };
                 await presenter.StartAsync(Time.realtimeSinceStartupAsDouble);
             }

@@ -35,6 +35,8 @@ namespace NodeWar.Lobby
     /// </summary>
     public class MatchLauncher
     {
+        // Unrated queues share rendezvous, but never submit ranked gameplay reports.
+        public bool RatedMatch { get; set; } = true;
         public enum Phase
         {
             Idle,
@@ -512,7 +514,7 @@ namespace NodeWar.Lobby
             match.isBotMatch = false;
             match.localPlayerID = localPlayerID;
             match.networkManager = networkManager;
-            match.isRanked = rankedMatchId != null;
+            match.isRanked = rankedMatchId != null && RatedMatch;
             match.matchId = rankedMatchId;
             match.playerIds = rankedPlayerIds;
 

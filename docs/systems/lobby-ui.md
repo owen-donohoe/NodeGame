@@ -123,7 +123,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 299e91af
+verified: 925e5744
 ---
 
 # Lobby UI
@@ -139,7 +139,7 @@ Loadouts, accounts/settings and match entry.
 `LobbyMotion` supplies springs. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills, with rubber-band edges and velocity-preserving retargets. `LobbyMouseDrag` supplies elastic mouse scrolling and pager/shop click cancellation. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet` serves sheets; `SafeAreaBinder` applies insets.
 
 Pages:
-- `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; an incomplete loadout dims it, and tapping it (or entering Home) shows a 2.5s toast; the next-box meter sits inside its face. Big/Small open crates; zero stock hides badges. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
+- `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE routes private selections through `LobbyPlayFlow` to `PrivateLobbyPanel.Open(selection)`, otherwise Searching. Incomplete loadouts dim it and show a toast. Meter/divider/label occupy separate rows; crate bottoms align. The mode button flags Private. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
 - `WorkshopPage` prebuilds tiles and refreshes in place via `LoadoutBrowse`. `WorkshopStageBinding` maps taps; suit framing keeps 8% margins. `LoadoutScreenModel` gates equipment, replacement and requests. Its 78% MkSheet shows preview-inset variant dots, skins, and ten-cell stacked `StatBar` rows.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show prebuilt settled offers with spring/stagger entrances and drag exits. LateUpdate projects after the camera; hidden panels retain layout. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles, falling back to Unknown, and shows signed RR. Requests cannot cross visits/accounts.
@@ -148,7 +148,7 @@ Pages:
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
-`LobbyModePicker.Open(selection)` opens the full-screen game-mode push page: a Ranked/Unranked/Other swipe pager (`LobbyModeCategories`) of two-column cards over a pinned `LobbyToggle` for Private; `LobbyModeSelection.FromProfile/Store` preserves mode preferences. `SearchingScreen.Open/Close/Update` owns `RankedQueuePresenter`/launcher, visible inert chrome and Home shot. Back cancels to Home; failures offer Retry. Ranked and Bot launch; LAN/private/party searches log stubs. `MultiplayerSheet.Open(playerId)` logs an invite and enters Searching for Private/2v2/FFA.
+`LobbyModePicker.Open(selection)` opens an elastic Ranked/Unranked/Other strip in the middle 60%, snapping after momentum. `LobbyModeLayout` supplies two-row columns/empty slots. Private disables Ranked and converts its selection to Unranked 1v1; `LobbyModeSelection.FromProfile/Store` persists preferences. `SearchingScreen.Open/Close/Update` owns queue/launcher and inert chrome; Back cancels Home. Unranked 1v1 reuses ranked ticket/rendezvous without ranked reports; its isolated queue requires backend support. `PrivateLobbyPanel`, LAN/party searches and `MultiplayerSheet.Open(playerId)` log stubs.
 
 `AccountFlow` coordinates account sheets, busy/result state and change notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 

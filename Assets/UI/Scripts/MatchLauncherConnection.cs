@@ -16,9 +16,10 @@ namespace NodeWar.Lobby
 
         private readonly MatchLauncher launcher;
 
-        public MatchLauncherConnection(MatchLauncher launcher)
+        public MatchLauncherConnection(MatchLauncher launcher, bool rated = true)
         {
             this.launcher = launcher;
+            launcher.RatedMatch = rated;
         }
 
         public void Host(string matchId, string[] playerIds)

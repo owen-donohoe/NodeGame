@@ -17,6 +17,7 @@
    <ui:VisualElement class="g2-home-actions" picking-mode="Ignore">
     <ui:Label name="home-toast" class="ui-toast g2-home-toast" picking-mode="Ignore" />
     <ui:Button name="home-mode" class="ui-reset-button mk-chip g2-home-mode">
+     <ui:Label name="home-private-flag" text="PRIVATE" class="g2-private-flag" picking-mode="Ignore" />
      <ui:VisualElement name="home-mode-dot" class="g2-mode-dot" picking-mode="Ignore" />
      <lobby:LobbyIcon name="home-mode-icon" context="Home" class="g2-mode-icon" picking-mode="Ignore" />
      <ui:Label name="home-mode-name" picking-mode="Ignore" />
@@ -24,13 +25,15 @@
       <lobby:LobbyIcon kind="Swap" context="Home" class="g2-swap" picking-mode="Ignore" />
      </ui:VisualElement>
     </ui:Button>
-    <ui:Button name="home-battle" text="BATTLE" class="ui-reset-button mk-battle g2-battle">
+    <ui:Button name="home-battle" class="ui-reset-button mk-battle g2-battle">
      <ui:VisualElement class="g2-battle-progress" picking-mode="Ignore">
       <ui:VisualElement name="home-boxmeter" class="g2-battle-meter" picking-mode="Ignore">
        <ui:VisualElement name="home-boxmeter-fill" picking-mode="Ignore" />
       </ui:VisualElement>
       <lobby:LobbyIcon name="home-next-crate-icon" context="Home" class="g2-next-icon" picking-mode="Ignore" />
      </ui:VisualElement>
+     <ui:VisualElement class="g2-battle-divider" picking-mode="Ignore" />
+     <ui:Label text="BATTLE" class="g2-battle-label" picking-mode="Ignore" />
     </ui:Button>
    </ui:VisualElement>
   </ui:VisualElement>

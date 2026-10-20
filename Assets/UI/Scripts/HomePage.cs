@@ -86,6 +86,8 @@ namespace NodeWar.Lobby
 
         public void SetMode(LobbyModeSelection selection)
         {
+            var flag = Root.Q("home-private-flag");
+            if (flag != null) flag.style.display = selection.IsPrivate ? DisplayStyle.Flex : DisplayStyle.None;
             SelectedMode = selection.LegacyMode;
             var display = new HomeModeDisplay(selection);
             if (modeName != null) modeName.text = display.Name;

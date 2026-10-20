@@ -21,6 +21,7 @@ namespace NodeWar.Lobby
         {
             switch (selection.Mode)
             {
+                case LobbyMode.Unranked1v1: Name = "1v1"; Colour = "#A8D8EF"; Icon = LobbyIconKind.Swords; break;
                 case LobbyMode.Team2v2: Name = "2v2"; Colour = "#A8D8EF"; Icon = LobbyIconKind.Invite; break;
                 case LobbyMode.FreeForAll4: Name = "1v1v1v1"; Colour = "#E3B8EB"; Icon = LobbyIconKind.Swords; break;
                 case LobbyMode.Bot: Name = "Bot"; Colour = "#C8E5A0"; Icon = LobbyIconKind.Suit; break;
