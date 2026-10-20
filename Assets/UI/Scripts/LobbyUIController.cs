@@ -545,6 +545,9 @@ namespace NodeWar.Lobby
         {
             selectedMode = LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default);
             modePicker = new LobbyModePicker(lobbyRoot, router);
+            // Keep Home out of the page's slide/fade, including its exposed edges.
+            modePicker.Opened += () => { if (homePage != null) homePage.Root.style.visibility = Visibility.Hidden; };
+            modePicker.Closed += () => { if (homePage != null) homePage.Root.style.visibility = StyleKeyword.Null; };
             modePicker.Selected += selection =>
             {
                 selectedMode = selection;
