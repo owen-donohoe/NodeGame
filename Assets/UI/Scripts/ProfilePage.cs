@@ -145,7 +145,7 @@ namespace NodeWar.Lobby
             revealLater = Root.schedule.Execute(() =>
             {
                 if (!IsOpen || !awaitingReveal) return;
-                if (stateView.layout.width <= 0f || stateView.layout.height <= 0f)
+                if (stateView.layout.width <= 0f || stateView.layout.height <= 0f || !ProfileViews.PrepareLadder(stateView.Content))
                 { RevealPreparedLayout(); return; }
                 awaitingReveal = false; ownMotion.Open();
             });
