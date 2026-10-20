@@ -150,7 +150,7 @@ namespace NodeWar.Lobby
                 return;
             }
             mine.Content.Add(home);
-            var header = home.Q("guild-home-header"); header.Clear(); header.Add(GuildViews.Header(guild));
+            var header = home.Q("guild-home-header"); header.Clear(); header.Add(GuildViews.Header(guild, true));
             var scroll = home.Q<ScrollView>("guild-home-scroll"); scroll.Clear();
             var announcements = GuildViews.Card("Announcements");
             RenderPosts(announcements, guild.Pinned, true); RenderPosts(announcements, guild.Feed, false);

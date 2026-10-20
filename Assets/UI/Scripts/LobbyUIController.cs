@@ -748,7 +748,7 @@ namespace NodeWar.Lobby
                 if (showGuild && guildCard.userData != guildPage.CurrentGuild)
                 {
                     guildCard.Clear();
-                    guildCard.Add(GuildViews.Header(guildPage.CurrentGuild));
+                    guildCard.Add(GuildViews.Header(guildPage.CurrentGuild, true));
                     guildCard.userData = guildPage.CurrentGuild;
                 }
             }
