@@ -3,6 +3,14 @@ using NUnit.Framework;
 
 public class LobbyDragMathTests
 {
+    [TestCase(800, 200, 400, 0)]
+    [TestCase(800, 600, 400, 200)]
+    [TestCase(-20, 600, 400, 0)]
+    [TestCase(120, 600, 400, 120)]
+    [TestCase(800, 400, 400, 0)]
+    public void ContentResizeClampsOffset(float offset, float content, float viewport, float expected) =>
+        Assert.AreEqual(expected, LobbyDragMath.ClampOffset(offset, content, viewport));
+
     [TestCase(7.99f, 0, false)] [TestCase(0, -7.99f, false)]
     [TestCase(8, 0, true)] [TestCase(0, -8, true)]
     public void EightPixelThresholdPreservesTaps(float x, float y, bool passed) =>

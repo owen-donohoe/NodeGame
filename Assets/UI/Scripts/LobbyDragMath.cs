@@ -9,6 +9,9 @@ namespace NodeWar.Lobby
         public static bool PassedThreshold(float dx, float dy) =>
             Math.Max(Math.Abs(dx), Math.Abs(dy)) >= Threshold;
 
+        public static float ClampOffset(float offset, float contentSize, float viewportSize) =>
+            Math.Max(0, Math.Min(Math.Max(0, contentSize - viewportSize), offset));
+
         public static float Elastic(float position, float max, float viewport)
         {
             float bound = Math.Max(0, Math.Min(max, position));
