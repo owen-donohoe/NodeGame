@@ -661,6 +661,7 @@ namespace NodeWar.Lobby
             else if (Enum.TryParse(inspectedItem.ID.Substring(5), true, out DistrictType district))
                 rows = StatHistogram.DistrictRows(balance, district, variant);
             else rows = Array.Empty<HistogramRow>();
+            if (activeTab == Tab.Suits && rows.Length > 0) histogram.Add(StatLegend());
             foreach (var row in rows) histogram.Add(HistogramLine(row));
 
             string description = inspectedItem.Description ?? "";
@@ -724,18 +725,17 @@ namespace NodeWar.Lobby
         {
             var line = new VisualElement { tooltip = "1 cell = " + row.Unit };
             line.AddToClassList("mk-hrow"); line.AddToClassList("ws-stat-row");
-            var heading = new VisualElement(); heading.AddToClassList("ws-stat-heading");
-            heading.Add(MakeLabel(row.Label, "ws-stat-label"));
-            heading.Add(MakeLabel(row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "mk-value", "ws-stat-value"));
-            line.Add(heading);
+            var body = new VisualElement(); body.AddToClassList("ws-stat-body");
+            body.Add(MakeLabel(row.Label, "ws-stat-label"));
             var cells = new VisualElement(); cells.AddToClassList("mk-cells"); cells.AddToClassList("ws-stat-cells");
             for (int i = 0; i < StatHistogram.MaxCells; i++)
             {
-                bool lost = i >= row.Filled && i < row.Filled + row.Loss;
+                StatSegment segment = row.Segments != null ? row.Segments[i] : StatSegment.Empty;
                 var cell = MakeLabel("", "mk-cell", "ws-stat-cell");
-                if (i < row.Filled) cell.AddToClassList("mk-cell--f");
-                else if (i < row.Filled + row.Gain) cell.AddToClassList("mk-cell--g");
-                else if (lost)
+                if (segment == StatSegment.Villager) cell.AddToClassList("mk-cell--f");
+                else if (segment == StatSegment.BaseSuit) cell.AddToClassList("mk-cell--b");
+                else if (segment == StatSegment.Gain) cell.AddToClassList("mk-cell--g");
+                else if (segment == StatSegment.Loss)
                 {
                     cell.AddToClassList("mk-cell--t");
                     cell.style.borderLeftWidth = cell.style.borderRightWidth = cell.style.borderTopWidth = cell.style.borderBottomWidth = 0;
@@ -743,8 +743,23 @@ namespace NodeWar.Lobby
                 }
                 cells.Add(cell);
             }
-            line.Add(cells);
+            body.Add(cells); line.Add(body);
+            var delta = MakeLabel(row.Delta == 0 ? "0" : (row.Delta > 0 ? "+" : "") + row.Delta, "ws-stat-delta");
+            delta.AddToClassList(row.Delta == 0 ? "ws-stat-delta--same" : row.Better ? "ws-stat-delta--up" : "ws-stat-delta--down");
+            line.Add(delta);
             return line;
+        }
+
+        private static VisualElement StatLegend()
+        {
+            var legend = new VisualElement(); legend.AddToClassList("ws-legend");
+            foreach (var entry in new[] { ("Villager", "mk-cell--f"), ("Base suit", "mk-cell--b"), ("This suit", "mk-cell--g") })
+            {
+                var item = new VisualElement(); item.AddToClassList("ws-legend-item");
+                var swatch = new VisualElement(); swatch.AddToClassList("ws-legend-swatch"); swatch.AddToClassList(entry.Item2);
+                item.Add(swatch); item.Add(MakeLabel(entry.Item1, "ws-legend-label")); legend.Add(item);
+            }
+            return legend;
         }
 
         private static void DrawLostCell(MeshGenerationContext context)
