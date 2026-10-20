@@ -63,6 +63,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < stalls.Length; i++)
             {
                 BuildStall(i);
+                stalls[i].style.display = DisplayStyle.None;
                 poses[i] = new ShopPanelPose(float.NaN, float.NaN, float.NaN, false);
             }
             // Bank contains two shelves, but is a single camera stop.
@@ -260,6 +261,12 @@ namespace NodeWar.Lobby
         public override void OnShow()
         {
             shown = true;
+            // Never carry projected panels from the last camera pose into a visit.
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                stalls[i].style.display = DisplayStyle.None;
+                poseReady[i] = false;
+            }
             previousTime = Time.unscaledTimeAsDouble;
             RefreshCountdowns();
             clock.Resume();
@@ -371,7 +378,8 @@ namespace NodeWar.Lobby
                     screen.z, panelDistances[i],
                     stage.ShopReferenceDistance,
                     i, walk.Position, panelHeights[i], vertical, restPoint.y, desiredY);
-                ApplyPose(i, pose);
+                ApplyPose(i, new ShopPanelPose(pose.X, pose.Y, pose.Scale,
+                    pose.Visible && !walk.Dragging && !walk.Moving && !stage.IsPanning));
             }
             bool changed = ShopProjection.OrderByDistance(panelDistances, panelOrder);
             if (!orderReady || changed)

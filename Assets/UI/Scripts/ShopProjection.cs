@@ -27,7 +27,7 @@ namespace NodeWar.Lobby
         }
 
         public static bool IsVisible(float stall, float position, float depth)
-            => depth > 0f && position - stall >= -0.001f && position - stall <= 1f;
+            => depth > 0f && Math.Abs(position - stall) <= 0.001f;
 
         /// <summary>Far to near, ID breaking ties. Reuses both arrays and reports order changes.</summary>
         public static bool OrderByDistance(float[] distances, int[] order)
