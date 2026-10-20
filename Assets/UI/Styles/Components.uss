@@ -864,3 +864,15 @@
 .lb-root .ws-card { overflow: hidden; }
 .lb-root .ws-tile-meta { min-height: 16px; }
 .lb-root .ws-monogram { font-size: 24px; margin-bottom: 0; }
+
+/* Search icon belongs to the field; the only adjacent action is Filter. */
+.lb-root .lb-guild-query-wrap { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; position: relative; }
+.lb-root .lb-guild-query-wrap .lb-guild-query { margin-right: 0; }
+.lb-root .lb-guild-query-wrap .unity-text-field__input { padding-left: 40px; }
+.lb-root .lb-guild-query-icon { position: absolute; left: 12px; top: 12px; width: 24px; height: 24px; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .lb-guild-query .unity-base-text-field__input--placeholder { color: var(--mk-muted); }
+.lb-root #page-guild .lb-guild-filterbtn { width: 48px; height: 48px; min-width: 48px; min-height: 48px; background-image: none; }
+.lb-root .lb-guild-filterbtn .lb-icon { width: 24px; height: 24px; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .lb-guild-browse-toggle, .lb-root .lb-guild-browse-toggle:active { height: 44px; padding: 0; border-width: 0; background-color: var(--clear); background-image: none; align-items: center; justify-content: center; }
+.lb-root .lb-guild-expand-ink, .lb-root .lb-guild-expand-face { position: absolute; width: 24px; height: 24px; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .lb-guild-expand-face { -unity-background-image-tint-color: var(--mk-sheet); }

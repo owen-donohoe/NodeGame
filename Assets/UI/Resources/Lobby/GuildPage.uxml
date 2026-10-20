@@ -5,11 +5,19 @@
         <ui:VisualElement name="guild-search-anchor" class="lb-guild-search-anchor">
             <ui:Label text="GUILDS" class="mk-page-title lb-guild-title" />
             <ui:VisualElement class="lb-guild-search">
-                <ui:TextField name="guild-query" class="lb-guild-query" tooltip="Guild name · press Enter to search" />
-                <ui:Button name="guild-search" class="mk-btn lb-guild-searchbtn" tooltip="Search guilds" />
+                <ui:VisualElement class="lb-guild-query-wrap">
+                    <ui:TextField name="guild-query" class="lb-guild-query" tooltip="Press Enter to search" />
+                    <lobby:LobbyIcon kind="Search" class="lb-guild-query-icon" picking-mode="Ignore" />
+                </ui:VisualElement>
                 <ui:Button name="guild-filter" class="mk-btn lb-guild-filterbtn" tooltip="Filter guilds" />
             </ui:VisualElement>
-            <ui:Button name="guild-browse-toggle" text="⌄" class="mk-btn lb-guild-browse-toggle" tooltip="Browse public guilds" />
+            <ui:Button name="guild-browse-toggle" class="ui-reset-button lb-guild-browse-toggle" tooltip="Browse public guilds">
+                <ui:VisualElement class="lb-guild-expand-ink" style="translate: -1px 0;" picking-mode="Ignore" />
+                <ui:VisualElement class="lb-guild-expand-ink" style="translate: 1px 0;" picking-mode="Ignore" />
+                <ui:VisualElement class="lb-guild-expand-ink" style="translate: 0 -1px;" picking-mode="Ignore" />
+                <ui:VisualElement class="lb-guild-expand-ink" style="translate: 0 1px;" picking-mode="Ignore" />
+                <ui:VisualElement class="lb-guild-expand-face" picking-mode="Ignore" />
+            </ui:Button>
         </ui:VisualElement>
         <ui:ScrollView name="guild-results-scroll" class="lb-guild-results" mode="Vertical" vertical-scroller-visibility="Hidden">
             <ui:VisualElement name="guild-search-results" class="mk-card mk-ledger lb-guild-card"><ui:Label text="Search results" class="mk-ledger__header" /></ui:VisualElement>

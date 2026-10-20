@@ -71,6 +71,8 @@ namespace NodeWar.Lobby
             mine.AddToClassList("lb-guild-membership"); mine.Content.AddToClassList("lb-guild-membership-content");
             Root.Q("guild-state").Add(mine);
             query = visitor.Q<TextField>("guild-query");
+            query.textEdition.placeholder = "Search guild names";
+            query.textEdition.hidePlaceholderOnFocus = false;
             query.Query<TextElement>().ForEach(element => element.enableRichText = false);
             visitor.Q("guild-search-results").Add(search);
             visitor.Q("guild-browse-results").Add(browse);
