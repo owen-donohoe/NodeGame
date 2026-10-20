@@ -643,6 +643,7 @@ namespace NodeWar.Lobby
             previous.AddToClassList("mk-arr"); previous.AddToClassList("ws-arr-prev");
             next.AddToClassList("mk-arr"); next.AddToClassList("ws-arr-next");
             previous.SetEnabled(!inventoryBusy && choices.Length > 1); next.SetEnabled(!inventoryBusy && choices.Length > 1);
+            previous.Add(ArrowGlyph("ws-arr-glyph--prev")); next.Add(ArrowGlyph("ws-arr-glyph--next"));
             artRow.Add(previous); artRow.Add(next); content.Add(artRow);
             var dots = new VisualElement(); dots.AddToClassList("mk-dots");
             for (int i = 0; i < Math.Max(1, choices.Length); i++)
@@ -748,6 +749,12 @@ namespace NodeWar.Lobby
             delta.AddToClassList(row.Delta == 0 ? "ws-stat-delta--same" : row.Better ? "ws-stat-delta--up" : "ws-stat-delta--down");
             line.Add(delta);
             return line;
+        }
+
+        private static VisualElement ArrowGlyph(string side)
+        {
+            var glyph = new VisualElement { pickingMode = PickingMode.Ignore };
+            glyph.AddToClassList("ws-arr-glyph"); glyph.AddToClassList(side); return glyph;
         }
 
         private static VisualElement StatLegend()

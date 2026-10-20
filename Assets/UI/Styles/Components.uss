@@ -692,8 +692,6 @@
 .lb-root .ws-item-content > * { margin-bottom: var(--space-3); }
 .lb-root .ws-item-art { height: 152px; flex-shrink: 0; align-items: center; justify-content: center; }
 .lb-root .ws-artbox .ws-art-clip { width: 100%; height: 100%; }
-.lb-root .ws-arr-prev { left: 0; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-left-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); }
-.lb-root .ws-arr-next { right: 0; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-right-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); }
 .lb-root .ws-item-status { white-space: normal; }
 .lb-root .ws-sheet-actions { flex-direction: row; justify-content: space-between; flex-shrink: 0; }
 .lb-root .ws-sheet-actions > Button { width: 45%; }
@@ -859,7 +857,7 @@
 .lb-root .ui-filter-sort .ui-filter-face { min-height: 20px; padding: 0; border-width: 0; background-image: none; background-color: var(--clear); }
 .lb-root .ws-sort-caret { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; width: 16px; height: 16px; margin-left: 4px; -unity-background-image-tint-color: var(--mk-ink); }
 
-.lb-root .ws-arr-prev, .lb-root .ws-arr-next, .lb-root .mk-panel__close, .lb-root .lb-guild-browse-toggle { background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
+.lb-root .lb-root .mk-panel__close, .lb-root .lb-guild-browse-toggle { background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
 
 .lb-root .mk-field { border-width: 0; padding: 0; background-color: var(--clear); min-height: 48px; }
 .lb-root .mk-field .unity-text-field__input { flex-grow: 1; min-height: 48px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 8px 12px; background-color: var(--mk-sheet); color: var(--mk-ink); font-size: 16px; -unity-font-definition: var(--font-body); }
@@ -922,3 +920,11 @@
 .lb-root #page-guild .lb-switch--on { background-color: var(--mk-tap); }
 .lb-root #page-guild .lb-switch__knob { top: 2px; left: 2px; width: 20px; height: 20px; border-width: 2px; border-color: var(--line-inner); border-radius: 10px; background-color: var(--mk-sheet); }
 .lb-root .lb-switch__knob { transition-property: none; }
+
+/* Side-variant arrows: a 36px circle holding a flatter caret (arms squashed to 70% toward the tip), nudged to the optical centre. */
+.lb-root .ws-arr-prev, .lb-root .ws-arr-next { width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 18px; background-image: none; align-items: center; justify-content: center; }
+.lb-root .ws-arr-prev { left: 0; }
+.lb-root .ws-arr-next { right: 0; }
+.lb-root .ws-arr-glyph { width: 24px; height: 24px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); scale: 0.7 1; }
+.lb-root .ws-arr-glyph--prev { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-left-bold.svg"); transform-origin: 28% 50%; translate: 2px 0; }
+.lb-root .ws-arr-glyph--next { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-right-bold.svg"); transform-origin: 72% 50%; translate: -2px 0; }
