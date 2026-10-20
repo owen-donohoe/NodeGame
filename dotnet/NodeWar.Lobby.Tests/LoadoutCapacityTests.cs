@@ -9,278 +9,159 @@ namespace NodeWar.Lobby.Tests
 {
     public class LoadoutCapacityTests
     {
-        [TestCase(0, false)]
-        [TestCase(1, false)]
-        [TestCase(2, true)]
-        [TestCase(100, true)]
-        public void WarriorOfferedOnlyInHigh(int arena, bool offered)
+        [TestCase(0, 3, 1)] [TestCase(1, 2, 0)] [TestCase(2, 0, 0)] [TestCase(5, 0, 0)]
+        public void PerEraLocksAndFullShape(int arena, int districts, int suits)
         {
-            Assert.AreEqual(offered, LoadoutRules.IsSuitOffered("suit_warrior", arena));
-            Assert.IsTrue(LoadoutRules.IsSuitOffered("suit_scout", arena));
-            Assert.IsFalse(LoadoutRules.IsSuitOffered("unknown", arena));
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town" }.Take(districts), LoadoutRules.LockedDistricts(arena));
+            CollectionAssert.AreEqual(new[] { "suit_warrior" }.Take(suits), LoadoutRules.LockedSuits(arena));
+            Assert.AreEqual(3, LoadoutCapacityPolicy.SuitCapacity(arena));
+            Assert.AreEqual(5, LoadoutCapacityPolicy.DistrictCapacity(arena));
+            Assert.AreEqual(arena > 0, LoadoutRules.IsSuitOffered("suit_warrior", arena));
+            Assert.AreEqual(arena > 0, LoadoutRules.IsDistrictOffered("node_town", arena));
+            Assert.AreEqual(arena >= 2, LoadoutRules.IsDistrictOffered("node_farm", arena));
+            Assert.AreEqual(arena >= 2, LoadoutRules.IsDistrictOffered("node_mine", arena));
+            Assert.IsFalse(LoadoutRules.IsDistrictOffered("node_core", arena));
         }
 
-        [TestCase("node_farm")]
-        [TestCase("node_mine")]
-        [TestCase("node_village")]
-        public void LowLocksNotChosenOffers(string id)
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void FreshDefaultsAndAllPresets(int arena)
         {
-            Assert.IsFalse(LoadoutRules.IsDistrictOffered(id, 1));
-            Assert.IsTrue(LoadoutRules.IsDistrictOffered(id, 2));
-            Assert.IsTrue(LoadoutRules.IsDistrictOffered("node_pier", 1));
-            Assert.IsFalse(LoadoutRules.IsDistrictOffered("node_crossroads", 2));
-            Assert.IsFalse(LoadoutRules.IsDistrictOffered("node_core", 2));
-        }
-
-        [Test]
-        public void IncompleteHighStillHighMode()
-        {
-            var editor = LoadoutRules.LocalEditor(LoadoutData.CreateEmpty(2), 2);
-            var deck = editor.ToLoadout();
-            Assert.IsTrue(LoadoutCapacityPolicy.IsHighShape(deck.suitIDs.Length, deck.districtIDs.Length));
-            Assert.IsFalse(LoadoutRules.IsComplete(deck, 2));
-            Assert.IsFalse(LoadoutMatchSetup.GetsFreeGrants(deck));
-        }
-
-        [Test]
-        public void PromotionDemotion_LocalOnly()
-        {
-            var remote = LoadoutData.CreateEmpty(2);
-            remote.suitIDs = new[] { "suit_scout", "suit_medic", "suit_guardian" };
-            remote.districtIDs = new[] { "node_pier", "node_infirmary", "node_farm", "node_mine", "node_village" };
-            remote.suitEras[(int)SuitType.Guardian] = 2;
-            remote.skinIDs = new[] { "skin.suit.guardian.default" };
-            var low = LoadoutRules.LocalEditor(remote, 1).ToLoadout();
-            Assert.IsTrue(LoadoutRules.IsComplete(low, 1));
-            var promoted = LoadoutRules.LocalEditor(low, 2).ToLoadout();
-            Assert.IsFalse(LoadoutRules.IsComplete(promoted, 2));
-            Assert.AreEqual("", promoted.suitIDs[2]);
-            Assert.AreEqual(2, promoted.suitEras[(int)SuitType.Guardian]);
-            CollectionAssert.AreEqual(remote.skinIDs, promoted.skinIDs);
-            Assert.AreEqual("suit_guardian", remote.suitIDs[2]);
-            Assert.AreEqual(5, remote.districtIDs.Length);
-        }
-
-        [Test]
-        public void Sanitization_EmptiesUnavailableAndBlocksLaunch()
-        {
-            var source = LoadoutData.CreateEmpty(1);
-            source.suitIDs = new[] { "suit_warrior", "suit_scout" };
-            source.districtIDs = new[] { "node_farm", "node_pier" };
-            var sanitized = LoadoutRules.LocalEditor(source, 1).ToLoadout();
-            Assert.AreEqual("", sanitized.suitIDs[0]);
-            Assert.AreEqual("", sanitized.districtIDs[0]);
-            Assert.IsFalse(LoadoutRules.IsComplete(sanitized, 1));
-            Assert.AreEqual("suit_warrior", source.suitIDs[0]);
-        }
-
-        [Test]
-        public void FrozenEquipment_IndependentOfLaterProfileAndRankChanges()
-        {
-            var source = LoadoutData.CreateEmpty(2);
-            source.suitIDs = new[] { "suit_scout", "suit_medic", "suit_guardian" };
-            source.districtIDs = new[] { "node_pier", "node_infirmary", "node_farm", "node_mine", "node_village" };
-            var state = new PlayerState { Rank = new RankRecord { Arena = 2 } };
-            var frozen = LoadoutTypes.WithEquipment(LoadoutRules.LocalEditor(source, 2).ToLoadout(), state);
-            source.suitIDs[0] = "";
-            state.Rank.Arena = 1;
-            Assert.IsTrue(LoadoutRules.IsComplete(frozen, 2));
-            Assert.AreEqual("suit_scout", frozen.suitIDs[0]);
-            Assert.AreEqual(5, frozen.districtIDs.Length);
-            Assert.IsFalse(LoadoutRules.IsComplete(LoadoutRules.LocalEditor(source, 2).ToLoadout(), 2));
-        }
-        [TestCase(0, 2, 2, true)]
-        [TestCase(1, 2, 2, true)]
-        [TestCase(2, 3, 5, false)]
-        [TestCase(100, 3, 5, false)]
-        public void Arena1And2_ExactShapesAndLocks(int arena, int suits, int districts, bool grants)
-        {
-            Assert.AreEqual(suits, LoadoutCapacityPolicy.SuitCapacity(arena));
-            Assert.AreEqual(districts, LoadoutCapacityPolicy.DistrictCapacity(arena));
-            Assert.AreEqual(grants, LoadoutCapacityPolicy.GetsFreeGrants(arena));
-            Assert.AreEqual(suits, LoadoutRules.ChosenSuitSlots(arena));
-            Assert.AreEqual(districts, LoadoutRules.ChosenDistrictSlots(arena));
-            Assert.AreEqual(grants ? 1 : 0, LoadoutRules.LockedSuits(arena).Length);
-            Assert.AreEqual(grants ? 3 : 0, LoadoutRules.LockedDistricts(arena).Length);
-            Assert.AreEqual(grants, LoadoutCapacityPolicy.IsLowShape(suits, districts));
-            Assert.AreEqual(!grants, LoadoutCapacityPolicy.IsHighShape(suits, districts));
-        }
-
-        [Test]
-        public void DefaultOffline_AreLow()
-        {
-            foreach (var deck in new[] { LoadoutData.CreateEmpty(), LoadoutData.Normalized(default),
-                LoadoutTypes.WithEquipment(LoadoutData.CreateEmpty(2), null) })
+            var profile = new PlayerProfileData();
+            LoadoutPresets.Migrate(ref profile);
+            foreach (var data in profile.loadoutPresets.Select(p => p.ToLoadout()).Concat(new[] { LoadoutData.CreateEmpty(arena), LoadoutData.Normalized(default) }))
             {
-                Assert.AreEqual(2, deck.suitIDs.Length);
-                Assert.AreEqual(2, deck.districtIDs.Length);
+                CollectionAssert.AreEqual(new[] { "suit_warrior", "", "" }, data.suitIDs);
+                CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "", "" }, data.districtIDs);
+                Assert.AreEqual(DistrictType.Town, LoadoutTypes.DistrictForLobbyId(data.districtIDs[2]));
             }
-            Assert.AreEqual(3, LoadoutData.SuitSlots);
-            Assert.AreEqual(5, LoadoutData.DistrictSlots);
         }
 
         [Test]
-        public void PromotionPads_DemotionTrimsWithoutEquipmentLoss()
+        public void ExistingThreeLegacyPresetsMigrateTogetherOnce()
         {
-            var low = LoadoutData.CreateEmpty(1);
-            low.suitIDs = new[] { "suit_scout", "suit_medic" };
-            low.districtIDs = new[] { "node_pier", "node_infirmary" };
-            low.suitEras[(int)SuitType.Medic] = 2;
-            low.districtEras[(int)DistrictType.Pier] = 3;
-            low.skinIDs = new[] { "skin.suit.medic.default" };
-            var high = LoadoutData.Normalized(low, 2);
-            CollectionAssert.AreEqual(new[] { "suit_scout", "suit_medic", "" }, high.suitIDs);
-            CollectionAssert.AreEqual(new[] { "node_pier", "node_infirmary", "", "", "" }, high.districtIDs);
-            high.suitIDs[2] = "suit_guardian";
-            high.districtIDs[4] = "node_workshop";
-            var demoted = LoadoutData.Normalized(high, 1);
-            CollectionAssert.AreEqual(low.suitIDs, demoted.suitIDs);
-            CollectionAssert.AreEqual(low.districtIDs, demoted.districtIDs);
-            CollectionAssert.AreEqual(low.suitEras, demoted.suitEras);
-            CollectionAssert.AreEqual(low.districtEras, demoted.districtEras);
-            CollectionAssert.AreEqual(low.skinIDs, demoted.skinIDs);
-            Assert.AreEqual("", LoadoutData.Normalized(demoted, 2).suitIDs[2]);
-            var equipped = LoadoutTypes.WithEquipment(low, new PlayerState { Rank = new RankRecord { Arena = 2 } });
-            Assert.AreEqual(3, equipped.suitIDs.Length);
-            Assert.AreEqual(5, equipped.districtIDs.Length);
+            var legacy = new LoadoutRecord { suitIDs = new[] { "suit_guardian", "suit_scout" },
+                nodeIDs = new[] { "node_barracks", "node_village" } };
+            var profile = new PlayerProfileData { activeLoadoutPreset = 2, loadoutPresets = new[] { legacy, legacy, legacy } };
+            Assert.IsTrue(LoadoutPresets.Migrate(ref profile));
+            Assert.AreEqual(2, profile.activeLoadoutPreset);
+            foreach (var preset in profile.loadoutPresets)
+            {
+                CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "node_barracks", "node_village" }, preset.nodeIDs);
+                CollectionAssert.AreEqual(new[] { "suit_warrior", "suit_guardian", "suit_scout" }, preset.suitIDs);
+            }
+            Assert.IsFalse(LoadoutPresets.Migrate(ref profile));
+            Assert.AreEqual(2, legacy.nodeIDs.Length);
         }
 
         [Test]
-        public void LegacyThreeByTwo_IsNotHigh()
+        public void ProductionSuitOwnershipCannotBlockQueue()
         {
-            var legacy = new LoadoutData { suitIDs = new[] { "a", "b", "dropped" }, districtIDs = new[] { "", "" } };
-            Assert.IsFalse(LoadoutCapacityPolicy.IsHighShape(3, 2));
-            CollectionAssert.AreEqual(new[] { "a", "b" }, LoadoutData.Normalized(legacy).suitIDs);
-            CollectionAssert.AreEqual(new[] { "a", "b", "" }, LoadoutData.Normalized(legacy, 2).suitIDs);
-            var record = new LoadoutRecord { suitIDs = legacy.suitIDs, nodeIDs = legacy.districtIDs };
-            CollectionAssert.AreEqual(new[] { "a", "b" }, record.ToLoadout().suitIDs);
+            var state = Owned(0, "suit_warrior", "node_farm", "node_mine", "node_town", "suit_farmer", "suit_miner");
+            Assert.IsTrue(LoadoutRules.IsComplete(LoadoutData.CreateEmpty(0), 0, state));
+            Assert.IsFalse(LoadoutRules.IsSuitOffered("suit_farmer", 0));
         }
 
-        [TestCase(1)]
-        [TestCase(2)]
-        public void Normalize_CopiesAndPreservesShape(int arena)
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void LegacyChoicesMigrateOnceAndKeepEquipment(int arena)
+        {
+            var legacy = new LoadoutData { suitIDs = new[] { "suit_guardian", "suit_scout" },
+                districtIDs = new[] { "node_barracks", "node_village" }, suitEras = new[] { 0, 1 }, skinIDs = new[] { "skin.suit.guardian.default" } };
+            var migrated = LoadoutData.Normalized(legacy, arena);
+            CollectionAssert.AreEqual(new[] { "suit_warrior", "suit_guardian", "suit_scout" }, migrated.suitIDs);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "node_barracks", "node_village" }, migrated.districtIDs);
+            for (int i = 0; i < 3; i++)
+            {
+                var copy = LoadoutRecord.From(migrated).ToLoadout();
+                CollectionAssert.AreEqual(migrated.suitIDs, copy.suitIDs);
+                CollectionAssert.AreEqual(migrated.districtIDs, copy.districtIDs);
+                CollectionAssert.AreEqual(migrated.suitEras, copy.suitEras);
+                CollectionAssert.AreEqual(legacy.skinIDs, copy.skinIDs);
+                migrated = copy;
+            }
+            Assert.AreEqual(2, legacy.suitIDs.Length);
+        }
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void EditorRefusesLockedRemovalReplacementAndClearKeepsOnlyLocks(int arena)
         {
             var source = LoadoutData.CreateEmpty(arena);
-            source.suitIDs[0] = "suit_scout";
-            source.districtIDs[0] = "node_pier";
-            source.suitEras[(int)SuitType.Medic] = 2;
-            source.districtEras[(int)DistrictType.Pier] = 3;
-            source.skinIDs = new[] { "skin.suit.scout.default" };
-            var copy = LoadoutData.Normalized(source);
-            CollectionAssert.AreEqual(source.suitIDs, copy.suitIDs);
-            CollectionAssert.AreEqual(source.districtIDs, copy.districtIDs);
-            Assert.AreNotSame(source.suitIDs, copy.suitIDs);
-            Assert.AreNotSame(source.districtIDs, copy.districtIDs);
-            Assert.AreNotSame(source.suitEras, copy.suitEras);
-            Assert.AreNotSame(source.districtEras, copy.districtEras);
-            Assert.AreNotSame(source.skinIDs, copy.skinIDs);
-            for (int i = 0; i < 3; i++) copy = LoadoutRecord.From(copy).ToLoadout();
-            CollectionAssert.AreEqual(source.suitIDs, copy.suitIDs);
-            CollectionAssert.AreEqual(source.districtIDs, copy.districtIDs);
-            CollectionAssert.AreEqual(source.skinIDs, copy.skinIDs);
-            CollectionAssert.AreEqual(source.suitEras, copy.suitEras);
-            CollectionAssert.AreEqual(source.districtEras, copy.districtEras);
-            CollectionAssert.AreEquivalent(new[] { "suitIDs", "nodeIDs", "suitEras", "districtEras", "skinIDs" },
-                typeof(LoadoutRecord).GetFields().Select(f => f.Name));
-        }
-
-        [TestCase(1)]
-        [TestCase(2)]
-        public void Editor_FillClearAndDropAtEffectiveCapacity(int arena)
-        {
-            var editor = new LoadoutEditor(default, arena);
-            for (int i = 0; i < editor.SuitSlotCount; i++) Assert.AreEqual(i, editor.EquipSuit("s" + i));
-            for (int i = 0; i < editor.DistrictSlotCount; i++) Assert.AreEqual(i, editor.EquipDistrict("d" + i));
-            Assert.IsTrue(editor.SuitSlotsFull);
-            Assert.IsTrue(editor.DistrictSlotsFull);
-            Assert.AreEqual(-1, editor.EquipSuit("extra"));
-            Assert.AreEqual(-1, editor.EquipDistrict("extra"));
-            int last = editor.DistrictSlotCount - 1;
-            Assert.AreEqual("d" + last, editor.ClearDistrictSlot(last));
-            Assert.AreEqual(last, editor.EquipDistrict("replacement"));
-            var snapshot = editor.ToLoadout();
-            var reloaded = new LoadoutEditor(snapshot);
-            Assert.AreEqual(editor.SuitSlotCount, reloaded.SuitSlotCount);
-            Assert.AreEqual(editor.DistrictSlotCount, reloaded.DistrictSlotCount);
-            Assert.AreEqual(editor.SuitSlotCount + editor.DistrictSlotCount, editor.DropUnavailable(s => false, d => false));
-            Assert.AreEqual(0, editor.FilledSuitCount);
-            Assert.AreEqual(0, editor.FilledDistrictCount);
-            Assert.IsTrue(reloaded.DistrictSlotsFull);
-        }
-
-        [TestCase(1, 0)]
-        [TestCase(1, 1)]
-        [TestCase(2, 0)]
-        [TestCase(2, 1)]
-        public void BothModes_RoundTripIncludingBlanks_RemoteShapeIsIndependentOfLocalArena(int arena, int seat)
-        {
-            var source = LoadoutData.CreateEmpty(arena);
-            source.suitIDs[0] = "suit_scout";
-            source.districtIDs[source.districtIDs.Length - 1] = "node_pier";
-            source.suitEras[(int)SuitType.Medic] = 2;
-            source.districtEras[(int)DistrictType.Pier] = 3;
-            source.skinIDs = new[] { "skin.suit.medic.default" };
-            var local = LoadoutData.CreateEmpty(arena == 1 ? 2 : 1);
-            byte[] packet = DraftSerializer.SerializeDraftLoadout(seat, source);
-            Assert.AreEqual(source.suitIDs.Length, packet[5]);
-            Assert.IsTrue(DraftSerializer.TryDeserializeDraftLoadout(packet, out int player, out var remote));
-            Assert.AreEqual(seat, player);
-            CollectionAssert.AreEqual(source.suitIDs, remote.suitIDs);
-            CollectionAssert.AreEqual(source.districtIDs, remote.districtIDs);
-            CollectionAssert.AreEqual(source.suitEras, remote.suitEras);
-            CollectionAssert.AreEqual(source.districtEras, remote.districtEras);
-            CollectionAssert.AreEqual(source.skinIDs, remote.skinIDs);
-            Assert.AreNotEqual(local.suitIDs.Length, LoadoutData.Normalized(remote).suitIDs.Length);
-        }
-
-        [TestCase(3, 2)]
-        [TestCase(2, 5)]
-        [TestCase(4, 5)]
-        [TestCase(3, 6)]
-        [TestCase(0, 0)]
-        [TestCase(255, 255)]
-        public void NoncanonicalPairs_AreRefused(int suits, int districts)
-        {
-            // Raw counts, with empty strings, ending at the optional equipment boundary.
-            var packet = new byte[7 + suits + districts];
-            packet[0] = (byte)PacketType.DraftLoadout;
-            packet[5] = (byte)suits;
-            packet[6 + suits] = (byte)districts;
-            Assert.IsFalse(DraftSerializer.TryDeserializeDraftLoadout(packet, out int player, out _));
-            Assert.AreEqual(-1, player);
-            Assert.Throws<FormatException>(() => DraftSerializer.DeserializeDraftLoadout(packet, out _, out _));
-        }
-
-        [TestCase(0)]
-        [TestCase(1)]
-        [TestCase(2)]
-        [TestCase(100)]
-        public void IsComplete_RequiresEveryEffectiveChosenSlot(int arena)
-        {
-            Assert.IsFalse(LoadoutRules.IsComplete(default, arena));
-            var deck = LoadoutData.CreateEmpty(arena);
-            string[] suits = arena < 2 ? new[] { "suit_scout", "suit_medic" } : new[] { "suit_warrior", "suit_scout", "suit_medic" };
-            string[] districts = arena < 2 ? new[] { "node_pier", "node_infirmary" } : new[] { "node_farm", "node_mine", "node_village", "node_pier", "node_infirmary" };
-            deck.suitIDs = suits;
-            deck.districtIDs = districts;
-            var state = new PlayerState { Inventory = new InventoryRecord { OwnedVariants = new System.Collections.Generic.List<string>() } };
-            foreach (string id in suits.Concat(districts)) state.Inventory.OwnedVariants.Add(CatalogIds.Variant(LoadoutTypes.CatalogBaseForLobbyId(id), 0));
-            Assert.IsTrue(LoadoutRules.IsComplete(deck, arena, state));
-            for (int i = 0; i < deck.suitIDs.Length; i++)
+            var editor = new LoadoutEditor(source, arena);
+            editor.EquipSuit("suit_guardian"); editor.EquipSuit("suit_scout");
+            editor.EquipDistrict("node_barracks"); editor.EquipDistrict("node_village");
+            foreach (string id in LoadoutRules.LockedDistricts(arena))
             {
-                string saved = deck.suitIDs[i];
-                deck.suitIDs[i] = null;
-                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena, state));
-                deck.suitIDs[i] = saved;
+                int slot = Array.IndexOf(editor.ToLoadout().districtIDs, id);
+                Assert.AreEqual("", editor.ClearDistrictSlot(slot));
+                Assert.IsFalse(editor.ReplaceDistrictSlot(slot, "node_forge"));
             }
-            for (int i = 0; i < deck.districtIDs.Length; i++)
+            foreach (string id in LoadoutRules.LockedSuits(arena))
             {
-                string saved = deck.districtIDs[i];
-                deck.districtIDs[i] = "";
-                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena, state));
-                deck.districtIDs[i] = saved;
+                int slot = Array.IndexOf(editor.ToLoadout().suitIDs, id);
+                Assert.AreEqual("", editor.ClearSuitSlot(slot));
+                Assert.IsFalse(editor.ReplaceSuitSlot(slot, "suit_medic"));
             }
-            if (arena < 2) Assert.IsFalse(LoadoutRules.IsComplete(deck, 2));
+            editor.ClearChoices();
+            CollectionAssert.AreEquivalent(LoadoutRules.LockedDistricts(arena), editor.ToLoadout().districtIDs.Where(id => id.Length > 0));
+            CollectionAssert.AreEquivalent(LoadoutRules.LockedSuits(arena), editor.ToLoadout().suitIDs.Where(id => id.Length > 0));
+            Assert.AreEqual(3, editor.SuitSlotCount); Assert.AreEqual(5, editor.DistrictSlotCount);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "", "" }, source.districtIDs);
+        }
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void DropsNeverRemoveLocksAndClearSurvivesPresetSwitch(int arena)
+        {
+            var editor = LoadoutRules.LocalEditor(LoadoutData.CreateEmpty(arena), arena);
+            editor.DropUnavailable(_ => false, _ => false);
+            editor.ClearChoices();
+            var profile = new PlayerProfileData();
+            LoadoutPresets.Store(ref profile, editor.ToLoadout());
+            LoadoutPresets.Switch(ref profile, 1, arena, _ => true, _ => true);
+            var restored = LoadoutPresets.Switch(ref profile, 0, arena, _ => true, _ => true);
+            CollectionAssert.AreEqual(editor.ToLoadout().districtIDs, restored.districtIDs);
+            CollectionAssert.AreEqual(editor.ToLoadout().suitIDs, restored.suitIDs);
+        }
+
+        private static PlayerState Owned(int arena, params string[] ids) => new PlayerState
+        {
+            Rank = new RankRecord { Arena = arena, HighestArena = 5 },
+            Inventory = new InventoryRecord { OwnedVariants = ids.Select(id => CatalogIds.Variant(LoadoutTypes.CatalogBaseForLobbyId(id), 0)).ToList() }
+        };
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void QueueFullOrExhaustedRequiresBothSides(int arena)
+        {
+            var data = LoadoutData.CreateEmpty(arena);
+            var current = data.suitIDs.Concat(data.districtIDs).Where(id => id.Length > 0).ToArray();
+            Assert.IsTrue(LoadoutRules.IsComplete(data, arena, Owned(arena, current)));
+            Assert.IsFalse(LoadoutRules.IsComplete(data, arena, Owned(arena, current.Concat(new[] { "suit_guardian" }).ToArray())));
+            Assert.IsFalse(LoadoutRules.IsComplete(data, arena, Owned(arena, current.Concat(new[] { "node_barracks" }).ToArray())));
+            data.suitIDs = new[] { "suit_warrior", "suit_guardian", "suit_scout" };
+            data.districtIDs = new[] { "node_farm", "node_mine", "node_town", "node_barracks", "node_village" };
+            Assert.IsTrue(LoadoutRules.IsComplete(data, arena, Owned(arena, current)));
+        }
+
+        [Test]
+        public void QueueIgnoresOwnedFutureBasesUntilUsableInExplicitEra()
+        {
+            var data = LoadoutData.CreateEmpty(0);
+            var state = Owned(5, "suit_warrior", "node_farm", "node_mine", "node_town", "suit_scout", "node_village");
+            Assert.IsTrue(LoadoutRules.IsComplete(data, 0, state));
+            Assert.IsFalse(LoadoutRules.IsComplete(data, 1, state));
+            var future = Owned(5, "suit_warrior", "node_farm", "node_mine", "node_town", "node_forge");
+            Assert.IsTrue(LoadoutRules.IsComplete(data, 1, future));
+            Assert.IsFalse(LoadoutRules.IsComplete(data, 2, future));
+        }
+
+        [Test]
+        public void DemotionRestoresMissingLocksWithoutMutatingFrozenRemote()
+        {
+            var remote = new LoadoutData { suitIDs = new[] { "suit_scout", "suit_guardian", "suit_medic" },
+                districtIDs = new[] { "node_barracks", "node_forge", "node_village", "node_workshop", "node_fortress" } };
+            var local = LoadoutRules.LocalEditor(remote, 0).ToLoadout();
+            foreach (string id in LoadoutRules.LockedDistricts(0)) CollectionAssert.Contains(local.districtIDs, id);
+            CollectionAssert.Contains(local.suitIDs, "suit_warrior");
+            CollectionAssert.DoesNotContain(remote.districtIDs, "node_farm");
+            Assert.AreEqual("suit_medic", remote.suitIDs[2]);
         }
     }
 }

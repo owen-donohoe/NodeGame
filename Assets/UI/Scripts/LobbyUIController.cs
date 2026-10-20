@@ -102,6 +102,7 @@ namespace NodeWar.Lobby
         private string[] stageSuitIds;
         private int[] stageDistrictTypes;
         private int[] stageSuitTypes;
+        private int stageArena = int.MinValue;
         private LobbyOverlayPanel burgerPanel;
         private LobbyOverlayPanel bellPanel;
         private readonly string[] notifications = System.Array.Empty<string>();
@@ -436,16 +437,16 @@ namespace NodeWar.Lobby
             if (stage == null || catalog == null) return;
             var loadout = catalog.CurrentLoadout().ToLoadout();
             int arena = LoadoutRules.ArenaOrFallback(NodeWar.Backend.BackendServices.LastKnownState?.Rank);
-            // Grants occupy real stage slots after the compact chosen slots.
-            int[] chosenDistricts = StageLoadoutTypes.WithGranted(StageLoadoutTypes.Districts(loadout.districtIDs),
-                StageLoadoutTypes.Districts(LoadoutRules.LockedDistricts(arena)));
-            int[] suits = StageLoadoutTypes.WithGranted(StageLoadoutTypes.Suits(loadout.suitIDs),
-                StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(arena)));
+            int[] chosenDistricts = StageLoadoutTypes.Districts(loadout.districtIDs);
+            int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
             int[] districtKey = chosenDistricts;
-            if (!StageLoadoutTypes.Same(districtKey, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
+            if (stageArena != arena || !StageLoadoutTypes.Same(districtKey, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
             {
                 workshopStage?.LoadoutReset();
-                stage.SetLoadout(chosenDistricts, suits);
+                stage.SetLoadout(chosenDistricts, suits,
+                    lockedDistricts: StageLoadoutTypes.Districts(LoadoutRules.LockedDistricts(arena)),
+                    lockedSuits: StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(arena)));
+                stageArena = arena;
                 stageDistrictTypes = districtKey;
                 stageSuitTypes = suits;
             }

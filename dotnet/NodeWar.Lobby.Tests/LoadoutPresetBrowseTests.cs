@@ -20,7 +20,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(3, profile.loadoutPresets.Length);
             Assert.AreEqual(0, profile.activeLoadoutPreset);
             Assert.AreEqual("node_pier", profile.loadoutPresets[0].nodeIDs[0]);
-            Assert.IsEmpty(profile.loadoutPresets[1].nodeIDs[0]);
+            Assert.AreEqual("node_farm", profile.loadoutPresets[1].nodeIDs[0]);
             Assert.IsFalse(LoadoutPresets.Migrate(ref profile));
             profile.loadout.nodeIDs[0] = "";
             Assert.AreEqual("node_pier", profile.loadoutPresets[0].nodeIDs[0]);
@@ -42,7 +42,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("node_infirmary", second.districtIDs[0]);
         }
 
-        [TestCase(1, 2, 2)]
+        [TestCase(1, 3, 5)]
         [TestCase(2, 3, 5)]
         public void SwitchingSanitizesCapacityOwnershipAndOffers(int arena, int suits, int districts)
         {
@@ -70,6 +70,7 @@ namespace NodeWar.Lobby.Tests
             var chosen = LoadoutData.CreateEmpty(1);
             chosen.suitIDs[0] = "suit_scout";
             chosen.suitIDs[1] = "suit_medic";
+            chosen.suitIDs[2] = "suit_berserker";
             var model = new LoadoutScreenModel(chosen);
             model.Preview("suit_guardian");
             Assert.IsTrue(model.BeginSuitReplace(true, false));
@@ -85,6 +86,7 @@ namespace NodeWar.Lobby.Tests
             var chosen = LoadoutData.CreateEmpty(1);
             chosen.suitIDs[0] = "suit_scout";
             chosen.suitIDs[1] = "suit_medic";
+            chosen.suitIDs[2] = "suit_berserker";
             var model = new LoadoutScreenModel(chosen);
             model.Preview("suit_guardian");
             Assert.IsFalse(model.BeginSuitReplace(true, true));

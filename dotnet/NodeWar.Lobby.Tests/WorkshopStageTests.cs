@@ -4,26 +4,19 @@ using NUnit.Framework;
 public class WorkshopStageTests
 {
 
-    [TestCase(true)] [TestCase(false)]
-    public void GrantPickHasInspectableIdentityButCannotEndReplacement(bool suit)
+    [TestCase(false)] [TestCase(true)]
+    public void LockedPickCannotEndReplacement(bool suit)
     {
-        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(1));
-        for (int i = 0; i < 2; i++) { model.Preview("chosen" + i); model.UsePreview(true, suit); }
-        model.Inspect("replacement", suit);
+        var editor = new LoadoutEditor(LoadoutData.CreateEmpty(0), 0);
+        editor.EquipSuit("suit_guardian"); editor.EquipSuit("suit_scout");
+        editor.EquipDistrict("node_barracks"); editor.EquipDistrict("node_village");
+        var model = new LoadoutScreenModel(editor.ToLoadout(), 0);
+        model.Inspect(suit ? "suit_medic" : "node_forge", suit);
         Assert.IsFalse(model.Use(true, false));
         Assert.IsTrue(model.Replacing);
-        var chosen = suit ? model.ToData().suitIDs : model.ToData().districtIDs;
-        var grants = suit ? LoadoutRules.LockedSuits(1) : LoadoutRules.LockedDistricts(1);
-        for (int i = 0; i < grants.Length; i++)
-        {
-            Assert.AreEqual(grants[i], StageSlotMap.IdAt(chosen, grants, 2 + i));
-            int slot = StageSlotMap.ToChosen(chosen, 2 + i);
-            Assert.AreEqual(-1, slot);
-            Assert.IsFalse(suit ? model.CompleteSuitReplace(slot, true, false) : model.CompleteReplace(slot, true, false));
-            Assert.IsTrue(model.Replacing);
-        }
-        Assert.IsTrue(suit ? model.CompleteSuitReplace(1, true, false) : model.CompleteReplace(1, true, false));
-        Assert.IsFalse(model.Replacing);
+        Assert.IsFalse(suit ? model.CompleteSuitReplace(0, true, false) : model.CompleteReplace(0, true, false));
+        Assert.IsTrue(model.Replacing);
+        Assert.IsTrue(suit ? model.CompleteSuitReplace(1, true, false) : model.CompleteReplace(3, true, false));
     }
 
     [Test]
@@ -31,7 +24,7 @@ public class WorkshopStageTests
     {
         string[] chosen = { "", "node_town" };
         var grants = LoadoutRules.LockedDistricts(1);
-        CollectionAssert.AreEqual(new[] { "node_town", "node_farm", "node_mine", "node_village" }, StageSlotMap.WithGranted(chosen, grants));
+        CollectionAssert.AreEqual(new[] { "node_town", "node_farm", "node_mine" }, StageSlotMap.WithGranted(chosen, grants));
         Assert.AreEqual(1, StageSlotMap.ToChosen(chosen, 0));
         Assert.AreEqual(-1, StageSlotMap.ToChosen(chosen, 1));
         Assert.AreEqual("node_farm", StageSlotMap.IdAt(chosen, grants, 1));
@@ -41,7 +34,7 @@ public class WorkshopStageTests
 
     private static LoadoutScreenModel Full(int arena)
     {
-        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(arena));
+        var model = new LoadoutScreenModel(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, 2);
         int capacity = model.ToData().districtIDs.Length;
         for (int i = 0; i < capacity; i++) { model.Preview("district" + i); model.UsePreview(true, false); }
         model.Preview("replacement");
@@ -95,12 +88,12 @@ public class WorkshopStageTests
     [Test]
     public void EmptySlotsStillUseFirstEmptyAndInvalidOrDuplicateReplacementIsRefused()
     {
-        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(2));
+        var model = new LoadoutScreenModel(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, 2);
         model.Preview("new");
         Assert.IsFalse(model.BeginReplace(true, false));
         Assert.IsTrue(model.UsePreview(true, false));
         Assert.AreEqual("new", model.ToData().districtIDs[0]);
-        var editor = new LoadoutEditor(model.ToData());
+        var editor = new LoadoutEditor(model.ToData(), 2);
         Assert.IsFalse(editor.ReplaceDistrictSlot(4, "other"));
         Assert.IsFalse(editor.ReplaceDistrictSlot(-1, "other"));
         Assert.IsFalse(editor.ReplaceDistrictSlot(0, "new"));

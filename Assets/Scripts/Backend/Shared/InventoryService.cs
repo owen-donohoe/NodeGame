@@ -103,7 +103,7 @@ namespace NodeWar.Backend
                 if (parsedBase != baseId) throw new InventoryValidationException($"Item '{id}' is not for base '{baseId}'.");
                 var owned = skin ? staged.Inventory.OwnedSkins : staged.Inventory.OwnedVariants;
                 if (owned == null || !owned.Contains(id)) throw new InventoryValidationException($"Item '{id}' is not owned.");
-                bool usable = SuitTree.IsTreeSuit(baseId) ? SuitTree.IsAvailable(id, state.Rank.Arena) : era <= state.Rank.Arena;
+                bool usable = LoadoutCapacityPolicy.IsVariantUsable(baseId, id, state.Rank.Arena);
                 if (!skin && !usable) throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
             });
             changed |= migrated;

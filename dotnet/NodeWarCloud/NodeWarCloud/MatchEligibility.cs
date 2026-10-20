@@ -48,13 +48,8 @@ namespace NodeWar.Cloud
                     if (p != 0 && p != 1) return "Invalid draft player.";
                     if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
-                    // Only the server catalog's board may waive ownership, never the log's own claim.
-                    var basePool = record.protocol < 6 ? null
-                        : p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
-                    bool free = LoadoutCapacityPolicy.GetsFreeGrants(record.players[p].Rank.Arena) &&
-                        basePool != null && System.Array.IndexOf(basePool, placement.districtType) >= 0;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
-                        type, log.loadouts[p].districtEras, requireOwnership: !free);
+                        type, log.loadouts[p].districtEras);
                     if (error != null) return error;
                 }
             return null;
@@ -91,12 +86,10 @@ namespace NodeWar.Cloud
                 if (loadout?.suits == null || loadout.districts == null)
                     return "Log needs complete loadouts.";
                 int arena = record.players[p].Rank.Arena;
-                bool low = LoadoutCapacityPolicy.GetsFreeGrants(arena);
-                int suitBudget = LoadoutCapacityPolicy.SuitCapacity(arena) + (low ? 1 : 0);
+                int suitBudget = LoadoutCapacityPolicy.SuitCapacity(arena);
                 if (loadout.suits.Length > suitBudget ||
                     loadout.districts.Length > LoadoutCapacityPolicy.DistrictCapacity(arena))
                     return "Loadout exceeds snapshot arena budget.";
-                bool warrior = false;
                 for (int i = 0; i < loadout.suits.Length; i++)
                 {
                     int type = loadout.suits[i];
@@ -105,9 +98,12 @@ namespace NodeWar.Cloud
                         return "Invalid chosen suit.";
                     for (int j = 0; j < i; j++)
                         if (loadout.suits[j] == type) return "Duplicate chosen suit.";
-                    if (type == (int)SuitType.Warrior) warrior = true;
+                    if (!LoadoutCapacityPolicy.IsBaseUsable(LoadoutTypes.CatalogBaseForSuit(type), arena))
+                        return "Drafted base is unavailable at the snapshot arena.";
                 }
-                if (low && !warrior) return "Low arena loadout needs its free Warrior.";
+                foreach (string id in LoadoutCapacityPolicy.LockedSuits(arena))
+                    if (System.Array.IndexOf(loadout.suits, (int)LoadoutTypes.SuitForLobbyId(id)) < 0)
+                        return "Loadout is missing a locked suit.";
 
                 budgets[p] = new int[LoadoutTypes.DistrictTypeCount];
                 for (int i = 0; i < loadout.districts.Length; i++)
@@ -118,14 +114,13 @@ namespace NodeWar.Cloud
                         LoadoutTypes.CatalogBaseForDistrict(type) == null)
                         return "Invalid chosen district.";
                     if (budgets[p][type] != 0) return "Duplicate chosen district.";
+                    if (!LoadoutCapacityPolicy.IsBaseUsable(LoadoutTypes.CatalogBaseForDistrict(type), arena))
+                        return "Drafted base is unavailable at the snapshot arena.";
                     budgets[p][type]++;
                 }
-                if (low)
-                {
-                    var basePool = p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
-                    if (basePool != null)
-                        foreach (var type in basePool) budgets[p][(int)type]++;
-                }
+                foreach (string id in LoadoutCapacityPolicy.LockedDistricts(arena))
+                    if (budgets[p][(int)LoadoutTypes.DistrictForLobbyId(id)] == 0)
+                        return "Loadout is missing a locked district.";
             }
             if (log.draft != null)
                 foreach (var placement in log.draft)

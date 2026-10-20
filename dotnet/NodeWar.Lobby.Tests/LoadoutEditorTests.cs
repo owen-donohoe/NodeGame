@@ -19,7 +19,7 @@ namespace NodeWar.Lobby.Tests
     {
         private static LoadoutEditor Empty()
         {
-            return new LoadoutEditor(LoadoutData.CreateEmpty());
+            return new LoadoutEditor(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, 2);
         }
 
         // ===== SHAPE =====
@@ -29,7 +29,7 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
 
-            Assert.AreEqual(2, editor.SuitSlotCount);
+            Assert.AreEqual(3, editor.SuitSlotCount);
             Assert.AreEqual(LoadoutRules.ChosenDistrictSlots(1), editor.DistrictSlotCount);
         }
 
@@ -40,8 +40,8 @@ namespace NodeWar.Lobby.Tests
             // without Normalized first would NullReference here.
             LoadoutEditor editor = new LoadoutEditor(new LoadoutData());
 
-            Assert.AreEqual(2, editor.SuitSlotCount);
-            Assert.AreEqual("", editor.SuitAt(0));
+            Assert.AreEqual(3, editor.SuitSlotCount);
+            Assert.AreEqual("suit_warrior", editor.SuitAt(0));
             Assert.IsFalse(editor.SuitSlotsFull);
         }
 
@@ -57,7 +57,7 @@ namespace NodeWar.Lobby.Tests
 
             LoadoutEditor editor = new LoadoutEditor(legacy);
 
-            Assert.AreEqual("suit_scout", editor.SuitAt(0));
+            Assert.AreEqual("suit_scout", editor.SuitAt(1));
             Assert.AreEqual("", editor.SuitAt(LoadoutRules.ChosenSuitSlots(1) - 1));
             Assert.AreEqual(LoadoutRules.ChosenDistrictSlots(1), editor.DistrictSlotCount);
         }
@@ -181,11 +181,11 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData saved = new LoadoutData
             {
-                suitIDs = new[] { "suit_warrior", "suit_scout" },
-                districtIDs = new[] { "node_crossroads", "node_market" }
+                suitIDs = new[] { "suit_warrior", "suit_scout", "" },
+                districtIDs = new[] { "node_crossroads", "node_market", "", "", "" }
             };
 
-            LoadoutEditor editor = new LoadoutEditor(saved);
+            LoadoutEditor editor = new LoadoutEditor(saved, 2);
 
             // Warrior is granted to everyone and Crossroads maps to nothing, so
             // neither is offered by the picker.
@@ -229,7 +229,7 @@ namespace NodeWar.Lobby.Tests
             editor.EquipSuit("suit_scout");
             editor.EquipDistrict("node_market");
 
-            LoadoutEditor reloaded = new LoadoutEditor(editor.ToLoadout());
+            LoadoutEditor reloaded = new LoadoutEditor(editor.ToLoadout(), 2);
 
             Assert.AreEqual("suit_scout", reloaded.SuitAt(0));
             Assert.AreEqual("node_market", reloaded.DistrictAt(0));

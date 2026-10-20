@@ -143,7 +143,7 @@ Loadouts, accounts/settings and match entry.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
-- `WorkshopPage` keeps browsing independent of stage inspection. Tiles open sheets; eligibility gates USE. `LoadoutScreenModel.Use` fills or starts replacement. Locked tags/Fixed actions identify current-era grants; headers count choices and locks. Locked taps preserve replacement. `WorkshopStageBinding` maps editable picks to chosen slots. Villagers keep separate lanes.
+- `WorkshopPage` keeps browsing independent of stage inspection. Tiles open sheets; eligibility gates USE. `LoadoutScreenModel.Use` fills or starts replacement. Locked tags/Fixed actions identify current-era grants; headers count choices and locks. Locked items occupy stage slots; locked taps preserve replacement. `WorkshopStageBinding` maps editable picks to chosen slots. Villagers keep separate lanes.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects offers. `ShopSnap/ShopProjection` coordinate entrances/exits; LateUpdate projects after the camera.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles, falling back to Unknown, and shows signed RR. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Others show stats, loadout, recent W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
@@ -157,18 +157,18 @@ Pages:
 
 `AccountFlow` coordinates account sheets and notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 
-`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves eligible local choices. `LoadoutRules.IsComplete(loadout, arena, state)` requires each side full including grants, or all owned eligible items equipped. Pure `LoadoutEditor` fills, clears and replaces chosen slots, refuses duplicates and preserves canonical shape; the arena overload explicitly resizes local edits.
+`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves choices. `LoadoutRules.IsComplete` requires each side full or no owned, usable, unequipped choice remaining. `LockedDistricts/LockedSuits(arena)` identify locks. `LoadoutEditor` refuses clearing/replacing locks; `ClearChoices` clears other slots. Workshop Clear uses `ClaimPanel`, saves and refreshes.
 
 `UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel` modals. `SkinBand` renders the looping skin strip through `SkinBandMath`.
 
-`PlayerProfile.Instance` persists local loadout/settings/mode. `LoadoutPresets` migrates current choices into preset 1; switches sanitize through `LoadoutEditor`, edits store the active preset. `LoadoutBrowse` filters ownership and sorts with ID ties. `LoadoutData.CreateEmpty/Normalized` preserve source shape or use an explicit arena; `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay`/`RankTable` supply era progress. `LobbyCurrencyNames.Premium` labels Premium as Laurels in purses and purchase text.
+`PlayerProfile.Instance` persists loadout/settings/mode. `LoadoutPresets` migrates current choices into preset 1; switches sanitize, edits store the active preset. All fresh presets contain Farm/Mine/Town and Warrior. `LoadoutData.CreateEmpty/Normalized` produce 3/5 arrays; legacy 2/2 saves gain defaults once. `LoadoutTypes.WithEquipment` overlays server equipment. `LoadoutBrowse` sorts with ID ties. `RankDisplay/RankTable` supply era progress; Premium displays as Laurels.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
 - `progression`: rank thresholds, tree eligibility, stable catalog IDs and capacity policy govern choices.
 - `match-flow`: launcher transfers frozen loadout and ordered ranked identity into `MatchConnection`.
 - `netcode`: Relay/LAN launch and `IRankedConnection` perform peer connection.
-- `draft`: normalized chosen loadouts determine grants/pools at match setup.
+- `draft`: complete normalized loadout arrays supply human match pools.
 - `match-ui`: shared settings/Controls and scene transition support match entry/return.
 - `input`: persisted bindings select intents; settings do not change simulation rules.
 - `ui-art`: `LobbyIcon`, district art, family/tint fallbacks and shared theme style pages.
@@ -180,7 +180,7 @@ Rated rank/inventory belongs to backend state, not local trophies/unlock arrays.
 ## How it works
 `LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
 
-Low arenas have two chosen suits/two districts plus grants; arena 2 onward has three/five chosen slots. Suit positions survive replacement; villagers lift, swap, then lower. Cancel lowers unchanged. Tree suits have variants; both kinds have skins.
+Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ has no locks. Slots always total five districts/three suits. Town and Warrior become ordinary choices when unlocked. Suit positions survive replacement; villagers lift, swap, then lower. Cancel lowers unchanged. Tree suits have variants; both kinds have skins.
 
 Launch freezes refreshed rank/choices/equipment and rechecks completeness. Ranked requires returned rank; private/offline uses arena 1. Rendezvous carries record ID/slot order. Only confirmed resizing persists.
 

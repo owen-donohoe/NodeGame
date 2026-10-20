@@ -37,18 +37,18 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/RankedMatchModule.cs
   - dotnet/NodeWarCloud/NodeWarCloud/ServerCatalog.cs
   - dotnet/NodeWarCloud/NodeWarCloud/WalletService.cs
-verified: b85047ad
+verified: 3c1b562c
 ---
 
 # Cloud
 
 ## Purpose
-UGS Cloud Code and Cloud Save hold authority over ranked identity, results and progression while peers run gameplay. The server refuses client-proposed authority and settles only eligible outcomes.
+UGS Cloud Code and Cloud Save own ranked identity, results and progression while peers run gameplay. The server settles only eligible outcomes.
 
 ## Interface
 Module `NodeWarCloud` exposes these Cloud Code functions; authority comes from authenticated `context.PlayerId`:
 - `GetPlayerState()` → `PlayerState`; initializes protected records including the wallet, grants the `ContentTable` starter kit and normalizes inventory.
-- `Equip(EquippedRecord changes)` → `PlayerState`; validates base, ownership and current-arena eligibility under an inventory write lock.
+- `Equip(EquippedRecord changes)` → `PlayerState`; validates ownership, base debut and current-arena variant eligibility under an inventory write lock, sharing policy with the local fake/clamp.
 - `VerifyMatch(string logBase64)` → `RefereeVerdict`; consistency verification only, without ranked settlement.
 - `ReportMatch(string matchId, string logBase64)` → `MatchReportingResult` (`state`, `message`, `playerState`).
 - `GetMatchHistory()` → `List<MatchHistoryEntry>` from caller history/outcomes, with snapshotted `OpponentName`/`OpponentTag`.
@@ -69,7 +69,7 @@ Ranked calls require membership. `MatchAllocation` creates `MatchRecord` from th
 
 `MatchRecord` holds roster, build/map identity, pre-match snapshots, lifecycle, reports/outcomes, rendezvous and discipline markers. `IMatchRecordStore`, `ISettlementPlayerStore` and `IDisciplinePlayerStore` separate storage from rules.
 
-Deploy from repository root: `ugs deploy dotnet/NodeWarCloud -e development`; queue: `ugs deploy dotnet/NodeWarCloud/Matchmaker -s matchmaker -e development`. Matchmaker requires UGS CLI 2.0.0. Live deployment needs separate verification.
+Deploy: `ugs deploy dotnet/NodeWarCloud -e development`; queue: `ugs deploy dotnet/NodeWarCloud/Matchmaker -s matchmaker -e development` (UGS CLI 2.0.0). Verify deployed behavior separately.
 
 ## Connects to
 - `backend-client`: async services call endpoints and display returned authoritative records/results.
@@ -87,9 +87,9 @@ Use server time. Stored field identities remain compatible. Conditional updates 
 ## How it works
 `ranked.mmq` defines one player per ticket, two-player matches, a 300-second pool timeout, equal build identity, arena gap at most one, same-arena preference for thirty seconds, and widening rating windows that become unbounded at 120 seconds. Rules explicitly enable themselves and read protected rating/arena. Allocation rechecks hard caps, known balance, current versions and discipline; the soft rating window stays queue-only. Idempotent retries return the existing record. Claims expire after two hours.
 
-`ReportMatch` checks identity, map, snapshot ownership and draft eligibility, then runs the referee. Protocol 6 low arenas choose two suits/two districts plus free grants; high arenas choose three/five without grants. Server-map free base placements need no ownership. Historical protocols retain their path; unplaceable pieces permit fewer placements.
+`ReportMatch` checks identity, map, snapshot ownership/eligibility, then replays. Protocol 6 permits three suits/five districts, requires era locks inside those arrays and budgets placements from them. Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ locks nothing. Base debut gates usability; map pools never waive ownership. Historical protocols retain their path; unplaceable pieces allow fewer placements.
 
-First accepted winning report becomes Pending; two must agree on winner/end tick/final hash. Disagreement becomes Disputed. Refusals do not consume the accepted slot; Pending times out lazily. Two consistent unfinished reports use the earlier log's Core breaches: fewer wins, ties void, no strikes.
+First accepted winning report becomes Pending; two must agree on winner/end tick/hash. Disagreement becomes Disputed. Refusals preserve the slot; Pending expires lazily. Consistent unfinished reports compare the earlier log's Core breaches: fewer wins, ties void without strikes.
 
 `MatchSettler` uses pre-match snapshots, updates ratings/RR, grants starters and clamps inventory. `history` retains twenty IDs and aligned newest-first summaries with opponent handles from settlement's profile reads. `Stats` tracks Matches/Wins/Losses, consecutive-win Streak and BestRR; old histories start at zero. `PlayerStatsRules` and `HistorySummaryRules` are shared pure rules. Each player's four-record conditional batch guards all updates with 200 `SettledMatchIds`; partial retries count once. Agreed reports, forfeit/surrender, abandonment and unequal-breach both-left decisions count; voids/disputes/unrated outcomes do not. Surrender carries no strike.
 
