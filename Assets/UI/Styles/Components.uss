@@ -876,3 +876,5 @@
 .lb-root .lb-guild-browse-toggle, .lb-root .lb-guild-browse-toggle:active { height: 44px; padding: 0; border-width: 0; background-color: var(--clear); background-image: none; align-items: center; justify-content: center; }
 .lb-root .lb-guild-expand-ink, .lb-root .lb-guild-expand-face { position: absolute; width: 24px; height: 24px; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-ink); }
 .lb-root .lb-guild-expand-face { -unity-background-image-tint-color: var(--mk-sheet); }
+
+.lb-root .g2-live-empty { padding: 8px 12px; }

@@ -70,7 +70,7 @@ namespace NodeWar.Lobby
             if (account != current) { Clear(tv); Clear(friends); Clear(previous); roster.Clear(); showOffline = false; }
             account = current; visit++; LoadTV(); LoadFriends(); LoadPrevious();
         }
-        private void LoadTV() => _ = Load(tv, async () => (await social.GetLiveMatchesAsync())?.FindAll(match => match?.A != null && match.B != null), RenderTV, "No live matches right now.");
+        private void LoadTV() => _ = Load(tv, async () => (await social.GetLiveMatchesAsync())?.FindAll(match => match?.A != null && match.B != null), RenderTV, "No other live games");
         private void LoadFriends() => _ = Load(friends, FetchOnline, rows => { roster = rows; RenderOnline(); }, "No friends or online guild members yet.");
         private void LoadPrevious() => _ = Load(previous, async () => (await history.GetAsync())?.FindAll(entry => entry != null && entry.state == MatchRecordState.Settled && entry.won.HasValue), RenderHistory, "No battles yet.");
         private async Task Load<T>(Section section, Func<Task<List<T>>> fetch, Action<List<T>> render, string empty)
@@ -113,13 +113,19 @@ namespace NodeWar.Lobby
         }
         private void RenderTV(List<LiveMatch> matches)
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < Math.Min(4, matches.Count); i++)
             {
-                LiveMatch match = i < matches.Count ? matches[i] : null;
+                LiveMatch match = matches[i];
                 var row = new VisualElement(); row.AddToClassList("g2-live-row");
                 row.Add(MiniPlayer(match?.A, "g2-player--p0"));
                 var vs = Versus(() => Debug.Log("[Stub] Watch match " + match.MatchId)); vs.SetEnabled(match != null); row.Add(vs);
                 row.Add(MiniPlayer(match?.B, "g2-player--p1")); tv.View.Content.Add(row);
+            }
+            Root.Q<Label>("social-live-count").text = Math.Min(4, matches.Count) + " games";
+            if (matches.Count < 4)
+            {
+                var empty = GuildViews.Text("No other live games", "mk-muted");
+                empty.AddToClassList("g2-live-empty"); tv.View.Content.Add(empty);
             }
         }
         private Button MiniPlayer(PlayerCard player, string colour)
@@ -153,10 +159,6 @@ namespace NodeWar.Lobby
                 {
                     var watch = GuildViews.Button("Spectate", () => Debug.Log("[Stub] Spectate player " + player.PlayerId), "mk-btn--sm"); watch.AddToClassList("g2-urgent");
                     watch.RegisterCallback<ClickEvent>(evt => evt.StopPropagation()); row.Trailing.Add(watch);
-                }
-                else
-                {
-                    var dot = new VisualElement { pickingMode = PickingMode.Ignore }; dot.AddToClassList("g2-online-dot"); row.Trailing.Add(dot);
                 }
                 host.Add(row);
             }
