@@ -3,6 +3,42 @@ using NUnit.Framework;
 
 public class WorkshopStageTests
 {
+
+    [TestCase(true)] [TestCase(false)]
+    public void GrantPickHasInspectableIdentityButCannotEndReplacement(bool suit)
+    {
+        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(1));
+        for (int i = 0; i < 2; i++) { model.Preview("chosen" + i); model.UsePreview(true, suit); }
+        model.Inspect("replacement", suit);
+        Assert.IsFalse(model.Use(true, false));
+        Assert.IsTrue(model.Replacing);
+        var chosen = suit ? model.ToData().suitIDs : model.ToData().districtIDs;
+        var grants = suit ? LoadoutRules.LockedSuits(1) : LoadoutRules.LockedDistricts(1);
+        for (int i = 0; i < grants.Length; i++)
+        {
+            Assert.AreEqual(grants[i], StageSlotMap.IdAt(chosen, grants, 2 + i));
+            int slot = StageSlotMap.ToChosen(chosen, 2 + i);
+            Assert.AreEqual(-1, slot);
+            Assert.IsFalse(suit ? model.CompleteSuitReplace(slot, true, false) : model.CompleteReplace(slot, true, false));
+            Assert.IsTrue(model.Replacing);
+        }
+        Assert.IsTrue(suit ? model.CompleteSuitReplace(1, true, false) : model.CompleteReplace(1, true, false));
+        Assert.IsFalse(model.Replacing);
+    }
+
+    [Test]
+    public void ShortStageUsesFrontSlotsAndKeepsChosenStorageMapping()
+    {
+        string[] chosen = { "", "node_town" };
+        var grants = LoadoutRules.LockedDistricts(1);
+        CollectionAssert.AreEqual(new[] { "node_town", "node_farm", "node_mine", "node_village" }, StageSlotMap.WithGranted(chosen, grants));
+        Assert.AreEqual(1, StageSlotMap.ToChosen(chosen, 0));
+        Assert.AreEqual(-1, StageSlotMap.ToChosen(chosen, 1));
+        Assert.AreEqual("node_farm", StageSlotMap.IdAt(chosen, grants, 1));
+        Assert.AreEqual("", StageSlotMap.IdAt(chosen, grants, 4));
+        CollectionAssert.AreEqual(grants, StageSlotMap.WithGranted(new string[2], grants));
+    }
+
     private static LoadoutScreenModel Full(int arena)
     {
         var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(arena));

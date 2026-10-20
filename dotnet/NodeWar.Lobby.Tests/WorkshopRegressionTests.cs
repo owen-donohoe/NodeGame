@@ -96,7 +96,8 @@ public class WorkshopRegressionTests
         var granted = StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(1));
         CollectionAssert.AreEqual(new[] { 5, 6, 3 }, StageLoadoutTypes.WithGranted(chosen, granted));
         Assert.AreEqual(-1, StageSlotMap.ToChosen(ids, chosen.Length));
-        StringAssert.Contains("int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);", Source("Assets/UI/Scripts/LobbyUIController.cs"));
+        Assert.AreEqual("suit_warrior", StageSlotMap.IdAt(ids, LoadoutRules.LockedSuits(1), chosen.Length));
+        CollectionAssert.AreEqual(new[] { 5, 6, 3 }, StageLoadoutTypes.WithGranted(chosen, granted, granted));
     }
 
     [TestCase(false)] [TestCase(true)]

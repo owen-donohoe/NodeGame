@@ -436,9 +436,11 @@ namespace NodeWar.Lobby
             if (stage == null || catalog == null) return;
             var loadout = catalog.CurrentLoadout().ToLoadout();
             int arena = LoadoutRules.ArenaOrFallback(NodeWar.Backend.BackendServices.LastKnownState?.Rank);
-            // Fixed grants are in hand, but have no editable slot. Only chosen items stand on stage.
-            int[] chosenDistricts = StageLoadoutTypes.Districts(loadout.districtIDs);
-            int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
+            // Grants occupy real stage slots after the compact chosen slots.
+            int[] chosenDistricts = StageLoadoutTypes.WithGranted(StageLoadoutTypes.Districts(loadout.districtIDs),
+                StageLoadoutTypes.Districts(LoadoutRules.LockedDistricts(arena)));
+            int[] suits = StageLoadoutTypes.WithGranted(StageLoadoutTypes.Suits(loadout.suitIDs),
+                StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(arena)));
             int[] districtKey = chosenDistricts;
             if (!StageLoadoutTypes.Same(districtKey, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
             {

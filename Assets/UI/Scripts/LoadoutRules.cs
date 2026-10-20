@@ -2,7 +2,7 @@ using NodeWar.Backend;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>Display positions include globally granted items, outside the chosen deck.</summary>
+    /// <summary>Grants and choices form the effective loadout; only chosen slots are editable.</summary>
     public static class LoadoutRules
     {
         public const int DisplaySuitSlots = 3;
@@ -11,14 +11,30 @@ namespace NodeWar.Lobby
         public static int ChosenSuitSlots(int arena) => LoadoutCapacityPolicy.SuitCapacity(arena);
         public static int ChosenDistrictSlots(int arena) => LoadoutCapacityPolicy.DistrictCapacity(arena);
 
-        /// <summary>Every chosen slot at the local arena's capacity must be filled.</summary>
-        public static bool IsComplete(LoadoutData loadout, int arena)
+        /// <summary>Each side is full, or has equipped every owned, offered base on that side.</summary>
+        public static bool IsComplete(LoadoutData loadout, int arena, PlayerState state = null)
         {
-            loadout = LoadoutData.Normalized(loadout, arena);
-            for (int i = 0; i < loadout.suitIDs.Length; i++)
-                if (string.IsNullOrEmpty(loadout.suitIDs[i])) return false;
-            for (int i = 0; i < loadout.districtIDs.Length; i++)
-                if (string.IsNullOrEmpty(loadout.districtIDs[i])) return false;
+            loadout = LocalEditor(loadout, arena).ToLoadout();
+            return SideComplete(loadout.suitIDs, LockedSuits(arena), DisplaySuitSlots, true, arena, state) &&
+                SideComplete(loadout.districtIDs, LockedDistricts(arena), DisplayDistrictSlots, false, arena, state);
+        }
+
+        private static bool SideComplete(string[] chosen, string[] grants, int capacity, bool suits,
+            int arena, PlayerState state)
+        {
+            var equipped = new System.Collections.Generic.List<string>(grants);
+            foreach (string id in chosen)
+                if (!string.IsNullOrEmpty(id) && !equipped.Contains(id)) equipped.Add(id);
+            int filled = equipped.Count;
+            if (filled >= capacity) return true;
+            int length = suits ? CatalogKeys.SuitTableLength : CatalogKeys.DistrictTableLength;
+            for (int type = 1; type < length; type++)
+            {
+                string id = suits ? CatalogKeys.SuitLobbyId(type) : CatalogKeys.DistrictLobbyId(type);
+                if (!(suits ? IsSuitOffered(id, arena) : IsDistrictOffered(id, arena)) ||
+                    !UnlockStates.ForBase(id, state).CanUse) continue;
+                if (System.Array.IndexOf(chosen, id) < 0) return false;
+            }
             return true;
         }
 

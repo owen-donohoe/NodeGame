@@ -44,7 +44,7 @@ namespace NodeWar.Lobby
             Bind("home-crate-medium", () => CrateRequested?.Invoke(CrateSize.Medium));
             Bind("home-battle", () =>
             {
-                if (!LoadoutRules.IsComplete(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena))
+                if (!LoadoutRules.IsComplete(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena, BackendServices.LastKnownState))
                 {
                     loadoutToast.Show("Fill your loadout");
                     return;
@@ -101,7 +101,7 @@ namespace NodeWar.Lobby
             if (crates != null) { crates.Changed -= Refresh; crates.Changed += Refresh; }
             Refresh();
             accountLinkPrompt.Show();
-            if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena)) loadoutToast.Show("Fill your loadout");
+            if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState)) loadoutToast.Show("Fill your loadout");
         }
 
         public override void OnHide()
@@ -119,7 +119,7 @@ namespace NodeWar.Lobby
             Root.Q("home-crate-medium")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Medium) ?? 0) == 0);
             if (progressFill != null) progressFill.style.width = Length.Percent((crates?.NextProgress ?? 0f) * 100f);
             if (nextIcon != null) nextIcon.Kind = crates?.NextSize == CrateSize.Medium ? LobbyIconKind.CrateMedium : LobbyIconKind.CrateSmall;
-            bool complete = LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena);
+            bool complete = LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState);
             var play = Root.Q<Button>("home-battle");
             if (play != null)
             {

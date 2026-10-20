@@ -88,8 +88,8 @@ entirely. A temporary GameObject carrying a `MatchConnection` with
 `GameManager` reads the singleton.
 
 Give it a loadout too: `loadout = NodeWar.Lobby.LoadoutData.CreateEmpty()`.
-Match setup accepts only the canonical 2/2 or 3/5 shapes, so a `default`
-loadout throws in the draft and the match stays in Drafting.
+Canonical array lengths are 2/2 or 3/5, including blank slots. Match setup
+normalizes a default loadout to low mode, skips blanks and adds low-arena grants.
 
 Two things about that to know in advance, because both read as "my code is
 broken" when they happen:

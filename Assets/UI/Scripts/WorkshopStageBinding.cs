@@ -75,9 +75,9 @@ namespace NodeWar.Lobby
             if (page.Replacing) return;
             stage.Deselect(); stage.ClearFocus();
             var data = page.StageLoadout;
-            stage.SetDistrictCapacity(data.districtIDs.Length);
+            stage.SetDistrictCapacity(page.StageDistrictCapacity);
             string[] chosen = suit ? data.suitIDs : data.districtIDs;
-            int slot = StageSlotMap.ToStage(chosen, Array.IndexOf(chosen, id));
+            int slot = Array.IndexOf(StageSlotMap.WithGranted(chosen, page.StageGrants(suit)), id);
             if (slot < 0) return;
             if (suit) stage.FocusSuit(slot);
             else { stage.ShowShot(StageShot.Districts); stage.SelectDistrict(slot); }
@@ -92,7 +92,7 @@ namespace NodeWar.Lobby
             if (page.Replacing)
             {
                 if (page.ReplacingSuit) stage.BeginSuitReplace();
-                else { stage.SetDistrictCapacity(page.StageLoadout.districtIDs.Length); stage.BeginReplace(); }
+                else { stage.SetDistrictCapacity(page.StageDistrictCapacity); stage.BeginReplace(); }
                 router.Open(new LobbyOverlay(ReplaceRoute, OverlayKind.Menu, backHandler: () =>
                 {
                     page.CancelReplacement(); return true;
@@ -134,9 +134,13 @@ namespace NodeWar.Lobby
             {
                 if (page.ReplacingSuit)
                 {
-                    if (pick.IsSuit) page.CompleteSuitReplacement(StageSlotMap.ToChosen(page.StageLoadout.suitIDs, pick.Index));
+                    if (pick.IsSuit)
+                    {
+                        int slot = StageSlotMap.ToChosen(page.StageLoadout.suitIDs, pick.Index);
+                        if (slot >= 0) page.CompleteSuitReplacement(slot);
+                    }
                 }
-                else if (!pick.IsSuit) stage.PickReplace(pick.Index);
+                else if (!pick.IsSuit && StageSlotMap.ToChosen(page.StageLoadout.districtIDs, pick.Index) >= 0) stage.PickReplace(pick.Index);
                 return;
             }
             page.InspectStageItem(pick.IsSuit, pick.Index);
