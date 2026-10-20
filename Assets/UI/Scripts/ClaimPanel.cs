@@ -20,7 +20,7 @@ namespace NodeWar.Lobby
         public ClaimPanel()
         {
             sheet = new MkPanel { name = "claim-overlay" };
-            Root = sheet;
+            Root = sheet; sheet.Scrim.name = "claim-scrim";
             var layout = Resources.Load<VisualTreeAsset>("Lobby/ClaimPanel");
             if (layout != null)
             {

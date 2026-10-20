@@ -554,6 +554,7 @@
 .ui-root .mk-row > *, .ui-root .mk-spread > *{ margin-right: 8px; }
 .ui-root .mk-spread{ justify-content: space-between; }
 .ui-root .mk-btn{ border-width: 2px; border-color: var(--mk-ink); background-color: var(--mk-sheet); color: var(--mk-ink); border-radius: 10px; padding: 8px 12px; min-height: 44px; min-width: 44px; font-size: var(--type-body); -unity-font-style: normal; }
+.ui-root .mk-btn--urgent { background-color: var(--mk-urgent); color: var(--mk-sheet); }
 .ui-root .mk-btn--primary, .ui-root .mk-btn--gold{ background-color: var(--mk-action); color: var(--mk-ink); }
 .ui-root .mk-btn--big{ font-size: var(--type-title); padding: 16px; width: 100%; letter-spacing: 0.88px; }
 .ui-root .mk-btn--sm{ padding: 4px 8px; font-size: var(--type-secondary); border-radius: 8px; }
@@ -659,7 +660,7 @@
 
 /* Font roles and line boxes are shared; page USS supplies geometry only. */
 .lb-root { -unity-font-definition: var(--font-body); -unity-text-outline-width: var(--ink-outline); }
-.lb-root Button, .lb-root .ui-paper-button__caption, .ui-root .mk-h2, .ui-root .mk-h3, .ui-root .mk-number, .ui-root .mk-trophy, .ui-root .mk-namelink, .ui-root .mk-purse, .ui-root .mk-battle, .ui-root .mk-cbadge, .ui-root .mk-tab-label { -unity-font-definition: var(--font-display); -unity-font-style: normal; -unity-text-outline-width: var(--ink-outline-strong); }
+.lb-root Button, .lb-root .ui-paper-button__caption, .ui-root .mk-btn, .ui-root .mk-tab, .ui-root .mk-rbtn, .ui-root .mk-h2, .ui-root .mk-h3, .ui-root .mk-number, .ui-root .mk-trophy, .ui-root .mk-namelink, .ui-root .mk-purse, .ui-root .mk-battle, .ui-root .mk-cbadge, .ui-root .mk-tab-label { -unity-font-definition: var(--font-display); -unity-font-style: normal; -unity-text-outline-width: var(--ink-outline-strong); }
 .ui-root .mk-body, .ui-root .mk-secondary, .ui-root .mk-caption, .ui-root .mk-muted, .ui-root .mk-cap, .ui-root .mk-friend__status { -unity-font-definition: var(--font-body); -unity-font-style: normal; }
 .ui-root .mk-label, .ui-root .mk-eyebrow, .ui-root .mk-chip, .ui-root .mk-friend__name, .ui-root .mk-friend__avatar, .ui-root .mk-hrow, .ui-root .mk-mark { -unity-font-definition: var(--font-label); -unity-font-style: normal; }
 .ui-root .mk-body, .ui-root .mk-label { font-size: var(--type-body); }
@@ -688,3 +689,5 @@
 
 .ui-root .mk-panel-list { flex-shrink: 1; min-height: 0; }
 .ui-root .mk-panel-list Button { margin-bottom: 8px; }
+
+.ui-root .mk-sheet > ScrollView > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container > .mk-btn { margin-bottom: 8px; }

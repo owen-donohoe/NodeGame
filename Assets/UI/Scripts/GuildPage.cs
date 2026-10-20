@@ -311,12 +311,12 @@ namespace NodeWar.Lobby
         private void ConfirmKick(GuildMember member)
         {
             var content = SheetContent("Remove from guild?");
-            content.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(member.Player) + " from " + current.Summary.Name + "?"));
+            content.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(member.Player) + " from " + current.Summary.Name + "?", "mk-ellipsis"));
             content.Add(GuildViews.Button("Cancel", CloseSheet));
             content.Add(GuildViews.Button("Kick", () =>
             {
                 Debug.Log("[Stub] Guild kick " + member.Player.PlayerId); CloseSheet();
-            }));
+            }, "mk-btn--urgent"));
             ShowSheet(content);
         }
 
@@ -325,8 +325,8 @@ namespace NodeWar.Lobby
             if (!GuildMembers.IsOfficer(current.OwnRole)) { openProfile(member.Player.PlayerId); return; }
             var content = SheetContent(PlayerCardViews.Handle(member.Player));
             content.Add(GuildViews.Button("View player", () => { CloseSheet(); openProfile(member.Player.PlayerId); }));
-            content.Add(GuildViews.Button("Kick", () => ConfirmKick(member)));
-            content.Add(GuildViews.Button("Report", () => report.Open(member, true)));
+            content.Add(GuildViews.Button("Kick", () => ConfirmKick(member), "mk-btn--urgent"));
+            content.Add(GuildViews.Button("Report", () => report.Open(member, true), "mk-btn--urgent"));
             ShowSheet(content);
         }
     }

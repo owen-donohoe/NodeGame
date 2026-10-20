@@ -56,7 +56,6 @@
 .ui-root .lb-page-paper ScrollView { background-color: var(--clear); }
 .ui-root .lb-guild-chat-safe, .ui-root .lb-crate-screen { --paper-card-fill: var(--paper); }
 .ui-root .lb-public-chip, .ui-root .lb-guild-chip, .ui-root .lb-party-slot { --paper-card-fill: var(--paper-dark); }
-.ui-root .lb-claim-panel { padding-top: 72px; }
 .ui-root .unity-popup-field__input { background-color: var(--paper-light); color: var(--ink); min-height: 48px; border-width: var(--paper-ink-width); border-color: var(--ink); border-radius: var(--corner-sm); padding: 8px; }
 .ui-root .unity-progress-bar { min-height: 24px; margin: 8px 0; }
 .ui-root .unity-progress-bar__background { background-color: var(--paper-dark); border-width: 2px; border-color: var(--ink); border-radius: var(--corner-sm); }

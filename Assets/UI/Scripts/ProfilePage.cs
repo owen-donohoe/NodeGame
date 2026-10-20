@@ -187,13 +187,13 @@ namespace NodeWar.Lobby
             if (!IsOpen || PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) == null) return;
             confirmation.Body.Clear();
             confirmation.Title.text = "Remove from guild?";
-            confirmation.Body.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(target) + " from " + ownGuild.Summary.Name + "?"));
+            confirmation.Body.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(target) + " from " + ownGuild.Summary.Name + "?", "mk-ellipsis"));
             confirmation.Body.Add(GuildViews.Button("Cancel", confirmation.Close));
             confirmation.Body.Add(GuildViews.Button("Kick", () =>
             {
                 if (IsOpen && PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null) Debug.Log("[Stub] Guild kick " + target.PlayerId);
                 confirmation.Close();
-            }, "g2-urgent"));
+            }, "mk-btn--urgent"));
             confirmation.Open();
         }
         private void Render(PublicProfileView profile)

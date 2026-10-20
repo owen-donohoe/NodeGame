@@ -3,15 +3,15 @@
 .g2-crates { flex-direction: row; margin-right: 8px; margin-bottom: 24px; }
 .g2-crates > .mk-crate { margin-right: 8px; }
 .g2-crates > #home-crate-small { margin-right: 0; }
-.g2-crate-icon { width: 46px; height: 46px; }
-.ui-root .g2-crate-label { position: absolute; bottom: 3px; letter-spacing: 0.6px; color: var(--mk-muted); }
+.g2-crate-icon { position: absolute; top: 4px; width: 40px; height: 40px; }
+.ui-root .g2-crate-label { position: absolute; bottom: 4px; letter-spacing: 0.6px; color: var(--mk-muted); }
 .g2-home-actions { width: 200px; flex-shrink: 1; min-width: 0; align-items: stretch; }
 .ui-root .g2-home-mode { width: 140px; min-height: 44px; align-self: flex-end; flex-direction: row; align-items: center; justify-content: center; background-color: var(--mk-sheet); margin-bottom: 8px; padding: 4px 8px; }
 .ui-root .g2-home-mode Label { min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
 .g2-mode-icon { width: 16px; height: 16px; margin-right: 4px; }
 .g2-mode-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 4px; background-color: var(--mk-action); }
 .g2-swap { width: 12px; height: 12px; }
-.ui-root .g2-fill-tag { background-color: var(--mk-sheet); margin-bottom: 4px; }
+.ui-root .g2-fill-tag { background-color: var(--mk-sheet); margin-bottom: 8px; }
 .g2-next-crate { flex-direction: row; align-items: center; height: 26px; }
 .g2-next-crate > .mk-meter { flex-grow: 1; background-color: var(--mk-ink); }
 .g2-next-crate #home-boxmeter-fill { background-color: var(--ink-white); }

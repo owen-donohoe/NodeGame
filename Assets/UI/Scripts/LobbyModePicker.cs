@@ -24,7 +24,7 @@ namespace NodeWar.Lobby
             var local = ModeGrid("mode-local"); root.Add(local);
             Add(local, LobbyMode.Bot); Add(local, LobbyMode.Lan);
             privateToggle = new Toggle("Private (1v1)") { name = "mode-private" };
-            privateToggle.AddToClassList("g2-private"); root.Add(privateToggle);
+            privateToggle.AddToClassList("g2-private"); privateToggle.AddToClassList("mk-label"); root.Add(privateToggle);
             privateToggle.RegisterValueChangedCallback(evt =>
             {
                 selection = new LobbyModeSelection(selection.Mode, evt.newValue);

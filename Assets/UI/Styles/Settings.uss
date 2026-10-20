@@ -13,7 +13,7 @@
 }
 
 .lb-push__scroll .unity-scroll-view__content-container {
-    padding-bottom: 40px;
+    padding-bottom: 32px;
 }
 
 .lb-root .lb-group-label {
@@ -159,7 +159,7 @@
     width: 100%;
     max-width: 760px;
     align-self: center;
-    padding-bottom: 48px;
+    padding-bottom: 32px;
 }
 
 .lb-root .cp-header {

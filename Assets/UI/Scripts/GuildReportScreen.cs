@@ -31,7 +31,7 @@ namespace NodeWar.Lobby
         {
             body.Clear();
             body.Add(GuildViews.Text("Report player", "mk-h2"));
-            body.Add(GuildViews.Text(PlayerCardViews.Handle(player), "mk-h3"));
+            var handle = GuildViews.Text(PlayerCardViews.Handle(player), "mk-h3"); handle.AddToClassList("mk-ellipsis"); body.Add(handle);
             body.Add(GuildViews.Text("Choose a reason", "mk-eyebrow"));
             string reason = null;
             var reasons = new VisualElement(); reasons.AddToClassList("lb-guild-report-reasons"); body.Add(reasons);
@@ -44,7 +44,7 @@ namespace NodeWar.Lobby
             {
                 Debug.Log("[Stub] Report player=" + player.PlayerId + " reason=" + reason + " details=" + details.value + " remove=" + (officer && remove.value));
                 Close();
-            }, "mk-btn--primary");
+            }, "mk-btn--urgent");
             submit.SetEnabled(false);
             foreach (string value in new[] { "Harassment", "Cheating", "Inappropriate name", "Spam", "Other" })
             {

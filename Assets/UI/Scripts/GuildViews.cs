@@ -61,7 +61,7 @@ namespace NodeWar.Lobby
             text.Add(Text(Role(member.Role) + " · " + (member.Online ? "Online" : "Offline"), "mk-muted"));
             row.Add(text);
             var trailing = new VisualElement { pickingMode = PickingMode.Ignore }; trailing.AddToClassList("mk-friend__trailing");
-            trailing.Add(Text(member.RR + " RR")); row.Add(trailing);
+            trailing.Add(Text(member.RR + " RR", "mk-number")); row.Add(trailing);
             return row;
         }
 
@@ -90,7 +90,7 @@ namespace NodeWar.Lobby
         public static VisualElement Message(ChatMessage message)
         {
             var row = Card(null); row.AddToClassList("lb-guild-message");
-            row.Add(Text(PlayerCardViews.Handle(message.Sender), "mk-h3")); row.Add(Text(message.Text));
+            row.Add(Text(PlayerCardViews.Handle(message.Sender), "mk-friend__name")); row.Add(Text(message.Text));
             return row;
         }
 

@@ -13,7 +13,7 @@
 .lb-guild-results { flex-grow: 1; min-height: 0; padding: 12px; }
 .lb-guild-card { margin-bottom: 12px; }
 .lb-guild-line { flex-direction: row; align-items: center; min-height: 44px; }
-.lb-guild-row, .lb-guild-member { flex-direction: row; align-items: center; min-height: 54px; margin-top: 8px; }
+.lb-guild-row, .lb-guild-member { flex-direction: row; align-items: center; min-height: 72px; margin-top: 8px; }
 .lb-guild-row-text { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-left: 8px; margin-right: 8px; }
 .lb-guild-emblem { width: 40px; height: 40px; flex-shrink: 0; }
 .lb-guild-header { margin-bottom: 8px; }
@@ -43,3 +43,5 @@
 .mk-fixed-sheet, .mk-fixed-sheet .lb-guild-preview, .mk-fixed-sheet .lb-guild-preview > VisualElement { min-height: 0; flex-shrink: 1; overflow: hidden; }
 .mk-fixed-sheet .lb-guild-header { flex-shrink: 0; }
 .mk-fixed-sheet .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.lb-guild-sheet > .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }

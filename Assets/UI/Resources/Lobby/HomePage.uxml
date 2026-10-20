@@ -5,12 +5,12 @@
    <ui:VisualElement class="g2-crates" picking-mode="Ignore">
     <ui:Button name="home-crate-medium" class="ui-reset-button mk-crate" tooltip="Open Big crate">
      <lobby:LobbyIcon kind="CrateMedium" context="Home" class="g2-crate-icon" picking-mode="Ignore" />
-     <ui:Label text="BIG" class="g2-crate-label" picking-mode="Ignore" />
+     <ui:Label text="BIG" class="mk-caption g2-crate-label" picking-mode="Ignore" />
      <ui:Label name="home-crate-medium-count" text="0" class="mk-cbadge" picking-mode="Ignore" />
     </ui:Button>
     <ui:Button name="home-crate-small" class="ui-reset-button mk-crate" tooltip="Open Small crate">
      <lobby:LobbyIcon kind="CrateSmall" context="Home" class="g2-crate-icon" picking-mode="Ignore" />
-     <ui:Label text="SMALL" class="g2-crate-label" picking-mode="Ignore" />
+     <ui:Label text="SMALL" class="mk-caption g2-crate-label" picking-mode="Ignore" />
      <ui:Label name="home-crate-small-count" text="0" class="mk-cbadge" picking-mode="Ignore" />
     </ui:Button>
    </ui:VisualElement>

@@ -165,7 +165,7 @@ namespace NodeWar.Lobby
                 row.Add(GuildViews.Text("You"));
                 var replay = GuildViews.Button("VS", () => Debug.Log("[Stub] Replay match " + match.matchId), "mk-btn--sm"); replay.AddToClassList("g2-vs"); row.Add(replay);
                 var opponent = new PlayerCard { PlayerId = match.opponentPlayerId, Name = match.OpponentName, Tag = match.OpponentTag };
-                var name = GuildViews.Button(PlayerCardViews.Handle(opponent), () => openProfile?.Invoke(opponent.PlayerId)); name.AddToClassList("g2-history-name"); row.Add(name);
+                var name = GuildViews.Button(PlayerCardViews.Handle(opponent), () => openProfile?.Invoke(opponent.PlayerId)); name.AddToClassList("g2-history-name"); name.AddToClassList("mk-friend__name"); row.Add(name);
                 var delta = GuildViews.Text(match.rrDelta.HasValue ? (match.rrDelta.Value >= 0 ? "+" : "") + match.rrDelta.Value + " RR" : "\u2014");
                 delta.AddToClassList("g2-rr-delta"); delta.AddToClassList("mk-number"); delta.AddToClassList(match.rrDelta.GetValueOrDefault() >= 0 ? "g2-positive" : "g2-negative"); row.Add(delta);
                 previous.View.Content.Add(row);
