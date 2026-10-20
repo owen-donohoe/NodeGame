@@ -6,5 +6,6 @@ namespace NodeWar.Lobby
         public bool IsSuit { get; }
         public int Index { get; }
         public StagePick(bool isSuit, int index) { IsSuit = isSuit; Index = index; }
+        public bool CanPick(bool replacing, bool replacingSuit) => !replacing || IsSuit == replacingSuit;
     }
 }
