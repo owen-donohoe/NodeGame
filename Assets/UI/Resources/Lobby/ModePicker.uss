@@ -4,7 +4,8 @@
 .lb-root .g2-mode-card Label { align-self: stretch; white-space: nowrap; -unity-text-align: middle-center; }
 .lb-root .g2-mode-card--on { border-color: var(--mk-tap); border-bottom-width: 2px; }
 .lb-root .g2-mode-card:active { border-bottom-width: 2px; }
-.lb-root .lb-modepage { border-width: 0; border-radius: 0; background-color: var(--clear); }
+/* Fullscreen overlays hide the stage; parchment avoids exposing the camera's empty sky. */
+.lb-root .lb-modepage { border-width: 0; border-radius: 0; background-color: var(--pal-paper-100); }
 .lb-modepage__middle { position: absolute; top: 20%; height: 60%; left: 0; right: 0; justify-content: center; }
 .lb-modepage__strip { height: 308px; flex-grow: 0; }
 .lb-modepage__strip .unity-scroll-view__content-container { align-items: center; }
