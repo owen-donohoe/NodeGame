@@ -110,6 +110,7 @@ namespace NodeWar.Lobby
         private LobbyModePicker modePicker;
         private LobbyModeSelection selectedMode;
         private LobbyPlayFlow playFlow;
+        private PrivateLobbyPanel privateLobbyPanel;
         private SearchingScreen searchingScreen;
         private MultiplayerSheet multiplayerSheet;
         private WorkshopStageBinding workshopStage;
@@ -198,6 +199,7 @@ namespace NodeWar.Lobby
             homePage?.OnHide();
             homePage = null;
             searchingScreen?.Dispose(); searchingScreen = null; multiplayerSheet = null;
+            privateLobbyPanel?.Dispose(); privateLobbyPanel = null;
             playFlow?.Dispose();
             playFlow = null;
             workshopStage?.Dispose();
@@ -282,6 +284,7 @@ namespace NodeWar.Lobby
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
             playFlow?.Update();
+            privateLobbyPanel?.Update();
             searchingScreen?.Update();
             burgerPanel?.Update();
             bellPanel?.Update();
@@ -347,7 +350,11 @@ namespace NodeWar.Lobby
             BuildPlayPopup();
             BuildModePicker();
             playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
+            privateLobbyPanel = new PrivateLobbyPanel(lobbyRoot, router, catalog, menu, toast, profilePage.OpenFor, playFlow.OpenPrivateInvite);
+            if (playPopup != null) playPopup.PrivateJoinRequested += privateLobbyPanel.Join;
+            playFlow.PrivateRequested += privateLobbyPanel.Open;
             searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
+            searchingScreen.PrivateRequested += privateLobbyPanel.Open;
             RegisterPages();
             WireOverlays(root);
             LobbyScrollbars.Hide(root);

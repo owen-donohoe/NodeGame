@@ -114,6 +114,11 @@
     --pal-player-0-edge: rgb(40, 72, 140);
     --pal-player-1: rgb(255, 102, 102);
     --pal-player-1-edge: rgb(140, 40, 40);
+    /* Lobby previews only: the board has no 4-player colours yet. */
+    --pal-player-2: #70b879;
+    --pal-player-2-edge: #306b38;
+    --pal-player-3: #b28ae0;
+    --pal-player-3-edge: #624080;
     --pal-neutral: rgb(154, 146, 133);
     --pal-neutral-edge: rgb(107, 100, 89);
 
@@ -216,6 +221,10 @@
     --p0-edge: var(--pal-player-0-edge);
     --p1: var(--pal-player-1);
     --p1-edge: var(--pal-player-1-edge);
+    --p2: var(--pal-player-2);
+    --p2-edge: var(--pal-player-2-edge);
+    --p3: var(--pal-player-3);
+    --p3-edge: var(--pal-player-3-edge);
     --unowned: var(--pal-neutral);
     --unowned-edge: var(--pal-neutral-edge);
     --mark-ink: var(--pal-umber-900);

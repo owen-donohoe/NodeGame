@@ -79,6 +79,7 @@ namespace NodeWar.Lobby
         private bool useLan;
         public event System.Action<GameMode> ModeChanged;
         public event System.Action BotRequested;
+        public event System.Action<string> PrivateJoinRequested;
         private bool internalEntry;
 
         public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast, LobbySheet sheet,
@@ -446,6 +447,10 @@ namespace NodeWar.Lobby
         {
             string entered = codeField != null ? codeField.value : "";
 
+            if (!useLan && PrivateJoinRequested != null)
+            {
+                Hide(); PrivateJoinRequested.Invoke(entered); return;
+            }
             if (useLan) launcher.JoinLan(entered); else launcher.JoinRelay(entered);
             ShowView(View.Status);
             RefreshStatus();

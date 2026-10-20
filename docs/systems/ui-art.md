@@ -64,7 +64,7 @@ Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets
 
 `LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. Attached lobby icons load white Phosphor Bold SVG VectorImages from `Resources/Lobby/Icons/Phosphor`, tinted by USS. Shop and non-lobby surfaces retain themed sprites and cached Painter2D glyphs.
 
-District and suit icons accept Profile context for loadout minis.
+`Tokens.uss` adds lobby-only green/purple `--p2/--p3` and edge tokens; the board has no four-player colours.
 
 `LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this inventory.
 
@@ -78,7 +78,7 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 
 `PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
 
-`SegmentedSwitch.Select/Changed` slides one face; `LobbySwitch` and `LobbyToggle` slide a knob (the toggle takes its 2/22px travel from `LobbyToggleMath`). All retarget critical `LobbyMotion` springs; segment colours crossfade. `--mk-private` supplies the purple Private ribbon meaning.
+`SegmentedSwitch.Select/Changed` slides one face; `LobbySwitch` and `LobbyToggle` slide a knob; `LobbyToggleMath` fixes toggle travel. All retarget critical `LobbyMotion` springs; segment colours crossfade. `--mk-private` supplies the purple Private ribbon meaning.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
