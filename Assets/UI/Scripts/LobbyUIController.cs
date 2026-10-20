@@ -428,13 +428,18 @@ namespace NodeWar.Lobby
         {
             if (stage == null || catalog == null) return;
             var loadout = catalog.CurrentLoadout().ToLoadout();
-            int[] districts = StageLoadoutTypes.Districts(loadout.districtIDs);
-            int[] suits = StageLoadoutTypes.Suits(loadout.suitIDs);
-            if (!StageLoadoutTypes.Same(districts, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
+            int arena = LoadoutRules.ArenaOrFallback(NodeWar.Backend.BackendServices.LastKnownState?.Rank);
+            // Free-grant items (Farm, Mine, Village, Warrior in low arenas) are never in the chosen deck
+            // but are always in hand, so they stand on the stage after the chosen ones.
+            int[] chosenDistricts = StageLoadoutTypes.Districts(loadout.districtIDs);
+            int[] granted = StageLoadoutTypes.Districts(LoadoutRules.LockedDistricts(arena));
+            int[] suits = StageLoadoutTypes.WithGranted(StageLoadoutTypes.Suits(loadout.suitIDs), StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(arena)));
+            int[] districtKey = StageLoadoutTypes.WithGranted(chosenDistricts, new[] { -1 }, granted);
+            if (!StageLoadoutTypes.Same(districtKey, stageDistrictTypes) || !StageLoadoutTypes.Same(suits, stageSuitTypes))
             {
                 workshopStage?.LoadoutReset();
-                stage.SetLoadout(districts, suits);
-                stageDistrictTypes = districts;
+                stage.SetLoadout(chosenDistricts, suits, granted);
+                stageDistrictTypes = districtKey;
                 stageSuitTypes = suits;
             }
             PlayerProfile profile = PlayerProfile.Instance;

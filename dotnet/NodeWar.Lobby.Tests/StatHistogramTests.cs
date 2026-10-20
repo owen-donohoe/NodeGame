@@ -42,22 +42,57 @@ namespace NodeWar.Lobby.Tests
             Assert.That(StatHistogram.Unit(-35), Is.EqualTo(5));
             Assert.That(StatHistogram.Cells(1000, StatHistogram.Unit(1000)), Is.LessThanOrEqualTo(StatHistogram.MaxCells));
         }
-        [Test] public void SuitRows_PairOfRowsPerStat_BaseSuitThenVillager()
+        private static StatSegment[] Bar(params (StatSegment kind, int count)[] runs)
+        {
+            var cells = new StatSegment[StatHistogram.MaxCells];
+            int at = 0;
+            foreach (var (kind, count) in runs) for (int i = 0; i < count; i++) cells[at++] = kind;
+            return cells;
+        }
+        [Test] public void SuitRows_OneRowPerStat_ComparedWithBaseSuit_BarCarriesVillager()
         {
             var b = Balance();
             var rows = StatHistogram.SuitRows(LoadoutInfoModel.SuitStats(b, "suit.warrior", 1), LoadoutInfoModel.SuitStats(b, "suit.warrior", 0));
-            Assert.That(rows.Length, Is.EqualTo(12));
-            var dmgSuit = rows.Single(r => r.Label == "Damage vs base");
-            var dmgVillager = rows.Single(r => r.Label == "Damage vs villager");
-            Assert.That(dmgSuit.Delta, Is.EqualTo(6), "11 against the base suit's 5");
-            Assert.That(dmgVillager.Delta, Is.EqualTo(8), "11 against the villager's 3");
-            Assert.That(rows.Single(r => r.Label == "Move time vs villager").Gain, Is.GreaterThan(0), "faster is better");
+            Assert.That(rows.Length, Is.EqualTo(6));
+            var damage = rows.Single(r => r.Label == "Damage");
+            Assert.That(damage.Delta, Is.EqualTo(6), "11 against the base suit's 5");
+            Assert.That(damage.Better, Is.True);
+            Assert.That(damage.Unit, Is.EqualTo(2));
+            Assert.That(damage.Segments, Is.EqualTo(Bar((StatSegment.Villager, 2), (StatSegment.BaseSuit, 1), (StatSegment.Gain, 3))));
+            var move = rows.Single(r => r.Label == "Move time");
+            Assert.That(move.Delta, Is.EqualTo(-2));
+            Assert.That(move.Better, Is.True, "faster is better");
+            Assert.That(move.Segments, Is.EqualTo(Bar((StatSegment.Villager, 5), (StatSegment.Gain, 2), (StatSegment.BaseSuit, 2))));
         }
-        [Test] public void BaseSuit_AgainstItself_HasNoDelta()
+        [Test] public void BaseSuit_AgainstItself_HasNoChangeCells()
         {
             var b = Balance();
             var own = LoadoutInfoModel.SuitStats(b, "suit.warrior", 0);
-            Assert.That(StatHistogram.SuitRows(own, own).Where(r => r.Label.EndsWith("base")).All(r => r.Gain == 0 && r.Loss == 0), Is.True);
+            var rows = StatHistogram.SuitRows(own, own);
+            Assert.That(rows.All(r => r.Delta == 0 && !r.Segments.Contains(StatSegment.Gain)), Is.True);
+        }
+        [Test] public void StatBar_UpUp_StacksVillagerBaseThenGain()
+            => Assert.That(StatBar.Cells(2, 4, 7, true, 1), Is.EqualTo(Bar((StatSegment.Villager, 2), (StatSegment.BaseSuit, 2), (StatSegment.Gain, 3))));
+        [Test] public void StatBar_UpDown_BaseToneThenLostCells()
+            => Assert.That(StatBar.Cells(2, 6, 4, true, 1), Is.EqualTo(Bar((StatSegment.Villager, 2), (StatSegment.BaseSuit, 2), (StatSegment.Loss, 2))));
+        [Test] public void StatBar_DownUp_BaseLossDashedUnderGain()
+            => Assert.That(StatBar.Cells(6, 3, 5, true, 1), Is.EqualTo(Bar((StatSegment.Villager, 3), (StatSegment.Gain, 2), (StatSegment.Loss, 1))));
+        [Test] public void StatBar_DownDown_BothLossesDashed()
+            => Assert.That(StatBar.Cells(6, 4, 2, true, 1), Is.EqualTo(Bar((StatSegment.Villager, 2), (StatSegment.Loss, 4))));
+        [Test] public void StatBar_ClampsAtTenCells()
+        {
+            Assert.That(StatBar.Cells(3, 8, 30, true, 1), Is.EqualTo(Bar((StatSegment.Villager, 3), (StatSegment.BaseSuit, 5), (StatSegment.Gain, 2))));
+            Assert.That(StatBar.Cells(50, 50, 50, true, 1), Is.EqualTo(Bar((StatSegment.Villager, 10))));
+        }
+        [Test] public void StatBar_SmallChangeInOneCell_StillShowsOneCell()
+        {
+            var bar = StatBar.Cells(20, 20, 21, true, 5);
+            Assert.That(bar, Is.EqualTo(Bar((StatSegment.Villager, 4), (StatSegment.Gain, 1))));
+        }
+        [Test] public void StatBar_LowerIsBetter_RiseIsLossFallIsGain()
+        {
+            Assert.That(StatBar.Cells(9, 9, 11, false, 1)[9], Is.EqualTo(StatSegment.Loss));
+            Assert.That(StatBar.Cells(9, 9, 7, false, 1), Is.EqualTo(Bar((StatSegment.Villager, 7), (StatSegment.Gain, 2))));
         }
         [TestCase(int.MinValue, int.MaxValue)]
         [TestCase(int.MaxValue, int.MinValue)]
@@ -72,15 +107,6 @@ namespace NodeWar.Lobby.Tests
             Assert.That(row.Gain + row.Loss, Is.GreaterThan(0));
             Assert.That(StatHistogram.Cells(value, StatHistogram.Unit(reference, value)), Is.LessThanOrEqualTo(StatHistogram.MaxCells));
         }
-        [Test] public void SuitComparisons_ShareUnitsAndCellWidths()
-        {
-            var own = new[] { new LoadoutStatRow("Damage", 100, 99, 99) };
-            var parent = new[] { new LoadoutStatRow("Damage", 99, 98, 98) };
-            var rows = StatHistogram.SuitRows(own, parent);
-            Assert.That(rows[0].Unit, Is.EqualTo(rows[1].Unit));
-            Assert.That(rows.All(r => r.Filled + r.Gain + r.Loss <= StatHistogram.MaxCells), Is.True);
-            Assert.That(rows[0].Gain, Is.GreaterThan(0));
-        }
         [Test] public void SuitRows_HideAllZeroAndInternalStats_KeepNonzeroComparisons()
         {
             var own = new[] {
@@ -89,8 +115,8 @@ namespace NodeWar.Lobby.Tests
                 new LoadoutStatRow("Fight priority", 12, 12, 12)
             };
             var rows = StatHistogram.SuitRows(own, own);
-            Assert.That(rows.Select(r => r.Label), Is.EqualTo(new[] { "Food cost vs base", "Food cost vs villager" }));
-            Assert.That(rows[1].Delta, Is.EqualTo(-4));
+            Assert.That(rows.Select(r => r.Label), Is.EqualTo(new[] { "Food cost" }));
+            Assert.That(rows[0].Delta, Is.EqualTo(0), "base suit against itself");
         }
         [Test] public void DistrictRows_KeepOwnFactsAndHideSharedRulesAndZeroPairs()
         {

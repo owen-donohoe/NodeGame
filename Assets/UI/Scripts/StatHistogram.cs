@@ -6,6 +6,43 @@ using NodeWar.UI;
 
 namespace NodeWar.Lobby
 {
+    /// <summary>What one cell of a stacked stat bar shows, from the lowest baseline up.</summary>
+    public enum StatSegment { Empty, Villager, BaseSuit, Gain, Loss }
+
+    /// <summary>
+    /// One bar per stat: solid up to the villager, a lighter tone up to the base suit, then this
+    /// item's change against the base as green (better) or dashed red (worse) cells.
+    /// </summary>
+    public static class StatBar
+    {
+        public static StatSegment[] Cells(int villager, int baseValue, int thisValue, bool higherIsBetter, int unit)
+        {
+            int scale = Math.Max(1, unit);
+            int v = Count(villager, scale), b = Count(baseValue, scale), t = Count(thisValue, scale);
+            var cells = new StatSegment[StatHistogram.MaxCells];
+            Span(villager, baseValue, v, b, out int low, out int high);
+            bool baseHigher = Math.Abs((long)baseValue) >= Math.Abs((long)villager);
+            for (int i = 0; i < low; i++) cells[i] = StatSegment.Villager;
+            // Whatever the base suit adds over the villager is a lighter tone; what it gives up is a loss.
+            bool baseBetter = baseHigher == higherIsBetter;
+            for (int i = low; i < high; i++) cells[i] = baseBetter ? StatSegment.BaseSuit : StatSegment.Loss;
+            Span(baseValue, thisValue, b, t, out low, out high);
+            bool thisHigher = Math.Abs((long)thisValue) >= Math.Abs((long)baseValue);
+            bool thisBetter = thisHigher == higherIsBetter;
+            for (int i = low; i < high; i++) cells[i] = thisBetter ? StatSegment.Gain : StatSegment.Loss;
+            return cells;
+        }
+
+        private static int Count(int value, int unit) => Math.Min(StatHistogram.MaxCells, StatHistogram.Cells(value, unit));
+
+        // Two different values in one cell bucket still show one changed cell.
+        private static void Span(int a, int b, int cellsA, int cellsB, out int low, out int high)
+        {
+            low = Math.Min(cellsA, cellsB); high = Math.Max(cellsA, cellsB);
+            if (a != b && low == high) low = Math.Max(0, high - 1);
+        }
+    }
+
     /// <summary>Common filled cells plus the gained or struck portion; value and delta keep their raw units.</summary>
     public readonly struct HistogramRow
     {
@@ -16,8 +53,11 @@ namespace NodeWar.Lobby
         public long Delta { get; }
         public int Value { get; }
         public int Unit { get; }
-        public HistogramRow(string label, int filled, int gain, int loss, long delta, int value, int unit)
-        { Label = label; Filled = filled; Gain = gain; Loss = loss; Delta = delta; Value = value; Unit = unit; }
+        public StatSegment[] Segments { get; }
+        public bool Better { get; }
+        public HistogramRow(string label, int filled, int gain, int loss, long delta, int value, int unit,
+            StatSegment[] segments = null, bool better = false)
+        { Label = label; Filled = filled; Gain = gain; Loss = loss; Delta = delta; Value = value; Unit = unit; Segments = segments; Better = better; }
     }
 
     /// <summary>Bounded integer cells, with the same scale for both comparisons of a suit stat.</summary>
@@ -49,7 +89,8 @@ namespace NodeWar.Lobby
             int filled = (int)Math.Max(0, Math.Max(Count(reference, scale), Count(value, scale)) - changed);
             bool better = higherIsBetter ? delta > 0 : delta < 0;
             return new HistogramRow(label, filled, better ? changed : 0,
-                !better && delta != 0 ? changed : 0, delta, value, scale);
+                !better && delta != 0 ? changed : 0, delta, value, scale,
+                StatBar.Cells(reference, reference, value, higherIsBetter, scale), better);
         }
         public static HistogramRow[] SuitRows(LoadoutStatRow[] suit, LoadoutStatRow[] baseSuit)
         {
@@ -66,8 +107,9 @@ namespace NodeWar.Lobby
                 long peak = Math.Max(Math.Abs((long)own.Value), Math.Max(Math.Abs((long)parent.Value), Math.Abs((long)villager)));
                 peak = Math.Max(peak, Math.Max(Math.Abs((long)own.Value - parent.Value), Math.Abs((long)own.Value - villager)));
                 int unit = NiceUnit(peak);
-                rows.Add(Row(own.Label + " vs base", parent.Value, own.Value, own.HigherIsBetter, unit));
-                rows.Add(Row(own.Label + " vs villager", villager, own.Value, own.HigherIsBetter, unit));
+                var row = Row(own.Label, parent.Value, own.Value, own.HigherIsBetter, unit);
+                rows.Add(new HistogramRow(row.Label, row.Filled, row.Gain, row.Loss, row.Delta, row.Value, row.Unit,
+                    StatBar.Cells(villager, parent.Value, own.Value, own.HigherIsBetter, row.Unit), row.Better));
             }
             return rows.ToArray();
         }

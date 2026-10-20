@@ -86,7 +86,6 @@ namespace NodeWar.Lobby
             segDistricts = Root.Q<Button>("workshop-tab-districts");
             segSuits = Root.Q<Button>("workshop-tab-suits");
             unlocked = Root.Q<VisualElement>("workshop-unlocked");
-            unlocked.RegisterCallback<GeometryChangedEvent>(_ => SizeCards());
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
             grid.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
@@ -124,6 +123,8 @@ namespace NodeWar.Lobby
             if (segSuits != null) segSuits.clicked += () => SetTab(Tab.Suits);
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) CloseInventory(); });
             CollectItems();
+            // Build every tile (and bake its art) now, so showing the page never does.
+            RenderCards();
         }
         private static VisualElement Build(VisualTreeAsset layout)
         {
@@ -137,9 +138,10 @@ namespace NodeWar.Lobby
         public override void OnShow()
         {
             int visit = session.BeginVisit();
-            CloseItemPanel();
+            if (panelBaseId != null || inventorySheet.IsOpen) CloseItemPanel();
             playerState = BackendServices.LastKnownState;
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
+            UpdateScrollLayout();
             _ = LoadInventoryAsync(visit);
         }
         public override void OnHide() { CloseInventory(); Hidden?.Invoke(); }
@@ -154,13 +156,19 @@ namespace NodeWar.Lobby
 
         private void UpdateScrollLayout()
         {
-            if (grid?.panel == null) return;
+            if (grid == null) return;
             float navHeight = nav?.resolvedStyle.height ?? 0;
             navClearance.style.height = float.IsNaN(navHeight) ? 0 : navHeight;
             if (Replacing && grid.scrollOffset != Vector2.zero) grid.scrollOffset = Vector2.zero;
-            if (!Mathf.Approximately(stageWindow.layout.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
-            if (!Mathf.Approximately(panelSpace.layout.height, firstPanel.layout.height)) panelSpace.style.height = firstPanel.layout.height;
-            var clip = WorkshopLayout.Clip(stageBandHeight, firstPanel.layout.height, secondPanel.layout.height, grid.scrollOffset.y);
+            if (!Mathf.Approximately(stageWindow.resolvedStyle.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
+            // Header and card heights never depend on a layout pass: the header is a fixed size and the
+            // card height is remembered from the last measurement (or estimated before the first one).
+            float cardHeight = secondPanel.layout.height;
+            if (!float.IsNaN(cardHeight) && cardHeight > 0) measuredCardHeight = cardHeight;
+            else if (measuredCardHeight <= 0) measuredCardHeight = 9f + 24f + 52f + 12f + Mathf.Ceil(Mathf.Max(1, unlocked.childCount) / 2f) * 160f;
+            float header = WorkshopLayout.HeaderHeight;
+            if (!Mathf.Approximately(panelSpace.resolvedStyle.height, header)) panelSpace.style.height = header;
+            var clip = WorkshopLayout.Clip(stageBandHeight, header, measuredCardHeight, grid.scrollOffset.y);
             firstPanel.style.top = clip.HeaderTop;
             secondSpace.style.height = clip.ContentHeight;
             secondClip.style.top = clip.ClipTop; secondClip.style.height = clip.MaskHeight;
@@ -283,83 +291,136 @@ namespace NodeWar.Lobby
             int selected = profile != null ? profile.data.activeLoadoutPreset : 0;
             for (int i = 0; i < presets.Length; i++)
             {
-                presets[i].Q<Label>().EnableInClassList("mk-chip--on", selected == i);
-                presets[i].SetEnabled(!inventoryBusy);
+                presets[i].EnableInClassList("ws-preset--on", selected == i);
             }
             int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
             if (presetLabel != null) presetLabel.text = "LOADOUT " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
         }
-        private VisualElement MakeArt(Item item, bool neutral, bool navy)
+        private static VisualElement MakeArt(Item item, bool neutral, bool navy, int variant = 0)
         {
             var clip = new VisualElement { pickingMode = PickingMode.Ignore };
             clip.AddToClassList("ws-art-clip"); clip.AddToClassList("mk-art");
             var art = new VisualElement { pickingMode = PickingMode.Ignore };
             art.AddToClassList("ws-art");
-
-            if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
             art.EnableInClassList("ws-art--neutral", neutral); art.EnableInClassList("ws-art--navy", navy);
-            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "mk-h2"));
+            // The generated paper art carries the item's tint, so the box stays neutral behind it.
+            StyleBackground paper = item == null ? new StyleBackground(StyleKeyword.None) : LobbyPaperArt.BackgroundFor(item.ID, variant);
+            if (paper.keyword != StyleKeyword.None)
+            {
+                art.style.backgroundImage = paper;
+                art.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            }
+            else
+            {
+                if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
+                art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "mk-h2"));
+            }
             clip.Add(art); return clip;
         }
+        // Tiles are built once per item, with their art, and kept for the page's lifetime. Refreshing
+        // only flips classes and text in place, so showing the page never rebuilds or re-lays-out them.
+        private sealed class Tile
+        {
+            public Tab Tab;
+            public string ID;
+            public VisualElement Cell, Art;
+            public Button Card;
+            public Label Name, Meta, Mark;
+        }
+        private readonly Dictionary<string, Tile> tiles = new Dictionary<string, Tile>();
+        private VisualElement emptyCell;
+        private float measuredCardHeight;
+
+        private static string TileKey(Tab tab, string id) => (int)tab + ":" + id;
+
+        private void EnsureTiles()
+        {
+            foreach (Item item in districts) EnsureTile(Tab.Districts, item);
+            foreach (Item item in suits) EnsureTile(Tab.Suits, item);
+            if (emptyCell == null)
+            {
+                emptyCell = new VisualElement { pickingMode = PickingMode.Ignore };
+                emptyCell.AddToClassList("ws-empty-cell");
+                emptyCell.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "mk-muted"));
+            }
+        }
+
+        private void EnsureTile(Tab tab, Item item)
+        {
+            string key = TileKey(tab, item.ID);
+            if (tiles.ContainsKey(key)) return;
+            string id = item.ID;
+            var tile = new Tile { Tab = tab, ID = id };
+            tile.Cell = new VisualElement { pickingMode = PickingMode.Ignore };
+            tile.Cell.AddToClassList("ws-cell");
+            tile.Card = new Button(() => PreviewItem(id));
+            tile.Card.AddToClassList("mk-tile"); tile.Card.AddToClassList("ws-card");
+            var art = MakeArt(item, false, false);
+            tile.Art = art.Q(className: "ws-art");
+            tile.Card.Add(art);
+            tile.Name = MakeLabel(item.Name, "ws-name", "mk-h3");
+            tile.Meta = MakeLabel("", "mk-caption", "ws-tile-meta");
+            tile.Mark = MakeLabel("", "mk-mark", "ws-mark");
+            tile.Card.Add(tile.Name); tile.Card.Add(tile.Meta); tile.Card.Add(tile.Mark);
+            if (menu != null) menu.Attach(tile.Card, () =>
+            {
+                var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(id)) };
+                Item current = Find(tab == Tab.Suits ? suits : districts, id);
+                if (current != null && tab == activeTab && IsSelected(current) && !current.Granted)
+                    actions.Add(new LobbyMenuItem("Remove from loadout", () =>
+                    {
+                        if (inventoryBusy || !session.IsOpen) return;
+                        CancelReplacement();
+                        bool suit = activeTab == Tab.Suits;
+                        var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+                        if (loadout.ClearChosen(suit, Array.IndexOf(chosen, id))) { SaveToProfile(); Render(); }
+                    }));
+                return actions;
+            });
+            tile.Cell.Add(tile.Card);
+            tiles[key] = tile;
+        }
+
         private void RenderCards()
         {
             if (unlocked == null) return;
-            unlocked.Clear();
+            EnsureTiles();
             ownership.Select(showAll ? 1 : 0);
             sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Era" : sort == LoadoutSort.Name ? "Name" : "Role");
             browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
+            var wanted = new List<VisualElement>();
             foreach (Item item in items)
             {
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
-                if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
-                var card = new Button(() => PreviewItem(item.ID));
-                card.AddToClassList("mk-tile"); card.EnableInClassList("mk-tile--selected", loadout.PreviewId == item.ID); card.AddToClassList("ws-card");
-                card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
-                card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
-                card.Add(MakeLabel(item.Name, "ws-name", "mk-h3"));
-                card.Add(MakeLabel("Era " + state.UnlockEra, "mk-caption", "ws-tile-meta"));
-                card.EnableInClassList("mk-tile--locked", state.Status != UnlockStatus.Owned);
-                if (IsSelected(item)) card.Add(MakeLabel("In hand", "mk-mark", "ws-mark"));
-                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era", "ws-mark"));
-                if (menu != null) menu.Attach(card, () =>
-                {
-                    var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) };
-                    if (IsSelected(item) && !item.Granted)
-                        actions.Add(new LobbyMenuItem("Remove from loadout", () =>
-                        {
-                            if (inventoryBusy || !session.IsOpen) return;
-                            CancelReplacement();
-                            bool suit = activeTab == Tab.Suits;
-                            var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
-                            if (loadout.ClearChosen(suit, Array.IndexOf(chosen, item.ID))) { SaveToProfile(); Render(); }
-                        }));
-                    return actions;
-                });
-                unlocked.Add(card);
+                bool owned = state.Status == UnlockStatus.Owned;
+                if (!LoadoutBrowse.Includes(showAll, owned)) continue;
+                Tile tile = tiles[TileKey(activeTab, item.ID)];
+                bool preview = loadout.PreviewId == item.ID;
+                tile.Card.EnableInClassList("mk-tile--selected", preview);
+                tile.Card.EnableInClassList("ws-card--preview", preview);
+                tile.Card.EnableInClassList("mk-tile--locked", !owned);
+                tile.Art.EnableInClassList("ws-art--neutral", !owned);
+                if (tile.Name.text != item.Name) tile.Name.text = item.Name;
+                string meta = "Era " + state.UnlockEra;
+                if (tile.Meta.text != meta) tile.Meta.text = meta;
+                bool inHand = IsSelected(item);
+                string mark = inHand ? "In hand" : !owned ? "Arena " + state.UnlockEra : "";
+                if (tile.Mark.text != mark) tile.Mark.text = mark;
+                tile.Mark.EnableInClassList("mk-mark--era", !inHand && !owned);
+                tile.Mark.style.display = mark.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                wanted.Add(tile.Cell);
             }
-            if (unlocked.childCount == 0) unlocked.Add(MakeLabel("Nothing here. Try All.", "ws-empty", "mk-muted"));
-            SizeCards();
-        }
-        private void SizeCards()
-        {
-            if (unlocked.contentRect.width <= 24) return;
-            float width = WorkshopLayout.TileWidth(unlocked.contentRect.width);
-            int index = 0;
-            unlocked.Query<Button>(className: "mk-tile").ForEach(card =>
+            if (wanted.Count == 0) wanted.Add(emptyCell);
+            bool same = unlocked.childCount == wanted.Count;
+            for (int i = 0; same && i < wanted.Count; i++) same = unlocked[i] == wanted[i];
+            if (!same)
             {
-                // Unity's default Button has a left margin. Two border-box widths
-                // plus that inherited margin overflow the row and wrap to one column.
-                card.style.marginLeft = card.style.marginTop = 0;
-                card.style.flexBasis = StyleKeyword.Auto;
-                card.style.width = card.style.maxWidth = width;
-                card.style.minWidth = card.style.minHeight = 0;
-                card.style.height = 152;
-                card.style.marginRight = index++ % 2 == 1 ? 0 : WorkshopLayout.TileGap;
-                card.style.marginBottom = WorkshopLayout.TileGap;
-                card.Q(className: "ws-art-clip").style.height = 78;
-            });
+                unlocked.Clear();
+                foreach (var cell in wanted) unlocked.Add(cell);
+            }
+            UpdateScrollLayout();
         }
 
         public void InspectStageItem(bool suit, int stageIndex)
@@ -440,8 +501,9 @@ namespace NodeWar.Lobby
         }
         private void RenderInventory()
         {
-            for (int i = 0; i < presets.Length; i++) presets[i].SetEnabled(!inventoryBusy);
-            if (eraMessage != null) { eraMessage.text = inventoryMessage; eraMessage.style.display = string.IsNullOrEmpty(inventoryMessage) ? DisplayStyle.None : DisplayStyle.Flex; }
+            // Only failures take room on the page; "Loading" and "Saving" must not shift the layout.
+            bool failed = inventoryMessage.StartsWith("Couldn", StringComparison.Ordinal);
+            if (eraMessage != null) { eraMessage.text = failed ? inventoryMessage : ""; eraMessage.style.display = failed ? DisplayStyle.Flex : DisplayStyle.None; }
             RenderCards(); RenderItemPanel();
         }
         private void CloseInventory()
@@ -631,7 +693,7 @@ namespace NodeWar.Lobby
             content.Add(MakeLabel(name, "mk-h2", "ws-item-title"));
             var artRow = new VisualElement(); artRow.AddToClassList("ws-item-art");
             var art = new VisualElement(); art.AddToClassList("ws-artbox");
-            art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+            art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock, variant));
             artRow.Add(art);
             void Cycle(int direction)
             {
@@ -643,6 +705,7 @@ namespace NodeWar.Lobby
             previous.AddToClassList("mk-arr"); previous.AddToClassList("ws-arr-prev");
             next.AddToClassList("mk-arr"); next.AddToClassList("ws-arr-next");
             previous.SetEnabled(!inventoryBusy && choices.Length > 1); next.SetEnabled(!inventoryBusy && choices.Length > 1);
+            previous.Add(ArrowGlyph("ws-arr-glyph--prev")); next.Add(ArrowGlyph("ws-arr-glyph--next"));
             artRow.Add(previous); artRow.Add(next); content.Add(artRow);
             var dots = new VisualElement(); dots.AddToClassList("mk-dots");
             for (int i = 0; i < Math.Max(1, choices.Length); i++)
@@ -661,6 +724,7 @@ namespace NodeWar.Lobby
             else if (Enum.TryParse(inspectedItem.ID.Substring(5), true, out DistrictType district))
                 rows = StatHistogram.DistrictRows(balance, district, variant);
             else rows = Array.Empty<HistogramRow>();
+            if (activeTab == Tab.Suits && rows.Length > 0) histogram.Add(StatLegend());
             foreach (var row in rows) histogram.Add(HistogramLine(row));
 
             string description = inspectedItem.Description ?? "";
@@ -724,18 +788,17 @@ namespace NodeWar.Lobby
         {
             var line = new VisualElement { tooltip = "1 cell = " + row.Unit };
             line.AddToClassList("mk-hrow"); line.AddToClassList("ws-stat-row");
-            var heading = new VisualElement(); heading.AddToClassList("ws-stat-heading");
-            heading.Add(MakeLabel(row.Label, "ws-stat-label"));
-            heading.Add(MakeLabel(row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "mk-value", "ws-stat-value"));
-            line.Add(heading);
+            var body = new VisualElement(); body.AddToClassList("ws-stat-body");
+            body.Add(MakeLabel(row.Label, "ws-stat-label"));
             var cells = new VisualElement(); cells.AddToClassList("mk-cells"); cells.AddToClassList("ws-stat-cells");
             for (int i = 0; i < StatHistogram.MaxCells; i++)
             {
-                bool lost = i >= row.Filled && i < row.Filled + row.Loss;
+                StatSegment segment = row.Segments != null ? row.Segments[i] : StatSegment.Empty;
                 var cell = MakeLabel("", "mk-cell", "ws-stat-cell");
-                if (i < row.Filled) cell.AddToClassList("mk-cell--f");
-                else if (i < row.Filled + row.Gain) cell.AddToClassList("mk-cell--g");
-                else if (lost)
+                if (segment == StatSegment.Villager) cell.AddToClassList("mk-cell--f");
+                else if (segment == StatSegment.BaseSuit) cell.AddToClassList("mk-cell--b");
+                else if (segment == StatSegment.Gain) cell.AddToClassList("mk-cell--g");
+                else if (segment == StatSegment.Loss)
                 {
                     cell.AddToClassList("mk-cell--t");
                     cell.style.borderLeftWidth = cell.style.borderRightWidth = cell.style.borderTopWidth = cell.style.borderBottomWidth = 0;
@@ -743,8 +806,29 @@ namespace NodeWar.Lobby
                 }
                 cells.Add(cell);
             }
-            line.Add(cells);
+            body.Add(cells); line.Add(body);
+            var delta = MakeLabel(row.Delta == 0 ? "0" : (row.Delta > 0 ? "+" : "") + row.Delta, "ws-stat-delta");
+            delta.AddToClassList(row.Delta == 0 ? "ws-stat-delta--same" : row.Better ? "ws-stat-delta--up" : "ws-stat-delta--down");
+            line.Add(delta);
             return line;
+        }
+
+        private static VisualElement ArrowGlyph(string side)
+        {
+            var glyph = new VisualElement { pickingMode = PickingMode.Ignore };
+            glyph.AddToClassList("ws-arr-glyph"); glyph.AddToClassList(side); return glyph;
+        }
+
+        private static VisualElement StatLegend()
+        {
+            var legend = new VisualElement(); legend.AddToClassList("ws-legend");
+            foreach (var entry in new[] { ("Villager", "mk-cell--f"), ("Base suit", "mk-cell--b"), ("This suit", "mk-cell--g") })
+            {
+                var item = new VisualElement(); item.AddToClassList("ws-legend-item");
+                var swatch = new VisualElement(); swatch.AddToClassList("ws-legend-swatch"); swatch.AddToClassList(entry.Item2);
+                item.Add(swatch); item.Add(MakeLabel(entry.Item1, "ws-legend-label")); legend.Add(item);
+            }
+            return legend;
         }
 
         private static void DrawLostCell(MeshGenerationContext context)

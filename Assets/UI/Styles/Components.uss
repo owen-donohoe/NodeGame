@@ -624,6 +624,7 @@
 .lb-root .mk-cell { flex-grow: 1; flex-basis: 0; min-width: 0; height: 16px; margin-right: 4px; border-width: 2px; border-color: var(--line-light); border-radius: 3px; background-color: var(--mk-pressed); }
 .lb-root .mk-cell--f { background-color: var(--line-inner); border-color: var(--line-inner); }
 .lb-root .mk-cell--g { background-color: var(--confirm); border-color: var(--confirm); }
+.lb-root .mk-cell--b { background-color: var(--mk-track); border-color: var(--line-inner); }
 .lb-root .mk-cell--t { background-color: var(--clear); border-color: var(--mk-urgent); }
 .lb-root .mk-crate { width: 76px; height: 76px; border-color: var(--line-outer); border-radius: 14px; padding: 4px 4px 12px; align-items: center; justify-content: center; }
 .lb-root .mk-crate--dim { opacity: 0.6; }
@@ -671,12 +672,14 @@
 .lb-root .ws-scroll { flex-grow: 1; min-height: 0; }
 .lb-root .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: var(--space-3); }
 .lb-root .ws-stage-spacer { height: 220px; flex-shrink: 0; }
-.lb-root .ws-panel1-space { height: 136px; flex-shrink: 0; }
+.lb-root .ws-panel1-space { flex-shrink: 0; }
 .lb-root .ws-panel2-space { flex-shrink: 0; }
 .lb-root .ws-panel2-clip { position: absolute; left: 0; right: 0; overflow: hidden; }
 .lb-root .ws-presets .ws-preset-tabs { flex-shrink: 0; }
-.lb-root .ws-preset { width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; }
-.lb-root .ws-preset-face { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; -unity-text-align: middle-center; }
+.lb-root .ws-preset-tabs { justify-content: flex-start; }
+.lb-root #page-workshop .ws-preset-tabs > .ws-preset { width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin: 0 8px 0 0; padding: 0; background-image: none; -unity-text-align: middle-center; }
+.lb-root #page-workshop .ws-preset-tabs > .ws-preset:last-child { margin-right: 0; }
+.lb-root #page-workshop .ws-preset--on { background-color: var(--mk-action); }
 .lb-root .ws-eyebrow { flex-grow: 1; flex-shrink: 1; min-width: 0; -unity-text-align: middle-right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb-root .ws-browser-title { flex-grow: 1; }
 .lb-root .ws-roles-scroll { flex-shrink: 0; }
@@ -689,13 +692,10 @@
 .lb-root .ws-item-content > * { margin-bottom: var(--space-3); }
 .lb-root .ws-item-art { height: 152px; flex-shrink: 0; align-items: center; justify-content: center; }
 .lb-root .ws-artbox .ws-art-clip { width: 100%; height: 100%; }
-.lb-root .ws-arr-prev { left: 0; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-left-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); }
-.lb-root .ws-arr-next { right: 0; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-right-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); }
 .lb-root .ws-item-status { white-space: normal; }
 .lb-root .ws-sheet-actions { flex-direction: row; justify-content: space-between; flex-shrink: 0; }
 .lb-root .ws-sheet-actions > Button { width: 45%; }
 .lb-root #page-workshop .ws-mark { top: 4px; right: 4px; padding: 0 var(--space-1); }
-.lb-root #page-workshop .ws-preset { padding: 0; }
 .lb-root #page-workshop #workshop-tab-suits { margin-right: 0; }
 .lb-root #page-workshop .mk-toolbar { margin: var(--space-3) 0 var(--space-2); }
 .lb-root #page-workshop .mk-toolbar > * { margin-right: var(--space-2); }
@@ -708,10 +708,6 @@
 .lb-root .ws-item-sheet .ws-sheet-actions { margin-bottom: 0; }
 .lb-root .ws-item-sheet .ws-sheet-actions > Button { width: 48%; }
 .lb-root .ws-item-sheet .mk-skins > * { margin-right: var(--space-2); }
-.lb-root .ws-item-sheet .ws-stat-label { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-right: var(--space-2); white-space: normal; }
-.lb-root .ws-item-sheet .ws-stat-row { flex-direction: column; align-items: stretch; margin-bottom: var(--space-3); }
-.lb-root .ws-stat-heading { flex-direction: row; align-items: center; margin-bottom: var(--space-1); }
-.lb-root .ws-item-sheet .ws-stat-value { flex-shrink: 0; -unity-text-align: middle-right; }
 .lb-root .ws-item-sheet .mk-arr { padding: 0; }
 .lb-root .g2-social-scroll { flex-grow: 1; min-height: 0; padding: var(--space-3); }
 .lb-root .g2-social-card { margin-bottom: var(--space-3); }
@@ -799,7 +795,15 @@
 .lb-root .ws-skin-art { width: 40px; height: 36px; min-height: 0; }
 .lb-root .ws-skin-lock { width: 24px; height: 24px; }
 .lb-root .ws-stat-cells { width: 100%; flex-grow: 0; margin-right: 0; }
-.lb-root .ws-stat-value { font-size: 15px; -unity-font-definition: var(--font-display); }
+.lb-root .ws-item-sheet .ws-stat-row { flex-direction: row; align-items: center; margin-bottom: var(--space-3); }
+.lb-root .ws-stat-body { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.lb-root .ws-stat-delta { width: 40px; flex-shrink: 0; margin-left: var(--space-2); font-size: 15px; -unity-font-definition: var(--font-display); -unity-text-align: middle-right; color: var(--mk-muted); }
+.lb-root .ws-stat-delta--up { color: var(--confirm); }
+.lb-root .ws-stat-delta--down { color: var(--mk-urgent); }
+.lb-root .ws-legend { flex-direction: row; margin-bottom: var(--space-2); }
+.lb-root .ws-legend-item { flex-direction: row; align-items: center; margin-right: var(--space-3); }
+.lb-root .ws-legend-swatch { width: 12px; height: 12px; margin-right: var(--space-1); border-width: 2px; border-radius: 3px; }
+.lb-root .ws-legend-label { font-size: 13px; }
 .lb-root .ws-stat-label { font-size: 13px; }
 .lb-root .ws-description { font-size: 15px; max-height: 40px; overflow: hidden; white-space: normal; }
 .lb-root .ui-filter-segments { flex-direction: row; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 4px; background-color: var(--mk-sheet); }
@@ -853,7 +857,7 @@
 .lb-root .ui-filter-sort .ui-filter-face { min-height: 20px; padding: 0; border-width: 0; background-image: none; background-color: var(--clear); }
 .lb-root .ws-sort-caret { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; width: 16px; height: 16px; margin-left: 4px; -unity-background-image-tint-color: var(--mk-ink); }
 
-.lb-root .ws-arr-prev, .lb-root .ws-arr-next, .lb-root .mk-panel__close, .lb-root .lb-guild-browse-toggle { background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
+.lb-root .lb-root .mk-panel__close, .lb-root .lb-guild-browse-toggle { background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
 
 .lb-root .mk-field { border-width: 0; padding: 0; background-color: var(--clear); min-height: 48px; }
 .lb-root .mk-field .unity-text-field__input { flex-grow: 1; min-height: 48px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 8px 12px; background-color: var(--mk-sheet); color: var(--mk-ink); font-size: 16px; -unity-font-definition: var(--font-body); }
@@ -919,3 +923,21 @@
 .lb-root .lb-toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; border-width: 2px; border-color: var(--line-inner); border-radius: 14px; background-color: var(--mk-track); }
 .lb-root .lb-toggle--on { background-color: var(--mk-tap); }
 .lb-root .lb-toggle__knob { position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-width: 2px; border-color: var(--line-inner); border-radius: 10px; background-color: var(--mk-sheet); }
+/* Side-variant arrows: a 36px circle holding a flatter caret (arms squashed to 70% toward the tip), nudged to the optical centre. */
+.lb-root .ws-arr-prev, .lb-root .ws-arr-next { width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 18px; background-image: none; align-items: center; justify-content: center; }
+.lb-root .ws-arr-prev { left: 0; }
+.lb-root .ws-arr-next { right: 0; }
+.lb-root .ws-arr-glyph { width: 24px; height: 24px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); scale: 0.7 1; }
+.lb-root .ws-arr-glyph--prev { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-left-bold.svg"); transform-origin: 28% 50%; translate: 2px 0; }
+.lb-root .ws-arr-glyph--next { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-right-bold.svg"); transform-origin: 72% 50%; translate: -2px 0; }
+
+/* Workshop tiles: two equal columns by percentage with an exact 8px gutter, so the grid needs no measuring. */
+.lb-root #page-workshop .ws-cards { margin-left: -4px; margin-right: -4px; }
+.lb-root .ws-cell { width: 50%; height: 160px; padding: 0 4px 8px 4px; flex-shrink: 0; }
+.lb-root .ws-cell > .ws-card { flex-grow: 1; margin: 0; min-width: 0; min-height: 0; }
+.lb-root .ws-cell > .ws-card .ws-art-clip { height: 78px; }
+.lb-root .ws-empty-cell { width: 100%; }
+.lb-root .ws-presets { height: 59px; flex-shrink: 0; }
+.lb-root .ws-panel1 { height: 119px; }
+.lb-root .ws-panel1-space { height: 119px; }
+.lb-root .ws-art { -unity-background-scale-mode: scale-to-fit; }

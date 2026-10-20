@@ -28,4 +28,11 @@ public class StageLoadoutTypesTests
         Assert.IsFalse(StageLoadoutTypes.Same(new[] { "a" }, new[] { "b" }));
         Assert.IsTrue(StageLoadoutTypes.Same(new[] { 1, 2 }, new[] { 1, 2 }));
     }
+
+    [Test]
+    public void WithGranted_AppendsGrantedAfterChosenWithoutDuplicates()
+    {
+        CollectionAssert.AreEqual(new[] { 4, 1, 2, 3 }, StageLoadoutTypes.WithGranted(new[] { 4, 1 }, new[] { 1, 2, 3 }));
+        CollectionAssert.AreEqual(new[] { 5 }, StageLoadoutTypes.WithGranted(null, new[] { 5, 5 }));
+    }
 }
