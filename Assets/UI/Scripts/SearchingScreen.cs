@@ -85,7 +85,12 @@ namespace NodeWar.Lobby
         }
         private async System.Threading.Tasks.Task PlayBotAsync()
         {
-            if (!await launcher.LaunchLocalAsync(true) && IsOpen) ShowFailed(launcher.FailureMessage);
+            int request = version;
+            try
+            {
+                if (!await launcher.LaunchLocalAsync(true) && IsOpen && request == version) ShowFailed(launcher.FailureMessage);
+            }
+            catch (Exception ex) { if (IsOpen && request == version) ShowFailed(ex.Message); }
         }
         public void Update() { if (IsOpen) { presenter?.Tick(Time.realtimeSinceStartupAsDouble); launcher.Update(); } }
         public void Close()

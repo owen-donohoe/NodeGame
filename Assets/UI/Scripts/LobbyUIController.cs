@@ -647,7 +647,7 @@ namespace NodeWar.Lobby
             profilePage.Closed += () =>
             {
                 router.Closed("profile");
-                stage.ShowShot(StageShots.ForPage(navigation.CurrentPageID.ToString()));
+                stage.ShowShot(navigation.CurrentPageID == LobbyPageID.Home ? StageShot.Home : StageShots.ForPage(navigation.CurrentPageID.ToString()));
             };
             WirePushPage(settingsPage, "settings", promote);
             WirePushPage(matchHistoryPage, "history", promote);

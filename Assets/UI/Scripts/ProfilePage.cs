@@ -49,14 +49,19 @@ namespace NodeWar.Lobby
             stateView.Content.AddToClassList("g2-profile-content");
             stateView.AddToClassList("g2-profile-state"); stateView.RetryRequested += Reload;
             Root.style.display = DisplayStyle.None;
-            own.RegisterCallback<PointerDownEvent>(evt => { if (evt.button == 0) { pointer = evt.pointerId; down = evt.position; } });
+            own.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                var header = stateView.Content.Q("public-profile-header");
+                bool onHeader = header != null ? header.worldBound.Contains(evt.position) : evt.position.y < own.worldBound.yMin + 100;
+                if (evt.button == 0 && onHeader) { pointer = evt.pointerId; down = evt.position; }
+            }, TrickleDown.TrickleDown);
             own.RegisterCallback<PointerUpEvent>(evt =>
             {
                 Vector2 delta = (Vector2)evt.position - down;
                 if (evt.pointerId == pointer && delta.y > 60 && delta.y > Mathf.Abs(delta.x)) Close();
                 pointer = -1;
-            });
-            own.RegisterCallback<PointerCancelEvent>(_ => pointer = -1);
+            }, TrickleDown.TrickleDown);
+            own.RegisterCallback<PointerCancelEvent>(_ => pointer = -1, TrickleDown.TrickleDown);
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) Close(); });
         }
         public void BindPanels(LobbyOverlayRouter router, VisualElement host)
@@ -72,6 +77,7 @@ namespace NodeWar.Lobby
             if (IsOpen) return;
             sourceRect = source;
             OpenFor(SelfId);
+            Root.RemoveFromClassList("g2-profile--expanded");
             Root.AddToClassList("g2-profile--instant"); SnapTo(source);
             Root.schedule.Execute(() =>
             {
@@ -85,14 +91,15 @@ namespace NodeWar.Lobby
             if (string.IsNullOrEmpty(id)) return;
             hideLater?.Pause();
             bool changed = playerId != id || account != SelfId;
-            playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null; shownCard = null;
+            playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null;
+            if (changed) shownCard = null; else if (!viewingSelf) RenderFooter();
             if (changed) { state = new AsyncState(); stateView.Content.Clear(); }
             Root.EnableInClassList("g2-profile--self", viewingSelf);
             Root.EnableInClassList("g2-profile--player", !viewingSelf);
             Root.AddToClassList("g2-profile--expanded");
             own.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
             if (viewingSelf) { panel.Close(); own.Add(stateView); }
-            else { sourceRect = null; panel.Body.Add(stateView); panel.Open(true); }
+            else { sourceRect = null; panel.Body.Add(stateView); panel.Open(); }
             Root.style.translate = new Translate(0, 0); Root.style.scale = new Scale(Vector2.one);
             BackendServices.StateChanged -= StateChanged; BackendServices.StateChanged += StateChanged;
             BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
@@ -195,7 +202,7 @@ namespace NodeWar.Lobby
             identity.Add(GuildViews.Text(PlayerCardViews.Handle(profile.Card), "mk-h2"));
             var rank = new RankDisplay(profile.Card.RR);
             var rankRow = new VisualElement(); rankRow.AddToClassList("mk-row");
-            var era = GuildViews.Text(rank.Name, "mk-chip"); era.AddToClassList("g2-era-badge"); rankRow.Add(era);
+            var era = GuildViews.Text(rank.Name, "mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
             rankRow.Add(GuildViews.Text(rank.RR + " RR", "mk-trophy")); identity.Add(rankRow); header.Add(identity);
             if (viewingSelf) header.Add(GuildViews.Button("Back", Close));
             else
