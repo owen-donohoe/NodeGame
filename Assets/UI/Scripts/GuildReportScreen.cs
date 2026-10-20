@@ -36,7 +36,7 @@ namespace NodeWar.Lobby
             string reason = null;
             var reasons = new VisualElement(); reasons.AddToClassList("lb-guild-report-reasons"); body.Add(reasons);
             var details = new TextField("Details (optional)") { multiline = true, maxLength = 1000 };
-            details.AddToClassList("mk-card"); details.AddToClassList("lb-guild-report-details");
+            details.AddToClassList("mk-field"); details.AddToClassList("lb-guild-report-details");
             details.Query<TextElement>().ForEach(element => element.enableRichText = false);
             var remove = new Toggle("Also remove from guild") { value = false };
             var actions = new VisualElement(); actions.AddToClassList("lb-guild-report-actions");

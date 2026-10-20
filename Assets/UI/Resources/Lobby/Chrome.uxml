@@ -25,7 +25,7 @@
             <ui:VisualElement class="mk-row" picking-mode="Ignore">
                 <ui:Button name="name-button" class="ui-reset-button mk-namelink" tooltip="Profile">
                     <ui:Label class="mk-ellipsis" name="name-text" text="player" enable-rich-text="false" picking-mode="Ignore" />
-                    <ui:Label text="›" picking-mode="Ignore" />
+                    <ui:VisualElement class="mk-profile-caret" picking-mode="Ignore" />
                 </ui:Button>
                 <ui:VisualElement class="mk-trophy" picking-mode="Ignore">
                     <ui:Label name="trophy-count" text="—" picking-mode="Ignore" />

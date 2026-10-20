@@ -113,5 +113,16 @@ namespace NodeWar.UI.Editor
             }
         }
     }
+    /// <summary>Unity authors SVG importer metadata when the lead opens the worktree.</summary>
+    internal sealed class LobbyPhosphorImport : AssetPostprocessor
+    {
+        private void OnPreprocessAsset()
+        {
+            if (!assetPath.StartsWith("Assets/UI/Resources/Lobby/Icons/Phosphor/", StringComparison.Ordinal) ||
+                !assetPath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)) return;
+            if (assetImporter is Unity.VectorGraphics.Editor.SVGImporter svg)
+                svg.SvgType = Unity.VectorGraphics.Editor.SVGType.VectorImage;
+        }
+    }
 }
 #endif

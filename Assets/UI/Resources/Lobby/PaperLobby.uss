@@ -1,7 +1,6 @@
-/* Imported after page geometry. PaperCard owns fill, grain, shadow and outline. */
+/* Legacy and market paper drawing; lobby surfaces use the shared recipe. */
 .ui-root PaperCard.ui-paper, .ui-root PaperButton.ui-paper-button {
-    background-color: var(--clear);
-    border-color: var(--clear);
+
     color: var(--ink);
     -unity-font-definition: var(--font-medium);
 }
@@ -67,3 +66,19 @@
 .ui-root .lb-social-red > .ui-paper-button__caption, .ui-root .lb-guild-red > .ui-paper-button__caption { color: var(--ink-white); }
 .ui-root .lb-live-row > .lb-social-player > .lb-player-open { --paper-card-fill: var(--paper); }
 .ui-root .lb-social-scroll, .ui-root .lb-guild-scroll { padding: 8px; }
+
+/* Retained PaperCard types keep bindings; USS draws the lobby panel recipe. */
+.mk-paper-panel { background-color: var(--paper); border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; background-image: url("paper-grain.png"); }
+.mk-btn > .ui-paper__underlay { display: none; }
+.ui-root PaperButton.mk-btn { background-color: var(--mk-sheet); border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 8px; color: var(--mk-ink); padding: 8px 12px; }
+.ui-root PaperButton.mk-btn:active { border-bottom-width: 2px; translate: 0 0; }
+.ui-root PaperButton.mk-btn .ui-paper-button__caption { -unity-font-definition: var(--font-display); font-size: 15px; }
+.ui-root .lb-crate-accept { background-color: var(--mk-action); }
+.ui-root .lb-crate-screen { background-color: var(--clear); border-width: 0; border-radius: 0; background-image: none; }
+.ui-root .lb-party-safe { background-color: var(--clear); }
+.ui-root .lb-group { border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; }
+.ui-root .unity-base-slider__tracker { border-color: var(--line-inner); }
+.ui-root .unity-base-slider__dragger { background-color: var(--paper-light); border-color: var(--line-inner); border-bottom-width: 4px; }
+
+.ui-root PaperButton.lb-grow { height: 56px; border-width: 0; border-bottom-width: 1px; border-bottom-color: var(--mk-hairline); border-radius: 0; background-color: var(--clear); padding: 0 16px; }
+.ui-root .lb-party-slot { border-width: 0; border-radius: 10px; background-color: var(--mk-pressed); }

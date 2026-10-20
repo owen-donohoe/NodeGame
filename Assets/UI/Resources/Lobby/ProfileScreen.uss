@@ -1,27 +1,27 @@
 .g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
-.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; background-color: var(--mk-sheet); }
+.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
 .g2-profile-state, .g2-profile-state > .g2-profile-content { min-height: 0; }
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
 .g2-profile-header { flex-direction: row; align-items: center; height: 96px; min-height: 96px; max-height: 96px; padding: 12px; overflow: hidden; flex-shrink: 0; }
 .g2-profile-header .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); }
+.ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
 .g2-profile-columns { flex-grow: 1; min-height: 0; flex-direction: row; padding: 0 12px 12px; }
 .g2-profile-left { flex-grow: 3; flex-basis: 0; min-width: 0; min-height: 0; margin-right: 12px; }
 .g2-road { flex-grow: 2; flex-basis: 0; min-width: 0; min-height: 0; }
 .g2-stat-row { flex-direction: row; margin-bottom: 8px; }
-.ui-root .g2-stat { flex-grow: 1; flex-basis: 0; padding: 12px; margin-right: 8px; min-width: 0; }
+.ui-root .g2-stat { flex-grow: 1; flex-basis: 0; padding: 12px; margin-right: 8px; min-width: 0; border-width: 0; background-color: var(--mk-pressed); }
 .ui-root .g2-stat Label { white-space: normal; }
 .g2-loadout { margin-top: 8px; }
 .g2-mini-row { flex-direction: row; justify-content: center; margin-top: 4px; }
-.ui-root .g2-mini { width: 30%; max-width: 48px; height: 64px; padding: 4px; margin: 0 4px; align-items: center; justify-content: center; }
+.ui-root .g2-mini { width: 30%; max-width: 48px; height: 64px; border-width: 0; background-color: var(--mk-pressed); padding: 4px; margin: 0 4px; align-items: center; justify-content: center; }
 .g2-mini LobbyIcon { width: 24px; height: 24px; }
 .g2-road-inner { flex-direction: row; padding: 8px 0; }
 .g2-rail { width: 22px; flex-shrink: 0; position: relative; margin-right: 8px; }
 .g2-rtrack, .g2-rfill { position: absolute; left: 9px; width: 4px; bottom: 0; border-radius: 2px; }
 .g2-rtrack { top: 0; background-color: var(--mk-track); }
 .g2-rfill { background-color: var(--mk-ink); }
-.g2-waypoint { position: absolute; left: 5px; width: 12px; height: 12px; border-width: 2px; border-color: var(--mk-ink); border-radius: 6px; background-color: var(--mk-sheet); }
+.g2-waypoint { position: absolute; left: 5px; width: 12px; height: 12px; border-width: 2px; border-color: var(--line-inner); border-radius: 6px; background-color: var(--mk-sheet); }
 .g2-you { position: absolute; left: 1px; width: 20px; height: 20px; border-width: 3px; border-color: var(--mk-ink); border-radius: 10px; background-color: var(--mk-tap); }
 .g2-era-bands { flex-grow: 1; min-width: 0; }
 .g2-era-band { height: 150px; flex-shrink: 0; padding: 12px 8px; border-width: 2px; border-color: var(--mk-ink); }

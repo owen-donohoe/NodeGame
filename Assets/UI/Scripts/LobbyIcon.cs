@@ -48,6 +48,61 @@ namespace NodeWar.Lobby
         private bool keepOriginalColours;
         private Color? resourceTint;
 
+        // Lobby-only authored icons. Match and market surfaces retain their theme
+        // and procedural fallbacks; attaching is when the actual surface is known.
+        private VectorImage LobbyImage()
+        {
+            if (context == LobbyIconContext.ShopCard) return null;
+            bool lobby = false;
+            for (VisualElement ancestor = parent; ancestor != null; ancestor = ancestor.parent)
+            {
+                if (ancestor.name == "page-shop") return null;
+                if (ancestor.ClassListContains("lb-root")) lobby = true;
+            }
+            if (!lobby) return null;
+            string icon = kind switch
+            {
+                LobbyIconKind.Burger => "list",
+                LobbyIconKind.Bell => "bell",
+                LobbyIconKind.Search => "magnifying-glass",
+                LobbyIconKind.Funnel => "funnel",
+                LobbyIconKind.Shop or LobbyIconKind.NavBarShop => "storefront",
+                LobbyIconKind.Tools => "hammer",
+                LobbyIconKind.NavBarHome or LobbyIconKind.District => "house",
+                LobbyIconKind.Swords or LobbyIconKind.Suit => "sword",
+                LobbyIconKind.Spectate or LobbyIconKind.Tv => "eye",
+                LobbyIconKind.Guild => "crown-simple",
+                LobbyIconKind.AddFriend or LobbyIconKind.Invite => "user-plus",
+                LobbyIconKind.GoldLeaf => "coins",
+                LobbyIconKind.Gear => "gear",
+                LobbyIconKind.Refresh or LobbyIconKind.Swap or LobbyIconKind.Respawn => "arrows-clockwise",
+                LobbyIconKind.Back => "caret-left",
+                LobbyIconKind.Close => "x",
+                LobbyIconKind.Lock => "lock",
+                LobbyIconKind.Chat or LobbyIconKind.NavBarSocial => "chat-circle",
+                LobbyIconKind.Laurel => "trophy",
+                LobbyIconKind.Pointer => "play",
+                LobbyIconKind.Food => "carrot",
+                LobbyIconKind.Materials => "mountains",
+                LobbyIconKind.Metal => "hammer",
+                LobbyIconKind.Sleep => "moon",
+                LobbyIconKind.CrateSmall or LobbyIconKind.CrateMedium or LobbyIconKind.DailyBox or LobbyIconKind.ShopBundle => "package",
+                LobbyIconKind.Info => "info",
+                LobbyIconKind.VictoryBox or LobbyIconKind.Envelope => "envelope",
+                LobbyIconKind.Flag or LobbyIconKind.CosmeticPaperBanner => "flag",
+                LobbyIconKind.Mouth or LobbyIconKind.Smile or LobbyIconKind.EmoteHappy => "smiley",
+                LobbyIconKind.Spark or LobbyIconKind.MagicResource => "star",
+                LobbyIconKind.Diamond or LobbyIconKind.Pip => "diamond",
+                LobbyIconKind.Alert => "warning",
+                LobbyIconKind.Hat or LobbyIconKind.CosmeticStrawHat => "baseball-cap",
+                LobbyIconKind.CosmeticTinRoof => "house",
+                LobbyIconKind.ProfileYouAreHere => "map-pin",
+                LobbyIconKind.None => null,
+                _ => "star"
+            };
+            return icon == null ? null : Resources.Load<VectorImage>("Lobby/Icons/Phosphor/" + icon + "-bold");
+        }
+
         /// <summary>Live resource tint, respecting the theme's original-colour art.</summary>
         public void SetResourceTint(Color tint)
         {
@@ -79,8 +134,13 @@ namespace NodeWar.Lobby
             if (panel != null) ValidateUsage();
 #endif
             keepOriginalColours = false;
+            VectorImage lobbyImage = LobbyImage();
             UIArtTheme theme = UIArt.Theme;
-            if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
+            if (lobbyImage != null)
+            {
+                style.backgroundImage = new StyleBackground(lobbyImage);
+            }
+            else if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
             {
                 keepOriginalColours = entry.keepOriginalColours;
                 style.backgroundImage = new StyleBackground(entry.sprite);
@@ -98,6 +158,7 @@ namespace NodeWar.Lobby
             AddToClassList("lb-icon");
             pickingMode = PickingMode.Ignore;
             style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            RegisterCallback<AttachToPanelEvent>(_ => RefreshArt());
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // UXML sets Kind and Context separately. Check only after both initial
             // attributes have been applied, avoiding warnings about temporary pairs.

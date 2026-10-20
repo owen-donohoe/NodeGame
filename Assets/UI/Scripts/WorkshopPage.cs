@@ -305,7 +305,7 @@ namespace NodeWar.Lobby
             unlocked.Clear();
             ownedFilter.EnableInClassList("ui-filter-chip--on", !showAll);
             allFilter.EnableInClassList("ui-filter-chip--on", showAll);
-            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role") + " \u2304";
+            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role");
             browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
@@ -314,7 +314,7 @@ namespace NodeWar.Lobby
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
                 if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
                 var card = new Button(() => PreviewItem(item.ID));
-                card.AddToClassList("mk-tile"); card.AddToClassList("ws-card");
+                card.AddToClassList("mk-tile"); card.EnableInClassList("mk-tile--selected", IsSelected(item)); card.AddToClassList("ws-card");
                 card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
                 card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
                 card.Add(MakeLabel(item.Name, "ws-name", "mk-h3"));
@@ -628,7 +628,7 @@ namespace NodeWar.Lobby
             string name = inspectedItem.Name + (index >= 0 && choices[index].OrderKey != 0 ? " · " + choices[index].Label : "");
             content.Add(MakeLabel(name, "mk-h2", "ws-item-title"));
             var artRow = new VisualElement(); artRow.AddToClassList("ws-item-art");
-            var art = new MkCard(); art.AddToClassList("ws-artbox");
+            var art = new VisualElement(); art.AddToClassList("ws-artbox");
             art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
             artRow.Add(art);
             void Cycle(int direction)
@@ -636,8 +636,8 @@ namespace NodeWar.Lobby
                 if (inventoryBusy || choices.Length < 2) return;
                 panelRevision++; panelChoiceId = choices[(index + direction + choices.Length) % choices.Length].ID; RenderItemPanel();
             }
-            var previous = new Button(() => Cycle(-1)) { text = "‹", name = "workshop-variant-prev" };
-            var next = new Button(() => Cycle(1)) { text = "›", name = "workshop-variant-next" };
+            var previous = new Button(() => Cycle(-1)) { text = "", name = "workshop-variant-prev" };
+            var next = new Button(() => Cycle(1)) { text = "", name = "workshop-variant-next" };
             previous.AddToClassList("mk-arr"); previous.AddToClassList("ws-arr-prev");
             next.AddToClassList("mk-arr"); next.AddToClassList("ws-arr-next");
             previous.SetEnabled(!inventoryBusy && choices.Length > 1); next.SetEnabled(!inventoryBusy && choices.Length > 1);
@@ -646,11 +646,11 @@ namespace NodeWar.Lobby
             for (int i = 0; i < Math.Max(1, choices.Length); i++)
             {
                 bool locked = choices.Length > 0 && !choices[i].UnlockState.CanUse;
-                var dot = MakeLabel(locked ? "/" : "", "mk-dot2", "ws-variant-dot");
+                var dot = MakeLabel("", "mk-dot2", "ws-variant-dot");
                 dot.EnableInClassList("mk-dot2--on", choices.Length == 0 || i == index);
                 dot.EnableInClassList("mk-dot2--locked", locked); dots.Add(dot);
             }
-            content.Add(dots);
+            dots.AddToClassList("ws-preview-dots"); artRow.Add(dots);
             var histogram = new VisualElement(); histogram.AddToClassList("mk-hist");
             var balance = TreeBalance();
             HistogramRow[] rows;
@@ -660,11 +660,11 @@ namespace NodeWar.Lobby
                 rows = StatHistogram.DistrictRows(balance, district, variant);
             else rows = Array.Empty<HistogramRow>();
             foreach (var row in rows) histogram.Add(HistogramLine(row));
-            content.Add(histogram);
+
             string description = inspectedItem.Description ?? "";
             if (activeTab == Tab.Districts && Enum.TryParse(inspectedItem.ID.Substring(5), true, out DistrictType type))
                 description = NodeWar.View.DistrictFallback.Describe(type).Description ?? description;
-            content.Add(MakeLabel(description, "mk-muted", "ws-description"));
+
             if (!state.CanUse) content.Add(MakeLabel("Locked · Arena " + state.UnlockEra, "mk-muted", "ws-item-status"));
             var skins = LoadoutChoices.Skins(baseId, null, playerState);
             if (!Array.Exists(skins, choice => choice.ID == panelSkinId)) panelSkinId = EquippedChoice(skins);
@@ -679,11 +679,24 @@ namespace NodeWar.Lobby
                 var chip = new Button(() => { panelRevision++; panelSkinId = skinId; RenderItemPanel(); });
                 chip.AddToClassList("mk-skin"); chip.EnableInClassList("mk-skin--on", panelSkinId == skinId);
                 chip.EnableInClassList("mk-skin--locked", !choice.UnlockState.CanUse);
-                chip.Add(MakeArt(inspectedItem, !choice.UnlockState.CanUse, false));
-                chip.Add(MakeLabel((choice.UnlockState.CanUse ? "" : "× ") + choice.Label, "ws-skin-name", "mk-muted"));
+                var skinArt = MakeArt(inspectedItem, !choice.UnlockState.CanUse, false);
+                skinArt.AddToClassList("ws-skin-art"); chip.Add(skinArt);
+                chip.tooltip = choice.Label + (choice.UnlockState.CanUse ? "" : " (locked)");
                 chip.SetEnabled(!inventoryBusy); skinRow.Add(chip);
             }
-            skinScroll.Add(skinRow); content.Add(skinScroll);
+            // No catalogue of unowned cosmetics is supplied yet. Keep the real
+            // owned choices, and show inert locked previews without inventing IDs.
+            for (int i = skins.Length; i < 4; i++)
+            {
+                var placeholder = new Button { tooltip = "Locked skin preview" };
+                placeholder.AddToClassList("mk-skin"); placeholder.AddToClassList("mk-skin--locked");
+                var icon = new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop);
+                icon.AddToClassList("ws-skin-lock"); placeholder.Add(icon);
+                placeholder.SetEnabled(false); skinRow.Add(placeholder);
+            }
+            content.Add(MakeLabel("Skins", "mk-h3"));
+            skinScroll.Add(skinRow); content.Add(skinScroll); content.Add(histogram);
+            content.Add(MakeLabel(description, "mk-muted", "ws-description"));
             if (!string.IsNullOrEmpty(inventoryMessage)) content.Add(MakeLabel(inventoryMessage, "mk-muted", "ws-item-status"));
             inventorySheet.Body.Add(content);
             itemActions.Add(SheetButton("BACK", CloseItemPanel));
@@ -717,14 +730,42 @@ namespace NodeWar.Lobby
             for (int i = 0; i < StatHistogram.MaxCells; i++)
             {
                 bool lost = i >= row.Filled && i < row.Filled + row.Loss;
-                var cell = MakeLabel(lost ? "/" : "", "mk-cell", "ws-stat-cell");
+                var cell = MakeLabel("", "mk-cell", "ws-stat-cell");
                 if (i < row.Filled) cell.AddToClassList("mk-cell--f");
                 else if (i < row.Filled + row.Gain) cell.AddToClassList("mk-cell--g");
-                else if (lost) cell.AddToClassList("mk-cell--t");
+                else if (lost)
+                {
+                    cell.AddToClassList("mk-cell--t");
+                    cell.style.borderLeftWidth = cell.style.borderRightWidth = cell.style.borderTopWidth = cell.style.borderBottomWidth = 0;
+                    cell.generateVisualContent += DrawLostCell;
+                }
                 cells.Add(cell);
             }
             line.Add(cells);
             return line;
+        }
+
+        private static void DrawLostCell(MeshGenerationContext context)
+        {
+            var rect = context.visualElement.contentRect;
+            var painter = context.painter2D;
+            painter.strokeColor = context.visualElement.resolvedStyle.borderLeftColor;
+            painter.lineWidth = 2;
+            void Dashes(Vector2 a, Vector2 b)
+            {
+                float length = Vector2.Distance(a, b);
+                for (float offset = 0; offset < length; offset += 6)
+                {
+                    painter.BeginPath();
+                    painter.MoveTo(Vector2.Lerp(a, b, offset / length));
+                    painter.LineTo(Vector2.Lerp(a, b, Math.Min(offset + 3, length) / length));
+                    painter.Stroke();
+                }
+            }
+            Dashes(new Vector2(1, 1), new Vector2(rect.width - 1, 1));
+            Dashes(new Vector2(1, rect.height - 1), new Vector2(rect.width - 1, rect.height - 1));
+            Dashes(new Vector2(1, 1), new Vector2(1, rect.height - 1));
+            Dashes(new Vector2(rect.width - 1, 1), new Vector2(rect.width - 1, rect.height - 1));
         }
 
         private async Task UseItemAsync()

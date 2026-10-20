@@ -6,7 +6,7 @@
         <ui:ScrollView name="guild-chat-list" class="lb-guild-chat-list" mode="Vertical" vertical-scroller-visibility="Hidden" />
         <ui:Label name="guild-chat-error" class="mk-muted" />
         <ui:VisualElement class="lb-guild-compose">
-            <ui:TextField name="guild-chat-input" class="mk-card" tooltip="Plain text and emoji, up to 200 characters" />
+            <ui:TextField name="guild-chat-input" class="mk-field" tooltip="Plain text and emoji, up to 200 characters" />
             <ui:Button name="guild-chat-send" class="mk-btn mk-btn--primary" text="Send" />
         </ui:VisualElement>
     </ui:VisualElement>

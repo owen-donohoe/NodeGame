@@ -268,8 +268,8 @@
     --lobby-card-gap: var(--space-2);
     --lobby-panel-padding: var(--space-3);
     --font-hand: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
-    --lobby-ink-outline: 0.4px;
-    --lobby-ink-outline-strong: 0.6px;
+    --lobby-ink-outline: 0px;
+    --lobby-ink-outline-strong: 0px;
 
     /* ---- corners. No pill token: USS turns an oversized radius into an
        ellipse, so a pill is given exactly half its height where it is used. ---- */
@@ -337,4 +337,53 @@
     --era-3: var(--pal-era-3);
     --era-4: var(--pal-era-4);
     --era-5: var(--pal-era-5);
+}
+
+/* Approved panel language. Lobby scope preserves the shared match faces. */
+.lb-root {
+    --line-outer: #2d2319;
+    --line-inner: #4d3d2d;
+    --line-light: #c3aa85;
+    --lip-panel: 5px;
+    --lip-press: 3px;
+    --edge-panel-bottom: 7px;
+    --edge-press-bottom: 5px;
+    --corner-sm: 10px;
+    --corner-md: 12px;
+    --corner-lg: 14px;
+    --corner-sheet: 14px;
+    --stroke: 2px;
+    --stroke-mid: 2px;
+    --paper-ink-width: 2px;
+    --radius-panel: 14px;
+    --radius-field: 12px;
+    --radius-tile: 10px;
+    --radius-button: 8px;
+    --tracking: 0.6px;
+    --font-body: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
+    --font-label: var(--font-display);
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-display);
+    --font-hand: var(--font-body);
+    --font-bold: var(--font-display);
+    --lobby-edge-inset: 12px;
+    --mk-scrim: rgba(30,22,15,0.25);
+    --scrim: rgba(30,22,15,0.25);
+    letter-spacing: var(--tracking);
+}
+/* Shop keeps its established faces and tracking while sharing lobby chrome. */
+#page-shop {
+    --corner-sm: 10px;
+    --corner-md: 16px;
+    --corner-lg: 24px;
+    --corner-sheet: 28px;
+    --stroke: 3px;
+    --stroke-mid: 2.5px;
+    --paper-ink-width: 3px;
+    --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
+    --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
+    --font-bold: var(--font-label);
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-label);
+    letter-spacing: 0;
 }

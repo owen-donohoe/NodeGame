@@ -45,7 +45,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: e50ce8d7
+verified: 8832f7f3
 ---
 
 # UI art
@@ -58,11 +58,11 @@ Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets
 
 `UIArtTheme.icons` is an ordered `IconEntry[]` of `{ LobbyIconKind kind, LobbyIconContext context, Sprite sprite, bool keepOriginalColours }`. `TryIcon(kind, context, out entry)` uses pure `UIArtLookup.SpriteIndex(entries, kind, context, kindOf, contextOf, hasSprite)` to resolve overrides. `districtVisuals` references `DistrictVisualTable`; its per-type `DistrictVisual.icon` supplies node-sheet art and `StickerOrIcon` supplies draft art before fallback mappings. Workshop uses ink monograms on paper rather than those sprites.
 
-`LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. It resolves themed sprites or cached `VectorImage` glyphs drawn by seeded `InkPen`/`PaperMath` with Painter2D in a 24×24 design box.
+`LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. Attached lobby icons load white Phosphor Bold SVG VectorImages from `Resources/Lobby/Icons/Phosphor`, tinted by USS. Shop and non-lobby surfaces retain themed sprites and cached Painter2D glyphs.
 
 District and suit icons accept Profile context for loadout minis.
 
-`LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this table rather than the obsolete generic icon inventory.
+`LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this inventory.
 
 Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, InlineText, EmotePicker, EmoteBubble, OffScreenIndicator, ShopCard, Workshop, Profile, Home. Context value 11 is reserved for the retired tree location and never matches. Retired kind values remain reserved, including SuitTreeAvailable/Owned/Equipped/Locked; their drawers are not active UI.
 
@@ -72,7 +72,7 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 
 `MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals with scrim, close and router Back. Both use `LobbyMotion` pop springs, 120ms scrim/surface fades and 140ms closes; sheets rise, panels scale; no USS tween competes. `Components.uss` exposes `mk-` classes; `Tokens.uss` separates raw `--pal-*` values from meaning tokens. Pages are transparent; cards carry content.
 
-`PaperCard : VisualElement` (`[UxmlElement]`) draws parchment, cached grain, offset shadows and seeded wobbling ink. `Seed`/`RotatePaper` control identity/rotation; `--paper-card-*` properties read meaning tokens. Geometry/style events rebuild it; presses drop the shadow. `PaperButton : Button` preserves binding contracts, drawing paper behind its caption. `PaperMath` is UnityEngine-free.
+`PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
@@ -86,26 +86,26 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 Never renumber surviving serialized enum values or reuse retired values. Context defaults to numeric zero/Anywhere for existing entries. First duplicate pair wins, including an empty first entry. Art cannot alter gameplay, element picking or command bindings. Keep environment/player ownership cues distinct from item-family/tint placeholders.
 
 ## How it works
-Lookup tries exact kind/context, then the same kind/Anywhere, then generated glyph. An empty first exact entry permits Anywhere fallback but never a later exact duplicate; empty first Anywhere falls through to glyph. Original-color sprites use white tint; other sprites retain glyph tint. Images fit centered with letterboxing. Unknown kinds get a placeholder; None intentionally draws nothing.
+Lobby SVG lookup precedes the theme, except within Shop or ShopCard context. Elsewhere lookup tries exact kind/context, then the same kind/Anywhere, then generated glyph. An empty first exact entry permits Anywhere fallback but never a later exact duplicate; empty first Anywhere falls through to glyph. Original-color sprites use white tint; other sprites retain glyph tint. Images fit centered with letterboxing. Unknown kinds get a placeholder; None draws nothing.
 
 `UIArtThemeIconEntryDrawer` offers grouped Icon and context-filtered Where menus. Anywhere is first; single-location icons display Anywhere while preserving valid serialized overrides. Changing kind resets an incompatible context. Retired choices stay visible only for existing rows. Validation warns on duplicates/unused pairs; Editor/development runtime warns once for unlisted active pairs after attachment/UXML attributes.
 
 `UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
 
-`--font-display` resolves Lilita One for titles, numbers, buttons and tabs; `--font-label` resolves Kalam Bold for labels/chips/row names; `--font-body` resolves Kalam Regular. Type tokens are body 16, secondary 14, caption 13, title 24 and number 22. Outline tokens are zero; real faces carry weight. Kalam line boxes allow its tall ascenders. Icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+Lobby-scoped tokens use Lilita One for display text and Fredoka SemiBold for body/meta, with 0.6px tracking. Shared root and Shop font tokens retain Kalam. Text outlines are zero except the stamped 34px page title. Icons use authored images or generated glyphs rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
 
-World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen offsets and distance scale clamped to 0.85 to 1. Safe-area margins are 16px; panels clear the top band and pill nav. Depth uses position/parallax/scale, never blur.
+World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen offsets and distance scale clamped to 0.85 to 1. Lobby content insets are 12px; panels clear the top band and pill nav. Depth uses position/parallax/scale, never blur.
 
-Workshop, its item sheet, Social and Guild use `--font-hand` (Patrick Hand) with ink outlines. Shared components provide 4/8-scale spacing, 16px screen insets, 8px grid gaps, 36px chip faces within 44px targets, 64px match rows and rectangular VS faces. Their runtime resource styles delegate to `Components.uss`.
+`Components.uss` supplies the lobby panel language: outer/inner/light edges, 2px outlines with 7px panel bottoms or 5px pressable bottoms, inset switches and flat gold nav. Ledgers have 56px rows and 40px avatars. Live cards are 48px with a 46×58 VS. Workshop uses 8px grid gutters; item sheets place dots inside the preview, 52px skins and ten flexible histogram cells below it.
 
 ## Decisions
-- Resolve semantic kind/context overrides rather than replace sprites independently at every call site.
+- Resolve lobby icons from a shared Phosphor mapping; retain semantic theme overrides elsewhere.
 - Preserve procedural glyph/gauge fallbacks rather than require a complete art pack to run.
 - Share a runtime theme with separate panels rather than duplicate tokens or couple panel tuning.
-- Use Lilita One and Kalam, parchment/umber meaning tokens and outlined mockup components across the lobby.
+- Scope Lilita One/Fredoka panel styling to the lobby so Shop and match styling remain independent.
 
 ## Pressure points
-The icon theme has no sprite entries. Workshop cards use monograms; `StageArt`/`StagePaperArt` generate tinted, badged buildings/villagers via `PaperRasterizer`. Authored lobby art is missing. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment.
+The icon theme has no sprite entries. Workshop cards use monograms; `StageArt`/`StagePaperArt` generate tinted, badged buildings/villagers via `PaperRasterizer`. Authored item thumbnails are missing. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment.
 
 ## Change recipes
 - Add an icon: append its stable kind, provide fallback drawing and usage locations/labels, set context at call sites and extend coverage tests; assign sprites through the Inspector.

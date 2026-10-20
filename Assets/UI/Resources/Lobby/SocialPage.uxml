@@ -1,16 +1,16 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
  <ui:Style src="SocialScreen.uss" />
  <ui:ScrollView name="social-scroll" class="g2-social-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
-  <lobby:MkCard class="g2-social-card">
-   <ui:Label text="LIVE" class="mk-eyebrow" />
+  <lobby:MkCard class="g2-social-card mk-ledger">
+   <ui:VisualElement class="mk-ledger__header"><ui:Label text="LIVE TV" /><ui:Label text="4 games" class="mk-ledger__meta" /></ui:VisualElement>
    <ui:VisualElement name="social-tv" />
   </lobby:MkCard>
-  <lobby:MkCard class="g2-social-card">
-   <ui:Label text="ONLINE" class="mk-eyebrow" />
+  <lobby:MkCard class="g2-social-card mk-ledger">
+   <ui:VisualElement class="mk-ledger__header"><ui:Label text="ONLINE" /><ui:Label text="Friends · Guild" class="mk-ledger__meta" /></ui:VisualElement>
    <ui:VisualElement name="social-friends" />
   </lobby:MkCard>
-  <lobby:MkCard class="g2-social-card">
-   <ui:Label text="BATTLE HISTORY" class="mk-eyebrow" />
+  <lobby:MkCard class="g2-social-card mk-ledger">
+   <ui:VisualElement class="mk-ledger__header"><ui:Label text="BATTLE HISTORY" /><ui:Label text="Recent" class="mk-ledger__meta" /></ui:VisualElement>
    <ui:VisualElement name="social-previous" />
   </lobby:MkCard>
   <ui:VisualElement class="ui-lobby-list-end" picking-mode="Ignore" />

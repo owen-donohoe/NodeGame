@@ -43,6 +43,8 @@ namespace NodeWar.Lobby
             RegisterCallback<CustomStyleResolvedEvent>(_ => Resolve());
             RegisterCallback<AttachToPanelEvent>(_ =>
             {
+                EnableInClassList("mk-paper-panel", IsLobbySurface(this));
+                if (ClassListContains("mk-paper-panel")) rotatePaper = false;
                 if (string.IsNullOrEmpty(name)) name = "paper-" + string.Join("-", GetClasses()) + "-" + (parent?.IndexOf(this) ?? 0);
                 Rebuild();
             });
@@ -50,6 +52,16 @@ namespace NodeWar.Lobby
             RegisterCallback<PointerUpEvent>(_ => Pressed = false);
             RegisterCallback<PointerCancelEvent>(_ => Pressed = false);
             generateVisualContent += Draw;
+        }
+
+        internal static bool IsLobbySurface(VisualElement element)
+        {
+            for (var ancestor = element; ancestor != null; ancestor = ancestor.parent)
+            {
+                if (ancestor.name == "page-shop") return false;
+                if (ancestor.ClassListContains("lb-root")) return true;
+            }
+            return false;
         }
 
         private void Resolve()
@@ -91,6 +103,9 @@ namespace NodeWar.Lobby
 
         private void Draw(MeshGenerationContext context)
         {
+            // USS supplies the approved lobby edge, lip and grain. Keep the
+            // procedural renderer for match and Shop surfaces.
+            if (ClassListContains("mk-paper-panel")) return;
             if (outline == null) return;
             float inset = Mathf.Max(2, width * 0.5f + wobble);
             Vector2 origin = new Vector2(inset, inset);
