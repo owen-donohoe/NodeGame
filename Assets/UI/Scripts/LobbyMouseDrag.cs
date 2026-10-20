@@ -7,6 +7,8 @@ namespace NodeWar.Lobby
     internal sealed class LobbyMouseDrag : Manipulator
     {
         private const string SuppressClick = "lb-suppress-drag-click";
+        private const string Scrolling = "lb-mouse-scrolling";
+        internal static bool IsScrolling(ScrollView view) => view.ClassListContains(Scrolling);
         private ScrollView scroll;
         private int pointer = -1;
         private Vector2 start, origin, velocity;
@@ -65,6 +67,7 @@ namespace NodeWar.Lobby
                 if (element == target) break;
             }
             if (scroll == null) return;
+            scroll.AddToClassList(Scrolling);
             scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             pointer = evt.pointerId; start = evt.position;
             origin = scroll.scrollOffset; previousAt = evt.timestamp;
@@ -87,8 +90,10 @@ namespace NodeWar.Lobby
                 {
                     var ancestor = scroll.parent;
                     while (ancestor != null && !(ancestor is ScrollView)) ancestor = ancestor.parent;
+                    scroll.RemoveFromClassList(Scrolling);
                     scroll = ancestor as ScrollView;
                     if (scroll == null) { pointer = -1; return; }
+                    scroll.AddToClassList(Scrolling);
                     origin = scroll.scrollOffset;
                 }
                 dragging = true; Capture(target, pointer);
@@ -110,7 +115,7 @@ namespace NodeWar.Lobby
             if (evt.pointerId != pointer) return;
             bool wasDragging = dragging;
             pointer = -1; dragging = false;
-            if (!wasDragging) { scroll = null; return; }
+            if (!wasDragging) { scroll?.RemoveFromClassList(Scrolling); scroll = null; return; }
             if (target.HasPointerCapture(evt.pointerId)) target.ReleasePointer(evt.pointerId);
             velocity.x = LobbyDragMath.ReleaseVelocity(velocity.x, evt.timestamp - previousAt);
             velocity.y = LobbyDragMath.ReleaseVelocity(velocity.y, evt.timestamp - previousAt);
@@ -133,12 +138,13 @@ namespace NodeWar.Lobby
             LobbyDragMath.Step(ref offset.y, ref velocity.y, max.y, seconds);
             scroll.scrollOffset = offset;
             if (velocity == Vector2.zero && offset.x >= 0 && offset.x <= max.x && offset.y >= 0 && offset.y <= max.y)
-            { inertia.Pause(); scroll = null; }
+            { inertia.Pause(); scroll.RemoveFromClassList(Scrolling); scroll = null; }
         }
 
         private void Stop()
         {
             inertia?.Pause();
+            scroll?.RemoveFromClassList(Scrolling);
             int released = pointer; pointer = -1; dragging = false;
             if (released >= 0 && target.HasPointerCapture(released)) target.ReleasePointer(released);
             if (scroll != null && scroll.panel != null)

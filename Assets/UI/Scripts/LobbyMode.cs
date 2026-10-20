@@ -2,17 +2,18 @@ using System;
 
 namespace NodeWar.Lobby
 {
-    public enum LobbyMode { Ranked1v1, Team2v2, FreeForAll4, Bot, Lan }
-    public enum LobbyPlayAction { Ranked, PrivateInvite, TeamChoice, FreeForAllChoice, Bot, Lan }
+    public enum LobbyMode { Ranked1v1, Team2v2, FreeForAll4, Bot, Lan, Unranked1v1 }
+    public enum LobbyPlayAction { Ranked, PrivateInvite, TeamChoice, FreeForAllChoice, Bot, Lan, Unranked }
 
     public readonly struct LobbyModeSelection
     {
         public LobbyMode Mode { get; }
         public bool Private { get; }
-        public bool IsPrivate => Mode == LobbyMode.Ranked1v1 && Private;
+        public bool IsPrivate => Private;
         public LobbyModeSelection(LobbyMode mode, bool isPrivate = false)
         {
-            Mode = Enum.IsDefined(typeof(LobbyMode), mode) ? mode : LobbyMode.Ranked1v1;
+            var valid = Enum.IsDefined(typeof(LobbyMode), mode) ? mode : LobbyMode.Ranked1v1;
+            Mode = isPrivate && valid == LobbyMode.Ranked1v1 ? LobbyMode.Unranked1v1 : valid;
             Private = isPrivate;
         }
         public GameMode LegacyMode => Mode == LobbyMode.Bot ? GameMode.Bot : Mode == LobbyMode.Lan || IsPrivate ? GameMode.OneVsOne : GameMode.Locked;
@@ -20,8 +21,10 @@ namespace NodeWar.Lobby
         {
             get
             {
+                if (IsPrivate) return LobbyPlayAction.PrivateInvite;
                 switch (Mode)
                 {
+                    case LobbyMode.Unranked1v1: return LobbyPlayAction.Unranked;
                     case LobbyMode.Team2v2: return LobbyPlayAction.TeamChoice;
                     case LobbyMode.FreeForAll4: return LobbyPlayAction.FreeForAllChoice;
                     case LobbyMode.Bot: return LobbyPlayAction.Bot;
