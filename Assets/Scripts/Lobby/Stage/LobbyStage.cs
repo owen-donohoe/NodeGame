@@ -100,8 +100,6 @@ namespace NodeWar.Lobby
 
             Primitive("Ocean (unplaceable edge)", PrimitiveType.Plane, transform,
                 new Vector3(0f, -0.18f, 0f), new Vector3(12f, 1f, 12f), Sea);
-            Primitive("Land", PrimitiveType.Plane, transform, new Vector3(0f, -0.01f, 0f),
-                new Vector3(1f, 1f, 0.7f), new Color(0.77f, 0.70f, 0.55f));
 
             var slots = StageSlots.Layout(0);
             for (int i = 0; i < slots.Length; i++)
