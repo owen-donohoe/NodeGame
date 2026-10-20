@@ -18,7 +18,7 @@ namespace NodeWar.Lobby
         private float startY;
         private LobbyOverlayRouter router;
         private string route;
-        private IVisualElementScheduledItem hideLater;
+        private readonly LobbyElementMotion motion;
 
         public MkSheet()
         {
@@ -44,6 +44,8 @@ namespace NodeWar.Lobby
             Handle.RegisterCallback<PointerUpEvent>(_ => Release());
             Handle.RegisterCallback<PointerCancelEvent>(_ => Release());
             style.display = DisplayStyle.None;
+            motion = new LobbyElementMotion(Surface, Scrim);
+            motion.Set(0f, 0f, LobbyMotion.ClosedScale);
         }
 
         public void SetScrollable(bool value)
@@ -61,13 +63,13 @@ namespace NodeWar.Lobby
         {
             Surface.EnableInClassList("mk-bigsheet", large);
             LobbyScrollbars.Hide(Body);
-            hideLater?.Pause();
             style.display = DisplayStyle.Flex;
+            SetEnabled(true);
             pickingMode = PickingMode.Position;
             Surface.pickingMode = Scrim.pickingMode = PickingMode.Position;
-            schedule.Execute(() => { if (IsOpen) Surface.AddToClassList("mk-sheet--open"); }).ExecuteLater(16);
             if (IsOpen) return;
             IsOpen = true;
+            motion.Open();
             if (router != null) router.Open(new LobbyOverlay(route, OverlayKind.Sheet, true), Close);
             Opened?.Invoke();
         }
@@ -75,10 +77,9 @@ namespace NodeWar.Lobby
         {
             if (!IsOpen) return;
             Release(); IsOpen = false;
-            Surface.RemoveFromClassList("mk-sheet--open");
+            SetEnabled(false);
             pickingMode = Surface.pickingMode = Scrim.pickingMode = PickingMode.Ignore;
-            hideLater = schedule.Execute(() => style.display = DisplayStyle.None);
-            hideLater.ExecuteLater(280);
+            motion.Close(() => style.display = DisplayStyle.None);
             if (router != null) router.Closed(route);
             Closed?.Invoke();
         }

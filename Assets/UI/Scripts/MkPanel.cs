@@ -18,6 +18,7 @@ namespace NodeWar.Lobby
         public event Action Closed;
         private LobbyOverlayRouter router;
         private string route;
+        private readonly LobbyElementMotion motion;
 
         public MkPanel()
         {
@@ -31,6 +32,8 @@ namespace NodeWar.Lobby
             Surface.Add(header); Body.AddToClassList("mk-panel__body"); Surface.Add(Body);
             Scrim.RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
             style.display = DisplayStyle.None;
+            motion = new LobbyElementMotion(Surface, Scrim);
+            motion.Set(0f, 0f, LobbyMotion.ClosedScale);
         }
         public void BindRouter(LobbyOverlayRouter value, string id) { router = value; route = id; }
         public void Open()
@@ -40,11 +43,14 @@ namespace NodeWar.Lobby
             LobbyScrollbars.Hide(Body);
             if (router != null) router.Open(new LobbyOverlay(route, OverlayKind.Panel, true), Close);
             Opened?.Invoke();
+            SetEnabled(true);
+            motion.Open();
         }
         public void Close()
         {
             if (!IsOpen) return;
-            IsOpen = false; style.display = DisplayStyle.None;
+            IsOpen = false; SetEnabled(false);
+            motion.Close(() => style.display = DisplayStyle.None);
             if (router != null) router.Closed(route);
             Closed?.Invoke();
         }

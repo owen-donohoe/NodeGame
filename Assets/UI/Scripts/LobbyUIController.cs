@@ -389,7 +389,7 @@ namespace NodeWar.Lobby
             if (backdrop != null) backdrop.style.display = DisplayStyle.None;
             navigation.PageShown += id =>
             {
-                stage.ShowShot(id == LobbyPageID.Home ? StageShot.Home : StageShots.ForPage(id.ToString()));
+                stage.ShowShot(StageShots.ForPage(id.ToString()));
                 RefreshStageLoadout();
             };
             router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
@@ -753,7 +753,7 @@ namespace NodeWar.Lobby
                 }
             }
             if (playerCard != null) playerCard.style.display = showGuild ? DisplayStyle.None : DisplayStyle.Flex;
-            if (pills != null) pills.style.display = (Routes.IsSheetOpen || top != null && top.HidesPills) ? DisplayStyle.None : DisplayStyle.Flex;
+            if (pills != null) pills.style.display = Routes.HidesPills ? DisplayStyle.None : DisplayStyle.Flex;
             if (header != null) header.style.display = (top != null && top.HidesHeader) ? DisplayStyle.None : DisplayStyle.Flex;
             if (currencies != null) currencies.style.display = (top != null && top.HidesHeader) ? DisplayStyle.None : DisplayStyle.Flex;
         }

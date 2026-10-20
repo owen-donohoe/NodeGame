@@ -13,6 +13,7 @@ namespace NodeWar.Lobby
     public abstract class LobbyPushPage
     {
         private readonly SafeAreaBinder safeArea;
+        private readonly LobbyElementMotion motion;
 
         public VisualElement Root { get; private set; }
 
@@ -25,6 +26,9 @@ namespace NodeWar.Lobby
             Root = new VisualElement();
             Root.name = name;
             Root.AddToClassList("lb-push");
+            Root.style.display = DisplayStyle.None;
+            motion = new LobbyElementMotion(Root);
+            motion.Set(0f, LobbyMotion.PageTravel, 1f);
 
             if (layout != null)
             {
@@ -49,11 +53,14 @@ namespace NodeWar.Lobby
 
         public void Open()
         {
+            if (IsOpen) return;
             IsOpen = true;
-            Root.AddToClassList("lb-push--open");
+            Root.style.display = DisplayStyle.Flex;
+            Root.SetEnabled(true);
             OnOpen();
             LobbyScrollbars.Hide(Root);
             Opened?.Invoke();
+            motion.To(1f, 0f, 1f, LobbyMotion.PageSeconds);
         }
 
         public void Close()
@@ -61,7 +68,9 @@ namespace NodeWar.Lobby
             if (!IsOpen) return;
 
             IsOpen = false;
-            Root.RemoveFromClassList("lb-push--open");
+            Root.SetEnabled(false);
+            motion.To(0f, LobbyMotion.PageTravel, 1f, LobbyMotion.PageSeconds,
+                done: () => Root.style.display = DisplayStyle.None);
             OnClose();
             Closed?.Invoke();
         }

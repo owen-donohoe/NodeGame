@@ -135,18 +135,14 @@
     overflow: hidden;
 }
 
-/* The pages sit side by side in one track, which slides to show a page -
-   a tab press scrolls rather than cuts. NavigationController sets each
-   page to the host width and the track translate. */
+/* NavigationController crossfades overlapping pages with LobbyMotion. */
 .lb-page-track {
     position: absolute;
     left: 0;
+    right: 0;
     top: 0;
     bottom: 0;
     flex-direction: row;
-    transition-property: translate;
-    transition-duration: var(--motion-page);
-    transition-timing-function: ease-out;
 }
 
 /* Every tab page. LobbyPage adds the class. */
@@ -224,14 +220,6 @@
     top: 0;
     bottom: 0;
     background-color: var(--surface);
-    translate: 100% 0;
-    transition-property: translate;
-    transition-duration: 300ms;
-    transition-timing-function: ease-out;
-}
-
-.lb-push--open {
-    translate: 0 0;
 }
 
 .lb-push__scroll {

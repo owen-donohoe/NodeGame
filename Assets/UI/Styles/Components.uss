@@ -648,8 +648,7 @@
 .ui-root .mk-tab--on .lb-icon{ -unity-background-image-tint-color: var(--mk-sheet); }
 .ui-root .mk-tab__badge{ position: absolute; top: 5px; right: 10px; width: 11px; height: 11px; border-radius: 6px; background-color: var(--mk-urgent); border-width: 2px; border-color: var(--mk-card); }
 
-.ui-root .mk-sheet{ translate: 0 100%; transition-property: translate; transition-duration: 280ms; transition-timing-function: ease-out; }
-.ui-root .mk-sheet--open{ translate: 0 0; }
+/* MkSheet and MkPanel animate their surface and scrim through LobbyMotion. */
 .ui-root .mk-friend--disabled, .ui-root .mk-chip--disabled, .ui-root .mk-chip:disabled, .ui-root .mk-seg2__btn--disabled, .ui-root .mk-seg2__btn:disabled{ opacity: 0.45; }
 .ui-root .mk-chip:active, .ui-root .mk-seg2__btn:active, .ui-root .mk-tile:active{ background-color: var(--mk-pressed); }
 .ui-root .mk-crate--dim{ opacity: 0.6; }

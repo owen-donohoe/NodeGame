@@ -25,7 +25,7 @@ namespace NodeWar.Lobby
             Func<bool> backHandler = null)
         {
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("Overlay needs an id", nameof(id));
-            ID = id; Kind = kind; HidesPills = hidesPills; HidesHeader = hidesHeader;
+            ID = id; Kind = kind; HidesPills = kind == OverlayKind.Fullscreen && hidesPills; HidesHeader = hidesHeader;
             BackHandler = backHandler;
         }
     }
@@ -38,6 +38,7 @@ namespace NodeWar.Lobby
         public LobbyOverlay Top => Count == 0 ? null : entries[Count - 1];
         public bool IsSheetOpen => entries.Exists(entry => entry.Kind == OverlayKind.Sheet);
         public bool AnyFullscreen => entries.Exists(entry => entry.Kind == OverlayKind.Fullscreen);
+        public bool HidesPills => entries.Exists(entry => entry.HidesPills);
 
         public void Push(LobbyOverlay entry)
         {
