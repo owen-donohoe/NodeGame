@@ -51,7 +51,7 @@ namespace NodeWar.Lobby
         {
             var road = new ScrollView { name = "profile-road" }; road.AddToClassList("g2-road"); LobbyScrollbars.Hide(road);
             var inside = new VisualElement(); inside.AddToClassList("g2-road-inner"); road.Add(inside);
-            int count = RankTable.Thresholds.Count; float height = count * 150f; inside.style.height = height;
+            int count = RankTable.Thresholds.Count; float height = count * 150f; inside.style.height = height + 20f;
             var rail = new VisualElement(); rail.AddToClassList("g2-rail"); inside.Add(rail);
             var track = new VisualElement(); track.AddToClassList("g2-rtrack"); rail.Add(track);
             var rank = new RankDisplay(rr);

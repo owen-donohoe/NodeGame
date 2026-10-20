@@ -21,7 +21,7 @@
 .ui-root .g2-mini { width: 30%; max-width: 48px; height: 44px; padding: 2px; margin: 0 2px; align-items: center; justify-content: center; }
 .g2-mini LobbyIcon { width: 24px; height: 24px; }
 .g2-mini-letter { font-size: 10px; }
-.g2-road-inner { flex-direction: row; }
+.g2-road-inner { flex-direction: row; padding: 10px 0; }
 .g2-rail { width: 22px; flex-shrink: 0; position: relative; margin-right: 8px; }
 .g2-rtrack, .g2-rfill { position: absolute; left: 9px; width: 4px; bottom: 0; border-radius: 2px; }
 .g2-rtrack { top: 0; background-color: var(--mk-track); }
@@ -31,11 +31,11 @@
 .g2-era-bands { flex-grow: 1; min-width: 0; }
 .g2-era-band { height: 150px; flex-shrink: 0; padding: 12px 8px; border-width: 2px; border-color: var(--mk-ink); }
 .g2-era-band Label { white-space: normal; }
-.g2-era--1 { background-color: var(--era-1); }
-.g2-era--2 { background-color: var(--era-2); }
-.g2-era--3 { background-color: var(--era-3); }
-.g2-era--4 { background-color: var(--era-4); }
-.g2-era--5 { background-color: var(--era-5); }
+.ui-root .g2-era--1 { background-color: var(--era-1); }
+.ui-root .g2-era--2 { background-color: var(--era-2); }
+.ui-root .g2-era--3 { background-color: var(--era-3); }
+.ui-root .g2-era--4 { background-color: var(--era-4); }
+.ui-root .g2-era--5 { background-color: var(--era-5); }
 .g2-reward-notch { width: 18px; height: 8px; border-width: 2px; border-color: var(--mk-ink); border-radius: 2px; background-color: var(--mk-sheet); margin-top: 8px; }
 .g2-win-history { flex-direction: row; margin-top: 12px; flex-wrap: wrap; }
 .ui-root .g2-result { width: 24px; height: 24px; margin-right: 3px; border-width: 1px; border-color: var(--mk-ink); -unity-text-align: middle-center; }

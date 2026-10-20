@@ -140,7 +140,7 @@ namespace NodeWar.Lobby
                 var row = new MkPlayerRow(PlayerCardViews.Handle(player), player.Presence == PlayerPresence.InBattle ? "In battle" : player.Presence.ToString());
                 row.AddToClassList("g2-online-player"); row.EnableInClassList("g2-offline", player.Presence == PlayerPresence.Offline);
                 row.RegisterCallback<ClickEvent>(evt => { if (!(evt.target is Button)) openProfile?.Invoke(player.PlayerId); });
-                row.focusable = true; row.RegisterCallback<KeyDownEvent>(evt => { if (evt.keyCode == KeyCode.Return) { openProfile?.Invoke(player.PlayerId); evt.StopPropagation(); } });
+                row.focusable = true; row.RegisterCallback<KeyDownEvent>(evt => { if (evt.target == row && evt.keyCode == KeyCode.Return) { openProfile?.Invoke(player.PlayerId); evt.StopPropagation(); } });
                 if (player.Presence == PlayerPresence.InBattle)
                 {
                     var watch = GuildViews.Button("Spectate", () => Debug.Log("[Stub] Spectate player " + player.PlayerId), "mk-btn--sm"); watch.AddToClassList("g2-urgent");
