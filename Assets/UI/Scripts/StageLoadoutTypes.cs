@@ -20,7 +20,11 @@ namespace NodeWar.Lobby
                 for (int type = 1; type < length; type++)
                 {
                     string candidate = suits ? CatalogKeys.SuitLobbyId(type) : CatalogKeys.DistrictLobbyId(type);
-                    if (!string.Equals(id, candidate, StringComparison.OrdinalIgnoreCase)) continue;
+                    string baseId = suits ? CatalogKeys.SuitBase(type) : CatalogKeys.DistrictBase(type);
+                    bool variant = CatalogIds.TryParseVariant(id, out string parsedBase, out _) &&
+                        string.Equals(parsedBase, baseId, StringComparison.OrdinalIgnoreCase);
+                    if (!string.Equals(id, candidate, StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(id, baseId, StringComparison.OrdinalIgnoreCase) && !variant) continue;
                     types.Add(type);
                     break;
                 }

@@ -2,6 +2,9 @@
 system: ui-art
 summary: Resolves shared UI icons, district thumbnails and procedural gauge styling from an Inspector-authored theme.
 sources:
+  - Assets/Scripts/Lobby/Stage/StageArt.cs
+  - Assets/Scripts/Lobby/Stage/StagePaperArt.cs
+  - Assets/Scripts/Lobby/Stage/PaperRasterizer.cs
   - Assets/UI/Editor/UIArtThemeIconEntryDrawer.cs
   - Assets/UI/Fonts/
   - Assets/UI/Resources/UIArtTheme.asset
@@ -42,7 +45,11 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
+<<<<<<< HEAD
 verified: 0be4a6bb
+=======
+verified: f141a2fb
+>>>>>>> feat/lobby-g6b
 ---
 
 # UI art
@@ -102,7 +109,7 @@ Workshop, its item sheet, Social and Guild use `--font-hand` (Patrick Hand) with
 - Use Lilita One and Kalam, parchment/umber meaning tokens and outlined mockup components across the lobby.
 
 ## Pressure points
-The current icon theme has no assigned sprite entries; much UI remains procedural/monogram art. Workshop still needs district-sprite consumption. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge sprite skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment, not historical asset counts.
+The icon theme has no sprite entries. Workshop cards use monograms; `StageArt`/`StagePaperArt` generate tinted, badged buildings/villagers via `PaperRasterizer`. Authored lobby art is missing. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment.
 
 ## Change recipes
 - Add an icon: append its stable kind, provide fallback drawing and usage locations/labels, set context at call sites and extend coverage tests; assign sprites through the Inspector.

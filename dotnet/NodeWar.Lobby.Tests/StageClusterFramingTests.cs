@@ -5,10 +5,56 @@ namespace NodeWar.Lobby.Tests
 {
     public class StageClusterFramingTests
     {
+        [Test]
+        public void FocusStillZoomsInAndOverviewZoomsOutWithoutChangingMotionTiming()
+        {
+            var sweep = StageClusterFraming.SweepSuit(-0.35f, 0.35f, -0.55f, 0.55f, 0, 0);
+            StageClusterFrame Frame(bool focus) => StageClusterFraming.Fit(390f / 844,
+                StageClusterFraming.SuitTop(0.2f, 0.55f, focus), StageClusterFraming.SuitBottom(0.2f, 0.55f, focus),
+                true, sweep.HalfWidth, sweep.HalfHeight, sweep.HalfDepth);
+            Assert.That(Frame(true).Distance, Is.LessThan(Frame(false).Distance));
+        }
         [TestCase(390f / 844f)]
         [TestCase(540f / 1200f)]
         [TestCase(16f / 9f)]
-        public void SelectedSuitFillsSixtyPercentOfStageBandAndIsCentred(float aspect)
+        public void MovingFrontEdgeBodyFeetLiftAndPopFitInsideWindowWithMargin(float aspect)
+        {
+            // Resting bounds of the actual generated 0.7 x 1.1 quad, not a target point.
+            var sweep = StageClusterFraming.SweepSuit(-0.35f, 0.35f, -0.55f, 0.55f, 0, 0);
+            const float top = 0.20f, bottom = 0.55f;
+            var fit = StageClusterFraming.Fit(aspect, StageClusterFraming.SuitTop(top, bottom),
+                StageClusterFraming.SuitBottom(top, bottom), true, sweep.HalfWidth, sweep.HalfHeight, sweep.HalfDepth);
+            double sin = Math.Sin(fit.Pitch * Math.PI / 180), cos = Math.Cos(fit.Pitch * Math.PI / 180);
+            double tan = Math.Tan(StageClusterFraming.FieldOfView * Math.PI / 360);
+            foreach (float walkX in new[] { -1f, 0, 1f })
+            foreach (float walkZ in new[] { -1.65f, -1f, -0.3f })
+            foreach (float lift in new[] { 0, 1.1f * 0.41f })
+            foreach (float pop in new[] { 0.78f, 1f, 1.22f })
+            foreach (float roll in new[] { -3f, 0, 3f })
+            foreach (float yaw in new[] { 0, 45f, 90f })
+            for (int corner = 0; corner < 4; corner++)
+            {
+                double mx = ((corner & 1) == 0 ? -0.35 : 0.35) / pop;
+                double my = ((corner & 2) == 0 ? -0.55 : 0.55) * pop;
+                double r = roll * Math.PI / 180, a = yaw * Math.PI / 180;
+                double rx = mx * Math.Cos(r) - my * Math.Sin(r);
+                double y = mx * Math.Sin(r) + my * Math.Cos(r) + 1.1 * 0.42 * (pop - 1) + lift - sweep.CentreY;
+                double x = walkX + rx * Math.Cos(a), z = walkZ - rx * Math.Sin(a) - sweep.CentreZ;
+                Assert.That(Math.Abs(x), Is.LessThanOrEqualTo(sweep.HalfWidth + 0.0001));
+                Assert.That(Math.Abs(y), Is.LessThanOrEqualTo(sweep.HalfHeight + 0.0001));
+                Assert.That(Math.Abs(z), Is.LessThanOrEqualTo(sweep.HalfDepth + 0.0001));
+                double depth = fit.Distance - y * sin + z * cos;
+                double screenX = 0.5 + x / (2 * depth * tan * aspect);
+                double screenY = 0.5 - (y * cos + z * sin + fit.UpOffset) / (2 * depth * tan);
+                Assert.That(screenX, Is.InRange(0.0799, 0.9201));
+                Assert.That(screenY, Is.InRange(top + (bottom - top) * 0.08 - 0.0001,
+                    bottom - (bottom - top) * 0.08 + 0.0001));
+            }
+        }
+        [TestCase(390f / 844f)]
+        [TestCase(540f / 1200f)]
+        [TestCase(16f / 9f)]
+        public void SelectedSuitLeavesEightPercentMarginInStageBand(float aspect)
         {
             const float top = 0.20f, bottom = 0.55f;
             float suitTop = StageClusterFraming.SuitTop(top, bottom);
@@ -23,7 +69,7 @@ namespace NodeWar.Lobby.Tests
                 double screen = 0.5 - (y * cos + frame.UpOffset) / (2 * depth * tan);
                 min = Math.Min(min, screen); max = Math.Max(max, screen);
             }
-            Assert.That((max - min) / (bottom - top), Is.InRange(0.54, 0.601));
+            Assert.That((max - min) / (bottom - top), Is.InRange(0.75, 0.841));
             Assert.That((min + max) / 2, Is.EqualTo((top + bottom) / 2).Within(0.015));
         }
 

@@ -6,7 +6,7 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: gpt-6, at: 2026-10-11T19:03:46Z }
-verified_at_commit: 6b614267
+verified_at_commit: b900cc84
 status: draft
 sources:
   - id: solution
@@ -119,6 +119,15 @@ The solution holds eight test projects. Run everything for pass/fail:
 ```
 dotnet test dotnet/NodeWar.sln
 ```
+
+Lobby stage verification: the serial solution run passes 4,626 cases. The final
+focus-zoom regression adds one Lobby case; its targeted rerun passes all 1,147.
+Unity compile-check passes. Coverage includes two-column Button margins, catalog
+paper-art resolution including side variants, front-edge body projection through
+lift/shake/pop, and bounded continuous replacement motion. One concurrent solution
+run reports a Simulation failure; an isolated rerun passes all 720, followed by the
+successful serial solution run. Editor captures are unavailable because the Unity
+CLI is absent. New pure sources/tests are explicitly linked in the Lobby project.
 
 The table records **4,494 passing cases** at `29ad7b26`. Unity compile-check also
 passes with its output redirected into the worktree, preserving the shared Library

@@ -45,6 +45,12 @@ namespace NodeWar.Lobby
         private Transform[] suits = Array.Empty<Transform>();
         private Vector3[] suitTargets = Array.Empty<Vector3>();
         private float[] suitWaits = Array.Empty<float>();
+        private int[] suitIdentities = Array.Empty<int>();
+        private Vector3[] suitGround = Array.Empty<Vector3>();
+        private float[] suitLifts = Array.Empty<float>(), suitAngles = Array.Empty<float>(), suitPops = Array.Empty<float>();
+        private bool replacingSuits, loweringSuits;
+        private float suitMotionTime;
+        private float[] lowerLifts = Array.Empty<float>(), lowerAngles = Array.Empty<float>();
         private int focusedSuit = -1;
         private Camera stageCamera;
         private Shader shader;
@@ -198,6 +204,7 @@ namespace NodeWar.Lobby
                 forward.y = 0f;
                 if (forward.sqrMagnitude > 0.0001f)
                     figure.rotation = Quaternion.LookRotation(forward, Vector3.up);
+                if (figures == suits) figure.rotation *= Quaternion.Euler(0, 0, suitAngles[i]);
             }
         }
 
@@ -272,8 +279,8 @@ namespace NodeWar.Lobby
                     var envelope = shot == StageShot.Suits ? SuitEnvelope() : clusterEnvelope;
                     var half = envelope.extents;
                     var fit = StageClusterFraming.Fit(stageCamera.aspect,
-                        shot == StageShot.Suits ? StageClusterFraming.SuitTop(workshopTop, workshopBottom) : workshopTop,
-                        shot == StageShot.Suits ? StageClusterFraming.SuitBottom(workshopTop, workshopBottom) : workshopBottom,
+                        shot == StageShot.Suits ? StageClusterFraming.SuitTop(workshopTop, workshopBottom, focusedSuit >= 0 || replacingSuits) : workshopTop,
+                        shot == StageShot.Suits ? StageClusterFraming.SuitBottom(workshopTop, workshopBottom, focusedSuit >= 0 || replacingSuits) : workshopBottom,
                         shot == StageShot.Suits, half.x, half.y, half.z);
                     rotation = Quaternion.Euler(fit.Pitch, 0f, 0f);
                     position = envelope.center - rotation * Vector3.forward * fit.Distance - rotation * Vector3.up * fit.UpOffset;
@@ -299,14 +306,14 @@ namespace NodeWar.Lobby
             var bounds = new Bounds();
             for (int i = 0; i < suitRenderers.Length; i++)
             {
-                if (focusedSuit >= 0 && i != focusedSuit) continue;
                 var renderer = suitRenderers[i];
-                for (int corner = 0; corner < 8; corner++)
-                {
-                    var point = transform.InverseTransformPoint(renderer.transform.TransformPoint(Corner(renderer.localBounds, corner)));
-                    if (first) { bounds = new Bounds(point, Vector3.zero); first = false; }
-                    else bounds.Encapsulate(point);
-                }
+                Vector3 min = Vector3.Scale(renderer.localBounds.min, new Vector3(0.7f, 1.1f, 1f));
+                Vector3 max = Vector3.Scale(renderer.localBounds.max, new Vector3(0.7f, 1.1f, 1f));
+                var sweep = StageClusterFraming.SweepSuit(min.x, max.x, min.y, max.y, min.z, max.z);
+                var body = new Bounds(slotPositions[1] + new Vector3(0, 0.03f + 1.1f * 0.42f + sweep.CentreY, sweep.CentreZ),
+                    new Vector3(sweep.HalfWidth, sweep.HalfHeight, sweep.HalfDepth) * 2);
+                if (first) { bounds = body; first = false; }
+                else bounds.Encapsulate(body);
             }
             return bounds;
         }
@@ -368,34 +375,67 @@ namespace NodeWar.Lobby
                 districts[i].SetActive(i < equipped);
                 if (i < equipped)
                 {
-                    PaperKind kind = DistrictPaper(districtTypes[i]);
-                    Color tint = TypeTint(districtTypes[i], "district_");
-                    districts[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, tint), Color.white);
+                    PaperKind kind = StageArt.District(districtTypes[i]);
+                    Color tint = TypeTint(districtTypes[i], false);
+                    districts[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, tint, mark: districtTypes[i]), Color.white);
                     outlines[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, Color.white, true), StagePaperArt.Ink);
                 }
             }
-            for (int i = 0; i < suits.Length; i++)
-            {
-                suits[i].gameObject.SetActive(false);
-                Destroy(suits[i].gameObject);
-            }
+            if (StageLoadoutTypes.Same(suitIdentities, suitTypes ?? Array.Empty<int>())) return;
+            var oldSuits = suits; var oldIds = suitIdentities;
+            var oldGround = suitGround; var oldTargets = suitTargets; var oldWaits = suitWaits;
+            var oldLifts = suitLifts; var oldAngles = suitAngles; var oldPops = suitPops;
+            var oldLowerLifts = lowerLifts; var oldLowerAngles = lowerAngles;
             suits = new Transform[suitTypes == null ? 0 : suitTypes.Length];
+            suitIdentities = suitTypes == null ? Array.Empty<int>() : (int[])suitTypes.Clone();
             suitRenderers = new Renderer[suits.Length];
             suitTargets = new Vector3[suits.Length];
+            suitGround = new Vector3[suits.Length];
             suitWaits = new float[suits.Length];
-            focusedSuit = -1;
+            suitLifts = new float[suits.Length]; suitAngles = new float[suits.Length]; suitPops = new float[suits.Length];
+            lowerLifts = new float[suits.Length]; lowerAngles = new float[suits.Length];
+            var retained = new bool[oldSuits.Length];
             for (int i = 0; i < suits.Length; i++)
             {
-                var suit = Cutout("Suit " + i, plots[1], PaperKind.Villager,
-                    new Vector3((i % 3 - 1) * 0.5f, 0.03f, -0.55f),
-                    new Vector2(0.7f, 1.1f), TypeTint(suitTypes[i], "suit_"));
-                suits[i] = suit.transform; suitRenderers[i] = suit.GetComponent<Renderer>();
-                suitTargets[i] = suit.transform.localPosition;
-                suitWaits[i] = UnityEngine.Random.Range(0.2f, 1.5f);
+                int previous = Array.IndexOf(oldIds, suitTypes[i]);
+                if (previous >= 0 && !retained[previous])
+                {
+                    retained[previous] = true; suits[i] = oldSuits[previous];
+                    suitGround[i] = oldGround[previous]; suitTargets[i] = oldTargets[previous]; suitWaits[i] = oldWaits[previous];
+                    suitLifts[i] = oldLifts[previous]; suitAngles[i] = oldAngles[previous]; suitPops[i] = oldPops[previous];
+                    lowerLifts[i] = oldLowerLifts[previous]; lowerAngles[i] = oldLowerAngles[previous];
+                }
+                else
+                {
+                    var suit = Cutout("Suit " + i, plots[1], StageArt.Suit(suitTypes[i]),
+                        new Vector3((i % 3 - 1) * 0.5f, 0.03f, -0.55f),
+                        new Vector2(0.7f, 1.1f), TypeTint(suitTypes[i], true));
+                    suits[i] = suit.transform;
+                    suitGround[i] = i < oldGround.Length ? oldGround[i] : suit.transform.localPosition;
+                    suitTargets[i] = suitGround[i]; suitWaits[i] = 0.5f;
+                    suitPops[i] = loweringSuits ? 0f : 1f;
+                    if (i < oldLifts.Length)
+                    {
+                        suitLifts[i] = oldLifts[i]; suitAngles[i] = oldAngles[i];
+                        lowerLifts[i] = oldLowerLifts[i]; lowerAngles[i] = oldLowerAngles[i];
+                    }
+                    suit.GetComponent<Renderer>().sharedMaterial = MaterialFor(
+                        paper.TextureFor(StageArt.Suit(suitTypes[i]), TypeTint(suitTypes[i], true), mark: suitTypes[i]), Color.white);
+                }
+                suits[i].name = "Suit " + i;
+                suitRenderers[i] = suits[i].GetComponent<Renderer>();
+                suits[i].localPosition = suitGround[i] + Vector3.up * suitLifts[i];
             }
+            for (int i = 0; i < oldSuits.Length; i++)
+                if (!retained[i]) { oldSuits[i].gameObject.SetActive(false); Destroy(oldSuits[i].gameObject); }
+            if (focusedSuit >= suits.Length) focusedSuit = -1;
         }
 
-        public void BeginSuitReplace() => cluster.Use(false);
+        public void BeginSuitReplace()
+        {
+            replacingSuits = true; loweringSuits = false; suitMotionTime = 0;
+            cluster.Cancel(); ClearFocus(); ShowShot(StageShot.Suits);
+        }
 
         public bool TryPick(Vector2 screenPoint, out StagePick pick)
         {
@@ -431,7 +471,14 @@ namespace NodeWar.Lobby
             if (result.Action != DistrictClusterAction.None) DistrictUsed?.Invoke(result);
         }
 
-        public void CancelReplace() => cluster.Cancel();
+        public void CancelReplace()
+        {
+            cluster.Cancel();
+            if (!replacingSuits) return;
+            replacingSuits = false; loweringSuits = true; suitMotionTime = 0;
+            Array.Copy(suitLifts, lowerLifts, suits.Length);
+            Array.Copy(suitAngles, lowerAngles, suits.Length);
+        }
 
         public void FocusSuit(int index)
         {
@@ -440,7 +487,12 @@ namespace NodeWar.Lobby
             ShowShot(StageShot.Suits);
         }
 
-        public void ClearFocus() => focusedSuit = -1;
+        public void ClearFocus()
+        {
+            if (focusedSuit < 0) return;
+            focusedSuit = -1;
+            if (currentShot == StageShot.Suits) ShowShot(StageShot.Suits);
+        }
 
         public void SetVisible(bool visible)
         {
@@ -482,32 +534,49 @@ namespace NodeWar.Lobby
 
         private void AnimateSuits(float delta)
         {
+            suitMotionTime += delta;
             for (int i = 0; i < suits.Length; i++)
             {
-                if (i == focusedSuit) continue;
-                Vector3 position = suits[i].localPosition;
-                Vector3 direction = suitTargets[i] - position;
-                if (direction.sqrMagnitude > 0.0001f)
+                float height = suitRenderers[i].localBounds.size.y * 1.1f;
+                if (replacingSuits)
                 {
-                    suits[i].localPosition = Vector3.MoveTowards(position, suitTargets[i], delta * 0.35f);
+                    suitLifts[i] = height * SuitReplacementMotion.Lift(suitMotionTime, i, suits.Length);
+                    suitAngles[i] = SuitReplacementMotion.Shake(suitMotionTime, i, suits.Length);
                 }
-                else
+                else if (loweringSuits)
                 {
-                    suitWaits[i] -= delta;
-                    if (suitWaits[i] > 0f) continue;
-                    // Walk on the front of the front-middle plot, clear of the filler building.
-                    suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), position.y,
-                        UnityEngine.Random.Range(-1f, -0.3f));
-                    suitWaits[i] = UnityEngine.Random.Range(0.5f, 2f);
+                    float lower = SuitReplacementMotion.Lower(suitMotionTime);
+                    suitLifts[i] = lowerLifts[i] * lower; suitAngles[i] = lowerAngles[i] * lower;
                 }
+                if (!replacingSuits && !loweringSuits && i != focusedSuit) Wander(i, delta);
+                suitPops[i] += delta;
+                float pop = SuitReplacementMotion.Pop(suitPops[i]);
+                suits[i].localScale = new Vector3(0.7f / pop, 1.1f * pop, 1f);
+                // Scale about the feet rather than the centre of the quad.
+                suits[i].localPosition = suitGround[i] + Vector3.up * (suitLifts[i] + height * 0.42f * (pop - 1));
+            }
+            if (loweringSuits && suitMotionTime >= SuitReplacementMotion.LowerSeconds) loweringSuits = false;
+        }
+
+        private void Wander(int i, float delta)
+        {
+            Vector3 position = suitGround[i];
+            Vector3 direction = suitTargets[i] - position;
+            if (direction.sqrMagnitude > 0.0001f)
+                suitGround[i] = Vector3.MoveTowards(position, suitTargets[i], delta * 0.35f);
+            else
+            {
+                suitWaits[i] -= delta;
+                if (suitWaits[i] > 0f) return;
+                // Walk on the front of the front-middle plot, clear of the filler building.
+                suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), position.y,
+                    UnityEngine.Random.Range(-1f, -0.3f));
+                suitWaits[i] = UnityEngine.Random.Range(0.5f, 2f);
             }
         }
 
-private static PaperKind DistrictPaper(int type)
-            => (PaperKind)((type % 3 + 3) % 3);
-
-        private static Color TypeTint(int type, string prefix)
-            => Tints[ItemTint.IndexFor(prefix + type.ToString(System.Globalization.CultureInfo.InvariantCulture))];
+        private static Color TypeTint(int type, bool suit)
+            => Tints[ItemTint.IndexFor(StageArt.Identity(type, suit))];
 
         // All stage materials are created here; the future dither shader has one entry point.
         private Material MaterialFor(Color colour) => MaterialFor(null, colour);
