@@ -13,6 +13,7 @@ namespace NodeWar.Lobby
 
         private static void HideScroll(ScrollView scroll)
         {
+            scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             scroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         }

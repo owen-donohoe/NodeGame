@@ -35,6 +35,7 @@ namespace NodeWar.Lobby
         {
             if (newContent == null) return;
             if (IsOpen && content != newContent) Close();
+            sheet.SetScrollable(!newContent.ClassListContains("mk-fixed-sheet"));
             if (newContent.parent != sheet.Body.contentContainer)
             {
                 sheet.Body.Clear(); sheet.Body.Add(newContent);

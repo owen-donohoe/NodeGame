@@ -639,7 +639,6 @@ namespace NodeWar.Lobby
             menu.Closed += () => router.Closed("menu");
             profilePage.Opened += () =>
             {
-                if (profilePage.ViewingSelf) stage.ShowShot(StageShot.Ocean);
                 profilePage.Root.BringToFront();
                 promote(profilePage.Root.parent);
                 router.Open(new LobbyOverlay("profile", profilePage.ViewingSelf ? OverlayKind.Panel : OverlayKind.Sheet, true), profilePage.Close);
@@ -647,7 +646,6 @@ namespace NodeWar.Lobby
             profilePage.Closed += () =>
             {
                 router.Closed("profile");
-                stage.ShowShot(navigation.CurrentPageID == LobbyPageID.Home ? StageShot.Home : StageShots.ForPage(navigation.CurrentPageID.ToString()));
             };
             WirePushPage(settingsPage, "settings", promote);
             WirePushPage(matchHistoryPage, "history", promote);

@@ -1,13 +1,13 @@
 .g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; transform-origin: 0 0; transition-property: translate, scale; transition-duration: 340ms; transition-timing-function: ease-out-cubic; }
 .g2-profile--instant { transition-duration: 0ms; }
-.ui-root .g2-profile-own { position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; background-color: var(--mk-sheet); }
+.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; background-color: var(--mk-sheet); }
 .g2-profile-state, .g2-profile-state > .g2-profile-content { min-height: 0; }
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
 .g2-profile--self .g2-profile-state { opacity: 0; transition-property: opacity; transition-duration: 120ms; }
 .g2-profile--expanded .g2-profile-state { opacity: 1; }
-.g2-profile-header { flex-direction: row; align-items: center; min-height: 60px; padding: 12px; flex-shrink: 0; }
-.g2-profile-header .mk-h2 { white-space: normal; }
+.g2-profile-header { flex-direction: row; align-items: center; height: 88px; min-height: 88px; max-height: 88px; padding: 12px; overflow: hidden; flex-shrink: 0; }
+.g2-profile-header .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); }
 .g2-profile-columns { flex-grow: 1; min-height: 0; flex-direction: row; padding: 0 12px 12px; }
 .g2-profile-left { flex-grow: 3; flex-basis: 0; min-width: 0; min-height: 0; margin-right: 12px; }
@@ -48,4 +48,8 @@
 .g2-player-footer { flex-direction: row; margin-top: 12px; }
 .g2-player-footer > Button { flex-grow: 1; margin-right: 8px; }
 .ui-root .g2-urgent { background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
-.g2-profile--player .g2-profile-header { padding: 0 0 8px; }
+.g2-profile--player .g2-profile-header { height: 80px; min-height: 80px; max-height: 80px; padding: 0 0 8px; }
+
+.g2-profile--player .g2-profile-content { min-height: 0; flex-shrink: 1; overflow: hidden; }
+.g2-player-list { min-height: 0; max-height: 440px; flex-shrink: 1; }
+.g2-player-footer, .g2-win-history { flex-shrink: 0; }

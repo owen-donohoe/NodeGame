@@ -262,7 +262,7 @@ namespace NodeWar.Lobby
         private void OpenPreview(GuildSummary summary)
         {
             details.Invalidate(true);
-            var content = SheetContent("Guild"); content.Add(details);
+            var content = SheetContent("Guild"); content.AddToClassList("mk-fixed-sheet"); content.Add(details);
             details.RetryRequested -= RetryPreview;
             previewId = summary.GuildId; details.RetryRequested += RetryPreview;
             ShowSheet(content, true); LoadPreview();
@@ -276,7 +276,7 @@ namespace NodeWar.Lobby
             _ = details.Load(() => service.GetAsync(id), guild =>
             {
                 details.Content.Add(GuildViews.Header(guild));
-                details.Content.Add(PlayerCardViews.Text(guild.Summary.Description));
+                details.Content.Add(GuildViews.Text(guild.Summary.Description, "mk-ellipsis"));
                 var list = new ScrollView { verticalScrollerVisibility = ScrollerVisibility.Hidden }; list.AddToClassList("lb-guild-panel-members");
                 foreach (var member in GuildMembers.Sorted(guild.Members, GuildMemberOrder.OnlineByRR))
                     list.Add(GuildViews.Member(member, () => { CloseSheet(); openProfile(member.Player.PlayerId); }));
