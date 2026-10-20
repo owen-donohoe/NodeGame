@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
 {
     public sealed class MultiplayerSheet
     {
-        private readonly MkSheet sheet = new MkSheet { name = "multiplayer-sheet" };
+        private readonly MkPanel sheet = new MkPanel { name = "multiplayer-sheet" };
         private readonly LobbyOverlayRouter router;
         private readonly Action<LobbyModeSelection> search;
         private string playerId;
@@ -19,7 +19,7 @@ namespace NodeWar.Lobby
             BackendServices.Account.Changed += AccountChanged;
             sheet.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == sheet) BackendServices.Account.Changed -= AccountChanged; });
             sheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker"));
-            sheet.Body.Add(GuildViews.Text("Multiplayer", "mk-h2"));
+            sheet.Title.text = "Multiplayer";
             var grid = LobbyModePicker.ModeGrid("multiplayer-modes"); sheet.Body.Add(grid);
             foreach (var mode in new[] { new LobbyModeSelection(LobbyMode.Ranked1v1, true), new LobbyModeSelection(LobbyMode.Team2v2), new LobbyModeSelection(LobbyMode.FreeForAll4) })
             {

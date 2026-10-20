@@ -514,7 +514,7 @@ namespace NodeWar.Lobby
         private void BuildModePicker()
         {
             selectedMode = LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default);
-            modePicker = new LobbyModePicker(sheet);
+            modePicker = new LobbyModePicker(lobbyRoot, router);
             modePicker.Selected += selection =>
             {
                 selectedMode = selection;
@@ -654,7 +654,7 @@ namespace NodeWar.Lobby
             claimPanel.Opened += () =>
             {
                 promote(claimPanel.Root);
-                router.Open(new LobbyOverlay("claim", OverlayKind.Sheet, true), claimPanel.Cancel);
+                router.Open(new LobbyOverlay("claim", OverlayKind.Panel, true), claimPanel.Cancel);
             };
             claimPanel.Closed += () => router.Closed("claim");
             claimPanel.Cancelled += () => confirmingExit = false;
@@ -684,7 +684,7 @@ namespace NodeWar.Lobby
             panel.Opened += () =>
             {
                 promote(panel.Root);
-                router.Open(new LobbyOverlay(id, OverlayKind.Sheet, true), panel.Close);
+                router.Open(new LobbyOverlay(id, OverlayKind.Panel, true), panel.Close);
             };
             panel.Closed += () => router.Closed(id);
         }

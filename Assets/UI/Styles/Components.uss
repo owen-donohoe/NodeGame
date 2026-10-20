@@ -676,3 +676,11 @@
 .ui-root .mk-namelink Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0; }
 .ui-root .mk-tab { margin-right: 8px; }
 .ui-root .mk-tab--last { margin-right: 0; }
+
+.ui-root .mk-panel-host { position: absolute; left: 0; right: 0; top: 0; bottom: 0; padding: 12px; align-items: center; justify-content: center; }
+.ui-root .mk-panel { width: 340px; max-width: 100%; max-height: 80%; flex-shrink: 1; padding: 12px; border-width: 2px; border-bottom-width: 5px; border-color: var(--mk-ink); border-radius: 16px; background-color: var(--mk-sheet); color: var(--paper-ink); --mk-text-ink: var(--paper-ink); overflow: hidden; }
+.ui-root .mk-panel__header { flex-direction: row; align-items: center; height: 44px; flex-shrink: 0; margin-bottom: 12px; }
+.ui-root .mk-panel__header > .mk-h2 { flex-grow: 1; margin-right: 8px; margin-bottom: 0; }
+.ui-root .mk-panel__close { width: 44px; height: 44px; flex-shrink: 0; padding: 0; font-size: var(--type-title); }
+.ui-root .mk-panel__body { min-height: 0; flex-shrink: 1; overflow: hidden; }
+.ui-root .mk-panel__body > Button { margin-top: 8px; }
