@@ -40,6 +40,8 @@
     <Compile Include="../../Assets/UI/Scripts/LoadoutPresets.cs" Link="Lobby/LoadoutPresets.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutBrowse.cs" Link="Lobby/LoadoutBrowse.cs" />
     <Compile Include="SegmentedSwitchMathTests.cs" />
+    <Compile Include="HistoryOpponentNamesTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/HistoryOpponentNames.cs" Link="Lobby/HistoryOpponentNames.cs" />
     <Compile Include="../../Assets/UI/Scripts/SegmentedSwitchMath.cs" Link="Lobby/SegmentedSwitchMath.cs" />
     <Compile Include="PaperMathTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/PaperMath.cs" Link="Lobby/PaperMath.cs" />

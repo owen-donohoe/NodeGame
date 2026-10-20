@@ -16,6 +16,9 @@ namespace NodeWar.Lobby
             public int Request;
         }
         private sealed class OnlinePlayer { public PlayerCard Card; public bool Guild; }
+        private sealed class HistoryMatch { public MatchHistoryEntry Entry; public string Opponent; }
+        private HistoryOpponentNames opponentNames;
+        private IProfileService profiles;
         private readonly Section tv = new Section(), friends = new Section(), previous = new Section();
         private ISocialService social;
         private IMatchHistoryService history;
@@ -43,6 +46,8 @@ namespace NodeWar.Lobby
             Action<string> openProfile, LobbySheet sheet, IGuildService guild = null)
         {
             this.social = social; this.history = history; this.openProfile = openProfile; this.guild = guild ?? BackendServices.Guild;
+            opponentNames = new HistoryOpponentNames(profiles);
+            this.profiles = profiles;
             BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
             if (visible) Reload();
         }
@@ -57,6 +62,7 @@ namespace NodeWar.Lobby
         }
         private void AccountChanged(AccountInfo info)
         {
+            opponentNames = new HistoryOpponentNames(profiles);
             visit++; Clear(tv); Clear(friends); Clear(previous); roster.Clear(); showOffline = false; account = info?.PlayerId;
             if (visible && social != null) Reload();
         }
@@ -67,12 +73,24 @@ namespace NodeWar.Lobby
         private void Reload()
         {
             string current = BackendServices.Account.Current?.PlayerId;
-            if (account != current) { Clear(tv); Clear(friends); Clear(previous); roster.Clear(); showOffline = false; }
+            if (account != current) { Clear(tv); Clear(friends); Clear(previous); roster.Clear(); showOffline = false; opponentNames = new HistoryOpponentNames(profiles); }
             account = current; visit++; LoadTV(); LoadFriends(); LoadPrevious();
         }
         private void LoadTV() => _ = Load(tv, async () => (await social.GetLiveMatchesAsync())?.FindAll(match => match?.A != null && match.B != null), RenderTV, "No other live games");
         private void LoadFriends() => _ = Load(friends, FetchOnline, rows => { roster = rows; RenderOnline(); }, "No friends or online guild members yet.");
-        private void LoadPrevious() => _ = Load(previous, async () => (await history.GetAsync())?.FindAll(entry => entry != null && entry.state == MatchRecordState.Settled && entry.won.HasValue), RenderHistory, "No battles yet.");
+        private void LoadPrevious() => _ = Load(previous, FetchHistory, RenderHistory, "No battles yet.");
+        private async Task<List<HistoryMatch>> FetchHistory()
+        {
+            var resolver = opponentNames;
+            var entries = (await history.GetAsync())?.FindAll(entry => entry != null && entry.state == MatchRecordState.Settled && entry.won.HasValue);
+            var rows = new List<HistoryMatch>();
+            if (entries == null) return rows;
+            var lookups = new List<Task<string>>();
+            foreach (var entry in entries) lookups.Add(resolver.ResolveAsync(entry));
+            var names = await Task.WhenAll(lookups);
+            for (int i = 0; i < entries.Count; i++) rows.Add(new HistoryMatch { Entry = entries[i], Opponent = names[i] });
+            return rows;
+        }
         private async Task Load<T>(Section section, Func<Task<List<T>>> fetch, Action<List<T>> render, string empty)
         {
             if (!visible) return;
@@ -122,7 +140,8 @@ namespace NodeWar.Lobby
                 var vs = Versus(() => Debug.Log("[Stub] Watch match " + match.MatchId)); vs.SetEnabled(match != null); row.Add(vs);
                 row.Add(MiniPlayer(match?.B, "g2-player--p1")); tv.View.Content.Add(row);
             }
-            Root.Q<Label>("social-live-count").text = Math.Min(4, matches.Count) + " games";
+            int count = Math.Min(4, matches.Count);
+            Root.Q<Label>("social-live-count").text = count + (count == 1 ? " game" : " games");
             if (matches.Count < 4)
             {
                 var empty = GuildViews.Text("No other live games", "mk-muted");
@@ -165,18 +184,18 @@ namespace NodeWar.Lobby
             }
             if (offline > 0) host.Add(GuildViews.Button((showOffline ? "Hide offline (" : "Show offline (") + offline + ")", () => { showOffline = !showOffline; RenderOnline(); }));
         }
-        private void RenderHistory(List<MatchHistoryEntry> matches)
+        private void RenderHistory(List<HistoryMatch> matches)
         {
-            var sorted = new List<MatchHistoryEntry>(matches);
-            sorted.Sort((a, b) => { int order = b.createdUnixSeconds.CompareTo(a.createdUnixSeconds); return order != 0 ? order : StringComparer.Ordinal.Compare(a.matchId, b.matchId); });
-            foreach (var match in sorted)
+            var sorted = new List<HistoryMatch>(matches);
+            sorted.Sort((a, b) => { int order = b.Entry.createdUnixSeconds.CompareTo(a.Entry.createdUnixSeconds); return order != 0 ? order : StringComparer.Ordinal.Compare(a.Entry.matchId, b.Entry.matchId); });
+            foreach (var resolved in sorted)
             {
+                var match = resolved.Entry;
                 var row = new VisualElement(); row.AddToClassList("g2-history-row");
                 var result = GuildViews.Text(match.won.Value ? "W" : "L", "mk-caption"); result.AddToClassList("g2-result-badge"); result.AddToClassList(match.won.Value ? "g2-gain" : "g2-loss"); row.Add(result);
                 row.Add(GuildViews.Text("You"));
                 row.Add(Versus(() => Debug.Log("[Stub] Replay match " + match.matchId)));
-                var opponent = new PlayerCard { PlayerId = match.opponentPlayerId, Name = match.OpponentName, Tag = match.OpponentTag };
-                var name = GuildViews.Button(PlayerCardViews.Handle(opponent), () => openProfile?.Invoke(opponent.PlayerId)); name.AddToClassList("g2-history-name"); name.AddToClassList("mk-friend__name"); row.Add(name);
+                var name = GuildViews.Button(resolved.Opponent, () => openProfile?.Invoke(match.opponentPlayerId)); name.AddToClassList("g2-history-name"); name.AddToClassList("mk-friend__name"); row.Add(name);
                 var delta = GuildViews.Text(match.rrDelta.HasValue ? (match.rrDelta.Value >= 0 ? "+" : "") + match.rrDelta.Value + " RR" : "\u2014");
                 delta.AddToClassList("g2-rr-delta"); delta.AddToClassList("mk-number"); delta.AddToClassList(match.rrDelta.GetValueOrDefault() >= 0 ? "g2-positive" : "g2-negative"); row.Add(delta);
                 previous.View.Content.Add(row);
