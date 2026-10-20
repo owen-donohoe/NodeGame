@@ -11,6 +11,7 @@ namespace NodeWar.Lobby
             public PaperKind Kind;
             public Color Tint;
             public bool Silhouette;
+            public int Mark;
             public Texture2D Texture;
         }
 
@@ -22,14 +23,14 @@ namespace NodeWar.Lobby
 
         public StagePaperArt(int screenHeight) { this.screenHeight = screenHeight; }
 
-        public Texture2D TextureFor(PaperKind kind, Color tint, bool silhouette = false)
+        public Texture2D TextureFor(PaperKind kind, Color tint, bool silhouette = false, int mark = 0)
         {
             // Selection backings only need the alpha mask, independent of item tint.
             if (silhouette) tint = Color.white;
             for (int i = 0; i < textures.Count; i++)
             {
                 Entry entry = textures[i];
-                if (entry.Kind == kind && entry.Tint == tint && entry.Silhouette == silhouette)
+                if (entry.Kind == kind && entry.Tint == tint && entry.Silhouette == silhouette && entry.Mark == mark)
                     return entry.Texture;
             }
 
@@ -43,7 +44,7 @@ namespace NodeWar.Lobby
                     int index = y * size + x;
                     Color colour;
                     if (silhouette) colour = Color.white;
-                    else if (mask[index] == 1) colour = paper * PaperRasterizer.Grain(x, y);
+                    else if (mask[index] == 1 && !StageArt.Mark(mark, (x + 0.5f) * 100 / size, (y + 0.5f) * 100 / size)) colour = paper * PaperRasterizer.Grain(x, y);
                     else colour = Ink;
                     colour.a = alpha[index] / 255f;
                     pixels[index] = colour;
@@ -57,7 +58,7 @@ namespace NodeWar.Lobby
             };
             texture.SetPixels32(pixels);
             texture.Apply(true, true);
-            textures.Add(new Entry { Kind = kind, Tint = tint, Silhouette = silhouette, Texture = texture });
+            textures.Add(new Entry { Kind = kind, Tint = tint, Silhouette = silhouette, Mark = mark, Texture = texture });
             return texture;
         }
 
