@@ -277,6 +277,7 @@ namespace NodeWar.Lobby
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();
             if (matchHistoryPage != null) matchHistoryPage.Update();
+            if (modePicker != null) modePicker.Update();
 
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
