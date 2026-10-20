@@ -23,14 +23,14 @@
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
 
   --display:'Lilita One', sans-serif;
-  --body:'Kalam', cursive; --body-w:700;
+  --body:'Fredoka', sans-serif; --body-w:600; --track:0.04em;
 }
-body.f-thin{ --body-w:400 }
-body.f-fredoka{ --body:'Fredoka', sans-serif; --body-w:600 }
+*{letter-spacing:var(--track)}
+body.t2{--track:0.02em} body.t6{--track:0.06em}
 
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#1d1a17;color:var(--paper-50);font-family:var(--body);font-weight:var(--body-w);padding:24px}
-h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px}
+h1{font-family:var(--display);font-weight:400;font-size:28px;}
 .intro{max-width:1100px;margin:0 auto 20px;line-height:1.45;font-size:16px}
 .intro p{margin-top:6px;color:#d7c3a5}
 .toggles{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
@@ -46,7 +46,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
    linear-gradient(180deg, var(--sea-1), var(--sea-2));}
 .phone::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(115deg, transparent 0 22px, rgba(255,255,255,.035) 22px 24px)}
-.cap{font-family:var(--display);font-size:15px;color:var(--paper-200);text-align:center;margin-top:8px;letter-spacing:.4px}
+.cap{font-family:var(--display);font-size:15px;color:var(--paper-200);text-align:center;margin-top:8px;}
 .col{display:flex;flex-direction:column;align-items:center}
 .screen{position:absolute;inset:0;padding:44px var(--s4) 96px;display:flex;flex-direction:column;gap:var(--s2);z-index:1}
 
@@ -55,7 +55,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
   border-radius:var(--r-lg);padding:var(--s3)}
 .card.sm{border-bottom-width:calc(var(--edge) + var(--lip-sm));border-radius:var(--r-md)}
 .grain{background-image:radial-gradient(rgba(45,35,25,.05) 1px, transparent 1px);background-size:5px 5px}
-.dsp{font-family:var(--display);font-weight:400;letter-spacing:.3px}
+.dsp{font-family:var(--display);font-weight:400;}
 .meta{font-size:14px;color:var(--ink-mute)}
 .num{font-family:var(--display);font-weight:400}
 
@@ -73,7 +73,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
 .meter b{display:block;height:100%;background:var(--ink)}
 
 /* page title: stamped on the world, no panel behind it */
-.title{font-family:var(--display);font-size:34px;color:var(--paper-50);text-align:center;letter-spacing:1px;
+.title{font-family:var(--display);font-size:34px;color:var(--paper-50);text-align:center;
   -webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:0 4px 0 var(--ink);margin:var(--s3) 0 var(--s1)}
 
 /* LEDGER: one outlined card, rows flat inside, hairline dividers */
@@ -89,16 +89,18 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
 .who .m{font-size:13px;color:var(--ink-mute);line-height:1.2}
 
 /* buttons: same recipe, small lip; press = lip collapses */
-.btn{font-family:var(--display);font-size:15px;letter-spacing:.3px;height:40px;padding:0 14px;border-radius:var(--r-sm);
+.btn{font-family:var(--display);font-size:15px;height:40px;padding:0 14px;border-radius:var(--r-sm);
   border:2px solid var(--ink);border-bottom-width:5px;background:var(--paper-50);color:var(--ink);display:inline-flex;align-items:center;gap:6px;cursor:pointer;flex:none}
 .btn:active{border-bottom-width:2px;transform:translateY(3px)}
 .btn.gold{background:var(--gold)} .btn.red{background:var(--red);color:var(--paper-50)} .btn.teal{background:var(--tap);color:var(--paper-50)}
 .btn.sq{width:40px;padding:0;justify-content:center}
 
 /* segmented control: a sunk track, flat segments, no outlined pills */
-.seg{display:flex;background:var(--paper-200);border-radius:10px;padding:3px;gap:3px}
-.seg span{flex:1;text-align:center;font-family:var(--display);font-size:14px;padding:7px 10px;border-radius:7px;color:var(--ink-mute)}
-.seg span.on{background:var(--paper-50);color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+/* 2-3 option switch: outer box has the lip; inner shaded track has none; the selected face has a weaker, paper-coloured lip */
+.seg{display:flex;background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:5px;border-radius:12px;padding:4px}
+.seg .in{display:flex;flex:1;background:var(--paper-200);border-radius:8px;padding:4px;gap:4px}
+.seg span{flex:1;text-align:center;font-family:var(--display);font-size:14px;padding:6px 10px;border-radius:6px;color:var(--ink-mute)}
+.seg span.on{background:var(--paper-50);color:var(--ink);box-shadow:0 3px 0 var(--paper-300)}
 
 /* LIVE TV ROW: thin cards, tall VS */
 .live{display:flex;align-items:center;gap:6px}
@@ -129,7 +131,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
 /* pill nav */
 .nav{position:absolute;left:16px;right:16px;bottom:18px;height:64px;border-radius:32px;background:rgba(45,35,25,.94);border:2px solid var(--ink);display:flex;align-items:center;padding:6px;z-index:3}
 .nav span{flex:1;height:100%;display:grid;place-items:center;font-family:var(--display);font-size:12px;color:var(--paper-200);border-radius:26px}
-.nav span.on{background:var(--gold);color:var(--ink);border:2px solid var(--ink);border-bottom-width:4px;transform:translateY(-6px)}
+.nav span.on{background:var(--gold);color:var(--ink);border:2px solid var(--ink)}
 
 /* bottom sheet */
 .sheet{position:absolute;left:0;right:0;bottom:0;height:60%;z-index:5;border-radius:22px 22px 0 0;border-bottom-width:2px;padding:var(--s4)}
@@ -139,6 +141,32 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
 .bars{margin:12px 0;display:grid;grid-template-columns:70px 1fr;gap:6px 10px;align-items:center;font-size:14px}
 .cells{display:flex;gap:3px} .cells i{width:16px;height:12px;border-radius:3px;border:2px solid var(--ink);background:var(--ink)}
 .cells i.e{background:var(--paper-300);border-color:rgba(45,35,25,.35)} .cells i.up{background:#5cb85c} .cells i.dn{background:transparent;border-color:var(--red);border-style:dashed}
+
+/* workshop tiles: pressable, so outlined with a small lip */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.tile{background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:4px;border-radius:10px;padding:6px}
+.tile.on{border-color:var(--tap);box-shadow:0 0 0 2px var(--tap)}
+.tart{height:78px;border-radius:7px}
+.tn{font-family:var(--display);font-size:15px;margin-top:6px;color:var(--ink)}
+.tm{font-size:12px;color:var(--ink-mute)}
+/* sheet extras */
+.dots{position:absolute;left:0;right:0;bottom:8px;display:flex;gap:6px;justify-content:center}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(45,35,25,.3)} .dots i.on{background:var(--ink);width:18px;border-radius:4px}
+.skins{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}
+.skinrow{display:flex;gap:8px;margin-top:6px}
+.skin{width:52px;height:52px;border-radius:10px;border:2px solid var(--ink);border-bottom-width:4px;display:grid;place-items:center;font-size:16px}
+.skin.on{box-shadow:0 0 0 2px var(--tap);border-color:var(--tap)} .skin.lock{background:var(--paper-200);opacity:.7}
+/* icon board */
+.icons{max-width:1100px;margin:28px auto 0}
+.icons .card{margin-top:12px}
+.irow{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center;padding:10px 0}
+.irow + .irow{border-top:1px solid var(--hair)}
+.irow .lib b{font-family:var(--display);font-weight:400;font-size:17px;display:block}
+.irow .lib span{font-size:13px;color:var(--ink-mute)}
+.iset{display:flex;flex-wrap:wrap;gap:10px}
+.iset img{width:28px;height:28px}
+.iset .rb{width:44px;height:44px;border-radius:50%;background:rgba(45,35,25,.92);display:grid;place-items:center}
+.iset .rb img{width:24px;height:24px}
 
 /* SHOP: unique language: tags hung from the stall, never cards */
 .stall{position:absolute;left:0;right:0;top:150px;height:300px;
@@ -181,12 +209,12 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
 <body>
 <div class="intro">
   <h1>Node War: panel language</h1>
-  <p>Every panel is built from one recipe, taken from the player card you like: a parchment fill, a 2&nbsp;px ink outline, and a thicker bottom edge in place of a shadow. Display text is Lilita One; body text is Kalam <b>Bold</b>, because the thin text was Kalam Regular. The 3D world stays visible: pages have no backdrop panel, and only content sits on cards.</p>
-  <p>The rules are on the board below the phones. Toggle the body font to compare:</p>
+  <p>Every panel is built from one recipe, taken from the player card you like: a parchment fill, a 2&nbsp;px ink outline, and a thicker bottom edge in place of a shadow. Display text is Lilita One; body text is Fredoka SemiBold. All text gets extra letter spacing, so it reads lighter without losing weight. The 3D world stays visible: pages have no backdrop panel, and only content sits on cards.</p>
+  <p>The rules and the icon options are below the phones. Toggle the letter spacing to compare:</p>
   <div class="toggles">
-    <button class="on" data-f="">Kalam Bold (proposed)</button>
-    <button data-f="f-thin">Kalam Regular (current, too thin)</button>
-    <button data-f="f-fredoka">Fredoka SemiBold (rounder alternative)</button>
+    <button data-f="t2">Spacing 0.02 em</button>
+    <button class="on" data-f="">Spacing 0.04 em (proposed)</button>
+    <button data-f="t6">Spacing 0.06 em</button>
   </div>
 </div>
 
@@ -238,20 +266,42 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
 <div class="nav"><span>Shop</span><span>Workshop</span><span>Home</span><span>Social</span><span class="on">Guild</span></div>
 </div><div class="cap">2. Stamped title (no panel), search, filter bubble</div></div>
 
-<!-- 3. ITEM SHEET -->
+<!-- 3. WORKSHOP BROWSE -->
 <div class="col"><div class="phone"><div class="screen">
   <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔</div></div>
-  <div class="card sm" style="padding:6px">
-    <div class="seg"><span class="on">Districts</span><span>Suits</span></div>
+  <div style="height:150px;display:grid;place-items:center;font-family:var(--display);color:rgba(244,233,213,.6);font-size:14px">3D districts</div>
+  <div class="seg"><div class="in"><span class="on">Districts</span><span>Suits</span></div></div>
+  <div class="card grain" style="flex:1;padding:var(--s3);overflow:hidden">
+    <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:var(--s3)">
+      <div class="seg" style="flex:1"><div class="in"><span class="on">Owned</span><span>All</span></div></div>
+      <span class="btn" style="height:auto">Sort: Era ▾</span>
+    </div>
+    <div class="grid">
+      <div class="tile on"><div class="tart" style="background:#8aa06a"></div><div class="tn">Lighthouse</div><div class="tm">Era 2 · equipped</div></div>
+      <div class="tile"><div class="tart" style="background:#7d8fa3"></div><div class="tn">Granary</div><div class="tm">Era 1</div></div>
+      <div class="tile"><div class="tart" style="background:#b8734a"></div><div class="tn">Forge</div><div class="tm">Era 3</div></div>
+      <div class="tile"><div class="tart" style="background:#8a6bb0"></div><div class="tn">Observatory</div><div class="tm">Era 4</div></div>
+    </div>
   </div>
-  <div style="display:flex;gap:8px"><div class="seg" style="flex:1;border:2px solid var(--ink)"><span class="on">Owned</span><span>All</span></div><span class="btn">Sort: Era ▾</span></div>
+</div>
+<div class="nav"><span>Shop</span><span class="on">Workshop</span><span>Home</span><span>Social</span><span>Guild</span></div>
+</div><div class="cap">3. Workshop: switches, sort and filter live in the card panel</div></div>
+
+<!-- 4. ITEM SHEET -->
+<div class="col"><div class="phone"><div class="screen">
+  <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔</div></div>
 </div>
 <div class="scrim-lite"></div>
-<div class="card sheet grain">
+<div class="card sheet grain" style="height:74%">
   <div class="handle"></div>
   <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="dsp" style="font-size:24px">Lighthouse</span><span class="meta">District · Era 2</span></div>
-  <div class="art" style="margin-top:8px"><span class="arr">‹</span><span class="dsp" style="font-size:14px;color:var(--ink-mute)">3D preview spins</span><span class="arr">›</span></div>
-  <div style="display:flex;gap:6px;justify-content:center;margin-top:8px"><i style="width:8px;height:8px;border-radius:50%;background:var(--ink)"></i><i style="width:8px;height:8px;border-radius:50%;background:var(--paper-300)"></i></div>
+  <div class="art" style="margin-top:8px;position:relative"><span class="arr">‹</span><span class="dsp" style="font-size:14px;color:var(--ink-mute)">3D preview spins</span><span class="arr">›</span>
+    <div class="dots"><i class="on"></i><i></i></div></div>
+  <div class="skins"><span class="dsp" style="font-size:15px">Skins</span><span class="meta">2 of 4</span></div>
+  <div class="skinrow">
+    <div class="skin on" style="background:#8aa06a"></div><div class="skin" style="background:#d9a441"></div>
+    <div class="skin lock">🔒</div><div class="skin lock">🔒</div>
+  </div>
   <div class="bars">
     <span>Range</span><div class="cells"><i></i><i></i><i></i><i class="up"></i><i class="e"></i><i class="e"></i></div>
     <span>Defence</span><div class="cells"><i></i><i></i><i class="dn"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
@@ -260,27 +310,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
   <div class="meta" style="font-size:15px;color:var(--ink)">Reveals nodes two hops away. Slower to claim.</div>
   <div style="display:flex;gap:10px;margin-top:14px"><span class="btn" style="flex:1;justify-content:center;height:48px">Back</span><span class="btn gold" style="flex:2;justify-content:center;height:48px;font-size:18px">Use</span></div>
 </div>
-</div><div class="cap">3. Workshop controls and the item sheet</div></div>
-
-<!-- 4. SHOP: UNIQUE -->
-<div class="col"><div class="phone" style="background:
-   radial-gradient(ellipse 75% 10% at 35% 57%, #8f7a4f 0 60%, #c9b98a 62% 70%, transparent 72%),
-   linear-gradient(180deg, #e8b878 0%, #c98a6a 30%, var(--sea-1) 62%, var(--sea-2))">
-  <div class="screen" style="padding-bottom:0">
-    <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔</div></div>
-  </div>
-  <div class="stall">
-    <div class="sign">Daily Stall<small>new wares in 6h 12m</small></div>
-    <div class="awning"></div><div class="posts"></div><div class="keeper"></div>
-  </div>
-  <div class="tags">
-    <div class="tag"><div class="n">Ember Suit</div><div class="p"><i></i>320</div></div>
-    <div class="tag"><div class="n">Small Crate</div><div class="p"><i></i>90</div></div>
-    <div class="tag sold"><div class="n">Lantern skin</div><div class="p">Sold ✓</div></div>
-  </div>
-  <div class="rail"><i></i><i class="on"></i><i></i><i></i><i></i></div>
-  <div class="nav"><span class="on">Shop</span><span>Workshop</span><span>Home</span><span>Social</span><span>Guild</span></div>
-</div><div class="cap">4. Shop: wares are tags hung from the stall</div></div>
+</div><div class="cap">4. Item sheet: dots inside the window, skins row</div></div>
 
 </div>
 
@@ -295,7 +325,8 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
     <li>Lists are a <b>ledger</b>: one card, a darker header strip, flat 56 px rows. This replaces the thin name panels.</li>
     <li>The only outlined things inside a panel are buttons, because they are pressable.</li></ul></div>
   <div class="card grain"><h2>Type</h2><ul>
-    <li>Lilita One for names, numbers, titles and buttons. Kalam Bold for body text and meta lines.</li>
+    <li>Lilita One for names, numbers, titles and buttons. Fredoka SemiBold for body text and meta lines.</li>
+    <li>All text is tracked out 0.04 em: lighter to read, same weight.</li>
     <li>Sizes: title 34, panel heading 17 to 24, name 15 to 17, body 15 to 16, meta 13. Nothing below 13.</li>
     <li>Page titles are stamped straight onto the world (ink stroke and drop), with no panel behind them.</li></ul></div>
   <div class="card grain"><h2>Space</h2><ul>
@@ -305,12 +336,37 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.5px
   <div class="card grain"><h2>The world shows through</h2><ul>
     <li>Pages have no full-screen backdrop. Cards hold content; the 3D scene fills the gaps.</li>
     <li>Scrims are light (25%), so the world stays visible behind sheets and bubbles.</li>
-    <li>The Shop alone uses tags and signs hung in the world, not cards: that is what makes it unique.</li></ul></div>
+    <li>The Shop gets its own language later; it is not part of this sheet.</li></ul></div>
+  <div class="card grain"><h2>2 to 3 option switches</h2><ul>
+    <li>The outer box has the outline and the ink lip.</li>
+    <li>The shaded inner track has no lip.</li>
+    <li>The selected face is lighter, with a weaker paper-coloured lip. It sits 4 px inside the track, so the outer border always shows in full.</li>
+    <li>A switch lives in the panel it filters (Owned/All sits with the cards).</li></ul></div>
+  <div class="card grain"><h2>Pill nav</h2><ul>
+    <li>Flat: the selected tab is a gold face with an ink outline. No lip and no raise.</li></ul></div>
   <div class="card grain"><h2>Don't</h2>
     <div class="dont"><div class="bad"><span>Owned</span><span>All</span><span>Sort</span></div><span>Outlined pills inside an outlined box: the old Workshop filters.</span></div></div>
 </div>
 
+<div class="icons">
+  <h1>Icon library options</h1>
+  <p style="color:#d7c3a5;margin-top:6px">The same 14 jobs in each free library: menu, bell, search, filter, shop, workshop, home, battle, watch, guild, add friend, coins, settings and refresh. Ink icons on parchment, then the top-bar style (light on dark).</p>
+  <div class="card grain" id="iconboard"></div>
+</div>
+
 <script>
+const libs=[
+ ['Phosphor (Bold)','MIT · 9k icons · 6 weights incl. duotone','ph',['list-bold','bell-bold','magnifying-glass-bold','funnel-bold','storefront-bold','hammer-bold','house-bold','sword-bold','eye-bold','crown-simple-bold','user-plus-bold','coins-bold','gear-bold','arrows-clockwise-bold']],
+ ['Tabler','MIT · 5k icons · adjustable stroke','tabler',['menu-2','bell','search','filter','building-store','hammer','home','swords','eye','crown','user-plus','coins','settings','refresh']],
+ ['Lucide','ISC · 1.5k icons · clean line','lucide',['menu','bell','search','funnel','store','hammer','house','swords','eye','crown','user-plus','coins','settings','refresh-cw']],
+ ['Game-icons.net','CC BY 3.0 (credit needed) · 4k game glyphs, filled','game-icons',['hamburger-menu','ringing-bell','magnifying-glass','funnel','shop','hammer-nails','house','crossed-swords','eyeball','crown','two-shadows','coins','cog','cycle']],
+];
+const u=(p,n,c)=>`https://api.iconify.design/${p}/${n}.svg?color=%23${c}`;
+document.getElementById('iconboard').innerHTML=libs.map(([name,lic,p,ns])=>
+ `<div class="irow"><div class="lib"><b>${name}</b><span>${lic}</span></div><div>
+  <div class="iset">${ns.map(n=>`<img src="${u(p,n,'2d2319')}" title="${n}">`).join('')}</div>
+  <div class="iset" style="margin-top:8px">${ns.slice(0,4).map(n=>`<span class="rb"><img src="${u(p,n,'f4e9d5')}"></span>`).join('')}</div>
+ </div></div>`).join('');
 document.querySelectorAll('.toggles button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.toggles button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   document.body.className=b.dataset.f;});
