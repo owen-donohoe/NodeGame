@@ -347,7 +347,11 @@ namespace NodeWar.Lobby
             int index = 0;
             unlocked.Query<Button>(className: "mk-tile").ForEach(card =>
             {
-                card.style.width = card.style.maxWidth = card.style.flexBasis = width;
+                // Unity's default Button has a left margin. Two border-box widths
+                // plus that inherited margin overflow the row and wrap to one column.
+                card.style.marginLeft = card.style.marginTop = 0;
+                card.style.flexBasis = StyleKeyword.Auto;
+                card.style.width = card.style.maxWidth = width;
                 card.style.minWidth = card.style.minHeight = 0;
                 card.style.height = width;
                 card.style.marginRight = index++ % 2 == 1 ? 0 : WorkshopLayout.TileGap;

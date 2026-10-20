@@ -1,9 +1,24 @@
 using NUnit.Framework;
+using System.IO;
 
 namespace NodeWar.Lobby.Tests
 {
     public class WorkshopLayoutTests
     {
+        [Test]
+        public void TileSizingNeutralizesDefaultButtonMarginsBeforeApplyingExactTwoColumnWidths()
+        {
+            var root = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (root != null && !Directory.Exists(Path.Combine(root.FullName, "Assets"))) root = root.Parent;
+            Assert.That(root, Is.Not.Null);
+            string page = File.ReadAllText(Path.Combine(root.FullName, "Assets/UI/Scripts/WorkshopPage.cs"));
+            // The pure width test alone missed Unity's inherited 3px left margin:
+            // 2 * tile + gap + 2 * 3 > available, so Yoga wraps the second tile.
+            StringAssert.Contains("card.style.marginLeft = card.style.marginTop = 0", page);
+            StringAssert.Contains("card.style.flexBasis = StyleKeyword.Auto", page);
+            float width = WorkshopLayout.TileWidth(338);
+            Assert.That(2 * width + WorkshopLayout.TileGap + 6, Is.GreaterThan(338));
+        }
         [TestCase(208)]
         [TestCase(276)]
         [TestCase(338)]

@@ -363,7 +363,6 @@ namespace NodeWar.Lobby
         private void OpenFilter()
         {
             if (filterLayer.resolvedStyle.display != DisplayStyle.None) { CloseFilter(); return; }
-            ExpandSearch();
             filterBubble.Clear();
             var tail = new VisualElement(); tail.AddToClassList("ui-filter-tail"); filterBubble.Add(tail);
             filterContent = new ScrollView { horizontalScrollerVisibility = ScrollerVisibility.Hidden, verticalScrollerVisibility = ScrollerVisibility.Hidden };
