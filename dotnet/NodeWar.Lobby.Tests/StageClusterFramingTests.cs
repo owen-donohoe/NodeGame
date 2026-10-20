@@ -5,6 +5,15 @@ namespace NodeWar.Lobby.Tests
 {
     public class StageClusterFramingTests
     {
+        [Test]
+        public void FocusStillZoomsInAndOverviewZoomsOutWithoutChangingMotionTiming()
+        {
+            var sweep = StageClusterFraming.SweepSuit(-0.35f, 0.35f, -0.55f, 0.55f, 0, 0);
+            StageClusterFrame Frame(bool focus) => StageClusterFraming.Fit(390f / 844,
+                StageClusterFraming.SuitTop(0.2f, 0.55f, focus), StageClusterFraming.SuitBottom(0.2f, 0.55f, focus),
+                true, sweep.HalfWidth, sweep.HalfHeight, sweep.HalfDepth);
+            Assert.That(Frame(true).Distance, Is.LessThan(Frame(false).Distance));
+        }
         [TestCase(390f / 844f)]
         [TestCase(540f / 1200f)]
         [TestCase(16f / 9f)]

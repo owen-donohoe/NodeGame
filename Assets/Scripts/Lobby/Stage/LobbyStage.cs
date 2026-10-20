@@ -261,8 +261,8 @@ namespace NodeWar.Lobby
                     var envelope = shot == StageShot.Suits ? SuitEnvelope() : clusterEnvelope;
                     var half = envelope.extents;
                     var fit = StageClusterFraming.Fit(stageCamera.aspect,
-                        shot == StageShot.Suits ? StageClusterFraming.SuitTop(workshopTop, workshopBottom) : workshopTop,
-                        shot == StageShot.Suits ? StageClusterFraming.SuitBottom(workshopTop, workshopBottom) : workshopBottom,
+                        shot == StageShot.Suits ? StageClusterFraming.SuitTop(workshopTop, workshopBottom, focusedSuit >= 0 || replacingSuits) : workshopTop,
+                        shot == StageShot.Suits ? StageClusterFraming.SuitBottom(workshopTop, workshopBottom, focusedSuit >= 0 || replacingSuits) : workshopBottom,
                         shot == StageShot.Suits, half.x, half.y, half.z);
                     rotation = Quaternion.Euler(fit.Pitch, 0f, 0f);
                     position = envelope.center - rotation * Vector3.forward * fit.Distance - rotation * Vector3.up * fit.UpOffset;
@@ -469,7 +469,12 @@ namespace NodeWar.Lobby
             ShowShot(StageShot.Suits);
         }
 
-        public void ClearFocus() => focusedSuit = -1;
+        public void ClearFocus()
+        {
+            if (focusedSuit < 0) return;
+            focusedSuit = -1;
+            if (currentShot == StageShot.Suits) ShowShot(StageShot.Suits);
+        }
 
         public void SetVisible(bool visible)
         {

@@ -22,10 +22,10 @@ namespace NodeWar.Lobby
         public const float FieldOfView = 42f;
         public const float HorizontalInset = 0.04f;
         public const float SuitHeightFraction = 0.84f; // 8% clear at each edge of the window.
-        public static float SuitTop(float top, float bottom) =>
-            (top + bottom) * 0.5f - (bottom - top) * SuitHeightFraction * 0.5f;
-        public static float SuitBottom(float top, float bottom) =>
-            (top + bottom) * 0.5f + (bottom - top) * SuitHeightFraction * 0.5f;
+        public static float SuitTop(float top, float bottom, bool focused = true) =>
+            (top + bottom) * 0.5f - (bottom - top) * (focused ? SuitHeightFraction : 0.60f) * 0.5f;
+        public static float SuitBottom(float top, float bottom, bool focused = true) =>
+            (top + bottom) * 0.5f + (bottom - top) * (focused ? SuitHeightFraction : 0.60f) * 0.5f;
 
         /// <summary>Sweep measured resting mesh bounds across the walking area, billboard yaw,
         /// lift, +/-3 degree roll and pop. Includes the plot's 0.65 separation during settling.</summary>
