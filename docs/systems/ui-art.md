@@ -45,7 +45,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: a547dbfc
+verified: 8832f7f3
 ---
 
 # UI art
@@ -58,7 +58,7 @@ Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets
 
 `UIArtTheme.icons` is an ordered `IconEntry[]` of `{ LobbyIconKind kind, LobbyIconContext context, Sprite sprite, bool keepOriginalColours }`. `TryIcon(kind, context, out entry)` uses pure `UIArtLookup.SpriteIndex(entries, kind, context, kindOf, contextOf, hasSprite)` to resolve overrides. `districtVisuals` references `DistrictVisualTable`; its per-type `DistrictVisual.icon` supplies node-sheet art and `StickerOrIcon` supplies draft art before fallback mappings. Workshop uses ink monograms on paper rather than those sprites.
 
-`LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. Attached lobby icons load white 96px Phosphor Bold PNGs from `Resources/Lobby/Icons/Phosphor`, tinted by USS. Shop and non-lobby surfaces retain themed sprites and cached Painter2D glyphs.
+`LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. Attached lobby icons load white Phosphor Bold SVG VectorImages from `Resources/Lobby/Icons/Phosphor`, tinted by USS. Shop and non-lobby surfaces retain themed sprites and cached Painter2D glyphs.
 
 District and suit icons accept Profile context for loadout minis.
 
@@ -86,7 +86,7 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 Never renumber surviving serialized enum values or reuse retired values. Context defaults to numeric zero/Anywhere for existing entries. First duplicate pair wins, including an empty first entry. Art cannot alter gameplay, element picking or command bindings. Keep environment/player ownership cues distinct from item-family/tint placeholders.
 
 ## How it works
-Lobby PNG lookup precedes the theme, except within Shop or ShopCard context. Elsewhere lookup tries exact kind/context, then the same kind/Anywhere, then generated glyph. An empty first exact entry permits Anywhere fallback but never a later exact duplicate; empty first Anywhere falls through to glyph. Original-color sprites use white tint; other sprites retain glyph tint. Images fit centered with letterboxing. Unknown kinds get a placeholder; None draws nothing.
+Lobby SVG lookup precedes the theme, except within Shop or ShopCard context. Elsewhere lookup tries exact kind/context, then the same kind/Anywhere, then generated glyph. An empty first exact entry permits Anywhere fallback but never a later exact duplicate; empty first Anywhere falls through to glyph. Original-color sprites use white tint; other sprites retain glyph tint. Images fit centered with letterboxing. Unknown kinds get a placeholder; None draws nothing.
 
 `UIArtThemeIconEntryDrawer` offers grouped Icon and context-filtered Where menus. Anywhere is first; single-location icons display Anywhere while preserving valid serialized overrides. Changing kind resets an incompatible context. Retired choices stay visible only for existing rows. Validation warns on duplicates/unused pairs; Editor/development runtime warns once for unlisted active pairs after attachment/UXML attributes.
 
