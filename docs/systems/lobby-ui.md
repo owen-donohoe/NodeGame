@@ -126,7 +126,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 944649d2
+verified: 7aff5c82
 ---
 
 # Lobby UI
@@ -151,9 +151,9 @@ Pages:
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
-`LobbyModePicker.Open(selection)` opens an elastic Ranked/Unranked/Other strip in the middle 60%, snapping after momentum. `LobbyModeLayout` supplies two-row columns/empty slots. Private disables Ranked and converts its selection to Unranked 1v1; `LobbyModeSelection.FromProfile/Store` persists preferences. `SearchingScreen.Open/Close/Update` owns queue/launcher; Back cancels Home. Unranked 1v1 reuses ranked ticket/rendezvous without ranked reports; its isolated queue requires backend support. LAN/party searches and `MultiplayerSheet.Open(playerId)` log stubs.
+`LobbyModePicker.Open(selection)` opens a parchment page with a snapping Ranked/Unranked/Other strip. `LobbyModeLayout` supplies two-row columns/empty slots. Private disables Ranked and converts its selection to Unranked 1v1; `LobbyModeSelection.FromProfile/Store` persists preferences. `SearchingScreen.Open/Close/Update` owns queue/launcher; Back cancels Home. Unranked 1v1 reuses ranked ticket/rendezvous without ranked reports; its isolated queue requires backend support. LAN/party searches and `MultiplayerSheet.Open(playerId)` log stubs.
 
-`PrivateLobbyPanel.Open(LobbyModeSelection)` hosts; `Join(code)` receives join-code guests from `PlayPopup`. `MatchLauncher.HostPrivate/JoinPrivate/PrivateAction` synchronize seats and host authority over lobby-only Relay packets; Start releases the launcher handshake after roster acknowledgment. Only 1v1 starts. Four-seat layouts support one Relay guest; remaining seats are local empty placeholders. `LobbyPlayFlow.OpenPrivateInvite(code)` opens the existing Friends/Guild chooser and copies the code; invitation delivery remains stubbed.
+`PrivateLobbyPanel.Open(LobbyModeSelection)` hosts; `Join(code)` receives `PlayPopup` guests. Hosts drag filled seats to swap. `MatchLauncher.HostPrivate/JoinPrivate/PrivateAction` synchronize seats and host authority over lobby-only Relay packets; Start releases the launcher handshake after roster acknowledgment. Only 1v1 starts. Four-seat layouts support one Relay guest; remaining seats are local empty placeholders. `LobbyPlayFlow.OpenPrivateInvite(code)` opens the existing Friends/Guild chooser and copies the code; invitation delivery remains stubbed.
 
 `AccountFlow` coordinates account sheets and notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 
