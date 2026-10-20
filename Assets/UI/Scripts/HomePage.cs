@@ -116,8 +116,8 @@ namespace NodeWar.Lobby
 
         public void Refresh()
         {
-            if (smallCount != null) smallCount.text = (crates?.Count(CrateSize.Small) ?? 0).ToString();
-            if (mediumCount != null) mediumCount.text = (crates?.Count(CrateSize.Medium) ?? 0).ToString();
+            SetCount(smallCount, crates?.Count(CrateSize.Small) ?? 0);
+            SetCount(mediumCount, crates?.Count(CrateSize.Medium) ?? 0);
             Root.Q("home-crate-small")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Small) ?? 0) == 0);
             Root.Q("home-crate-medium")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Medium) ?? 0) == 0);
             if (progressFill != null) progressFill.style.width = Length.Percent((crates?.NextProgress ?? 0f) * 100f);
@@ -132,6 +132,12 @@ namespace NodeWar.Lobby
             }
             var reason = Root.Q("home-battle-reason-tag");
             if (reason != null) reason.style.display = complete ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+        private static void SetCount(Label badge, int count)
+        {
+            if (badge == null) return;
+            badge.text = count.ToString();
+            badge.style.display = count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }

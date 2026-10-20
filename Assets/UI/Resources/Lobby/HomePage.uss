@@ -10,8 +10,11 @@
 .ui-root .g2-home-mode Label { flex-grow: 1; flex-basis: 0; min-width: 0; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
 .g2-mode-icon { width: 16px; height: 16px; margin-right: 4px; }
 .g2-mode-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 4px; background-color: var(--mk-action); }
-.g2-swap { width: 12px; height: 12px; }
-.ui-root .g2-fill-tag { background-color: var(--mk-sheet); margin-bottom: 8px; }
+.g2-swap-badge { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 12px; border-width: 2px; border-color: var(--line-outer); background-color: var(--mk-urgent); align-items: center; justify-content: center; }
+.ui-root .g2-home-mode .g2-swap { width: 14px; height: 14px; -unity-background-image-tint-color: white; }
+.ui-root .g2-fill-tag { flex-direction: row; align-items: center; justify-content: center; padding: 4px 0; margin: 0; border-width: 0; border-radius: 0; background-color: var(--clear); color: var(--mk-muted); }
+.ui-root .g2-fill-tag Label { font-size: 13px; -unity-font-definition: var(--font-body); color: var(--mk-muted); margin: 0; padding: 0; }
+.g2-fill-warning { width: 14px; height: 14px; margin-right: 4px; background-image: url("Icons/Phosphor/warning-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-muted); }
 .g2-next-crate { flex-direction: row; align-items: center; height: 26px; }
 .g2-next-crate > .mk-meter { flex-grow: 1; background-color: var(--mk-ink); }
 .g2-next-crate #home-boxmeter-fill { background-color: var(--ink-white); }

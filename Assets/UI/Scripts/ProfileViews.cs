@@ -75,8 +75,24 @@ namespace NodeWar.Lobby
                 }
                 bands.Add(band);
             }
-            road.schedule.Execute(() => road.scrollOffset = new Vector2(0, Mathf.Max(0, height - marker - road.contentViewport.layout.height / 2))).ExecuteLater(32);
+            // The profile reveal prepares this from measured layout, never from a timer.
+            road.userData = (Func<bool>)(() =>
+            {
+                float viewport = road.contentViewport.layout.height;
+                float content = road.contentContainer.layout.height;
+                if (float.IsNaN(viewport) || viewport <= 0 || float.IsNaN(content) || content < height) return false;
+                // Set the range now as well: ScrollView may not have processed its
+                // geometry callback yet, and a stale range would clamp the offset.
+                road.verticalScroller.highValue = Mathf.Max(0, content - viewport);
+                road.scrollOffset = new Vector2(0, Mathf.Clamp(height - marker - viewport / 2, 0, road.verticalScroller.highValue));
+                return true;
+            });
             return road;
+        }
+        public static bool PrepareLadder(VisualElement root)
+        {
+            var road = root.Q<ScrollView>("profile-road");
+            return road == null || !(road.userData is Func<bool> prepare) || prepare();
         }
         public static VisualElement History(List<MatchSummary> summaries)
         {

@@ -8,7 +8,7 @@ namespace NodeWar.Lobby
     {
         public static SwipeAxis Lock(float dx, float dy)
         {
-            if (Math.Max(Math.Abs(dx), Math.Abs(dy)) < 10f) return SwipeAxis.Pending;
+            if (!LobbyDragMath.PassedThreshold(dx, dy)) return SwipeAxis.Pending;
             return Math.Abs(dx) > 1.5f * Math.Abs(dy) ? SwipeAxis.Horizontal : SwipeAxis.Vertical;
         }
 

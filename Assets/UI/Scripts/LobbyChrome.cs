@@ -120,12 +120,12 @@ namespace NodeWar.Lobby
             RankDisplay display = new RankDisplay(rank?.RR ?? 0);
             if (trophyCount != null) trophyCount.text = rank == null ? Dash :
                 display.RR.ToString();
-            if (trophyMax != null) trophyMax.text = rank == null ? "" : " RR";
+            if (trophyMax != null) trophyMax.text = "";
             if (trophyFill != null)
                 trophyFill.style.width = Length.Percent(rank != null ? display.Fill * 100f : 0f);
             if (arenaText != null)
-                arenaText.text = rank == null ? "Era " + Dash : display.Name + (display.Span.HasValue
-                    ? " \u00b7 " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
+                arenaText.text = rank == null ? "Era " + Dash : "Era " + (display.Arena + 1) + " \u00b7 " + display.Name + (display.Span.HasValue
+                    ? " \u00b7 " + (display.Span.Value - display.RRIntoArena) + " RR to next"
                     : " \u00b7 Top era");
         }
 
