@@ -362,6 +362,8 @@
     --tracking: 0.6px;
     --font-body: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
     --font-label: var(--font-display);
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-display);
     --font-hand: var(--font-body);
     --font-bold: var(--font-display);
     --lobby-edge-inset: 12px;
@@ -381,5 +383,7 @@
     --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
     --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
     --font-bold: var(--font-label);
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-label);
     letter-spacing: 0;
 }

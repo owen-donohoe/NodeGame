@@ -221,7 +221,8 @@
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: var(--surface);
+    background-color: var(--mk-card);
+    border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px;
 }
 
 .lb-push__scroll {

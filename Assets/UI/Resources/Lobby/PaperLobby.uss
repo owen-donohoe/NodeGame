@@ -79,3 +79,6 @@
 .ui-root .lb-group { border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; }
 .ui-root .unity-base-slider__tracker { border-color: var(--line-inner); }
 .ui-root .unity-base-slider__dragger { background-color: var(--paper-light); border-color: var(--line-inner); border-bottom-width: 4px; }
+
+.ui-root PaperButton.lb-grow { height: 56px; border-width: 0; border-bottom-width: 1px; border-bottom-color: var(--mk-hairline); border-radius: 0; background-color: var(--clear); padding: 0 16px; }
+.ui-root .lb-party-slot { border-width: 0; border-radius: 10px; background-color: var(--mk-pressed); }

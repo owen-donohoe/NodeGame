@@ -305,7 +305,7 @@ namespace NodeWar.Lobby
             unlocked.Clear();
             ownedFilter.EnableInClassList("ui-filter-chip--on", !showAll);
             allFilter.EnableInClassList("ui-filter-chip--on", showAll);
-            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role") + " \u2304";
+            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role");
             browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);

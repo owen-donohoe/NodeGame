@@ -1,11 +1,11 @@
 .g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
-.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; background-color: var(--mk-card); }
+.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
 .g2-profile-state, .g2-profile-state > .g2-profile-content { min-height: 0; }
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
 .g2-profile-header { flex-direction: row; align-items: center; height: 96px; min-height: 96px; max-height: 96px; padding: 12px; overflow: hidden; flex-shrink: 0; }
 .g2-profile-header .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); }
+.ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
 .g2-profile-columns { flex-grow: 1; min-height: 0; flex-direction: row; padding: 0 12px 12px; }
 .g2-profile-left { flex-grow: 3; flex-basis: 0; min-width: 0; min-height: 0; margin-right: 12px; }
 .g2-road { flex-grow: 2; flex-basis: 0; min-width: 0; min-height: 0; }

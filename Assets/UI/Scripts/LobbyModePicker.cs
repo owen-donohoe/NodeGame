@@ -53,7 +53,7 @@ namespace NodeWar.Lobby
         internal static Button ModeCard(LobbyModeSelection mode, Action selected)
         {
             var display = new HomeModeDisplay(mode);
-            var card = new Button(selected); card.AddToClassList("mk-card"); card.AddToClassList("g2-mode-card");
+            var card = new Button(selected); card.AddToClassList("mk-btn"); card.AddToClassList("g2-mode-card");
             var bar = new VisualElement(); bar.AddToClassList("g2-mode-colour");
             if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour)) bar.style.backgroundColor = colour;
             card.Add(bar); card.Add(new LobbyIcon(display.Icon, LobbyIconContext.Home));
