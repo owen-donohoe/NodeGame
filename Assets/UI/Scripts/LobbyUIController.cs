@@ -562,7 +562,6 @@ namespace NodeWar.Lobby
                 home.ModeRequested += () => modePicker.Open(selectedMode);
                 home.CrateRequested += size =>
                 crateScreen?.Open(size, crateInventory);
-                home.LoadoutRequested += () => navigation.Show(LobbyPageID.Workshop);
                 navigation.Register(home);
             }
             else

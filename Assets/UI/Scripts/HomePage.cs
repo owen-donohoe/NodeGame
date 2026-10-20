@@ -9,6 +9,7 @@ namespace NodeWar.Lobby
     public class HomePage : LobbyPage
     {
         private readonly LobbyToast toast;
+        private readonly LobbyToast loadoutToast;
         private readonly LoadoutCatalog catalog;
         private readonly AccountLinkPrompt accountLinkPrompt;
         private readonly ICrateInventory crates;
@@ -20,7 +21,6 @@ namespace NodeWar.Lobby
         private readonly LobbyIcon modeIcon;
         public GameMode SelectedMode { get; private set; }
         public event Action PlayRequested;
-        public event Action LoadoutRequested;
         public event Action ModeRequested;
         public event Action<CrateSize> CrateRequested;
 
@@ -29,6 +29,7 @@ namespace NodeWar.Lobby
             : base(LobbyPageID.Home, Build(layout))
         {
             this.toast = toast;
+            loadoutToast = new LobbyToast(Root.Q<Label>("home-toast"), 2500);
             this.catalog = catalog ?? new LoadoutCatalog(null, null);
             this.crates = crates;
             accountLinkPrompt = new AccountLinkPrompt(accountFlow, canPrompt, Say);
@@ -38,7 +39,6 @@ namespace NodeWar.Lobby
             nextIcon = Root.Q<LobbyIcon>("home-next-crate-icon");
             modeName = Root.Q<Label>("home-mode-name");
             modeIcon = Root.Q<LobbyIcon>("home-mode-icon");
-            Bind("home-battle-reason-tag", () => LoadoutRequested?.Invoke());
             Bind("home-mode", () => ModeRequested?.Invoke());
             Bind("home-crate-small", () => CrateRequested?.Invoke(CrateSize.Small));
             Bind("home-crate-medium", () => CrateRequested?.Invoke(CrateSize.Medium));
@@ -46,16 +46,10 @@ namespace NodeWar.Lobby
             {
                 if (!LoadoutRules.IsComplete(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena))
                 {
-                    Say("Fill your loadout");
-                    LoadoutRequested?.Invoke();
+                    loadoutToast.Show("Fill your loadout");
                     return;
                 }
                 PlayRequested?.Invoke();
-            });
-            Root.Q<Button>("home-battle")?.RegisterCallback<GeometryChangedEvent>(evt =>
-            {
-                var track = Root.Q<VisualElement>("home-boxmeter");
-                if (track != null) track.style.height = evt.newRect.height / 8f;
             });
             Root.RegisterCallback<DetachFromPanelEvent>(_ => OnHide());
             SetMode(LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default));
@@ -105,6 +99,7 @@ namespace NodeWar.Lobby
             if (crates != null) { crates.Changed -= Refresh; crates.Changed += Refresh; }
             Refresh();
             accountLinkPrompt.Show();
+            if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena)) loadoutToast.Show("Fill your loadout");
         }
 
         public override void OnHide()
@@ -126,12 +121,10 @@ namespace NodeWar.Lobby
             var play = Root.Q<Button>("home-battle");
             if (play != null)
             {
-                play.SetEnabled(complete);
+                play.SetEnabled(true); // A disabled button swallows the tap; the toast explains why BATTLE is off.
                 play.EnableInClassList("mk-battle--off", !complete);
                 play.tooltip = complete ? "Play" : "Fill your loadout";
             }
-            var reason = Root.Q("home-battle-reason-tag");
-            if (reason != null) reason.style.display = complete ? DisplayStyle.None : DisplayStyle.Flex;
         }
         private static void SetCount(Label badge, int count)
         {
