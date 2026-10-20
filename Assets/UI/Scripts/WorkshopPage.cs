@@ -372,7 +372,7 @@ namespace NodeWar.Lobby
             tile.Starter = new VisualElement { pickingMode = PickingMode.Ignore };
             tile.Starter.AddToClassList("ws-starter-tag");
             tile.Starter.Add(new LobbyIcon(LobbyIconKind.Lock, LobbyIconContext.Workshop));
-            var starterText = MakeLabel("Starter", "ws-starter-text");
+            var starterText = MakeLabel("Locked", "ws-starter-text");
             TrackedText.Track(starterText);
             tile.Starter.Add(starterText);
             tile.Card.Add(tile.Starter);
@@ -407,9 +407,8 @@ namespace NodeWar.Lobby
             int capacity = suitTab ? LoadoutRules.ChosenSuitSlots(arena) : LoadoutRules.ChosenDistrictSlots(arena);
             var chosen = suitTab ? StageLoadout.suitIDs : StageLoadout.districtIDs;
             int count = Array.FindAll(chosen, id => !string.IsNullOrEmpty(id)).Length;
-            int starters = StageGrants(suitTab).Length;
-            browserTitle.text = (suitTab ? "Suits " : "Districts ") + count + " of " + capacity + " chosen" +
-                (starters > 0 ? " · " + starters + " starter" : "");
+            int locked = StageGrants(suitTab).Length;
+            browserTitle.text = count + " of " + capacity + " chosen · " + locked + " locked";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             var wanted = new List<VisualElement>();
@@ -711,12 +710,7 @@ namespace NodeWar.Lobby
             bool fixedStarter = IsFixedStarter(inspectedItem);
             if (fixedStarter)
             {
-                int firstEditable = 0;
-                while (firstEditable < RankTable.Names.Count - 1 && LoadoutCapacityPolicy.GetsFreeGrants(firstEditable)) firstEditable++;
-                string era = new RankDisplay(RankTable.Thresholds[firstEditable]).Name;
-                string note = "Fixed starter until " + era + ".";
-                if (!inspectedItem.IsSuit)
-                    note += " Choose your other " + LoadoutRules.ChosenDistrictSlots(LoadoutRules.ArenaOrFallback(playerState?.Rank)) + " districts below.";
+                string note = "Locked starter for your current era.";
                 var starterNote = MakeLabel(note, "ws-starter-note");
                 starterNote.tooltip = note;
                 content.Add(starterNote);
