@@ -6,16 +6,15 @@ namespace NodeWar.Lobby.Tests
     public class WorkshopLayoutTests
     {
         [Test]
-        public void TileSizingNeutralizesDefaultButtonMarginsBeforeApplyingExactTwoColumnWidths()
+        public void TilesAreStaticPercentageCellsWithNeutralisedButtonMargins()
         {
             var root = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
             while (root != null && !Directory.Exists(Path.Combine(root.FullName, "Assets"))) root = root.Parent;
             Assert.That(root, Is.Not.Null);
-            string page = File.ReadAllText(Path.Combine(root.FullName, "Assets/UI/Scripts/WorkshopPage.cs"));
-            // The pure width test alone missed Unity's inherited 3px left margin:
-            // 2 * tile + gap + 2 * 3 > available, so Yoga wraps the second tile.
-            StringAssert.Contains("card.style.marginLeft = card.style.marginTop = 0", page);
-            StringAssert.Contains("card.style.flexBasis = StyleKeyword.Auto", page);
+            string page = File.ReadAllText(Path.Combine(root.FullName, "Assets/UI/Styles/Components.uss"));
+            // Unity gives a Button a default margin; a cell wraps it so two columns never wrap on a measured width.
+            StringAssert.Contains(".ws-cell > .ws-card { flex-grow: 1; margin: 0;", page);
+            StringAssert.Contains(".ws-cell { width: 50%;", page);
             float width = WorkshopLayout.TileWidth(338);
             Assert.That(2 * width + WorkshopLayout.TileGap + 6, Is.GreaterThan(338));
         }
