@@ -45,11 +45,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-<<<<<<< HEAD
-verified: 0be4a6bb
-=======
-verified: f141a2fb
->>>>>>> feat/lobby-g6b
+verified: e50ce8d7
 ---
 
 # UI art

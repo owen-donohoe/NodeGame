@@ -115,11 +115,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-<<<<<<< HEAD
-verified: 0be4a6bb
-=======
-verified: b900cc84
->>>>>>> feat/lobby-g6b
+verified: e50ce8d7
 ---
 
 # Lobby UI
