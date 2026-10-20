@@ -601,6 +601,7 @@ namespace NodeWar.Lobby
             pillDock.RegisterCallback<GeometryChangedEvent>(_ => UpdateListClearance());
             // Guild home and visitor are attached on demand after membership loads.
             guildPage.Root.RegisterCallback<GeometryChangedEvent>(_ => UpdateListClearance());
+            guildPage.MembershipChanged += () => lobbyRoot.schedule.Execute(UpdateListClearance);
             lobbyRoot.schedule.Execute(UpdateListClearance);
         }
 

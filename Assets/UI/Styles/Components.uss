@@ -560,7 +560,8 @@
 .lb-root .mk-eyebrow { letter-spacing: var(--tracking); }
 .lb-root .mk-ellipsis, .lb-root .mk-friend__name, .lb-root .mk-namelink Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
 /* Row labels need allocated width before ellipsis is measured. */
-.lb-root .mk-namelink Label { flex-grow: 1; flex-basis: 0; font-size: 17px; }
+.lb-root .mk-namelink Label { flex-grow: 1; flex-basis: 0; font-size: 15px; }
+.lb-root .mk-row > .mk-namelink, .lb-root .mk-namelink > .mk-profile-caret { margin-right: 0; }
 .lb-root .mk-profile-caret, .lb-root .mk-trophy { flex-shrink: 0; }
 .lb-root .mk-btn, .lb-root .mk-tile, .lb-root .mk-crate, .lb-root .mk-skin { border-width: 2px; border-bottom-width: var(--edge-press-bottom); border-color: var(--line-inner); border-radius: var(--radius-button); background-color: var(--mk-sheet); color: var(--mk-ink); padding: 8px 12px; min-height: 44px; min-width: 44px; -unity-font-definition: var(--font-display); font-size: 15px; }
 .lb-root .mk-btn:active, .lb-root .mk-tile:active, .lb-root .mk-skin:active, .lb-root .mk-crate:active { border-bottom-width: 2px; }
@@ -878,3 +879,5 @@
 .lb-root .lb-guild-expand-face { -unity-background-image-tint-color: var(--mk-sheet); }
 
 .lb-root .g2-live-empty { padding: 8px 12px; }
+
+.lb-root .mk-purse, .lb-root .mk-namelink, .lb-root .g2-home-mode, .lb-root .ws-card { background-image: none; }
