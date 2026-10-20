@@ -51,8 +51,8 @@ namespace NodeWar.Lobby
         }
         public void Open(LobbyModeSelection selection)
         {
-            if (selection.IsPrivate) { PrivateLobbyPanel.Open(selection); return; }
             if (IsOpen) Close();
+            if (selection.IsPrivate) { router.CloseAll(); PrivateLobbyPanel.Open(selection); return; }
             mode = selection; navigation.Show(LobbyPageID.Home); router.CloseAll(); IsOpen = true;
             Root.style.display = DisplayStyle.Flex; Root.BringToFront(); RefreshRating(); SetChrome(true);
             invite.style.display = selection.IsPrivate || selection.Mode == LobbyMode.Team2v2 || selection.Mode == LobbyMode.FreeForAll4 ? DisplayStyle.Flex : DisplayStyle.None;
