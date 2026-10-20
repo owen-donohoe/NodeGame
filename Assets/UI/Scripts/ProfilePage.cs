@@ -130,7 +130,7 @@ namespace NodeWar.Lobby
             Root.style.scale = new Scale(new Vector2(from.width / full.width, from.height / full.height));
         }
         private void StateChanged() { if (IsOpen && viewingSelf) Reload(); }
-        private void AccountChanged(AccountInfo _) { Close(); }
+        private void AccountChanged(AccountInfo _) { report?.Close(); Close(); }
         private void Reload() { if (IsOpen) _ = LoadAsync(++generation, playerId, SelfId); }
         private async Task LoadAsync(int request, string id, string requestedFor)
         {

@@ -1,4 +1,5 @@
 using System;
+using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,6 +16,8 @@ namespace NodeWar.Lobby
         {
             this.router = router; this.search = search;
             sheet.BindRouter(router, "multiplayer"); host.Add(sheet);
+            BackendServices.Account.Changed += AccountChanged;
+            sheet.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == sheet) BackendServices.Account.Changed -= AccountChanged; });
             sheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker"));
             sheet.Body.Add(GuildViews.Text("Multiplayer", "mk-h2"));
             var grid = LobbyModePicker.ModeGrid("multiplayer-modes"); sheet.Body.Add(grid);
@@ -25,6 +28,7 @@ namespace NodeWar.Lobby
             }
             sheet.Body.Add(GuildViews.Button("Back", sheet.Close));
         }
+        private void AccountChanged(AccountInfo _) { playerId = null; sheet.Close(); }
         public void Open(string targetPlayerId = null)
         {
             playerId = targetPlayerId; sheet.BringToFront(); sheet.Open();

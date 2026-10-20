@@ -47,6 +47,7 @@ namespace NodeWar.Lobby
             int dots = 0;
             Root.schedule.Execute(() => { if (IsOpen && searching) title.text = "Searching" + new string('.', dots = (dots + 1) % 4); }).Every(400);
             BackendServices.StateChanged += RefreshRating;
+            BackendServices.Account.Changed += AccountChanged;
         }
         public void Open(LobbyModeSelection selection)
         {
@@ -57,6 +58,7 @@ namespace NodeWar.Lobby
             router.Open(new LobbyOverlay("searching", OverlayKind.Panel, true), Close);
             shot(StageShot.Home); _ = StartAsync();
         }
+        private void AccountChanged(AccountInfo _) => Close();
         private void RefreshRating() => rating.text = BackendServices.LastKnownState?.Rank is RankRecord rank ? rank.RR + " RR" : "\u2014";
         private async System.Threading.Tasks.Task StartAsync()
         {
@@ -146,6 +148,6 @@ namespace NodeWar.Lobby
         {
             extra.text = "Play a bot"; extraAction = () => BotAccepted?.Invoke(); extra.style.display = DisplayStyle.Flex;
         }
-        public void Dispose() { Close(); BackendServices.StateChanged -= RefreshRating; launcher.Dispose(); Root.RemoveFromHierarchy(); }
+        public void Dispose() { Close(); BackendServices.StateChanged -= RefreshRating; BackendServices.Account.Changed -= AccountChanged; launcher.Dispose(); Root.RemoveFromHierarchy(); }
     }
 }
