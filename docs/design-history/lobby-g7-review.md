@@ -29,8 +29,8 @@ shrink from 80px to 52px; Live cards shrink from 64px to 48px while VS grows fro
 44px to 58px; ledger avatars grow from 34px to 40px. Existing skin data remains
 bound; inert locked previews fill missing catalogue slots without invented IDs.
 
-Phosphor Bold uses 96px white PNGs, tinted by USS. The installed built-in vector
-module has no SVG importer package. The upstream MIT licence accompanies the
+Phosphor Bold uses white SVGs, tinted by USS. The installed native SVG importer
+is configured to produce UI Toolkit Vector Images by an Editor postprocessor. The upstream MIT licence accompanies the
 icons. Unity must generate all new asset/folder `.meta` files.
 
 Validation: the full .NET solution passes (4,636 reported passing cases); its

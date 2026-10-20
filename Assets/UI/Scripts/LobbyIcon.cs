@@ -50,7 +50,7 @@ namespace NodeWar.Lobby
 
         // Lobby-only authored icons. Match and market surfaces retain their theme
         // and procedural fallbacks; attaching is when the actual surface is known.
-        private Texture2D LobbyImage()
+        private VectorImage LobbyImage()
         {
             if (context == LobbyIconContext.ShopCard) return null;
             bool lobby = false;
@@ -100,7 +100,7 @@ namespace NodeWar.Lobby
                 LobbyIconKind.None => null,
                 _ => "star"
             };
-            return icon == null ? null : Resources.Load<Texture2D>("Lobby/Icons/Phosphor/" + icon + "-bold");
+            return icon == null ? null : Resources.Load<VectorImage>("Lobby/Icons/Phosphor/" + icon + "-bold");
         }
 
         /// <summary>Live resource tint, respecting the theme's original-colour art.</summary>
@@ -134,7 +134,7 @@ namespace NodeWar.Lobby
             if (panel != null) ValidateUsage();
 #endif
             keepOriginalColours = false;
-            Texture2D lobbyImage = LobbyImage();
+            VectorImage lobbyImage = LobbyImage();
             UIArtTheme theme = UIArt.Theme;
             if (lobbyImage != null)
             {
