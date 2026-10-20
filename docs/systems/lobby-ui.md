@@ -113,7 +113,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 013527f0
+verified: f05cc8f0
 ---
 
 # Lobby UI
