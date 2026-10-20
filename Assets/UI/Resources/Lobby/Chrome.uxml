@@ -27,16 +27,16 @@
                     <ui:Label class="mk-ellipsis" name="name-text" text="player" enable-rich-text="false" picking-mode="Ignore" />
                     <ui:VisualElement class="mk-profile-caret" picking-mode="Ignore" />
                 </ui:Button>
+                <ui:VisualElement class="mk-trophy" picking-mode="Ignore">
+                    <ui:Label name="trophy-count" text="—" picking-mode="Ignore" />
+                    <ui:Label name="trophy-max" picking-mode="Ignore" />
+                </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement class="mk-meter" picking-mode="Ignore">
                 <ui:VisualElement name="trophy-fill" picking-mode="Ignore" />
             </ui:VisualElement>
             <ui:VisualElement class="mk-spread">
                 <ui:Label name="arena-text" text="Era —" class="mk-cap mk-ellipsis" style="flex-grow: 1; flex-basis: 0;" picking-mode="Ignore" />
-                <ui:VisualElement class="mk-trophy" picking-mode="Ignore">
-                    <ui:Label name="trophy-count" text="—" picking-mode="Ignore" />
-                    <ui:Label name="trophy-max" picking-mode="Ignore" />
-                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
