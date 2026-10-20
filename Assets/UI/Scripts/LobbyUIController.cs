@@ -250,6 +250,14 @@ namespace NodeWar.Lobby
             confirmingExit = false;
         }
 
+        private void LateUpdate()
+        {
+            var shop = lobbyRoot?.Q("page-shop")?.userData as ShopPage;
+            shop?.Tick(Time.unscaledDeltaTime);
+            navigation?.Tick(Time.unscaledDeltaTime);
+            shop?.Project();
+        }
+
         private void Update()
         {
             // Cheap: each returns immediately unless the safe area, the screen
@@ -387,11 +395,14 @@ namespace NodeWar.Lobby
             if (presentation != null) shell.styleSheets.Add(presentation);
             VisualElement backdrop = root.Q<VisualElement>("backdrop");
             if (backdrop != null) backdrop.style.display = DisplayStyle.None;
-            navigation.PageShown += id =>
+            bool pageWasMoving = false, firstPagePose = true;
+            navigation.MotionChanged += (from, to, progress, moving) =>
             {
-                stage.ShowShot(StageShots.ForPage(id.ToString()));
-                RefreshStageLoadout();
+                if (moving || pageWasMoving || firstPagePose)
+                    stage.ApplyPageMotion(StageShots.ForPage(from.ToString()), StageShots.ForPage(to.ToString()), progress, moving);
+                pageWasMoving = moving; firstPagePose = false;
             };
+            navigation.PageShown += _ => RefreshStageLoadout();
             router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
             NodeWar.Backend.BackendServices.StateChanged += RefreshStageLoadout;
             RefreshStageLoadout();

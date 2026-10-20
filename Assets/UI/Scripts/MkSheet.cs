@@ -44,7 +44,7 @@ namespace NodeWar.Lobby
             Handle.RegisterCallback<PointerUpEvent>(_ => Release());
             Handle.RegisterCallback<PointerCancelEvent>(_ => Release());
             style.display = DisplayStyle.None;
-            motion = new LobbyElementMotion(Surface, Scrim);
+            motion = new LobbyElementMotion(Surface, Scrim, vertical: true);
             motion.Set(0f, 0f, LobbyMotion.ClosedScale);
         }
 

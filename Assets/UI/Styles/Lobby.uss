@@ -135,7 +135,7 @@
     overflow: hidden;
 }
 
-/* NavigationController crossfades overlapping pages with LobbyMotion. */
+/* NavigationController translates edge-attached pages with LobbyMotion. */
 .lb-page-track {
     position: absolute;
     left: 0;
@@ -172,6 +172,8 @@
 }
 
 .lb-tabbar-dock { position: absolute; left: 0; right: 0; bottom: 0; }
+.ui-root .lb-pill-progress { background-color: var(--mk-tap); border-radius: 26px; }
+.ui-root .mk-tabs--sliding .mk-tab--on { background-color: var(--clear); }
 /* ===================================================================
    Icons. Vector images drawn by LobbyIcon; colour is the tint, so it
    transitions like any other style property.
