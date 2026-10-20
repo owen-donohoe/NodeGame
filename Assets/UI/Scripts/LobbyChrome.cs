@@ -35,7 +35,11 @@ namespace NodeWar.Lobby
         public LobbyChrome(VisualElement root, LobbyToast toast, BadgeBoard badges = null)
         {
             nameText = root.Q<Label>("name-text");
-            if (nameText != null) nameText.enableRichText = false;
+            if (nameText != null)
+            {
+                nameText.enableRichText = false;
+                TrackedText.Track(nameText);
+            }
             trophyCount = root.Q<Label>("trophy-count");
             trophyMax = root.Q<Label>("trophy-max");
             trophyFill = root.Q<VisualElement>("trophy-fill");
@@ -101,8 +105,8 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
 
             if (nameText != null)
-                nameText.text = HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
-                    profile != null ? profile.Username : "player");
+                TrackedText.SetText(nameText, HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
+                    profile != null ? profile.Username : "player"));
 
             if (!firstHandleAttempted && BackendServices.LastKnownState != null &&
                 BackendServices.LastKnownState.Profile == null)

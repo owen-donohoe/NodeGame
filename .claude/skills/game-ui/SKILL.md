@@ -57,6 +57,9 @@ summary:
   Every piece of text has `letter-spacing` of 0.04 em (about 0.6 px at 15 px). It should read
   lighter but stay just as bold. Do not use Patrick Hand or Kalam, and do not fake weight with text
   outlines.
+- UI Toolkit measures text WITHOUT letter-spacing. A label sized to its own text (`flex-grow: 0`)
+  is therefore too narrow and elides its last glyphs. Either let it grow into spare room, or
+  size it with `TrackedText.Track` + `TrackedText.SetText` (see the player-card name).
 - Sizes: title 34, panel heading 17–24, names 15–17, body 15–16, meta 13 (never smaller), BATTLE
   32. Line height at least 1.2× the size.
 - Contrast: text on paper is full ink (`--paper-ink`); muted text is no lighter than 70% ink.
