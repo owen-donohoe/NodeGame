@@ -39,7 +39,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 023d3245
+verified: 4f3e4aff
 ---
 
 # UI art

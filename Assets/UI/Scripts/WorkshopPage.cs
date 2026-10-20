@@ -26,6 +26,9 @@ namespace NodeWar.Lobby
         private readonly VisualElement unlocked;
         private readonly Label eraMessage;
         private readonly ScrollView grid;
+        private readonly VisualElement firstPanel, panelSpace, stageWindow, secondPanel, secondSpace, secondClip;
+        private float stageBandHeight = 220f;
+        private VisualElement nav;
 
         private readonly Button ownedFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
@@ -49,7 +52,8 @@ namespace NodeWar.Lobby
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
         private Tab activeTab;
         public bool IsOpen => session.IsOpen;
-        public VisualElement StageWindow => Root.Q<VisualElement>("workshop-window");
+        public VisualElement StageWindow => stageWindow;
+        public float StageViewportTop => grid.contentViewport.worldBound.y;
         public event Action Hidden;
         public event Action<bool> ViewChanged;
         public bool ReplacingSuit => loadout.ReplacingSuit;
@@ -84,10 +88,17 @@ namespace NodeWar.Lobby
             unlocked.RegisterCallback<GeometryChangedEvent>(_ => SizeCards());
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
+            grid.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            Root.Q<ScrollView>("workshop-roles").touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            firstPanel = Root.Q("workshop-panel1"); panelSpace = Root.Q("workshop-panel1-space");
+            stageWindow = Root.Q("workshop-window");
+            secondPanel = Root.Q("workshop-panel2"); secondSpace = Root.Q("workshop-panel2-space");
+            secondClip = Root.Q("workshop-panel2-clip");
+            secondPanel.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
             // Render the sticky first card last, above the scrolling second card.
-            Root.Q("workshop-panel1").BringToFront();
+            firstPanel.BringToFront();
             Root.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
-            Root.Q("workshop-panel1").RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
+            firstPanel.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
             grid.verticalScroller.valueChanged += _ => UpdateScrollLayout();
             ownedFilter = Root.Q<Button>("workshop-owned");
             sortFilter = Root.Q<Button>("workshop-sort");
@@ -126,16 +137,28 @@ namespace NodeWar.Lobby
             _ = LoadInventoryAsync(visit);
         }
         public override void OnHide() { CloseInventory(); Hidden?.Invoke(); }
+        public void SetStageViewportBottom(float bottom)
+        {
+            if (grid.panel == null) return;
+            var panel = Root.panel.visualTree.worldBound;
+            float height = Mathf.Max(0, panel.y + bottom * panel.height + 12f - StageViewportTop);
+            if (!Mathf.Approximately(height, stageBandHeight)) stageBandHeight = height;
+            UpdateScrollLayout();
+        }
+
         private void UpdateScrollLayout()
         {
             if (grid?.panel == null) return;
-            var first = Root.Q("workshop-panel1");
-            float screenHeight = Root.panel.visualTree.worldBound.height;
-            float band = Mathf.Max(0, screenHeight * 0.46f - grid.contentViewport.worldBound.y);
-            if (!Mathf.Approximately(StageWindow.layout.height, band)) StageWindow.style.height = band;
-            var space = Root.Q("workshop-panel1-space");
-            if (!Mathf.Approximately(space.layout.height, first.layout.height)) space.style.height = first.layout.height;
-            first.style.top = Mathf.Max(band, grid.scrollOffset.y);
+            float navHeight = nav?.resolvedStyle.height ?? 0;
+            grid.contentContainer.style.paddingBottom = (float.IsNaN(navHeight) ? 0 : navHeight) + 12f;
+            if (Replacing && grid.scrollOffset != Vector2.zero) grid.scrollOffset = Vector2.zero;
+            if (!Mathf.Approximately(stageWindow.layout.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
+            if (!Mathf.Approximately(panelSpace.layout.height, firstPanel.layout.height)) panelSpace.style.height = firstPanel.layout.height;
+            var clip = WorkshopLayout.Clip(stageBandHeight, firstPanel.layout.height, secondPanel.layout.height, grid.scrollOffset.y);
+            firstPanel.style.top = clip.HeaderTop;
+            secondSpace.style.height = clip.ContentHeight;
+            secondClip.style.top = clip.ClipTop; secondClip.style.height = clip.MaskHeight;
+            secondPanel.style.top = clip.CardOffset;
         }
         private void CollectItems()
         {
@@ -295,7 +318,7 @@ namespace NodeWar.Lobby
                 card.Add(MakeLabel(item.Name, "ws-name", "mk-h3"));
                 card.EnableInClassList("mk-tile--locked", state.Status != UnlockStatus.Owned);
                 if (IsSelected(item)) card.Add(MakeLabel("In hand", "mk-mark", "ws-mark"));
-                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era"));
+                else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era", "ws-mark"));
                 if (menu != null) menu.Attach(card, () =>
                 {
                     var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(item.ID)) };
@@ -318,8 +341,17 @@ namespace NodeWar.Lobby
         private void SizeCards()
         {
             if (unlocked.contentRect.width <= 24) return;
-            float width = (unlocked.contentRect.width - 24) / 3f;
-            unlocked.Query<Button>(className: "mk-tile").ForEach(card => card.style.width = width);
+            float width = WorkshopLayout.TileWidth(unlocked.contentRect.width);
+            int index = 0;
+            unlocked.Query<Button>(className: "mk-tile").ForEach(card =>
+            {
+                card.style.width = card.style.maxWidth = card.style.flexBasis = width;
+                card.style.minWidth = card.style.minHeight = 0;
+                card.style.height = width;
+                card.style.marginRight = index++ % 3 == 2 ? 0 : WorkshopLayout.TileGap;
+                card.style.marginBottom = WorkshopLayout.TileGap;
+                card.Q(className: "ws-art-clip").style.height = Math.Max(24, (float)Math.Floor((width - 48) / 4) * 4);
+            });
         }
 
         private void RenderRoles(List<Item> items)
@@ -543,10 +575,12 @@ namespace NodeWar.Lobby
 
         public void BindOverlayRouter(LobbyOverlayRouter router, VisualElement shell)
         {
+            nav = shell.Q("tabbar-dock");
             inventorySheet.BindRouter(router, "workshop-item");
             inventorySheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
             inventorySheet.Surface.AddToClassList("ws-item-sheet");
             inventorySheet.Body.style.flexGrow = 1;
+            ((ScrollView)inventorySheet.Body).touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             itemActions.AddToClassList("ws-sheet-actions"); inventorySheet.Surface.Add(itemActions);
             shell.Add(inventorySheet);
             inventorySheet.Opened += () =>
@@ -646,6 +680,7 @@ namespace NodeWar.Lobby
             var skins = LoadoutChoices.Skins(baseId, null, playerState);
             if (!Array.Exists(skins, choice => choice.ID == panelSkinId)) panelSkinId = EquippedChoice(skins);
             var skinScroll = new ScrollView(ScrollViewMode.Horizontal);
+            skinScroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             skinScroll.AddToClassList("ws-skin-scroll"); skinScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             skinScroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             var skinRow = new VisualElement(); skinRow.AddToClassList("mk-skins");
@@ -684,8 +719,12 @@ namespace NodeWar.Lobby
         private static VisualElement HistogramLine(HistogramRow row)
         {
             var line = new VisualElement { tooltip = "1 cell = " + row.Unit };
-            line.AddToClassList("mk-hrow"); line.Add(MakeLabel(row.Label, "mk-eyebrow", "ws-stat-label"));
-            var cells = new VisualElement(); cells.AddToClassList("mk-cells");
+            line.AddToClassList("mk-hrow"); line.AddToClassList("ws-stat-row");
+            var heading = new VisualElement(); heading.AddToClassList("ws-stat-heading");
+            heading.Add(MakeLabel(row.Label, "ws-stat-label"));
+            heading.Add(MakeLabel(row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "mk-value", "ws-stat-value"));
+            line.Add(heading);
+            var cells = new VisualElement(); cells.AddToClassList("mk-cells"); cells.AddToClassList("ws-stat-cells");
             for (int i = 0; i < StatHistogram.MaxCells; i++)
             {
                 bool lost = i >= row.Filled && i < row.Filled + row.Loss;
@@ -696,7 +735,6 @@ namespace NodeWar.Lobby
                 cells.Add(cell);
             }
             line.Add(cells);
-            line.Add(MakeLabel(row.Value + " (" + (row.Delta > 0 ? "+" : "") + row.Delta + ")", "mk-value", "ws-stat-value"));
             return line;
         }
 
@@ -735,11 +773,10 @@ namespace NodeWar.Lobby
             if (toast != null) toast.Show(message);
         }
 
-        private static Label MakeLabel(string text, string styleClass, string weightClass)
+        private static Label MakeLabel(string text, params string[] classes)
         {
             Label label = new Label(text) { enableRichText = false };
-            label.AddToClassList(styleClass);
-            label.AddToClassList(weightClass);
+            foreach (var styleClass in classes) label.AddToClassList(styleClass);
             label.pickingMode = PickingMode.Ignore;
             return label;
         }

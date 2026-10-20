@@ -12,6 +12,7 @@ namespace NodeWar.Lobby
         private readonly LobbyOverlayRouter router;
         private readonly Action refresh;
         private readonly NavigationController navigation;
+        private readonly IVisualElementScheduledItem projection;
         private int pointer = -1;
         private Vector2 pointerStart;
         private long pointerStartedAt;
@@ -23,6 +24,7 @@ namespace NodeWar.Lobby
             this.page = page; this.stage = stage; this.router = router; this.refresh = refresh;
             this.navigation = navigation;
             if (navigation != null) navigation.PageShown += PageShown;
+            projection = page.Root.schedule.Execute(UpdateProjection).Every(16); projection.Pause();
             page.Hidden += Hide;
             page.ItemViewed += View;
             page.ViewChanged += ShowView;
@@ -46,15 +48,27 @@ namespace NodeWar.Lobby
         }
         private void Hide()
         {
-            ResetPointer(); stage.Deselect(); stage.ClearFocus();
+            projection.Pause(); ResetPointer(); stage.Deselect(); stage.ClearFocus();
         }
 
         private void PageShown(LobbyPageID id)
         {
-            if (id == LobbyPageID.Workshop) ShowView(page.ViewingSuit);
+            if (id == LobbyPageID.Workshop) { UpdateProjection(); ShowView(page.ViewingSuit); projection.Resume(); }
         }
 
-        private void ShowView(bool suits) => stage.ShowShot(suits ? StageShot.Suits : StageShot.Districts);
+        private void UpdateProjection()
+        {
+            if (!page.IsOpen || page.Root.panel == null) return;
+            var panel = page.Root.panel.visualTree.worldBound;
+            stage.SetWorkshopBand((page.StageViewportTop - panel.y + 12f) / panel.height, 0.55f);
+            if (stage.TryGetClusterViewportBounds(out Rect bounds)) page.SetStageViewportBottom(1f - bounds.yMin);
+        }
+
+        private void ShowView(bool suits)
+        {
+            stage.ShowShot(suits ? StageShot.Suits : StageShot.Districts);
+            UpdateProjection();
+        }
 
         public void RefreshInspection() => View(page.ViewingSuit, page.ViewedId);
         public void LoadoutReset() => page.CancelReplacement();

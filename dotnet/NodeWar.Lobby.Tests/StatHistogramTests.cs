@@ -46,8 +46,8 @@ namespace NodeWar.Lobby.Tests
         {
             var b = Balance();
             var rows = StatHistogram.SuitRows(LoadoutInfoModel.SuitStats(b, "suit.warrior", 1), LoadoutInfoModel.SuitStats(b, "suit.warrior", 0));
-            Assert.That(rows.Length, Is.EqualTo(14));
-            var dmgSuit = rows.Single(r => r.Label == "Damage vs base suit");
+            Assert.That(rows.Length, Is.EqualTo(12));
+            var dmgSuit = rows.Single(r => r.Label == "Damage vs base");
             var dmgVillager = rows.Single(r => r.Label == "Damage vs villager");
             Assert.That(dmgSuit.Delta, Is.EqualTo(6), "11 against the base suit's 5");
             Assert.That(dmgVillager.Delta, Is.EqualTo(8), "11 against the villager's 3");
@@ -57,7 +57,7 @@ namespace NodeWar.Lobby.Tests
         {
             var b = Balance();
             var own = LoadoutInfoModel.SuitStats(b, "suit.warrior", 0);
-            Assert.That(StatHistogram.SuitRows(own, own).Where(r => r.Label.EndsWith("base suit")).All(r => r.Gain == 0 && r.Loss == 0), Is.True);
+            Assert.That(StatHistogram.SuitRows(own, own).Where(r => r.Label.EndsWith("base")).All(r => r.Gain == 0 && r.Loss == 0), Is.True);
         }
         [TestCase(int.MinValue, int.MaxValue)]
         [TestCase(int.MaxValue, int.MinValue)]
@@ -80,6 +80,28 @@ namespace NodeWar.Lobby.Tests
             Assert.That(rows[0].Unit, Is.EqualTo(rows[1].Unit));
             Assert.That(rows.All(r => r.Filled + r.Gain + r.Loss <= StatHistogram.MaxCells), Is.True);
             Assert.That(rows[0].Gain, Is.GreaterThan(0));
+        }
+        [Test] public void SuitRows_HideAllZeroAndInternalStats_KeepNonzeroComparisons()
+        {
+            var own = new[] {
+                new LoadoutStatRow("Damage", 0, 0, 0),
+                new LoadoutStatRow("Food cost", 0, -4, 4),
+                new LoadoutStatRow("Fight priority", 12, 12, 12)
+            };
+            var rows = StatHistogram.SuitRows(own, own);
+            Assert.That(rows.Select(r => r.Label), Is.EqualTo(new[] { "Food cost vs base", "Food cost vs villager" }));
+            Assert.That(rows[1].Delta, Is.EqualTo(-4));
+        }
+        [Test] public void DistrictRows_KeepOwnFactsAndHideSharedRulesAndZeroPairs()
+        {
+            var b = new GameBalanceData {
+                bankCapacity = 20, collectProgressPerUnit = 5, collectProgressPerTick = 2,
+                maxWorkersPerNode = 0,
+                districtStats = new[] { new DistrictStats { districtType = DistrictType.Farm, productionTicks = 40 } }
+            };
+            var rows = StatHistogram.DistrictRows(b, DistrictType.Farm, 0);
+            Assert.That(rows.Select(r => r.Label), Is.EquivalentTo(new[] { "Production cycle", "Yield per cycle", "Bank capacity" }));
+            Assert.That(rows.All(r => r.Value != 0 || r.Delta != 0), Is.True);
         }
         [Test] public void Districts_CompareNumericFactsToBaseDistrict()
         {
