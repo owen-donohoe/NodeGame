@@ -84,6 +84,7 @@ namespace NodeWar.Lobby
                 if (!Active(generation, section, request, requestedFor)) return;
                 section.View.Content.Clear();
                 bool hasRows = rows != null && rows.Count > 0;
+                if (section == tv && !hasRows) Root.Q<Label>("social-live-count").text = "0 games";
                 if (hasRows) render(rows);
                 section.State = section.State.Reduce(hasRows ? AsyncResult.Ready : AsyncResult.Empty, Now); section.View.Render(section.State, Now, empty);
             }

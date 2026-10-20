@@ -881,3 +881,5 @@
 .lb-root .g2-live-empty { padding: 8px 12px; }
 
 .lb-root .mk-purse, .lb-root .mk-namelink, .lb-root .g2-home-mode, .lb-root .ws-card { background-image: none; }
+
+.lb-root #social-tv .lb-async > VisualElement > Label { color: var(--mk-muted); font-size: 13px; padding: 8px 12px; }
