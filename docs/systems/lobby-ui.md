@@ -115,7 +115,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 8891d096
+verified: f141a2fb
 ---
 
 # Lobby UI
@@ -131,7 +131,7 @@ Loadouts, accounts/settings and match entry, separate from server progression.
 `LobbyMotion` defines page/camera timing (280ms cubic-out, 24px crossfade) and surfaces (220ms open, 160ms close, scale/fade). Changes retarget; inactive pages use display:none. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `LobbyContextMenu.Attach/Show/Close` displays actions; `LobbyToast.Show(message)` supplies feedback. `SafeAreaBinder` applies insets.
 
 Pages:
-- `WorkshopPage` scrolls two-column grids, Owned/All and Sort via `LoadoutBrowse`. `WorkshopStageBinding` maps stage taps; selected suits fill 60% of the stage. `WorkshopInventorySession` gates equipment/replacement. Its 78% MkSheet shows variants, skins and `StatHistogram` comparisons against base items/villagers.
+- `WorkshopPage` scrolls two-column grids via `LoadoutBrowse`. `WorkshopStageBinding` maps taps; measured suit bounds retain 8% window margins. `LoadoutScreenModel` gates equipment/replacement; `WorkshopInventorySession` gates requests. Its 78% MkSheet shows variants, skins and `StatHistogram` comparisons.
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a Workshop tag. Big/Small open crates. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show only settled offers after camera pans. Daily anchors below header, others centrally. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history `AsyncStateView`s. TV has four slots. Friends precede online guild members; offline friends expand behind a toggle. History uses settled outcomes and signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
@@ -167,7 +167,7 @@ Rated rank/inventory belongs to backend state, not local trophies/unlock arrays.
 ## How it works
 `LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
 
-Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five without grants. Workshop shows five stage nodes. Use fills or replaces; taps inspect. Variants are tree suits; skins cover both kinds.
+Low arenas choose two suits/two districts with grant locks; arena 2 onward chooses three/five. Workshop has five stage nodes. Suit state survives refreshes; replacement lifts/bobs, swaps, then lowers. Cancel lowers unchanged. Tree suits have variants; both kinds have skins.
 
 Launch refreshes state, freezes rank/choices/equipment, then rechecks completeness. Ranked requires returned rank; private/offline uses arena 1. Rendezvous carries record ID/slot order. Confirmed resizing persists; closing an unconfirmed fallback cannot trim saved high decks.
 
