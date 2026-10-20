@@ -26,7 +26,7 @@ namespace NodeWar.Lobby
         private readonly VisualElement unlocked;
         private readonly Label eraMessage;
         private readonly ScrollView grid;
-        private readonly VisualElement firstPanel, panelSpace, stageWindow;
+        private readonly VisualElement firstPanel, panelSpace, stageWindow, secondPanel, secondSpace, secondClip;
         private float stageBandHeight = 220f;
 
         private readonly Button ownedFilter, sortFilter;
@@ -90,6 +90,9 @@ namespace NodeWar.Lobby
             grid.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             firstPanel = Root.Q("workshop-panel1"); panelSpace = Root.Q("workshop-panel1-space");
             stageWindow = Root.Q("workshop-window");
+            secondPanel = Root.Q("workshop-panel2"); secondSpace = Root.Q("workshop-panel2-space");
+            secondClip = Root.Q("workshop-panel2-clip");
+            secondPanel.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
             // Render the sticky first card last, above the scrolling second card.
             firstPanel.BringToFront();
             Root.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
@@ -147,7 +150,11 @@ namespace NodeWar.Lobby
             if (Replacing && grid.scrollOffset != Vector2.zero) grid.scrollOffset = Vector2.zero;
             if (!Mathf.Approximately(stageWindow.layout.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
             if (!Mathf.Approximately(panelSpace.layout.height, firstPanel.layout.height)) panelSpace.style.height = firstPanel.layout.height;
-            firstPanel.style.top = Mathf.Max(stageBandHeight, grid.scrollOffset.y);
+            var clip = WorkshopLayout.Clip(stageBandHeight, firstPanel.layout.height, secondPanel.layout.height, grid.scrollOffset.y);
+            firstPanel.style.top = clip.HeaderTop;
+            secondSpace.style.height = clip.ContentHeight;
+            secondClip.style.top = clip.ClipTop; secondClip.style.height = clip.MaskHeight;
+            secondPanel.style.top = clip.CardOffset;
         }
         private void CollectItems()
         {

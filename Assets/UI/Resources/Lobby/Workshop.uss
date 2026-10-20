@@ -1,11 +1,13 @@
-﻿/* Layout only. Components.uss supplies the mockup skin. */
+/* Layout only. Components.uss supplies the mockup skin. */
 #page-workshop, #page-workshop > TemplateContainer, .lb-workshop { flex-grow: 1; min-height: 0; }
 .ws-scroll { flex-grow: 1; min-height: 0; }
 .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 112px; }
 .ws-stage-spacer { height: 220px; flex-shrink: 0; }
 .ws-panel1-space { height: 136px; flex-shrink: 0; }
 .ws-panel1 { position: absolute; left: 12px; right: 12px; flex-shrink: 0; }
-.ws-panel2 { margin: 10px 12px 0; flex-shrink: 0; }
+.ws-panel2 { position: absolute; left: 0; right: 0; margin: 12px 12px 0; flex-shrink: 0; }
+.ws-panel2-space { flex-shrink: 0; }
+.ws-panel2-clip { position: absolute; left: 0; right: 0; overflow: hidden; }
 .ws-presets { margin-bottom: 10px; }
 .ws-presets .ws-preset-tabs { flex-shrink: 0; }
 .ws-preset { width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; }

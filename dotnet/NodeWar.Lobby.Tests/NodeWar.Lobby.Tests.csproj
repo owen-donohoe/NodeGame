@@ -67,6 +67,8 @@
     <Compile Include="../../Assets/UI/Scripts/ShopResets.cs" Link="Lobby/ShopResets.cs" />
     <Compile Include="../../Assets/UI/Scripts/ShopCountdown.cs" Link="Lobby/ShopCountdown.cs" />
     <Compile Include="../../Assets/UI/Scripts/ShopSnap.cs" Link="Lobby/ShopSnap.cs" />
+    <Compile Include="WorkshopLayoutTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/WorkshopLayout.cs" Link="Lobby/WorkshopLayout.cs" />
     <Compile Include="StageClusterFramingTests.cs" />
     <Compile Include="../../Assets/Scripts/Lobby/Stage/StageClusterFraming.cs" Link="Lobby/Stage/StageClusterFraming.cs" />
     <Compile Include="StageSlotsTests.cs" />
