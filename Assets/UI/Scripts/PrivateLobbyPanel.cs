@@ -17,13 +17,15 @@ namespace NodeWar.Lobby
         private readonly VisualElement arena = new VisualElement();
         private readonly Label code = Text("Creating room…", "private-code");
         private readonly Label meta = Text("", "private-meta");
-        private readonly Button start, copy, move;
+        private readonly Button start, copy;
         private readonly VisualElement[] seats = new VisualElement[4];
         private readonly MkPanel confirm = new MkPanel { name = "private-kick" };
         private string localId;
-        private int selected = -1, dragSeat = -1;
-        private Vector2 dragOrigin;
-        private bool moving, dragged, suppressClick, disposed;
+        private int dragSeat = -1, dragPointer = -1;
+        private Vector2 dragOrigin, dragDelta;
+        private VisualElement dragCard, dragOwner, returningCard;
+        private IVisualElementScheduledItem returnTick;
+        private bool dragged, suppressClick, disposed;
         private int lastRevision = -1;
         private PrivateLobbyModel rendered;
         public VisualElement Root => panel;
@@ -43,10 +45,8 @@ namespace NodeWar.Lobby
             TrackedText.Track(panel.Title);
             var tag = Text("PRIVATE", "private-tag");
             panel.Title.parent.Insert(1, tag);
-            panel.Closed += () => { confirm.Close(); launcher.Cancel(); selected = -1; moving = false; };
+            panel.Closed += () => { ResetDrag(); confirm.Close(); launcher.Cancel(); };
             arena.AddToClassList("private-arena"); panel.Body.Add(arena);
-            move = Button("Move seats", () => { moving = !moving; selected = -1; RefreshSelection(); });
-            move.AddToClassList("private-move");
             var codeRow = new VisualElement(); codeRow.AddToClassList("private-code-row");
             codeRow.Add(code);
             copy = Button("Copy", () =>
@@ -100,7 +100,7 @@ namespace NodeWar.Lobby
         }
         private void ResetView()
         {
-            rendered = null; lastRevision = -1; moving = false; selected = -1; arena.Clear();
+            ResetDrag(); rendered = null; lastRevision = -1; arena.Clear();
             TrackedText.SetText(panel.Title, "1v1");
         }
 
@@ -109,7 +109,6 @@ namespace NodeWar.Lobby
             if (disposed || !panel.IsOpen) return;
             var model = launcher.PrivateLobby;
             bool host = model != null && model.IsHost(localId);
-            move.style.display = host ? DisplayStyle.Flex : DisplayStyle.None;
             start.style.display = host ? DisplayStyle.Flex : DisplayStyle.None;
             start.SetEnabled(model != null && model.CanStart(localId));
             copy.SetEnabled(!string.IsNullOrEmpty(launcher.JoinCode));
@@ -124,14 +123,13 @@ namespace NodeWar.Lobby
             if (model == null) return;
             if (rendered != null && rendered.Mode == model.Mode && lastRevision == model.Revision) return;
             rendered = model; lastRevision = model.Revision;
-            selected = -1;
+            ResetDrag();
             TrackedText.SetText(panel.Title, model.Mode == LobbyMode.Team2v2 ? "2v2" : model.Mode == LobbyMode.FreeForAll4 ? "1v1v1v1" : "1v1");
             arena.Clear(); Array.Clear(seats, 0, seats.Length);
             arena.EnableInClassList("private-arena--ffa", model.Mode == LobbyMode.FreeForAll4);
             var board = new VisualElement(); board.AddToClassList("private-board");
-            board.Add(Text("Board", "private-board-label")); board.Add(move); arena.Add(board);
+            board.Add(Text("Board", "private-board-label")); arena.Add(board);
             for (int i = 0; i < model.Capacity; i++) BuildSeat(i, model);
-            RefreshSelection();
         }
 
         private void BuildSeat(int index, PrivateLobbyModel model)
@@ -145,7 +143,7 @@ namespace NodeWar.Lobby
             {
                 card.AddToClassList("private-seat--empty");
                 card.generateVisualContent += ctx => DrawEmptySeat(ctx, card);
-                var empty = Button("+ Invite", () => { if (moving) TapSeat(index); else InvitePlayers(); });
+                var empty = Button("+ Invite", InvitePlayers);
                 empty.AddToClassList("private-invite-seat"); card.Add(empty);
             }
             else
@@ -167,32 +165,44 @@ namespace NodeWar.Lobby
                 who.Add(seatMeta);
                 face.Add(who); card.Add(face);
                 var more = Button("⋯", () => ShowMenu(card, index)); more.AddToClassList("private-more"); card.Add(more);
-                menu.Attach(face, () => MenuRows(index));
                 face.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    if (evt.button != 0 || !model.IsHost(localId)) return;
-                    dragSeat = index; dragOrigin = evt.position; dragged = false;
-                });
+                    suppressClick = false;
+                    if (evt.button != 0 || !evt.isPrimary || !model.IsHost(localId)) return;
+                    ResetDrag();
+                    dragSeat = index; dragPointer = evt.pointerId; dragCard = card; dragOwner = face;
+                    dragOrigin = arena.WorldToLocal(evt.position); dragDelta = Vector2.zero;
+                }, TrickleDown.TrickleDown);
                 face.RegisterCallback<PointerMoveEvent>(evt =>
                 {
-                    if (dragSeat != index || !model.IsHost(localId)) return;
-                    if (((Vector2)evt.position - dragOrigin).sqrMagnitude < 100) return;
-                    dragged = true; face.CapturePointer(evt.pointerId); card.AddToClassList("private-seat--selected");
-                    evt.StopPropagation();
-                });
+                    if (dragSeat != index || evt.pointerId != dragPointer) return;
+                    if (!model.IsHost(localId)) { ResetDrag(); return; }
+                    dragDelta = arena.WorldToLocal(evt.position) - dragOrigin;
+                    if (!dragged && dragDelta.sqrMagnitude < 64) return;
+                    if (!dragged)
+                    {
+                        dragged = true; suppressClick = true;
+                        LobbyMouseDrag.Capture(face, dragPointer);
+                        card.BringToFront(); card.AddToClassList("private-seat--dragging");
+                        card.style.scale = new Scale(Vector3.one * 1.04f);
+                    }
+                    card.style.translate = new Translate(dragDelta.x, dragDelta.y);
+                    evt.StopImmediatePropagation();
+                }, TrickleDown.TrickleDown);
                 face.RegisterCallback<PointerUpEvent>(evt =>
                 {
-                    if (dragSeat != index) return;
-                    dragSeat = -1;
-                    if (face.HasPointerCapture(evt.pointerId)) face.ReleasePointer(evt.pointerId);
-                    if (!dragged) return;
-                    suppressClick = true;
+                    if (dragSeat != index || evt.pointerId != dragPointer) return;
+                    bool wasDragged = dragged;
+                    int target = -1;
                     for (int j = 0; j < model.Capacity; j++)
-                        if (j != index && seats[j].worldBound.Contains(evt.position)) { Swap(index, j); break; }
-                    RefreshSelection(); panel.schedule.Execute(() => suppressClick = false);
+                        if (j != index && seats[j].worldBound.Contains(evt.position)) { target = j; break; }
+                    EndDrag(wasDragged);
+                    if (!wasDragged) return;
+                    if (target >= 0 && model.IsHost(localId)) Swap(index, target);
                     evt.StopImmediatePropagation();
-                });
-                face.RegisterCallback<PointerCancelEvent>(_ => { dragSeat = -1; dragged = false; RefreshSelection(); });
+                }, TrickleDown.TrickleDown);
+                face.RegisterCallback<PointerCancelEvent>(evt => { if (evt.pointerId == dragPointer) EndDrag(true); });
+                face.RegisterCallback<PointerCaptureOutEvent>(evt => { if (evt.pointerId == dragPointer) EndDrag(true); });
             }
             arena.Add(card);
         }
@@ -217,12 +227,6 @@ namespace NodeWar.Lobby
             if (suppressClick) return;
             var model = launcher.PrivateLobby;
             if (model == null) return;
-            if (moving && model.IsHost(localId))
-            {
-                if (selected < 0) selected = seat;
-                else { int first = selected; selected = -1; Swap(first, seat); }
-                RefreshSelection(); return;
-            }
             if (model.Player(seat) != null) openPlayer?.Invoke(model.Player(seat));
         }
         private void Swap(int a, int b) => launcher.PrivateAction(2, a, b);
@@ -231,11 +235,40 @@ namespace NodeWar.Lobby
             if (string.IsNullOrEmpty(launcher.JoinCode)) { toast?.Show("The room is still being created"); return; }
             invite?.Invoke(launcher.JoinCode);
         }
-        private void RefreshSelection()
+        private void EndDrag(bool springBack)
         {
-            for (int i = 0; i < seats.Length; i++) seats[i]?.EnableInClassList("private-seat--selected", selected == i);
-            move.tooltip = moving ? "Tap two seats to swap. Dragging also swaps seats." : "Move seats: tap two seats or drag a player";
-            move.EnableInClassList("private-move--active", moving);
+            var card = dragCard; var owner = dragOwner; int pointer = dragPointer;
+            bool lifted = dragged;
+            dragSeat = dragPointer = -1; dragCard = dragOwner = null; dragged = false;
+            // Clear identity before release: capture-out must not end the gesture twice.
+            if (pointer >= 0 && owner != null && owner.HasPointerCapture(pointer)) owner.ReleasePointer(pointer);
+            if (card == null) return;
+            card.RemoveFromClassList("private-seat--dragging");
+            if (!springBack || !lifted) { RestoreSeat(card); return; }
+            returningCard = card;
+            var x = new LobbyMotion.Spring(dragDelta.x) { Target = 0 };
+            var y = new LobbyMotion.Spring(dragDelta.y) { Target = 0 };
+            var scale = new LobbyMotion.Spring(1.04f) { Target = 1 };
+            double sampledAt = Time.unscaledTimeAsDouble;
+            returnTick = panel.schedule.Execute(() =>
+            {
+                double now = Time.unscaledTimeAsDouble; float dt = (float)(now - sampledAt); sampledAt = now;
+                x.Step(dt, LobbyMotion.PopDamping); y.Step(dt, LobbyMotion.PopDamping); scale.Step(dt, LobbyMotion.PopDamping);
+                card.style.translate = new Translate(x.Position, y.Position);
+                card.style.scale = new Scale(Vector3.one * scale.Position);
+                if (x.Settled && y.Settled && scale.Settled)
+                { RestoreSeat(card); returnTick.Pause(); returningCard = null; }
+            }).Every(16);
+        }
+        private static void RestoreSeat(VisualElement card)
+        {
+            card.style.translate = new Translate(0, 0); card.style.scale = new Scale(Vector3.one);
+        }
+        private void ResetDrag()
+        {
+            returnTick?.Pause();
+            if (returningCard != null) RestoreSeat(returningCard);
+            returningCard = null; EndDrag(false);
         }
         private void ShowMenu(VisualElement card, int index) => menu.Show(card, card.worldBound.center, MenuRows(index));
         private IList<LobbyMenuItem> MenuRows(int seat)
@@ -247,7 +280,6 @@ namespace NodeWar.Lobby
             if (model.IsHost(localId))
             {
                 if (!model.IsHost(model.Player(seat))) rows.Add(new LobbyMenuItem("Make host", () => launcher.PrivateAction(3, seat)));
-                rows.Add(new LobbyMenuItem("Move", () => { moving = true; selected = seat; RefreshSelection(); }));
                 if (model.Player(seat) != localId) rows.Add(new LobbyMenuItem("Kick", () => ConfirmKick(seat)));
             }
             return rows;
