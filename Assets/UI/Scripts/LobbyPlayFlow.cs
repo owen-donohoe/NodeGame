@@ -84,6 +84,7 @@ namespace NodeWar.Lobby
         public void Play(LobbyModeSelection selection)
         {
             if (disposed || localBusy) return;
+            if (selection.IsPrivate) { PrivateLobbyPanel.Open(selection); return; }
             switch (selection.PlayAction)
             {
                 case LobbyPlayAction.Ranked:

@@ -530,7 +530,8 @@ namespace NodeWar.Lobby
 
         private void OnPlayRequested()
         {
-            searchingScreen.Open(selectedMode);
+            if (selectedMode.IsPrivate) playFlow.Play(selectedMode);
+            else searchingScreen.Open(selectedMode);
         }
 
         private void BuildModePicker()
