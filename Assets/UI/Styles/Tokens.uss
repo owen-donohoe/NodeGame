@@ -264,6 +264,12 @@
     --space-4: 16px;
     --space-5: 24px;
     --space-6: 32px;
+    --lobby-edge-inset: var(--space-4);
+    --lobby-card-gap: var(--space-2);
+    --lobby-panel-padding: var(--space-3);
+    --font-hand: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
+    --lobby-ink-outline: 0.4px;
+    --lobby-ink-outline-strong: 0.6px;
 
     /* ---- corners. No pill token: USS turns an oversized radius into an
        ellipse, so a pill is given exactly half its height where it is used. ---- */

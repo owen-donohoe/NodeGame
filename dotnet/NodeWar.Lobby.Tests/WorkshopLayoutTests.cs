@@ -9,12 +9,12 @@ namespace NodeWar.Lobby.Tests
         [TestCase(338)]
         [TestCase(540)]
         [TestCase(800)]
-        public void ThreeSquareTilesFitWithExactlyTwoGaps(float available)
+        public void TwoSquareTilesFillWidthWithExactlyOneGap(float available)
         {
             float width = WorkshopLayout.TileWidth(available);
-            float used = 3 * width + 2 * WorkshopLayout.TileGap;
+            float used = 2 * width + WorkshopLayout.TileGap;
             Assert.That(used, Is.LessThanOrEqualTo(available));
-            Assert.That(available - used, Is.LessThan(3));
+            Assert.That(used, Is.EqualTo(available).Within(0.001));
             Assert.That(width, Is.GreaterThanOrEqualTo(44));
         }
 

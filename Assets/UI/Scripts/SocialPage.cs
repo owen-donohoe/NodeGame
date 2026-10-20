@@ -29,7 +29,7 @@ namespace NodeWar.Lobby
 
         public SocialPage(VisualTreeAsset layout) : base(LobbyPageID.Social, Build())
         {
-            Root.userData = this; Root.AddToClassList("lb-page-flush");
+            Root.userData = this; Root.AddToClassList("lb-page-flush"); Root.AddToClassList("ui-social");
             Root.Q("social-tv").Add(tv.View); Root.Q("social-friends").Add(friends.View); Root.Q("social-previous").Add(previous.View);
             tv.View.RetryRequested += LoadTV; friends.View.RetryRequested += LoadFriends; previous.View.RetryRequested += LoadPrevious;
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) { OnHide(); BackendServices.Account.Changed -= AccountChanged; } });
@@ -118,16 +118,25 @@ namespace NodeWar.Lobby
                 LiveMatch match = i < matches.Count ? matches[i] : null;
                 var row = new VisualElement(); row.AddToClassList("g2-live-row");
                 row.Add(MiniPlayer(match?.A, "g2-player--p0"));
-                var vs = GuildViews.Button("VS", () => Debug.Log("[Stub] Watch match " + match.MatchId)); vs.AddToClassList("g2-vs"); vs.SetEnabled(match != null); row.Add(vs);
+                var vs = Versus(() => Debug.Log("[Stub] Watch match " + match.MatchId)); vs.SetEnabled(match != null); row.Add(vs);
                 row.Add(MiniPlayer(match?.B, "g2-player--p1")); tv.View.Content.Add(row);
             }
         }
         private Button MiniPlayer(PlayerCard player, string colour)
         {
             var button = new Button(() => openProfile?.Invoke(player?.PlayerId)); button.AddToClassList("mk-card"); button.AddToClassList("g2-live-player"); button.AddToClassList(colour);
-            button.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "mk-friend__name"));
-            button.Add(GuildViews.Text(player == null ? "\u2014" : new RankDisplay(player.RR).Name + " \u00b7 " + player.RR + " RR", "mk-cap"));
+            button.Add(GuildViews.Text(player == null || string.IsNullOrEmpty(player.Name) ? "?" : player.Name.Substring(0, 1), "ui-match-avatar"));
+            var body = new VisualElement(); body.AddToClassList("ui-match-body");
+            body.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "mk-friend__name"));
+            body.Add(GuildViews.Text(player == null ? "\u2014" : player.RR + " RR", "mk-cap"));
+            button.Add(body);
             button.SetEnabled(player != null); return button;
+        }
+        private static Button Versus(Action action)
+        {
+            var button = new Button(action); button.AddToClassList("ui-reset-button"); button.AddToClassList("g2-vs");
+            var face = GuildViews.Text("VS", "ui-versus-face"); face.pickingMode = PickingMode.Ignore; button.Add(face);
+            return button;
         }
         private void RenderOnline()
         {
@@ -163,7 +172,7 @@ namespace NodeWar.Lobby
                 var row = new VisualElement(); row.AddToClassList("g2-history-row");
                 var result = GuildViews.Text(match.won.Value ? "W" : "L", "mk-caption"); result.AddToClassList("g2-result-badge"); result.AddToClassList(match.won.Value ? "g2-gain" : "g2-loss"); row.Add(result);
                 row.Add(GuildViews.Text("You"));
-                var replay = GuildViews.Button("VS", () => Debug.Log("[Stub] Replay match " + match.matchId), "mk-btn--sm"); replay.AddToClassList("g2-vs"); row.Add(replay);
+                row.Add(Versus(() => Debug.Log("[Stub] Replay match " + match.matchId)));
                 var opponent = new PlayerCard { PlayerId = match.opponentPlayerId, Name = match.OpponentName, Tag = match.OpponentTag };
                 var name = GuildViews.Button(PlayerCardViews.Handle(opponent), () => openProfile?.Invoke(opponent.PlayerId)); name.AddToClassList("g2-history-name"); name.AddToClassList("mk-friend__name"); row.Add(name);
                 var delta = GuildViews.Text(match.rrDelta.HasValue ? (match.rrDelta.Value >= 0 ? "+" : "") + match.rrDelta.Value + " RR" : "\u2014");

@@ -115,7 +115,11 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
+<<<<<<< HEAD
 verified: 6b614267
+=======
+verified: 1474a6d2
+>>>>>>> feat/lobby-g5b
 ---
 
 # Lobby UI
@@ -131,12 +135,16 @@ Loadouts, accounts/settings and match entry, separate from server progression.
 `LobbyMotion` defines page/camera timing (280ms cubic-out, 24px crossfade) and surfaces (220ms open, 160ms close, scale/fade). Changes retarget; inactive pages use display:none. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `LobbyContextMenu.Attach/Show/Close` displays actions; `LobbyToast.Show(message)` supplies feedback. `SafeAreaBinder` applies insets.
 
 Pages:
+<<<<<<< HEAD
 - `WorkshopPage` scrolls a stage spacer and two cards using `LoadoutBrowse`. `WorkshopStageBinding` maps taps and shots; selected suits fill 60% of the stage band. `WorkshopInventorySession` gates equipment/replacement. Its 78% MkSheet shows variants, skins and `StatHistogram` comparisons against base districts/suits and villagers.
+=======
+- `WorkshopPage` scrolls two-column grids with Owned/All and Sort via `LoadoutBrowse`. `WorkshopStageBinding` maps stage taps/shots. `WorkshopInventorySession` gates equipment/replacement with Cancel/Back. Its 78% MkSheet shows variants, skins and `StatHistogram` comparisons against base items/villagers.
+>>>>>>> feat/lobby-g5b
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a Workshop tag. Big/Small open crates. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show only settled offers after camera pans. Daily anchors below header, others centrally. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history `AsyncStateView`s. TV has four slots. Friends precede online guild members; offline friends expand behind a toggle. History uses settled outcomes and signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Players have stats, loadout, newest-ten W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
-- `GuildPage` receives shared sheets/profile callbacks. Search/browse open public guild details without weekly progress. Members see weekly progress on home, announcements and sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, fullscreen reports log. `GuildViews` builds mk components; `GuildSheetHost` adapts sheets. `OpenChatAsync` checks membership; chat polls and clamps text to 200 characters.
+- `GuildPage`: focus/typing/browse raises search (280ms cubic slide/fade); Back/clear centers it. The anchored filter bubble has RR/member sliders and Joinable only; member ranges filter locally. Public details omit weekly progress. Membership shows progress/announcements/sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, reports log. `GuildViews` builds components; `GuildSheetHost` adapts sheets. `OpenChatAsync` checks membership; chat polls, capped at 200 characters.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
