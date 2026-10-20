@@ -126,7 +126,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 8ff42188
+verified: 168dc75e
 ---
 
 # Lobby UI
@@ -143,7 +143,7 @@ Loadouts, accounts/settings and match entry.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
-- `WorkshopPage` keeps browsing independent of stage inspection. Tiles open sheets; eligibility gates USE. `LoadoutScreenModel.Use` fills or starts replacement. Starter tags/Fixed actions identify grants; headers count chosen slots separately. Locked taps preserve replacement. `WorkshopStageBinding` maps editable picks to chosen slots. Villagers keep separate lanes.
+- `WorkshopPage` keeps browsing independent of stage inspection. Tiles open sheets; eligibility gates USE. `LoadoutScreenModel.Use` fills or starts replacement. Locked tags/Fixed actions identify current-era grants; headers count choices and locks. Locked taps preserve replacement. `WorkshopStageBinding` maps editable picks to chosen slots. Villagers keep separate lanes.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects offers. `ShopSnap/ShopProjection` coordinate entrances/exits; LateUpdate projects after the camera.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles, falling back to Unknown, and shows signed RR. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Others show stats, loadout, recent W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
