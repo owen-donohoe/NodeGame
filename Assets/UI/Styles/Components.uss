@@ -553,13 +553,13 @@
 .ui-root .mk-row, .ui-root .mk-spread{ flex-direction: row; align-items: center; }
 .ui-root .mk-row > *, .ui-root .mk-spread > *{ margin-right: 8px; }
 .ui-root .mk-spread{ justify-content: space-between; }
-.ui-root .mk-btn{ border-width: 2px; border-color: var(--mk-ink); background-color: var(--mk-sheet); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); border-radius: 10px; padding: 9px 14px; min-height: 44px; min-width: 44px; font-size: var(--type-body); -unity-font-style: bold; }
+.ui-root .mk-btn{ border-width: 2px; border-color: var(--mk-ink); background-color: var(--mk-sheet); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); border-radius: 10px; padding: 8px 12px; min-height: 44px; min-width: 44px; font-size: var(--type-body); -unity-font-style: bold; }
 .ui-root .mk-btn--primary, .ui-root .mk-btn--gold{ background-color: var(--mk-action); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); }
 .ui-root .mk-btn--big{ font-size: var(--type-title); padding: 16px; width: 100%; letter-spacing: 0.88px; }
-.ui-root .mk-btn--sm{ padding: 5px 10px; font-size: var(--type-secondary); border-radius: 8px; }
+.ui-root .mk-btn--sm{ padding: 4px 8px; font-size: var(--type-secondary); border-radius: 8px; }
 .ui-root .mk-btn:disabled, .ui-root .mk-btn--disabled{ opacity: 0.45; }
 .ui-root .mk-btn:active{ background-color: var(--mk-pressed); }
-.ui-root .mk-chip{ border-width: 2px; border-color: var(--mk-disabled); background-color: var(--clear); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); border-radius: 22px; padding: 4px 11px; min-height: 44px; min-width: 44px; font-size: var(--type-caption); -unity-font-style: bold; }
+.ui-root .mk-chip{ border-width: 2px; border-color: var(--mk-disabled); background-color: var(--clear); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); border-radius: 22px; padding: 4px 12px; min-height: 44px; min-width: 44px; font-size: var(--type-caption); -unity-font-style: bold; }
 .ui-root .mk-chip--on{ background-color: var(--mk-ink); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); border-color: var(--mk-ink); }
 .ui-root .mk-chip--tap{ border-color: var(--mk-tap); color: var(--mk-tap); --mk-text-ink: var(--mk-tap); }
 .ui-root .mk-chip--tap.mk-chip--on{ background-color: var(--mk-tap); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
@@ -575,14 +575,14 @@
 .ui-root .mk-tile--locked .mk-art{ opacity: 0.4; }
 .ui-root .mk-mark{ position: absolute; top: -6px; right: -6px; background-color: var(--mk-ink); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); font-size: var(--type-caption); -unity-font-style: bold; letter-spacing: 0.45px; padding: 1px 6px; border-radius: 10px; }
 .ui-root .mk-mark--era{ background-color: var(--era-3); }
-.ui-root .mk-banner{ border-width: 2px; border-color: var(--mk-tap); background-color: var(--mk-tap-soft); border-radius: 12px; padding: 10px 12px; margin-top: 12px; }
+.ui-root .mk-banner{ border-width: 2px; border-color: var(--mk-tap); background-color: var(--mk-tap-soft); border-radius: 12px; padding: 8px 12px; margin-top: 12px; }
 .ui-root .mk-toolbar{ flex-direction: row; flex-wrap: wrap; align-items: center; margin: 14px 0 6px; }
 .ui-root .mk-toolbar > *, .ui-root .mk-roles > *{ margin-right: 6px; }
 .ui-root .mk-roles{ flex-direction: row; padding: 2px 0 8px; }
 .ui-root .mk-roles > *{ flex-shrink: 0; }
-.ui-root .mk-sheet, .ui-root .mk-bigsheet{ position: absolute; left: 0; right: 0; bottom: 0; max-height: 80%; background-color: var(--mk-sheet); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); border-top-width: 3px; border-top-color: var(--mk-ink); border-top-left-radius: 18px; border-top-right-radius: 18px; padding: 16px 14px 18px; }
-.ui-root .mk-bigsheet{ height: 78%; max-height: 78%; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 14px 14px 12px; }
-.ui-root .mk-bigsheet > *{ margin-bottom: 10px; }
+.ui-root .mk-sheet, .ui-root .mk-bigsheet{ position: absolute; left: 0; right: 0; bottom: 0; max-height: 80%; background-color: var(--mk-sheet); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); border-top-width: 3px; border-top-color: var(--mk-ink); border-top-left-radius: 18px; border-top-right-radius: 18px; padding: 16px 12px 16px; }
+.ui-root .mk-bigsheet{ height: 78%; max-height: 78%; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 12px 12px 12px; }
+.ui-root .mk-bigsheet > *{ margin-bottom: 8px; }
 .ui-root .mk-bigsheet .mk-h2{ font-size: var(--type-title); -unity-text-align: middle-center; }
 .ui-root .mk-handle{ width: 40px; height: 5px; background-color: var(--mk-disabled); border-radius: 3px; align-self: center; margin-top: 8px; }
 .ui-root .mk-handle-hit{ height: 44px; flex-shrink: 0; margin-top: -16px; }
@@ -611,38 +611,38 @@
 .ui-root .mk-cell--f{ background-color: var(--mk-ink); }
 .ui-root .mk-cell--g{ background-color: var(--mk-tap); border-color: var(--mk-tap); }
 .ui-root .mk-cell--t{ background-color: var(--mk-urgent); border-color: var(--mk-urgent); }
-.ui-root .mk-crate{ width: 76px; height: 76px; border-radius: 14px; padding: 6px 6px 14px; align-items: center; justify-content: center; }
-.ui-root .mk-cbadge{ position: absolute; top: -9px; right: -9px; min-width: 26px; height: 26px; padding: 0 5px; border-radius: 13px; background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); border-width: 2px; border-color: var(--mk-ink); font-size: var(--type-caption); -unity-font-style: bold; -unity-text-align: middle-center; }
-.ui-root .mk-battle{ width: 100%; border-width: 2px; border-bottom-width: 8px; border-color: var(--mk-ink); border-radius: 16px; background-color: var(--mk-action); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); font-size: var(--type-battle); -unity-font-style: bold; letter-spacing: 3px; padding: 14px; min-height: 44px; }
+.ui-root .mk-crate{ width: 76px; height: 76px; border-radius: 14px; padding: 4px 4px 12px; align-items: center; justify-content: center; }
+.ui-root .mk-cbadge{ position: absolute; top: -9px; right: -9px; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 13px; background-color: var(--mk-urgent); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); border-width: 2px; border-color: var(--mk-ink); font-size: var(--type-caption); -unity-font-style: bold; -unity-text-align: middle-center; }
+.ui-root .mk-battle{ width: 100%; border-width: 2px; border-bottom-width: 8px; border-color: var(--mk-ink); border-radius: 16px; background-color: var(--mk-action); color: var(--mk-ink); --mk-text-ink: var(--mk-ink); font-size: var(--type-battle); -unity-font-style: bold; letter-spacing: 3px; padding: 12px; min-height: 44px; }
 .ui-root .mk-battle--off{ opacity: 0.5; }
 .ui-root .mk-battle:active{ translate: 0 4px; border-bottom-width: 4px; }
 .ui-root .mk-friend{ flex-direction: row; align-items: center; padding: 8px 0; border-bottom-width: 1.5px; border-bottom-color: var(--mk-disabled); min-height: 44px; }
-.ui-root .mk-friend > *{ margin-right: 10px; }
+.ui-root .mk-friend > *{ margin-right: 8px; }
 .ui-root .mk-friend__avatar{ width: 34px; height: 34px; border-radius: 8px; border-width: 2px; border-color: var(--mk-ink); background-color: var(--p0); font-size: var(--type-body); -unity-font-style: bold; -unity-text-align: middle-center; }
 .ui-root .mk-friend__body{ flex-grow: 1; min-width: 0; }
 .ui-root .mk-friend__name{ font-size: var(--type-body); -unity-font-style: bold; }
 .ui-root .mk-friend__status{ flex-direction: row; align-items: center; color: var(--mk-muted); --mk-text-ink: var(--mk-muted); font-size: var(--type-secondary); }
-.ui-root .mk-friend__dot{ width: 8px; height: 8px; border-radius: 4px; background-color: var(--mk-tap); margin-right: 5px; }
+.ui-root .mk-friend__dot{ width: 8px; height: 8px; border-radius: 4px; background-color: var(--mk-tap); margin-right: 4px; }
 .ui-root .mk-friend__trailing{ flex-direction: row; align-items: center; }
-.ui-root .mk-topbar{ flex-direction: row; align-items: center; padding: 10px 12px 8px; flex-shrink: 0; min-height: 52px; }
+.ui-root .mk-topbar{ flex-direction: row; align-items: center; padding: 8px 12px 8px; flex-shrink: 0; min-height: 52px; }
 .ui-root .mk-topbar > *{ margin-right: 8px; }
-.ui-root .mk-purse{ flex-direction: row; align-items: center; padding: 7px 14px; border-width: 0; border-radius: 22px; min-height: 44px; min-width: 44px; background-color: var(--mk-dark); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); font-size: var(--type-body); -unity-font-style: bold; }
-.ui-root .mk-purse > *{ margin-right: 7px; color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
+.ui-root .mk-purse{ flex-direction: row; align-items: center; padding: 8px 12px; border-width: 0; border-radius: 22px; min-height: 44px; min-width: 44px; background-color: var(--mk-dark); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); font-size: var(--type-body); -unity-font-style: bold; }
+.ui-root .mk-purse > *{ margin-right: 8px; color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
 .ui-root .mk-purse__dot--coin, .ui-root .mk-purse__dot--leaf{ width: 14px; height: 14px; border-radius: 7px; border-width: 2px; border-color: var(--mk-sheet); background-color: var(--mk-coin); }
 .ui-root .mk-purse__dot--leaf{ width: 16px; height: 16px; border-radius: 2px 14px 2px 14px; rotate: -12deg; background-color: var(--mk-leaf); }
 .ui-root .mk-rbtn{ width: 44px; height: 44px; min-width: 44px; flex-shrink: 0; border-radius: 22px; border-width: 0; background-color: var(--mk-dark); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); padding: 0; align-items: center; justify-content: center; font-size: var(--type-title); }
 .ui-root .mk-rbtn .lb-icon{ width: 24px; height: 24px; -unity-background-image-tint-color: var(--mk-sheet); }
-.ui-root .mk-strip{ margin: 0 10px 8px; padding: 8px 12px 9px; border-bottom-width: 5px; border-radius: 12px; flex-shrink: 0; }
+.ui-root .mk-strip{ margin: 0 8px 8px; padding: 8px 12px 8px; border-bottom-width: 5px; border-radius: 12px; flex-shrink: 0; }
 .ui-root .mk-namelink{ flex-direction: row; flex-grow: 1; align-items: center; background-color: var(--clear); border-width: 0; padding: 0; font-size: var(--type-number); -unity-font-style: bold; color: var(--mk-ink); --mk-text-ink: var(--mk-ink); }
-.ui-root .mk-namelink > *{ margin-right: 6px; }
+.ui-root .mk-namelink > *{ margin-right: 4px; }
 .ui-root .mk-trophy{ flex-direction: row; color: var(--mk-trophy); --mk-text-ink: var(--mk-trophy); font-size: var(--type-number); -unity-font-style: bold; }
 .ui-root .mk-meter{ height: 6px; border-width: 2px; border-color: var(--mk-ink); border-radius: 4px; overflow: hidden; background-color: var(--mk-track); }
 .ui-root .mk-meter > *{ height: 100%; background-color: var(--mk-ink); }
-.ui-root .mk-meter--thin{ height: 8px; margin: 5px 0 3px; }
+.ui-root .mk-meter--thin{ height: 8px; margin: 4px 0 4px; }
 .ui-root .mk-cap{ font-size: var(--type-caption); color: var(--mk-muted); --mk-text-ink: var(--mk-muted); }
-.ui-root .mk-tabs{ flex-direction: row; margin: 6px 12px 10px; border-width: 2px; border-color: var(--mk-ink); border-radius: 32px; padding: 4px; background-color: var(--mk-card); }
-.ui-root .mk-tab{ position: relative; flex-grow: 1; flex-basis: 0; min-width: 44px; min-height: 44px; border-width: 0; border-radius: 26px; padding: 6px 2px 5px; margin-right: 4px; align-items: center; background-color: var(--clear); color: var(--mk-muted); --mk-text-ink: var(--mk-muted); font-size: var(--type-caption); -unity-font-style: bold; letter-spacing: 0.33px; }
-.ui-root .mk-tab .lb-icon{ width: 22px; height: 22px; margin-bottom: 3px; -unity-background-image-tint-color: var(--mk-muted); }
+.ui-root .mk-tabs{ flex-direction: row; margin: 4px 12px 8px; border-width: 2px; border-color: var(--mk-ink); border-radius: 32px; padding: 4px; background-color: var(--mk-card); }
+.ui-root .mk-tab{ position: relative; flex-grow: 1; flex-basis: 0; min-width: 44px; min-height: 44px; border-width: 0; border-radius: 26px; padding: 4px 4px 4px; margin-right: 4px; align-items: center; background-color: var(--clear); color: var(--mk-muted); --mk-text-ink: var(--mk-muted); font-size: var(--type-caption); -unity-font-style: bold; letter-spacing: 0.33px; }
+.ui-root .mk-tab .lb-icon{ width: 22px; height: 22px; margin-bottom: 4px; -unity-background-image-tint-color: var(--mk-muted); }
 .ui-root .mk-tab--on{ background-color: var(--mk-tap); color: var(--mk-sheet); --mk-text-ink: var(--mk-sheet); }
 .ui-root .mk-tab--on .lb-icon{ -unity-background-image-tint-color: var(--mk-sheet); }
 .ui-root .mk-tab__badge{ position: absolute; top: 5px; right: 10px; width: 11px; height: 11px; border-radius: 6px; background-color: var(--mk-urgent); border-width: 2px; border-color: var(--mk-card); }
@@ -655,7 +655,7 @@
 .ui-root .mk-crate--dim .mk-cbadge{ background-color: var(--mk-pressed); color: var(--mk-muted); --mk-text-ink: var(--mk-muted); }
 .ui-root .mk-dot2--locked{ color: var(--mk-disabled); --mk-text-ink: var(--mk-disabled); }
 
-.ui-root .mk-bigsheet > .mk-handle-hit{ margin-top: -14px; }
+.ui-root .mk-bigsheet > .mk-handle-hit{ margin-top: -12px; }
 
 /* Patrick Hand has one weight. The outline follows each text colour. */
 .lb-root { --mk-text-ink: var(--paper-ink); -unity-text-outline-width: var(--text-outline); -unity-text-outline-color: var(--mk-text-ink); }
@@ -666,3 +666,13 @@
 .ui-root .mk-number { font-size: var(--type-number); }
 .ui-root .mk-h2, .ui-root .mk-h3, .ui-root .mk-number, .ui-root .mk-trophy, .ui-root .mk-namelink, .ui-root .mk-purse, .ui-root .mk-btn, .ui-root .mk-chip, .ui-root .mk-battle, .ui-root .mk-cbadge, .lb-root Button { -unity-text-outline-width: var(--text-outline-strong); }
 .ui-root .mk-ellipsis, .ui-root .mk-friend__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
+
+.ui-root .mk-body { min-height: 20px; }
+.ui-root .mk-secondary { min-height: 17px; }
+.ui-root .mk-caption, .ui-root .mk-cap, .ui-root .mk-eyebrow { min-height: 16px; }
+.ui-root .mk-h2 { min-height: 32px; }
+.ui-root .mk-h3, .ui-root .mk-number { min-height: 27px; }
+.ui-root .mk-namelink { min-height: 44px; min-width: 0; flex-shrink: 1; }
+.ui-root .mk-namelink Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0; }
+.ui-root .mk-tab { margin-right: 8px; }
+.ui-root .mk-tab--last { margin-right: 0; }

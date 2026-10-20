@@ -2,4 +2,4 @@
 .mk-purse Label { }
 .mk-trophy Label { color: var(--mk-trophy); --mk-text-ink: var(--mk-trophy); }
 .mk-namelink Label { color: var(--mk-ink); --mk-text-ink: var(--mk-ink); }
-.ui-root .mk-cap { margin-top: 3px; }
+.ui-root .mk-cap { margin-top: 4px; }
