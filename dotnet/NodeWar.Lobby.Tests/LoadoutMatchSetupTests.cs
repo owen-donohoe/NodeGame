@@ -8,6 +8,42 @@ namespace NodeWar.Lobby.Tests
     [TestFixture]
     public class LoadoutMatchSetupTests
     {
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void EveryShortOwnedLoadout_PreservesWireModeAndBuildsMatch(int arena)
+        {
+            string[] suits = { "suit_guardian", "suit_scout", "suit_medic" };
+            string[] districts = { "node_barracks", "node_town", "node_farm", "node_mine", "node_village" };
+            var board = PremadeMaps.Hourglass01();
+            for (int suitCount = 0; suitCount <= NodeWar.Backend.LoadoutCapacityPolicy.SuitCapacity(arena); suitCount++)
+            for (int districtCount = 0; districtCount <= NodeWar.Backend.LoadoutCapacityPolicy.DistrictCapacity(arena); districtCount++)
+            {
+                var data = LoadoutData.CreateEmpty(arena);
+                Array.Copy(suits, data.suitIDs, suitCount);
+                Array.Copy(districts, data.districtIDs, districtCount);
+                var owned = data.suitIDs.Concat(data.districtIDs).Where(id => id.Length > 0)
+                    .Select(id => NodeWar.Backend.CatalogIds.Variant(LoadoutTypes.CatalogBaseForLobbyId(id), 0)).ToList();
+                var inventory = new NodeWar.Backend.PlayerState { Rank = new NodeWar.Backend.RankRecord { Arena = arena },
+                    Inventory = new NodeWar.Backend.InventoryRecord { OwnedVariants = owned } };
+                Assert.IsTrue(LoadoutRules.IsComplete(data, arena, inventory));
+                var frozen = LoadoutTypes.WithEquipment(data, inventory);
+                for (int seat = 0; seat < 2; seat++)
+                {
+                    var packet = NodeWar.Network.DraftSerializer.SerializeDraftLoadout(seat, frozen);
+                    Assert.IsTrue(NodeWar.Network.DraftSerializer.TryDeserializeDraftLoadout(packet, out int decodedSeat, out var decoded));
+                    Assert.AreEqual(seat, decodedSeat);
+                    Assert.AreEqual(arena < 2, LoadoutMatchSetup.GetsFreeGrants(decoded));
+                    var pool = LoadoutMatchSetup.DistrictPool(decoded, board.baseDraftDistrictsP0);
+                    Assert.AreEqual(districtCount + (arena < 2 ? board.baseDraftDistrictsP0.Length : 0), pool.Length);
+                    Assert.AreEqual(suitCount + (arena < 2 ? 1 : 0), LoadoutMatchSetup.DraftedSuits(decoded).Length);
+                    var setup = new PlayerSetup { suits = LoadoutMatchSetup.DraftedSuits(decoded),
+                        districts = LoadoutMatchSetup.DraftedDistricts(decoded) };
+                    Assert.DoesNotThrow(() => MatchFactory.Build(GameBalanceData.Default(), board,
+                        Array.Empty<DraftPlacement>(), new[] { setup, setup }));
+                }
+            }
+        }
+
         private static LoadoutData Low() => new LoadoutData
         {
             suitIDs = new[] { "suit_guardian", "suit_scout" },

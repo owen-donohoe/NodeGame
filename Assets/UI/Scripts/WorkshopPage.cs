@@ -60,6 +60,12 @@ namespace NodeWar.Lobby
         public bool ReplacingSuit => loadout.ReplacingSuit;
         public bool Replacing => loadout.Replacing;
         public LoadoutData StageLoadout => loadout.ToData();
+        public string[] StageGrants(bool suit)
+        {
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            return suit ? LoadoutRules.LockedSuits(arena) : LoadoutRules.LockedDistricts(arena);
+        }
+        public int StageDistrictCapacity => LoadoutRules.DisplayDistrictSlots;
         public bool ViewingSuit => activeTab == Tab.Suits;
         public bool InspectedSuit => inspectedItem?.IsSuit ?? ViewingSuit;
         public string ViewedId => inspectedItem?.ID;
@@ -430,9 +436,8 @@ namespace NodeWar.Lobby
         {
             if (!session.IsOpen || Replacing) return;
             var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
-            int slot = StageSlotMap.ToChosen(chosen, stageIndex);
-            if (slot < 0) return;
-            PreviewItem(chosen[slot]);
+            string id = StageSlotMap.IdAt(chosen, StageGrants(suit), stageIndex);
+            if (id.Length > 0) PreviewItem(id);
         }
 
         private void PreviewItem(string id)

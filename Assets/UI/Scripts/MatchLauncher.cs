@@ -125,9 +125,9 @@ namespace NodeWar.Lobby
             };
             LoadoutData choices = catalog.CurrentLoadout(launchState).ToLoadout();
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
-            if (!LoadoutRules.IsComplete(choices, arena))
+            if (!LoadoutRules.IsComplete(choices, arena, launchState))
             {
-                Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
+                Fail("Fill your loadout", "Open the Workshop and equip your available items.");
                 return false;
             }
             if (launchState?.Rank != null) PlayerProfile.Instance?.SetLoadout(choices);
@@ -144,10 +144,10 @@ namespace NodeWar.Lobby
                 return false;
             }
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
-            if (LoadoutRules.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena))
+            if (LoadoutRules.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena, launchState))
                 return true;
             Cleanup();
-            Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
+            Fail("Fill your loadout", "Open the Workshop and equip your available items.");
             return false;
         }
 

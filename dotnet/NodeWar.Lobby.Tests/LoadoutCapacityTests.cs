@@ -259,21 +259,25 @@ namespace NodeWar.Lobby.Tests
         {
             Assert.IsFalse(LoadoutRules.IsComplete(default, arena));
             var deck = LoadoutData.CreateEmpty(arena);
-            for (int i = 0; i < deck.suitIDs.Length; i++) deck.suitIDs[i] = "s" + i;
-            for (int i = 0; i < deck.districtIDs.Length; i++) deck.districtIDs[i] = "d" + i;
-            Assert.IsTrue(LoadoutRules.IsComplete(deck, arena));
+            string[] suits = arena < 2 ? new[] { "suit_scout", "suit_medic" } : new[] { "suit_warrior", "suit_scout", "suit_medic" };
+            string[] districts = arena < 2 ? new[] { "node_pier", "node_infirmary" } : new[] { "node_farm", "node_mine", "node_village", "node_pier", "node_infirmary" };
+            deck.suitIDs = suits;
+            deck.districtIDs = districts;
+            var state = new PlayerState { Inventory = new InventoryRecord { OwnedVariants = new System.Collections.Generic.List<string>() } };
+            foreach (string id in suits.Concat(districts)) state.Inventory.OwnedVariants.Add(CatalogIds.Variant(LoadoutTypes.CatalogBaseForLobbyId(id), 0));
+            Assert.IsTrue(LoadoutRules.IsComplete(deck, arena, state));
             for (int i = 0; i < deck.suitIDs.Length; i++)
             {
                 string saved = deck.suitIDs[i];
                 deck.suitIDs[i] = null;
-                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena));
+                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena, state));
                 deck.suitIDs[i] = saved;
             }
             for (int i = 0; i < deck.districtIDs.Length; i++)
             {
                 string saved = deck.districtIDs[i];
                 deck.districtIDs[i] = "";
-                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena));
+                Assert.IsFalse(LoadoutRules.IsComplete(deck, arena, state));
                 deck.districtIDs[i] = saved;
             }
             if (arena < 2) Assert.IsFalse(LoadoutRules.IsComplete(deck, 2));
