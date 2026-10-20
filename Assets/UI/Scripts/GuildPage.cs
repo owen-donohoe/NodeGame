@@ -45,6 +45,7 @@ namespace NodeWar.Lobby
             chat = new GuildChatScreen(service, router, overlays);
             report = new GuildReportScreen(router, overlays);
             Root.userData = this;
+            details.AddToClassList("lb-guild-preview");
             visitor = Root.Q("guild-visitor"); visitor.RemoveFromHierarchy();
             visitor.RegisterCallback<GeometryChangedEvent>(_ => PlaceSearch(false));
             home = Root.Q("guild-home"); home.RemoveFromHierarchy();

@@ -16,7 +16,7 @@ namespace NodeWar.Lobby
         public LobbyOverlayPanel(string title)
         {
             sheet.Title.text = title; sheet.Title.name = "panel-title";
-            Content.style.minHeight = 0; Content.style.flexShrink = 1;
+            Content.AddToClassList("mk-panel-list");
             sheet.Body.Add(Content);
             sheet.Opened += () => Opened?.Invoke();
             sheet.Closed += () => Closed?.Invoke();

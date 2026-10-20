@@ -284,10 +284,13 @@
     --motion-sheet: 320ms;
     --motion-bob: 1700ms;
 
-    /* ---- type. Patrick Hand throughout; hierarchy comes from size. ---- */
-    --font-medium: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
-    --font-semibold: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
-    --font-bold: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
+    /* ---- type. Display, handwritten labels and readable body copy. ---- */
+    --font-display: url("project://database/Assets/UI/Fonts/LilitaOne-Regular-SDF.asset");
+    --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
+    --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-label);
+    --font-bold: var(--font-label);
 
     /* Nothing is set smaller than --type-min. The prototypes go to 7px, which
        at a 390-wide reference is unreadable on a phone. */
@@ -297,10 +300,11 @@
     --type-body: 16px;
     --type-number: 22px;
     --type-heading: 22px;
-    --type-title: 26px;
+    --type-title: 24px;
     --type-battle: 32px;
-    --text-outline: 0.4px;
-    --text-outline-strong: 0.6px;
+    /* Real font weights replace the synthetic text outlines. */
+    --ink-outline: 0px;
+    --ink-outline-strong: 0px;
 
     /* Minimum touch target. The panels scale to a 390-wide reference, so a
        unit is about one point on a phone. */

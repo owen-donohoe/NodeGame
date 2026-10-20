@@ -704,12 +704,13 @@ namespace NodeWar.Lobby
 
         private void AddBurgerItem(string label, System.Action destination = null)
         {
-            var button = new PaperButton(() =>
+            var button = new Button(() =>
             {
                 burgerPanel.Close();
                 if (destination != null) destination();
-                else Debug.Log("[LobbyUI] Menu: " + label);
+                else Debug.Log("[Stub] Menu " + label);
             }) { text = label };
+            button.AddToClassList("mk-btn");
             button.AddToClassList("lb-menu-destination");
             burgerPanel.Content.Add(button);
         }

@@ -29,7 +29,9 @@ this file; if they disagree, fix one of them.
 - **Colour.** Warm parchment and earth: cream and tan papers, ink brown, muted greens, a
   warm gold for the main action, and a red only for urgent marks (badges, Spectate, VS).
   Pages read meaning tokens (`Tokens.uss`), never palette tokens or raw colours.
-- **Type.** Patrick Hand for everything; size and weight carry hierarchy. Numbers are large.
+- **Type.** Lilita One for titles, numbers, button captions and tabs; Kalam Bold for labels,
+  eyebrows, chips and row names; Kalam Regular for body and secondary text. Body is 16px,
+  secondary 14px, captions 13px, titles 24px and numbers 22px. Real weights replace faux-bold outlines.
 - **Main action.** PLAY is a big gold cut-out with the ink outline and hand-lettered text,
   pressing down on tap.
 

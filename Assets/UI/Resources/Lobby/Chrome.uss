@@ -1,5 +1,4 @@
 #lobby-chrome { flex-shrink: 0; }
-.mk-purse Label { }
-.mk-trophy Label { color: var(--mk-trophy); --mk-text-ink: var(--mk-trophy); }
-.mk-namelink Label { color: var(--mk-ink); --mk-text-ink: var(--mk-ink); }
+.mk-trophy Label { color: var(--mk-trophy); }
+.mk-namelink Label { color: var(--mk-ink); }
 .ui-root .mk-cap { margin-top: 4px; }

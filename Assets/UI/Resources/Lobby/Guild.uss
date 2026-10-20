@@ -40,6 +40,6 @@
 .lb-guild-report-actions { flex-direction: row; justify-content: space-between; margin-top: 16px; }
 
 .lb-guild-row-text Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mk-fixed-sheet, .mk-fixed-sheet .lb-guild-state, .mk-fixed-sheet .lb-guild-state > VisualElement { min-height: 0; flex-shrink: 1; overflow: hidden; }
+.mk-fixed-sheet, .mk-fixed-sheet .lb-guild-preview, .mk-fixed-sheet .lb-guild-preview > VisualElement { min-height: 0; flex-shrink: 1; overflow: hidden; }
 .mk-fixed-sheet .lb-guild-header { flex-shrink: 0; }
 .mk-fixed-sheet .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

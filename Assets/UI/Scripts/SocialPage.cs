@@ -125,7 +125,7 @@ namespace NodeWar.Lobby
         private Button MiniPlayer(PlayerCard player, string colour)
         {
             var button = new Button(() => openProfile?.Invoke(player?.PlayerId)); button.AddToClassList("mk-card"); button.AddToClassList("g2-live-player"); button.AddToClassList(colour);
-            button.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "mk-ellipsis"));
+            button.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "mk-friend__name"));
             button.Add(GuildViews.Text(player == null ? "\u2014" : new RankDisplay(player.RR).Name + " \u00b7 " + player.RR + " RR", "mk-cap"));
             button.SetEnabled(player != null); return button;
         }
@@ -161,7 +161,7 @@ namespace NodeWar.Lobby
             foreach (var match in sorted)
             {
                 var row = new VisualElement(); row.AddToClassList("g2-history-row");
-                var result = GuildViews.Text(match.won.Value ? "W" : "L"); result.AddToClassList("g2-result-badge"); result.AddToClassList(match.won.Value ? "g2-gain" : "g2-loss"); row.Add(result);
+                var result = GuildViews.Text(match.won.Value ? "W" : "L", "mk-caption"); result.AddToClassList("g2-result-badge"); result.AddToClassList(match.won.Value ? "g2-gain" : "g2-loss"); row.Add(result);
                 row.Add(GuildViews.Text("You"));
                 var replay = GuildViews.Button("VS", () => Debug.Log("[Stub] Replay match " + match.matchId), "mk-btn--sm"); replay.AddToClassList("g2-vs"); row.Add(replay);
                 var opponent = new PlayerCard { PlayerId = match.opponentPlayerId, Name = match.OpponentName, Tag = match.OpponentTag };
