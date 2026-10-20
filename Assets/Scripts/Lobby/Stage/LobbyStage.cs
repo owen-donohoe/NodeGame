@@ -19,14 +19,6 @@ namespace NodeWar.Lobby
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
         private static readonly Color Sea = new Color(0.42f, 0.61f, 0.72f);
 
-        // ItemTint's palette, from Assets/UI/Styles/Tokens.uss (--pal-tile-0 .. -7).
-        private static readonly Color32[] Tints =
-        {
-            new Color32(58, 110, 108, 255), new Color32(160, 82, 45, 255),
-            new Color32(72, 82, 140, 255), new Color32(104, 112, 52, 255),
-            new Color32(112, 64, 112, 255), new Color32(78, 92, 104, 255),
-            new Color32(158, 122, 40, 255), new Color32(140, 62, 62, 255)
-        };
 
         private StagePaperArt paper;
         private readonly List<Material> materials = new List<Material>();
@@ -130,7 +122,7 @@ namespace NodeWar.Lobby
                     new Vector3(0f, 0.03f, 0.38f), new Vector2(2.06f, 1.79f), Color.white, true);
                 outlines[i].SetActive(false);
                 districts[i] = Cutout("District", plots[i], PaperKind.House,
-                    new Vector3(0f, 0.03f, 0.35f), new Vector2(1.9f, 1.65f), Tints[0]);
+                    new Vector3(0f, 0.03f, 0.35f), new Vector2(1.9f, 1.65f), StagePaperArt.Tints[0]);
                 // Match centres so the enlarged backing stays farther away in the
                 // transparent queue, even when the camera looks down at the facade.
                 Vector3 backing = outlines[i].transform.localPosition;
@@ -158,12 +150,12 @@ namespace NodeWar.Lobby
                 stall.transform.SetParent(market.transform, false);
                 stall.transform.localPosition = new Vector3(ShopMarketFraming.StallX, 0f, -i * ShopStallSpacing);
                 Cutout("Stall facade", stall.transform, PaperKind.Stall,
-                    new Vector3(0f, 0.02f, 0f), new Vector2(1.35f, 1.9f), Tints[i]);
+                    new Vector3(0f, 0.02f, 0f), new Vector2(1.35f, 1.9f), StagePaperArt.Tints[i]);
                 Cutout("Canopy", stall.transform, PaperKind.Canopy,
-                    new Vector3(0f, 1.4f, -0.03f), new Vector2(1.5f, 0.75f), Tints[(i + 3) % Tints.Length]);
+                    new Vector3(0f, 1.4f, -0.03f), new Vector2(1.5f, 0.75f), StagePaperArt.Tints[(i + 3) % StagePaperArt.Tints.Length]);
                 marketmen[i] = Cutout("Marketman", stall.transform, PaperKind.Marketman,
                     new Vector3(-0.25f, 0.02f, -0.08f), new Vector2(0.9f, 1.65f),
-                    Tints[(i + 1) % Tints.Length]).transform;
+                    StagePaperArt.Tints[(i + 1) % StagePaperArt.Tints.Length]).transform;
             }
             var reserved = new GameObject("Reserved ground - Social and Guild");
             reserved.transform.SetParent(transform, false);
@@ -365,19 +357,29 @@ namespace NodeWar.Lobby
             bounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
             return valid && !float.IsInfinity(min.y);
         }
-        public void SetLoadout(int[] districtTypes, int[] suitTypes)
+        public void SetLoadout(int[] districtTypes, int[] suitTypes, int[] grantedDistricts = null)
         {
             equipped = Mathf.Min(districtTypes == null ? 0 : districtTypes.Length, StageSlots.Count);
             cluster = new DistrictCluster(equipped);
+            // Granted districts take the last free slots, after the chosen ones, and are never picked.
+            var slotTypes = new int[StageSlots.Count];
+            for (int i = 0; i < equipped; i++) slotTypes[i] = districtTypes[i];
+            var extra = new List<int>();
+            if (grantedDistricts != null)
+                foreach (int type in grantedDistricts)
+                    if (Array.IndexOf(districtTypes ?? Array.Empty<int>(), type) < 0 && !extra.Contains(type)) extra.Add(type);
+            int firstGranted = Mathf.Max(equipped, StageSlots.Count - extra.Count);
+            for (int k = 0; k < extra.Count && firstGranted + k < StageSlots.Count; k++) slotTypes[firstGranted + k] = extra[k];
             for (int i = 0; i < districts.Length; i++)
             {
                 outlines[i].SetActive(false);
-                districts[i].SetActive(i < equipped);
-                if (i < equipped)
+                bool shown = slotTypes[i] > 0;
+                districts[i].SetActive(shown);
+                if (shown)
                 {
-                    PaperKind kind = StageArt.District(districtTypes[i]);
-                    Color tint = TypeTint(districtTypes[i], false);
-                    districts[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, tint, mark: districtTypes[i]), Color.white);
+                    PaperKind kind = StageArt.District(slotTypes[i]);
+                    Color tint = TypeTint(slotTypes[i], false);
+                    districts[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, tint, mark: slotTypes[i]), Color.white);
                     outlines[i].GetComponent<Renderer>().sharedMaterial = MaterialFor(paper.TextureFor(kind, Color.white, true), StagePaperArt.Ink);
                 }
             }
@@ -576,7 +578,7 @@ namespace NodeWar.Lobby
         }
 
         private static Color TypeTint(int type, bool suit)
-            => Tints[ItemTint.IndexFor(StageArt.Identity(type, suit))];
+            => StagePaperArt.Tints[ItemTint.IndexFor(StageArt.Identity(type, suit))];
 
         // All stage materials are created here; the future dither shader has one entry point.
         private Material MaterialFor(Color colour) => MaterialFor(null, colour);

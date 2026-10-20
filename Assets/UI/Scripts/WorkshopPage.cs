@@ -289,16 +289,25 @@ namespace NodeWar.Lobby
             int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
             if (presetLabel != null) presetLabel.text = "LOADOUT " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
         }
-        private VisualElement MakeArt(Item item, bool neutral, bool navy)
+        private static VisualElement MakeArt(Item item, bool neutral, bool navy, int variant = 0)
         {
             var clip = new VisualElement { pickingMode = PickingMode.Ignore };
             clip.AddToClassList("ws-art-clip"); clip.AddToClassList("mk-art");
             var art = new VisualElement { pickingMode = PickingMode.Ignore };
             art.AddToClassList("ws-art");
-
-            if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
             art.EnableInClassList("ws-art--neutral", neutral); art.EnableInClassList("ws-art--navy", navy);
-            art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "mk-h2"));
+            // The generated paper art carries the item's tint, so the box stays neutral behind it.
+            StyleBackground paper = item == null ? new StyleBackground(StyleKeyword.None) : LobbyPaperArt.BackgroundFor(item.ID, variant);
+            if (paper.keyword != StyleKeyword.None)
+            {
+                art.style.backgroundImage = paper;
+                art.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            }
+            else
+            {
+                if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
+                art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "mk-h2"));
+            }
             clip.Add(art); return clip;
         }
         private void RenderCards()
@@ -631,7 +640,7 @@ namespace NodeWar.Lobby
             content.Add(MakeLabel(name, "mk-h2", "ws-item-title"));
             var artRow = new VisualElement(); artRow.AddToClassList("ws-item-art");
             var art = new VisualElement(); art.AddToClassList("ws-artbox");
-            art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock));
+            art.Add(MakeArt(inspectedItem, state.Status != UnlockStatus.Owned, state.Status == UnlockStatus.CannotUnlock, variant));
             artRow.Add(art);
             void Cycle(int direction)
             {

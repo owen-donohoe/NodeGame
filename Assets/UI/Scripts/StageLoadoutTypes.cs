@@ -32,6 +32,16 @@ namespace NodeWar.Lobby
             return types.ToArray();
         }
 
+        /// <summary>Chosen types first, then each extra group, skipping any type already present.</summary>
+        public static int[] WithGranted(int[] chosen, params int[][] extras)
+        {
+            var result = new List<int>(chosen ?? new int[0]);
+            foreach (var group in extras)
+                foreach (int type in group)
+                    if (type < 0 || !result.Contains(type)) result.Add(type);
+            return result.ToArray();
+        }
+
         public static bool Same<T>(T[] left, T[] right)
         {
             if (left == null || right == null) return left == right;
