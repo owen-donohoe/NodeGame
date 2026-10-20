@@ -19,6 +19,7 @@ namespace NodeWar.Lobby
         private LobbyOverlayRouter router;
         private string route;
         private readonly LobbyElementMotion motion;
+        private int openRevision;
 
         public MkSheet()
         {
@@ -63,6 +64,19 @@ namespace NodeWar.Lobby
         {
             Surface.EnableInClassList("mk-bigsheet", large);
             LobbyScrollbars.Hide(Body);
+            int revision = ++openRevision;
+            // Never paint the previous item's offset. Reset again after layout,
+            // when Unity has recomputed the new content and scroller bounds.
+            Body.style.visibility = Visibility.Hidden;
+            LobbyScrollbars.Reset(Body);
+            // Scheduling from the next update guarantees a layout pass between
+            // rebuilding the content and revealing it, even if its size is unchanged.
+            Body.schedule.Execute(() => Body.schedule.Execute(() =>
+            {
+                if (!IsOpen || revision != openRevision) return;
+                LobbyScrollbars.Reset(Body);
+                Body.style.visibility = StyleKeyword.Null;
+            }).StartingIn(1)).StartingIn(1);
             style.display = DisplayStyle.Flex;
             SetEnabled(true);
             pickingMode = PickingMode.Position;
