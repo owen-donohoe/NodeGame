@@ -115,7 +115,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 8832f7f3
+verified: c22d418b
 ---
 
 # Lobby UI
@@ -134,7 +134,7 @@ Pages:
 - `WorkshopPage` scrolls two-column grids via `LoadoutBrowse`. `WorkshopStageBinding` maps taps; measured suit bounds retain 8% window margins. `LoadoutScreenModel` gates equipment/replacement; `WorkshopInventorySession` gates requests. Its 78% MkSheet shows preview-inset variant dots, data-bound skins with inert locked previews, and ten-cell `StatHistogram` comparisons.
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a Workshop tag. Big/Small open crates. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show prebuilt settled offers with spring/stagger entrances and drag exits. LateUpdate projects after the camera; hidden panels retain layout. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
-- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history `AsyncStateView`s. TV has four slots; TV/Online/history use shared ledgers. Friends precede online guild members; offline friends expand behind a toggle. History uses settled outcomes and signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
+- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history `AsyncStateView`s. TV shows up to four games and one empty-state line; TV/Online/history use shared ledgers. Friends precede online guild members; offline friends expand behind a toggle. History uses settled outcomes and signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Players have stats, loadout, newest-ten W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
 - `GuildPage`: focus/typing/browse raises search (280ms cubic slide/fade); Back/clear centers it. The anchored filter bubble has RR/member sliders and Joinable only; member ranges filter locally. Results, members and announcements use ledgers; public details omit weekly progress. Membership shows progress/announcements/sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, reports log. `GuildViews` builds components; `GuildSheetHost` adapts sheets. `OpenChatAsync` checks membership; chat polls, capped at 200 characters.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
