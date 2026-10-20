@@ -1,6 +1,6 @@
 ---
 name: game-ui
-description: Craft rules for Node War's lobby UI in Unity UI Toolkit (USS/UXML, not web CSS) — readability, spacing, hierarchy, panels vs sheets, overflow. Use before building or restyling any lobby screen, together with .claude/plans/lobby-ui-spec.md.
+description: Craft rules for Node War's lobby UI in Unity UI Toolkit (USS/UXML, not web CSS) — the approved panel language, readability, spacing, hierarchy, panels vs sheets, overflow. Use before building or restyling any lobby screen, together with .claude/plans/lobby-ui-spec.md.
 ---
 
 # Game UI craft (UI Toolkit)
@@ -14,13 +14,51 @@ older paths, no `calc()`, no `box-shadow`, no `:nth-child` — use flex, explici
 percentages and child elements instead. Selector specificity still bites: prefer one class per
 concern and avoid descendant chains that cancel each other.
 
+## 0. The panel language (default, user-approved)
+
+The visual contract is `docs/design-history/panel-language.html`; open it before restyling. In
+summary:
+
+- **One panel recipe**, taken from the top player card: a parchment fill, a 2 px outline, and a
+  thicker bottom edge as the only shadow (`border-bottom-width` 7 for panels, 5–6 for buttons, rows
+  and tiles). Pressing a button collapses that edge. Subtle paper grain, with no blur or glass.
+  Corners are 14 for panels, 12 for fields, and 8–10 for buttons and avatars.
+- **Three edge colours**, as tokens:
+  - *outer* `#2d2319`: panels that sit on the 3D world;
+  - *inner* `#4d3d2d`: anything outlined inside a panel;
+  - *light* `#c3aa85`: only for a lip that sits inside a shaded region.
+  Never use any other edge colour.
+- **One outline level.** No outlined pill inside an outlined box. Inside a panel, things are flat:
+  filled, sunk, or divided by hairlines. Only pressables (buttons, tiles, switches) carry an
+  outline there, and it uses the inner colour.
+- **Lists are ledgers**: one card with a darker header strip (title plus small meta on the right)
+  and flat 56 px rows (40 px avatar, name over a meta line, trailing button), separated by
+  hairlines. They replace the thin name panels.
+- **2–3 option switch**:
+  - the outer box has the outline and lip;
+  - the shaded inner track has no lip;
+  - the selected face is lighter, with a *light* lip, inset 4 px so the outer border always shows.
+  A switch lives inside the panel it filters (Owned/All sits with the Workshop cards).
+- **Pill nav is flat.** The selected tab is a gold face with an ink outline, with no lip or raise.
+- **Page titles** (GUILDS) are stamped straight onto the world in Lilita with an ink outline, with
+  no panel behind them.
+- **The world shows through.** Pages have no full-screen backdrop, and scrims are 25%.
+- **Live TV rows**: 48 px player cards (name over a 12 px RR, a 6 px player-colour edge on the
+  outside) and a 46×58 red VS that stands taller than both.
+- **Item sheet**: the variant dots sit inside the preview window. Below it are a Skins row of 52 px
+  tiles (owned, selected, locked), then 10-cell stat histograms that fill the sheet width.
+- **Icons: Phosphor Bold** only (MIT). Tint them with `-unity-background-image-tint-color`: ink on
+  paper, paper on dark buttons.
+- **Shop**: not covered by this contract yet; leave its look alone.
+
 ## 1. Readability first (the user's top complaint)
 
-- Patrick Hand has one weight. Make text read as **bold** with
-  `-unity-text-outline-width: 0.4px; -unity-text-outline-color: <same as text colour>` on all
-  text, 0.6px on titles, numbers and buttons. Never rely on colour alone for emphasis.
-- Minimum sizes at the 390×844 reference: body 16, secondary 14, captions/eyebrows 13 (never
-  smaller), titles 22–26, big numbers 22+, BATTLE 32. Line height ≥ 1.2× size.
+- Display (names, numbers, titles, buttons): **Lilita One**. Body and meta: **Fredoka SemiBold**.
+  Every piece of text has `letter-spacing` of 0.04 em (about 0.6 px at 15 px). It should read
+  lighter but stay just as bold. Do not use Patrick Hand or Kalam, and do not fake weight with text
+  outlines.
+- Sizes: title 34, panel heading 17–24, names 15–17, body 15–16, meta 13 (never smaller), BATTLE
+  32. Line height at least 1.2× the size.
 - Contrast: text on paper is full ink (`--paper-ink`); muted text is no lighter than 70% ink.
   No text on raw 3D.
 - One line per label: `white-space: nowrap; overflow: hidden; text-overflow: ellipsis` on names,
@@ -44,8 +82,8 @@ concern and avoid descendant chains that cancel each other.
 
 ## 4. Containers: panel vs sheet vs screen
 
-- **Panel** (`MkPanel`): a centred modal card (width 340, max-height 80%, radius 16, 2px ink
-  border, 3px ink drop), with a dim scrim and a close ×; Back or a scrim tap closes it. Use it for
+- **Panel** (`MkPanel`): a centred modal card (width 340, max-height 80%, the section 0 recipe
+  ), with a 25% scrim and a close ×; Back or a scrim tap closes it. Use it for
   Settings/Menu, Notifications, the Game-mode picker, the Multiplayer picker, and **every
   purchase or claim confirmation**.
 - **Sheet** (`MkSheet`): bottom-anchored, handle, drag down to close. Use it for content you
