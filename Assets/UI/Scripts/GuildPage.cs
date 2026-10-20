@@ -45,6 +45,7 @@ namespace NodeWar.Lobby
             chat = new GuildChatScreen(service, router, overlays);
             report = new GuildReportScreen(router, overlays);
             Root.userData = this;
+            details.AddToClassList("lb-guild-preview");
             visitor = Root.Q("guild-visitor"); visitor.RemoveFromHierarchy();
             visitor.RegisterCallback<GeometryChangedEvent>(_ => PlaceSearch(false));
             home = Root.Q("guild-home"); home.RemoveFromHierarchy();
@@ -149,7 +150,7 @@ namespace NodeWar.Lobby
                 return;
             }
             mine.Content.Add(home);
-            var header = home.Q("guild-home-header"); header.Clear(); header.Add(GuildViews.Header(guild));
+            var header = home.Q("guild-home-header"); header.Clear(); header.Add(GuildViews.Header(guild, true));
             var scroll = home.Q<ScrollView>("guild-home-scroll"); scroll.Clear();
             var announcements = GuildViews.Card("Announcements");
             RenderPosts(announcements, guild.Pinned, true); RenderPosts(announcements, guild.Feed, false);
@@ -262,7 +263,7 @@ namespace NodeWar.Lobby
         private void OpenPreview(GuildSummary summary)
         {
             details.Invalidate(true);
-            var content = SheetContent("Guild"); content.Add(details);
+            var content = SheetContent("Guild"); content.AddToClassList("mk-fixed-sheet"); content.Add(details);
             details.RetryRequested -= RetryPreview;
             previewId = summary.GuildId; details.RetryRequested += RetryPreview;
             ShowSheet(content, true); LoadPreview();
@@ -276,7 +277,7 @@ namespace NodeWar.Lobby
             _ = details.Load(() => service.GetAsync(id), guild =>
             {
                 details.Content.Add(GuildViews.Header(guild));
-                details.Content.Add(PlayerCardViews.Text(guild.Summary.Description));
+                details.Content.Add(GuildViews.Text(guild.Summary.Description, "mk-ellipsis"));
                 var list = new ScrollView { verticalScrollerVisibility = ScrollerVisibility.Hidden }; list.AddToClassList("lb-guild-panel-members");
                 foreach (var member in GuildMembers.Sorted(guild.Members, GuildMemberOrder.OnlineByRR))
                     list.Add(GuildViews.Member(member, () => { CloseSheet(); openProfile(member.Player.PlayerId); }));
@@ -310,12 +311,12 @@ namespace NodeWar.Lobby
         private void ConfirmKick(GuildMember member)
         {
             var content = SheetContent("Remove from guild?");
-            content.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(member.Player) + " from " + current.Summary.Name + "?"));
+            content.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(member.Player) + " from " + current.Summary.Name + "?", "mk-ellipsis"));
             content.Add(GuildViews.Button("Cancel", CloseSheet));
             content.Add(GuildViews.Button("Kick", () =>
             {
                 Debug.Log("[Stub] Guild kick " + member.Player.PlayerId); CloseSheet();
-            }));
+            }, "mk-btn--urgent"));
             ShowSheet(content);
         }
 
@@ -324,8 +325,8 @@ namespace NodeWar.Lobby
             if (!GuildMembers.IsOfficer(current.OwnRole)) { openProfile(member.Player.PlayerId); return; }
             var content = SheetContent(PlayerCardViews.Handle(member.Player));
             content.Add(GuildViews.Button("View player", () => { CloseSheet(); openProfile(member.Player.PlayerId); }));
-            content.Add(GuildViews.Button("Kick", () => ConfirmKick(member)));
-            content.Add(GuildViews.Button("Report", () => report.Open(member, true)));
+            content.Add(GuildViews.Button("Kick", () => ConfirmKick(member), "mk-btn--urgent"));
+            content.Add(GuildViews.Button("Report", () => report.Open(member, true), "mk-btn--urgent"));
             ShowSheet(content);
         }
     }

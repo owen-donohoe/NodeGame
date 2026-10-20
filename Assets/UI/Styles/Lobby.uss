@@ -46,7 +46,7 @@
 }
 
 /* ===================================================================
-   Root. Patrick Hand, the label reset, the weights (.ui-w500/600/700), the
+   Root. Font roles, the label reset, the weights (.ui-w500/600/700), the
    reset button, shadows (.ui-sticker__shadow, .ui-soft-shadow), lip
    buttons (.ui-button), the sheet, the bar and the toast are shared
    components in Components.uss. The lobby adds only its own ground.
@@ -247,7 +247,7 @@
 }
 
 .lb-root .lb-push__title {
-    font-size: 30px;
+    font-size: var(--type-title);
     color: var(--ink);
     margin-left: var(--space-3);
 }
@@ -296,7 +296,7 @@
 }
 
 .lb-placeholder__label {
-    font-size: 13px;
+    font-size: var(--type-caption);
     color: var(--placeholder-ink);
     -unity-font-style: bold;
     -unity-text-align: middle-center;
@@ -313,7 +313,7 @@
     justify-content: center;
     padding-left: var(--space-6);
     padding-right: var(--space-6);
-    padding-bottom: 130px;
+    padding-bottom: 96px;
 }
 
 .lb-stub__icon {
@@ -344,14 +344,14 @@
 }
 
 .lb-root .lb-stub__title {
-    font-size: 26px;
+    font-size: var(--type-title);
     color: var(--ink);
     margin-bottom: var(--space-2);
     -unity-text-align: middle-center;
 }
 
 .lb-root .lb-stub__body {
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
     white-space: normal;
     -unity-text-align: middle-center;
@@ -449,13 +449,13 @@
 .lb-loadout-line {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .lb-root .lb-loadout-line__part {
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
-    margin-right: 5px;
+    margin-right: 8px;
 }
 
 .lb-root .lb-loadout-line__part--short {

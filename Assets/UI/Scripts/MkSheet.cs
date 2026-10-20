@@ -6,7 +6,7 @@ namespace NodeWar.Lobby
     [UxmlElement]
     public partial class MkSheet : VisualElement
     {
-        public VisualElement Body { get; } = new ScrollView();
+        public VisualElement Body { get; private set; } = new ScrollView();
         public override VisualElement contentContainer => Body.contentContainer;
         public VisualElement Surface { get; } = new VisualElement();
         public VisualElement Scrim { get; } = new VisualElement();
@@ -46,6 +46,16 @@ namespace NodeWar.Lobby
             style.display = DisplayStyle.None;
         }
 
+        public void SetScrollable(bool value)
+        {
+            if ((Body is ScrollView) == value) return;
+            var previous = Body;
+            Body = value ? new ScrollView() : new VisualElement();
+            Body.name = previous.name;
+            Body.style.minHeight = 0; Body.style.flexShrink = 1; Body.style.overflow = Overflow.Hidden;
+            foreach (var child in new System.Collections.Generic.List<VisualElement>(previous.Children())) Body.Add(child);
+            previous.RemoveFromHierarchy(); Surface.Add(Body);
+        }
         public void BindRouter(LobbyOverlayRouter value, string id) { router = value; route = id; }
         public void Open(bool large = false)
         {

@@ -19,7 +19,7 @@ namespace NodeWar.Lobby
                 for (int col = 0; col < 2; col++)
                 {
                     int i = row * 2 + col; var cell = new MkCard(); cell.AddToClassList("g2-stat");
-                    cell.Add(GuildViews.Text(Stats[i], "mk-eyebrow")); cell.Add(GuildViews.Text(values[i], "g2-stat-value")); line.Add(cell);
+                    cell.Add(GuildViews.Text(Stats[i], "mk-eyebrow")); cell.Add(GuildViews.Text(values[i], "mk-number")); line.Add(cell);
                 }
             }
             return grid;
@@ -43,7 +43,7 @@ namespace NodeWar.Lobby
             else
             {
                 var icon = new LobbyIcon(suit ? LobbyIconKind.Suit : LobbyIconKind.District, LobbyIconContext.Profile); mini.Add(icon);
-                mini.Add(GuildViews.Text(ItemTint.MonogramFor(id.Substring(id.IndexOf('_') + 1), id), "g2-mini-letter"));
+                mini.Add(GuildViews.Text(ItemTint.MonogramFor(id.Substring(id.IndexOf('_') + 1), id), "mk-caption"));
             }
             return mini;
         }
@@ -51,7 +51,7 @@ namespace NodeWar.Lobby
         {
             var road = new ScrollView { name = "profile-road" }; road.AddToClassList("g2-road"); LobbyScrollbars.Hide(road);
             var inside = new VisualElement(); inside.AddToClassList("g2-road-inner"); road.Add(inside);
-            int count = RankTable.Thresholds.Count; float height = count * 150f; inside.style.height = height + 20f;
+            int count = RankTable.Thresholds.Count; float height = count * 150f; inside.style.height = height + 16f;
             var rail = new VisualElement(); rail.AddToClassList("g2-rail"); inside.Add(rail);
             var track = new VisualElement(); track.AddToClassList("g2-rtrack"); rail.Add(track);
             var rank = new RankDisplay(rr);
@@ -84,7 +84,7 @@ namespace NodeWar.Lobby
             var sorted = PlayerPanelPolicy.LastTen(summaries);
             for (int i = 0; i < Math.Min(10, sorted.Count); i++)
             {
-                var cell = GuildViews.Text(sorted[i].Won ? "W" : "L"); cell.AddToClassList("g2-result"); cell.AddToClassList(sorted[i].Won ? "g2-gain" : "g2-loss"); strip.Add(cell);
+                var cell = GuildViews.Text(sorted[i].Won ? "W" : "L", "mk-caption"); cell.AddToClassList("g2-result"); cell.AddToClassList(sorted[i].Won ? "g2-gain" : "g2-loss"); strip.Add(cell);
             }
             if (sorted.Count == 0) strip.Add(GuildViews.Text("No battles yet", "mk-muted"));
             return strip;

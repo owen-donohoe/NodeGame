@@ -6,24 +6,25 @@ namespace NodeWar.Lobby
 {
     public sealed class LobbyModePicker
     {
-        private readonly LobbySheet sheet;
+        private readonly MkPanel sheet;
         private readonly VisualElement root;
         private readonly Toggle privateToggle;
         private LobbyModeSelection selection;
         public event Action<LobbyModeSelection> Selected;
 
-        public LobbyModePicker(LobbySheet sheet)
+        public LobbyModePicker(VisualElement host, LobbyOverlayRouter router)
         {
-            this.sheet = sheet;
+            sheet = new MkPanel { name = "game-mode-panel" };
+            sheet.Title.text = "Game mode"; sheet.BindRouter(router, "game-mode"); host.Add(sheet);
             root = new VisualElement { name = "game-mode-sheet" };
             root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker"));
-            root.Add(GuildViews.Text("Game mode", "mk-h2"));
+            sheet.Body.Add(root);
             var grid = ModeGrid("mode-grid"); root.Add(grid);
             foreach (var mode in new[] { LobbyMode.Ranked1v1, LobbyMode.Team2v2, LobbyMode.FreeForAll4 }) Add(grid, mode);
             var local = ModeGrid("mode-local"); root.Add(local);
             Add(local, LobbyMode.Bot); Add(local, LobbyMode.Lan);
             privateToggle = new Toggle("Private (1v1)") { name = "mode-private" };
-            privateToggle.AddToClassList("g2-private"); root.Add(privateToggle);
+            privateToggle.AddToClassList("g2-private"); privateToggle.AddToClassList("mk-label"); root.Add(privateToggle);
             privateToggle.RegisterValueChangedCallback(evt =>
             {
                 selection = new LobbyModeSelection(selection.Mode, evt.newValue);
@@ -62,7 +63,7 @@ namespace NodeWar.Lobby
         {
             selection = current;
             root.Query<Button>(className: "g2-mode-card").ForEach(card => card.EnableInClassList("g2-mode-card--on", card.userData is LobbyMode mode && mode == current.Mode));
-            privateToggle.SetValueWithoutNotify(current.Private); sheet.Open(root);
+            privateToggle.SetValueWithoutNotify(current.Private); sheet.Open();
         }
     }
 }

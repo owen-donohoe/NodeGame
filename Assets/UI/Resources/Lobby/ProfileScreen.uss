@@ -1,27 +1,25 @@
 .g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; transform-origin: 0 0; transition-property: translate, scale; transition-duration: 340ms; transition-timing-function: ease-out-cubic; }
 .g2-profile--instant { transition-duration: 0ms; }
-.ui-root .g2-profile-own { position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; background-color: var(--mk-sheet); }
+.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; background-color: var(--mk-sheet); }
 .g2-profile-state, .g2-profile-state > .g2-profile-content { min-height: 0; }
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
 .g2-profile--self .g2-profile-state { opacity: 0; transition-property: opacity; transition-duration: 120ms; }
 .g2-profile--expanded .g2-profile-state { opacity: 1; }
-.g2-profile-header { flex-direction: row; align-items: center; min-height: 60px; padding: 12px; flex-shrink: 0; }
-.g2-profile-header .mk-h2 { white-space: normal; }
-.ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 2px 6px; font-size: 11px; background-color: var(--mk-card); }
-.g2-profile-columns { flex-grow: 1; min-height: 0; flex-direction: row; padding: 0 12px 14px; }
+.g2-profile-header { flex-direction: row; align-items: center; height: 96px; min-height: 96px; max-height: 96px; padding: 12px; overflow: hidden; flex-shrink: 0; }
+.g2-profile-header .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); }
+.g2-profile-columns { flex-grow: 1; min-height: 0; flex-direction: row; padding: 0 12px 12px; }
 .g2-profile-left { flex-grow: 3; flex-basis: 0; min-width: 0; min-height: 0; margin-right: 12px; }
 .g2-road { flex-grow: 2; flex-basis: 0; min-width: 0; min-height: 0; }
 .g2-stat-row { flex-direction: row; margin-bottom: 8px; }
-.ui-root .g2-stat { flex-grow: 1; flex-basis: 0; padding: 5px 6px; margin-right: 4px; min-width: 0; }
+.ui-root .g2-stat { flex-grow: 1; flex-basis: 0; padding: 12px; margin-right: 8px; min-width: 0; }
 .ui-root .g2-stat Label { white-space: normal; }
-.g2-stat-value { font-size: 23px; }
-.g2-loadout { margin-top: 10px; }
-.g2-mini-row { flex-direction: row; justify-content: center; margin-top: 6px; }
-.ui-root .g2-mini { width: 30%; max-width: 48px; height: 44px; padding: 2px; margin: 0 2px; align-items: center; justify-content: center; }
+.g2-loadout { margin-top: 8px; }
+.g2-mini-row { flex-direction: row; justify-content: center; margin-top: 4px; }
+.ui-root .g2-mini { width: 30%; max-width: 48px; height: 64px; padding: 4px; margin: 0 4px; align-items: center; justify-content: center; }
 .g2-mini LobbyIcon { width: 24px; height: 24px; }
-.g2-mini-letter { font-size: 10px; }
-.g2-road-inner { flex-direction: row; padding: 10px 0; }
+.g2-road-inner { flex-direction: row; padding: 8px 0; }
 .g2-rail { width: 22px; flex-shrink: 0; position: relative; margin-right: 8px; }
 .g2-rtrack, .g2-rfill { position: absolute; left: 9px; width: 4px; bottom: 0; border-radius: 2px; }
 .g2-rtrack { top: 0; background-color: var(--mk-track); }
@@ -38,14 +36,18 @@
 .ui-root .g2-era--5 { background-color: var(--era-5); }
 .g2-reward-notch { width: 18px; height: 8px; border-width: 2px; border-color: var(--mk-ink); border-radius: 2px; background-color: var(--mk-sheet); margin-top: 8px; }
 .g2-win-history { flex-direction: row; margin-top: 12px; flex-wrap: wrap; }
-.ui-root .g2-result { width: 24px; height: 24px; margin-right: 3px; border-width: 1px; border-color: var(--mk-ink); -unity-text-align: middle-center; }
+.ui-root .g2-result { width: 24px; height: 24px; margin-right: 4px; border-width: 1px; border-color: var(--mk-ink); -unity-text-align: middle-center; }
 .g2-gain { background-color: var(--mk-tap); color: var(--mk-sheet); }
 .g2-loss { background-color: var(--mk-urgent); color: var(--mk-sheet); }
 
 .g2-player-actions { flex-direction: row; align-items: center; }
-.g2-player-actions > Button { margin-left: 4px; }
+.g2-player-actions > Button { margin-left: 8px; }
 .g2-player-actions > #public-profile-add { width: 44px; padding: 0; }
 .g2-player-footer { flex-direction: row; margin-top: 12px; }
-.g2-player-footer > Button { flex-grow: 1; margin-right: 4px; }
+.g2-player-footer > Button { flex-grow: 1; margin-right: 8px; }
 .ui-root .g2-urgent { background-color: var(--mk-urgent); color: var(--mk-sheet); }
-.g2-profile--player .g2-profile-header { padding: 0 0 8px; }
+.g2-profile--player .g2-profile-header { height: 80px; min-height: 80px; max-height: 80px; padding: 0 0 8px; }
+
+.g2-profile--player .g2-profile-content { min-height: 0; flex-shrink: 1; overflow: hidden; }
+.g2-player-list { min-height: 0; max-height: 440px; flex-shrink: 1; }
+.g2-player-footer, .g2-win-history { flex-shrink: 0; }

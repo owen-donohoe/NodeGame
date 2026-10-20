@@ -12,15 +12,15 @@ namespace NodeWar.Lobby
         public event Action Closed;
         public event Action Confirmed;
         public event Action Cancelled;
-        private readonly MkSheet sheet;
+        private readonly MkPanel sheet;
         private readonly Label title;
         private readonly VisualElement details;
         private readonly Button primary;
 
         public ClaimPanel()
         {
-            sheet = new MkSheet { name = "claim-overlay" };
-            Root = sheet;
+            sheet = new MkPanel { name = "claim-overlay" };
+            Root = sheet; sheet.Scrim.name = "claim-scrim";
             var layout = Resources.Load<VisualTreeAsset>("Lobby/ClaimPanel");
             if (layout != null)
             {
@@ -29,12 +29,13 @@ namespace NodeWar.Lobby
                 var body = new VisualElement();
                 foreach (var child in new System.Collections.Generic.List<VisualElement>(panel.Children())) body.Add(child);
                 for (int i = 0; i < content.styleSheets.count; i++) body.styleSheets.Add(content.styleSheets[i]);
-                sheet.Body.Add(body);
+                body.AddToClassList("mk-claim-body"); sheet.Body.Add(body);
             }
             sheet.Closed += () => { if (IsOpen) Cancel(); };
             Root.style.position = Position.Absolute;
             Root.style.left = Root.style.right = Root.style.top = Root.style.bottom = 0;
-            title = Root.Q<Label>("claim-title");
+            var oldTitle = Root.Q<Label>("claim-title"); oldTitle?.RemoveFromHierarchy();
+            title = sheet.Title; title.name = "claim-title";
             details = Root.Q<VisualElement>("claim-details");
             primary = Root.Q<Button>("claim-primary");
             var info = Root.Q<Button>("claim-info");

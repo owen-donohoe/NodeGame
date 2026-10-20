@@ -29,7 +29,7 @@ namespace NodeWar.Lobby
             return button;
         }
 
-        public static VisualElement Header(GuildView guild)
+        public static VisualElement Header(GuildView guild, bool showWeekly = false)
         {
             var header = Card(null); header.AddToClassList("lb-guild-header");
             var row = new VisualElement(); row.AddToClassList("mk-row");
@@ -39,6 +39,7 @@ namespace NodeWar.Lobby
             text.Add(Text(guild.Summary.Name, "mk-h2"));
             text.Add(Text(guild.Summary.Members + "/" + guild.Summary.Capacity + " members · " + guild.OnlineCount + " online", "mk-muted"));
             row.Add(text); header.Add(row);
+            if (!showWeekly) return header;
             var meter = new VisualElement(); meter.AddToClassList("mk-meter");
             var fill = new VisualElement(); fill.AddToClassList("mk-meter__fill");
             int progress = guild.WeeklyGoal > 0 ? Math.Max(0, Math.Min(100, (int)((long)guild.WeeklyProgress * 100 / guild.WeeklyGoal))) : 0;
@@ -60,7 +61,7 @@ namespace NodeWar.Lobby
             text.Add(Text(Role(member.Role) + " · " + (member.Online ? "Online" : "Offline"), "mk-muted"));
             row.Add(text);
             var trailing = new VisualElement { pickingMode = PickingMode.Ignore }; trailing.AddToClassList("mk-friend__trailing");
-            trailing.Add(Text(member.RR + " RR")); row.Add(trailing);
+            trailing.Add(Text(member.RR + " RR", "mk-number")); row.Add(trailing);
             return row;
         }
 
@@ -69,7 +70,7 @@ namespace NodeWar.Lobby
             var row = new Button(open); row.AddToClassList("mk-card"); row.AddToClassList("lb-guild-row");
             Icon(row, LobbyIconKind.Guild);
             var text = new VisualElement { pickingMode = PickingMode.Ignore }; text.AddToClassList("lb-guild-row-text");
-            text.Add(Text(guild.Name, "mk-h3")); text.Add(Text(guild.Members + "/" + guild.Capacity + " members", "mk-muted"));
+            text.Add(Text(guild.Name, "mk-friend__name")); text.Add(Text(guild.Members + "/" + guild.Capacity + " members", "mk-muted"));
             row.Add(text);
             var chip = Text(guild.Joinable && guild.Members < guild.Capacity ? "Join" : "Closed", "mk-chip");
             chip.pickingMode = PickingMode.Ignore; row.Add(chip);
@@ -89,7 +90,7 @@ namespace NodeWar.Lobby
         public static VisualElement Message(ChatMessage message)
         {
             var row = Card(null); row.AddToClassList("lb-guild-message");
-            row.Add(Text(PlayerCardViews.Handle(message.Sender), "mk-h3")); row.Add(Text(message.Text));
+            row.Add(Text(PlayerCardViews.Handle(message.Sender), "mk-friend__name")); row.Add(Text(message.Text));
             return row;
         }
 

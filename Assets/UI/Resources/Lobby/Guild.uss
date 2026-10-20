@@ -8,23 +8,23 @@
 .lb-guild-search TextField { flex-grow: 1; min-width: 0; margin-right: 8px; }
 .lb-guild-search .unity-base-field__label { display: none; }
 .lb-guild-searchbtn, .lb-guild-filterbtn { width: 44px; height: 44px; align-items: center; justify-content: center; flex-shrink: 0; }
-.lb-guild-filterbtn { margin-left: 4px; }
+.lb-guild-filterbtn { margin-left: 8px; }
 .lb-guild-browse-toggle { width: 44px; min-height: 44px; align-self: center; margin-top: 8px; }
 .lb-guild-results { flex-grow: 1; min-height: 0; padding: 12px; }
 .lb-guild-card { margin-bottom: 12px; }
 .lb-guild-line { flex-direction: row; align-items: center; min-height: 44px; }
-.lb-guild-row, .lb-guild-member { flex-direction: row; align-items: center; min-height: 54px; margin-top: 8px; }
+.lb-guild-row, .lb-guild-member { flex-direction: row; align-items: center; min-height: 72px; margin-top: 8px; }
 .lb-guild-row-text { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-left: 8px; margin-right: 8px; }
 .lb-guild-emblem { width: 40px; height: 40px; flex-shrink: 0; }
 .lb-guild-header { margin-bottom: 8px; }
 .lb-guild-header .mk-meter { margin-top: 8px; margin-bottom: 4px; }
 .lb-guild-header .mk-meter__fill { height: 100%; }
 .lb-guild-home { flex-grow: 1; min-height: 0; padding: 12px; }
-.lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: 76px; }
+.lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: 96px; }
 .lb-guild-post { padding-top: 8px; padding-bottom: 8px; }
 .lb-guild-sort { min-height: 44px; }
 .lb-guild-chat-button { position: absolute; right: 16px; bottom: 16px; min-width: 96px; min-height: 56px; flex-direction: row; align-items: center; justify-content: center; }
-.lb-guild-sheet { flex-grow: 1; min-height: 0; padding: 12px; }
+.lb-guild-sheet { flex-grow: 1; min-height: 0; padding: 0; }
 .lb-guild-sheet .unity-base-field { margin-bottom: 12px; min-height: 44px; }
 .lb-guild-panel-members { max-height: 320px; min-height: 64px; flex-shrink: 1; margin-top: 12px; margin-bottom: 12px; }
 .lb-guild-chat, .lb-guild-report { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
@@ -38,3 +38,14 @@
 .lb-guild-reason { min-height: 44px; margin-right: 8px; margin-bottom: 8px; }
 .lb-guild-report-details { min-height: 120px; margin-bottom: 12px; }
 .lb-guild-report-actions { flex-direction: row; justify-content: space-between; margin-top: 16px; }
+
+.lb-guild-row-text Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-fixed-sheet, .mk-fixed-sheet .lb-guild-preview, .mk-fixed-sheet .lb-guild-preview > VisualElement { min-height: 0; flex-shrink: 1; overflow: hidden; }
+.mk-fixed-sheet .lb-guild-header { flex-shrink: 0; }
+.mk-fixed-sheet .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.lb-guild-sheet > .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+
+.lb-guild-row { min-height: 88px; }
+
+#page-guild { padding: 0; }

@@ -116,7 +116,7 @@
                         <lobby:LobbyIcon context="NavBar" kind="NavBarSocial" class="lb-icon" picking-mode="Ignore" />
                         <engine:Label text="SOCIAL" class="mk-tab-label" picking-mode="Ignore" />
                     </engine:Button>
-                    <engine:Button name="nav-guild" class="ui-reset-button mk-tab" tooltip="Guild">
+                    <engine:Button name="nav-guild" class="ui-reset-button mk-tab mk-tab--last" tooltip="Guild">
                         <lobby:LobbyIcon context="NavBar" kind="Guild" class="lb-icon" picking-mode="Ignore" />
                         <engine:Label text="GUILD" class="mk-tab-label" picking-mode="Ignore" />
                     </engine:Button>

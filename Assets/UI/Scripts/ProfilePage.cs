@@ -11,7 +11,7 @@ namespace NodeWar.Lobby
     {
         private readonly IProfileService profiles;
         private readonly IGuildService guild = BackendServices.Guild;
-        private readonly MkSheet confirmation = new MkSheet();
+        private readonly MkPanel confirmation = new MkPanel();
         private GuildReportScreen report;
         private GuildView ownGuild;
         private PlayerCard shownCard;
@@ -44,6 +44,7 @@ namespace NodeWar.Lobby
             this.profiles = profiles ?? BackendServices.Profiles;
             Root.userData = this; Root.AddToClassList("g2-profile"); Root.AddToClassList("lb-no-swipe");
             Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ProfileScreen")); Root.Add(own); Root.Add(panel);
+            panel.SetScrollable(false);
             own.AddToClassList("g2-profile-own"); own.Add(stateView);
             safeArea = new SafeAreaBinder(own); panel.Closed += Close;
             stateView.Content.AddToClassList("g2-profile-content");
@@ -175,7 +176,7 @@ namespace NodeWar.Lobby
             footer.Clear();
             var target = shownCard;
             footer.Add(GuildViews.Button("Block", () => Debug.Log("[Stub] Block player " + target.PlayerId)));
-            footer.Add(GuildViews.Button("Report", () => report?.Open(target, PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null)));
+            footer.Add(GuildViews.Button("Report", () => report?.Open(target, PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null), "g2-urgent"));
             if (PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null)
             {
                 var kick = GuildViews.Button("Kick", () => ConfirmKick(target)); kick.AddToClassList("g2-urgent"); footer.Add(kick);
@@ -185,24 +186,24 @@ namespace NodeWar.Lobby
         {
             if (!IsOpen || PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) == null) return;
             confirmation.Body.Clear();
-            confirmation.Body.Add(GuildViews.Text("Remove from guild?", "mk-h2"));
-            confirmation.Body.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(target) + " from " + ownGuild.Summary.Name + "?"));
+            confirmation.Title.text = "Remove from guild?";
+            confirmation.Body.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(target) + " from " + ownGuild.Summary.Name + "?", "mk-ellipsis"));
             confirmation.Body.Add(GuildViews.Button("Cancel", confirmation.Close));
             confirmation.Body.Add(GuildViews.Button("Kick", () =>
             {
                 if (IsOpen && PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null) Debug.Log("[Stub] Guild kick " + target.PlayerId);
                 confirmation.Close();
-            }));
+            }, "mk-btn--urgent"));
             confirmation.Open();
         }
         private void Render(PublicProfileView profile)
         {
             var header = new VisualElement { name = "public-profile-header" }; header.AddToClassList("g2-profile-header");
-            var identity = new VisualElement(); identity.style.flexGrow = 1; identity.style.flexShrink = 1;
-            identity.Add(GuildViews.Text(PlayerCardViews.Handle(profile.Card), "mk-h2"));
+            var identity = new VisualElement(); identity.style.flexGrow = 1; identity.style.flexShrink = 1; identity.style.minWidth = 0;
+            var handle = GuildViews.Text(PlayerCardViews.Handle(profile.Card), "mk-h2"); handle.AddToClassList("mk-ellipsis"); identity.Add(handle);
             var rank = new RankDisplay(profile.Card.RR);
             var rankRow = new VisualElement(); rankRow.AddToClassList("mk-row");
-            var era = GuildViews.Text(rank.Name, "mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
+            var era = GuildViews.Text(rank.Name, "mk-caption"); era.AddToClassList("mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
             rankRow.Add(GuildViews.Text(rank.RR + " RR", "mk-trophy")); identity.Add(rankRow); header.Add(identity);
             if (viewingSelf) header.Add(GuildViews.Button("Back", Close));
             else
@@ -217,9 +218,9 @@ namespace NodeWar.Lobby
             stateView.Content.Add(header);
             if (!viewingSelf)
             {
-                stateView.Content.Add(ProfileViews.StatsGrid(profile.Stats));
-                stateView.Content.Add(ProfileViews.Loadout(profile));
-                stateView.Content.Add(ProfileViews.History(profile.Recent));
+                var list = new ScrollView(); list.AddToClassList("g2-player-list"); LobbyScrollbars.Hide(list);
+                list.Add(ProfileViews.StatsGrid(profile.Stats)); list.Add(ProfileViews.Loadout(profile));
+                list.Add(ProfileViews.History(profile.Recent)); stateView.Content.Add(list);
                 footer = new VisualElement(); footer.AddToClassList("g2-player-footer"); stateView.Content.Add(footer);
                 RenderFooter(); stateView.Content.Add(moderation); return;
             }
