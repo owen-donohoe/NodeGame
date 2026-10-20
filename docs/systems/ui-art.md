@@ -7,6 +7,7 @@ sources:
   - Assets/UI/Resources/UIArtTheme.asset
   - Assets/UI/Scripts/ItemFamily.cs
   - Assets/UI/Scripts/ItemTint.cs
+  - Assets/UI/Scripts/ProfileViews.cs
   - docs/style-guide.md
   - Assets/UI/Resources/Lobby/
   - Assets/UI/Scripts/MkCard.cs
@@ -38,7 +39,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 380d53b3
+verified: 023d3245
 ---
 
 # UI art
@@ -52,6 +53,8 @@ Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets
 `UIArtTheme.icons` is an ordered `IconEntry[]` of `{ LobbyIconKind kind, LobbyIconContext context, Sprite sprite, bool keepOriginalColours }`. `TryIcon(kind, context, out entry)` uses pure `UIArtLookup.SpriteIndex(entries, kind, context, kindOf, contextOf, hasSprite)` to resolve overrides. `districtVisuals` references `DistrictVisualTable`; its per-type `DistrictVisual.icon` supplies node-sheet art and `StickerOrIcon` supplies draft art before fallback mappings. Workshop uses ink monograms on paper rather than those sprites.
 
 `LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. It resolves themed sprites or cached `VectorImage` glyphs drawn by seeded `InkPen`/`PaperMath` with Painter2D in a 24×24 design box.
+
+District and suit icons accept Profile context for loadout minis.
 
 `LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this table rather than the obsolete generic icon inventory.
 
