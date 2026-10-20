@@ -165,12 +165,25 @@ namespace NodeWar.Lobby.Tests
             var next = ShopProjection.Project(100, 200, 1, 10, 5, -1, 0, 100, 0.5f);
             Assert.AreEqual(1, daily.Scale);
             Assert.AreEqual(200, daily.Y);
-            Assert.AreEqual(0.3f, next.Scale, 0.0001f);
-            Assert.AreEqual(185, next.Y, 0.0001f);
+            Assert.AreEqual(0.85f, next.Scale, 0.0001f);
+            Assert.AreEqual(158, next.Y, 0.0001f);
             var offset = ShopProjection.Project(100, 200, 1, 5, 5, 0, 0, 100, 0.5f, 200, 400);
             Assert.AreEqual(350, offset.Y);
             Assert.IsFalse(ShopProjection.Changed(1, 1.0001f, 0.001f));
             Assert.IsTrue(ShopProjection.Changed(float.NaN, 1, 0.001f));
+        }
+
+        [TestCase(1f)]
+        [TestCase(100f)]
+        public void DepthScaleIsReadableAndPositionIsPixelAligned(float distance)
+        {
+            var pose = ShopProjection.Project(100.4f, 200.6f, 1, distance, 5, 0, 0, 100, 0);
+            Assert.That(pose.Scale, Is.InRange(0.85f, 1f));
+            Assert.That(pose.X, Is.EqualTo(100)); Assert.That(pose.Y, Is.EqualTo(201));
+            pose = ShopProjection.Constrain(pose, 174, 100, 16, 220, 374, 700);
+            Assert.That(pose.Y, Is.GreaterThanOrEqualTo(220));
+            pose = ShopProjection.Constrain(new ShopPanelPose(999, 999, 1, true), 174, 100, 16, 220, 374, 700);
+            Assert.That(pose.X, Is.EqualTo(200)); Assert.That(pose.Y, Is.EqualTo(600));
         }
     }
 }

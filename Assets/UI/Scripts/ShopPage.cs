@@ -16,6 +16,7 @@ namespace NodeWar.Lobby
 
         private static readonly string[] StallNames = { "daily", "crates", "weekly", "bundle", "bank" };
         private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Bank" };
+        private static readonly string[] TopBands = { "top-bar", "strip-wrap", "guild-chrome-card" };
         private static readonly string[] Odds =
         {
             "Placeholder odds per reward kind; illustrative only.",
@@ -27,13 +28,14 @@ namespace NodeWar.Lobby
         private readonly VisualElement[] offers = new VisualElement[6];
         private readonly Label[] countdowns = new Label[5];
         private readonly DateTime[] resets = new DateTime[5];
-        private readonly ShopPanelPose[] poses = new ShopPanelPose[5];
-        private readonly bool[] poseReady = new bool[5];
         private readonly float[] panelDistances = new float[5];
         private readonly float[] panelHeights = new float[5];
         private readonly int[] panelOrder = { 0, 1, 2, 3, 4 };
         private bool orderReady;
-        private readonly IVisualElementScheduledItem motion;
+        private readonly LobbyMotion.Spring[] entrances = new LobbyMotion.Spring[5];
+        private readonly float[] elapsed = new float[5], exitElapsed = new float[5], exitAlpha = new float[5], exitScale = new float[5];
+        private readonly bool[] showing = new bool[5], exiting = new bool[5];
+        private readonly System.Collections.Generic.List<VisualElement>[] cards = new System.Collections.Generic.List<VisualElement>[5];
         private readonly IVisualElementScheduledItem clock;
         private readonly ShopSnap walk = new ShopSnap();
         private LobbyStage stage;
@@ -45,7 +47,7 @@ namespace NodeWar.Lobby
         private DateTime dailyDate;
         private DateTime bundleStart;
         private bool dailyClaimed;
-        private double previousTime;
+
         private int pointer = -1;
         private Vector2 dragStart;
         private Vector2 dragPrevious;
@@ -63,8 +65,9 @@ namespace NodeWar.Lobby
             for (int i = 0; i < stalls.Length; i++)
             {
                 BuildStall(i);
-                stalls[i].style.display = DisplayStyle.None;
-                poses[i] = new ShopPanelPose(float.NaN, float.NaN, float.NaN, false);
+                stalls[i].style.display = DisplayStyle.Flex;
+                stalls[i].style.visibility = Visibility.Hidden;
+                stalls[i].style.opacity = 0f;
             }
             // Bank contains two shelves, but is a single camera stop.
             offers[5] = new VisualElement();
@@ -79,6 +82,15 @@ namespace NodeWar.Lobby
             stalls[4].Add(laurelsTitle);
             stalls[4].Add(offers[5]);
             BuildOffers();
+            // Keep tall offer lists usable inside the chrome-safe viewport.
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                var list = new ScrollView { touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic };
+                list.style.minHeight = 0; list.style.flexShrink = 1;
+                var children = new System.Collections.Generic.List<VisualElement>(stalls[i].Children());
+                for (int c = 2; c < children.Count; c++) list.Add(children[c]);
+                stalls[i].Add(list); LobbyScrollbars.Hide(list);
+            }
             RefreshCountdowns();
             Root.RegisterCallback<PointerDownEvent>(BeginPointer, TrickleDown.TrickleDown);
             Root.RegisterCallback<PointerMoveEvent>(MovePointer, TrickleDown.TrickleDown);
@@ -94,13 +106,12 @@ namespace NodeWar.Lobby
                 walk.ScrollTo(ShopSnap.Target(walk.Position + Mathf.Sign(evt.delta.y) * 0.01f, evt.delta.y));
                 evt.StopPropagation();
             });
-            motion = Root.schedule.Execute(Animate).Every(16);
-            motion.Pause();
+
             clock = Root.schedule.Execute(RefreshCountdowns).Every(1000);
             clock.Pause();
             Root.RegisterCallback<DetachFromPanelEvent>(evt =>
             {
-                motion.Pause(); clock.Pause();
+                clock.Pause();
                 if (claims == null) return;
                 claims.Confirmed -= OnConfirmed;
                 claims.Cancelled -= OnCancelled;
@@ -146,6 +157,7 @@ namespace NodeWar.Lobby
             stall.Add(grid);
             host.Add(stall);
             stalls[index] = stall;
+            cards[index] = new System.Collections.Generic.List<VisualElement>();
             offers[index] = grid;
         }
 
@@ -211,12 +223,13 @@ namespace NodeWar.Lobby
                 tile.Add(hint);
             }
             offers[stall].Add(sticker);
+            cards[stall == 5 ? 4 : stall].Add(sticker);
             return offer;
         }
 
         private void OpenOffer(Offer offer)
         {
-            if (claims == null || offer.FreeDaily && dailyClaimed) return;
+            if (claims == null || walk.Dragging || walk.Moving || stage?.IsPanning == true || offer.FreeDaily && dailyClaimed) return;
             claims.Open(offer.Request);
             pending = offer;
         }
@@ -264,19 +277,21 @@ namespace NodeWar.Lobby
             // Never carry projected panels from the last camera pose into a visit.
             for (int i = 0; i < stalls.Length; i++)
             {
-                stalls[i].style.display = DisplayStyle.None;
-                poseReady[i] = false;
+                stalls[i].style.display = DisplayStyle.Flex;
+                stalls[i].style.visibility = Visibility.Hidden;
+                stalls[i].style.opacity = 0f;
+                showing[i] = exiting[i] = false;
             }
-            previousTime = Time.unscaledTimeAsDouble;
+
             RefreshCountdowns();
             clock.Resume();
-            motion.Resume();
+
         }
 
         public override void OnHide()
         {
             shown = false;
-            motion.Pause();
+
             clock.Pause();
             CancelPointer();
             walk.Stop();
@@ -296,6 +311,10 @@ namespace NodeWar.Lobby
             // The shell can capture a horizontal swipe and consume its release.
             // A fresh primary press must clear that gesture before starting another.
             CancelPointer();
+            // An overflowing offer list owns vertical gestures inside its viewport.
+            for (var target = evt.target as VisualElement; target != null && target != Root; target = target.parent)
+                if (target is ScrollView scroll && scroll.contentContainer.layout.height > scroll.contentViewport.layout.height + 1f)
+                    return;
             pointer = evt.pointerId;
             dragStart = dragPrevious = evt.position;
             dragTime = evt.timestamp;
@@ -348,13 +367,23 @@ namespace NodeWar.Lobby
             if (released >= 0 && Root.HasPointerCapture(released)) Root.ReleasePointer(released);
         }
 
-        private void Animate()
+        // Called by the shell before its page/camera tick, never by a UI schedule.
+        public void Tick(float seconds)
+        {
+            if (!shown || stage == null) return;
+            walk.Step(seconds);
+            stage.SetShopScroll(walk.Position);
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                if (showing[i]) { entrances[i].Step(seconds, LobbyMotion.PopDamping); elapsed[i] += seconds; }
+                if (exiting[i]) exitElapsed[i] += seconds;
+            }
+        }
+
+        // Camera has already consumed the same page spring sample this frame.
+        public void Project()
         {
             if (!shown || stage == null || Root.panel == null || Root.layout.height <= 0f) return;
-            double now = Time.unscaledTimeAsDouble;
-            walk.Step(Mathf.Min(0.05f, (float)(now - previousTime)));
-            previousTime = now;
-            stage.SetShopScroll(walk.Position);
             Camera camera = stage.ShopCamera;
             for (int i = 0; i < stalls.Length; i++)
             {
@@ -373,11 +402,18 @@ namespace NodeWar.Lobby
                 Vector2 restPoint = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
                     new Vector2(restScreen.x, Screen.height - restScreen.y)));
                 float vertical = ShopSnap.ScreenAnchor(i);
+                // Offset is screen-space and independent of camera distance.
                 float desiredY = i == 0 ? 8f : host.layout.height * vertical;
                 ShopPanelPose pose = ShopProjection.Project(point.x, point.y,
                     screen.z, panelDistances[i],
                     stage.ShopReferenceDistance,
                     i, walk.Position, panelHeights[i], vertical, restPoint.y, desiredY);
+                var safe = SafeBounds();
+                // Reserve the pop overshoot as well as the steady depth scale.
+                stalls[i].style.maxHeight = Mathf.Max(0f, safe.height / (pose.Scale * 1.02f));
+                stalls[i].style.overflow = Overflow.Hidden;
+                pose = ShopProjection.Constrain(pose, stalls[i].layout.width * 1.02f, panelHeights[i] * 1.02f,
+                    safe.xMin, safe.yMin, safe.xMax, safe.yMax);
                 ApplyPose(i, new ShopPanelPose(pose.X, pose.Y, pose.Scale,
                     pose.Visible && !walk.Dragging && !walk.Moving && !stage.IsPanning));
             }
@@ -390,33 +426,65 @@ namespace NodeWar.Lobby
             }
         }
 
+        private Rect SafeBounds()
+        {
+            var root = Root.panel.visualTree;
+            var safe = root.Q("safe-area") ?? root.Q("lobby-root") ?? root;
+            Rect bounds = host.WorldToLocal(safe.worldBound);
+            var pills = root.Q("tabbar-dock");
+            foreach (string name in TopBands)
+            {
+                var top = root.Q(name);
+                if (top != null && top.resolvedStyle.display != DisplayStyle.None)
+                    bounds.yMin = Mathf.Max(bounds.yMin, host.WorldToLocal(top.worldBound).yMax);
+            }
+            if (pills != null && pills.resolvedStyle.display != DisplayStyle.None)
+                bounds.yMax = Mathf.Min(bounds.yMax, host.WorldToLocal(pills.worldBound).yMin);
+            bounds.xMin += 16; bounds.xMax -= 16; bounds.yMin += 16; bounds.yMax -= 16;
+            return bounds;
+        }
+
         private void ApplyPose(int index, ShopPanelPose pose)
         {
-            VisualElement panel = stalls[index];
-            ShopPanelPose previous = poses[index];
-            if (!poseReady[index] || pose.Visible != previous.Visible)
+            var panel = stalls[index];
+            if (pose.Visible && !showing[index])
             {
-                // Display also hides descendants with explicit visibility rules.
-                // Keep the last measured height for the next centred projection.
-                panel.style.display = pose.Visible ? DisplayStyle.Flex : DisplayStyle.None;
-                panel.style.visibility = pose.Visible ? Visibility.Visible : Visibility.Hidden;
+                showing[index] = true; exiting[index] = false; elapsed[index] = 0;
+                entrances[index] = new LobbyMotion.Spring(0f) { Target = 1f };
+                panel.style.visibility = Visibility.Visible;
             }
-            poseReady[index] = true;
-            if (!pose.Visible)
+            else if (!pose.Visible && showing[index])
             {
-                poses[index] = new ShopPanelPose(previous.X, previous.Y, previous.Scale, false);
-                return;
+                showing[index] = false; exiting[index] = true; exitElapsed[index] = 0;
+                exitAlpha[index] = Mathf.Clamp01(elapsed[index] / LobbyMotion.FadeSeconds);
+                exitScale[index] = 0.85f + 0.15f * entrances[index].Position;
             }
-            if (ShopProjection.Changed(previous.X, pose.X, 0.25f)) panel.style.left = pose.X;
-            if (ShopProjection.Changed(previous.Y, pose.Y, 0.25f)) panel.style.top = pose.Y;
-            if (ShopProjection.Changed(previous.Scale, pose.Scale, 0.001f))
-                panel.style.scale = new Scale(new Vector3(pose.Scale, pose.Scale, 1f));
-            // Cache the values actually written, so sub-epsilon motion accumulates.
-            poses[index] = new ShopPanelPose(
-                ShopProjection.Changed(previous.X, pose.X, 0.25f) ? pose.X : previous.X,
-                ShopProjection.Changed(previous.Y, pose.Y, 0.25f) ? pose.Y : previous.Y,
-                ShopProjection.Changed(previous.Scale, pose.Scale, 0.001f) ? pose.Scale : previous.Scale,
-                pose.Visible);
+            if (!showing[index] && !exiting[index]) return;
+            float alpha, size;
+            if (exiting[index])
+            {
+                float t = Mathf.Clamp01(exitElapsed[index] / 0.100f);
+                alpha = exitAlpha[index] * (1f - t);
+                size = Mathf.Lerp(exitScale[index], 0.95f, LobbyMotion.InCubic(t));
+                if (t >= 1f) { exiting[index] = false; panel.style.visibility = Visibility.Hidden; }
+            }
+            else
+            {
+                alpha = Mathf.Clamp01(elapsed[index] / LobbyMotion.FadeSeconds);
+                size = 0.85f + 0.15f * entrances[index].Position;
+                for (int c = 0; c < cards[index].Count; c++)
+                {
+                    float age = Mathf.Max(0f, elapsed[index] - c * 0.040f);
+                    var pop = new LobbyMotion.Spring(0f) { Target = 1f };
+                    pop.Step(age, LobbyMotion.PopDamping);
+                    cards[index][c].style.opacity = Mathf.Clamp01(age / LobbyMotion.FadeSeconds);
+                    cards[index][c].style.translate = new Translate(0f, 12f * (1f - pop.Position));
+                    cards[index][c].style.scale = new Scale(Vector3.one * (0.85f + 0.15f * pop.Position));
+                }
+            }
+            panel.style.opacity = alpha;
+            panel.style.left = pose.X; panel.style.top = pose.Y;
+            panel.style.scale = new Scale(new Vector3(pose.Scale * size, pose.Scale * size, 1f));
         }
     }
 }

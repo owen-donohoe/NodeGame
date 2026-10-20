@@ -22,9 +22,21 @@ namespace NodeWar.Lobby
             float behind = position - stall;
             bool visible = IsVisible(stall, position, depth);
             float recession = 1f - 0.4f * Math.Max(0f, Math.Min(1f, behind));
-            float scale = referenceDistance / Math.Max(0.001f, distance) * recession;
-            return new ShopPanelPose(x, y + targetY - restY - panelHeight * scale * screenAnchor, scale, visible);
+            float scale = Math.Max(0.85f, Math.Min(1f, referenceDistance / Math.Max(0.001f, distance) * recession));
+            return new ShopPanelPose((float)Math.Round(x), (float)Math.Round(y + targetY - restY - panelHeight * scale * screenAnchor), scale, visible);
         }
+
+        public static ShopPanelPose Constrain(ShopPanelPose pose, float width, float height,
+            float left, float top, float right, float bottom)
+        {
+            float maxX = Math.Max(left, right - width * pose.Scale);
+            float maxY = Math.Max(top, bottom - height * pose.Scale);
+            return new ShopPanelPose(PixelInside(pose.X, left, maxX),
+                PixelInside(pose.Y, top, maxY), pose.Scale, pose.Visible);
+        }
+
+        private static float PixelInside(float value, float min, float max) =>
+            (float)Math.Max(Math.Ceiling(min), Math.Min(Math.Floor(max), Math.Round(value)));
 
         public static bool IsVisible(float stall, float position, float depth)
             => depth > 0f && Math.Abs(position - stall) <= 0.001f;

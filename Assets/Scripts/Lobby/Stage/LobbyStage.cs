@@ -56,7 +56,8 @@ namespace NodeWar.Lobby
         private Vector3 shotPosition;
         private Quaternion shotRotation;
         private double shotStarted = double.NegativeInfinity;
-        public bool IsPanning => Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PageSeconds;
+        private bool pageDriven, pageMoving;
+        public bool IsPanning => pageMoving || Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PageSeconds;
         private StageShot currentShot = StageShot.Home;
         private float shopScroll;
 
@@ -202,12 +203,29 @@ namespace NodeWar.Lobby
 
         public void ShowShot(StageShot shot)
         {
+            pageDriven = pageMoving = false;
             currentShot = shot;
             shotStartPosition = stageCamera.transform.localPosition;
             shotStartRotation = stageCamera.transform.localRotation;
             GetShot(shot, out shotPosition, out shotRotation);
             if (shot == StageShot.Market) shotPosition.z -= shopScroll * ShopStallSpacing;
             shotStarted = Time.unscaledTimeAsDouble;
+        }
+
+        /// <summary>Sampled by the shell from the same coordinate as the page strip.</summary>
+        public void ApplyPageMotion(StageShot from, StageShot to, float progress, bool moving)
+        {
+            pageDriven = true; pageMoving = moving;
+            currentShot = to;
+            GetShot(from, out var a, out var ar);
+            GetShot(to, out var b, out var br);
+            if (from == StageShot.Market) a.z -= shopScroll * ShopStallSpacing;
+            if (to == StageShot.Market) b.z -= shopScroll * ShopStallSpacing;
+            shotPosition = Vector3.LerpUnclamped(a, b, progress);
+            shotRotation = Quaternion.SlerpUnclamped(ar, br, progress);
+            stageCamera.transform.localPosition = shotPosition;
+            stageCamera.transform.localRotation = shotRotation;
+            shotStarted = double.NegativeInfinity;
         }
 
         /// <summary>Continuous stall units. Applies exactly, without a camera tween.</summary>
@@ -433,7 +451,7 @@ namespace NodeWar.Lobby
         private void Update()
         {
             float delta = Time.unscaledDeltaTime;
-            if (IsPanning || stageCamera.transform.localPosition != shotPosition)
+            if (!pageDriven && (IsPanning || stageCamera.transform.localPosition != shotPosition))
             {
                 float progress = (float)(Time.unscaledTimeAsDouble - shotStarted) / LobbyMotion.PageSeconds;
                 float t = LobbyMotion.OutCubic(progress);

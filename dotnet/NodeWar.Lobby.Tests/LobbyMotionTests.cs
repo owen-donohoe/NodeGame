@@ -6,6 +6,96 @@ namespace NodeWar.Lobby.Tests
     public class LobbyMotionTests
     {
         [Test]
+        public void SpringIsFrameRateIndependentAndRetargetPreservesMomentum()
+        {
+            var a = new LobbyMotion.Spring(0) { Target = 1, Velocity = 2 };
+            var b = a;
+            a.Step(0.12f);
+            for (int i = 0; i < 12; i++) b.Step(0.01f);
+            Assert.That(a.Position, Is.EqualTo(b.Position).Within(0.00001f));
+            Assert.That(a.Velocity, Is.EqualTo(b.Velocity).Within(0.0001f));
+            float position = a.Position, velocity = a.Velocity;
+            a.Target = -1;
+            Assert.That(a.Position, Is.EqualTo(position));
+            Assert.That(a.Velocity, Is.EqualTo(velocity));
+            a.Step(0.001f);
+            Assert.That(a.Position, Is.GreaterThan(position));
+            a.Step(1f);
+            Assert.That(a.Position, Is.EqualTo(-1).Within(0.001f));
+        }
+
+        [Test]
+        public void PageSpringSettlesAround350msAndPopOvershoots()
+        {
+            var page = new LobbyMotion.Spring(0) { Target = 1 };
+            page.Step(0.350f);
+            Assert.That(page.Settled, Is.True);
+            var pop = new LobbyMotion.Spring(0.92f) { Target = 1 };
+            pop.Step(0.150f, LobbyMotion.PopDamping);
+            Assert.That(pop.Position, Is.GreaterThan(1));
+            pop.Step(0.150f, LobbyMotion.PopDamping);
+            Assert.That(pop.Position, Is.EqualTo(1).Within(0.001f));
+        }
+
+        [Test]
+        public void NonAdjacentJumpTravelsOneWidthWithOnlyTwoPagesAndSharedProgress()
+        {
+            var strip = new LobbyMotion.PageStrip(); strip.Reset(0); strip.Go(4);
+            Assert.That(strip.Motion.Target, Is.EqualTo(1));
+            strip.Step(0.05f);
+            Assert.That(strip.Visible(0) && strip.Visible(4), Is.True);
+            for (int i = 1; i < 4; i++) Assert.That(strip.Visible(i), Is.False);
+            Assert.That(strip.Slots[4] - strip.Slots[0], Is.EqualTo(1));
+            strip.Pair(out int from, out int to, out float t);
+            Assert.That(from, Is.EqualTo(0)); Assert.That(to, Is.EqualTo(4));
+            Assert.That(t, Is.EqualTo(strip.Motion.Position));
+            Assert.That(from + (to - from) * t, Is.GreaterThan(t)); // pills/camera traverse the full logical path
+            strip.Step(1);
+            Assert.That(strip.Visible(4), Is.True); Assert.That(strip.Visible(0), Is.False);
+        }
+
+        [Test]
+        public void DragTracksFingerRubberBandsEdgesAndRetainsReleaseVelocity()
+        {
+            var strip = new LobbyMotion.PageStrip(); strip.Reset(2); strip.BeginDrag();
+            strip.Drag(0.4f, 2f);
+            Assert.That(strip.Motion.Position, Is.EqualTo(0.4f));
+            Assert.That(strip.Visible(3), Is.True); Assert.That(strip.Visible(1), Is.False);
+            strip.Release(1); Assert.That(strip.Motion.Velocity, Is.EqualTo(2));
+            strip.Step(1); Assert.That(strip.Current, Is.EqualTo(3));
+            strip.Reset(0); strip.BeginDrag(); strip.Drag(-0.5f, -2);
+            Assert.That(strip.Motion.Position, Is.EqualTo(-0.175f).Within(0.0001f));
+            strip.Release(-1); strip.Step(1); Assert.That(strip.Current, Is.Zero);
+            Assert.That(strip.Motion.Position, Is.Zero);
+        }
+
+        [Test]
+        public void InterruptedNavigationNeverMovesExistingPagesOrResetsVelocity()
+        {
+            var strip = new LobbyMotion.PageStrip(); strip.Reset(2); strip.Go(4); strip.Step(0.03f);
+            float x = strip.Motion.Position, v = strip.Motion.Velocity, slot = strip.Slots[4];
+            strip.Go(0);
+            Assert.That(strip.Motion.Position, Is.EqualTo(x));
+            Assert.That(strip.Motion.Velocity, Is.EqualTo(v));
+            Assert.That(strip.Slots[4], Is.EqualTo(slot));
+            strip.Go(4); Assert.That(strip.Motion.Velocity, Is.EqualTo(v));
+            strip.BeginDrag(); strip.Drag(0, v);
+            Assert.That(strip.Motion.Position, Is.EqualTo(x));
+            strip.Release(0); strip.Go(0); strip.Go(3);
+            x = strip.Motion.Position; strip.BeginDrag(); strip.Drag(0, v);
+            Assert.That(strip.Motion.Position, Is.EqualTo(x));
+        }
+
+        [Test]
+        public void EdgeCameraAndPillProgressUseTheRubberBandCoordinate()
+        {
+            var strip = new LobbyMotion.PageStrip(); strip.Reset(0); strip.BeginDrag(); strip.Drag(-0.5f, -1);
+            strip.Pair(out int from, out int to, out float progress);
+            Assert.That(from, Is.Zero); Assert.That(to, Is.EqualTo(1));
+            Assert.That(progress, Is.EqualTo(strip.Motion.Position));
+        }
+
+        [Test]
         public void EveryTabPairFollowsPillOrderIncludingNonAdjacentJumps()
         {
             var order = new[] { LobbyPageID.Shop, LobbyPageID.Workshop, LobbyPageID.Home, LobbyPageID.Social, LobbyPageID.Guild };
