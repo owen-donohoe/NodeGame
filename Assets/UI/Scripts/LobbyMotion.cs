@@ -95,7 +95,10 @@ namespace NodeWar.Lobby
             public void Release(int offset)
             {
                 int page = Math.Max(0, Math.Min(4, Current + offset));
-                if (float.IsNaN(Slots[page])) page = Current;
+                // An interrupted long jump can occupy the neighbour's usual
+                // slot. Attach that destination beyond it rather than dropping
+                // the release or replacing a page that is still on screen.
+                if (float.IsNaN(Slots[page])) { Go(page); return; }
                 Current = page; Motion.Target = Slots[page]; Dragging = false; Moving = true;
             }
             public void Step(float seconds)

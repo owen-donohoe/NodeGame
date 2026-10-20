@@ -96,6 +96,19 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void SwipeInterruptingLongJumpStillReachesItsLogicalNeighbour()
+        {
+            var strip = new LobbyMotion.PageStrip(); strip.Reset(0); strip.Go(4); strip.Step(0.03f);
+            strip.BeginDrag(); strip.Drag(-0.1f, -1f);
+            float x = strip.Motion.Position, v = strip.Motion.Velocity;
+            strip.Release(-1);
+            Assert.That(strip.Current, Is.EqualTo(3));
+            Assert.That(strip.Motion.Position, Is.EqualTo(x));
+            Assert.That(strip.Motion.Velocity, Is.EqualTo(v));
+            strip.Step(1f); Assert.That(strip.Visible(3), Is.True);
+        }
+
+        [Test]
         public void EveryTabPairFollowsPillOrderIncludingNonAdjacentJumps()
         {
             var order = new[] { LobbyPageID.Shop, LobbyPageID.Workshop, LobbyPageID.Home, LobbyPageID.Social, LobbyPageID.Guild };
