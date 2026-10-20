@@ -27,6 +27,15 @@ namespace NodeWar.Lobby
             public void Step(float seconds, float damping = PageDamping)
             {
                 if (seconds <= 0f) return;
+                if (damping == 1f)
+                {
+                    double offset = Position - Target;
+                    double impulse = Velocity + Frequency * offset;
+                    double falloff = Math.Exp(-Frequency * seconds);
+                    Position = Target + (float)((offset + impulse * seconds) * falloff);
+                    Velocity = (float)((Velocity - Frequency * impulse * seconds) * falloff);
+                    return;
+                }
                 double a = damping * Frequency;
                 double b = Frequency * Math.Sqrt(1.0 - damping * damping);
                 double displacement = Position - Target;

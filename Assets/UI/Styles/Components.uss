@@ -883,3 +883,16 @@
 .lb-root .mk-purse, .lb-root .mk-namelink, .lb-root .g2-home-mode, .lb-root .ws-card { background-image: none; }
 
 .lb-root #social-tv .lb-async > VisualElement > Label { color: var(--mk-muted); font-size: 13px; padding: 8px 12px; }
+
+/* SegmentedSwitch owns a single face; option buttons paint only their text. */
+.lb-root .lb-segmented { height: 52px; flex-shrink: 0; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 4px; background-color: var(--mk-sheet); }
+.lb-root .lb-segmented__track { position: relative; flex-direction: row; flex-grow: 1; padding: 4px; border-radius: 8px; background-color: var(--mk-pressed); }
+.lb-root .lb-segmented__thumb { position: absolute; left: 0; top: 4px; height: 32px; border-width: 0; border-bottom-width: 3px; border-bottom-color: var(--line-light); border-radius: 6px; background-color: var(--mk-sheet); }
+.lb-root .lb-segmented__face, .lb-root .lb-segmented__face:hover, .lb-root .lb-segmented__face:active, .lb-root .lb-segmented__face:focus { flex-grow: 1; flex-basis: 0; min-width: 0; height: 29px; min-height: 0; margin: 0; padding: 6px 10px; border-width: 0; border-radius: 6px; background-image: none; background-color: var(--clear); color: var(--mk-muted); -unity-font-definition: var(--font-display); font-size: 14px; -unity-text-align: middle-center; translate: 0 0; scale: 1 1; transition-property: color; transition-duration: 0.25s; }
+.lb-root .lb-segmented__face--on, .lb-root .lb-segmented__face--on:hover, .lb-root .lb-segmented__face--on:active, .lb-root .lb-segmented__face--on:focus { color: var(--mk-ink); }
+.lb-root #page-workshop .ui-filter-row { align-items: stretch; margin-bottom: 12px; }
+.lb-root #page-workshop .ws-ownership { flex-grow: 1; flex-basis: 0; min-width: 0; }
+.lb-root #page-workshop .ws-panel2 { padding: 12px; }
+.lb-root #page-workshop .ui-filter-sort { height: auto; min-height: 0; margin: 0 0 0 8px; padding: 0 14px; border-radius: 8px; }
+.lb-root .lb-guild-member-filter { margin: 12px; }
+

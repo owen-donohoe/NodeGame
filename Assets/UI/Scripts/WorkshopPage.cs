@@ -23,6 +23,7 @@ namespace NodeWar.Lobby
         private readonly LobbyContextMenu menu;
         private readonly List<Item> districts = new List<Item>(), suits = new List<Item>();
         private readonly Button segDistricts, segSuits;
+        private readonly SegmentedSwitch tabs, ownership;
         private readonly VisualElement unlocked;
         private readonly Label eraMessage;
         private readonly ScrollView grid;
@@ -102,7 +103,9 @@ namespace NodeWar.Lobby
             grid.verticalScroller.valueChanged += _ => UpdateScrollLayout();
             ownedFilter = Root.Q<Button>("workshop-owned");
             allFilter = Root.Q<Button>("workshop-all");
-            allFilter.AddToClassList("ui-filter-all");
+            tabs = SegmentedSwitch.Replace(segDistricts.parent.parent, segDistricts, segSuits);
+            ownership = SegmentedSwitch.Replace(ownedFilter.parent.parent, ownedFilter, allFilter);
+            ownership.AddToClassList("ws-ownership");
             sortFilter = Root.Q<Button>("workshop-sort");
             presetLabel = Root.Q<Label>("workshop-preset-label");
             browserTitle = Root.Q<Label>("workshop-browser-title");
@@ -270,8 +273,7 @@ namespace NodeWar.Lobby
         }
         private void Render()
         {
-            segDistricts?.EnableInClassList("mk-seg2__btn--on", activeTab == Tab.Districts);
-            segSuits?.EnableInClassList("mk-seg2__btn--on", activeTab == Tab.Suits);
+            tabs.Select((int)activeTab);
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             Item item = Find(items, loadout.PreviewId);
@@ -303,9 +305,8 @@ namespace NodeWar.Lobby
         {
             if (unlocked == null) return;
             unlocked.Clear();
-            ownedFilter.EnableInClassList("ui-filter-chip--on", !showAll);
-            allFilter.EnableInClassList("ui-filter-chip--on", showAll);
-            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role");
+            ownership.Select(showAll ? 1 : 0);
+            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Era" : sort == LoadoutSort.Name ? "Name" : "Role");
             browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
