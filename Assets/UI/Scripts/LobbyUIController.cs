@@ -583,6 +583,25 @@ namespace NodeWar.Lobby
             router.Stack.Changed += guildChrome;
             navigation.Register(guildPage);
             guildPage.MembershipChanged += () => RefreshChromeVisibility(lobbyRoot);
+
+            // Padding belongs to the scrolling content, so the final row can
+            // reach the top of the floating dock at every panel scale.
+            void UpdateListClearance()
+            {
+                float height = pillDock.resolvedStyle.height;
+                if (float.IsNaN(height) || height <= 0) return;
+                foreach (string name in new[] { "social-scroll", "guild-results-scroll", "guild-home-scroll" })
+                {
+                    var scroll = lobbyRoot.Q<ScrollView>(name);
+                    if (scroll != null) scroll.contentContainer.style.paddingBottom = height + 12f;
+                }
+                var chat = guildPage.Root.Q("guild-chat-button");
+                if (chat != null) chat.style.bottom = height + 12f;
+            }
+            pillDock.RegisterCallback<GeometryChangedEvent>(_ => UpdateListClearance());
+            // Guild home and visitor are attached on demand after membership loads.
+            guildPage.Root.RegisterCallback<GeometryChangedEvent>(_ => UpdateListClearance());
+            lobbyRoot.schedule.Execute(UpdateListClearance);
         }
 
         private void BindNav(VisualElement root, string elementName, LobbyPageID id)

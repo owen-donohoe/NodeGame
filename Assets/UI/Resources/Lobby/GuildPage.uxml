@@ -28,7 +28,6 @@
                 </ui:VisualElement>
                 <ui:VisualElement name="guild-browse-results" />
             </ui:VisualElement>
-            <ui:VisualElement class="ui-lobby-list-end" picking-mode="Ignore" />
         </ui:ScrollView>
     </ui:VisualElement>
     <ui:VisualElement name="guild-home" class="lb-guild-home">

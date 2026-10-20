@@ -738,7 +738,7 @@
 .lb-root .lb-guild-header .mk-meter { margin-top: var(--space-2); margin-bottom: var(--space-1); }
 .lb-root .lb-guild-header .mk-meter__fill { height: 100%; }
 .lb-root .lb-guild-home { flex-grow: 1; min-height: 0; padding: var(--space-3); }
-.lb-root .lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: var(--space-6); }
+.lb-root .lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: 0; }
 .lb-root .lb-guild-sort { min-height: 44px; }
 .lb-root .lb-guild-chat-button { position: absolute; right: 16px; bottom: 16px; min-width: 96px; min-height: 56px; flex-direction: row; align-items: center; justify-content: center; }
 .lb-root .lb-guild-sheet { flex-grow: 1; min-height: 0; padding: 0; }
@@ -769,15 +769,15 @@
 .lb-root #page-workshop .ui-filter-hit { min-height: 44px; height: 44px; min-width: 44px; padding: 0; margin: 0; align-items: stretch; justify-content: center; flex-shrink: 0; }
 .lb-root #page-workshop .ui-filter-all { margin-left: var(--space-2); }
 .lb-root #page-workshop .ui-filter-sort { margin-left: var(--space-2); }
-.lb-root #page-workshop .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: var(--space-6); }
-.lb-root #page-social .g2-social-scroll { padding: var(--lobby-edge-inset) var(--lobby-edge-inset) var(--space-6); }
+.lb-root #page-workshop .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 12px; }
+.lb-root #page-social .g2-social-scroll { padding: var(--lobby-edge-inset) var(--lobby-edge-inset) 0; }
 .lb-root #page-social .ui-match-body { flex-grow: 1; flex-shrink: 1; min-width: 0; }
 .lb-root #page-social .g2-history-row .mk-number { min-height: 24px; }
 .lb-root #page-social .g2-history-name { min-height: 44px; }
 .lb-root #page-guild .lb-guild-search-anchor { position: relative; margin: var(--space-4) var(--lobby-edge-inset) 0; flex-shrink: 0; }
 .lb-root #page-guild .lb-guild-searchbtn { padding: var(--space-2); }
 .lb-root #page-guild .lb-guild-filterbtn { padding: var(--space-2); }
-.lb-root #page-guild .lb-guild-results { opacity: 0; padding: var(--space-4) var(--lobby-edge-inset) var(--space-6); }
+.lb-root #page-guild .lb-guild-results { opacity: 0; padding: var(--space-4) var(--lobby-edge-inset) 0; }
 .lb-root #page-guild .ui-filter-layer { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
 .lb-root #page-guild .ui-filter-bubble .unity-base-field { min-height: 44px; margin: 0 0 var(--space-2); }
 .lb-root #page-guild .ui-filter-bubble .unity-base-field__label { min-width: 0; }

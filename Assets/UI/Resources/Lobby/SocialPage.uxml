@@ -13,6 +13,5 @@
    <ui:VisualElement class="mk-ledger__header"><ui:Label text="BATTLE HISTORY" /><ui:Label text="Recent" class="mk-ledger__meta" /></ui:VisualElement>
    <ui:VisualElement name="social-previous" />
   </lobby:MkCard>
-  <ui:VisualElement class="ui-lobby-list-end" picking-mode="Ignore" />
  </ui:ScrollView>
 </ui:UXML>
