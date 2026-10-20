@@ -283,7 +283,7 @@ namespace NodeWar.Lobby
             int selected = profile != null ? profile.data.activeLoadoutPreset : 0;
             for (int i = 0; i < presets.Length; i++)
             {
-                presets[i].Q<Label>().EnableInClassList("mk-chip--on", selected == i);
+                presets[i].EnableInClassList("ws-preset--on", selected == i);
                 presets[i].SetEnabled(!inventoryBusy);
             }
             int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);

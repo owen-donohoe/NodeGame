@@ -8,9 +8,9 @@
             <engine:VisualElement name="workshop-panel1" class="ws-panel1">
                 <engine:VisualElement class="mk-spread ws-presets">
                     <engine:VisualElement class="mk-row ws-preset-tabs">
-                        <engine:Button name="workshop-preset-0" class="ui-reset-button ws-preset"><engine:Label text="1" class="mk-chip mk-chip--tap ws-preset-face" picking-mode="Ignore" /></engine:Button>
-                        <engine:Button name="workshop-preset-1" class="ui-reset-button ws-preset"><engine:Label text="2" class="mk-chip mk-chip--tap ws-preset-face" picking-mode="Ignore" /></engine:Button>
-                        <engine:Button name="workshop-preset-2" class="ui-reset-button ws-preset"><engine:Label text="3" class="mk-chip mk-chip--tap ws-preset-face" picking-mode="Ignore" /></engine:Button>
+                        <engine:Button name="workshop-preset-0" text="1" class="mk-btn ws-preset" />
+                        <engine:Button name="workshop-preset-1" text="2" class="mk-btn ws-preset" />
+                        <engine:Button name="workshop-preset-2" text="3" class="mk-btn ws-preset" />
                     </engine:VisualElement>
                     <engine:Label name="workshop-preset-label" class="mk-eyebrow ws-eyebrow" picking-mode="Ignore" />
                 </engine:VisualElement>
