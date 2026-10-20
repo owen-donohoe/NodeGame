@@ -40,7 +40,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: f05cc8f0
+verified: 1474a6d2
 ---
 
 # UI art
@@ -88,6 +88,8 @@ Lookup tries exact kind/context, then the same kind/Anywhere, then generated gly
 `UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
 
 `--font-display` resolves Lilita One for titles, numbers, buttons and tabs; `--font-label` resolves Kalam Bold for labels/chips/row names; `--font-body` resolves Kalam Regular. Type tokens are body 16, secondary 14, caption 13, title 24 and number 22. Outline tokens are zero; real faces carry weight. Kalam line boxes allow its tall ascenders. Icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+
+Workshop, its item sheet, Social and Guild use `--font-hand` (Patrick Hand) with ink outlines. Shared components provide 4/8-scale spacing, 16px screen insets, 8px grid gaps, 36px chip faces within 44px targets, 64px match rows and rectangular VS faces. Their runtime resource styles delegate to `Components.uss`.
 
 ## Decisions
 - Resolve semantic kind/context overrides rather than replace sprites independently at every call site.
