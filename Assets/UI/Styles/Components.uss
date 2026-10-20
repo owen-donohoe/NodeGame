@@ -559,6 +559,9 @@
 .lb-root .mk-caption, .lb-root .mk-cap, .lb-root .mk-muted, .lb-root .mk-eyebrow, .lb-root .mk-friend__status { font-size: 13px; min-height: 16px; -unity-font-definition: var(--font-body); color: var(--mk-muted); }
 .lb-root .mk-eyebrow { letter-spacing: var(--tracking); }
 .lb-root .mk-ellipsis, .lb-root .mk-friend__name, .lb-root .mk-namelink Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
+/* Row labels need allocated width before ellipsis is measured. */
+.lb-root .mk-namelink Label { flex-grow: 1; flex-basis: 0; font-size: 17px; }
+.lb-root .mk-profile-caret, .lb-root .mk-trophy { flex-shrink: 0; }
 .lb-root .mk-btn, .lb-root .mk-tile, .lb-root .mk-crate, .lb-root .mk-skin { border-width: 2px; border-bottom-width: var(--edge-press-bottom); border-color: var(--line-inner); border-radius: var(--radius-button); background-color: var(--mk-sheet); color: var(--mk-ink); padding: 8px 12px; min-height: 44px; min-width: 44px; -unity-font-definition: var(--font-display); font-size: 15px; }
 .lb-root .mk-btn:active, .lb-root .mk-tile:active, .lb-root .mk-skin:active, .lb-root .mk-crate:active { border-bottom-width: 2px; }
 .lb-root .mk-btn--primary, .lb-root .mk-btn--gold { background-color: var(--mk-action); }
@@ -629,9 +632,9 @@
 .lb-root .mk-battle:active { border-bottom-width: 2px; }
 .lb-root .mk-topbar { flex-direction: row; align-items: center; padding: 8px 12px; flex-shrink: 0; min-height: 52px; }
 .lb-root .mk-topbar > * { margin-right: 8px; }
-.lb-root .mk-purse { flex-direction: row; align-items: center; padding: 8px 12px; border-width: 2px; border-color: var(--line-outer); border-radius: 22px; min-height: 44px; min-width: 44px; flex-shrink: 1; background-color: var(--mk-dark); color: var(--mk-sheet); font-size: 16px; }
-.lb-root .mk-purse > * { margin-right: 8px; color: var(--mk-sheet); }
-.lb-root .mk-purse > .mk-number { min-width: 0; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; }
+.lb-root .mk-purse { flex-direction: row; align-items: center; padding: 8px 12px; border-width: 2px; border-color: var(--line-outer); border-radius: 22px; min-height: 44px; min-width: 44px; flex-shrink: 0; background-color: var(--mk-dark); color: var(--mk-sheet); font-size: 16px; }
+.lb-root .mk-purse > * { flex-shrink: 0; margin-right: 4px; color: var(--mk-sheet); }
+.lb-root .mk-purse > .mk-number { flex-shrink: 0; white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 16px; }
 .lb-root .mk-purse__dot--coin, .lb-root .mk-purse__dot--leaf { width: 16px; height: 16px; border-radius: 8px; border-width: 2px; border-color: var(--mk-sheet); background-color: var(--mk-coin); }
 .lb-root .mk-purse__dot--leaf { border-radius: 2px 12px 2px 12px; background-color: var(--mk-leaf); }
 .lb-root .mk-rbtn { width: 44px; height: 44px; min-width: 44px; flex-shrink: 0; border-radius: 22px; border-width: 2px; border-color: var(--line-outer); background-color: var(--mk-dark); color: var(--mk-sheet); padding: 0; align-items: center; justify-content: center; }
