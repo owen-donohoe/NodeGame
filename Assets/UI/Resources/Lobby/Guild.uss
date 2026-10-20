@@ -45,3 +45,5 @@
 .mk-fixed-sheet .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .lb-guild-sheet > .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+
+.lb-guild-row { min-height: 88px; }
