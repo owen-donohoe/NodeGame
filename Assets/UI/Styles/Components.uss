@@ -675,7 +675,7 @@
 .ui-root .mk-ellipsis, .ui-root .mk-friend__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
 .ui-root .mk-namelink { min-height: 44px; min-width: 0; flex-shrink: 1; }
 .ui-root .mk-namelink Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0; }
-.ui-root .mk-purse { flex-shrink: 1; min-width: 0; }
+.ui-root .mk-purse { flex-shrink: 1; min-width: 44px; }
 .ui-root .mk-purse > .mk-number { min-width: 0; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-root .mk-tab { min-height: 64px; margin-right: 8px; }
 .ui-root .mk-tab--last { margin-right: 0; }
@@ -691,3 +691,5 @@
 .ui-root .mk-panel-list Button { margin-bottom: 8px; }
 
 .ui-root .mk-sheet > ScrollView > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container > .mk-btn { margin-bottom: 8px; }
+
+.ui-root .mk-tab-label { font-size: var(--type-caption); }
