@@ -17,6 +17,9 @@ sources:
   - Assets/UI/Scripts/MkPanel.cs
   - Assets/UI/Scripts/MkSheet.cs
   - Assets/UI/Scripts/LobbyMotion.cs
+  - Assets/UI/Scripts/SegmentedSwitch.cs
+  - Assets/UI/Scripts/SegmentedSwitchMath.cs
+  - Assets/UI/Scripts/LobbySwitch.cs
   - Assets/UI/Scripts/LobbyElementMotion.cs
   - Assets/UI/Scripts/MkPlayerRow.cs
   - Assets/UI/Scripts/PaperCard.cs
@@ -45,13 +48,13 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 70600df1
+verified: 513150e5
 ---
 
 # UI art
 
 ## Purpose
-Art can replace placeholder glyphs and district thumbnails without changing screen behavior. One semantic theme serves lobby, draft and match surfaces while procedural defaults keep missing art usable.
+Shared art themes serve lobby, draft and match UI without changing behavior; procedural fallbacks keep missing art usable.
 
 ## Interface
 Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets/UI/Resources/UIArtTheme.asset`. `UIArt.Theme` loads `Resources.Load<UIArtTheme>("UIArtTheme")` once per play session; restart Play Mode after reference/entry changes.
@@ -73,6 +76,8 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 `MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals with scrim, close and router Back. Both use `LobbyMotion` pop springs, 120ms scrim/surface fades and 140ms closes; sheets rise, panels scale; no USS tween competes. `Components.uss` exposes `mk-` classes; `Tokens.uss` separates raw `--pal-*` values from meaning tokens. Pages are transparent; cards carry content.
 
 `PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
+
+`SegmentedSwitch.Select/Changed` slides one face; `LobbySwitch` slides its knob. Both retarget critical `LobbyMotion` springs; segment colours crossfade.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
@@ -105,7 +110,7 @@ World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen o
 - Scope Lilita One/Fredoka panel styling to the lobby so Shop and match styling remain independent.
 
 ## Pressure points
-The icon theme has no sprite entries. Workshop cards use monograms; `StageArt`/`StagePaperArt` generate tinted, badged buildings/villagers via `PaperRasterizer`. Authored item thumbnails are missing. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment.
+Icon theme entries are empty. Workshop cards use monograms; `StageArt`/`StagePaperArt` generate tinted, badged buildings/villagers via `PaperRasterizer`. Item thumbnails are missing. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence varies. Gauge skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment.
 
 ## Change recipes
 - Add an icon: append its stable kind, provide fallback drawing and usage locations/labels, set context at call sites and extend coverage tests; assign sprites through the Inspector.

@@ -112,10 +112,13 @@ sources:
   - Assets/UI/Scripts/SkinBand.cs
   - Assets/UI/Scripts/SkinBandMath.cs
   - Assets/UI/Scripts/SocialPage.cs
+  - Assets/UI/Scripts/HistoryOpponentNames.cs
+  - Assets/UI/Scripts/SegmentedSwitch.cs
+  - Assets/UI/Scripts/SegmentedSwitchMath.cs
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 70600df1
+verified: 513150e5
 ---
 
 # Lobby UI
@@ -128,15 +131,15 @@ Loadouts, accounts/settings and match entry.
 
 `LobbyOverlayRouter` registers close callbacks on `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels, remaining targets log. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `BadgeBoard` sums dotted keys. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled in a centered `MkPanel`, including shop purchases.
 
-`LobbyMotion` supplies exact damped springs. `NavigationController.Tick/MotionChanged` shares one coordinate with stage/pills: physical slides, finger tracking, rubber-band edges, velocity-preserving retargets; long jumps travel one width. Only travel-range pages display. Surfaces pop/fade open and ease closed. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `LobbyContextMenu.Attach/Show/Close` displays actions; `LobbyToast.Show(message)` supplies feedback. `SafeAreaBinder` applies insets.
+`LobbyMotion` supplies exact damped springs. `NavigationController.Tick/MotionChanged` shares one coordinate with stage/pills: physical slides, finger tracking, rubber-band edges, velocity-preserving retargets; long jumps travel one width. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `LobbyContextMenu.Attach/Show/Close` displays actions; `LobbyToast.Show(message)` supplies feedback. `SafeAreaBinder` applies insets.
 
 Pages:
 - `WorkshopPage` scrolls two-column grids via `LoadoutBrowse`. `WorkshopStageBinding` maps taps; measured suit bounds retain 8% window margins. `LoadoutScreenModel` gates equipment/replacement; `WorkshopInventorySession` gates requests. Its 78% MkSheet shows preview-inset variant dots, data-bound skins with inert locked previews, and ten-cell `StatHistogram` comparisons.
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a Workshop tag. Big/Small open crates. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show prebuilt settled offers with spring/stagger entrances and drag exits. LateUpdate projects after the camera; hidden panels retain layout. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
-- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history `AsyncStateView`s. TV/Online/history share ledgers; TV lists 0-4 games plus an empty-state line. Friends precede online guild members; offline friends expand behind a toggle. History uses settled outcomes and signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
+- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles, falling back to Unknown, and shows signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Players have stats, loadout, newest-ten W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
-- `GuildPage`: focus/typing/browse raises search (280ms cubic slide/fade); Back/clear centers it. The anchored filter bubble has RR/member sliders and Joinable only; member ranges filter locally. Results, members and announcements use ledgers; public details omit weekly progress. Membership shows progress/announcements/sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, reports log. `GuildViews` builds components; `GuildSheetHost` adapts sheets. `OpenChatAsync` checks membership; chat polls, capped at 200 characters.
+- `GuildPage`: focus/typing/browse raises search (280ms cubic slide/fade); Back or empty blur centers it. Clearing focused text stays raised. The anchored filter bubble has RR/member sliders and Joinable only; member ranges filter locally. Results, members and announcements use ledgers; public details omit weekly progress. Membership shows progress/announcements/sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, reports log. `GuildViews` builds components; `GuildSheetHost` adapts sheets. `OpenChatAsync` checks membership; chat polls, capped at 200 characters.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 

@@ -883,3 +883,34 @@
 .lb-root .mk-purse, .lb-root .mk-namelink, .lb-root .g2-home-mode, .lb-root .ws-card { background-image: none; }
 
 .lb-root #social-tv .lb-async > VisualElement > Label { color: var(--mk-muted); font-size: 13px; padding: 8px 12px; }
+
+/* SegmentedSwitch owns a single face; option buttons paint only their text. */
+.lb-root .lb-segmented { height: 52px; flex-shrink: 0; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 4px; background-color: var(--mk-sheet); }
+.lb-root .lb-segmented__track { position: relative; flex-direction: row; flex-grow: 1; padding: 4px; border-radius: 8px; background-color: var(--mk-pressed); }
+.lb-root .lb-segmented__thumb { position: absolute; left: 0; top: 4px; height: 32px; border-width: 0; border-bottom-width: 3px; border-bottom-color: var(--line-light); border-radius: 6px; background-color: var(--mk-sheet); }
+.lb-root .lb-segmented__face, .lb-root .lb-segmented__face:hover, .lb-root .lb-segmented__face:active, .lb-root .lb-segmented__face:focus { flex-grow: 1; flex-basis: 0; min-width: 0; height: 29px; min-height: 0; margin: 0; padding: 6px 10px; border-width: 0; border-radius: 6px; background-image: none; background-color: var(--clear); color: var(--mk-muted); -unity-font-definition: var(--font-display); font-size: 14px; -unity-text-align: middle-center; translate: 0 0; scale: 1 1; transition-property: color; transition-duration: 0.25s; }
+.lb-root .lb-segmented__face--on, .lb-root .lb-segmented__face--on:hover, .lb-root .lb-segmented__face--on:active, .lb-root .lb-segmented__face--on:focus { color: var(--mk-ink); }
+.lb-root #page-workshop .ui-filter-row { align-items: stretch; margin-bottom: 12px; }
+.lb-root #page-workshop .ws-ownership { flex-grow: 1; flex-basis: 0; min-width: 0; }
+.lb-root #page-workshop .ws-panel2 { padding: 12px; }
+.lb-root #page-workshop .ui-filter-sort { height: auto; min-height: 0; margin: 0 0 0 8px; padding: 0 14px; border-radius: 8px; }
+.lb-root .lb-guild-member-filter { margin: 12px; }
+
+/* Phone 2: four compact rows, with custom paper controls over native slider input. */
+.lb-root #page-guild .ui-filter-content .unity-scroll-view__content-container { padding: 0; }
+.lb-root #page-guild .ui-filter-slider-row { margin-bottom: 14px; }
+.lb-root #page-guild .ui-filter-labels { flex-direction: row; justify-content: space-between; height: 18px; }
+.lb-root #page-guild .ui-filter-labels Label, .lb-root #page-guild .ui-filter-toggle Label { font-size: 15px; -unity-font-definition: var(--font-body); color: var(--mk-ink); }
+.lb-root #page-guild .ui-filter-labels .ui-filter-value { -unity-font-definition: var(--font-display); }
+.lb-root #page-guild .ui-filter-bubble .unity-base-field { height: 24px; min-height: 24px; margin: 3px 0 0; padding: 0; }
+.lb-root #page-guild .ui-filter-bubble .unity-base-field__input { margin: 0; background-color: var(--clear); }
+.lb-root .ui-filter-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background-color: var(--mk-tap); }
+.lb-root #page-guild .unity-min-max-slider__dragger { height: 6px; background-color: var(--mk-tap); border-width: 0; }
+.lb-root #page-guild .unity-base-slider__dragger-border { display: none; }
+.lb-root #page-guild .ui-filter-toggle, .lb-root #page-guild .ui-filter-toggle:hover, .lb-root #page-guild .ui-filter-toggle:active, .lb-root #page-guild .ui-filter-toggle:focus { flex-direction: row; align-items: center; justify-content: space-between; height: 28px; min-height: 28px; padding: 0; margin: 0; border-width: 0; background-image: none; background-color: var(--clear); translate: 0 0; }
+.lb-root #page-guild .ui-filter-actions { margin-top: 14px; }
+.lb-root #page-guild .ui-filter-actions Button { height: 40px; min-height: 40px; padding: 0 14px; }
+.lb-root #page-guild .lb-switch { width: 48px; height: 28px; border-radius: 14px; border-width: 2px; border-color: var(--line-inner); background-color: var(--mk-track); }
+.lb-root #page-guild .lb-switch--on { background-color: var(--mk-tap); }
+.lb-root #page-guild .lb-switch__knob { top: 2px; left: 2px; width: 20px; height: 20px; border-width: 2px; border-color: var(--line-inner); border-radius: 10px; background-color: var(--mk-sheet); }
+.lb-root .lb-switch__knob { transition-property: none; }

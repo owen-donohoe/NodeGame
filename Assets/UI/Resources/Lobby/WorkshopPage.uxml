@@ -14,9 +14,9 @@
                     </engine:VisualElement>
                     <engine:Label name="workshop-preset-label" class="mk-eyebrow ws-eyebrow" picking-mode="Ignore" />
                 </engine:VisualElement>
-                <engine:VisualElement class="mk-seg2"><engine:VisualElement class="mk-seg2__track">
-                    <engine:Button name="workshop-tab-districts" text="Districts" class="mk-seg2__btn" />
-                    <engine:Button name="workshop-tab-suits" text="Suits" class="mk-seg2__btn" />
+                <engine:VisualElement name="workshop-tabs"><engine:VisualElement>
+                    <engine:Button name="workshop-tab-districts" text="Districts" />
+                    <engine:Button name="workshop-tab-suits" text="Suits" />
                 </engine:VisualElement></engine:VisualElement>
             </engine:VisualElement>
             <engine:VisualElement name="workshop-panel2-space" class="ws-panel2-space" picking-mode="Ignore" />
@@ -25,9 +25,9 @@
                 <engine:VisualElement name="workshop-browser">
                     <engine:Label name="workshop-browser-title" text="Districts" class="mk-caption ui-browser-title" style="display: none;" />
                     <engine:VisualElement name="workshop-toolbar" class="ui-filter-row">
-                        <engine:VisualElement class="ui-filter-segments"><engine:VisualElement class="ui-filter-track">
-                            <engine:Button name="workshop-owned" class="ui-reset-button ui-filter-hit"><engine:Label text="Owned" class="ui-filter-face" picking-mode="Ignore" /></engine:Button>
-                            <engine:Button name="workshop-all" class="ui-reset-button ui-filter-hit"><engine:Label text="All" class="ui-filter-face" picking-mode="Ignore" /></engine:Button>
+                        <engine:VisualElement name="workshop-ownership"><engine:VisualElement>
+                            <engine:Button name="workshop-owned" text="Owned" />
+                            <engine:Button name="workshop-all" text="All" />
                         </engine:VisualElement></engine:VisualElement>
                         <engine:Button name="workshop-sort" class="ui-reset-button ui-filter-hit ui-filter-sort"><engine:Label text="Sort: Arena" class="ui-filter-face" picking-mode="Ignore" /><engine:VisualElement class="ws-sort-caret" picking-mode="Ignore" /></engine:Button>
                     </engine:VisualElement>
