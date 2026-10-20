@@ -559,6 +559,10 @@
 .lb-root .mk-caption, .lb-root .mk-cap, .lb-root .mk-muted, .lb-root .mk-eyebrow, .lb-root .mk-friend__status { font-size: 13px; min-height: 16px; -unity-font-definition: var(--font-body); color: var(--mk-muted); }
 .lb-root .mk-eyebrow { letter-spacing: var(--tracking); }
 .lb-root .mk-ellipsis, .lb-root .mk-friend__name, .lb-root .mk-namelink Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
+/* Row labels need allocated width before ellipsis is measured. */
+.lb-root .mk-namelink Label { flex-grow: 1; flex-basis: 0; font-size: 15px; }
+.lb-root .mk-row > .mk-namelink, .lb-root .mk-namelink > .mk-profile-caret { margin-right: 0; }
+.lb-root .mk-profile-caret, .lb-root .mk-trophy { flex-shrink: 0; }
 .lb-root .mk-btn, .lb-root .mk-tile, .lb-root .mk-crate, .lb-root .mk-skin { border-width: 2px; border-bottom-width: var(--edge-press-bottom); border-color: var(--line-inner); border-radius: var(--radius-button); background-color: var(--mk-sheet); color: var(--mk-ink); padding: 8px 12px; min-height: 44px; min-width: 44px; -unity-font-definition: var(--font-display); font-size: 15px; }
 .lb-root .mk-btn:active, .lb-root .mk-tile:active, .lb-root .mk-skin:active, .lb-root .mk-crate:active { border-bottom-width: 2px; }
 .lb-root .mk-btn--primary, .lb-root .mk-btn--gold { background-color: var(--mk-action); }
@@ -629,9 +633,9 @@
 .lb-root .mk-battle:active { border-bottom-width: 2px; }
 .lb-root .mk-topbar { flex-direction: row; align-items: center; padding: 8px 12px; flex-shrink: 0; min-height: 52px; }
 .lb-root .mk-topbar > * { margin-right: 8px; }
-.lb-root .mk-purse { flex-direction: row; align-items: center; padding: 8px 12px; border-width: 2px; border-color: var(--line-outer); border-radius: 22px; min-height: 44px; min-width: 44px; flex-shrink: 1; background-color: var(--mk-dark); color: var(--mk-sheet); font-size: 16px; }
-.lb-root .mk-purse > * { margin-right: 8px; color: var(--mk-sheet); }
-.lb-root .mk-purse > .mk-number { min-width: 0; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; }
+.lb-root .mk-purse { flex-direction: row; align-items: center; padding: 8px 12px; border-width: 2px; border-color: var(--line-outer); border-radius: 22px; min-height: 44px; min-width: 44px; flex-shrink: 0; background-color: var(--mk-dark); color: var(--mk-sheet); font-size: 16px; }
+.lb-root .mk-purse > * { flex-shrink: 0; margin-right: 4px; color: var(--mk-sheet); }
+.lb-root .mk-purse > .mk-number { flex-shrink: 0; white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 16px; }
 .lb-root .mk-purse__dot--coin, .lb-root .mk-purse__dot--leaf { width: 16px; height: 16px; border-radius: 8px; border-width: 2px; border-color: var(--mk-sheet); background-color: var(--mk-coin); }
 .lb-root .mk-purse__dot--leaf { border-radius: 2px 12px 2px 12px; background-color: var(--mk-leaf); }
 .lb-root .mk-rbtn { width: 44px; height: 44px; min-width: 44px; flex-shrink: 0; border-radius: 22px; border-width: 2px; border-color: var(--line-outer); background-color: var(--mk-dark); color: var(--mk-sheet); padding: 0; align-items: center; justify-content: center; }
@@ -643,7 +647,7 @@
 .lb-root .mk-meter { height: 8px; border-width: 2px; border-color: var(--line-inner); border-radius: 4px; overflow: hidden; background-color: var(--mk-track); }
 .lb-root .mk-meter > * { height: 100%; background-color: var(--mk-ink); }
 .lb-root .mk-meter--thin { height: 8px; margin: 4px 0; }
-.lb-root .mk-tabs { flex-direction: row; margin: 4px 12px 8px; border-width: 2px; border-color: var(--line-outer); border-radius: 32px; padding: 4px; background-color: var(--mk-dark); }
+.lb-root .mk-tabs { overflow: hidden; flex-direction: row; margin: 4px 12px 8px; border-width: 2px; border-color: var(--line-outer); border-radius: 32px; padding: 4px; background-color: #302e29; }
 .lb-root .mk-tab { position: relative; flex-grow: 1; flex-basis: 0; min-width: 44px; min-height: 64px; border-width: 2px; border-color: var(--clear); border-radius: 26px; padding: 4px; margin-right: 8px; align-items: center; background-color: var(--clear); color: var(--mk-pressed); font-size: 13px; }
 .lb-root .mk-tab--last { margin-right: 0; }
 .lb-root .mk-tab .lb-icon { width: 22px; height: 22px; margin-bottom: 4px; -unity-background-image-tint-color: var(--mk-pressed); }
@@ -678,8 +682,8 @@
 .lb-root .ws-roles-scroll { flex-shrink: 0; }
 .lb-root .ws-actionbar { margin-top: var(--space-3); }
 .lb-root #page-workshop .ws-cards { margin-right: 0; margin-bottom: 0; }
-.lb-root .ws-art-clip { height: 64px; align-items: stretch; justify-content: center; }
-.lb-root .ws-art { flex-grow: 1; align-items: center; justify-content: center; }
+.lb-root .ws-art-clip { width: 100%; height: 78px; flex-shrink: 0; overflow: hidden; border-radius: 7px; background-color: var(--mk-pressed); align-items: stretch; justify-content: center; }
+.lb-root .ws-art { flex-grow: 1; min-height: 0; align-items: center; justify-content: center; }
 .lb-root .ws-empty { width: 100%; padding: var(--space-3); }
 .lb-root .ws-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb-root .ws-item-content > * { margin-bottom: var(--space-3); }
@@ -735,7 +739,7 @@
 .lb-root .lb-guild-header .mk-meter { margin-top: var(--space-2); margin-bottom: var(--space-1); }
 .lb-root .lb-guild-header .mk-meter__fill { height: 100%; }
 .lb-root .lb-guild-home { flex-grow: 1; min-height: 0; padding: var(--space-3); }
-.lb-root .lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: var(--space-6); }
+.lb-root .lb-guild-home-scroll { flex-grow: 1; min-height: 0; padding-bottom: 0; }
 .lb-root .lb-guild-sort { min-height: 44px; }
 .lb-root .lb-guild-chat-button { position: absolute; right: 16px; bottom: 16px; min-width: 96px; min-height: 56px; flex-direction: row; align-items: center; justify-content: center; }
 .lb-root .lb-guild-sheet { flex-grow: 1; min-height: 0; padding: 0; }
@@ -766,15 +770,15 @@
 .lb-root #page-workshop .ui-filter-hit { min-height: 44px; height: 44px; min-width: 44px; padding: 0; margin: 0; align-items: stretch; justify-content: center; flex-shrink: 0; }
 .lb-root #page-workshop .ui-filter-all { margin-left: var(--space-2); }
 .lb-root #page-workshop .ui-filter-sort { margin-left: var(--space-2); }
-.lb-root #page-workshop .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: var(--space-6); }
-.lb-root #page-social .g2-social-scroll { padding: var(--lobby-edge-inset) var(--lobby-edge-inset) var(--space-6); }
+.lb-root #page-workshop .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 12px; }
+.lb-root #page-social .g2-social-scroll { padding: var(--lobby-edge-inset) var(--lobby-edge-inset) 0; }
 .lb-root #page-social .ui-match-body { flex-grow: 1; flex-shrink: 1; min-width: 0; }
 .lb-root #page-social .g2-history-row .mk-number { min-height: 24px; }
 .lb-root #page-social .g2-history-name { min-height: 44px; }
 .lb-root #page-guild .lb-guild-search-anchor { position: relative; margin: var(--space-4) var(--lobby-edge-inset) 0; flex-shrink: 0; }
 .lb-root #page-guild .lb-guild-searchbtn { padding: var(--space-2); }
 .lb-root #page-guild .lb-guild-filterbtn { padding: var(--space-2); }
-.lb-root #page-guild .lb-guild-results { opacity: 0; padding: var(--space-4) var(--lobby-edge-inset) var(--space-6); }
+.lb-root #page-guild .lb-guild-results { opacity: 0; padding: var(--space-4) var(--lobby-edge-inset) 0; }
 .lb-root #page-guild .ui-filter-layer { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
 .lb-root #page-guild .ui-filter-bubble .unity-base-field { min-height: 44px; margin: 0 0 var(--space-2); }
 .lb-root #page-guild .ui-filter-bubble .unity-base-field__label { min-width: 0; }
@@ -843,9 +847,39 @@
 .lb-root .ui-filter-bubble .unity-min-max-slider__min-thumb, .lb-root .ui-filter-bubble .unity-min-max-slider__max-thumb { width: 24px; height: 24px; border-width: 2px; border-bottom-width: 4px; border-color: var(--line-inner); border-radius: 12px; background-color: var(--mk-sheet); }
 .lb-root .g2-history-name { flex-grow: 1; flex-shrink: 1; min-width: 0; min-height: 44px; padding: 0; margin: 0; border-width: 0; background-color: var(--clear); font-size: 15px; -unity-text-align: middle-left; overflow: hidden; text-overflow: ellipsis; }
 
-.lb-root .ui-filter-sort .ui-filter-face { padding-right: 24px; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); background-size: 16px 16px; background-position: right center; background-repeat: no-repeat; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root #page-workshop .ui-filter-sort { flex-direction: row; align-items: center; padding: 4px 8px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 8px; background-color: var(--mk-sheet); background-image: none; }
+.lb-root .ui-filter-sort .ui-filter-face { min-height: 20px; padding: 0; border-width: 0; background-image: none; background-color: var(--clear); }
+.lb-root .ws-sort-caret { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; width: 16px; height: 16px; margin-left: 4px; -unity-background-image-tint-color: var(--mk-ink); }
 
 .lb-root .ws-arr-prev, .lb-root .ws-arr-next, .lb-root .mk-panel__close, .lb-root .lb-guild-browse-toggle { background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
 
 .lb-root .mk-field { border-width: 0; padding: 0; background-color: var(--clear); min-height: 48px; }
 .lb-root .mk-field .unity-text-field__input { flex-grow: 1; min-height: 48px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 8px 12px; background-color: var(--mk-sheet); color: var(--mk-ink); font-size: 16px; -unity-font-definition: var(--font-body); }
+
+/* Remove runtime-theme button artwork; USS edges are the only lip. */
+.lb-root .mk-tab, .lb-root .mk-seg2__btn { background-image: none; translate: 0 0; scale: 1 1; }
+.lb-root .mk-tab, .lb-root .mk-tab:active { border-width: 2px; }
+.lb-root .mk-tabs--sliding .mk-tab--on { border-color: var(--clear); }
+.lb-root .lb-pill-progress { border-width: 2px; background-image: none; }
+
+.lb-root .ws-card { overflow: hidden; }
+.lb-root .ws-tile-meta { min-height: 16px; }
+.lb-root .ws-monogram { font-size: 24px; margin-bottom: 0; }
+
+/* Search icon belongs to the field; the only adjacent action is Filter. */
+.lb-root .lb-guild-query-wrap { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; position: relative; }
+.lb-root .lb-guild-query-wrap .lb-guild-query { margin-right: 0; }
+.lb-root .lb-guild-query-wrap .unity-text-field__input { padding-left: 40px; }
+.lb-root .lb-guild-query-icon { position: absolute; left: 12px; top: 12px; width: 24px; height: 24px; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .lb-guild-query .unity-base-text-field__input--placeholder { color: var(--mk-muted); }
+.lb-root #page-guild .lb-guild-filterbtn { width: 48px; height: 48px; min-width: 48px; min-height: 48px; background-image: none; }
+.lb-root .lb-guild-filterbtn .lb-icon { width: 24px; height: 24px; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .lb-guild-browse-toggle, .lb-root .lb-guild-browse-toggle:active { height: 44px; padding: 0; border-width: 0; background-color: var(--clear); background-image: none; align-items: center; justify-content: center; }
+.lb-root .lb-guild-expand-ink, .lb-root .lb-guild-expand-face { position: absolute; width: 24px; height: 24px; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .lb-guild-expand-face { -unity-background-image-tint-color: var(--mk-sheet); }
+
+.lb-root .g2-live-empty { padding: 8px 12px; }
+
+.lb-root .mk-purse, .lb-root .mk-namelink, .lb-root .g2-home-mode, .lb-root .ws-card { background-image: none; }
+
+.lb-root #social-tv .lb-async > VisualElement > Label { color: var(--mk-muted); font-size: 13px; padding: 8px 12px; }

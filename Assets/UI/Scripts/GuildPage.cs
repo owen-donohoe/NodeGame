@@ -71,6 +71,8 @@ namespace NodeWar.Lobby
             mine.AddToClassList("lb-guild-membership"); mine.Content.AddToClassList("lb-guild-membership-content");
             Root.Q("guild-state").Add(mine);
             query = visitor.Q<TextField>("guild-query");
+            query.textEdition.placeholder = "Search guild names";
+            query.textEdition.hidePlaceholderOnFocus = false;
             query.Query<TextElement>().ForEach(element => element.enableRichText = false);
             visitor.Q("guild-search-results").Add(search);
             visitor.Q("guild-browse-results").Add(browse);
@@ -89,7 +91,6 @@ namespace NodeWar.Lobby
                 ExpandSearch();
                 querySearch = Root.schedule.Execute(Search).StartingIn(180);
             });
-            visitor.Q<Button>("guild-search").clicked += Search;
             query.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter) { Search(); evt.StopPropagation(); }
@@ -97,7 +98,6 @@ namespace NodeWar.Lobby
             visitor.Q<Button>("guild-refresh").clicked += () => LoadBrowse(true);
             visitor.Q<Button>("guild-filter").clicked += OpenFilter;
             GuildViews.Icon(visitor.Q<Button>("guild-filter"), LobbyIconKind.Funnel);
-            GuildViews.Icon(visitor.Q<Button>("guild-search"), LobbyIconKind.Search);
             chatButton = Root.Q<Button>("guild-chat-button");
             chatButton.clicked += () => _ = OpenChatAsync();
             GuildViews.Icon(chatButton, LobbyIconKind.Chat);

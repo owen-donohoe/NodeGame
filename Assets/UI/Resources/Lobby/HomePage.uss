@@ -6,8 +6,8 @@
 .g2-crate-icon { position: absolute; top: 4px; width: 40px; height: 40px; }
 .ui-root .g2-crate-label { position: absolute; bottom: 4px; letter-spacing: 0.6px; color: var(--mk-muted); }
 .g2-home-actions { width: 200px; flex-shrink: 1; min-width: 0; align-items: stretch; }
-.ui-root .g2-home-mode { width: 140px; min-height: 44px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-outer); border-radius: 12px; align-self: flex-end; flex-direction: row; align-items: center; justify-content: center; background-color: var(--mk-sheet); margin-bottom: 8px; padding: 4px 8px; }
-.ui-root .g2-home-mode Label { min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
+.ui-root .g2-home-mode { width: 100%; min-height: 44px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-outer); border-radius: 12px; align-self: flex-end; flex-direction: row; align-items: center; justify-content: center; background-color: var(--mk-sheet); margin-bottom: 8px; padding: 4px 8px; }
+.ui-root .g2-home-mode Label { flex-grow: 1; flex-basis: 0; min-width: 0; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 4px; }
 .g2-mode-icon { width: 16px; height: 16px; margin-right: 4px; }
 .g2-mode-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 4px; background-color: var(--mk-action); }
 .g2-swap { width: 12px; height: 12px; }

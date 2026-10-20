@@ -291,7 +291,7 @@ namespace NodeWar.Lobby
         {
             var clip = new VisualElement { pickingMode = PickingMode.Ignore };
             clip.AddToClassList("ws-art-clip"); clip.AddToClassList("mk-art");
-            var art = new MkCard { pickingMode = PickingMode.Ignore };
+            var art = new VisualElement { pickingMode = PickingMode.Ignore };
             art.AddToClassList("ws-art");
 
             if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
@@ -314,10 +314,11 @@ namespace NodeWar.Lobby
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
                 if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
                 var card = new Button(() => PreviewItem(item.ID));
-                card.AddToClassList("mk-tile"); card.EnableInClassList("mk-tile--selected", IsSelected(item)); card.AddToClassList("ws-card");
+                card.AddToClassList("mk-tile"); card.EnableInClassList("mk-tile--selected", loadout.PreviewId == item.ID); card.AddToClassList("ws-card");
                 card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
                 card.Add(MakeArt(item, state.Status != UnlockStatus.Owned, false));
                 card.Add(MakeLabel(item.Name, "ws-name", "mk-h3"));
+                card.Add(MakeLabel("Era " + state.UnlockEra, "mk-caption", "ws-tile-meta"));
                 card.EnableInClassList("mk-tile--locked", state.Status != UnlockStatus.Owned);
                 if (IsSelected(item)) card.Add(MakeLabel("In hand", "mk-mark", "ws-mark"));
                 else if (state.Status != UnlockStatus.Owned) card.Add(MakeLabel("Arena " + state.UnlockEra, "mk-mark", "mk-mark--era", "ws-mark"));
@@ -353,10 +354,10 @@ namespace NodeWar.Lobby
                 card.style.flexBasis = StyleKeyword.Auto;
                 card.style.width = card.style.maxWidth = width;
                 card.style.minWidth = card.style.minHeight = 0;
-                card.style.height = width;
+                card.style.height = 152;
                 card.style.marginRight = index++ % 2 == 1 ? 0 : WorkshopLayout.TileGap;
                 card.style.marginBottom = WorkshopLayout.TileGap;
-                card.Q(className: "ws-art-clip").style.height = Math.Max(24, (float)Math.Floor((width - 64) / 4) * 4);
+                card.Q(className: "ws-art-clip").style.height = 78;
             });
         }
 
