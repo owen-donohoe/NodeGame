@@ -20,6 +20,7 @@ sources:
   - Assets/UI/Scripts/SegmentedSwitch.cs
   - Assets/UI/Scripts/SegmentedSwitchMath.cs
   - Assets/UI/Scripts/LobbySwitch.cs
+  - Assets/UI/Scripts/LobbyToggle.cs
   - Assets/UI/Scripts/LobbyElementMotion.cs
   - Assets/UI/Scripts/MkPlayerRow.cs
   - Assets/UI/Scripts/PaperCard.cs
@@ -48,7 +49,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 313f4784
+verified: 568869ee
 ---
 
 # UI art
@@ -73,11 +74,11 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
 
-`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals, scrims and router Back. Both use `LobbyMotion` springs, 120ms fades and 140ms closes; sheets rise, panels scale. `Components.uss` exposes `mk-` classes; `Tokens.uss` separates raw `--pal-*` values from meaning tokens. Tab pages are transparent; full-page surfaces are square and unoutlined. Cards are rounded.
+`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals, scrims and router Back. Both open on `LobbyMotion` springs with 120ms fades; panels close in 140ms by scaling, sheets in 180ms by sliding down with only the scrim fading. `Components.uss` exposes `mk-` classes; Tab pages are transparent; full-page surfaces are square and unoutlined. Cards are rounded.
 
 `PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
 
-`SegmentedSwitch.Select/Changed` slides one face; `LobbySwitch` slides its knob. Both retarget critical `LobbyMotion` springs; segment colours crossfade.
+`SegmentedSwitch.Select/Changed` slides one face; `LobbySwitch` and `LobbyToggle` slide a knob (the toggle takes its 2/22px travel from `LobbyToggleMath`). All retarget critical `LobbyMotion` springs; segment colours crossfade.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
@@ -97,11 +98,11 @@ Lobby SVG lookup precedes the theme, except within Shop or ShopCard context. Els
 
 `UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
 
-Lobby-scoped tokens use Lilita One for display text and Fredoka SemiBold for body/meta, with 0.6px tracking. Shared root and Shop font tokens retain Kalam. Text outlines are zero except the stamped 34px page title. Icons use authored images or generated glyphs rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+Lobby-scoped tokens use Lilita One for display text and Fredoka SemiBold for body/meta, with 0.6px tracking. Shared root and Shop font tokens retain Kalam. Text outlines are zero except the stamped 34px page title. Icons use authored images or generated glyphs. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
 
-World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen offsets and distance scale clamped to 0.85 to 1. Lobby content insets are 12px; panels clear the top band and pill nav. Depth uses position/parallax/scale, never blur.
+World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen offsets and distance scale clamped to 0.85 to 1. Lobby content insets are 12px; panels clear the top band and pill nav.
 
-`Components.uss` supplies the lobby panel language: outer/inner/light edges, 2px outlines with 7px panel bottoms or 5px pressable bottoms, inset switches and flat gold nav. Ledgers have 56px rows and 40px avatars. Live cards are 48px with a 46×58 VS. Workshop uses 8px grid gutters; item sheets place dots inside the preview, 52px skins and ten flexible histogram cells below it.
+`Components.uss` supplies the lobby panel language: outer/inner/light edges, 2px outlines with 7px panel bottoms or 5px pressable bottoms and flat gold nav. Ledgers have 56px rows and 40px avatars. Live cards are 48px with a 46×58 VS.  item sheets place dots inside the preview, 52px skins and ten flexible histogram cells below it.
 
 ## Decisions
 - Resolve lobby icons from a shared Phosphor mapping; retain semantic theme overrides elsewhere.

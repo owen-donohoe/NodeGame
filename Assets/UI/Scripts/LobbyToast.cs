@@ -10,14 +10,15 @@ namespace NodeWar.Lobby
     /// </summary>
     public class LobbyToast
     {
-        private const long VisibleMs = 1700;
+        private const long DefaultVisibleMs = 1700;
 
         private readonly Label label;
+        private readonly long visibleMs;
         private IVisualElementScheduledItem hideItem;
 
-        public LobbyToast(Label label)
+        public LobbyToast(Label label, long visibleMs = DefaultVisibleMs)
         {
-            this.label = label;
+            this.label = label; this.visibleMs = visibleMs;
         }
 
         public void Show(string message)
@@ -29,7 +30,7 @@ namespace NodeWar.Lobby
 
             if (hideItem != null) hideItem.Pause();
             hideItem = label.schedule.Execute(() => label.RemoveFromClassList("ui-toast--on"));
-            hideItem.ExecuteLater(VisibleMs);
+            hideItem.ExecuteLater(visibleMs);
         }
     }
 }

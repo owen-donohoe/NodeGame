@@ -17,7 +17,7 @@ namespace NodeWar.Lobby
         private float duration;
         private bool closing, running;
         private Action completed;
-        private bool springOpen;
+        private bool springOpen, slide;
         private double sampledAt;
         private LobbyMotion.Spring offsetSpring, scaleSpring;
         public float Offset { get { Sample(); return x; } }
@@ -31,7 +31,7 @@ namespace NodeWar.Lobby
         }
         public void Set(float alpha, float offset, float size)
         {
-            running = false; tick.Pause(); completed = null;
+            running = false; tick.Pause(); completed = null; slide = false;
             opacity = alpha; x = offset; scale = size; Apply();
             offsetSpring = new LobbyMotion.Spring(x); scaleSpring = new LobbyMotion.Spring(scale);
         }
@@ -39,9 +39,9 @@ namespace NodeWar.Lobby
         {
             completed = null; Sample(); running = false; tick.Pause();
         }
-        public void To(float alpha, float offset, float size, float seconds, bool easeIn = false, Action done = null)
+        public void To(float alpha, float offset, float size, float seconds, bool easeIn = false, Action done = null, bool slideOut = false)
         {
-            completed = null;
+            completed = null; slide = slideOut;
             Sample();
             fromOpacity = opacity; fromX = x; fromScale = scale;
             toOpacity = alpha; toX = offset; toScale = size;
@@ -51,7 +51,7 @@ namespace NodeWar.Lobby
         }
         public void Open()
         {
-            completed = null; Sample();
+            completed = null; Sample(); slide = false;
             if (opacity <= 0.001f)
             {
                 scale = LobbyMotion.OpenScale;
@@ -69,6 +69,11 @@ namespace NodeWar.Lobby
         public void Close(Action done)
         {
             To(0f, vertical ? 32f : 0f, LobbyMotion.ClosedScale, LobbyMotion.CloseSeconds, true, done);
+        }
+        /// <summary>A bottom sheet leaves downwards at full opacity; only the scrim fades.</summary>
+        public void CloseDown(Action done)
+        {
+            To(0f, Mathf.Max(48f, element.layout.height) + 16f, 1f, LobbyMotion.SheetCloseSeconds, true, done, true);
         }
         private void Sample()
         {
@@ -95,7 +100,7 @@ namespace NodeWar.Lobby
         }
         private void Apply()
         {
-            element.style.opacity = opacity;
+            element.style.opacity = slide ? 1f : opacity;
             element.style.translate = vertical ? new Translate(0, x) : new Translate(x, 0);
             element.style.scale = new Scale(Vector3.one * scale);
             if (scrim != null) scrim.style.opacity = opacity;

@@ -79,7 +79,7 @@ namespace NodeWar.Lobby
             Release(); IsOpen = false;
             SetEnabled(false);
             pickingMode = Surface.pickingMode = Scrim.pickingMode = PickingMode.Ignore;
-            motion.Close(() => style.display = DisplayStyle.None);
+            motion.CloseDown(() => style.display = DisplayStyle.None);
             if (router != null) router.Closed(route);
             Closed?.Invoke();
         }

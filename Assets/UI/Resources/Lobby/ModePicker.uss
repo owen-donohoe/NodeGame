@@ -3,4 +3,11 @@
 .g2-mode-card > LobbyIcon { width: 28px; height: 28px; margin: 4px 0; }
 .g2-mode-colour { position: absolute; top: 0; left: 0; right: 0; height: 6px; }
 .ui-root .g2-mode-card--on { background-color: var(--mk-pressed); border-color: var(--mk-tap); }
-.g2-private { min-height: 44px; flex-shrink: 0; margin-top: 8px; padding: 8px; background-color: var(--mk-sheet); border-top-width: 2px; border-top-color: var(--mk-ink); }
+.lb-root .lb-modepage { border-width: 0; border-radius: 0; background-color: var(--mk-card); }
+.lb-modepage__tabs { margin: 12px 12px 0 12px; }
+.lb-modepage__pager { flex-grow: 1; margin-top: 12px; overflow: hidden; position: relative; }
+.lb-modepage__page { position: absolute; left: 0; right: 0; top: 0; bottom: 0; justify-content: center; padding: 96px 12px; }
+.lb-modepage .g2-mode-grid { margin-right: 0; justify-content: center; }
+.ui-root .lb-modepage .g2-mode-card { margin: 0 4px 8px 4px; }
+.lb-root .lb-modepage__private, .lb-root .lb-modepage__private:hover, .lb-root .lb-modepage__private:active, .lb-root .lb-modepage__private:focus { flex-direction: row; align-items: center; justify-content: space-between; flex-shrink: 0; height: 56px; margin: 12px; padding: 0 16px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; background-image: none; background-color: var(--mk-sheet); translate: 0 0; }
+.lb-modepage__private Label { font-size: 16px; -unity-font-definition: var(--font-body); color: var(--mk-ink); flex-grow: 1; }

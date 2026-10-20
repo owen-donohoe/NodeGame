@@ -9,6 +9,7 @@ namespace NodeWar.Lobby
         public const float LongSeconds = 0.420f;
         public const float OpenSeconds = 0.300f;
         public const float CloseSeconds = 0.140f;
+        public const float SheetCloseSeconds = 0.180f;
         public const float PageTravel = 24f;
         public const float ClosedScale = 0.96f;
         public const float OpenScale = 0.92f;
