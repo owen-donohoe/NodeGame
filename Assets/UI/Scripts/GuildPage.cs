@@ -84,16 +84,13 @@ namespace NodeWar.Lobby
             {
                 ExpandSearch();
             };
-            query.RegisterCallback<FocusInEvent>(_ => ExpandSearch());
-            query.RegisterCallback<FocusOutEvent>(_ =>
-            {
-                if (searched && string.IsNullOrEmpty(query.value)) CollapseSearch();
-            });
+            // Focus alone never moves the bar and leaving focus never collapses it: the first tap on a result
+            // blurs the field before the click, so a focus-out collapse swallowed the tap.
             query.RegisterValueChangedCallback(evt =>
             {
                 querySearch?.Pause();
-                ExpandSearch();
-                querySearch = Root.schedule.Execute(Search).StartingIn(180);
+                if (string.IsNullOrWhiteSpace(evt.newValue) && !searched) return;
+                querySearch = Root.schedule.Execute(Search).StartingIn(300);
             });
             query.RegisterCallback<KeyDownEvent>(evt =>
             {
@@ -443,9 +440,14 @@ namespace NodeWar.Lobby
 
         private void SearchOutsideTap(PointerDownEvent evt)
         {
-            if (!visible || !searched || !string.IsNullOrEmpty(query.value)) return;
-            if (evt.target is VisualElement target && (target == query || query.Contains(target))) return;
-            query.Blur();
+            if (!visible || !searched || !(evt.target is VisualElement target)) return;
+            // A sheet or the filter bubble on top owns the tap; so do the bar and the result rows.
+            if (router.Stack.Top?.ID != "guild-search-state") return;
+            if (visitor.Q("guild-search-anchor").Contains(target) || visitor.Q("guild-search-results").Contains(target)) return;
+            if (target != visitor && !visitor.Contains(target)) return;
+            // Empty background collapses only once the query is cleared; until then it just leaves the field.
+            if (!string.IsNullOrEmpty(query.value)) { query.Blur(); return; }
+            CollapseSearch();
         }
 
         private void ConfirmKick(GuildMember member)
