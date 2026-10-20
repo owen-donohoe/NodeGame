@@ -255,7 +255,9 @@ namespace NodeWar.Lobby
             var chosen = LoadoutPresets.Switch(ref profile.data, index, arena,
                 id => catalog.IsSuitOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse,
                 id => catalog.IsDistrictOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse);
+            bool browsingSuits = ViewingSuit;
             loadout = new LoadoutScreenModel(chosen);
+            loadout.Browse(browsingSuits);
             profile.Save();
             LoadoutChanged?.Invoke();
             Render();
