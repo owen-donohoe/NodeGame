@@ -48,7 +48,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 313f4784
+verified: 1d2f8b47
 ---
 
 # UI art
@@ -110,7 +110,7 @@ World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen o
 - Scope Lilita One/Fredoka panel styling to the lobby so Shop and match styling remain independent.
 
 ## Pressure points
-Icon theme entries are empty. Workshop cards use monograms; `StageArt`/`StagePaperArt` generate tinted, badged buildings/villagers via `PaperRasterizer`. Item thumbnails are missing. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence varies. Gauge skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment.
+Icon theme entries are empty. `StagePaperArt.Bake` generates tinted, badged buildings/villagers via `PaperRasterizer`; `LobbyPaperArt` caches them for Workshop tiles and sheet previews, monograms only as fallback. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence varies. Gauge skins and Addressables are absent.
 
 ## Change recipes
 - Add an icon: append its stable kind, provide fallback drawing and usage locations/labels, set context at call sites and extend coverage tests; assign sprites through the Inspector.

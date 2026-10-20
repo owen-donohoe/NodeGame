@@ -120,7 +120,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 37e1b21b
+verified: 1d2f8b47
 ---
 
 # Lobby UI
@@ -136,7 +136,7 @@ Loadouts, accounts/settings and match entry.
 `LobbyMotion` supplies springs. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills, with rubber-band edges and velocity-preserving retargets. `LobbyMouseDrag` supplies elastic mouse scrolling and pager/shop click cancellation at 8px; wheels stay native. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet.Open(content, large)/Close/IsShowing/Closed/Lift(pageRoot, contentName)` serves sheets. `SafeAreaBinder` applies insets.
 
 Pages:
-- `WorkshopPage` scrolls two-column grids via `LoadoutBrowse`. `WorkshopStageBinding` maps taps; measured suit bounds retain 8% window margins. `LoadoutScreenModel` gates equipment/replacement; `WorkshopInventorySession` gates requests. Its 78% MkSheet shows preview-inset variant dots, data-bound skins with inert locked previews, and ten-cell `StatHistogram` comparisons.
+- `WorkshopPage` builds tiles once at startup and refreshes them in place via `LoadoutBrowse`. `WorkshopStageBinding` maps taps. `LoadoutScreenModel` gates equipment, replacement and requests. Its 78% MkSheet shows preview-inset variant dots, skins, and ten-cell stacked `StatBar` rows. The stage adds free-grant items.
 - `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens Searching; incomplete loadouts disable it and show a note below. Big/Small open crates; zero stock hides count badges. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium and has zero local stock.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects. `ScrollTo(stall)` animates daily/crates/weekly/bundle/bank (coins/laurels aliases). `ShopSnap/ShopProjection` show prebuilt settled offers with spring/stagger entrances and drag exits. LateUpdate projects after the camera; hidden panels retain layout. `LobbyStage.SetShopScroll(float)` dollies; `ShopCamera/ShopAnchor` project.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles, falling back to Unknown, and shows signed RR. Watch/replay/spectate log. Requests cannot cross visits/accounts.
