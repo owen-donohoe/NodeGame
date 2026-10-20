@@ -17,6 +17,8 @@
 
   /* The one panel recipe, taken from the player card */
   --edge:2px;           /* ink outline, all panels */
+  /* three edge colours: outer = panels on the world; inner = pressables inside a panel (close, a little lighter); light = only inside a shaded region */
+  --line-outer:#2d2319; --line-inner:#4d3d2d; --line-light:#c3aa85;
   --lip:5px;            /* thicker bottom edge = the shadow */
   --lip-sm:3px;         /* rows and buttons */
   --r-lg:14px; --r-md:12px; --r-sm:8px;
@@ -51,7 +53,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
 .screen{position:absolute;inset:0;padding:44px var(--s4) 96px;display:flex;flex-direction:column;gap:var(--s2);z-index:1}
 
 /* ---------- THE PANEL RECIPE ---------- */
-.card{background:var(--paper-100);color:var(--ink);border:var(--edge) solid var(--ink);border-bottom-width:calc(var(--edge) + var(--lip));
+.card{background:var(--paper-100);color:var(--ink);border:var(--edge) solid var(--line-outer);border-bottom-width:calc(var(--edge) + var(--lip));
   border-radius:var(--r-lg);padding:var(--s3)}
 .card.sm{border-bottom-width:calc(var(--edge) + var(--lip-sm));border-radius:var(--r-md)}
 .grain{background-image:radial-gradient(rgba(45,35,25,.05) 1px, transparent 1px);background-size:5px 5px}
@@ -100,7 +102,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
 .seg{display:flex;background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:5px;border-radius:12px;padding:4px}
 .seg .in{display:flex;flex:1;background:var(--paper-200);border-radius:8px;padding:4px;gap:4px}
 .seg span{flex:1;text-align:center;font-family:var(--display);font-size:14px;padding:6px 10px;border-radius:6px;color:var(--ink-mute)}
-.seg span.on{background:var(--paper-50);color:var(--ink);box-shadow:0 3px 0 var(--paper-300)}
+.seg span.on{background:var(--paper-50);color:var(--ink);box-shadow:0 3px 0 var(--line-light)}
 
 /* LIVE TV ROW: thin cards, tall VS */
 .live{display:flex;align-items:center;gap:6px}
@@ -138,9 +140,9 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
 .handle{width:44px;height:5px;border-radius:3px;background:var(--paper-300);margin:-6px auto 10px}
 .art{height:150px;border-radius:var(--r-md);background:linear-gradient(180deg,#a9b6d9,#e6dcc4);border:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 8px}
 .art .arr{width:36px;height:36px;border-radius:50%;background:rgba(45,35,25,.85);color:var(--paper-50);display:grid;place-items:center;font-family:var(--display)}
-.bars{margin:12px 0;display:grid;grid-template-columns:70px 1fr;gap:6px 10px;align-items:center;font-size:14px}
-.cells{display:flex;gap:3px} .cells i{width:16px;height:12px;border-radius:3px;border:2px solid var(--ink);background:var(--ink)}
-.cells i.e{background:var(--paper-300);border-color:rgba(45,35,25,.35)} .cells i.up{background:#5cb85c} .cells i.dn{background:transparent;border-color:var(--red);border-style:dashed}
+.bars{margin:12px 0;display:grid;grid-template-columns:64px 1fr;gap:6px 10px;align-items:center;font-size:14px}
+.cells{display:flex;gap:3px} .cells i{flex:1;height:14px;border-radius:3px;border:2px solid var(--line-inner);background:var(--line-inner)}
+.cells i.e{background:var(--paper-200);border-color:var(--line-light)} .cells i.up{background:#5cb85c} .cells i.dn{background:transparent;border-color:var(--red);border-style:dashed}
 
 /* workshop tiles: pressable, so outlined with a small lip */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
@@ -157,6 +159,9 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
 .skin{width:52px;height:52px;border-radius:10px;border:2px solid var(--ink);border-bottom-width:4px;display:grid;place-items:center;font-size:16px}
 .skin.on{box-shadow:0 0 0 2px var(--tap);border-color:var(--tap)} .skin.lock{background:var(--paper-200);opacity:.7}
 /* icon board */
+/* anything outlined that sits inside a panel takes the inner edge colour */
+.card .btn, .card .tile:not(.on), .card .pl, .card .vs, .card .seg, .card .skin:not(.on), .card .av, .card .art, .card .field, .card .track, .card .thumb, .card .sw, .card .sw::after, .card .meter{border-color:var(--line-inner)}
+.card.ledger h3{border-bottom-color:var(--line-inner)}
 .icons{max-width:1100px;margin:28px auto 0}
 .icons .card{margin-top:12px}
 .irow{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center;padding:10px 0}
@@ -303,9 +308,9 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
     <div class="skin lock">🔒</div><div class="skin lock">🔒</div>
   </div>
   <div class="bars">
-    <span>Range</span><div class="cells"><i></i><i></i><i></i><i class="up"></i><i class="e"></i><i class="e"></i></div>
-    <span>Defence</span><div class="cells"><i></i><i></i><i class="dn"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
-    <span>Output</span><div class="cells"><i></i><i></i><i></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
+    <span>Range</span><div class="cells"><i></i><i></i><i></i><i></i><i class="up"></i><i class="up"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
+    <span>Defence</span><div class="cells"><i></i><i></i><i></i><i class="dn"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
+    <span>Output</span><div class="cells"><i></i><i></i><i></i><i></i><i></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
   </div>
   <div class="meta" style="font-size:15px;color:var(--ink)">Reveals nodes two hops away. Slower to claim.</div>
   <div style="display:flex;gap:10px;margin-top:14px"><span class="btn" style="flex:1;justify-content:center;height:48px">Back</span><span class="btn gold" style="flex:2;justify-content:center;height:48px;font-size:18px">Use</span></div>
@@ -318,6 +323,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
   <div class="card grain"><h2>The one recipe</h2><ul>
     <li>Parchment fill, 2 px ink outline, a thicker bottom edge as the only shadow (5 px for panels, 3 to 5 px for rows and buttons).</li>
     <li>Corners: 14 px for panels, 12 px for fields, 8 to 10 px for buttons and avatars.</li>
+    <li>Three edge colours. <b>Outer</b> (ink #2d2319) for panels that sit on the world. <b>Inner</b> (#4d3d2d, close but a little lighter) for anything outlined inside a panel. <b>Light</b> (#c3aa85) only for a lip that sits inside a shaded region, such as the selected face of a switch.</li>
     <li>Pressing a button collapses its bottom edge, so it physically goes down.</li>
     <li>Subtle paper grain on every panel; no blur, no glass.</li></ul></div>
   <div class="card grain"><h2>One outline level</h2><ul>
@@ -327,6 +333,7 @@ h1{font-family:var(--display);font-weight:400;font-size:28px;}
   <div class="card grain"><h2>Type</h2><ul>
     <li>Lilita One for names, numbers, titles and buttons. Fredoka SemiBold for body text and meta lines.</li>
     <li>All text is tracked out 0.04 em: lighter to read, same weight.</li>
+    <li>Stat histograms are 10 cells and fill the sheet width.</li>
     <li>Sizes: title 34, panel heading 17 to 24, name 15 to 17, body 15 to 16, meta 13. Nothing below 13.</li>
     <li>Page titles are stamped straight onto the world (ink stroke and drop), with no panel behind them.</li></ul></div>
   <div class="card grain"><h2>Space</h2><ul>
