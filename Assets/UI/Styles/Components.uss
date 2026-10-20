@@ -646,7 +646,7 @@
 .lb-root .mk-meter { height: 8px; border-width: 2px; border-color: var(--line-inner); border-radius: 4px; overflow: hidden; background-color: var(--mk-track); }
 .lb-root .mk-meter > * { height: 100%; background-color: var(--mk-ink); }
 .lb-root .mk-meter--thin { height: 8px; margin: 4px 0; }
-.lb-root .mk-tabs { flex-direction: row; margin: 4px 12px 8px; border-width: 2px; border-color: var(--line-outer); border-radius: 32px; padding: 4px; background-color: var(--mk-dark); }
+.lb-root .mk-tabs { overflow: hidden; flex-direction: row; margin: 4px 12px 8px; border-width: 2px; border-color: var(--line-outer); border-radius: 32px; padding: 4px; background-color: #302e29; }
 .lb-root .mk-tab { position: relative; flex-grow: 1; flex-basis: 0; min-width: 44px; min-height: 64px; border-width: 2px; border-color: var(--clear); border-radius: 26px; padding: 4px; margin-right: 8px; align-items: center; background-color: var(--clear); color: var(--mk-pressed); font-size: 13px; }
 .lb-root .mk-tab--last { margin-right: 0; }
 .lb-root .mk-tab .lb-icon { width: 22px; height: 22px; margin-bottom: 4px; -unity-background-image-tint-color: var(--mk-pressed); }
@@ -852,3 +852,9 @@
 
 .lb-root .mk-field { border-width: 0; padding: 0; background-color: var(--clear); min-height: 48px; }
 .lb-root .mk-field .unity-text-field__input { flex-grow: 1; min-height: 48px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 12px; padding: 8px 12px; background-color: var(--mk-sheet); color: var(--mk-ink); font-size: 16px; -unity-font-definition: var(--font-body); }
+
+/* Remove runtime-theme button artwork; USS edges are the only lip. */
+.lb-root .mk-tab, .lb-root .mk-seg2__btn { background-image: none; translate: 0 0; scale: 1 1; }
+.lb-root .mk-tab, .lb-root .mk-tab:active { border-width: 2px; }
+.lb-root .mk-tabs--sliding .mk-tab--on { border-color: var(--clear); }
+.lb-root .lb-pill-progress { border-width: 2px; background-image: none; }
