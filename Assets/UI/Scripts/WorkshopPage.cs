@@ -16,7 +16,7 @@ namespace NodeWar.Lobby
         {
             public string ID, Name, Description;
             public ItemFamily.Family Family;
-            public bool Granted;
+            public bool Granted, IsSuit;
         }
         private readonly LoadoutCatalog catalog;
         private readonly LobbyToast toast;
@@ -51,7 +51,7 @@ namespace NodeWar.Lobby
         private string inventoryMessage = "";
         private Task inventoryIdle = Task.CompletedTask;
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
-        private Tab activeTab;
+        private Tab activeTab { get => loadout.BrowsingSuits ? Tab.Suits : Tab.Districts; set => loadout.Browse(value == Tab.Suits); }
         public bool IsOpen => session.IsOpen;
         public VisualElement StageWindow => stageWindow;
         public float StageViewportTop => grid.contentViewport.worldBound.y;
@@ -61,11 +61,10 @@ namespace NodeWar.Lobby
         public bool Replacing => loadout.Replacing;
         public LoadoutData StageLoadout => loadout.ToData();
         public bool ViewingSuit => activeTab == Tab.Suits;
+        public bool InspectedSuit => inspectedItem?.IsSuit ?? ViewingSuit;
         public string ViewedId => inspectedItem?.ID;
         public event Action<bool, string> ItemViewed;
         public event Action LoadoutChanged;
-        public event Func<bool> DistrictUseRequested;
-        public event Action<int> DistrictSlotPicked;
         public event Action ReplacementChanged;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private UnlockStatus? debugUnlockStatus;
@@ -212,7 +211,7 @@ namespace NodeWar.Lobby
                     Name = catalog.SuitName(suit.suitID),
                     Description = suit.description,
                     Family = ItemFamily.Family.Combat,
-                    Granted = !catalog.IsSuitOffered(suit.suitID, arena)
+                    IsSuit = true, Granted = !catalog.IsSuitOffered(suit.suitID, arena)
                 });
             }
         }
@@ -256,7 +255,9 @@ namespace NodeWar.Lobby
             var chosen = LoadoutPresets.Switch(ref profile.data, index, arena,
                 id => catalog.IsSuitOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse,
                 id => catalog.IsDistrictOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse);
+            bool browsingSuits = ViewingSuit;
             loadout = new LoadoutScreenModel(chosen);
+            loadout.Browse(browsingSuits);
             profile.Save();
             LoadoutChanged?.Invoke();
             Render();
@@ -284,7 +285,7 @@ namespace NodeWar.Lobby
             tabs.Select((int)activeTab);
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
-            Item item = Find(items, loadout.PreviewId);
+            Item item = Find(inspectedItem?.IsSuit == true ? suits : districts, loadout.PreviewId);
             Inspect(item);
             RenderCards();
             var profile = PlayerProfile.Instance;
@@ -397,6 +398,8 @@ namespace NodeWar.Lobby
                 bool owned = state.Status == UnlockStatus.Owned;
                 if (!LoadoutBrowse.Includes(showAll, owned)) continue;
                 Tile tile = tiles[TileKey(activeTab, item.ID)];
+                tile.Card.pickingMode = PickingMode.Position;
+                tile.Card.SetEnabled(true);
                 bool preview = loadout.PreviewId == item.ID;
                 tile.Card.EnableInClassList("mk-tile--selected", preview);
                 tile.Card.EnableInClassList("ws-card--preview", preview);
@@ -429,13 +432,12 @@ namespace NodeWar.Lobby
             var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
             int slot = StageSlotMap.ToChosen(chosen, stageIndex);
             if (slot < 0) return;
-            SetTab(suit ? Tab.Suits : Tab.Districts);
             PreviewItem(chosen[slot]);
         }
 
         private void PreviewItem(string id)
         {
-            Inspect(Find(activeTab == Tab.Suits ? suits : districts, id));
+            Inspect(Find(suits, id) ?? Find(districts, id));
             RenderCards();
             if (inspectedItem != null) OpenItemPanel();
         }
@@ -443,7 +445,7 @@ namespace NodeWar.Lobby
         {
             if (item == null) return false;
             var data = loadout.ToData();
-            return item.Granted || Array.IndexOf(activeTab == Tab.Suits ? data.suitIDs : data.districtIDs, item.ID) >= 0;
+            return item.Granted || Array.IndexOf(item.IsSuit ? data.suitIDs : data.districtIDs, item.ID) >= 0;
         }
         private void UsePreview()
         {
@@ -451,16 +453,9 @@ namespace NodeWar.Lobby
             // Actual eligibility is independent of the debug display override.
             if (!catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse || inspectedItem.Granted) return;
             closingForUse = true; CloseItemPanel(); closingForUse = false;
-            if (activeTab == Tab.Districts && DistrictUseRequested?.Invoke() == true)
+            if (!loadout.Use(true, inventoryBusy))
             {
-                if (loadout.BeginReplace(true, inventoryBusy)) { RenderReplacement(); ReplacementChanged?.Invoke(); }
-                else CancelReplacement();
-                return;
-            }
-            if (!loadout.UsePreview(true, activeTab == Tab.Suits))
-            {
-                if (activeTab == Tab.Suits && loadout.BeginSuitReplace(true, inventoryBusy))
-                { RenderReplacement(); ReplacementChanged?.Invoke(); }
+                if (Replacing) { RenderReplacement(); ReplacementChanged?.Invoke(); }
                 return;
             }
             SaveToProfile(); Render();
@@ -526,9 +521,9 @@ namespace NodeWar.Lobby
             }
             session.Select(item == null ? null : LoadoutTypes.CatalogBaseForLobbyId(item.ID));
             if (panelBaseId != null && panelBaseId != session.SelectedBaseID) CloseItemPanel();
-            loadout.Preview(item?.ID);
+            loadout.Inspect(item?.ID, item?.IsSuit ?? ViewingSuit);
             RenderInventory();
-            ItemViewed?.Invoke(activeTab == Tab.Suits, item?.ID);
+            ItemViewed?.Invoke(item?.IsSuit ?? ViewingSuit, item?.ID);
         }
 
         private async Task LoadInventoryAsync(int visit)
@@ -719,16 +714,16 @@ namespace NodeWar.Lobby
             var histogram = new VisualElement(); histogram.AddToClassList("mk-hist");
             var balance = TreeBalance();
             HistogramRow[] rows;
-            if (activeTab == Tab.Suits)
+            if (inspectedItem.IsSuit)
                 rows = StatHistogram.SuitRows(LoadoutInfoModel.SuitStats(balance, baseId, variant), LoadoutInfoModel.SuitStats(balance, baseId, 0));
             else if (Enum.TryParse(inspectedItem.ID.Substring(5), true, out DistrictType district))
                 rows = StatHistogram.DistrictRows(balance, district, variant);
             else rows = Array.Empty<HistogramRow>();
-            if (activeTab == Tab.Suits && rows.Length > 0) histogram.Add(StatLegend());
+            if (inspectedItem.IsSuit && rows.Length > 0) histogram.Add(StatLegend());
             foreach (var row in rows) histogram.Add(HistogramLine(row));
 
             string description = inspectedItem.Description ?? "";
-            if (activeTab == Tab.Districts && Enum.TryParse(inspectedItem.ID.Substring(5), true, out DistrictType type))
+            if (!inspectedItem.IsSuit && Enum.TryParse(inspectedItem.ID.Substring(5), true, out DistrictType type))
                 description = NodeWar.View.DistrictFallback.Describe(type).Description ?? description;
 
             if (!state.CanUse) content.Add(MakeLabel("Locked · Arena " + state.UnlockEra, "mk-muted", "ws-item-status"));
@@ -769,18 +764,19 @@ namespace NodeWar.Lobby
             var use = SheetButton("USE", () => _ = UseItemAsync(), "mk-btn--primary");
             bool canUse = catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse &&
                 (index < 0 || choices[index].Equipped || choices[index].Selectable);
-            bool skinValid = Array.Exists(skins, choice => choice.ID == panelSkinId && (choice.Equipped || choice.Selectable));
+            bool skinValid = LoadoutScreenModel.ValidChoice(skins, panelSkinId);
             bool changes = !IsSelected(inspectedItem) || index >= 0 && !choices[index].Equipped ||
                 Array.Exists(skins, choice => choice.ID == panelSkinId && !choice.Equipped);
+            use.tooltip = !canUse ? "Locked - own this item and reach its required arena to use it." : !skinValid ? "Selected skin is locked." : "";
             use.SetEnabled(!inventoryBusy && canUse && skinValid && changes); itemActions.Add(use);
         }
 
         private int CurrentEra(Item item)
         {
             var data = loadout.ToData();
-            var eras = activeTab == Tab.Suits ? data.suitEras : data.districtEras;
+            var eras = item.IsSuit ? data.suitEras : data.districtEras;
             int type = DistrictMigration.SourceType(item.ID);
-            if (activeTab == Tab.Suits && Enum.TryParse(item.ID.Substring(5), true, out SuitType suit)) type = (int)suit;
+            if (item.IsSuit && Enum.TryParse(item.ID.Substring(5), true, out SuitType suit)) type = (int)suit;
             return type >= 0 && type < eras.Length ? eras[type] : 0;
         }
 
@@ -863,14 +859,15 @@ namespace NodeWar.Lobby
             if (!catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse) return;
             var variants = LoadoutChoices.Variants(baseId, playerState);
             int variant = Array.FindIndex(variants, choice => choice.ID == choiceId);
-            if (variant >= 0 && !variants[variant].Equipped)
+            if (!LoadoutScreenModel.ValidChoice(variants, choiceId)) return;
+            if (variant >= 0 && LoadoutScreenModel.NeedsEquipment(variants[variant]))
             {
                 if (!variants[variant].Selectable || !await EquipVariantAsync(baseId, choiceId) || !Current()) return;
             }
             var skins = LoadoutChoices.Skins(baseId, null, playerState);
             int skin = Array.FindIndex(skins, choice => choice.ID == skinId);
-            if (skin < 0) return;
-            if (!skins[skin].Equipped)
+            if (!LoadoutScreenModel.ValidChoice(skins, skinId)) return;
+            if (skin >= 0 && LoadoutScreenModel.NeedsEquipment(skins[skin]))
             {
                 if (!skins[skin].Selectable || !await EquipSkinAsync(baseId, skinId) || !Current()) return;
             }

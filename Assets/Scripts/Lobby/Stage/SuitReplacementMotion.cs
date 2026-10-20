@@ -6,6 +6,10 @@ namespace NodeWar.Lobby
     public static class SuitReplacementMotion
     {
         public const float RiseSeconds = 0.25f, LowerSeconds = 0.20f;
+        // Disjoint horizontal lanes include the widest replacement pop (0.7 / 0.78).
+        public static float LaneX(int index, int count) => count <= 1 ? 0 : -0.95f + 1.9f * index / (count - 1);
+        public static float WanderX(int index, int count, float sample) =>
+            LaneX(index, count) + 0.02f * Math.Max(-1, Math.Min(1, sample));
         public static float Lift(float seconds, int index, int count)
         {
             double t = Math.Max(0, seconds);

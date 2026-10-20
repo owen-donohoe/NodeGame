@@ -92,6 +92,8 @@
     <Compile Include="../../Assets/UI/Scripts/PrivateLobbyModel.cs" Link="Lobby/PrivateLobbyModel.cs" />
     <Compile Include="PartyWaitModelTests.cs" />
     <Compile Include="WorkshopStageTests.cs" />
+    <Compile Include="WorkshopRegressionTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StagePick.cs" Link="Lobby/StagePick.cs" />
     <Compile Include="../../Assets/UI/Scripts/StageSlotMap.cs" Link="Lobby/StageSlotMap.cs" />
     <Compile Include="../../Assets/UI/Scripts/PartyWaitModel.cs" Link="Lobby/PartyWaitModel.cs" />
     <Compile Include="RecentOpponentListTests.cs" />

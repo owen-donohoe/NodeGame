@@ -9,6 +9,24 @@ namespace NodeWar.Lobby
         public string PendingSuitId { get; private set; } = "";
         public bool ReplacingSuit => PendingSuitId.Length > 0;
         public bool Replacing => PendingDistrictId.Length > 0 || ReplacingSuit;
+        public bool BrowsingSuits { get; private set; }
+        public bool PreviewIsSuit { get; private set; }
+        public void Browse(bool suits) { BrowsingSuits = suits; CancelReplace(); }
+        public void Inspect(string id, bool suit) { PreviewIsSuit = suit; Preview(id); }
+
+        // One entry point for sheet Use: fill first, otherwise wait for a stage pick.
+        public bool Use(bool canUse, bool busy)
+        {
+            if (!canUse || busy) return false;
+            if (UsePreview(true, PreviewIsSuit)) return true;
+            if (PreviewIsSuit) BeginSuitReplace(true, false);
+            else BeginReplace(true, false);
+            return false;
+        }
+
+        public static bool NeedsEquipment(LoadoutChoice choice) => !choice.Equipped && choice.Selectable;
+        public static bool ValidChoice(LoadoutChoice[] choices, string id) =>
+            choices.Length == 0 || System.Array.Exists(choices, c => c.ID == id && (c.Equipped || c.Selectable));
 
         public LoadoutScreenModel(LoadoutData chosen) { editor = new LoadoutEditor(chosen); }
         public void Preview(string lobbyId)

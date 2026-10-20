@@ -28,6 +28,14 @@ namespace NodeWar.Lobby.Tests
             Assert.That(SuitReplacementMotion.Shake(1, 1, 3), Is.EqualTo(SuitReplacementMotion.Shake(1.4f, 1, 3)).Within(0.00001));
         }
 
+        [TestCase(1)] [TestCase(2)] [TestCase(3)]
+        public void WanderingLanesKeepEveryBodySeparateDuringPop(int count)
+        {
+            for (int i = 0; i + 1 < count; i++)
+                Assert.That(SuitReplacementMotion.WanderX(i + 1, count, -1) - SuitReplacementMotion.WanderX(i, count, 1),
+                    Is.GreaterThan(0.7f / 0.78f));
+        }
+
         [Test]
         public void LowerAndPopHaveContinuousEndpoints()
         {

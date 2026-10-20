@@ -399,7 +399,7 @@ namespace NodeWar.Lobby
             var retained = new bool[oldSuits.Length];
             for (int i = 0; i < suits.Length; i++)
             {
-                int previous = Array.IndexOf(oldIds, suitTypes[i]);
+                int previous = i < oldIds.Length && oldIds[i] == suitTypes[i] ? i : -1;
                 if (previous >= 0 && !retained[previous])
                 {
                     retained[previous] = true; suits[i] = oldSuits[previous];
@@ -410,7 +410,7 @@ namespace NodeWar.Lobby
                 else
                 {
                     var suit = Cutout("Suit " + i, plots[1], StageArt.Suit(suitTypes[i]),
-                        new Vector3((i % 3 - 1) * 0.5f, 0.03f, -0.55f),
+                        new Vector3(SuitReplacementMotion.LaneX(i, suits.Length), 0.03f, -0.55f),
                         new Vector2(0.7f, 1.1f), TypeTint(suitTypes[i], true));
                     suits[i] = suit.transform;
                     suitGround[i] = i < oldGround.Length ? oldGround[i] : suit.transform.localPosition;
@@ -425,6 +425,11 @@ namespace NodeWar.Lobby
                         paper.TextureFor(StageArt.Suit(suitTypes[i]), TypeTint(suitTypes[i], true), mark: suitTypes[i]), Color.white);
                 }
                 suits[i].name = "Suit " + i;
+                if (oldSuits.Length != suits.Length)
+                {
+                    suitGround[i].x = SuitReplacementMotion.LaneX(i, suits.Length);
+                    suitTargets[i].x = suitGround[i].x;
+                }
                 suitRenderers[i] = suits[i].GetComponent<Renderer>();
                 suits[i].localPosition = suitGround[i] + Vector3.up * suitLifts[i];
             }
@@ -445,15 +450,27 @@ namespace NodeWar.Lobby
             if (!stageCamera.isActiveAndEnabled) return false;
             Physics.SyncTransforms();
             Ray ray = stageCamera.ScreenPointToRay(screenPoint);
-            if (!Physics.Raycast(ray, out RaycastHit hit, stageCamera.farClipPlane,
-                1 << StageLayer, QueryTriggerInteraction.Ignore)) return false;
-            for (int i = 0; i < suits.Length; i++)
-                if (hit.transform == suits[i]) { pick = new StagePick(true, i); return true; }
-            for (int i = 0; i < plots.Length; i++)
-                if (hit.transform.IsChildOf(plots[i])) { pick = new StagePick(false, i); return true; }
+            var hits = Physics.RaycastAll(ray, stageCamera.farClipPlane, 1 << StageLayer, QueryTriggerInteraction.Ignore);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (var hit in hits)
+            {
+                int suit = Array.IndexOf(suits, hit.transform);
+                if (suit >= 0)
+                {
+                    var candidate = new StagePick(true, suit);
+                    if (candidate.CanPick(replacingSuits || cluster.Shaking, replacingSuits))
+                    { pick = candidate; return true; }
+                    continue;
+                }
+                if (replacingSuits) continue;
+                for (int i = 0; i < plots.Length; i++)
+                {
+                    if (cluster.Shaking && i >= equipped) continue;
+                    if (hit.transform.IsChildOf(plots[i])) { pick = new StagePick(false, i); return true; }
+                }
+            }
             return false;
         }
-
         public void SelectDistrict(int slot) => cluster.Select(slot);
         public void Deselect() => cluster.Deselect();
         public void SetDistrictCapacity(int capacity) => districtCapacity = Mathf.Clamp(capacity, 0, StageSlots.Count);
@@ -571,7 +588,7 @@ namespace NodeWar.Lobby
                 suitWaits[i] -= delta;
                 if (suitWaits[i] > 0f) return;
                 // Walk on the front of the front-middle plot, clear of the filler building.
-                suitTargets[i] = new Vector3(UnityEngine.Random.Range(-1f, 1f), position.y,
+                suitTargets[i] = new Vector3(SuitReplacementMotion.WanderX(i, suits.Length, UnityEngine.Random.Range(-1f, 1f)), position.y,
                     UnityEngine.Random.Range(-1f, -0.3f));
                 suitWaits[i] = UnityEngine.Random.Range(0.5f, 2f);
             }
