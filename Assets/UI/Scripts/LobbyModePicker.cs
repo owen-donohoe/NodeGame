@@ -144,7 +144,7 @@ namespace NodeWar.Lobby
                 // Wait for content widths to reach Yoga before assigning scroll offset.
                 Root.schedule.Execute(() =>
                 {
-                    strip.scrollOffset = new Vector2(LobbyModeLayout.GroupStart(LobbyModeCategories.IndexOf(LobbyModeCategories.Of(selection)), columnWidth, Gap, GroupGap), 0);
+                    strip.scrollOffset = Vector2.zero;
                     previousOffset = strip.scrollOffset.x; idleSince = Time.realtimeSinceStartupAsDouble; placing = false;
                 });
             }
