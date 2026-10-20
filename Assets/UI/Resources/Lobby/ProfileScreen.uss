@@ -1,11 +1,8 @@
-.g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; transform-origin: 0 0; transition-property: translate, scale; transition-duration: 340ms; transition-timing-function: ease-out-cubic; }
-.g2-profile--instant { transition-duration: 0ms; }
+.g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
 .ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; background-color: var(--mk-sheet); }
 .g2-profile-state, .g2-profile-state > .g2-profile-content { min-height: 0; }
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
-.g2-profile--self .g2-profile-state { opacity: 0; transition-property: opacity; transition-duration: 120ms; }
-.g2-profile--expanded .g2-profile-state { opacity: 1; }
 .g2-profile-header { flex-direction: row; align-items: center; height: 96px; min-height: 96px; max-height: 96px; padding: 12px; overflow: hidden; flex-shrink: 0; }
 .g2-profile-header .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); }

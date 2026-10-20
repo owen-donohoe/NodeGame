@@ -7,14 +7,8 @@ namespace NodeWar.Lobby
     /// <summary>
     /// Owns which tab page is showing and keeps the tab bar in step with it.
     ///
-    /// Pages sit side by side in one track inside the page host, in the order
-    /// they are registered, and changing page slides the track - so a tab press
-    /// scrolls to its page rather than cutting. Every page stays in the tree,
-    /// which also keeps each page's scroll position and element state between
-    /// visits for free.
-    ///
-    /// Each page is sized to the host here rather than in USS, because the
-    /// page count is decided by registration, not by a stylesheet.
+    /// Pages overlap during a short crossfade; inactive pages retain their state
+    /// with display:none. Interrupted changes retarget every visible page.
     ///
     /// Profile, Settings and Match history are not pages in this sense: they
     /// are overlays above the chrome, owned by the shell.
@@ -24,6 +18,7 @@ namespace NodeWar.Lobby
         private readonly VisualElement pageHost;
         private readonly VisualElement track;
         private readonly List<LobbyPage> pages = new List<LobbyPage>();
+        private readonly List<LobbyElementMotion> motions = new List<LobbyElementMotion>();
         private readonly Dictionary<LobbyPageID, Button> navButtons =
             new Dictionary<LobbyPageID, Button>();
 
@@ -54,7 +49,6 @@ namespace NodeWar.Lobby
             track.pickingMode = PickingMode.Ignore;
             pageHost.Add(track);
 
-            pageHost.RegisterCallback<GeometryChangedEvent>(evt => Layout(false));
             pageHost.RegisterCallback<PointerDownEvent>(OnSwipeStart, TrickleDown.TrickleDown);
             pageHost.RegisterCallback<PointerMoveEvent>(OnSwipeMove, TrickleDown.TrickleDown);
             pageHost.RegisterCallback<PointerUpEvent>(OnSwipeEnd, TrickleDown.TrickleDown);
@@ -128,7 +122,10 @@ namespace NodeWar.Lobby
 
             pages.Add(page);
             track.Add(page.Root);
-            Layout(false);
+            page.Root.style.position = Position.Absolute;
+            page.Root.style.left = page.Root.style.right = page.Root.style.top = page.Root.style.bottom = 0;
+            page.Root.style.display = DisplayStyle.None;
+            motions.Add(new LobbyElementMotion(page.Root));
         }
 
         public bool Has(LobbyPageID id)
@@ -149,38 +146,40 @@ namespace NodeWar.Lobby
             if (currentPage == target) return;
 
             bool first = currentPage == null;
+            int direction = first ? 0 : LobbyMotion.ContentDirection(currentPage.ID, id);
 
             if (currentPage != null) currentPage.OnHide();
 
             currentPage = target;
+            bool hidden = target.Root.style.display == DisplayStyle.None;
+            target.Root.style.display = DisplayStyle.Flex;
+            target.Root.SetEnabled(true);
+            target.Root.BringToFront();
             currentPage.OnShow();
 
-            Layout(!first);
+            for (int i = 0; i < pages.Count; i++)
+            {
+                var page = pages[i];
+                var motion = motions[i];
+                if (page == target)
+                {
+                    if (first) motion.Set(1f, 0f, 1f);
+                    else
+                    {
+                        if (hidden) motion.Set(0f, -direction * LobbyMotion.PageTravel, 1f);
+                        motion.To(1f, 0f, 1f, LobbyMotion.PageSeconds);
+                    }
+                }
+                else if (page.Root.style.display != DisplayStyle.None)
+                {
+                    page.Root.SetEnabled(false);
+                    motion.To(0f, motion.Offset + direction * LobbyMotion.PageTravel, 1f,
+                        LobbyMotion.PageSeconds, done: () => page.Root.style.display = DisplayStyle.None);
+                }
+            }
             RefreshNavButtons();
 
             if (PageShown != null) PageShown(id);
-        }
-
-        /// <summary>
-        /// Sizes the track and pages to the host and positions the track on the
-        /// current page. The first placement is not animated, so the lobby
-        /// opens on Home rather than sliding to it from Shop.
-        /// </summary>
-        private void Layout(bool animate)
-        {
-            float width = pageHost.resolvedStyle.width;
-            if (float.IsNaN(width) || width <= 0f) return;
-
-            track.style.width = width * pages.Count;
-            for (int i = 0; i < pages.Count; i++)
-                pages[i].Root.style.width = width;
-
-            int index = currentPage != null ? pages.IndexOf(currentPage) : 0;
-
-            track.style.transitionDuration = animate
-                ? StyleKeyword.Null
-                : new StyleList<TimeValue>(new List<TimeValue> { new TimeValue(0) });
-            track.style.translate = new Translate(-width * index, 0);
         }
 
         private void RefreshNavButtons()

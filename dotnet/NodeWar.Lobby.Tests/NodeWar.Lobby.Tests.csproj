@@ -94,6 +94,8 @@
     <Compile Include="../../Assets/Scripts/Lobby/Stage/StageShots.cs" Link="Lobby/Stage/StageShots.cs" />
     <Compile Include="BankActionTests.cs" />
     <Compile Include="LobbyRouteTests.cs" />
+    <Compile Include="LobbyMotionTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyMotion.cs" Link="Lobby/LobbyMotion.cs" />
     <Compile Include="LobbyOverlayRouterTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyOverlayRouter.cs" Link="Lobby/LobbyOverlayRouter.cs" />
     <Compile Include="LobbyStateTests.cs" />

@@ -23,8 +23,10 @@ namespace NodeWar.Lobby
         private readonly AsyncStateView stateView = new AsyncStateView();
         private readonly SafeAreaBinder safeArea;
         private AsyncState state = new AsyncState();
-        private VisualElement sourceRect;
+        private readonly LobbyElementMotion ownMotion;
         private IVisualElementScheduledItem hideLater;
+        private IVisualElementScheduledItem revealLater;
+        private bool awaitingReveal;
         private bool viewingSelf;
         private string playerId, account;
         private int generation;
@@ -46,6 +48,8 @@ namespace NodeWar.Lobby
             Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ProfileScreen")); Root.Add(own); Root.Add(panel);
             panel.SetScrollable(false);
             own.AddToClassList("g2-profile-own"); own.Add(stateView);
+            ownMotion = new LobbyElementMotion(own);
+            ownMotion.Set(0f, 0f, LobbyMotion.ClosedScale);
             safeArea = new SafeAreaBinder(own); panel.Closed += Close;
             stateView.Content.AddToClassList("g2-profile-content");
             stateView.AddToClassList("g2-profile-state"); stateView.RetryRequested += Reload;
@@ -76,35 +80,39 @@ namespace NodeWar.Lobby
         public void Open(VisualElement source)
         {
             if (IsOpen) return;
-            sourceRect = source;
             OpenFor(SelfId);
-            Root.RemoveFromClassList("g2-profile--expanded");
-            Root.AddToClassList("g2-profile--instant"); SnapTo(source);
-            Root.schedule.Execute(() =>
-            {
-                if (!IsOpen) return;
-                Root.RemoveFromClassList("g2-profile--instant"); Root.AddToClassList("g2-profile--expanded");
-                Root.style.translate = new Translate(0, 0); Root.style.scale = new Scale(Vector2.one);
-            }).ExecuteLater(16);
         }
         public void OpenFor(string id)
         {
             if (string.IsNullOrEmpty(id)) return;
             hideLater?.Pause();
+            bool hidden = Root.style.display == DisplayStyle.None;
             bool changed = playerId != id || account != SelfId;
             playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null;
             if (changed) shownCard = null; else if (!viewingSelf) RenderFooter();
             if (changed) { state = new AsyncState(); stateView.Content.Clear(); }
             Root.EnableInClassList("g2-profile--self", viewingSelf);
             Root.EnableInClassList("g2-profile--player", !viewingSelf);
-            Root.AddToClassList("g2-profile--expanded");
             own.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
             if (viewingSelf) { panel.Close(); own.Add(stateView); }
-            else { sourceRect = null; panel.Body.Add(stateView); panel.Open(); }
-            Root.style.translate = new Translate(0, 0); Root.style.scale = new Scale(Vector2.one);
+            else { panel.Body.Add(stateView); }
             BackendServices.StateChanged -= StateChanged; BackendServices.StateChanged += StateChanged;
             BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
             bool opening = !IsOpen; IsOpen = true; Root.style.display = DisplayStyle.Flex;
+            if (opening || changed)
+            {
+                awaitingReveal = true;
+                if (viewingSelf)
+                {
+                    if (hidden) ownMotion.Set(0f, 0f, LobbyMotion.ClosedScale);
+                    else
+                    {
+                        ownMotion.Hold();
+                        if (state.HasContent && !changed)
+                        { awaitingReveal = false; ownMotion.Open(); }
+                    }
+                }
+            }
             if (opening) Opened?.Invoke();
             Reload();
         }
@@ -112,23 +120,36 @@ namespace NodeWar.Lobby
         {
             if (!IsOpen) return;
             IsOpen = false; generation++; pointer = -1; confirmation.Close();
+            awaitingReveal = false; revealLater?.Pause();
             BackendServices.StateChanged -= StateChanged; BackendServices.Account.Changed -= AccountChanged;
-            Root.RemoveFromClassList("g2-profile--expanded");
-            if (viewingSelf && sourceRect != null)
+            if (viewingSelf)
             {
-                SnapTo(sourceRect);
-                hideLater = Root.schedule.Execute(() => Root.style.display = DisplayStyle.None); hideLater.ExecuteLater(340);
+                ownMotion.Close(() => Root.style.display = DisplayStyle.None);
             }
-            else { panel.Close(); Root.style.display = DisplayStyle.None; }
+            else
+            {
+                panel.Close();
+                hideLater = Root.schedule.Execute(() => Root.style.display = DisplayStyle.None);
+                hideLater.ExecuteLater((long)(LobbyMotion.CloseSeconds * 1000));
+            }
             Closed?.Invoke();
         }
-        private void SnapTo(VisualElement source)
+        private void RevealPreparedLayout()
         {
-            if (source == null || Root.parent == null) return;
-            Rect full = Root.parent.worldBound, from = source.worldBound;
-            if (full.width <= 0 || full.height <= 0) return;
-            Root.style.translate = new Translate(from.x - full.x, from.y - full.y);
-            Root.style.scale = new Scale(new Vector2(from.width / full.width, from.height / full.height));
+            if (!IsOpen || !awaitingReveal) return;
+            if (!viewingSelf) { awaitingReveal = false; panel.Open(); return; }
+            // Build data and let Toolkit lay out the complete hierarchy at zero
+            // opacity before starting the single surface tween. No display toggle
+            // or independent content fade can interrupt the expansion.
+            revealLater?.Pause();
+            revealLater = Root.schedule.Execute(() =>
+            {
+                if (!IsOpen || !awaitingReveal) return;
+                if (stateView.layout.width <= 0f || stateView.layout.height <= 0f)
+                { RevealPreparedLayout(); return; }
+                awaitingReveal = false; ownMotion.Open();
+            });
+            revealLater.ExecuteLater(16);
         }
         private void StateChanged() { if (IsOpen && viewingSelf) Reload(); }
         private void AccountChanged(AccountInfo _) { report?.Close(); Close(); }
@@ -141,15 +162,17 @@ namespace NodeWar.Lobby
                 PublicProfileView profile = await profiles.GetAsync(id);
                 if (!Active(request, id, requestedFor)) return;
                 stateView.Content.Clear();
-                if (profile?.Card == null) { state = state.Reduce(AsyncResult.Empty, Now); stateView.Render(state, Now, "This profile is unavailable."); return; }
+                if (profile?.Card == null) { state = state.Reduce(AsyncResult.Empty, Now); stateView.Render(state, Now, "This profile is unavailable."); RevealPreparedLayout(); return; }
                 shownCard = profile.Card; Render(profile);
                 if (!viewingSelf) _ = LoadModerationAsync(request, id, requestedFor);
                 state = state.Reduce(AsyncResult.Ready, Now); stateView.Render(state, Now);
+                RevealPreparedLayout();
             }
             catch (Exception)
             {
                 if (!Active(request, id, requestedFor)) return;
                 state = state.Reduce(AsyncResult.Offline, Now); stateView.Render(state, Now, "Couldn't load this profile. Try again.");
+                RevealPreparedLayout();
             }
         }
         private bool Active(int request, string id, string requestedFor) => IsOpen && generation == request && playerId == id && SelfId == requestedFor;

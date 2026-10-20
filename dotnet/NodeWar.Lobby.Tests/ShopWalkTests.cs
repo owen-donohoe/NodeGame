@@ -40,11 +40,13 @@ namespace NodeWar.Lobby.Tests
         }
 
         [TestCase(0, 2, false)] // Daily must be absent at Weekly.
-        [TestCase(1, 2, true)]  // Only the immediately previous stall remains.
+        [TestCase(1, 2, false)] // Previous stall must never remain behind the current UI.
         [TestCase(2, 2, true)]
         [TestCase(3, 2, false)]
         [TestCase(0, 1.001f, false)]
-        public void Panels_HideBeyondOneStallBehind(float stall, float position, bool visible)
+        [TestCase(2, 2.25f, false)]
+        [TestCase(3, 2.75f, false)]
+        public void Panels_ShowOnlyCurrentSettledStall(float stall, float position, bool visible)
             => Assert.AreEqual(visible, ShopProjection.IsVisible(stall, position, 10));
 
         [TestCase(390f / 844f)]
@@ -149,7 +151,7 @@ namespace NodeWar.Lobby.Tests
         }
 
         [TestCase(0, 1, true)]
-        [TestCase(-1, 1, true)]
+        [TestCase(-1, 1, false)]
         [TestCase(-1.01f, 1, false)]
         [TestCase(0.1f, 1, false)]
         [TestCase(0, -1, false)]
