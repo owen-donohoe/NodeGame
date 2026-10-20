@@ -1,0 +1,46 @@
+.ui-root .private-lobby-panel { width: 94%; max-width: 360px; }
+.ui-root .private-lobby-panel .mk-panel__body { padding: 0; }
+.ui-root .private-tag { font-size: 13px; color: var(--p3-edge); background-color: var(--p3); border-radius: 8px; padding: 4px 8px; margin-right: 8px; flex-shrink: 0; }
+.ui-root .private-arena { height: 264px; flex-shrink: 0; margin-bottom: 8px; }
+.ui-root .private-board { position: absolute; width: 120px; height: 120px; top: 72px; left: 50%; margin-left: -60px; align-items: center; justify-content: center; background-color: var(--paper-dark); border-width: 2px; border-color: var(--line-inner); border-radius: 12px; }
+.ui-root .private-board-label { position: absolute; top: 8px; font-size: 17px; color: var(--ink-mute); -unity-font-definition: var(--font-display); }
+.ui-root .private-seat { position: absolute; height: 64px; flex-direction: row; background-color: var(--paper-light); border-width: 2px; border-bottom-width: 5px; border-left-width: 6px; border-color: var(--line-inner); border-radius: 10px; overflow: hidden; }
+.ui-root .private-seat--top, .ui-root .private-seat--bottom { width: 200px; left: 50%; margin-left: -100px; }
+.ui-root .private-seat--top, .ui-root .private-seat--topleft, .ui-root .private-seat--topright { top: 0; }
+.ui-root .private-seat--bottom, .ui-root .private-seat--bottomleft, .ui-root .private-seat--bottomright { bottom: 0; }
+.ui-root .private-seat--topleft, .ui-root .private-seat--bottomleft { left: 0; width: 48%; }
+.ui-root .private-seat--topright, .ui-root .private-seat--bottomright { right: 0; width: 48%; }
+.ui-root .private-seat--p0 { border-left-color: var(--p0); }
+.ui-root .private-seat--p1 { border-left-color: var(--p1); }
+.ui-root .private-seat--p2 { border-left-color: var(--p2); }
+.ui-root .private-seat--p3 { border-left-color: var(--p3); }
+.ui-root .private-seat--empty { background-color: var(--paper-dark); }
+/* UI Toolkit has no border-style:dashed. Empty cards draw dashes with generateVisualContent. */
+.ui-root .private-seat--empty { border-width: 0; }
+.ui-root .private-face.mk-btn { flex-direction: row; align-items: center; flex-grow: 1; flex-shrink: 1; min-width: 0; min-height: 0; border-width: 0; background-color: var(--clear); padding: 4px; margin: 0; }
+.ui-root .private-avatar { min-width: 24px; height: 32px; flex-shrink: 0; font-size: 17px; -unity-font-definition: var(--font-display); -unity-text-align: middle-center; background-color: var(--paper-dark); border-radius: 8px; margin-right: 4px; }
+.ui-root .private-who { flex-grow: 1; flex-shrink: 1; min-width: 0; justify-content: center; }
+.ui-root .private-name { font-size: 15px; -unity-font-definition: var(--font-display); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin: 0; padding: 0; }
+.ui-root .private-seat-meta { font-size: 13px; color: var(--ink-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; padding: 0; }
+.ui-root .private-seat-meta-row { flex-direction: row; align-items: center; }
+.ui-root .private-crown { width: 12px; height: 12px; flex-shrink: 0; margin-right: 4px; background-image: url("Icons/Phosphor/crown-simple-bold.svg"); -unity-background-image-tint-color: var(--paper-ink); }
+.ui-root .private-more.mk-btn { width: 44px; min-width: 44px; min-height: 44px; border-width: 0; background-color: var(--clear); padding: 0; margin: 0; }
+.ui-root .private-invite-seat.mk-btn { flex-grow: 1; min-width: 0; margin: 4px; border-width: 0; background-color: var(--clear); padding: 4px; }
+.ui-root .private-seat--selected { background-color: var(--mk-action); }
+.ui-root .private-arena--ffa .private-board { width: 88px; height: 88px; top: 88px; margin-left: -44px; }
+.ui-root .private-arena--ffa .private-seat--top, .ui-root .private-arena--ffa .private-seat--bottom { width: 192px; margin-left: -96px; }
+.ui-root .private-seat--left, .ui-root .private-seat--right { width: 104px; height: 88px; top: 88px; }
+.ui-root .private-seat--left { left: 0; }
+.ui-root .private-seat--right { right: 0; }
+.ui-root .private-arena--ffa .private-seat--left .private-face, .ui-root .private-arena--ffa .private-seat--right .private-face { flex-direction: column; align-items: stretch; }
+.ui-root .private-arena--ffa .private-seat--left .private-avatar, .ui-root .private-arena--ffa .private-seat--right .private-avatar { height: 24px; }
+.ui-root .private-code-row { flex-direction: row; align-items: center; margin-top: 8px; margin-bottom: 8px; }
+.ui-root .private-code { flex-grow: 1; flex-shrink: 1; font-size: 24px; -unity-font-definition: var(--font-display); color: var(--paper-ink); }
+.ui-root .private-meta { font-size: 13px; color: var(--ink-mute); margin-top: 8px; margin-bottom: 8px; flex-shrink: 1; }
+.ui-root .private-button-label { font-size: 15px; -unity-font-definition: var(--font-display); -unity-text-align: middle-center; }
+.ui-root .private-start.mk-btn, .ui-root .private-move--active.mk-btn { background-color: var(--mk-action); }
+.ui-root .private-lobby-panel .mk-btn { margin-bottom: 8px; min-height: 44px; align-items: center; justify-content: center; }
+.ui-root .private-lobby-panel .private-face, .ui-root .private-lobby-panel .private-more { margin-bottom: 0; }
+.ui-root .private-move.mk-btn { position: absolute; bottom: 4px; min-height: 44px; min-width: 0; padding: 4px; margin: 0; }
+.ui-root .private-arena--ffa .private-move .private-button-label { font-size: 13px; }
+.ui-root .private-lobby-panel .mk-panel__body > Button { margin-top: 0; }

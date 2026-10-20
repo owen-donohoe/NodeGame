@@ -33,7 +33,7 @@ namespace NodeWar.Lobby
     /// does not time out at all. That is the difference between a message and a
     /// recovery action.
     /// </summary>
-    public class MatchLauncher
+    public partial class MatchLauncher
     {
         public enum Phase
         {
@@ -184,6 +184,7 @@ namespace NodeWar.Lobby
 
         public void HostRelay()
         {
+            ResetPrivateLobby();
             SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginHost(false, null);
         }
@@ -233,6 +234,7 @@ namespace NodeWar.Lobby
         /// </summary>
         public void JoinRelay(string joinCode)
         {
+            ResetPrivateLobby();
             string code = (joinCode ?? "").Trim();
 
             if (code.Length == 0)
@@ -262,6 +264,7 @@ namespace NodeWar.Lobby
         public void Cancel()
         {
             preparationVersion++;
+            LeavePrivateLobby();
             Cleanup();
             CurrentPhase = Phase.Idle;
             JoinCode = null;
@@ -344,6 +347,7 @@ namespace NodeWar.Lobby
 
         public void Update()
         {
+            PumpPrivateLobby();
             switch (CurrentPhase)
             {
                 case Phase.CreatingRoom:
@@ -412,6 +416,11 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < packets.Length; i++)
             {
+                if (ReceivePrivateLobby(packets[i]))
+                {
+                    if (networkManager == null) return;
+                    continue;
+                }
                 if (InputSerializer.ReadPacketType(packets[i]) != PacketType.Handshake) continue;
 
                 BuildIdentity self = LocalBuildIdentity.Current;
@@ -421,6 +430,12 @@ namespace NodeWar.Lobby
                 HandshakeVerdict verdict = InputSerializer.TryDeserializeHandshake(packets[i], out BuildIdentity peer)
                     ? InputSerializer.Compare(self, peer)
                     : HandshakeVerdict.PeerOlder;
+
+                if (privateLobbyActive && verdict == HandshakeVerdict.Compatible)
+                {
+                    if (!privatePeerCompatible) { privatePeerCompatible = true; Notify(); }
+                    continue; // Start releases the existing handshake.
+                }
 
                 // Three of each, as the shipped flow does: the reply is
                 // unreliable and a dropped one would strand the client.
@@ -467,6 +482,11 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < packets.Length; i++)
             {
+                if (ReceivePrivateLobby(packets[i]))
+                {
+                    if (networkManager == null) return;
+                    continue;
+                }
                 PacketType type = InputSerializer.ReadPacketType(packets[i]);
                 if (type != PacketType.HandshakeAck && type != PacketType.HandshakeReject) continue;
 
@@ -491,7 +511,7 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            if (Time.time - phaseEnterTime <= handshakeTimeout) return;
+            if (privateLobbyActive || Time.time - phaseEnterTime <= handshakeTimeout) return;
 
             Cleanup();
             Fail("The host didn't answer.",
@@ -502,6 +522,7 @@ namespace NodeWar.Lobby
 
         private void Succeed()
         {
+            if (PrivateLobby != null) localPlayerID = PrivateLobby.SeatOf(privateLocalId);
             if (!RecheckLoadout()) return;
             CurrentPhase = Phase.Connected;
             Notify();
@@ -598,6 +619,7 @@ namespace NodeWar.Lobby
         public void Dispose()
         {
             preparationVersion++;
+            LeavePrivateLobby();
             Cleanup();
             CurrentPhase = Phase.Idle;
         }

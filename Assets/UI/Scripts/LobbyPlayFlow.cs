@@ -24,6 +24,7 @@ namespace NodeWar.Lobby
         private int searchVersion;
         private string recentPlayerId;
         private bool localBusy, disposed;
+        private string privateInviteCode;
         public event Action<LobbyMode, string> PartyRequested;
 
         public LobbyPlayFlow(VisualElement shell, LobbyOverlayRouter router, PlayPopup legacy,
@@ -50,7 +51,7 @@ namespace NodeWar.Lobby
             Bind(inviteRoot, "invite-friends", () => ShowInviteEmpty("No friends to invite"));
             Bind(inviteRoot, "invite-guild", () => ShowInviteEmpty("You're not in a guild"));
             Bind(inviteRoot, "invite-search", OpenSearch);
-            Bind(inviteRoot, "invite-code", () => OpenCode(false));
+            Bind(inviteRoot, "invite-code", () => { if (privateInviteCode == null) OpenCode(false); else { GUIUtility.systemCopyBuffer = privateInviteCode; toast?.Show("Code copied"); } });
             Resources.Load<VisualTreeAsset>("Lobby/PlayerSearch")?.CloneTree(searchRoot);
             search.Content.Add(searchRoot);
             searchRoot.Q<VisualElement>("recent-opponents")?.Add(recent);
@@ -92,6 +93,9 @@ namespace NodeWar.Lobby
                 case LobbyPlayAction.Bot: StartBot(); break;
                 case LobbyPlayAction.Lan: OpenCode(true); break;
                 case LobbyPlayAction.PrivateInvite:
+                    privateInviteCode = null;
+                    var inviteCodeButton = inviteRoot.Q<Button>("invite-code");
+                    if (inviteCodeButton != null) inviteCodeButton.text = "Use a join code instead";
                     ShowInviteEmpty("No friends to invite"); invite.Open(); break;
                 case LobbyPlayAction.TeamChoice:
                     ShowChoice(("Invite guild member", () => RequestParty(LobbyMode.Team2v2, "Guild member")),
@@ -103,6 +107,15 @@ namespace NodeWar.Lobby
                         ("Invite", () => RequestParty(LobbyMode.FreeForAll4, "Player")));
                     break;
             }
+        }
+
+        public void OpenPrivateInvite(string joinCode)
+        {
+            privateInviteCode = joinCode;
+            var button = inviteRoot.Q<Button>("invite-code");
+            if (button != null) button.text = "Copy lobby join code";
+            ShowInviteEmpty("Share the code with friends or guild members" );
+            invite.Open();
         }
 
         private void RequestParty(LobbyMode mode, string source)

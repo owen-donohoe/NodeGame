@@ -64,7 +64,7 @@ Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets
 
 `LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. Attached lobby icons load white Phosphor Bold SVG VectorImages from `Resources/Lobby/Icons/Phosphor`, tinted by USS. Shop and non-lobby surfaces retain themed sprites and cached Painter2D glyphs.
 
-District and suit icons accept Profile context for loadout minis.
+`Tokens.uss` adds lobby-only green/purple `--p2/--p3` and edge tokens; the board has no four-player colours.
 
 `LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this inventory.
 
