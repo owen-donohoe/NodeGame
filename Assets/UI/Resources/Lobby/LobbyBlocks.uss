@@ -2,5 +2,5 @@
 .mk-claim-body { min-height: 0; flex-shrink: 1; }
 .lb-claim-details { min-height: 0; max-height: 320px; flex-shrink: 1; margin-bottom: 12px; }
 .lb-claim-details Label { white-space: normal; margin-bottom: 8px; }
-.lb-async { padding: 16px; }
+.lb-async { padding: 0; }
 .lb-spinner { width: 28px; height: 28px; border-width: 3px; border-color: var(--ink); border-top-color: var(--ink); border-radius: 14px; margin: 8px; }
