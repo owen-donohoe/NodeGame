@@ -39,12 +39,19 @@ namespace NodeWar.Lobby.Tests
         [TestCase(800)]
         public void CardClipTracksHeaderMiddleWithoutMovingScrolledContent(float scroll)
         {
-            var layout = WorkshopLayout.Clip(480, 160, 1600, scroll);
+            var layout = WorkshopLayout.Clip(480, 160, 1600, scroll, 80);
             Assert.That(layout.ClipTop - scroll, Is.EqualTo(layout.HeaderTop - scroll + 80));
             Assert.That(layout.ClipTop + layout.CardOffset + WorkshopLayout.CardGap - scroll, Is.EqualTo(652 - scroll));
             Assert.That(layout.ContentHeight, Is.EqualTo(1612));
             Assert.That(layout.MaskHeight + layout.ClipTop, Is.EqualTo(2252));
             if (scroll >= 480) Assert.That(layout.HeaderTop - scroll, Is.Zero);
+        }
+
+        [Test]
+        public void DefaultClipEdgeIsTheMiddleOfTheSelector()
+        {
+            var layout = WorkshopLayout.Clip(300, WorkshopLayout.HeaderHeight, 900, 0);
+            Assert.That(layout.ClipTop - layout.HeaderTop, Is.EqualTo(59 + 8 + 26));
         }
     }
 }

@@ -672,7 +672,7 @@
 .lb-root .ws-scroll { flex-grow: 1; min-height: 0; }
 .lb-root .ws-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: var(--space-3); }
 .lb-root .ws-stage-spacer { height: 220px; flex-shrink: 0; }
-.lb-root .ws-panel1-space { height: 136px; flex-shrink: 0; }
+.lb-root .ws-panel1-space { flex-shrink: 0; }
 .lb-root .ws-panel2-space { flex-shrink: 0; }
 .lb-root .ws-panel2-clip { position: absolute; left: 0; right: 0; overflow: hidden; }
 .lb-root .ws-presets .ws-preset-tabs { flex-shrink: 0; }
@@ -928,3 +928,14 @@
 .lb-root .ws-arr-glyph { width: 24px; height: 24px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); scale: 0.7 1; }
 .lb-root .ws-arr-glyph--prev { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-left-bold.svg"); transform-origin: 28% 50%; translate: 2px 0; }
 .lb-root .ws-arr-glyph--next { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-right-bold.svg"); transform-origin: 72% 50%; translate: -2px 0; }
+
+/* Workshop tiles: two equal columns by percentage with an exact 8px gutter, so the grid needs no measuring. */
+.lb-root #page-workshop .ws-cards { margin-left: -4px; margin-right: -4px; }
+.lb-root .ws-cell { width: 50%; height: 160px; padding: 0 4px 8px 4px; flex-shrink: 0; }
+.lb-root .ws-cell > .ws-card { flex-grow: 1; margin: 0; min-width: 0; min-height: 0; }
+.lb-root .ws-cell > .ws-card .ws-art-clip { height: 78px; }
+.lb-root .ws-empty-cell { width: 100%; }
+.lb-root .ws-presets { height: 59px; flex-shrink: 0; }
+.lb-root .ws-panel1 { height: 119px; }
+.lb-root .ws-panel1-space { height: 119px; }
+.lb-root .ws-art { -unity-background-scale-mode: scale-to-fit; }
