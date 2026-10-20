@@ -113,7 +113,10 @@ namespace NodeWar.Lobby
         }
         private void OnSwipeStart(PointerDownEvent evt)
         {
-            if (!initialized || swipePointer != -1 || evt.button != 0 || overlayOpen?.Invoke() == true) return;
+            if (!initialized || !evt.isPrimary || evt.button != 0 || overlayOpen?.Invoke() == true) return;
+            // A list may capture above pageHost and consume the pending gesture's
+            // release. A fresh primary press always starts a fresh decision.
+            CancelSwipe();
             for (var target = evt.target as VisualElement; target != null; target = target.parent)
             {
                 if (target.ClassListContains("lb-no-swipe")) return;
@@ -137,7 +140,7 @@ namespace NodeWar.Lobby
             float velocity = -(point.x - swipePrevious.x) / width / Mathf.Max(0.001f, (evt.timestamp - swipePreviousAt) / 1000f);
             strip.Drag(-delta.x / width, velocity);
             swipePrevious = point; swipePreviousAt = evt.timestamp;
-            pageHost.CapturePointer(evt.pointerId); Apply(); evt.StopPropagation();
+            LobbyMouseDrag.Capture(pageHost, evt.pointerId); Apply(); evt.StopPropagation();
         }
         private void OnSwipeEnd(PointerUpEvent evt)
         {

@@ -102,6 +102,9 @@ namespace NodeWar.Lobby
             });
             Root.RegisterCallback<WheelEvent>(evt =>
             {
+                for (var element = evt.target as VisualElement; element != null && element != Root; element = element.parent)
+                    if (element is ScrollView list && list.contentContainer.layout.height > list.contentViewport.layout.height + 1f)
+                        return;
                 if (Mathf.Abs(evt.delta.x) >= Mathf.Abs(evt.delta.y)) return;
                 walk.ScrollTo(ShopSnap.Target(walk.Position + Mathf.Sign(evt.delta.y) * 0.01f, evt.delta.y));
                 evt.StopPropagation();
@@ -332,7 +335,7 @@ namespace NodeWar.Lobby
                 if (axis == SwipeAxis.Vertical)
                 {
                     walk.BeginDrag();
-                    Root.CapturePointer(pointer);
+                    LobbyMouseDrag.Capture(Root, pointer);
                 }
             }
             if (axis != SwipeAxis.Vertical) return;

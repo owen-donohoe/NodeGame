@@ -115,6 +115,7 @@ namespace NodeWar.Lobby
         private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
+        private LobbyMouseDrag mouseDrag;
         public NodeWar.Backend.ICrateInventory Crates => crateInventory;
 
         public LobbyRouteStack Routes => router?.Stack;
@@ -191,6 +192,8 @@ namespace NodeWar.Lobby
 
         private void OnDisable()
         {
+            if (mouseDrag != null) document?.rootVisualElement?.RemoveManipulator(mouseDrag);
+            mouseDrag = null;
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             homePage?.OnHide();
             homePage = null;
@@ -347,6 +350,8 @@ namespace NodeWar.Lobby
             RegisterPages();
             WireOverlays(root);
             LobbyScrollbars.Hide(root);
+            mouseDrag = new LobbyMouseDrag();
+            root.AddManipulator(mouseDrag);
 
             navigation.Show(LobbyPageID.Home);
             Application.deepLinkActivated += HandleDeepLink;
