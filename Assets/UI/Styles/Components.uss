@@ -681,8 +681,8 @@
 .lb-root .ws-roles-scroll { flex-shrink: 0; }
 .lb-root .ws-actionbar { margin-top: var(--space-3); }
 .lb-root #page-workshop .ws-cards { margin-right: 0; margin-bottom: 0; }
-.lb-root .ws-art-clip { height: 64px; align-items: stretch; justify-content: center; }
-.lb-root .ws-art { flex-grow: 1; align-items: center; justify-content: center; }
+.lb-root .ws-art-clip { width: 100%; height: 78px; flex-shrink: 0; overflow: hidden; border-radius: 7px; background-color: var(--mk-pressed); align-items: stretch; justify-content: center; }
+.lb-root .ws-art { flex-grow: 1; min-height: 0; align-items: center; justify-content: center; }
 .lb-root .ws-empty { width: 100%; padding: var(--space-3); }
 .lb-root .ws-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb-root .ws-item-content > * { margin-bottom: var(--space-3); }
@@ -846,7 +846,9 @@
 .lb-root .ui-filter-bubble .unity-min-max-slider__min-thumb, .lb-root .ui-filter-bubble .unity-min-max-slider__max-thumb { width: 24px; height: 24px; border-width: 2px; border-bottom-width: 4px; border-color: var(--line-inner); border-radius: 12px; background-color: var(--mk-sheet); }
 .lb-root .g2-history-name { flex-grow: 1; flex-shrink: 1; min-width: 0; min-height: 44px; padding: 0; margin: 0; border-width: 0; background-color: var(--clear); font-size: 15px; -unity-text-align: middle-left; overflow: hidden; text-overflow: ellipsis; }
 
-.lb-root .ui-filter-sort .ui-filter-face { padding-right: 24px; background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); background-size: 16px 16px; background-position: right center; background-repeat: no-repeat; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root #page-workshop .ui-filter-sort { flex-direction: row; align-items: center; padding: 4px 8px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-inner); border-radius: 8px; background-color: var(--mk-sheet); background-image: none; }
+.lb-root .ui-filter-sort .ui-filter-face { padding: 0; border-width: 0; background-image: none; background-color: var(--clear); }
+.lb-root .ws-sort-caret { background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/caret-down-bold.svg"); -unity-background-scale-mode: scale-to-fit; width: 16px; height: 16px; margin-left: 4px; -unity-background-image-tint-color: var(--mk-ink); }
 
 .lb-root .ws-arr-prev, .lb-root .ws-arr-next, .lb-root .mk-panel__close, .lb-root .lb-guild-browse-toggle { background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
 
@@ -858,3 +860,7 @@
 .lb-root .mk-tab, .lb-root .mk-tab:active { border-width: 2px; }
 .lb-root .mk-tabs--sliding .mk-tab--on { border-color: var(--clear); }
 .lb-root .lb-pill-progress { border-width: 2px; background-image: none; }
+
+.lb-root .ws-card { overflow: hidden; }
+.lb-root .ws-tile-meta { min-height: 16px; }
+.lb-root .ws-monogram { font-size: 24px; margin-bottom: 0; }
