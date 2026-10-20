@@ -747,6 +747,8 @@
 .lb-root .lb-guild-panel-members { max-height: 320px; min-height: 64px; flex-shrink: 1; margin-top: var(--space-3); margin-bottom: var(--space-3); }
 .lb-root .lb-guild-chat { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
 .lb-root .lb-guild-report { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+/* Full-page surfaces are pages even when built with MkCard. */
+.lb-root .mk-card.lb-guild-chat-safe, .lb-root .mk-card.lb-guild-report { border-width: 0; border-radius: 0; }
 .lb-root .lb-guild-chat > TemplateContainer { flex-grow: 1; min-height: 0; }
 .lb-root .lb-guild-chat-safe { flex-grow: 1; padding: var(--space-4); min-height: 0; }
 .lb-root .lb-guild-report-safe { flex-grow: 1; padding: var(--space-4); min-height: 0; }

@@ -1,5 +1,5 @@
 .g2-profile { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
-.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
+.ui-root .g2-profile-own { overflow: hidden; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border-width: 0; border-radius: 0; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
 .g2-profile-state, .g2-profile-state > .g2-profile-content { min-height: 0; }
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
