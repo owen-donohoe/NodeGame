@@ -27,6 +27,14 @@ namespace NodeWar.Lobby
         private readonly Action<string> openProfile;
         private readonly GuildChatScreen chat;
         private readonly GuildReportScreen report;
+        private readonly LobbyOverlayRouter router;
+        private readonly VisualElement filterLayer = new VisualElement();
+        private readonly VisualElement filterBubble = new VisualElement();
+        private ScrollView filterContent;
+        private VisualElement outsideTapRoot;
+        private ValueAnimation<StyleValues> searchMotion, resultsMotion;
+        private IVisualElementScheduledItem querySearch;
+        private int minMembers = 1, maxMembers = 25;
         private GuildFilter filter = new GuildFilter();
         private GuildView current;
         public GuildView CurrentGuild => HasGuild ? current : null;
@@ -42,12 +50,23 @@ namespace NodeWar.Lobby
             LobbySheet sheet, Action<string> openProfile) : base(LobbyPageID.Guild, Build())
         {
             this.service = service; this.cache = cache; this.sheet = new GuildSheetHost(sheet); this.openProfile = openProfile;
+            this.router = router;
+            Root.AddToClassList("ui-guild");
+            filterLayer.AddToClassList("ui-filter-layer"); filterBubble.AddToClassList("ui-filter-bubble");
+            filterLayer.Add(filterBubble); Root.Add(filterLayer); filterLayer.style.display = DisplayStyle.None;
+            filterLayer.RegisterCallback<PointerDownEvent>(evt => { if (evt.target == filterLayer) { CloseFilter(); evt.StopPropagation(); } });
+            filterBubble.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            Root.RegisterCallback<GeometryChangedEvent>(_ => { if (filterLayer.resolvedStyle.display != DisplayStyle.None) PositionFilter(); });
             chat = new GuildChatScreen(service, router, overlays);
             report = new GuildReportScreen(router, overlays);
             Root.userData = this;
             details.AddToClassList("lb-guild-preview");
             visitor = Root.Q("guild-visitor"); visitor.RemoveFromHierarchy();
             visitor.RegisterCallback<GeometryChangedEvent>(_ => PlaceSearch(false));
+            visitor.Q("guild-search-anchor").RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (filterLayer.resolvedStyle.display != DisplayStyle.None) PositionFilter();
+            });
             home = Root.Q("guild-home"); home.RemoveFromHierarchy();
             mine.AddToClassList("lb-guild-membership"); mine.Content.AddToClassList("lb-guild-membership-content");
             Root.Q("guild-state").Add(mine);
@@ -60,9 +79,16 @@ namespace NodeWar.Lobby
             browseToggle = visitor.Q<Button>("guild-browse-toggle");
             browseToggle.clicked += () =>
             {
-                browsing = !browsing; UpdateVisitor();
-                if (browsing) LoadBrowse(false);
+                ExpandSearch();
             };
+            query.RegisterCallback<FocusInEvent>(_ => ExpandSearch());
+            query.RegisterValueChangedCallback(evt =>
+            {
+                querySearch?.Pause();
+                if (string.IsNullOrEmpty(evt.newValue)) { CollapseSearch(); return; }
+                ExpandSearch();
+                querySearch = Root.schedule.Execute(Search).StartingIn(180);
+            });
             visitor.Q<Button>("guild-search").clicked += Search;
             query.RegisterCallback<KeyDownEvent>(evt =>
             {
@@ -101,6 +127,10 @@ namespace NodeWar.Lobby
         public override void OnShow() { visible = true; Refresh(); }
         public override void OnHide()
         {
+            CollapseSearch();
+            querySearch?.Pause(); StopMotion(ref searchMotion); StopMotion(ref resultsMotion);
+            results.style.opacity = 0; results.style.visibility = Visibility.Hidden; PlaceSearch(false);
+            CloseFilter(); router.Closed("guild-search-state");
             visible = false; visit++;
             mine.Invalidate(); search.Invalidate(); browse.Invalidate(); details.Invalidate(true);
             report.Close(); CloseSheet(); chat.Close();
@@ -108,6 +138,7 @@ namespace NodeWar.Lobby
 
         private void AccountChanged(AccountInfo info)
         {
+            CollapseSearch();
             current = null; visit++; searched = browsing = false;
             mine.Invalidate(true); search.Invalidate(true); browse.Invalidate(true); details.Invalidate(true);
             report.Close(); CloseSheet(); chat.Close();
@@ -199,17 +230,23 @@ namespace NodeWar.Lobby
         private void PlaceSearch(bool animate)
         {
             var anchor = visitor.Q("guild-search-anchor");
-            float top = searched ? 8 : Mathf.Max(8, visitor.layout.height * 0.38f - 50);
-            if (float.IsNaN(top)) return;
-            if (animate) anchor.experimental.animation.Start(new StyleValues { marginTop = top }, 250);
-            else anchor.style.marginTop = top;
+            float offset = searched ? 0 : Mathf.Max(0, visitor.layout.height * 0.38f - 50 - 16);
+            if (float.IsNaN(offset)) return;
+            StopMotion(ref searchMotion);
+            // TODO: use LobbyMotion when the shared lobby motion class lands.
+            if (animate) searchMotion = anchor.experimental.animation.Start(new StyleValues { top = offset }, 280).Ease(Easing.OutCubic).KeepAlive();
+            else anchor.style.top = offset;
         }
         private void UpdateVisitor()
         {
             visitor.EnableInClassList("lb-guild-visitor--searched", searched);
-            browseCard.style.display = browsing && !searched ? DisplayStyle.Flex : DisplayStyle.None;
-            search.style.display = searched ? DisplayStyle.Flex : DisplayStyle.None;
-            results.style.display = browsing || searched ? DisplayStyle.Flex : DisplayStyle.None;
+            browseCard.style.display = DisplayStyle.None;
+            search.style.display = DisplayStyle.Flex;
+            results.style.display = DisplayStyle.Flex;
+            results.pickingMode = searched ? PickingMode.Position : PickingMode.Ignore;
+            results.SetEnabled(searched);
+            if (searched) results.style.visibility = Visibility.Visible;
+            else if (resultsMotion == null) results.style.visibility = Visibility.Hidden;
             browseToggle.text = browsing ? "⌃" : "⌄";
             browseToggle.style.display = searched ? DisplayStyle.None : DisplayStyle.Flex;
         }
@@ -217,11 +254,43 @@ namespace NodeWar.Lobby
         private void Search()
         {
             if (!visible || HasGuild) return;
-            bool animate = !searched; searched = true; UpdateVisitor(); PlaceSearch(animate);
+            ExpandSearch(false);
             string text = query.value;
             GuildFilter selected = SnapshotFilter();
-            _ = search.Load(() => service.SearchAsync(text, selected), rows => RenderRows(search.Content, rows),
+            int low = minMembers, high = maxMembers;
+            _ = search.Load(async () =>
+            {
+                var rows = string.IsNullOrWhiteSpace(text) ? await cache.GetAsync(service) : await service.SearchAsync(text, selected);
+                // Member ranges are not part of IGuildService; apply to returned rows locally.
+                return rows?.FindAll(guild => GuildFilters.Matches(guild, selected) && guild.Members >= low && guild.Members <= high);
+            }, rows => RenderRows(search.Content, rows),
                 rows => rows != null && rows.Count > 0, "No guilds match this search. Try another name or filter.");
+        }
+
+        private void ExpandSearch(bool load = true)
+        {
+            if (!visible || HasGuild || searched) return;
+            searched = true; browsing = false; UpdateVisitor(); PlaceSearch(true);
+            StopMotion(ref resultsMotion);
+            resultsMotion = results.experimental.animation.Start(new StyleValues { opacity = 1, top = 0 }, 280).Ease(Easing.OutCubic).KeepAlive();
+            router.Open(new LobbyOverlay("guild-search-state", OverlayKind.Menu), CollapseSearch);
+            if (load) Search();
+        }
+
+        private void CollapseSearch()
+        {
+            CloseFilter(); querySearch?.Pause();
+            searched = browsing = false; query.SetValueWithoutNotify(""); query.Blur();
+            search.Invalidate(); router.Closed("guild-search-state"); UpdateVisitor(); PlaceSearch(true);
+            StopMotion(ref resultsMotion);
+            resultsMotion = results.experimental.animation.Start(new StyleValues { opacity = 0, top = 16 }, 280).Ease(Easing.OutCubic).KeepAlive();
+            resultsMotion.OnCompleted(() => { if (!searched) results.style.visibility = Visibility.Hidden; });
+        }
+
+        private static void StopMotion(ref ValueAnimation<StyleValues> motion)
+        {
+            if (motion == null) return;
+            motion.Stop(); motion.Recycle(); motion = null;
         }
 
         private void LoadBrowse(bool refresh)
@@ -293,19 +362,63 @@ namespace NodeWar.Lobby
 
         private void OpenFilter()
         {
-            var content = SheetContent("Filter guilds");
+            if (filterLayer.resolvedStyle.display != DisplayStyle.None) { CloseFilter(); return; }
+            ExpandSearch();
+            filterBubble.Clear();
+            var tail = new VisualElement(); tail.AddToClassList("ui-filter-tail"); filterBubble.Add(tail);
+            filterContent = new ScrollView { horizontalScrollerVisibility = ScrollerVisibility.Hidden, verticalScrollerVisibility = ScrollerVisibility.Hidden };
+            filterContent.AddToClassList("ui-filter-content"); filterBubble.Add(filterContent);
+            filterContent.Add(GuildViews.Text("Filter guilds", "mk-h3"));
             var joinable = new Toggle("Joinable only") { value = filter.JoinableOnly };
-            var rr = new IntegerField("Min RR") { value = filter.MinRR }; rr.AddToClassList("mk-card");
-            var members = new IntegerField("Min members") { value = filter.MinMembers }; members.AddToClassList("mk-card");
-            content.Add(joinable); content.Add(rr); content.Add(members);
-            content.Add(GuildViews.Button("Apply", () =>
+            var rrLabel = GuildViews.Text("Min RR: " + filter.MinRR);
+            var rr = new SliderInt(0, 5000) { value = filter.MinRR };
+            rr.showInputField = false;
+            rr.RegisterValueChangedCallback(evt => rrLabel.text = "Min RR: " + evt.newValue);
+            var membersLabel = GuildViews.Text("Members: " + minMembers + "\u2013" + maxMembers);
+            var members = new MinMaxSlider(minMembers, maxMembers, 1, 25);
+            members.RegisterValueChangedCallback(evt => membersLabel.text = "Members: " + Mathf.RoundToInt(evt.newValue.x) + "\u2013" + Mathf.RoundToInt(evt.newValue.y));
+            filterContent.Add(rrLabel); filterContent.Add(rr); filterContent.Add(membersLabel); filterContent.Add(members); filterContent.Add(joinable);
+            var actions = new VisualElement(); actions.AddToClassList("ui-filter-actions");
+            actions.Add(GuildViews.Button("Reset", () => { rr.value = 0; members.value = new Vector2(1, 25); joinable.value = false; }));
+            actions.Add(GuildViews.Button("Apply", () =>
             {
-                filter = new GuildFilter { JoinableOnly = joinable.value, MinRR = Math.Max(0, rr.value), MinMembers = Math.Max(0, members.value) };
-                CloseSheet();
-                if (searched) Search();
-                if (browsing) LoadBrowse(false);
+                minMembers = Mathf.RoundToInt(members.value.x); maxMembers = Mathf.RoundToInt(members.value.y);
+                filter = new GuildFilter { JoinableOnly = joinable.value, MinRR = rr.value, MinMembers = minMembers };
+                CloseFilter(); Search();
             }));
-            ShowSheet(content);
+            filterContent.Add(actions);
+            filterLayer.style.display = DisplayStyle.Flex; filterLayer.BringToFront(); PositionFilter();
+            outsideTapRoot = Root.panel?.visualTree;
+            outsideTapRoot?.RegisterCallback<PointerDownEvent>(FilterOutsideTap, TrickleDown.TrickleDown);
+            filterBubble.RegisterCallback<GeometryChangedEvent>(PositionFilterChanged);
+            router.Open(new LobbyOverlay("guild-filter-bubble", OverlayKind.Menu), CloseFilter);
+        }
+
+        private void PositionFilterChanged(GeometryChangedEvent evt) => PositionFilter();
+        private void PositionFilter()
+        {
+            var button = visitor.Q<Button>("guild-filter");
+            var bounds = Root.WorldToLocal(button.worldBound.position);
+            float width = Mathf.Min(280, Root.layout.width - 32);
+            filterBubble.style.width = width;
+            filterBubble.style.left = Mathf.Clamp(bounds.x + button.layout.width - width, 16, Mathf.Max(16, Root.layout.width - width - 16));
+            filterBubble.style.top = bounds.y + button.layout.height + 8;
+            // Keep controls reachable on short portrait viewports and with a software keyboard.
+            filterContent.style.maxHeight = Mathf.Max(44, Root.layout.height - bounds.y - button.layout.height - 8 - 16 - 28);
+        }
+        private void CloseFilter()
+        {
+            outsideTapRoot?.UnregisterCallback<PointerDownEvent>(FilterOutsideTap, TrickleDown.TrickleDown);
+            outsideTapRoot = null;
+            filterLayer.style.display = DisplayStyle.None;
+            filterBubble.UnregisterCallback<GeometryChangedEvent>(PositionFilterChanged);
+            router.Closed("guild-filter-bubble");
+        }
+        private void FilterOutsideTap(PointerDownEvent evt)
+        {
+            if (evt.target is VisualElement target && (target == filterBubble || filterBubble.Contains(target) ||
+                target == visitor.Q("guild-filter") || visitor.Q("guild-filter").Contains(target))) return;
+            CloseFilter(); evt.StopPropagation();
         }
 
         private void ConfirmKick(GuildMember member)

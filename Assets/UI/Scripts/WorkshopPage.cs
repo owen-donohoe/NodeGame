@@ -27,15 +27,15 @@ namespace NodeWar.Lobby
         private readonly Label eraMessage;
         private readonly ScrollView grid;
         private readonly VisualElement firstPanel, panelSpace, stageWindow, secondPanel, secondSpace, secondClip;
+        private readonly VisualElement navClearance = new VisualElement { pickingMode = PickingMode.Ignore };
         private float stageBandHeight = 220f;
         private VisualElement nav;
 
-        private readonly Button ownedFilter, sortFilter;
+        private readonly Button ownedFilter, allFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
         private readonly Label presetLabel, browserTitle;
         private bool closingForUse;
         private bool showAll;
-        private string roleFilter;
         private LoadoutSort sort;
         private PlayerState playerState;
         private Item inspectedItem;
@@ -89,11 +89,11 @@ namespace NodeWar.Lobby
             eraMessage = Root.Q<Label>("workshop-era-message");
             grid = Root.Q<ScrollView>("workshop-grid");
             grid.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
-            Root.Q<ScrollView>("workshop-roles").touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
             firstPanel = Root.Q("workshop-panel1"); panelSpace = Root.Q("workshop-panel1-space");
             stageWindow = Root.Q("workshop-window");
             secondPanel = Root.Q("workshop-panel2"); secondSpace = Root.Q("workshop-panel2-space");
             secondClip = Root.Q("workshop-panel2-clip");
+            navClearance.AddToClassList("ui-lobby-list-end"); grid.Add(navClearance);
             secondPanel.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
             // Render the sticky first card last, above the scrolling second card.
             firstPanel.BringToFront();
@@ -101,10 +101,13 @@ namespace NodeWar.Lobby
             firstPanel.RegisterCallback<GeometryChangedEvent>(_ => UpdateScrollLayout());
             grid.verticalScroller.valueChanged += _ => UpdateScrollLayout();
             ownedFilter = Root.Q<Button>("workshop-owned");
+            allFilter = Root.Q<Button>("workshop-all");
+            allFilter.AddToClassList("ui-filter-all");
             sortFilter = Root.Q<Button>("workshop-sort");
             presetLabel = Root.Q<Label>("workshop-preset-label");
             browserTitle = Root.Q<Label>("workshop-browser-title");
-            ownedFilter.clicked += () => { showAll = !showAll; RenderCards(); };
+            ownedFilter.clicked += () => { showAll = false; RenderCards(); };
+            allFilter.clicked += () => { showAll = true; RenderCards(); };
             sortFilter.clicked += () => { sort = (LoadoutSort)(((int)sort + 1) % 3); RenderCards(); };
             for (int i = 0; i < presets.Length; i++)
             {
@@ -150,7 +153,7 @@ namespace NodeWar.Lobby
         {
             if (grid?.panel == null) return;
             float navHeight = nav?.resolvedStyle.height ?? 0;
-            grid.contentContainer.style.paddingBottom = (float.IsNaN(navHeight) ? 0 : navHeight) + 12f;
+            navClearance.style.height = float.IsNaN(navHeight) ? 0 : navHeight;
             if (Replacing && grid.scrollOffset != Vector2.zero) grid.scrollOffset = Vector2.zero;
             if (!Mathf.Approximately(stageWindow.layout.height, stageBandHeight)) stageWindow.style.height = stageBandHeight;
             if (!Mathf.Approximately(panelSpace.layout.height, firstPanel.layout.height)) panelSpace.style.height = firstPanel.layout.height;
@@ -258,7 +261,7 @@ namespace NodeWar.Lobby
         {
             CancelReplacement();
             CloseItemPanel();
-            activeTab = tab; roleFilter = null;
+            activeTab = tab;
             ViewChanged?.Invoke(tab == Tab.Suits);
             var profile = PlayerProfile.Instance;
             if (profile != null) profile.WorkshopTabIndex = (int)tab;
@@ -300,17 +303,16 @@ namespace NodeWar.Lobby
         {
             if (unlocked == null) return;
             unlocked.Clear();
-            ownedFilter.text = showAll ? "All" : "Owned";
-            sortFilter.text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role");
+            ownedFilter.EnableInClassList("ui-filter-chip--on", !showAll);
+            allFilter.EnableInClassList("ui-filter-chip--on", showAll);
+            sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Arena" : sort == LoadoutSort.Name ? "Name" : "Role") + " \u2304";
             browserTitle.text = activeTab == Tab.Suits ? "Suits" : "Districts";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
-            RenderRoles(items);
             foreach (Item item in items)
             {
                 var state = DisplayUnlock(catalog.UnlockForBase(item.ID, playerState));
-                if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned) ||
-                    roleFilter != null && roleFilter != item.Family.ToString()) continue;
+                if (!LoadoutBrowse.Includes(showAll, state.Status == UnlockStatus.Owned)) continue;
                 var card = new Button(() => PreviewItem(item.ID));
                 card.AddToClassList("mk-tile"); card.AddToClassList("ws-card");
                 card.EnableInClassList("ws-card--preview", loadout.PreviewId == item.ID);
@@ -348,29 +350,12 @@ namespace NodeWar.Lobby
                 card.style.width = card.style.maxWidth = card.style.flexBasis = width;
                 card.style.minWidth = card.style.minHeight = 0;
                 card.style.height = width;
-                card.style.marginRight = index++ % 3 == 2 ? 0 : WorkshopLayout.TileGap;
+                card.style.marginRight = index++ % 2 == 1 ? 0 : WorkshopLayout.TileGap;
                 card.style.marginBottom = WorkshopLayout.TileGap;
-                card.Q(className: "ws-art-clip").style.height = Math.Max(24, (float)Math.Floor((width - 48) / 4) * 4);
+                card.Q(className: "ws-art-clip").style.height = Math.Max(24, (float)Math.Floor((width - 64) / 4) * 4);
             });
         }
 
-        private void RenderRoles(List<Item> items)
-        {
-            var host = Root.Q("workshop-role-chips"); host.Clear();
-            var roles = new List<string>();
-            foreach (var item in items)
-                if (!roles.Contains(item.Family.ToString())) roles.Add(item.Family.ToString());
-            roles.Sort(StringComparer.Ordinal);
-            if (roleFilter != null && !roles.Contains(roleFilter)) roleFilter = null;
-            void Add(string role, string label)
-            {
-                var chip = new Button(() => { roleFilter = role; RenderCards(); }) { text = label };
-                chip.AddToClassList("mk-chip"); chip.AddToClassList("mk-chip--tap");
-                chip.EnableInClassList("mk-chip--on", role == roleFilter); host.Add(chip);
-            }
-            Add(null, "All");
-            foreach (var role in roles) Add(role, ItemFamily.NoteFor((ItemFamily.Family)Enum.Parse(typeof(ItemFamily.Family), role)));
-        }
         public void InspectStageItem(bool suit, int stageIndex)
         {
             if (!session.IsOpen || Replacing) return;

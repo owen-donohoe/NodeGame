@@ -1,4 +1,4 @@
-﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
  <ui:Style src="SocialScreen.uss" />
  <ui:ScrollView name="social-scroll" class="g2-social-scroll" mode="Vertical" vertical-scroller-visibility="Hidden">
   <lobby:MkCard class="g2-social-card">
@@ -13,5 +13,6 @@
    <ui:Label text="BATTLE HISTORY" class="mk-eyebrow" />
    <ui:VisualElement name="social-previous" />
   </lobby:MkCard>
+  <ui:VisualElement class="ui-lobby-list-end" picking-mode="Ignore" />
  </ui:ScrollView>
 </ui:UXML>
