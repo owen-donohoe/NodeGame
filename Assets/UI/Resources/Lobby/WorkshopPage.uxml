@@ -11,6 +11,7 @@
                         <engine:Button name="workshop-preset-0" text="1" class="mk-btn ws-preset" />
                         <engine:Button name="workshop-preset-1" text="2" class="mk-btn ws-preset" />
                         <engine:Button name="workshop-preset-2" text="3" class="mk-btn ws-preset" />
+                        <engine:Button name="workshop-clear" class="mk-btn mk-btn--sm ws-clear"><engine:Label text="Clear" picking-mode="Ignore" /></engine:Button>
                     </engine:VisualElement>
                     <engine:Label name="workshop-preset-label" class="mk-eyebrow ws-eyebrow" picking-mode="Ignore" />
                 </engine:VisualElement>

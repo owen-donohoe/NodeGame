@@ -14,20 +14,10 @@ namespace NodeWar.Lobby
     /// <summary>Resolves each player's canonical loadout without changing the authored board.</summary>
     public static class LoadoutMatchSetup
     {
-        public static bool GetsFreeGrants(LoadoutData loadout)
-        {
-            loadout = Sanitize(loadout);
-            return IsLow(loadout);
-        }
-
         public static DraftPoolEntry[] DistrictPool(LoadoutData loadout, DistrictType[] mapBasePool)
         {
             loadout = Sanitize(loadout);
             var pool = new List<DraftPoolEntry>();
-            if (IsLow(loadout) && mapBasePool != null)
-                for (int i = 0; i < mapBasePool.Length; i++)
-                    if (mapBasePool[i] != DistrictType.None)
-                        pool.Add(new DraftPoolEntry { DistrictType = mapBasePool[i], IsFromLoadout = false });
             for (int i = 0; i < loadout.districtIDs.Length; i++)
                 if (!string.IsNullOrEmpty(loadout.districtIDs[i]))
                     pool.Add(new DraftPoolEntry { DistrictType = LoadoutTypes.DistrictForLobbyId(loadout.districtIDs[i]),
@@ -39,13 +29,11 @@ namespace NodeWar.Lobby
         {
             loadout = Sanitize(loadout);
             var suits = new List<int>();
-            bool low = IsLow(loadout);
-            if (low) suits.Add((int)SuitType.Warrior);
             for (int i = 0; i < loadout.suitIDs.Length; i++)
             {
                 if (string.IsNullOrEmpty(loadout.suitIDs[i])) continue;
                 SuitType type = LoadoutTypes.SuitForLobbyId(loadout.suitIDs[i]);
-                if (!low || type != SuitType.Warrior) suits.Add((int)type);
+                suits.Add((int)type);
             }
             return suits.ToArray();
         }
@@ -60,9 +48,6 @@ namespace NodeWar.Lobby
                     districts.Add((int)LoadoutTypes.DistrictForLobbyId(loadout.districtIDs[i]));
             return districts.ToArray();
         }
-
-        private static bool IsLow(LoadoutData loadout) =>
-            LoadoutCapacityPolicy.IsLowShape(loadout.suitIDs.Length, loadout.districtIDs.Length);
 
         // Normalize a detached copy, then keep only the first valid choice of each type.
         // Slot order and canonical shape determine identical results on both peers.

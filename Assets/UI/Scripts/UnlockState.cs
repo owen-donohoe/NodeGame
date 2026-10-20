@@ -29,6 +29,9 @@ namespace NodeWar.Lobby
         private static int HighestArena(PlayerState state) => state?.Rank?.HighestArena ?? 1;
 
         public static UnlockState ForBase(string lobbyId, PlayerState state)
+            => ForBase(lobbyId, state, Arena(state));
+
+        public static UnlockState ForBase(string lobbyId, PlayerState state, int arena)
         {
             string baseId = LoadoutTypes.CatalogBaseForLobbyId(lobbyId);
             if (baseId == null) return Invalid;
@@ -38,7 +41,7 @@ namespace NodeWar.Lobby
             bool owned = variants != null ? variants.Contains(CatalogIds.Variant(baseId, 0)) : ContentTable.IsStarter(baseId);
             return new UnlockState(owned ? UnlockStatus.Owned :
                 HighestArena(state) >= gate ? UnlockStatus.CanUnlock : UnlockStatus.CannotUnlock,
-                gate, owned);
+                gate, owned && LoadoutCapacityPolicy.IsBaseUsable(baseId, arena));
         }
 
         public static UnlockState ForVariant(string baseId, string variantId, PlayerState state)
@@ -63,7 +66,7 @@ namespace NodeWar.Lobby
                 available = Arena(state) >= gate;
             }
             return new UnlockState(isOwned ? UnlockStatus.Owned : canUnlock ? UnlockStatus.CanUnlock : UnlockStatus.CannotUnlock,
-                gate, isOwned && available);
+                gate, isOwned && available && LoadoutCapacityPolicy.IsVariantUsable(baseId, variantId, Arena(state)));
         }
 
         public static UnlockState ForSkin(string baseId, string skinId, PlayerState state)

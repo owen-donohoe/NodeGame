@@ -357,8 +357,18 @@ namespace NodeWar.Lobby
             bounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
             return valid && !float.IsInfinity(min.y);
         }
-        public void SetLoadout(int[] districtTypes, int[] suitTypes, int[] grantedDistricts = null)
+        private readonly bool[] lockedDistrictSlots = new bool[StageSlots.Count];
+        private readonly bool[] lockedSuitSlots = new bool[3];
+
+        public void SetLoadout(int[] districtTypes, int[] suitTypes, int[] grantedDistricts = null,
+            int[] lockedDistricts = null, int[] lockedSuits = null)
         {
+            for (int i = 0; i < lockedDistrictSlots.Length; i++)
+                lockedDistrictSlots[i] = districtTypes != null && i < districtTypes.Length &&
+                    Array.IndexOf(lockedDistricts ?? Array.Empty<int>(), districtTypes[i]) >= 0;
+            for (int i = 0; i < lockedSuitSlots.Length; i++)
+                lockedSuitSlots[i] = suitTypes != null && i < suitTypes.Length &&
+                    Array.IndexOf(lockedSuits ?? Array.Empty<int>(), suitTypes[i]) >= 0;
             equipped = Mathf.Min(districtTypes == null ? 0 : districtTypes.Length, StageSlots.Count);
             cluster = new DistrictCluster(equipped);
             // Granted districts take the last free slots, after the chosen ones, and are never picked.
@@ -540,7 +550,7 @@ namespace NodeWar.Lobby
                 int target = cluster.TargetSeparation(i);
                 separations[i] = Mathf.MoveTowards(separations[i], target, delta * 4f);
                 Vector3 position = slotPositions[i] + slotDirections[i] * (separations[i] * 0.65f);
-                if (cluster.Shaking)
+                if (cluster.Shaking && !lockedDistrictSlots[i])
                 {
                     Vector2 jitter = UnityEngine.Random.insideUnitCircle * 0.025f;
                     position += new Vector3(jitter.x, 0f, jitter.y);
@@ -557,7 +567,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < suits.Length; i++)
             {
                 float height = suitRenderers[i].localBounds.size.y * 1.1f;
-                if (replacingSuits)
+                if (replacingSuits && !lockedSuitSlots[i])
                 {
                     suitLifts[i] = height * SuitReplacementMotion.Lift(suitMotionTime, i, suits.Length);
                     suitAngles[i] = SuitReplacementMotion.Shake(suitMotionTime, i, suits.Length);

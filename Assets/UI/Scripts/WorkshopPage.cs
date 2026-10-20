@@ -35,6 +35,7 @@ namespace NodeWar.Lobby
         private readonly Button ownedFilter, allFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
         private readonly Label presetLabel, browserTitle;
+        private ClaimPanel clearConfirmation;
         private bool closingForUse;
         private bool showAll;
         private LoadoutSort sort;
@@ -122,6 +123,9 @@ namespace NodeWar.Lobby
                 presets[i] = Root.Q<Button>("workshop-preset-" + i);
                 presets[i].clicked += () => SwitchPreset(index);
             }
+            var clear = Root.Q<Button>("workshop-clear");
+            clear.Insert(0, new LobbyIcon(LobbyIconKind.Close));
+            clear.clicked += ConfirmClear;
             Root.Q<Button>("workshop-replace-cancel").clicked += CancelReplacement;
             RenderReplacement();
             if (segDistricts != null) segDistricts.clicked += () => SetTab(Tab.Districts);
@@ -244,7 +248,7 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
 
             string preview = loadout.PreviewId;
-            loadout = new LoadoutScreenModel(catalog.CurrentLoadout(playerState).ToLoadout());
+            loadout = new LoadoutScreenModel(catalog.CurrentLoadout(playerState).ToLoadout(), LoadoutRules.ArenaOrFallback(playerState?.Rank));
             loadout.Preview(preview);
             activeTab = profile != null && profile.WorkshopTabIndex == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
             // Until rank is confirmed, fallback display must not trim a saved high deck.
@@ -262,11 +266,24 @@ namespace NodeWar.Lobby
                 id => catalog.IsSuitOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse,
                 id => catalog.IsDistrictOffered(id, arena) && catalog.UnlockForBase(id, playerState).CanUse);
             bool browsingSuits = ViewingSuit;
-            loadout = new LoadoutScreenModel(chosen);
+            loadout = new LoadoutScreenModel(chosen, arena);
             loadout.Browse(browsingSuits);
             profile.Save();
             LoadoutChanged?.Invoke();
             Render();
+        }
+        private void ConfirmClear()
+        {
+            if (!session.IsOpen || inventoryBusy || clearConfirmation == null) return;
+            CancelReplacement(); CloseItemPanel();
+            clearConfirmation.Open(new ClaimRequest("Clear this loadout?", "Keeps the items locked for this era and clears all other slots.", ClaimAction.Ok));
+        }
+        public bool IsStageSlotLocked(bool suit, int slot) => loadout.IsSlotLocked(suit, slot);
+
+        private void ClearConfirmed()
+        {
+            if (!session.IsOpen || inventoryBusy) return;
+            loadout.ClearChoices(); SaveToProfile(); Render();
         }
         private void SaveToProfile()
         {
@@ -508,6 +525,7 @@ namespace NodeWar.Lobby
         }
         private void CloseInventory()
         {
+            clearConfirmation?.Cancel();
             CancelReplacement();
             ItemViewed?.Invoke(false, null);
             CloseItemPanel();
@@ -628,6 +646,15 @@ namespace NodeWar.Lobby
 
         public void BindOverlayRouter(LobbyOverlayRouter router, VisualElement shell)
         {
+            clearConfirmation = new ClaimPanel();
+            shell.Add(clearConfirmation.Root);
+            clearConfirmation.Confirmed += ClearConfirmed;
+            clearConfirmation.Opened += () =>
+            {
+                clearConfirmation.Root.BringToFront();
+                router.Open(new LobbyOverlay("workshop-clear", OverlayKind.Panel), clearConfirmation.Cancel);
+            };
+            clearConfirmation.Closed += () => router.Closed("workshop-clear");
             nav = shell.Q("tabbar-dock");
             inventorySheet.BindRouter(router, "workshop-item");
             inventorySheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));

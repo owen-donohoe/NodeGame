@@ -2,7 +2,7 @@ using NodeWar.Backend;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>Grants and choices form the effective loadout; only chosen slots are editable.</summary>
+    /// <summary>Fixed items live inside the loadout; only other slots are editable.</summary>
     public static class LoadoutRules
     {
         public const int DisplaySuitSlots = 3;
@@ -15,14 +15,14 @@ namespace NodeWar.Lobby
         public static bool IsComplete(LoadoutData loadout, int arena, PlayerState state = null)
         {
             loadout = LocalEditor(loadout, arena).ToLoadout();
-            return SideComplete(loadout.suitIDs, LockedSuits(arena), DisplaySuitSlots, true, arena, state) &&
-                SideComplete(loadout.districtIDs, LockedDistricts(arena), DisplayDistrictSlots, false, arena, state);
+            return SideComplete(loadout.suitIDs, DisplaySuitSlots, true, arena, state) &&
+                SideComplete(loadout.districtIDs, DisplayDistrictSlots, false, arena, state);
         }
 
-        private static bool SideComplete(string[] chosen, string[] grants, int capacity, bool suits,
+        private static bool SideComplete(string[] chosen, int capacity, bool suits,
             int arena, PlayerState state)
         {
-            var equipped = new System.Collections.Generic.List<string>(grants);
+            var equipped = new System.Collections.Generic.List<string>();
             foreach (string id in chosen)
                 if (!string.IsNullOrEmpty(id) && !equipped.Contains(id)) equipped.Add(id);
             int filled = equipped.Count;
@@ -32,7 +32,7 @@ namespace NodeWar.Lobby
             {
                 string id = suits ? CatalogKeys.SuitLobbyId(type) : CatalogKeys.DistrictLobbyId(type);
                 if (!(suits ? IsSuitOffered(id, arena) : IsDistrictOffered(id, arena)) ||
-                    !UnlockStates.ForBase(id, state).CanUse) continue;
+                    !UnlockStates.ForBase(id, state, arena).CanUse) continue;
                 if (System.Array.IndexOf(chosen, id) < 0) return false;
             }
             return true;
@@ -40,20 +40,19 @@ namespace NodeWar.Lobby
 
         public static string[] LockedDistricts(int arena)
         {
-            return LoadoutCapacityPolicy.GetsFreeGrants(arena)
-                ? new[] { "node_farm", "node_mine", "node_village" } : new string[0];
+            return LoadoutCapacityPolicy.LockedDistricts(arena);
         }
 
         public static string[] LockedSuits(int arena)
         {
-            return LoadoutCapacityPolicy.GetsFreeGrants(arena) ? new[] { "suit_warrior" } : new string[0];
+            return LoadoutCapacityPolicy.LockedSuits(arena);
         }
 
         public static bool IsSuitOffered(string id, int arena)
         {
-            for (int type = 1; type < CatalogKeys.SuitTableLength; type++)
+            foreach (int type in new[] { 3, 5, 6, 7, 8 })
                 if (id == CatalogKeys.SuitLobbyId(type))
-                    return id != "suit_warrior" || !LoadoutCapacityPolicy.GetsFreeGrants(arena);
+                    return System.Array.IndexOf(LockedSuits(arena), id) < 0;
             return false;
         }
 
@@ -61,8 +60,7 @@ namespace NodeWar.Lobby
         {
             foreach (int type in CatalogKeys.CatalogDistrictTypes)
                 if (id == CatalogKeys.DistrictLobbyId(type))
-                    return !LoadoutCapacityPolicy.GetsFreeGrants(arena) ||
-                        (id != "node_farm" && id != "node_mine" && id != "node_village");
+                    return System.Array.IndexOf(LockedDistricts(arena), id) < 0;
             return false;
         }
 

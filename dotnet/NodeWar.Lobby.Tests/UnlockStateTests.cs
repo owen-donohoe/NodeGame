@@ -48,7 +48,7 @@ namespace NodeWar.Lobby.Tests
 
         [TestCase("suit_scout", "suit.scout")]
         [TestCase("node_village", "district.village")]
-        public void OwnedBase_CanUseBelowDebut(string lobbyId, string baseId)
+        public void OwnedBase_CannotUseBelowDebut(string lobbyId, string baseId)
         {
             var state = State();
             state.Rank.Arena = 0;
@@ -57,7 +57,7 @@ namespace NodeWar.Lobby.Tests
             var result = UnlockStates.ForBase(lobbyId, state);
             Assert.AreEqual(UnlockStatus.Owned, result.Status);
             Assert.AreEqual(ContentTable.DebutEra(baseId), result.UnlockEra);
-            Assert.IsTrue(result.CanUse);
+            Assert.IsFalse(result.CanUse);
         }
 
         [TestCase(1, UnlockStatus.CanUnlock)]

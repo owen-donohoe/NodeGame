@@ -1,1 +1,4 @@
 /* Workshop components live in the shared Components.uss theme. */
+.lb-root #page-workshop .ws-clear { flex-direction: row; align-items: center; width: 80px; height: 44px; margin: 0; padding: 4px 8px; }
+.lb-root .ws-clear > .lb-icon { width: 16px; height: 16px; margin-right: 4px; flex-shrink: 0; }
+.lb-root .ws-clear > Label { flex-grow: 1; margin: 0; }

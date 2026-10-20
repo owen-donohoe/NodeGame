@@ -48,8 +48,8 @@ namespace NodeWar.Lobby.Tests
             LoadoutData legacy = Legacy();
 
             LoadoutData normalized = LoadoutData.Normalized(legacy);
-            CollectionAssert.AreEqual(legacy.suitIDs.Take(2), normalized.suitIDs);
-            CollectionAssert.AreEqual(legacy.districtIDs, normalized.districtIDs, "No truncated or reordered district choice.");
+            CollectionAssert.AreEqual(new[] { "suit_warrior", "suit_guardian", "" }, normalized.suitIDs);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "node_storehouse", "" }, normalized.districtIDs);
             CollectionAssert.AreEqual(legacy.districtEras, normalized.districtEras.Take(legacy.districtEras.Length));
             CollectionAssert.AreEqual(legacy.skinIDs, normalized.skinIDs);
 
@@ -83,8 +83,8 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(5, LoadoutData.DistrictSlots);
             Assert.AreEqual(3, LoadoutData.SuitSlots);
             LoadoutData empty = LoadoutData.CreateEmpty();
-            Assert.AreEqual(2, empty.districtIDs.Length);
-            Assert.AreEqual(2, empty.suitIDs.Length);
+            Assert.AreEqual(5, empty.districtIDs.Length);
+            Assert.AreEqual(3, empty.suitIDs.Length);
 
             // The catalog owns the base picks after migration; base picks remain unchanged.
             BoardConfigData board = PremadeMaps.Hourglass01();

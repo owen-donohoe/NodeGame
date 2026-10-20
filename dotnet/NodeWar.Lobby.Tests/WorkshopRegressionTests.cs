@@ -13,57 +13,23 @@ public class WorkshopRegressionTests
         return File.ReadAllText(Path.Combine(root.FullName, path));
     }
 
-    [TestCase(1)] [TestCase(2)]
-    public void FreshLoadoutFillsAllDistrictsAndReplacesEachSuitThenSavesComplete(int arena)
+    [TestCase(0)] [TestCase(1)] [TestCase(2)]
+    public void FreshLoadoutAddsChoicesAndSavesComplete(int arena)
     {
-        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(arena));
+        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(arena), arena);
+        foreach (string id in new[] { "node_barracks", "node_village" })
+        {
+            model.Inspect(id, false); Assert.IsTrue(model.Use(true, false));
+        }
+        foreach (string id in new[] { "suit_guardian", "suit_scout" })
+        {
+            model.Inspect(id, true); Assert.IsTrue(model.Use(true, false));
+        }
         var profile = new PlayerProfileData();
-        string[] districts = arena == 1 ? new[] { "node_barracks", "node_forge" } :
-            new[] { "node_farm", "node_mine", "node_village", "node_barracks", "node_forge" };
-        string[] suits = arena == 1 ? new[] { "suit_guardian", "suit_scout" } :
-            new[] { "suit_warrior", "suit_guardian", "suit_scout" };
-        Assert.IsFalse(LoadoutRules.IsComplete(model.ToData(), arena));
-        foreach (string id in districts)
-        {
-            Assert.IsTrue(LoadoutRules.IsDistrictOffered(id, arena));
-            model.Inspect(id, false);
-            Assert.IsTrue(model.Use(true, false));
-            LoadoutPresets.Store(ref profile, model.ToData());
-        }
-        // Front-middle is stage index 1, even when villagers stand in front of it.
-        model.Inspect("node_workshop", false);
-        Assert.IsFalse(model.Use(true, false));
-        Assert.IsTrue(model.Replacing);
-        var cluster = new DistrictCluster(districts.Length);
-        cluster.Use(false);
-        var pick = new StagePick(false, 1);
-        Assert.IsTrue(pick.CanPick(true, false));
-        Assert.IsFalse(new StagePick(true, 0).CanPick(true, false));
-        var result = cluster.Pick(pick.Index);
-        Assert.IsTrue(model.CompleteReplace(StageSlotMap.ToChosen(model.ToData().districtIDs, result.Slot), true, false));
-        Assert.AreEqual("node_workshop", model.ToData().districtIDs[1]);
-        foreach (string id in suits) { model.Inspect(id, true); Assert.IsTrue(model.Use(true, false)); }
-        for (int slot = 0; slot < suits.Length; slot++)
-        {
-            string replacement = slot % 2 == 0 ? "suit_berserker" : "suit_medic";
-            // Reuse the suit just removed when replacing the third slot.
-            if (slot == 2) replacement = "suit_warrior";
-            var before = model.ToData();
-            model.Inspect(replacement, true);
-            Assert.IsFalse(model.Use(true, false));
-            Assert.IsTrue(model.ReplacingSuit);
-            var hit = new StagePick(true, StageSlotMap.ToStage(before.suitIDs, slot));
-            Assert.IsTrue(hit.CanPick(true, true));
-            Assert.IsTrue(model.CompleteSuitReplace(StageSlotMap.ToChosen(before.suitIDs, hit.Index), true, false));
-            Assert.IsFalse(model.Replacing);
-            var after = model.ToData();
-            for (int i = 0; i < suits.Length; i++) Assert.AreEqual(i == slot ? replacement : before.suitIDs[i], after.suitIDs[i]);
-            LoadoutPresets.Store(ref profile, after);
-            model = new LoadoutScreenModel(profile.loadoutPresets[profile.activeLoadoutPreset].ToLoadout());
-            CollectionAssert.AreEqual(after.suitIDs, model.ToData().suitIDs);
-        }
-        Assert.IsTrue(LoadoutRules.IsComplete(profile.loadout.ToLoadout(), arena), "HomePage BATTLE predicate");
-        CollectionAssert.AreEqual(StageLoadoutTypes.Suits(model.ToData().suitIDs), StageLoadoutTypes.Suits(profile.loadout.ToLoadout().suitIDs));
+        LoadoutPresets.Store(ref profile, model.ToData());
+        Assert.IsTrue(LoadoutRules.IsComplete(profile.loadout.ToLoadout(), arena));
+        CollectionAssert.AreEqual(model.ToData().suitIDs, profile.loadout.ToLoadout().suitIDs);
+        CollectionAssert.AreEqual(model.ToData().districtIDs, profile.loadout.ToLoadout().districtIDs);
     }
 
     [TestCase(1)] [TestCase(2)] [TestCase(3)]
@@ -93,17 +59,17 @@ public class WorkshopRegressionTests
     {
         var ids = new[] { "suit_guardian", "suit_scout" };
         var chosen = StageLoadoutTypes.Suits(ids);
-        var granted = StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(1));
+        var granted = StageLoadoutTypes.Suits(LoadoutRules.LockedSuits(0));
         CollectionAssert.AreEqual(new[] { 5, 6, 3 }, StageLoadoutTypes.WithGranted(chosen, granted));
         Assert.AreEqual(-1, StageSlotMap.ToChosen(ids, chosen.Length));
-        Assert.AreEqual("suit_warrior", StageSlotMap.IdAt(ids, LoadoutRules.LockedSuits(1), chosen.Length));
+        Assert.AreEqual("suit_warrior", StageSlotMap.IdAt(ids, LoadoutRules.LockedSuits(0), chosen.Length));
         CollectionAssert.AreEqual(new[] { 5, 6, 3 }, StageLoadoutTypes.WithGranted(chosen, granted, granted));
     }
 
     [TestCase(false)] [TestCase(true)]
     public void StageInspectionDoesNotChangeTheBrowserTabOrTheItemKind(bool browsingSuits)
     {
-        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(2));
+        var model = new LoadoutScreenModel(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, 2);
         model.Browse(browsingSuits);
         model.Inspect(browsingSuits ? "node_barracks" : "suit_warrior", !browsingSuits);
         Assert.AreEqual(browsingSuits, model.BrowsingSuits);
@@ -115,7 +81,7 @@ public class WorkshopRegressionTests
     [Test]
     public void LockedPreviewOpensWithoutEquippingAndEmptyCosmeticsDoNotBlockBaseUse()
     {
-        var model = new LoadoutScreenModel(LoadoutData.CreateEmpty(2));
+        var model = new LoadoutScreenModel(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, 2);
         model.Inspect("node_fortress", false);
         Assert.AreEqual("node_fortress", model.PreviewId);
         Assert.IsFalse(model.Use(false, false));

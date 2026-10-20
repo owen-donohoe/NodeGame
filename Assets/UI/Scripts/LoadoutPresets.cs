@@ -11,8 +11,18 @@ namespace NodeWar.Lobby
         {
             if (profile.loadoutPresets != null && profile.loadoutPresets.Length == Count)
             {
+                bool changed = false;
+                for (int i = 0; i < Count; i++)
+                {
+                    var saved = profile.loadoutPresets[i];
+                    var normalized = LoadoutRecord.From(saved.ToLoadout());
+                    if (!NodeWar.Backend.DistrictMigration.Equal(saved.suitIDs, normalized.suitIDs) ||
+                        !NodeWar.Backend.DistrictMigration.Equal(saved.nodeIDs, normalized.nodeIDs))
+                    { profile.loadoutPresets[i] = normalized; changed = true; }
+                }
+                changed |= profile.activeLoadoutPreset != Clamp(profile.activeLoadoutPreset);
                 profile.activeLoadoutPreset = Clamp(profile.activeLoadoutPreset);
-                return false;
+                return changed;
             }
             profile.loadoutPresets = new LoadoutRecord[Count];
             for (int i = 0; i < Count; i++)

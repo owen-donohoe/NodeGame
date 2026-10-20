@@ -20,7 +20,7 @@ namespace NodeWar.Lobby.Tests
                 record = LoadoutRecord.From(record.ToLoadout());
             Assert.AreEqual(deck.suitIDs.Length, record.suitIDs.Length);
             Assert.AreEqual(deck.districtIDs.Length, record.nodeIDs.Length);
-            Assert.AreEqual("", record.nodeIDs[0]);
+            Assert.AreEqual("node_farm", record.nodeIDs[0]);
             Assert.AreEqual("node_fortress", record.nodeIDs[record.nodeIDs.Length - 1]);
         }
 
@@ -42,8 +42,8 @@ namespace NodeWar.Lobby.Tests
             var record = LoadoutRecord.From(LoadoutData.Normalized(OldChoices()));
             CollectionAssert.AreEquivalent(new[] { "suitIDs", "nodeIDs", "suitEras", "districtEras", "skinIDs" },
                 typeof(LoadoutRecord).GetFields().Select(f => f.Name));
-            CollectionAssert.AreEqual(new[] { "suit_guardian", "suit_scout" }, record.ToLoadout().suitIDs);
-            CollectionAssert.AreEqual(OldChoices().districtIDs, record.nodeIDs);
+            CollectionAssert.AreEqual(new[] { "suit_warrior", "suit_guardian", "suit_scout" }, record.ToLoadout().suitIDs);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "node_pier", "node_infirmary" }, record.nodeIDs);
         }
 
         [Test]
@@ -51,10 +51,10 @@ namespace NodeWar.Lobby.Tests
         {
             var source = OldChoices();
             var result = LoadoutData.Normalized(source);
-            Assert.AreEqual(2, result.suitIDs.Length);
+            Assert.AreEqual(3, result.suitIDs.Length);
             CollectionAssert.AreEqual(source.suitEras, result.suitEras);
             CollectionAssert.AreEqual(source.districtEras, result.districtEras);
-            CollectionAssert.AreEqual(source.districtIDs, result.districtIDs);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "node_pier", "node_infirmary" }, result.districtIDs);
             CollectionAssert.AreEqual(source.skinIDs, result.skinIDs);
             CollectionAssert.AreEqual(new[] { "suit_guardian", "suit_scout", "suit_medic" }, source.suitIDs);
         }

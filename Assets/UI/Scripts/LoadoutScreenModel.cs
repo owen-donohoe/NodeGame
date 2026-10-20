@@ -28,7 +28,9 @@ namespace NodeWar.Lobby
         public static bool ValidChoice(LoadoutChoice[] choices, string id) =>
             choices.Length == 0 || System.Array.Exists(choices, c => c.ID == id && (c.Equipped || c.Selectable));
 
-        public LoadoutScreenModel(LoadoutData chosen) { editor = new LoadoutEditor(chosen); }
+        public LoadoutScreenModel(LoadoutData chosen, int arena = 1) { editor = new LoadoutEditor(chosen, arena); }
+        public void ClearChoices() { CancelReplace(); editor.ClearChoices(); }
+        public bool IsSlotLocked(bool suit, int slot) => suit ? editor.IsSuitSlotLocked(slot) : editor.IsDistrictSlotLocked(slot);
         public void Preview(string lobbyId)
         {
             string id = lobbyId ?? "";
@@ -56,6 +58,7 @@ namespace NodeWar.Lobby
         public bool CompleteReplace(int slot, bool canUse, bool busy)
         {
             if (slot < 0 || slot >= editor.DistrictSlotCount) return false;
+            if (editor.IsDistrictSlotLocked(slot)) return false;
             string id = PendingDistrictId;
             CancelReplace();
             return !busy && canUse && id.Length > 0 && PreviewId == id && editor.ReplaceDistrictSlot(slot, id);
@@ -71,6 +74,7 @@ namespace NodeWar.Lobby
         public bool CompleteSuitReplace(int slot, bool canUse, bool busy)
         {
             if (slot < 0 || slot >= editor.SuitSlotCount) return false;
+            if (editor.IsSuitSlotLocked(slot)) return false;
             string id = PendingSuitId;
             CancelReplace();
             return !busy && canUse && id.Length > 0 && PreviewId == id && editor.ReplaceSuitSlot(slot, id);

@@ -39,7 +39,7 @@ Shared `ContentTable` holds placeholder content data: `DebutEra(baseId)` (the er
 
 `SuitTree.Nodes`, `TryGet`, `Root`, `IsAvailable`, `CanOwn`, `OwnershipProblems` describe suit branches. `SuitTreeNode` carries BaseId, Variant, ParentVariant, Arena, Unlock (Cost/DropOnly), Cost, derived Id/ParentId. Current tree suits have variant 0 roots and sibling variants 1/2; availability uses the node's unlock arena, not its variant number. `CanOwn` additionally requires the reached arena and parent ownership. This table does not itself charge currency or grant purchases.
 
-`InventoryClamp.ClampToArena(InventoryRecord, arena)` mutates only unusable equipped variants and needed fallback ownership. `LoadoutCapacityPolicy.SuitCapacity`, `DistrictCapacity`, `GetsFreeGrants` define arena-dependent choices. `DistrictMigration.Deck(source, slots)`, `Apply(PlayerState)`, `Detached(PlayerState)` and `CanonicalType` migrate saved decks/inventory to the active roster.
+`InventoryClamp.ClampToArena(InventoryRecord, arena)` clamps unusable equipment and supplies fallback ownership. Shared `LoadoutCapacityPolicy` defines 3-suit/5-district capacity, `LockedSuits/LockedDistricts(arena)` and base/variant usability. `DistrictMigration.Deck/Apply/Detached/CanonicalType` migrate saved inventory and decks.
 
 `DisconnectPenalty.Decay/Strike/NonReport(state, now)` are pure discipline rules consumed by the server; account persistence lives elsewhere.
 
@@ -47,7 +47,7 @@ Shared `ContentTable` holds placeholder content data: `DebutEra(baseId)` (the er
 - `cloud`: `MatchSettler` wraps pure settlement with locked persistence, grants, clamp and history; equip checks catalog and ownership.
 - `backend-client`: shared records, local inventory fake and rank displays consume the same IDs/policies.
 - `lobby-ui`: Workshop uses suit trees, owned IDs and capacity policy; rank displays use `RankTable`.
-- `draft`: chosen capacities, free grants and equipped variants determine match loadouts.
+- `draft`: complete loadout arrays and equipped variants determine match pieces.
 - `simulation`: variant indices select gameplay balance; skins never enter state or hashes.
 - `match-log`: eras and cosmetic skin IDs preserve the recorded loadout.
 - `tooling`: Editor exports catalog/balance data for server validation.
@@ -64,7 +64,7 @@ RR derives from hidden rating after the match versus implied rating `1000 + 0.5 
 
 Grants add the starter bases' era-0 variants and default skins; other content awaits crates or admin grants. Suit equip/referee checks use `SuitTree`, so ownership alone does not imply equip availability. Generic demotion clamp selects the highest owned eligible era, granting era 0 if necessary. Tree clamp falls back to its root, even before the root's debut arena; equip validation may still refuse that root.
 
-Below arena index 2, choose two suits and two districts, receiving free Warrior/base-district grants. Higher arenas choose three suits and five districts without those grants. Count-pair helpers recognize only low (2,2) and high (3,5) shapes.
+Every era uses three suit/five district slots including locks. Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ locks nothing. Fresh presets contain Farm/Mine/Town and Warrior. Legacy 2/2 choices gain those defaults once; canonical arrays retain blanks. Town is type 15, `node_town`; Village remains a separate choice.
 
 District migration remaps retired IDs, removes duplicate deck choices, preserves historical ownership and chooses canonical equipment before clamping. Server and fake paths reuse it.
 
@@ -75,7 +75,7 @@ District migration remaps retired IDs, removes duplicate deck choices, preserves
 - Keep explicit persisted keys and retirement rather than regenerate identity from renamed types.
 
 ## Pressure points
-Variants are being redesigned as side-variants whose era only gates unlock; IDs `suit.<base>.e<n>` may be renamed before the first production deploy. Catalog generation still uses six generic eras while suit eligibility uses a three-node tree, and `ContentTable` debut eras gate neither equip nor draft yet. Nothing grants non-starter content to players until crates exist. Export validation is duplicated between Editor and server. Balance and RR constants need calibration; arena names/themes remain placeholders.
+Variants are being redesigned as side-variants; catalog generation uses six generic eras while suits use a three-node tree. Base debut gates client/server equip and current-protocol draft eligibility. Demoted future bases retain dormant roots. Non-starter content awaits crates or admin grants. Export validation is duplicated. Balance/RR tuning and arena names remain placeholders.
 
 ## Change recipes
 - Change rank tuning: update shared thresholds/server config together, test boundary behavior and simultaneous settlement.

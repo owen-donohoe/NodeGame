@@ -4,6 +4,7 @@ summary: Turn-based district placement that produces the agreed match board befo
 sources:
   - Assets/Scripts/Game/Simulation/DraftState.cs
   - Assets/Scripts/Game/Core/DraftManager.cs
+  - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
   - Assets/Scripts/Game/Core/IDraftPresenter.cs
   - Assets/Scripts/Game/Network/DraftSerializer.cs
 verified: a1da5182
@@ -38,14 +39,14 @@ Let each player choose district positions on a shared map before ticks begin. De
 - `simulation`: drafted districts become Fixed, unowned nodes at the placer's era when the match is built.
 - `economy`: district types and placer's era select the starting economic stats.
 - `cloud`: ranked eligibility checks chosen capacities and placed district multisets against snapshots.
-- `lobby-ui`: normalized chosen `LoadoutData` supplies pieces and the applicable free grants.
+- `lobby-ui`: normalized 3-suit/5-district `LoadoutData` includes fixed defaults and blank choices.
 - `match-log`: resolved loadouts and ordered placements are recorded to rebuild tick-zero state.
 
 ## Invariants
 No placement before map/rules agreement. A valid cell is an empty district slot, never a Core: Land for ordinary districts, Lake for Pier, never Ocean. Inactive district values are refused without runtime aliases. A refused choice consumes nothing. A pick with no legal cell is unplayable rather than forced. Presentation cannot choose rule exceptions.
 
 ## How it works
-Phases are WaitingForReady → InitialReveal → ActiveDraft → Complete. P0 drafts first. Initial fixed placements occupy their cells. Each player's pool combines applicable base/loadout pieces; human effective pools and configured bot pools resolve independently. Turns advance through players with at least one playable pick; the draft ends when neither has one.
+Phases are WaitingForReady → InitialReveal → ActiveDraft → Complete. P0 drafts first. Initial fixed placements occupy their cells. Human pools come only from loadout arrays, including Farm/Mine/Town defaults; match setup skips blanks, deduplicates and never appends map pieces or Warrior. Legacy 2/2 input migrates to 3/5 before pool construction. Draft wire readers accept both shapes. Configured bots retain independent map/configured pools. Turns skip players without playable picks; drafting ends when neither has one.
 
 The active peer validates local confirmation, applies it and transmits the chosen district/cell. The receiving peer checks phase/seat/turn and resolves the first matching unspent pick against the same legality. Pending delivery prevents premature local progress; completion waits for outstanding ready/loadout/placement acknowledgements. The manager stops polling before handing control to the playing driver so it cannot swallow gameplay packets from the shared inbound queue.
 

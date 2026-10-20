@@ -137,10 +137,14 @@ namespace NodeWar.Lobby
                     if (pick.IsSuit)
                     {
                         int slot = StageSlotMap.ToChosen(page.StageLoadout.suitIDs, pick.Index);
-                        if (slot >= 0) page.CompleteSuitReplacement(slot);
+                        if (slot >= 0 && !page.IsStageSlotLocked(true, slot)) page.CompleteSuitReplacement(slot);
                     }
                 }
-                else if (!pick.IsSuit && StageSlotMap.ToChosen(page.StageLoadout.districtIDs, pick.Index) >= 0) stage.PickReplace(pick.Index);
+                else if (!pick.IsSuit)
+                {
+                    int slot = StageSlotMap.ToChosen(page.StageLoadout.districtIDs, pick.Index);
+                    if (slot >= 0 && !page.IsStageSlotLocked(false, slot)) stage.PickReplace(pick.Index);
+                }
                 return;
             }
             page.InspectStageItem(pick.IsSuit, pick.Index);

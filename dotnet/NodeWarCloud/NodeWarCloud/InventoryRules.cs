@@ -61,9 +61,7 @@ namespace NodeWar.Cloud
                 var owned = skin ? staged.Inventory.OwnedSkins : staged.Inventory.OwnedVariants;
                 if (owned == null || !owned.Contains(id)) throw new InventoryValidationException($"Item '{id}' is not owned.");
                 // Suits follow the tree; everything else keeps the era rule.
-                bool usable = SuitTree.IsTreeSuit(baseId)
-                    ? SuitTree.IsAvailable(id, state.Rank.Arena)
-                    : EraUnlocks.IsUsable(item, state.Rank.Arena);
+                bool usable = LoadoutCapacityPolicy.IsVariantUsable(baseId, id, state.Rank.Arena);
                 if (!skin && !usable)
                     throw new InventoryValidationException($"Variant '{id}' is locked at the current arena.");
             });
