@@ -2,47 +2,44 @@
 <engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
     <engine:Style src="Workshop.uss" />
     <engine:VisualElement name="workshop-page" class="lb-workshop" picking-mode="Ignore">
-        <engine:VisualElement class="ws-presets" picking-mode="Ignore">
-            <lobby:PaperButton name="workshop-preset-0" text="1" class="ui-reset-button ui-chip ws-preset" />
-            <lobby:PaperButton name="workshop-preset-1" text="2" class="ui-reset-button ui-chip ws-preset" />
-            <lobby:PaperButton name="workshop-preset-2" text="3" class="ui-reset-button ui-chip ws-preset" />
-            <engine:Label name="workshop-preset-label" class="ws-eyebrow ui-w700" picking-mode="Ignore" />
-        </engine:VisualElement>
-        <engine:VisualElement name="workshop-window" class="ws-window lb-no-swipe" />
-        <lobby:PaperCard class="ws-tabs" picking-mode="Ignore" name="paper-ws-tabs-0">
-            <lobby:PaperButton name="workshop-tab-districts" text="Districts" class="ui-reset-button ui-button ui-button--quiet ws-tab ui-w700" />
-            <lobby:PaperButton name="workshop-tab-suits" text="Suits" class="ui-reset-button ui-button ui-button--quiet ws-tab ui-w700" />
-        </lobby:PaperCard>
-        <engine:VisualElement name="workshop-toolbar" class="ws-toolbar" picking-mode="Ignore">
-            <engine:Label name="workshop-browser-title" text="Districts" class="ws-browser-title ui-w700" picking-mode="Ignore" />
-            <lobby:PaperButton name="workshop-owned" text="Owned" class="ui-reset-button ui-chip ws-filter ui-w600" />
-            <lobby:PaperButton name="workshop-sort" text="Sort: Owned first" class="ui-reset-button ui-chip ws-filter ui-w600" />
-        </engine:VisualElement>
-        <lobby:PaperCard name="workshop-replace-banner" class="ws-banner" picking-mode="Ignore">
-            <engine:Label text="Replace which one?" class="ws-banner-title ui-w700" picking-mode="Ignore" />
-            <engine:Label name="workshop-replace-message" class="ws-fact" picking-mode="Ignore" />
-        </lobby:PaperCard>
-        <engine:VisualElement name="workshop-replace-actions" class="ws-actionbar" picking-mode="Ignore">
-            <lobby:PaperButton name="workshop-replace-cancel" text="Cancel" class="ui-reset-button ui-button ui-button--quiet ws-cancel ui-w700" />
-        </engine:VisualElement>
-        <engine:Label name="workshop-era-message" class="ws-fact" picking-mode="Ignore" />
-        <engine:ScrollView name="workshop-grid" class="ws-grid" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
-            <engine:VisualElement name="workshop-unlocked" class="ws-cards" picking-mode="Ignore" />
+        <engine:ScrollView name="workshop-grid" class="ws-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+            <engine:VisualElement name="workshop-window" class="ws-stage-spacer" />
+            <engine:VisualElement name="workshop-panel1-space" class="ws-panel1-space" picking-mode="Ignore" />
+            <lobby:MkCard name="workshop-panel1" class="ws-panel1">
+                <engine:VisualElement class="mk-spread ws-presets">
+                    <engine:VisualElement class="mk-row ws-preset-tabs">
+                        <engine:Button name="workshop-preset-0" class="ui-reset-button ws-preset"><engine:Label text="1" class="mk-chip mk-chip--tap ws-preset-face" picking-mode="Ignore" /></engine:Button>
+                        <engine:Button name="workshop-preset-1" class="ui-reset-button ws-preset"><engine:Label text="2" class="mk-chip mk-chip--tap ws-preset-face" picking-mode="Ignore" /></engine:Button>
+                        <engine:Button name="workshop-preset-2" class="ui-reset-button ws-preset"><engine:Label text="3" class="mk-chip mk-chip--tap ws-preset-face" picking-mode="Ignore" /></engine:Button>
+                    </engine:VisualElement>
+                    <engine:Label name="workshop-preset-label" class="mk-eyebrow ws-eyebrow" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement class="mk-seg2">
+                    <engine:Button name="workshop-tab-districts" text="Districts" class="mk-seg2__btn" />
+                    <engine:Button name="workshop-tab-suits" text="Suits" class="mk-seg2__btn" />
+                </engine:VisualElement>
+            </lobby:MkCard>
+            <lobby:MkCard name="workshop-panel2" class="ws-panel2">
+                <engine:VisualElement name="workshop-browser">
+                    <engine:VisualElement name="workshop-toolbar" class="mk-toolbar">
+                        <engine:Label name="workshop-browser-title" text="Districts" class="mk-h3 ws-browser-title" picking-mode="Ignore" />
+                        <engine:Button name="workshop-owned" text="Owned" class="mk-chip" />
+                        <engine:Button name="workshop-sort" text="Sort: Arena" class="mk-chip" />
+                    </engine:VisualElement>
+                    <engine:ScrollView name="workshop-roles" class="ws-roles-scroll lb-no-swipe" mode="Horizontal" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+                        <engine:VisualElement name="workshop-role-chips" class="mk-roles" />
+                    </engine:ScrollView>
+                    <engine:VisualElement name="workshop-unlocked" class="mk-grid ws-cards" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement name="workshop-replace-banner" class="mk-banner">
+                    <engine:Label text="Replace which one?" class="mk-h3" />
+                    <engine:Label name="workshop-replace-message" class="mk-muted" />
+                </engine:VisualElement>
+                <engine:VisualElement name="workshop-replace-actions" class="ws-actionbar">
+                    <engine:Button name="workshop-replace-cancel" text="Cancel" class="mk-btn" />
+                </engine:VisualElement>
+                <engine:Label name="workshop-era-message" class="mk-muted" picking-mode="Ignore" />
+            </lobby:MkCard>
         </engine:ScrollView>
-        <engine:VisualElement name="workshop-info" class="ws-info" picking-mode="Ignore">
-            <engine:ScrollView class="ws-info-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
-                <engine:VisualElement name="workshop-info-preview" class="ws-preview" picking-mode="Ignore" />
-                <engine:Label name="workshop-info-title" class="ws-title ui-w700" picking-mode="Ignore" />
-                <engine:VisualElement name="workshop-info-stats" picking-mode="Ignore" />
-                <engine:Label name="workshop-info-description" class="ws-fact" picking-mode="Ignore" />
-                <engine:Label name="workshop-info-unlock" class="ws-fact" picking-mode="Ignore" />
-            </engine:ScrollView>
-            <lobby:PaperButton name="workshop-info-use" text="Use" class="ui-reset-button ui-button ui-button--gold ws-primary ui-w700" />
-            <engine:VisualElement class="ws-actions" picking-mode="Ignore">
-                <lobby:PaperButton name="workshop-open-variants" text="Variants" class="ui-reset-button ui-button ui-button--quiet ws-secondary" />
-                <lobby:PaperButton name="workshop-open-skins" text="Skins" class="ui-reset-button ui-button ui-button--quiet ws-secondary" />
-            </engine:VisualElement>
-            <engine:VisualElement name="workshop-panel-host" class="ws-panel-host" picking-mode="Ignore" />
-        </engine:VisualElement>
     </engine:VisualElement>
-<engine:Style src="PaperLobby.uss" /></engine:UXML>
+</engine:UXML>

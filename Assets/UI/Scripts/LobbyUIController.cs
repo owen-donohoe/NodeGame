@@ -529,7 +529,7 @@ namespace NodeWar.Lobby
             var workshop = new WorkshopPage(workshopPageLayout, catalog, toast, menu, sheet);
             navigation.Register(workshop);
             workshop.BindOverlayRouter(router, lobbyRoot);
-            workshopStage = new WorkshopStageBinding(workshop, stage, router, lobbyRoot, RefreshWorkshopStage);
+            workshopStage = new WorkshopStageBinding(workshop, stage, router, lobbyRoot, RefreshWorkshopStage, navigation);
 
             if (homePageLayout != null || Resources.Load<VisualTreeAsset>("Lobby/HomePage") != null)
             {

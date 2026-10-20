@@ -12,9 +12,10 @@ namespace NodeWar.Lobby
         public int Value { get; }
         public int Delta { get; }
         public int Improvement { get; }
+        public bool HigherIsBetter { get; }
         public StatTrend Trend => Improvement == 0 ? StatTrend.Same : Improvement > 0 ? StatTrend.Better : StatTrend.Worse;
-        public LoadoutStatRow(string label, int value, int delta, int improvement)
-        { Label = label; Value = value; Delta = delta; Improvement = improvement; }
+        public LoadoutStatRow(string label, int value, int delta, int improvement, bool higherIsBetter = true)
+        { Label = label; Value = value; Delta = delta; Improvement = improvement; HigherIsBetter = higherIsBetter; }
     }
     /// <summary>Read-only preview data, independent of tree layout and player inventory.</summary>
     public static class LoadoutInfoModel
@@ -40,7 +41,7 @@ namespace NodeWar.Lobby
             {
                 var def = Defs[i];
                 int value = def.Read(own), delta = value - def.Read(baseline);
-                rows[i] = new LoadoutStatRow(def.Label, value, delta, def.HigherIsBetter ? delta : -delta);
+                rows[i] = new LoadoutStatRow(def.Label, value, delta, def.HigherIsBetter ? delta : -delta, def.HigherIsBetter);
             }
             return rows;
         }

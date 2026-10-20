@@ -129,6 +129,8 @@
     <Compile Include="../../Assets/UI/Scripts/UnlockState.cs" Link="Lobby/UnlockState.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutChoices.cs" Link="Lobby/LoadoutChoices.cs" />
     <Compile Include="LoadoutInfoModelTests.cs" />
+    <Compile Include="StatHistogramTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/StatHistogram.cs" Link="Lobby/StatHistogram.cs" />
     <Compile Include="DistrictInfoFactsTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutInfoModel.cs" Link="Lobby/LoadoutInfoModel.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/DistrictInfoFacts.cs" Link="Gameplay/DistrictInfoFacts.cs" />
