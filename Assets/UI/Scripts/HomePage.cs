@@ -38,6 +38,7 @@ namespace NodeWar.Lobby
             nextIcon = Root.Q<LobbyIcon>("home-next-crate-icon");
             modeName = Root.Q<Label>("home-mode-name");
             modeIcon = Root.Q<LobbyIcon>("home-mode-icon");
+            Bind("home-battle-reason-tag", () => LoadoutRequested?.Invoke());
             Bind("home-mode", () => ModeRequested?.Invoke());
             Bind("home-crate-small", () => CrateRequested?.Invoke(CrateSize.Small));
             Bind("home-crate-medium", () => CrateRequested?.Invoke(CrateSize.Medium));
@@ -86,6 +87,7 @@ namespace NodeWar.Lobby
             var display = new HomeModeDisplay(SelectedMode);
             if (modeName != null) modeName.text = display.Name;
             if (modeIcon != null) modeIcon.Kind = display.Icon;
+            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour)) Root.Q("home-mode-dot").style.backgroundColor = colour;
 }
 
         public void SetMode(LobbyModeSelection selection)
@@ -116,13 +118,16 @@ namespace NodeWar.Lobby
         {
             if (smallCount != null) smallCount.text = (crates?.Count(CrateSize.Small) ?? 0).ToString();
             if (mediumCount != null) mediumCount.text = (crates?.Count(CrateSize.Medium) ?? 0).ToString();
+            Root.Q("home-crate-small")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Small) ?? 0) == 0);
+            Root.Q("home-crate-medium")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Medium) ?? 0) == 0);
             if (progressFill != null) progressFill.style.width = Length.Percent((crates?.NextProgress ?? 0f) * 100f);
             if (nextIcon != null) nextIcon.Kind = crates?.NextSize == CrateSize.Medium ? LobbyIconKind.CrateMedium : LobbyIconKind.CrateSmall;
             bool complete = LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena);
             var play = Root.Q<Button>("home-battle");
             if (play != null)
             {
-                play.EnableInClassList("lb-home-play--locked", !complete);
+                play.SetEnabled(complete);
+                play.EnableInClassList("mk-battle--off", !complete);
                 play.tooltip = complete ? "Play" : "Fill your loadout";
             }
             var reason = Root.Q("home-battle-reason-tag");

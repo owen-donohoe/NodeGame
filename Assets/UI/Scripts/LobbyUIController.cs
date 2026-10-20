@@ -110,6 +110,8 @@ namespace NodeWar.Lobby
         private LobbyModePicker modePicker;
         private LobbyModeSelection selectedMode;
         private LobbyPlayFlow playFlow;
+        private SearchingScreen searchingScreen;
+        private MultiplayerSheet multiplayerSheet;
         private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
         private VisualElement pillDock;
@@ -192,6 +194,7 @@ namespace NodeWar.Lobby
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             homePage?.OnHide();
             homePage = null;
+            searchingScreen?.Dispose(); searchingScreen = null; multiplayerSheet = null;
             playFlow?.Dispose();
             playFlow = null;
             workshopStage?.Dispose();
@@ -267,6 +270,7 @@ namespace NodeWar.Lobby
             // Pumps the connection state machine while the battle sheet is open.
             if (playPopup != null) playPopup.Update();
             playFlow?.Update();
+            searchingScreen?.Update();
             burgerPanel?.Update();
             bellPanel?.Update();
             WatchStageLoadout();
@@ -331,6 +335,7 @@ namespace NodeWar.Lobby
             BuildPlayPopup();
             BuildModePicker();
             playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
+            searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
             RegisterPages();
             WireOverlays(root);
             LobbyScrollbars.Hide(root);
@@ -384,7 +389,7 @@ namespace NodeWar.Lobby
             if (backdrop != null) backdrop.style.display = DisplayStyle.None;
             navigation.PageShown += id =>
             {
-                stage.ShowShot(StageShots.ForPage(id.ToString()));
+                stage.ShowShot(id == LobbyPageID.Home ? StageShot.Home : StageShots.ForPage(id.ToString()));
                 RefreshStageLoadout();
             };
             router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
@@ -503,7 +508,7 @@ namespace NodeWar.Lobby
 
         private void OnPlayRequested()
         {
-            playFlow?.Play(selectedMode);
+            searchingScreen.Open(selectedMode);
         }
 
         private void BuildModePicker()
@@ -600,6 +605,10 @@ namespace NodeWar.Lobby
             (root.Q("page-shop")?.userData as ShopPage)?.Bind(claimPanel, Badges);
             (root.Q("page-shop")?.userData as ShopPage)?.BindStage(stage);
             shell.Add(claimPanel.Root);
+            profilePage.BindPanels(router, shell);
+            multiplayerSheet = new MultiplayerSheet(shell, router, searchingScreen.Open);
+            profilePage.InviteRequested += target => multiplayerSheet.Open(target);
+            searchingScreen.InviteRequested += () => multiplayerSheet.Open();
             burgerPanel = new LobbyOverlayPanel("Menu");
             bellPanel = new LobbyOverlayPanel("Notifications");
             shell.Add(burgerPanel.Root);
@@ -638,7 +647,7 @@ namespace NodeWar.Lobby
             profilePage.Closed += () =>
             {
                 router.Closed("profile");
-                stage.ShowShot(StageShots.ForPage(navigation.CurrentPageID.ToString()));
+                stage.ShowShot(navigation.CurrentPageID == LobbyPageID.Home ? StageShot.Home : StageShots.ForPage(navigation.CurrentPageID.ToString()));
             };
             WirePushPage(settingsPage, "settings", promote);
             WirePushPage(matchHistoryPage, "history", promote);

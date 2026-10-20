@@ -6,42 +6,35 @@ using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>A public profile panel. The shell routes Opened/Closed through its overlay stack.</summary>
+    /// <summary>Self expands from chrome; other players use the shared sheet surface.</summary>
     public class ProfilePage
     {
-        private static readonly string[] StatNames = { "Matches", "Wins", "Losses", "Win rate", "Streak", "Best" };
-        private readonly MkSheet panel;
+        private readonly IProfileService profiles;
+        private readonly IGuildService guild = BackendServices.Guild;
+        private readonly MkSheet confirmation = new MkSheet();
+        private GuildReportScreen report;
+        private GuildView ownGuild;
+        private PlayerCard shownCard;
+        private VisualElement footer;
+        private readonly AsyncStateView moderation = new AsyncStateView();
+        public event Action<string> InviteRequested;
+        private readonly MkSheet panel = new MkSheet();
+        private readonly MkCard own = new MkCard { name = "own-profile" };
+        private readonly AsyncStateView stateView = new AsyncStateView();
+        private readonly SafeAreaBinder safeArea;
+        private AsyncState state = new AsyncState();
         private VisualElement sourceRect;
         private IVisualElementScheduledItem hideLater;
-        private readonly IProfileService profiles;
-        private readonly LobbySheet sheet;
-        private readonly LobbyToast toast;
-        private readonly SafeAreaBinder safeArea;
-        private readonly AsyncStateView stateView;
-        private readonly Label handle;
-        private readonly Label rank;
-        private readonly Button addFriend;
-        private readonly Button invite;
-        private readonly Button rename;
-        private readonly Button spectate;
-        private readonly VisualElement stats;
-        private readonly VisualElement loadout;
-        private readonly VisualElement recent;
-        private readonly VisualElement renameContent;
-        private readonly TextField nameField;
-        private readonly TextField tagField;
-        private readonly Label nameNote;
-        private AsyncState state = new AsyncState();
-        private string playerId;
-        private string shownAccount;
         private bool viewingSelf;
+        private string playerId, account;
         private int generation;
-        private int renameSession;
-        private bool renamePending;
+        private int pointer = -1;
+        private Vector2 down;
         private static long Now => (long)(Time.realtimeSinceStartupAsDouble * 1000);
         private static string SelfId => BackendServices.Account.Current?.PlayerId ?? "self";
-        public VisualElement Root { get; }
+        public VisualElement Root { get; } = new VisualElement { name = "public-profile" };
         public bool IsOpen { get; private set; }
+        public bool ViewingSelf => viewingSelf;
         public event Action Opened;
         public event Action Closed;
         public event Action Renamed;
@@ -49,79 +42,84 @@ namespace NodeWar.Lobby
         public ProfilePage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast, IProfileService profiles = null)
         {
             this.profiles = profiles ?? BackendServices.Profiles;
-            this.sheet = sheet;
-            this.toast = toast;
-            Root = new VisualElement { name = "public-profile", userData = this };
-            Resources.Load<VisualTreeAsset>("Lobby/PublicProfile").CloneTree(Root);
-            Root.AddToClassList("lb-public-overlay");
-            Root.AddToClassList("lb-no-swipe");
+            Root.userData = this; Root.AddToClassList("g2-profile"); Root.AddToClassList("lb-no-swipe");
+            Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ProfileScreen")); Root.Add(own); Root.Add(panel);
+            own.AddToClassList("g2-profile-own"); own.Add(stateView);
+            safeArea = new SafeAreaBinder(own); panel.Closed += Close;
+            stateView.Content.AddToClassList("g2-profile-content");
+            stateView.AddToClassList("g2-profile-state"); stateView.RetryRequested += Reload;
             Root.style.display = DisplayStyle.None;
-            var oldPanel = Root.Q("public-profile-safe");
-            panel = new MkSheet();
-            var profileContent = new VisualElement();
-            foreach (var child in new System.Collections.Generic.List<VisualElement>(oldPanel.Children())) profileContent.Add(child);
-            oldPanel.RemoveFromHierarchy();
-            Root.Q("public-profile-scrim")?.RemoveFromHierarchy();
-            panel.Surface.name = "public-profile-safe";
-            panel.Body.Add(profileContent);
-            Root.Add(panel);
-            panel.Closed += Close;
-            safeArea = new SafeAreaBinder(profileContent);
-            stateView = new AsyncStateView();
-            var body = Root.Q("public-profile-body");
-            body.RemoveFromHierarchy();
-            stateView.Content.Add(body);
-            Root.Q("public-profile-scroll").Add(stateView);
-            stateView.RetryRequested += Reload;
-            handle = Root.Q<Label>("public-profile-handle");
-            handle.enableRichText = false;
-            handle.RegisterCallback<ClickEvent>(_ => { if (viewingSelf) Close(); });
-            rank = Root.Q<Label>("public-profile-rank");
-            stats = Root.Q("public-profile-stats");
-            loadout = Root.Q("public-profile-loadout");
-            recent = Root.Q("public-profile-recent");
-            addFriend = Root.Q<Button>("public-profile-add");
-            invite = Root.Q<Button>("public-profile-invite");
-            rename = Root.Q<Button>("public-profile-rename");
-            spectate = Root.Q<Button>("public-profile-spectate");
-            addFriend.Add(new LobbyIcon(LobbyIconKind.AddFriend) { pickingMode = PickingMode.Ignore });
-            invite.Add(new LobbyIcon(LobbyIconKind.Invite) { pickingMode = PickingMode.Ignore });
-            addFriend.clicked += () => Debug.Log("[Profile] add friend " + playerId);
-            invite.clicked += () => Debug.Log("[Profile] invite to mode " + playerId);
-            spectate.clicked += () => Debug.Log("[Profile] spectate " + playerId);
-            Root.Q<Button>("public-profile-close").clicked += Close;
-
-            rename.clicked += BeginRename;
-            renameContent = LobbySheet.Lift(Root, "profile-rename");
-            nameField = renameContent.Q<TextField>("profile-name-field");
-            tagField = renameContent.Q<TextField>("profile-tag-field");
-            nameNote = renameContent.Q<Label>("profile-name-note");
-            nameNote.enableRichText = false;
-            nameField.Query<TextElement>().ForEach(element => element.enableRichText = false);
-            tagField.Query<TextElement>().ForEach(element => element.enableRichText = false);
-            renameContent.Q<Button>("profile-name-save").clicked += CommitRename;
-            renameContent.Q<Button>("profile-name-cancel").clicked += () => sheet?.Close();
-            nameField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
-            tagField.RegisterCallback<KeyDownEvent>(OnNameFieldKeyDown, TrickleDown.TrickleDown);
+            own.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                var header = stateView.Content.Q("public-profile-header");
+                bool onHeader = header != null ? header.worldBound.Contains(evt.position) : evt.position.y < own.worldBound.yMin + 100;
+                if (evt.button == 0 && onHeader) { pointer = evt.pointerId; down = evt.position; }
+            }, TrickleDown.TrickleDown);
+            own.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                Vector2 delta = (Vector2)evt.position - down;
+                if (evt.pointerId == pointer && delta.y > 60 && delta.y > Mathf.Abs(delta.x)) Close();
+                pointer = -1;
+            }, TrickleDown.TrickleDown);
+            own.RegisterCallback<PointerCancelEvent>(_ => pointer = -1, TrickleDown.TrickleDown);
             Root.RegisterCallback<DetachFromPanelEvent>(evt => { if (evt.target == Root) Close(); });
         }
-
-        public void Update() { if (IsOpen) safeArea.Update(); }
-        public bool ViewingSelf => viewingSelf;
+        public void BindPanels(LobbyOverlayRouter router, VisualElement host)
+        {
+            confirmation.BindRouter(router, "player-kick"); host.Add(confirmation);
+            confirmation.Opened += () => confirmation.BringToFront();
+            report = new GuildReportScreen(router, host, "player-report");
+            moderation.RetryRequested += () => { if (IsOpen && !viewingSelf) _ = LoadModerationAsync(generation, playerId, SelfId); };
+        }
+        public void Update() { if (IsOpen && viewingSelf) safeArea.Update(); }
         public void Open(VisualElement source)
         {
             if (IsOpen) return;
             sourceRect = source;
             OpenFor(SelfId);
-            Root.AddToClassList("mk-profile--instant");
-            SnapTo(source);
+            Root.RemoveFromClassList("g2-profile--expanded");
+            Root.AddToClassList("g2-profile--instant"); SnapTo(source);
             Root.schedule.Execute(() =>
             {
                 if (!IsOpen) return;
-                Root.RemoveFromClassList("mk-profile--instant");
-                Root.style.translate = new Translate(0, 0);
-                Root.style.scale = new Scale(Vector2.one);
+                Root.RemoveFromClassList("g2-profile--instant"); Root.AddToClassList("g2-profile--expanded");
+                Root.style.translate = new Translate(0, 0); Root.style.scale = new Scale(Vector2.one);
             }).ExecuteLater(16);
+        }
+        public void OpenFor(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+            hideLater?.Pause();
+            bool changed = playerId != id || account != SelfId;
+            playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null;
+            if (changed) shownCard = null; else if (!viewingSelf) RenderFooter();
+            if (changed) { state = new AsyncState(); stateView.Content.Clear(); }
+            Root.EnableInClassList("g2-profile--self", viewingSelf);
+            Root.EnableInClassList("g2-profile--player", !viewingSelf);
+            Root.AddToClassList("g2-profile--expanded");
+            own.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
+            if (viewingSelf) { panel.Close(); own.Add(stateView); }
+            else { sourceRect = null; panel.Body.Add(stateView); panel.Open(); }
+            Root.style.translate = new Translate(0, 0); Root.style.scale = new Scale(Vector2.one);
+            BackendServices.StateChanged -= StateChanged; BackendServices.StateChanged += StateChanged;
+            BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
+            bool opening = !IsOpen; IsOpen = true; Root.style.display = DisplayStyle.Flex;
+            if (opening) Opened?.Invoke();
+            Reload();
+        }
+        public void Close()
+        {
+            if (!IsOpen) return;
+            IsOpen = false; generation++; pointer = -1; confirmation.Close();
+            BackendServices.StateChanged -= StateChanged; BackendServices.Account.Changed -= AccountChanged;
+            Root.RemoveFromClassList("g2-profile--expanded");
+            if (viewingSelf && sourceRect != null)
+            {
+                SnapTo(sourceRect);
+                hideLater = Root.schedule.Execute(() => Root.style.display = DisplayStyle.None); hideLater.ExecuteLater(340);
+            }
+            else { panel.Close(); Root.style.display = DisplayStyle.None; }
+            Closed?.Invoke();
         }
         private void SnapTo(VisualElement source)
         {
@@ -131,239 +129,105 @@ namespace NodeWar.Lobby
             Root.style.translate = new Translate(from.x - full.x, from.y - full.y);
             Root.style.scale = new Scale(new Vector2(from.width / full.width, from.height / full.height));
         }
-
-        public void OpenFor(string requestedPlayerId)
-        {
-            if (string.IsNullOrEmpty(requestedPlayerId)) return;
-            bool changed = playerId != requestedPlayerId || shownAccount != SelfId;
-            if (changed)
-            {
-                state = new AsyncState();
-                CancelRename();
-            }
-            playerId = requestedPlayerId;
-            viewingSelf = playerId == SelfId;
-            shownAccount = SelfId;
-            hideLater?.Pause();
-            Root.EnableInClassList("mk-profile--self", viewingSelf);
-            if (!viewingSelf)
-            {
-                sourceRect = null;
-                Root.style.translate = new Translate(0, 0);
-                Root.style.scale = new Scale(Vector2.one);
-            }
-            panel.Open(true);
-            BackendServices.StateChanged -= StateChanged;
-            BackendServices.StateChanged += StateChanged;
-            BackendServices.Account.Changed -= AccountChanged;
-            BackendServices.Account.Changed += AccountChanged;
-            if (!IsOpen)
-            {
-                IsOpen = true;
-                Root.style.display = DisplayStyle.Flex;
-                Opened?.Invoke();
-            }
-            Reload();
-        }
-
-        public void Close()
-        {
-            if (!IsOpen) return;
-            IsOpen = false;
-            generation++;
-            CancelRename();
-            BackendServices.StateChanged -= StateChanged;
-            BackendServices.Account.Changed -= AccountChanged;
-            stateView.Render(state.Reduce(state.HasContent ? AsyncResult.Ready : AsyncResult.Empty, Now), Now);
-            if (viewingSelf && sourceRect != null)
-            {
-                SnapTo(sourceRect);
-                hideLater = Root.schedule.Execute(() => { panel.Close(); Root.style.display = DisplayStyle.None; });
-                hideLater.ExecuteLater(340);
-            }
-            else { panel.Close(); Root.style.display = DisplayStyle.None; }
-            Closed?.Invoke();
-        }
-
-        private void CancelRename()
-        {
-            renameSession++;
-            if (sheet != null && sheet.IsShowing(renameContent)) sheet.Close();
-        }
-
         private void StateChanged() { if (IsOpen && viewingSelf) Reload(); }
-
-        private void AccountChanged(AccountInfo info)
-        {
-            if (!IsOpen) return;
-            CancelRename();
-            if (viewingSelf) playerId = SelfId;
-            viewingSelf = playerId == SelfId;
-            shownAccount = SelfId;
-            state = new AsyncState();
-            Reload();
-        }
-
-        private void Reload()
-        {
-            if (!IsOpen) return;
-            _ = LoadAsync(++generation, playerId, SelfId);
-        }
-
+        private void AccountChanged(AccountInfo _) { report?.Close(); Close(); }
+        private void Reload() { if (IsOpen) _ = LoadAsync(++generation, playerId, SelfId); }
         private async Task LoadAsync(int request, string id, string requestedFor)
         {
-            state = state.Reduce(AsyncResult.Loading, Now);
-            stateView.Render(state, Now);
+            state = state.Reduce(AsyncResult.Loading, Now); stateView.Render(state, Now);
             try
             {
-                var profile = await profiles.GetAsync(id);
+                PublicProfileView profile = await profiles.GetAsync(id);
                 if (!Active(request, id, requestedFor)) return;
-                if (profile?.Card == null)
-                {
-                    state = state.Reduce(AsyncResult.Empty, Now);
-                    stateView.Render(state, Now, "This player profile isn't available.", LobbyIconKind.Smile);
-                    return;
-                }
-                Render(profile);
-                state = state.Reduce(AsyncResult.Ready, Now);
-                stateView.Render(state, Now);
+                stateView.Content.Clear();
+                if (profile?.Card == null) { state = state.Reduce(AsyncResult.Empty, Now); stateView.Render(state, Now, "This profile is unavailable."); return; }
+                shownCard = profile.Card; Render(profile);
+                if (!viewingSelf) _ = LoadModerationAsync(request, id, requestedFor);
+                state = state.Reduce(AsyncResult.Ready, Now); stateView.Render(state, Now);
             }
             catch (Exception)
             {
                 if (!Active(request, id, requestedFor)) return;
-                bool offline = BackendServices.SimulatedOffline || Application.internetReachability == NetworkReachability.NotReachable;
-                state = state.Reduce(offline ? AsyncResult.Offline : AsyncResult.Error, Now);
-                stateView.Render(state, Now, offline ? "You're offline. Connect to load this profile." : "Couldn't load this profile. Try again.");
+                state = state.Reduce(AsyncResult.Offline, Now); stateView.Render(state, Now, "Couldn't load this profile. Try again.");
             }
         }
-
-        private bool Active(int request, string id, string account) => IsOpen && generation == request &&
-            playerId == id && SelfId == account;
-
-        private void Render(PublicProfileView profile)
+        private bool Active(int request, string id, string requestedFor) => IsOpen && generation == request && playerId == id && SelfId == requestedFor;
+        private async Task LoadModerationAsync(int request, string id, string requestedFor)
         {
-            handle.text = PlayerCardViews.Handle(profile.Card);
-            var display = new RankDisplay(profile.Card.RR);
-            rank.text = display.Name + " · " + display.RR + " RR";
-            addFriend.style.display = invite.style.display = viewingSelf ? DisplayStyle.None : DisplayStyle.Flex;
-            rename.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
-            spectate.style.display = profile.Card.Presence == PlayerPresence.InBattle ? DisplayStyle.Flex : DisplayStyle.None;
-            stats.Clear();
-            string[] values = ProfileStatsFormat.Values(profile.Stats);
-            for (int i = 0; i < values.Length; i++)
-            {
-                var cell = new PaperCard();
-                cell.AddToClassList("lb-public-stat");
-                cell.Add(PlayerCardViews.Text(StatNames[i]));
-                cell.Add(PlayerCardViews.Text(values[i]));
-                stats.Add(cell);
-            }
-            loadout.Clear();
-            AddChips(profile.SuitIds, "Suit");
-            AddChips(profile.DistrictIds, "District");
-            if (loadout.childCount == 0) loadout.Add(PlayerCardViews.Text("No loadout shared."));
-            recent.Clear();
-            if (profile.Recent != null)
-                foreach (var match in profile.Recent)
-                {
-                    if (match == null) continue;
-                    var row = new PaperCard();
-                    row.AddToClassList("lb-public-recent");
-                    row.Add(PlayerCardViews.Text(PlayerCardViews.Handle(match.Opponent)));
-                    row.Add(PlayerCardViews.Text((match.Won ? "Won" : "Lost") + " · " +
-                        (match.RRDelta >= 0 ? "+" : "") + match.RRDelta + " RR"));
-                    recent.Add(row);
-                }
-            if (recent.childCount == 0) recent.Add(PlayerCardViews.Text("No recent matches shared."));
-        }
-
-        private void AddChips(string[] ids, string kind)
-        {
-            if (ids == null) return;
-            foreach (string id in ids)
-            {
-                if (string.IsNullOrEmpty(id)) continue;
-                var chip = new PaperCard { name = "profile-chip-" + id, pickingMode = PickingMode.Ignore };
-                chip.Add(PlayerCardViews.Text(kind + ": " + id));
-                chip.AddToClassList("lb-public-chip");
-                loadout.Add(chip);
-            }
-        }
-
-        private void BeginRename()
-        {
-            if (!viewingSelf || renamePending || sheet == null) return;
-            renameSession++;
-            nameField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Name ?? PlayerProfile.Instance?.Username ?? "");
-            tagField.SetValueWithoutNotify(BackendServices.LastKnownState?.Profile?.Tag ?? "");
-            ShowNote(null);
-            sheet.Open(renameContent);
-            nameField.schedule.Execute(() => { if (sheet.IsShowing(renameContent)) { nameField.Focus(); nameField.SelectAll(); } });
-        }
-
-        private async void CommitRename()
-        {
-            if (renamePending || !IsOpen || !viewingSelf || sheet == null || !sheet.IsShowing(renameContent)) return;
-            string candidate = nameField.value;
-            string tag = tagField.value;
-            if (!System.Text.RegularExpressions.Regex.IsMatch(candidate, @"\A[A-Za-z0-9_-]{3,16}\z"))
-            {
-                ShowNote("3 to 16 characters: letters, numbers, underscores or hyphens.");
-                return;
-            }
-            if (!System.Text.RegularExpressions.Regex.IsMatch(tag, @"\A[A-Z0-9]{0,4}\z"))
-            {
-                ShowNote("Tag: 1 to 4 uppercase letters or numbers, or leave empty.");
-                return;
-            }
-            int session = renameSession;
-            string account = SelfId;
-            renamePending = true;
-            nameField.SetEnabled(false); tagField.SetEnabled(false);
+            moderation.Render(new AsyncState(Now), Now);
             try
             {
-                await BackendServices.Handles.SetHandleAsync(candidate, tag, Guid.NewGuid().ToString());
-                if (account != SelfId) return;
-                Renamed?.Invoke();
-                if (session != renameSession || !IsOpen || !viewingSelf) return;
-                if (sheet.IsShowing(renameContent)) sheet.Close();
-                Reload();
-                toast?.Show("Name changed");
+                var result = await guild.GetMineAsync();
+                if (!Active(request, id, requestedFor)) return;
+                ownGuild = result; RenderFooter();
+                moderation.Render(new AsyncState().Reduce(AsyncResult.Ready, Now), Now);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                if (account == SelfId && session == renameSession && IsOpen && viewingSelf)
-                {
-                    ShowNote(ex.Message);
-                    toast?.Show(ex.Message);
-                }
+                if (!Active(request, id, requestedFor)) return;
+                ownGuild = null; RenderFooter();
+                moderation.Render(new AsyncState().Reduce(AsyncResult.Offline, Now), Now, "Couldn't check guild permissions.");
             }
-            finally
+        }
+        private void RenderFooter()
+        {
+            if (footer == null || shownCard == null) return;
+            footer.Clear();
+            var target = shownCard;
+            footer.Add(GuildViews.Button("Block", () => Debug.Log("[Stub] Block player " + target.PlayerId)));
+            footer.Add(GuildViews.Button("Report", () => report?.Open(target, PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null)));
+            if (PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null)
             {
-                renamePending = false;
-                nameField.SetEnabled(true); tagField.SetEnabled(true);
+                var kick = GuildViews.Button("Kick", () => ConfirmKick(target)); kick.AddToClassList("g2-urgent"); footer.Add(kick);
             }
         }
-
-        private void OnNameFieldKeyDown(KeyDownEvent evt)
+        private void ConfirmKick(PlayerCard target)
         {
-            if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
-            CommitRename();
-            evt.StopPropagation();
+            if (!IsOpen || PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) == null) return;
+            confirmation.Body.Clear();
+            confirmation.Body.Add(GuildViews.Text("Remove from guild?", "mk-h2"));
+            confirmation.Body.Add(GuildViews.Text("Remove " + PlayerCardViews.Handle(target) + " from " + ownGuild.Summary.Name + "?"));
+            confirmation.Body.Add(GuildViews.Button("Cancel", confirmation.Close));
+            confirmation.Body.Add(GuildViews.Button("Kick", () =>
+            {
+                if (IsOpen && PlayerPanelPolicy.ModerationTarget(ownGuild, target.PlayerId, SelfId) != null) Debug.Log("[Stub] Guild kick " + target.PlayerId);
+                confirmation.Close();
+            }));
+            confirmation.Open();
         }
-
-        private void ShowNote(string error)
+        private void Render(PublicProfileView profile)
         {
-            nameNote.text = string.IsNullOrEmpty(error) ? RenameCostHint() : error;
-            nameNote.EnableInClassList("ui-sheet__note--error", !string.IsNullOrEmpty(error));
-        }
-
-        private static string RenameCostHint()
-        {
-            ProfileRecord profile = BackendServices.LastKnownState?.Profile;
-            if (profile == null || profile.LastFreeRenameUnixSeconds == 0) return "Free";
-            DateTimeOffset nextFree = DateTimeOffset.FromUnixTimeSeconds(profile.LastFreeRenameUnixSeconds).AddDays(30);
-            return DateTimeOffset.UtcNow >= nextFree ? "Free" : "50 laurels, free again on " + nextFree.ToLocalTime().ToString("yyyy-MM-dd");
+            var header = new VisualElement { name = "public-profile-header" }; header.AddToClassList("g2-profile-header");
+            var identity = new VisualElement(); identity.style.flexGrow = 1; identity.style.flexShrink = 1;
+            identity.Add(GuildViews.Text(PlayerCardViews.Handle(profile.Card), "mk-h2"));
+            var rank = new RankDisplay(profile.Card.RR);
+            var rankRow = new VisualElement(); rankRow.AddToClassList("mk-row");
+            var era = GuildViews.Text(rank.Name, "mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
+            rankRow.Add(GuildViews.Text(rank.RR + " RR", "mk-trophy")); identity.Add(rankRow); header.Add(identity);
+            if (viewingSelf) header.Add(GuildViews.Button("Back", Close));
+            else
+            {
+                var actions = new VisualElement(); actions.AddToClassList("g2-player-actions");
+                var add = GuildViews.Button("+", () => Debug.Log("[Stub] Add friend " + profile.Card.PlayerId)); add.name = "public-profile-add"; add.tooltip = "Add friend";
+                actions.Add(add);
+                var invite = GuildViews.Button("Invite", () => InviteRequested?.Invoke(profile.Card.PlayerId)); invite.name = "public-profile-invite"; actions.Add(invite);
+                header.Add(actions);
+            }
+            if (viewingSelf) header.RegisterCallback<ClickEvent>(_ => Close());
+            stateView.Content.Add(header);
+            if (!viewingSelf)
+            {
+                stateView.Content.Add(ProfileViews.StatsGrid(profile.Stats));
+                stateView.Content.Add(ProfileViews.Loadout(profile));
+                stateView.Content.Add(ProfileViews.History(profile.Recent));
+                footer = new VisualElement(); footer.AddToClassList("g2-player-footer"); stateView.Content.Add(footer);
+                RenderFooter(); stateView.Content.Add(moderation); return;
+            }
+            var columns = new VisualElement(); columns.AddToClassList("g2-profile-columns"); stateView.Content.Add(columns);
+            var left = new ScrollView(); left.AddToClassList("g2-profile-left"); LobbyScrollbars.Hide(left);
+            left.Add(ProfileViews.StatsGrid(profile.Stats)); left.Add(ProfileViews.Loadout(profile)); columns.Add(left);
+            if (viewingSelf) columns.Add(ProfileViews.Ladder(profile.Card.RR));
+            else left.Add(ProfileViews.History(profile.Recent));
         }
     }
 }

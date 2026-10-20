@@ -10,12 +10,13 @@ namespace NodeWar.Lobby
         private readonly SafeAreaBinder safeArea;
         private readonly VisualElement body;
         private bool open;
+        private readonly string routeId;
         public VisualElement Root { get; }
 
-        public GuildReportScreen(LobbyOverlayRouter router, VisualElement host)
+        public GuildReportScreen(LobbyOverlayRouter router, VisualElement host, string routeId = "guild-report")
         {
-            this.router = router;
-            Root = new VisualElement { name = "guild-report-screen" };
+            this.router = router; this.routeId = routeId;
+            Root = new VisualElement { name = routeId + "-screen" };
             Root.AddToClassList("mk-card"); Root.AddToClassList("lb-guild-report"); Root.AddToClassList("lb-no-swipe");
             Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Guild"));
             body = new ScrollView(); body.AddToClassList("lb-guild-report-safe"); Root.Add(body);
@@ -24,11 +25,13 @@ namespace NodeWar.Lobby
             Root.RegisterCallback<GeometryChangedEvent>(_ => { if (open) safeArea.Update(); });
         }
 
-        public void Open(GuildMember member, bool officer)
+        public void Open(GuildMember member, bool officer) => Open(member.Player, officer);
+
+        public void Open(PlayerCard player, bool officer = false)
         {
             body.Clear();
             body.Add(GuildViews.Text("Report player", "mk-h2"));
-            body.Add(GuildViews.Text(PlayerCardViews.Handle(member.Player), "mk-h3"));
+            body.Add(GuildViews.Text(PlayerCardViews.Handle(player), "mk-h3"));
             body.Add(GuildViews.Text("Choose a reason", "mk-eyebrow"));
             string reason = null;
             var reasons = new VisualElement(); reasons.AddToClassList("lb-guild-report-reasons"); body.Add(reasons);
@@ -39,7 +42,7 @@ namespace NodeWar.Lobby
             var actions = new VisualElement(); actions.AddToClassList("lb-guild-report-actions");
             var submit = GuildViews.Button("Submit", () =>
             {
-                Debug.Log("[Stub] Report player=" + member.Player.PlayerId + " reason=" + reason + " details=" + details.value + " remove=" + (officer && remove.value));
+                Debug.Log("[Stub] Report player=" + player.PlayerId + " reason=" + reason + " details=" + details.value + " remove=" + (officer && remove.value));
                 Close();
             }, "mk-btn--primary");
             submit.SetEnabled(false);
@@ -58,13 +61,13 @@ namespace NodeWar.Lobby
             if (officer) body.Add(remove);
             actions.Add(GuildViews.Button("Cancel", Close)); actions.Add(submit); body.Add(actions);
             open = true; Root.style.display = DisplayStyle.Flex; Root.BringToFront(); safeArea.Update();
-            router.Open(new LobbyOverlay("guild-report", OverlayKind.Fullscreen, true, true), Close);
+            router.Open(new LobbyOverlay(routeId, OverlayKind.Fullscreen, true, true), Close);
         }
 
         public void Close()
         {
             if (!open) return;
-            open = false; Root.style.display = DisplayStyle.None; body.Clear(); router.Closed("guild-report");
+            open = false; Root.style.display = DisplayStyle.None; body.Clear(); router.Closed(routeId);
         }
     }
 }
