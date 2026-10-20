@@ -51,5 +51,6 @@ Around the match:
 - `docs/skills/`: how to run things (tests, the Editor CLI).
 - `docs/computations/`, `docs/attesters/`: the determinism baseline CI runs.
 - `docs/design-history/`: the original design document. Historical.
+- [Lobby art audit](reports/lobby-art-audit.md): definition, variant and generated paper coverage.
 
 Future work is never in this folder: it is the Notion Roadmap.
