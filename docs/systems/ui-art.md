@@ -13,6 +13,8 @@ sources:
   - Assets/UI/Scripts/MkCard.cs
   - Assets/UI/Scripts/MkPanel.cs
   - Assets/UI/Scripts/MkSheet.cs
+  - Assets/UI/Scripts/LobbyMotion.cs
+  - Assets/UI/Scripts/LobbyElementMotion.cs
   - Assets/UI/Scripts/MkPlayerRow.cs
   - Assets/UI/Scripts/PaperCard.cs
   - Assets/UI/Scripts/PaperButton.cs
@@ -40,7 +42,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: f05cc8f0
+verified: 6b614267
 ---
 
 # UI art
@@ -65,7 +67,7 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
 
-`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` keeps fixed panels separate from internal lists. `MkPanel` owns centered modal cards with scrim, close and router Back. `Components.uss` exposes the mockup `mk-` classes; `Tokens.uss` keeps raw `--pal-*` values separate from meaning tokens. Lobby pages are transparent; cards carry content.
+`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. `MkPanel` owns centered modals with scrim, close and router Back. Both use `LobbyMotion` scale/fade timing, including scrims, and hide after closing; no USS tween competes. `Components.uss` exposes `mk-` classes; `Tokens.uss` separates raw `--pal-*` values from meaning tokens. Pages are transparent; cards carry content.
 
 `PaperCard : VisualElement` (`[UxmlElement]`) draws parchment, cached grain, offset shadows and seeded wobbling ink. `Seed`/`RotatePaper` control identity/rotation; `--paper-card-*` properties read meaning tokens. Geometry/style events rebuild it; presses drop the shadow. `PaperButton : Button` preserves binding contracts, drawing paper behind its caption. `PaperMath` is UnityEngine-free.
 
