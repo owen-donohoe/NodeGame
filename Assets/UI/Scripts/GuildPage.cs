@@ -374,8 +374,8 @@ namespace NodeWar.Lobby
             var tail = new VisualElement(); tail.AddToClassList("ui-filter-tail"); filterBubble.Add(tail);
             filterContent = new ScrollView { horizontalScrollerVisibility = ScrollerVisibility.Hidden, verticalScrollerVisibility = ScrollerVisibility.Hidden };
             filterContent.AddToClassList("ui-filter-content"); filterBubble.Add(filterContent);
-            var joinable = new LobbySwitch { Value = filter.JoinableOnly };
-            var toggleRow = new Button(() => joinable.Flip()); toggleRow.AddToClassList("ui-filter-toggle");
+            var joinable = new LobbyToggle(filter.JoinableOnly);
+            var toggleRow = new Button(joinable.Flip); toggleRow.AddToClassList("ui-filter-toggle");
             toggleRow.Add(GuildViews.Text("Joinable only")); toggleRow.Add(joinable);
             var rrLabel = GuildViews.Text(filter.MinRR.ToString(), "ui-filter-value");
             var rr = new SliderInt(0, 5000) { value = filter.MinRR };

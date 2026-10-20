@@ -912,7 +912,10 @@
 .lb-root #page-guild .ui-filter-toggle, .lb-root #page-guild .ui-filter-toggle:hover, .lb-root #page-guild .ui-filter-toggle:active, .lb-root #page-guild .ui-filter-toggle:focus { flex-direction: row; align-items: center; justify-content: space-between; height: 28px; min-height: 28px; padding: 0; margin: 0; border-width: 0; background-image: none; background-color: var(--clear); translate: 0 0; }
 .lb-root #page-guild .ui-filter-actions { margin-top: 14px; }
 .lb-root #page-guild .ui-filter-actions Button { height: 40px; min-height: 40px; padding: 0 14px; }
-.lb-root #page-guild .lb-switch { width: 48px; height: 28px; border-radius: 14px; border-width: 2px; border-color: var(--line-inner); background-color: var(--mk-track); }
-.lb-root #page-guild .lb-switch--on { background-color: var(--mk-tap); }
-.lb-root #page-guild .lb-switch__knob { top: 2px; left: 2px; width: 20px; height: 20px; border-width: 2px; border-color: var(--line-inner); border-radius: 10px; background-color: var(--mk-sheet); }
 .lb-root .lb-switch__knob { transition-property: none; }
+
+/* Shared toggle (LobbyToggle): 48x28 track, 2 px border, 20 px knob with a 2 px inset. The knob sits at left 0
+   and LobbyToggleMath supplies the translate, so on = 22 px and off = 2 px inside the border. */
+.lb-root .lb-toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; border-width: 2px; border-color: var(--line-inner); border-radius: 14px; background-color: var(--mk-track); }
+.lb-root .lb-toggle--on { background-color: var(--mk-tap); }
+.lb-root .lb-toggle__knob { position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-width: 2px; border-color: var(--line-inner); border-radius: 10px; background-color: var(--mk-sheet); }
