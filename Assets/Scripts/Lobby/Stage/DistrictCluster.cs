@@ -57,7 +57,7 @@ namespace NodeWar.Lobby
 
         public DistrictClusterResult Pick(int slot)
         {
-            if (!Shaking || !Valid(slot)) return default;
+            if (!Shaking || !Valid(slot) || !slots[slot].Filled) return default;
             Reset();
             return new DistrictClusterResult(DistrictClusterAction.Replaced, slot);
         }

@@ -28,8 +28,6 @@ namespace NodeWar.Lobby
             page.Hidden += Hide;
             page.ItemViewed += View;
             page.ViewChanged += ShowView;
-            page.DistrictUseRequested += Begin;
-            page.DistrictSlotPicked += Pick;
             page.ReplacementChanged += ReplacementChanged;
             page.LoadoutChanged += refresh;
             stage.DistrictUsed += Used;
@@ -70,7 +68,7 @@ namespace NodeWar.Lobby
             UpdateProjection();
         }
 
-        public void RefreshInspection() => View(page.ViewingSuit, page.ViewedId);
+        public void RefreshInspection() => View(page.InspectedSuit, page.ViewedId);
         public void LoadoutReset() => page.CancelReplacement();
         private void View(bool suit, string id)
         {
@@ -81,17 +79,8 @@ namespace NodeWar.Lobby
             string[] chosen = suit ? data.suitIDs : data.districtIDs;
             int slot = StageSlotMap.ToStage(chosen, Array.IndexOf(chosen, id));
             if (slot < 0) return;
-            if (suit) stage.FocusSuit(slot); else stage.SelectDistrict(slot);
-        }
-        private bool Begin()
-        {
-            stage.SetDistrictCapacity(page.StageLoadout.districtIDs.Length);
-            return stage.BeginReplace();
-        }
-        private void Pick(int slot)
-        {
-            int stageSlot = StageSlotMap.ToStage(page.StageLoadout.districtIDs, slot);
-            if (stageSlot >= 0) stage.PickReplace(stageSlot);
+            if (suit) stage.FocusSuit(slot);
+            else { stage.ShowShot(StageShot.Districts); stage.SelectDistrict(slot); }
         }
         private void Used(DistrictClusterResult result)
         {
@@ -103,6 +92,7 @@ namespace NodeWar.Lobby
             if (page.Replacing)
             {
                 if (page.ReplacingSuit) stage.BeginSuitReplace();
+                else { stage.SetDistrictCapacity(page.StageLoadout.districtIDs.Length); stage.BeginReplace(); }
                 router.Open(new LobbyOverlay(ReplaceRoute, OverlayKind.Menu, backHandler: () =>
                 {
                     page.CancelReplacement(); return true;
@@ -163,7 +153,7 @@ namespace NodeWar.Lobby
             Hide();
             page.CancelReplacement(); stage.Deselect(); stage.ClearFocus();
             page.ViewChanged -= ShowView;
-            page.ItemViewed -= View; page.DistrictUseRequested -= Begin; page.DistrictSlotPicked -= Pick;
+            page.ItemViewed -= View;
             page.ReplacementChanged -= ReplacementChanged; page.LoadoutChanged -= refresh;
             stage.DistrictUsed -= Used; router.Stack.Changed -= StackChanged;
             page.Root.UnregisterCallback<PointerDownEvent>(PointerDown, TrickleDown.TrickleDown);
