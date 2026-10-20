@@ -1,4 +1,4 @@
-.lb-party-safe { flex-grow: 1; background-color: var(--surface); justify-content: center; }
+.lb-party-safe { flex-grow: 1; background-color: var(--clear); justify-content: center; }
 .lb-party-body { margin: 24px; }
 .lb-party-title { font-size: var(--type-title); white-space: normal; margin-bottom: 16px; }
 .lb-party-presence-row { flex-direction: row; align-items: center; }

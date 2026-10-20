@@ -189,7 +189,7 @@ namespace NodeWar.Lobby
                 announcements.Add(PlayerCardViews.Text("No announcements yet."));
             scroll.Add(announcements);
             var members = GuildViews.Card(null);
-            var heading = new VisualElement(); heading.AddToClassList("mk-spread");
+            var heading = new VisualElement(); heading.AddToClassList("mk-ledger__header");
             var title = PlayerCardViews.Text("Members"); title.AddToClassList("mk-h3"); title.AddToClassList("lb-guild-row-text");
             heading.Add(title);
             var order = GuildMemberOrder.OnlineByRR;
@@ -247,7 +247,7 @@ namespace NodeWar.Lobby
             results.SetEnabled(searched);
             if (searched) results.style.visibility = Visibility.Visible;
             else if (resultsMotion == null) results.style.visibility = Visibility.Hidden;
-            browseToggle.text = browsing ? "⌃" : "⌄";
+            browseToggle.text = "";
             browseToggle.style.display = searched ? DisplayStyle.None : DisplayStyle.Flex;
         }
 

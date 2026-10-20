@@ -348,6 +348,13 @@
     --lip-press: 3px;
     --edge-panel-bottom: 7px;
     --edge-press-bottom: 5px;
+    --corner-sm: 10px;
+    --corner-md: 12px;
+    --corner-lg: 14px;
+    --corner-sheet: 14px;
+    --stroke: 2px;
+    --stroke-mid: 2px;
+    --paper-ink-width: 2px;
     --radius-panel: 14px;
     --radius-field: 12px;
     --radius-tile: 10px;
@@ -364,6 +371,13 @@
 }
 /* Shop keeps its established faces and tracking while sharing lobby chrome. */
 #page-shop {
+    --corner-sm: 10px;
+    --corner-md: 16px;
+    --corner-lg: 24px;
+    --corner-sheet: 28px;
+    --stroke: 3px;
+    --stroke-mid: 2.5px;
+    --paper-ink-width: 3px;
     --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
     --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
     --font-bold: var(--font-label);

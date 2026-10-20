@@ -2,3 +2,8 @@
 .mk-trophy Label { color: var(--mk-trophy); }
 .mk-namelink Label { color: var(--mk-ink); }
 .ui-root .mk-cap { margin-top: 4px; }
+
+.mk-profile-caret { width: 20px; height: 20px; background-image: url("Icons/Phosphor/caret-right-bold.png"); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-ink); }
+.mk-purse__dot--coin { background-image: url("Icons/Phosphor/coins-bold.png"); }
+.mk-purse__dot--leaf { background-image: url("Icons/Phosphor/leaf-bold.png"); }
+.mk-purse__dot--coin, .mk-purse__dot--leaf { width: 20px; height: 20px; border-width: 0; background-color: var(--clear); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: var(--mk-sheet); }

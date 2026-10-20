@@ -16,8 +16,8 @@ namespace NodeWar.Lobby
         public static VisualElement Card(string title)
         {
             var card = new VisualElement();
-            card.AddToClassList("mk-card"); card.AddToClassList("lb-guild-card");
-            if (!string.IsNullOrEmpty(title)) card.Add(Text(title, "mk-eyebrow"));
+            card.AddToClassList("mk-card"); card.AddToClassList("lb-guild-card"); card.AddToClassList("mk-ledger");
+            if (!string.IsNullOrEmpty(title)) card.Add(Text(title, "mk-ledger__header"));
             return card;
         }
 
@@ -31,7 +31,7 @@ namespace NodeWar.Lobby
 
         public static VisualElement Header(GuildView guild, bool showWeekly = false)
         {
-            var header = Card(null); header.AddToClassList("lb-guild-header");
+            var header = Card(null); header.RemoveFromClassList("mk-ledger"); header.AddToClassList("lb-guild-header");
             var row = new VisualElement(); row.AddToClassList("mk-row");
             var icon = new LobbyIcon(LobbyIconKind.Guild) { tooltip = guild.Summary.IconId, pickingMode = PickingMode.Ignore };
             icon.AddToClassList("lb-guild-emblem"); row.Add(icon);
@@ -67,7 +67,7 @@ namespace NodeWar.Lobby
 
         public static VisualElement GuildRow(GuildSummary guild, Action open)
         {
-            var row = new Button(open); row.AddToClassList("mk-card"); row.AddToClassList("lb-guild-row");
+            var row = new Button(open); row.AddToClassList("lb-guild-row");
             Icon(row, LobbyIconKind.Guild);
             var text = new VisualElement { pickingMode = PickingMode.Ignore }; text.AddToClassList("lb-guild-row-text");
             text.Add(Text(guild.Name, "mk-friend__name")); text.Add(Text(guild.Members + "/" + guild.Capacity + " members", "mk-muted"));

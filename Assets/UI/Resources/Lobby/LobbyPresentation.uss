@@ -1,5 +1,5 @@
 .lb-stage, .lb-stage .lb-page { background-color: var(--clear); }
 
 
-.mk-tab-label { color: var(--mk-muted); }
-.mk-tab--on .mk-tab-label { color: var(--mk-sheet); }
+.mk-tab-label { color: var(--mk-pressed); }
+.mk-tab--on .mk-tab-label { color: var(--mk-ink); }

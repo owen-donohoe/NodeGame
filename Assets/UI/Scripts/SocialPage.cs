@@ -124,11 +124,10 @@ namespace NodeWar.Lobby
         }
         private Button MiniPlayer(PlayerCard player, string colour)
         {
-            var button = new Button(() => openProfile?.Invoke(player?.PlayerId)); button.AddToClassList("mk-card"); button.AddToClassList("g2-live-player"); button.AddToClassList(colour);
-            button.Add(GuildViews.Text(player == null || string.IsNullOrEmpty(player.Name) ? "?" : player.Name.Substring(0, 1), "ui-match-avatar"));
+            var button = new Button(() => openProfile?.Invoke(player?.PlayerId)); button.AddToClassList("g2-live-player"); button.AddToClassList(colour);
             var body = new VisualElement(); body.AddToClassList("ui-match-body");
-            body.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "mk-friend__name"));
-            body.Add(GuildViews.Text(player == null ? "\u2014" : player.RR + " RR", "mk-cap"));
+            body.Add(GuildViews.Text(player == null ? "\u2014" : PlayerCardViews.Handle(player), "g2-live-name"));
+            body.Add(GuildViews.Text(player == null ? "\u2014" : player.RR + " RR", "g2-live-rr"));
             button.Add(body);
             button.SetEnabled(player != null); return button;
         }

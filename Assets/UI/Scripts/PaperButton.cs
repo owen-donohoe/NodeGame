@@ -31,6 +31,7 @@ namespace NodeWar.Lobby
             hierarchy.Add(caption);
             RegisterCallback<AttachToPanelEvent>(_ =>
             {
+                EnableInClassList("mk-btn", PaperCard.IsLobbySurface(this));
                 if (string.IsNullOrEmpty(name)) name = "paper-button-" + text + "-" + (parent?.IndexOf(this) ?? 0);
                 paper.Seed = name;
             });
