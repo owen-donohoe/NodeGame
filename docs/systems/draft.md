@@ -7,7 +7,7 @@ sources:
   - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
   - Assets/Scripts/Game/Core/IDraftPresenter.cs
   - Assets/Scripts/Game/Network/DraftSerializer.cs
-verified: a1da5182
+verified: 3c1b562c
 ---
 
 # Draft
@@ -27,6 +27,8 @@ Let each player choose district positions on a shared map before ticks begin. De
 `IDraftPresenter` receives `Initialize(manager, localPlayerID)`, `ShowWaiting`, `ShowInitialReveal(initialPlacements)`, `SweepIn(state, seat)`, `SweepOut`, `UpdateTimer(remaining, total)`, `OnTurnChanged(state, seat)` and `OnPlacementConfirmed(placement)`. `TryGetPendingPlacement(out slotIndex, out gridX, out gridZ)` reports timeout choice; `GetPersistentPlacements()` returns world objects handed to match transitions. Screen implementation belongs to match UI.
 
 `DraftSerializer` encodes setup/setup-ack, ready, loadout and placement packets. `SerializeDraftPlacement(playerID, districtType, gridX, gridZ, wasTimeout)` sends district identity, not slot index; matching deserialisation returns those values. `TryDeserializeDraftLoadout` provides checked loadout decoding. `InputSerializer` carries draft acknowledgements with ready/loadout receipt and applied-placement count; the manager owns retries/progress.
+
+`LoadoutMatchSetup.DistrictPool(loadout, mapBasePool)`, `DraftedSuits` and `DraftedDistricts` resolve human arrays, skipping blanks and duplicate types. Map pools supply no extra human pieces; defaults already occupy the loadout. Configured bot pools resolve separately in `DraftManager`.
 
 ## Connects to
 - `board`: `MatchSetup` agreement precedes drafting; all placement checks delegate to `PlacementLegality`; output feeds `MatchFactory`.
