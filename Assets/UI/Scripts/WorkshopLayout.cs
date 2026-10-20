@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace NodeWar.Lobby
 {
@@ -19,6 +19,8 @@ namespace NodeWar.Lobby
     public static class WorkshopLayout
     {
         public const float CardGap = 12f;
+        public const float TileGap = 8f;
+        public static float TileWidth(float available) => Math.Max(0, (float)Math.Floor((available - TileGap * 2) / 3f));
         public static WorkshopClipLayout Clip(float band, float header, float card, float scroll)
             => new WorkshopClipLayout(band, header, card, Math.Max(0, scroll));
     }

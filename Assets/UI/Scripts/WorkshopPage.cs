@@ -337,8 +337,17 @@ namespace NodeWar.Lobby
         private void SizeCards()
         {
             if (unlocked.contentRect.width <= 24) return;
-            float width = (unlocked.contentRect.width - 24) / 3f;
-            unlocked.Query<Button>(className: "mk-tile").ForEach(card => card.style.width = width);
+            float width = WorkshopLayout.TileWidth(unlocked.contentRect.width);
+            int index = 0;
+            unlocked.Query<Button>(className: "mk-tile").ForEach(card =>
+            {
+                card.style.width = card.style.maxWidth = card.style.flexBasis = width;
+                card.style.minWidth = card.style.minHeight = 0;
+                card.style.height = width;
+                card.style.marginRight = index++ % 3 == 2 ? 0 : WorkshopLayout.TileGap;
+                card.style.marginBottom = WorkshopLayout.TileGap;
+                card.Q(className: "ws-art-clip").style.height = Math.Max(24, (float)Math.Floor((width - 48) / 4) * 4);
+            });
         }
 
         private void RenderRoles(List<Item> items)

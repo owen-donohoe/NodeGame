@@ -1,9 +1,23 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace NodeWar.Lobby.Tests
 {
     public class WorkshopLayoutTests
     {
+        [TestCase(208)]
+        [TestCase(276)]
+        [TestCase(338)]
+        [TestCase(540)]
+        [TestCase(800)]
+        public void ThreeSquareTilesFitWithExactlyTwoGaps(float available)
+        {
+            float width = WorkshopLayout.TileWidth(available);
+            float used = 3 * width + 2 * WorkshopLayout.TileGap;
+            Assert.That(used, Is.LessThanOrEqualTo(available));
+            Assert.That(available - used, Is.LessThan(3));
+            Assert.That(width, Is.GreaterThanOrEqualTo(44));
+        }
+
         [TestCase(0)]
         [TestCase(200)]
         [TestCase(480)]
