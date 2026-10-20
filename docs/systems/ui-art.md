@@ -11,6 +11,7 @@ sources:
   - docs/style-guide.md
   - Assets/UI/Resources/Lobby/
   - Assets/UI/Scripts/MkCard.cs
+  - Assets/UI/Scripts/MkPanel.cs
   - Assets/UI/Scripts/MkSheet.cs
   - Assets/UI/Scripts/MkPlayerRow.cs
   - Assets/UI/Scripts/PaperCard.cs
@@ -39,7 +40,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 023d3245
+verified: 013527f0
 ---
 
 # UI art
@@ -64,7 +65,7 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
 
-`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns all modal sheet surfaces. `Components.uss` exposes the mockup `mk-` classes; `Tokens.uss` keeps raw `--pal-*` values separate from meaning tokens. Lobby pages are transparent; cards carry content.
+`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` keeps fixed panels separate from internal lists. `MkPanel` owns centered modal cards with scrim, close and router Back. `Components.uss` exposes the mockup `mk-` classes; `Tokens.uss` keeps raw `--pal-*` values separate from meaning tokens. Lobby pages are transparent; cards carry content.
 
 `PaperCard : VisualElement` (`[UxmlElement]`) draws parchment, cached grain, offset shadows and seeded wobbling ink. `Seed`/`RotatePaper` control identity/rotation; `--paper-card-*` properties read meaning tokens. Geometry/style events rebuild it; presses drop the shadow. `PaperButton : Button` preserves binding contracts, drawing paper behind its caption. `PaperMath` is UnityEngine-free.
 
@@ -86,13 +87,13 @@ Lookup tries exact kind/context, then the same kind/Anywhere, then generated gly
 
 `UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
 
-Every font token references `PatrickHand-Regular-SDF` in `Assets/UI/Fonts/`; size carries hierarchy. Fredoka assets remain available but unreferenced. Icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+`--font-display` resolves Lilita One for titles, numbers, buttons and tabs; `--font-label` resolves Kalam Bold for labels/chips/row names; `--font-body` resolves Kalam Regular. Type tokens are body 16, secondary 14, caption 13, title 24 and number 22. Outline tokens are zero; real faces carry weight. Kalam line boxes allow its tall ascenders. Icons use glyph drawing rather than fallback-font characters. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
 
 ## Decisions
 - Resolve semantic kind/context overrides rather than replace sprites independently at every call site.
 - Preserve procedural glyph/gauge fallbacks rather than require a complete art pack to run.
 - Share a runtime theme with separate panels rather than duplicate tokens or couple panel tuning.
-- Use Patrick Hand, parchment/umber meaning tokens and outlined mockup components across the lobby.
+- Use Lilita One and Kalam, parchment/umber meaning tokens and outlined mockup components across the lobby.
 
 ## Pressure points
 The current icon theme has no assigned sprite entries; much UI remains procedural/monogram art. Workshop still needs district-sprite consumption. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence can surprise CSS users. Gauge sprite skins, theme switching and Addressables are absent. Import sizing and device aliasing need visual assessment, not historical asset counts.
