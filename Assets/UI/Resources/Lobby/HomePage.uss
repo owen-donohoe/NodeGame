@@ -14,11 +14,10 @@
 .g2-swap-badge { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 12px; border-width: 2px; border-color: var(--line-outer); background-color: var(--mk-urgent); align-items: center; justify-content: center; }
 .ui-root .g2-home-mode .g2-swap { width: 14px; height: 14px; -unity-background-image-tint-color: white; }
 .ui-root .ui-toast.g2-home-toast { position: absolute; left: 0; right: 0; bottom: 100%; margin: 0 0 12px 0; max-width: none; padding: 8px 12px; border-width: 2px; border-bottom-width: 5px; border-color: var(--line-outer); border-radius: 12px; background-color: var(--mk-sheet); color: var(--mk-ink); -unity-font-definition: var(--font-display); font-size: 16px; }
-.ui-root .mk-battle.g2-battle { height: 72px; padding: 4px 12px 0; flex-direction: column; align-items: stretch; }
-.g2-battle-progress { height: 8px; flex-shrink: 0; flex-direction: row; align-items: center; }
-.g2-battle-divider { height: 1px; flex-shrink: 0; margin: 4px 0 0; background-color: var(--line-inner); }
-.ui-root .g2-battle-label { flex-grow: 1; flex-basis: 0; min-height: 40px; margin: 0; padding: 0; font-size: 32px; -unity-font-definition: var(--font-display); -unity-text-align: middle-center; }
-.g2-battle-meter { flex-grow: 1; height: 6px; border-radius: 3px; overflow: hidden; background-color: rgba(45, 35, 25, 0.28); }
-.g2-battle-meter > * { height: 100%; border-radius: 3px; background-color: var(--mk-ink); }
-.ui-root .g2-battle-progress .g2-next-icon { width: 12px; height: 12px; margin-left: 8px; -unity-background-image-tint-color: var(--mk-ink); }
+.ui-root .mk-battle.g2-battle { height: 72px; padding: 0 12px; align-items: stretch; justify-content: center; }
+.g2-battle-progress { height: 10px; flex-shrink: 0; position: relative; margin-bottom: 6px; }
+.ui-root .g2-battle-label { flex-grow: 1; margin: 0; padding: 0; font-size: 32px; -unity-font-definition: var(--font-display); -unity-text-align: middle-center; }
+.g2-battle-meter { width: 100%; height: 10px; border-width: 2px; border-color: var(--line-inner); border-radius: 5px; overflow: hidden; background-color: var(--pal-paper-300); }
+.g2-battle-meter > * { height: 100%; background-color: var(--mk-action); }
+.ui-root .g2-battle-progress .g2-next-icon { position: absolute; right: -4px; top: -5px; width: 20px; height: 20px; -unity-background-image-tint-color: var(--mk-ink); }
 .ui-root .g2-home-mode .g2-private-flag { position: absolute; top: -12px; left: -4px; width: 80px; height: 24px; flex-grow: 0; flex-basis: auto; padding: 0 8px; margin: 0; border-radius: 4px; background-color: var(--mk-private); color: var(--mk-sheet); font-size: 13px; -unity-text-align: middle-center; display: none; }
