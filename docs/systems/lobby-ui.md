@@ -126,7 +126,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 881d08ed
+verified: 816766a2
 ---
 
 # Lobby UI
@@ -157,7 +157,7 @@ Pages:
 
 `AccountFlow` coordinates account sheets and notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 
-`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves choices. `LoadoutRules.IsComplete` requires each side full or no owned, usable, unequipped choice remaining. `LockedDistricts/LockedSuits(arena)` identify locks. `LoadoutEditor` refuses clearing/replacing locks; `ClearChoices` clears other slots. Workshop Clear uses `ClaimPanel`, saves and refreshes.
+`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves choices. `LoadoutRules.IsComplete` requires full sides or no owned, usable, unequipped choices. `LockedDistricts/LockedSuits(arena)` identify locks. `LoadoutEditor` refuses clearing/replacing locks; `ClearChoices` restores locks and empties other slots. Workshop Clear confirms in `MkPanel`, saves and refreshes.
 
 `UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel` modals. `SkinBand` renders the looping skin strip through `SkinBandMath`.
 
