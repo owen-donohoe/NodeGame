@@ -136,6 +136,23 @@ namespace NodeWar.Lobby
 
             CacheClusterEnvelope();
 
+            // The market (about 15 textures) builds on first Shop visit; see EnsureMarket.
+            var reserved = new GameObject("Reserved ground - Social and Guild");
+            reserved.transform.SetParent(transform, false);
+            reserved.transform.localPosition = new Vector3(10f, 0f, 0f);
+
+            GetShot(StageShot.Home, out shotPosition, out shotRotation);
+            stageCamera.transform.localPosition = shotPosition;
+            stageCamera.transform.localRotation = shotRotation;
+        }
+
+        private bool marketBuilt;
+
+        /// <summary>Builds stalls, canopies and marketmen on the first Shop visit or scroll.</summary>
+        private void EnsureMarket()
+        {
+            if (marketBuilt) return;
+            marketBuilt = true;
             var market = new GameObject("Market node");
             market.transform.SetParent(transform, false);
             market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
@@ -157,13 +174,6 @@ namespace NodeWar.Lobby
                     new Vector3(-0.25f, 0.02f, -0.08f), new Vector2(0.9f, 1.65f),
                     StagePaperArt.Tints[(i + 1) % StagePaperArt.Tints.Length]).transform;
             }
-            var reserved = new GameObject("Reserved ground - Social and Guild");
-            reserved.transform.SetParent(transform, false);
-            reserved.transform.localPosition = new Vector3(10f, 0f, 0f);
-
-            GetShot(StageShot.Home, out shotPosition, out shotRotation);
-            stageCamera.transform.localPosition = shotPosition;
-            stageCamera.transform.localRotation = shotRotation;
         }
 
         private void LateUpdate()
@@ -175,6 +185,7 @@ namespace NodeWar.Lobby
 
         private void UpdateMarketVisibility()
         {
+            if (!marketBuilt) return;
             Vector3 cameraPosition = stageCamera.transform.position;
             for (int i = 0; i < marketStalls.Length; i++)
             {
@@ -202,6 +213,7 @@ namespace NodeWar.Lobby
 
         public void ShowShot(StageShot shot)
         {
+            if (shot == StageShot.Market) EnsureMarket();
             pageDriven = pageMoving = false;
             currentShot = shot;
             shotStartPosition = stageCamera.transform.localPosition;
@@ -214,6 +226,7 @@ namespace NodeWar.Lobby
         /// <summary>Sampled by the shell from the same coordinate as the page strip.</summary>
         public void ApplyPageMotion(StageShot from, StageShot to, float progress, bool moving)
         {
+            if (from == StageShot.Market || to == StageShot.Market) EnsureMarket();
             pageDriven = true; pageMoving = moving;
             currentShot = to;
             GetShot(from, out var a, out var ar);
@@ -230,6 +243,7 @@ namespace NodeWar.Lobby
         /// <summary>Continuous stall units. Applies exactly, without a camera tween.</summary>
         public void SetShopScroll(float position)
         {
+            EnsureMarket();
             shopScroll = Mathf.Clamp(position, 0f, 4f);
             if (currentShot != StageShot.Market) return;
             GetShot(StageShot.Market, out shotPosition, out shotRotation);

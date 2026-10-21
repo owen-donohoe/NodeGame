@@ -9,9 +9,9 @@ namespace NodeWar.Lobby.Tests
         [TestCase(PaperKind.Canopy, 844, 512)]
         [TestCase(PaperKind.Villager, 844, 256)]
         [TestCase(PaperKind.Villager, 2400, 512)]
-        [TestCase(PaperKind.Stall, 2400, 1024)]
-        [TestCase(PaperKind.House, 10000, 1024)]
-        public void Resolution_IsTwiceProjectedSize_WithDeviceCap(PaperKind kind, int screenHeight, int expected)
+        [TestCase(PaperKind.Stall, 2400, 512)]
+        [TestCase(PaperKind.House, 10000, 512)]
+        public void Resolution_IsTwiceProjectedSize_WithMobileCap(PaperKind kind, int screenHeight, int expected)
             => Assert.AreEqual(expected, PaperRasterizer.TextureSize(kind, screenHeight));
 
         [TestCase(PaperKind.House)]
