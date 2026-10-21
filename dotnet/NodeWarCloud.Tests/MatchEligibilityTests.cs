@@ -185,6 +185,15 @@ namespace NodeWar.Cloud.Tests
                 Assert.That(MatchEligibility.Check(record, log) == null, Is.EqualTo(client), id);
             }
         }
+        [Test]
+        public void V7AcceptedAndV6Retired()
+        {
+            var (record, log) = Current(1);
+            Assert.That(record.protocol, Is.EqualTo(7));
+            Assert.That(MatchEligibility.Check(record, log), Is.Null);
+            record.protocol = log.header.protocol = 6;
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("Incompatible protocol"));
+        }
         internal static (MatchRecord record, Log log) Current(int highSeat)
         {
             var board = PremadeMaps.Hourglass01();

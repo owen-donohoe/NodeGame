@@ -11,7 +11,9 @@ namespace NodeWar.Lobby.Tests
         public void PreviousProtocol_IsRejected()
         {
             var current = new BuildIdentity(InputSerializer.ProtocolVersion, Local.sim, Local.content);
-            var previous = new BuildIdentity(5, Local.sim, Local.content);
+            var previous = new BuildIdentity(6, Local.sim, Local.content);
+            Assert.That(current.protocol, Is.EqualTo(7));
+            Assert.That(InputSerializer.Compare(current, current), Is.EqualTo(HandshakeVerdict.Compatible));
             Assert.That(InputSerializer.TryDeserializeHandshake(
                 InputSerializer.SerializeHandshake(previous), out BuildIdentity peer), Is.True);
 
