@@ -7,3 +7,5 @@
 .lb-root .ws-clear-actions { flex-direction: row; }
 .lb-root .ws-clear-actions > Button { flex-grow: 1; flex-basis: 0; margin: 0; }
 .lb-root .ws-clear-actions > Button:first-child { margin-right: 8px; }
+.lb-root .ws-item-sheet .ws-sheet-actions.ws-sheet-actions--remove > Button { width: auto; flex-grow: 1; flex-basis: 0; margin-left: 8px; }
+.lb-root .ws-item-sheet .ws-sheet-actions.ws-sheet-actions--remove > Button:first-child { margin-left: 0; }

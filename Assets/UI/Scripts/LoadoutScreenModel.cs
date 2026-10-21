@@ -28,7 +28,8 @@ namespace NodeWar.Lobby
         public static bool ValidChoice(LoadoutChoice[] choices, string id) =>
             choices.Length == 0 || System.Array.Exists(choices, c => c.ID == id && (c.Equipped || c.Selectable));
 
-        public LoadoutScreenModel(LoadoutData chosen, int arena = 1) { editor = new LoadoutEditor(chosen, arena); }
+        public LoadoutScreenModel(LoadoutData chosen, int arena = 1, bool restoreLocks = true)
+        { editor = new LoadoutEditor(chosen, arena, restoreLocks); }
         public void ClearChoices() { CancelReplace(); editor.ClearChoices(); }
         public bool IsSlotLocked(bool suit, int slot) => suit ? editor.IsSuitSlotLocked(slot) : editor.IsDistrictSlotLocked(slot);
         public void Preview(string lobbyId)

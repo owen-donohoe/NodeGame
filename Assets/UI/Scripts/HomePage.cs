@@ -46,7 +46,7 @@ namespace NodeWar.Lobby
             {
                 if (!LoadoutRules.IsComplete(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena, BackendServices.LastKnownState))
                 {
-                    loadoutToast.Show("Fill your loadout");
+                    loadoutToast.Show(LoadoutRules.MissingMessage(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena, BackendServices.LastKnownState));
                     return;
                 }
                 PlayRequested?.Invoke();
@@ -101,7 +101,8 @@ namespace NodeWar.Lobby
             if (crates != null) { crates.Changed -= Refresh; crates.Changed += Refresh; }
             Refresh();
             accountLinkPrompt.Show();
-            if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState)) loadoutToast.Show("Fill your loadout");
+            if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState))
+                loadoutToast.Show(LoadoutRules.MissingMessage(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState));
         }
 
         public override void OnHide()
@@ -125,7 +126,7 @@ namespace NodeWar.Lobby
             {
                 play.SetEnabled(true); // A disabled button swallows the tap; the toast explains why BATTLE is off.
                 play.EnableInClassList("mk-battle--off", !complete);
-                play.tooltip = complete ? "Play" : "Fill your loadout";
+                play.tooltip = complete ? "Play" : LoadoutRules.MissingMessage(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState);
             }
         }
         private static void SetCount(Label badge, int count)

@@ -466,7 +466,7 @@ namespace NodeWar.Lobby
         public void BeginSuitReplace()
         {
             replacingSuits = true; loweringSuits = false; suitMotionTime = 0;
-            cluster.Cancel(); ClearFocus(); ShowShot(StageShot.Suits);
+            cluster.Cancel(); ClearFocus();
         }
 
         public bool TryPick(Vector2 screenPoint, out StagePick pick)

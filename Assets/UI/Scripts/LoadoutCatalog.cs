@@ -100,10 +100,7 @@ namespace NodeWar.Lobby
         {
             int arena = LoadoutRules.ArenaOrFallback(state?.Rank);
             PlayerProfile profile = PlayerProfile.Instance;
-            var editor = LoadoutRules.LocalEditor(profile != null ? profile.Loadout : default, arena);
-            editor.DropUnavailable(id => IsSuitOffered(id, arena) && UnlockForBase(id, state).CanUse,
-                id => IsDistrictOffered(id, arena) && UnlockForBase(id, state).CanUse);
-            return editor;
+            return LoadoutRules.OwnedEditor(profile != null ? profile.Loadout : default, arena, state);
         }
     }
 }

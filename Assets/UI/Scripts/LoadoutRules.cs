@@ -14,28 +14,42 @@ namespace NodeWar.Lobby
         /// <summary>Each side is full, or has equipped every owned, offered base on that side.</summary>
         public static bool IsComplete(LoadoutData loadout, int arena, PlayerState state = null)
         {
-            loadout = LocalEditor(loadout, arena).ToLoadout();
-            return SideComplete(loadout.suitIDs, DisplaySuitSlots, true, arena, state) &&
-                SideComplete(loadout.districtIDs, DisplayDistrictSlots, false, arena, state);
+            var missing = MissingCounts(loadout, arena, state);
+            return missing.Districts == 0 && missing.Suits == 0;
         }
 
-        private static bool SideComplete(string[] chosen, int capacity, bool suits,
+        /// <summary>Only empty slots with an owned, era-usable, unequipped candidate are missing.</summary>
+        public static (int Districts, int Suits) MissingCounts(LoadoutData loadout, int arena, PlayerState state = null)
+        {
+            loadout = LocalEditor(loadout, arena).ToLoadout();
+            return (SideMissing(loadout.districtIDs, false, arena, state),
+                SideMissing(loadout.suitIDs, true, arena, state));
+        }
+
+        public static string MissingMessage(LoadoutData loadout, int arena, PlayerState state = null)
+        {
+            var missing = MissingCounts(loadout, arena, state);
+            if (missing.Districts > 0 && missing.Suits > 0) return "Fill your loadout";
+            if (missing.Districts > 0) return "Missing " + missing.Districts + (missing.Districts == 1 ? " district" : " districts");
+            if (missing.Suits > 0) return "Missing " + missing.Suits + (missing.Suits == 1 ? " suit" : " suits");
+            return "";
+        }
+
+        private static int SideMissing(string[] chosen, bool suits,
             int arena, PlayerState state)
         {
-            var equipped = new System.Collections.Generic.List<string>();
-            foreach (string id in chosen)
-                if (!string.IsNullOrEmpty(id) && !equipped.Contains(id)) equipped.Add(id);
-            int filled = equipped.Count;
-            if (filled >= capacity) return true;
+            int empty = System.Array.FindAll(chosen, string.IsNullOrEmpty).Length;
+            if (empty == 0) return 0;
+            int available = 0;
             int length = suits ? CatalogKeys.SuitTableLength : CatalogKeys.DistrictTableLength;
             for (int type = 1; type < length; type++)
             {
                 string id = suits ? CatalogKeys.SuitLobbyId(type) : CatalogKeys.DistrictLobbyId(type);
                 if (!(suits ? IsSuitOffered(id, arena) : IsDistrictOffered(id, arena)) ||
                     !UnlockStates.ForBase(id, state, arena).CanUse) continue;
-                if (System.Array.IndexOf(chosen, id) < 0) return false;
+                if (System.Array.IndexOf(chosen, id) < 0) available++;
             }
-            return true;
+            return System.Math.Min(empty, available);
         }
 
         public static string[] LockedDistricts(int arena)
@@ -69,6 +83,16 @@ namespace NodeWar.Lobby
         {
             var editor = new LoadoutEditor(source, arena);
             editor.DropUnavailable(id => IsSuitOffered(id, arena), id => IsDistrictOffered(id, arena));
+            return editor;
+        }
+
+        /// <summary>Ownership filtering requires a complete authoritative snapshot.</summary>
+        public static LoadoutEditor OwnedEditor(LoadoutData source, int arena, PlayerState state)
+        {
+            var editor = new LoadoutEditor(source, arena, restoreLocks: RememberGuard.HasInventoryState(state));
+            if (RememberGuard.HasInventoryState(state))
+                editor.DropUnavailable(id => IsSuitOffered(id, arena) && UnlockStates.ForBase(id, state, arena).CanUse,
+                    id => IsDistrictOffered(id, arena) && UnlockStates.ForBase(id, state, arena).CanUse);
             return editor;
         }
         public static int ArenaOrFallback(RankRecord rank)

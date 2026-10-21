@@ -8,6 +8,9 @@ namespace NodeWar.Backend
     /// </summary>
     public static class RememberGuard
     {
+        public static bool HasInventoryState(PlayerState state) => state?.Rank != null &&
+            state.Inventory?.OwnedVariants != null && state.Inventory.OwnedSkins != null;
+
         /// <summary>
         /// True only if the call was started for a real player and that same
         /// player is still the one signed in when it finishes.

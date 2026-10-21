@@ -6,12 +6,73 @@ namespace NodeWar.Lobby.Tests
 {
     public class LoadoutRulesTests
     {
+        [TestCase(false)] [TestCase(true)]
+        public void DropUnavailableIsSkippedWithoutCompleteOwnership(bool partial)
+        {
+            var data = new LoadoutData
+            {
+                suitIDs = new[] { "suit_guardian", "suit_scout", "suit_medic" },
+                districtIDs = new[] { "node_barracks", "node_village", "node_forge", "node_fortress", "node_workshop" }
+            };
+            var state = partial ? new PlayerState { Rank = new RankRecord { Arena = 2 }, Inventory = new InventoryRecord() } : null;
+            int arena = LoadoutRules.ArenaOrFallback(state?.Rank);
+            var editor = LoadoutRules.OwnedEditor(data, arena, state);
+            var model = new LoadoutScreenModel(editor.ToLoadout(), arena, restoreLocks: RememberGuard.HasInventoryState(state));
+            CollectionAssert.AreEqual(data.suitIDs, model.ToData().suitIDs);
+            CollectionAssert.AreEqual(data.districtIDs, model.ToData().districtIDs);
+        }
+
+        [Test]
+        public void ClearWithoutStateReappliesAllStarterLocks()
+        {
+            PlayerState state = null;
+            var model = new LoadoutScreenModel(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, state?.Rank?.Arena ?? 0);
+            model.ClearChoices();
+            CollectionAssert.AreEqual(new[] { "suit_warrior", "", "" }, model.ToData().suitIDs);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "", "" }, model.ToData().districtIDs);
+        }
 
         private static PlayerState Owns(params string[] ids)
         {
             var variants = new System.Collections.Generic.List<string>();
             foreach (string id in ids) variants.Add(CatalogIds.Variant(LoadoutTypes.CatalogBaseForLobbyId(id), 0));
             return new PlayerState { Inventory = new InventoryRecord { OwnedVariants = variants } };
+        }
+
+        [TestCase(1, 0, "Missing 1 district")]
+        [TestCase(2, 0, "Missing 2 districts")]
+        [TestCase(0, 1, "Missing 1 suit")]
+        [TestCase(0, 2, "Missing 2 suits")]
+        [TestCase(1, 1, "Fill your loadout")]
+        [TestCase(0, 0, "")]
+        public void MissingCountsOnlyFillableEmptySlotsAndPluralizes(int districts, int suits, string message)
+        {
+            var data = LoadoutData.CreateEmpty(2);
+            var state = Owns("node_farm", "node_mine", "node_town", "suit_warrior");
+            if (districts > 0) state.Inventory.OwnedVariants.Add("district.barracks.e0");
+            if (districts > 1) state.Inventory.OwnedVariants.Add("district.village.e0");
+            if (suits > 0) state.Inventory.OwnedVariants.Add("suit.guardian.e0");
+            if (suits > 1) state.Inventory.OwnedVariants.Add("suit.scout.e0");
+            var missing = LoadoutRules.MissingCounts(data, 2, state);
+            Assert.AreEqual(districts, missing.Districts);
+            Assert.AreEqual(suits, missing.Suits);
+            Assert.AreEqual(message, LoadoutRules.MissingMessage(data, 2, state));
+            Assert.AreEqual(districts + suits == 0, LoadoutRules.IsComplete(data, 2, state));
+        }
+
+        [Test]
+        public void MissingCountsClampToEmptySlotsAndExcludeOwnedItemsOutsideEra()
+        {
+            var data = LoadoutData.CreateEmpty(2);
+            data.districtIDs[3] = "node_barracks";
+            data.suitIDs[1] = "suit_guardian";
+            var state = Owns("node_barracks", "node_village", "node_forge", "node_fortress",
+                "suit_guardian", "suit_scout", "suit_medic", "suit_berserker");
+            var missing = LoadoutRules.MissingCounts(data, 2, state);
+            Assert.AreEqual(1, missing.Districts);
+            Assert.AreEqual(1, missing.Suits);
+            var unavailable = Owns("node_fortress");
+            Assert.AreEqual(0, LoadoutRules.MissingCounts(LoadoutData.CreateEmpty(0), 0, unavailable).Districts);
         }
 
         [TestCase(0)] [TestCase(1)] [TestCase(2)]

@@ -34,9 +34,9 @@ namespace NodeWar.Lobby
         /// </summary>
         public LoadoutEditor(LoadoutData source) : this(source, 1) { }
 
-        public LoadoutEditor(LoadoutData source, int arena)
+        public LoadoutEditor(LoadoutData source, int arena, bool restoreLocks = true)
         {
-            LoadoutData normalized = LoadoutData.Normalized(source, arena);
+            LoadoutData normalized = restoreLocks ? LoadoutData.Normalized(source, arena) : LoadoutData.Normalized(source);
             lockedSuits = LoadoutRules.LockedSuits(arena);
             lockedDistricts = LoadoutRules.LockedDistricts(arena);
             suitIDs = normalized.suitIDs;

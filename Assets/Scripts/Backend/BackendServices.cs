@@ -83,7 +83,7 @@ namespace NodeWar.Backend
         /// </summary>
         internal static void Remember(PlayerState state, string requestedFor)
         {
-            if (state == null) return;
+            if (!RememberGuard.HasInventoryState(state)) return;
             if (!RememberGuard.ShouldRemember(requestedFor, Account.Current?.PlayerId)) return;
             lastKnown = state;
             lastKnownFor = requestedFor;
