@@ -71,7 +71,7 @@ namespace NodeWar.Lobby
             double now = Time.realtimeSinceStartupAsDouble;
             float dt = (float)(now - lastTime); lastTime = now;
             if (!placed) { ticker.Pause(); return; }
-            if (!Settled) { x.Step(dt, 1f); width.Step(dt, 1f); Paint(); }
+            if (!Settled) { x.Advance(dt, 1f); width.Advance(dt, 1f); Paint(); }
             if (Settled) { x.Position = x.Target; width.Position = width.Target; x.Velocity = width.Velocity = 0f; Paint(); ticker.Pause(); }
         }
 

@@ -17,6 +17,19 @@ namespace NodeWar.Lobby
         public const float PageDamping = 0.9f;
         public const float PopDamping = 0.65f;
         public const float Frequency = 28f;
+        public const float ReducedFadeSeconds = 0.080f;
+        public const float ReducedPanSeconds = 0.150f;
+
+        /// <summary>The shared Reduced Motion preference; set from the Settings page.</summary>
+        public static bool Reduced { get; private set; }
+        public static event Action ReducedChanged;
+        public static void SetReduced(bool value)
+        {
+            if (Reduced == value) return;
+            Reduced = value; ReducedChanged?.Invoke();
+        }
+        /// <summary>Camera pans stay visible but short when motion is reduced.</summary>
+        public static float PanSeconds => Reduced ? ReducedPanSeconds : PageSeconds;
 
         // Exact damped oscillator: stable across long frames. Changing Target
         // preserves both position and velocity, including on reversal.
@@ -25,6 +38,12 @@ namespace NodeWar.Lobby
             public float Position, Velocity, Target;
             public Spring(float position) { Position = Target = position; Velocity = 0f; }
             public bool Settled => Math.Abs(Position - Target) < 0.001f && Math.Abs(Velocity) < 0.01f;
+            /// <summary>Steps the spring, or jumps to the target when motion is reduced.</summary>
+            public void Advance(float seconds, float damping = PageDamping)
+            {
+                if (Reduced) { Position = Target; Velocity = 0f; return; }
+                Step(seconds, damping);
+            }
             public void Step(float seconds, float damping = PageDamping)
             {
                 if (seconds <= 0f) return;
@@ -114,7 +133,7 @@ namespace NodeWar.Lobby
             public void Step(float seconds)
             {
                 if (!Moving) return;
-                Motion.Step(seconds);
+                Motion.Advance(seconds);
                 if (!Motion.Settled) return;
                 Motion.Position = Motion.Target; Motion.Velocity = 0f; Moving = false;
             }

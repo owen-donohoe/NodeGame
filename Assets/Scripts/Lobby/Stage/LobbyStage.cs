@@ -55,7 +55,7 @@ namespace NodeWar.Lobby
         private Quaternion shotRotation;
         private double shotStarted = double.NegativeInfinity;
         private bool pageDriven, pageMoving;
-        public bool IsPanning => pageMoving || Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PageSeconds;
+        public bool IsPanning => pageMoving || Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PanSeconds;
         private StageShot currentShot = StageShot.Home;
         private float shopScroll;
 
@@ -549,7 +549,7 @@ namespace NodeWar.Lobby
             float delta = Time.unscaledDeltaTime;
             if (!pageDriven && (IsPanning || stageCamera.transform.localPosition != shotPosition))
             {
-                float progress = (float)(Time.unscaledTimeAsDouble - shotStarted) / LobbyMotion.PageSeconds;
+                float progress = (float)(Time.unscaledTimeAsDouble - shotStarted) / LobbyMotion.PanSeconds;
                 float t = LobbyMotion.OutCubic(progress);
                 stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
                 stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
@@ -565,7 +565,7 @@ namespace NodeWar.Lobby
                 int target = cluster.TargetSeparation(i);
                 separations[i] = Mathf.MoveTowards(separations[i], target, delta * 4f);
                 Vector3 position = slotPositions[i] + slotDirections[i] * (separations[i] * 0.65f);
-                if (cluster.Shaking && !lockedDistrictSlots[i])
+                if (cluster.Shaking && !LobbyMotion.Reduced && !lockedDistrictSlots[i])
                 {
                     Vector2 jitter = UnityEngine.Random.insideUnitCircle * 0.025f;
                     position += new Vector3(jitter.x, 0f, jitter.y);
@@ -584,17 +584,17 @@ namespace NodeWar.Lobby
                 float height = suitRenderers[i].localBounds.size.y * 1.1f;
                 if (replacingSuits && !lockedSuitSlots[i])
                 {
-                    suitLifts[i] = height * SuitReplacementMotion.Lift(suitMotionTime, i, suits.Length);
-                    suitAngles[i] = SuitReplacementMotion.Shake(suitMotionTime, i, suits.Length);
+                    suitLifts[i] = height * SuitReplacementMotion.Lift(suitMotionTime, i, suits.Length, LobbyMotion.Reduced);
+                    suitAngles[i] = SuitReplacementMotion.Shake(suitMotionTime, i, suits.Length, LobbyMotion.Reduced);
                 }
                 else if (loweringSuits)
                 {
                     float lower = SuitReplacementMotion.Lower(suitMotionTime);
                     suitLifts[i] = lowerLifts[i] * lower; suitAngles[i] = lowerAngles[i] * lower;
                 }
-                if (!replacingSuits && !loweringSuits && i != focusedSuit) Wander(i, delta);
+                if (!LobbyMotion.Reduced && !replacingSuits && !loweringSuits && i != focusedSuit) Wander(i, delta);
                 suitPops[i] += delta;
-                float pop = SuitReplacementMotion.Pop(suitPops[i]);
+                float pop = LobbyMotion.Reduced ? 1f : SuitReplacementMotion.Pop(suitPops[i]);
                 suits[i].localScale = new Vector3(0.7f / pop, 1.1f * pop, 1f);
                 // Scale about the feet rather than the centre of the quad.
                 suits[i].localPosition = suitGround[i] + Vector3.up * (suitLifts[i] + height * 0.42f * (pop - 1));

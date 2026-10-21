@@ -412,6 +412,13 @@ namespace NodeWar.Lobby
             bool pageWasMoving = false, firstPagePose = true;
             navigation.MotionChanged += (from, to, progress, moving) =>
             {
+                if (LobbyMotion.Reduced && !moving && pageWasMoving && !firstPagePose)
+                {
+                    // A snapped page change gets a short camera pan rather than an instant cut.
+                    stage.ShowShot(StageShots.ForPage(to.ToString()));
+                    pageWasMoving = false;
+                    return;
+                }
                 if (moving || pageWasMoving || firstPagePose)
                     stage.ApplyPageMotion(StageShots.ForPage(from.ToString()), StageShots.ForPage(to.ToString()), progress, moving);
                 pageWasMoving = moving; firstPagePose = false;
@@ -492,6 +499,7 @@ namespace NodeWar.Lobby
         private void ApplyLobbySettings(GameSettingsData settings)
         {
             NodeWar.Core.FrameRateCap.Apply(settings.frameCap);
+            LobbyMotion.SetReduced(settings.reducedMotion);
 
             if (lobbyRoot == null) return;
 

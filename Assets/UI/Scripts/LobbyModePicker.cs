@@ -162,7 +162,7 @@ namespace NodeWar.Lobby
             float offset = strip.scrollOffset.x;
             if (snapping)
             {
-                snap.Step(dt, 1f); strip.scrollOffset = new Vector2(snap.Position, 0);
+                snap.Advance(dt, 1f); strip.scrollOffset = new Vector2(snap.Position, 0);
                 if (snap.Settled) { strip.scrollOffset = new Vector2(snap.Target, 0); snapping = false; }
                 previousOffset = strip.scrollOffset.x; idleSince = now; return;
             }
