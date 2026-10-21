@@ -353,7 +353,6 @@ namespace NodeWar.Lobby
             playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
             privateLobbyPanel = new PrivateLobbyPanel(lobbyRoot, router, catalog, menu, toast, profilePage.OpenFor, playFlow.OpenPrivateInvite);
             if (playPopup != null) playPopup.PrivateJoinRequested += privateLobbyPanel.Join;
-            playFlow.PrivateRequested += privateLobbyPanel.Open;
             searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
             searchingScreen.PrivateRequested += privateLobbyPanel.Open;
             searchingScreen.LanRequested += () => playPopup.OpenJoinCode(true);
@@ -540,7 +539,7 @@ namespace NodeWar.Lobby
         private void OnPlayRequested()
         {
             if (selectedMode.LaunchStrategy == ModeLaunchStrategy.Lan) playPopup.OpenJoinCode(true);
-            else if (selectedMode.IsPrivate) playFlow.Play(selectedMode);
+            else if (selectedMode.IsPrivate) privateLobbyPanel.Open(selectedMode);
             else searchingScreen.Open(selectedMode);
         }
 

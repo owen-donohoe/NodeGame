@@ -5,7 +5,6 @@ namespace NodeWar.Lobby
 {
     // Persisted IDs: append only.
     public enum LobbyMode { Ranked1v1, Team2v2, FreeForAll4, Bot, Lan, Unranked1v1 }
-    public enum LobbyPlayAction { Ranked, PrivateInvite, TeamChoice, FreeForAllChoice, Bot, Lan, Unranked }
     public enum ModeLaunchStrategy { Queue, Bot, Lan, Private }
     public enum ModeAvailability { Available, ComingSoon, Hidden }
 
@@ -22,16 +21,15 @@ namespace NodeWar.Lobby
         public ModeAvailability Availability { get; }
         public string Colour { get; }
         public LobbyIconKind Icon { get; }
-        public LobbyPlayAction PlayAction { get; }
         private readonly int[] teams;
         private readonly PrivateSeatPosition[] positions;
         private ModeDefinition(LobbyMode id, string name, LobbyModeCategory category, bool supportsPrivate,
             ModeLaunchStrategy launch, string queue, ModeAvailability availability, string colour,
-            LobbyIconKind icon, LobbyPlayAction action, int[] teams, PrivateSeatPosition[] positions)
+            LobbyIconKind icon, int[] teams, PrivateSeatPosition[] positions)
         {
             Id = id; DisplayName = name; Category = category; SupportsPrivate = supportsPrivate;
             LaunchStrategy = launch; QueueKey = queue; Availability = availability; Colour = colour;
-            Icon = icon; PlayAction = action; this.teams = teams; this.positions = positions;
+            Icon = icon; this.teams = teams; this.positions = positions;
         }
         public int Team(int seat) => teams[seat];
         public PrivateSeatPosition Position(int seat) => positions[seat];
@@ -46,24 +44,24 @@ namespace NodeWar.Lobby
         private static readonly ModeDefinition[] definitions = {
             new ModeDefinition(LobbyMode.Ranked1v1, "1v1 Ranked", LobbyModeCategory.Ranked, true,
                 ModeLaunchStrategy.Queue, "ranked", ModeAvailability.Available, "#F4CC72", LobbyIconKind.Swords,
-                LobbyPlayAction.Ranked, DuelTeams, DuelPositions),
+                DuelTeams, DuelPositions),
             new ModeDefinition(LobbyMode.Unranked1v1, "1v1", LobbyModeCategory.Unranked, true,
                 ModeLaunchStrategy.Queue, "unranked-1v1", ModeAvailability.ComingSoon, "#A8D8EF", LobbyIconKind.Swords,
-                LobbyPlayAction.Unranked, DuelTeams, DuelPositions),
+                DuelTeams, DuelPositions),
             new ModeDefinition(LobbyMode.Team2v2, "2v2", LobbyModeCategory.Unranked, true,
                 ModeLaunchStrategy.Queue, "unranked-2v2", ModeAvailability.Available, "#A8D8EF", LobbyIconKind.Invite,
-                LobbyPlayAction.TeamChoice, new[] { 0, 0, 1, 1 }, new[] { PrivateSeatPosition.TopLeft,
+                new[] { 0, 0, 1, 1 }, new[] { PrivateSeatPosition.TopLeft,
                     PrivateSeatPosition.TopRight, PrivateSeatPosition.BottomLeft, PrivateSeatPosition.BottomRight }),
             new ModeDefinition(LobbyMode.FreeForAll4, "1v1v1v1", LobbyModeCategory.Unranked, true,
                 ModeLaunchStrategy.Queue, "unranked-ffa4", ModeAvailability.Available, "#E3B8EB", LobbyIconKind.Swords,
-                LobbyPlayAction.FreeForAllChoice, new[] { 0, 1, 2, 3 }, new[] { PrivateSeatPosition.Top,
+                new[] { 0, 1, 2, 3 }, new[] { PrivateSeatPosition.Top,
                     PrivateSeatPosition.Right, PrivateSeatPosition.Bottom, PrivateSeatPosition.Left }),
             new ModeDefinition(LobbyMode.Bot, "Bot", LobbyModeCategory.Other, false,
                 ModeLaunchStrategy.Bot, null, ModeAvailability.Available, "#C8E5A0", LobbyIconKind.Suit,
-                LobbyPlayAction.Bot, DuelTeams, DuelPositions),
+                DuelTeams, DuelPositions),
             new ModeDefinition(LobbyMode.Lan, "LAN", LobbyModeCategory.Other, false,
                 ModeLaunchStrategy.Lan, null, ModeAvailability.Available, "#A8D8EF", LobbyIconKind.Invite,
-                LobbyPlayAction.Lan, DuelTeams, DuelPositions)
+                DuelTeams, DuelPositions)
         };
         public static IReadOnlyList<ModeDefinition> All { get; } = Array.AsReadOnly(definitions);
         static ModeDefinition() { Validate(All); }
@@ -117,7 +115,6 @@ namespace NodeWar.Lobby
         }
         public GameMode LegacyMode => LaunchStrategy == ModeLaunchStrategy.Bot ? GameMode.Bot
             : LaunchStrategy == ModeLaunchStrategy.Lan || Private ? GameMode.OneVsOne : GameMode.Locked;
-        public LobbyPlayAction PlayAction => Private ? LobbyPlayAction.PrivateInvite : Definition.PlayAction;
         public static LobbyModeSelection FromProfile(PlayerProfileData data)
         {
             if (data.lobbyModeVersion > 0) return new LobbyModeSelection((LobbyMode)data.selectedLobbyModeIndex, data.privateLobbyMode);
