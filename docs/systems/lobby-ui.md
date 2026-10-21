@@ -125,7 +125,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 7577cb88
+verified: 7e21f820
 ---
 
 # Lobby UI
@@ -138,7 +138,7 @@ Loadouts, accounts/settings and match entry.
 
 `LobbyOverlayRouter` registers close callbacks on `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled in a centered `MkPanel`, including shop purchases.
 
-`LobbyMotion` supplies springs and the `Reduced` flag set from Settings: springs snap, panels fade 80ms, villagers stand, camera pans shorten to 150ms. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills, with rubber-band edges and velocity-preserving retargets. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet` serves sheets.
+`LobbyMotion` supplies springs, progressive overscroll and critical return. `Reduced` snaps springs, clamps scrolling, fades panels 80ms, stills villagers and pans 150ms. `LobbyMouseDrag` owns touch/mouse lists; mode/shop snapping follows edge return. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills and preserves retarget velocity. `LobbyRouteStack.HidesPills` aggregates fullscreen routes.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
