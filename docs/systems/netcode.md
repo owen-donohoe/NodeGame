@@ -10,7 +10,7 @@ sources:
   - Assets/Scripts/Game/Network/NetworkManagerTransport.cs
   - Assets/Scripts/Game/Network/SetupAgreement.cs
   - dotnet/NodeWar.Network.Tests/
-verified: cb532363
+verified: 6333fd98
 ---
 
 # Netcode
@@ -23,7 +23,7 @@ Peers exchange commands rather than simulation state. Lockstep preserves identic
 
 Observers receive `LocalInputDue`, `TickSimulated(TickEventLog)`, `ConfirmedTickSimulated(int)`, `CommandsApplied(int, GameCommand[])`, `HashComputed(int, int)`, `OnDesync(int)`, `HoldStarted`, `HoldEnded`, `SpeculationChanged(bool)` and `RolledBack(int villagerCountBefore)`. Replay of a speculative span emits confirmed/recording events without emitting visual tick cues again.
 
-`NetworkManagerTransport` adapts Unity's `NetworkManager`: `StartAsHost/StartAsClient` use DirectUDP; `StartAsRelayHost/StartAsRelayClient` use Unity Relay with DTLS. `Send`, `ReceiveAll`, `Flush`, `Shutdown`, connection flags and `JoinCode` serve launch/draft consumers.
+`NetworkManagerTransport` adapts Unity's `NetworkManager`: `StartAsHost/StartAsClient` use DirectUDP; `StartAsRelayHost/StartAsRelayClient` return `Task<bool>` and use Unity Relay with DTLS; `Shutdown` or a newer start stales an in-flight setup (`AttemptGate`), which then builds nothing and returns false. `Send`, `ReceiveAll`, `Flush`, `Shutdown`, connection flags and `JoinCode` serve launch/draft consumers.
 
 `InputSerializer` encodes little-endian packets. `PacketType` values are Handshake=0, HandshakeAck=1, TickInput=2, Heartbeat=3, DraftReady=4, DraftPlacement=5, DraftLoadout=6, DraftAck=7, Emote=8, HandshakeReject=9, MatchSetup=10, MatchSetupAck=11. `TickInput` contains `forTick`, `stateHash`, `senderDelay`, `requestedDelay`, `GameCommand[] commands`; each command occupies 24 bytes. `DraftSerializer` owns setup and draft payloads; `DraftAck` acknowledges ready/loadout reception and applied placement count.
 
