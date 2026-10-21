@@ -32,13 +32,13 @@ namespace NodeWar.Cloud
                 if (loadout?.suits == null || loadout.districts == null) return "Log needs complete loadouts.";
                 foreach (int type in loadout.suits)
                 {
-                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForSuit(type), type, loadout.suitEras);
+                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForSuit(type), type, loadout.suitEras, record.protocol);
                     if (error != null) return error;
                 }
                 foreach (int type in loadout.districts)
                 {
                     if (!NodeWar.Simulation.DistrictRoster.IsActive((NodeWar.Simulation.DistrictType)type)) return "Inactive district.";
-                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras);
+                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras, record.protocol);
                     if (error != null) return error;
                 }
             }
@@ -51,7 +51,7 @@ namespace NodeWar.Cloud
                     if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
-                        type, log.loadouts[p].districtEras);
+                        type, log.loadouts[p].districtEras, record.protocol);
                     if (error != null) return error;
                 }
             return null;
@@ -137,16 +137,16 @@ namespace NodeWar.Cloud
             return null;
         }
         private static string CheckVariant(MatchPlayerSnapshot player, string baseId, int type, int[] eras,
-            bool requireOwnership = true)
+            ushort protocol, bool requireOwnership = true)
         {
             if (baseId == null) return "Unknown drafted type.";
             // ERAS encodes a null table as an empty array when another table is present.
             if (eras != null && eras.Length > 0 && type >= eras.Length) return "Incomplete era table.";
             int era = eras == null || eras.Length == 0 ? 0 : eras[type];
             if (era < 0 || era >= CatalogIds.EraCount ||
-                (SuitTree.IsTreeSuit(baseId)
+                (protocol == ProtocolVersion.Current ? !LoadoutCapacityPolicy.IsVariantUsable(baseId, CatalogIds.Variant(baseId, era), player.Rank.Arena) : (SuitTree.IsTreeSuit(baseId)
                     ? !SuitTree.IsAvailable(CatalogIds.Variant(baseId, era), player.Rank.Arena)
-                    : era > player.Rank.Arena))
+                    : era > player.Rank.Arena)))
                 return "Drafted era exceeds the snapshot arena.";
             if (requireOwnership && !player.OwnedVariants.Contains(CatalogIds.Variant(baseId, era)))
                 return "Drafted variant was not owned in the snapshot.";

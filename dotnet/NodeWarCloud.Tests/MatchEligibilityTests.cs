@@ -165,6 +165,26 @@ namespace NodeWar.Cloud.Tests
             Assert.That(MatchEligibility.Check(record, log), Is.Null);
         }
 
+        [TestCase("suit.warrior", (int)SuitType.Warrior, false)]
+        [TestCase("suit.guardian", (int)SuitType.Guardian, false)]
+        [TestCase("district.farm", (int)DistrictType.Farm, true)]
+        public void CurrentRefereeAgreesWithClientUsability(string baseId, int type, bool district)
+        {
+            for (int era = 0; era < CatalogIds.EraCount; era++)
+            {
+                var (record, log) = Current(1);
+                log.draft = Array.Empty<DraftPlacement>();
+                var loadout = log.loadouts[1];
+                var eras = new int[district ? NodeWar.Lobby.LoadoutTypes.DistrictTypeCount : NodeWar.Lobby.LoadoutTypes.SuitTypeCount];
+                eras[type] = era;
+                if (district) { loadout.districts[0] = type; loadout.districtEras = eras; }
+                else { loadout.suits = new[] { type }; loadout.suitEras = eras; }
+                string id = CatalogIds.Variant(baseId, era);
+                record.players[1].OwnedVariants.Add(id);
+                bool client = LoadoutCapacityPolicy.IsVariantUsable(baseId, id, record.players[1].Rank.Arena);
+                Assert.That(MatchEligibility.Check(record, log) == null, Is.EqualTo(client), id);
+            }
+        }
         internal static (MatchRecord record, Log log) Current(int highSeat)
         {
             var board = PremadeMaps.Hourglass01();

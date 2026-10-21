@@ -75,9 +75,9 @@ namespace NodeWar.Lobby
             // Low-shape choices follow the fixed defaults. Preserve up to two
             // distinct choices per side; repeated normalization is idempotent.
             var result = Resize(source, SuitSlots, DistrictSlots);
-            result.suitIDs = WithDefaults(source.suitIDs, SuitSlots, new[] { "suit_warrior" });
+            result.suitIDs = WithDefaults(source.suitIDs, SuitSlots, NodeWar.Backend.LoadoutCapacityPolicy.DefaultSuits());
             result.districtIDs = WithDefaults(source.districtIDs, DistrictSlots,
-                new[] { "node_farm", "node_mine", "node_town" });
+                NodeWar.Backend.LoadoutCapacityPolicy.DefaultDistricts());
             return result;
         }
 
