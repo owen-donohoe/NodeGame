@@ -36,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: cab32ace
+verified: b006bbaa
 ---
 
 # Backend client
