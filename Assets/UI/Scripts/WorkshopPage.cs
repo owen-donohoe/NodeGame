@@ -34,7 +34,7 @@ namespace NodeWar.Lobby
 
         private readonly Button ownedFilter, allFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
-        private readonly Label presetLabel, browserTitle;
+        private readonly Label presetLabel;
         private MkPanel clearConfirmation;
         private int clearPreset;
         private bool closingForUse;
@@ -116,7 +116,6 @@ namespace NodeWar.Lobby
             ownership.AddToClassList("ws-ownership");
             sortFilter = Root.Q<Button>("workshop-sort");
             presetLabel = Root.Q<Label>("workshop-preset-label");
-            browserTitle = Root.Q<Label>("workshop-browser-title");
             ownedFilter.clicked += () => { showAll = false; RenderCards(); };
             allFilter.clicked += () => { showAll = true; RenderCards(); };
             sortFilter.clicked += () => { sort = (LoadoutSort)(((int)sort + 1) % 3); RenderCards(); };
@@ -444,13 +443,6 @@ namespace NodeWar.Lobby
             EnsureTiles();
             ownership.Select(showAll ? 1 : 0);
             sortFilter.Q<Label>().text = "Sort: " + (sort == LoadoutSort.OwnedFirst ? "Era" : sort == LoadoutSort.Name ? "Name" : "Role");
-            bool suitTab = activeTab == Tab.Suits;
-            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
-            int capacity = suitTab ? LoadoutRules.ChosenSuitSlots(arena) : LoadoutRules.ChosenDistrictSlots(arena);
-            var chosen = suitTab ? StageLoadout.suitIDs : StageLoadout.districtIDs;
-            int count = Array.FindAll(chosen, id => !string.IsNullOrEmpty(id)).Length;
-            int locked = StageGrants(suitTab).Length;
-            browserTitle.text = count + " of " + capacity + " chosen · " + locked + " locked";
             var items = activeTab == Tab.Suits ? suits : districts;
             SortByFamily(items);
             var wanted = new List<VisualElement>();

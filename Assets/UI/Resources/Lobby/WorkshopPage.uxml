@@ -24,7 +24,6 @@
             <engine:VisualElement name="workshop-panel2-clip" class="ws-panel2-clip" picking-mode="Ignore">
             <lobby:MkCard name="workshop-panel2" class="ws-panel2">
                 <engine:VisualElement name="workshop-browser">
-                    <engine:Label name="workshop-browser-title" text="Districts" class="mk-caption ui-browser-title" />
                     <engine:VisualElement name="workshop-toolbar" class="ui-filter-row">
                         <engine:VisualElement name="workshop-ownership"><engine:VisualElement>
                             <engine:Button name="workshop-owned" text="Owned" />
