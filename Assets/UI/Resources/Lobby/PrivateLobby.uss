@@ -2,7 +2,6 @@
 .ui-root .private-lobby-panel .mk-panel__body { padding: 0; }
 .ui-root .private-lobby-panel .mk-panel__header > .mk-h2 { flex-grow: 0; flex-shrink: 0; margin-right: 8px; }
 .ui-root .private-tag { min-width: 76px; font-size: 13px; color: var(--p3-edge); background-color: var(--p3); border-radius: 8px; padding: 4px 8px; margin: 0; margin-right: auto; flex-shrink: 0; align-self: center; -unity-text-align: middle-center; }
-.ui-root .private-lobby-panel .mk-panel__close { width: 44px; min-width: 44px; height: 44px; padding: 0; margin: 0; border-width: 2px; border-color: var(--line-inner); border-radius: 22px; background-color: var(--mk-dark); background-size: 20px 20px; background-position: center; background-repeat: no-repeat; -unity-background-image-tint-color: var(--mk-sheet); }
 /* 264 px when there is room; shrinks to 180 px on short viewports. Seats and board scale with it. */
 .ui-root .private-arena { flex-basis: 264px; flex-grow: 0; flex-shrink: 1; min-height: 180px; margin-bottom: 8px; }
 .ui-root .private-info { flex-grow: 0; flex-shrink: 1; min-height: 56px; }

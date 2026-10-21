@@ -11,6 +11,7 @@ namespace NodeWar.Lobby
         public VisualElement Surface { get; } = new VisualElement();
         public VisualElement Scrim { get; } = new VisualElement();
         public VisualElement Handle { get; } = new VisualElement();
+        public Button CloseButton { get; }
         public bool IsOpen { get; private set; }
         public event Action Opened;
         public event Action Closed;
@@ -30,6 +31,9 @@ namespace NodeWar.Lobby
             Surface.AddToClassList("mk-sheet"); hierarchy.Add(Surface);
             Handle.AddToClassList("mk-handle-hit"); Surface.Add(Handle);
             var grip = new VisualElement(); grip.AddToClassList("mk-handle"); Handle.Add(grip);
+            CloseButton = LobbyCloseButton.Create(Close); CloseButton.name = "sheet-close";
+            CloseButton.AddToClassList("mk-sheet__close"); Handle.Add(CloseButton);
+            CloseButton.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
             Body.style.minHeight = 0; Body.style.flexShrink = 1; Surface.Add(Body);
             RegisterCallback<PointerDownEvent>(evt => { if (!IsOpen) evt.StopImmediatePropagation(); }, TrickleDown.TrickleDown);
             RegisterCallback<ClickEvent>(evt => { if (!IsOpen) evt.StopImmediatePropagation(); }, TrickleDown.TrickleDown);
