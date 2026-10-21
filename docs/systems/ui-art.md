@@ -19,7 +19,6 @@ sources:
   - Assets/UI/Scripts/LobbyMotion.cs
   - Assets/UI/Scripts/SegmentedSwitch.cs
   - Assets/UI/Scripts/SegmentedSwitchMath.cs
-  - Assets/UI/Scripts/LobbySwitch.cs
   - Assets/UI/Scripts/LobbyToggle.cs
   - Assets/UI/Scripts/LobbyElementMotion.cs
   - Assets/UI/Scripts/MkPlayerRow.cs
@@ -49,7 +48,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: 4dcc6251
+verified: a218ae29
 ---
 
 # UI art
@@ -64,13 +63,13 @@ Create a `NodeWar > UI Art Theme` ScriptableObject named `UIArtTheme` at `Assets
 
 `LobbyIcon : VisualElement` has independently mutable `Kind` and `Context`, constructors `LobbyIcon()` and `LobbyIcon(kind, context = Anywhere)`, and `SetResourceTint(Color)`. UXML accepts `kind="Tv" context="PageHeader"`. Attached lobby icons load white Phosphor Bold SVG VectorImages from `Resources/Lobby/Icons/Phosphor`, tinted by USS. Shop and non-lobby surfaces retain themed sprites and cached Painter2D glyphs.
 
-`Tokens.uss` adds lobby-only green/purple `--p2/--p3` and edge tokens; the board has no four-player colours.
+`Tokens.uss` `:root` stays the match and draft values; lobby colour, type and edge overrides live in its `.lb-root` block. It adds lobby-only `--p2/--p3`; the board has no four-player colours.
 
-`LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation. Active kinds distinguish resources, navigation, indicators, emotes and cosmetics; use this inventory.
+`LobbyIconUsage.All`, `For(kind)`, `IsUsed(kind, context)`, `IsValidThemePair` and `WhereChoices(kind)` supply semantic groups, labels and valid locations to Inspector/runtime validation.
 
-Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, InlineText, EmotePicker, EmoteBubble, OffScreenIndicator, ShopCard, Workshop, Profile, Home. Context value 11 is reserved for the retired tree location and never matches. Retired kind values remain reserved, including SuitTreeAvailable/Owned/Equipped/Locked; their drawers are not active UI.
+Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, InlineText, EmotePicker, EmoteBubble, OffScreenIndicator, ShopCard, Workshop, Profile, Home. Context value 11 is reserved for the retired tree location and never matches. Retired kind values remain reserved.
 
-`ItemFamily.ForDistrict/NoteFor/ClassFor/SortKey` maps district IDs to Round/Square/Triangle/Combat grouping and fallback shapes; unknown districts use Square. `ItemTint.IndexFor/ClassFor/MonogramFor` provides stable eight-color item placeholders independent of list order. These are presentation identities, not ownership or catalog authority.
+`ItemFamily.ForDistrict/NoteFor/ClassFor/SortKey` maps district IDs to Round/Square/Triangle/Combat grouping and fallback shapes; unknown districts use Square. `ItemTint.IndexFor/ClassFor/MonogramFor` provides stable eight-color item placeholders independent of list order.
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
 
@@ -78,7 +77,7 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 
 `PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
 
-`SegmentedSwitch.Select/Changed` slides one face; `LobbySwitch` and `LobbyToggle` slide a knob; `LobbyToggleMath` fixes toggle travel. All retarget critical `LobbyMotion` springs; segment colours crossfade. `--mk-private` supplies the purple Private ribbon meaning.
+`SegmentedSwitch.Select/Changed` slides one face; `LobbyToggle` (the one binary control, also in the match HUD) slides a knob; `LobbyToggleMath` fixes travel. Both tick only while moving; segment colours crossfade. `--mk-private` supplies the purple Private ribbon meaning.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
@@ -96,9 +95,9 @@ Lobby SVG lookup precedes the theme, except within Shop or ShopCard context. Els
 
 `UIArtThemeIconEntryDrawer` offers grouped Icon and context-filtered Where menus. Anywhere is first; single-location icons display Anywhere while preserving valid serialized overrides. Changing kind resets an incompatible context. Retired choices stay visible only for existing rows. Validation warns on duplicates/unused pairs; Editor/development runtime warns once for unlisted active pairs after attachment/UXML attributes.
 
-`UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings with shared theme/reference frame. Layout-imported screen USS overrides theme rules regardless of specificity; put shared palette/role tokens and `ui-` components in the theme, screen-specific rules in page sheets.
+`UnityDefaultRuntimeTheme.tss` imports Unity defaults, then `Tokens.uss`, then `Components.uss`. Lobby, HUD and Draft have separate PanelSettings. Layout-imported screen USS overrides theme rules regardless of specificity; shared tokens and `ui-` components go in the theme, screen rules in page sheets.
 
-Lobby-scoped tokens use Lilita One for display text and Fredoka SemiBold for body/meta, with 0.6px tracking. Shared root and Shop font tokens retain Kalam. Text outlines are zero except the stamped 34px page title. Icons use authored images or generated glyphs. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
+Lobby-scoped tokens use Lilita One for display text and Fredoka SemiBold for body/meta, with 0.6px tracking. Shared root font tokens keep the match Fredoka cuts; Shop retains Kalam. Text outlines are zero except the stamped 34px page title. Icons use authored images or generated glyphs. `Assets/UI/Editor/UIToolkitLobbySetup`, `UIToolkitHUDSetup`, `UIToolkitDraftSetup` create roots/PanelSettings and connect layouts via Tools menus; the theme drawer authors icon rows, not scene YAML.
 
 World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen offsets and distance scale clamped to 0.85 to 1. Lobby content insets are 12px; panels clear the top band and pill nav.
 
@@ -111,7 +110,7 @@ World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen o
 - Scope Lilita One/Fredoka panel styling to the lobby so Shop and match styling remain independent.
 
 ## Pressure points
-Icon theme entries are empty. `StagePaperArt.Bake` generates tinted, badged buildings/villagers via `PaperRasterizer`; `LobbyPaperArt` caches them for Workshop tiles and sheet previews, monograms only as fallback. District references coexist with legacy definition/sticker fields. Caching requires a play-session restart. Theme precedence varies. Gauge skins and Addressables are absent.
+Icon theme entries are empty. `StagePaperArt.Bake` generates tinted, badged buildings/villagers via `PaperRasterizer`; `LobbyPaperArt` caches them for Workshop tiles and sheet previews, monograms only as fallback. Unknown ids are never cached. Gauge skins and Addressables are absent.
 
 ## Change recipes
 - Add an icon: append its stable kind, provide fallback drawing and usage locations/labels, set context at call sites and extend coverage tests; assign sprites through the Inspector.

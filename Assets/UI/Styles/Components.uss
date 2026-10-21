@@ -472,42 +472,11 @@
 .ui-tile-tint--6 { background-color: var(--tile-tint-6); }
 .ui-tile-tint--7 { background-color: var(--tile-tint-7); }
 
-/* Shared by lobby and in-match settings. */
-.lb-switch {
-    width: 52px;
-    height: 31px;
-    flex-shrink: 0;
-    border-top-left-radius: 15.5px;
-    border-top-right-radius: 15.5px;
-    border-bottom-left-radius: 15.5px;
-    border-bottom-right-radius: 15.5px;
-    background-color: var(--off);
-    transition-property: background-color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-switch__knob {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 25px;
-    height: 25px;
-    border-top-left-radius: 12.5px;
-    border-top-right-radius: 12.5px;
-    border-bottom-left-radius: 12.5px;
-    border-bottom-right-radius: 12.5px;
-    background-color: var(--ink-white);
-    transition-property: translate;
-    transition-duration: var(--motion-release);
-}
-
-.lb-switch--on {
-    background-color: var(--confirm);
-}
-
-.lb-switch--on > .lb-switch__knob {
-    translate: 21px 0;
-}
+/* LobbyToggle, the one binary control, shared by lobby and in-match settings. Unscoped faces are the match HUD's;
+   the .lb-root rules below restyle it for the lobby. LobbyToggleMath fixes the geometry. */
+.lb-toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; border-width: 2px; border-color: var(--clear); border-radius: 14px; background-color: var(--off); }
+.lb-toggle--on { background-color: var(--confirm); }
+.lb-toggle__knob { position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-radius: 10px; background-color: var(--ink-white); }
 
 
 /* Paper geometry is retained by PaperCard; native fills must not cover its edge. */
@@ -916,7 +885,6 @@
 .lb-root #page-guild .ui-filter-toggle, .lb-root #page-guild .ui-filter-toggle:hover, .lb-root #page-guild .ui-filter-toggle:active, .lb-root #page-guild .ui-filter-toggle:focus { flex-direction: row; align-items: center; justify-content: space-between; height: 28px; min-height: 28px; padding: 0; margin: 0; border-width: 0; background-image: none; background-color: var(--clear); translate: 0 0; }
 .lb-root #page-guild .ui-filter-actions { margin-top: 14px; }
 .lb-root #page-guild .ui-filter-actions Button { height: 40px; min-height: 40px; padding: 0 14px; }
-.lb-root .lb-switch__knob { transition-property: none; }
 
 /* Shared toggle (LobbyToggle): 48x28 track, 2 px border, 20 px knob with a 2 px inset. The knob sits at left 0
    and LobbyToggleMath supplies the translate, so on = 22 px and off = 2 px inside the border. */

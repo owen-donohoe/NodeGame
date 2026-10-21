@@ -110,5 +110,15 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual("C", ItemTint.MonogramFor("crossroads", "node_crossroads"));
             Assert.AreEqual("W", ItemTint.MonogramFor("  watchtower", "node_watchtower"));
         }
+
+        [Test]
+        public void SkinKeyAndBadge_VarySkinsOfOneBaseDeterministically()
+        {
+            Assert.AreNotEqual(ItemTint.SkinKey("node_barracks", "skin.node.barracks.default"), ItemTint.SkinKey("node_barracks", "skin.node.barracks.gold"));
+            Assert.AreEqual("D", ItemTint.SkinBadge("skin.node.barracks.default"));
+            Assert.AreEqual("G", ItemTint.SkinBadge("skin.node.barracks.gold"));
+            Assert.AreEqual("-", ItemTint.SkinBadge(null));
+            Assert.AreEqual(ItemTint.IndexFor(ItemTint.SkinKey("a", "s.x")), ItemTint.IndexFor(ItemTint.SkinKey("a", "s.x")));
+        }
     }
 }

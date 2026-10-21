@@ -14,6 +14,7 @@ namespace NodeWar.Lobby
         private bool placed;
         private int selected;
         private double lastTime;
+        private readonly IVisualElementScheduledItem ticker;
         public event Action<int> Changed;
 
         public SegmentedSwitch(params Button[] options)
@@ -31,8 +32,8 @@ namespace NodeWar.Lobby
                 faces[i].clicked += () => { Select(index); Changed?.Invoke(index); };
                 faces[i].RegisterCallback<GeometryChangedEvent>(_ => Retarget());
             }
-            RegisterCallback<AttachToPanelEvent>(_ => { lastTime = Time.realtimeSinceStartupAsDouble; });
-            schedule.Execute(Tick).Every(16);
+            ticker = schedule.Execute(Tick).Every(16); ticker.Pause();
+            RegisterCallback<AttachToPanelEvent>(_ => { if (!Settled) Wake(); });
             Select(0);
         }
 
@@ -62,15 +63,20 @@ namespace NodeWar.Lobby
                 x = new LobbyMotion.Spring(target.X); width = new LobbyMotion.Spring(target.Width);
                 placed = true; Paint();
             }
+            else if (!Settled && panel != null) Wake();
         }
 
         private void Tick()
         {
             double now = Time.realtimeSinceStartupAsDouble;
             float dt = (float)(now - lastTime); lastTime = now;
-            if (!placed || (x.Settled && width.Settled)) return;
-            x.Step(dt, 1f); width.Step(dt, 1f); Paint();
+            if (!placed) { ticker.Pause(); return; }
+            if (!Settled) { x.Step(dt, 1f); width.Step(dt, 1f); Paint(); }
+            if (Settled) { x.Position = x.Target; width.Position = width.Target; x.Velocity = width.Velocity = 0f; Paint(); ticker.Pause(); }
         }
+
+        private bool Settled => x.Settled && width.Settled;
+        private void Wake() { lastTime = Time.realtimeSinceStartupAsDouble; ticker.Resume(); }
 
         private void Paint()
         {

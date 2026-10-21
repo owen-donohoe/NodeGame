@@ -71,11 +71,11 @@
                 <lobby:PaperCard class="lb-group" name="paper-lb-group-2">
                     <lobby:PaperButton name="settings-row-colourblind" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Colourblind marks" picking-mode="Ignore" />
-                        <lobby:LobbySwitch name="settings-colourblind" value="true" />
+                        <lobby:LobbyToggle name="settings-colourblind" value="true" />
                     </lobby:PaperButton>
                     <lobby:PaperButton name="settings-row-motion" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Reduced motion" picking-mode="Ignore" />
-                        <lobby:LobbySwitch name="settings-motion" value="false" />
+                        <lobby:LobbyToggle name="settings-motion" value="false" />
                     </lobby:PaperButton>
                     <lobby:PaperButton name="settings-row-size" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Interface size" picking-mode="Ignore" />
@@ -94,7 +94,7 @@
                     </engine:VisualElement>
                     <lobby:PaperButton name="settings-row-confirm" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Confirm each command" picking-mode="Ignore" />
-                        <lobby:LobbySwitch name="settings-confirm" value="false" />
+                        <lobby:LobbyToggle name="settings-confirm" value="false" />
                     </lobby:PaperButton>
                 </lobby:PaperCard>
             </engine:VisualElement>
@@ -120,7 +120,7 @@
                 <lobby:PaperCard class="lb-group" name="paper-lb-group-5">
                     <lobby:PaperButton name="settings-row-haptics" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Haptics" picking-mode="Ignore" />
-                        <lobby:LobbySwitch name="settings-haptics" value="true" />
+                        <lobby:LobbyToggle name="settings-haptics" value="true" />
                     </lobby:PaperButton>
                     <lobby:PaperButton name="settings-row-framecap" class="ui-reset-button lb-grow">
                         <engine:Label class="lb-grow__label ui-w500" text="Frame rate cap" picking-mode="Ignore" />
@@ -128,7 +128,7 @@
                     </lobby:PaperButton>
                     <lobby:PaperButton name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />
-                        <lobby:LobbySwitch name="settings-battery" value="false" />
+                        <lobby:LobbyToggle name="settings-battery" value="false" />
                     </lobby:PaperButton>
                 </lobby:PaperCard>
             </engine:VisualElement>

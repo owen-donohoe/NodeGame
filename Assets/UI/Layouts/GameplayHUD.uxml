@@ -422,13 +422,13 @@
             <!-- The whole row is the target, as in the lobby's settings rows. -->
             <engine:Button name="hud-settings-row-routes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
                 <engine:Label class="hud__settings-label ui-w500" text="Opponent routes" picking-mode="Ignore" />
-                <lobby:LobbySwitch name="hud-settings-routes" value="true" />
+                <lobby:LobbyToggle name="hud-settings-routes" value="true" />
             </engine:Button>
 
             <engine:Button name="hud-settings-row-emotes" class="ui-reset-button hud__settings-row hud__settings-row--switch">
                 <lobby:LobbyIcon name="hud-settings-emotes-icon" context="HeadsUpDisplay" kind="Speaker" class="hud__speaker hud__settings-emotes-icon" picking-mode="Ignore" />
                 <engine:Label class="hud__settings-label ui-w500" text="Emotes (saved)" picking-mode="Ignore" />
-                <lobby:LobbySwitch name="hud-settings-emotes" value="true" />
+                <lobby:LobbyToggle name="hud-settings-emotes" value="true" />
             </engine:Button>
 
             <engine:Button name="hud-settings-row-framecap" class="ui-reset-button hud__settings-row hud__settings-row--switch">
@@ -442,7 +442,7 @@
             -->
             <engine:Button name="hud-settings-row-camerabutton" class="ui-reset-button hud__settings-row hud__settings-row--switch">
                 <engine:Label class="hud__settings-label ui-w500" text="Camera button" picking-mode="Ignore" />
-                <lobby:LobbySwitch name="hud-settings-camerabutton" value="true" />
+                <lobby:LobbyToggle name="hud-settings-camerabutton" value="true" />
             </engine:Button>
 
             <engine:Button name="hud-settings-row-target" class="ui-reset-button hud__settings-row hud__settings-row--switch">
@@ -452,7 +452,7 @@
 
             <engine:Button name="hud-settings-row-tooltips" class="ui-reset-button hud__settings-row hud__settings-row--switch">
                 <engine:Label class="hud__settings-label ui-w500" text="Tooltips" picking-mode="Ignore" />
-                <lobby:LobbySwitch name="hud-settings-tooltips" value="true" />
+                <lobby:LobbyToggle name="hud-settings-tooltips" value="true" />
             </engine:Button>
 
             <engine:Button name="hud-settings-row-side" class="ui-reset-button hud__settings-row hud__settings-row--switch">

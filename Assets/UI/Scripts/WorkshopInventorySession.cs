@@ -11,11 +11,12 @@ namespace NodeWar.Lobby
         public int Visit { get; }
         public int Selection { get; }
         public int Request { get; }
+        public int Account { get; }
         public string BaseID { get; }
 
-        public InventoryRequestToken(int visit, int selection, int request, string baseId)
+        public InventoryRequestToken(int visit, int selection, int request, string baseId, int account = 0)
         {
-            Visit = visit; Selection = selection; Request = request; BaseID = baseId;
+            Visit = visit; Selection = selection; Request = request; BaseID = baseId; Account = account;
         }
     }
 
@@ -26,7 +27,7 @@ namespace NodeWar.Lobby
     /// </summary>
     public sealed class WorkshopInventorySession
     {
-        private int visit, selection, request, activeRequest;
+        private int visit, selection, request, activeRequest, account;
         private bool open;
         private string baseId;
 
@@ -42,6 +43,15 @@ namespace NodeWar.Lobby
             selection++;
             baseId = null;
             return visit;
+        }
+
+        /// <summary>Moves to a new account generation: every earlier token and visit goes stale. Returns the new visit.</summary>
+        public int InvalidateAccount()
+        {
+            account++;
+            selection++;
+            baseId = null;
+            return ++visit;
         }
 
         /// <summary>Records the inspected base item. Re-selecting the same item keeps requests current.</summary>
@@ -64,17 +74,17 @@ namespace NodeWar.Lobby
                 return false;
             }
             activeRequest = ++request;
-            token = new InventoryRequestToken(visit, selection, activeRequest, baseId);
+            token = new InventoryRequestToken(visit, selection, activeRequest, baseId, account);
             return true;
         }
 
         /// <summary>True while the visit is open and the same item is still inspected.</summary>
         public bool IsCurrent(InventoryRequestToken token) =>
-            open && token.Visit == visit && token.Selection == selection &&
+            open && token.Account == account && token.Visit == visit && token.Selection == selection &&
             string.Equals(token.BaseID, baseId, StringComparison.Ordinal);
 
         /// <summary>True while the visit is open, regardless of which item is inspected.</summary>
-        public bool IsVisitCurrent(InventoryRequestToken token) => open && token.Visit == visit;
+        public bool IsVisitCurrent(InventoryRequestToken token) => open && token.Account == account && token.Visit == visit;
 
         public bool IsVisitCurrent(int visitId) => open && visitId == visit;
 

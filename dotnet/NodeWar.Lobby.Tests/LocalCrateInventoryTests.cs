@@ -5,7 +5,7 @@ using NUnit.Framework;
 public class LocalCrateInventoryTests
 {
     [Test]
-    public void OpeningSmallPersistsConsumptionAndPublishesFixedRewards()
+    public void OpeningSmallKeepsStockAndPublishesFixedRewards()
     {
         int held = 2;
         int saves = 0;
@@ -15,21 +15,19 @@ public class LocalCrateInventoryTests
         Assert.AreEqual(CrateSize.Small, inventory.NextSize);
         Assert.AreEqual(0, inventory.Count(CrateSize.Medium));
         Assert.IsTrue(inventory.TryOpen(CrateSize.Small, out var first));
-        Assert.AreEqual(1, held);
-        Assert.AreEqual(1, saves);
-        Assert.AreEqual(1, changes);
+        Assert.AreEqual(2, held);
+        Assert.AreEqual(0, saves);
+        Assert.AreEqual(0, changes);
         Assert.AreEqual(2, first.Count);
         Assert.AreEqual(CrateRewardKind.Coins, first[0].Kind);
         Assert.Greater(first[0].Amount, 0);
         Assert.AreEqual(CrateRewardKind.Premium, first[1].Kind);
         Assert.IsTrue(inventory.TryOpen(CrateSize.Small, out var second));
         CollectionAssert.AreEqual(first, second);
+        held = 0;
         Assert.IsFalse(inventory.TryOpen(CrateSize.Small, out var empty));
         Assert.IsEmpty(empty);
-        Assert.AreEqual(0, held);
-        Assert.AreEqual(2, saves);
-        inventory.Refresh();
-        Assert.AreEqual(2, changes);
+        Assert.AreEqual(0, saves);
     }
 
     [TestCase(CrateSize.Medium)] [TestCase((CrateSize)999)]

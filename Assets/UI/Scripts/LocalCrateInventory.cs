@@ -44,9 +44,9 @@ namespace NodeWar.Lobby
             rewards = Array.Empty<CrateReward>();
             int count = Count(size);
             if (size != CrateSize.Small || count == 0) return false;
-            saveSmallCount(count - 1);
+            // Non-consuming while rewards are placeholders: real consumption waits for a
+            // server-issued receipt, so a demo open must not burn saved stock.
             rewards = SmallRewards;
-            Refresh();
             return true;
         }
 
