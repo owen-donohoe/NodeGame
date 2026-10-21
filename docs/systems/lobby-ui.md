@@ -90,7 +90,6 @@ sources:
   - Assets/UI/Scripts/LobbyPage.cs
   - Assets/UI/Scripts/LobbyPushPage.cs
   - Assets/UI/Scripts/LobbySheet.cs
-  - Assets/UI/Scripts/LobbySwitch.cs
   - Assets/UI/Scripts/LobbyToast.cs
   - Assets/UI/Scripts/LobbyToggle.cs
   - Assets/UI/Scripts/LobbyToggleMath.cs
@@ -145,8 +144,8 @@ Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
 - `WorkshopPage` keeps browsing independent of stage inspection. `LoadoutScreenModel.Use` fills or starts replacement. Locked tags/Fixed actions identify current-era grants; headers count choices and locks. Locked items occupy stage slots; locked taps preserve replacement. `WorkshopStageBinding` maps editable picks to chosen slots.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects offers. `ShopSnap/ShopProjection` coordinate entrances/exits; LateUpdate projects after the camera.
-- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles, falling back to Unknown, and shows signed RR. Requests cannot cross visits/accounts.
-- `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header and 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back without camera movement. Only internal lists scroll; handles ellipsize. Others show stats, loadout, recent W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` requires officer status and target membership for Kick/report removal.
+- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles (Unknown fallback) and shows signed RR. Requests cannot cross visits/accounts.
+- `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header, 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back, and a Rename panel (name+tag via `Handles.SetHandleAsync`, `Renamed` redraws chrome). Only internal lists scroll. Others show stats, loadout, recent W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` gates Kick on officer status and target membership.
 - `GuildPage`: only Enter, a typing pause (300ms) or the caret raises search; focus never moves or collapses it, so result taps survive. Back, or empty background after clearing, centers it. The anchored filter bubble has RR/member sliders and Joinable only; member ranges filter locally. Results, members and announcements use ledgers; public details omit weekly progress. Membership shows progress/announcements/sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, reports log. Chat polls, capped at 200 characters.
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
