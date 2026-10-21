@@ -9,13 +9,17 @@ namespace NodeWar.Lobby.Tests
         [TestCase(false)] [TestCase(true)]
         public void DropUnavailableIsSkippedWithoutCompleteOwnership(bool partial)
         {
-            var data = LoadoutData.CreateEmpty(2);
-            data.suitIDs[1] = "suit_medic";
-            data.districtIDs[3] = "node_fortress";
+            var data = new LoadoutData
+            {
+                suitIDs = new[] { "suit_guardian", "suit_scout", "suit_medic" },
+                districtIDs = new[] { "node_barracks", "node_village", "node_forge", "node_fortress", "node_workshop" }
+            };
             var state = partial ? new PlayerState { Rank = new RankRecord { Arena = 2 }, Inventory = new InventoryRecord() } : null;
-            var editor = LoadoutRules.OwnedEditor(data, 2, state);
-            CollectionAssert.AreEqual(data.suitIDs, editor.ToLoadout().suitIDs);
-            CollectionAssert.AreEqual(data.districtIDs, editor.ToLoadout().districtIDs);
+            int arena = LoadoutRules.ArenaOrFallback(state?.Rank);
+            var editor = LoadoutRules.OwnedEditor(data, arena, state);
+            var model = new LoadoutScreenModel(editor.ToLoadout(), arena, restoreLocks: RememberGuard.HasInventoryState(state));
+            CollectionAssert.AreEqual(data.suitIDs, model.ToData().suitIDs);
+            CollectionAssert.AreEqual(data.districtIDs, model.ToData().districtIDs);
         }
 
         [Test]

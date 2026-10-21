@@ -89,7 +89,7 @@ namespace NodeWar.Lobby
         /// <summary>Ownership filtering requires a complete authoritative snapshot.</summary>
         public static LoadoutEditor OwnedEditor(LoadoutData source, int arena, PlayerState state)
         {
-            var editor = new LoadoutEditor(source, arena);
+            var editor = new LoadoutEditor(source, arena, restoreLocks: RememberGuard.HasInventoryState(state));
             if (RememberGuard.HasInventoryState(state))
                 editor.DropUnavailable(id => IsSuitOffered(id, arena) && UnlockStates.ForBase(id, state, arena).CanUse,
                     id => IsDistrictOffered(id, arena) && UnlockStates.ForBase(id, state, arena).CanUse);

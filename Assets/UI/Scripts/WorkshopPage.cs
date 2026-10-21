@@ -253,7 +253,8 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
 
             string preview = loadout.PreviewId;
-            loadout = new LoadoutScreenModel(catalog.CurrentLoadout(playerState).ToLoadout(), LoadoutRules.ArenaOrFallback(playerState?.Rank));
+            loadout = new LoadoutScreenModel(catalog.CurrentLoadout(playerState).ToLoadout(),
+                LoadoutRules.ArenaOrFallback(playerState?.Rank), restoreLocks: ownershipKnown);
             loadout.Preview(preview);
             activeTab = profile != null && profile.WorkshopTabIndex == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
             // Until rank is confirmed, fallback display must not trim a saved high deck.
