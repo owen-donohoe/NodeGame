@@ -63,7 +63,7 @@ namespace NodeWar.Lobby
             if (opacity <= 0.001f)
             {
                 scale = LobbyMotion.OpenScale;
-                x = vertical ? Mathf.Max(48f, element.layout.height) : 0f;
+                x = vertical ? LobbyMotion.SheetTravel(element.layout.height) : 0f;
                 offsetSpring = new LobbyMotion.Spring(x); scaleSpring = new LobbyMotion.Spring(scale);
             }
             else
@@ -81,7 +81,7 @@ namespace NodeWar.Lobby
         /// <summary>A bottom sheet leaves downwards at full opacity; only the scrim fades.</summary>
         public void CloseDown(Action done)
         {
-            To(0f, Mathf.Max(48f, element.layout.height) + 16f, 1f, LobbyMotion.SheetCloseSeconds, true, done, true);
+            To(0f, LobbyMotion.SheetTravel(element.layout.height) + 16f, 1f, LobbyMotion.SheetCloseSeconds, true, done, true);
         }
         private void Sample()
         {

@@ -5,6 +5,15 @@ namespace NodeWar.Lobby.Tests
 {
     public class LobbyMotionTests
     {
+        [TestCase(float.NaN, 48)]
+        [TestCase(float.PositiveInfinity, 48)]
+        [TestCase(float.NegativeInfinity, 48)]
+        [TestCase(0, 48)]
+        [TestCase(-1, 48)]
+        [TestCase(600, 600)]
+        public void SheetMotionHasFiniteTravelBeforeAndAfterLayout(float height, float expected) =>
+            Assert.AreEqual(expected, LobbyMotion.SheetTravel(height));
+
         [Test]
         public void SpringIsFrameRateIndependentAndRetargetPreservesMomentum()
         {
