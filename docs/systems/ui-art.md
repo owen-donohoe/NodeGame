@@ -48,7 +48,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: b006bbaa
+verified: 84873e6a
 ---
 
 # UI art
@@ -73,7 +73,7 @@ Contexts are Anywhere, TopBar, PageHeader, NavBar, HeadsUpDisplay, NodeSheet, In
 
 Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` customize rings and sheet readouts; stops override compatible `--ring-critical` through `--ring-rich`. `--dial-thickness`, `--dial-track-color`, `--dial-fill-color` customize `ProgressDial`. `UiArtMath.Geometry(value, fallback, min, max)` bounds procedural dimensions. `.sheet__res-readout-tint` opacity affects only the background, with expanded-bar overrides under `.sheet__res-readout--bar`.
 
-`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet` owns bottom sheets; `SetScrollable` separates fixed panels from lists. Sheets open at the top after layout and clamp resized scroll content. `MkPanel` owns centered modals, scrims and router Back. Both use `LobbyMotion` springs with 120ms fades; panels close by scaling (140ms), sheets slide down (180ms) with scrim fades. `Components.uss` exposes `mk-` classes; Tab pages are transparent; fullscreen surfaces are square/unoutlined.
+`MkCard : VisualElement` supplies `mk-card`; `MkPlayerRow.SetPlayer(handle, status)` supplies avatar/name/status and `Trailing`. `MkSheet.SetScrollable` separates fixed panels from lists; opening resets offsets after layout and resizing clamps bounds. `MkPanel` owns centered modals, scrims and router Back. Both share 44px close buttons with 20px Phosphor icons and finite pre-layout animation travel. `LobbyMotion` supplies 120ms fades, 140ms panel closing and 180ms downward sheet closing. `Components.uss` exposes `mk-` classes; tabs are transparent; fullscreen surfaces square/unoutlined.
 
 `PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
 
