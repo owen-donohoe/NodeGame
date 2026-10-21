@@ -9,6 +9,8 @@ namespace NodeWar.Cloud
     {
         public static string Check(MatchRecord record, Log log)
         {
+            if (record.protocol == 6 || record.protocol > ProtocolVersion.Current)
+                return "Incompatible protocol version; use protocol 7.";
             var header = log?.header;
             if (header == null || header.matchId != record.matchId || header.playerIds == null ||
                 header.playerIds.Length != 2 || header.playerIds[0] != record.playerIds[0] ||
@@ -19,7 +21,7 @@ namespace NodeWar.Cloud
             if (mapError != null) return mapError;
             if (log.loadouts == null || log.loadouts.Length != 2) return "Log needs two loadouts.";
             var board = log.board;
-            if (record.protocol >= 6)
+            if (record.protocol == ProtocolVersion.Current)
             {
                 string budgetError = CheckBudgets(record, log, out board);
                 if (budgetError != null) return budgetError;

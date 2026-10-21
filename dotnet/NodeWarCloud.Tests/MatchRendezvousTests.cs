@@ -24,7 +24,7 @@ namespace NodeWar.Cloud.Tests
             foreach (var state in states) state.ActiveMatch = new ActiveMatchRecord
                 { matchId = MatchId, expiresUnixSeconds = 1 + ActiveMatchClaims.LifetimeSeconds };
             players = states.Select(s => new FakeSettlementPlayerStore(s)).ToArray();
-            var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1, 1, 1, 1);
+            var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1, ProtocolVersion.Current, 1, 1);
             matches = new HookMatchStore(new InMemoryMatchRecordStore(record));
             rendezvous = new MatchRendezvous(matches, id => players[id == "p0" ? 0 : 1],
                 new MatchSettler(id => players[id == "p0" ? 0 : 1], new InventoryRules(ServerCatalog.Items)));
@@ -50,7 +50,7 @@ namespace NodeWar.Cloud.Tests
         public async Task RendezvousCarriesTheMapIdAndBoardHashToBothPlayers()
         {
             var states = new[] { MatchRecordTests.Player(), MatchRecordTests.Player() };
-            var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1, 1, 1, 1,
+            var record = MatchRecords.Create(MatchId, new[] { "p0", "p1" }, states, 1, ProtocolVersion.Current, 1, 1,
                 NodeWar.Simulation.PremadeMaps.Hourglass01Id,
                 NodeWar.Simulation.BoardHasher.Hash(NodeWar.Simulation.PremadeMaps.Hourglass01()));
             var withMap = new MatchRendezvous(new HookMatchStore(new InMemoryMatchRecordStore(record)),

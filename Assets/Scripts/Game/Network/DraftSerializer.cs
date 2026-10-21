@@ -136,7 +136,7 @@ namespace NodeWar.Network
         /// each (there are six); skins are catalog IDs, cosmetic only.
         ///
         /// Variable length. String IDs are length-prefixed UTF8, and each array
-        /// is count-prefixed. Protocol 6 accepts canonical (2,2) and (3,5) pairs,
+        /// is count-prefixed. Protocol 7 accepts only canonical (3,5) pairs,
         /// including blanks, so each peer retains the opponent's capacity mode.
         ///
         /// One byte per length caps an ID at 255 bytes; IDs are short ASCII
@@ -226,9 +226,8 @@ namespace NodeWar.Network
             int suits = data[offset];
             if (!SkipStringArray(data, ref offset) || offset >= data.Length) return false;
             int districts = data[offset];
-            // Protocol 6 mode comes from raw counts, including blanks. Save migration is never a wire rule.
-            if (!NodeWar.Backend.LoadoutCapacityPolicy.IsLowShape(suits, districts)
-                && !NodeWar.Backend.LoadoutCapacityPolicy.IsHighShape(suits, districts)) return false;
+            // Save migration is never a wire rule.
+            if (!NodeWar.Backend.LoadoutCapacityPolicy.IsHighShape(suits, districts)) return false;
             if (!SkipStringArray(data, ref offset)) return false;
             if (offset < data.Length && !SkipBytes(data, ref offset)) return false;
             if (offset < data.Length && !SkipBytes(data, ref offset)) return false;

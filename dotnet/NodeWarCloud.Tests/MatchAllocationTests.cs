@@ -68,7 +68,7 @@ namespace NodeWar.Cloud.Tests
         public async Task PreviousProtocol_IsRejected()
         {
             var roster = Roster();
-            foreach (var player in roster) player.Protocol = 5;
+            foreach (var player in roster) player.Protocol = 6;
 
             await AssertRefused(await allocation.Allocate("m", roster, Now), "Unsupported");
             Assert.That(reads, Is.Empty);
@@ -80,11 +80,11 @@ namespace NodeWar.Cloud.Tests
         public async Task CurrentProtocol_IsAccepted()
         {
             var roster = Roster();
-            foreach (var player in roster) player.Protocol = 6;
+            foreach (var player in roster) player.Protocol = 7;
 
             var result = await allocation.Allocate("m", roster, Now);
             Assert.That(result.ok, Is.True, result.error);
-            Assert.That((await matches.ReadAsync("m")).Record.protocol, Is.EqualTo(6));
+            Assert.That((await matches.ReadAsync("m")).Record.protocol, Is.EqualTo(7));
             Assert.That(matches.Writes, Is.EqualTo(1));
             Assert.That(reads, Is.EqualTo(new[] { "p0", "p1" }));
         }

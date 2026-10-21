@@ -177,7 +177,7 @@ namespace NodeWar.Cloud.Tests
                     "district.town.e0", "district.fortress.e0", "district.workshop.e0" });
             players[highSeat].Rank.Arena = 2;
             players[1 - highSeat].Rank.Arena = 1;
-            var record = MatchRecords.Create("m", new[] { "p0", "p1" }, players, 1, 6,
+            var record = MatchRecords.Create("m", new[] { "p0", "p1" }, players, 1, ProtocolVersion.Current,
                 (ushort)SimulationVersion.Current, BalanceHasher.Hash(balance), PremadeMaps.Hourglass01Id, BoardHasher.Hash(board));
             var log = new Log {
                 header = new MatchLogHeader { matchId = "m", playerIds = record.playerIds,
