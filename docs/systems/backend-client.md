@@ -36,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: e7dbc7de
+verified: cab32ace
 ---
 
 # Backend client
@@ -47,7 +47,7 @@ Client code asks services for authoritative account, inventory and ranked state.
 ## Interface
 `GameServices.InitializeAsync()` initializes UGS without requiring a player; account sign-in uses it. Data services await `EnsureReadyAsync()` for initialization plus sign-in. Editor environment follows Project Settings; Development Builds use `development`, releases `production`.
 
-`BackendServices` selects `Ugs*Service` or `Local*Service` for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `Profiles`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Social` and `Guild` remain local. `Tools > Node War > Backend > Admin` calls admin grants in Play mode. `LastKnownState`/`StateChanged` expose accepted current-account state; `RememberGuard` rejects previous-account results. Cloud module: `NodeWarCloud`.
+`BackendServices` selects `Ugs*Service` or `Local*Service` for `Account`, `PlayerState`, `Inventory`, `MatchReports`, `MatchHistory`, `Profiles`, `RankedQueue`, `RankedMatch`. Editor menu `Tools > Node War > Backend > Use Local Fakes` selects fakes; builds use UGS. `Social` and `Guild` remain local. `Tools > Node War > Backend > Admin` calls admin grants in Play mode. `LastKnownState`/`StateChanged` expose accepted current-account state; `RememberGuard` rejects previous-account results and partial inventory snapshots. Cloud module: `NodeWarCloud`.
 
 Shared `ProtocolVersion.Current` is 6; the network serializer aliases this constant, and server allocation checks it alongside simulation/content identity.
 
