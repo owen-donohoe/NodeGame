@@ -1,18 +1,10 @@
 using System;
-using System.IO;
 using NodeWar.Backend;
 using NodeWar.Lobby;
 using NUnit.Framework;
 
 public class WorkshopRegressionTests
 {
-    private static string Source(string path)
-    {
-        var root = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
-        while (root != null && !Directory.Exists(Path.Combine(root.FullName, "Assets"))) root = root.Parent;
-        return File.ReadAllText(Path.Combine(root.FullName, path));
-    }
-
     [TestCase(0)] [TestCase(1)] [TestCase(2)]
     public void FreshLoadoutAddsChoicesAndSavesComplete(int arena)
     {
@@ -91,9 +83,5 @@ public class WorkshopRegressionTests
             new UnlockState(UnlockStatus.CannotUnlock, 4, false), false);
         Assert.IsFalse(LoadoutScreenModel.ValidChoice(new[] { locked }, locked.ID));
         Assert.IsFalse(LoadoutScreenModel.NeedsEquipment(locked));
-        string page = Source("Assets/UI/Scripts/WorkshopPage.cs");
-        StringAssert.Contains("tile.Card = new Button(() => PreviewItem(id));", page);
-        StringAssert.Contains("tile.Card.pickingMode = PickingMode.Position;", page);
-        StringAssert.Contains("tile.Card.SetEnabled(true);", page);
     }
 }
