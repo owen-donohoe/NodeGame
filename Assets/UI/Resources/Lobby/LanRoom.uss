@@ -12,3 +12,5 @@
 .ui-root .lan-join-status { min-height: 24px; font-size: 13px; color: var(--mk-muted); margin: 8px 0 12px; }
 .ui-root .lan-actions { flex-direction: row; margin: 0 -4px; flex-shrink: 0; }
 .ui-root #lan-room-sheet .lan-actions > .mk-btn { flex-grow: 1; flex-basis: 0; margin: 0 4px; min-width: 0; height: 48px; }
+
+.ui-root .lan-join { padding: 12px 0 16px; }

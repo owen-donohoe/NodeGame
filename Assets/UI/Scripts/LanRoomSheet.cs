@@ -64,10 +64,11 @@ namespace NodeWar.Lobby
         private void ShowJoin(string error = null)
         {
             SetTitle("Join LAN room");
+            var form = new VisualElement(); form.AddToClassList("lan-join"); sheet.Body.Add(form);
             var field = new TextField("IP address") { value = address }; field.AddToClassList("lan-address");
-            field.RegisterValueChangedCallback(e => address = e.newValue); sheet.Body.Add(field);
-            sheet.Body.Add(GuildViews.Text(error ?? "", "lan-join-status"));
-            var actions = ActionRow(); sheet.Body.Add(actions);
+            field.RegisterValueChangedCallback(e => address = e.newValue); form.Add(field);
+            form.Add(GuildViews.Text(error ?? "", "lan-join-status"));
+            var actions = ActionRow(); form.Add(actions);
             actions.Add(GuildViews.Button("Join", () =>
             {
                 state.Connect(); SetTitle("Connecting\u2026");
