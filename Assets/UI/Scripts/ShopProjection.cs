@@ -26,6 +26,10 @@ namespace NodeWar.Lobby
             return new ShopPanelPose((float)Math.Round(x), (float)Math.Round(y + targetY - restY - panelHeight * scale * screenAnchor), scale, visible);
         }
 
+        /// <summary>Offer panels follow resisted edge travel while the stage camera stays bounded.</summary>
+        public static float EdgeOffset(float position, float pixelsPerStall)
+            => -(position - Math.Max(0f, Math.Min(ShopSnap.StallCount - 1, position))) * pixelsPerStall;
+
         public static ShopPanelPose Constrain(ShopPanelPose pose, float width, float height,
             float left, float top, float right, float bottom)
         {

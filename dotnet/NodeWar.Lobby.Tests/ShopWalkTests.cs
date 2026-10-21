@@ -171,6 +171,14 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(4, model.Position);
         }
 
+        [TestCase(-0.2f, 80f)]
+        [TestCase(0f, 0f)]
+        [TestCase(2f, 0f)]
+        [TestCase(4f, 0f)]
+        [TestCase(4.2f, -80f)]
+        public void EdgeOfferPanelFollowsResistedTravelWithoutMovingTheCamera(float position, float expected)
+            => Assert.That(ShopProjection.EdgeOffset(position, 400), Is.EqualTo(expected).Within(0.001));
+
         [TestCase(0, 1, true)]
         [TestCase(-1, 1, false)]
         [TestCase(-1.01f, 1, false)]
