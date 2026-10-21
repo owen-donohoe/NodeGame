@@ -40,7 +40,9 @@ namespace NodeWar.Lobby
         private bool closingForUse;
         private bool showAll;
         private LoadoutSort sort;
-        private PlayerState playerState;
+        private PlayerState playerState => session.State;
+        private bool equipmentSaving;
+        private bool ownershipKnown => RememberGuard.HasInventoryState(playerState);
         private Item inspectedItem;
         private readonly WorkshopInventorySession session = new WorkshopInventorySession();
 
@@ -49,7 +51,7 @@ namespace NodeWar.Lobby
         private int panelRevision;
         private readonly VisualElement itemActions = new VisualElement();
 
-        private bool inventoryBusy => session.Busy;
+        private bool inventoryBusy => equipmentSaving;
         private string inventoryMessage = "";
         private Task inventoryIdle = Task.CompletedTask;
         private LoadoutScreenModel loadout = new LoadoutScreenModel(LoadoutData.CreateEmpty());
@@ -64,7 +66,7 @@ namespace NodeWar.Lobby
         public LoadoutData StageLoadout => loadout.ToData();
         public string[] StageGrants(bool suit)
         {
-            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            int arena = playerState?.Rank?.Arena ?? 0;
             return suit ? LoadoutRules.LockedSuits(arena) : LoadoutRules.LockedDistricts(arena);
         }
         public int StageDistrictCapacity => LoadoutRules.DisplayDistrictSlots;
@@ -151,7 +153,7 @@ namespace NodeWar.Lobby
             int visit = session.BeginVisit();
             BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
             if (panelBaseId != null || inventorySheet.IsOpen) CloseItemPanel();
-            playerState = BackendServices.LastKnownState;
+            session.AcceptState(BackendServices.LastKnownState);
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
             UpdateScrollLayout();
             _ = LoadInventoryAsync(visit);
@@ -255,11 +257,11 @@ namespace NodeWar.Lobby
             loadout.Preview(preview);
             activeTab = profile != null && profile.WorkshopTabIndex == (int)Tab.Suits ? Tab.Suits : Tab.Districts;
             // Until rank is confirmed, fallback display must not trim a saved high deck.
-            if (playerState?.Rank != null) SaveToProfile();
+            if (ownershipKnown) SaveToProfile();
         }
         private void SwitchPreset(int index)
         {
-            if (!session.IsOpen || inventoryBusy) return;
+            if (!session.IsOpen || inventoryBusy || !ownershipKnown) return;
             var profile = PlayerProfile.Instance;
             if (profile == null || profile.data.activeLoadoutPreset == index) return;
             CancelReplacement();
@@ -291,7 +293,8 @@ namespace NodeWar.Lobby
             if (profile != null && profile.data.activeLoadoutPreset != clearPreset) { clearConfirmation.Close(); return; }
             clearConfirmation.Close();
             CancelReplacement(); CloseItemPanel();
-            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            // With no confirmed era, preserve every starter lock; never persist this fallback.
+            int arena = playerState?.Rank?.Arena ?? 0;
             bool browsingSuits = ViewingSuit;
             loadout = new LoadoutScreenModel(loadout.ToData(), arena);
             loadout.Browse(browsingSuits);
@@ -300,6 +303,7 @@ namespace NodeWar.Lobby
         }
         private void SaveToProfile()
         {
+            if (!ownershipKnown) { LoadoutChanged?.Invoke(); return; }
             PlayerProfile profile = PlayerProfile.Instance;
             if (profile != null) profile.SetLoadout(loadout.ToData());
             LoadoutChanged?.Invoke();
@@ -576,7 +580,7 @@ namespace NodeWar.Lobby
             // Responses issued for the previous account must neither load nor save into this one.
             int visit = session.InvalidateAccount();
             clearConfirmation?.Close(); CancelReplacement(); CloseItemPanel();
-            playerState = BackendServices.LastKnownState;
+            session.AcceptState(BackendServices.LastKnownState);
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
             _ = LoadInventoryAsync(visit);
         }
@@ -600,19 +604,19 @@ namespace NodeWar.Lobby
 
         private async Task LoadInventoryAsync(int visit)
         {
-            CancelReplacement();
-            inventoryMessage = "Loading inventory...";
-            RenderInventory();
             // A reopened page must not fetch a snapshot before an earlier save finishes.
             await inventoryIdle;
             if (!IsInventoryActive(visit) || !session.TryBeginRequest(out InventoryRequestToken token)) return;
+            var completion = new TaskCompletionSource<bool>();
+            inventoryIdle = completion.Task;
+            inventoryMessage = ownershipKnown ? "" : "Loading inventory...";
             RenderInventory();
+            bool retry = false;
             try
             {
                 PlayerState result = await BackendServices.PlayerState.GetAsync();
                 if (!IsInventoryActive(visit)) return;
-                if (result == null) throw new InvalidOperationException("Missing player state");
-                playerState = result;
+                if (!session.AcceptState(result)) throw new InvalidOperationException("Incomplete player state");
                 CollectItems();
                 LoadFromProfile();
                 Render();
@@ -620,12 +624,23 @@ namespace NodeWar.Lobby
             }
             catch (Exception)
             {
-                if (IsInventoryActive(visit)) inventoryMessage = "Couldn't load inventory. Loadout editing is still available.";
+                if (IsInventoryActive(visit))
+                {
+                    inventoryMessage = "";
+                    retry = true;
+                    if (session.Failed()) Say("Couldn't refresh inventory. Retrying...");
+                }
             }
             finally
             {
                 session.EndRequest(token);
+                completion.TrySetResult(true);
                 if (IsInventoryActive(visit)) RenderInventory();
+            }
+            if (retry)
+            {
+                await Task.Delay(session.RetrySeconds * 1000);
+                if (IsInventoryActive(visit)) _ = LoadInventoryAsync(visit);
             }
         }
 
@@ -641,6 +656,7 @@ namespace NodeWar.Lobby
             if (!session.TryBeginRequest(out InventoryRequestToken token)) return false;
 
             int visit = token.Visit;
+            equipmentSaving = true;
             var completion = new TaskCompletionSource<bool>();
             inventoryIdle = completion.Task;
             inventoryMessage = "Saving...";
@@ -654,8 +670,7 @@ namespace NodeWar.Lobby
                 else changes.Variants = map;
                 PlayerState result = await BackendServices.Inventory.EquipAsync(changes);
                 if (!session.IsCurrent(token)) return false;
-                if (result == null) throw new InvalidOperationException("Missing player state");
-                playerState = result;
+                if (!session.AcceptState(result)) throw new InvalidOperationException("Incomplete player state");
                 CollectItems();
                 LoadFromProfile();
                 Render();
@@ -668,7 +683,7 @@ namespace NodeWar.Lobby
                 if (session.IsCurrent(token))
                 {
                     inventoryMessage = "Couldn't equip. Please try again.";
-                    Say(inventoryMessage);
+                    if (session.Failed()) Say("Couldn't refresh inventory. Retrying...");
                 }
             }
             finally
@@ -676,19 +691,30 @@ namespace NodeWar.Lobby
                 bool visitCurrent = session.IsVisitCurrent(token);
                 bool current = session.IsCurrent(token);
                 session.EndRequest(token);
+                equipmentSaving = false;
                 completion.TrySetResult(true);
                 if (visitCurrent)
                 {
                     if (!current)
                     {
                         // Discard the old selection's response and get a fresh snapshot.
-                        playerState = null;
                         _ = LoadInventoryAsync(visit);
                     }
-                    else RenderInventory();
+                    else
+                    {
+                        inventoryMessage = "";
+                        RenderInventory();
+                        if (!applied) _ = RetryInventoryAsync(visit);
+                    }
                 }
             }
             return applied;
+        }
+
+        private async Task RetryInventoryAsync(int visit)
+        {
+            await Task.Delay(Math.Max(2, session.RetrySeconds) * 1000);
+            if (IsInventoryActive(visit)) await LoadInventoryAsync(visit);
         }
 
         // ===== ITEM SHEET =====
@@ -860,7 +886,7 @@ namespace NodeWar.Lobby
             bool changes = !IsSelected(inspectedItem) || index >= 0 && !choices[index].Equipped ||
                 Array.Exists(skins, choice => choice.ID == panelSkinId && !choice.Equipped);
             use.tooltip = !canUse ? "Locked - own this item and reach its required arena to use it." : !skinValid ? "Selected skin is locked." : "";
-            use.SetEnabled(!fixedStarter && !inventoryBusy && canUse && skinValid && changes); itemActions.Add(use);
+            use.SetEnabled(!fixedStarter && ownershipKnown && !inventoryBusy && canUse && skinValid && changes); itemActions.Add(use);
         }
 
         private bool IsFixedStarter(Item item) => Array.IndexOf(StageGrants(item.IsSuit), item.ID) >= 0;
@@ -946,7 +972,7 @@ namespace NodeWar.Lobby
 
         private async Task UseItemAsync()
         {
-            if (!session.IsOpen || inventoryBusy || inspectedItem == null || panelBaseId == null) return;
+            if (!session.IsOpen || !ownershipKnown || inventoryBusy || inspectedItem == null || panelBaseId == null) return;
             int revision = panelRevision;
             string baseId = panelBaseId, choiceId = panelChoiceId, skinId = panelSkinId;
             bool Current() => session.IsOpen && inventorySheet.IsOpen && revision == panelRevision && panelBaseId == baseId;

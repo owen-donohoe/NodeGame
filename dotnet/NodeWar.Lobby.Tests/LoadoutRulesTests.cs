@@ -6,6 +6,27 @@ namespace NodeWar.Lobby.Tests
 {
     public class LoadoutRulesTests
     {
+        [TestCase(false)] [TestCase(true)]
+        public void DropUnavailableIsSkippedWithoutCompleteOwnership(bool partial)
+        {
+            var data = LoadoutData.CreateEmpty(2);
+            data.suitIDs[1] = "suit_medic";
+            data.districtIDs[3] = "node_fortress";
+            var state = partial ? new PlayerState { Rank = new RankRecord { Arena = 2 }, Inventory = new InventoryRecord() } : null;
+            var editor = LoadoutRules.OwnedEditor(data, 2, state);
+            CollectionAssert.AreEqual(data.suitIDs, editor.ToLoadout().suitIDs);
+            CollectionAssert.AreEqual(data.districtIDs, editor.ToLoadout().districtIDs);
+        }
+
+        [Test]
+        public void ClearWithoutStateReappliesAllStarterLocks()
+        {
+            PlayerState state = null;
+            var model = new LoadoutScreenModel(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, state?.Rank?.Arena ?? 0);
+            model.ClearChoices();
+            CollectionAssert.AreEqual(new[] { "suit_warrior", "", "" }, model.ToData().suitIDs);
+            CollectionAssert.AreEqual(new[] { "node_farm", "node_mine", "node_town", "", "" }, model.ToData().districtIDs);
+        }
 
         private static PlayerState Owns(params string[] ids)
         {

@@ -71,6 +71,16 @@ namespace NodeWar.Lobby
             editor.DropUnavailable(id => IsSuitOffered(id, arena), id => IsDistrictOffered(id, arena));
             return editor;
         }
+
+        /// <summary>Ownership filtering requires a complete authoritative snapshot.</summary>
+        public static LoadoutEditor OwnedEditor(LoadoutData source, int arena, PlayerState state)
+        {
+            var editor = new LoadoutEditor(source, arena);
+            if (RememberGuard.HasInventoryState(state))
+                editor.DropUnavailable(id => IsSuitOffered(id, arena) && UnlockStates.ForBase(id, state, arena).CanUse,
+                    id => IsDistrictOffered(id, arena) && UnlockStates.ForBase(id, state, arena).CanUse);
+            return editor;
+        }
         public static int ArenaOrFallback(RankRecord rank)
         {
             return rank == null ? 1 : rank.Arena;

@@ -36,6 +36,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../Assets/Scripts/Backend/Shared/RememberGuard.cs" Link="Backend/RememberGuard.cs" />
     <Compile Include="LoadoutPresetBrowseTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutPresets.cs" Link="Lobby/LoadoutPresets.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutBrowse.cs" Link="Lobby/LoadoutBrowse.cs" />

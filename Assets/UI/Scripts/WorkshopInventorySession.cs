@@ -34,10 +34,29 @@ namespace NodeWar.Lobby
         public bool IsOpen => open;
         public bool Busy => activeRequest != 0;
         public string SelectedBaseID => baseId;
+        public NodeWar.Backend.PlayerState State { get; private set; }
+        public int RetrySeconds { get; private set; }
+        private bool failureShown;
+
+        public bool AcceptState(NodeWar.Backend.PlayerState state)
+        {
+            if (!NodeWar.Backend.RememberGuard.HasInventoryState(state)) return false;
+            State = state; RetrySeconds = 0; failureShown = false;
+            return true;
+        }
+
+        // One toast per outage; retries back off to thirty seconds.
+        public bool Failed()
+        {
+            RetrySeconds = RetrySeconds == 0 ? 2 : Math.Min(30, RetrySeconds * 2);
+            bool notify = !failureShown; failureShown = true;
+            return notify;
+        }
 
         /// <summary>Opens a new visit; everything issued under an earlier visit becomes stale.</summary>
         public int BeginVisit()
         {
+            State = null; RetrySeconds = 0; failureShown = false;
             open = true;
             visit++;
             selection++;
@@ -48,6 +67,7 @@ namespace NodeWar.Lobby
         /// <summary>Moves to a new account generation: every earlier token and visit goes stale. Returns the new visit.</summary>
         public int InvalidateAccount()
         {
+            State = null; RetrySeconds = 0; failureShown = false;
             account++;
             selection++;
             baseId = null;
