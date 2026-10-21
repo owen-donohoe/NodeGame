@@ -571,7 +571,7 @@
 .lb-root .mk-bigsheet { height: 78%; max-height: 78%; padding: 12px; }
 .lb-root .mk-bigsheet .mk-h2 { -unity-text-align: middle-center; }
 .lb-root .mk-handle { width: 44px; height: 5px; background-color: var(--line-light); border-radius: 3px; align-self: center; margin-top: 8px; }
-.lb-root .mk-handle-hit { height: 44px; flex-shrink: 0; margin-top: -16px; }
+.lb-root .mk-handle-hit { height: 56px; flex-shrink: 0; margin-top: -16px; }
 .lb-root .mk-bigsheet > .mk-handle-hit { margin-top: -12px; }
 .lb-root .mk-scrim { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: var(--mk-scrim); }
 .lb-root .mk-arr { position: absolute; top: 50%; translate: 0 -50%; width: 44px; height: 44px; border-width: 2px; border-color: var(--line-inner); border-radius: 22px; background-color: var(--mk-dark); color: var(--mk-sheet); padding: 0; font-size: 24px; }
@@ -630,7 +630,7 @@
 .lb-root .mk-panel__header { flex-direction: row; align-items: center; height: 44px; flex-shrink: 0; margin-bottom: 12px; }
 .lb-root .mk-panel__header > .mk-h2 { flex-grow: 1; margin-right: 8px; margin-bottom: 0; }
 .lb-root .mk-close { width: 44px; min-width: 44px; max-width: 44px; height: 44px; min-height: 44px; max-height: 44px; flex-shrink: 0; padding: 0; margin: 0; border-width: 2px; border-color: var(--line-inner); border-radius: 22px; background-color: var(--mk-dark); background-image: url("project://database/Assets/UI/Resources/Lobby/Icons/Phosphor/x-bold.svg"); background-size: 20px 20px; background-position: center; background-repeat: no-repeat; -unity-background-image-tint-color: var(--mk-sheet); }
-.lb-root .mk-sheet__close { position: absolute; right: 0; top: 0; }
+.lb-root .mk-sheet__close { position: absolute; right: 0; top: 12px; }
 .lb-root .mk-panel__body { min-height: 0; flex-shrink: 1; overflow: hidden; }
 .lb-root .mk-panel__body > Button { margin-top: 8px; }
 .lb-root .mk-panel-list { flex-shrink: 1; min-height: 0; }
