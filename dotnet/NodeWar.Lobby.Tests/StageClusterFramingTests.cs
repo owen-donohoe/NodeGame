@@ -5,6 +5,23 @@ namespace NodeWar.Lobby.Tests
 {
     public class StageClusterFramingTests
     {
+        [TestCase(390f / 844f)][TestCase(540f / 1200f)][TestCase(0.75f)]
+        public void QueueFitsWholeLoadoutInsideTransparentGap(float aspect)
+        {
+            const float top = 0.29f, bottom = 0.61f;
+            // Five ground plots plus building height and the walking-suit envelope.
+            const float x = 4.55f, y = 1.3f, z = 3.2f;
+            var frame = StageClusterFraming.Fit(aspect, top, bottom, false, x, y, z);
+            double sin = Math.Sin(frame.Pitch * Math.PI / 180), cos = Math.Cos(frame.Pitch * Math.PI / 180);
+            double tan = Math.Tan(StageClusterFraming.FieldOfView * Math.PI / 360);
+            for (int i = 0; i < 8; i++)
+            {
+                double px = (i & 1) == 0 ? -x : x, py = (i & 2) == 0 ? -y : y, pz = (i & 4) == 0 ? -z : z;
+                double depth = frame.Distance - py * sin + pz * cos;
+                Assert.That(0.5 + px / (2 * depth * tan * aspect), Is.InRange(0.0399, 0.9601));
+                Assert.That(0.5 - (py * cos + pz * sin + frame.UpOffset) / (2 * depth * tan), Is.InRange(top - 0.0001, bottom + 0.0001));
+            }
+        }
         [Test]
         public void FocusStillZoomsInAndOverviewZoomsOutWithoutChangingMotionTiming()
         {

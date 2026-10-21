@@ -9,6 +9,7 @@ namespace NodeWar.Lobby.Tests
         [TestCase("Workshop", StageShot.Districts)]
         [TestCase("Loadout", StageShot.Districts)]
         [TestCase("Home", StageShot.Districts)]
+        [TestCase("Searching", StageShot.Queue)]
         [TestCase("Social", StageShot.Ocean)]
         [TestCase("Guild", StageShot.Ocean)]
         [TestCase("unknown", StageShot.Home)]
