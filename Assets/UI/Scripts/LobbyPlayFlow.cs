@@ -14,35 +14,24 @@ namespace NodeWar.Lobby
         private readonly LobbyToast toast;
         private readonly MatchLauncher local;
         private readonly IMatchHistoryService history;
-        private readonly LobbyOverlayPanel invite, search, choice, starting;
+        private readonly LobbyOverlayPanel invite, search, starting;
         private readonly VisualElement inviteRoot = new VisualElement();
         private readonly VisualElement searchRoot = new VisualElement();
         private readonly AsyncStateView recent = new AsyncStateView();
         private readonly AsyncStateView loading = new AsyncStateView();
-        private readonly PartyWaitScreen party;
         private AsyncState recentState = new AsyncState();
         private int searchVersion;
         private string recentPlayerId;
         private bool localBusy, disposed;
         private string privateInviteCode;
-        public event Action<LobbyMode, string> PartyRequested;
-        public event Action<LobbyModeSelection> PrivateRequested;
 
         public LobbyPlayFlow(VisualElement shell, LobbyOverlayRouter router, PlayPopup legacy,
             LoadoutCatalog catalog, LobbyToast toast, IMatchHistoryService history)
         {
             this.router = router; this.legacy = legacy; this.toast = toast; this.history = history;
             local = new MatchLauncher(catalog);
-            party = new PartyWaitScreen(shell, router);
-            PartyRequested += (mode, player) => party.Open(mode, player);
-            party.InviteRequested += () =>
-            {
-                Debug.Log("[Party] Invite placeholder member (not implemented)");
-                party.SetFilled(party.Filled + 1);
-            };
             invite = Panel(shell, "Invite to 1v1", "private-invite");
             search = Panel(shell, "Search players", "invite-search");
-            choice = Panel(shell, "Party", "party-choice");
             starting = Panel(shell, "Starting a Bot match", "bot-starting");
             starting.Content.Add(loading);
             starting.Closed += () => { if (localBusy) local.Cancel(); };
@@ -83,34 +72,6 @@ namespace NodeWar.Lobby
             if (button != null) button.clicked += action;
         }
 
-        public void Play(LobbyModeSelection selection)
-        {
-            if (disposed || localBusy) return;
-            if (selection.IsPrivate) { PrivateRequested?.Invoke(selection); return; }
-            switch (selection.PlayAction)
-            {
-                case LobbyPlayAction.Ranked:
-                    if (legacy != null) legacy.OpenRankedFlow(); else toast?.Show("Ranked layout is not assigned");
-                    break;
-                case LobbyPlayAction.Bot: StartBot(); break;
-                case LobbyPlayAction.Lan: OpenCode(true); break;
-                case LobbyPlayAction.PrivateInvite:
-                    privateInviteCode = null;
-                    var inviteCodeButton = inviteRoot.Q<Button>("invite-code");
-                    if (inviteCodeButton != null) inviteCodeButton.text = "Use a join code instead";
-                    ShowInviteEmpty("No friends to invite"); invite.Open(); break;
-                case LobbyPlayAction.TeamChoice:
-                    ShowChoice(("Invite guild member", () => RequestParty(LobbyMode.Team2v2, "Guild member")),
-                        ("Invite friend", () => RequestParty(LobbyMode.Team2v2, "Friend")),
-                        ("Continue without", () => Debug.Log("[Party] 2v2 random queue (not implemented)")));
-                    break;
-                case LobbyPlayAction.FreeForAllChoice:
-                    ShowChoice(("Random", () => Debug.Log("[Party] 1v1v1v1 random queue (not implemented)")),
-                        ("Invite", () => RequestParty(LobbyMode.FreeForAll4, "Player")));
-                    break;
-            }
-        }
-
         public void OpenPrivateInvite(string joinCode)
         {
             privateInviteCode = joinCode;
@@ -118,20 +79,6 @@ namespace NodeWar.Lobby
             if (button != null) button.text = "Copy lobby join code";
             ShowInviteEmpty("Share the code with friends or guild members" );
             invite.Open();
-        }
-
-        private void RequestParty(LobbyMode mode, string source)
-        {
-            Debug.Log("[Party] Invite " + source + " (not implemented)");
-            PartyRequested?.Invoke(mode, source);
-        }
-
-        private void ShowChoice(params (string Label, Action Action)[] options)
-        {
-            choice.Content.Clear();
-            foreach (var option in options)
-                choice.Content.Add(new PaperButton(() => { choice.Close(); option.Action(); }) { text = option.Label });
-            choice.Open();
         }
 
         private void ShowInviteEmpty(string message)
@@ -147,7 +94,7 @@ namespace NodeWar.Lobby
         private void OpenCode(bool lan)
         {
             if (legacy == null) { toast?.Show("Join-code layout is not assigned"); return; }
-            invite.Close(); search.Close(); choice.Close();
+            invite.Close(); search.Close();
             legacy.OpenJoinCode(lan);
         }
 
@@ -203,7 +150,7 @@ namespace NodeWar.Lobby
 
         public void Update()
         {
-            invite.Update(); search.Update(); choice.Update(); starting.Update(); local.Update(); party.Update();
+            invite.Update(); search.Update(); starting.Update(); local.Update();
         }
 
         private bool IsSearchCurrent(int version, string playerId) => !disposed && version == searchVersion && search.IsOpen
@@ -212,12 +159,11 @@ namespace NodeWar.Lobby
         public void Dispose()
         {
             disposed = true; searchVersion++;
-            party.Dispose();
             if (legacy != null) legacy.BotRequested -= StartBot;
-            invite.Close(); search.Close(); choice.Close(); starting.Close();
+            invite.Close(); search.Close(); starting.Close();
             local.Dispose();
             invite.Root.RemoveFromHierarchy(); search.Root.RemoveFromHierarchy();
-            choice.Root.RemoveFromHierarchy(); starting.Root.RemoveFromHierarchy();
+            starting.Root.RemoveFromHierarchy();
         }
     }
 }

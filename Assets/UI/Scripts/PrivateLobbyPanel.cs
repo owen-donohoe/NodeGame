@@ -124,7 +124,7 @@ namespace NodeWar.Lobby
             if (rendered != null && rendered.Mode == model.Mode && lastRevision == model.Revision) return;
             rendered = model; lastRevision = model.Revision;
             ResetDrag();
-            TrackedText.SetText(panel.Title, model.Mode == LobbyMode.Team2v2 ? "2v2" : model.Mode == LobbyMode.FreeForAll4 ? "1v1v1v1" : "1v1");
+            TrackedText.SetText(panel.Title, ModeDefinition.For(model.Mode).DisplayName);
             arena.Clear(); Array.Clear(seats, 0, seats.Length);
             arena.EnableInClassList("private-arena--ffa", model.Mode == LobbyMode.FreeForAll4);
             var board = new VisualElement(); board.AddToClassList("private-board");

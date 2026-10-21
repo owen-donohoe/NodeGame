@@ -21,9 +21,10 @@ namespace NodeWar.Lobby
             sheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ModePicker"));
             sheet.Title.text = "Multiplayer";
             var grid = LobbyModePicker.ModeGrid("multiplayer-modes"); sheet.Body.Add(grid);
-            foreach (var mode in new[] { new LobbyModeSelection(LobbyMode.Ranked1v1, true), new LobbyModeSelection(LobbyMode.Team2v2), new LobbyModeSelection(LobbyMode.FreeForAll4) })
+            foreach (var mode in ModeDefinition.All)
             {
-                var selection = mode;
+                if (!mode.CanSelect(true)) continue;
+                var selection = new LobbyModeSelection(mode.Id, true);
                 grid.Add(LobbyModePicker.ModeCard(selection, () => Select(selection)));
             }
             sheet.Body.Add(GuildViews.Button("Back", sheet.Close));

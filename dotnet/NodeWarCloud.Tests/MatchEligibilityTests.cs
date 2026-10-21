@@ -165,6 +165,35 @@ namespace NodeWar.Cloud.Tests
             Assert.That(MatchEligibility.Check(record, log), Is.Null);
         }
 
+        [TestCase("suit.warrior", (int)SuitType.Warrior, false)]
+        [TestCase("suit.guardian", (int)SuitType.Guardian, false)]
+        [TestCase("district.farm", (int)DistrictType.Farm, true)]
+        public void CurrentRefereeAgreesWithClientUsability(string baseId, int type, bool district)
+        {
+            for (int era = 0; era < CatalogIds.EraCount; era++)
+            {
+                var (record, log) = Current(1);
+                log.draft = Array.Empty<DraftPlacement>();
+                var loadout = log.loadouts[1];
+                var eras = new int[district ? NodeWar.Lobby.LoadoutTypes.DistrictTypeCount : NodeWar.Lobby.LoadoutTypes.SuitTypeCount];
+                eras[type] = era;
+                if (district) { loadout.districts[0] = type; loadout.districtEras = eras; }
+                else { loadout.suits = new[] { type }; loadout.suitEras = eras; }
+                string id = CatalogIds.Variant(baseId, era);
+                record.players[1].OwnedVariants.Add(id);
+                bool client = LoadoutCapacityPolicy.IsVariantUsable(baseId, id, record.players[1].Rank.Arena);
+                Assert.That(MatchEligibility.Check(record, log) == null, Is.EqualTo(client), id);
+            }
+        }
+        [Test]
+        public void V7AcceptedAndV6Retired()
+        {
+            var (record, log) = Current(1);
+            Assert.That(record.protocol, Is.EqualTo(7));
+            Assert.That(MatchEligibility.Check(record, log), Is.Null);
+            record.protocol = log.header.protocol = 6;
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("Incompatible protocol"));
+        }
         internal static (MatchRecord record, Log log) Current(int highSeat)
         {
             var board = PremadeMaps.Hourglass01();
@@ -177,7 +206,7 @@ namespace NodeWar.Cloud.Tests
                     "district.town.e0", "district.fortress.e0", "district.workshop.e0" });
             players[highSeat].Rank.Arena = 2;
             players[1 - highSeat].Rank.Arena = 1;
-            var record = MatchRecords.Create("m", new[] { "p0", "p1" }, players, 1, 6,
+            var record = MatchRecords.Create("m", new[] { "p0", "p1" }, players, 1, ProtocolVersion.Current,
                 (ushort)SimulationVersion.Current, BalanceHasher.Hash(balance), PremadeMaps.Hourglass01Id, BoardHasher.Hash(board));
             var log = new Log {
                 header = new MatchLogHeader { matchId = "m", playerIds = record.playerIds,

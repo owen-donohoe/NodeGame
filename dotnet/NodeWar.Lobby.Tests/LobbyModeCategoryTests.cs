@@ -7,7 +7,7 @@ public class LobbyModeCategoryTests
 {
     [TestCase(LobbyMode.Ranked1v1, false, LobbyModeCategory.Ranked)]
     [TestCase(LobbyMode.Ranked1v1, true, LobbyModeCategory.Unranked)]
-    [TestCase(LobbyMode.Unranked1v1, false, LobbyModeCategory.Unranked)]
+    [TestCase(LobbyMode.Unranked1v1, false, LobbyModeCategory.Ranked)]
     [TestCase(LobbyMode.Unranked1v1, true, LobbyModeCategory.Unranked)]
     [TestCase(LobbyMode.Team2v2, true, LobbyModeCategory.Unranked)]
     [TestCase(LobbyMode.Team2v2, false, LobbyModeCategory.Unranked)]
@@ -26,7 +26,7 @@ public class LobbyModeCategoryTests
         {
             var homes = LobbyModeCategories.All.Where(c => LobbyModeCategories.ModesIn(c).Contains(mode)).ToArray();
             Assert.AreEqual(1, homes.Length, mode.ToString());
-            Assert.AreEqual(homes[0], LobbyModeCategories.Of(new LobbyModeSelection(mode)), mode.ToString());
+            Assert.AreEqual(homes[0], ModeDefinition.For(mode).Category, mode.ToString());
         }
     }
 

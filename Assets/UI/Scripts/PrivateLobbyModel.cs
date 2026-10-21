@@ -12,7 +12,8 @@ namespace NodeWar.Lobby
         public LobbyMode Mode { get; }
         public string HostId { get; private set; }
         public int Revision { get; private set; }
-        public int Capacity => Mode == LobbyMode.Team2v2 || Mode == LobbyMode.FreeForAll4 ? 4 : 2;
+        private ModeDefinition Definition => ModeDefinition.For(Mode);
+        public int Capacity => Definition.SeatCount;
         private readonly string[] ids = new string[4];
         private readonly string[] names = new string[4];
         public string Player(int seat) => Valid(seat) ? ids[seat] : null;
@@ -22,19 +23,15 @@ namespace NodeWar.Lobby
         public int SeatOf(string id) { for (int i = 0; i < Capacity; i++) if (id != null && ids[i] == id) return i; return -1; }
         public PrivateLobbyModel(LobbyMode mode, string hostId, string hostName)
         {
-            if (!Enum.IsDefined(typeof(LobbyMode), mode) || mode == LobbyMode.Bot || mode == LobbyMode.Lan)
+            if (!Enum.IsDefined(typeof(LobbyMode), mode) || !ModeDefinition.For(mode).SupportsPrivate)
                 throw new ArgumentOutOfRangeException(nameof(mode));
             Mode = mode; HostId = hostId; ids[0] = hostId; names[0] = hostName;
         }
-        public int Colour(int seat) => Mode == LobbyMode.Team2v2 ? seat / 2 : seat;
+        public int Colour(int seat) => Definition.Team(seat);
         public PrivateSeatPosition Position(int seat)
         {
             if (!Valid(seat)) throw new ArgumentOutOfRangeException(nameof(seat));
-            if (Mode == LobbyMode.Team2v2) return new[] { PrivateSeatPosition.TopLeft, PrivateSeatPosition.TopRight,
-                PrivateSeatPosition.BottomLeft, PrivateSeatPosition.BottomRight }[seat];
-            if (Mode == LobbyMode.FreeForAll4) return new[] { PrivateSeatPosition.Top, PrivateSeatPosition.Right,
-                PrivateSeatPosition.Bottom, PrivateSeatPosition.Left }[seat];
-            return seat == 0 ? PrivateSeatPosition.Top : PrivateSeatPosition.Bottom;
+            return Definition.Position(seat);
         }
         public bool CanStart(string actor) => Capacity == 2 && IsHost(actor) && ids[0] != null && ids[1] != null;
         public bool AddGuest(string id, string name)

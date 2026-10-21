@@ -3,22 +3,22 @@ using NUnit.Framework;
 
 public class LobbyModeTests
 {
-    [TestCase(LobbyMode.Ranked1v1, false, LobbyPlayAction.Ranked)]
-    [TestCase(LobbyMode.Ranked1v1, true, LobbyPlayAction.PrivateInvite)]
-    [TestCase(LobbyMode.Team2v2, false, LobbyPlayAction.TeamChoice)]
-    [TestCase(LobbyMode.Team2v2, true, LobbyPlayAction.PrivateInvite)]
-    [TestCase(LobbyMode.FreeForAll4, false, LobbyPlayAction.FreeForAllChoice)]
-    [TestCase(LobbyMode.FreeForAll4, true, LobbyPlayAction.PrivateInvite)]
-    [TestCase(LobbyMode.Bot, false, LobbyPlayAction.Bot)]
-    [TestCase(LobbyMode.Bot, true, LobbyPlayAction.PrivateInvite)]
-    [TestCase(LobbyMode.Lan, false, LobbyPlayAction.Lan)]
-    [TestCase(LobbyMode.Lan, true, LobbyPlayAction.PrivateInvite)]
-    [TestCase(LobbyMode.Unranked1v1, false, LobbyPlayAction.Unranked)]
-    [TestCase(LobbyMode.Unranked1v1, true, LobbyPlayAction.PrivateInvite)]
-    public void PrivateRoutesEveryModeToInvitedPlayers(LobbyMode mode, bool privateMode, LobbyPlayAction expected)
+    [TestCase(LobbyMode.Ranked1v1, false, ModeLaunchStrategy.Queue)]
+    [TestCase(LobbyMode.Ranked1v1, true, ModeLaunchStrategy.Private)]
+    [TestCase(LobbyMode.Team2v2, false, ModeLaunchStrategy.Queue)]
+    [TestCase(LobbyMode.Team2v2, true, ModeLaunchStrategy.Private)]
+    [TestCase(LobbyMode.FreeForAll4, false, ModeLaunchStrategy.Queue)]
+    [TestCase(LobbyMode.FreeForAll4, true, ModeLaunchStrategy.Private)]
+    [TestCase(LobbyMode.Bot, false, ModeLaunchStrategy.Bot)]
+    [TestCase(LobbyMode.Bot, true, ModeLaunchStrategy.Private)]
+    [TestCase(LobbyMode.Lan, false, ModeLaunchStrategy.Lan)]
+    [TestCase(LobbyMode.Lan, true, ModeLaunchStrategy.Private)]
+    [TestCase(LobbyMode.Unranked1v1, false, ModeLaunchStrategy.Queue)]
+    [TestCase(LobbyMode.Unranked1v1, true, ModeLaunchStrategy.Private)]
+    public void RoutesNormalizedSelectionThroughModeCapabilities(LobbyMode mode, bool privateMode, ModeLaunchStrategy expected)
     {
         var selection = new LobbyModeSelection(mode, privateMode);
-        Assert.AreEqual(expected, selection.PlayAction);
+        Assert.AreEqual(expected, selection.LaunchStrategy);
         Assert.IsNotEmpty(new HomeModeDisplay(selection).Name);
     }
 
@@ -42,7 +42,7 @@ public class LobbyModeTests
         var selection = new LobbyModeSelection(mode, true);
         var data = new PlayerProfileData();
         selection.Store(ref data);
-        Assert.AreEqual(mode == LobbyMode.Ranked1v1 ? LobbyMode.Unranked1v1 : mode, LobbyModeSelection.FromProfile(data).Mode);
+        Assert.AreEqual(mode == LobbyMode.Ranked1v1 || mode == LobbyMode.Bot || mode == LobbyMode.Lan ? LobbyMode.Unranked1v1 : mode, LobbyModeSelection.FromProfile(data).Mode);
         Assert.IsTrue(LobbyModeSelection.FromProfile(data).Private);
         Assert.That(data.selectedGameModeIndex, Is.InRange(0, 3));
     }
@@ -55,12 +55,12 @@ public class LobbyModeTests
     }
 
     [Test]
-    public void PrivateRankedPreferencesMigrateAndRemainUnrankedWhenPrivateTurnsOff()
+    public void PrivateRankedPreferencesMigrateAndFallBackToRankedWhenPrivateTurnsOff()
     {
         var privateMode = LobbyModeSelection.FromProfile(new PlayerProfileData
             { lobbyModeVersion = 1, selectedLobbyModeIndex = 0, privateLobbyMode = true });
         Assert.AreEqual(LobbyMode.Unranked1v1, privateMode.Mode);
-        Assert.AreEqual(LobbyMode.Unranked1v1, new LobbyModeSelection(privateMode.Mode, false).Mode);
+        Assert.AreEqual(LobbyMode.Ranked1v1, new LobbyModeSelection(privateMode.Mode, false).Mode);
         Assert.AreEqual("1v1", new HomeModeDisplay(privateMode).Name);
         Assert.AreEqual(5, (int)LobbyMode.Unranked1v1, "Existing persisted mode IDs must not move");
     }

@@ -43,6 +43,8 @@ namespace NodeWar.Cloud
                 var read = await matches.ReadAsync(matchId);
                 var record = read.Record;
                 if (record == null) return new RendezvousResult { message = "Match not found." };
+                if (record.protocol != ProtocolVersion.Current)
+                    return new RendezvousResult { message = "Incompatible protocol version; use protocol 7." };
                 int slot = Array.IndexOf(record.playerIds, callerId);
                 if (slot < 0) return new RendezvousResult { message = "Caller is not in this match." };
 
@@ -83,6 +85,8 @@ namespace NodeWar.Cloud
                 var read = await matches.ReadAsync(matchId);
                 var record = read.Record;
                 if (record == null) return;
+                if (record.protocol != ProtocolVersion.Current)
+                    return;
                 int slot = Array.IndexOf(record.playerIds, callerId);
                 if (slot < 0) return;
                 if ((record.state != MatchRecordState.Open && record.state != MatchRecordState.Pending) ||

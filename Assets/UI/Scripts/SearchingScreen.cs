@@ -25,6 +25,7 @@ namespace NodeWar.Lobby
         public VisualElement Root { get; } = new VisualElement { name = "searching-screen", pickingMode = PickingMode.Position };
         public bool IsOpen { get; private set; }
         public event Action InviteRequested;
+        public event Action LanRequested;
         public event Action<LobbyModeSelection> PrivateRequested;
         public event Action CancelRequested;
         public event Action ForfeitConfirmed;
@@ -53,7 +54,8 @@ namespace NodeWar.Lobby
         public void Open(LobbyModeSelection selection)
         {
             if (IsOpen) Close();
-            if (selection.IsPrivate) { router.CloseAll(); PrivateRequested?.Invoke(selection); return; }
+            if (selection.LaunchStrategy == ModeLaunchStrategy.Private) { router.CloseAll(); PrivateRequested?.Invoke(selection); return; }
+            if (selection.LaunchStrategy == ModeLaunchStrategy.Lan) { router.CloseAll(); LanRequested?.Invoke(); return; }
             mode = selection; navigation.Show(LobbyPageID.Home); router.CloseAll(); IsOpen = true;
             Root.style.display = DisplayStyle.Flex; Root.BringToFront(); RefreshRating(); SetChrome(true);
             invite.style.display = selection.IsPrivate || selection.Mode == LobbyMode.Team2v2 || selection.Mode == LobbyMode.FreeForAll4 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -65,13 +67,13 @@ namespace NodeWar.Lobby
         private async System.Threading.Tasks.Task StartAsync()
         {
             int request = ++version; presenter?.Dispose(); presenter = null; launcher.Cancel(); ShowSearching(0);
-            if (mode.IsPrivate || mode.Mode == LobbyMode.Team2v2 || mode.Mode == LobbyMode.FreeForAll4 || mode.Mode == LobbyMode.Lan)
+            if (!mode.Definition.CanSelect(false) || (mode.LaunchStrategy == ModeLaunchStrategy.Queue && mode.Definition.QueueKey != ModeDefinition.For(LobbyMode.Ranked1v1).QueueKey))
             {
-                Debug.Log("[Stub] Search " + new HomeModeDisplay(mode).Name); return;
+                ShowFailed("Coming soon"); return;
             }
             try
             {
-                if (mode.Mode == LobbyMode.Bot)
+                if (mode.LaunchStrategy == ModeLaunchStrategy.Bot)
                 {
                     if (!await launcher.LaunchLocalAsync(true) && IsOpen && request == version) ShowFailed(launcher.FailureMessage);
                     return;
@@ -80,8 +82,8 @@ namespace NodeWar.Lobby
                 if (!IsOpen || request != version) return;
                 if (!await launcher.PrepareAsync(true)) { if (IsOpen && request == version) ShowFailed(launcher.FailureMessage); return; }
                 if (!IsOpen || request != version) return;
-                bool rated = mode.Mode == LobbyMode.Ranked1v1;
-                IRankedQueueService queue = rated ? BackendServices.RankedQueue : new UgsRankedQueueService(false);
+                bool rated = true;
+                IRankedQueueService queue = BackendServices.RankedQueue;
                 presenter = new RankedQueuePresenter(queue, this, BackendServices.RankedMatch,
                     BackendServices.PlayerState, () => new MatchLauncherConnection(launcher, rated));
                 presenter.BotMatchAccepted += () => { if (IsOpen) _ = PlayBotAsync(); };
