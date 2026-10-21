@@ -18,6 +18,7 @@ namespace NodeWar.Lobby
         {
             sheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/TeammateInvite"));
             sheet.BindRouter(router, "teammate-invite"); shell.Add(sheet);
+            sheet.Opened += () => { sheet.BringToFront(); shell.Q("toast-dock")?.BringToFront(); };
             sheet.Body.Add(GuildViews.Text("Invite teammate", "mk-h2"));
             sheet.Body.Add(list); sheet.Body.Add(GuildViews.Button("Done", sheet.Close));
             sheet.Closed += () => version++;

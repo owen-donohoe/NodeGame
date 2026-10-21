@@ -154,6 +154,7 @@ namespace NodeWar.Lobby
         private void Show(string text, string detail = null, bool failed = false)
         {
             searching = false; title.text = text; message.text = detail ?? "";
+            message.style.display = string.IsNullOrEmpty(detail) ? DisplayStyle.None : DisplayStyle.Flex;
             retry.style.display = failed ? DisplayStyle.Flex : DisplayStyle.None;
             extra.style.display = DisplayStyle.None;
         }

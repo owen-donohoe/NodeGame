@@ -61,6 +61,12 @@ sources:
   - Assets/UI/Scripts/LobbyModeCategory.cs
   - Assets/UI/Scripts/LobbyModePicker.cs
   - Assets/UI/Scripts/LobbyPlayFlow.cs
+  - Assets/UI/Scripts/LanRoomState.cs
+  - Assets/UI/Scripts/LanRoomSheet.cs
+  - Assets/UI/Scripts/RoomView.cs
+  - Assets/UI/Scripts/QueueSearchPolicy.cs
+  - Assets/UI/Scripts/TeammateInviteRoster.cs
+  - Assets/UI/Scripts/TeammateInviteSheet.cs
   - Assets/UI/Scripts/PrivateLobbyModel.cs
   - Assets/UI/Scripts/PrivateLobbyPanel.cs
   - Assets/UI/Scripts/MatchLauncherPrivateLobby.cs
@@ -131,69 +137,61 @@ verified: b006bbaa
 # Lobby UI
 
 ## Purpose
-Loadouts, accounts/settings and match entry.
+Present account, loadout and match entry while separating local preferences from server progression.
 
 ## Interface
-`LobbyUIController` exposes `Navigation`, `Routes`, `Claims`, `Badges`, `Crates`, `ShowShot`. `NavigationController.Register/BindNavButton/Show/Has/CurrentPageID/PageShown` drives the five tabs. `LobbyPage.Root/ID/OnShow/OnHide` defines tab lifetime. `ProfilePage.Open(source)` expands self after layout preparation; `OpenFor(playerId)/Close` operates player sheets. `LobbyPushPage.Open/Close/Update` supports Settings/MatchHistory. `LobbyStage.ShowShot(StageShot)` retargets shots; `TryPick` returns `StagePick` indices. Fullscreen overlays hide the stage; Searching retains it.
+`LobbyUIController` exposes Navigation, Routes, Claims, Badges, Crates and ShowShot. `NavigationController` registers pages and drives five tabs; `LobbyPage` defines Root/ID/OnShow/OnHide. `LobbyStage` supplies shots and loadout picking. Fullscreen routes hide stage/pills; Searching preserves the ocean stage and visible, inert player/purse band.
 
-`LobbyOverlayRouter` registers close callbacks on `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled in a centered `MkPanel`, including shop purchases.
+`LobbyOverlayRouter` owns close callbacks through `LobbyRouteStack`. Back delegates to optional BackHandler, then closes the top, goes Home or confirms exit. `LobbySheet` shares MkSheet content. `LobbyContextMenu.ShowBubble` anchors player actions above rooms. Panels may confirm over sheets. Overlays and lb-no-swipe block navigation swipes.
 
-`LobbyMotion` supplies springs, progressive overscroll and critical return. `Reduced` snaps springs, clamps scrolling, fades panels 80ms, stills villagers and pans 150ms. `LobbyMouseDrag` owns touch/mouse lists; mode/shop snapping follows edge return. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills and preserves retarget velocity. `LobbyRouteStack.HidesPills` aggregates fullscreen routes.
+Match entry:
+- `HomePage` exposes PlayRequested, ModeRequested, InviteTeammateRequested, CrateRequested, SetMode and Refresh. BATTLE gates incomplete loadouts with a toast; private selections open PrivateLobbyPanel, LAN opens LanRoomSheet, queued modes open SearchingScreen. Only 2v2 shows Invite teammate.
+- `ModeDefinition` owns capabilities, queue keys, seat positions and colours. `LobbyModeSelection.FromProfile/Store` persists selection. Private converts Ranked to Unranked 1v1. `LobbyModePicker` presents the snapping category strip.
+- `SearchingScreen.Open/Close/Update` owns a fullscreen queue attempt, animated status, mode, elapsed time, ranked RR and Cancel. `QueueSearchPolicy` leaves 2v2/FFA searching forever without tickets; Ranked retains its real presenter/rendezvous. Only 2v2 offers Invite. Back cancels Home.
+- `TeammateInviteSheet.Open` reads Social friends then Guild members into separate ledgers. `TeammateInviteRoster` maps presence, caps handles and orders lobby/battle/offline then handle/ID. Multiple requests disable matching rows as Invited through the existing logging stub; delivery and incoming invites are unavailable.
+- `PrivateLobbyPanel.Open/Join` owns Relay rooms. `RoomView` shares board/seats, team colours, host drag swaps and player bubbles with LAN. `PrivateLobbyModel` owns roster/revision/start authority. Start freezes the roster and waits for acknowledgement before releasing the handshake; only 1v1 launches.
+- `LanRoomSheet.Open/Update` presents Host/Join, IP entry, connection status and retryable errors. `LanRoomState` returns Leave/Kick to choice. Host switches 1v1/2v2/FFA using the same seat table; real peers occupy seats, remaining seats stay empty. Host Play launches 1v1; four-player Play shows a placeholder toast. Player bubbles offer profile and confirmed host-only Kick.
+- `MatchLauncher.HostLanRoom/JoinLanRoom/ChangeLanRoomMode` reuse DirectUDP and the existing private-room envelope without packet changes. `LobbyPlayFlow.OpenPrivateInvite` shares/copies private codes; invite delivery is stubbed.
 
-Pages:
-- `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
-- `WorkshopPage` preserves framing and scroll during browsing/inspection. `LoadoutScreenModel.Use` fills or starts replacement; sheets remove editable used items. Locked tags/Fixed actions identify grants. `WorkshopStageBinding` maps editable picks to chosen slots; locked taps preserve replacement.
-- `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects offers. `ShopSnap/ShopProjection` coordinate entrances/exits; LateUpdate projects after the camera.
-- `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles (Unknown fallback) and shows signed RR. Requests cannot cross visits/accounts.
-- `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header, 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back, and a Rename panel (name+tag via `Handles.SetHandleAsync`, `Renamed` redraws chrome). Only internal lists scroll. Others show stats, loadout, recent W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` gates Kick on officer status and target membership.
-- `GuildPage`: only Enter, a typing pause (300ms) or the caret raises search; focus never moves or collapses it, so result taps survive. Back, or empty background after clearing, centers it. The anchored filter bubble has RR/member sliders and Joinable only; member ranges filter locally. Results, members and announcements use ledgers; public details omit weekly progress. Membership shows progress/announcements/sortable members. `HasGuild`/`MembershipChanged` drive chrome. Officers choose View/Kick/Report; kicks confirm, reports log. Chat polls, capped at 200 characters.
-- `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
-- `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
+Other surfaces:
+- `WorkshopPage` preserves camera/scroll while browsing. `LoadoutScreenModel.Use` equips or begins replacement; `WorkshopStageBinding` maps editable picks. Locked taps preserve replacement.
+- `ShopPage.Bind` shares claims/badges; BindStage projects offers. `ClaimPanel` confirms purchases/claims; `CrateScreen` owns opening sequences. `LocalCrateInventory` tracks Small progress/stock; Big maps to Medium.
+- `SocialPage.Bind` supplies TV, friends/guild and history ledgers. Offline friends expand separately; unknown historical handles use cached profiles or Unknown. Requests cannot cross visits/accounts.
+- `GuildPage` raises search on Enter/typing pause/caret, preserving result taps. Filters constrain RR/membership. Membership supplies announcements, sortable members and chat; officer actions confirm kicks and log reports.
+- `ProfilePage.Open/OpenFor/Close` presents self/other sheets through IProfileService. BindPanels wires reporting/confirmed Kick; InviteRequested opens Multiplayer. Null stats show dashes. Rename uses Handles.SetHandleAsync.
+- `SettingsPage.Changed/Flush` persists preferences; ControlsPanel shares match bindings. MatchHistoryPage reads recorded outcomes without replay playback. AccountFlow handles linking/notifications; LobbyDeepLink routes pages, profiles and stalls.
 
-`LobbyModePicker.Open(selection)` opens a parchment page with a snapping Ranked/Unranked/Other strip. `LobbyModeLayout` supplies two-row columns/empty slots. Private disables Ranked and converts its selection to Unranked 1v1; `LobbyModeSelection.FromProfile/Store` persists preferences. `SearchingScreen.Open/Close/Update` owns queue/launcher; Back cancels Home. Unranked 1v1 reuses ranked ticket/rendezvous without ranked reports; its isolated queue requires backend support. LAN/party searches and `MultiplayerSheet.Open(playerId)` log stubs.
-
-`PrivateLobbyPanel.Open(LobbyModeSelection)` hosts; `Join(code)` receives `PlayPopup` guests. Hosts drag seats to swap ; Start freezes the roster. `MatchLauncher.HostPrivate/JoinPrivate/PrivateAction` synchronize seats and host authority over lobby-only Relay packets; Start then releases the launcher handshake after roster acknowledgment. Only 1v1 starts. Four-seat layouts seat one Relay guest. `LobbyPlayFlow.OpenPrivateInvite(code)` opens the Friends/Guild chooser and copies the code; delivery is stubbed.
-
-`AccountFlow` coordinates account sheets and notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
-
-`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves choices. `LoadoutRules.MissingCounts` counts min(empty slots, owned era-usable unequipped items) per side; `IsComplete` requires zero. `MissingMessage` names a single missing side. `LoadoutEditor` protects locks; `ClearChoices` restores them. Clear confirms in `MkPanel`. Missing/partial ownership never trims or saves choices; failures retain state and retry with backoff and one toast.
-
-`UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel` modals. `SkinBand` renders the looping skin strip through `SkinBandMath`.
-
-`PlayerProfile.Instance` persists loadout/settings/mode. `LoadoutPresets` stores edits in the active preset. `LoadoutData.CreateEmpty/Normalized` produce 3/5 arrays; legacy 2/2 saves gain defaults once. `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay/RankTable` supply era progress; Premium displays as Laurels.
+`LoadoutCatalog.CurrentLoadout` resolves equipment/choices. `LoadoutRules` shares completeness and missing-item messages. LoadoutEditor protects locks; clearing confirms. Failed saves retain state with retry/backoff. `PlayerProfile` persists preferences/presets; `LoadoutData.Normalized` maintains 3/5 slots. LobbyChrome renders server handle, rank and balances; RankDisplay/RankTable supply progress. Premium displays as Laurels.
 
 ## Connects to
-- `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
-- `progression`: rank thresholds, tree eligibility, stable catalog IDs and capacity policy govern choices.
-- `match-flow`: launcher transfers frozen loadout and ordered ranked identity into `MatchConnection`.
-- `netcode`: Relay/LAN launch and `IRankedConnection` perform peer connection.
-- `draft`: complete normalized loadout arrays supply human match pools.
-- `match-ui`: shared settings/Controls and scene transition support match entry/return.
-- `input`: persisted bindings select intents; settings do not change simulation rules.
-- `ui-art`: `LobbyIcon`, district art, family/tint fallbacks and shared theme style pages.
-- `bots`: accepted queue fallback launches an unranked local bot match.
+- `backend-client`: account, inventory, social/guild, history and ranked services.
+- `progression`: rank, capacity, ownership and catalog eligibility.
+- `match-flow`: frozen loadout and ordered ranked identity enter MatchConnection.
+- `netcode`: Relay/LAN transport and ranked connection adapters.
+- `draft`: normalized human loadout pools.
+- `match-ui`: shared settings/Controls and scene transitions.
+- `input`: persisted bindings.
+- `ui-art`: shared icons, district art and theme.
+- `bots`: accepted fallback launches an unranked bot match.
 
 ## Invariants
-Rated rank/inventory belongs to backend state, not local trophies/unlock arrays. Local changes never resize an opponent's deck. Preserve frozen `LoadoutRecord.nodeIDs` storage identity. A preview click does not equip. Delayed equipment/account responses cannot redraw a different selection/account. Launch gates share completeness; canonical arrays retain blanks and match setup skips them.
+Backend owns rank/inventory. Local changes never resize opponents' decks. Preserve frozen LoadoutRecord.nodeIDs identity. Preview never equips. Delayed account/equipment responses cannot redraw another account/selection. Launch gates share completeness; canonical arrays retain blanks. Placeholders never claim backend delivery or match success.
 
 ## How it works
-`LobbyManager.useUIToolkitLobby` selects Toolkit or legacy; missing roots warn and fall back. `UIToolkitLobbySetup.SetUp` authors the root/layouts/PanelSettings through Editor tools. Scene-referenced legacy panels remain compiled.
-
-Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ has no locks. Slots always total five districts/three suits. Town and Warrior become ordinary choices when unlocked. Suit positions survive replacement; villagers lift, swap, then lower. Cancel lowers unchanged. Tree suits have variants; both kinds have skins.
-
-Launch freezes refreshed rank/choices/equipment and rechecks completeness. Ranked requires returned rank; private/offline uses arena 1. Rendezvous carries record ID/slot order. Only confirmed resizing persists.
+LobbyManager selects Toolkit or legacy fallback; UIToolkitLobbySetup authors layouts/PanelSettings through Editor tools. Era locks constrain editable choices; missing ownership never trims choices. Launch refreshes/freezes state and rechecks completeness. Ranked requires returned rank; offline/private uses arena 1. Rendezvous supplies record/slot order. Only confirmed resizing persists.
 
 ## Decisions
-- Use shared navigation/sheet/menu instances rather than independent modal stacks per page.
-- Freeze launch data rather than let asynchronous rank updates reshape an in-flight match.
-- Keep legacy code compiling behind a scene toggle rather than delete the fallback during migration.
+- Share navigation, room views, sheet and menu components rather than duplicate presentation logic.
+- Freeze launch data rather than reshape in-flight matches after rank updates.
+- Preserve compiling legacy fallback during migration.
 
 ## Pressure points
-Legacy progression and backend stubs coexist; placeholder layouts require manual verification.
+Local social/guild fakes and invite stubs remain. LAN rooms transport one real peer even with four-seat layouts. Interaction, animation, scene wiring and live peer handoff need manual verification.
 
 ## Change recipes
-- Add a page: implement lifecycle and register with navigation; overlays register close callbacks with the shared router. New layouts load from Resources/Lobby.
-- Change loadouts: update pure editor/rules, shared capacity/ownership, persistence migration and frozen-launch tests together.
+- Add a page: implement lifecycle/register navigation; overlays register cleanup with router; layouts load from Resources/Lobby.
+- Change loadouts: update pure rules, capacity/ownership, migration and frozen-launch tests together.
+- Change room layouts: update ModeDefinition and shared model/view tests; preserve roster revisions and start gating.
 
 ## Tests
-`NodeWar.Lobby.Tests` guards loadouts, histograms, settings, presenters, route/state/claim/swipe models, crate sequences, paper masks and motion/projection. Interaction, rendering and scene wiring require Editor/device verification.
+NodeWar.Lobby.Tests covers queue policy, invite ordering/presence, LAN leave/kick/layouts, private roster packets/start, loadouts, routes, claims and presentation maths. Compile-check covers Unity adapters. Editor/device verification covers rendering and real transport.

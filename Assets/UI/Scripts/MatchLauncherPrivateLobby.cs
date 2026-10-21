@@ -15,6 +15,28 @@ namespace NodeWar.Lobby
         public bool PrivateReady => PrivateLobby != null && PrivateLobby.CanStart(privateLocalId)
             && (!privateCoordinator || privatePeerCompatible);
 
+        // Reuse the room envelope and handshake over the existing DirectUDP transport.
+        public void HostLanRoom(LobbyMode mode, string id, string name)
+        {
+            ResetPrivateLobby(); useLan = true;
+            privateLobbyActive = privateCoordinator = true;
+            privateLocalId = id; privateLocalName = name;
+            PrivateLobby = new PrivateLobbyModel(mode, id, name);
+            JoinCode = null; SetRanked(null, null, NoDeadline, HandshakeTimeout);
+            BeginHost(true, null);
+        }
+        public void JoinLanRoom(string address, string id, string name)
+        {
+            ResetPrivateLobby(); JoinLan(address);
+            privateLobbyActive = true; privateLocalId = id; privateLocalName = name;
+            privateLastHeard = Time.unscaledTime;
+        }
+        public void ChangeLanRoomMode(LobbyMode mode)
+        {
+            if (!useLan || !privateCoordinator || PrivateLobby == null) return;
+            PrivateLobby = PrivateLobby.WithMode(privateLocalId, mode);
+            SendPrivateSnapshot(); Notify();
+        }
         public void HostPrivate(LobbyMode mode, string id, string name)
         {
             ResetPrivateLobby();
@@ -156,7 +178,9 @@ namespace NodeWar.Lobby
             PrivateLobby.CancelStart();
             PrivateLobby.MakeHost(privatePeerId, PrivateLobby.SeatOf(privateLocalId));
             PrivateLobby.Remove(privateLocalId, seat);
-            privatePeerId = null; privatePeerCompatible = false; Notify();
+            privatePeerId = null; privatePeerCompatible = false;
+            if (useLan) BeginHost(true, null);
+            Notify();
         }
 
         private void LeavePrivateLobby()

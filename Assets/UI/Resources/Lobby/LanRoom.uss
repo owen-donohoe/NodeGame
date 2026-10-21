@@ -1,0 +1,6 @@
+.ui-root .lan-room-page { flex-shrink: 1; min-height: 0; }
+.ui-root #lan-room-sheet .private-arena { flex-basis: 264px; flex-shrink: 1; min-height: 224px; margin-top: 16px; }
+.ui-root #lan-room-sheet .mk-btn { min-height: 44px; margin-top: 8px; }
+.ui-root #lan-room-sheet .private-face, .ui-root #lan-room-sheet .private-more { margin-top: 0; }
+.ui-root .lan-address { font-size: 16px; min-height: 48px; margin: 8px 0; }
+.ui-root #lan-room-sheet .mk-muted { min-height: 24px; margin-top: 8px; white-space: normal; }

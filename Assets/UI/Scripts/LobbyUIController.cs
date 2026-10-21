@@ -112,6 +112,7 @@ namespace NodeWar.Lobby
         private LobbyModeSelection selectedMode;
         private LobbyPlayFlow playFlow;
         private PrivateLobbyPanel privateLobbyPanel;
+        private LanRoomSheet lanRoomSheet;
         private SearchingScreen searchingScreen;
         private TeammateInviteSheet teammateInviteSheet;
         private MultiplayerSheet multiplayerSheet;
@@ -205,6 +206,7 @@ namespace NodeWar.Lobby
             multiplayerSheet?.Dispose(); multiplayerSheet = null;
             chrome?.Dispose();
             privateLobbyPanel?.Dispose(); privateLobbyPanel = null;
+            lanRoomSheet?.Dispose(); lanRoomSheet = null;
             playFlow?.Dispose();
             playFlow = null;
             workshopStage?.Dispose();
@@ -290,6 +292,7 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Update();
             playFlow?.Update();
             privateLobbyPanel?.Update();
+            lanRoomSheet?.Update();
             searchingScreen?.Update();
             burgerPanel?.Update();
             bellPanel?.Update();
@@ -359,7 +362,8 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.PrivateJoinRequested += privateLobbyPanel.Join;
             searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
             searchingScreen.PrivateRequested += privateLobbyPanel.Open;
-            searchingScreen.LanRequested += () => playPopup.OpenJoinCode(true);
+            lanRoomSheet = new LanRoomSheet(lobbyRoot, router, catalog, menu, toast, profilePage.OpenFor);
+            searchingScreen.LanRequested += lanRoomSheet.Open;
             teammateInviteSheet = new TeammateInviteSheet(lobbyRoot, router);
             RegisterPages();
             WireOverlays(root);
@@ -417,6 +421,7 @@ namespace NodeWar.Lobby
             bool pageWasMoving = false, firstPagePose = true;
             navigation.MotionChanged += (from, to, progress, moving) =>
             {
+                if (searchingScreen?.IsOpen == true) { pageWasMoving = false; firstPagePose = false; return; }
                 if (LobbyMotion.Reduced && !moving && pageWasMoving && !firstPagePose)
                 {
                     // A snapped page change gets a short camera pan rather than an instant cut.
@@ -551,7 +556,7 @@ namespace NodeWar.Lobby
 
         private void OnPlayRequested()
         {
-            if (selectedMode.LaunchStrategy == ModeLaunchStrategy.Lan) playPopup.OpenJoinCode(true);
+            if (selectedMode.LaunchStrategy == ModeLaunchStrategy.Lan) lanRoomSheet.Open();
             else if (selectedMode.IsPrivate) privateLobbyPanel.Open(selectedMode);
             else searchingScreen.Open(selectedMode);
         }
