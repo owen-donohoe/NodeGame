@@ -30,6 +30,7 @@ namespace NodeWar.Lobby
         private readonly VisualElement firstPanel, panelSpace, stageWindow, secondPanel, secondSpace, secondClip;
         private readonly VisualElement navClearance = new VisualElement { pickingMode = PickingMode.Ignore };
         private float stageBandHeight = 220f;
+        private int scrollRestoreRevision;
         private VisualElement nav;
 
         private readonly Button ownedFilter, allFilter, sortFilter;
@@ -310,6 +311,7 @@ namespace NodeWar.Lobby
 
         private void SetTab(Tab tab)
         {
+            Vector2 offset = grid.scrollOffset;
             CancelReplacement();
             CloseItemPanel();
             activeTab = tab;
@@ -317,7 +319,19 @@ namespace NodeWar.Lobby
             var profile = PlayerProfile.Instance;
             if (profile != null) profile.WorkshopTabIndex = (int)tab;
             Render();
-            if (grid != null) grid.scrollOffset = Vector2.zero;
+            RestoreScrollAfterLayout(offset);
+        }
+
+        private void RestoreScrollAfterLayout(Vector2 offset)
+        {
+            int revision = ++scrollRestoreRevision;
+            // The new card changes the spacer and then the ScrollView's range on successive layouts.
+            Root.schedule.Execute(() => Root.schedule.Execute(() =>
+            {
+                if (!session.IsOpen || revision != scrollRestoreRevision) return;
+                grid.scrollOffset = new Vector2(offset.x, Mathf.Clamp(offset.y, 0, Mathf.Max(0, grid.verticalScroller.highValue)));
+                UpdateScrollLayout();
+            }).StartingIn(1)).StartingIn(1);
         }
         private void Render()
         {
@@ -485,9 +499,11 @@ namespace NodeWar.Lobby
 
         private void PreviewItem(string id)
         {
+            Vector2 offset = grid.scrollOffset;
             Inspect(Find(suits, id) ?? Find(districts, id));
             RenderCards();
             if (inspectedItem != null) OpenItemPanel();
+            RestoreScrollAfterLayout(offset);
         }
         private bool IsSelected(Item item)
         {

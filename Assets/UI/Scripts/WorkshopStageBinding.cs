@@ -71,7 +71,6 @@ namespace NodeWar.Lobby
         private void ShowView(bool suits)
         {
             lastBottomPx = float.NaN;
-            stage.ShowShot(suits ? StageShot.Suits : StageShot.Districts);
             UpdateProjection();
         }
 
@@ -86,8 +85,7 @@ namespace NodeWar.Lobby
             string[] chosen = suit ? data.suitIDs : data.districtIDs;
             int slot = Array.IndexOf(StageSlotMap.WithGranted(chosen, page.StageGrants(suit)), id);
             if (slot < 0) return;
-            if (suit) stage.FocusSuit(slot);
-            else { stage.ShowShot(StageShot.Districts); stage.SelectDistrict(slot); }
+            if (!suit) stage.SelectDistrict(slot);
         }
         private void Used(DistrictClusterResult result)
         {
