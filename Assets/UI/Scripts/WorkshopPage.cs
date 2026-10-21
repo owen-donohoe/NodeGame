@@ -881,7 +881,9 @@ namespace NodeWar.Lobby
             if (!string.IsNullOrEmpty(inventoryMessage)) content.Add(MakeLabel(inventoryMessage, "mk-muted", "ws-item-status"));
             inventorySheet.Body.Add(content);
             itemActions.Add(SheetButton("BACK", CloseItemPanel));
-            if (!fixedStarter && IsSelected(inspectedItem))
+            bool removable = !fixedStarter && IsSelected(inspectedItem);
+            itemActions.EnableInClassList("ws-sheet-actions--remove", removable);
+            if (removable)
             {
                 var remove = SheetButton("Remove", () => RemoveItem(inspectedItem));
                 remove.SetEnabled(ownershipKnown && !inventoryBusy);
