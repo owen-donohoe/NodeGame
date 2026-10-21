@@ -50,5 +50,19 @@ namespace NodeWar.Lobby.Tests
                 Assert.That(SuitReplacementMotion.Lower(t + 0.0001f), Is.EqualTo(SuitReplacementMotion.Lower(t)).Within(0.002));
             }
         }
+
+        [Test]
+        public void Reduced_RemovesShakeAndBobButKeepsTheLift()
+        {
+            for (int slot = 0; slot < 3; slot++)
+                for (int sample = 0; sample < 3000; sample++)
+                {
+                    float t = sample * 0.001f;
+                    Assert.That(SuitReplacementMotion.Shake(t, slot, 3, true), Is.Zero);
+                    float lift = SuitReplacementMotion.Lift(t, slot, 3, true);
+                    Assert.That(lift, Is.InRange(0, 0.35001f));
+                    if (t >= SuitReplacementMotion.RiseSeconds) Assert.That(lift, Is.EqualTo(0.35f).Within(0.0001f));
+                }
+        }
     }
 }

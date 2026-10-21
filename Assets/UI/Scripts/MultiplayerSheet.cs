@@ -30,6 +30,8 @@ namespace NodeWar.Lobby
             sheet.Body.Add(GuildViews.Button("Back", sheet.Close));
         }
         private void AccountChanged(AccountInfo _) { playerId = null; sheet.Close(); }
+        /// <summary>Explicit teardown: the sheet may stay attached when only the controller is disabled.</summary>
+        public void Dispose() => BackendServices.Account.Changed -= AccountChanged;
         public void Open(string targetPlayerId = null)
         {
             playerId = targetPlayerId; sheet.BringToFront(); sheet.Open();

@@ -45,6 +45,13 @@ namespace NodeWar.Lobby
             Sample();
             fromOpacity = opacity; fromX = x; fromScale = scale;
             toOpacity = alpha; toX = offset; toScale = size;
+            if (LobbyMotion.Reduced)
+            {
+                // Fade only: no translate or scale. A closing element keeps its pose.
+                if (alpha > 0.001f) { x = toX; scale = toScale; }
+                else { toX = x; toScale = scale; }
+                fromX = x; fromScale = scale; slide = false; seconds = LobbyMotion.ReducedFadeSeconds; Apply();
+            }
             duration = seconds; started = Time.unscaledTimeAsDouble;
             closing = easeIn; completed = done; running = true; tick.Resume();
             springOpen = false;
@@ -52,6 +59,7 @@ namespace NodeWar.Lobby
         public void Open()
         {
             completed = null; Sample(); slide = false;
+            if (LobbyMotion.Reduced) { To(1f, 0f, 1f, LobbyMotion.ReducedFadeSeconds); return; }
             if (opacity <= 0.001f)
             {
                 scale = LobbyMotion.OpenScale;
@@ -82,7 +90,7 @@ namespace NodeWar.Lobby
             {
                 double now = Time.unscaledTimeAsDouble;
                 float dt = (float)(now - sampledAt); sampledAt = now;
-                offsetSpring.Step(dt, LobbyMotion.PopDamping); scaleSpring.Step(dt, LobbyMotion.PopDamping);
+                offsetSpring.Advance(dt, LobbyMotion.PopDamping); scaleSpring.Advance(dt, LobbyMotion.PopDamping);
                 x = offsetSpring.Position; scale = scaleSpring.Position;
                 opacity = Mathf.Lerp(fromOpacity, 1f, Mathf.Clamp01((float)(now - started) / LobbyMotion.FadeSeconds));
                 Apply();

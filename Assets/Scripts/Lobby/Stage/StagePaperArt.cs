@@ -18,6 +18,10 @@ namespace NodeWar.Lobby
         public static readonly Color Ink = new Color32(45, 35, 25, 255);
         private static readonly Color Parchment = new Color32(244, 233, 213, 255);
         private readonly List<Entry> textures = new List<Entry>();
+        // Shape coverage depends only on kind + size, so tints reuse one rasterisation.
+        private readonly Dictionary<long, Coverage> coverage = new Dictionary<long, Coverage>();
+
+        private sealed class Coverage { public byte[] Mask; public byte[] Alpha; }
 
         private readonly int screenHeight;
 
@@ -35,7 +39,14 @@ namespace NodeWar.Lobby
             }
 
             int size = PaperRasterizer.TextureSize(kind, screenHeight);
-            var texture = Bake(kind, tint, size, silhouette, mark, 0);
+            long key = ((long)(int)kind << 32) | (uint)size;
+            if (!coverage.TryGetValue(key, out Coverage shape))
+            {
+                shape = new Coverage();
+                shape.Mask = PaperRasterizer.RasterizeCoverage(kind, size, out shape.Alpha);
+                coverage[key] = shape;
+            }
+            var texture = Bake(kind, tint, size, silhouette, mark, 0, shape.Mask, shape.Alpha);
             textures.Add(new Entry { Kind = kind, Tint = tint, Silhouette = silhouette, Mark = mark, Texture = texture });
             return texture;
         }
@@ -45,8 +56,12 @@ namespace NodeWar.Lobby
         /// pips tell items apart when palette colours collide.
         /// </summary>
         public static Texture2D Bake(PaperKind kind, Color tint, int size, bool silhouette, int mark, int variant)
+            => Bake(kind, tint, size, silhouette, mark, variant, null, null);
+
+        private static Texture2D Bake(PaperKind kind, Color tint, int size, bool silhouette, int mark, int variant,
+            byte[] mask, byte[] alpha)
         {
-            byte[] mask = PaperRasterizer.RasterizeCoverage(kind, size, out byte[] alpha);
+            if (mask == null) mask = PaperRasterizer.RasterizeCoverage(kind, size, out alpha);
             var pixels = new Color32[mask.Length];
             Color paper = Color.Lerp(Parchment, tint, 0.5f + 0.08f * Mathf.Clamp(variant, 0, 3));
             for (int y = 0; y < size; y++)
@@ -94,6 +109,7 @@ namespace NodeWar.Lobby
         {
             for (int i = 0; i < textures.Count; i++) Object.Destroy(textures[i].Texture);
             textures.Clear();
+            coverage.Clear();
         }
     }
 }

@@ -7,7 +7,8 @@ namespace NodeWar.Lobby
     /// <summary>Bottom-up masks: 0 transparent, 1 parchment, 2 ink. No Unity dependency.</summary>
     public static class PaperRasterizer
     {
-        public const int MaxTextureSize = 1024;
+        // Mobile memory cap: 512 squared RGBA with mips is about 1.4 MiB per texture.
+        public const int MaxTextureSize = 512;
 
         // Conservative longest projected sides for the largest Home/Loadout/Market shot.
         // Capture the device size once; changing shots never regenerates textures.

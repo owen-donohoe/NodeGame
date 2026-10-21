@@ -55,7 +55,7 @@ namespace NodeWar.Lobby
         private Quaternion shotRotation;
         private double shotStarted = double.NegativeInfinity;
         private bool pageDriven, pageMoving;
-        public bool IsPanning => pageMoving || Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PageSeconds;
+        public bool IsPanning => pageMoving || Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PanSeconds;
         private StageShot currentShot = StageShot.Home;
         private float shopScroll;
 
@@ -136,6 +136,23 @@ namespace NodeWar.Lobby
 
             CacheClusterEnvelope();
 
+            // The market (about 15 textures) builds on first Shop visit; see EnsureMarket.
+            var reserved = new GameObject("Reserved ground - Social and Guild");
+            reserved.transform.SetParent(transform, false);
+            reserved.transform.localPosition = new Vector3(10f, 0f, 0f);
+
+            GetShot(StageShot.Home, out shotPosition, out shotRotation);
+            stageCamera.transform.localPosition = shotPosition;
+            stageCamera.transform.localRotation = shotRotation;
+        }
+
+        private bool marketBuilt;
+
+        /// <summary>Builds stalls, canopies and marketmen on the first Shop visit or scroll.</summary>
+        private void EnsureMarket()
+        {
+            if (marketBuilt) return;
+            marketBuilt = true;
             var market = new GameObject("Market node");
             market.transform.SetParent(transform, false);
             market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
@@ -157,13 +174,6 @@ namespace NodeWar.Lobby
                     new Vector3(-0.25f, 0.02f, -0.08f), new Vector2(0.9f, 1.65f),
                     StagePaperArt.Tints[(i + 1) % StagePaperArt.Tints.Length]).transform;
             }
-            var reserved = new GameObject("Reserved ground - Social and Guild");
-            reserved.transform.SetParent(transform, false);
-            reserved.transform.localPosition = new Vector3(10f, 0f, 0f);
-
-            GetShot(StageShot.Home, out shotPosition, out shotRotation);
-            stageCamera.transform.localPosition = shotPosition;
-            stageCamera.transform.localRotation = shotRotation;
         }
 
         private void LateUpdate()
@@ -175,6 +185,7 @@ namespace NodeWar.Lobby
 
         private void UpdateMarketVisibility()
         {
+            if (!marketBuilt) return;
             Vector3 cameraPosition = stageCamera.transform.position;
             for (int i = 0; i < marketStalls.Length; i++)
             {
@@ -202,6 +213,7 @@ namespace NodeWar.Lobby
 
         public void ShowShot(StageShot shot)
         {
+            if (shot == StageShot.Market) EnsureMarket();
             pageDriven = pageMoving = false;
             currentShot = shot;
             shotStartPosition = stageCamera.transform.localPosition;
@@ -214,6 +226,7 @@ namespace NodeWar.Lobby
         /// <summary>Sampled by the shell from the same coordinate as the page strip.</summary>
         public void ApplyPageMotion(StageShot from, StageShot to, float progress, bool moving)
         {
+            if (from == StageShot.Market || to == StageShot.Market) EnsureMarket();
             pageDriven = true; pageMoving = moving;
             currentShot = to;
             GetShot(from, out var a, out var ar);
@@ -230,6 +243,7 @@ namespace NodeWar.Lobby
         /// <summary>Continuous stall units. Applies exactly, without a camera tween.</summary>
         public void SetShopScroll(float position)
         {
+            EnsureMarket();
             shopScroll = Mathf.Clamp(position, 0f, 4f);
             if (currentShot != StageShot.Market) return;
             GetShot(StageShot.Market, out shotPosition, out shotRotation);
@@ -345,9 +359,10 @@ namespace NodeWar.Lobby
             void Include(Renderer renderer)
             {
                 if (!renderer.gameObject.activeInHierarchy) return;
+                Bounds rendererBounds = renderer.bounds; // fetched once, not per corner
                 for (int i = 0; i < 8; i++)
                 {
-                    Vector3 point = stageCamera.WorldToViewportPoint(Corner(renderer.bounds, i));
+                    Vector3 point = stageCamera.WorldToViewportPoint(Corner(rendererBounds, i));
                     if (point.z <= stageCamera.nearClipPlane) { valid = false; continue; }
                     min = Vector2.Min(min, point); max = Vector2.Max(max, point);
                 }
@@ -534,7 +549,7 @@ namespace NodeWar.Lobby
             float delta = Time.unscaledDeltaTime;
             if (!pageDriven && (IsPanning || stageCamera.transform.localPosition != shotPosition))
             {
-                float progress = (float)(Time.unscaledTimeAsDouble - shotStarted) / LobbyMotion.PageSeconds;
+                float progress = (float)(Time.unscaledTimeAsDouble - shotStarted) / LobbyMotion.PanSeconds;
                 float t = LobbyMotion.OutCubic(progress);
                 stageCamera.transform.localPosition = Vector3.Lerp(shotStartPosition, shotPosition, t);
                 stageCamera.transform.localRotation = Quaternion.Slerp(shotStartRotation, shotRotation, t);
@@ -550,7 +565,7 @@ namespace NodeWar.Lobby
                 int target = cluster.TargetSeparation(i);
                 separations[i] = Mathf.MoveTowards(separations[i], target, delta * 4f);
                 Vector3 position = slotPositions[i] + slotDirections[i] * (separations[i] * 0.65f);
-                if (cluster.Shaking && !lockedDistrictSlots[i])
+                if (cluster.Shaking && !LobbyMotion.Reduced && !lockedDistrictSlots[i])
                 {
                     Vector2 jitter = UnityEngine.Random.insideUnitCircle * 0.025f;
                     position += new Vector3(jitter.x, 0f, jitter.y);
@@ -569,17 +584,17 @@ namespace NodeWar.Lobby
                 float height = suitRenderers[i].localBounds.size.y * 1.1f;
                 if (replacingSuits && !lockedSuitSlots[i])
                 {
-                    suitLifts[i] = height * SuitReplacementMotion.Lift(suitMotionTime, i, suits.Length);
-                    suitAngles[i] = SuitReplacementMotion.Shake(suitMotionTime, i, suits.Length);
+                    suitLifts[i] = height * SuitReplacementMotion.Lift(suitMotionTime, i, suits.Length, LobbyMotion.Reduced);
+                    suitAngles[i] = SuitReplacementMotion.Shake(suitMotionTime, i, suits.Length, LobbyMotion.Reduced);
                 }
                 else if (loweringSuits)
                 {
                     float lower = SuitReplacementMotion.Lower(suitMotionTime);
                     suitLifts[i] = lowerLifts[i] * lower; suitAngles[i] = lowerAngles[i] * lower;
                 }
-                if (!replacingSuits && !loweringSuits && i != focusedSuit) Wander(i, delta);
+                if (!LobbyMotion.Reduced && !replacingSuits && !loweringSuits && i != focusedSuit) Wander(i, delta);
                 suitPops[i] += delta;
-                float pop = SuitReplacementMotion.Pop(suitPops[i]);
+                float pop = LobbyMotion.Reduced ? 1f : SuitReplacementMotion.Pop(suitPops[i]);
                 suits[i].localScale = new Vector3(0.7f / pop, 1.1f * pop, 1f);
                 // Scale about the feet rather than the centre of the quad.
                 suits[i].localPosition = suitGround[i] + Vector3.up * (suitLifts[i] + height * 0.42f * (pop - 1));

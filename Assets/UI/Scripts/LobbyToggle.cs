@@ -54,7 +54,7 @@ namespace NodeWar.Lobby
         {
             double now = Time.realtimeSinceStartupAsDouble;
             float dt = (float)(now - lastTime); lastTime = now;
-            if (!motion.Settled) { motion.Step(dt, 1f); Paint(); }
+            if (!motion.Settled) { motion.Advance(dt, 1f); Paint(); }
             if (motion.Settled) { motion.Position = motion.Target; motion.Velocity = 0f; Paint(); ticker.Pause(); }
         }
 

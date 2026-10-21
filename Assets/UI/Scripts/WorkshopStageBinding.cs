@@ -17,6 +17,7 @@ namespace NodeWar.Lobby
         private Vector2 pointerStart;
         private long pointerStartedAt;
         private bool dragged;
+        private float lastBottomPx = float.NaN;
 
         public WorkshopStageBinding(WorkshopPage page, LobbyStage stage, LobbyOverlayRouter router,
             VisualElement shell, Action refresh, NavigationController navigation = null)
@@ -51,7 +52,7 @@ namespace NodeWar.Lobby
 
         private void PageShown(LobbyPageID id)
         {
-            if (id == LobbyPageID.Workshop) { UpdateProjection(); ShowView(page.ViewingSuit); projection.Resume(); }
+            if (id == LobbyPageID.Workshop) { lastBottomPx = float.NaN; UpdateProjection(); ShowView(page.ViewingSuit); projection.Resume(); }
         }
 
         private void UpdateProjection()
@@ -59,11 +60,17 @@ namespace NodeWar.Lobby
             if (!page.IsOpen || page.Root.panel == null) return;
             var panel = page.Root.panel.visualTree.worldBound;
             stage.SetWorkshopBand((page.StageViewportTop - panel.y + 12f) / panel.height, 0.55f);
-            if (stage.TryGetClusterViewportBounds(out Rect bounds)) page.SetStageViewportBottom(1f - bounds.yMin);
+            if (!stage.TryGetClusterViewportBounds(out Rect bounds)) return;
+            // Skip layout work when the projected edge moved less than half a pixel.
+            float bottomPx = panel.y + (1f - bounds.yMin) * panel.height;
+            if (!float.IsNaN(lastBottomPx) && Mathf.Abs(bottomPx - lastBottomPx) < 0.5f) return;
+            lastBottomPx = bottomPx;
+            page.SetStageViewportBottom(1f - bounds.yMin);
         }
 
         private void ShowView(bool suits)
         {
+            lastBottomPx = float.NaN;
             stage.ShowShot(suits ? StageShot.Suits : StageShot.Districts);
             UpdateProjection();
         }

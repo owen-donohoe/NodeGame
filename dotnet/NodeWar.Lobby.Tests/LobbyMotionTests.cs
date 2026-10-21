@@ -148,5 +148,36 @@ namespace NodeWar.Lobby.Tests
             routes.Pop("searching");
             Assert.That(routes.HidesPills, Is.False);
         }
+
+        [Test]
+        public void ReducedMotion_SnapsSpringsAndPageStrip_AndShortensPans()
+        {
+            try
+            {
+                int raised = 0;
+                LobbyMotion.ReducedChanged += () => raised++;
+                LobbyMotion.SetReduced(true);
+                LobbyMotion.SetReduced(true);
+                Assert.That(raised, Is.EqualTo(1));
+                var spring = new LobbyMotion.Spring(0) { Target = 1, Velocity = 5 };
+                spring.Advance(0.001f);
+                Assert.That(spring.Position, Is.EqualTo(1));
+                Assert.That(spring.Settled, Is.True);
+                var strip = new LobbyMotion.PageStrip();
+                strip.Reset(2); strip.Go(3);
+                Assert.That(strip.Moving, Is.True);
+                strip.Step(0.001f);
+                Assert.That(strip.Moving, Is.False);
+                Assert.That(strip.Motion.Position, Is.EqualTo(strip.Slots[3]));
+                Assert.That(LobbyMotion.PanSeconds, Is.EqualTo(LobbyMotion.ReducedPanSeconds));
+                Assert.That(LobbyMotion.ReducedFadeSeconds, Is.EqualTo(0.08f));
+                LobbyMotion.SetReduced(false);
+                var normal = new LobbyMotion.Spring(0) { Target = 1 };
+                normal.Advance(0.01f);
+                Assert.That(normal.Position, Is.LessThan(1));
+                Assert.That(LobbyMotion.PanSeconds, Is.EqualTo(LobbyMotion.PageSeconds));
+            }
+            finally { LobbyMotion.SetReduced(false); }
+        }
     }
 }
