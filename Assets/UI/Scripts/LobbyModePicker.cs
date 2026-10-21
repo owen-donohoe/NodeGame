@@ -81,9 +81,9 @@ namespace NodeWar.Lobby
 
         private void AddCard(VisualElement column, LobbyMode mode)
         {
-            var card = ModeCard(new LobbyModeSelection(mode), () =>
+            var card = ModeCard(ModeDefinition.For(mode), () =>
             {
-                if (privateToggle.Value && mode == LobbyMode.Ranked1v1) return;
+                if (!ModeDefinition.For(mode).CanSelect(privateToggle.Value)) return;
                 selection = new LobbyModeSelection(mode, privateToggle.Value);
                 Selected?.Invoke(selection); Close();
             });
@@ -104,20 +104,24 @@ namespace NodeWar.Lobby
             return grid;
         }
         internal static Button ModeCard(LobbyModeSelection mode, Action selected)
+            => ModeCard(mode.Definition, selected);
+        private static Button ModeCard(ModeDefinition mode, Action selected)
         {
-            var display = new HomeModeDisplay(mode);
             var card = new Button(selected); card.AddToClassList("ui-reset-button"); card.AddToClassList("mk-btn"); card.AddToClassList("g2-mode-card");
-            card.Add(new LobbyIcon(display.Icon, LobbyIconContext.Home));
-            card.Add(GuildViews.Text(display.Name, "mk-h3")); return card;
+            card.Add(new LobbyIcon(mode.Icon, LobbyIconContext.Home));
+            card.Add(GuildViews.Text(mode.DisplayName, "mk-h3")); return card;
         }
         private void RefreshCards()
         {
             Root.Query<Button>(className: "g2-mode-card").ForEach(card =>
             {
                 if (!(card.userData is LobbyMode mode)) return;
-                bool off = selection.Private && mode == LobbyMode.Ranked1v1;
+                string reason = ModeDefinition.For(mode).DisabledReason(selection.Private);
+                bool off = reason != null;
                 card.SetEnabled(!off); card.EnableInClassList("g2-mode-card--on", mode == selection.Mode);
-                card.Q(className: "lb-modepage__private-meta").style.display = off ? DisplayStyle.Flex : DisplayStyle.None;
+                var meta = card.Q<Label>(className: "lb-modepage__private-meta");
+                meta.text = reason;
+                meta.style.display = off ? DisplayStyle.Flex : DisplayStyle.None;
             });
         }
         public void Open(LobbyModeSelection chosen)

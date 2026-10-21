@@ -13,27 +13,16 @@ namespace NodeWar.Lobby
 
         /// <summary>Private changes entry routing, not the selected mode's group.</summary>
         public static LobbyModeCategory Of(LobbyModeSelection selection)
-        {
-            switch (selection.Mode)
-            {
-                case LobbyMode.Ranked1v1: return LobbyModeCategory.Ranked;
-                case LobbyMode.Unranked1v1:
-                case LobbyMode.Team2v2:
-                case LobbyMode.FreeForAll4: return LobbyModeCategory.Unranked;
-                default: return LobbyModeCategory.Other;
-            }
-        }
+            => selection.Definition.Category;
 
         /// <summary>Display order is column first, with two rows per column.</summary>
         public static LobbyMode[] ModesIn(LobbyModeCategory category)
         {
-            switch (category)
-            {
-                case LobbyModeCategory.Ranked: return new[] { LobbyMode.Ranked1v1 };
-                case LobbyModeCategory.Unranked: return new[] { LobbyMode.Unranked1v1, LobbyMode.Team2v2, LobbyMode.FreeForAll4 };
-                case LobbyModeCategory.Other: return new[] { LobbyMode.Bot, LobbyMode.Lan };
-                default: throw new ArgumentOutOfRangeException(nameof(category));
-            }
+            if (!Enum.IsDefined(typeof(LobbyModeCategory), category)) throw new ArgumentOutOfRangeException(nameof(category));
+            var modes = new System.Collections.Generic.List<LobbyMode>();
+            foreach (var mode in ModeDefinition.All)
+                if (mode.Category == category && mode.Availability != ModeAvailability.Hidden) modes.Add(mode.Id);
+            return modes.ToArray();
         }
 
         public static int IndexOf(LobbyModeCategory category) => Array.IndexOf(All, category);
