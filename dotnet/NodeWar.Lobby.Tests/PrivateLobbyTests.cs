@@ -77,5 +77,63 @@ namespace NodeWar.Lobby.Tests
             var trailing = new byte[data.Length + 1]; System.Array.Copy(data, trailing, data.Length);
             Assert.That(PrivateLobbyPacket.TryRead(trailing, out _), Is.False);
         }
+
+        private static PrivateLobbyModel Ready()
+        {
+            var m = new PrivateLobbyModel(LobbyMode.Ranked1v1, "h", "Host");
+            m.AddGuest("g", "Guest"); return m;
+        }
+
+        [Test]
+        public void StartFreezesEveryRosterMutation()
+        {
+            var m = Ready();
+            Assert.That(m.BeginStart("g"), Is.False);
+            Assert.That(m.Phase, Is.EqualTo(PrivatePhase.Waiting));
+            Assert.That(m.BeginStart("h"), Is.True);
+            Assert.That(m.Phase, Is.EqualTo(PrivatePhase.Starting));
+            int revision = m.Revision;
+            Assert.That(m.Swap("h", 0, 1), Is.False);
+            Assert.That(m.MakeHost("h", 1), Is.False);
+            Assert.That(m.Remove("h", 1), Is.False);
+            Assert.That(m.AddGuest("x", "X"), Is.False);
+            Assert.That(m.BeginStart("h"), Is.False);
+            Assert.That(m.Revision, Is.EqualTo(revision));
+            Assert.That(m.Player(1), Is.EqualTo("g"));
+        }
+
+        [Test]
+        public void CancellingTheStartUnfreezesTheRoster()
+        {
+            var m = Ready(); m.BeginStart("h"); m.CancelStart();
+            Assert.That(m.Starting, Is.False);
+            Assert.That(m.Swap("h", 0, 1), Is.True);
+            Assert.That(m.Starting, Is.False);
+        }
+
+        [Test]
+        public void RevisionChangeCancelsPendingStartAndNeedsANewOne()
+        {
+            var m = Ready(); m.BeginStart("h"); int at = m.Revision;
+            Assert.That(m.IsStartingAt(at), Is.True);
+            // A guest leaving cancels first, then mutates (the launcher's departure path).
+            m.CancelStart(); m.Remove("h", 1);
+            Assert.That(m.Revision, Is.GreaterThan(at));
+            Assert.That(m.Starting, Is.False);
+            Assert.That(m.IsStartingAt(at), Is.False);
+            m.AddGuest("g2", "G2");
+            Assert.That(m.Starting, Is.False);
+            Assert.That(m.BeginStart("h"), Is.True);
+        }
+
+        [Test]
+        public void StaleStartFlagIsIgnoredAfterAnyRevisionChange()
+        {
+            var m = Ready(); m.BeginStart("h"); int stale = m.Revision;
+            m.CancelStart(); m.Swap("h", 0, 1);
+            Assert.That(m.IsStartingAt(stale), Is.False);
+            Assert.That(m.IsStartingAt(m.Revision), Is.False);
+            Assert.That(m.Phase, Is.EqualTo(PrivatePhase.Waiting));
+        }
     }
 }

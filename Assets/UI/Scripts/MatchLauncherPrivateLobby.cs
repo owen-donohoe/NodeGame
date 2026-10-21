@@ -11,7 +11,6 @@ namespace NodeWar.Lobby
         private string privateLocalId, privateLocalName, privatePeerId, privateBlockedId;
         private float privateNextSend;
         private float privateLastHeard;
-        private bool privateStartPending;
         private PrivateLobbyPacket privatePendingAction;
         public bool PrivateReady => PrivateLobby != null && PrivateLobby.CanStart(privateLocalId)
             && (!privateCoordinator || privatePeerCompatible);
@@ -64,9 +63,8 @@ namespace NodeWar.Lobby
                     }
                     break;
                 case 5:
-                    if (!privatePeerCompatible || !PrivateLobby.CanStart(p.Id)) return;
-                    privateStartPending = true;
-                    SendPrivateSnapshot(); return;
+                    if (!privatePeerCompatible || !PrivateLobby.BeginStart(p.Id)) return;
+                    SendPrivateSnapshot(); Notify(); return;
             }
             SendPrivateSnapshot(); Notify();
         }
@@ -90,7 +88,7 @@ namespace NodeWar.Lobby
         private void SendPrivateSnapshot()
         {
             if (PrivateLobby != null) networkManager?.Send(new PrivateLobbyPacket { Kind = 1, Model = PrivateLobby,
-                Id = privateLocalId, A = privateStartPending ? 1 : 0 }.Encode());
+                Id = privateLocalId, A = PrivateLobby.Starting ? 1 : 0 }.Encode());
         }
 
         private bool ReceivePrivateLobby(byte[] bytes)
@@ -113,7 +111,7 @@ namespace NodeWar.Lobby
                     privateLastHeard = Time.unscaledTime;
                     if (packet.Kind == 6)
                         RemoveDepartedPeer();
-                    else if (packet.Kind == 7 && privateStartPending && packet.Revision == PrivateLobby.Revision
+                    else if (packet.Kind == 7 && PrivateLobby.IsStartingAt(packet.Revision)
                         && PrivateLobby.CanStart(PrivateLobby.HostId))
                     {
                         if (!RecheckLoadout()) return true;
@@ -130,6 +128,8 @@ namespace NodeWar.Lobby
                 if (PrivateLobby != null && packet.Model.Revision < PrivateLobby.Revision) return true;
                 bool wasSeated = PrivateLobby?.SeatOf(privateLocalId) >= 0;
                 PrivateLobby = packet.Model;
+                // The flag rides with this snapshot's revision; the model never carries an older start over.
+                if (packet.A == 1) PrivateLobby.BeginStart(PrivateLobby.HostId);
                 if (privatePendingAction != null && privatePendingAction.Revision != PrivateLobby.Revision) privatePendingAction = null;
                 if (wasSeated && PrivateLobby.SeatOf(privateLocalId) < 0)
                 { Cleanup(); Fail("You were removed from the lobby.", "Ask the host for a new invitation."); }
@@ -153,9 +153,10 @@ namespace NodeWar.Lobby
         private void RemoveDepartedPeer()
         {
             int seat = PrivateLobby.SeatOf(privatePeerId);
+            PrivateLobby.CancelStart();
             PrivateLobby.MakeHost(privatePeerId, PrivateLobby.SeatOf(privateLocalId));
             PrivateLobby.Remove(privateLocalId, seat);
-            privatePeerId = null; privatePeerCompatible = privateStartPending = false; Notify();
+            privatePeerId = null; privatePeerCompatible = false; Notify();
         }
 
         private void LeavePrivateLobby()
@@ -170,7 +171,7 @@ namespace NodeWar.Lobby
         private void ResetPrivateLobby()
         {
             privateLobbyActive = privatePeerCompatible = privateCoordinator = false;
-            privateStartPending = false; privatePendingAction = null;
+            privatePendingAction = null;
             PrivateLobby = null; privatePeerId = privateBlockedId = null; privateNextSend = 0;
         }
     }
