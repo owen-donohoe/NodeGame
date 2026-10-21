@@ -12,6 +12,12 @@ namespace NodeWar.Lobby
         private readonly IProfileService profiles;
         private readonly IGuildService guild = BackendServices.Guild;
         private readonly MkPanel confirmation = new MkPanel();
+        private readonly MkPanel renamePanel = new MkPanel();
+        private readonly TextField nameField = new TextField("Name");
+        private readonly TextField tagField = new TextField("Tag");
+        private readonly Label nameNote = new Label { enableRichText = false };
+        private bool renamePending;
+        private string renameAccount;
         private GuildReportScreen report;
         private GuildView ownGuild;
         private PlayerCard shownCard;
@@ -73,6 +79,7 @@ namespace NodeWar.Lobby
         {
             confirmation.BindRouter(router, "player-kick"); host.Add(confirmation);
             confirmation.Opened += () => confirmation.BringToFront();
+            BuildRenamePanel(router, host);
             report = new GuildReportScreen(router, host, "player-report");
             moderation.RetryRequested += () => { if (IsOpen && !viewingSelf) _ = LoadModerationAsync(generation, playerId, SelfId); };
         }
@@ -119,7 +126,7 @@ namespace NodeWar.Lobby
         public void Close()
         {
             if (!IsOpen) return;
-            IsOpen = false; generation++; pointer = -1; confirmation.Close();
+            IsOpen = false; generation++; pointer = -1; confirmation.Close(); renamePanel.Close();
             awaitingReveal = false; revealLater?.Pause();
             BackendServices.StateChanged -= StateChanged; BackendServices.Account.Changed -= AccountChanged;
             if (viewingSelf)
@@ -152,7 +159,7 @@ namespace NodeWar.Lobby
             revealLater.ExecuteLater(16);
         }
         private void StateChanged() { if (IsOpen && viewingSelf) Reload(); }
-        private void AccountChanged(AccountInfo _) { report?.Close(); Close(); }
+        private void AccountChanged(AccountInfo _) { report?.Close(); renameAccount = null; Close(); }
         private void Reload() { if (IsOpen) _ = LoadAsync(++generation, playerId, SelfId); }
         private async Task LoadAsync(int request, string id, string requestedFor)
         {
@@ -228,7 +235,11 @@ namespace NodeWar.Lobby
             var rankRow = new VisualElement(); rankRow.AddToClassList("mk-row");
             var era = GuildViews.Text(rank.Name, "mk-caption"); era.AddToClassList("mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
             rankRow.Add(GuildViews.Text(rank.RR + " RR", "mk-trophy")); identity.Add(rankRow); header.Add(identity);
-            if (viewingSelf) header.Add(GuildViews.Button("Back", Close));
+            if (viewingSelf)
+            {
+                var rename = GuildViews.Button("Rename", () => BeginRename(profile.Card)); rename.name = "profile-rename";
+                header.Add(rename); header.Add(GuildViews.Button("Back", Close));
+            }
             else
             {
                 var actions = new VisualElement(); actions.AddToClassList("g2-player-actions");
@@ -252,6 +263,78 @@ namespace NodeWar.Lobby
             left.Add(ProfileViews.StatsGrid(profile.Stats)); left.Add(ProfileViews.Loadout(profile)); columns.Add(left);
             if (viewingSelf) columns.Add(ProfileViews.Ladder(profile.Card.RR));
             else left.Add(ProfileViews.History(profile.Recent));
+        }
+
+        private void BuildRenamePanel(LobbyOverlayRouter router, VisualElement host)
+        {
+            renamePanel.BindRouter(router, "profile-rename"); renamePanel.Title.text = "Rename";
+            foreach (var field in new[] { nameField, tagField })
+            {
+                field.maxLength = 16; field.AddToClassList("mk-field");
+                field.RegisterCallback<KeyDownEvent>(evt =>
+                {
+                    if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
+                    CommitRename(); evt.StopPropagation();
+                }, TrickleDown.TrickleDown);
+                renamePanel.Body.Add(field);
+            }
+            tagField.maxLength = 4; nameNote.AddToClassList("mk-caption");
+            renamePanel.Body.Add(nameNote);
+            renamePanel.Body.Add(GuildViews.Button("Cancel", renamePanel.Close));
+            renamePanel.Body.Add(GuildViews.Button("Save", CommitRename, "mk-btn--primary"));
+            renamePanel.Opened += () => renamePanel.BringToFront();
+            host.Add(renamePanel);
+        }
+
+        private void BeginRename(PlayerCard card)
+        {
+            if (!IsOpen || !viewingSelf || renamePending) return;
+            renameAccount = SelfId;
+            ProfileRecord record = BackendServices.LastKnownState?.Profile;
+            nameField.SetValueWithoutNotify(record?.Name ?? card.Name ?? "");
+            tagField.SetValueWithoutNotify(record?.Tag ?? "");
+            ShowNote(null);
+            renamePanel.Open();
+            nameField.schedule.Execute(() => { nameField.Focus(); nameField.SelectAll(); });
+        }
+
+        private async void CommitRename()
+        {
+            if (renamePending || !renamePanel.IsOpen) return;
+            string requestedFor = renameAccount;
+            string candidate = nameField.value, tag = tagField.value;
+            if (!System.Text.RegularExpressions.Regex.IsMatch(candidate, @"\A[A-Za-z0-9_-]{3,16}\z"))
+            { ShowNote("3 to 16 characters: letters, numbers, underscores or hyphens.", true); return; }
+            if (!System.Text.RegularExpressions.Regex.IsMatch(tag, @"\A[A-Z0-9]{0,4}\z"))
+            { ShowNote("Tag: 1 to 4 uppercase letters or numbers, or leave empty.", true); return; }
+            renamePending = true; nameField.SetEnabled(false); tagField.SetEnabled(false);
+            try
+            {
+                await BackendServices.Handles.SetHandleAsync(candidate, tag, Guid.NewGuid().ToString());
+                if (requestedFor != SelfId) return;
+                renamePanel.Close(); Renamed?.Invoke();
+                if (IsOpen && viewingSelf) Reload();
+            }
+            catch (Exception ex)
+            {
+                if (requestedFor == SelfId) ShowNote(ex.Message, true);
+            }
+            finally { renamePending = false; nameField.SetEnabled(true); tagField.SetEnabled(true); }
+        }
+
+        private void ShowNote(string error, bool isError = false)
+        {
+            nameNote.text = isError ? error : RenameCostHint();
+            nameNote.style.color = isError ? new Color(0.78f, 0.2f, 0.16f) : StyleKeyword.Null;
+        }
+
+        private static string RenameCostHint()
+        {
+            ProfileRecord profile = BackendServices.LastKnownState?.Profile;
+            if (profile == null || profile.LastFreeRenameUnixSeconds == 0) return "Free";
+            DateTimeOffset nextFree = DateTimeOffset.FromUnixTimeSeconds(profile.LastFreeRenameUnixSeconds).AddDays(30);
+            return DateTimeOffset.UtcNow >= nextFree ? "Free" :
+                "50 laurels, free again on " + nextFree.ToLocalTime().ToString("yyyy-MM-dd");
         }
     }
 }
