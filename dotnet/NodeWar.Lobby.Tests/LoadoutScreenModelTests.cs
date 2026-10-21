@@ -5,6 +5,25 @@ namespace NodeWar.Lobby.Tests
 {
     public class LoadoutScreenModelTests
     {
+        [TestCase(false)] [TestCase(true)]
+        public void RemoveChosenPersistsOnlyActivePresetAndCannotRemoveLocks(bool suit)
+        {
+            var source = LoadoutData.CreateEmpty(0);
+            var model = new LoadoutScreenModel(source, 0);
+            model.Inspect(suit ? "suit_guardian" : "node_barracks", suit);
+            Assert.IsTrue(model.Use(true, false));
+            var profile = new PlayerProfileData();
+            LoadoutPresets.Store(ref profile, model.ToData());
+            var other = profile.loadoutPresets[1];
+            var chosen = suit ? model.ToData().suitIDs : model.ToData().districtIDs;
+            Assert.IsTrue(model.ClearChosen(suit, System.Array.IndexOf(chosen, model.PreviewId)));
+            Assert.IsFalse(model.ClearChosen(suit, 0), "starter is fixed in era zero");
+            LoadoutPresets.Store(ref profile, model.ToData());
+            CollectionAssert.AreEqual(source.suitIDs, profile.loadout.ToLoadout().suitIDs);
+            CollectionAssert.AreEqual(source.districtIDs, profile.loadout.ToLoadout().districtIDs);
+            CollectionAssert.AreEqual(other.suitIDs, profile.loadoutPresets[1].suitIDs);
+            CollectionAssert.AreEqual(other.nodeIDs, profile.loadoutPresets[1].nodeIDs);
+        }
         [TestCase(1)] [TestCase(2)]
         public void Preview_DoesNotMutateChosen(int arena)
         {

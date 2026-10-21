@@ -423,14 +423,7 @@ namespace NodeWar.Lobby
                 var actions = new List<LobbyMenuItem> { new LobbyMenuItem("View details", () => PreviewItem(id)) };
                 Item current = Find(tab == Tab.Suits ? suits : districts, id);
                 if (current != null && tab == activeTab && IsSelected(current) && !current.Granted)
-                    actions.Add(new LobbyMenuItem("Remove from loadout", () =>
-                    {
-                        if (inventoryBusy || !session.IsOpen) return;
-                        CancelReplacement();
-                        bool suit = activeTab == Tab.Suits;
-                        var chosen = suit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
-                        if (loadout.ClearChosen(suit, Array.IndexOf(chosen, id))) { SaveToProfile(); Render(); }
-                    }));
+                    actions.Add(new LobbyMenuItem("Remove from loadout", () => RemoveItem(current)));
                 return actions;
             });
             tile.Cell.Add(tile.Card);
@@ -871,6 +864,12 @@ namespace NodeWar.Lobby
             if (!string.IsNullOrEmpty(inventoryMessage)) content.Add(MakeLabel(inventoryMessage, "mk-muted", "ws-item-status"));
             inventorySheet.Body.Add(content);
             itemActions.Add(SheetButton("BACK", CloseItemPanel));
+            if (!fixedStarter && IsSelected(inspectedItem))
+            {
+                var remove = SheetButton("Remove", () => RemoveItem(inspectedItem));
+                remove.SetEnabled(ownershipKnown && !inventoryBusy);
+                itemActions.Add(remove);
+            }
             var use = SheetButton(fixedStarter ? "Fixed" : "USE", () => _ = UseItemAsync(), "mk-btn--primary");
             bool canUse = catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse &&
                 (index < 0 || choices[index].Equipped || choices[index].Selectable);
@@ -882,6 +881,15 @@ namespace NodeWar.Lobby
         }
 
         private bool IsFixedStarter(Item item) => Array.IndexOf(StageGrants(item.IsSuit), item.ID) >= 0;
+
+        private void RemoveItem(Item item)
+        {
+            if (item == null || !session.IsOpen || inventoryBusy || !ownershipKnown || IsFixedStarter(item)) return;
+            CancelReplacement();
+            var chosen = item.IsSuit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
+            if (!loadout.ClearChosen(item.IsSuit, Array.IndexOf(chosen, item.ID))) return;
+            SaveToProfile(); Render();
+        }
 
         private int CurrentEra(Item item)
         {
