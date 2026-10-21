@@ -89,6 +89,8 @@
     <Compile Include="LobbyToggleMathTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyToggleMath.cs" Link="Lobby/LobbyToggleMath.cs" />
     <Compile Include="PrivateLobbyTests.cs" />
+    <Compile Include="AttemptGateTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Network/AttemptGate.cs" Link="Network/AttemptGate.cs" />
     <Compile Include="../../Assets/UI/Scripts/PrivateLobbyModel.cs" Link="Lobby/PrivateLobbyModel.cs" />
     <Compile Include="PartyWaitModelTests.cs" />
     <Compile Include="WorkshopStageTests.cs" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 using NodeWar.Backend;
@@ -56,58 +57,101 @@ namespace NodeWar.Network
 
         public string JoinCode { get; private set; }
         public bool RelayReady => relayReady;
+        /// <summary>Why the last relay setup failed; null if it succeeded or was cancelled.</summary>
+        public string RelayError { get; private set; }
 
-        public async void StartAsRelayHost()
+        // Every await in relay setup re-checks this; Shutdown/Destroy and a newer start make older setups stale.
+        private readonly AttemptGate relayAttempt = new AttemptGate();
+
+        /// <summary>
+        /// Creates a relay allocation. Completes true once the host driver is listening; false on failure
+        /// (see RelayError) or when cancelled by Shutdown/Destroy, in which case nothing is left behind.
+        /// </summary>
+        public async Task<bool> StartAsRelayHost()
         {
+            int attempt = relayAttempt.Begin();
             mode = TransportMode.UnityRelay;
             IsHost = true;
             isRunning = true;
             relayReady = false;
+            RelayError = null;
 
-            await GameServices.EnsureReadyAsync();
+            try
+            {
+                await GameServices.EnsureReadyAsync();
+                if (!relayAttempt.IsCurrent(attempt)) return false;
 
-            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
-            JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
+                if (!relayAttempt.IsCurrent(attempt)) return false;
 
-            // Alternative if .ToRelayServerData() isn't found:
-            //var relayServerData = AllocationUtils.ToRelayServerData(allocation, "dtls");
+                string code = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+                if (!relayAttempt.IsCurrent(attempt)) return false;
 
-            // DTLS, not plain UDP: packets are encrypted between each peer and
-            // the Relay server. Both sides must agree (ProtocolVersion 3).
-            var relayServerData = allocation.ToRelayServerData("dtls");
-            var settings = new NetworkSettings();
-            settings.WithRelayParameters(ref relayServerData);
+                // DTLS, not plain UDP: packets are encrypted between each peer and
+                // the Relay server. Both sides must agree (ProtocolVersion 3).
+                var relayServerData = allocation.ToRelayServerData("dtls");
+                var settings = new NetworkSettings();
+                settings.WithRelayParameters(ref relayServerData);
 
-            relayDriver = NetworkDriver.Create(settings);
-            relayDriver.Bind(NetworkEndpoint.AnyIpv4);
-            relayDriver.Listen();
+                // No await below: the driver is created and owned in one step.
+                JoinCode = code;
+                relayDriver = NetworkDriver.Create(settings);
+                relayDriver.Bind(NetworkEndpoint.AnyIpv4);
+                relayDriver.Listen();
 
-            relayReady = true;
-            Debug.Log("[Net] Relay host ready. Code: " + JoinCode);
+                relayReady = true;
+                Debug.Log("[Net] Relay host ready. Code: " + JoinCode);
+                return true;
+            }
+            catch (Exception e)
+            {
+                if (!relayAttempt.IsCurrent(attempt)) return false;
+                if (relayDriver.IsCreated) relayDriver.Dispose();
+                RelayError = e.Message;
+                Debug.LogWarning("[Net] Relay host setup failed: " + e.Message);
+                return false;
+            }
         }
 
-        public async void StartAsRelayClient(string joinCode)
+        /// <summary>Joins a relay allocation. Same completion contract as StartAsRelayHost.</summary>
+        public async Task<bool> StartAsRelayClient(string joinCode)
         {
+            int attempt = relayAttempt.Begin();
             mode = TransportMode.UnityRelay;
             IsHost = false;
             isRunning = true;
             relayReady = false;
+            RelayError = null;
             JoinCode = joinCode;
 
-            await GameServices.EnsureReadyAsync();
+            try
+            {
+                await GameServices.EnsureReadyAsync();
+                if (!relayAttempt.IsCurrent(attempt)) return false;
 
-            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+                JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+                if (!relayAttempt.IsCurrent(attempt)) return false;
 
-            var relayServerData = joinAllocation.ToRelayServerData("dtls");
-            var settings = new NetworkSettings();
-            settings.WithRelayParameters(ref relayServerData);
+                var relayServerData = joinAllocation.ToRelayServerData("dtls");
+                var settings = new NetworkSettings();
+                settings.WithRelayParameters(ref relayServerData);
 
-            relayDriver = NetworkDriver.Create(settings);
-            relayDriver.Bind(NetworkEndpoint.AnyIpv4);
-            relayPeerConnection = relayDriver.Connect();
+                relayDriver = NetworkDriver.Create(settings);
+                relayDriver.Bind(NetworkEndpoint.AnyIpv4);
+                relayPeerConnection = relayDriver.Connect();
 
-            relayReady = true;
-            Debug.Log("[Net] Relay client connecting.");
+                relayReady = true;
+                Debug.Log("[Net] Relay client connecting.");
+                return true;
+            }
+            catch (Exception e)
+            {
+                if (!relayAttempt.IsCurrent(attempt)) return false;
+                if (relayDriver.IsCreated) relayDriver.Dispose();
+                RelayError = e.Message;
+                Debug.LogWarning("[Net] Relay join failed: " + e.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -410,6 +454,8 @@ namespace NodeWar.Network
 
         public void Shutdown()
         {
+            relayAttempt.Invalidate(); // a relay setup still awaiting must not build a driver after this
+            relayReady = false;
             ResetDraftDelivery();
             isRunning = false;
             IsConnected = false;
