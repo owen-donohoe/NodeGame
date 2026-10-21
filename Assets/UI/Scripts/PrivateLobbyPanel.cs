@@ -54,12 +54,16 @@ namespace NodeWar.Lobby
                 if (string.IsNullOrEmpty(launcher.JoinCode)) return;
                 GUIUtility.systemCopyBuffer = launcher.JoinCode; toast?.Show("Code copied");
             });
-            codeRow.Add(copy); panel.Body.Add(codeRow);
-            panel.Body.Add(Button("Invite players", InvitePlayers));
-            panel.Body.Add(meta);
+            // The code block scrolls if the viewport is short; Start and Leave sit in a fixed footer below it.
+            var info = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            info.AddToClassList("private-info"); LobbyScrollbars.Hide(info); panel.Body.Add(info);
+            codeRow.Add(copy); info.Add(codeRow);
+            info.Add(Button("Invite players", InvitePlayers));
+            info.Add(meta);
+            var footer = new VisualElement(); footer.AddToClassList("private-footer"); panel.Body.Add(footer);
             start = Button("Start", () => launcher.PrivateAction(5));
-            start.AddToClassList("private-start"); panel.Body.Add(start);
-            panel.Body.Add(Button("Leave", panel.Close));
+            start.AddToClassList("private-start"); footer.Add(start);
+            var leave = Button("Leave", panel.Close); leave.AddToClassList("private-leave"); footer.Add(leave);
             shell.Add(panel);
             confirm.Title.text = "Remove player?"; confirm.BindRouter(router, "private-lobby-kick"); shell.Add(confirm);
         }
