@@ -125,7 +125,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: b006bbaa
+verified: 84873e6a
 ---
 
 # Lobby UI
@@ -138,7 +138,7 @@ Loadouts, accounts/settings and match entry.
 
 `LobbyOverlayRouter` registers close callbacks on `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled in a centered `MkPanel`, including shop purchases.
 
-`LobbyMotion` supplies springs, progressive overscroll and critical return. `Reduced` snaps springs, clamps scrolling, fades panels 80ms, stills villagers and pans 150ms. `LobbyMouseDrag` owns touch/mouse lists; mode/shop snapping follows edge return. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills and preserves retarget velocity. `LobbyRouteStack.HidesPills` aggregates fullscreen routes.
+`LobbyMotion` supplies springs, progressive overscroll and critical return. `Reduced` snaps springs, clamps scrolling, fades panels 80ms, stills villagers and pans 150ms. `LobbyMouseDrag` bounds pointer/wheel lists; mode/shop snapping follows edge return. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills and preserves retarget velocity. `LobbyRouteStack.HidesPills` aggregates fullscreen routes.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
@@ -150,7 +150,7 @@ Pages:
 - `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
 - `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
 
-`LobbyModePicker.Open(selection)` opens a parchment page with a snapping Ranked/Unranked/Other strip. `LobbyModeLayout` supplies two-row columns/empty slots. Private disables Ranked and converts its selection to Unranked 1v1; `LobbyModeSelection.FromProfile/Store` persists preferences. `SearchingScreen.Open/Close/Update` owns queue/launcher; Back cancels Home. Unranked 1v1 reuses ranked ticket/rendezvous without ranked reports; its isolated queue requires backend support. LAN/party searches and `MultiplayerSheet.Open(playerId)` log stubs.
+`LobbyModePicker.Open(selection)` opens a page with a half-height Ranked/Unranked/Other snapping strip. `LobbyModeLayout` supplies two-row columns/empty slots. Private disables Ranked and converts its selection to Unranked 1v1; `LobbyModeSelection.FromProfile/Store` persists preferences. `SearchingScreen.Open/Close/Update` owns queue/launcher; Back cancels Home. Unranked 1v1 reuses ranked ticket/rendezvous without ranked reports; its isolated queue requires backend support. LAN/party searches and `MultiplayerSheet.Open(playerId)` log stubs.
 
 `PrivateLobbyPanel.Open(LobbyModeSelection)` hosts; `Join(code)` receives `PlayPopup` guests. Hosts drag seats to swap ; Start freezes the roster. `MatchLauncher.HostPrivate/JoinPrivate/PrivateAction` synchronize seats and host authority over lobby-only Relay packets; Start then releases the launcher handshake after roster acknowledgment. Only 1v1 starts. Four-seat layouts seat one Relay guest. `LobbyPlayFlow.OpenPrivateInvite(code)` opens the Friends/Guild chooser and copies the code; delivery is stubbed.
 

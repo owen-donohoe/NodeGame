@@ -31,11 +31,15 @@ namespace NodeWar.Lobby
 
         internal static void ConfigureMotion(ScrollView scroll)
         {
-            // Root pointer handling owns travel and inertia for both input devices.
-            // Unrestricted lets that owner display resisted offsets without Toolkit's second spring.
-            scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Unrestricted;
+            // Native input must have bounds even when no custom gesture owns this list.
+            // Only the active owner temporarily enables resisted offsets.
+            scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Clamped;
             scroll.scrollDecelerationRate = 0;
         }
+
+        internal static Vector2 Maximum(ScrollView scroll) => new Vector2(
+            LobbyDragMath.Maximum(scroll.contentContainer.layout.width, scroll.contentViewport.layout.width),
+            LobbyDragMath.Maximum(scroll.contentContainer.layout.height, scroll.contentViewport.layout.height));
 
         private static void HideScroll(ScrollView scroll)
         {

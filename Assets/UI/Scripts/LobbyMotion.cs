@@ -31,6 +31,10 @@ namespace NodeWar.Lobby
         /// <summary>Camera pans stay visible but short when motion is reduced.</summary>
         public static float PanSeconds => Reduced ? ReducedPanSeconds : PageSeconds;
 
+        // A newly displayed sheet may not have a Yoga height until the next layout pass.
+        public static float SheetTravel(float height) => float.IsNaN(height) || float.IsInfinity(height)
+            ? 48f : Math.Max(48f, height);
+
         /// <summary>Progressive resistance, shared by pixel lists, page widths and stall units.</summary>
         public static float RubberBand(float position, float min, float max, float viewport)
         {

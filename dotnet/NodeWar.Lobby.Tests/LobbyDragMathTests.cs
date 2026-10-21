@@ -3,6 +3,34 @@ using NUnit.Framework;
 
 public class LobbyDragMathTests
 {
+    [TestCase(200, 400, -10000, 0)]
+    [TestCase(200, 400, 10000, 0)]
+    [TestCase(600, 400, -10000, 0)]
+    [TestCase(600, 400, 10000, 200)]
+    public void ContentBoundsPermitOnlyResistedOvershootThenReturn(float content, float viewport, float travel, float edge)
+    {
+        float max = LobbyDragMath.Maximum(content, viewport);
+        float position = LobbyDragMath.Elastic(travel, max, viewport), velocity = 0;
+        Assert.That(position, Is.InRange(-viewport * 0.3f, max + viewport * 0.3f));
+        for (int i = 0; i < 120; i++) LobbyDragMath.Step(ref position, ref velocity, max, 1f / 60);
+        Assert.AreEqual(edge, position);
+        Assert.AreEqual(0, velocity);
+    }
+
+    [TestCase(float.NaN, 400)]
+    [TestCase(600, float.NaN)]
+    [TestCase(float.PositiveInfinity, 400)]
+    [TestCase(600, 0)]
+    public void UnmeasuredLayoutHasNoScrollRange(float content, float viewport)
+    {
+        Assert.AreEqual(0, LobbyDragMath.Maximum(content, viewport));
+        Assert.AreEqual(0, LobbyDragMath.ClampOffset(100, content, viewport));
+    }
+
+    [TestCase(float.NaN)] [TestCase(float.NegativeInfinity)]
+    public void InvalidOffsetCannotReachToolkit(float offset) =>
+        Assert.AreEqual(0, LobbyDragMath.ClampOffset(offset, 600, 400));
+
     [TestCase(800, 200, 400, 0)]
     [TestCase(800, 600, 400, 200)]
     [TestCase(-20, 600, 400, 0)]

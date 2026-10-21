@@ -51,12 +51,16 @@ namespace NodeWar.Lobby
         {
             this.profiles = profiles ?? BackendServices.Profiles;
             Root.userData = this; Root.AddToClassList("g2-profile"); Root.AddToClassList("lb-no-swipe");
-            Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/ProfileScreen")); Root.Add(own); Root.Add(panel);
+            var styles = Resources.Load<StyleSheet>("Lobby/ProfileScreen");
+            if (styles != null) Root.styleSheets.Add(styles);
+            Root.Add(own); Root.Add(panel);
             panel.SetScrollable(false);
             own.AddToClassList("g2-profile-own"); own.Add(stateView);
             ownMotion = new LobbyElementMotion(own);
             ownMotion.Set(0f, 0f, LobbyMotion.ClosedScale);
-            safeArea = new SafeAreaBinder(own); panel.Closed += Close;
+            safeArea = new SafeAreaBinder(own);
+            // Switching to self closes the old sheet without closing the new profile.
+            panel.Closed += () => { if (!viewingSelf) Close(); };
             stateView.Content.AddToClassList("g2-profile-content");
             stateView.AddToClassList("g2-profile-state"); stateView.RetryRequested += Reload;
             Root.style.display = DisplayStyle.None;
@@ -92,17 +96,28 @@ namespace NodeWar.Lobby
         public void OpenFor(string id)
         {
             if (string.IsNullOrEmpty(id)) return;
+            if (IsOpen && playerId == id && account == SelfId) return;
             hideLater?.Pause();
+            revealLater?.Pause();
             bool hidden = Root.style.display == DisplayStyle.None;
             bool changed = playerId != id || account != SelfId;
             playerId = id; account = SelfId; viewingSelf = id == SelfId; ownGuild = null;
-            if (changed) shownCard = null; else if (!viewingSelf) RenderFooter();
+            if (changed) { shownCard = null; footer = null; } else if (!viewingSelf) RenderFooter();
             if (changed) { state = new AsyncState(); stateView.Content.Clear(); }
             Root.EnableInClassList("g2-profile--self", viewingSelf);
             Root.EnableInClassList("g2-profile--player", !viewingSelf);
             own.style.display = viewingSelf ? DisplayStyle.Flex : DisplayStyle.None;
-            if (viewingSelf) { panel.Close(); own.Add(stateView); }
-            else { panel.Body.Add(stateView); }
+            if (viewingSelf)
+            {
+                panel.Close();
+                if (stateView.parent != own) own.Add(stateView);
+            }
+            else
+            {
+                // Cancel a self-close completion that could otherwise hide this new sheet.
+                ownMotion.Hold();
+                if (stateView.parent != panel.Body) panel.Body.Add(stateView);
+            }
             BackendServices.StateChanged -= StateChanged; BackendServices.StateChanged += StateChanged;
             BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
             bool opening = !IsOpen; IsOpen = true; Root.style.display = DisplayStyle.Flex;
@@ -169,7 +184,7 @@ namespace NodeWar.Lobby
                 PublicProfileView profile = await profiles.GetAsync(id);
                 if (!Active(request, id, requestedFor)) return;
                 stateView.Content.Clear();
-                if (profile?.Card == null) { state = state.Reduce(AsyncResult.Empty, Now); stateView.Render(state, Now, "This profile is unavailable."); RevealPreparedLayout(); return; }
+                if (profile?.Card == null) { shownCard = null; footer = null; state = state.Reduce(AsyncResult.Empty, Now); stateView.Render(state, Now, "This profile is unavailable."); RevealPreparedLayout(); return; }
                 shownCard = profile.Card; Render(profile);
                 if (!viewingSelf) _ = LoadModerationAsync(request, id, requestedFor);
                 state = state.Reduce(AsyncResult.Ready, Now); stateView.Render(state, Now);
@@ -295,7 +310,11 @@ namespace NodeWar.Lobby
             tagField.SetValueWithoutNotify(record?.Tag ?? "");
             ShowNote(null);
             renamePanel.Open();
-            nameField.schedule.Execute(() => { nameField.Focus(); nameField.SelectAll(); });
+            nameField.schedule.Execute(() =>
+            {
+                if (!IsOpen || !viewingSelf || !renamePanel.IsOpen || nameField.panel == null) return;
+                nameField.Focus(); nameField.SelectAll();
+            });
         }
 
         private async void CommitRename()

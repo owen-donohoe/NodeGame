@@ -3,6 +3,17 @@ using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
+    /// <summary>The single lobby close control for centered panels and bottom sheets.</summary>
+    internal static class LobbyCloseButton
+    {
+        public static Button Create(Action close)
+        {
+            var button = new Button(close) { text = "", tooltip = "Close" };
+            button.AddToClassList("ui-reset-button"); button.AddToClassList("mk-close");
+            return button;
+        }
+    }
+
     /// <summary>A fixed modal card; only lists placed inside Body may scroll.</summary>
     [UxmlElement]
     public partial class MkPanel : VisualElement
@@ -27,8 +38,8 @@ namespace NodeWar.Lobby
             Surface.AddToClassList("mk-panel"); hierarchy.Add(Surface);
             var header = new VisualElement(); header.AddToClassList("mk-panel__header");
             Title.AddToClassList("mk-h2"); Title.AddToClassList("mk-ellipsis"); header.Add(Title);
-            CloseButton = new Button(Close) { name = "panel-close", text = "", tooltip = "Close" };
-            CloseButton.AddToClassList("mk-btn"); CloseButton.AddToClassList("mk-panel__close"); header.Add(CloseButton);
+            CloseButton = LobbyCloseButton.Create(Close); CloseButton.name = "panel-close";
+            CloseButton.AddToClassList("mk-panel__close"); header.Add(CloseButton);
             Surface.Add(header); Body.AddToClassList("mk-panel__body"); Surface.Add(Body);
             Scrim.RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
             style.display = DisplayStyle.None;

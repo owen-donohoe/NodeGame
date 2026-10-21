@@ -9,8 +9,12 @@ namespace NodeWar.Lobby
         public static bool PassedThreshold(float dx, float dy) =>
             Math.Max(Math.Abs(dx), Math.Abs(dy)) >= Threshold;
 
+        public static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        public static float Maximum(float contentSize, float viewportSize) =>
+            IsFinite(contentSize) && IsFinite(viewportSize) && viewportSize > 0
+                ? Math.Max(0, contentSize - viewportSize) : 0;
         public static float ClampOffset(float offset, float contentSize, float viewportSize) =>
-            Math.Max(0, Math.Min(Math.Max(0, contentSize - viewportSize), offset));
+            IsFinite(offset) ? Math.Max(0, Math.Min(Maximum(contentSize, viewportSize), offset)) : 0;
 
         public static float Elastic(float position, float max, float viewport)
         {
