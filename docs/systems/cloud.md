@@ -37,7 +37,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/RankedMatchModule.cs
   - dotnet/NodeWarCloud/NodeWarCloud/ServerCatalog.cs
   - dotnet/NodeWarCloud/NodeWarCloud/WalletService.cs
-verified: 3c1b562c
+verified: cb532363
 ---
 
 # Cloud
@@ -87,7 +87,7 @@ Use server time. Stored field identities remain compatible. Conditional updates 
 ## How it works
 `ranked.mmq` defines one player per ticket, two-player matches, a 300-second pool timeout, equal build identity, arena gap at most one, same-arena preference for thirty seconds, and widening rating windows that become unbounded at 120 seconds. Rules explicitly enable themselves and read protected rating/arena. Allocation rechecks hard caps, known balance, current versions and discipline; the soft rating window stays queue-only. Idempotent retries return the existing record. Claims expire after two hours.
 
-`ReportMatch` checks identity, map, snapshot ownership/eligibility, then replays. Protocol 6 permits three suits/five districts, requires era locks inside those arrays and budgets placements from them. Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ locks nothing. Base debut gates usability; map pools never waive ownership. Historical protocols retain their path; unplaceable pieces allow fewer placements.
+`ReportMatch` checks identity, map, snapshot ownership/eligibility, then replays. Protocol 7 permits three suits/five districts, requires era locks inside those arrays and budgets placements from them. Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ locks nothing. Base debut gates usability; map pools never waive ownership. v6 is rejected; older protocols keep their path; unplaceable pieces allow fewer placements.
 
 First accepted winning report becomes Pending; two must agree on winner/end tick/hash. Disagreement becomes Disputed. Refusals preserve the slot; Pending expires lazily. Consistent unfinished reports compare the earlier log's Core breaches: fewer wins, ties void without strikes.
 

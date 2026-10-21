@@ -10,7 +10,7 @@ sources:
   - Assets/Scripts/Game/Network/NetworkManagerTransport.cs
   - Assets/Scripts/Game/Network/SetupAgreement.cs
   - dotnet/NodeWar.Network.Tests/
-verified: a1da5182
+verified: cb532363
 ---
 
 # Netcode
@@ -27,7 +27,7 @@ Observers receive `LocalInputDue`, `TickSimulated(TickEventLog)`, `ConfirmedTick
 
 `InputSerializer` encodes little-endian packets. `PacketType` values are Handshake=0, HandshakeAck=1, TickInput=2, Heartbeat=3, DraftReady=4, DraftPlacement=5, DraftLoadout=6, DraftAck=7, Emote=8, HandshakeReject=9, MatchSetup=10, MatchSetupAck=11. `TickInput` contains `forTick`, `stateHash`, `senderDelay`, `requestedDelay`, `GameCommand[] commands`; each command occupies 24 bytes. `DraftSerializer` owns setup and draft payloads; `DraftAck` acknowledges ready/loadout reception and applied placement count.
 
-`BuildIdentity` is `{ ushort protocol, ushort sim, int content }`. `LocalBuildIdentity.Current` supplies it; `SetupFor(mapId)` supplies `MatchSetup` with map ID, board hash, simulation version and balance hash. `ProtocolVersion.Current` is 6, aliased by `InputSerializer`; simulation identity comes from `SimulationVersion.Current`, content from shared balance hashing. `SetupAgreement.Host/Guest`, `NextToSend`, `Receive`, `Agreed`, `Refused` and `AcceptsDraftPackets` gate draft delivery against the shipped board catalog.
+`BuildIdentity` is `{ ushort protocol, ushort sim, int content }`. `LocalBuildIdentity.Current` supplies it; `SetupFor(mapId)` supplies `MatchSetup` with map ID, board hash, simulation version and balance hash. `ProtocolVersion.Current` is 7 (v6 retired), aliased by `InputSerializer`; simulation identity comes from `SimulationVersion.Current`, content from shared balance hashing. `SetupAgreement.Host/Guest`, `NextToSend`, `Receive`, `Agreed`, `Refused` and `AcceptsDraftPackets` gate draft delivery against the shipped board catalog.
 
 The `match-flow`-owned persistent `Core/MatchConnection` carries transport, local slot, mode/loadout and ordered ranked identity across scenes. `Shutdown` clears the connection.
 
