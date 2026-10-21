@@ -110,7 +110,7 @@ World UI keeps crisp screen-plane text, integer-pixel anchors, constant screen o
 - Scope Lilita One/Fredoka panel styling to the lobby so Shop and match styling remain independent.
 
 ## Pressure points
-Icon theme entries are empty. `StagePaperArt.Bake` generates tinted, badged buildings/villagers via `PaperRasterizer`; `LobbyPaperArt` caches them for Workshop tiles and sheet previews, monograms only as fallback. Unknown ids are never cached. Gauge skins and Addressables are absent.
+Icon theme entries are empty. `StagePaperArt.Bake` generates tinted, badged buildings/villagers via `PaperRasterizer`; `LobbyPaperArt` caches them for Workshop tiles and sheet previews, monograms only as fallback. Unknown ids are never cached. Textures cap at 512px with coverage cached per kind and size, and the market builds on the first Shop visit. Gauge skins and Addressables are absent.
 
 ## Change recipes
 - Add an icon: append its stable kind, provide fallback drawing and usage locations/labels, set context at call sites and extend coverage tests; assign sprites through the Inspector.

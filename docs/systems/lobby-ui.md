@@ -138,7 +138,7 @@ Loadouts, accounts/settings and match entry.
 
 `LobbyOverlayRouter` registers close callbacks on `LobbyRouteStack`. An optional `LobbyOverlay.BackHandler` consumes Back by returning true; otherwise Back closes the top, goes Home, or opens quit confirmation. `CrateScreen.Open(size, inventory)` runs `CrateOpeningSequence` as a fullscreen overlay. `LobbyDeepLink.TryParse` accepts nodewar routes; page/stall links navigate, bell opens notifications, profile IDs open panels. Overlays declare chrome visibility. `SwipeDecision` gates navigation by axis/travel/flick; overlays and `lb-no-swipe` block it. `ClaimPanel.Open(ClaimRequest)/Cancel` raises Confirmed/Cancelled in a centered `MkPanel`, including shop purchases.
 
-`LobbyMotion` supplies springs. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills, with rubber-band edges and velocity-preserving retargets. `LobbyMouseDrag` supplies elastic mouse scrolling and pager/shop click cancellation. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet` serves sheets.
+`LobbyMotion` supplies springs and the `Reduced` flag set from Settings: springs snap, panels fade 80ms, villagers stand, camera pans shorten to 150ms. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills, with rubber-band edges and velocity-preserving retargets. `LobbyRouteStack.HidesPills` aggregates fullscreen routes; panels/sheets preserve pills. `LobbySheet` serves sheets.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
@@ -160,7 +160,7 @@ Pages:
 
 `UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel` modals. `SkinBand` renders the looping skin strip through `SkinBandMath`.
 
-`PlayerProfile.Instance` persists loadout/settings/mode. `LoadoutPresets` migrates current choices into preset 1; switches sanitize, edits store the active preset. All fresh presets contain Farm/Mine/Town and Warrior. `LoadoutData.CreateEmpty/Normalized` produce 3/5 arrays; legacy 2/2 saves gain defaults once. `LoadoutTypes.WithEquipment` overlays server equipment. `LoadoutBrowse` sorts with ID ties. `RankDisplay/RankTable` supply era progress; Premium displays as Laurels.
+`PlayerProfile.Instance` persists loadout/settings/mode. `LoadoutPresets` migrates current choices into preset 1; switches sanitize, edits store the active preset. All fresh presets contain Farm/Mine/Town and Warrior. `LoadoutData.CreateEmpty/Normalized` produce 3/5 arrays; legacy 2/2 saves gain defaults once. `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay/RankTable` supply era progress; Premium displays as Laurels.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
@@ -196,4 +196,4 @@ Legacy progression and backend stubs coexist; placeholder layouts require manual
 - Change loadouts: update pure editor/rules, shared capacity/ownership, persistence migration and frozen-launch tests together.
 
 ## Tests
-`NodeWar.Lobby.Tests` guards loadouts, histograms, settings, presenters, route/state/claim/swipe models, crate sequences, paper masks and motion/projection. Compile-check covers Unity pages/launchers. Interaction, rendering and scene wiring require Editor/device verification.
+`NodeWar.Lobby.Tests` guards loadouts, histograms, settings, presenters, route/state/claim/swipe models, crate sequences, paper masks and motion/projection. Interaction, rendering and scene wiring require Editor/device verification.
