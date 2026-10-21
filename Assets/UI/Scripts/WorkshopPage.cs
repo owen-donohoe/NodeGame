@@ -333,7 +333,7 @@ namespace NodeWar.Lobby
             int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
             if (presetLabel != null) presetLabel.text = "LOADOUT " + (selected + 1) + " \u00b7 " + RankTable.Names[Mathf.Clamp(arena, 0, RankTable.Names.Count - 1)];
         }
-        private static VisualElement MakeArt(Item item, bool neutral, bool navy, int variant = 0)
+        private static VisualElement MakeArt(Item item, bool neutral, bool navy, int variant = 0, string skinId = null)
         {
             var clip = new VisualElement { pickingMode = PickingMode.Ignore };
             clip.AddToClassList("ws-art-clip"); clip.AddToClassList("mk-art");
@@ -346,11 +346,19 @@ namespace NodeWar.Lobby
             {
                 art.style.backgroundImage = paper;
                 art.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                if (!string.IsNullOrEmpty(skinId))
+                    art.style.unityBackgroundImageTintColor = Color.Lerp(Color.white, StagePaperArt.Tints[ItemTint.IndexFor(ItemTint.SkinKey(item.ID, skinId))], 0.5f);
             }
             else
             {
-                if (item != null) art.AddToClassList(ItemTint.ClassFor(item.ID));
+                if (item != null) art.AddToClassList(ItemTint.ClassFor(string.IsNullOrEmpty(skinId) ? item.ID : ItemTint.SkinKey(item.ID, skinId)));
                 art.Add(MakeLabel(item == null ? "+" : ItemTint.MonogramFor(item.Name, item.ID), "ws-monogram", "mk-h2"));
+            }
+            if (item != null && !string.IsNullOrEmpty(skinId))
+            {
+                var badge = MakeLabel(ItemTint.SkinBadge(skinId), "ws-monogram");
+                badge.style.position = Position.Absolute; badge.style.right = 3; badge.style.bottom = 1; badge.style.fontSize = 12;
+                clip.Add(art); clip.Add(badge); return clip;
             }
             clip.Add(art); return clip;
         }
@@ -824,7 +832,7 @@ namespace NodeWar.Lobby
                 var chip = new Button(() => { panelRevision++; panelSkinId = skinId; RenderItemPanel(); });
                 chip.AddToClassList("mk-skin"); chip.EnableInClassList("mk-skin--on", panelSkinId == skinId);
                 chip.EnableInClassList("mk-skin--locked", !choice.UnlockState.CanUse);
-                var skinArt = MakeArt(inspectedItem, !choice.UnlockState.CanUse, false);
+                var skinArt = MakeArt(inspectedItem, !choice.UnlockState.CanUse, false, 0, skinId);
                 skinArt.AddToClassList("ws-skin-art"); chip.Add(skinArt);
                 chip.tooltip = choice.Label + (choice.UnlockState.CanUse ? "" : " (locked)");
                 chip.SetEnabled(!inventoryBusy); skinRow.Add(chip);
