@@ -1,12 +1,4 @@
-            UpdatePills(from, to, progress);
-            bool moving = strip.Moving || strip.Dragging;
-            appliedMoving = moving; appliedWidth = pageHost.layout.width;
-            if (navButtons.TryGetValue(Order[strip.Current], out var pill)) appliedPill = pill.worldBound;
-            // Raise only when the sample changed; the settled shell stays silent.
-            if (hasSample && sampleFrom == Order[from] && sampleTo == Order[to] &&
-                Mathf.Approximately(sampleProgress, progress) && sampleMoving == moving) return;
-            hasSample = true; sampleFrom = Order[from]; sampleTo = Order[to]; sampleProgress = progress; sampleMoving = moving;
-            MotionChanged?.Invoke(Order[from], Order[to], progress, moving);using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -118,7 +110,14 @@ namespace NodeWar.Lobby
             }
             strip.Pair(out int from, out int to, out float progress);
             UpdatePills(from, to, progress);
-            MotionChanged?.Invoke(Order[from], Order[to], progress, strip.Moving || strip.Dragging);
+            bool moving = strip.Moving || strip.Dragging;
+            appliedMoving = moving; appliedWidth = pageHost.layout.width;
+            if (navButtons.TryGetValue(Order[strip.Current], out var pill)) appliedPill = pill.worldBound;
+            // Raise only when the sample changed; the settled shell stays silent.
+            if (hasSample && sampleFrom == Order[from] && sampleTo == Order[to] &&
+                Mathf.Approximately(sampleProgress, progress) && sampleMoving == moving) return;
+            hasSample = true; sampleFrom = Order[from]; sampleTo = Order[to]; sampleProgress = progress; sampleMoving = moving;
+            MotionChanged?.Invoke(Order[from], Order[to], progress, moving);
         }
         private void UpdatePills(int from, int to, float progress)
         {

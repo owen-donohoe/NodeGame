@@ -87,6 +87,8 @@ namespace NodeWar.Lobby
             if (root.panel != null) ObserveState();
         }
 
+        public void Dispose() => BackendServices.StateChanged -= Refresh;
+
         private void ObserveState()
         {
             BackendServices.StateChanged -= Refresh;

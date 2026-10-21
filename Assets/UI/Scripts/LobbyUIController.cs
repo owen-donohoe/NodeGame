@@ -199,7 +199,9 @@ namespace NodeWar.Lobby
             NodeWar.Backend.BackendServices.StateChanged -= RefreshStageLoadout;
             homePage?.OnHide();
             homePage = null;
-            searchingScreen?.Dispose(); searchingScreen = null; multiplayerSheet = null;
+            searchingScreen?.Dispose(); searchingScreen = null;
+            multiplayerSheet?.Dispose(); multiplayerSheet = null;
+            chrome?.Dispose();
             privateLobbyPanel?.Dispose(); privateLobbyPanel = null;
             playFlow?.Dispose();
             playFlow = null;
@@ -600,15 +602,21 @@ namespace NodeWar.Lobby
             // Guild-specific binding stays here so the shared chrome can replace it at merge.
             guildPage = new GuildPage(NodeWar.Backend.BackendServices.Guild, NodeWar.Backend.BackendServices.GuildBrowse,
                 router, lobbyRoot, sheet, playerId => profilePage.OpenFor(playerId));
-            System.Action guildChrome = () => lobbyRoot.schedule.Execute(() =>
+            System.Action guildChrome = () =>
             {
-                if (navigation.CurrentPageID != LobbyPageID.Guild) return;
-                bool hide = router.Stack.Top?.HidesHeader == true;
-                var playerBand = lobbyRoot.Q("strip-wrap");
-                var resources = lobbyRoot.Q("top-bar");
-                if (playerBand != null) playerBand.style.display = hide || guildPage.HasGuild ? DisplayStyle.None : DisplayStyle.Flex;
-                if (resources != null) resources.style.display = hide ? DisplayStyle.None : DisplayStyle.Flex;
-            });
+                if (lobbyRoot == null) return;
+                lobbyRoot.schedule.Execute(() =>
+                {
+                    // OnDisable can run before this queued item; the shell may be gone.
+                    if (lobbyRoot == null || navigation == null || router == null || guildPage == null) return;
+                    if (navigation.CurrentPageID != LobbyPageID.Guild) return;
+                    bool hide = router.Stack.Top?.HidesHeader == true;
+                    var playerBand = lobbyRoot.Q("strip-wrap");
+                    var resources = lobbyRoot.Q("top-bar");
+                    if (playerBand != null) playerBand.style.display = hide || guildPage.HasGuild ? DisplayStyle.None : DisplayStyle.Flex;
+                    if (resources != null) resources.style.display = hide ? DisplayStyle.None : DisplayStyle.Flex;
+                });
+            };
             guildPage.MembershipChanged += guildChrome;
             navigation.PageShown += _ => guildChrome();
             router.Stack.Changed += guildChrome;
@@ -619,6 +627,7 @@ namespace NodeWar.Lobby
             // reach the top of the floating dock at every panel scale.
             void UpdateListClearance()
             {
+                if (lobbyRoot == null || pillDock == null || guildPage == null) return;
                 float height = pillDock.resolvedStyle.height;
                 if (float.IsNaN(height) || height <= 0) return;
                 foreach (string name in new[] { "social-scroll", "guild-results-scroll", "guild-home-scroll" })
@@ -792,6 +801,7 @@ namespace NodeWar.Lobby
 
         private void RefreshChromeVisibility(VisualElement root)
         {
+            if (navigation == null || router == null) return;
             LobbyOverlay top = Routes?.Top;
             VisualElement pills = root.Q<VisualElement>("tabbar-dock");
             VisualElement header = root.Q<VisualElement>("strip-wrap");
