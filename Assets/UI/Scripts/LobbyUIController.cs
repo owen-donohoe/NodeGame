@@ -112,7 +112,9 @@ namespace NodeWar.Lobby
         private LobbyModeSelection selectedMode;
         private LobbyPlayFlow playFlow;
         private PrivateLobbyPanel privateLobbyPanel;
+        private LanRoomSheet lanRoomSheet;
         private SearchingScreen searchingScreen;
+        private TeammateInviteSheet teammateInviteSheet;
         private MultiplayerSheet multiplayerSheet;
         private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
@@ -200,9 +202,11 @@ namespace NodeWar.Lobby
             homePage?.OnHide();
             homePage = null;
             searchingScreen?.Dispose(); searchingScreen = null;
+            teammateInviteSheet?.Dispose(); teammateInviteSheet = null;
             multiplayerSheet?.Dispose(); multiplayerSheet = null;
             chrome?.Dispose();
             privateLobbyPanel?.Dispose(); privateLobbyPanel = null;
+            lanRoomSheet?.Dispose(); lanRoomSheet = null;
             playFlow?.Dispose();
             playFlow = null;
             workshopStage?.Dispose();
@@ -288,6 +292,7 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.Update();
             playFlow?.Update();
             privateLobbyPanel?.Update();
+            lanRoomSheet?.Update();
             searchingScreen?.Update();
             burgerPanel?.Update();
             bellPanel?.Update();
@@ -357,7 +362,9 @@ namespace NodeWar.Lobby
             if (playPopup != null) playPopup.PrivateJoinRequested += privateLobbyPanel.Join;
             searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
             searchingScreen.PrivateRequested += privateLobbyPanel.Open;
-            searchingScreen.LanRequested += () => playPopup.OpenJoinCode(true);
+            lanRoomSheet = new LanRoomSheet(lobbyRoot, router, catalog, menu, toast, profilePage.OpenFor);
+            searchingScreen.LanRequested += lanRoomSheet.Open;
+            teammateInviteSheet = new TeammateInviteSheet(lobbyRoot, router);
             RegisterPages();
             WireOverlays(root);
             LobbyScrollbars.Hide(root);
@@ -414,6 +421,7 @@ namespace NodeWar.Lobby
             bool pageWasMoving = false, firstPagePose = true;
             navigation.MotionChanged += (from, to, progress, moving) =>
             {
+                if (searchingScreen?.IsOpen == true) { pageWasMoving = false; firstPagePose = false; return; }
                 if (LobbyMotion.Reduced && !moving && pageWasMoving && !firstPagePose)
                 {
                     // A snapped page change gets a short camera pan rather than an instant cut.
@@ -426,7 +434,7 @@ namespace NodeWar.Lobby
                 pageWasMoving = moving; firstPagePose = false;
             };
             navigation.PageShown += _ => RefreshStageLoadout();
-            router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
+            router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen || searchingScreen?.IsOpen == true);
             NodeWar.Backend.BackendServices.StateChanged += RefreshStageLoadout;
             RefreshStageLoadout();
         }
@@ -548,7 +556,7 @@ namespace NodeWar.Lobby
 
         private void OnPlayRequested()
         {
-            if (selectedMode.LaunchStrategy == ModeLaunchStrategy.Lan) playPopup.OpenJoinCode(true);
+            if (selectedMode.LaunchStrategy == ModeLaunchStrategy.Lan) lanRoomSheet.Open();
             else if (selectedMode.IsPrivate) privateLobbyPanel.Open(selectedMode);
             else searchingScreen.Open(selectedMode);
         }
@@ -588,6 +596,7 @@ namespace NodeWar.Lobby
                         && Routes != null && Routes.Count == 0, crateInventory);
                 homePage = home;
                 home.PlayRequested += OnPlayRequested;
+                home.InviteTeammateRequested += () => teammateInviteSheet.Open();
                 home.ModeRequested += () => modePicker.Open(selectedMode);
                 home.CrateRequested += size =>
                 crateScreen?.Open(size, crateInventory);
@@ -679,7 +688,7 @@ namespace NodeWar.Lobby
             profilePage.BindPanels(router, shell);
             multiplayerSheet = new MultiplayerSheet(shell, router, searchingScreen.Open);
             profilePage.InviteRequested += target => multiplayerSheet.Open(target);
-            searchingScreen.InviteRequested += () => multiplayerSheet.Open();
+            searchingScreen.InviteRequested += () => teammateInviteSheet.Open();
             burgerPanel = new LobbyOverlayPanel("Menu");
             bellPanel = new LobbyOverlayPanel("Notifications");
             shell.Add(burgerPanel.Root);

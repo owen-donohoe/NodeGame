@@ -290,7 +290,11 @@ namespace NodeWar.Lobby
 
             if (lan)
             {
-                networkManager.StartAsHost();
+                try { networkManager.StartAsHost(); }
+                catch (Exception e)
+                {
+                    Cleanup(); Fail("Couldn't host a LAN room.", "Close any other local room and retry. (" + e.GetType().Name + ")"); return;
+                }
                 JoinCode = NetworkManager.GetLocalIPAddress();
                 EnterPhase(Phase.WaitingForOpponent);
             }

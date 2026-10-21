@@ -36,6 +36,9 @@ namespace NodeWar.Lobby
         {
             playerId = targetPlayerId; sheet.BringToFront(); sheet.Open();
         }
+        public static void SendInviteStub(string target, LobbyModeSelection selection) =>
+            Debug.Log("[Stub] Invite " + (target ?? "player") + " to " + new HomeModeDisplay(selection).Name);
+
         private void Select(LobbyModeSelection selection)
         {
             string target = playerId;

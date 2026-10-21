@@ -1,4 +1,6 @@
 .g2-search { position: absolute; top: 0; bottom: 0; left: 0; right: 0; align-items: center; justify-content: center; }
-.ui-root .g2-search-card { width: 260px; }
-.ui-root .g2-search-card > Label { white-space: normal; -unity-text-align: middle-center; margin-bottom: 8px; }
-.ui-root .g2-search-card > Button { margin-top: 8px; }
+.ui-root .g2-search-content { width: 80%; max-width: 340px; align-items: stretch; }
+.ui-root .g2-search-content > Label { white-space: nowrap; -unity-text-align: middle-center; margin: 0 0 8px; }
+.ui-root .g2-search-title { font-size: 34px; -unity-font-definition: var(--font-display); color: var(--paper-light); -unity-text-outline-width: 2px; -unity-text-outline-color: var(--line-outer); }
+.ui-root .g2-search-mode, .ui-root .g2-search-time, .ui-root .g2-search-content .mk-trophy, .ui-root .g2-search-content .mk-muted { font-size: 17px; color: var(--mk-ink); background-color: var(--paper-light); border-radius: 8px; padding: 8px 12px; }
+.ui-root .g2-search-content > Button { min-height: 44px; margin-top: 8px; }

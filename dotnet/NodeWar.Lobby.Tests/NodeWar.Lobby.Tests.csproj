@@ -49,6 +49,10 @@
     <Compile Include="GuildTests.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildService.cs" Link="Backend/GuildService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildPolicies.cs" Link="Backend/GuildPolicies.cs" />
+    <Compile Include="QueueSearchPolicyTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/QueueSearchPolicy.cs" Link="Lobby/QueueSearchPolicy.cs" />
+    <Compile Include="TeammateInviteTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/TeammateInviteRoster.cs" Link="Lobby/TeammateInviteRoster.cs" />
     <Compile Include="SocialProfileTests.cs" />
     <Compile Include="PlayerPanelPolicyTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/PlayerPanelPolicy.cs" Link="Lobby/PlayerPanelPolicy.cs" />
@@ -89,6 +93,8 @@
     <Compile Include="../../Assets/UI/Scripts/LobbyModeCategory.cs" Link="Lobby/LobbyModeCategory.cs" />
     <Compile Include="LobbyToggleMathTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LobbyToggleMath.cs" Link="Lobby/LobbyToggleMath.cs" />
+    <Compile Include="LanRoomTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LanRoomState.cs" Link="Lobby/LanRoomState.cs" />
     <Compile Include="PrivateLobbyTests.cs" />
     <Compile Include="AttemptGateTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Network/AttemptGate.cs" Link="Network/AttemptGate.cs" />

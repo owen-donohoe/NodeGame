@@ -29,6 +29,14 @@ namespace NodeWar.Lobby
                 throw new ArgumentOutOfRangeException(nameof(mode));
             Mode = mode; HostId = hostId; ids[0] = hostId; names[0] = hostName;
         }
+        public PrivateLobbyModel WithMode(string actor, LobbyMode mode)
+        {
+            if (!IsHost(actor) || Starting || (mode != LobbyMode.Unranked1v1 && mode != LobbyMode.Team2v2 && mode != LobbyMode.FreeForAll4)) return this;
+            var next = new PrivateLobbyModel(mode, HostId, Name(SeatOf(HostId)));
+            for (int i = 0; i < Capacity; i++) if (ids[i] != null && ids[i] != HostId) next.AddGuest(ids[i], names[i]);
+            next.Revision = Revision + 1;
+            return next;
+        }
         public int Colour(int seat) => Definition.Team(seat);
         public PrivateSeatPosition Position(int seat)
         {
