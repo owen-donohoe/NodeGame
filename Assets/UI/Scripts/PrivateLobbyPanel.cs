@@ -54,12 +54,16 @@ namespace NodeWar.Lobby
                 if (string.IsNullOrEmpty(launcher.JoinCode)) return;
                 GUIUtility.systemCopyBuffer = launcher.JoinCode; toast?.Show("Code copied");
             });
-            codeRow.Add(copy); panel.Body.Add(codeRow);
-            panel.Body.Add(Button("Invite players", InvitePlayers));
-            panel.Body.Add(meta);
+            // The code block scrolls if the viewport is short; Start and Leave sit in a fixed footer below it.
+            var info = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            info.AddToClassList("private-info"); LobbyScrollbars.Hide(info); panel.Body.Add(info);
+            codeRow.Add(copy); info.Add(codeRow);
+            info.Add(Button("Invite players", InvitePlayers));
+            info.Add(meta);
+            var footer = new VisualElement(); footer.AddToClassList("private-footer"); panel.Body.Add(footer);
             start = Button("Start", () => launcher.PrivateAction(5));
-            start.AddToClassList("private-start"); panel.Body.Add(start);
-            panel.Body.Add(Button("Leave", panel.Close));
+            start.AddToClassList("private-start"); footer.Add(start);
+            var leave = Button("Leave", panel.Close); leave.AddToClassList("private-leave"); footer.Add(leave);
             shell.Add(panel);
             confirm.Title.text = "Remove player?"; confirm.BindRouter(router, "private-lobby-kick"); shell.Add(confirm);
         }
@@ -116,10 +120,14 @@ namespace NodeWar.Lobby
             bool failed = launcher.CurrentPhase == MatchLauncher.Phase.Failed;
             string message = failed ? launcher.FailureMessage : model == null ? "Connecting to host…"
                 : model.Capacity == 4 ? "Coming soon: 4-player matches"
+                : model.Starting ? "Starting match…"
                 : model.CanStart(model.HostId) ? host ? "Ready when you are" : "Waiting for the host to start"
                 : "Waiting for an invited player";
             TrackedText.SetText(meta, message);
-            start.SetEnabled(!failed && launcher.PrivateReady);
+            bool starting = model != null && model.Starting;
+            start.SetEnabled(!failed && !starting && launcher.PrivateReady);
+            if (starting) { ResetDrag(); confirm.Close(); }
+            for (int i = 0; i < seats.Length; i++) seats[i]?.Q(className: "private-more")?.SetEnabled(!starting);
             if (model == null) return;
             if (rendered != null && rendered.Mode == model.Mode && lastRevision == model.Revision) return;
             rendered = model; lastRevision = model.Revision;
@@ -168,7 +176,7 @@ namespace NodeWar.Lobby
                 face.RegisterCallback<PointerDownEvent>(evt =>
                 {
                     suppressClick = false;
-                    if (evt.button != 0 || !evt.isPrimary || !model.IsHost(localId)) return;
+                    if (evt.button != 0 || !evt.isPrimary || Frozen || !model.IsHost(localId)) return;
                     ResetDrag();
                     dragSeat = index; dragPointer = evt.pointerId; dragCard = card; dragOwner = face;
                     dragOrigin = arena.WorldToLocal(evt.position); dragDelta = Vector2.zero;
@@ -176,7 +184,7 @@ namespace NodeWar.Lobby
                 face.RegisterCallback<PointerMoveEvent>(evt =>
                 {
                     if (dragSeat != index || evt.pointerId != dragPointer) return;
-                    if (!model.IsHost(localId)) { ResetDrag(); return; }
+                    if (Frozen || !model.IsHost(localId)) { ResetDrag(); return; }
                     dragDelta = arena.WorldToLocal(evt.position) - dragOrigin;
                     if (!dragged && dragDelta.sqrMagnitude < 64) return;
                     if (!dragged)
@@ -198,7 +206,7 @@ namespace NodeWar.Lobby
                         if (j != index && seats[j].worldBound.Contains(evt.position)) { target = j; break; }
                     EndDrag(wasDragged);
                     if (!wasDragged) return;
-                    if (target >= 0 && model.IsHost(localId)) Swap(index, target);
+                    if (target >= 0 && !Frozen && model.IsHost(localId)) Swap(index, target);
                     evt.StopImmediatePropagation();
                 }, TrickleDown.TrickleDown);
                 face.RegisterCallback<PointerCancelEvent>(evt => { if (evt.pointerId == dragPointer) EndDrag(true); });
@@ -229,6 +237,8 @@ namespace NodeWar.Lobby
             if (model == null) return;
             if (model.Player(seat) != null) openPlayer?.Invoke(model.Player(seat));
         }
+        // Read live: seat handlers capture the model they were built from, which a newer snapshot may replace.
+        private bool Frozen => launcher.PrivateLobby != null && launcher.PrivateLobby.Starting;
         private void Swap(int a, int b) => launcher.PrivateAction(2, a, b);
         private void InvitePlayers()
         {
@@ -277,7 +287,7 @@ namespace NodeWar.Lobby
             var rows = new List<LobbyMenuItem>();
             if (model == null || model.Player(seat) == null) return rows;
             rows.Add(new LobbyMenuItem("View player", () => openPlayer?.Invoke(model.Player(seat))));
-            if (model.IsHost(localId))
+            if (model.IsHost(localId) && !model.Starting)
             {
                 if (!model.IsHost(model.Player(seat))) rows.Add(new LobbyMenuItem("Make host", () => launcher.PrivateAction(3, seat)));
                 if (model.Player(seat) != localId) rows.Add(new LobbyMenuItem("Kick", () => ConfirmKick(seat)));

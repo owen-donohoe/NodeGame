@@ -6,6 +6,8 @@ namespace NodeWar.Lobby
 {
     public enum PrivateSeatPosition { Top, TopLeft, TopRight, Right, Bottom, BottomLeft, BottomRight, Left }
 
+    public enum PrivatePhase { Waiting, Starting }
+
     /// <summary>Lobby authority is independent of which peer owns the Relay allocation.</summary>
     public sealed class PrivateLobbyModel
     {
@@ -34,26 +36,41 @@ namespace NodeWar.Lobby
             return Definition.Position(seat);
         }
         public bool CanStart(string actor) => Capacity == 2 && IsHost(actor) && ids[0] != null && ids[1] != null;
+
+        // A start request is bound to the roster revision it was made at. Any revision change makes it stale,
+        // so a later snapshot can never inherit an older start decision. Local state only; the wire carries a flag.
+        private int startRevision = -1;
+        public PrivatePhase Phase => startRevision == Revision ? PrivatePhase.Starting : PrivatePhase.Waiting;
+        public bool Starting => Phase == PrivatePhase.Starting;
+        public bool IsStartingAt(int revision) => Starting && revision == Revision;
+        /// <summary>Freezes the roster. Refused unless the host can start, or if already starting.</summary>
+        public bool BeginStart(string actor)
+        {
+            if (Starting || !CanStart(actor)) return false;
+            startRevision = Revision; return true;
+        }
+        public void CancelStart() => startRevision = -1;
+
         public bool AddGuest(string id, string name)
         {
-            if (string.IsNullOrEmpty(id) || SeatOf(id) >= 0) return false;
+            if (Starting || string.IsNullOrEmpty(id) || SeatOf(id) >= 0) return false;
             for (int i = 0; i < Capacity; i++) if (ids[i] == null)
             { ids[i] = id; names[i] = name; Revision++; return true; }
             return false;
         }
         public bool Swap(string actor, int a, int b)
         {
-            if (!IsHost(actor) || !Valid(a) || !Valid(b) || a == b) return false;
+            if (Starting || !IsHost(actor) || !Valid(a) || !Valid(b) || a == b) return false;
             (ids[a], ids[b]) = (ids[b], ids[a]); (names[a], names[b]) = (names[b], names[a]); Revision++; return true;
         }
         public bool MakeHost(string actor, int seat)
         {
-            if (!IsHost(actor) || !Valid(seat) || ids[seat] == null || ids[seat] == HostId) return false;
+            if (Starting || !IsHost(actor) || !Valid(seat) || ids[seat] == null || ids[seat] == HostId) return false;
             HostId = ids[seat]; Revision++; return true;
         }
         public bool Remove(string actor, int seat)
         {
-            if (!IsHost(actor) || !Valid(seat) || ids[seat] == null || ids[seat] == HostId) return false;
+            if (Starting || !IsHost(actor) || !Valid(seat) || ids[seat] == null || ids[seat] == HostId) return false;
             ids[seat] = names[seat] = null; Revision++; return true;
         }
         internal void Write(BinaryWriter writer)
