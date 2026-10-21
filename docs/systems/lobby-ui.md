@@ -125,7 +125,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 7577cb88
+verified: cab32ace
 ---
 
 # Lobby UI
@@ -142,7 +142,7 @@ Loadouts, accounts/settings and match entry.
 
 Pages:
 - `HomePage` exposes `PlayRequested`, `ModeRequested`, `CrateRequested`, `SetMode`, `Refresh`. BATTLE opens `PrivateLobbyPanel` for private selections, otherwise Searching. Incomplete loadouts dim it and show a toast. `LocalCrateInventory` backs Small stock/progress; Big maps to Medium with zero stock.
-- `WorkshopPage` keeps browsing independent of stage inspection. `LoadoutScreenModel.Use` fills or starts replacement. Locked tags/Fixed actions identify current-era grants; headers count choices and locks. Locked items occupy stage slots; locked taps preserve replacement. `WorkshopStageBinding` maps editable picks to chosen slots.
+- `WorkshopPage` preserves framing and scroll during browsing/inspection. `LoadoutScreenModel.Use` fills or starts replacement; sheets remove editable used items. Locked tags/Fixed actions identify grants. `WorkshopStageBinding` maps editable picks to chosen slots; locked taps preserve replacement.
 - `ShopPage.Bind(ClaimPanel, BadgeBoard)` shares claims/badges; `BindStage(LobbyStage)` projects offers. `ShopSnap/ShopProjection` coordinate entrances/exits; LateUpdate projects after the camera.
 - `SocialPage.Bind(social, profiles, history, openProfile, sheet, guild)` supplies TV/Online/history ledgers. TV lists 0-4 games. Friends precede online guild members; offline friends expand behind a toggle. Settled history resolves missing handles through cached profiles (Unknown fallback) and shows signed RR. Requests cannot cross visits/accounts.
 - `ProfilePage` reads self/others through `IProfileService`: null stats show dashes; self has a fixed header, 60/40 stats/loadout and RR-ladder layout, closing via header/swipe/Back, and a Rename panel (name+tag via `Handles.SetHandleAsync`, `Renamed` redraws chrome). Only internal lists scroll. Others show stats, loadout, recent W/L and Block/Report. `BindPanels(router, host)` wires reporting/confirmed Kick; `InviteRequested(playerId)` opens Multiplayer. `PlayerPanelPolicy` gates Kick on officer status and target membership.
@@ -156,11 +156,11 @@ Pages:
 
 `AccountFlow` coordinates account sheets and notifications. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
 
-`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves choices. `LoadoutRules.IsComplete` requires full sides or no owned, usable, unequipped choices. `LockedDistricts/LockedSuits(arena)` identify locks. `LoadoutEditor` refuses clearing/replacing locks; `ClearChoices` restores locks and empties other slots. Workshop Clear confirms in `MkPanel`, saves and refreshes.
+`LoadoutCatalog.CurrentLoadout(PlayerState)` resolves choices. `LoadoutRules.MissingCounts` counts min(empty slots, owned era-usable unequipped items) per side; `IsComplete` requires zero. `MissingMessage` names a single missing side. `LoadoutEditor` protects locks; `ClearChoices` restores them. Clear confirms in `MkPanel`. Missing/partial ownership never trims or saves choices; failures retain state and retry with backoff and one toast.
 
 `UnlockStates.ForBase/ForVariant/ForSkin` supplies ownership, unlock arena and CanUse. `LobbyChrome` shows the server handle with rich text disabled, era progress and Coins/Premium balances; purse buttons route to shop stalls. Burger/bell open `LobbyOverlayPanel` modals. `SkinBand` renders the looping skin strip through `SkinBandMath`.
 
-`PlayerProfile.Instance` persists loadout/settings/mode. `LoadoutPresets` migrates current choices into preset 1; switches sanitize, edits store the active preset. All fresh presets contain Farm/Mine/Town and Warrior. `LoadoutData.CreateEmpty/Normalized` produce 3/5 arrays; legacy 2/2 saves gain defaults once. `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay/RankTable` supply era progress; Premium displays as Laurels.
+`PlayerProfile.Instance` persists loadout/settings/mode. `LoadoutPresets` stores edits in the active preset. `LoadoutData.CreateEmpty/Normalized` produce 3/5 arrays; legacy 2/2 saves gain defaults once. `LoadoutTypes.WithEquipment` overlays server equipment. `RankDisplay/RankTable` supply era progress; Premium displays as Laurels.
 
 ## Connects to
 - `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
