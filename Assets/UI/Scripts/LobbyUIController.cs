@@ -429,7 +429,7 @@ namespace NodeWar.Lobby
                 pageWasMoving = moving; firstPagePose = false;
             };
             navigation.PageShown += _ => RefreshStageLoadout();
-            router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen);
+            router.Stack.Changed += () => stage.SetVisible(!router.Stack.AnyFullscreen || searchingScreen?.IsOpen == true);
             NodeWar.Backend.BackendServices.StateChanged += RefreshStageLoadout;
             RefreshStageLoadout();
         }

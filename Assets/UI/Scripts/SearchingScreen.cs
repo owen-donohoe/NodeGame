@@ -14,7 +14,9 @@ namespace NodeWar.Lobby
         private readonly Action<StageShot> shot;
         private readonly VisualElement shell;
         private readonly MatchLauncher launcher;
-        private readonly Label title, rating, message;
+        private readonly Label title, rating, message, modeName, elapsed;
+        private double startedAt;
+        private StyleEnum<Visibility> pageVisibility;
         private readonly Button retry, invite, extra;
         private readonly Dictionary<VisualElement, (PickingMode picking, bool focus)> chrome = new Dictionary<VisualElement, (PickingMode, bool)>();
         private RankedQueuePresenter presenter;
@@ -37,14 +39,16 @@ namespace NodeWar.Lobby
             this.shell = shell; this.router = router; this.navigation = navigation; this.shot = shot;
             launcher = new MatchLauncher(catalog);
             Root.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Searching")); Root.AddToClassList("g2-search"); Root.AddToClassList("lb-no-swipe");
-            var card = new MkCard { name = "searching-card" }; card.AddToClassList("g2-search-card"); Root.Add(card);
-            title = GuildViews.Text("Searching\u2026", "mk-h2"); card.Add(title);
+            var card = new VisualElement { name = "searching-content" }; card.AddToClassList("g2-search-content"); Root.Add(card);
+            title = GuildViews.Text("Searching\u2026", "g2-search-title"); card.Add(title);
+            modeName = GuildViews.Text("", "g2-search-mode"); card.Add(modeName);
+            elapsed = GuildViews.Text("00:00", "g2-search-time"); card.Add(elapsed);
             rating = GuildViews.Text("", "mk-trophy"); card.Add(rating);
             message = GuildViews.Text("", "mk-muted"); card.Add(message);
             invite = GuildViews.Button("Invite", () => InviteRequested?.Invoke(), "mk-btn--primary"); invite.name = "searching-invite"; card.Add(invite);
             retry = GuildViews.Button("Retry", () => _ = StartAsync()); retry.name = "searching-retry"; card.Add(retry);
             extra = GuildViews.Button("", () => extraAction?.Invoke()); card.Add(extra);
-            card.Add(GuildViews.Button("Back \u00d7", Close));
+            card.Add(GuildViews.Button("Cancel", Close));
             Root.style.display = DisplayStyle.None; shell.Add(Root);
             int dots = 0;
             Root.schedule.Execute(() => { if (IsOpen && searching) title.text = "Searching" + new string('.', dots = (dots + 1) % 4); }).Every(400);
@@ -58,15 +62,24 @@ namespace NodeWar.Lobby
             if (selection.LaunchStrategy == ModeLaunchStrategy.Lan) { router.CloseAll(); LanRequested?.Invoke(); return; }
             mode = selection; navigation.Show(LobbyPageID.Home); router.CloseAll(); IsOpen = true;
             Root.style.display = DisplayStyle.Flex; Root.BringToFront(); RefreshRating(); SetChrome(true);
-            invite.style.display = selection.IsPrivate || selection.Mode == LobbyMode.Team2v2 || selection.Mode == LobbyMode.FreeForAll4 ? DisplayStyle.Flex : DisplayStyle.None;
-            router.Open(new LobbyOverlay("searching", OverlayKind.Panel, true), Close);
-            shot(StageShot.Home); _ = StartAsync();
+            modeName.text = selection.Definition.DisplayName;
+            startedAt = Time.realtimeSinceStartupAsDouble; elapsed.text = "00:00";
+            invite.style.display = QueueSearchPolicy.CanInvite(selection.Mode) ? DisplayStyle.Flex : DisplayStyle.None;
+            var pages = shell.Q("page-host");
+            if (pages != null) { pageVisibility = pages.style.visibility; pages.style.visibility = Visibility.Hidden; }
+            router.Open(new LobbyOverlay("searching", OverlayKind.Fullscreen, true), Close);
+            shot(StageShot.Ocean); _ = StartAsync();
         }
         private void AccountChanged(AccountInfo _) => Close();
-        private void RefreshRating() => rating.text = BackendServices.LastKnownState?.Rank is RankRecord rank ? rank.RR + " RR" : "\u2014";
+        private void RefreshRating()
+        {
+            rating.style.display = mode.Mode == LobbyMode.Ranked1v1 ? DisplayStyle.Flex : DisplayStyle.None;
+            rating.text = BackendServices.LastKnownState?.Rank is RankRecord rank ? rank.RR + " RR" : "\u2014";
+        }
         private async System.Threading.Tasks.Task StartAsync()
         {
             int request = ++version; presenter?.Dispose(); presenter = null; launcher.Cancel(); ShowSearching(0);
+            if (QueueSearchPolicy.IsFake(mode.Mode)) return; // Deliberately searches forever without a backend ticket.
             if (!mode.Definition.CanSelect(false) || (mode.LaunchStrategy == ModeLaunchStrategy.Queue && mode.Definition.QueueKey != ModeDefinition.For(LobbyMode.Ranked1v1).QueueKey))
             {
                 ShowFailed("Coming soon"); return;
@@ -100,12 +113,20 @@ namespace NodeWar.Lobby
             }
             catch (Exception ex) { if (IsOpen && request == version) ShowFailed(ex.Message); }
         }
-        public void Update() { if (IsOpen) { presenter?.Tick(Time.realtimeSinceStartupAsDouble); launcher.Update(); } }
+        public void Update()
+        {
+            if (!IsOpen) return;
+            double now = Time.realtimeSinceStartupAsDouble;
+            elapsed.text = QueueSearchPolicy.Elapsed(Math.Max(0, (int)(now - startedAt)));
+            presenter?.Tick(now); launcher.Update();
+        }
         public void Close()
         {
             if (!IsOpen) return;
             IsOpen = false; version++; CancelRequested?.Invoke(); presenter?.Dispose(); presenter = null; launcher.Cancel();
-            Root.style.display = DisplayStyle.None; SetChrome(false); router.Closed("searching");
+            Root.style.display = DisplayStyle.None; SetChrome(false);
+            var pages = shell.Q("page-host"); if (pages != null) pages.style.visibility = pageVisibility;
+            router.Closed("searching");
             navigation.Show(LobbyPageID.Home); shot(StageShot.Home);
         }
         private void SetChrome(bool inert)
