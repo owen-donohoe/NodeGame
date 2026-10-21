@@ -39,9 +39,6 @@
 .ui-root .lb-crate-box { --paper-card-fill: var(--paper-dark); }
 .ui-root .lb-crate-reward { --paper-card-fill: var(--paper-gold); }
 .ui-root .lb-reveal-district, .ui-root .lb-reveal-suit, .ui-root .lb-reveal-skin { --paper-card-fill: var(--paper-light); color: var(--ink); }
-.ui-root .lb-switch { background-color: var(--paper-dark); border-width: 2px; border-color: var(--ink); }
-.ui-root .lb-switch--on { background-color: var(--paper-gold); }
-.ui-root .lb-switch__knob { background-color: var(--paper-light); border-width: 2px; border-color: var(--ink); }
 .ui-root .cp-check, .ui-root .cp-check--on { border-color: var(--ink); background-color: var(--paper-light); }
 .ui-root .cp-check--on { background-color: var(--paper-gold); }
 .ui-root .unity-foldout__toggle { min-height: 48px; background-color: var(--paper-dark); border-radius: var(--corner-sm); padding: 8px; }
