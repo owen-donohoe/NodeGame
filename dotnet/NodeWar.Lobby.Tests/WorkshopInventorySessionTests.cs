@@ -27,6 +27,25 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void AccountChange_RejectsPreviousAccountResponses()
+        {
+            var session = Open("a");
+            Assert.That(session.TryBeginRequest(out var old), Is.True);
+            int visit = session.InvalidateAccount();
+            session.Select("a");
+            Assert.That(session.IsOpen, Is.True);
+            Assert.That(session.IsCurrent(old), Is.False);
+            Assert.That(session.IsVisitCurrent(old), Is.False);
+            Assert.That(session.IsVisitCurrent(visit), Is.True);
+            session.EndRequest(old);
+            Assert.That(session.TryBeginRequest(out var fresh), Is.True);
+            Assert.That(session.IsCurrent(fresh), Is.True);
+            var forged = new InventoryRequestToken(fresh.Visit, fresh.Selection, fresh.Request, fresh.BaseID, fresh.Account - 1);
+            Assert.That(session.IsCurrent(forged), Is.False, "the account generation alone must invalidate");
+            Assert.That(session.IsVisitCurrent(forged), Is.False);
+        }
+
+        [Test]
         public void SwitchItem_RejectsOldSelection()
         {
             var session = Open("a");

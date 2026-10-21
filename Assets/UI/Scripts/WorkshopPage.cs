@@ -149,6 +149,7 @@ namespace NodeWar.Lobby
         public override void OnShow()
         {
             int visit = session.BeginVisit();
+            BackendServices.Account.Changed -= AccountChanged; BackendServices.Account.Changed += AccountChanged;
             if (panelBaseId != null || inventorySheet.IsOpen) CloseItemPanel();
             playerState = BackendServices.LastKnownState;
             CollectItems(); LoadFromProfile(); Inspect(null); Render();
@@ -553,11 +554,23 @@ namespace NodeWar.Lobby
         }
         private void CloseInventory()
         {
+            BackendServices.Account.Changed -= AccountChanged;
             clearConfirmation?.Close();
             CancelReplacement();
             ItemViewed?.Invoke(false, null);
             CloseItemPanel();
             session.Close();
+        }
+
+        private void AccountChanged(AccountInfo account)
+        {
+            if (!session.IsOpen) return;
+            // Responses issued for the previous account must neither load nor save into this one.
+            int visit = session.InvalidateAccount();
+            clearConfirmation?.Close(); CancelReplacement(); CloseItemPanel();
+            playerState = BackendServices.LastKnownState;
+            CollectItems(); LoadFromProfile(); Inspect(null); Render();
+            _ = LoadInventoryAsync(visit);
         }
 
         private bool IsInventoryActive(int visit) => session.IsVisitCurrent(visit);
