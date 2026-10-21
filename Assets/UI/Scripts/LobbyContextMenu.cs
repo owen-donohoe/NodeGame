@@ -32,6 +32,8 @@ namespace NodeWar.Lobby
         private readonly VisualElement menu;
         private readonly MkSheet sheet;
         private VisualElement lifted;
+        private readonly VisualElement bubbleScrim = new VisualElement();
+        private readonly VisualElement bubble = new VisualElement();
 
         public LobbyContextMenu(VisualElement root)
         {
@@ -41,6 +43,13 @@ namespace NodeWar.Lobby
             layer.Add(sheet);
             menu = sheet.Body;
             sheet.Closed += Close;
+            bubbleScrim.AddToClassList("lb-context-bubble-scrim");
+            bubble.AddToClassList("lb-context-bubble");
+            var styles = Resources.Load<StyleSheet>("Lobby/ContextBubble");
+            if (styles != null) layer.styleSheets.Add(styles);
+            layer.Add(bubbleScrim); layer.Add(bubble);
+            bubbleScrim.style.display = bubble.style.display = DisplayStyle.None;
+            bubbleScrim.RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
         }
 
         public bool IsOpen { get; private set; }
@@ -100,11 +109,39 @@ namespace NodeWar.Lobby
             Opened?.Invoke();
         }
 
+        /// <summary>Anchored player actions, kept on the shared menu layer above a room sheet.</summary>
+        public void ShowBubble(VisualElement source, IList<LobbyMenuItem> items)
+        {
+            if (source == null || items == null || items.Count == 0) return;
+            Close(); bubble.Clear();
+            var tip = new VisualElement { pickingMode = PickingMode.Ignore }; tip.AddToClassList("lb-context-bubble-tip"); bubble.Add(tip);
+            foreach (var item in items)
+            {
+                var row = GuildViews.Button(item.Label, () => { Close(); item.Action?.Invoke(); });
+                bubble.Add(row);
+            }
+            bubbleScrim.style.display = bubble.style.display = DisplayStyle.Flex;
+            bubbleScrim.BringToFront(); bubble.BringToFront();
+            var point = layer.WorldToLocal(new Vector2(source.worldBound.center.x, source.worldBound.yMax));
+            float width = Mathf.Min(240, Mathf.Max(160, layer.layout.width - 24));
+            float left = Mathf.Clamp(point.x - width / 2, 12, Mathf.Max(12, layer.layout.width - width - 12));
+            float height = items.Count * 52 + 32;
+            bool above = point.y + height + 12 > layer.layout.height;
+            bubble.style.width = width;
+            bubble.style.left = left;
+            bubble.style.top = above ? Mathf.Max(12, layer.WorldToLocal(new Vector2(0, source.worldBound.yMin)).y - height - 8) : point.y + 8;
+            tip.style.left = Mathf.Clamp(point.x - left - 8, 16, width - 32);
+            tip.EnableInClassList("lb-context-bubble-tip--below", above);
+            lifted = source; lifted.AddToClassList("lb-lifted");
+            IsOpen = true; Opened?.Invoke();
+        }
+
         public void Close()
         {
             if (!IsOpen) return;
 
             IsOpen = false;
+            bubbleScrim.style.display = bubble.style.display = DisplayStyle.None;
             sheet.Close();
 
             if (menu != null)
