@@ -63,6 +63,12 @@ public class LobbyModeCategoryTests
         Assert.IsTrue(LobbyModeLayout.IsEmpty(1, 0, 1));
     }
 
+    [TestCase(300f)][TestCase(433f)][TestCase(600f)]
+    public void CardsKeepTenToEightProportionInsideTheHalfHeightBand(float groupHeight)
+    {
+        float height = (groupHeight - 88) / 2;
+        Assert.That(height / LobbyModeLayout.CardWidth(groupHeight), Is.EqualTo(10f / 8f).Within(0.0001));
+    }
     [Test]
     public void GroupStartsIncludeColumnAndGroupGapsAndSnapToNearestStart()
     {

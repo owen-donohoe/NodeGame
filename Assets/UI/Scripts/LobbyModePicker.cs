@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
     /// <summary>One elastic strip of two-row column groups, with a spring snap after scrolling rests.</summary>
     public sealed class LobbyModePicker : LobbyPushPage
     {
-        private const float Gap = 8, GroupGap = 16, GroupFrame = 20;
+        private const float Gap = 12, GroupGap = 16, GroupFrame = 24;
         private readonly LobbyToggle privateToggle = new LobbyToggle();
         private readonly ScrollView strip = new ScrollView(ScrollViewMode.Horizontal);
         private readonly VisualElement[] groups = new VisualElement[3];
@@ -42,6 +42,7 @@ namespace NodeWar.Lobby
                 var modes = LobbyModeCategories.ModesIn(category);
                 var group = new VisualElement(); group.AddToClassList("mk-card"); group.AddToClassList("lb-modepage__group");
                 group.AddToClassList("lb-modepage__group--" + category.ToString().ToLowerInvariant());
+                var edge = new VisualElement { pickingMode = PickingMode.Ignore }; edge.AddToClassList("lb-modepage__group-edge"); group.Add(edge);
                 groups[i] = group; strip.Add(group);
                 group.Add(GuildViews.Text(LobbyModeCategories.Title(category), "lb-modepage__group-title"));
                 var columns = new VisualElement(); columns.AddToClassList("lb-modepage__columns"); group.Add(columns);
@@ -131,9 +132,10 @@ namespace NodeWar.Lobby
         {
             float width = strip.contentViewport.layout.width;
             if (float.IsNaN(width) || width <= 0) return;
-            columnWidth = Mathf.Clamp(width * (0.50f * 5f / 7f), 120, 188);
+            columnWidth = LobbyModeLayout.CardWidth(strip.contentViewport.layout.height);
+            if (float.IsNaN(columnWidth) || columnWidth <= 0) return;
             // Ranked sits just left of centre; the next group peeks in immediately.
-            float inset = Mathf.Max(12, width * 0.38f - (columnWidth + GroupFrame) / 2);
+            float inset = 16;
             strip.contentContainer.style.paddingLeft = inset;
             strip.contentContainer.style.paddingRight = Mathf.Max(12, width - inset - columnWidth - GroupFrame);
             for (int i = 0; i < groups.Length; i++)
