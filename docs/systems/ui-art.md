@@ -48,7 +48,7 @@ sources:
   - Assets/UI/Styles/Workshop.uss
   - Assets/UI/Resources/Lobby/Workshop.uss
   - Assets/UI/UnityDefaultRuntimeTheme.tss
-verified: d7bcb118
+verified: 7e21f820
 ---
 
 # UI art
@@ -77,7 +77,7 @@ Gauge USS properties: `--res-thickness`, `--res-stop-0` through `--res-stop-5` c
 
 `PaperCard` and `PaperButton` retain UXML types and bindings. Attached lobby surfaces use USS panels and pressables, grain and bottom-edge lips; their procedural underlays are suppressed. Shop and non-lobby surfaces retain seeded paper drawing through `--paper-card-*`, `Seed` and `RotatePaper`. `PaperMath` is UnityEngine-free.
 
-`SegmentedSwitch.Select/Changed` slides one face; `LobbyToggle` (the one binary control, also in the match HUD) slides a knob; `LobbyToggleMath` fixes travel. Both tick only while moving; segment colours crossfade. `--mk-private` supplies the purple Private ribbon meaning.
+`SegmentedSwitch.Select/Changed` slides one face; `LobbyToggle` (the one binary control, also in the match HUD) slides a knob; `LobbyToggleMath` fixes travel. Both tick only while moving; segment colours crossfade. `--mk-private` colours Private; `--mk-mode-other` colours Other groups.
 
 `UiRequired` and shared `UiRequiredNames` report missing/wrong behavior-bearing elements in Editor/development builds without aborting binding. Art/layout edits must preserve those names and element types.
 
