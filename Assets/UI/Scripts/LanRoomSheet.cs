@@ -28,7 +28,7 @@ namespace NodeWar.Lobby
             launcher = new MatchLauncher(catalog); launcher.Changed += Refresh;
             sheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/PrivateLobby"));
             sheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/LanRoom"));
-            sheet.SetScrollable(false); sheet.BindRouter(router, "lan-room"); shell.Add(sheet);
+            sheet.SetScrollable(true); sheet.BindRouter(router, "lan-room"); shell.Add(sheet);
             sheet.Closed += () => { state.Leave(); room.ResetDrag(); menu.Close(); confirm.Close(); launcher.Cancel(); };
             sheet.Opened += () => { sheet.BringToFront(); shell.Q("toast-dock")?.BringToFront(); };
             room = new RoomView(menu, () => localId, (a, b) => launcher.PrivateAction(2, a, b), MenuRows);
@@ -55,24 +55,27 @@ namespace NodeWar.Lobby
         {
             if (kicked) state.Kicked(); else state.Leave();
             room.ResetDrag(); menu.Close(); confirm.Close(); launcher.Cancel();
-            sheet.Body.Clear(); sheet.Body.Add(GuildViews.Text("LAN", "mk-h2"));
+            SetTitle("LAN");
             if (!string.IsNullOrEmpty(error)) sheet.Body.Add(GuildViews.Text(error, "mk-muted"));
-            sheet.Body.Add(GuildViews.Button("Host", Host));
-            sheet.Body.Add(GuildViews.Button("Join", () => { state.Join(); ShowJoin(); }));
+            var choice = new VisualElement(); choice.AddToClassList("lan-choice");
+            choice.Add(GuildViews.Button("Host", Host));
+            choice.Add(GuildViews.Button("Join", () => { state.Join(); ShowJoin(); })); sheet.Body.Add(choice);
         }
         private void ShowJoin(string error = null)
         {
-            sheet.Body.Clear(); sheet.Body.Add(GuildViews.Text("Join LAN room", "mk-h2"));
+            SetTitle("Join LAN room");
+            var form = new VisualElement(); form.AddToClassList("lan-join"); sheet.Body.Add(form);
             var field = new TextField("IP address") { value = address }; field.AddToClassList("lan-address");
-            field.RegisterValueChangedCallback(e => address = e.newValue); sheet.Body.Add(field);
-            if (!string.IsNullOrEmpty(error)) sheet.Body.Add(GuildViews.Text(error, "mk-muted"));
-            sheet.Body.Add(GuildViews.Button("Join", () =>
+            field.RegisterValueChangedCallback(e => address = e.newValue); form.Add(field);
+            form.Add(GuildViews.Text(error ?? "", "lan-join-status"));
+            var actions = ActionRow(); form.Add(actions);
+            actions.Add(GuildViews.Button("Join", () =>
             {
-                state.Connect(); sheet.Body.Clear(); sheet.Body.Add(GuildViews.Text("Connecting\u2026", "mk-h2"));
+                state.Connect(); SetTitle("Connecting\u2026");
                 sheet.Body.Add(GuildViews.Button("Cancel", () => { state.Join(); launcher.Cancel(); ShowJoin(); }));
                 launcher.JoinLanRoom(address, localId, LocalName());
             }));
-            sheet.Body.Add(GuildViews.Button("Cancel", () => ReturnToChoice()));
+            actions.Add(GuildViews.Button("Cancel", () => ReturnToChoice()));
         }
         private void Host()
         {
@@ -81,15 +84,23 @@ namespace NodeWar.Lobby
         }
         private void ShowHost()
         {
-            roomPage.Clear(); roomPage.Add(modes); roomPage.Add(room.Root); roomPage.Add(status); roomPage.Add(play);
-            roomPage.Add(GuildViews.Button("Close room", () => ReturnToChoice()));
-            sheet.Body.Clear(); sheet.Body.Add(GuildViews.Text("LAN room", "mk-h2")); sheet.Body.Add(roomPage);
+            roomPage.Clear(); roomPage.Add(modes); roomPage.Add(room.Root); roomPage.Add(status);
+            var actions = ActionRow(); actions.Add(GuildViews.Button("Close room", () => ReturnToChoice())); actions.Add(play); roomPage.Add(actions);
+            SetTitle("LAN room"); sheet.Body.Add(roomPage);
         }
         private void ShowGuest()
         {
             sheet.Body.Clear(); sheet.Body.Add(GuildViews.Text("LAN room", "mk-h2"));
             sheet.Body.Add(room.Root); sheet.Body.Add(status);
             sheet.Body.Add(GuildViews.Button("Leave", () => ReturnToChoice()));
+        }
+        private void SetTitle(string text)
+        {
+            sheet.Header.Clear(); sheet.Header.Add(GuildViews.Text(text, "mk-h2")); sheet.Body.Clear();
+        }
+        private static VisualElement ActionRow()
+        {
+            var row = new VisualElement(); row.AddToClassList("lan-actions"); return row;
         }
         private void Play()
         {

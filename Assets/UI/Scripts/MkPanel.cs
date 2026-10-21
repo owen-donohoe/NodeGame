@@ -49,7 +49,7 @@ namespace NodeWar.Lobby
         public void BindRouter(LobbyOverlayRouter value, string id) { router = value; route = id; }
         public void Open()
         {
-            if (IsOpen) return;
+            if (IsOpen || (router != null && !router.Allows(route))) return;
             IsOpen = true; style.display = DisplayStyle.Flex; BringToFront();
             LobbyScrollbars.Hide(Body);
             if (router != null) router.Open(new LobbyOverlay(route, OverlayKind.Panel, true), Close);

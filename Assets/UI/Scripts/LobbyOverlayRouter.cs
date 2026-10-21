@@ -9,8 +9,11 @@ namespace NodeWar.Lobby
         private readonly Dictionary<string, Action> dismiss = new Dictionary<string, Action>();
         public LobbyRouteStack Stack { get; } = new LobbyRouteStack();
 
+        public bool Allows(string id) => !Stack.Contains("searching") || id == "searching" || id == "teammate-invite";
+
         public void Open(LobbyOverlay entry, Action close)
         {
+            if (!Allows(entry.ID)) { close?.Invoke(); return; }
             dismiss[entry.ID] = close;
             Stack.Push(entry);
         }

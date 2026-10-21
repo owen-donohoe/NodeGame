@@ -36,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: b006bbaa
+verified: f56e12df
 ---
 
 # Backend client
@@ -64,7 +64,7 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 
 `PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs, stats, twenty retained summaries), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s) and `ProfileRecord` (`Name`, `Tag`, `NameNorm`, last free rename). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile`. `HandleRules` (validation, normalisation, rename cost) and `HandleDisplay` (Name#TAG, capped headers, first-run name) are shared. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
 
-`RankedQueuePresenter.StartAsync(now)`, `Tick(now)`, `RequestCancelAsync()` and `Dispose()` drive `IRankedQueueView`; view events are `CancelRequested`, `ForfeitConfirmed`, `BotAccepted`. View methods show idle/search/found/failure/cancel/connecting/requeue/forfeit/waiting/bot-offer/blocked states. `MatchFound` and `BotMatchAccepted` hand off outcomes.
+`RankedQueuePresenter.StartAsync(now)`, `Tick(now)`, `RequestCancelAsync()` and `Dispose()` drive `IRankedQueueView`; view events are `CancelRequested`, `ForfeitConfirmed`, `BotAccepted`. View methods show idle/search/found/failure/cancel/connecting/requeue/forfeit/waiting/bot-offer/blocked states. `MatchFound` and `BotMatchAccepted` hand off outcomes. Shared `BotOfferSeconds` is 90; poll exceptions fail immediately while cancelling the ticket.
 
 `RankedRendezvous.Start/Tick/Cancel` drives `IRankedConnection.Host(matchId, playerIds)` or `Join(matchId, playerIds, joinCode)`, reads its phase/code/failure and raises `Connected` or `Failed`. `RendezvousResult` supplies roster, caller slot, code, connection flag, map ID and board hash. Slot 0 hosts, slot 1 joins.
 
@@ -86,7 +86,7 @@ Services are async and can refuse or throw. UI displays returned state rather th
 ## How it works
 Anonymous authentication is the initial identity. UPA linking preserves its UGS Player ID; a conflict offers explicit account switching without merging. Sign-out clears cached credentials. `LinkPromptPolicy` prompts once progress matters; Steam linking is unbuilt.
 
-Queue preflight retries pending reports, fetches state and clears or offers forfeiting an active match. It displays discipline blocks before enqueueing. UGS initializes player records before creating tickets containing protocol/sim/content/noRR. Polling runs every two seconds; failures recheck active claims instead of parsing ticket messages and allow three automatic requeues. After ninety seconds a bot offer leaves the ticket live until accepted.
+Queue preflight retries pending reports, fetches state and clears or offers forfeiting an active match. It displays discipline blocks before enqueueing. UGS initializes player records before creating tickets containing protocol/sim/content/noRR. Polling runs every two seconds; poll exceptions expose Retry immediately. Match/rendezvous failures recheck active claims and permit three automatic requeues. After ninety seconds a bot offer leaves the ticket live until accepted.
 
 Rendezvous exchanges a Relay code through the record, without UGS Lobby. Guest code wait is fifteen seconds; host guest wait is twenty-two after publication. Failure leaves the record and cancels the connection. Both sides confirm connection before draft handoff.
 

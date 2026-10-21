@@ -58,6 +58,7 @@ namespace NodeWar.Lobby
         public bool IsPanning => pageMoving || Time.unscaledTimeAsDouble - shotStarted < LobbyMotion.PanSeconds;
         private StageShot currentShot = StageShot.Home;
         private float shopScroll;
+        private float queueTop = 0.28f, queueBottom = 0.62f, queueAspect;
 
         /// <summary>
         /// FillEmpty/ Replaced asks the owner to apply its chosen type, then call SetLoadout.
@@ -280,6 +281,17 @@ namespace NodeWar.Lobby
                     target = new Vector3(18f, 0f, 0f);
                     position = target + new Vector3(0f, 9f, -12f);
                     break;
+                case StageShot.Queue:
+                    // Queue has no selection/replacement: tighten the plot halo, then include every walking suit.
+                    var queueEnvelope = clusterEnvelope;
+                    queueEnvelope.Expand(new Vector3(-1f, 0f, -1f));
+                    if (suitRenderers.Length > 0) queueEnvelope.Encapsulate(SuitEnvelope());
+                    var queueHalf = queueEnvelope.extents;
+                    var queueFit = StageClusterFraming.Fit(stageCamera.aspect, queueTop, queueBottom, false,
+                        queueHalf.x, queueHalf.y, queueHalf.z);
+                    rotation = Quaternion.Euler(queueFit.Pitch, 0f, 0f);
+                    position = queueEnvelope.center - rotation * Vector3.forward * queueFit.Distance - rotation * Vector3.up * queueFit.UpOffset;
+                    return;
                 case StageShot.Districts:
                 case StageShot.Suits:
                     var envelope = shot == StageShot.Suits ? SuitEnvelope() : clusterEnvelope;
@@ -338,6 +350,17 @@ namespace NodeWar.Lobby
             clusterEnvelope.Expand(new Vector3(1.4f, 0f, 1.4f));
         }
 
+        /// <summary>Queue's transparent gap, normalized against the full camera viewport.</summary>
+        public void SetQueueBand(float top, float bottom)
+        {
+            if (Mathf.Approximately(top, queueTop) && Mathf.Approximately(bottom, queueBottom)
+                && Mathf.Approximately(stageCamera.aspect, queueAspect)) return;
+            queueTop = top; queueBottom = bottom; queueAspect = stageCamera.aspect;
+            if (currentShot != StageShot.Queue) return;
+            // Retarget during the shared pan without restarting its clock.
+            if (IsPanning) GetShot(currentShot, out shotPosition, out shotRotation);
+            else ShowShot(currentShot);
+        }
         public void SetWorkshopBand(float top, float bottom)
         {
             if (Mathf.Approximately(top, workshopTop) && Mathf.Approximately(bottom, workshopBottom) &&

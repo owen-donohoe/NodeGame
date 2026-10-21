@@ -360,11 +360,12 @@ namespace NodeWar.Lobby
             playFlow = new LobbyPlayFlow(lobbyRoot, router, playPopup, catalog, toast, NodeWar.Backend.BackendServices.MatchHistory);
             privateLobbyPanel = new PrivateLobbyPanel(lobbyRoot, router, catalog, menu, toast, profilePage.OpenFor, playFlow.OpenPrivateInvite);
             if (playPopup != null) playPopup.PrivateJoinRequested += privateLobbyPanel.Join;
-            searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
+            searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot, (top, bottom) => stage?.SetQueueBand(top, bottom));
             searchingScreen.PrivateRequested += privateLobbyPanel.Open;
             lanRoomSheet = new LanRoomSheet(lobbyRoot, router, catalog, menu, toast, profilePage.OpenFor);
             searchingScreen.LanRequested += lanRoomSheet.Open;
             teammateInviteSheet = new TeammateInviteSheet(lobbyRoot, router);
+            searchingScreen.CancelRequested += teammateInviteSheet.Reset;
             RegisterPages();
             WireOverlays(root);
             LobbyScrollbars.Hide(root);
@@ -570,6 +571,7 @@ namespace NodeWar.Lobby
             modePicker.Closed += () => { if (homePage != null) homePage.Root.style.visibility = StyleKeyword.Null; };
             modePicker.Selected += selection =>
             {
+                if (selection.Mode != selectedMode.Mode || selection.Private != selectedMode.Private) teammateInviteSheet?.Reset();
                 selectedMode = selection;
                 var profile = PlayerProfile.Instance;
                 if (profile != null) { selection.Store(ref profile.data); profile.Save(); }
@@ -841,6 +843,7 @@ namespace NodeWar.Lobby
 
         private void HandleBack()
         {
+            if (searchingScreen?.IsOpen == true) { searchingScreen.Close(); return; }
             if (router == null || navigation == null) return;
             BackAction action = Routes.Back(navigation.CurrentPageID ?? LobbyPageID.Home);
             if (action.Kind == BackActionKind.CloseTop) router.Close(action.ID);
@@ -854,6 +857,7 @@ namespace NodeWar.Lobby
 
         public void HandleDeepLink(string url)
         {
+            if (searchingScreen?.IsOpen == true) return;
             if (router == null || navigation == null || !LobbyDeepLink.TryParse(url, out LobbyRoute route)) return;
             router.CloseAll();
             if (route.Kind == LobbyRouteKind.ShopStall)

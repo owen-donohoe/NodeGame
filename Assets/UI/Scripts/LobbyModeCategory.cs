@@ -32,6 +32,8 @@ namespace NodeWar.Lobby
     public static class LobbyModeLayout
     {
         public const int Rows = 2;
+        // The 50% band includes 12px padding, a 40px title, a 12px title gap and a 12px row gap.
+        public static float CardWidth(float groupHeight) => Math.Max(0, (groupHeight - 88) / Rows) * 8f / 10f;
         public static int Columns(int modes) => Math.Max(1, (modes + Rows - 1) / Rows);
         public static int Slots(int modes) => Columns(modes) * Rows;
         public static int ModeIndex(int column, int row) => column * Rows + row;

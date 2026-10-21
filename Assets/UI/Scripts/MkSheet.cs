@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
@@ -11,6 +12,8 @@ namespace NodeWar.Lobby
         public VisualElement Surface { get; } = new VisualElement();
         public VisualElement Scrim { get; } = new VisualElement();
         public VisualElement Handle { get; } = new VisualElement();
+        public VisualElement Header { get; } = new VisualElement();
+        public VisualElement Footer { get; } = new VisualElement();
         public Button CloseButton { get; }
         public bool IsOpen { get; private set; }
         public event Action Opened;
@@ -21,6 +24,13 @@ namespace NodeWar.Lobby
         private string route;
         private readonly LobbyElementMotion motion;
         private int openRevision;
+        private readonly IVisualElementScheduledItem sizeTick;
+        private LobbyMotion.Spring height;
+        private double sizeSampled;
+        private bool heightPlaced;
+        private Label parkedHeading;
+        private VisualElement headingOwner;
+        private int headingIndex;
 
         public MkSheet()
         {
@@ -34,7 +44,9 @@ namespace NodeWar.Lobby
             CloseButton = LobbyCloseButton.Create(Close); CloseButton.name = "sheet-close";
             CloseButton.AddToClassList("mk-sheet__close"); Handle.Add(CloseButton);
             CloseButton.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
-            Body.style.minHeight = 0; Body.style.flexShrink = 1; Surface.Add(Body);
+            Header.style.flexShrink = 0; Footer.style.flexShrink = 0;
+            Header.AddToClassList("mk-sheet-header"); Footer.AddToClassList("mk-sheet-footer");
+            Surface.Add(Header); Body.style.minHeight = 0; Body.style.flexShrink = 1; Surface.Add(Body); Surface.Add(Footer);
             RegisterCallback<PointerDownEvent>(evt => { if (!IsOpen) evt.StopImmediatePropagation(); }, TrickleDown.TrickleDown);
             RegisterCallback<ClickEvent>(evt => { if (!IsOpen) evt.StopImmediatePropagation(); }, TrickleDown.TrickleDown);
             Scrim.RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
@@ -51,6 +63,7 @@ namespace NodeWar.Lobby
             style.display = DisplayStyle.None;
             motion = new LobbyElementMotion(Surface, Scrim, vertical: true);
             motion.Set(0f, 0f, LobbyMotion.ClosedScale);
+            sizeTick = schedule.Execute(FitContent).Every(16); sizeTick.Pause();
         }
 
         public void SetScrollable(bool value)
@@ -61,12 +74,16 @@ namespace NodeWar.Lobby
             Body.name = previous.name;
             Body.style.minHeight = 0; Body.style.flexShrink = 1; Body.style.overflow = Overflow.Hidden;
             foreach (var child in new System.Collections.Generic.List<VisualElement>(previous.Children())) Body.Add(child);
-            previous.RemoveFromHierarchy(); Surface.Add(Body);
+            previous.RemoveFromHierarchy(); Surface.Insert(Surface.IndexOf(Footer), Body);
         }
         public void BindRouter(LobbyOverlayRouter value, string id) { router = value; route = id; }
         public void Open(bool large = false)
         {
+            if (router != null && !router.Allows(route)) return;
             Surface.EnableInClassList("mk-bigsheet", large);
+            bool item = Surface.ClassListContains("ws-item-sheet");
+            if (item) { Surface.style.height = Length.Percent(78); Surface.style.maxHeight = Length.Percent(78); }
+            else { Surface.style.maxHeight = Length.Percent(85); sizeSampled = Time.unscaledTimeAsDouble; sizeTick.Resume(); }
             LobbyScrollbars.Hide(Body);
             int revision = ++openRevision;
             // Never paint the previous item's offset. Reset again after layout,
@@ -94,12 +111,45 @@ namespace NodeWar.Lobby
         public void Close()
         {
             if (!IsOpen) return;
-            Release(); IsOpen = false;
+            Release(); IsOpen = false; sizeTick.Pause(); heightPlaced = false; RestoreHeading();
             SetEnabled(false);
             pickingMode = Surface.pickingMode = Scrim.pickingMode = PickingMode.Ignore;
             motion.CloseDown(() => style.display = DisplayStyle.None);
             if (router != null) router.Closed(route);
             Closed?.Invoke();
+        }
+        private void RestoreHeading()
+        {
+            if (parkedHeading != null && headingOwner != null)
+                headingOwner.Insert(Mathf.Min(headingIndex, headingOwner.childCount), parkedHeading);
+            parkedHeading = null; headingOwner = null;
+        }
+        private void FitContent()
+        {
+            if (!IsOpen || panel == null || Surface.ClassListContains("ws-item-sheet")) return;
+            var body = Body.contentContainer;
+            VisualElement first = body.childCount > 0 ? body[0] : null;
+            var heading = first as Label;
+            if (heading == null && first != null && first.childCount > 0) heading = first[0] as Label;
+            if (heading != null && heading.ClassListContains("mk-h2"))
+            {
+                if (parkedHeading != null) { parkedHeading.RemoveFromHierarchy(); parkedHeading = null; }
+                headingOwner = heading.parent; headingIndex = headingOwner.IndexOf(heading); parkedHeading = heading;
+                Header.Add(heading);
+            }
+            float contentHeight = body.layout.height;
+            if (float.IsNaN(contentHeight) || contentHeight <= 0) return;
+            var style = Surface.resolvedStyle;
+            float chrome = Handle.layout.height + Handle.resolvedStyle.marginTop + Header.layout.height + Footer.layout.height
+                + style.paddingTop + style.paddingBottom + style.borderTopWidth + style.borderBottomWidth;
+            float target = Mathf.Min(Mathf.Max(240, contentHeight + chrome), worldBound.height * 0.85f);
+            if (float.IsNaN(target) || target <= 0) return;
+            if (!heightPlaced) { height = new LobbyMotion.Spring(target); heightPlaced = true; }
+            height.Target = target;
+            double now = Time.unscaledTimeAsDouble;
+            if (LobbyMotion.Reduced) { height.Position = target; height.Velocity = 0; }
+            else height.Advance((float)(now - sizeSampled), LobbyMotion.PopDamping);
+            sizeSampled = now; Surface.style.height = height.Position;
         }
         private void Release()
         {
