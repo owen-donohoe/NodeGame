@@ -100,23 +100,44 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
-        public void Drag_ClampsBothEnds_ReleaseRetainsVelocity()
+        public void DragResistsBothEndsAndReturnsBeforeStallSnapping()
         {
-            var model = new ShopSnap();
-            model.BeginDrag();
-            model.Drag(-1, 0.1f);
-            Assert.AreEqual(0, model.Position);
-            model.Drag(0.3f, 0.1f);
+            var model = new ShopSnap(); model.BeginDrag(); model.Drag(-1, 0.1f);
+            Assert.That(model.Position, Is.InRange(-0.3f, -0.01f));
+            float position = model.Position;
+            model.BeginDrag(); model.Drag(0, 0.01f);
+            Assert.That(model.Position, Is.EqualTo(position).Within(0.0001));
+            model.Release(); model.Step(0.016f);
+            Assert.That(model.Position, Is.InRange(position, 0));
+            for (int i = 0; i < 100; i++) model.Step(0.016f);
+            Assert.AreEqual(0, model.Position); Assert.IsFalse(model.Moving);
+            model.BeginDrag(); model.Drag(100, 0.1f);
+            Assert.That(model.Position, Is.InRange(4.01f, 4.3f));
             model.Release();
+            for (int i = 0; i < 100; i++) model.Step(0.016f);
+            Assert.AreEqual(4, model.Position); Assert.IsFalse(model.Moving);
+        }
+
+        [Test]
+        public void InBoundsReleaseRetainsMomentum()
+        {
+            var model = new ShopSnap(); model.BeginDrag(); model.Drag(0.3f, 0.1f); model.Release();
             Assert.AreEqual(3, model.Velocity, 0.001f);
-            model.Step(0.1f);
-            Assert.Greater(model.Position, 0.3f);
-            Assert.Less(model.Velocity, 3);
-            model.BeginDrag();
-            model.Drag(100, 0.1f);
-            model.Release();
-            model.Step(1);
-            Assert.AreEqual(4, model.Position);
+            model.Step(0.1f); Assert.Greater(model.Position, 0.3f); Assert.Less(model.Velocity, 3);
+        }
+
+        [Test]
+        public void ReducedShopDragClampsAtTheEdges()
+        {
+            try
+            {
+                LobbyMotion.SetReduced(true);
+                var model = new ShopSnap(); model.BeginDrag(); model.Drag(-1, 0.1f);
+                Assert.AreEqual(0, model.Position);
+                model.Drag(100, 0.1f); Assert.AreEqual(4, model.Position);
+                model.Release(); model.Step(0.016f); Assert.AreEqual(4, model.Position);
+            }
+            finally { LobbyMotion.SetReduced(false); }
         }
 
         [Test]

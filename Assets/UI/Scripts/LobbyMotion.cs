@@ -31,6 +31,39 @@ namespace NodeWar.Lobby
         /// <summary>Camera pans stay visible but short when motion is reduced.</summary>
         public static float PanSeconds => Reduced ? ReducedPanSeconds : PageSeconds;
 
+        /// <summary>Progressive resistance, shared by pixel lists, page widths and stall units.</summary>
+        public static float RubberBand(float position, float min, float max, float viewport)
+        {
+            float bound = Math.Max(min, Math.Min(max, position));
+            if (Reduced) return bound;
+            float excess = position - bound, limit = Math.Max(0.001f, viewport * 0.3f);
+            return bound + excess * 0.55f / (1f + Math.Abs(excess) * 0.55f / limit);
+        }
+        /// <summary>Recover finger travel when grabbing an already displaced surface.</summary>
+        public static float UnrubberBand(float position, float min, float max, float viewport)
+        {
+            float bound = Math.Max(min, Math.Min(max, position));
+            if (Reduced) return bound;
+            float excess = position - bound, limit = Math.Max(0.001f, viewport * 0.3f);
+            return bound + excess / (0.55f * Math.Max(0.001f, 1f - Math.Abs(excess) / limit));
+        }
+        public static float EdgeVelocity(float velocity, float position, float min, float max) =>
+            position < min || position > max ? velocity * 0.15f : velocity;
+
+        /// <summary>Exact critical return, approximately 300ms; inward speed cannot cross the edge.</summary>
+        public static void ReturnToEdge(ref float position, ref float velocity, float edge, float seconds, float epsilon = 0.001f)
+        {
+            if (Reduced) { position = edge; velocity = 0; return; }
+            float displacement = position - edge;
+            if (displacement * velocity < 0 && Math.Abs(velocity) > Frequency * Math.Abs(displacement))
+                velocity = -Frequency * displacement;
+            var spring = new Spring(position) { Target = edge, Velocity = velocity };
+            spring.Step(seconds, 1f);
+            position = spring.Position; velocity = spring.Velocity;
+            if (Math.Abs(position - edge) < epsilon && Math.Abs(velocity) < epsilon * 10)
+            { position = edge; velocity = 0; }
+        }
+
         // Exact damped oscillator: stable across long frames. Changing Target
         // preserves both position and velocity, including on reversal.
         public struct Spring
@@ -75,11 +108,12 @@ namespace NodeWar.Lobby
             public int Current { get; private set; }
             public bool Dragging { get; private set; }
             public bool Moving { get; private set; }
-            private float dragOrigin;
+            private float dragOrigin, dragMin, dragMax, pendingTarget;
+            private bool returning;
             public void Reset(int page)
             {
                 for (int i = 0; i < Slots.Length; i++) Slots[i] = float.NaN;
-                Slots[page] = 0f; Current = page; Motion = new Spring(0f); Moving = Dragging = false;
+                Slots[page] = 0f; Current = page; Motion = new Spring(0f); Moving = Dragging = returning = false;
             }
             public void Go(int page)
             {
@@ -93,6 +127,7 @@ namespace NodeWar.Lobby
                     while (Occupied(edge)) edge += direction;
                     Slots[page] = edge;
                 }
+                returning = false;
                 Current = page; Motion.Target = Slots[page]; Dragging = false; Moving = true;
             }
             private bool Occupied(float slot)
@@ -102,8 +137,13 @@ namespace NodeWar.Lobby
             }
             public void BeginDrag()
             {
-                if (!Moving) Reset(Current);
-                dragOrigin = Motion.Position; Dragging = true; Moving = false;
+                if (!Moving && !Dragging) Reset(Current);
+                dragMin = Slots[Current] - (Current > 0 ? 1f : 0f);
+                dragMax = Slots[Current] + (Current < 4 ? 1f : 0f);
+                if (Current > 0) dragMin = Math.Min(dragMin, Motion.Position);
+                if (Current < 4) dragMax = Math.Max(dragMax, Motion.Position);
+                dragOrigin = UnrubberBand(Motion.Position, dragMin, dragMax, 1f);
+                Dragging = true; Moving = returning = false;
                 for (int d = -1; d <= 1; d += 2)
                 {
                     int neighbour = Current + d;
@@ -115,11 +155,8 @@ namespace NodeWar.Lobby
             public void Drag(float travel, float velocity)
             {
                 float destination = dragOrigin + travel;
-                float min = Math.Min(dragOrigin, Slots[Current] - (Current > 0 ? 1f : 0f));
-                float max = Math.Max(dragOrigin, Slots[Current] + (Current < 4 ? 1f : 0f));
-                float bounded = Math.Max(min, Math.Min(max, destination));
-                Motion.Position = bounded + (destination - bounded) * 0.35f;
-                Motion.Velocity = velocity * (bounded == destination ? 1f : 0.35f);
+                Motion.Position = RubberBand(destination, dragMin, dragMax, 1f);
+                Motion.Velocity = EdgeVelocity(velocity, destination, dragMin, dragMax);
             }
             public void Release(int offset)
             {
@@ -128,14 +165,25 @@ namespace NodeWar.Lobby
                 // slot. Attach that destination beyond it rather than dropping
                 // the release or replacing a page that is still on screen.
                 if (float.IsNaN(Slots[page])) { Go(page); return; }
-                Current = page; Motion.Target = Slots[page]; Dragging = false; Moving = true;
+                Current = page; pendingTarget = Slots[page];
+                returning = Motion.Position < dragMin || Motion.Position > dragMax;
+                Motion.Target = returning ? Math.Max(dragMin, Math.Min(dragMax, Motion.Position)) : pendingTarget;
+                Dragging = false; Moving = true;
             }
             public void Step(float seconds)
             {
                 if (!Moving) return;
-                Motion.Advance(seconds);
+                if (returning)
+                    ReturnToEdge(ref Motion.Position, ref Motion.Velocity, Motion.Target, seconds);
+                else Motion.Advance(seconds);
                 if (!Motion.Settled) return;
-                Motion.Position = Motion.Target; Motion.Velocity = 0f; Moving = false;
+                Motion.Position = Motion.Target; Motion.Velocity = 0f;
+                if (returning)
+                {
+                    returning = false; Motion.Target = pendingTarget;
+                    if (!Motion.Settled) return;
+                }
+                Moving = false;
             }
             public bool Visible(int page) => !float.IsNaN(Slots[page]) &&
                 (Moving || Dragging ? Math.Abs(Slots[page] - Motion.Position) <= 1.001f : page == Current);

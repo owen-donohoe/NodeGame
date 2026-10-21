@@ -14,10 +14,7 @@ namespace NodeWar.Lobby
 
         public static float Elastic(float position, float max, float viewport)
         {
-            float bound = Math.Max(0, Math.Min(max, position));
-            float excess = position - bound;
-            float limit = Math.Max(1, viewport * 0.3f);
-            return bound + excess / (1 + Math.Abs(excess) / limit);
+            return LobbyMotion.RubberBand(position, 0, Math.Max(0, max), viewport);
         }
 
         public static float Velocity(float delta, long elapsedMs) => elapsedMs <= 0 ? 0 :
@@ -29,25 +26,26 @@ namespace NodeWar.Lobby
             if (seconds <= 0) return;
             max = Math.Max(0, max);
             float bound = Math.Max(0, Math.Min(max, position));
+            if (LobbyMotion.Reduced)
+            { position = bound; velocity = 0; return; }
             if (position != bound)
-            {
-                // Exact critically damped return, independent of scheduler cadence.
-                const float frequency = 14;
-                float displacement = position - bound;
-                float impulse = velocity + frequency * displacement;
-                float decay = (float)Math.Exp(-frequency * seconds);
-                position = bound + (displacement + impulse * seconds) * decay;
-                velocity = (velocity - frequency * impulse * seconds) * decay;
-                if (Math.Abs(position - bound) < 0.1f && Math.Abs(velocity) < 1)
-                { position = bound; velocity = 0; }
-            }
+                LobbyMotion.ReturnToEdge(ref position, ref velocity, bound, seconds, 0.1f);
             else
             {
                 const float friction = 5;
                 float decay = (float)Math.Exp(-friction * seconds);
-                position += velocity * (1 - decay) / friction;
-                velocity *= decay;
-                if (Math.Abs(velocity) < 1) velocity = 0;
+                float next = position + velocity * (1 - decay) / friction;
+                if (next < 0 || next > max)
+                {
+                    // Integrate exactly to the crossing before dissipating the edge impact.
+                    float edge = next < 0 ? 0 : max;
+                    float hit = (float)(-Math.Log(1 - friction * (edge - position) / velocity) / friction);
+                    velocity *= (float)Math.Exp(-friction * hit) * 0.15f;
+                    position = edge;
+                    LobbyMotion.ReturnToEdge(ref position, ref velocity, edge, Math.Max(0, seconds - hit), 0.1f);
+                }
+                else
+                { position = next; velocity *= decay; if (Math.Abs(velocity) < 1) velocity = 0; }
             }
         }
     }

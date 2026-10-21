@@ -25,7 +25,57 @@ public class LobbyDragMathTests
         Assert.That(top, Is.InRange(-60f, 0f));
         Assert.That(bottom, Is.InRange(100f, 160f));
         Assert.That(bottom - 100, Is.EqualTo(-top).Within(0.001));
-        Assert.That(LobbyDragMath.Elastic(-0.01f, 100, 200), Is.EqualTo(-0.01f).Within(0.001));
+        Assert.That(LobbyDragMath.Elastic(-0.01f, 100, 200), Is.EqualTo(-0.0055f).Within(0.001));
+    }
+
+    [Test]
+    public void ResistanceIncreasesAndRegrabKeepsTheDisplayedOffset()
+    {
+        float a = LobbyDragMath.Elastic(-20, 100, 200), b = LobbyDragMath.Elastic(-40, 100, 200);
+        float c = LobbyDragMath.Elastic(-60, 100, 200);
+        Assert.Less(b - c, a - b);
+        float raw = LobbyMotion.UnrubberBand(b, 0, 100, 200);
+        Assert.That(LobbyDragMath.Elastic(raw, 100, 200), Is.EqualTo(b).Within(0.0001));
+        Assert.That(LobbyMotion.EdgeVelocity(-1000, b, 0, 100), Is.EqualTo(-150));
+    }
+
+    [TestCase(-60f, 5000f, 0f)]
+    [TestCase(160f, -5000f, 100f)]
+    public void FastInwardReleaseCannotCrossEdgeAndReturnsInAbout300ms(float position, float velocity, float edge)
+    {
+        float initial = position;
+        for (int i = 0; i < 20; i++)
+        {
+            LobbyDragMath.Step(ref position, ref velocity, 100, 0.016f);
+            Assert.That(position, Is.InRange(System.Math.Min(initial, edge), System.Math.Max(initial, edge)));
+        }
+        Assert.That(position, Is.EqualTo(edge).Within(0.1));
+    }
+
+    [Test]
+    public void EdgeCrossingIsIndependentOfFrameRateAndDissipatesFlick()
+    {
+        float a = 90, av = 1000, b = a, bv = av;
+        LobbyDragMath.Step(ref a, ref av, 100, 0.1f);
+        for (int i = 0; i < 10; i++) LobbyDragMath.Step(ref b, ref bv, 100, 0.01f);
+        Assert.That(b, Is.EqualTo(a).Within(0.001));
+        Assert.That(bv, Is.EqualTo(av).Within(0.01));
+        Assert.Less(a, 103);
+    }
+
+    [Test]
+    public void ReducedMotionClampsDragAndRelease()
+    {
+        try
+        {
+            LobbyMotion.SetReduced(true);
+            Assert.AreEqual(0, LobbyDragMath.Elastic(-200, 100, 200));
+            Assert.AreEqual(100, LobbyDragMath.Elastic(300, 100, 200));
+            float p = -20, v = -1000;
+            LobbyDragMath.Step(ref p, ref v, 100, 0.016f);
+            Assert.AreEqual(0, p); Assert.AreEqual(0, v);
+        }
+        finally { LobbyMotion.SetReduced(false); }
     }
 
     [Test]

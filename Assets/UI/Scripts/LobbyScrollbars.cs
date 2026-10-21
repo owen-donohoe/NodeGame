@@ -20,12 +20,21 @@ namespace NodeWar.Lobby
 
         private static void Clamp(ScrollView scroll)
         {
+            if (LobbyMouseDrag.IsScrolling(scroll)) return;
             var content = scroll.contentContainer.layout;
             var viewport = scroll.contentViewport.layout;
             var offset = scroll.scrollOffset;
             scroll.scrollOffset = new Vector2(
                 LobbyDragMath.ClampOffset(offset.x, content.width, viewport.width),
                 LobbyDragMath.ClampOffset(offset.y, content.height, viewport.height));
+        }
+
+        internal static void ConfigureMotion(ScrollView scroll)
+        {
+            // Root pointer handling owns travel and inertia for both input devices.
+            // Unrestricted lets that owner display resisted offsets without Toolkit's second spring.
+            scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Unrestricted;
+            scroll.scrollDecelerationRate = 0;
         }
 
         private static void HideScroll(ScrollView scroll)
@@ -36,7 +45,7 @@ namespace NodeWar.Lobby
                 scroll.contentContainer.RegisterCallback<GeometryChangedEvent>(_ => Clamp(scroll));
                 scroll.contentViewport.RegisterCallback<GeometryChangedEvent>(_ => Clamp(scroll));
             }
-            scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            ConfigureMotion(scroll);
             scroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         }

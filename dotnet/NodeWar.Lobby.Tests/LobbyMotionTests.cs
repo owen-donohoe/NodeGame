@@ -64,9 +64,24 @@ namespace NodeWar.Lobby.Tests
             strip.Release(1); Assert.That(strip.Motion.Velocity, Is.EqualTo(2));
             strip.Step(1); Assert.That(strip.Current, Is.EqualTo(3));
             strip.Reset(0); strip.BeginDrag(); strip.Drag(-0.5f, -2);
-            Assert.That(strip.Motion.Position, Is.EqualTo(-0.175f).Within(0.0001f));
+            Assert.That(strip.Motion.Position, Is.EqualTo(LobbyMotion.RubberBand(-0.5f, 0, 1, 1)).Within(0.0001f));
             strip.Release(-1); strip.Step(1); Assert.That(strip.Current, Is.Zero);
             Assert.That(strip.Motion.Position, Is.Zero);
+        }
+
+        [Test]
+        public void EdgeReleaseReturnsBeforeSnappingToAnotherPageAndRegrabDoesNotJump()
+        {
+            var strip = new LobbyMotion.PageStrip(); strip.Reset(0); strip.BeginDrag(); strip.Drag(-1f, -4);
+            float position = strip.Motion.Position;
+            strip.BeginDrag(); strip.Drag(0, 0);
+            Assert.That(strip.Motion.Position, Is.EqualTo(position).Within(0.0001));
+            strip.Release(1);
+            Assert.That(strip.Motion.Target, Is.Zero);
+            strip.Step(0.05f);
+            Assert.That(strip.Motion.Position, Is.LessThan(0));
+            for (int i = 0; i < 100; i++) strip.Step(0.016f);
+            Assert.That(strip.Motion.Position, Is.EqualTo(strip.Slots[1]));
         }
 
         [Test]
