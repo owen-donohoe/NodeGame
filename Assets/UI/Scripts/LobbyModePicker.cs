@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
     /// <summary>One elastic strip of two-row column groups, with a spring snap after scrolling rests.</summary>
     public sealed class LobbyModePicker : LobbyPushPage
     {
-        private const float Gap = 12, GroupGap = 24, GroupFrame = 28;
+        private const float Gap = 8, GroupGap = 16, GroupFrame = 20;
         private readonly LobbyToggle privateToggle = new LobbyToggle();
         private readonly ScrollView strip = new ScrollView(ScrollViewMode.Horizontal);
         private readonly VisualElement[] groups = new VisualElement[3];
@@ -131,7 +131,7 @@ namespace NodeWar.Lobby
         {
             float width = strip.contentViewport.layout.width;
             if (float.IsNaN(width) || width <= 0) return;
-            columnWidth = Mathf.Clamp(width * 0.50f, 160, 264);
+            columnWidth = Mathf.Clamp(width * (0.50f * 5f / 7f), 120, 188);
             // Ranked sits just left of centre; the next group peeks in immediately.
             float inset = Mathf.Max(12, width * 0.38f - (columnWidth + GroupFrame) / 2);
             strip.contentContainer.style.paddingLeft = inset;
