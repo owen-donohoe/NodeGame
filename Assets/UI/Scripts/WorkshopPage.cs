@@ -35,7 +35,8 @@ namespace NodeWar.Lobby
         private readonly Button ownedFilter, allFilter, sortFilter;
         private readonly Button[] presets = new Button[LoadoutPresets.Count];
         private readonly Label presetLabel, browserTitle;
-        private ClaimPanel clearConfirmation;
+        private MkPanel clearConfirmation;
+        private int clearPreset;
         private bool closingForUse;
         private bool showAll;
         private LoadoutSort sort;
@@ -124,6 +125,7 @@ namespace NodeWar.Lobby
                 presets[i].clicked += () => SwitchPreset(index);
             }
             var clear = Root.Q<Button>("workshop-clear");
+            clear.name = "Clear loadout";
             clear.Insert(0, new LobbyIcon(LobbyIconKind.Close));
             clear.clicked += ConfirmClear;
             Root.Q<Button>("workshop-replace-cancel").clicked += CancelReplacement;
@@ -275,15 +277,25 @@ namespace NodeWar.Lobby
         private void ConfirmClear()
         {
             if (!session.IsOpen || inventoryBusy || clearConfirmation == null) return;
-            CancelReplacement(); CloseItemPanel();
-            clearConfirmation.Open(new ClaimRequest("Clear this loadout?", "Keeps the items locked for this era and clears all other slots.", ClaimAction.Ok));
+            clearPreset = PlayerProfile.Instance != null ? PlayerProfile.Instance.data.activeLoadoutPreset : 0;
+            clearConfirmation.Title.text = "Clear loadout " + (clearPreset + 1) + "?";
+            clearConfirmation.Open();
         }
         public bool IsStageSlotLocked(bool suit, int slot) => loadout.IsSlotLocked(suit, slot);
 
         private void ClearConfirmed()
         {
             if (!session.IsOpen || inventoryBusy) return;
+            var profile = PlayerProfile.Instance;
+            if (profile != null && profile.data.activeLoadoutPreset != clearPreset) { clearConfirmation.Close(); return; }
+            clearConfirmation.Close();
+            CancelReplacement(); CloseItemPanel();
+            int arena = LoadoutRules.ArenaOrFallback(playerState?.Rank);
+            bool browsingSuits = ViewingSuit;
+            loadout = new LoadoutScreenModel(loadout.ToData(), arena);
+            loadout.Browse(browsingSuits);
             loadout.ClearChoices(); SaveToProfile(); Render();
+            toast?.Show("Loadout " + (clearPreset + 1) + " cleared");
         }
         private void SaveToProfile()
         {
@@ -541,7 +553,7 @@ namespace NodeWar.Lobby
         }
         private void CloseInventory()
         {
-            clearConfirmation?.Cancel();
+            clearConfirmation?.Close();
             CancelReplacement();
             ItemViewed?.Invoke(false, null);
             CloseItemPanel();
@@ -662,15 +674,18 @@ namespace NodeWar.Lobby
 
         public void BindOverlayRouter(LobbyOverlayRouter router, VisualElement shell)
         {
-            clearConfirmation = new ClaimPanel();
-            shell.Add(clearConfirmation.Root);
-            clearConfirmation.Confirmed += ClearConfirmed;
-            clearConfirmation.Opened += () =>
-            {
-                clearConfirmation.Root.BringToFront();
-                router.Open(new LobbyOverlay("workshop-clear", OverlayKind.Panel), clearConfirmation.Cancel);
-            };
-            clearConfirmation.Closed += () => router.Closed("workshop-clear");
+            clearConfirmation = new MkPanel { name = "workshop-clear-confirmation" };
+            clearConfirmation.BindRouter(router, "workshop-clear");
+            clearConfirmation.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
+            clearConfirmation.Surface.AddToClassList("ws-clear-confirmation");
+            var clearBody = new Label("Removes your chosen districts and suits. Locked starters stay.") { enableRichText = false };
+            clearBody.AddToClassList("ws-clear-body");
+            clearConfirmation.Body.Add(clearBody);
+            var clearActions = new VisualElement(); clearActions.AddToClassList("ws-clear-actions");
+            clearActions.Add(SheetButton("Cancel", clearConfirmation.Close));
+            clearActions.Add(SheetButton("Clear", ClearConfirmed, "mk-btn--urgent"));
+            clearConfirmation.Body.Add(clearActions);
+            shell.Add(clearConfirmation);
             nav = shell.Q("tabbar-dock");
             inventorySheet.BindRouter(router, "workshop-item");
             inventorySheet.styleSheets.Add(Resources.Load<StyleSheet>("Lobby/Workshop"));
