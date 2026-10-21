@@ -49,6 +49,8 @@
     <Compile Include="GuildTests.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildService.cs" Link="Backend/GuildService.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/GuildPolicies.cs" Link="Backend/GuildPolicies.cs" />
+    <Compile Include="TeammateInviteTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/TeammateInviteRoster.cs" Link="Lobby/TeammateInviteRoster.cs" />
     <Compile Include="SocialProfileTests.cs" />
     <Compile Include="PlayerPanelPolicyTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/PlayerPanelPolicy.cs" Link="Lobby/PlayerPanelPolicy.cs" />

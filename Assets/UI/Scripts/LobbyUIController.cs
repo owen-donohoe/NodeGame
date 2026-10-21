@@ -113,6 +113,7 @@ namespace NodeWar.Lobby
         private LobbyPlayFlow playFlow;
         private PrivateLobbyPanel privateLobbyPanel;
         private SearchingScreen searchingScreen;
+        private TeammateInviteSheet teammateInviteSheet;
         private MultiplayerSheet multiplayerSheet;
         private WorkshopStageBinding workshopStage;
         private VisualElement safeAreaRoot;
@@ -200,6 +201,7 @@ namespace NodeWar.Lobby
             homePage?.OnHide();
             homePage = null;
             searchingScreen?.Dispose(); searchingScreen = null;
+            teammateInviteSheet?.Dispose(); teammateInviteSheet = null;
             multiplayerSheet?.Dispose(); multiplayerSheet = null;
             chrome?.Dispose();
             privateLobbyPanel?.Dispose(); privateLobbyPanel = null;
@@ -358,6 +360,7 @@ namespace NodeWar.Lobby
             searchingScreen = new SearchingScreen(lobbyRoot, router, navigation, catalog, ShowShot);
             searchingScreen.PrivateRequested += privateLobbyPanel.Open;
             searchingScreen.LanRequested += () => playPopup.OpenJoinCode(true);
+            teammateInviteSheet = new TeammateInviteSheet(lobbyRoot, router);
             RegisterPages();
             WireOverlays(root);
             LobbyScrollbars.Hide(root);
@@ -588,6 +591,7 @@ namespace NodeWar.Lobby
                         && Routes != null && Routes.Count == 0, crateInventory);
                 homePage = home;
                 home.PlayRequested += OnPlayRequested;
+                home.InviteTeammateRequested += () => teammateInviteSheet.Open();
                 home.ModeRequested += () => modePicker.Open(selectedMode);
                 home.CrateRequested += size =>
                 crateScreen?.Open(size, crateInventory);
@@ -679,7 +683,7 @@ namespace NodeWar.Lobby
             profilePage.BindPanels(router, shell);
             multiplayerSheet = new MultiplayerSheet(shell, router, searchingScreen.Open);
             profilePage.InviteRequested += target => multiplayerSheet.Open(target);
-            searchingScreen.InviteRequested += () => multiplayerSheet.Open();
+            searchingScreen.InviteRequested += () => teammateInviteSheet.Open();
             burgerPanel = new LobbyOverlayPanel("Menu");
             bellPanel = new LobbyOverlayPanel("Notifications");
             shell.Add(burgerPanel.Root);

@@ -22,6 +22,7 @@ namespace NodeWar.Lobby
         public GameMode SelectedMode { get; private set; }
         public event Action PlayRequested;
         public event Action ModeRequested;
+        public event Action InviteTeammateRequested;
         public event Action<CrateSize> CrateRequested;
 
         public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu, LoadoutCatalog catalog,
@@ -39,6 +40,7 @@ namespace NodeWar.Lobby
             nextIcon = Root.Q<LobbyIcon>("home-next-crate-icon");
             modeName = Root.Q<Label>("home-mode-name");
             modeIcon = Root.Q<LobbyIcon>("home-mode-icon");
+            Bind("home-invite-teammate", () => InviteTeammateRequested?.Invoke());
             Bind("home-mode", () => ModeRequested?.Invoke());
             Bind("home-crate-small", () => CrateRequested?.Invoke(CrateSize.Small));
             Bind("home-crate-medium", () => CrateRequested?.Invoke(CrateSize.Medium));
@@ -86,6 +88,8 @@ namespace NodeWar.Lobby
 
         public void SetMode(LobbyModeSelection selection)
         {
+            var teammate = Root.Q("home-invite-teammate");
+            if (teammate != null) teammate.style.display = selection.Mode == LobbyMode.Team2v2 ? DisplayStyle.Flex : DisplayStyle.None;
             var flag = Root.Q("home-private-flag");
             if (flag != null) flag.style.display = selection.IsPrivate ? DisplayStyle.Flex : DisplayStyle.None;
             SelectedMode = selection.LegacyMode;

@@ -17,6 +17,10 @@
    </ui:VisualElement>
    <ui:VisualElement class="g2-home-actions" picking-mode="Ignore">
 
+    <ui:Button name="home-invite-teammate" class="ui-reset-button mk-btn g2-home-invite" style="display: none;">
+     <lobby:LobbyIcon kind="Invite" context="Home" class="g2-mode-icon" picking-mode="Ignore" />
+     <ui:Label text="Invite teammate" picking-mode="Ignore" />
+    </ui:Button>
     <ui:Button name="home-mode" class="ui-reset-button mk-chip g2-home-mode">
      <ui:Label name="home-private-flag" text="PRIVATE" class="g2-private-flag" picking-mode="Ignore" />
      <ui:VisualElement name="home-mode-dot" class="g2-mode-dot" picking-mode="Ignore" />
