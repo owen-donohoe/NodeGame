@@ -4,7 +4,7 @@
 .g2-profile-state > VisualElement { flex-shrink: 1; min-height: 0; }
 .g2-profile--self .g2-profile-state, .g2-profile--self .g2-profile-state > .g2-profile-content { flex-grow: 1; }
 .g2-profile-header { flex-direction: row; align-items: center; height: 96px; min-height: 96px; max-height: 96px; padding: 12px; overflow: hidden; flex-shrink: 0; }
-.g2-profile-header .mk-h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g2-profile-header .mk-h2 { max-width: 100%; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-root .g2-era-badge { min-height: 0; min-width: 0; padding: 4px 8px; background-color: var(--mk-card); background-image: url("paper-grain.png"); }
 .g2-profile-columns { flex-grow: 1; min-height: 0; flex-direction: row; padding: 0 12px 12px; }
 .g2-profile-left { flex-grow: 3; flex-basis: 0; min-width: 0; min-height: 0; margin-right: 12px; }
@@ -38,13 +38,13 @@
 .g2-gain { background-color: var(--mk-tap); color: var(--mk-sheet); }
 .g2-loss { background-color: var(--mk-urgent); color: var(--mk-sheet); }
 
-.g2-player-actions { flex-direction: row; align-items: center; }
-.g2-player-actions > Button { margin-left: 8px; }
+.g2-player-actions { flex-direction: row; align-items: center; align-self: flex-start; flex-shrink: 0; margin-top: 8px; }
+.g2-player-actions > Button { margin: 0 8px 0 0; min-height: 44px; flex-shrink: 0; }
 .g2-player-actions > #public-profile-add { width: 44px; padding: 0; }
 .g2-player-footer { flex-direction: row; margin-top: 12px; }
 .g2-player-footer > Button { flex-grow: 1; margin-right: 8px; }
 .ui-root .g2-urgent { background-color: var(--mk-urgent); color: var(--mk-sheet); }
-.g2-profile--player .g2-profile-header { height: 80px; min-height: 80px; max-height: 80px; padding: 0 0 8px; }
+.g2-profile--player .g2-profile-header { flex-direction: column; align-items: stretch; height: auto; min-height: 0; max-height: none; padding: 0 0 8px; }
 
 .g2-profile--player .g2-profile-content { min-height: 0; flex-shrink: 1; overflow: hidden; }
 .g2-player-list { min-height: 0; max-height: 440px; flex-shrink: 1; }

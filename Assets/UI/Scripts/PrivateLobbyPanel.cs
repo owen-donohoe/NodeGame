@@ -161,7 +161,7 @@ namespace NodeWar.Lobby
                 face.Add(Text(name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?", "private-avatar"));
                 var who = new VisualElement(); who.AddToClassList("private-who");
                 // Flexible names fill the available width; they must not get a content width.
-                var nameLabel = new Label(name) { enableRichText = false, pickingMode = PickingMode.Ignore };
+                var nameLabel = new Label(HandleDisplay.Constrained(name)) { enableRichText = false, pickingMode = PickingMode.Ignore };
                 nameLabel.AddToClassList("private-name"); who.Add(nameLabel);
                 var seatMeta = new VisualElement(); seatMeta.AddToClassList("private-seat-meta-row");
                 if (model.IsHost(id))
