@@ -139,8 +139,10 @@ namespace NodeWar.Lobby
 
         public void ClearChoices()
         {
-            for (int i = 0; i < SuitSlotCount; i++) ClearSuitSlot(i);
-            for (int i = 0; i < DistrictSlotCount; i++) ClearDistrictSlot(i);
+            for (int i = 0; i < SuitSlotCount; i++)
+                suitIDs[i] = i < lockedSuits.Length ? lockedSuits[i] : "";
+            for (int i = 0; i < DistrictSlotCount; i++)
+                districtIDs[i] = i < lockedDistricts.Length ? lockedDistricts[i] : "";
         }
 
         /// <summary>
