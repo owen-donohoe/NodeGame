@@ -56,21 +56,21 @@
     --pal-era-5: #c25b9a;
 
     /* paper, lightest to darkest */
-    --pal-paper-50: #f4e9d5;
-    --pal-paper-100: #ebdcc3;
-    --pal-paper-200: #d7c3a5;
+    --pal-paper-50: rgb(244, 233, 213);
+    --pal-paper-100: rgb(235, 220, 195);
+    --pal-paper-200: rgb(215, 195, 165);
     --pal-paper-300: rgb(195, 170, 133);
     --pal-paper-500: rgb(150, 128, 95);
     --pal-paper-500-a22: rgba(150, 128, 95, 0.22);
     --pal-paper-500-a30: rgba(150, 128, 95, 0.3);
 
     /* umber: the ink, and the dark glass drawn over scenery */
-    --pal-umber-900: #2d2319;
+    --pal-umber-900: rgb(45, 35, 25);
     --pal-umber-900-a55: rgba(30, 22, 15, 0.55);
     --pal-umber-900-a82: rgba(45, 35, 25, 0.82);
     --pal-umber-900-a92: rgba(45, 35, 25, 0.92);
     --pal-umber-900-a94: rgba(45, 35, 25, 0.94);
-    --pal-umber-500: #2d2319;
+    --pal-umber-500: rgb(115, 100, 79);
     --pal-shadow-a25: rgba(90, 70, 40, 0.25);
     --pal-shadow-a30: rgba(90, 70, 40, 0.3);
     --pal-black-a35: rgba(0, 0, 0, 0.35);
@@ -80,15 +80,15 @@
     --pal-clear: rgba(0, 0, 0, 0);
 
     /* gold */
-    --pal-gold-400: #e0a526;
-    --pal-gold-500: #e0a526;
+    --pal-gold-400: rgb(245, 195, 60);
+    --pal-gold-500: rgb(222, 172, 42);
     --pal-gold-700: rgb(168, 128, 28);
-    --pal-gold-800: #8a6a14;
+    --pal-gold-800: rgb(138, 106, 18);
     --pal-gold-950: rgb(58, 42, 8);
 
     /* green */
-    --pal-green-400: rgb(128, 147, 91);
-    --pal-green-500: rgb(96, 117, 66);
+    --pal-green-400: rgb(95, 185, 95);
+    --pal-green-500: rgb(76, 160, 76);
     --pal-green-950: rgb(18, 51, 18);
 
     /* leaf - the second currency */
@@ -96,7 +96,7 @@
     --pal-leaf-800: rgb(126, 100, 19);
 
     /* signal red and its edge */
-    --pal-red-500: #d2452f;
+    --pal-red-500: rgb(205, 60, 50);
     --pal-red-800: rgb(125, 33, 26);
 
     /* stone - off and disabled */
@@ -104,9 +104,9 @@
     --pal-stone-600: rgb(110, 101, 87);
 
     /* navy and orange - loadout state */
-    --pal-navy-600: rgb(111, 128, 77);
-    --pal-navy-50: #f4e9d5;
-    --pal-orange-500: rgb(179, 124, 66);
+    --pal-navy-600: rgb(52, 80, 146);
+    --pal-navy-50: rgb(236, 240, 250);
+    --pal-orange-500: rgb(222, 110, 48);
     --pal-orange-700: rgb(178, 84, 32);
 
     /* players - copied from the board, see the header */
@@ -142,14 +142,14 @@
     --pal-ring-rich: rgb(28, 110, 112);
 
     /* monogram tiles - ItemTint picks one by hashing the item's ID */
-    --pal-tile-0: rgb(129, 147, 103);
-    --pal-tile-1: rgb(167, 115, 77);
-    --pal-tile-2: rgb(181, 155, 113);
-    --pal-tile-3: rgb(127, 136, 81);
-    --pal-tile-4: rgb(153, 114, 94);
-    --pal-tile-5: rgb(147, 132, 110);
-    --pal-tile-6: rgb(175, 140, 72);
-    --pal-tile-7: rgb(156, 100, 76);
+    --pal-tile-0: rgb(58, 110, 108);
+    --pal-tile-1: rgb(160, 82, 45);
+    --pal-tile-2: rgb(72, 82, 140);
+    --pal-tile-3: rgb(104, 112, 52);
+    --pal-tile-4: rgb(112, 64, 112);
+    --pal-tile-5: rgb(78, 92, 104);
+    --pal-tile-6: rgb(158, 122, 40);
+    --pal-tile-7: rgb(140, 62, 62);
 
     /* ================= MEANING ================= */
 
@@ -172,10 +172,10 @@
     --surface-raised: var(--pal-paper-50);
     --surface-sunk: var(--pal-paper-200);
     --surface-track: var(--pal-paper-300);
-    --edge: var(--pal-umber-900);
+    --edge: var(--pal-paper-500);
     --rule: var(--pal-paper-500-a30);
     --press-tint: var(--pal-paper-500-a22);
-    --scrim: var(--pal-umber-50);
+    --scrim: var(--pal-umber-900-a55);
     --glass: var(--pal-umber-900-a82);
     --glass-strong: var(--pal-umber-900-a92);
     --glass-toast: var(--pal-umber-900-a94);
@@ -185,7 +185,7 @@
 
     /* ---- ink ---- */
     --ink: var(--pal-umber-900);
-    --ink-mute: var(--pal-umber-70);
+    --ink-mute: var(--pal-umber-500);
     --ink-inverse: var(--pal-cream);
     --ink-white: var(--pal-white);
     --clear: var(--pal-clear);
@@ -193,28 +193,28 @@
     /* ---- actions ---- */
     --action: var(--pal-gold-400);
     --action-press: var(--pal-gold-500);
-    --action-edge: var(--pal-umber-900);
-    --action-ink: var(--pal-umber-900);
-    --confirm: var(--pal-tap);
-    --confirm-edge: var(--pal-umber-900);
-    --confirm-ink: var(--pal-umber-900);
+    --action-edge: var(--pal-gold-700);
+    --action-ink: var(--pal-gold-950);
+    --confirm: var(--pal-green-400);
+    --confirm-edge: var(--pal-green-500);
+    --confirm-ink: var(--pal-green-950);
     --off: var(--pal-stone-400);
-    --off-edge: var(--pal-umber-900);
+    --off-edge: var(--pal-stone-600);
 
     /* ---- currency and progress ---- */
-    --trophy-ink: var(--pal-umber-900);
+    --trophy-ink: var(--pal-gold-800);
     --leaf: var(--pal-leaf-500);
-    --leaf-edge: var(--pal-umber-900);
+    --leaf-edge: var(--pal-leaf-800);
 
     /* ---- notification. NOT a player colour. ---- */
     --badge: var(--pal-red-500);
-    --badge-edge: var(--pal-umber-900);
+    --badge-edge: var(--pal-red-800);
 
     /* ---- status: a filled loadout slot, and one that could be filled but is not ---- */
     --status-ready: var(--pal-navy-600);
     --status-ready-ink: var(--pal-navy-50);
     --status-short: var(--pal-orange-500);
-    --status-short-ink: var(--pal-umber-900);
+    --status-short-ink: var(--pal-orange-700);
 
     /* ---- players ---- */
     --p0: var(--pal-player-0);
@@ -303,19 +303,19 @@
     --font-display: url("project://database/Assets/UI/Fonts/LilitaOne-Regular-SDF.asset");
     --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
     --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
-    --font-medium: var(--font-body);
-    --font-semibold: var(--font-label);
-    --font-bold: var(--font-label);
+    --font-medium: url("project://database/Assets/UI/Fonts/Fredoka-Medium-SDF.asset");
+    --font-semibold: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
+    --font-bold: url("project://database/Assets/UI/Fonts/Fredoka-Bold-SDF.asset");
 
     /* Nothing is set smaller than --type-min. The prototypes go to 7px, which
        at a 390-wide reference is unreadable on a phone. */
-    --type-min: 13px;
+    --type-min: 11px;
     --type-caption: 13px;
     --type-secondary: 14px;
-    --type-body: 16px;
-    --type-number: 22px;
-    --type-heading: 22px;
-    --type-title: 24px;
+    --type-body: 17px;
+    --type-number: 18px;
+    --type-heading: 21px;
+    --type-title: 27px;
     --type-battle: 32px;
     /* Real font weights replace the synthetic text outlines. */
     --ink-outline: 0px;
@@ -351,6 +351,42 @@
 
 /* Approved panel language. Lobby scope preserves the shared match faces. */
 .lb-root {
+    /* Lobby values, scoped here so the draft and match HUD keep the shared tokens above. */
+    --pal-umber-500: #2d2319;
+    --pal-gold-400: #e0a526;
+    --pal-gold-500: #e0a526;
+    --pal-gold-800: #8a6a14;
+    --pal-green-400: rgb(128, 147, 91);
+    --pal-green-500: rgb(96, 117, 66);
+    --pal-red-500: #d2452f;
+    --pal-navy-600: rgb(111, 128, 77);
+    --pal-navy-50: #f4e9d5;
+    --pal-orange-500: rgb(179, 124, 66);
+    --pal-tile-0: rgb(129, 147, 103);
+    --pal-tile-1: rgb(167, 115, 77);
+    --pal-tile-2: rgb(181, 155, 113);
+    --pal-tile-3: rgb(127, 136, 81);
+    --pal-tile-4: rgb(153, 114, 94);
+    --pal-tile-5: rgb(147, 132, 110);
+    --pal-tile-6: rgb(175, 140, 72);
+    --pal-tile-7: rgb(156, 100, 76);
+    --edge: var(--pal-umber-900);
+    --ink-mute: var(--pal-umber-70);
+    --action-edge: var(--pal-umber-900);
+    --action-ink: var(--pal-umber-900);
+    --confirm: var(--pal-tap);
+    --confirm-edge: var(--pal-umber-900);
+    --confirm-ink: var(--pal-umber-900);
+    --off-edge: var(--pal-umber-900);
+    --trophy-ink: var(--pal-umber-900);
+    --leaf-edge: var(--pal-umber-900);
+    --badge-edge: var(--pal-umber-900);
+    --status-short-ink: var(--pal-umber-900);
+    --type-min: 13px;
+    --type-body: 16px;
+    --type-number: 22px;
+    --type-heading: 22px;
+    --type-title: 24px;
     --line-outer: #2d2319;
     --line-inner: #4d3d2d;
     --line-light: #c3aa85;
