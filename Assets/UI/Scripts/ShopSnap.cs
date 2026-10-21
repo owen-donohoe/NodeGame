@@ -13,7 +13,8 @@ namespace NodeWar.Lobby
         public bool Dragging { get; private set; }
         public bool Moving { get; private set; }
         private float direction;
-        private float target;
+        private float target, rawPosition;
+        private bool returning;
 
         public static int StallIndex(string name)
         {
@@ -41,6 +42,8 @@ namespace NodeWar.Lobby
 
         public void BeginDrag()
         {
+            rawPosition = LobbyMotion.UnrubberBand(Position, 0, StallCount - 1, 1);
+            returning = false;
             Dragging = true;
             Moving = false;
             Velocity = direction = 0f;
@@ -50,7 +53,8 @@ namespace NodeWar.Lobby
         {
             if (!Dragging || seconds <= 0f) return;
             float before = Position;
-            Position = Clamp(Position + deltaStalls);
+            rawPosition += deltaStalls;
+            Position = LobbyMotion.RubberBand(rawPosition, 0, StallCount - 1, 1);
             Velocity = (Position - before) / seconds;
             if (Math.Abs(Velocity) > 0.001f) direction = Math.Sign(Velocity);
         }
@@ -60,7 +64,9 @@ namespace NodeWar.Lobby
             if (!Dragging) return;
             Dragging = false;
             Moving = true;
-            target = Target(Position, direction);
+            returning = Position < 0 || Position > StallCount - 1;
+            Velocity = LobbyMotion.EdgeVelocity(Velocity, Position, 0, StallCount - 1);
+            target = returning ? Clamp(Position) : Target(Position, direction);
         }
 
         public void ScrollTo(float stall)
@@ -68,6 +74,7 @@ namespace NodeWar.Lobby
             Dragging = false;
             Moving = true;
             Velocity = direction = 0f;
+            returning = Position < 0 || Position > StallCount - 1;
             target = Clamp(stall);
         }
 
@@ -80,12 +87,30 @@ namespace NodeWar.Lobby
         public void Step(float seconds)
         {
             if (Dragging || !Moving || seconds <= 0f) return;
+            if (LobbyMotion.Reduced) { Position = target; Velocity = 0; Moving = returning = false; return; }
+            if (returning)
+            {
+                float edge = Clamp(Position), position = Position, velocity = Velocity;
+                LobbyMotion.ReturnToEdge(ref position, ref velocity, edge, seconds);
+                Position = position; Velocity = velocity;
+                if (Position == edge && Velocity == 0) returning = false;
+                return;
+            }
             if (Math.Abs(Velocity) >= VelocityThreshold)
             {
                 float decay = (float)Math.Exp(-Decay * seconds);
-                Position = Clamp(Position + Velocity * (1f - decay) / Decay);
+                float next = Position + Velocity * (1f - decay) / Decay;
+                if (next < 0 || next > StallCount - 1)
+                {
+                    float edge = Clamp(next);
+                    float hit = (float)(-Math.Log(1 - Decay * (edge - Position) / Velocity) / Decay);
+                    float position = edge, velocity = Velocity * (float)Math.Exp(-Decay * hit) * 0.15f;
+                    LobbyMotion.ReturnToEdge(ref position, ref velocity, edge, Math.Max(0, seconds - hit));
+                    Position = position; Velocity = velocity; returning = true; target = edge; return;
+                }
+                Position = next;
                 Velocity *= decay;
-                if (Position <= 0f || Position >= StallCount - 1) Velocity = 0f;
+
                 target = Target(Position, direction);
             }
             else

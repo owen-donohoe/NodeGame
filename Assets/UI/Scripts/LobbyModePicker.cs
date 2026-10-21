@@ -7,7 +7,7 @@ namespace NodeWar.Lobby
     /// <summary>One elastic strip of two-row column groups, with a spring snap after scrolling rests.</summary>
     public sealed class LobbyModePicker : LobbyPushPage
     {
-        private const float Gap = 12, GroupGap = 24;
+        private const float Gap = 12, GroupGap = 24, GroupFrame = 28;
         private readonly LobbyToggle privateToggle = new LobbyToggle();
         private readonly ScrollView strip = new ScrollView(ScrollViewMode.Horizontal);
         private readonly VisualElement[] groups = new VisualElement[3];
@@ -31,7 +31,7 @@ namespace NodeWar.Lobby
 
             var middle = new VisualElement(); middle.AddToClassList("lb-modepage__middle"); Root.Add(middle);
             strip.name = "mode-strip"; strip.AddToClassList("lb-modepage__strip");
-            strip.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+            LobbyScrollbars.Hide(strip);
             strip.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             strip.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             strip.contentContainer.style.flexDirection = FlexDirection.Row;
@@ -40,7 +40,8 @@ namespace NodeWar.Lobby
             {
                 var category = LobbyModeCategories.All[i];
                 var modes = LobbyModeCategories.ModesIn(category);
-                var group = new VisualElement(); group.AddToClassList("lb-modepage__group");
+                var group = new VisualElement(); group.AddToClassList("mk-card"); group.AddToClassList("lb-modepage__group");
+                group.AddToClassList("lb-modepage__group--" + category.ToString().ToLowerInvariant());
                 groups[i] = group; strip.Add(group);
                 group.Add(GuildViews.Text(LobbyModeCategories.Title(category), "lb-modepage__group-title"));
                 var columns = new VisualElement(); columns.AddToClassList("lb-modepage__columns"); group.Add(columns);
@@ -59,9 +60,6 @@ namespace NodeWar.Lobby
                 }
             }
             strip.contentViewport.RegisterCallback<GeometryChangedEvent>(_ => LayoutGroups());
-            Root.RegisterCallback<PointerDownEvent>(evt => { held = evt.pointerType != UnityEngine.UIElements.PointerType.mouse; snapping = false; }, TrickleDown.TrickleDown);
-            Root.RegisterCallback<PointerUpEvent>(_ => { held = false; idleSince = Time.realtimeSinceStartupAsDouble; }, TrickleDown.TrickleDown);
-            Root.RegisterCallback<PointerCancelEvent>(_ => held = false, TrickleDown.TrickleDown);
             Root.RegisterCallback<WheelEvent>(_ => { snapping = false; idleSince = Time.realtimeSinceStartupAsDouble; }, TrickleDown.TrickleDown);
             var row = new Button(privateToggle.Flip) { name = "mode-private" };
             row.AddToClassList("ui-reset-button"); row.AddToClassList("lb-modepage__private");
@@ -133,14 +131,14 @@ namespace NodeWar.Lobby
         {
             float width = strip.contentViewport.layout.width;
             if (float.IsNaN(width) || width <= 0) return;
-            columnWidth = Mathf.Clamp(width * 0.43f, 136, 224);
+            columnWidth = Mathf.Clamp(width * 0.50f, 160, 264);
             // Ranked sits just left of centre; the next group peeks in immediately.
-            float inset = Mathf.Max(12, width * 0.38f - columnWidth / 2);
+            float inset = Mathf.Max(12, width * 0.38f - (columnWidth + GroupFrame) / 2);
             strip.contentContainer.style.paddingLeft = inset;
-            strip.contentContainer.style.paddingRight = Mathf.Max(12, width - inset - columnWidth);
+            strip.contentContainer.style.paddingRight = Mathf.Max(12, width - inset - columnWidth - GroupFrame);
             for (int i = 0; i < groups.Length; i++)
             {
-                groups[i].style.width = LobbyModeLayout.GroupWidth(LobbyModeCategories.ModesIn(LobbyModeCategories.All[i]).Length, columnWidth, Gap);
+                groups[i].style.width = LobbyModeLayout.GroupWidth(LobbyModeCategories.ModesIn(LobbyModeCategories.All[i]).Length, columnWidth, Gap) + GroupFrame;
                 groups[i].Query(className: "lb-modepage__column").ForEach(c => c.style.width = columnWidth);
             }
             if (placing)
@@ -166,10 +164,10 @@ namespace NodeWar.Lobby
                 if (snap.Settled) { strip.scrollOffset = new Vector2(snap.Target, 0); snapping = false; }
                 previousOffset = strip.scrollOffset.x; idleSince = now; return;
             }
-            // Let native touch inertia and LobbyMouseDrag finish before owning the offset.
+            // The shared pointer owner returns overscroll before group snapping.
             if (Mathf.Abs(offset - previousOffset) > 0.01f) { previousOffset = offset; idleSince = now; return; }
-            if (now - idleSince < 0.2) return;
-            float destination = LobbyModeLayout.GroupStart(LobbyModeLayout.NearestGroup(offset, columnWidth, Gap, GroupGap), columnWidth, Gap, GroupGap);
+            if (now - idleSince < 0.2 || offset < 0 || offset > strip.horizontalScroller.highValue) return;
+            float destination = LobbyModeLayout.GroupStart(LobbyModeLayout.NearestGroup(offset, columnWidth, Gap, GroupGap + GroupFrame), columnWidth, Gap, GroupGap + GroupFrame);
             destination = Mathf.Clamp(destination, 0, strip.horizontalScroller.highValue);
             if (Mathf.Abs(destination - offset) < 0.5f) return;
             snap = new LobbyMotion.Spring(offset) { Target = destination }; snapping = true;

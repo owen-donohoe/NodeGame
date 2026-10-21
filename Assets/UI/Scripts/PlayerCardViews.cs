@@ -9,6 +9,8 @@ namespace NodeWar.Lobby
         public static string Handle(PlayerCard card) => card == null ? "Unknown player" :
             HandleDisplay.Display(card.Name, card.Tag, card.PlayerId ?? "Unknown player");
 
+        public static string HeaderHandle(PlayerCard card) => HandleDisplay.Constrained(Handle(card));
+
         public static VisualElement Card(PlayerCard card, Action open, bool spectate)
         {
             var root = new VisualElement();

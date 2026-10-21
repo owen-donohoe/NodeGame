@@ -230,10 +230,10 @@ namespace NodeWar.Lobby
         {
             var header = new VisualElement { name = "public-profile-header" }; header.AddToClassList("g2-profile-header");
             var identity = new VisualElement(); identity.style.flexGrow = 1; identity.style.flexShrink = 1; identity.style.minWidth = 0;
-            var handle = GuildViews.Text(PlayerCardViews.Handle(profile.Card), "mk-h2"); handle.AddToClassList("mk-ellipsis"); identity.Add(handle);
+            var handle = GuildViews.Text(PlayerCardViews.HeaderHandle(profile.Card), "mk-h2"); handle.AddToClassList("mk-ellipsis"); TrackedText.Track(handle); identity.Add(handle);
             var rank = new RankDisplay(profile.Card.RR);
             var rankRow = new VisualElement(); rankRow.AddToClassList("mk-row");
-            var era = GuildViews.Text(rank.Name, "mk-caption"); era.AddToClassList("mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
+            var era = GuildViews.Text(rank.Name, "mk-caption"); TrackedText.Track(era); era.AddToClassList("mk-chip"); era.AddToClassList("g2-era-badge"); era.AddToClassList("g2-era--" + (Math.Min(4, rank.Arena) + 1)); rankRow.Add(era);
             rankRow.Add(GuildViews.Text(rank.RR + " RR", "mk-trophy")); identity.Add(rankRow); header.Add(identity);
             if (viewingSelf)
             {

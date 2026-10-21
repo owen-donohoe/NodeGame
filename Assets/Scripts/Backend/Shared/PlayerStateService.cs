@@ -17,6 +17,17 @@ namespace NodeWar.Backend
         public static string Display(string name, string tag, string fallback) =>
             string.IsNullOrEmpty(name) ? fallback : name + (string.IsNullOrEmpty(tag) ? "" : "#" + tag);
 
+        /// <summary>Compact headers keep the tag and cap only the name, by visible character.</summary>
+        public static string Constrained(string handle)
+        {
+            if (string.IsNullOrEmpty(handle)) return handle;
+            int hash = handle.LastIndexOf('#');
+            string name = hash < 0 ? handle : handle.Substring(0, hash);
+            int[] characters = System.Globalization.StringInfo.ParseCombiningCharacters(name);
+            return characters.Length <= 16 ? handle
+                : name.Substring(0, characters[16]) + "\u2026" + (hash < 0 ? "" : handle.Substring(hash));
+        }
+
         public static string FirstRunName(string localName)
         {
             var name = new System.Text.StringBuilder();

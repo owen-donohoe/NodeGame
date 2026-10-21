@@ -388,6 +388,9 @@ namespace NodeWar.Lobby
         {
             if (!shown || stage == null || Root.panel == null || Root.layout.height <= 0f) return;
             Camera camera = stage.ShopCamera;
+            float boundedPosition = Mathf.Clamp(walk.Position, 0, ShopSnap.StallCount - 1);
+            float edgeOffset = ShopProjection.EdgeOffset(walk.Position, Mathf.Max(200f, Root.layout.height * 0.65f));
+            bool atEdge = walk.Position <= 0 || walk.Position >= ShopSnap.StallCount - 1;
             for (int i = 0; i < stalls.Length; i++)
             {
                 Vector3 anchor = stage.ShopAnchor(i);
@@ -401,7 +404,7 @@ namespace NodeWar.Lobby
                 // vertical origin to its declared screen anchor in the usable page.
                 Vector3 restAnchor = stage.ShopAnchor(0);
                 Vector3 restScreen = camera.WorldToScreenPoint(restAnchor +
-                    Vector3.back * walk.Position * LobbyStage.ShopStallSpacing);
+                    Vector3.back * boundedPosition * LobbyStage.ShopStallSpacing);
                 Vector2 restPoint = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
                     new Vector2(restScreen.x, Screen.height - restScreen.y)));
                 float vertical = ShopSnap.ScreenAnchor(i);
@@ -410,15 +413,15 @@ namespace NodeWar.Lobby
                 ShopPanelPose pose = ShopProjection.Project(point.x, point.y,
                     screen.z, panelDistances[i],
                     stage.ShopReferenceDistance,
-                    i, walk.Position, panelHeights[i], vertical, restPoint.y, desiredY);
+                    i, boundedPosition, panelHeights[i], vertical, restPoint.y, desiredY);
                 var safe = SafeBounds();
                 // Reserve the pop overshoot as well as the steady depth scale.
                 stalls[i].style.maxHeight = Mathf.Max(0f, safe.height / (pose.Scale * 1.02f));
                 stalls[i].style.overflow = Overflow.Hidden;
                 pose = ShopProjection.Constrain(pose, stalls[i].layout.width * 1.02f, panelHeights[i] * 1.02f,
                     safe.xMin, safe.yMin, safe.xMax, safe.yMax);
-                ApplyPose(i, new ShopPanelPose(pose.X, pose.Y, pose.Scale,
-                    pose.Visible && !walk.Dragging && !walk.Moving && !stage.IsPanning));
+                ApplyPose(i, new ShopPanelPose(pose.X, pose.Y + edgeOffset, pose.Scale,
+                    pose.Visible && (atEdge || !walk.Dragging && !walk.Moving) && !stage.IsPanning));
             }
             bool changed = ShopProjection.OrderByDistance(panelDistances, panelOrder);
             if (!orderReady || changed)

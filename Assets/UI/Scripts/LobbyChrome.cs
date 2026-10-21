@@ -107,8 +107,8 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
 
             if (nameText != null)
-                TrackedText.SetText(nameText, HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
-                    profile != null ? profile.Username : "player"));
+                TrackedText.SetText(nameText, HandleDisplay.Constrained(HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
+                    profile != null ? profile.Username : "player")));
 
             if (!firstHandleAttempted && BackendServices.LastKnownState != null &&
                 BackendServices.LastKnownState.Profile == null)
