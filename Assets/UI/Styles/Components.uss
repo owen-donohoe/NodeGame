@@ -567,8 +567,10 @@
 .lb-root .mk-toolbar, .lb-root .mk-roles { flex-direction: row; align-items: center; }
 .lb-root .mk-toolbar > *, .lb-root .mk-roles > * { margin-right: 8px; }
 .lb-root .mk-roles > * { flex-shrink: 0; }
-.lb-root .mk-sheet, .lb-root .mk-bigsheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 80%; border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px 14px 0 0; background-color: var(--mk-card); color: var(--mk-ink); padding: 16px 12px; }
-.lb-root .mk-bigsheet { height: 78%; max-height: 78%; padding: 12px; }
+.lb-root .mk-sheet, .lb-root .mk-bigsheet { position: absolute; left: 0; right: 0; bottom: 0; height: auto; min-height: 240px; max-height: 85%; border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px 14px 0 0; background-color: var(--mk-card); color: var(--mk-ink); padding: 16px 12px; }
+.lb-root .mk-bigsheet { height: auto; max-height: 85%; padding: 12px; }
+.lb-root .mk-sheet > ScrollView { flex-grow: 1; flex-shrink: 1; }
+.lb-root .mk-sheet-header > .mk-h2 { font-size: 22px; -unity-text-align: middle-center; margin-bottom: 12px; }
 .lb-root .mk-bigsheet .mk-h2 { -unity-text-align: middle-center; }
 .lb-root .mk-handle { width: 44px; height: 5px; background-color: var(--line-light); border-radius: 3px; align-self: center; margin-top: 8px; }
 .lb-root .mk-handle-hit { height: 56px; flex-shrink: 0; margin-top: -16px; }

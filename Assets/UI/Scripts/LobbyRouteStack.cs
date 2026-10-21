@@ -34,6 +34,7 @@ namespace NodeWar.Lobby
     {
         private readonly List<LobbyOverlay> entries = new List<LobbyOverlay>();
         public event Action Changed;
+        public bool Contains(string id) => entries.Exists(entry => entry.ID == id);
         public int Count => entries.Count;
         public LobbyOverlay Top => Count == 0 ? null : entries[Count - 1];
         public bool IsSheetOpen => entries.Exists(entry => entry.Kind == OverlayKind.Sheet);

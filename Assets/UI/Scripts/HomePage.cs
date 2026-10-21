@@ -89,7 +89,7 @@ namespace NodeWar.Lobby
         public void SetMode(LobbyModeSelection selection)
         {
             var teammate = Root.Q("home-invite-teammate");
-            if (teammate != null) teammate.style.display = selection.Mode == LobbyMode.Team2v2 ? DisplayStyle.Flex : DisplayStyle.None;
+            if (teammate != null) teammate.style.display = !selection.IsPrivate && selection.Mode == LobbyMode.Team2v2 ? DisplayStyle.Flex : DisplayStyle.None;
             var flag = Root.Q("home-private-flag");
             if (flag != null) flag.style.display = selection.IsPrivate ? DisplayStyle.Flex : DisplayStyle.None;
             SelectedMode = selection.LegacyMode;
