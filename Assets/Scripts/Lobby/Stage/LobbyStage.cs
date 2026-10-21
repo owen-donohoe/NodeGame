@@ -359,9 +359,10 @@ namespace NodeWar.Lobby
             void Include(Renderer renderer)
             {
                 if (!renderer.gameObject.activeInHierarchy) return;
+                Bounds rendererBounds = renderer.bounds; // fetched once, not per corner
                 for (int i = 0; i < 8; i++)
                 {
-                    Vector3 point = stageCamera.WorldToViewportPoint(Corner(renderer.bounds, i));
+                    Vector3 point = stageCamera.WorldToViewportPoint(Corner(rendererBounds, i));
                     if (point.z <= stageCamera.nearClipPlane) { valid = false; continue; }
                     min = Vector2.Min(min, point); max = Vector2.Max(max, point);
                 }

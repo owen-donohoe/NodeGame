@@ -1,4 +1,12 @@
-using System;
+            UpdatePills(from, to, progress);
+            bool moving = strip.Moving || strip.Dragging;
+            appliedMoving = moving; appliedWidth = pageHost.layout.width;
+            if (navButtons.TryGetValue(Order[strip.Current], out var pill)) appliedPill = pill.worldBound;
+            // Raise only when the sample changed; the settled shell stays silent.
+            if (hasSample && sampleFrom == Order[from] && sampleTo == Order[to] &&
+                Mathf.Approximately(sampleProgress, progress) && sampleMoving == moving) return;
+            hasSample = true; sampleFrom = Order[from]; sampleTo = Order[to]; sampleProgress = progress; sampleMoving = moving;
+            MotionChanged?.Invoke(Order[from], Order[to], progress, moving);using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -17,6 +25,14 @@ namespace NodeWar.Lobby
         private readonly VisualElement indicator = new VisualElement { name = "pill-progress", pickingMode = PickingMode.Ignore };
         private Func<bool> overlayOpen;
         private bool initialized;
+        // Settled fast path: the last applied geometry and motion sample.
+        private bool appliedMoving = true;
+        private float appliedWidth = -1f;
+        private Rect appliedPill;
+        private bool hasSample;
+        private LobbyPageID sampleFrom, sampleTo;
+        private float sampleProgress;
+        private bool sampleMoving;
         private int swipePointer = -1;
         private Vector2 swipeStart, swipePrevious;
         private long swipeStartedAt, swipePreviousAt;
@@ -79,7 +95,11 @@ namespace NodeWar.Lobby
         public void Tick(float seconds)
         {
             if (!initialized) return;
-            strip.Step(seconds); Apply();
+            strip.Step(seconds);
+            bool settled = !strip.Moving && !strip.Dragging;
+            if (settled && !appliedMoving && Mathf.Approximately(pageHost.layout.width, appliedWidth) &&
+                (!navButtons.TryGetValue(Order[strip.Current], out var current) || current.worldBound == appliedPill)) return;
+            Apply();
         }
         private void Apply()
         {
