@@ -93,7 +93,7 @@ namespace NodeWar.Lobby
                 // A fitting inner list yields to an overflowing parent or the
                 // shop walk/pager, just as the native touch path does.
                 while ((horizontal && (scroll.mode == ScrollViewMode.Vertical || Maximum.x <= 1)) ||
-                    (!horizontal && (scroll.mode == ScrollViewMode.Horizontal || Maximum.y <= 1)))
+                    (!horizontal && scroll.mode == ScrollViewMode.Horizontal))
                 {
                     var ancestor = scroll.parent;
                     while (ancestor != null && !(ancestor is ScrollView)) ancestor = ancestor.parent;
@@ -107,6 +107,7 @@ namespace NodeWar.Lobby
                         LobbyMotion.UnrubberBand(scroll.scrollOffset.y, 0, parentMax.y, size.y));
                     LobbyScrollbars.ConfigureMotion(scroll);
                 }
+                scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Unrestricted;
                 dragging = true; Capture(target, pointer);
             }
             Vector2 offset = scroll.scrollOffset;
@@ -134,9 +135,7 @@ namespace NodeWar.Lobby
             evt.StopImmediatePropagation();
         }
 
-        private Vector2 Maximum => new Vector2(
-            Mathf.Max(0, scroll.contentContainer.layout.width - scroll.contentViewport.layout.width),
-            Mathf.Max(0, scroll.contentContainer.layout.height - scroll.contentViewport.layout.height));
+        private Vector2 Maximum => LobbyScrollbars.Maximum(scroll);
 
         private void Step()
         {
@@ -149,15 +148,16 @@ namespace NodeWar.Lobby
             LobbyDragMath.Step(ref offset.y, ref velocity.y, max.y, seconds);
             scroll.scrollOffset = offset;
             if (velocity == Vector2.zero && offset.x >= 0 && offset.x <= max.x && offset.y >= 0 && offset.y <= max.y)
-            { inertia.Pause(); scroll.RemoveFromClassList(Scrolling); scroll = null; }
+            { inertia.Pause(); scroll.RemoveFromClassList(Scrolling); LobbyScrollbars.ConfigureMotion(scroll); scroll = null; }
         }
 
         private static void ReturnInterrupted(ScrollView view)
         {
             Vector2 offset = view.scrollOffset;
-            float x = Mathf.Max(0, view.contentContainer.layout.width - view.contentViewport.layout.width);
-            float y = Mathf.Max(0, view.contentContainer.layout.height - view.contentViewport.layout.height);
-            if (offset.x >= 0 && offset.x <= x && offset.y >= 0 && offset.y <= y) return;
+            Vector2 max = LobbyScrollbars.Maximum(view);
+            float x = max.x, y = max.y;
+            if (offset.x >= 0 && offset.x <= x && offset.y >= 0 && offset.y <= y)
+            { LobbyScrollbars.ConfigureMotion(view); return; }
             view.AddToClassList("lb-returning-scroll"); view.AddToClassList(Scrolling);
             Vector2 speed = Vector2.zero;
             double previous = Time.unscaledTimeAsDouble;
@@ -167,13 +167,12 @@ namespace NodeWar.Lobby
                 if (!view.ClassListContains("lb-returning-scroll")) { animation.Pause(); return; }
                 double now = Time.unscaledTimeAsDouble;
                 offset = view.scrollOffset;
-                x = Mathf.Max(0, view.contentContainer.layout.width - view.contentViewport.layout.width);
-                y = Mathf.Max(0, view.contentContainer.layout.height - view.contentViewport.layout.height);
+                max = LobbyScrollbars.Maximum(view); x = max.x; y = max.y;
                 LobbyDragMath.Step(ref offset.x, ref speed.x, x, (float)(now - previous));
                 LobbyDragMath.Step(ref offset.y, ref speed.y, y, (float)(now - previous));
                 previous = now; view.scrollOffset = offset;
                 if (speed == Vector2.zero && offset.x >= 0 && offset.x <= x && offset.y >= 0 && offset.y <= y)
-                { animation.Pause(); view.RemoveFromClassList("lb-returning-scroll"); view.RemoveFromClassList(Scrolling); }
+                { animation.Pause(); view.RemoveFromClassList("lb-returning-scroll"); view.RemoveFromClassList(Scrolling); LobbyScrollbars.ConfigureMotion(view); }
             }).Every(16);
         }
 
@@ -199,13 +198,40 @@ namespace NodeWar.Lobby
             {
                 Vector2 max = Maximum, offset = scroll.scrollOffset;
                 scroll.scrollOffset = new Vector2(Mathf.Clamp(offset.x, 0, max.x), Mathf.Clamp(offset.y, 0, max.y));
+                LobbyScrollbars.ConfigureMotion(scroll);
             }
             scroll = null; velocity = Vector2.zero;
         }
         private void Cancel(PointerCancelEvent evt) { if (evt.pointerId == pointer) Finish(); }
         private void CaptureOut(PointerCaptureOutEvent evt) { if (evt.target == target && evt.pointerId == pointer) Finish(); }
         private void Detach(DetachFromPanelEvent evt) { if (evt.target == target) Stop(); }
-        private void Wheel(WheelEvent evt) { Finish(); } // Native wheel scrolling remains enabled.
+        private void Wheel(WheelEvent evt)
+        {
+            ScrollView next = null;
+            for (var element = evt.target as VisualElement; element != null; element = element.parent)
+            {
+                if (element is ScrollView view) { next = view; break; }
+                if (element == target) break;
+            }
+            if (next == null) return;
+            var previous = scroll;
+            Stop(false);
+            if (previous != null && previous != next) ReturnInterrupted(previous);
+            scroll = next; scroll.RemoveFromClassList("lb-returning-scroll");
+            scroll.AddToClassList(Scrolling);
+            scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Unrestricted;
+            Vector2 offset = scroll.scrollOffset, max = Maximum, size = scroll.contentViewport.layout.size;
+            bool across = scroll.mode == ScrollViewMode.Horizontal || (scroll.mode != ScrollViewMode.Vertical && Mathf.Abs(evt.delta.x) > Mathf.Abs(evt.delta.y));
+            if (across)
+                offset.x = LobbyDragMath.Elastic(LobbyMotion.UnrubberBand(offset.x, 0, max.x, size.x) +
+                    (evt.delta.x != 0 ? evt.delta.x : evt.delta.y) * scroll.mouseWheelScrollSize, max.x, size.x);
+            else
+                offset.y = LobbyDragMath.Elastic(LobbyMotion.UnrubberBand(offset.y, 0, max.y, size.y) +
+                    evt.delta.y * scroll.mouseWheelScrollSize, max.y, size.y);
+            scroll.scrollOffset = offset;
+            Finish();
+            evt.StopImmediatePropagation();
+        }
         private bool Suppressed(VisualElement element)
         {
             for (; element != null; element = element.parent)
