@@ -129,7 +129,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 852bc029
+verified: 88cadc48
 ---
 
 # Lobby UI
@@ -153,7 +153,7 @@ Match entry:
 - `MatchLauncher.HostLanRoom/JoinLanRoom/ChangeLanRoomMode` reuse DirectUDP and the existing private-room envelope without packet changes. `LobbyPlayFlow.OpenPrivateInvite` shares/copies private codes; invite delivery is stubbed.
 
 Other surfaces:
-- `WorkshopPage` preserves camera/scroll while browsing; USE returns to the top; equipped items show Remove instead. `LoadoutScreenModel.Use` equips or begins replacement; `WorkshopStageBinding` maps editable picks. Locked taps preserve replacement.
+- `WorkshopPage` preserves camera/scroll while browsing; USE and Remove close the sheet and return to the top; equipped items show Remove instead of USE. `LoadoutScreenModel.Use` equips or begins replacement; `WorkshopStageBinding` maps editable picks. Locked taps preserve replacement.
 - `ShopPage.Bind` shares claims/badges; BindStage projects offers. `ClaimPanel` confirms purchases/claims; `CrateScreen` owns opening sequences. `LocalCrateInventory` tracks Small progress/stock; Big maps to Medium.
 - `SocialPage.Bind` supplies TV, friends/guild and history ledgers. Offline friends expand separately; unknown historical handles use cached profiles or Unknown. Requests cannot cross visits/accounts.
 - `GuildPage` raises search on Enter/typing pause/caret, preserving result taps. Filters constrain RR/membership. Membership supplies announcements, sortable members and chat; officer actions confirm kicks and log reports.

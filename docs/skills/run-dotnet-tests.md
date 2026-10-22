@@ -39,9 +39,6 @@ sources:
   - id: tests-district-info
     resource: dotnet/NodeWar.Lobby.Tests/DistrictInfoFactsTests.cs
     title: Static district facts from supplied balance without live bindings
-  - id: tests-skin-band
-    resource: dotnet/NodeWar.Lobby.Tests/SkinBandMathTests.cs
-    title: Looping skin band identity, snapping, rebasing and allocation checks
   - id: tests-loadout-capacity
     resource: dotnet/NodeWar.Lobby.Tests/LoadoutCapacityTests.cs
     title: Canonical arena capacities, local completeness, resizing and wire refusals
@@ -170,14 +167,6 @@ check were each attempted once and blocked before compilation by the SDK access
 denial above. The lead must run both, including the existing replay/referee suites;
 these additions are not a passing-test receipt.
 
-P1.7 adds 23 lobby cases in `SkinBandMathTests`, explicitly linked with the
-UnityEngine-free `SkinBandMath` source. They cover signed wrapping, increasing-index
-midpoint ties, empty/single choices, 13-slot identity, symmetric scale/fade,
-large-count neighbors, rebasing, buffer reuse and a warmed zero-allocation check.
-At `08bb45e8`, both required commands were attempted once and blocked before
-compilation by the SDK access denial above. The lead must run both; these additions
-are not a passing-test receipt and do not verify UI gestures or Editor wiring.
-
 P1.2b adds capacity and save-migration cases covering canonical low 2/2 and
 high 3/5 shapes, default/offline fallback, promotion/demotion, copied equipment,
 editor fill/clear/drop, repeated save round trips, both-seat wire round trips
@@ -237,11 +226,9 @@ not covered. At 7a0cf4f0 the full solution passed 3966 cases (Lobby 758) and
 compile-check reported clean. Check in the Editor: two panels never stack,
 header and rows stay visible, and the equipped variant survives a page reload.
 
-P1.8 adds one lobby case, `SkinBandMathTests.DragDelta_UsesMeasuredTilePitch`,
-for the new `SkinBandMath.DragDelta` pixel-to-item-unit conversion. At 9d3f8aa2 the
-full solution passed 3967 cases (Lobby 759) and compile-check reported clean. The
-`SkinBand` element and the Skins sheet are compile-checked only; drag, tap, snap,
-cancel and detach behaviour need Editor or device checks.
+The lobby redesign deletes the unused `SkinBand` element, `SkinBandMath` and its
+24 `SkinBandMathTests` cases; at 88cadc48 the full solution passed 4810 cases
+(Lobby 1310) and compile-check reported clean.
 
 P1.10 deletes the suit tree view, model, stylesheet and `SuitTreeModelTests` (18 Lobby
 cases) and adds `LobbyIconContextCompatibilityTests` (2 View cases) pinning the surviving
