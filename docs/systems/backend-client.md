@@ -36,7 +36,7 @@ sources:
   - Assets/Scripts/Backend/UgsPlayerStateService.cs
   - Assets/Scripts/Backend/UgsRankedMatchService.cs
   - Assets/Scripts/Backend/UgsRankedQueueService.cs
-verified: f56e12df
+verified: 522aa8dd23940654e95a829d1c315e291c9bce81
 ---
 
 # Backend client
@@ -62,7 +62,7 @@ Service contracts in UnityEngine-free `Backend/Shared/`:
 - `UgsRankedQueueService(rated: false)` reuses ticketing with `noRR: true` in isolated `unranked-1v1`; default is `ranked`. Backend configuration must match by authoritative RR and support unrated allocation/rendezvous with no progression settlement.
 - `IRankedMatchService`: `RendezvousAsync(matchId, joinCode)`, `ConfirmConnectedAsync(matchId)`, `LeaveAsync(matchId, forfeit)`, `GetResultAsync(matchId)`, `PresenceAsync(matchId, holding)`, `ResolveHoldAsync(matchId)` map to Cloud Code `Rendezvous`, `ConfirmConnected`, `LeaveMatch`, `GetMatchResult`, `Presence`, `ResolveHold`.
 
-`PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, chosen suit/node IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs, stats, twenty retained summaries, `LastLoadout` lobby IDs from settlement), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s) and `ProfileRecord` (`Name`, `Tag`, `NameNorm`, last free rename). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile`. `HandleRules` (validation, normalisation, rename cost) and `HandleDisplay` (Name#TAG, capped headers, first-run name) are shared. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
+`PlayerState` groups `RatingRecord` (R/Rd/Sigma, last match, settled IDs), `RankRecord` (RR/Arena/HighestArena), `InventoryRecord` (owned variants/skins, obsolete slot IDs, `EquippedRecord` base-ID-to-variant/skin dictionaries), `HistoryRecord` (match IDs, stats, twenty retained summaries, `LastLoadout` lobby IDs from settlement), `ActiveMatchRecord` (match ID, expiry), `DisciplineRecord` (level, strike/decay/block timestamps, non-reports, struck IDs) `WalletRecord` (version, `Coins`, `Premium`, last fifty `WalletTransaction`s) and `ProfileRecord` (`Name`, `Tag`, `NameNorm`, last free rename). Their Cloud Save keys are `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile`. `HandleRules` (validation, normalisation, rename cost) and `HandleDisplay` (Name#TAG, capped headers, first-run name) are shared. `WalletLedger.Apply` is the only balance change: it refuses a repeated request ID or a negative result. `PlayerStateDefaults`/`WalletLedger.Starting` set first-time values.
 
 `RankedQueuePresenter.StartAsync(now)`, `Tick(now)`, `RequestCancelAsync()` and `Dispose()` drive `IRankedQueueView`; view events are `CancelRequested`, `ForfeitConfirmed`, `BotAccepted`. View methods show idle/search/found/failure/cancel/connecting/requeue/forfeit/waiting/bot-offer/blocked states. `MatchFound` and `BotMatchAccepted` hand off outcomes. Shared `BotOfferSeconds` is 90; poll exceptions fail immediately while cancelling the ticket.
 
