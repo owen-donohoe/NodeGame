@@ -7,7 +7,7 @@ tags: [shell/3, realm/backend, system/cloud, script]
 file: dotnet/NodeWarCloud/NodeWarCloud/MatchRecord.cs
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchRecord.cs
-verified: ce9fb6bf
+verified: 2ef5a5fb
 ---
 
 # MatchRecord
@@ -29,7 +29,7 @@ MatchRecord
 ├── identity    matchId, playerIds[2], createdUnixSeconds, protocol, sim, content, mapId, boardHash
 ├── snapshots   players[2]: { Rating, Rank, OwnedVariants }   ← frozen at allocation
 ├── lifecycle   state (Open/Pending/Settled/Void/Disputed), pendingUnixSeconds, settlementUnixSeconds
-├── evidence    reports[]: { playerIndex, winner, endTick, finalHash, accepted, error, unfinished, breaches, pendingLogBase64 }
+├── evidence    reports[]: { playerIndex, winner, endTick, finalHash, accepted, error, unfinished, breaches, loadouts, pendingLogBase64 }
 ├── result      outcomes[2]: { won, rrDelta, rrAfter, arenaAfter, promoted, demoted }
 ├── connection  joinCode, confirmedUnixSeconds[2], connectedUnixSeconds
 └── decisions   forfeitedBy, abandonedBy, pendingTimeoutVoid, disciplineApplied, bothLeft

@@ -13,7 +13,7 @@ tags: [shell/0, realm/backend]
 sources:
   - docs/systems/cloud.md
   - docs/systems/backend-client.md
-verified: 56ab2583
+verified: 2ef5a5fb
 ---
 
 # Backend
@@ -49,7 +49,7 @@ This is the map to keep coming back to:
 | Last 20 match logs | Device: `MatchLogs/*.nwml` | Binary ([[Match log]] format) | The client | The client (future replays) |
 | Unsent ranked logs | Device: `PendingReports/` | Binary | The client | `PendingRankedReports` retries until the server answers |
 | Rating, rank, inventory, history (match IDs, stats, recent-match summaries), active match, discipline, wallet, handle profile | Cloud Save, **Protected** player data: keys `rating`, `rank`, `inventory`, `history`, `activeMatch`, `discipline`, `wallet`, `profile` | JSON per key | **Only Cloud Code** | The player (own records), Cloud Code |
-| Public profile view (handle, arena, RR, stats, recent history) | Not stored: `GetProfileView` assembles it from the target's protected records | `PublicProfileView` | Cloud Code | Any signed-in player |
+| Public profile view (handle, arena, RR, stats, recent history, last played loadout) | Not stored: `GetProfileView` assembles it from the target's protected records | `PublicProfileView` | Cloud Code | Any signed-in player |
 | Match record, presence, uploaded logs | Cloud Save, **Private** custom item `match-<id>` | JSON (logs as base64) | Only Cloud Code | Only Cloud Code |
 | Queue ticket | Matchmaker | Ticket with `{protocol, sim, content}` | The client creates it | Matchmaker, then the allocator function |
 | Relay join code | Inside the match record | String | Cloud Code (from slot 0's call) | Slot 1 via `Rendezvous` |
