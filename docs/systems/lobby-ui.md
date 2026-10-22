@@ -122,8 +122,6 @@ sources:
   - Assets/UI/Scripts/SceneTransition.cs
   - Assets/UI/Scripts/SettingsPage.cs
   - Assets/UI/Scripts/ShopPage.cs
-  - Assets/UI/Scripts/SkinBand.cs
-  - Assets/UI/Scripts/SkinBandMath.cs
   - Assets/UI/Scripts/SocialPage.cs
   - Assets/UI/Scripts/HistoryOpponentNames.cs
   - Assets/UI/Scripts/SegmentedSwitch.cs
@@ -164,7 +162,7 @@ Other surfaces:
 
 `LoadoutCatalog.CurrentLoadout` resolves equipment/choices. `LoadoutRules` shares completeness and missing-item messages. LoadoutEditor protects locks; clearing confirms. Failed saves retain state with retry/backoff. `PlayerProfile` persists preferences/presets; `LoadoutData.Normalized` maintains 3/5 slots. LobbyChrome renders server handle, rank and balances; RankDisplay/RankTable supply progress. Premium displays as Laurels.
 
-`UnlockStates.ForBase/ForVariant/ForSkin` supply ownership and CanUse; `SkinBand` renders the skin strip; `LoadoutPresets` stores active-preset edits; `LoadoutTypes.WithEquipment` overlays server equipment.
+`UnlockStates.ForBase/ForVariant/ForSkin` supply ownership and CanUse; `LoadoutPresets` stores active-preset edits; `LoadoutTypes.WithEquipment` overlays server equipment.
 
 ## Connects to
 - `backend-client`: account, inventory, social/guild, history and ranked services.
