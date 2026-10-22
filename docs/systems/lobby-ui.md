@@ -131,7 +131,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: f56e12df
+verified: 852bc029
 ---
 
 # Lobby UI
@@ -147,7 +147,7 @@ Present account, loadout and match entry while separating local preferences from
 `LobbyMotion` supplies springs, progressive overscroll and critical return. `Reduced` snaps springs, clamps scrolling, fades panels 80ms, stills villagers and pans 150ms. `LobbyMouseDrag` bounds pointer/wheel lists; mode/shop snapping follows edge return. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills and preserves retarget velocity. `LobbyRouteStack.HidesPills` aggregates fullscreen routes.
 Match entry:
 - `HomePage` exposes PlayRequested, ModeRequested, InviteTeammateRequested, CrateRequested, SetMode and Refresh. BATTLE gates incomplete loadouts with a toast; private selections open PrivateLobbyPanel, LAN opens LanRoomSheet, queued modes open SearchingScreen. Only non-private 2v2 shows Invite teammate.
-- `ModeDefinition` owns capabilities, queue keys, seat positions and colours. `LobbyModeSelection.FromProfile/Store` persists selection. Private converts Ranked to Unranked 1v1. `LobbyModePicker` fits 10:8 cards/empty slots into a half-height snapping strip.
+- `ModeDefinition` owns capabilities, queue keys, seat positions and colours. `LobbyModeSelection.FromProfile/Store` persists selection. Private converts Ranked to Unranked 1v1. `LobbyModePicker` fits 10:8 cards/empty slots into a half-height strip that snaps groups to centre.
 - `SearchingScreen.Open/Close/Update` owns a fullscreen queue attempt, loadout window, animated status, hour-aware timer, RR/Era cards and pinned Cancel. `QueueSearchPolicy` leaves 2v2/FFA searching forever without tickets; Ranked retains its real presenter/rendezvous. Every queued mode offers the real local bot fallback after the shared delay; ticket cancellation precedes launch. Retry resets timer/actions. Only 2v2 offers Invite. Back cancels Home; duplicate Open is ignored and other overlays are rejected.
 - `TeammateInviteSheet.Open` reads Social friends then Guild members into separate ledgers. `TeammateInviteRoster` maps presence, caps names while preserving tags and orders lobby/battle/offline then name/ID. Friends take precedence over shared guild members; offline invites are disabled. Logged requests show Invited until cancel/mode change; title/Done stay fixed while ledgers scroll; delivery/incoming invites are unavailable.
 - `PrivateLobbyPanel.Open/Join` owns Relay rooms. `RoomView` shares board/seats, team colours, host drag swaps and player bubbles with LAN. `PrivateLobbyModel` owns roster/revision/start authority. Start freezes the roster and waits for acknowledgement before releasing the handshake; only 1v1 launches.
@@ -155,7 +155,7 @@ Match entry:
 - `MatchLauncher.HostLanRoom/JoinLanRoom/ChangeLanRoomMode` reuse DirectUDP and the existing private-room envelope without packet changes. `LobbyPlayFlow.OpenPrivateInvite` shares/copies private codes; invite delivery is stubbed.
 
 Other surfaces:
-- `WorkshopPage` preserves camera/scroll while browsing. `LoadoutScreenModel.Use` equips or begins replacement; `WorkshopStageBinding` maps editable picks. Locked taps preserve replacement.
+- `WorkshopPage` preserves camera/scroll while browsing; USE returns to the top; equipped items show Remove instead. `LoadoutScreenModel.Use` equips or begins replacement; `WorkshopStageBinding` maps editable picks. Locked taps preserve replacement.
 - `ShopPage.Bind` shares claims/badges; BindStage projects offers. `ClaimPanel` confirms purchases/claims; `CrateScreen` owns opening sequences. `LocalCrateInventory` tracks Small progress/stock; Big maps to Medium.
 - `SocialPage.Bind` supplies TV, friends/guild and history ledgers. Offline friends expand separately; unknown historical handles use cached profiles or Unknown. Requests cannot cross visits/accounts.
 - `GuildPage` raises search on Enter/typing pause/caret, preserving result taps. Filters constrain RR/membership. Membership supplies announcements, sortable members and chat; officer actions confirm kicks and log reports.
