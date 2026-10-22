@@ -179,6 +179,12 @@ namespace NodeWar.Cloud
             report.unfinished = verdict.ok && !verdict.gameOver && verdict.breaches != null &&
                                 verdict.breaches.Length == 2;
             if (report.unfinished) report.breaches = verdict.breaches;
+            if (report.accepted || report.unfinished)
+                report.loadouts = log.loadouts.Select(l => new LastLoadout
+                {
+                    SuitIds = l.suits.Select(CatalogKeys.SuitLobbyId).Where(id => id != null).ToArray(),
+                    DistrictIds = l.districts.Select(CatalogKeys.DistrictLobbyId).Where(id => id != null).ToArray()
+                }).ToArray();
             return report;
         }
 

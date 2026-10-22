@@ -58,6 +58,51 @@ namespace NodeWar.Cloud.Tests
                 RefereeTests.NewReferee(RefereeTests.Catalog(balance)), new InventoryRules(ServerCatalog.Items));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task SettlementWritesBothVerifiedLoadoutsIncludingAfterConflict(bool conflict)
+        {
+            var log = ReadLog(winningBytes);
+            byte[] bytes = winningBytes;
+            Assert.That((await Report(0, bytes)).state, Is.EqualTo(MatchRecordState.Pending));
+            Assert.That((await State(0)).History.LastLoadout, Is.Null, "pending reports do not publish loadouts");
+            if (conflict)
+                players[0].BeforeWrite = () =>
+                {
+                    players[0].BeforeWrite = null;
+                    players[0].Mutate(s => s.Inventory.OwnedSkins.Add("concurrent-skin"));
+                };
+            Assert.That((await Report(1, bytes)).state, Is.EqualTo(MatchRecordState.Settled));
+            for (int p = 0; p < 2; p++)
+            {
+                var loadout = (await State(p)).History.LastLoadout;
+                Assert.That(loadout.SuitIds, Is.EqualTo(log.loadouts[p].suits.Select(CatalogKeys.SuitLobbyId)));
+                Assert.That(loadout.DistrictIds, Is.EqualTo(log.loadouts[p].districts.Select(CatalogKeys.DistrictLobbyId)));
+                Assert.That(players[p].WriteCount, Is.EqualTo(1));
+            }
+            Assert.That(players[0].WriteAttempts, Is.EqualTo(conflict ? 2 : 1));
+            if (conflict) Assert.That((await State(0)).Inventory.OwnedSkins, Does.Contain("concurrent-skin"));
+        }
+
+        [Test]
+        public async Task SettlementWithoutVerifiedLogPreservesPreviousLoadouts()
+        {
+            foreach (var player in players)
+                player.Mutate(s => s.History.LastLoadout = new LastLoadout
+                    { SuitIds = new[] { "suit_guardian" }, DistrictIds = new[] { "node_town" } });
+            var record = await Record();
+            record.forfeitedBy = 1;
+            record.settlementUnixSeconds = 100;
+            var settler = new MatchSettler(id => players[id == "p0" ? 0 : 1], new InventoryRules(ServerCatalog.Items));
+            Assert.That(await settler.Settle(record, 0, 100), Is.True);
+            for (int p = 0; p < 2; p++)
+            {
+                var loadout = (await State(p)).History.LastLoadout;
+                Assert.That(loadout.SuitIds, Is.EqualTo(new[] { "suit_guardian" }));
+                Assert.That(loadout.DistrictIds, Is.EqualTo(new[] { "node_town" }));
+            }
+        }
+
         [Test]
         public async Task MissingOpponentProfileStillSettlesWithEmptyHandle()
         {
@@ -85,6 +130,7 @@ namespace NodeWar.Cloud.Tests
                 var state = await State(i);
                 Assert.That(state.History.Stats.Matches, Is.EqualTo(1));
                 Assert.That(state.History.Summaries, Has.Count.EqualTo(1));
+                Assert.That(state.History.LastLoadout.SuitIds, Is.EqualTo(new[] { "suit_warrior" }));
             }
         }
 

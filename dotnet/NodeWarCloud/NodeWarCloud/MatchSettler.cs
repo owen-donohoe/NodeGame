@@ -87,6 +87,11 @@ namespace NodeWar.Cloud
             var stores = record.playerIds.Select(players).ToArray();
             var initial = await Task.WhenAll(stores.Select(s => s.ReadForSettlementAsync()));
             var profiles = initial.Select(r => r.State?.Profile).ToArray();
+            // A forfeit can have no verified log; keep the previous loadout then.
+            // Prefer an accepted report, otherwise the earlier unfinished log.
+            var loadouts = record.reports.Where(r => (r.accepted || r.unfinished) && r.loadouts?.Length == 2)
+                .OrderByDescending(r => r.accepted).ThenBy(r => r.endTick).ThenBy(r => r.playerIndex)
+                .FirstOrDefault()?.loadouts;
 
             for (int p = 0; p < 2; p++)
             {
@@ -117,6 +122,7 @@ namespace NodeWar.Cloud
                         HighestArena = settled.Rank.HighestArena };
                     inventory.GrantDefaults(state);
                     InventoryClamp.ClampToArena(state.Inventory, state.Rank.Arena);
+                    if (loadouts != null) state.History.LastLoadout = loadouts[p];
                     if (state.History.Stats == null) state.History.Stats = new PlayerStats();
                     PlayerStatsRules.Apply(state.History.Stats, winner == p, state.Rank.RR);
                     HistorySummaryRules.Prepend(state.History, new HistorySummary

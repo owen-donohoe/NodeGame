@@ -39,8 +39,8 @@ namespace NodeWar.Cloud
                     Tag = state?.Profile?.Tag ?? "", RR = state?.Rank?.RR ?? 0,
                     Arena = state?.Rank?.Arena ?? 0, Presence = PlayerPresence.Offline },
                 Stats = state?.History?.Stats ?? new PlayerStats(),
-                SuitIds = LobbyIds(state?.Inventory?.EquippedSuitIDs, true),
-                DistrictIds = LobbyIds(state?.Inventory?.EquippedNodeIDs, false)
+                SuitIds = LobbyIds(state?.History?.LastLoadout?.SuitIds, true),
+                DistrictIds = LobbyIds(state?.History?.LastLoadout?.DistrictIds, false)
             };
             var history = state?.History;
             if (history?.MatchIds != null)
