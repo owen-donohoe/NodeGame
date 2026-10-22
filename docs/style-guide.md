@@ -1,3 +1,11 @@
+---
+type: Guide
+title: UI style guide
+description: What Node War's menus look like — layout, material, stage and motion. Build rules live in the game-ui skill.
+tags: [ui, style, lobby]
+status: stable
+---
+
 # UI style guide
 
 How Node War's menus look. Layout follows Clash Royale; style follows the paper-craft look of
@@ -11,21 +19,18 @@ this file; if they disagree, fix one of them.
 - Top: two strips. A thin currency strip (Coins, Laurels, each with "+"), then a player strip
   (avatar, Name#TAG, era badge, thin RR bar; burger and bell as small round buttons at its
   right). Hidden on Guild, which shows the guild strip instead.
-- Bottom: a full-width tab bar (Shop, Loadout, Home, Social, Guild). The selected tab is raised
-  and wider, with a larger icon and a label; the others show their icon only. Red dots mark news.
+- Bottom: a full-width tab bar (Shop, Loadout, Home, Social, Guild). The selected tab is a flat gold
+  face with an ink outline, a larger icon and a label; the others show their icon only. Red dots mark news.
 - Home: the 3D stage fills the middle. Bottom right: mode label above PLAY, next-crate bar
   below; crate buttons to PLAY's left.
 - Panels open as bottom sheets (lists, pickers) or centred cut-out cards (claims, confirmations).
 
 ## Material: paper and ink
 
-- **Cut-out card.** Every panel, button and chip is a paper cut-out: a parchment fill, a
-  thick (about 3 px) warm dark-brown ink outline that wobbles slightly like a brush pen, a soft
-  offset shadow beneath, and a rotation of up to ±1° (seeded per element, so it is stable).
-- **Grain.** A faint paper-fibre grain is multiplied over every panel fill. It should be barely
-  visible: it reads as paper, not as noise.
-- **Ink.** Outlines, icons and text share one ink colour. Icons are hand-inked glyphs: wobbly
-  strokes with a flat fill, drawn by the procedural icon painter.
+- **Panel language.** Every panel follows one recipe: parchment fill, 2 px outline, a thicker
+  bottom edge as the only shadow, three edge colours and one outline level. The visual contract
+  is `docs/design-history/panel-language.html`; the build rules are the `game-ui` skill.
+- **Icons.** Phosphor Bold, tinted ink on paper and paper on dark buttons.
 - **Colour.** Warm parchment and earth: cream and tan papers, ink brown, muted greens, a
   warm gold for the main action, and a red only for urgent marks (badges, Spectate, VS).
   Pages read meaning tokens (`Tokens.uss`), never palette tokens or raw colours.

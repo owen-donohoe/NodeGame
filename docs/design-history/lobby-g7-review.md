@@ -1,3 +1,11 @@
+---
+type: Design History
+title: Lobby panel-language review
+description: Point-in-time source audit of the G7 restyle against panel-language.html. Historical.
+tags: [design, history, lobby]
+status: historical
+---
+
 # Lobby panel-language review
 
 Implemented against `panel-language.html`; routes, paging, stage code and Shop

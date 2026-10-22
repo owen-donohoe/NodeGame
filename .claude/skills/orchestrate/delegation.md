@@ -18,108 +18,35 @@ No `sources:` block: nothing in this repo can make this file stale. What can
 make it stale is a change to the plan, the models, or Paseo itself — re-measure
 with the command at the bottom rather than trusting the numbers below.
 
-## What a delegated agent actually costs
+## What a delegated agent costs
 
-Measured 2026-09-20 from `~/.codex/sessions/<date>/rollout-*.jsonl`. Six Codex
-agents, `gpt-6-astra` at high reasoning except where noted, dispatched within
-six minutes of each other:
+Read real totals from `~/.codex/sessions/<date>/rollout-*.jsonl` (command at the bottom);
+an agent's own estimate has been off by 20×. Treat the Codex allowance as **~6M tokens per
+rolling 5-hour window** until a measurement says otherwise.
 
-| Task | Turns | Tokens |
-|---|---:|---:|
-| Audit `View/Outline/` (~1,900 lines, unfamiliar) | 23 | 1.89M |
-| Camera audit, three sections of one issue | 21 | 1.27M |
-| Dead-code sweep, two items, files named for it | 21 | 1.25M |
-| Write lobby tests for one class | 18 | 0.89M |
-| Two research questions, `gpt-5.6-luna` at low | 18 | 0.86M |
-| Handshake audit (died at the limit, 8 turns in) | 8 | 0.22M |
-
-A second wave later the same day, with the estimates above in hand:
-
-| Task | Turns | Tokens |
-|---|---:|---:|
-| Web research: this repo's doc system vs published practice | 34 | **4.13M** |
-| Fix one issue, file and candidate fix named in the prompt | 14 | **0.70M** |
-
-A third wave, 2026-09-21, two feature implementations with files, decisions
-and verification commands named in the prompt (estimated 2.4M together):
-
-| Task | Tokens |
-|---|---:|
-| Four indicator producers plus a gate extraction, 6 commits, 12 tests | **1.20M** |
-| Emotes end to end: packet, limiter, settings v3, HUD, 27 tests | **1.41M** |
-
-Both fall on the "bounded, files named" and "finds its own way" estimates
-below, and both needed a review pass: stray commit prefixes, one UI overlap, and one per-poll allocation.
-
-**Total 6.4M tokens in about 35 minutes. That took the Codex budget from 0% to
-100%.** The limit reset roughly five hours after the first call, so treat the
-Codex allowance as **~6M tokens per rolling 5-hour window** until measurement
-says otherwise.
-
-Three things that table says, which are not obvious:
-
-- **Output is noise. Input is everything.** Across all six, output was 5–9k
-  tokens each — under 1%. Cost is `turns × context size`, because the whole
-  conversation is re-sent every turn. An agent that takes five more turns to
-  find a file pays for its entire context five more times.
-- **Reasoning effort is not the lever.** The cheap `luna` profile on low
-  reasoning still cost 0.86M, within 30% of `astra` on high. Turn count and
-  file size set the price; the model tier barely moves it.
-- **Audits are the worst ratio.** The most expensive agent produced the least:
-  1.89M tokens for two small commits, because auditing means reading
-  everything and changing almost nothing.
-
-Those two are the controlled experiment for everything below.
-
-- **Naming the file and the candidate fix halves the cost.** 0.70M against
-  1.27M for a comparable task the day before, 14 turns against 21. Same model,
-  same settings. The difference was the prompt.
-- **Web research is the most expensive shape there is, by a wide margin.**
-  4.13M for one agent — 69% of the window, alone. Every fetched page lands in
-  context and is re-sent every turn afterwards. Budget a web-research task as
-  most of a window, or split the questions across two waves.
-
-Working estimate before dispatching:
+- **Input is everything.** Output is under 1%. Cost is `turns × context`, because the whole
+  conversation is re-sent every turn; five extra turns to find a file pay for the context
+  five more times. Reasoning tier barely moves it.
+- **Naming the files and the candidate fix halves the cost** (0.70M vs 1.27M for comparable
+  tasks). A fresh agent per commit with only its own spec section costs 0.3–0.5M; the same
+  coder kept across commits grew to 10M.
+- **Audits, web research and whole-system plans are the expensive shapes.** Audits read
+  everything and change little; every fetched page or file is re-sent each turn.
+- **A supervisor's cost is its context.** Plan in one agent, then review from a fresh one
+  whose brief names only the files in hand, working from diffs.
 
 | Shape | Estimate |
 |---|---|
 | Bounded task, files and fix named | **0.7M** |
 | Bounded task, agent finds its own way | **1.2M** |
+| Multi-commit feature (per commit) | **0.4–0.5M**, plus 15–30% auto-review |
 | Audit over large unfamiliar files | **1.9M** |
-| Anything with web search | **4M+** |
+| Doc re-verification of a large cluster | **~3M** |
+| Whole-system plan, or anything with web search | **4M+** |
 
-Multiply by the number of agents and compare against what is left in the
-window. Five agents is 5–9M against a ~6M window; that arithmetic could have
-been done in advance, and should have been. A wave of two containing one web
-research task is 4.8M, which is also too much — the pair matters, not just the
-count.
-
-### Planner, supervisor and coder (terrain redesign, 2026-10-07/08)
-
-A planner (`gpt-6-astra`, high) wrote a commit-by-commit contract, then supervised
-a `gpt-6.1-sol` coder commit by commit. Claude Sonnet coders covered a GPT outage.
-
-| Task | Tokens |
-|---|---:|
-| Astra: whole-system plan for four PRs (22 commits), one turn | **4.78M** |
-| Sol + Astra: one view/draft commit, finished from a WIP | **8.05M** (coder 5.5, supervisor 1.7, review 0.85) |
-| Sol + Astra: a two-file test fix | **~3.3M** |
-| Sonnet: five bounded commits (A1–B3), files and specs named | well under one Claude session |
-| Sol, one commit, fresh agent, brief = execution rules + its own spec section, one red run + one full run (C3 recruit) | **0.46M** |
-| Same shape, smaller commit (C4 Town) | **0.33M** |
-| Same coder kept across C1 + fix + C2 (84 turns, context growing) | **10.0M** |
-
-What it says:
-
-- **A supervisor's cost is its context, re-sent every turn.** The planner reached
-  180k+ context and every small review paid for all of it. Plan in one agent,
-  then supervise from a fresh one whose brief names only the files of the PR in
-  hand, and audit from diffs rather than whole files.
-- **A whole-system plan is a web-research-sized task.** Budget it as most of a
-  window, or plan one PR at a time.
-- **Split the plan by what each role reads.** A coder working one commit should
-  open that commit's spec and the decisions it cites, not every decision for
-  every PR (see `.claude/plans/<change>/README.md`).
+Multiply by the number of agents and compare against what is left in the window. A Claude
+Sonnet agent with the design fully specified is roughly 10× cheaper than Codex for the same
+bounded task, and spends the Claude budget instead.
 
 ## The rule
 

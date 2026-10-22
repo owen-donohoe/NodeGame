@@ -50,7 +50,6 @@ Around the match:
 ## Procedures
 - `docs/skills/`: how to run things (tests, the Editor CLI).
 - `docs/computations/`, `docs/attesters/`: the determinism baseline CI runs.
-- `docs/design-history/`: the original design document. Historical.
-- [Lobby art audit](reports/lobby-art-audit.md): definition, variant and generated paper coverage.
+- `docs/design-history/`: the original design document, the lobby mockup and panel-language contract, and point-in-time lobby audits. Historical except `panel-language.html`, which the `game-ui` skill treats as the visual contract.
 
 Future work is never in this folder: it is the Notion Roadmap.
