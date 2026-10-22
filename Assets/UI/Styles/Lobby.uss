@@ -229,7 +229,7 @@
     flex-grow: 1;
 }
 
-/* PlayPopup and MatchHistoryPage hide their inactive views with this. */
+/* PlayPopup hides its inactive views with this. */
 .lb-view--hidden {
     display: none;
 }

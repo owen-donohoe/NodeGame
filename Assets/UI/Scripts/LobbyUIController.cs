@@ -53,8 +53,6 @@ namespace NodeWar.Lobby
         [Tooltip("SettingsPage.uxml. Without it Settings shows a labelled note.")]
         [SerializeField] private VisualTreeAsset settingsPageLayout;
 
-        [Tooltip("MatchHistoryPage.uxml. Without it Match history shows a labelled note.")]
-        [SerializeField] private VisualTreeAsset matchHistoryPageLayout;
 
         [Header("Draftable items")]
 
@@ -91,7 +89,6 @@ namespace NodeWar.Lobby
         private SettingsPage settingsPage;
         private AccountFlow accountFlow;
         private VisualElement lobbyRoot;
-        private MatchHistoryPage matchHistoryPage;
         private GuildPage guildPage;
         private LobbyOverlayRouter router;
         private ClaimPanel claimPanel;
@@ -248,7 +245,6 @@ namespace NodeWar.Lobby
 
             settingsPage = null;
             lobbyRoot = null;
-            matchHistoryPage = null;
             catalog = null;
             toast = null;
             sheet = null;
@@ -285,7 +281,6 @@ namespace NodeWar.Lobby
             crateInventory?.Refresh();
             if (profilePage != null) profilePage.Update();
             if (settingsPage != null) settingsPage.Update();
-            if (matchHistoryPage != null) matchHistoryPage.Update();
             if (modePicker != null) modePicker.Update();
 
             // Pumps the connection state machine while the battle sheet is open.
@@ -536,9 +531,6 @@ namespace NodeWar.Lobby
 
             settingsPage = new SettingsPage(settingsPageLayout, accountFlow);
             overlayHost.Add(settingsPage.Root);
-
-            matchHistoryPage = new MatchHistoryPage(matchHistoryPageLayout);
-            overlayHost.Add(matchHistoryPage.Root);
         }
 
         private void BuildPlayPopup()
@@ -730,7 +722,6 @@ namespace NodeWar.Lobby
                 router.Closed("profile");
             };
             WirePushPage(settingsPage, "settings", promote);
-            WirePushPage(matchHistoryPage, "history", promote);
             claimPanel.Opened += () =>
             {
                 promote(claimPanel.Root);

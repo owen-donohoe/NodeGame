@@ -181,7 +181,6 @@
     <Compile Include="EmotePacketTests.cs" />
     <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="PacketRobustnessTests.cs" />
-    <Compile Include="MatchHistoryRowTests.cs" />
     <Compile Include="RankedQueuePresenterTests.cs" />
     <Compile Include="RankedRendezvousTests.cs" />
     <Compile Include="RankedResultTrackerTests.cs" />
@@ -245,8 +244,6 @@
              Link="Lobby/EraChips.cs" />
     <Compile Include="../../Assets/UI/Scripts/RankDisplay.cs"
              Link="Lobby/RankDisplay.cs" />
-    <Compile Include="../../Assets/UI/Scripts/MatchHistoryRow.cs"
-             Link="Lobby/MatchHistoryRow.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankTable.cs"
              Link="Backend/RankTable.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/MatchReportTypes.cs"
