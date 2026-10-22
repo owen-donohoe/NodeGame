@@ -12,7 +12,7 @@ sources:
   - Assets/Scripts/Backend/Shared/RankTable.cs
   - Assets/Scripts/Backend/Shared/SuitTree.cs
   - Assets/Scripts/Backend/Shared/DistrictMigration.cs
-verified: 3c1b562c
+verified: 56ab2583
 ---
 
 # Progression
@@ -39,7 +39,7 @@ Shared `ContentTable` holds placeholder content data: `DebutEra(baseId)` (the er
 
 `SuitTree.Nodes`, `TryGet`, `Root`, `IsAvailable`, `CanOwn`, `OwnershipProblems` describe suit branches. `SuitTreeNode` carries BaseId, Variant, ParentVariant, Arena, Unlock (Cost/DropOnly), Cost, derived Id/ParentId. Current tree suits have variant 0 roots and sibling variants 1/2; availability uses the node's unlock arena, not its variant number. `CanOwn` additionally requires the reached arena and parent ownership. This table does not itself charge currency or grant purchases.
 
-`InventoryClamp.ClampToArena(InventoryRecord, arena)` clamps unusable equipment and supplies fallback ownership. Shared `LoadoutCapacityPolicy` defines 3-suit/5-district capacity, `LockedSuits/LockedDistricts(arena)` and base/variant usability. `DistrictMigration.Deck/Apply/Detached/CanonicalType` migrate saved inventory and decks.
+`InventoryClamp.ClampToArena(InventoryRecord, arena)` clamps unusable equipment and supplies fallback ownership. Shared `LoadoutCapacityPolicy` defines 3-suit/5-district capacity, `DefaultSuits/DefaultDistricts()`, `LockedSuits/LockedDistricts(arena)` (one table of default locks, each with the last arena it stays locked) and base/variant usability. `DistrictMigration.Deck/Apply/Detached/CanonicalType` migrate saved inventory and decks.
 
 `DisconnectPenalty.Decay/Strike/NonReport(state, now)` are pure discipline rules consumed by the server; account persistence lives elsewhere.
 

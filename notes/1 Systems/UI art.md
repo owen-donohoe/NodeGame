@@ -20,7 +20,7 @@ sources:
   - Assets/UI/UnityDefaultRuntimeTheme.tss
   - Assets/UI/Styles/Tokens.uss
   - Assets/UI/Styles/Components.uss
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # UI art
@@ -44,7 +44,7 @@ An icon means something before it looks like something. Food in a HUD and food i
 |---|---|---|
 | `UIArtTheme` | Inspector-authored icon entries and a district-visual table reference | [[Semantic icons and fallbacks]] |
 | `UIArtLookup` | Exact location → Anywhere → generated-art result | [[UIArtLookup]] |
-| `LobbyIcon` | Draw a sprite or cached vector glyph; preserve tint and picking behavior | [[LobbyIcon]] |
+| `LobbyIcon` | Draw a Phosphor SVG (lobby), a sprite or a cached vector glyph; preserve tint and picking behavior | [[LobbyIcon]] |
 | Runtime theme | Share tokens and components across Toolkit panels | [[Shared UI theme]] |
 | `ItemFamily` / `ItemTint` | Give unfinished item art a shape, stable tint and monogram | Source files in this note's frontmatter |
 | `UiRequired` | Diagnose missing or wrongly typed named elements during binding | [[Tooling]] |

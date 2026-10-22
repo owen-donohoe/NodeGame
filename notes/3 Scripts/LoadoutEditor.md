@@ -5,7 +5,7 @@ tags: [shell/3, realm/lobby, system/lobby-ui, script]
 file: Assets/UI/Scripts/LoadoutEditor.cs
 sources:
   - Assets/UI/Scripts/LoadoutEditor.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # LoadoutEditor
@@ -24,9 +24,9 @@ verified: ce9fb6bf
 ## Read it in this order
 
 1. **The header:** why it's separate: "GroupSelectionPanel expresses the same rules across five [SerializeField] slot displays and a visibility pass, where they cannot be tested at all."
-2. **Constructors:** `LoadoutEditor(source)` keeps the source's canonical shape; `LoadoutEditor(source, arena)` resizes explicitly for a known arena.
+2. **Constructors:** `LoadoutEditor(source)` is the offline arena-1 case; `LoadoutEditor(source, arena)` restores that era's locked defaults (e.g. Warrior and Farm/Mine/Town in era 0) into the three suit and five district slots. Locked slots can be neither cleared nor replaced.
 3. **`EquipSuit(id)`:** first empty slot, or `NoSlot` if blank, duplicate or full. The duplicate rule is explained: "two slots spent on one suit is indistinguishable in the draft from one, so it is a slot silently thrown away… the rule belongs with the data rather than with the view."
-4. **`ClearSuitSlot`, district equivalents, and the prune method** that drops IDs no longer offered.
+4. **`ReplaceSuitSlot`/`ReplaceDistrictSlot`, `ClearSuitSlot`, district equivalents, `ClearChoices`** (resets to the locked defaults), **and `DropUnavailable`**, which drops IDs no longer offered.
 5. **`ToLoadout`:** back to `LoadoutData`.
 
 ## Lesson

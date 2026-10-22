@@ -5,7 +5,7 @@ tags: [shell/3, realm/lobby, system/lobby-ui, script]
 file: Assets/Scripts/Lobby/PlayerProfile.cs
 sources:
   - Assets/Scripts/Lobby/PlayerProfile.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # PlayerProfile
@@ -19,7 +19,7 @@ verified: ce9fb6bf
 
 ## What it is
 
-"Persistent player data singleton… Local JSON persistence now, server-swappable later." It writes `player_profile.json` under `Application.persistentDataPath` with Unity's `JsonUtility`. It holds username, settings, local loadout choices, the account-link prompt flag, the last Workshop tab, and some legacy fields (trophies, boxes) that "nothing writes yet".
+"Persistent player data singleton… Local JSON persistence now, server-swappable later." It writes `player_profile.json` under `Application.persistentDataPath` with Unity's `JsonUtility`. It holds username, settings, local loadout choices (three presets, one active; `Loadout` reads and writes the active one), the account-link prompt flag, the last Workshop tab, and some legacy fields (trophies, boxes) that "nothing writes yet".
 
 ## Read it in this order
 

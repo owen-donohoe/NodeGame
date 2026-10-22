@@ -14,8 +14,8 @@ attester:
   resource: docs/attesters/hash_baseline.ps1
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
-  - { by: gpt-6, at: 2026-10-19T13:50:30Z }
-verified_at_commit: df6cbbc2
+  - { by: claude-opus-5-5, at: 2026-10-22T04:45:00Z }
+verified_at_commit: d5818158
 status: stable
 sources:
   - id: tests

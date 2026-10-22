@@ -9,7 +9,7 @@ tags: [shell/3, realm/backend, system/backend-client, script]
 file: Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs
 sources:
   - Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # RankedQueuePresenter
@@ -32,7 +32,7 @@ through `Tick(nowSeconds)`.
 1. **`IRankedQueueView` (top of the file):** everything the screen can *show* (searching, found,
    requeue, forfeit prompt, waiting for result, bot offer, blocked countdown) and *ask*
    (`CancelRequested`, `ForfeitConfirmed`, `BotAccepted`). Restyling the queue means writing a new view; the presenter stays.
-2. **Constants:** poll every 2 s, bot offer at 90 s, 3 automatic requeues, 3 consecutive poll exceptions tolerated.
+2. **Constants:** poll every 2 s, bot offer at 90 s (shared as a public constant), 3 automatic requeues. A poll that throws fails the attempt at once and cancels the ticket; it is not retried.
 3. **`enum Phase`:** `Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, CancellingForBot,
    Connecting, Rendezvous, Blocked`. A [[State machines|state machine]]: `Tick` does only what the current phase needs.
 4. **`StartAsync` → preflight:** retry pending reports, fetch state, deal with an existing active match (forfeit prompt or wait), show discipline blocks.

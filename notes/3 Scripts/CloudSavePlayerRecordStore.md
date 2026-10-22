@@ -10,7 +10,7 @@ tags: [shell/3, realm/backend, system/cloud, script]
 file: dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # CloudSavePlayerRecordStore
@@ -26,8 +26,8 @@ verified: ce9fb6bf
 ## What it is
 
 The adapter between the server's rules and the Cloud Save API, for one player's Protected
-records. It implements four narrow interfaces (`IPlayerRecordStore`, `ISettlementPlayerStore`,
-`ILockedPlayerRecordStore`, `IDisciplinePlayerStore`), so each rule asks only for what it needs, and tests replace it with fakes.
+records. It implements narrow interfaces (`IPlayerRecordStore`, `ISettlementPlayerStore`,
+`ILockedPlayerRecordStore`, `IDisciplinePlayerStore`, `IWalletStore`, `IProfileStore`, `IProfileViewStore`), so each rule asks only for what it needs, and tests replace it with fakes.
 
 ## Read it in this order
 
@@ -71,8 +71,12 @@ That's a clever workaround for a missing feature (create-if-absent): piggy-back 
 ### 4. `WriteForSettlementAsync`: refuse to write without locks
 
 It throws unless all four records and all four locks are present. Settlement must never run as last-write-wins.
+### 5. Wallet and profile: separate keys, separate locks
 
-### 5. `Convert<T>`: JSON round trip
+`wallet` and `profile` sit beside the settlement four, not inside them. The wallet is read and written alone under its own lock, so a currency grant never contends with settlement. Both are *created* the way the claim is: fenced with the existing `rating` key. `ReadProfileViewAsync` reads only profile, rank, history and inventory, which is all a public profile needs.
+
+
+### 6. `Convert<T>`: JSON round trip
 
 `Item.Value` arrives as a loosely typed JSON object. Serialising and deserialising with Newtonsoft
 turns it into the typed record. It's simple, at the cost of a little speed.

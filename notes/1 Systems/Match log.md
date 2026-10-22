@@ -11,7 +11,7 @@ card: docs/systems/match-log.md
 sources:
   - Assets/Scripts/MatchLog/
   - dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Match log

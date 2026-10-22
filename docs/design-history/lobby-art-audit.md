@@ -1,3 +1,11 @@
+---
+type: Design History
+title: Lobby art coverage audit
+description: Point-in-time audit of lobby paper-art coverage for definitions, variants and generated art. Historical.
+tags: [design, history, lobby]
+status: historical
+---
+
 # Lobby art coverage
 
 Scope: every serialized DistrictDefinition (including its former NodeDefinition

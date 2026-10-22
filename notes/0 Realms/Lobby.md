@@ -11,7 +11,7 @@ tags: [shell/0, realm/lobby]
 sources:
   - docs/systems/lobby-ui.md
   - docs/systems/match-flow.md
-verified: 774005c2
+verified: 56ab2583
 ---
 
 # Lobby
@@ -38,7 +38,7 @@ the setup is agreed (map, then draft) through deterministic, catalog-checked ste
 
 ```mermaid
 flowchart LR
-    L["Lobby UI<br/>Workshop, Play popup"] -->|PrepareAsync: refresh + freeze| ML[MatchLauncher]
+    L["Lobby UI<br/>Workshop, Home BATTLE button"] -->|PrepareAsync: refresh + freeze| ML[MatchLauncher]
     ML -->|ranked| RM[Ranked matchmaking]
     ML -->|Relay / LAN / bot| MC
     RM --> MC["MatchConnection<br/>(DontDestroyOnLoad)"]

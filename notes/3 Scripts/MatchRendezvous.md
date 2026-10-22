@@ -5,7 +5,7 @@ tags: [shell/3, realm/backend, system/cloud, script]
 file: dotnet/NodeWarCloud/NodeWarCloud/MatchRendezvous.cs
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchRendezvous.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # MatchRendezvous

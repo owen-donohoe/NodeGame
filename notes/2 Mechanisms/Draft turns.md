@@ -10,7 +10,7 @@ sources:
   - Assets/Scripts/Game/Simulation/DraftState.cs
   - Assets/Scripts/Game/Core/DraftManager.cs
   - Assets/Scripts/Game/Network/DraftSerializer.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Draft turns

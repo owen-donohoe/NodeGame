@@ -11,7 +11,7 @@ file: Assets/UI/Scripts/LobbyIcon.cs
 sources:
   - Assets/UI/Scripts/LobbyIcon.cs
   - Assets/UI/Scripts/LobbyIconUsage.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # LobbyIcon
@@ -25,15 +25,15 @@ verified: ce9fb6bf
 
 ## What it is
 
-A UXML-enabled `VisualElement` used by the lobby and in-match indicators/emotes/resources. Its header explains the original problem: “The prototype uses Unicode symbols and emoji, which Fredoka does not carry.” It draws white vectors once and lets normal image tint styling color them, while theme sprites can replace them.
+A UXML-enabled `VisualElement` used by the lobby and in-match indicators/emotes/resources. Its header explains the original problem: “The prototype uses Unicode symbols and emoji, which the display font does not carry.” It draws white vectors once and lets normal image tint styling color them, while theme sprites can replace them.
 
 ## Read it in this order
 
 1. **`Kind` and `Context`.** Each UXML attribute setter refreshes art. The two-argument constructor sets context before assigning Kind.
-2. **`RefreshArt`.** Ask [[UIArtTheme]] for a sprite; otherwise call `ImageFor`. Then choose white for original-color art, the stored resource tint if present, or clear the inline tint override so styling can apply.
+2. **`RefreshArt`.** Inside the lobby (not the shop page or shop cards), a bundled Phosphor SVG chosen by kind (`LobbyImage`) wins. Otherwise ask [[UIArtTheme]] for a sprite; otherwise call `ImageFor`. Match and market surfaces keep the theme and procedural path, which is why art is refreshed on attach, when the real surface is known. Then choose white for original-color art, the stored resource tint if present, or clear the inline tint override so styling can apply.
 3. **The default constructor.** Add `lb-icon`, ignore picking, fit the image, and register attachment-time validation in Editor/development builds.
 4. **`ValidateUsage`.** None is intentionally unset. Other unlisted kind/context usages warn once per pair. Attachment timing avoids warning while UXML has assigned only one of the two attributes.
-5. **`ImageFor`.** None returns null; the kind cache avoids redrawing known glyphs. Painter2D draws inside a 24×24 design box; transparent corner dots pin the bounds so glyphs keep a common scale and center.
+5. **`ImageFor`.** None returns null; the kind cache avoids redrawing known glyphs. `InkPen` (seeded per kind, so strokes look hand-drawn) draws inside a 24×24 design box; transparent corner dots pin the bounds so glyphs keep a common scale and center.
 6. **The switch, then one drawer.** Several semantic kinds share a fallback drawing. Unknown values get a placeholder. You can understand the lifecycle before reading every path coordinate.
 
 ## Lessons to take away
@@ -42,7 +42,7 @@ Art does not need to become interaction. `PickingMode.Ignore` keeps the icon fro
 
 `SetResourceTint` respects original-color sprites instead of blindly recoloring them. Cached glyphs and warned-usage sets reset on subsystem registration. This UI layer can use floats and dictionaries: the simulation-only restrictions do not ban those from presentation code.
 
-The pure lookup tests prove selection policy, not the quality of Painter2D output. Compile-check catches type errors; tint, clipping and device rendering still need Unity.
+The pure lookup tests prove selection policy, not the quality of the drawn output. Compile-check catches type errors; tint, clipping and device rendering still need Unity.
 
 ## Check yourself
 

@@ -10,7 +10,7 @@ tags: [shell/2, realm/backend, system/cloud]
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
   - dotnet/NodeWarCloud/NodeWarCloud/MatchReporting.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Match settlement
@@ -45,7 +45,7 @@ flowchart TB
     C --> P1[Player 1]
     P0 --> G0{"matchId in rating.SettledMatchIds?"}
     G0 -->|yes| S0[skip: already done]
-    G0 -->|no| W0["batch write rating, rank, inventory, history<br/>with 4 write locks (retry ≤3 on conflict)"]
+    G0 -->|no| W0["batch write rating, rank, inventory, history (IDs, stats, summary)<br/>with 4 write locks (retry ≤3 on conflict)"]
     P1 --> G1{"same guard"}
     G1 -->|yes| S1[skip]
     G1 -->|no| W1[batch write]

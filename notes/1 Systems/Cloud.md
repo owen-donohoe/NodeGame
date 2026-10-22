@@ -19,7 +19,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSaveMatchRecordStore.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Cloud
@@ -49,12 +49,12 @@ The module `NodeWarCloud` exposes these functions to the game:
 
 | Function | What it does |
 |---|---|
-| `GetPlayerState` | Creates missing records, grants defaults and returns your state |
+| `GetPlayerState` | Creates missing records (including the wallet), grants the starter kit and returns your state |
 | `Equip` | Validates ownership and arena, under the inventory write lock |
 | `Matchmaker_Allocate` / `_Poll` | Called by Matchmaker (not players). Creates the match record and pre-match snapshots |
 | `Rendezvous`, `ConfirmConnected` | Swap the Relay code through the record, and confirm both peers connected |
 | `ReportMatch` | Upload a log. Eligibility, then the referee, then agreement, then settlement ([[Match settlement]]) |
-| `GetMatchResult`, `GetMatchHistory` | Read results for the end card and history |
+| `GetMatchResult`, `GetMatchHistory`, `GetProfileView` | Read results for the end card, history (with opponent names), and any player's public profile: handle, arena, RR, stats, recent matches |
 | `Presence`, `ResolveHold`, `LeaveMatch` | Disconnect handling, forfeits and abandonment discipline |
 | `VerifyMatch` | Referee only, no settlement |
 
