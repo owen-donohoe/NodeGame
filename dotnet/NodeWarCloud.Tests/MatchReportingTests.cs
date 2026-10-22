@@ -62,12 +62,8 @@ namespace NodeWar.Cloud.Tests
         [TestCase(true)]
         public async Task SettlementWritesBothVerifiedLoadoutsIncludingAfterConflict(bool conflict)
         {
-            // The legacy replay fixture permits repeated chosen types. Five slots
-            // exercise the truncation that makes the obsolete inventory fields unsafe.
             var log = ReadLog(winningBytes);
-            log.loadouts[0].districts = Enumerable.Repeat((int)DistrictType.Farm, 5).ToArray();
-            log.loadouts[1].districts = Enumerable.Repeat((int)DistrictType.Mine, 5).ToArray();
-            byte[] bytes = MatchLogFormat.Write(log);
+            byte[] bytes = winningBytes;
             Assert.That((await Report(0, bytes)).state, Is.EqualTo(MatchRecordState.Pending));
             Assert.That((await State(0)).History.LastLoadout, Is.Null, "pending reports do not publish loadouts");
             if (conflict)
@@ -80,8 +76,8 @@ namespace NodeWar.Cloud.Tests
             for (int p = 0; p < 2; p++)
             {
                 var loadout = (await State(p)).History.LastLoadout;
-                Assert.That(loadout.SuitIds, Is.EqualTo(new[] { "suit_warrior" }));
-                Assert.That(loadout.DistrictIds, Is.EqualTo(Enumerable.Repeat(p == 0 ? "node_farm" : "node_mine", 5)));
+                Assert.That(loadout.SuitIds, Is.EqualTo(log.loadouts[p].suits.Select(CatalogKeys.SuitLobbyId)));
+                Assert.That(loadout.DistrictIds, Is.EqualTo(log.loadouts[p].districts.Select(CatalogKeys.DistrictLobbyId)));
                 Assert.That(players[p].WriteCount, Is.EqualTo(1));
             }
             Assert.That(players[0].WriteAttempts, Is.EqualTo(conflict ? 2 : 1));

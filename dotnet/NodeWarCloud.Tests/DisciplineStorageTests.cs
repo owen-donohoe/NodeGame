@@ -47,11 +47,11 @@ namespace NodeWar.Cloud.Tests
         }
 
         [Test]
-        public async Task ProfileViewReadsOnlyItsFourPublicSourceKeysInOneBatch()
+        public async Task ProfileViewReadsOnlyItsThreePublicSourceKeysInOneBatch()
         {
             await new ProfileViewModule(api).GetProfileView(context, "target");
             Assert.That(reads, Has.Count.EqualTo(1));
-            Assert.That(reads[0], Is.EqualTo(new[] { "profile", "rank", "history", "inventory" }));
+            Assert.That(reads[0], Is.EqualTo(new[] { "profile", "rank", "history" }));
             Assert.That(batches, Is.Empty);
         }
 
