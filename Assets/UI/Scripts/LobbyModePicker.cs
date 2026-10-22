@@ -13,7 +13,7 @@ namespace NodeWar.Lobby
         private readonly VisualElement[] groups = new VisualElement[3];
         private LobbyModeSelection selection;
         private LobbyMotion.Spring snap;
-        private float columnWidth, previousOffset;
+        private float columnWidth, previousOffset, viewportWidth;
         private double lastTime, idleSince;
         private bool held, snapping, placing;
         public event Action<LobbyModeSelection> Selected;
@@ -134,10 +134,10 @@ namespace NodeWar.Lobby
             if (float.IsNaN(width) || width <= 0) return;
             columnWidth = LobbyModeLayout.CardWidth(strip.contentViewport.layout.height);
             if (float.IsNaN(columnWidth) || columnWidth <= 0) return;
-            // Ranked sits just left of centre; the next group peeks in immediately.
-            float inset = 16;
-            strip.contentContainer.style.paddingLeft = inset;
-            strip.contentContainer.style.paddingRight = Mathf.Max(12, width - inset - columnWidth - GroupFrame);
+            // Each group rests centred on screen, so the strip is padded to let the first and last centre too.
+            viewportWidth = width;
+            strip.contentContainer.style.paddingLeft = Mathf.Max(16, (width - FrameWidth(0)) / 2f);
+            strip.contentContainer.style.paddingRight = Mathf.Max(16, (width - FrameWidth(groups.Length - 1)) / 2f);
             for (int i = 0; i < groups.Length; i++)
             {
                 groups[i].style.width = LobbyModeLayout.GroupWidth(LobbyModeCategories.ModesIn(LobbyModeCategories.All[i]).Length, columnWidth, Gap) + GroupFrame;
@@ -153,6 +153,17 @@ namespace NodeWar.Lobby
                 });
             }
         }
+        private float FrameWidth(int group) =>
+            LobbyModeLayout.GroupWidth(LobbyModeCategories.ModesIn(LobbyModeCategories.All[group]).Length, columnWidth, Gap) + GroupFrame;
+
+        /// <summary>The scroll offset that puts a group's centre at the viewport centre.</summary>
+        private float CentredOffset(int group)
+        {
+            float padLeft = Mathf.Max(16, (viewportWidth - FrameWidth(0)) / 2f);
+            float centre = padLeft + LobbyModeLayout.GroupStart(group, columnWidth, Gap, GroupGap + GroupFrame) + FrameWidth(group) / 2f;
+            return centre - viewportWidth / 2f;
+        }
+
         private void Tick()
         {
             double now = Time.realtimeSinceStartupAsDouble;
@@ -169,7 +180,9 @@ namespace NodeWar.Lobby
             // The shared pointer owner returns overscroll before group snapping.
             if (Mathf.Abs(offset - previousOffset) > 0.01f) { previousOffset = offset; idleSince = now; return; }
             if (now - idleSince < 0.2 || offset < 0 || offset > strip.horizontalScroller.highValue) return;
-            float destination = LobbyModeLayout.GroupStart(LobbyModeLayout.NearestGroup(offset, columnWidth, Gap, GroupGap + GroupFrame), columnWidth, Gap, GroupGap + GroupFrame);
+            float destination = CentredOffset(0);
+            for (int i = 1; i < groups.Length; i++)
+                if (Mathf.Abs(offset - CentredOffset(i)) < Mathf.Abs(offset - destination)) destination = CentredOffset(i);
             destination = Mathf.Clamp(destination, 0, strip.horizontalScroller.highValue);
             if (Mathf.Abs(destination - offset) < 0.5f) return;
             snap = new LobbyMotion.Spring(offset) { Target = destination }; snapping = true;

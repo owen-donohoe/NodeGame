@@ -881,20 +881,22 @@ namespace NodeWar.Lobby
             if (!string.IsNullOrEmpty(inventoryMessage)) content.Add(MakeLabel(inventoryMessage, "mk-muted", "ws-item-status"));
             inventorySheet.Body.Add(content);
             itemActions.Add(SheetButton("BACK", CloseItemPanel));
-            bool removable = !fixedStarter && IsSelected(inspectedItem);
-            itemActions.EnableInClassList("ws-sheet-actions--remove", removable);
-            if (removable)
-            {
-                var remove = SheetButton("Remove", () => RemoveItem(inspectedItem));
-                remove.SetEnabled(ownershipKnown && !inventoryBusy);
-                itemActions.Add(remove);
-            }
-            var use = SheetButton(fixedStarter ? "Fixed" : "USE", () => _ = UseItemAsync(), "mk-btn--primary");
             bool canUse = catalog.UnlockForBase(inspectedItem.ID, playerState).CanUse &&
                 (index < 0 || choices[index].Equipped || choices[index].Selectable);
             bool skinValid = LoadoutScreenModel.ValidChoice(skins, panelSkinId);
-            bool changes = !IsSelected(inspectedItem) || index >= 0 && !choices[index].Equipped ||
+            bool variantOrSkinChange = index >= 0 && !choices[index].Equipped ||
                 Array.Exists(skins, choice => choice.ID == panelSkinId && !choice.Equipped);
+            bool changes = !IsSelected(inspectedItem) || variantOrSkinChange;
+            // An equipped, unlocked item with nothing new picked offers a red Remove in USE's place.
+            if (!fixedStarter && IsSelected(inspectedItem) && !variantOrSkinChange)
+            {
+                var remove = SheetButton("Remove", () => RemoveItem(inspectedItem), "mk-btn--urgent");
+                remove.SetEnabled(ownershipKnown && !inventoryBusy);
+                itemActions.Add(remove);
+                return;
+            }
+            string label = fixedStarter ? "Fixed" : IsSelected(inspectedItem) ? "Apply" : "USE";
+            var use = SheetButton(label, () => _ = UseItemAsync(), "mk-btn--primary");
             use.tooltip = !canUse ? "Locked - own this item and reach its required arena to use it." : !skinValid ? "Selected skin is locked." : "";
             use.SetEnabled(!fixedStarter && ownershipKnown && !inventoryBusy && canUse && skinValid && changes); itemActions.Add(use);
         }
@@ -1012,6 +1014,8 @@ namespace NodeWar.Lobby
             }
             if (!Current()) return;
             closingForUse = true; CloseItemPanel(); closingForUse = false;
+            // USE always returns to the top so the stage it changes is in view.
+            grid.scrollOffset = Vector2.zero;
             UsePreview();
         }
         private static GameBalanceData TreeBalance()
