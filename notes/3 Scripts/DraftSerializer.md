@@ -7,7 +7,7 @@ tags: [shell/3, realm/lobby, system/draft, script]
 file: Assets/Scripts/Game/Network/DraftSerializer.cs
 sources:
   - Assets/Scripts/Game/Network/DraftSerializer.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # DraftSerializer

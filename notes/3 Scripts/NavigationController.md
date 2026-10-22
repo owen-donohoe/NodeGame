@@ -5,13 +5,13 @@ tags: [shell/3, realm/lobby, system/lobby-ui, script]
 file: Assets/UI/Scripts/NavigationController.cs
 sources:
   - Assets/UI/Scripts/NavigationController.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # NavigationController
 
 > [!question] The question
-> How do the lobby's tabs slide between pages, and keep each page's scroll position, in 143 lines?
+> How do the lobby's tabs slide between pages, and keep each page's scroll position, in under 200 lines?
 
 **Where you are:** [[Home]] › [[Lobby]] › [[Lobby UI]] › **NavigationController** (script)
 
@@ -19,7 +19,7 @@ verified: ce9fb6bf
 
 ## What it is
 
-A plain class (not a MonoBehaviour) that "owns which tab page is showing and keeps the tab bar in step with it". API: `Register(LobbyPage)`, `BindNavButton(id, button)`, `Show(id)`, `Has`, `CurrentPageID`, `PageShown`.
+A plain class (not a MonoBehaviour) that "owns which tab page is showing and keeps the tab bar in step with it". API: `Register(LobbyPage)`, `BindNavButton(id, button)`, `BindSwipes`, `Show(id)`, `Has`, `CurrentPageID`, `PageShown`, `MotionChanged`, `Tick`. It is one physical strip, sampled once per frame, so pages, the nav pills and the stage camera share the same motion and swipes can be interrupted and retargeted.
 
 ## The design, from its comments
 
@@ -27,7 +27,7 @@ A plain class (not a MonoBehaviour) that "owns which tab page is showing and kee
 - **Pages are sized in code, not USS**, "because the page count is decided by registration, not by a stylesheet."
 - **First layout isn't animated**, "so the lobby opens on Home rather than sliding to it from Shop."
 - **Forgiving API:** binding a button before its page exists is safe, and showing an unregistered page is ignored "so a half-built lobby stays usable".
-- **Profile, Settings and Match history aren't pages here:** they're overlays above the chrome, owned by the shell.
+- **Profile, Settings and the crate screen aren't pages here:** they're overlays above the chrome, owned by the shell. The five pages (Shop, Workshop, Home, Social, Guild) have fixed slots in the strip.
 
 ## UI Toolkit lesson
 

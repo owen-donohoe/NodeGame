@@ -17,7 +17,7 @@ sources:
   - Assets/UI/Scripts/LobbyIconContext.cs
   - Assets/UI/Editor/UIArtThemeIconEntryDrawer.cs
   - dotnet/NodeWar.View.Tests/UIArtLookupTests.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Semantic icons and fallbacks
@@ -58,7 +58,7 @@ flowchart TD
 
 `LobbyIconUsage` supplies actual locations and labels to the Inspector drawer and runtime diagnostics. Anywhere is a theme wildcard, not an actual runtime location in that metadata. The drawer resets incompatible contexts when changing kind, preserves unknown saved kinds, and avoids rewriting a valid single-location override just because you opened the Inspector.
 
-`LobbyIcon` ignores picking, fits the image to its box, and uses `keepOriginalColours` to choose white tint. `None` has no generated image; an unknown kind receives a placeholder. Generated glyphs are cached by kind.
+`LobbyIcon` ignores picking, fits the image to its box, and uses `keepOriginalColours` to choose white tint. Inside the lobby it first tries a bundled white Phosphor Bold SVG chosen by kind, so the theme lookup below applies to match, shop and other surfaces; the Phosphor icons are tinted by USS. `None` has no generated image; an unknown kind receives a placeholder. Generated glyphs are cached by kind.
 
 ## Why this, not that
 

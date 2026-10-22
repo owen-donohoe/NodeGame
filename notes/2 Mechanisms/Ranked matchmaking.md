@@ -15,7 +15,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchAllocation.cs
   - dotnet/NodeWarCloud/NodeWarCloud/MatchRendezvous.cs
   - Assets/Scripts/Backend/Shared/RankedQueuePresenter.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Ranked matchmaking
@@ -68,7 +68,7 @@ players' `activeMatch` and only *then* snapshots their state. The soft rating wi
 queue preference only.
 
 **Client side** (`RankedQueuePresenter`): up to 3 automatic requeues if the opponent's connection
-fails, and a bot offer after 90 s.
+fails, and a bot offer after 90 s. A poll that throws shows Retry immediately instead of waiting for the next poll.
 
 ## Why this, not that
 

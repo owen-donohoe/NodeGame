@@ -9,7 +9,7 @@ sources:
   - Assets/Scripts/Backend/BackendServices.cs
   - Assets/Scripts/Backend/PendingRankedReports.cs
   - Assets/Scripts/Backend/Shared/PlayerStateService.cs
-verified: f576d156
+verified: 56ab2583
 ---
 
 # Backend client
@@ -40,12 +40,12 @@ flowchart LR
     UI[Lobby / end card / HUD] --> P["Presenters & trackers<br/>RankedQueuePresenter, RankedResultTracker,<br/>DisconnectHold, PresenceHeartbeat"]
     P --> S["Service interfaces (Backend/Shared)<br/>IPlayerStateService, IRankedQueueService,<br/>IMatchReportService…"]
     S -->|established services in builds| U["Ugs*Service → Cloud Code / Matchmaker"]
-    S -->|Editor fakes; Social/Profiles/Guild in every build| L["Local*Service → simulated answers"]
+    S -->|Editor fakes; Social/Guild in every build| L["Local*Service → simulated answers"]
 ```
 
 | Piece | Job |
 |---|---|
-| `BackendServices` | Picks UGS or local fakes for established services; Social/Profiles/Guild stay local in every build |
+| `BackendServices` | Picks UGS or local fakes; Social/Guild stay local in every build (profiles are UGS in builds) |
 | `LastKnownState` / `StateChanged` | The last state *the server returned*, shown by the UI |
 | `RememberGuard` | Drops answers that belong to a previous account |
 | `PendingRankedReports` | Saves the ranked log to disk and retries after the match, on lobby load and at queue preflight. Any server answer (even a refusal) removes it. A thrown exception keeps it |
@@ -55,7 +55,7 @@ flowchart LR
 
 | Decision | Alternative | Why the alternative lost |
 |---|---|---|
-| Interfaces plus permanent fakes | Call UGS directly from UI | Can't work offline or test presenters without the network |
+| Interfaces plus fakes (for tests and offline Editor work) | Call UGS directly from UI | Can't work offline or test presenters without the network |
 | Show returned state | Optimistically show "+20 RR" right away | If the server refuses or computes differently, the UI lied |
 | Persist uploads to disk | Hold them in memory | Closing the app would lose the evidence, and the match would void |
 | Remove a pending upload on *any* answer | Remove only on success | A refusal is final. Retrying a refused log forever wastes calls |
@@ -69,7 +69,7 @@ flowchart LR
 ## Traps
 
 - **Awaiting a service in a MonoBehaviour after it's destroyed.** Check that it's still alive after every `await`.
-- **Mistaking placeholders for production data.** Social/Profiles/Guild use local samples in every build; established services use UGS in builds.
+- **Mistaking placeholders for production data.** Social/Guild use local samples in every build; profiles and the established services use UGS in builds.
 - **Forgetting the account check** when an async answer arrives late.
 
 ## Patterns you've seen before

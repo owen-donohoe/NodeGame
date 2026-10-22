@@ -12,7 +12,7 @@ sources:
   - Assets/UI/Scripts/MatchLauncher.cs
   - Assets/Scripts/Game/Core/MatchConnection.cs
   - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Match launch
@@ -36,11 +36,11 @@ Unity destroys every object in a scene when it loads another. The lobby's knowle
 2. **Freeze:** copy rank and inventory into `launchState`; build the loadout from the catalog for that arena; refuse if incomplete ("Fill your loadout"); `frozenLoadout = LoadoutTypes.WithEquipment(...)`.
 3. **Connect:**
    - Local/bot: no network.
-   - Relay/LAN private: host waits *open-ended* (someone reading a code to a friend shouldn't time out); a join by code has separate deadlines for relay setup (12 s) and handshake (30 s), so a wrong code fails fast with a useful message.
+   - Relay/LAN private: host waits *open-ended* (someone reading a code to a friend shouldn't time out); a join by code has separate deadlines for relay setup (12 s) and handshake (30 s). A relay setup that reports failure ends the phase at once rather than waiting out the deadline, and one the launcher has since cancelled is ignored. A wrong code fails fast with a useful message.
    - Ranked: slot 0 hosts as simulation player 0 ("the referee reads the log's player order as the record's"), with deadlines everywhere; failure re-queues.
    - The handshake swaps [[Build identity handshake|build identities]] (acks sent ×3).
 4. **Recheck** the loadout against the frozen arena, then create `MatchConnection` (seat, networked/bot flags, frozen loadout, ranked `matchId` and ordered `playerIds`), parent the `NetworkManager` under it, and `SceneTransition.Load("Gameplay")`.
-5. **In Gameplay:** `LoadoutMatchSetup` turns the lobby's string IDs into simulation data: drafted suits (adding the free Warrior in low arenas), drafted districts, and the draft pool, after sanitising duplicates and inactive types "so both peers get identical results".
+5. **In Gameplay:** `LoadoutMatchSetup` turns the lobby's string IDs into simulation data: drafted suits and districts, and the draft pool. Nothing is added at this point: the era's locked default suits and districts already sit inside the loadout arrays, after sanitising duplicates and inactive types "so both peers get identical results".
 
 ## Why this, not that
 

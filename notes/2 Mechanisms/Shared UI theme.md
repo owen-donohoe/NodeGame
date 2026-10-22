@@ -17,7 +17,7 @@ sources:
   - Assets/UI/Scripts/ItemTint.cs
   - Assets/UI/Scripts/UiRequired.cs
   - Assets/UI/Scripts/UiRequiredNames.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Shared UI theme
@@ -50,11 +50,11 @@ flowchart TD
 
 The theme imports Unity defaults, tokens, then components. `Tokens.uss` separates raw `--pal-*` colors from role tokens such as `--surface` and `--action`. Its reason is worth keeping: “Two jobs that happen to share a colour today get two tokens, so they can part later without a search through every page.”
 
-Shared `ui-` components read meaning tokens. Page styles use their own names, such as lobby `lb-` classes. Card width and page padding belong to their owner, rather than automatically becoming global tokens. Real Fredoka Medium, SemiBold and Bold assets back the weight classes; glyph art handles symbols that font does not carry.
+Shared `ui-` components read meaning tokens. Page styles use their own names, such as lobby `lb-` classes. Card width and page padding belong to their owner, rather than automatically becoming global tokens. Real Fredoka Medium, SemiBold and Bold assets back the weight classes in the match; lobby-scoped tokens use Lilita One for display text and Fredoka SemiBold for body text; glyph art handles symbols that font does not carry.
 
 The important USS rule is recorded in `Components.uss`: a theme rule “loses to ANY rule in a stylesheet a layout imports, whatever the specificity.” Increasing the theme selector's specificity does not solve that precedence boundary.
 
-`ItemTint` connects stable item IDs to tint classes; the colors remain in tokens and components. Its comment chooses identity over perfect neighbor contrast: coloring by list position could make an item change color between its slot and the list.
+`ItemTint` connects stable item IDs to tint classes (a skin placeholder is seeded by item *and* skin, `SkinKey`, so two skins of one item differ); the colors remain in tokens and components. Its comment chooses identity over perfect neighbor contrast: coloring by list position could make an item change color between its slot and the list.
 
 ## Why this, not that
 

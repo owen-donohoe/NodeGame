@@ -10,7 +10,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
   - dotnet/NodeWarCloud/NodeWarCloud/MatchReporting.cs
   - dotnet/NodeWarCloud/NodeWarCloud/MatchEligibility.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Referee
@@ -39,8 +39,8 @@ For each `ReportMatch(matchId, log)` call (in `MatchReporting.Verify`):
 
 1. **Size:** at most 512 KB.
 2. **Parse:** `MatchLogFormat.TryRead`.
-3. **Eligibility** (`MatchEligibility.Check`): the header identity matches the record, the map is
-   the server's, each loadout is owned according to the *pre-match snapshot*, and draft choices are legal for the arena.
+3. **Eligibility** (`MatchEligibility.Check`): protocol 7 is the only one accepted, the header identity matches the record, the map is
+   the server's, each loadout is owned according to the *pre-match snapshot*, and draft choices are legal for the arena (including the era's locked defaults).
 4. **Replay** (`Referee.Verify` → `MatchReplay.Run`): every checkpoint hash and the final hash must
    match, and a Win must reach game-over with the declared winner.
 5. **Accepted** only if the replay is valid *and* ended in a win for player 0 or 1.
