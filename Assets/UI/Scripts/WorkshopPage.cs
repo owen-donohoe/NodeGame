@@ -909,6 +909,9 @@ namespace NodeWar.Lobby
             CancelReplacement();
             var chosen = item.IsSuit ? StageLoadout.suitIDs : StageLoadout.districtIDs;
             if (!loadout.ClearChosen(item.IsSuit, Array.IndexOf(chosen, item.ID))) return;
+            // Like USE: close the sheet and return to the top so the changed stage is in view.
+            CloseItemPanel();
+            grid.scrollOffset = Vector2.zero;
             SaveToProfile(); Render();
         }
 

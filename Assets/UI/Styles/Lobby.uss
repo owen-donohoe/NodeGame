@@ -229,6 +229,11 @@
     flex-grow: 1;
 }
 
+/* PlayPopup and MatchHistoryPage hide their inactive views with this. */
+.lb-view--hidden {
+    display: none;
+}
+
 .lb-push__header {
     flex-direction: row;
     align-items: center;
