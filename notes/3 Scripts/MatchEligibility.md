@@ -5,7 +5,7 @@ tags: [shell/3, realm/backend, system/cloud, script]
 file: dotnet/NodeWarCloud/NodeWarCloud/MatchEligibility.cs
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchEligibility.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # MatchEligibility
@@ -24,11 +24,10 @@ the referee replays, comparing the log against the **server's match record**, ne
 
 ## The checks, in order
 
-1. **Header matches the record:** match ID, both player IDs in order, protocol, sim, content.
+1. **Protocol and header:** only protocol 7 is accepted (6 and anything newer are refused with "use protocol 7"). Then match ID, both player IDs in order, protocol, sim, content must equal the record.
 2. **`CheckMap`:** the log's setup and board equal the record's server-assigned map and hash.
-3. **`CheckBudgets` (protocol ≥6):** loadout size fits the player's **snapshot arena**: low arenas get
-   2 suits plus the free Warrior and 2 districts, high arenas 3 suits and 5 districts. No duplicates,
-   the low-arena Warrior is present, and draft placements don't exceed what was chosen plus the base pool.
+3. **`CheckBudgets`:** loadout holds at most 3 suits and 5 districts, whatever the arena. No duplicates;
+   every base must be usable at that arena (`IsBaseUsable`); the loadout must contain the era's locked defaults (`LockedSuits`/`LockedDistricts`: Warrior and Farm/Mine/Town in era 0, Farm/Mine in era 1, none after) inside those same slots, not as free extras; and draft placements may not exceed what the loadout holds. Map base pools no longer add free placements.
 4. **`CheckVariant` for every suit, district and placement:** the era is allowed for the snapshot
    arena, *and* the variant was in `OwnedVariants` **in the pre-match snapshot**.
 

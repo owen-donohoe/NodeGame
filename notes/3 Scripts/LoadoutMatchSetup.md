@@ -7,7 +7,7 @@ tags: [shell/3, realm/lobby, system/lobby-ui, system/draft, script]
 file: Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
 sources:
   - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # LoadoutMatchSetup
@@ -21,13 +21,12 @@ verified: ce9fb6bf
 
 ## What it is
 
-A 99-line static class: "Resolves each player's canonical loadout without changing the authored board."
+An 84-line static class: "Resolves each player's canonical loadout without changing the authored board."
 
 | Method | Returns |
 |---|---|
-| `GetsFreeGrants(loadout)` | Low-arena shape (2 suits / 2 districts)? |
-| `DistrictPool(loadout, mapBasePool)` | Draft pieces: map base districts (low arena only) + loadout districts, each tagged `IsFromLoadout` |
-| `DraftedSuits(loadout)` | `int[]` of `SuitType`, with the free Warrior added first in low arenas |
+| `DistrictPool(loadout, mapBasePool)` | Draft pieces: the loadout's districts, each tagged `IsFromLoadout`. The map base pool is no longer added; the era's locked default districts already sit inside the loadout |
+| `DraftedSuits(loadout)` | `int[]` of `SuitType`, as stored (a locked Warrior is already one of the slots) |
 | `DraftedDistricts(loadout)` | `int[]` of chosen `DistrictType`s |
 
 ## The key private method: `Sanitize`

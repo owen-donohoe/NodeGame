@@ -19,7 +19,7 @@ sources:
   - scripts/compile-check.ps1
   - Assets/Scripts/Editor/TestBridge.cs
   - Assets/Tests/EditMode/Outline/NodeWar.View.Outline.Tests.asmdef
-verified: f576d156
+verified: 56ab2583
 ---
 
 # Test evidence
@@ -44,7 +44,7 @@ A headless test can prove a resource-ring calculation while never drawing a ring
 | Test project | What it checks |
 |---|---|
 | `NodeWar.Simulation.Tests` | Rules, construction, movement/economy, state hashing/copying and determinism fixtures |
-| `NodeWar.Lobby.Tests` | Loadouts, eligibility, lobby models, settings and packet shapes |
+| `NodeWar.Lobby.Tests` | Loadouts and presets, eligibility, lobby, LAN and private-room models, queue policy, settings and packet shapes |
 | `NodeWar.View.Tests` | Pure startup-sequence policies, gesture/view/layout/art mathematics and authored UI contracts |
 | `NodeWar.MatchLog.Tests` | Binary logs, recording, replay, refusal and corruption |
 | `NodeWar.Network.Tests` | Lockstep under simulated loss, duplication, reordering, outages and rollback |

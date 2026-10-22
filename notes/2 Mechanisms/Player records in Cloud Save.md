@@ -10,20 +10,20 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSaveMatchRecordStore.cs
   - Assets/Scripts/Backend/Shared/PlayerState.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Player records in Cloud Save
 
 > [!question] The question
-> What does a player *look like* on the server, as stored data? Why is it split into six
+> What does a player *look like* on the server, as stored data? Why is it split into eight
 > keys instead of one, and who may read or write each one?
 
 **Where you are:** [[Home]] › [[Backend]] › [[Cloud]] › **Player records in Cloud Save** (mechanism)
 
 ## The problem
 
-A player's server-side state includes rating, rank, inventory, history, the match they're
+A player's server-side state includes rating, rank, inventory, history, wallet, public handle, win/loss stats, the match they're
 in, and penalties. Some changes touch one part (equipping a skin changes only inventory).
 Others touch several at once (settlement changes rating, rank, inventory and history). The
 storage has to let the player *see* their state, stop them *changing* it, and stop two
@@ -45,9 +45,11 @@ player 7f3a…
 ├── rating       { R, Rd, Sigma, LastMatchUnixSeconds, SettledMatchIds[≤200] }
 ├── rank         { RR, Arena, HighestArena }
 ├── inventory    { owned variants/skins, chosen suits/nodes, Equipped { base → variant/skin } }
-├── history      { MatchIds[≤20] }
+├── history      { MatchIds[≤20], Stats, Summaries[≤20] }   ← summaries carry opponent name/tag, RR change, arena
 ├── activeMatch  { matchId, expiresUnixSeconds }          ← "I'm in a match" claim
-└── discipline   { level, strike/decay/block times, non-reports, struck IDs }
+├── discipline   { level, strike/decay/block times, non-reports, struck IDs }
+├── wallet       { Coins, Premium, Recent[≤50 transactions] }   ← changed only through WalletLedger
+└── profile      { Name, Tag, NameNorm, last free rename }   ← the public identity
 ```
 
 ### The match's item (Private custom data, server-only)
@@ -67,7 +69,7 @@ custom item "match-<id>"
 |---|---|---|---|
 | Default | ✔ (own) | ✔ (own) | (not used: a player could edit it) |
 | Public | ✔ (anyone) | ✔ (own) | (not used) |
-| **Protected** | ✔ (own) | ✘ (server only) | Rating, rank, inventory, history, claims, discipline |
+| **Protected** | ✔ (own) | ✘ (server only) | Rating, rank, inventory, history, claims, discipline, wallet, profile |
 | **Private** (custom items here) | ✘ | ✘ (server only) | Match records, presence, logs |
 
 (Check the current UGS Cloud Save docs for the exact rules. This is the shape that matters here.)
@@ -76,11 +78,11 @@ custom item "match-<id>"
 
 | Choice | Gain | Pay |
 |---|---|---|
-| **One key per unit of change** (chosen) | Equip locks only `inventory`. Presence writes only its own slot key. Fewer conflicts | Settlement must write 4 keys in one batch, with 4 locks |
+| **One key per unit of change** (chosen) | Equip locks only `inventory`; a currency grant locks only `wallet`. Presence writes only its own slot key. Fewer conflicts | Settlement must write 4 keys in one batch, with 4 locks |
 | One big `player` document | One read, one write | *Every* change conflicts with every other change, and documents grow without limit |
 | A key per item owned | Fine-grained | Hundreds of keys. Reading "the inventory" becomes many reads |
 
-**Bounded lists** keep documents small: history keeps 20 IDs, and the settlement guard keeps 200.
+**Bounded lists** keep documents small: history keeps 20 IDs and 20 summaries, the wallet 50 transactions, and the settlement guard 200.
 
 ## What it costs later
 

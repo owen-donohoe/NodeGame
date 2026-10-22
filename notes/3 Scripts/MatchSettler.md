@@ -7,7 +7,7 @@ tags: [shell/3, realm/backend, system/cloud, script]
 file: dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/MatchSettler.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # MatchSettler
@@ -62,6 +62,7 @@ for (int p = 0; p < 2; p++)
       inventory.GrantDefaults(state);
       InventoryClamp.ClampToArena(state.Inventory, state.Rank.Arena);
       history.Insert(0, matchId); trim to 20;
+      PlayerStatsRules.Apply(history.Stats, …); HistorySummaryRules.Prepend(history, summary);  // opponent name/tag, RR delta, arena
       try { await store.WriteForSettlementAsync(state, read.WriteLocks); break; }
       catch (RecordConflictException) when (attempt + 1 < RetryLimit) { }
   }

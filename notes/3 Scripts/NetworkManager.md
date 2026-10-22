@@ -10,7 +10,7 @@ file: Assets/Scripts/Game/Network/NetworkManager.cs
 sources:
   - Assets/Scripts/Game/Network/NetworkManager.cs
   - Assets/Scripts/Game/Network/NetworkManagerTransport.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # NetworkManager
@@ -46,8 +46,7 @@ Unity-free [[LockstepCore]] needs: `Send`, `ReceiveAll`, `Flush`.
 
 ## Things to notice
 
-- **`async void`** on the Start methods: fire-and-forget. An exception in one can't be caught
-  by the caller and may surface only in the log. It's a common Unity pattern with a real cost; `async Task` plus an awaiting caller is safer.
+- **The relay Start methods return `Task<bool>`** (false means setup failed or was cancelled; `RelayError` says why). An `AttemptGate` counts attempts and each one checks it after every `await`, so `Shutdown` or a newer start leaves a stale setup building nothing. The launcher observes the task and fails its phase at once instead of waiting out a deadline. The old `async void` hid failures; the cost now is remembering the check after every new `await`.
 - **Sends before ready are queued, not dropped**, so the handshake can be "sent" before Relay finishes connecting.
 - **DirectUDP reads only the connected endpoint**: packets from other addresses are ignored (netcode card invariant).
 

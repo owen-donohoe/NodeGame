@@ -16,7 +16,7 @@ sources:
   - Assets/Scripts/Game/Network/LockstepCore.cs
   - Assets/Scripts/Game/Network/InputDelayController.cs
   - Assets/Scripts/Game/Network/NetworkManager.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Netcode
@@ -110,6 +110,7 @@ connection (packet loss, jitter, outages) and check that the result matches a pe
 - **Trusting the packet's own `playerID`.** The sender's slot comes from *which connection*
   delivered the packet.
 - **Recording, hashing or settling a guess.** Only confirmed ticks count.
+- **Letting a cancelled Relay setup finish.** Relay setup has several awaits. `Shutdown`, or a newer start, stales the in-flight attempt (`AttemptGate`), so it builds nothing and returns false instead of starting a transport nobody asked for.
 
 ## Patterns you've seen before
 

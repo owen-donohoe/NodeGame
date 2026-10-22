@@ -10,7 +10,7 @@ tags: [shell/2, realm/backend, system/cloud]
 sources:
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
   - dotnet/NodeWarCloud/NodeWarCloud/MatchReporting.cs
-verified: ce9fb6bf
+verified: 56ab2583
 ---
 
 # Write locks
@@ -63,7 +63,10 @@ Details that matter:
 - **Batch writes are atomic per player.** Settlement writes rating, rank, inventory and history
   in one `SetProtectedItemBatchAsync` with four locks. All succeed or none do.
 - **A null lock means "no check".** The first creation of a key can't be guarded, so the code
-  includes an existing key (`rating`) with its lock in the same batch as a fence.
+  includes an existing key (`rating`) with its lock in the same batch as a fence. The wallet and the
+  first handle are created this way.
+- **A hot, separate key gets its own lock.** The wallet is read and written alone, so a currency
+  grant never conflicts with settlement or equip.
 - **Retries are bounded** (3), and then the error surfaces.
 
 ## Why this, not that
