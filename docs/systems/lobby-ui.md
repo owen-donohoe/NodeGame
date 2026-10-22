@@ -15,7 +15,6 @@ sources:
   - Assets/Scripts/Lobby/TrophyBarLogic.cs
   - Assets/UI/Layouts/HomePage.uxml
   - Assets/UI/Layouts/LobbyRoot.uxml
-  - Assets/UI/Layouts/MatchHistoryPage.uxml
   - Assets/UI/Layouts/PlayPopup.uxml
   - Assets/UI/Layouts/ProfilePage.uxml
   - Assets/UI/Layouts/SettingsPage.uxml
@@ -101,8 +100,6 @@ sources:
   - Assets/UI/Scripts/LobbyToggleMath.cs
   - Assets/UI/Scripts/LobbyUIController.cs
   - Assets/UI/Scripts/LongPressManipulator.cs
-  - Assets/UI/Scripts/MatchHistoryPage.cs
-  - Assets/UI/Scripts/MatchHistoryRow.cs
   - Assets/UI/Scripts/MatchLauncher.cs
   - Assets/UI/Scripts/MatchLauncherConnection.cs
   - Assets/UI/Scripts/NavigationController.cs
@@ -129,7 +126,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 88cadc48
+verified: 1da38209
 ---
 
 # Lobby UI
@@ -158,7 +155,7 @@ Other surfaces:
 - `SocialPage.Bind` supplies TV, friends/guild and history ledgers. Offline friends expand separately; unknown historical handles use cached profiles or Unknown. Requests cannot cross visits/accounts.
 - `GuildPage` raises search on Enter/typing pause/caret, preserving result taps. Filters constrain RR/membership. Membership supplies announcements, sortable members and chat; officer actions confirm kicks and log reports.
 - `ProfilePage.Open/OpenFor/Close` presents self/other sheets through IProfileService. BindPanels wires reporting/confirmed Kick; InviteRequested opens Multiplayer. Null stats show dashes. Rename uses Handles.SetHandleAsync.
-- `SettingsPage.Changed/Flush` persists preferences; ControlsPanel shares match bindings. MatchHistoryPage reads recorded outcomes without replay playback. AccountFlow handles linking/notifications; LobbyDeepLink routes pages, profiles and stalls.
+- `SettingsPage.Changed/Flush` persists preferences; ControlsPanel shares match bindings. Match history lives on the Social page; Replay is still a stub. AccountFlow handles linking/notifications; LobbyDeepLink routes pages, profiles and stalls.
 
 `LoadoutCatalog.CurrentLoadout` resolves equipment/choices. `LoadoutRules` shares completeness and missing-item messages. LoadoutEditor protects locks; clearing confirms. Failed saves retain state with retry/backoff. `PlayerProfile` persists preferences/presets; `LoadoutData.Normalized` maintains 3/5 slots. LobbyChrome renders server handle, rank and balances; RankDisplay/RankTable supply progress. Premium displays as Laurels.
 
