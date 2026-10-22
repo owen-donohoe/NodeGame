@@ -37,7 +37,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/RankedMatchModule.cs
   - dotnet/NodeWarCloud/NodeWarCloud/ServerCatalog.cs
   - dotnet/NodeWarCloud/NodeWarCloud/WalletService.cs
-verified: cb532363
+verified: 522aa8dd23940654e95a829d1c315e291c9bce81
 ---
 
 # Cloud
