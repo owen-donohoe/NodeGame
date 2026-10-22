@@ -10,7 +10,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSavePlayerRecordStore.cs
   - dotnet/NodeWarCloud/NodeWarCloud/CloudSaveMatchRecordStore.cs
   - Assets/Scripts/Backend/Shared/PlayerState.cs
-verified: 56ab2583
+verified: 2ef5a5fb
 ---
 
 # Player records in Cloud Save
@@ -45,7 +45,7 @@ player 7f3a…
 ├── rating       { R, Rd, Sigma, LastMatchUnixSeconds, SettledMatchIds[≤200] }
 ├── rank         { RR, Arena, HighestArena }
 ├── inventory    { owned variants/skins, chosen suits/nodes, Equipped { base → variant/skin } }
-├── history      { MatchIds[≤20], Stats, Summaries[≤20] }   ← summaries carry opponent name/tag, RR change, arena
+├── history      { MatchIds[≤20], Stats, Summaries[≤20], LastLoadout }   ← summaries carry opponent name/tag, RR change, arena; LastLoadout is the verified log's loadout
 ├── activeMatch  { matchId, expiresUnixSeconds }          ← "I'm in a match" claim
 ├── discipline   { level, strike/decay/block times, non-reports, struck IDs }
 ├── wallet       { Coins, Premium, Recent[≤50 transactions] }   ← changed only through WalletLedger
